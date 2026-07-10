@@ -686,8 +686,9 @@ class DNSSource:
             runs where users want zero CT load.
           * ``active_probes`` - when True, opt in to the BIMI VMC certificate
             fetch (a direct request to a target-influenced host). Off by
-            default keeps the DNS source passive; BIMI presence is still
-            detected from the TXT record either way.
+            default; BIMI presence is still detected from the TXT record either
+            way. Independently, a published MTA-STS record can trigger the
+            standards-defined policy fetch from ``mta-sts.<domain>``.
         """
         skip_ct = bool(kwargs.get("skip_ct", False))
         active_probes = bool(kwargs.get("active_probes", False))
@@ -771,9 +772,10 @@ class DNSSource:
         and any other CNAME-discovered hosts; only the CT-fed contributions
         are absent from related_domains.
 
-        ``active_probes`` is recorded on the context so the BIMI VMC fetch
-        (the one direct-to-target HTTP call in this source) runs only when the
-        operator opted in; the default stays passive.
+        ``active_probes`` is recorded on the context so the BIMI VMC fetch runs
+        only when the operator opted in. The standards-defined MTA-STS policy
+        fetch remains part of the default email-security detector when the
+        domain publishes an MTA-STS record.
         """
         ctx = _DetectionCtx()
         ctx.active_probes = active_probes

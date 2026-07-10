@@ -1,4 +1,4 @@
-"""Google Workspace passive discovery source.
+"""Google Workspace opt-in direct discovery source.
 
 Queries public, unauthenticated endpoints to detect Google Workspace
 configuration and security posture:
@@ -8,13 +8,8 @@ configuration and security posture:
    that the org uses Google Workspace CSE with an external key manager.
    This is a high-security signal (data sovereignty, compliance).
 
-2. Google Workspace SMTP relay check — probes for the presence of
-   aspmx.l.google.com in MX records (already handled by DNS source,
-   but this source adds the "google_workspace" flag for confidence
-   scoring when DNS confirms Google MX).
-
-All probes are passive, unauthenticated HTTP GETs. No credentials,
-no login attempts, no API keys.
+The CSE request is a target-visible, unauthenticated HTTPS GET gated behind
+``--direct-probes``. It uses no credentials, login attempt, or API key.
 """
 
 from __future__ import annotations
@@ -80,7 +75,7 @@ def parse_cse_config(data: dict[str, Any], domain: str) -> dict[str, Any]:
 
 
 class GoogleSource:
-    """Lookup source: Google Workspace passive discovery (CSE, metadata)."""
+    """Lookup source for opt-in Google Workspace CSE discovery."""
 
     @property
     def name(self) -> str:

@@ -44,26 +44,26 @@ three primary workflows.
 
 ### 1. Restore evidence-semantic integrity
 
-Status: active, highest trust priority. The first live MCP instruction and
-score-description corrections are in Unreleased.
+Status: active, highest trust priority. The live MCP instruction,
+score-description, and parent-platform child-product corrections are in
+Unreleased.
 
-Why first: output truthfulness is more valuable than another feature. A current
-sparse-output fixture infers Copilot use from a parent tenant even though that
-evidence cannot establish child-product licensing, enablement, deployment, or
-use. This review also found live MCP instructions that overstated the
-target-interaction boundary and score meaning; those strings and their
-regression tests were corrected as part of the roadmap pass. The wider panel,
-CLI, generated-guidance, and recommendation audit remains open. Current
-sovereignty handling preserves absent metadata as unknown; that invariant
-should remain explicit and tested.
+Why first: output truthfulness is more valuable than another feature. The
+roadmap review found a sparse-output fixture that inferred Copilot use from a
+parent tenant even though the evidence could not establish child-product
+licensing, enablement, deployment, or use. That inference and the earlier MCP
+target-interaction and score overstatements are now corrected with regression
+tests. The wider panel, CLI, generated-guidance, and recommendation audit
+remains open. Current sovereignty handling preserves absent metadata as
+unknown; that invariant should remain explicit and tested.
 
 Work:
 
 - Audit every default panel insight, service label, live MCP instruction and
   tool description, generated agent guidance item, recommendation, and score
   label against its direct provenance path.
-- Remove child-product use or deployment claims that are inferred only from a
-  parent platform.
+- Keep the shipped regression guard that rejects child-product use or
+  deployment claims inferred only from a parent platform.
 - Preserve missing cloud metadata as unknown.
 - In human-facing output, describe `email_security_score` as a count of
   observable public email controls and the 0-100 value as a model-bound

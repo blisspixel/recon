@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Removed the expired PyJWT advisory exception from CI and release dependency
+  audits after PyJWT 2.13.0 cleared the unqualified frozen-runtime audit.
+- Corrected source documentation to distinguish the default target-visible
+  MTA-STS policy fetch from opt-in CSE and BIMI direct probes.
+
+### Fixed
+
+- Removed unsupported Microsoft Copilot and Google Gemini service labels that
+  were inferred solely from Microsoft 365 or Google Workspace presence. Direct
+  AI domain-verification evidence continues to render normally.
+
 ## [2.3.9] - 2026-07-10
 
 ### Tool Surface Changes

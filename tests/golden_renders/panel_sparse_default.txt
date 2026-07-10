@@ -7,7 +7,6 @@ northwindtraders.com
 
 Services
   Email          Microsoft 365
-  AI             Microsoft Copilot (likely)
 
 
 Insights

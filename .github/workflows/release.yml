@@ -110,13 +110,7 @@ jobs:
         run: uv export --frozen --no-dev --no-emit-project --format requirements.txt --output-file .ci-audit-requirements.txt
 
       - name: Audit dependencies
-        # Mirrors ci.yml. PYSEC-2025-183 (CVE-2025-45768) is a disputed,
-        # no-fix advisory in pyjwt, pulled transitively by mcp[crypto] for
-        # MCP's HTTP/OAuth transport, which recon's stdio-only MCP server
-        # never invokes. This ignore is kept in lockstep with ci.yml so a
-        # tagged release is not blocked by an advisory CI already accepts.
-        # See docs/security-audit-resolutions.md; drop when a fixed pyjwt ships.
-        run: uv run pip-audit -r .ci-audit-requirements.txt --ignore-vuln PYSEC-2025-183
+        run: uv run pip-audit -r .ci-audit-requirements.txt
 
   build:
     # Pure build job. The supply-chain isolation contract requires

@@ -9,7 +9,6 @@ contoso.com
 
 Services
   Email          Microsoft 365, Proofpoint, DMARC reject, MTA-STS enforce
-  AI             Microsoft Copilot (likely)
   Collaboration  Slack
 
 
