@@ -1,16 +1,21 @@
 # Performance
 
+Status: historical characterization, not a current service-level objective
+Review date: 2026-07-10
+
 recon is a passive, concurrent DNS + HTTP-endpoint client. Latency is
 dominated by two variables: CT-log query time (crt.sh / CertSpotter,
 chronically flaky) and the slowest of the identity-endpoint queries
 (OIDC discovery, GetUserRealm, Google Identity). Tuning is mostly
 about timeout caps, not algorithmic work.
 
-## Measured numbers
+## Historical measured numbers
 
-The numbers below are from a dev laptop (Ryzen 7, 32GB RAM, residential
-fiber, Windows 11), single-run per corpus size, no warm cache. Cold
-runs are what you'll see the first time you sweep a new corpus.
+The numbers below are retained as historical context from a dev laptop (Ryzen
+7, 32GB RAM, residential fiber, Windows 11), one run per corpus size, with no
+warm cache. The original run date, exact recon commit, provider state, Python
+version, and dispersion were not recorded, so these figures are not a current
+benchmark and must not be treated as an SLO or regression threshold.
 
 | Corpus | Wall clock | Memory peak | Notes |
 |--------|-----------|-------------|-------|
@@ -18,18 +23,18 @@ runs are what you'll see the first time you sweep a new corpus.
 | 100 domains | ~180s | ~240 MB | Sustained ~0.55 domains/sec; CT-cache starts helping on sibling domains |
 | 500 domains | ~16 min | ~420 MB | CT provider rotation + rate-limit backoff dominates past ~300 domains |
 
-Warm-cache (re-run with `~/.recon/ct-cache/` populated) is roughly 3×
-faster because CT lookups short-circuit.
+The historical observation was that a warm CT cache was roughly three times
+faster. That multiplier has not been revalidated against the current provider
+rotation and 30-day cache policy.
 
 ## Methodology
 
-Reproduce with any newline-delimited list of real apex domains saved
-locally (one per line). The project ships only a fictional example
-corpus, so you supply your own list. The shape of the corpus matters
-far more than the specific names. A representative 40-domain list
-covers big-tech, major SaaS, retail, automotive, finance, media,
-pharma, and a few international apexes so the built-in fingerprint
-catalog has a fair chance of firing.
+The command below remains useful for local characterization, but one timing run
+is not a benchmark. A current baseline must record the commit, Python and OS
+versions, hardware, network class, provider outcomes, cache state, corpus
+shape, repetition count, p50/p95, peak allocation, and degraded-source count.
+Use a newline-delimited list of apex domains stored locally. The project ships
+only fictional examples; any real corpus remains private under the data policy.
 
 ```bash
 recon cache clear --all                                # start cold
@@ -47,11 +52,11 @@ transmitted anywhere recon does not already query.
   entire pipeline for one domain. CT providers are the usual cause
   of long tails; lower the budget to fail fast if you're sweeping
   many domains.
-- **CT cache TTL.** `~/.recon/ct-cache/` entries live 7 days by
+- **CT cache TTL.** `~/.recon/ct-cache/` entries live 30 days by
   default. On a sweep of sibling domains (portfolio discovery),
   the first domain warms the cache and subsequent domains reuse it.
-- **Batch concurrency.** `recon batch` resolves domains sequentially
-  by default; `--concurrency N` runs several at once, but raising it
+- **Batch concurrency.** `recon batch` uses concurrency 5 by default;
+  `--concurrency N` changes the number of in-flight lookups, but raising it
   also raises the per-provider rate-limit pressure on crt.sh /
   CertSpotter. Keep it conservative.
 
@@ -82,3 +87,19 @@ past ~20 queries/minute.
 3. Drop `--timeout` to 60 if you'd rather fail fast on slow domains.
 4. For batch work on hundreds of domains, run overnight with a
    generous budget rather than interactively with a tight one.
+
+## Next measurement gate
+
+The active engineering plan requires a reproducible synthetic characterization
+before performance-driven code changes:
+
+- single, batch, graph, and MCP workflows;
+- cold and warm p50/p95 wall time;
+- peak allocation and blocked-loop observations;
+- stage timing for DNS, identity, CT, merge, inference, and rendering;
+- partial and degraded-source counts;
+- CT marginal signal gain relative to latency cost.
+
+Only measured blocking I/O should move to a thread. Timing results should guide
+budgets and design decisions, while deterministic functional checks remain the
+CI gate.

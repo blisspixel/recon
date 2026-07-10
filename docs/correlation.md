@@ -2599,7 +2599,7 @@ recon's adversarial-public-channel setting.
 
 ### 6.3 Dependency-floor manifesto
 
-recon ships with eight runtime imports plus one transitive-
+recon ships with ten direct runtime dependencies plus one transitive-
 dependency security pin. Each is named below with the role it
 plays. The list of widely-used libraries we *deliberately do not
 depend on* follows; each exclusion is a positive commitment the
@@ -2618,6 +2618,8 @@ supply-chain risk.
 | `rich` | Terminal rendering. |
 | `mcp` | Model Context Protocol server. |
 | `networkx` | Graph correlation layer (Louvain, community detection). |
+| `publicsuffixlist` | Public Suffix List based registrable-domain reduction without naive last-two-label assumptions. |
+| `deal` | Design-by-contract checks for inference-core invariants; disabled under optimized production execution. |
 
 **Transitive-dependency security pin (not imported at runtime):**
 
@@ -2646,7 +2648,7 @@ The exclusion list is the practical statement of the
 "data-file-only schema, no learned weights" invariant
 ([roadmap.md § Invariants](roadmap.md#invariants)). A
 contributor proposing a new dependency must justify why their
-addition belongs alongside the eight above and not on the
+addition belongs alongside the ten above and not on the
 exclusion list.
 
 ### 6.4 Alignment with invariants
@@ -2655,8 +2657,10 @@ Every engine above is gated by the project invariants, stated
 authoritatively in [roadmap.md § Invariants](roadmap.md#invariants)
 and summarised here:
 
-  - **Passive only.** No new probes beyond standard public-DNS
-    resolution.
+  - **Public metadata only.** Public DNS, certificate transparency, and
+    unauthenticated identity discovery are the core channel. The standard
+    MTA-STS policy fetch is target-visible; Google CSE and BIMI certificate
+    requests remain explicit opt-in direct probes.
   - **Zero credentials, zero API keys, zero paid APIs.** Every
     source is reachable without an account.
   - **No bundled ML weights, embeddings, ASN/GeoIP databases, or
@@ -2669,9 +2673,9 @@ and summarised here:
     stays qualified; dense evidence can be firmer; "we cannot tell
     from this channel" remains a valid result.
 
-See [roadmap.md § Implementation discipline](roadmap.md#implementation-discipline-for-new-correlation-work)
-for the per-PR checklist that turns these invariants into shippable
-behavior.
+See [engineering-refinement-plan.md](engineering-refinement-plan.md) for the
+decision filter, dependency order, graph guidance, acceptance evidence, and
+stop rules that turn these invariants into shippable behavior.
 
 ### 6.5 Relationship to other documents
 

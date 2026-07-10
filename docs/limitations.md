@@ -1,8 +1,11 @@
 # Known Limitations
 
-recon is passive, zero-credential, and DNS/identity-endpoint-only. That gives
-it stealth, speed, and legal clarity, but it also means there are whole
-classes of information the tool cannot see. This doc is the honest inventory.
+recon is public-metadata-only and zero-credential. Its narrow collection
+boundary limits target interaction, but it also means there are whole classes
+of information the tool cannot see. The standard MTA-STS policy fetch is
+target-visible, and opt-in direct probes add the documented CSE and BIMI
+certificate requests. This document is the honest inventory, not a legal
+opinion or a claim of invisibility.
 
 If any of these matter for your use case, either pipe recon's output into a
 complementary tool (active scanner, authenticated API consumer) or accept the
@@ -19,11 +22,11 @@ gap as a known unknown.
 
 ### Bundled platform services with no DNS footprint
 
-- **Microsoft Copilot, Microsoft Teams Phone, Microsoft Purview**: included in
-  M365 licenses with no public DNS verification token. recon infers Copilot
-  as `(likely)` from M365 tenant presence (see Services > AI).
-- **Google Gemini, Google Vault, Context-Aware Access**: same pattern,
-  inferred from Google Workspace presence.
+- **Microsoft Copilot, Microsoft Teams Phone, Microsoft Purview**: a public
+  M365 tenant observation does not establish licensing, enablement, deployment,
+  or use of these child products.
+- **Google Gemini, Google Vault, Context-Aware Access**: a Google Workspace
+  observation likewise does not establish child-product use.
 - **Most GitHub features**: private repos, actions, code scanning have no
   public DNS footprint even when the org is detectable elsewhere.
 
@@ -67,9 +70,10 @@ documented: it may fetch the standards-compliant MTA-STS policy at
 - **Localized verification schemes**: regional SaaS products may publish TXT
   or CNAME proofs that are stable but not yet fingerprinted.
 
-When this happens, recon may correctly show a self-hosted or low-signal result
-even though a rich domestic stack exists behind the scenes. Treat those results
-as coverage gaps unless the DNS evidence directly supports a stronger claim.
+When this happens, recon may show a low-signal or unclassified result even
+though a rich domestic stack exists behind the scenes. Treat those results as
+coverage gaps unless the public evidence directly supports a stronger claim;
+do not infer that the stack is self-hosted.
 
 ### Network-level and host-level facts
 
@@ -86,19 +90,21 @@ as coverage gaps unless the DNS evidence directly supports a stronger claim.
 
 ---
 
-## What recon underclaims on
+## Where recon must remain conservative
 
-These are cases where the tool hedges or shows a weaker signal than the
-reality, because the evidence density doesn't justify a stronger claim.
+These are cases where the evidence does not justify a stronger claim. Some are
+deliberate abstentions. The bundled-AI behavior below is a known overclaim and
+is in the first correction track in the roadmap.
 
 ### Bundled AI services
 
-**Current:** `Microsoft Copilot (likely)` / `Google Gemini (likely)` even when
-the organization has a fully provisioned Copilot deployment.
+**Current known overclaim:** sparse output can show `Microsoft Copilot
+(likely)` or `Google Gemini (likely)` from parent-platform presence alone.
 
-**Why hedged:** DNS has nothing to say about license SKU. We know the platform
-exists and infer the bundled AI is available. The `(likely)` qualifier is
-load-bearing honesty.
+**Why this must change:** public DNS and tenant metadata say nothing about the
+child product's license, enablement, deployment, or use. The word `(likely)`
+does not create evidence. Until the correction ships, treat these labels only
+as unsupported platform-family possibilities, not observations.
 
 ### Dual-provider organizations
 
@@ -116,12 +122,12 @@ Showing both on every lookup was noise.
 
 **Current:** Government cloud (GCC, GCC High, DoD) detection depends on the
 Microsoft OIDC discovery endpoint returning `cloud_instance` and
-`tenant_region_sub_scope`. When a tenant is configured to suppress these
-fields, recon treats the tenant as commercial.
+`tenant_region_sub_scope`. When those fields are absent, recon preserves them
+as unknown and emits no sovereignty conclusion.
 
-**Why underclaimed:** There is no way to distinguish "commercial tenant" from
-"sovereignty info stripped" from DNS alone. A domain-level hint would require
-active probing, which is out of scope.
+**Why unresolved:** absent metadata cannot distinguish a commercial tenant from
+suppressed or unavailable sovereignty metadata. This unknown-state behavior is
+an invariant to preserve, not evidence of a commercial cloud.
 
 ### Federated IdP vendor identification
 
@@ -176,9 +182,10 @@ Times recon has been wrong in empirically verified ways:
   non-standard or per-account selectors (for example some Mailchimp, SendGrid,
   Salesforce Marketing Cloud, and regional providers) can still produce "No
   DKIM observed" false negatives.
-- **Domain homograph / Punycode.** recon normalizes to lowercase but does not
-  attempt IDN → ASCII round-tripping. Punycode domains are handled, but the
-  display name may not match what a user sees in a browser.
+- **Domain homograph / Punycode.** recon IDNA-encodes Unicode input and enforces
+  a round-trip guard before analysis. This validation reduces ambiguous input;
+  it does not make a Unicode display name safe from visual confusables or
+  guarantee that it matches what a browser renders.
 - **Wildcard DNS.** A domain with a catch-all wildcard A record at `*.domain`
   makes subdomain probing return a hit for every prefix, including ones that
   aren't actually distinct services. recon filters wildcard CT results but
