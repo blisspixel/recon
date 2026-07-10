@@ -18,7 +18,8 @@ SVC_INTUNE_MDM = "Intune / MDM"
 SVC_OFFICE_PROPLUS = "Office ProPlus (msoid)"
 SVC_DKIM_EXCHANGE = "DKIM (Exchange Online)"
 
-# Generic DKIM — detected via Google or other common selectors
+# Google and generic DKIM labels
+SVC_DKIM_GOOGLE = "DKIM (Google Workspace)"
 SVC_DKIM = "DKIM"
 
 # Email security labels

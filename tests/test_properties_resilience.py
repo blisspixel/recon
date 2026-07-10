@@ -284,7 +284,8 @@ class TestProperty5DegradedInAllOutputs:
         for source_name in degraded:
             assert source_name in panel_text, f"{source_name} missing from panel"
             assert source_name in json_dict["degraded_sources"], f"{source_name} missing from JSON"
-            assert source_name in md, f"{source_name} missing from markdown"
+            markdown_name = "".join(f"\\{char}" if char in string.punctuation else char for char in source_name)
+            assert markdown_name in md, f"{source_name} missing from markdown"
             assert source_name in mcp_text, f"{source_name} missing from MCP text"
 
 

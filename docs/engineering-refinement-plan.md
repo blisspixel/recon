@@ -47,7 +47,9 @@ or failing guard.
 
 Status: active; live MCP boundary, score wording, and parent-platform
 child-product inference corrected in Unreleased; provider summaries now share
-one evidence-aware derivation across output surfaces
+one evidence-aware derivation across output surfaces; Markdown service labels
+now cross one escaped output boundary and use mutually exclusive provider
+groups
 Dependencies: none
 Risk: high product-trust risk, high compatibility sensitivity
 
