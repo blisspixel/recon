@@ -19,11 +19,11 @@ from collections.abc import Sequence
 from mcp.types import ToolAnnotations
 
 from recon_tool.formatter import (
-    detect_provider,
     format_tenant_dict,
     format_tenant_json,
     format_tenant_markdown,
 )
+from recon_tool.formatter.classify import provider_line
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.server import app as server_app
@@ -79,7 +79,7 @@ def _lookup_tenant_surface_lines(info: TenantInfo) -> list[str]:
 
 def _lookup_tenant_text(info: TenantInfo) -> str:
     """Render the default human-readable text format for ``lookup_tenant``."""
-    provider = detect_provider(info.services, info.slugs)
+    provider = provider_line(info)
     lines = [
         f"Company: {info.display_name}",
         f"Domain: {info.default_domain}",

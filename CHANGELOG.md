@@ -19,6 +19,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Removed unsupported Microsoft Copilot and Google Gemini service labels that
   were inferred solely from Microsoft 365 or Google Workspace presence. Direct
   AI domain-verification evidence continues to render normally.
+- Unified provider-line derivation across panel, JSON, CSV, MCP text, and chain
+  output. TXT-only account evidence no longer appears as an email secondary,
+  and chain panels no longer append an explanatory unknown-provider label.
 
 ## [2.3.9] - 2026-07-10
 

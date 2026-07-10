@@ -40,6 +40,7 @@ from recon_tool.formatter.classify import (
     detect_provider,
     is_gws_service,
     is_m365_service,
+    provider_line,
     slug_to_relationship_metadata,
 )
 from recon_tool.formatter.exposure import (  # re-exported: stable import path after the split
@@ -634,23 +635,6 @@ def _with_idp(base: str, google_idp_name: str | None) -> str:
     return f"{base} via {google_idp_name}" if google_idp_name else base
 
 
-def _key_facts_provider_line(info: TenantInfo) -> str:
-    """The provider line via ``detect_provider``, with the MX/DKIM-derived
-    has-MX and email-confirmed-slug flags (only secondaries confirmed via email
-    routing are shown)."""
-    has_mx_records = any(e.source_type == "MX" for e in info.evidence)
-    email_confirmed_slugs = frozenset(e.slug for e in info.evidence if e.source_type in ("MX", "DKIM"))
-    return detect_provider(
-        info.services,
-        info.slugs,
-        primary_email_provider=info.primary_email_provider,
-        email_gateway=info.email_gateway,
-        likely_primary_email_provider=info.likely_primary_email_provider,
-        has_mx_records=has_mx_records,
-        email_confirmed_slugs=email_confirmed_slugs,
-    )
-
-
 def _key_facts_auth_line(info: TenantInfo) -> str | None:
     """Combine the M365 and Google Workspace auth labels into one line.
 
@@ -715,7 +699,7 @@ def _render_key_facts(info: TenantInfo) -> Text:
     renders in ``tests/test_golden_renders.py`` pin the exact output.
     """
     facts = Text()
-    _append_field(facts, "Provider", _key_facts_provider_line(info))
+    _append_field(facts, "Provider", provider_line(info))
 
     if info.tenant_id:
         tenant_line = info.tenant_id
@@ -1913,10 +1897,10 @@ def render_chain_panel(report: ChainReport) -> Panel:
                 current_depth = r.chain_depth
                 text.append(f"  Depth {current_depth}:\n", style="bold")
             indent = "    " + "  " * r.chain_depth
-            provider = detect_provider(r.info.services, r.info.slugs)
+            provider = provider_line(r.info)
             text.append(f"{indent}{r.domain}", style="cyan")
             text.append(f" — {r.info.display_name}", style="dim")
-            if provider != "Unknown":
+            if not provider.startswith("Unknown"):
                 text.append(f" ({provider})", style="dim")
             text.append("\n")
 

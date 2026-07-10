@@ -108,8 +108,9 @@ use.
 **Current:** A domain with M365 tenant + MX → Trend Micro gateway + DKIM for
 M365 correctly reads as "Microsoft 365 via Trend Micro gateway". But if M365
 is the only detected slug and Google Workspace fires only from a TXT token
-(no DKIM, no MX), Google Workspace is treated as a weaker secondary/account
-signal. Use `--full` when account-only detections matter.
+(no DKIM, no MX), Google Workspace remains an account signal and does not enter
+the provider line. Use `--full` or structured output when account-only
+detections matter.
 
 **Why underclaimed:** An M365 tenant with a dormant Google Workspace
 registration is wildly common and doesn't mean active dual-platform email.

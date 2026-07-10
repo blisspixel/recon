@@ -45,17 +45,19 @@ three primary workflows.
 ### 1. Restore evidence-semantic integrity
 
 Status: active, highest trust priority. The live MCP instruction,
-score-description, and parent-platform child-product corrections are in
-Unreleased.
+score-description, parent-platform child-product, and cross-renderer provider
+summary corrections are in Unreleased.
 
 Why first: output truthfulness is more valuable than another feature. The
 roadmap review found a sparse-output fixture that inferred Copilot use from a
 parent tenant even though the evidence could not establish child-product
 licensing, enablement, deployment, or use. That inference and the earlier MCP
 target-interaction and score overstatements are now corrected with regression
-tests. The wider panel, CLI, generated-guidance, and recommendation audit
-remains open. Current sovereignty handling preserves absent metadata as
-unknown; that invariant should remain explicit and tested.
+tests. Provider topology now also uses one evidence-aware summary across panel,
+JSON, CSV, MCP, and chain output. The wider default-claim,
+generated-guidance, and recommendation audit remains open. Current sovereignty
+handling preserves absent metadata as unknown; that invariant should remain
+explicit and tested.
 
 Work:
 

@@ -12,6 +12,7 @@ pytest.importorskip("mcp")
 
 from recon_tool.models import (
     ConfidenceLevel,
+    EvidenceRecord,
     ReconLookupError,
     SourceResult,
     SurfaceAttribution,
@@ -137,6 +138,40 @@ class TestLookupText:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         result = await lookup_tenant("contoso.com")
         assert "Subdomain surface:" not in result
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_provider_line_omits_txt_only_secondary(self, mock_resolve: AsyncMock) -> None:
+        info = TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Contoso Ltd",
+            default_domain="contoso.onmicrosoft.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.HIGH,
+            services=("Microsoft 365", "Google Workspace"),
+            slugs=("microsoft365", "google-workspace"),
+            evidence=(
+                EvidenceRecord(
+                    source_type="MX",
+                    raw_value="mx.example",
+                    rule_name="test",
+                    slug="microsoft365",
+                ),
+                EvidenceRecord(
+                    source_type="TXT",
+                    raw_value="google-site-verification=x",
+                    rule_name="test",
+                    slug="google-workspace",
+                ),
+            ),
+            primary_email_provider="Microsoft 365",
+        )
+        mock_resolve.return_value = (info, SAMPLE_RESULTS)
+
+        result = await lookup_tenant("contoso.com")
+
+        assert "Provider: Microsoft 365 (primary)\n" in result
+        assert "Provider: Microsoft 365 (primary) + Google Workspace" not in result
 
 
 class TestLookupJson:

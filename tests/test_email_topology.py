@@ -12,10 +12,11 @@ Validates:
 
 from __future__ import annotations
 
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
-from recon_tool.formatter import detect_provider
+from recon_tool.formatter import detect_provider, format_tenant_csv_row, format_tenant_dict
 from recon_tool.insights import InsightContext, _email_topology_insights
 from recon_tool.merger import (
     _EMAIL_PROVIDER_SLUG_NAMES,
@@ -23,7 +24,7 @@ from recon_tool.merger import (
     _GATEWAY_SLUGS,
     _compute_email_topology,
 )
-from recon_tool.models import EvidenceRecord, SignalContext
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, SignalContext, TenantInfo
 from recon_tool.signals import evaluate_signals, reload_signals
 
 # ── Helpers ───────────────────────────────────────────────────────────
@@ -320,6 +321,94 @@ class TestDetectProviderFormatting:
             email_gateway="Trend Micro",
         )
         assert result == "Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)"
+
+    @pytest.mark.parametrize("secondary_slug", ["aws-ses", "self-hosted-mail"])
+    def test_legacy_direct_call_does_not_promote_new_secondary_types(
+        self,
+        secondary_slug: str,
+    ) -> None:
+        result = detect_provider(
+            services=(),
+            slugs=("microsoft365", secondary_slug),
+            primary_email_provider="Microsoft 365",
+        )
+
+        assert result == "Microsoft 365 (primary)"
+
+
+class TestProviderSurfaceConsistency:
+    @pytest.mark.parametrize(
+        ("secondary_slug", "secondary_name"),
+        [
+            ("aws-ses", "AWS SES"),
+            ("self-hosted-mail", "Self-hosted mail"),
+        ],
+    )
+    def test_mx_confirmed_secondary_provider_is_preserved(
+        self,
+        secondary_slug: str,
+        secondary_name: str,
+    ) -> None:
+        info = TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Contoso Ltd",
+            default_domain="contoso.onmicrosoft.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.HIGH,
+            services=("Microsoft 365", secondary_name),
+            slugs=("microsoft365", secondary_slug),
+            evidence=(
+                _ev("MX", "microsoft365"),
+                _ev("MX", secondary_slug),
+            ),
+            primary_email_provider=f"{secondary_name} + Microsoft 365",
+        )
+
+        expected = f"Microsoft 365 (primary) + {secondary_name} (secondary)"
+        assert format_tenant_dict(info)["provider"] == expected
+        assert format_tenant_csv_row(info)["provider"] == expected
+
+    def test_txt_only_secondary_is_omitted_from_json_and_csv_provider_lines(self) -> None:
+        info = TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Contoso Ltd",
+            default_domain="contoso.onmicrosoft.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.HIGH,
+            services=("Microsoft 365", "Google Workspace"),
+            slugs=("microsoft365", "google-workspace"),
+            evidence=(
+                _ev("MX", "microsoft365"),
+                _ev("TXT", "google-workspace"),
+            ),
+            primary_email_provider="Microsoft 365",
+        )
+
+        expected = "Microsoft 365 (primary)"
+        assert format_tenant_dict(info)["provider"] == expected
+        assert format_tenant_csv_row(info)["provider"] == expected
+
+    def test_gateway_does_not_promote_second_account_signal_to_secondary(self) -> None:
+        info = TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Contoso Ltd",
+            default_domain="contoso.onmicrosoft.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.MEDIUM,
+            services=("Proofpoint", "Microsoft 365", "Google Workspace"),
+            slugs=("proofpoint", "microsoft365", "google-workspace"),
+            evidence=(
+                _ev("MX", "proofpoint"),
+                _ev("HTTP", "microsoft365"),
+                _ev("TXT", "google-workspace"),
+            ),
+            email_gateway="Proofpoint",
+            likely_primary_email_provider="Google Workspace + Microsoft 365",
+        )
+
+        expected = "Microsoft 365 (likely primary) via Proofpoint gateway"
+        assert format_tenant_dict(info)["provider"] == expected
+        assert format_tenant_csv_row(info)["provider"] == expected
 
 
 # ── 11.3: Email topology insights ────────────────────────────────────
