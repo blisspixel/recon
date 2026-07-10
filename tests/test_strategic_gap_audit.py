@@ -21,15 +21,17 @@ def test_strategic_gap_audit_is_linked_from_reader_docs() -> None:
         assert "strategic-gap-audit.md" in _read(path), path
 
 
-def test_strategic_gap_audit_keeps_runtime_expansion_out_of_scope() -> None:
+def test_strategic_gap_audit_prioritizes_product_quality_without_runtime_expansion() -> None:
     text = " ".join(_read(AUDIT).split())
 
     for required in (
-        "feature-complete",
-        "not runtime expansion",
-        "hardening, polish, artifact review readiness",
+        "The highest-value work is not runtime expansion",
+        "evidence semantics, measured utility, catalog quality",
+        "MCP v2 beta",
+        "aggregate-safe product-quality baseline",
         "does not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior",
-        "Runtime expansion, catalog growth, stable-surface promotion, and public real-data release are all blocked",
+        "Runtime expansion, broad catalog growth, stable-surface promotion, "
+        "and public real-data release remain blocked",
     ):
         assert required in text
 
@@ -38,6 +40,11 @@ def test_strategic_gap_audit_names_real_remaining_gaps_without_fake_progress() -
     text = " ".join(_read(AUDIT).split())
 
     for required in (
+        "Evidence-semantic integrity",
+        "MCP v2 compatibility",
+        "Measured product utility",
+        "Catalog quality and freshness",
+        "Latency and degradation contract",
         "OpenSSF Best Practices Badge",
         "manual answer queue",
         "openssf-badge-readiness.md",
@@ -62,7 +69,8 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
     text = " ".join(_read(AUDIT).split())
 
     for required in (
-        "No private corpus, real target list, per-domain result rows, or tenant IDs are tracked",
+            "No private corpus, real target list, per-domain result rows, or "
+            "tenant IDs are committed or published",
         "Remote release readiness passes for the current pushed main branch",
         "public Scorecard API freshness and code-owned control scores",
         "public Scorecard API pass on current main",

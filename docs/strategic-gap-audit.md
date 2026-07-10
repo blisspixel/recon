@@ -7,16 +7,19 @@ Checked: 2026-07-10.
 
 ## Bottom Line
 
-The project has made real progress. The current phase is not runtime expansion.
-For the current roadmap, recon is feature-complete: the CLI, JSON schema, MCP
-server, release path, generated-artifact guards, public proof bundle, and
-claim-map gates are shipped. The highest-value work is now hardening, polish,
-artifact review readiness, OpenSSF process posture, and conservative research
-refinement.
+The project has a strong stable baseline: the CLI, JSON schema, local stdio MCP
+server, bounded collectors, release path, generated-artifact guards, public
+proof bundle, and claim-map gates are shipped. Stable infrastructure is not
+proof that the product is complete. The current product gaps are evidence
+semantics, measured utility, catalog quality, latency and degradation evidence,
+and MCP context and compatibility cost.
 
-That does not mean the project is finished forever. It means the next changes
-should improve trust, clarity, reproducibility, and false-positive control
-before adding surface area.
+The highest-value work is not runtime expansion. It is correcting any default
+claim that is stronger than its public evidence, characterizing the MCP v2 beta,
+and establishing an aggregate-safe product-quality baseline before adding more
+inference or graph surface. Artifact review, OpenSSF process, independent
+replication, and archive work remain worthwhile maintainer tracks, but they do
+not outrank product truthfulness or measured user value.
 
 ## Sources Checked
 
@@ -40,6 +43,14 @@ before adding surface area.
   <https://www.rfc-editor.org/rfc/rfc9989.html>,
   <https://www.rfc-editor.org/rfc/rfc9990.html>, and
   <https://www.rfc-editor.org/rfc/rfc9991.html>
+- MCP 2026-07-28 release candidate, draft tools, and Python SDK history:
+  <https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/>,
+  <https://modelcontextprotocol.io/specification/draft/server/tools>, and
+  <https://pypi.org/project/mcp/>
+- Python asyncio development guidance:
+  <https://docs.python.org/3.14/library/asyncio-dev.html>
+- JSON Schema 2020-12 validation:
+  <https://json-schema.org/draft/2020-12/json-schema-validation>
 - GitHub and Zenodo archive metadata guidance:
   <https://docs.github.com/repositories/archiving-a-github-repository/referencing-and-citing-content>,
   <https://help.zenodo.org/docs/github/describe-software/citation-file/>,
@@ -67,6 +78,8 @@ before adding surface area.
 - GitHub contributor history and current contributors are maintainer-only.
 - Top-level dependencies are current under the locked resolver state, with MCP
   intentionally bounded to the stable v1 line until a reviewed v2 migration.
+  Official Python SDK `2.0.0b1` shipped on 2026-06-30, so the isolated
+  compatibility-spike trigger is now met.
 - Public DMARC references in comments, tests, and validation notes use the
   current RFC 9989 protocol specification and RFC 9990 aggregate-reporting
   split rather than the prior obsolete citation.
@@ -77,16 +90,21 @@ These are not active gaps for the current roadmap:
 
 | Area | Why it is not a gap |
 |---|---|
-| Runtime features | The shipped CLI, MCP server, schema, batch, delta, posture, and explanation surfaces satisfy the current roadmap. |
-| Public company data | No private corpus, real target list, per-domain result rows, or tenant IDs are tracked. Private run outputs may exist locally under ignored paths only. |
+| Baseline runtime surface | The shipped CLI, MCP server, schema, batch, delta, posture, and explanation surfaces provide a stable base. New surface is not the current priority. |
+| Public company data | No private corpus, real target list, per-domain result rows, or tenant IDs are committed or published. Private corpus and run rows may exist only in the ignored local workspaces defined by the data-handling policy. |
 | Package release | Documentation and proof-memo refreshes do not require a new package release. Release when package behavior, public package metadata, or release artifacts change. |
 | Broad validation claims | The claim map already blocks population-rate, frequentist-coverage, and independent-calibration overclaims. |
-| Fingerprint expansion | No active public-source-backed candidate is waiting. New patterns need public documentation or disclosure-safe aggregate evidence. |
+| Broad fingerprint expansion | New patterns need public documentation or disclosure-safe aggregate evidence. A proposal enters the queue only with an exact record type, pattern, evidence basis, identifier, and disposition; vendor names alone are not backlog items. |
 
 ## Real Remaining Gaps
 
 | Gap | Why it matters | Current state | Next action | Stop rule |
 |---|---|---|---|---|
+| Evidence-semantic integrity | Parent-platform presence and model-bound public-evidence values can be presented more strongly than their evidence supports. | Sparse output exposes a child-product assumption; public-evidence values can still read like maturity verdicts outside the corrected MCP descriptions. | Audit every default claim and correct the smallest evidence-to-claim paths while preserving stable JSON. | Do not add new inference semantics while a known default claim lacks direct provenance. |
+| MCP v2 compatibility | The final 2026-07-28 protocol and stable SDK are imminent and contain breaking changes. | Stable v1.28.1 is locked; official v2 beta `2.0.0b1` is available for an isolated matrix. | Run the exact-pinned compatibility matrix and document migration actions, dependency floor, and rollback pin. | Do not publish a prerelease dependency or add remote MCP scope. |
+| Measured product utility | Green gates and sophisticated models do not establish that the output improves an operator decision. | No unified scorecard covers unsupported claims, abstention, provenance, catalog surface, CT marginal value, latency, degradation, or MCP context cost. | Establish an aggregate-safe baseline and predeclared deterministic-versus-fusion ablation. | Do not expand graph or probabilistic machinery without measured benefit. |
+| Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | The catalog has 847 entries and optional `verified` metadata, but no active classified-surface or stale-rule regression budget. | Baseline by record type and stratum, then ratchet references, dates, and negative fixtures. | No new undated, unreferenced, or untested rule. |
+| Latency and degradation contract | CT and external providers dominate long tails, while current published measurements are historical single runs. | Timeouts and partial results are bounded, but stage measurements and reproducible p50/p95 budgets are not established. | Run stable-v1 resolver and schema characterization before the product scorecard; apply only candidate-SDK deltas after the MCP matrix. | Move only proven blocking I/O and do not create brittle timing CI. |
 | OpenSSF Best Practices Badge | Scorecard marks this as absent until a real badge project exists. | Readiness evidence and the manual answer queue are documented in [openssf-posture.md](openssf-posture.md) and [openssf-badge-readiness.md](openssf-badge-readiness.md), but no badge is claimed. | Complete the questionnaire on `bestpractices.dev`, then link the real badge page. | Do not add a placeholder badge or claim a badge before the project exists. |
 | Reviewed PR signal | Scorecard cannot credit review history on direct-main work. | CODEOWNERS exists and required checks protect main. | Use reviewed PRs for non-urgent work when another qualified reviewer is available. | Do not manufacture review history or contributor diversity. |
 | Artifact archive and DOI | External papers are easier to cite and review when the exact artifact is archived. | GitHub release, PyPI release, citation metadata, SBOM, provenance, reproducible build recipe, and [archive-readiness.md](archive-readiness.md) exist; the archive path decision packet now separates `CITATION.cff` sufficiency from `.zenodo.json` need. | Once the paper package freezes, choose a DOI path such as Zenodo or the venue supplement, then add metadata deliberately. | Do not add `.zenodo.json`, DOI language, or archive-badge language before the archive policy is chosen. |
@@ -97,22 +115,27 @@ These are not active gaps for the current roadmap:
 
 ## Priority Order
 
-1. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
+1. Correct bounded default-claim semantics and define the provenance ADR scope.
+2. Run the isolated MCP v2 beta compatibility matrix.
+3. Run the stable-v1 resolver, allocation, CT-value, and schema
+   characterization that feeds product measurement.
+4. Complete the product-quality scorecard and freeze the ablation decision rule
+   before running it.
+5. Use the baseline to decide dimensioned email observations, catalog
+   priorities, and agent-surface simplification; apply candidate-SDK
+   characterization deltas after the MCP matrix.
+6. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
    release state and provenance aligned.
-2. Run a final paper claim freeze before any external submission package.
-3. Complete the OpenSSF Best Practices Badge questionnaire if a visible
-   Scorecard lift is worth the process work.
-4. Arrange one outside public-artifact replication pass.
-5. Decide whether the frozen paper package needs a DOI-backed archive.
-6. Resume pattern or motif work only when a reviewed, public-source-backed
-   candidate appears.
+7. Run the paper claim freeze, OpenSSF questionnaire, outside replication, and
+   archive decision as separate maintainer work when their external event is
+   ready.
 
 ## Decision
 
-The next work remains hardening and external write-up readiness. Runtime
-expansion, catalog growth, stable-surface promotion, and public real-data
-release are all blocked until a concrete consumer, support tier, or architecture
-review changes the value calculation.
+The next work is evidence integrity, MCP compatibility, and measured product
+quality. Runtime expansion, broad catalog growth, stable-surface promotion, and
+public real-data release remain blocked until a concrete consumer, measured
+benefit, support tier, or architecture review changes the value calculation.
 
 Public status surfaces should continue to name absent external events as gaps.
 Do not add Zenodo archive badges, DOI links, OpenSSF Best Practices project

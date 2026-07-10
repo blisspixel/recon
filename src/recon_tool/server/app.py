@@ -36,10 +36,12 @@ logger = logging.getLogger("recon")
 # the tool composition patterns, and what the confidence levels mean. Avoid
 # duplicating individual tool docstrings — those speak for themselves.
 SERVER_INSTRUCTIONS = """\
-recon is a passive domain-intelligence MCP server. It queries public DNS
-records, Microsoft/Google identity endpoints, and certificate-transparency
-logs. It performs zero active scanning, requires zero credentials, and never
-touches a target's own HTTP infrastructure.
+recon is a public-metadata domain-intelligence MCP server. It queries public
+DNS records, Microsoft/Google identity endpoints, and certificate-transparency
+logs. It performs zero active scanning and requires zero credentials. Its one
+default target-visible HTTP request is the standards-defined MTA-STS policy
+fetch at `mta-sts.<domain>`; Google CSE and BIMI certificate requests are
+explicit opt-in direct probes.
 
 ## When to use which tool
 
@@ -51,12 +53,14 @@ touches a target's own HTTP infrastructure.
   `profile` argument (fintech, healthcare, saas-b2b, high-value-target,
   public-sector, higher-ed) to apply a posture lens.
 - `assess_exposure(domain)` / `find_hardening_gaps(domain)` — defensive-review
-  framing with a posture score (0–100) and categorized gap list.
+  framing with a model-bound public-evidence index (0-100) and categorized gap
+  list. The index is not an overall security score.
 - `compare_postures(domain_a, domain_b)` — side-by-side comparison for peer /
   acquisition / vendor analysis.
-- `simulate_hardening(domain, fixes=[...])` — what-if: re-computes the posture
-  score with hypothetical fixes applied. Zero network calls (operates on cached
-  pipeline data).
+- `simulate_hardening(domain, fixes=[...])` - what-if: re-computes the
+  model-bound public-evidence index with hypothetical fixes applied. It is
+  cache-first and may perform the ordinary base lookup on a cache miss; the
+  simulation itself adds no network calls after resolution.
 - `test_hypothesis(domain, hypothesis)` — test a theory ("this org is
   mid-migration to Entra ID") against evidence. Returns likelihood + evidence.
 - `chain_lookup(domain, depth, result_limit=0)`: recursively resolve related
@@ -72,7 +76,8 @@ Typical agentic flow for a defensive review:
 1. `lookup_tenant(domain, explain=True)` — establish the baseline.
 2. `analyze_posture(domain)` with the relevant `profile` — posture lens.
 3. `find_hardening_gaps(domain)` — categorized gaps with severity.
-4. `simulate_hardening(domain, fixes=[...])` — quantify the improvement.
+4. `simulate_hardening(domain, fixes=[...])` - report the model-bound index
+   delta and remaining public-configuration observations.
 
 For introspection / hypothesis work:
 - `get_fingerprints()` / `get_signals()` — inspect what the tool knows how to

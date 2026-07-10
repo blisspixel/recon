@@ -93,6 +93,21 @@ maintainer's machine:
 Only the aggregate metrics (counts, calibration numbers, drift deltas) reach the
 repo; the apexes and per-domain output never do.
 
+Every new Tier 3 run directory must contain an ignored `RETENTION.md`. This is a
+manual local control, not a generated or committed artifact. Record:
+
+- the UTC creation date and validation purpose;
+- the aggregate memo or decision the rows support;
+- the review event or date after which retention is reconsidered;
+- one disposition: retain for named longitudinal comparison, delete after the
+  aggregate memo is reproduced and reviewed, or delete immediately because the
+  run is invalid.
+
+Update the disposition after aggregate review and remove superseded per-domain
+rows when they no longer support an active reproduction or named longitudinal
+comparison. Never copy `RETENTION.md`, the run rows, or identifying excerpts
+into a commit, issue, pull request, or agent transcript.
+
 The closed certificate-transparency validation sequence is broken out in
 [c3-ct-validation-plan.md](c3-ct-validation-plan.md). That document owns the
 historical retry order and closure rule; this page owns the enduring Tier 3

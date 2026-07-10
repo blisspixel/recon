@@ -363,6 +363,8 @@ class TestTTYStartupGuard:
         assert ran["called"] is True
         assert "NOT an interactive REPL" not in captured.err
         assert "Listening on stdio transport." in captured.err
+        assert "Available tools (selected):" in captured.err
+        assert "Available tools (20 total):" not in captured.err
 
     def test_non_tty_path_runs_server_normally(
         self,
