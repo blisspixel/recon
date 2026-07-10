@@ -1,10 +1,10 @@
 # Tenant Report: Northwind Traders
 
-**Domain:** northwindtraders.com  
-**Default Domain:** northwindtraders.com  
-**Confidence:** low (1 sources)  
-**Evidence Confidence:** medium  
-**Inference Confidence:** medium  
+**Domain:** northwindtraders\.com\
+**Default Domain:** northwindtraders\.com\
+**Confidence:** low (1 sources)\
+**Evidence Confidence:** medium\
+**Inference Confidence:** medium
 
 ## Microsoft 365 Services
 
@@ -12,7 +12,7 @@
 
 ## Insights
 
-- Passive DNS surfaces little for this apex.
+- Passive DNS surfaces little for this apex\.
 
 ---
-*Sources: dns_records*
+*Sources: dns\_records*

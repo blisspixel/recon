@@ -1,13 +1,13 @@
 # Tenant Report: Contoso Ltd
 
-**Domain:** contoso.com  
-**Tenant ID:** `a1b2c3d4-e5f6-7890-abcd-ef1234567890`  
-**Default Domain:** contoso.com  
-**Region:** NA  
-**Auth Type:** Federated  
-**Confidence:** high (3 sources)  
-**Evidence Confidence:** high  
-**Inference Confidence:** high  
+**Domain:** contoso\.com\
+**Tenant ID:** `a1b2c3d4-e5f6-7890-abcd-ef1234567890`\
+**Default Domain:** contoso\.com\
+**Region:** NA\
+**Auth Type:** Federated\
+**Confidence:** high (3 sources)\
+**Evidence Confidence:** high\
+**Inference Confidence:** high
 
 ## Microsoft 365 Services
 
@@ -19,7 +19,7 @@
 
 ## Insights
 
-- Email security 4/5 strong \(DMARC reject, DKIM, SPF strict, MTA-STS\)
+- Email security 4\/5 strong \(DMARC reject\, DKIM\, SPF strict\, MTA\-STS\)
 
 ## Certificate Intelligence
 
@@ -28,18 +28,18 @@
 - **Issuance Velocity:** 7 certs in last 90 days
 - **Newest Cert Age:** 2 days
 - **Oldest Cert Age:** 365 days
-- **Top Issuers:** Let's Encrypt, DigiCert, Sectigo
+- **Top Issuers:** Let\'s Encrypt, DigiCert, Sectigo
 
 ## Tenant Domains (3)
 
-- contoso.com
-- contoso.onmicrosoft.com
-- contoso.co.uk
+- contoso\.com
+- contoso\.onmicrosoft\.com
+- contoso\.co\.uk
 
 ## Related Domains
 
-- api.contoso.com
-- login.contoso.com
+- api\.contoso\.com
+- login\.contoso\.com
 
 ---
-*Sources: oidc_discovery, userrealm, dns_records*
+*Sources: oidc\_discovery, userrealm, dns\_records*

@@ -54,8 +54,11 @@ parent tenant even though the evidence could not establish child-product
 licensing, enablement, deployment, or use. That inference and the earlier MCP
 target-interaction and score overstatements are now corrected with regression
 tests. Provider topology now also uses one evidence-aware summary across panel,
-JSON, CSV, MCP, and chain output. The wider default-claim,
-generated-guidance, and recommendation audit remains open. Current sovereignty
+JSON, CSV, MCP, and chain output. Source-derived Markdown service labels now
+cross an escaped output boundary, and service sections use exact,
+mutually exclusive provider grouping instead of broad substring matches. The
+wider default-claim, generated-guidance, and recommendation audit remains open.
+Current sovereignty
 handling preserves absent metadata as unknown; that invariant should remain
 explicit and tested.
 

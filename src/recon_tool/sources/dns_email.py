@@ -19,6 +19,7 @@ from recon_tool.constants import (
     SVC_BIMI,
     SVC_DKIM,
     SVC_DKIM_EXCHANGE,
+    SVC_DKIM_GOOGLE,
     SVC_DMARC,
     SVC_MTA_STS,
     SVC_SPF_SOFTFAIL,
@@ -303,13 +304,13 @@ def _apply_google_dkim(ctx: dns_base.DetectionCtx, txt_results: list[str], cname
     for record in txt_results:
         if "v=dkim1" in record.lower():
             ctx.services.add(SVC_DKIM)
-            ctx.add("DKIM (Google Workspace)", "google-workspace", source_type="DKIM", raw_value=record)
+            ctx.add(SVC_DKIM_GOOGLE, "google-workspace", source_type="DKIM", raw_value=record)
             return
     for cname in cname_results:
         host = cname.lower().rstrip(".")
         if host_has_suffix(host, "google.com"):
             ctx.services.add(SVC_DKIM)
-            ctx.add("DKIM (Google Workspace)", "google-workspace", source_type="DKIM", raw_value=cname)
+            ctx.add(SVC_DKIM_GOOGLE, "google-workspace", source_type="DKIM", raw_value=cname)
             return
 
 
