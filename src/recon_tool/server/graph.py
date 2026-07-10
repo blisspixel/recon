@@ -25,7 +25,6 @@ from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import (
     log_structured,
-    rate_limit_release,
     rate_limit_try_acquire,
 )
 from recon_tool.validator import validate_domain
@@ -214,9 +213,8 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
     # Rate limit: chain_lookup is the most expensive tool (up to
     # MAX_CHAIN_DOMAINS resolves per call), so an untrusted MCP caller
     # could otherwise use it to amplify outbound DNS/HTTP. Gate it on the
-    # same per-domain limiter the single-domain tools use; release the
-    # slot on error so a transient failure does not block a legitimate
-    # retry.
+    # same per-domain limiter the single-domain tools use. Retain the cooldown
+    # after every started attempt, including failures and cancellation.
     if not rate_limit_try_acquire(validated):
         return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
 
@@ -226,10 +224,8 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
 
         report = await chain_resolve(validated, depth=depth)
     except asyncio.CancelledError:
-        rate_limit_release(validated)
         raise
     except Exception as exc:
-        rate_limit_release(validated)
         logger.exception(
             "Unexpected error in chain lookup for %s (request_id=%s)",
             domain,

@@ -56,7 +56,10 @@
   "properties": {
     "tenant_id": {
       "description": "Microsoft 365 tenant UUID. Null for non-M365 domains.",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "display_name": {
       "description": "Organization display name. Falls back to the queried domain when no better signal is available.",
@@ -77,52 +80,95 @@
     "confidence": {
       "description": "Overall confidence in the merged result.",
       "type": "string",
-      "enum": ["high", "medium", "low"]
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
     },
     "evidence_confidence": {
       "description": "Confidence in detected fingerprint slugs.",
       "type": "string",
-      "enum": ["high", "medium", "low"]
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
     },
     "inference_confidence": {
       "description": "Confidence in derived insights.",
       "type": "string",
-      "enum": ["high", "medium", "low"]
+      "enum": [
+        "high",
+        "medium",
+        "low"
+      ]
     },
     "region": {
       "description": "Geographic region when detectable via OIDC (e.g. 'NA', 'EU', 'WW').",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "auth_type": {
       "description": "M365 authentication style.",
-      "type": ["string", "null"],
-      "enum": ["Federated", "Managed", null]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "Federated",
+        "Managed",
+        null
+      ]
     },
     "google_auth_type": {
       "description": "Google Workspace authentication style.",
-      "type": ["string", "null"],
-      "enum": ["Federated", "Managed", null]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "Federated",
+        "Managed",
+        null
+      ]
     },
     "google_idp_name": {
       "description": "Third-party IdP name for Google Workspace when detectable.",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "primary_email_provider": {
       "description": "MX-confirmed primary email provider.",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "likely_primary_email_provider": {
       "description": "Inferred primary (hedged) when MX is a gateway and DKIM/TXT/OIDC points to a specific downstream.",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "email_gateway": {
       "description": "MX-detected email security gateway (Proofpoint, Mimecast, etc.).",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "sources": {
       "description": "Source names that successfully contributed to the result.",
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "partial": {
       "description": "True when any core source is in degraded_sources (CT-only degradation does not flip this flag).",
@@ -131,27 +177,42 @@
     "degraded_sources": {
       "description": "Source names that failed or were unavailable.",
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "services": {
       "description": "Human-readable service names ('Microsoft 365', 'Slack', etc.).",
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "slugs": {
       "description": "Stable fingerprint slugs for programmatic matching.",
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "detection_scores": {
       "description": "Per-slug detection score level aggregated from evidence.",
       "type": "object",
-      "additionalProperties": {"type": "string", "enum": ["low", "medium", "high"]}
+      "additionalProperties": {
+        "type": "string",
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
+      }
     },
     "insights": {
       "description": "Derived intelligence lines. Exact wording may evolve; presence and signal types are stable.",
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "domain_count": {
       "description": "Number of domains in the tenant.",
@@ -161,12 +222,16 @@
     "tenant_domains": {
       "description": "All domains found in the tenant.",
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "related_domains": {
       "description": "Domains inferred from CNAME breadcrumbs, CT logs, or autodiscover delegation.",
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "email_security_score": {
       "description": "Count of the 5 email controls present: effectively enforcing DMARC, DKIM selectors, SPF strict (-all), MTA-STS, BIMI.",
@@ -176,28 +241,52 @@
     },
     "dmarc_policy": {
       "description": "DMARC policy when a DMARC record is present.",
-      "type": ["string", "null"],
-      "enum": ["reject", "quarantine", "none", null]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "reject",
+        "quarantine",
+        "none",
+        null
+      ]
     },
     "dmarc_pct": {
       "description": "DMARC pct= parameter.",
-      "type": ["integer", "null"],
+      "type": [
+        "integer",
+        "null"
+      ],
       "minimum": 0,
       "maximum": 100
     },
     "mta_sts_mode": {
       "description": "MTA-STS policy mode.",
-      "type": ["string", "null"],
-      "enum": ["enforce", "testing", "none", null]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "enforce",
+        "testing",
+        "none",
+        null
+      ]
     },
     "site_verification_tokens": {
       "description": "TXT tokens observed on the apex (e.g. 'google-site-verification=', 'MS=').",
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "ct_provider_used": {
       "description": "Best-effort CT-pipeline telemetry, not part of the guaranteed contract (removed from the required set in the v2.0 schema-hardening pass so the CT pipeline can evolve). Which CT provider answered, or '(cached)' suffix when data came from the per-domain CT cache.",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "ct_subdomain_count": {
       "description": "Number of subdomains returned after filtering.",
@@ -206,45 +295,88 @@
     },
     "ct_cache_age_days": {
       "description": "Best-effort CT-pipeline telemetry, not part of the guaranteed contract (optional since the v2.0 schema-hardening pass). Age of the CT cache entry in days when cached data was used. Null when data came from a live provider.",
-      "type": ["integer", "null"],
+      "type": [
+        "integer",
+        "null"
+      ],
       "minimum": 0
     },
     "ct_attempt_outcome": {
       "description": "Best-effort CT-pipeline telemetry, not part of the guaranteed contract (optional since the v2.0 schema-hardening pass; the enum may gain values as the pipeline evolves). v1.9.25: outcome of the CT enumeration attempt. cache_hit when the cache-first short-circuit served the result. live_success when a live provider returned data. live_rate_limited when a provider hit HTTP 429 or local pacing / wait-ceiling limits and no provider or cache returned data. breaker_open when every failed provider was stopped by an open local breaker before a useful live attempt. live_other_failure for non-429 errors (timeout, 5xx, JSON parse). cache_miss when providers returned empty-but-not-error and no cache entry existed. skipped when --no-ct was passed. Null on older records or sources that do not touch CT.",
-      "type": ["string", "null"],
-      "enum": [null, "cache_hit", "live_success", "live_rate_limited", "breaker_open", "live_other_failure", "cache_miss", "skipped"]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        null,
+        "cache_hit",
+        "live_success",
+        "live_rate_limited",
+        "breaker_open",
+        "live_other_failure",
+        "cache_miss",
+        "skipped"
+      ]
     },
     "cert_summary": {
       "description": "Certificate transparency summary. Null when no CT data was obtained.",
       "oneOf": [
-        {"$ref": "#/$defs/CertSummary"},
-        {"type": "null"}
+        {
+          "$ref": "#/$defs/CertSummary"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "cloud_instance": {
       "description": "Microsoft cloud-sovereignty host from M365 OIDC discovery. Microsoft controls this value and may add sovereign clouds, so it is an open string rather than a closed enum; known values include microsoftonline.com (commercial), microsoftonline.us (US Gov), and partner.microsoftonline.cn (China).",
-      "type": ["string", "null"]
+      "type": [
+        "string",
+        "null"
+      ]
     },
     "tenant_region_sub_scope": {
       "description": "Gov-cloud disambiguation from M365 OIDC.",
-      "type": ["string", "null"],
-      "enum": ["GCC", "DOD", "USGov", null]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "GCC",
+        "DOD",
+        "USGov",
+        null
+      ]
     },
     "msgraph_host": {
       "description": "Authoritative Microsoft Graph host.",
-      "type": ["string", "null"],
-      "enum": ["graph.microsoft.com", "graph.microsoft.us", null]
+      "type": [
+        "string",
+        "null"
+      ],
+      "enum": [
+        "graph.microsoft.com",
+        "graph.microsoft.us",
+        null
+      ]
     },
     "lexical_observations": {
       "description": "Hedged observations from CT subdomain lexical taxonomy.",
       "type": "array",
-      "items": {"type": "string"}
+      "items": {
+        "type": "string"
+      }
     },
     "bimi_identity": {
-      "description": "BIMI VMC identity. Null when no BIMI VMC was observed.",
+      "description": "BIMI VMC identity from a trust-validated source. Null when no validated identity is available; observing an unverified certificate document does not populate this field.",
       "oneOf": [
-        {"$ref": "#/$defs/BIMIIdentity"},
-        {"type": "null"}
+        {
+          "$ref": "#/$defs/BIMIIdentity"
+        },
+        {
+          "type": "null"
+        }
       ]
     },
     "fusion_enabled": {
@@ -263,46 +395,64 @@
     "slug_confidences": {
       "description": "Bayesian per-slug posterior means (stable v2.0+). An object mapping each detected slug to its posterior mean in [0, 1], parallel to detection_scores. Populated only when fusion runs (see fusion_enabled); empty object otherwise. The Beta layer operates on raw evidence; the network layer (posterior_observations) propagates through chained claims.",
       "type": "object",
-      "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}
+      "additionalProperties": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 1
+      }
     },
     "posterior_observations": {
       "description": "Marginal posteriors over high-level claims from the Bayesian network at recon_tool/data/bayesian_network.yaml (v1.9; stable v2.0+). Each entry includes the posterior P(node=present | E) and the central 80% credible interval. Populated only when fusion runs (see fusion_enabled); empty array otherwise. The Beta layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
       "type": "array",
-      "items": {"$ref": "#/$defs/PosteriorObservation"}
+      "items": {
+        "$ref": "#/$defs/PosteriorObservation"
+      }
     },
     "surface_attributions": {
-      "description": "Per-subdomain attribution to a SaaS or infrastructure provider, derived from CNAME-chain classification of related_domains. Each entry maps one subdomain to its primary service. Application-tier matches (Auth0, Shopify, Zendesk, ...) take precedence over infrastructure-tier matches (Cloudflare, Fastly, CloudFront, ...) when a chain produces both — the infrastructure layer is recorded in infra_slug / infra_name as supplementary context. Empty array when no related domains classified.",
+      "description": "Per-subdomain attribution to a SaaS or infrastructure provider, derived from CNAME-chain classification of related_domains. Each entry maps one subdomain to its primary service. Application-tier matches (Auth0, Shopify, Zendesk, ...) take precedence over infrastructure-tier matches (Cloudflare, Fastly, CloudFront, ...) when a chain produces both \u2014 the infrastructure layer is recorded in infra_slug / infra_name as supplementary context. Empty array when no related domains classified.",
       "type": "array",
-      "items": {"$ref": "#/$defs/SurfaceAttribution"}
+      "items": {
+        "$ref": "#/$defs/SurfaceAttribution"
+      }
     },
     "evidence_conflicts": {
       "description": "Top-level array of cross-source disagreements (v1.7+). Each entry names a merged field where 2+ sources provided different non-None values, with every candidate preserved. Empty array when sources agreed. The conflict-aware merger picks a winner using source-confidence ordering; this array surfaces the alternates so consumers can see what was discarded. The legacy `conflicts` dict that --explain emits remains for backwards compatibility.",
       "type": "array",
-      "items": {"$ref": "#/$defs/EvidenceConflict"}
+      "items": {
+        "$ref": "#/$defs/EvidenceConflict"
+      }
     },
     "chain_motifs": {
-      "description": "CNAME chain motifs (v1.7+). Each entry records an ordered proxy/CDN/origin shape (e.g. Cloudflare → AWS origin, Akamai → Azure origin) that fired on a related subdomain's CNAME chain. Observable structure only — never an ownership claim. Empty array when no motif matched any related subdomain. The motif catalog lives in recon_tool/data/motifs.yaml and can be extended via ~/.recon/motifs.yaml (additive only).",
+      "description": "CNAME chain motifs (v1.7+). Each entry records an ordered proxy/CDN/origin shape (e.g. Cloudflare \u2192 AWS origin, Akamai \u2192 Azure origin) that fired on a related subdomain's CNAME chain. Observable structure only \u2014 never an ownership claim. Empty array when no motif matched any related subdomain. The motif catalog lives in recon_tool/data/motifs.yaml and can be extended via ~/.recon/motifs.yaml (additive only).",
       "type": "array",
-      "items": {"$ref": "#/$defs/ChainMotif"}
+      "items": {
+        "$ref": "#/$defs/ChainMotif"
+      }
     },
     "infrastructure_clusters": {
-      "description": "Per-domain CT co-occurrence community detection report (v1.8+). Always emitted. ``algorithm`` records which path produced the partition (``louvain`` for small graphs, ``connected_components`` when the graph exceeds the size cap, ``skipped`` when no graph could be built). Modularity is 0.0 in the fallback / skipped paths. Members within each cluster are sorted; clusters are sorted by size descending. Observable structure only — clusters describe co-issuance, not ownership.",
+      "description": "Per-domain CT co-occurrence community detection report (v1.8+). Always emitted. ``algorithm`` records which path produced the partition (``louvain`` for small graphs, ``connected_components`` when the graph exceeds the size cap, ``skipped`` when no graph could be built). Modularity is 0.0 in the fallback / skipped paths. Members within each cluster are sorted; clusters are sorted by size descending. Observable structure only \u2014 clusters describe co-issuance, not ownership.",
       "$ref": "#/$defs/InfrastructureClusterReport"
     },
     "fingerprint_metadata": {
-      "description": "Per-slug relationship metadata (v1.8+). Object keyed by detected fingerprint slug. Each value is `{product_family, parent_vendor, bimi_org}` — descriptive hints sourced from the fingerprint YAML. Slugs without any populated metadata are omitted entirely. Empty object when no detected slug carries metadata. Drives the v1.8 ecosystem hypergraph; never an ownership assertion.",
+      "description": "Per-slug relationship metadata (v1.8+). Object keyed by detected fingerprint slug. Each value is `{product_family, parent_vendor, bimi_org}` \u2014 descriptive hints sourced from the fingerprint YAML. Slugs without any populated metadata are omitted entirely. Empty object when no detected slug carries metadata. Drives the v1.8 ecosystem hypergraph; never an ownership assertion.",
       "type": "object",
-      "additionalProperties": {"$ref": "#/$defs/FingerprintMetadata"}
+      "additionalProperties": {
+        "$ref": "#/$defs/FingerprintMetadata"
+      }
     },
     "unclassified_cname_chains": {
       "description": "Conditional. Present only when ``--include-unclassified`` is passed, absent otherwise; consumers should not treat it as always present. CNAME chains the surface classifier resolved but could not attribute to any cname_target fingerprint. Each entry: {subdomain, chain: [hop1, hop2, terminal]}. Wildcard-DNS echoes are filtered out before this list is populated. Feeds the fingerprint-discovery loop in validation/find_gaps.py and the /recon-fingerprint-triage skill.",
       "type": "array",
-      "items": {"$ref": "#/$defs/UnclassifiedCnameChain"}
+      "items": {
+        "$ref": "#/$defs/UnclassifiedCnameChain"
+      }
     },
     "evidence": {
       "description": "Conditional. Present only with --explain, absent otherwise; consumers should not treat it as always present. Per-detection evidence trace.",
       "type": "array",
-      "items": {"$ref": "#/$defs/EvidenceRecord"}
+      "items": {
+        "$ref": "#/$defs/EvidenceRecord"
+      }
     },
     "explanation_dag": {
       "description": "Conditional. Present only with --explain on the lookup_tenant MCP tool, absent otherwise; consumers should not treat it as always present. Top-level keys: evidence, slugs, rules, signals, insights, each a list of records with id and references.",
@@ -313,10 +463,17 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["token", "peer"],
+        "required": [
+          "token",
+          "peer"
+        ],
         "properties": {
-          "token": {"type": "string"},
-          "peer": {"type": "string"}
+          "token": {
+            "type": "string"
+          },
+          "peer": {
+            "type": "string"
+          }
         }
       }
     },
@@ -325,10 +482,23 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["tenant_id", "peers"],
+        "required": [
+          "tenant_id",
+          "peers"
+        ],
         "properties": {
-          "tenant_id": {"type": ["string", "null"]},
-          "peers": {"type": "array", "items": {"type": "string"}}
+          "tenant_id": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "peers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       }
     },
@@ -337,11 +507,24 @@
       "type": "array",
       "items": {
         "type": "object",
-        "required": ["display_name", "normalized_name", "peers"],
+        "required": [
+          "display_name",
+          "normalized_name",
+          "peers"
+        ],
         "properties": {
-          "display_name": {"type": "string"},
-          "normalized_name": {"type": "string"},
-          "peers": {"type": "array", "items": {"type": "string"}}
+          "display_name": {
+            "type": "string"
+          },
+          "normalized_name": {
+            "type": "string"
+          },
+          "peers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
         }
       }
     }
@@ -360,14 +543,32 @@
         "deployment_bursts"
       ],
       "properties": {
-        "cert_count": {"type": "integer", "minimum": 0},
-        "issuer_diversity": {"type": "integer", "minimum": 0},
-        "issuance_velocity": {"type": "integer", "minimum": 0, "description": "Certs issued in last 90 days."},
-        "newest_cert_age_days": {"type": "integer", "minimum": 0},
-        "oldest_cert_age_days": {"type": "integer", "minimum": 0},
+        "cert_count": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issuer_diversity": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "issuance_velocity": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Certs issued in last 90 days."
+        },
+        "newest_cert_age_days": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "oldest_cert_age_days": {
+          "type": "integer",
+          "minimum": 0
+        },
         "top_issuers": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string"
+          },
           "maxItems": 3
         },
         "wildcard_sibling_clusters": {
@@ -375,82 +576,201 @@
           "type": "array",
           "items": {
             "type": "object",
-            "required": ["names"],
+            "required": [
+              "names"
+            ],
             "properties": {
-              "names": {"type": "array", "items": {"type": "string"}}
+              "names": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
             }
           }
         },
         "deployment_bursts": {
-          "description": "Stable v1.7+. Cohorts of cert issuances clustered by `not_before` proximity (default 60s window, min 3 distinct non-wildcard SANs). Output is intentionally relative — span_seconds + name list — and never claims ownership. Empty array when no cluster meets the minimum size. Bounded — at most 8 bursts, 25 names per burst.",
+          "description": "Stable v1.7+. Cohorts of cert issuances clustered by `not_before` proximity (default 60s window, min 3 distinct non-wildcard SANs). Output is intentionally relative \u2014 span_seconds + name list \u2014 and never claims ownership. Empty array when no cluster meets the minimum size. Bounded \u2014 at most 8 bursts, 25 names per burst.",
           "type": "array",
-          "items": {"$ref": "#/$defs/CertBurst"}
+          "items": {
+            "$ref": "#/$defs/CertBurst"
+          }
         }
       }
     },
     "CertBurst": {
       "type": "object",
-      "required": ["window_start", "window_end", "span_seconds", "names"],
+      "required": [
+        "window_start",
+        "window_end",
+        "span_seconds",
+        "names"
+      ],
       "properties": {
-        "window_start": {"type": "string", "description": "ISO-8601 UTC of earliest not_before in this burst."},
-        "window_end": {"type": "string", "description": "ISO-8601 UTC of latest not_before in this burst."},
-        "span_seconds": {"type": "integer", "minimum": 0, "description": "Window span in seconds."},
+        "window_start": {
+          "type": "string",
+          "description": "ISO-8601 UTC of earliest not_before in this burst."
+        },
+        "window_end": {
+          "type": "string",
+          "description": "ISO-8601 UTC of latest not_before in this burst."
+        },
+        "span_seconds": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Window span in seconds."
+        },
         "names": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string"
+          },
           "description": "Distinct non-wildcard SANs co-issued inside this window, sorted."
         }
       }
     },
     "BIMIIdentity": {
+      "description": "Identity attributes supplied by a source that validates the certificate chain and VMC profile.",
       "type": "object",
-      "required": ["organization", "country", "state", "locality", "trademark"],
+      "required": [
+        "organization",
+        "country",
+        "state",
+        "locality",
+        "trademark"
+      ],
       "properties": {
-        "organization": {"type": "string"},
-        "country": {"type": ["string", "null"]},
-        "state": {"type": ["string", "null"]},
-        "locality": {"type": ["string", "null"]},
-        "trademark": {"type": ["string", "null"]}
+        "organization": {
+          "type": "string"
+        },
+        "country": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "state": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "locality": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "trademark": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "EvidenceRecord": {
       "type": "object",
-      "required": ["source_type", "raw_value", "rule_name", "slug"],
+      "required": [
+        "source_type",
+        "raw_value",
+        "rule_name",
+        "slug"
+      ],
       "properties": {
         "source_type": {
           "type": "string",
           "description": "DNS or HTTP source class (TXT, MX, CNAME, NS, SRV, CAA, SPF, HTTP)."
         },
-        "raw_value": {"type": "string"},
-        "rule_name": {"type": "string"},
-        "slug": {"type": "string"}
+        "raw_value": {
+          "type": "string"
+        },
+        "rule_name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": "string"
+        }
       }
     },
     "SurfaceAttribution": {
-      "description": "Maps one subdomain to its primary service from CNAME chain classification. primary_* fields are the application-tier match when present, else the most specific infrastructure-tier match. infra_* fields are populated only when both an application and an infrastructure tier matched — they record the CDN or load balancer fronting the application service.",
+      "description": "Maps one subdomain to its primary service from CNAME chain classification. primary_* fields are the application-tier match when present, else the most specific infrastructure-tier match. infra_* fields are populated only when both an application and an infrastructure tier matched \u2014 they record the CDN or load balancer fronting the application service.",
       "type": "object",
-      "required": ["subdomain", "primary_slug", "primary_name", "primary_tier", "infra_slug", "infra_name"],
+      "required": [
+        "subdomain",
+        "primary_slug",
+        "primary_name",
+        "primary_tier",
+        "infra_slug",
+        "infra_name"
+      ],
       "properties": {
-        "subdomain": {"type": "string"},
-        "primary_slug": {"type": "string"},
-        "primary_name": {"type": "string"},
-        "primary_tier": {"type": "string", "enum": ["application", "infrastructure"]},
-        "infra_slug": {"type": ["string", "null"]},
-        "infra_name": {"type": ["string", "null"]}
+        "subdomain": {
+          "type": "string"
+        },
+        "primary_slug": {
+          "type": "string"
+        },
+        "primary_name": {
+          "type": "string"
+        },
+        "primary_tier": {
+          "type": "string",
+          "enum": [
+            "application",
+            "infrastructure"
+          ]
+        },
+        "infra_slug": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "infra_name": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
       }
     },
     "ChainMotif": {
-      "description": "One CNAME chain motif observed against a related subdomain. ``chain`` is the ordered subset of hops that matched the motif's markers — not the full original chain.",
+      "description": "One CNAME chain motif observed against a related subdomain. ``chain`` is the ordered subset of hops that matched the motif's markers \u2014 not the full original chain.",
       "type": "object",
-      "required": ["motif_name", "display_name", "confidence", "subdomain", "chain"],
+      "required": [
+        "motif_name",
+        "display_name",
+        "confidence",
+        "subdomain",
+        "chain"
+      ],
       "properties": {
-        "motif_name": {"type": "string", "description": "Stable identifier from motifs.yaml."},
-        "display_name": {"type": "string", "description": "Human-readable label with → separators."},
-        "confidence": {"type": "string", "enum": ["high", "medium", "low"]},
-        "subdomain": {"type": "string", "description": "Related subdomain whose chain produced the match."},
+        "motif_name": {
+          "type": "string",
+          "description": "Stable identifier from motifs.yaml."
+        },
+        "display_name": {
+          "type": "string",
+          "description": "Human-readable label with \u2192 separators."
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "subdomain": {
+          "type": "string",
+          "description": "Related subdomain whose chain produced the match."
+        },
         "chain": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string"
+          },
           "description": "Matched hops in order, one per motif marker."
         }
       }
@@ -458,11 +778,21 @@
     "InfrastructureClusterReport": {
       "description": "Stable v1.8+. Wraps the cluster list with the algorithm path and the underlying graph metrics so downstream tools can interpret the partition correctly.",
       "type": "object",
-      "required": ["algorithm", "modularity", "node_count", "edge_count", "clusters"],
+      "required": [
+        "algorithm",
+        "modularity",
+        "node_count",
+        "edge_count",
+        "clusters"
+      ],
       "properties": {
         "algorithm": {
           "type": "string",
-          "enum": ["louvain", "connected_components", "skipped"],
+          "enum": [
+            "louvain",
+            "connected_components",
+            "skipped"
+          ],
           "description": "Path that produced the partition. ``connected_components`` is the deterministic fallback used when the graph exceeds the v1.8 node cap; ``skipped`` means no graph was built (no CT entries, fewer than two nodes, or no edges)."
         },
         "modularity": {
@@ -470,7 +800,10 @@
           "description": "Newman-Girvan modularity for the Louvain partition. 0.0 in the fallback / skipped paths."
         },
         "partition_stability": {
-          "type": ["number", "null"],
+          "type": [
+            "number",
+            "null"
+          ],
           "description": "Partition consensus across a Louvain seed sweep: the mean pairwise adjusted Rand index between the partitions produced by stability_runs different seeds (CAL11). 1.0 means every seed produced the identical partition; lower values flag partition degeneracy that a single modularity score cannot see. null outside the Louvain path (fallback / skipped), where the partition is deterministic and the measure is not applicable. Added 2.2.0; schema-additive."
         },
         "stability_runs": {
@@ -478,62 +811,137 @@
           "minimum": 0,
           "description": "Number of distinct Louvain seeds in the partition-stability sweep. 0 when partition_stability is null. Added 2.2.0; schema-additive."
         },
-        "node_count": {"type": "integer", "minimum": 0, "description": "Distinct non-wildcard SAN hostnames observed across the cert entries."},
-        "edge_count": {"type": "integer", "minimum": 0, "description": "Edges in the co-occurrence graph (each edge weights co-issuance count)."},
+        "node_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Distinct non-wildcard SAN hostnames observed across the cert entries."
+        },
+        "edge_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Edges in the co-occurrence graph (each edge weights co-issuance count)."
+        },
         "clusters": {
           "type": "array",
-          "items": {"$ref": "#/$defs/InfrastructureCluster"}
+          "items": {
+            "$ref": "#/$defs/InfrastructureCluster"
+          }
         }
       }
     },
     "EcosystemHyperedge": {
       "description": "One observed multi-domain signature in a ``recon batch --json --include-ecosystem`` run (v1.8+). Surfaced as the top-level ``ecosystem_hyperedges`` array of the batch wrapper, where the per-domain entries appear under ``domains``. Not emitted in single-domain ``--json`` output.",
       "type": "object",
-      "required": ["edge_type", "key", "members"],
+      "required": [
+        "edge_type",
+        "key",
+        "members"
+      ],
       "properties": {
         "edge_type": {
           "type": "string",
-          "enum": ["top_issuer", "bimi_org", "parent_vendor", "shared_slugs"],
-          "description": "Rule that produced the edge: shared CT top issuer, shared BIMI VMC organization, shared fingerprint parent_vendor, or shared fingerprint-slug pair (≥2 overlap)."
+          "enum": [
+            "top_issuer",
+            "bimi_org",
+            "parent_vendor",
+            "shared_slugs"
+          ],
+          "description": "Rule that produced the edge: shared CT top issuer, shared BIMI VMC organization, shared fingerprint parent_vendor, or shared fingerprint-slug pair (\u22652 overlap)."
         },
         "key": {
           "type": "string",
-          "description": "Value the rule fired on. Issuer name, BIMI org, parent vendor, or — for ``shared_slugs`` — the comma-joined intersection of overlapping slug names."
+          "description": "Value the rule fired on. Issuer name, BIMI org, parent vendor, or \u2014 for ``shared_slugs`` \u2014 the comma-joined intersection of overlapping slug names."
         },
         "members": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string"
+          },
           "minItems": 2,
           "description": "Sorted apex domains that share the signature."
         }
       }
     },
     "FingerprintMetadata": {
-      "description": "Relationship hints for one fingerprint slug. Stable v1.8+. Each field is optional — at least one will be non-null when this record appears.",
+      "description": "Relationship hints for one fingerprint slug. Stable v1.8+. Each field is optional \u2014 at least one will be non-null when this record appears.",
       "type": "object",
-      "required": ["product_family", "parent_vendor", "bimi_org"],
+      "required": [
+        "product_family",
+        "parent_vendor",
+        "bimi_org"
+      ],
       "properties": {
-        "product_family": {"type": ["string", "null"], "description": "Vendor-internal product line (e.g. \"Microsoft 365\", \"Google Workspace\", \"AWS\")."},
-        "parent_vendor": {"type": ["string", "null"], "description": "Corporate parent the product rolls up to (e.g. \"Microsoft\", \"Salesforce\" for Slack)."},
-        "bimi_org": {"type": ["string", "null"], "description": "Exact organization name expected on a BIMI VMC for domains under this product."}
+        "product_family": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Vendor-internal product line (e.g. \"Microsoft 365\", \"Google Workspace\", \"AWS\")."
+        },
+        "parent_vendor": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Corporate parent the product rolls up to (e.g. \"Microsoft\", \"Salesforce\" for Slack)."
+        },
+        "bimi_org": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Exact organization name expected on a BIMI VMC for domains under this product."
+        }
       }
     },
     "InfrastructureCluster": {
       "description": "One community in the per-domain SAN co-occurrence graph. Stable v1.8+.",
       "type": "object",
-      "required": ["cluster_id", "size", "members", "shared_cert_count", "dominant_issuer"],
+      "required": [
+        "cluster_id",
+        "size",
+        "members",
+        "shared_cert_count",
+        "dominant_issuer"
+      ],
       "properties": {
-        "cluster_id": {"type": "integer", "minimum": 0, "description": "Stable id within this report (largest cluster is 0)."},
-        "size": {"type": "integer", "minimum": 2},
-        "members": {"type": "array", "items": {"type": "string"}, "description": "SAN hostnames in this cluster, sorted."},
-        "shared_cert_count": {"type": "integer", "minimum": 0, "description": "Number of cert-entry contributions across edges fully inside this cluster (not unique certs)."},
-        "dominant_issuer": {"type": ["string", "null"], "description": "Most common issuer name across contributing certs."}
+        "cluster_id": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Stable id within this report (largest cluster is 0)."
+        },
+        "size": {
+          "type": "integer",
+          "minimum": 2
+        },
+        "members": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "description": "SAN hostnames in this cluster, sorted."
+        },
+        "shared_cert_count": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Number of cert-entry contributions across edges fully inside this cluster (not unique certs)."
+        },
+        "dominant_issuer": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "description": "Most common issuer name across contributing certs."
+        }
       }
     },
     "EvidenceConflict": {
       "description": "A single field where two or more sources provided different non-None values during merge. Stable v1.7+.",
       "type": "object",
-      "required": ["field", "candidates"],
+      "required": [
+        "field",
+        "candidates"
+      ],
       "properties": {
         "field": {
           "type": "string",
@@ -544,25 +952,47 @@
           "minItems": 2,
           "items": {
             "type": "object",
-            "required": ["value", "source", "confidence"],
+            "required": [
+              "value",
+              "source",
+              "confidence"
+            ],
             "properties": {
-              "value": {"type": "string"},
-              "source": {"type": "string"},
-              "confidence": {"type": "string", "enum": ["high", "medium", "low"]}
+              "value": {
+                "type": "string"
+              },
+              "source": {
+                "type": "string"
+              },
+              "confidence": {
+                "type": "string",
+                "enum": [
+                  "high",
+                  "medium",
+                  "low"
+                ]
+              }
             }
           }
         }
       }
     },
     "UnclassifiedCnameChain": {
-      "description": "A CNAME chain captured during surface classification that did not match any cname_target fingerprint. Surfaced only with ``--include-unclassified``. ``chain`` is ordered: each hop is a CNAME target, terminal last. Useful for proposing new fingerprints — the terminal hostname is usually a third-party SaaS endpoint we don't yet recognize, an intra-org CDN, or noise.",
+      "description": "A CNAME chain captured during surface classification that did not match any cname_target fingerprint. Surfaced only with ``--include-unclassified``. ``chain`` is ordered: each hop is a CNAME target, terminal last. Useful for proposing new fingerprints \u2014 the terminal hostname is usually a third-party SaaS endpoint we don't yet recognize, an intra-org CDN, or noise.",
       "type": "object",
-      "required": ["subdomain", "chain"],
+      "required": [
+        "subdomain",
+        "chain"
+      ],
       "properties": {
-        "subdomain": {"type": "string"},
+        "subdomain": {
+          "type": "string"
+        },
         "chain": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string"
+          },
           "minItems": 1
         }
       }
@@ -582,27 +1012,61 @@
         "conflict_provenance"
       ],
       "properties": {
-        "name": {"type": "string", "description": "Stable node identifier matching bayesian_network.yaml."},
-        "description": {"type": "string", "description": "Plain-English claim the node encodes."},
-        "posterior": {"type": "number", "minimum": 0, "maximum": 1, "description": "P(node=present | observed evidence)."},
-        "interval_low": {"type": "number", "minimum": 0, "maximum": 1, "description": "Lower bound of the 80% credible interval (evidence-responsive, not frequentist coverage)."},
-        "interval_high": {"type": "number", "minimum": 0, "maximum": 1, "description": "Upper bound of the 80% credible interval (evidence-responsive, not frequentist coverage)."},
+        "name": {
+          "type": "string",
+          "description": "Stable node identifier matching bayesian_network.yaml."
+        },
+        "description": {
+          "type": "string",
+          "description": "Plain-English claim the node encodes."
+        },
+        "posterior": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "P(node=present | observed evidence)."
+        },
+        "interval_low": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Lower bound of the 80% credible interval (evidence-responsive, not frequentist coverage)."
+        },
+        "interval_high": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Upper bound of the 80% credible interval (evidence-responsive, not frequentist coverage)."
+        },
         "evidence_used": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string"
+          },
           "description": "Bound observations that fired for this node, formatted as ``slug:<name>`` or ``signal:<name>``."
         },
-        "n_eff": {"type": "number", "minimum": 0, "description": "Effective sample size used to derive the interval; lower means wider interval."},
-        "sparse": {"type": "boolean", "description": "True when n_eff is at the floor and absence carried no disconfirming weight for this node; the interval reflects the passive-observation ceiling, not strong belief. For a declarative node (CAL14) absence is evidence, so a confidently-absent declarative node has n_eff above the floor and ``sparse=false`` despite a low posterior."},
+        "n_eff": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Effective sample size used to derive the interval; lower means wider interval."
+        },
+        "sparse": {
+          "type": "boolean",
+          "description": "True when n_eff is at the floor and absence carried no disconfirming weight for this node; the interval reflects the passive-observation ceiling, not strong belief. For a declarative node (CAL14) absence is evidence, so a confidently-absent declarative node has n_eff above the floor and ``sparse=false`` despite a low posterior."
+        },
         "conflict_provenance": {
           "type": "array",
           "description": "Cross-source disagreements that contributed to this node's n_eff penalty (v1.9.1+). Empty array when no conflicts dampened the interval. Surfaces the source-pair detail dropped by the legacy count-only path; pairs with the existing top-level ``evidence_conflicts`` array.",
-          "items": {"$ref": "#/$defs/NodeConflict"}
+          "items": {
+            "$ref": "#/$defs/NodeConflict"
+          }
         },
         "evidence_ranked": {
           "type": "array",
           "description": "Fired bindings ranked by absolute log-likelihood-ratio contribution, descending (v1.9.3.2+; the contributing set, one per correlation group). Empty when no bindings fired, and omitted on batch records (the batch shape predates it).",
-          "items": {"$ref": "#/$defs/NodeEvidence"}
+          "items": {
+            "$ref": "#/$defs/NodeEvidence"
+          }
         },
         "entropy_reduction_nats": {
           "type": "number",
@@ -611,37 +1075,100 @@
         "unit_counterfactuals": {
           "type": "array",
           "description": "Exact leave-one-unit-out counterfactuals for every evidence unit informative for this node in this run, sorted by absolute delta descending. An evidence counterfactual over the model, never a causal claim about the world. Deltas are individually exact but not additive (units interact through the DAG). Added 2.2.0; schema-additive.",
-          "items": {"$ref": "#/$defs/NodeUnitCounterfactual"}
+          "items": {
+            "$ref": "#/$defs/NodeUnitCounterfactual"
+          }
         }
       }
     },
     "NodeEvidence": {
       "description": "One fired binding's quantified influence on a node's posterior (v1.9.3.2+). llr is the natural-log likelihood ratio (positive favours present); influence_pct normalizes |llr| to a percentage across the node's fired bindings.",
       "type": "object",
-      "required": ["kind", "name", "llr", "influence_pct"],
+      "required": [
+        "kind",
+        "name",
+        "llr",
+        "influence_pct"
+      ],
       "properties": {
-        "kind": {"type": "string", "enum": ["slug", "signal"], "description": "Binding kind."},
-        "name": {"type": "string", "description": "Slug or signal name that fired."},
-        "llr": {"type": "number", "description": "Natural-log likelihood ratio for the fired observation."},
-        "influence_pct": {"type": "number", "minimum": 0, "maximum": 100, "description": "|llr| as a share of the node's total fired |llr|, in percent."}
+        "kind": {
+          "type": "string",
+          "enum": [
+            "slug",
+            "signal"
+          ],
+          "description": "Binding kind."
+        },
+        "name": {
+          "type": "string",
+          "description": "Slug or signal name that fired."
+        },
+        "llr": {
+          "type": "number",
+          "description": "Natural-log likelihood ratio for the fired observation."
+        },
+        "influence_pct": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100,
+          "description": "|llr| as a share of the node's total fired |llr|, in percent."
+        }
       }
     },
     "NodeUnitCounterfactual": {
       "description": "One evidence unit's exact leave-one-out influence on a node's posterior (added 2.2.0). The engine re-runs exact inference with the unit masked as structurally unobserved, globally across the DAG, so posterior_without reflects everything else still observed - including support flowing from other nodes' evidence through the CPTs.",
       "type": "object",
-      "required": ["unit", "kind", "observed", "posterior_without", "delta"],
+      "required": [
+        "unit",
+        "kind",
+        "observed",
+        "posterior_without",
+        "delta"
+      ],
       "properties": {
-        "unit": {"type": "string", "description": "Evidence-unit name: a correlation-group name (e.g. m365_indicators, dmarc_policy) or an ungrouped binding's slug/signal name."},
-        "kind": {"type": "string", "enum": ["group", "slug", "signal"], "description": "Unit kind: a correlation group, or the ungrouped binding's kind."},
-        "observed": {"type": "string", "enum": ["fired", "absent"], "description": "Whether the unit fired, or is an informative absence on a declarative node (there delta is typically negative: the absence drags the posterior down)."},
-        "posterior_without": {"type": "number", "minimum": 0, "maximum": 1, "description": "P(node=present | evidence with this unit masked as structurally unobserved)."},
-        "delta": {"type": "number", "minimum": -1, "maximum": 1, "description": "posterior - posterior_without: positive when the unit pushes the node up. Individually exact, not additive across units."}
+        "unit": {
+          "type": "string",
+          "description": "Evidence-unit name: a correlation-group name (e.g. m365_indicators, dmarc_policy) or an ungrouped binding's slug/signal name."
+        },
+        "kind": {
+          "type": "string",
+          "enum": [
+            "group",
+            "slug",
+            "signal"
+          ],
+          "description": "Unit kind: a correlation group, or the ungrouped binding's kind."
+        },
+        "observed": {
+          "type": "string",
+          "enum": [
+            "fired",
+            "absent"
+          ],
+          "description": "Whether the unit fired, or is an informative absence on a declarative node (there delta is typically negative: the absence drags the posterior down)."
+        },
+        "posterior_without": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "P(node=present | evidence with this unit masked as structurally unobserved)."
+        },
+        "delta": {
+          "type": "number",
+          "minimum": -1,
+          "maximum": 1,
+          "description": "posterior - posterior_without: positive when the unit pushes the node up. Individually exact, not additive across units."
+        }
       }
     },
     "NodeConflict": {
       "description": "One cross-source disagreement carried through to a NodePosterior (v1.9.1+). ``field`` is the merged TenantInfo field whose sources disagreed; ``sources`` lists the distinct sources that contributed candidate values; ``magnitude`` is the n_eff penalty (in n_eff units) this conflict applied to the node.",
       "type": "object",
-      "required": ["field", "sources", "magnitude"],
+      "required": [
+        "field",
+        "sources",
+        "magnitude"
+      ],
       "properties": {
         "field": {
           "type": "string",
@@ -649,7 +1176,9 @@
         },
         "sources": {
           "type": "array",
-          "items": {"type": "string"},
+          "items": {
+            "type": "string"
+          },
           "description": "Distinct source identifiers that contributed a candidate value for this field."
         },
         "magnitude": {
@@ -683,74 +1212,169 @@
           "const": "delta",
           "description": "Record discriminator (SH7, v2.0+); always 'delta' on this shape."
         },
-        "domain": {"type": "string"},
-        "added_services": {"type": "array", "items": {"type": "string"}},
-        "removed_services": {"type": "array", "items": {"type": "string"}},
-        "added_slugs": {"type": "array", "items": {"type": "string"}},
-        "removed_slugs": {"type": "array", "items": {"type": "string"}},
-        "added_signals": {"type": "array", "items": {"type": "string"}},
-        "removed_signals": {"type": "array", "items": {"type": "string"}},
+        "domain": {
+          "type": "string"
+        },
+        "added_services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removed_services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "added_slugs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removed_slugs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "added_signals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "removed_signals": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
         "changed_auth_type": {
           "oneOf": [
-            {"type": "null"},
+            {
+              "type": "null"
+            },
             {
               "type": "object",
-              "required": ["from", "to"],
+              "required": [
+                "from",
+                "to"
+              ],
               "properties": {
-                "from": {"type": ["string", "null"]},
-                "to": {"type": ["string", "null"]}
+                "from": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
               }
             }
           ]
         },
         "changed_dmarc_policy": {
           "oneOf": [
-            {"type": "null"},
+            {
+              "type": "null"
+            },
             {
               "type": "object",
-              "required": ["from", "to"],
+              "required": [
+                "from",
+                "to"
+              ],
               "properties": {
-                "from": {"type": ["string", "null"]},
-                "to": {"type": ["string", "null"]}
+                "from": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "to": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
               }
             }
           ]
         },
         "changed_email_security_score": {
           "oneOf": [
-            {"type": "null"},
+            {
+              "type": "null"
+            },
             {
               "type": "object",
-              "required": ["from", "to"],
+              "required": [
+                "from",
+                "to"
+              ],
               "properties": {
-                "from": {"type": ["integer", "null"]},
-                "to": {"type": ["integer", "null"]}
+                "from": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                },
+                "to": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ]
+                }
               }
             }
           ]
         },
         "changed_confidence": {
           "oneOf": [
-            {"type": "null"},
+            {
+              "type": "null"
+            },
             {
               "type": "object",
-              "required": ["from", "to"],
+              "required": [
+                "from",
+                "to"
+              ],
               "properties": {
-                "from": {"type": "string"},
-                "to": {"type": "string"}
+                "from": {
+                  "type": "string"
+                },
+                "to": {
+                  "type": "string"
+                }
               }
             }
           ]
         },
         "changed_domain_count": {
           "oneOf": [
-            {"type": "null"},
+            {
+              "type": "null"
+            },
             {
               "type": "object",
-              "required": ["from", "to"],
+              "required": [
+                "from",
+                "to"
+              ],
               "properties": {
-                "from": {"type": "integer"},
-                "to": {"type": "integer"}
+                "from": {
+                  "type": "integer"
+                },
+                "to": {
+                  "type": "integer"
+                }
               }
             }
           ]
@@ -760,7 +1384,12 @@
     "BatchErrorRecord": {
       "description": "Emitted in place of a success object when a single domain in a batch run fails. Appears as an array element in ``recon batch --json`` (BatchArray), as a ``domains`` element in the ``--include-ecosystem`` BatchResult wrapper, and as a line in ``recon batch --ndjson``. A domain yields this shape when it fails input validation (e.g. a malformed apex) or when its lookup raises. Exactly four keys (domain, error, error_kind, record_type) and no overlap with the single-domain success contract (which requires dozens of fields), so a consumer can branch on the key set alone. The deterministic classifier in recon_tool.schema_contract.classify_batch_record encodes that rule.",
       "type": "object",
-      "required": ["domain", "error", "error_kind", "record_type"],
+      "required": [
+        "domain",
+        "error",
+        "error_kind",
+        "record_type"
+      ],
       "additionalProperties": false,
       "properties": {
         "domain": {
@@ -773,7 +1402,11 @@
         },
         "error_kind": {
           "type": "string",
-          "enum": ["validation", "lookup", "timeout"],
+          "enum": [
+            "validation",
+            "lookup",
+            "timeout"
+          ],
           "description": "Machine-readable error category (SH8, v2.0+) so a consumer can route or alert on a code rather than the free-text message. validation = the domain failed input validation; timeout = the lookup timed out; lookup = any other lookup failure. The enum may gain values."
         },
         "record_type": {
@@ -788,22 +1421,34 @@
       "type": "array",
       "items": {
         "oneOf": [
-          {"$ref": "#"},
-          {"$ref": "#/$defs/BatchErrorRecord"}
+          {
+            "$ref": "#"
+          },
+          {
+            "$ref": "#/$defs/BatchErrorRecord"
+          }
         ]
       }
     },
     "BatchNdjsonRecord": {
       "description": "One line of ``recon batch <file> --ndjson`` output. Same per-record shape as a BatchArray element: either a single-domain success object (the root schema of this file) or a BatchErrorRecord. NDJSON streams per domain as each completes, so the cross-domain batch enrichment fields (shared_verification_tokens, shared_tenant, shared_display_name) and the --include-ecosystem hyperedge envelope are never present in this mode; both require the full result set before emission.",
       "oneOf": [
-        {"$ref": "#"},
-        {"$ref": "#/$defs/BatchErrorRecord"}
+        {
+          "$ref": "#"
+        },
+        {
+          "$ref": "#/$defs/BatchErrorRecord"
+        }
       ]
     },
     "BatchResult": {
       "description": "Shape of ``recon batch <file> --json --include-ecosystem``: a wrapper object carrying the per-domain results under ``domains`` and the cross-domain ``ecosystem_hyperedges`` array as a sibling. Without --include-ecosystem the batch JSON is a bare BatchArray instead, with no wrapper. From v2.0 (SH9) the wrapper is always emitted when --include-ecosystem is set, including on an all-failed batch (domains carries the error records, ecosystem_hyperedges is empty), so the top-level type does not flip to a bare array. Stable v2.0.",
       "type": "object",
-      "required": ["record_type", "domains", "ecosystem_hyperedges"],
+      "required": [
+        "record_type",
+        "domains",
+        "ecosystem_hyperedges"
+      ],
       "properties": {
         "record_type": {
           "type": "string",
@@ -815,15 +1460,21 @@
           "description": "Per-domain results, one entry per input apex in input-file order. Each entry is either a single-domain success object (the root schema of this file) or a BatchErrorRecord.",
           "items": {
             "oneOf": [
-              {"$ref": "#"},
-              {"$ref": "#/$defs/BatchErrorRecord"}
+              {
+                "$ref": "#"
+              },
+              {
+                "$ref": "#/$defs/BatchErrorRecord"
+              }
             ]
           }
         },
         "ecosystem_hyperedges": {
           "type": "array",
           "description": "Multi-domain signatures observed across the batch. Always present in this wrapper (empty array when no rule fired). Each entry is one ``EcosystemHyperedge``.",
-          "items": {"$ref": "#/$defs/EcosystemHyperedge"}
+          "items": {
+            "$ref": "#/$defs/EcosystemHyperedge"
+          }
         }
       }
     }

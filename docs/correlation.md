@@ -338,8 +338,10 @@ in `--json` and a section in `--explain`. v1.9 feeds the conflict
 count into the Bayesian dampener (§4.4).
 
 *Defender use:* surface drift between hardening signals: minimal DNS
-that disagrees with public CT, MX that contradicts SPF, OIDC display
-name that disagrees with BIMI VMC.
+that disagrees with public CT, or MX that contradicts SPF. A future
+trust-validated BIMI identity source may also support identity-name conflict
+checks; the current document probe does not treat an unverified subject as
+identity.
 
 ### 3.5 CT co-occurrence graph + Louvain community detection
 
@@ -516,8 +518,8 @@ feeds.
 
 For corpus runs, treat the batch as a hypergraph $\mathcal{H} = (V, \mathcal{E})$:
 hyperedges $e \in \mathcal{E}$ connect domains sharing an issuer, a
-fingerprint slug set ($|\mathrm{slugs}(e)| \geq 3$), or a BIMI VMC
-organization. Hyperedge size encodes "how many co-located
+fingerprint slug set ($|\mathrm{slugs}(e)| \geq 3$), or a trust-validated BIMI
+VMC organization when one is supplied. Hyperedge size encodes "how many co-located
 organizations sit behind the same broadcast signature". Surfaced
 behind `--include-ecosystem`. Describes observed co-membership; not
 ownership.

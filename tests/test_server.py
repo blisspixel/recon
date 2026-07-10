@@ -211,18 +211,14 @@ class TestErrors:
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
-    async def test_cancelled_resolve_releases_rate_limit_slot(self, mock_resolve: AsyncMock) -> None:
-        """A cancelled resolve frees the per-domain rate-limit slot it acquired
-        and re-raises the cancellation, so an immediate retry is not spuriously
-        rate-limited and the cancellation is never swallowed."""
-        from recon_tool.server_runtime import rate_limit_release, rate_limit_try_acquire
+    async def test_cancelled_resolve_retains_rate_limit_cooldown(self, mock_resolve: AsyncMock) -> None:
+        """Cancellation propagates while retaining the started-work cooldown."""
+        from recon_tool.server_runtime import rate_limit_try_acquire
 
         mock_resolve.side_effect = asyncio.CancelledError()
         with pytest.raises(asyncio.CancelledError):
             await lookup_tenant("example.com")
-        # The slot the tool acquired was released, so a fresh acquire succeeds.
-        assert rate_limit_try_acquire("example.com") is True
-        rate_limit_release("example.com")
+        assert rate_limit_try_acquire("example.com") is False
 
     @pytest.mark.asyncio
     async def test_concurrent_miss_only_one_lookup_reaches_upstream(self) -> None:
@@ -250,7 +246,7 @@ class TestErrors:
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
-    async def test_failed_lookup_releases_inflight_rate_limit(self, mock_resolve: AsyncMock) -> None:
+    async def test_failed_lookup_retains_rate_limit_cooldown(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(
             domain="unknown.com",
             message="No data",
@@ -261,8 +257,8 @@ class TestErrors:
         second = await lookup_tenant("unknown.com")
 
         assert "No information found for unknown.com" in first
-        assert "No information found for unknown.com" in second
-        assert mock_resolve.await_count == 2
+        assert "Rate limited" in second
+        assert mock_resolve.await_count == 1
 
 
 class TestMCPMetadata:
