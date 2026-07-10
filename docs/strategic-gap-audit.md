@@ -60,7 +60,7 @@ not outrank product truthfulness or measured user value.
 
 ## Current Evidence
 
-- `v2.3.8` is current on GitHub Releases and PyPI.
+- `v2.3.9` is current on GitHub Releases and PyPI.
 - Local release readiness passes for the current local main branch.
 - Remote release readiness passes for the current pushed main branch and
   verifies required GitHub Actions checks, public Scorecard API freshness and

@@ -2,12 +2,13 @@ cff-version: 1.2.0
 message: "If you use recon in academic or published work, please cite it using the metadata below."
 title: "recon: passive, provenance-aware domain intelligence"
 abstract: >-
-  recon is a zero-credential, strictly passive external-surface intelligence
-  tool. It reads public DNS records, certificate-transparency logs, and the
-  unauthenticated identity-discovery endpoints providers publish, then reports
-  each high-level claim through a small, auditable Bayesian network as an
-  evidence-responsive credible interval rather than a yes/no verdict, with full
-  provenance and no active scanning or credentialed access.
+  recon is a zero-credential, public-metadata external-surface intelligence
+  tool. It reads public DNS records, certificate-transparency logs,
+  unauthenticated provider identity-discovery endpoints, and the standard
+  target-visible MTA-STS policy endpoint, then reports each high-level claim
+  through a small, auditable Bayesian network as an evidence-responsive
+  credible interval rather than a yes/no verdict, with full provenance and no
+  active scanning or credentialed access.
 type: software
 authors:
   - family-names: Seal
@@ -16,7 +17,7 @@ authors:
 repository-code: "https://github.com/blisspixel/recon"
 url: "https://github.com/blisspixel/recon"
 license: Apache-2.0
-version: 2.3.8
+version: 2.3.9
 date-released: "2026-07-10"
 keywords:
   - passive reconnaissance

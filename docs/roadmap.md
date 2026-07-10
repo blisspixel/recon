@@ -6,7 +6,7 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.3.8 is current. The stable baseline is complete: recon ships a
+> **Status:** v2.3.9 is current. The stable baseline is complete: recon ships a
 > local CLI, importable library, versioned JSON contract, local stdio MCP
 > server, bounded passive collectors, generated-artifact guards, and a verified
 > release path. The product is not "finished." The active work is to make every
