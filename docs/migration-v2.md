@@ -102,11 +102,10 @@ v1.9.3.1). No data-migration step is needed in either direction.
 
 ## What stays in the post-v2.0 backlog
 
-The roadmap's [Backlog (after v2.0)](roadmap.md#backlog-after-v20)
-lists feature candidates that did not claim slots in the v1.9.x →
-v2.0 path. Any of them may ship in a v2.x.y patch when there's a
-falsifiable defensive case and corpus evidence to back it. v2.0
-itself does not commit to any of them.
+The current roadmap's [Next](roadmap.md#next) section lists evidence-gated
+tracks that did not claim slots in the v1.9.x to v2.0 path. Any runtime change
+still needs a falsifiable defensive case, measured evidence, and its named
+compatibility gate. v2.0 itself does not commit to those tracks.
 
 ## How to verify your v2.0 install
 

@@ -50,7 +50,7 @@ This tool queries endpoints operated by Microsoft, Google, and public DNS infras
 
 ## Defensive Security Assessment Tools
 
-The `assess_exposure`, `find_hardening_gaps`, and `compare_postures` tools synthesize existing pipeline data into structured security posture views. These tools operate exclusively on data already collected by the standard domain resolution pipeline: they perform zero additional network calls, query no new endpoints, and require no credentials beyond what the base tool uses.
+The `assess_exposure`, `find_hardening_gaps`, and `compare_postures` tools synthesize existing pipeline data into structured public-configuration views. These tools operate exclusively on data already collected by the standard domain resolution pipeline: they perform zero additional network calls, query no new endpoints, and require no credentials beyond what the base tool uses. Their model-bound values are not overall security scores or certifications.
 
 These tools are intended for the following legitimate use cases:
 

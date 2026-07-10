@@ -335,17 +335,19 @@ class TestToolDocstrings:
     def test_assess_exposure_docstring_has_disclaimer(self) -> None:
         doc = assess_exposure.__doc__
         assert doc is not None
-        assert "defensive security posture assessment only" in doc.lower()
+        normalized = " ".join(doc.lower().split())
+        assert "model-bound public-evidence assessment" in normalized
+        assert "not an overall security score" in normalized
 
     def test_find_hardening_gaps_docstring_has_disclaimer(self) -> None:
         doc = find_hardening_gaps.__doc__
         assert doc is not None
-        assert "defensive security posture assessment only" in doc.lower()
+        assert "not an overall security assessment" in " ".join(doc.lower().split())
 
     def test_compare_postures_docstring_has_disclaimer(self) -> None:
         doc = compare_postures.__doc__
         assert doc is not None
-        assert "defensive security posture assessment only" in doc.lower()
+        assert "not an overall security comparison" in " ".join(doc.lower().split())
 
 
 class TestExposureReadingGuidance:

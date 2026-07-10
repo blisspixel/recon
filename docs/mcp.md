@@ -35,34 +35,28 @@ pip install recon-tool
 
    The command merges the recon stanza into your existing config without touching sibling MCP servers. Existing `autoApprove` lists, custom `env` vars, `disabled` flags, and any other fields you've added to your recon block survive a `--force` rerun; only `command` and `args` are authoritative on the install side. Writes are atomic (sibling tempfile + `os.replace`), so a partial-write failure leaves the original config intact.
 
-   **b. Manual install.** If you'd rather edit by hand, drop this into the right config file (table below):
+   **b. Reviewed manual install.** Generate the exact interpreter-bound block
+   for the client, inspect it, and copy that preview only if automated writing
+   is unavailable:
 
-   ```json
-   {
-     "mcpServers": {
-       "recon": {
-         "command": "recon",
-         "args": ["mcp"],
-         "autoApprove": []
-       }
-     }
-   }
+   ```bash
+   recon mcp install --client=cursor --dry-run
    ```
 
-   > Prefer `recon mcp install` over copying this example. The installer binds
-   > the config to the Python interpreter running recon and writes a
-   > sys.path-stripping launcher; avoid hand-writing
-   > `python -m recon_tool.server` in workspace configs unless the
-   > working directory is trusted.
+   The generated launcher avoids PATH ambiguity and strips the workspace from
+   the import path. Do not replace it with a bare `recon` command or hand-write
+   `python -m recon_tool.server` in an untrusted working directory.
 
 3. Ask your AI tool something like: "Run a recon lookup on
-northwindtraders.com and summarize the security posture."
+northwindtraders.com and summarize the observed public configuration, naming
+anything unresolved."
 
 Example multi-step prompt for deeper analysis:
 
 > "Look up contoso.com with explain=true. Then run assess_exposure and
 > find_hardening_gaps. Finally, simulate_hardening with DMARC reject and
-> MTA-STS enforce applied, and tell me the new posture score."
+> MTA-STS enforce applied, and explain the model-bound public-evidence index
+> change without treating it as an overall security verdict."
 
 ## Startup warning
 
@@ -93,14 +87,21 @@ If you genuinely need to drive the JSON-RPC loop by hand (e.g. piping crafted re
 
 ## Available Tools
 
+Start with `lookup_tenant` for a single-domain summary and provenance,
+`analyze_posture` for categorized public observations, and
+`compare_postures` or `cluster_verification_tokens` only for an
+operator-supplied domain set. Graph export, posterior inspection, hypothesis
+testing, simulation, catalog mutation, and fingerprint discovery are specialist
+workflows; a first-time user does not need them for a normal lookup.
+
 | Tool | Network calls? | What it does | Parameters |
 |------|----------------|-------------|------------|
 | `lookup_tenant` | Cache first; may resolve | Full domain intelligence: tenant details, email score, SaaS fingerprints, signals. When `explain=true`, the response includes a JSON-serialisable `explanation_dag` with `evidence → slug → rule → signal → insight` provenance alongside the flat explanations list. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
 | `analyze_posture` | Cache first; may resolve | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument: one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
 | `cluster_verification_tokens` | Cache first; may resolve each domain | Cluster a list of domains by shared TXT site-verification tokens. Reveals hedged "possible relationship" signals from operator-scoped credential reuse. Optional peer caps report omitted counts for compact agent output. | `domains`: array of domain strings, `peer_limit_per_domain` (0 means raw) |
-| `assess_exposure` | Cache first; may resolve | Security posture score (0-100) with email, identity, infrastructure sections, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain` |
-| `find_hardening_gaps` | Cache first; may resolve | Categorized hardening gaps with severity and "Consider" recommendations, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain` |
-| `compare_postures` | Cache first; may resolve both domains | Side-by-side posture comparison of two domains | `domain_a`, `domain_b` |
+| `assess_exposure` | Cache first; may resolve | Model-bound public-evidence index (0-100) with email, identity, and infrastructure sections. It summarizes only collected public observables and is not an overall security score (see [correlation.md](correlation.md) for the inference model). | `domain` |
+| `find_hardening_gaps` | Cache first; may resolve | Categorized public-configuration opportunities with "Consider" recommendations and explicit absence semantics. It is not an overall assessment (see [correlation.md](correlation.md)). | `domain` |
+| `compare_postures` | Cache first; may resolve both domains | Side-by-side comparison of two domains' public configuration evidence, not overall security | `domain_a`, `domain_b` |
 | `chain_lookup` | Yes | Recursive domain discovery via CNAME/CT breadcrumbs. Optional result caps report omitted counts for compact agent output while preserving raw JSON as the default. | `domain`, `depth` (1-3), `result_limit` (0 means raw) |
 | `discover_fingerprint_candidates` | Yes | Mine a domain for new-fingerprint candidates. Resolves with unclassified-CNAME-chain capture, applies intra-org and already-covered filters, returns a ranked candidate list. Pair with the `/recon-fingerprint-triage` skill to turn candidates into YAML stanzas. | `domain`, `skip_ct`: bool, `keep_intra_org`: bool, `min_count`: int |
 | `reload_data` | No | Reload fingerprints, signals, and posture rules from disk | none |
@@ -108,7 +109,7 @@ If you genuinely need to drive the JSON-RPC loop by hand (e.g. piping crafted re
 | `get_signals` | No | List all loaded signals with rules, layers, conditions | `category`, `layer` (optional filters) |
 | `explain_signal` | No unless `domain` is provided | Query a signal's trigger conditions and current state for a domain | `signal_name`, `domain` (optional) |
 | `test_hypothesis` | Cache first; may resolve | Test a theory against signals and evidence; returns likelihood + evidence | `domain`, `hypothesis` |
-| `simulate_hardening` | Cache first; may resolve | What-if: re-compute exposure score with hypothetical fixes applied, using only the passive observables already collected (see [correlation.md](correlation.md) for the inference model). | `domain`, `fixes` (array) |
+| `simulate_hardening` | Cache first; may resolve | What-if: re-compute the model-bound public-evidence index with hypothetical fixes. This is not a prediction of overall security change (see [correlation.md](correlation.md)). | `domain`, `fixes` (array) |
 | `inject_ephemeral_fingerprint` | No | Inject a temporary fingerprint for the current session | `name`, `slug`, `category`, `confidence`, `detections` (array) |
 | `reevaluate_domain` | No | Re-evaluate cached domain data against current fingerprints (including ephemeral) | `domain` |
 | `list_ephemeral_fingerprints` | No | List all currently loaded ephemeral fingerprints | none |
@@ -147,11 +148,12 @@ Passing `result_limit`, `peer_limit_per_domain`, `member_limit_per_cluster`,
 omitted counts, a deterministic `selection_rule`, and a `raw_request` pointer
 so an agent can decide whether to request the raw result.
 
-Forward compatibility with the MCP 2026-07-28 release candidate is tracked in
+Compatibility with the MCP 2026-07-28 release candidate is tracked in
 [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md). recon remains a
-local stdio FastMCP server today; the plan is to update discovery, doctor,
-schema, and compact-output behavior when the Python MCP SDK exposes the final
-2026-07-28 protocol.
+local stdio FastMCP server on stable SDK v1 today. Official Python SDK
+`2.0.0b1` is now available for an isolated compatibility matrix; production
+stays on `<2` until the final specification and stable v2 SDK pass recon's
+doctor, discovery, schema, resource, ordering, and full CI gates.
 
 The no-network catalog list tools started the precise-schema Phase 2:
 `get_fingerprints` advertises a `FingerprintSummary` item schema and
@@ -357,11 +359,9 @@ Agent: "Now re-evaluate contoso.com to see if they use Fabrikam Platform."
 ```
 
 Ephemeral fingerprints are deliberately local-only and session-scoped. They
-support the same feedback-driven prior tuning workflow described in the
-Bayesian layer (v1.9.0; stable v2.0+, see
-[roadmap-history.md](roadmap-history.md#v190--probabilistic-fusion-shipped)) without
-ever writing to disk or sharing data; the priors stay in memory for
-the current server process and are gone when it exits.
+change matching rules for the current process; they do not tune Bayesian priors
+or persist learning. They support cache-only hypothesis checks without writing
+to disk or sharing data and disappear when the server exits.
 
 ## Where to Put the Config
 
@@ -377,7 +377,7 @@ the current server process and are gone when it exits.
 
 Per-agent install scaffolds (config snippets + guidance templates) live under [`agents/`](../agents/), one folder per client.
 
-One format note: VS Code's `.vscode/mcp.json` maps server names under a top-level `servers` key, not `mcpServers` (see the [VS Code MCP configuration reference](https://code.visualstudio.com/docs/copilot/reference/mcp-configuration)). `recon mcp install --client=vscode` writes the `servers` key for you; the other clients all use `mcpServers`. The manual-install JSON above is the `mcpServers` shape, so for VS Code swap the outer key to `servers`.
+One format note: VS Code's `.vscode/mcp.json` maps server names under a top-level `servers` key, not `mcpServers` (see the [VS Code MCP configuration reference](https://code.visualstudio.com/docs/copilot/reference/mcp-configuration)). `recon mcp install --client=vscode` writes the correct key; use `--dry-run` to preview the client-specific shape.
 
 ### PATH gotcha for GUI clients
 
@@ -401,7 +401,7 @@ The shorter `python -m recon_tool.server` form is acceptable only from a trusted
 Three complementary checks. The first two validate the server; the third validates that the client was told about it.
 
 - **`recon doctor --mcp`**: *static* diagnostic. Confirms the MCP dependencies are installed, the server module loads, FastMCP introspection finds all tools, and `recon` is on your PATH. Also prints a copy-pasteable JSON snippet for every supported client.
-- **`recon mcp doctor`**: *live* end-to-end check. Spawns the recon MCP server through the running interpreter, opens a real `stdio_client` + `ClientSession`, runs the discovery flow supported by the installed Python MCP SDK, and asserts the anchor tools (`lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `chain_lookup`) are registered. With the current SDK this is an `initialize` + `tools/list` handshake; the MCP 2026-07-28 readiness plan tracks the move to `server/discover` when the SDK exposes it. If the spawned server crashes during discovery, the trailing twelve lines of its stderr are spliced into the failure detail so you see the actual ImportError / traceback instead of an opaque `BrokenPipeError`. 30-second handshake timeout.
+- **`recon mcp doctor`**: *live* end-to-end check. Spawns the recon MCP server through the running interpreter, opens a real `stdio_client` + `ClientSession`, runs the discovery flow supported by the installed Python MCP SDK, and asserts the anchor tools (`lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `chain_lookup`) are registered. With the production v1 SDK this is an `initialize` + `tools/list` handshake. The MCP 2026-07-28 readiness plan now tracks an isolated v2 beta compatibility matrix, including `discover()` behavior. If the spawned server crashes during discovery, the trailing twelve lines of its stderr are spliced into the failure detail so you see the actual ImportError / traceback instead of an opaque `BrokenPipeError`. 30-second handshake timeout.
 - **`recon doctor --client=<name>`**: reads the config file the named client actually loads (`claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `kiro`) and reports whether an `mcpServers.recon` stanza is present and well-formed. This is the config-side complement to the two server checks: they confirm the server is healthy, this confirms the client was told where to find it. For Claude Code it also looks under the project-nested `projects[...].mcpServers.recon` shape that `claude mcp add` writes, and notes that a plugin install keeps its config inside the plugin rather than in `~/.claude.json`. Exits non-zero when no stanza is found, so it is usable in a setup script.
 
 The static check (`recon doctor --mcp`) is the right starting point. If it passes but a client still can't talk to the server, run `recon mcp doctor` to confirm the JSON-RPC loop itself is healthy, and `recon doctor --client=<name>` to confirm the client config carries the stanza.

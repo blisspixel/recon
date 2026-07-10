@@ -136,10 +136,10 @@ When the `recon` MCP server is connected, use it instead of shelling out; it ret
 
 - `lookup_tenant(domain, format="json", explain=true)`: full domain intelligence with provenance.
 - `analyze_posture(domain, profile=...)`: posture observations, optionally biased by a profile lens.
-- `assess_exposure(domain)`: posture score (0-100). Operates on already-collected data; no extra network calls.
+- `assess_exposure(domain)`: model-bound public-evidence index (0-100), not an overall security score. Cache first; it may run the ordinary base lookup on a miss, while index computation adds no network calls after resolution.
 - `find_hardening_gaps(domain)`: categorized gaps with neutral "Consider" notes.
 - `simulate_hardening(domain, fixes=[...])`: what-if scoring with hypothetical fixes applied.
-- `compare_postures(domain_a, domain_b)`: side-by-side posture comparison.
+- `compare_postures(domain_a, domain_b)`: side-by-side comparison of public configuration evidence, not overall security.
 - `cluster_verification_tokens(domains=[...])`: group domains by shared TXT site-verification tokens (hedged "possible relationship" signal).
 - `chain_lookup(domain, depth)`: recursive related-domain discovery via CNAME and CT breadcrumbs.
 
@@ -157,7 +157,7 @@ CLI fallbacks when the MCP server is not connected:
 Single-domain assessment (the common case):
 
 1. `lookup_tenant` with `explain=true` to get identity, services, and provenance.
-2. `assess_exposure` for the posture score.
+2. `assess_exposure` for the model-bound public-evidence index.
 3. `find_hardening_gaps` only if the user wants to discuss specific gaps.
 4. `simulate_hardening` only if the user explicitly asks "what if we did X."
 

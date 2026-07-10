@@ -137,10 +137,10 @@ When the `recon` MCP server is connected, use it instead of shelling out - it re
 
 - `lookup_tenant(domain, format="json", explain=true)` - full domain intelligence with provenance.
 - `analyze_posture(domain, profile=...)` - posture observations, optionally biased by a profile lens.
-- `assess_exposure(domain)` - posture score (0-100). Operates on already-collected data; no extra network calls.
+- `assess_exposure(domain)` - model-bound public-evidence index (0-100), not an overall security score. Cache first; it may run the ordinary base lookup on a miss, while index computation adds no network calls after resolution.
 - `find_hardening_gaps(domain)` - categorized gaps with neutral "Consider" notes.
 - `simulate_hardening(domain, fixes=[...])` - what-if scoring with hypothetical fixes applied.
-- `compare_postures(domain_a, domain_b)` - side-by-side posture comparison.
+- `compare_postures(domain_a, domain_b)` - side-by-side comparison of public configuration evidence, not overall security.
 - `cluster_verification_tokens(domains=[...])` - group domains by shared TXT site-verification tokens (hedged "possible relationship" signal).
 - `chain_lookup(domain, depth)` - recursive related-domain discovery via CNAME and CT breadcrumbs.
 
@@ -153,9 +153,9 @@ CLI fallbacks when the MCP server is not connected:
 - `recon batch <file> --json` - list of domains with cross-domain token clustering.
 - `recon delta <domain>` - diff against the last cached snapshot. Relay verbatim like the default panel.
 
-Most of the analysis the MCP tools expose is reachable from the CLI too. Reach for these rather than stopping at the plain panel when the user wants a score or gaps:
+Most of the analysis the MCP tools expose is reachable from the CLI too. Reach for these rather than stopping at the plain panel when the user wants the model-bound index or categorized observations:
 
-- `recon <domain> --exposure --json` produces the 0-100 exposure assessment. This is the CLI equivalent of the `assess_exposure` tool, and the 0-100 score comes from this flag specifically (the plain panel does not carry it).
+- `recon <domain> --exposure --json` produces the 0-100 model-bound public-evidence index. This is the CLI equivalent of `assess_exposure`; the plain panel does not carry this compatibility value, and it is not an overall security score.
 - `recon <domain> --gaps --json` produces the categorized hardening gaps with neutral "Consider" notes. CLI equivalent of `find_hardening_gaps`.
 - `recon <domain> --fusion` adds the Bayesian per-slug posteriors. `recon <domain> --explain-dag --explain-dag-format mermaid` renders the evidence DAG inline in chat. CLI equivalent of `get_posteriors` and `explain_dag`.
 
@@ -166,7 +166,7 @@ What stays MCP-only, because it needs cached session state or an iterative loop:
 Single-domain assessment (the common case):
 
 1. `lookup_tenant` with `explain=true` to get identity, services, and provenance.
-2. `assess_exposure` for the posture score.
+2. `assess_exposure` for the model-bound public-evidence index.
 3. `find_hardening_gaps` only if the user wants to discuss specific gaps.
 4. `simulate_hardening` only if the user explicitly asks "what if we did X."
 
@@ -265,7 +265,7 @@ the detail for each lives in the section above.
 - **A sub-host is analyzed as its apex unless you pass `--exact`.** `mail.acme.com` returns facts for `acme.com`; the `queried_domain` field tells you what was actually analyzed. Reporting apex tenancy as the sub-host's is wrong.
 - **`--full --json` is 3-10 KB; never dump it inline.** Save it to a file and reply with the 3-line headline. Inline JSON burns context for no benefit.
 - **Do not test MCP connectivity by calling a tool.** Read your own tool list for `mcp__recon__*`; a speculative call to "check" is a wasted, confusing round-trip.
-- **`--exposure` / `assess_exposure` does no new network I/O.** It scores already-collected data. Do not imply a fresh scan produced the 0-100 number.
+- **`--exposure` / `assess_exposure` is cache first and may resolve on a miss.** The index calculation adds no network calls after the ordinary base lookup. Do not imply that the 0-100 value comes from a separate scan or measures overall security.
 - **Low confidence means sparse DNS, not a suspicious org.** Sparse output is the passive-collection ceiling, not a finding. Do not manufacture confidence or insinuation.
 - **Do not guess a profile from a thin hint.** A wrong posture lens skews emphasis; omit `--profile` when the target type is unclear.
 - **Serve cache honestly.** Check `resolved_at` / `cached_at`; if the user wants current data and the entry is old, offer to re-resolve rather than passing stale data as fresh.

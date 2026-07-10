@@ -1895,7 +1895,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Assess a domain's publicly observable security posture for defensive review."
+        "summary": "Summarize a domain's public configuration evidence for defensive review."
       },
       {
         "annotations": {
@@ -2062,7 +2062,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Compare the security postures of two domains side by side."
+        "summary": "Compare the public configuration evidence of two domains side by side."
       },
       {
         "annotations": {
@@ -2822,7 +2822,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "What-if simulation: re-compute exposure score with hypothetical fixes."
+        "summary": "Re-compute the public-evidence index with hypothetical fixes."
       },
       {
         "annotations": {
