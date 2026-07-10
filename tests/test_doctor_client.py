@@ -124,6 +124,17 @@ class TestCheckClient:
         config_checks = [c for c in report.checks if c.name == "config file"]
         assert any(c.status == "fail" and "nested" in c.detail for c in config_checks)
 
+    def test_brackets_inside_json_strings_do_not_count_as_nesting(self, home: Path) -> None:
+        (home / ".claude.json").write_text(
+            '{"mcpServers":{"recon":{"command":"recon","args":["[[[{{{\\"quoted\\"}}}]]]"]}}}',
+            encoding="utf-8",
+        )
+
+        report = check_client("claude-code", platform_name="linux")
+
+        config_check = next(c for c in report.checks if c.name == "config file")
+        assert config_check.status == "ok"
+
     def test_oversized_json_integer_is_reported_without_crashing(self, home: Path) -> None:
         (home / ".claude.json").write_text(
             '{"x":' + "9" * 5_000 + "}",

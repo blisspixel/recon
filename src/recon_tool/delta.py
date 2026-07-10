@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 from recon_tool.email_security import compute_email_security_score
+from recon_tool.json_limits import exceeds_json_nesting_limit
 from recon_tool.models import DeltaReport, TenantInfo
 
 logger = logging.getLogger("recon")
@@ -38,13 +39,14 @@ def load_previous(path: Path) -> dict[str, Any]:
         raw = handle.read(_MAX_PREVIOUS_EXPORT_BYTES + 1)
     if len(raw) > _MAX_PREVIOUS_EXPORT_BYTES:
         raise ValueError(
-            f"Previous export exceeds maximum size of "
-            f"{_MAX_PREVIOUS_EXPORT_BYTES // (1024 * 1024)} MiB: {path}"
+            f"Previous export exceeds maximum size of {_MAX_PREVIOUS_EXPORT_BYTES // (1024 * 1024)} MiB: {path}"
         )
     try:
         text = raw.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise ValueError(f"Invalid UTF-8 in {path} at byte {exc.start}") from exc
+    if exceeds_json_nesting_limit(text):
+        raise ValueError(f"Invalid JSON in {path}: document is too deeply nested")
     try:
         data = json.loads(text)
     except json.JSONDecodeError as exc:
