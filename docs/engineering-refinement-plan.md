@@ -12,7 +12,7 @@ contract discipline in [ADR-0003](adr/0003-v2-schema-lock.md).
 
 ## Baseline
 
-- v2.3.8 is current on GitHub and PyPI.
+- v2.3.9 is current on GitHub and PyPI.
 - Local and remote release readiness pass on current main.
 - Meaningful branch-aware coverage is approximately 89 percent, above the 82
   percent enforced project gate and the 80 percent user bar.
