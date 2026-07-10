@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.8] - 2026-07-10
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Fixed
+
+- **Version-independent JSON nesting bounds.** Client configuration and delta
+  snapshot readers now perform a deterministic string-aware structural depth
+  scan before decoding. This preserves the 100-level nesting ceiling on Python
+  releases whose JSON decoder can parse deeply nested arrays without raising
+  `RecursionError`, while ignoring brackets inside escaped JSON strings.
+
 ## [2.3.7] - 2026-07-10
 
 ### Tool Surface Changes
