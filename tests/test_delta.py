@@ -82,6 +82,12 @@ class TestLoadPrevious:
         with pytest.raises(ValueError, match="nested"):
             load_previous(snapshot)
 
+    def test_brackets_inside_strings_do_not_count_as_nesting(self, tmp_path: Path) -> None:
+        snapshot = tmp_path / "brackets.json"
+        snapshot.write_text('{"insights":["[[[{{{\\"quoted\\"}}}]]]"]}', encoding="utf-8")
+
+        assert load_previous(snapshot)["insights"] == ['[[[{{{"quoted"}}}]]]']
+
     def test_oversized_file_is_rejected_before_parsing(self, tmp_path: Path) -> None:
         from recon_tool.delta import _MAX_PREVIOUS_EXPORT_BYTES
 

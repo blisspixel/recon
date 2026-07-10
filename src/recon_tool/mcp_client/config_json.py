@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
+from recon_tool.json_limits import exceeds_json_nesting_limit
+
 MAX_CLIENT_CONFIG_BYTES = 1024 * 1024
 
 JsonObjectState = Literal["missing", "empty", "invalid", "ok"]
@@ -46,6 +48,8 @@ def read_json_object(path: Path) -> JsonObjectRead:
         return JsonObjectRead("invalid", None, f"is not valid UTF-8 at byte {exc.start}")
     if not raw.strip():
         return JsonObjectRead("empty", None, "empty file")
+    if exceeds_json_nesting_limit(raw):
+        return JsonObjectRead("invalid", None, "JSON is too deeply nested")
 
     try:
         data = json.loads(raw)
