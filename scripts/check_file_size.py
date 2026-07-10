@@ -33,7 +33,7 @@ SOFT_CAP = 1000
 # decomposition track in docs/roadmap.md splits each file. Goal state: every
 # entry gone, every module under SOFT_CAP.
 BASELINE: dict[str, int] = {
-    "formatter/panel.py": 2140,
+    "formatter/panel.py": 2124,
     "exposure.py": 970,
     "merger.py": 955,
 }

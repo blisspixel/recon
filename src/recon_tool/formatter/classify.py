@@ -31,6 +31,7 @@ from recon_tool.formatter.classify_tables import (
     SERVICE_CATEGORIES_ORDER,
     SLUG_DISPLAY_OVERRIDES,
 )
+from recon_tool.merger_tables import EMAIL_PROVIDER_SLUG_NAMES, LIKELY_PROVIDER_SLUG_NAMES
 from recon_tool.models import TenantInfo
 
 __all__ = [
@@ -52,6 +53,7 @@ __all__ = [
     "detect_provider",
     "is_gws_service",
     "is_m365_service",
+    "provider_line",
     "slug_to_relationship_metadata",
 ]
 
@@ -243,12 +245,12 @@ def _topology_slug_secondaries(
     primary line. Account-only detections (OIDC, TXT tokens) are dropped as
     Provider-line noise unless confirmed via email routing (MX or DKIM)."""
     slug_secondaries: list[str] = []
-    for slug, name in (
-        ("microsoft365", "Microsoft 365"),
-        ("google-workspace", "Google Workspace"),
-        ("zoho", "Zoho Mail"),
-        ("protonmail", "ProtonMail"),
-    ):
+    provider_names = (
+        EMAIL_PROVIDER_SLUG_NAMES
+        if email_confirmed_slugs is not None
+        else LIKELY_PROVIDER_SLUG_NAMES
+    )
+    for slug, name in provider_names.items():
         if slug not in slug_set:
             continue
         if primary_name and name == primary_name:
@@ -280,6 +282,12 @@ def _provider_from_topology(
     elif likely_primary_email_provider:
         primary_name, inferred_secondaries = _pick_single_primary(likely_primary_email_provider)
         primary_label = "(likely primary)"
+
+    if email_confirmed_slugs is not None:
+        slug_by_name = {name: slug for slug, name in EMAIL_PROVIDER_SLUG_NAMES.items()}
+        inferred_secondaries = [
+            name for name in inferred_secondaries if slug_by_name.get(name) in email_confirmed_slugs
+        ]
 
     slug_secondaries = _topology_slug_secondaries(set(slugs), primary_name, inferred_secondaries, email_confirmed_slugs)
 
@@ -377,6 +385,25 @@ def detect_provider(
         )
 
     return _provider_slug_fallback(slugs, has_mx_records)
+
+
+def provider_line(info: TenantInfo) -> str:
+    """Return one evidence-aware provider summary for every output surface."""
+    has_mx_records = any(evidence.source_type == "MX" for evidence in info.evidence)
+    email_confirmed_slugs = frozenset(
+        evidence.slug for evidence in info.evidence if evidence.source_type in {"MX", "DKIM"}
+    )
+    return detect_provider(
+        info.services,
+        info.slugs,
+        primary_email_provider=info.primary_email_provider,
+        email_gateway=info.email_gateway,
+        likely_primary_email_provider=info.likely_primary_email_provider,
+        has_mx_records=has_mx_records,
+        email_confirmed_slugs=email_confirmed_slugs,
+    )
+
+
 def _slug_for_service(service: str, fp_slug_map: dict[str, str]) -> str | None:
     """Look up the slug for a service name, if any.
 
