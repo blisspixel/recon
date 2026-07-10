@@ -2,6 +2,8 @@
 
 import json
 
+from rich.console import Console
+
 from recon_tool.formatter import (
     format_chain_dict,
     format_chain_json,
@@ -171,6 +173,11 @@ class TestChainRendering:
         )
         panel = render_chain_panel(report)
         assert panel is not None
+
+        console = Console(no_color=True, record=True, width=120)
+        console.print(panel)
+        rendered = console.export_text()
+        assert "Unknown (no known provider pattern matched)" not in rendered
 
     def test_render_chain_truncated(self):
         info = _make_info()

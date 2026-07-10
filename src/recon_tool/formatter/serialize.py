@@ -14,7 +14,7 @@ import json
 from typing import Any
 
 from recon_tool.email_security import compute_email_security_score
-from recon_tool.formatter.classify import detect_provider, slug_to_relationship_metadata
+from recon_tool.formatter.classify import provider_line, slug_to_relationship_metadata
 from recon_tool.models import TenantInfo, serialize_conflicts_array
 from recon_tool.validator import strip_control_chars
 
@@ -28,15 +28,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     Off by default to keep the v2.0 schema contract narrow; opt-in for the
     fingerprint-discovery loop.
     """
-    has_mx_records = any(e.source_type == "MX" for e in info.evidence)
-    provider = detect_provider(
-        info.services,
-        info.slugs,
-        primary_email_provider=info.primary_email_provider,
-        email_gateway=info.email_gateway,
-        likely_primary_email_provider=info.likely_primary_email_provider,
-        has_mx_records=has_mx_records,
-    )
+    provider = provider_line(info)
     d: dict[str, Any] = {
         "tenant_id": info.tenant_id,
         "display_name": info.display_name,
@@ -404,7 +396,7 @@ def format_tenant_csv_row(info: TenantInfo) -> dict[str, str]:
     ``FederationBrandName`` (or any other attacker-influenced field)
     can't execute as a formula when the CSV is opened in a spreadsheet.
     """
-    provider = detect_provider(info.services, info.slugs)
+    provider = provider_line(info)
     return {
         "domain": _csv_safe(info.queried_domain),
         "provider": _csv_safe(provider),
