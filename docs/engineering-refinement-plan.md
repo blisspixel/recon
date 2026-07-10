@@ -46,7 +46,8 @@ or failing guard.
 ## Track 1: Evidence-Semantic Integrity
 
 Status: active; live MCP boundary, score wording, and parent-platform
-child-product inference corrected in Unreleased
+child-product inference corrected in Unreleased; provider summaries now share
+one evidence-aware derivation across output surfaces
 Dependencies: none
 Risk: high product-trust risk, high compatibility sensitivity
 
