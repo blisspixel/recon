@@ -532,17 +532,6 @@ def _consolidate_caa_issuers(by_cat: dict[str, list[str]]) -> None:
         by_cat["Security"] = [*non_caa, consolidated]
 
 
-def _infer_bundled_ai(by_cat: dict[str, list[str]], slugs: tuple[str, ...] | set[str]) -> None:
-    """Infer platform-bundled AI tools with no DNS fingerprint (Copilot from
-    M365, Gemini from Google Workspace), hedged with "(likely)" to distinguish
-    them from DNS-confirmed detections."""
-    ai_names = {n.lower() for n in by_cat.get("AI", [])}
-    if "microsoft365" in slugs and "microsoft copilot" not in ai_names:
-        by_cat.setdefault("AI", []).append("Microsoft Copilot (likely)")
-    if "google-workspace" in slugs and "google gemini" not in ai_names:
-        by_cat.setdefault("AI", []).append("Google Gemini (likely)")
-
-
 def categorize_services(info: TenantInfo) -> dict[str, list[str]]:
     """Group TenantInfo services into display categories.
 
@@ -576,6 +565,5 @@ def categorize_services(info: TenantInfo) -> dict[str, list[str]]:
     _categorize_pass2_names(info, name_to_slug, by_cat, seen_services, slugs_filed)
     _dedup_identity_echoes(by_cat)
     _consolidate_caa_issuers(by_cat)
-    _infer_bundled_ai(by_cat, info.slugs)
 
     return {c: svcs for c in SERVICE_CATEGORIES_ORDER if (svcs := by_cat.get(c))}

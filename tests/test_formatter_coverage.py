@@ -25,6 +25,7 @@ from recon_tool.formatter import (
     render_verbose_sources,
     set_console,
 )
+from recon_tool.formatter.classify import categorize_services
 from recon_tool.models import (
     CertSummary,
     ConfidenceLevel,
@@ -75,6 +76,40 @@ def _minimal_info(**overrides: object) -> TenantInfo:
     }
     defaults.update(overrides)
     return TenantInfo(**defaults)  # type: ignore[arg-type]
+
+
+class TestEvidenceSemanticServiceClassification:
+    @pytest.mark.parametrize(
+        ("parent_slug", "parent_service", "unsupported_child"),
+        [
+            ("microsoft365", "Microsoft 365", "Microsoft Copilot (likely)"),
+            ("google-workspace", "Google Workspace", "Google Gemini (likely)"),
+        ],
+    )
+    def test_parent_platform_does_not_infer_child_product(
+        self,
+        parent_slug: str,
+        parent_service: str,
+        unsupported_child: str,
+    ) -> None:
+        categorized = categorize_services(
+            _minimal_info(services=(parent_service,), slugs=(parent_slug,))
+        )
+
+        assert parent_service in categorized["Email"]
+        assert unsupported_child not in {
+            service for services in categorized.values() for service in services
+        }
+
+    def test_direct_ai_fingerprint_remains_visible(self) -> None:
+        categorized = categorize_services(
+            _minimal_info(
+                services=("Microsoft 365", "OpenAI Enterprise"),
+                slugs=("microsoft365", "openai"),
+            )
+        )
+
+        assert categorized["AI"] == ["OpenAI Enterprise"]
 
 
 class TestCsvFormulaNeutralization:
