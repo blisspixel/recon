@@ -28,7 +28,6 @@ from recon_tool.server.runtime import (
     cache_get,
     cache_set,
     log_structured,
-    rate_limit_release,
     rate_limit_try_acquire,
 )
 from recon_tool.validator import validate_domain
@@ -705,13 +704,10 @@ async def discover_fingerprint_candidates(
             try:
                 info, results = await server_app.resolve_tenant(validated, skip_ct=skip_ct)
             except ReconLookupError as exc:
-                rate_limit_release(validated)
                 raise ToolError(str(exc)) from exc
             except asyncio.CancelledError:
-                rate_limit_release(validated)
                 raise
             except Exception as exc:
-                rate_limit_release(validated)
                 logger.exception(
                     "Unexpected error in discover for %s (request_id=%s)",
                     domain,
@@ -912,13 +908,10 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
             try:
                 info, results = await server_app.resolve_tenant(validated)
             except ReconLookupError as exc:
-                rate_limit_release(validated)
                 return f"Error: {exc}"
             except asyncio.CancelledError:
-                rate_limit_release(validated)
                 raise
             except Exception as exc:
-                rate_limit_release(validated)
                 logger.exception(
                     "Unexpected error in explain_dag for %s (request_id=%s)",
                     domain,

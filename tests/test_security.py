@@ -90,6 +90,12 @@ class TestReDoSPrevention:
     def test_empty_regex_rejected(self):
         assert _validate_regex("", "test") is False
 
+    def test_ephemeral_regex_rejects_multiple_unbounded_quantifiers(self):
+        assert _validate_regex("^a*a*a*a*a*b$", "ephemeral:test") is False
+
+    def test_packaged_regex_keeps_single_safe_quantifier(self):
+        assert _validate_regex(r"^[a-z]+[.]example[.]com$", "packaged:test") is True
+
 
 class TestUUIDValidation:
     """Verify that azure_metadata validates tenant_id before URL interpolation."""

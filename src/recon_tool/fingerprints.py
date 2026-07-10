@@ -26,6 +26,8 @@ from typing import Any, NamedTuple
 import deal
 import yaml
 
+from recon_tool.regex_safety import validate_regex as _validate_regex
+
 logger = logging.getLogger("recon")
 
 __all__ = [
@@ -56,9 +58,6 @@ __all__ = [
     "validate_ephemeral_input_size",
 ]
 
-# Hard cap on pattern length. Not a ReDoS fix by itself — see _validate_regex.
-_MAX_PATTERN_LENGTH = 500
-
 # Generous per-file ceiling on third-party / ~/.recon catalog files. The
 # bundled catalog ships well under this; the cap protects the long-lived
 # MCP server from an oversized user file driving per-lookup matching cost
@@ -75,102 +74,6 @@ _VALID_DETECTION_TYPES = frozenset(
 _VALID_CNAME_TARGET_TIERS = frozenset({"application", "infrastructure"})
 _VALID_CONFIDENCE_LEVELS = frozenset({"high", "medium", "low"})
 _VALID_MATCH_MODES = frozenset({"any", "all"})
-
-# Structural patterns known to cause catastrophic backtracking.
-# Catches: nested quantifiers like (a+)+, (a*)+, (\w+)+ and the bounded
-# form (a+){20}; and polynomial backtracking like \w+\w+\w+ (3+ adjacent
-# quantifiers). This is a heuristic, not exhaustive: it deliberately does
-# NOT flag quantified alternation like (foo|bar)+, because non-overlapping
-# alternation is safe and common in real fingerprints, and distinguishing
-# the dangerous overlapping form (a|a)+ from the safe form needs real
-# analysis a regex cannot do. Overlapping-alternation and nested-group
-# ReDoS are instead bounded by the independent input length caps
-# (_MAX_TXT_MATCH_LENGTH here and the subdomain_txt cap in dns.py), which
-# cap worst-case backtracking regardless of pattern. A linear-time engine
-# (google-re2) would remove the heuristic but crosses the pure-Python
-# dependency floor.
-_REDOS_RE = re.compile(
-    r"\([^)]*[+*][^)]*\)[+*{]"  # (group-with-quantifier) then + * or {n}, e.g. (a+)+
-    r"|"
-    r"(?:[+*]\??\.\*[+*])"  # quantifier + .* + quantifier
-    r"|"
-    r"(?:\.[+*]\??\.[+*]\??\.[+*])"  # three adjacent .X quantifiers (polynomial)
-)
-
-# Quantified alternation group, e.g. (a|aa)+ or (a|ab)*. Only the prefix-
-# overlapping case backtracks catastrophically (one branch is a prefix of
-# another, so a match can be partitioned ambiguously); disjoint alternation
-# such as (foo|bar)+ is linear and stays allowed. See _alternation_redos.
-_ALT_GROUP_QUANT_RE = re.compile(r"\(([^()]*\|[^()]*)\)[+*{]")
-
-
-def _alternation_redos(pattern: str) -> bool:
-    """Flag quantified alternation groups whose branches prefix-overlap.
-
-    ``(a|aa)+`` and ``(a|ab)+`` cause exponential backtracking because one
-    branch is a prefix of another, making a partial match ambiguous. Disjoint
-    branches such as ``(foo|bar)+`` do not, so we flag only the prefix-overlap
-    case. This is a heuristic over simple (non-nested) groups, not a proof; the
-    docstring on _validate_regex notes the linear-time-engine swap for full
-    safety.
-    """
-    # Treat non-capturing and inline-flag groups ((?:...), (?i:...)) as plain
-    # groups so the branch split sees the real alternatives; otherwise the first
-    # branch parses as "?:a" and prefix-overlap detection misses (?:a|aa)+.
-    pattern = re.sub(r"\(\?[aimsxLu]*:", "(", pattern)
-    for match in _ALT_GROUP_QUANT_RE.finditer(pattern):
-        branches = [b.strip() for b in match.group(1).split("|")]
-        for i, first in enumerate(branches):
-            for second in branches[i + 1 :]:
-                if first and second and (first.startswith(second) or second.startswith(first)):
-                    return True
-    return False
-
-
-def _strip_escapes_and_classes(pattern: str) -> str:
-    """Remove escaped characters and character-class contents so a structural
-    metacharacter scan does not trip on literals like ``\\+`` or ``[+*]``."""
-    out: list[str] = []
-    i, n = 0, len(pattern)
-    while i < n:
-        c = pattern[i]
-        if c == "\\":
-            i += 2  # drop the escape and its target
-            continue
-        if c == "[":
-            i += 1
-            if i < n and pattern[i] == "^":
-                i += 1
-            if i < n and pattern[i] == "]":
-                i += 1  # a literal ] as the first class member
-            while i < n and pattern[i] != "]":
-                i += 2 if pattern[i] == "\\" else 1
-            i += 1  # skip the closing ]
-            continue
-        out.append(c)
-        i += 1
-    return "".join(out)
-
-
-def _has_nested_quantifier(pattern: str) -> bool:
-    """Flag a quantified group whose body itself contains a quantifier, e.g.
-    ``(a+)+``, ``((a+))+``, ``(a+b+)+``, ``(a{2,4})+``. This is the
-    catastrophic-backtracking shape that the flat ``_REDOS_RE`` misses once a
-    paren is nested (its ``[^)]*`` limbs cannot span an inner group). A regex
-    cannot match balanced parentheses, so this uses a paren-matching scan over
-    the pattern with escapes and character classes removed first.
-    """
-    cleaned = _strip_escapes_and_classes(pattern)
-    stack: list[int] = []
-    for i, ch in enumerate(cleaned):
-        if ch == "(":
-            stack.append(i)
-        elif ch == ")" and stack:
-            open_i = stack.pop()
-            nxt = cleaned[i + 1] if i + 1 < len(cleaned) else ""
-            if nxt in "+*{" and any(q in cleaned[open_i + 1 : i] for q in "+*{"):
-                return True
-    return False
 
 
 class Detection(NamedTuple):
@@ -232,43 +135,6 @@ class Fingerprint:
     product_family: str | None = None
     parent_vendor: str | None = None
     bimi_org: str | None = None
-
-
-def _validate_regex(pattern: str, source: str) -> bool:
-    """Validate a regex pattern is safe to compile and not degenerate.
-
-    Three-layer defense:
-    1. Reject empty / excessively long patterns.
-    2. Reject patterns with known catastrophic-backtracking structures
-       (nested quantifiers like (a+)+). This is a heuristic, not a proof —
-       for full safety, swap in google-re2 or another linear-time engine.
-    3. Reject patterns that don't compile.
-    """
-    if not pattern:
-        logger.warning("Empty regex pattern in %s — skipped", source)
-        return False
-    if len(pattern) > _MAX_PATTERN_LENGTH:
-        logger.warning(
-            "Regex pattern too long (%d chars) in %s — skipped",
-            len(pattern),
-            source,
-        )
-        return False
-    # Heuristic ReDoS check: reject nested quantifiers and prefix-overlapping
-    # quantified alternation (e.g. (a|aa)+), both catastrophic-backtracking shapes.
-    if _REDOS_RE.search(pattern) or _alternation_redos(pattern) or _has_nested_quantifier(pattern):
-        logger.warning(
-            "Potentially unsafe regex (catastrophic backtracking) %r in %s — skipped",
-            pattern,
-            source,
-        )
-        return False
-    try:
-        re.compile(pattern)
-    except re.error as exc:
-        logger.warning("Invalid regex %r in %s: %s — skipped", pattern, source, exc)
-        return False
-    return True
 
 
 def _validate_subdomain_txt_pattern(pattern: str, source: str, name: str) -> bool:

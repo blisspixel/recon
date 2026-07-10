@@ -21,13 +21,10 @@ Design notes:
 - Per-OS user paths only where the client has a documented user-level
   config. Workspace-scoped clients (VS Code) only support
   `--scope workspace`.
-- The preferred block matches the canonical example in README.md:
-  `{"command": "recon", "args": ["mcp"], "autoApprove": []}`. If
-  `recon` is not on PATH at install time, we persist a Python
-  `-c` launcher that strips cwd-equivalent entries from `sys.path`
-  before importing `recon_tool`, so GUI clients that do not inherit
-  shell PATH still work without exposing the `python -m` cwd-shadow
-  attack pattern.
+- The generated block is bound to the running Python interpreter and uses a
+  `-c` launcher that strips cwd-equivalent entries from `sys.path` before
+  importing `recon_tool`. This keeps GUI clients independent of shell PATH and
+  ensures the persisted command resolves the same installation that wrote it.
 """
 
 from __future__ import annotations
@@ -35,12 +32,13 @@ from __future__ import annotations
 import contextlib
 import json
 import os
-import shutil
 import sys
 import tempfile
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
+
+from recon_tool.mcp_client.config_json import read_json_object
 
 Scope = Literal["user", "workspace"]
 Client = Literal["claude-desktop", "claude-code", "cursor", "vscode", "windsurf", "kiro"]
@@ -241,11 +239,10 @@ _FALLBACK_LAUNCH_CODE = (
 def build_recon_block() -> dict[str, object]:
     """Return the MCP server stanza we register under `mcpServers.recon`.
 
-    Falls back from ``recon`` to the running interpreter when ``recon``
-    isn't on PATH. The fallback uses ``python -c "<safe-launcher>"``
-    rather than ``python -m recon_tool.server`` so cwd-shadow attacks
-    are blocked on every supported Python version, including Python
-    3.10 where ``PYTHONSAFEPATH`` is a no-op.
+    Uses the running interpreter with ``python -c "<safe-launcher>"``
+    rather than resolving a command through PATH. This binds the persisted
+    block to the installation executing this function and prevents an
+    untrusted workspace or PATH entry from becoming a persistent launcher.
 
     Supply-chain hardening: the launcher code runs
     ``del sys.path[0]`` before importing ``recon_tool``, removing the
@@ -254,19 +251,9 @@ def build_recon_block() -> dict[str, object]:
     fallback could not provide on Python 3.10. The PYTHONSAFEPATH env
     entry stays in place as belt-and-suspenders for Python 3.11+.
 
-    Operators on any version may still install ``recon`` to PATH and
-    let this function return the preferred ``{"command": "recon",
-    "args": ["mcp"]}`` form, which is shorter and equivalently safe.
-    ``warn_if_fallback`` surfaces a stderr advisory when the fallback
-    form is written.
+    ``warn_if_fallback`` remains as a compatibility shim for callers that
+    previously displayed an informational PATH warning.
     """
-    recon_on_path = shutil.which("recon")
-    if recon_on_path:
-        return {
-            "command": recon_on_path,
-            "args": ["mcp"],
-            "autoApprove": [],
-        }
     return {
         "command": sys.executable,
         # ``-c`` with explicit sys.path[0] removal closes the
@@ -284,30 +271,8 @@ def build_recon_block() -> dict[str, object]:
 
 
 def warn_if_fallback() -> str | None:
-    """Return a stderr-formatted warning when the fallback launch form
-    would be persisted, or ``None`` when ``recon`` is on PATH.
-
-    The warning is informational. The persisted fallback uses
-    ``python -c "<sys.path-stripping launcher>"`` instead of
-    ``python -m recon_tool.server``, so the cwd-shadow
-    attack is blocked on every supported Python version (including
-    Python 3.10 where ``PYTHONSAFEPATH`` is a no-op). Installing
-    ``recon`` to PATH still produces a shorter and arguably
-    more readable persisted command; the warning recommends it
-    on cosmetic grounds, not safety grounds.
-    """
-    if shutil.which("recon") is not None:
-        return None
-    return (
-        "info: `recon` is not on PATH; persisting the fallback launch "
-        f'form (`{sys.executable} -c "<sys.path-stripping launcher>"`). '
-        "The launcher removes the cwd entry from sys.path before any "
-        "recon_tool import, so the cwd-shadow attack is blocked on every "
-        "supported Python (including Python 3.10). For a shorter "
-        "persisted command, install recon to PATH "
-        "(`pip install --user recon-tool` or `pipx install recon-tool`) "
-        "and rerun this install command."
-    )
+    """Compatibility shim; the interpreter-bound launcher is canonical."""
+    return None
 
 
 @dataclass(frozen=True)
@@ -347,35 +312,14 @@ def _read_existing(path: Path) -> dict[str, object]:
     silently consumed instead of confusing ``json.loads`` into a
     "Unexpected character" error.
     """
-    if not path.exists():
+    result = read_json_object(path)
+    if result.state in {"missing", "empty"}:
         return {}
-    if path.is_dir():
-        # Common reflex error: passing `~/.cursor/mcp.json` typed with
-        # a trailing slash, or pointing `--config-path` at the parent
-        # directory. Surface it as a clear "this is a directory" error
-        # instead of letting `read_text` produce IsADirectoryError /
-        # PermissionError noise that doesn't tell the operator what
-        # they actually got wrong.
+    if result.state == "invalid":
         raise InstallError(
-            f"{path} is a directory, not a config file. Point --config-path at the actual `mcp.json`-shaped file."
+            f"{path} exists but {result.detail}. Refusing to overwrite. Fix the file or delete it and rerun."
         )
-    try:
-        raw = path.read_text(encoding="utf-8-sig")
-    except OSError as exc:
-        raise InstallError(f"cannot read {path}: {exc}") from exc
-    if not raw.strip():
-        return {}
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        raise InstallError(
-            f"{path} exists but is not valid JSON ({exc.msg} at line "
-            f"{exc.lineno}). Refusing to overwrite. Fix the file or "
-            f"delete it and rerun."
-        ) from exc
-    if not isinstance(data, dict):
-        raise InstallError(f"{path} contains {type(data).__name__}, not an object. Refusing to rewrite.")
-    return data
+    return result.data or {}
 
 
 _CANONICAL_KEYS: frozenset[str] = frozenset({"command", "args"})

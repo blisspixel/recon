@@ -116,8 +116,9 @@ The script enforces the pre-release checklist automatically. It runs:
 8. **Version bump**: updates `pyproject.toml`, `src/recon_tool/__init__.py`
    fallback, and regenerates `uv.lock`.
 9. **Git commit + tag**: commits the bumped files, tags `vX.Y.Z`.
-10. **Push prompt**: y/N, defaults to N. If declined, the commit and tag
-    exist locally only and can be reset.
+10. **Push prompt**: y/N, defaults to N. If accepted, the script pushes `main`
+    and only the newly created tag through an exact refspec. If declined, the
+    commit and tag exist locally only and can be reset.
 
 ### Dry-run mode
 

@@ -253,6 +253,22 @@ class TestInjectEphemeralFingerprintMCP:
             )
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("detection_type", ["txt", "cname", "subdomain_txt"])
+    async def test_multiple_unbounded_quantifiers_return_error(self, detection_type: str) -> None:
+        """Session-injected regexes allow at most one unbounded repetition."""
+        from recon_tool.server import inject_ephemeral_fingerprint
+
+        pattern = "_proof:^a*a*a*a*a*b$" if detection_type == "subdomain_txt" else "^a*a*a*a*a*b$"
+        with pytest.raises(ToolError):
+            await inject_ephemeral_fingerprint(
+                name="Northwind Polynomial",
+                slug=f"northwind-polynomial-{detection_type}",
+                category="SaaS",
+                confidence="high",
+                detections=[{"type": detection_type, "pattern": pattern}],
+            )
+
+    @pytest.mark.asyncio
     async def test_empty_detections_returns_error(self) -> None:
         """Empty detections list → error JSON."""
         from recon_tool.server import inject_ephemeral_fingerprint
@@ -393,6 +409,14 @@ class TestClearEphemeralFingerprintsMCP:
 
 class TestReevaluateDomainMCP:
     """Verify reevaluate_domain MCP tool."""
+
+    def test_annotation_marks_shared_cache_mutation_stateful(self) -> None:
+        from recon_tool.server import mcp
+
+        tool = mcp._tool_manager.get_tool("reevaluate_domain")
+        assert tool is not None
+        assert tool.annotations is not None
+        assert tool.annotations.readOnlyHint is False
 
     def setup_method(self) -> None:
         from recon_tool.server import _cache_clear  # pyright: ignore[reportPrivateUsage]

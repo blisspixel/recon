@@ -127,6 +127,7 @@ def test_surface_inventory_has_agent_surfaces() -> None:
     assert approval["stateful_tools"] == [
         "clear_ephemeral_fingerprints",
         "inject_ephemeral_fingerprint",
+        "reevaluate_domain",
         "reload_data",
     ]
     assert "lookup_tenant" in approval["read_only_tools"]

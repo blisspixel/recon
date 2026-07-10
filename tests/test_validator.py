@@ -328,6 +328,8 @@ class TestStripControlChars:
             ("line1\nline2", "line1line2"),  # newline removed
             ("a\r\nb\tc\x07d", "abcd"),  # CR / LF / TAB / BEL removed
             ("x\x9bCSI", "xCSI"),  # C1 control (0x9b) removed
+            ("Acme\u202e[spoof]", "Acme[spoof]"),  # bidi override removed
+            ("Acme\u2066isolated\u2069", "Acmeisolated"),  # bidi isolate removed
             ("café résumé", "café résumé"),  # non-control Unicode preserved
         ],
     )

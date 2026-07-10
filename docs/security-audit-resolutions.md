@@ -701,6 +701,11 @@ non-gating (`|| true`) and is unaffected.
 
 ## Closed: round-two ingestion audit (CT data + VMC fetch, v1.9.18)
 
+Current behavior since v2.3.7 is stricter than the historical closure below:
+the opt-in BIMI fetch records a plausible certificate document but does not
+extract or trust subject identity without certificate-chain and VMC-profile
+validation.
+
 After the DNS internal-name leak class was closed, a second audit pass
 looked at the other attacker-controlled data recon ingests: certificate
 fields from CT logs (SAN names, issuer names) and the BIMI VMC fetch.

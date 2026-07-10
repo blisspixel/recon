@@ -10,6 +10,8 @@ the static catalogs/parsers from ``dns_tables``; never imported by either.
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 import logging
 import re
 
@@ -31,7 +33,7 @@ from recon_tool.fingerprints import (
     match_txt_all,
 )
 from recon_tool.http import http_client as _http_client
-from recon_tool.models import BIMIIdentity, EvidenceRecord
+from recon_tool.models import EvidenceRecord
 from recon_tool.sources import dns_base
 from recon_tool.sources.dns_tables import (
     ESP_DKIM_SELECTORS,
@@ -39,7 +41,6 @@ from recon_tool.sources.dns_tables import (
     bimi_vmc_url_is_safe,
     extract_bimi_vmc_url,
     is_public_dns_name,
-    parse_vmc_subject,
 )
 from recon_tool.validator import host_has_suffix, strip_control_chars
 
@@ -377,13 +378,11 @@ async def detect_dkim(ctx: dns_base.DetectionCtx, domain: str) -> None:
 
 
 async def _parse_bimi_vmc(ctx: dns_base.DetectionCtx, bimi_txt: str) -> None:
-    """Fetch the VMC PEM from a BIMI ``a=`` URL and extract corporate identity.
+    """Fetch and parse the certificate document named by BIMI ``a=``.
 
-    BIMI TXT records may carry an ``a=`` tag pointing to a ``.pem`` VMC
-    (Verified Mark Certificate). VMCs require strict legal verification, so the
-    Subject fields are high-confidence corporate identity data. The fetch is
-    SSRF-guarded and the parsed fields are control-stripped before they reach
-    any sink.
+    Certificate syntax alone does not establish a trusted chain or the VMC
+    profile. Record the document as an observation, but never promote its
+    attacker-supplied subject fields to corporate identity.
     """
     a_url = extract_bimi_vmc_url(bimi_txt)
     if a_url is None or not bimi_vmc_url_is_safe(a_url):
@@ -396,31 +395,34 @@ async def _parse_bimi_vmc(ctx: dns_base.DetectionCtx, bimi_txt: str) -> None:
                 return
             pem_data = resp.text
 
-        org, country, state, locality = parse_vmc_subject(pem_data)
-        if not org:
+        if not _has_certificate_pem_shape(pem_data):
             return
-        # The VMC subject fields come from a PEM served at the attacker-
-        # influenced a= URL. Strip control bytes before any panel / markdown /
-        # MCP sink.
-        org = strip_control_chars(org)
-        ctx.bimi_identity = BIMIIdentity(
-            organization=org,
-            country=strip_control_chars(country) if country else None,
-            state=strip_control_chars(state) if state else None,
-            locality=strip_control_chars(locality) if locality else None,
-            trademark=None,
-        )
         ctx.slugs.add("bimi-vmc")
         ctx.evidence.append(
             EvidenceRecord(
                 source_type="HTTP",
-                raw_value=f"VMC Organization={org}",
-                rule_name="BIMI VMC",
+                raw_value="BIMI certificate document observed",
+                rule_name="BIMI certificate document",
                 slug="bimi-vmc",
             )
         )
     except Exception as exc:
         logger.debug("BIMI VMC parsing failed: %s", exc)
+
+
+def _has_certificate_pem_shape(pem_data: str) -> bool:
+    """Return whether text has one bounded PEM certificate envelope."""
+    lines = pem_data.strip().splitlines()
+    if len(lines) < 3:
+        return False
+    if lines[0] != "-----BEGIN CERTIFICATE-----" or lines[-1] != "-----END CERTIFICATE-----":
+        return False
+    encoded = "".join(line.strip() for line in lines[1:-1])
+    try:
+        der = base64.b64decode(encoded, validate=True)
+    except (ValueError, binascii.Error):
+        return False
+    return len(der) >= 2 and der[0] == 0x30
 
 
 async def _fetch_mta_sts_policy(domain: str) -> str | None:
@@ -622,12 +624,13 @@ def _apply_dmarc(ctx: dns_base.DetectionCtx, dmarc_results: list[str], domain: s
 
 
 async def _apply_bimi(ctx: dns_base.DetectionCtx, bimi_results: list[str], domain: str) -> None:
-    """Record BIMI presence and attempt best-effort VMC identity enrichment.
+    """Record BIMI presence and optionally observe its certificate document.
 
-    BIMI presence is read from the DNS TXT record (passive). The VMC enrichment
+    BIMI presence is read from the DNS TXT record (passive). The document fetch
     fetches the ``a=`` certificate URL, a direct request to a host the looked-up
     party influences, so it is gated behind ``ctx.active_probes`` (--direct-probes)
-    and skipped by default. When it does run it must never abort the DNS source:
+    and skipped by default. Subject identity is not trusted without chain and
+    VMC-profile validation. When the fetch runs it must never abort the DNS source:
     anything it raises is caught and the BIMI detection plus the rest of the DNS
     intelligence is kept.
     """

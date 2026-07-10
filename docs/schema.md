@@ -189,7 +189,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `lexical_observations` | `list[string]` | no | n/a | stable | Hedged observations from CT subdomain lexical taxonomy. |
-| `bimi_identity` | object | yes | n/a | stable | BIMI VMC identity: `{organization, country, state, locality, trademark}`. |
+| `bimi_identity` | object | yes | n/a | stable | BIMI VMC identity from a trust-validated source: `{organization, country, state, locality, trademark}`. The current opt-in document probe does not populate this field from an unverified certificate subject. |
 | `evidence_conflicts` | `list[EvidenceConflict]` | no | n/a | stable (v1.7+) | Cross-source disagreements: each entry names a merged field where 2+ sources gave different values, with all candidates preserved. Empty array when sources agreed. |
 | `chain_motifs` | `list[ChainMotif]` | no | n/a | stable (v1.7+) | CNAME chain motifs that fired on related subdomains, e.g. Cloudflare → AWS origin, Akamai → Azure origin. Observable proxy/origin shape only; never an ownership claim. Catalog at `recon_tool/data/motifs.yaml`. |
 | `infrastructure_clusters` | `InfrastructureClusterReport` | no | always | stable (v1.8+) | CT co-occurrence community detection report. `algorithm` ∈ {`louvain`, `connected_components`, `skipped`}; `modularity` is 0.0 in fallback / skipped paths. `partition_stability` / `stability_runs` (additive, 2.2.0+) report the Louvain seed-sweep consensus (mean pairwise ARI; null outside the Louvain path). Members sorted; clusters sorted by size desc. |
@@ -398,7 +398,10 @@ success object.
 }
 ```
 
-All string fields; all except `organization` nullable. Stability: stable.
+All string fields; all except `organization` nullable. Stability: stable. The
+top-level field remains null when no trust-validated identity source is
+available, including when the opt-in BIMI probe observes only a certificate
+document without validating its chain and VMC profile.
 
 ### `SurfaceAttribution`
 

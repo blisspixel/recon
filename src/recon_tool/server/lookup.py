@@ -32,7 +32,6 @@ from recon_tool.server.runtime import (
     cache_get,
     cache_set,
     log_structured,
-    rate_limit_release,
     rate_limit_try_acquire,
 )
 from recon_tool.validator import validate_domain
@@ -180,7 +179,6 @@ async def lookup_tenant(
             try:
                 info, results = await server_app.resolve_tenant(validated)
             except ReconLookupError as exc:
-                rate_limit_release(validated)
                 elapsed = time.monotonic() - start_time
                 log_structured(
                     logging.INFO,
@@ -192,10 +190,8 @@ async def lookup_tenant(
                 )
                 return f"No information found for {domain}"
             except asyncio.CancelledError:
-                rate_limit_release(validated)
                 raise
             except Exception as exc:
-                rate_limit_release(validated)
                 logger.exception(
                     "Unexpected error looking up %s (request_id=%s)",
                     domain,

@@ -118,9 +118,6 @@ class _ServerRuntimeState:
         self.rate_limit[domain] = now
         return True
 
-    def rate_limit_release(self, domain: str) -> None:
-        self.rate_limit.pop(domain, None)
-
     def rate_limit_clear(self) -> None:
         self.rate_limit.clear()
 
@@ -183,10 +180,6 @@ def rate_limit_record(domain: str) -> None:
 
 def rate_limit_try_acquire(domain: str) -> bool:
     return _STATE.rate_limit_try_acquire(domain)
-
-
-def rate_limit_release(domain: str) -> None:
-    _STATE.rate_limit_release(domain)
 
 
 def rate_limit_clear() -> None:

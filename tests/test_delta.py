@@ -72,8 +72,47 @@ class TestLoadPrevious:
         with pytest.raises(ValueError, match="Expected JSON object"):
             load_previous(f)
 
+    def test_deeply_nested_json_is_rejected_cleanly(self, tmp_path: Path) -> None:
+        snapshot = tmp_path / "deep.json"
+        snapshot.write_text(
+            '{"x":' + "[" * 20_000 + "0" + "]" * 20_000 + "}",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(ValueError, match="nested"):
+            load_previous(snapshot)
+
+    def test_oversized_file_is_rejected_before_parsing(self, tmp_path: Path) -> None:
+        from recon_tool.delta import _MAX_PREVIOUS_EXPORT_BYTES
+
+        snapshot = tmp_path / "oversized.json"
+        snapshot.write_bytes(b" " * (_MAX_PREVIOUS_EXPORT_BYTES + 1))
+
+        with pytest.raises(ValueError, match="maximum size"):
+            load_previous(snapshot)
+
+    def test_oversized_json_integer_is_rejected_cleanly(self, tmp_path: Path) -> None:
+        snapshot = tmp_path / "large-integer.json"
+        snapshot.write_text('{"x":' + "9" * 5_000 + "}", encoding="utf-8")
+
+        with pytest.raises(ValueError, match="supported limits"):
+            load_previous(snapshot)
+
 
 class TestComputeDelta:
+    @pytest.mark.parametrize(
+        "snapshot",
+        [
+            {"services": 1},
+            {"services": [{}]},
+            {"slugs": "not-a-list"},
+            {"insights": ["valid", 1]},
+        ],
+    )
+    def test_invalid_collection_shapes_are_rejected(self, snapshot: dict) -> None:
+        with pytest.raises(ValueError, match="snapshot field"):
+            compute_delta(snapshot, _make_info())
+
     def test_no_changes(self):
         info = _make_info()
         prev = _make_previous()

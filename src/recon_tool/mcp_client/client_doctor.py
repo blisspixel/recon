@@ -27,6 +27,7 @@ from dataclasses import dataclass
 from pathlib import Path, PureWindowsPath
 from typing import Literal
 
+from recon_tool.mcp_client.config_json import read_json_object
 from recon_tool.mcp_client.install import Client, Scope, resolve_config_path, servers_key
 from recon_tool.validator import strip_control_chars
 
@@ -72,23 +73,12 @@ def _read_config(path: Path) -> tuple[Literal["missing", "invalid", "ok"], dict[
     the installer config reader so a config written by a Windows tool that
     prepends a UTF-8 BOM is not misreported as malformed.
     """
-    if not path.exists():
-        return "missing", None, "not found"
-    if path.is_dir():
-        return "invalid", None, "is a directory, not a config file"
-    try:
-        raw = path.read_text(encoding="utf-8-sig")
-    except OSError as exc:
-        return "invalid", None, f"cannot read: {exc}"
-    if not raw.strip():
-        return "missing", None, "empty file"
-    try:
-        data = json.loads(raw)
-    except json.JSONDecodeError as exc:
-        return "invalid", None, f"not valid JSON ({exc.msg} at line {exc.lineno})"
-    if not isinstance(data, dict):
-        return "invalid", None, f"top-level JSON is {type(data).__name__}, not an object"
-    return "ok", {str(k): v for k, v in data.items()}, "parsed"
+    result = read_json_object(path)
+    if result.state in {"missing", "empty"}:
+        return "missing", None, result.detail
+    if result.state == "invalid":
+        return "invalid", None, result.detail
+    return "ok", result.data, result.detail
 
 
 def _locate_recon(config: dict[str, object], client: Client, cwd: Path) -> tuple[dict[str, object] | None, str]:
@@ -170,12 +160,9 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
                 )
             )
     else:
-        # An absolute path is the common installed form: `recon mcp install`
-        # persists `shutil.which("recon")`, which on most machines is an
-        # absolute path ending in `recon` / `recon.exe`. Recognize that and
-        # the python / uvx launcher forms by basename, so a config synced
-        # from another machine (where the path does not resolve locally) is
-        # not mislabelled "unrecognized".
+        # Recognize installed recon and Python / uv launchers by basename. Do
+        # not probe the config-supplied path: on Windows, even a metadata check
+        # for a UNC command can initiate an outbound SMB connection.
         #
         # Use PureWindowsPath for the basename: a config synced from a
         # Windows box carries a backslash path, and bare `Path` on POSIX
@@ -192,7 +179,16 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
         # and autoApprove are rendered via json.dumps, which already escapes
         # control bytes, so only the bare command needs this.
         safe_command = strip_control_chars(command)
-        if Path(command).exists() or known_launcher:
+        normalized_windows_path = command.replace("/", "\\")
+        if normalized_windows_path.startswith("\\\\"):
+            checks.append(
+                ClientCheck(
+                    "command",
+                    "warn",
+                    f"network path '{safe_command}' was not probed; use a local recon launcher",
+                )
+            )
+        elif known_launcher:
             checks.append(ClientCheck("command", "ok", safe_command))
         else:
             checks.append(

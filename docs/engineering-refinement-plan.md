@@ -1,7 +1,7 @@
 # Engineering Refinement Plan
 
 Status: active planning track
-Review date: 2026-07-09
+Review date: 2026-07-10
 
 This plan records the parts of the recent architecture feedback that are worth
 turning into project work, and the parts that should stay deferred until there
@@ -60,6 +60,8 @@ Acceptance:
   product need.
 
 ### 2. Compact Agent Output for High-Volume MCP Tools
+
+Status: complete for every currently named target surface.
 
 `lookup_tenant(format="text")` is already compact enough for agent use. The
 remaining risk is high-volume graph, chain, catalog, and export surfaces where
@@ -120,6 +122,12 @@ Acceptance:
 - A regression test or profiling note covers every changed path.
 
 ### 4. Target-Side Poisoning Hardening
+
+Status: active. The July 10 pass added bounded MCP client-config and delta JSON
+readers, aggregate CertSpotter name retention, stricter session regex admission,
+and bidirectional formatting-control removal. Remaining fixtures should be
+added only when a concrete parser or collector boundary lacks equivalent
+evidence.
 
 The existing code already has many caps and parser-isolation points. This
 track strengthens validation evidence against hostile public data rather than
@@ -199,7 +207,6 @@ Minimum design before implementation:
 
 1. Keep the roadmap and ADRs current.
 2. Finish MCP 2026 readiness before the final 2026-07-28 spec lands.
-3. Add compact MCP output only for measured high-volume tools.
-4. Run the async/blocking audit and fix only proven event-loop blockers.
-5. Expand target-poisoning fixtures around existing caps.
-6. Reconsider fingerprint expressions only after a trigger is met.
+3. Run the async/blocking audit and fix only proven event-loop blockers.
+4. Expand target-poisoning fixtures around existing caps.
+5. Reconsider fingerprint expressions only after a trigger is met.
