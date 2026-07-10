@@ -178,7 +178,7 @@ class TestFormatterDegradedOutput:
     def test_markdown_includes_degraded_note(self):
         ti = _make_tenant_info(degraded_sources=("crt.sh", "certspotter"))
         md = format_tenant_markdown(ti)
-        assert "crt.sh" in md
+        assert r"crt\.sh" in md
         assert "certspotter" in md
 
     def test_markdown_no_degraded_note_when_empty(self):

@@ -358,6 +358,14 @@ class TestMarkdownEscaping:
         for ch in "`*[]()|<>":
             assert ch not in out or ("\\" + ch) in out
 
+    def test_markdown_escape_cannot_be_cancelled_by_existing_backslashes(self):
+        assert _markdown_escape(r"\*") == r"\\\*"
+        assert _markdown_escape(r"\[") == r"\\\["
+
+    def test_markdown_escape_removes_block_injection_newlines(self):
+        assert _markdown_escape("safe\n# forged") == r"safe\# forged"
+        assert _markdown_escape("    indented block") == "indented block"
+
     def test_display_name_escaped_in_markdown(self, fully_populated_tenant_info):
         info = dataclasses.replace(fully_populated_tenant_info, display_name="Evil [x](http://e)")
         assert "[x](http://e)" not in format_tenant_markdown(info)
@@ -374,3 +382,24 @@ class TestMarkdownEscaping:
         md = format_tenant_markdown(info)
         assert "](http://evil)" not in md
         assert "`code`" not in md
+
+    def test_header_and_footer_dynamic_fields_are_markdown_safe(self, fully_populated_tenant_info):
+        info = dataclasses.replace(
+            fully_populated_tenant_info,
+            queried_domain="# forged",
+            tenant_id="`<tenant>`",
+            degraded_sources=("# degraded",),
+            sources=("[source](https://evil.invalid)",),
+        )
+
+        md = format_tenant_markdown(info)
+
+        assert "**Domain:** # forged" not in md
+        assert "<tenant>" not in md
+        assert "(# degraded)" not in md
+        assert "[source](https://evil.invalid)" not in md
+        assert r"**Domain:** \# forged" in md
+        assert r"\`\<tenant\>\`" in md
+        assert r"\# degraded" in md
+        assert r"\[source\]\(https\:\/\/evil\.invalid\)" in md
+        assert "\\\n\n" not in md

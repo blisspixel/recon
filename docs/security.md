@@ -54,6 +54,10 @@ no inbound network listeners, no user-code execution.
   unspecified, and other non-global addresses are skipped before PTR lookup.
 - Rich-text rendering uses `Text.append(value, style=...)` which escapes Rich markup in the user-controlled portion
 - Error, warning, and batch-progress sinks that print untrusted strings (a bad domain echoed back, a per-source error reason) escape Rich markup and strip control bytes (`render_error`, `render_warning`; output-injection sweep, v2.1.2), so a crafted domain or DNS value cannot inject terminal escapes or markup
+- Markdown rendering backslash-escapes structural characters and existing
+  backslashes in source-derived service labels, posture observations,
+  explanation text, identity fields, insights, certificate issuers, and domain
+  lists after control-byte stripping
 - JSON output uses `json.dumps` (escapes)
 - No DNS value is interpolated into shell, SQL, or exec contexts anywhere in the codebase
 

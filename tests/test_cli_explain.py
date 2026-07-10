@@ -29,6 +29,7 @@ from recon_tool.models import (
     ConfidenceLevel,
     EvidenceRecord,
     MergeConflicts,
+    Observation,
     SourceResult,
     TenantInfo,
 )
@@ -158,6 +159,32 @@ class TestCLIExplainMarkdown:
         result = runner.invoke(app, ["lookup", "contoso.com", "--explain", "--md", "--no-cache"])
         assert result.exit_code == 0
         assert "## Explanations" in result.output
+
+
+class TestCLIPostureMarkdown:
+    """--posture --md keeps posture observations literal."""
+
+    @patch("recon_tool.posture.analyze_posture")
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_posture_md_escapes_observation_text(self, mock_resolve: AsyncMock, mock_posture) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        mock_posture.return_value = (
+            Observation(
+                category="[category](https://evil.invalid)",
+                salience="high",
+                statement="[click](https://evil.invalid)<img src=x>",
+                related_slugs=(),
+            ),
+        )
+
+        result = runner.invoke(app, ["lookup", "contoso.com", "--posture", "--md", "--no-cache"])
+
+        assert result.exit_code == 0
+        assert "[category](https://evil.invalid)" not in result.output
+        assert "[click](https://evil.invalid)" not in result.output
+        assert "<img src=x>" not in result.output
+        assert r"\[category\]\(https\:\/\/evil\.invalid\)" in result.output
+        assert r"\[click\]\(https\:\/\/evil\.invalid\)\<img src\=x\>" in result.output
 
 
 class TestCLINoExplainBackwardCompat:

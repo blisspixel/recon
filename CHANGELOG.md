@@ -16,6 +16,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Escaped source-derived service labels, posture observations, and explanation
+  text at every Markdown sink using the complete CommonMark punctuation set,
+  including pre-existing backslashes. Dynamic text can no longer introduce
+  block structure, links, HTML, code spans, or emphasis. Markdown service
+  groups now form a single
+  partition, exact Microsoft 365 fallbacks no longer misclassify generic DKIM
+  or unrelated Microsoft products, Google Workspace DKIM remains grouped with
+  its provider, and the Microsoft 365 US Government cloud label remains in the
+  Microsoft 365 section. CommonMark hard breaks no longer depend on trailing
+  spaces and appear only between adjacent lines.
 - Removed unsupported Microsoft Copilot and Google Gemini service labels that
   were inferred solely from Microsoft 365 or Google Workspace presence. Direct
   AI domain-verification evidence continues to render normally.

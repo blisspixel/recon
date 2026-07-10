@@ -256,7 +256,7 @@ class TestMarkdownRendering:
         info = _make_info()
         md = format_tenant_markdown(info)
         assert "# Tenant Report:" in md
-        assert "test.com" in md
+        assert r"test\.com" in md
 
     def test_markdown_with_cert_summary(self):
         from recon_tool.formatter import format_tenant_markdown
@@ -288,7 +288,7 @@ class TestMarkdownRendering:
         md = format_tenant_markdown(info)
         assert "Tenant Domains" in md
         assert "Related Domains" in md
-        assert "crt.sh" in md
+        assert r"crt\.sh" in md
 
     def test_markdown_m365_and_other_services(self):
         from recon_tool.formatter import format_tenant_markdown
@@ -299,6 +299,64 @@ class TestMarkdownRendering:
         md = format_tenant_markdown(info)
         assert "Microsoft 365 Services" in md
         assert "Tech Stack" in md
+
+    def test_markdown_service_groups_are_mutually_exclusive(self):
+        from recon_tool.formatter import format_tenant_markdown
+
+        info = _make_info(
+            services=(
+                "Microsoft Teams",
+                "Google Workspace: DKIM",
+                "DKIM (Google Workspace)",
+                "DKIM",
+                "AutoGen (Microsoft)",
+                "Microsoft Edge (Front Door)",
+            ),
+        )
+
+        md = format_tenant_markdown(info)
+        m365_section = md.split("## Microsoft 365 Services", 1)[1].split("##", 1)[0]
+        gws_section = md.split("## Google Workspace Services", 1)[1].split("##", 1)[0]
+        tech_section = md.split("## Tech Stack", 1)[1].split("##", 1)[0]
+
+        assert "- Microsoft Teams" in m365_section
+        assert r"- Google Workspace\: DKIM" in gws_section
+        assert r"- DKIM \(Google Workspace\)" in gws_section
+        assert "- DKIM" in tech_section
+        assert r"- AutoGen \(Microsoft\)" in tech_section
+        assert r"- Microsoft Edge \(Front Door\)" in tech_section
+        assert md.count(r"- Google Workspace\: DKIM") == 1
+        assert md.count(r"- DKIM \(Google Workspace\)") == 1
+
+    def test_m365_fallbacks_are_exact_source_labels(self):
+        from recon_tool.formatter import _is_m365_service
+
+        expected = {
+            "DKIM (Exchange Online)": True,
+            "Exchange Autodiscover": True,
+            "Exchange Online": True,
+            "Intune / MDM": True,
+            "Microsoft 365": True,
+            "Microsoft 365 (US Government cloud)": True,
+            "Microsoft Teams": True,
+            "Office ProPlus (msoid)": True,
+            "DKIM": False,
+            "AutoGen (Microsoft)": False,
+            "Microsoft Edge (Front Door)": False,
+            "Google Workspace: DKIM": False,
+            "DKIM (Google Workspace)": False,
+        }
+
+        assert {service: _is_m365_service(service) for service in expected} == expected
+
+    def test_all_catalog_m365_names_classify_as_m365(self):
+        from recon_tool.fingerprints import load_fingerprints
+        from recon_tool.formatter import _is_m365_service
+
+        names = {fp.name for fp in load_fingerprints() if fp.slug.startswith("microsoft365")}
+
+        assert names
+        assert all(_is_m365_service(name) for name in names)
 
 
 class TestChainRenderingMultiDepth:

@@ -29,20 +29,20 @@ __all__ = [
     "SLUG_DISPLAY_OVERRIDES",
 ]
 
-# M365-specific service keywords for display categorization (--services, markdown).
-# COUPLING WARNING: If you add a new M365 service to fingerprints.yaml, you may
-# need to add a keyword here too, or it will show up under "Tech Stack" instead
-# of "M365" in the --services view. Detection logic uses slugs (not these keywords).
-# NOTE: provider_group on fingerprints takes precedence when available.
+# Exact M365 service-name fallbacks for source-derived labels without
+# ``provider_group`` metadata. Fingerprint metadata remains authoritative.
+# Keep these exact: broad substrings such as "microsoft" or "dkim" misclassify
+# unrelated products and generic email controls.
 M365_KEYWORDS = frozenset(
     {
-        "exchange",
-        "teams",
-        "intune",
-        "mdm",
-        "dkim",
-        "microsoft",
-        "domain verified",
+        "dkim (exchange online)",
+        "exchange autodiscover",
+        "exchange online",
+        "intune / mdm",
+        "microsoft 365",
+        "microsoft 365 (us government cloud)",
+        "microsoft teams",
+        "office proplus (msoid)",
     }
 )
 # Category display order. Each service is classified into exactly one
