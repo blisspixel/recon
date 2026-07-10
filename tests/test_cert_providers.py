@@ -821,6 +821,35 @@ class TestCertSpotterPagination:
             await provider.query("example.com")
 
 
+class TestCertSpotterAggregateBounds:
+    def test_total_retained_sans_are_capped_across_entries(self) -> None:
+        from recon_tool.sources.cert_providers import (
+            _MAX_CRTSH_CERT_SUMMARY_ENTRIES,
+            _MAX_CRTSH_RAW_NAMES,
+            _MAX_SANS_PER_CERT,
+        )
+
+        issuance = _issuance(1, "same.example.com")
+        issuance["dns_names"] = ["same.example.com"] * _MAX_SANS_PER_CERT
+        raw_names: list[str] = []
+        cert_entries: list[dict[str, str | int | list[str] | None]] = []
+
+        CertSpotterProvider._accumulate_issuances(
+            [issuance] * _MAX_CRTSH_CERT_SUMMARY_ENTRIES,
+            raw_names,
+            cert_entries,
+        )
+
+        retained_entry_names = sum(
+            len(names)
+            for entry in cert_entries
+            if isinstance((names := entry.get("dns_names")), list)
+        )
+        assert len(raw_names) == _MAX_CRTSH_RAW_NAMES
+        assert retained_entry_names == _MAX_CRTSH_RAW_NAMES
+        assert len(cert_entries) == _MAX_CRTSH_CERT_SUMMARY_ENTRIES
+
+
 # ── Attacker-controlled CT data sanitization ────────────────────────────
 
 

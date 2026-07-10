@@ -34,21 +34,6 @@ from pathlib import Path
 
 import pytest
 
-
-# Typed shutil.which replacements used by monkeypatching tests below.
-# Hoisted to module level so they have static type info (pyright objects
-# to inline lambdas under strict mode).
-def _shutil_which_returns_none(name: str) -> str | None:
-    """Stub for ``shutil.which`` that pretends nothing is on PATH."""
-    return None
-
-
-def _shutil_which_returns_fake_recon(name: str) -> str | None:
-    """Stub for ``shutil.which`` that returns a fake absolute path so
-    the install path picks the preferred (recon-on-PATH) launch form."""
-    return "/fake/path/to/recon"
-
-
 # ── Layer 1: mcp_doctor spawn parameters ────────────────────────────
 
 
@@ -87,21 +72,14 @@ class TestMcpDoctorSpawnsSafely:
 
 
 class TestMcpInstallPersistsSafeEnv:
-    """``build_recon_block`` persists ``PYTHONSAFEPATH=1`` in the
-    fallback launch block's env. ``warn_if_fallback`` exposes a
-    warning when the fallback is in use."""
+    """The canonical installer launcher is interpreter-bound and isolated."""
 
-    def test_fallback_block_uses_safe_launcher_args(self, monkeypatch):
+    def test_canonical_block_uses_safe_launcher_args(self):
         """The fallback uses ``python -c "<launcher>"`` so the
         cwd-shadow attack is blocked at the language level on every
         supported Python version (including Python 3.10 where
         ``PYTHONSAFEPATH`` is a no-op). The launcher strips empty
         and "." entries from sys.path BEFORE importing recon_tool."""
-        # Force the fallback path: pretend ``recon`` is not on PATH.
-        monkeypatch.setattr(
-            "recon_tool.mcp_install.shutil.which",
-            _shutil_which_returns_none,
-        )
         from recon_tool.mcp_install import build_recon_block
 
         block = build_recon_block()
@@ -129,46 +107,7 @@ class TestMcpInstallPersistsSafeEnv:
         # intent.
         assert block.get("env") == {"PYTHONSAFEPATH": "1"}
 
-    def test_recon_on_path_block_omits_env(self, monkeypatch):
-        # When recon is on PATH, the block uses the `recon mcp` form
-        # which has no -m and therefore no cwd-prepend concern. The
-        # env block stays clean to avoid persisting unnecessary state.
-        monkeypatch.setattr(
-            "recon_tool.mcp_install.shutil.which",
-            _shutil_which_returns_fake_recon,
-        )
-        from recon_tool.mcp_install import build_recon_block
-
-        block = build_recon_block()
-        assert block["command"] == "/fake/path/to/recon"
-        assert block["args"] == ["mcp"]
-        assert "env" not in block, (
-            "preferred block (recon on PATH) should not carry an env key — it has no cwd-shadow concern to mitigate."
-        )
-
-    def test_warn_if_fallback_when_recon_missing(self, monkeypatch):
-        monkeypatch.setattr(
-            "recon_tool.mcp_install.shutil.which",
-            _shutil_which_returns_none,
-        )
-        from recon_tool.mcp_install import warn_if_fallback
-
-        warning = warn_if_fallback()
-        assert warning is not None
-        assert "PATH" in warning
-        # Warning describes the cwd-stripping launcher protection
-        # rather than the prior PYTHONSAFEPATH framing (which was
-        # incomplete for Python 3.10).
-        assert "sys.path" in warning, (
-            "warning must mention the sys.path-stripping protection so the "
-            "operator understands the language-level mitigation."
-        )
-
-    def test_warn_if_fallback_returns_none_when_recon_on_path(self, monkeypatch):
-        monkeypatch.setattr(
-            "recon_tool.mcp_install.shutil.which",
-            _shutil_which_returns_fake_recon,
-        )
+    def test_compatibility_warning_is_retired(self):
         from recon_tool.mcp_install import warn_if_fallback
 
         assert warn_if_fallback() is None

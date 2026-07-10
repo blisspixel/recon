@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.7] - 2026-07-10
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes. The existing
+`reevaluate_domain` MCP tool is now correctly advertised as stateful because it
+replaces a cached result.
+
 ### Changed
 
 - Expanded the rotating CLI lookup status messages with more varied, still
@@ -26,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pointer.
 - Added `chain_lookup(result_limit=...)` for compact recursive-domain output
   while keeping the zero-limit raw JSON response unchanged.
+- **MCP client installation is interpreter-bound.** `recon mcp install` now
+  always persists the Python interpreter running the installer plus the
+  existing sys.path-stripping launcher. Generated client configuration no
+  longer depends on a later shell PATH lookup resolving the same installation.
+- **BIMI certificate observations no longer imply identity.** The opt-in direct
+  probe records a syntactically plausible PEM certificate document, but does
+  not promote unverified subject fields into the stable nullable
+  `bimi_identity` field. That field is reserved for a future source that
+  validates the certificate chain and VMC profile.
 
 ### Fixed
 
@@ -43,6 +60,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   evaluation now build metadata through the canonical tenant-info context, so
   gateway gap signals use the effective DMARC policy rather than only the raw
   published policy.
+- **Bounded local JSON ingestion.** MCP client configuration and delta snapshot
+  readers now cap bytes, reject excessive nesting and numeric values, require
+  consumed snapshot fields to have their documented shapes, and report clean
+  errors instead of propagating parser failures.
+- **Bounded certificate-transparency retention.** CertSpotter aggregation now
+  enforces one total retained-name ceiling across all admitted certificate
+  entries instead of multiplying the per-entry cap across a response page.
+- **Bounded session regex complexity.** Session-injected fingerprint patterns
+  now permit at most one repetition operator in addition to the existing
+  length and structural checks. Catalog regex validation moved into a focused
+  module without changing built-in matching behavior.
+- **MCP cooldown consistency.** A started lookup now retains its short
+  per-domain cooldown after failure or cancellation, preventing repeated
+  immediate work from bypassing the limiter.
+- **Unicode display normalization.** Output sanitization now removes invisible
+  bidirectional formatting controls while preserving ordinary international
+  text.
+- **Exact release-tag push.** The release helper pushes `main` and only the tag
+  created for the reviewed version, rather than every local tag.
+- **MCP configuration diagnostics.** Client checks no longer perform filesystem
+  metadata calls on commands supplied by workspace configuration and report
+  network-path commands without probing them.
 
 ## [2.3.6] - 2026-07-09
 

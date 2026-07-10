@@ -203,6 +203,12 @@ def _bump_lockfile(dry_run: bool) -> None:
     _run(["uv", "lock"], capture=False)
 
 
+def _release_push_command(version: str) -> list[str]:
+    """Return the exact refspec push for one reviewed release tag."""
+    tag = f"v{version}"
+    return ["git", "push", "origin", "main", f"refs/tags/{tag}:refs/tags/{tag}"]
+
+
 # ── Release pipeline ──────────────────────────────────────────────────────
 
 
@@ -277,13 +283,13 @@ def main(argv: list[str] | None = None) -> int:
 
         if _prompt_confirm(f"Push v{new_version} to origin main?", default_no=True):
             print("->Pushing...")
-            _run(["git", "push", "origin", "main", "--tags"], capture=False)
+            _run(_release_push_command(new_version), capture=False)
             print(f"\nReleased v{new_version}. Watch the pipeline:")
             print("  https://github.com/blisspixel/recon/actions")
         else:
             print(
                 f"\nCommit + tag v{new_version} are local only.\n"
-                "To push later:  git push origin main --tags\n"
+                f"To push later:  git push origin main refs/tags/v{new_version}:refs/tags/v{new_version}\n"
                 "To abort:       git reset --hard HEAD~1 && git tag -d v{new_version}"
             )
 
