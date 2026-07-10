@@ -777,10 +777,9 @@ class CertSpotterProvider:
         """Accumulate one page's issuances into the running lists, and return the
         last issuance id (the pagination cursor) or None.
 
-        Capped at ``_MAX_CRTSH_CERT_SUMMARY_ENTRIES`` the way crt.sh already is: a
-        10 MB page can carry thousands of issuances reusing one small SAN set,
-        which the unique-name early-exit never catches and which would otherwise
-        feed an unbounded entry count into the graph builder.
+        Entry count and aggregate retained SAN count are bounded independently.
+        A response can otherwise multiply the per-certificate SAN cap across
+        every admitted issuance before the later unique-name check runs.
         """
         last_id: str | None = None
         for issuance in data:
@@ -789,7 +788,10 @@ class CertSpotterProvider:
             names, cert_entry, issuance_id = _parse_certspotter_issuance(issuance)
             if cert_entry is None:
                 continue
-            all_raw_names.extend(names)
+            remaining_names = max(_MAX_CRTSH_RAW_NAMES - len(all_raw_names), 0)
+            retained_names = names[:remaining_names]
+            all_raw_names.extend(retained_names)
+            cert_entry["dns_names"] = retained_names
             all_cert_entries.append(cert_entry)
             if issuance_id is not None:
                 last_id = issuance_id
@@ -884,6 +886,7 @@ class CertSpotterProvider:
                 # cap, stop early. No point paying for more pages.
                 if (
                     len(set(all_raw_names)) >= MAX_SUBDOMAINS * 2
+                    or len(all_raw_names) >= _MAX_CRTSH_RAW_NAMES
                     or len(all_cert_entries) >= _MAX_CRTSH_CERT_SUMMARY_ENTRIES
                 ):
                     break

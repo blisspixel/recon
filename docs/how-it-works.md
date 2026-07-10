@@ -28,7 +28,9 @@ recon collects from three public source families:
 
 The default path is passive. The queried domain's own servers see only the
 standard MTA-STS policy fetch. Google CSE and BIMI VMC direct probes require
-`--direct-probes`.
+`--direct-probes`. The BIMI probe records a plausible certificate document as
+an observation; it does not treat unverified certificate-subject text as
+corporate identity.
 
 ## Normalization
 

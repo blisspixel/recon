@@ -112,6 +112,30 @@ class TestCheckClient:
         config_checks = [c for c in report.checks if c.name == "config file"]
         assert any(c.status == "fail" and "JSON" in c.detail for c in config_checks)
 
+    def test_deep_json_is_reported_without_crashing(self, home: Path) -> None:
+        (home / ".claude.json").write_text(
+            '{"x":' + "[" * 20_000 + "0" + "]" * 20_000 + "}",
+            encoding="utf-8",
+        )
+
+        report = check_client("claude-code", platform_name="linux")
+
+        assert not report.ok
+        config_checks = [c for c in report.checks if c.name == "config file"]
+        assert any(c.status == "fail" and "nested" in c.detail for c in config_checks)
+
+    def test_oversized_json_integer_is_reported_without_crashing(self, home: Path) -> None:
+        (home / ".claude.json").write_text(
+            '{"x":' + "9" * 5_000 + "}",
+            encoding="utf-8",
+        )
+
+        report = check_client("claude-code", platform_name="linux")
+
+        assert not report.ok
+        config_checks = [c for c in report.checks if c.name == "config file"]
+        assert any(c.status == "fail" and "supported limits" in c.detail for c in config_checks)
+
     def test_bom_tolerant_read(self, home: Path, recon_on_path: None) -> None:
         # A UTF-8 BOM prepended by a Windows editor must not break parsing.
         raw = json.dumps({"mcpServers": {"recon": {"command": "recon", "args": ["mcp"]}}})
@@ -264,6 +288,24 @@ class TestRegressionFixes:
         )
         report = check_client("claude-code", platform_name="linux")
         assert _statuses(report)["command"] == "ok"
+
+    def test_network_command_path_is_never_probed(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        class UntrustedPath:
+            def exists(self) -> bool:
+                raise AssertionError("workspace command paths must not trigger filesystem access")
+
+        def untrusted_path(_value: str) -> UntrustedPath:
+            return UntrustedPath()
+
+        monkeypatch.setattr(client_doctor, "Path", untrusted_path)
+
+        checks = client_doctor._command_checks(  # pyright: ignore[reportPrivateUsage]
+            {"command": r"\\server.invalid\share\recon.exe", "args": ["mcp"]}
+        )
+
+        command = next(check for check in checks if check.name == "command")
+        assert command.status == "warn"
+        assert "network path" in command.detail
 
     def test_duplicate_stanza_not_mislabelled(
         self, home: Path, recon_on_path: None, monkeypatch: pytest.MonkeyPatch, tmp_path: Path

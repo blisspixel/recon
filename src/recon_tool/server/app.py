@@ -23,7 +23,6 @@ from recon_tool.server.runtime import (
     cache_get,
     cache_set,
     log_structured,
-    rate_limit_release,
     rate_limit_try_acquire,
 )
 from recon_tool.validator import validate_domain
@@ -208,16 +207,10 @@ async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]]
     try:
         info, results = await resolve_tenant(validated)
     except ReconLookupError:
-        rate_limit_release(validated)
         return f"No information found for {domain}"
     except asyncio.CancelledError:
-        # A cancelled resolve (client cancellation, shutdown, timeout) must free
-        # the per-domain slot it acquired, or an immediate retry sees a spurious
-        # rate limit. Never swallow the cancellation itself.
-        rate_limit_release(validated)
         raise
     except Exception as exc:
-        rate_limit_release(validated)
         request_id = uuid.uuid4().hex[:12]
         logger.exception("Unexpected error looking up %s (request_id=%s)", domain, request_id)
         return internal_lookup_error(domain, request_id, exc)
@@ -256,13 +249,10 @@ async def resolve_single_for_tool(domain: str, request_id: str) -> TenantInfo:
     try:
         info, results = await resolve_tenant(validated)
     except ReconLookupError as exc:
-        rate_limit_release(validated)
         raise ToolError(f"No information found for {domain}") from exc
     except asyncio.CancelledError:
-        rate_limit_release(validated)
         raise
     except Exception as exc:
-        rate_limit_release(validated)
         logger.exception("Unexpected error looking up %s (request_id=%s)", domain, request_id)
         raise ToolError(internal_lookup_error(domain, request_id, exc)) from exc
 

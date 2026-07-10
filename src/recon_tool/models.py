@@ -68,10 +68,12 @@ class EvidenceRecord:
 
 @dataclass(frozen=True)
 class BIMIIdentity:
-    """Corporate identity extracted from a BIMI VMC certificate.
+    """Identity supplied by a trust-validated BIMI VMC source.
 
-    VMC certificates require strict legal verification, so the extracted
-    organization name is a high-confidence corporate identity signal.
+    The direct BIMI document probe does not populate this model because parsing
+    a certificate subject without chain and VMC-profile validation is not enough
+    to establish identity. The stable nullable model remains available for a
+    future source that performs that validation.
     """
 
     organization: str

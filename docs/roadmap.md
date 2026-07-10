@@ -5,7 +5,7 @@ This file is the current plan and scope boundary. Shipped work belongs in
 [release-process.md](release-process.md). Historical release planning lives in
 [roadmap-history.md](roadmap-history.md).
 
-> **Status:** v2.3.6 is current. recon is feature-complete for the current
+> **Status:** v2.3.7 is current. recon is feature-complete for the current
 > roadmap: the CLI, JSON schema, MCP server, validation guards, release path,
 > generated schema guard, and generated surface inventory guard are shipped.
 > Remaining work hardens the project, sharpens documentation, and improves
@@ -425,10 +425,10 @@ Pause the migration and reassess if any phase:
 
 ## Version Milestones
 
-- **2.2.x active patch line.** Documentation, validation, correctness fixes,
+- **2.3.x active patch line.** Documentation, validation, correctness fixes,
   generated-artifact guards, corpus-run tooling, and catalog refinements. Patch
   releases must not add a new stable runtime surface.
-- **2.3 reserved.** The only plausible current candidate is a stable subset of
+- **2.4 reserved.** The only plausible current candidate is a stable subset of
   the generated surface inventory. ADR-0007 blocks promotion until a concrete
   external consumer needs compatibility guarantees.
 - **3.0 reserved.** A major release happens only for an unavoidable breaking

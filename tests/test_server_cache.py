@@ -18,7 +18,6 @@ from recon_tool.server import (
     _rate_limit_check,
     _rate_limit_clear,
     _rate_limit_record,
-    _rate_limit_release,
     _rate_limit_try_acquire,
 )
 
@@ -114,11 +113,6 @@ class TestBoundedRateLimiter:
     def test_try_acquire_records_immediately(self):
         assert _rate_limit_try_acquire("test.com") is True
         assert _rate_limit_check("test.com") is False
-
-    def test_release_clears_inflight_token(self):
-        assert _rate_limit_try_acquire("test.com") is True
-        _rate_limit_release("test.com")
-        assert _rate_limit_check("test.com") is True
 
     def test_rate_limit_bounded_size(self):
         """Rate limiter should not grow unbounded."""

@@ -46,15 +46,29 @@ def host_has_suffix(host: str, suffix: str) -> bool:
 # enough to bound a hostile payload.
 _MAX_DISPLAY_LEN = 200
 
+_BIDI_CONTROL_CODEPOINTS = frozenset(
+    {
+        0x061C,  # Arabic Letter Mark
+        0x200E,  # Left-to-Right Mark
+        0x200F,  # Right-to-Left Mark
+        *range(0x202A, 0x202F),  # embeddings, overrides, and pop formatting
+        *range(0x2066, 0x206A),  # directional isolates and pop isolate
+    }
+)
+
 
 def _has_no_control_chars(value: str) -> bool:
-    """No C0 (0x00-0x1F), DEL (0x7F), or C1 (0x80-0x9F) control character survives.
+    """No terminal or bidirectional formatting control survives."""
 
-    This is the load-bearing security postcondition for ``strip_control_chars``:
-    its output is rendered to terminals and into JSON / markdown / MCP output, so
-    a surviving ESC or newline would be an injection vector.
-    """
-    return all(not (ord(c) < 0x20 or ord(c) == 0x7F or 0x80 <= ord(c) <= 0x9F) for c in value)
+    return all(
+        not (
+            ord(c) < 0x20
+            or ord(c) == 0x7F
+            or 0x80 <= ord(c) <= 0x9F
+            or ord(c) in _BIDI_CONTROL_CODEPOINTS
+        )
+        for c in value
+    )
 
 
 @deal.post(_has_no_control_chars)  # pyright: ignore[reportUntypedFunctionDecorator]
@@ -73,12 +87,21 @@ def strip_control_chars(value: str, max_len: int = _MAX_DISPLAY_LEN) -> str:
     inject extra lines into the line-oriented output an agent or SIEM
     consumes.
 
-    This removes every C0 control (0x00-0x1F), DEL (0x7F), and C1 control
-    (0x80-0x9F), then truncates to *max_len*. Printable content (letters,
-    digits, spaces, punctuation, non-control Unicode) is preserved, so a
-    legitimate "DigiCert Inc" or "Contoso, Ltd." is unchanged.
+    This removes every C0 control (0x00-0x1F), DEL (0x7F), C1 control
+    (0x80-0x9F), and Unicode bidirectional formatting control, then truncates
+    to *max_len*. Ordinary right-to-left letters remain intact; only invisible
+    formatting state that can reorder surrounding output is removed.
     """
-    cleaned = "".join(c for c in value if not (ord(c) < 0x20 or ord(c) == 0x7F or 0x80 <= ord(c) <= 0x9F))
+    cleaned = "".join(
+        c
+        for c in value
+        if not (
+            ord(c) < 0x20
+            or ord(c) == 0x7F
+            or 0x80 <= ord(c) <= 0x9F
+            or ord(c) in _BIDI_CONTROL_CODEPOINTS
+        )
+    )
     return cleaned[:max_len]
 
 

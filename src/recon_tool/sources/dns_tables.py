@@ -83,44 +83,6 @@ def bimi_vmc_url_is_safe(a_url: str) -> bool:
     return True
 
 
-def parse_vmc_subject(pem_data: str) -> tuple[str | None, str | None, str | None, str | None]:
-    """Extract (organization, country, state, locality) from a VMC PEM.
-
-    Prefers the cryptography library; falls back to a regex over the PEM text
-    when it is unavailable.
-    """
-    org = country = state = locality = None
-    try:
-        from cryptography import x509
-
-        cert_obj = x509.load_pem_x509_certificate(pem_data.encode())
-        for attr in cert_obj.subject:
-            oid_name = attr.oid.dotted_string
-            val = str(attr.value)
-            if oid_name == "2.5.4.10":  # Organization
-                org = val
-            elif oid_name == "2.5.4.6":  # Country
-                country = val
-            elif oid_name == "2.5.4.8":  # State
-                state = val
-            elif oid_name == "2.5.4.7":  # Locality
-                locality = val
-    except ImportError:
-        import re as _re
-
-        for line in pem_data.splitlines():
-            line_stripped = line.strip()
-            if "O=" in line_stripped or "O =" in line_stripped:
-                m = _re.search(r"O\s*=\s*([^,/]+)", line_stripped)
-                if m:
-                    org = m.group(1).strip()
-            if "C=" in line_stripped:
-                m = _re.search(r"C\s*=\s*([^,/]+)", line_stripped)
-                if m:
-                    country = m.group(1).strip()
-    return org, country, state, locality
-
-
 def is_public_dns_name(name: str) -> bool:
     """Return True when *name* looks like a name on the public DNS.
 

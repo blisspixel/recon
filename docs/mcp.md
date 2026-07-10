@@ -49,9 +49,9 @@ pip install recon-tool
    }
    ```
 
-   > If `recon` is not on your PATH, prefer `recon mcp install` or an
-   > absolute path to the `recon` script. The installer writes a
-   > sys.path-stripping Python fallback when needed; avoid hand-writing
+   > Prefer `recon mcp install` over copying this example. The installer binds
+   > the config to the Python interpreter running recon and writes a
+   > sys.path-stripping launcher; avoid hand-writing
    > `python -m recon_tool.server` in workspace configs unless the
    > working directory is trusted.
 
@@ -205,6 +205,9 @@ the ones to keep manual (or approve only when you understand the effect):
   session.
 - `reload_data`: re-reads the fingerprint, signal, and posture catalogs from
   disk into the running server.
+- `reevaluate_domain`: replaces the cached merged result for one domain after
+  applying the session's current fingerprint catalog. It makes no network
+  request, but later tools observe the refreshed cached result.
 
 Every other tool is **read-only** (`readOnlyHint=true`): it does not mutate
 server state. Note that read-only does not mean "no network": the
@@ -378,7 +381,7 @@ One format note: VS Code's `.vscode/mcp.json` maps server names under a top-leve
 
 ### PATH gotcha for GUI clients
 
-GUI MCP clients (Claude Desktop, Windsurf, Cursor, VS Code) typically don't inherit your shell's PATH. If a client can't find `recon`, first run `recon mcp install --client=<name> --force` from the Python environment where recon is installed. The installer writes an absolute `recon` path when it can find one, or a sys.path-stripping Python fallback when it cannot. If you edit by hand, prefer the absolute path to the `recon` script (run `which recon` / `where recon` to find it):
+GUI MCP clients (Claude Desktop, Windsurf, Cursor, VS Code) typically don't inherit your shell's PATH. Run `recon mcp install --client=<name> --force` from the Python environment where recon is installed. The installer always writes that interpreter's absolute path plus a sys.path-stripping launcher, so the client uses the same recon installation without depending on shell PATH. If you edit by hand, prefer the absolute path to the `recon` script (run `which recon` / `where recon` to find it):
 
 ```json
 {

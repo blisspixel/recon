@@ -118,14 +118,14 @@ class TestDefaultScope:
 
 
 class TestBuildReconBlock:
-    def test_uses_recon_when_on_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        def _which(_cmd: str) -> str:
-            return "/usr/local/bin/recon"
-
-        monkeypatch.setattr("recon_tool.mcp_install.shutil.which", _which)
+    def test_uses_running_interpreter_even_when_recon_is_on_path(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr("recon_tool.mcp_install.sys.executable", "/opt/python/bin/python3")
         block = build_recon_block()
-        assert block["command"] == "/usr/local/bin/recon"
-        assert block["args"] == ["mcp"]
+        assert block["command"] == "/opt/python/bin/python3"
+        assert block["args"][0] == "-c"
+        assert block["env"] == {"PYTHONSAFEPATH": "1"}
         assert block["autoApprove"] == []
 
     def test_falls_back_to_python_safe_launcher(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -139,10 +139,6 @@ class TestBuildReconBlock:
         before any ``recon_tool`` import, blocking the cwd-shadow
         attack at the language level."""
 
-        def _which(_cmd: str) -> str | None:
-            return None
-
-        monkeypatch.setattr("recon_tool.mcp_install.shutil.which", _which)
         monkeypatch.setattr("recon_tool.mcp_install.sys.executable", "/opt/python/bin/python3")
         block = build_recon_block()
         assert block["command"] == "/opt/python/bin/python3"
@@ -187,7 +183,7 @@ class TestPlanAndInstallCreate:
         assert result.path == target
         assert result.action == "create"
         data = json.loads(target.read_text(encoding="utf-8"))
-        assert data["mcpServers"]["recon"]["args"] == ["mcp"]
+        assert data["mcpServers"]["recon"]["args"] == build_recon_block()["args"]
         assert data["mcpServers"]["recon"]["autoApprove"] == []
 
     def test_install_dry_run_writes_nothing(self, tmp_path: Path) -> None:
@@ -244,6 +240,25 @@ class TestPlanAndInstallMerge:
 
 
 class TestInstallRefusals:
+    def test_deep_existing_json_is_refused_cleanly(self, tmp_path: Path) -> None:
+        target = tmp_path / "mcp.json"
+        target.write_text(
+            '{"x":' + "[" * 20_000 + "0" + "]" * 20_000 + "}",
+            encoding="utf-8",
+        )
+
+        with pytest.raises(InstallError, match="nested"):
+            plan_install("cursor", "user", config_path_override=target)
+
+    def test_oversized_existing_json_is_refused_cleanly(self, tmp_path: Path) -> None:
+        from recon_tool.mcp_client.config_json import MAX_CLIENT_CONFIG_BYTES
+
+        target = tmp_path / "mcp.json"
+        target.write_bytes(b" " * (MAX_CLIENT_CONFIG_BYTES + 1))
+
+        with pytest.raises(InstallError, match="maximum size"):
+            plan_install("cursor", "user", config_path_override=target)
+
     def test_refuse_overwrite_differing_recon_block_without_force(self, tmp_path: Path) -> None:
         target = tmp_path / "mcp.json"
         target.write_text(
@@ -753,7 +768,7 @@ class TestVscodeServersKey:
         data = json.loads(target.read_text(encoding="utf-8"))
         assert "servers" in data
         assert "mcpServers" not in data
-        assert data["servers"]["recon"]["args"] == ["mcp"]
+        assert data["servers"]["recon"]["args"] == build_recon_block()["args"]
 
     def test_install_vscode_merges_into_existing_servers(self, tmp_path: Path) -> None:
         target = tmp_path / "mcp.json"

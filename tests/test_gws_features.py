@@ -214,8 +214,8 @@ class TestTlsRptDetection:
 class TestParseBimiVmc:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_bimi_vmc_identity_extracted(self, mock_resolve):
-        """BIMI with a= PEM URL should extract VMC corporate identity."""
+    async def test_bimi_vmc_unverified_subject_not_used(self, mock_resolve):
+        """An unverified PEM subject must not become corporate identity."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
                 "example.com/TXT": [],
@@ -226,7 +226,7 @@ class TestParseBimiVmc:
             }
         )
 
-        # Mock the HTTP fetch for the PEM file — use regex fallback path
+        # A certificate-looking subject line does not make an invalid PEM trusted.
         pem_content = "Subject: O=Northwind Traders, C=US\n-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----"
         mock_resp = httpx.Response(
             status_code=200,
@@ -238,16 +238,13 @@ class TestParseBimiVmc:
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
         mock_client.__aexit__ = AsyncMock(return_value=False)
 
-        with (
-            patch("recon_tool.sources.dns_email._http_client", return_value=mock_client),
-            patch.dict("sys.modules", {"cryptography": None, "cryptography.x509": None}),
-        ):
+        with patch("recon_tool.sources.dns_email._http_client", return_value=mock_client):
             # VMC fetch is opt-in (--direct-probes); enable it for this test.
             result = await DNSSource().lookup("example.com", active_probes=True)
 
-        assert result.bimi_identity is not None
-        assert result.bimi_identity.organization == "Northwind Traders"
-        assert result.bimi_identity.country == "US"
+        assert "BIMI" in result.detected_services
+        assert result.bimi_identity is None
+        assert "bimi-vmc" not in result.detected_slugs
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")

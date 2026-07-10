@@ -85,7 +85,6 @@ _rate_limit_evict_expired = _server_runtime.rate_limit_evict_expired
 _rate_limit_check = _server_runtime.rate_limit_check
 _rate_limit_record = _server_runtime.rate_limit_record
 _rate_limit_try_acquire = _server_runtime.rate_limit_try_acquire
-_rate_limit_release = _server_runtime.rate_limit_release
 _rate_limit_clear = _server_runtime.rate_limit_clear
 _log_structured = _server_runtime.log_structured
 

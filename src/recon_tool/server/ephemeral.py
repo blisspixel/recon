@@ -395,7 +395,7 @@ async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
 
 @mcp.tool(
     annotations=ToolAnnotations(
-        readOnlyHint=True,
+        readOnlyHint=False,
         destructiveHint=False,
         idempotentHint=True,
         openWorldHint=True,

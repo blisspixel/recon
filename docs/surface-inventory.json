@@ -209,7 +209,6 @@
         "get_signals",
         "list_ephemeral_fingerprints",
         "lookup_tenant",
-        "reevaluate_domain",
         "simulate_hardening",
         "test_hypothesis"
       ],
@@ -217,6 +216,7 @@
       "stateful_tools": [
         "clear_ephemeral_fingerprints",
         "inject_ephemeral_fingerprint",
+        "reevaluate_domain",
         "reload_data"
       ]
     },
@@ -2628,7 +2628,7 @@
           "destructiveHint": false,
           "idempotentHint": true,
           "openWorldHint": true,
-          "readOnlyHint": true
+          "readOnlyHint": false
         },
         "input_parameters": [
           {

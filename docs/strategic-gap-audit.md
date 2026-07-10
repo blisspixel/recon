@@ -3,7 +3,7 @@
 Status: source-backed step-back audit for the current roadmap. This file does
 not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior.
 
-Checked: 2026-06-30.
+Checked: 2026-07-10.
 
 ## Bottom Line
 
@@ -49,7 +49,7 @@ before adding surface area.
 
 ## Current Evidence
 
-- `v2.2.18` is current on GitHub Releases and PyPI.
+- `v2.3.7` is current on GitHub Releases and PyPI.
 - Local release readiness passes for the current local main branch.
 - Remote release readiness passes for the current pushed main branch and
   verifies required GitHub Actions checks, public Scorecard API freshness and
