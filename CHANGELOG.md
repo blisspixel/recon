@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.3.9] - 2026-07-10
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Changed
 
 - Reframed the canonical roadmap around evidence-semantic integrity, an
@@ -14,9 +20,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   baseline. Publication and process work now remains a separate maintainer
   track instead of defining product priority.
 - Corrected stale or misleading documentation about MCP v2 availability,
-  bundled AI and sovereignty inference, CT cache lifetime, batch concurrency,
-  fingerprint-catalog size, ephemeral fingerprint behavior, runtime dependency
-  count, and the interpretation of public-evidence scores.
+  bundled AI inference, sovereignty unknown-state behavior, CT cache lifetime,
+  batch concurrency, fingerprint-catalog size, ephemeral fingerprint behavior,
+  runtime dependency count, and the interpretation of public-evidence scores.
 - Replaced the completed interface-migration detail in the active roadmap with
   graph-backed hotspot, acceptance, and stop-rule guidance; historical shipped
   work remains in the changelog, roadmap history, and ADRs.
