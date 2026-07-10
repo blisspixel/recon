@@ -293,6 +293,24 @@ class TestParseBimiVmc:
 class TestFetchMtaStsPolicy:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_no_policy_fetch_without_mta_sts_record(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_mta-sts.example.com/TXT": [],
+            }
+        )
+
+        with patch("recon_tool.sources.dns_email._http_client") as mock_http_client:
+            result = await DNSSource().lookup("example.com", skip_ct=True)
+
+        mock_http_client.assert_not_called()
+        assert "MTA-STS" not in result.detected_services
+        assert result.mta_sts_mode is None
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_mta_sts_enforce_mode(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {

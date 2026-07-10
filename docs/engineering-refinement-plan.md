@@ -45,7 +45,8 @@ or failing guard.
 
 ## Track 1: Evidence-Semantic Integrity
 
-Status: active; live MCP boundary and score wording corrected in Unreleased
+Status: active; live MCP boundary, score wording, and parent-platform
+child-product inference corrected in Unreleased
 Dependencies: none
 Risk: high product-trust risk, high compatibility sensitivity
 
@@ -55,10 +56,10 @@ Risk: high product-trust risk, high compatibility sensitivity
    workflows.
 2. Classify each claim as directly observed, derived from a documented rule,
    defined public absence, or unresolved.
-3. Remove parent-platform child-product claims next. The live MCP
-   collection-boundary instructions and model-bound score wording were the
-   first completed correction. Preserve and test the existing behavior that
-   keeps absent sovereignty metadata unknown.
+3. Keep the completed parent-platform child-product regression guard green.
+   The live MCP collection-boundary instructions and model-bound score wording
+   were the first completed corrections. Preserve and test the existing
+   behavior that keeps absent sovereignty metadata unknown.
 4. Preserve current stable JSON names while correcting presentation and
    inference semantics.
 5. Draft a provenance-envelope ADR before changing `EvidenceRecord` or public

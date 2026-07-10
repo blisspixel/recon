@@ -666,36 +666,12 @@ regression in any recon commit):
 httpx / anyio). The lockfile was bumped to idna 3.15, which carries
 the fix. No ignore needed; the audit passes on the upgraded version.
 
-**pyjwt 2.12.1, PYSEC-2025-183 / CVE-2025-45768 - documented
-ignore, not a fix.** There is no version to upgrade to, so this one
-is ignored deliberately and narrowly rather than left to fail the
-gate silently:
-
-- **No fix exists.** 2.12.1 is the latest pyjwt release; the
-  advisory marks the entire 0.1.1 through 2.12.1 range affected with
-  no `fixed` event.
-- **Disputed.** The maintainer disputes the finding: the JWT key
-  length is chosen by the calling application, not the library.
-  CVSS 6.4, high attack complexity.
-- **Unreachable in recon.** `pyjwt[crypto]` is pulled transitively
-  by `mcp[crypto]` for MCP's HTTP/OAuth transport. recon runs the
-  MCP server over stdio only, with no auth transport, and never
-  signs or encrypts a JWT. The vulnerable code path is not invoked.
-
-The ignore is scoped to the single advisory ID
-(`--ignore-vuln PYSEC-2025-183`) with the same rationale inline in
-`.github/workflows/ci.yml`. It is not a blanket `--ignore-vuln`
-without an ID, and it is not a global pip-audit disable. Re-evaluate
-and drop the ignore the moment a fixed pyjwt ships, or if recon ever
-adds an HTTP MCP transport that would exercise the JWT path.
-
-The same gating `pip-audit` runs in the release workflow
-(`.github/workflows/release.yml`, the `test` job that gates the PyPI
-publish), so that step carries the identical ignore (added v1.9.17).
-The two gates are kept in lockstep: an advisory CI accepts must not
-silently block a tagged release, and an advisory that should block a
-release must also fail CI. The release SBOM job runs `pip-audit`
-non-gating (`|| true`) and is unaffected.
+**pyjwt, PYSEC-2025-183 / CVE-2025-45768 - fixed.** The historical
+2.12.1 exception was removed on 2026-07-10 after the lockfile moved to
+PyJWT 2.13.0 and an unignored audit of the frozen runtime dependency set
+reported no known vulnerabilities. CI and the release workflow now run the
+same unqualified `pip-audit` gate. The earlier reachability analysis remains
+part of the audit history, but no exception is active.
 
 ---
 

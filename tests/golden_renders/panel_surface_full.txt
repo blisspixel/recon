@@ -10,7 +10,6 @@ contoso.com
 
 Services
   Email          Microsoft 365
-  AI             Microsoft Copilot (likely)
   Collaboration  Slack
 
 

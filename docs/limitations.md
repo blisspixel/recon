@@ -93,18 +93,15 @@ do not infer that the stack is self-hosted.
 ## Where recon must remain conservative
 
 These are cases where the evidence does not justify a stronger claim. Some are
-deliberate abstentions. The bundled-AI behavior below is a known overclaim and
-is in the first correction track in the roadmap.
+deliberate abstentions.
 
 ### Bundled AI services
 
-**Current known overclaim:** sparse output can show `Microsoft Copilot
-(likely)` or `Google Gemini (likely)` from parent-platform presence alone.
-
-**Why this must change:** public DNS and tenant metadata say nothing about the
-child product's license, enablement, deployment, or use. The word `(likely)`
-does not create evidence. Until the correction ships, treat these labels only
-as unsupported platform-family possibilities, not observations.
+**Current behavior:** Microsoft 365 and Google Workspace observations do not
+produce Microsoft Copilot or Google Gemini labels. A child product appears only
+when recon has a direct fingerprint for that product. Public DNS and tenant
+metadata do not establish a child product's license, enablement, deployment, or
+use.
 
 ### Dual-provider organizations
 
