@@ -515,6 +515,16 @@ class TestCLI:
         assert "client" in result.output
         assert "cursor" in result.output
         assert "dry-run" in result.output.lower()
+        assert "sys.path[:] = [p for p in sys.path" in result.output
+        assert "sys.path[:] = ;" not in result.output
+        block_start = result.output.index("    {", result.output.index("new block:"))
+        block_end = result.output.index("\n\n", block_start)
+        rendered_block = result.output[block_start:block_end]
+        parsed_block = json.loads(
+            "\n".join(line[4:] if line.startswith("    ") else line for line in rendered_block.splitlines())
+        )
+        expected = plan_install("cursor", "user", config_path_override=target)
+        assert parsed_block == {"recon": expected.new_block}
         assert not target.exists()
 
     def test_install_writes_file(self, tmp_path: Path) -> None:

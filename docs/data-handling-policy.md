@@ -88,6 +88,15 @@ never in a commit:
 - `validation/runs-private/`: per-run outputs (results, gaps, diffs).
 - `validation/local/`: any other scratch space.
 
+Private per-run rows are retained only while they are needed to reproduce and
+review the active aggregate memo. Each new private run records its manual local
+retention disposition in an ignored `RETENTION.md` inside the run directory, as
+defined by [maintainer-validation.md](maintainer-validation.md). Superseded rows
+are removed when that disposition says they are no longer needed. The curated
+input corpus can remain local for longitudinal validation, but neither the
+corpus nor per-run rows may be committed, published, or copied into an agent
+transcript.
+
 The committed validation tooling (the runner, gap finder, triage
 script, synthetic-corpus generator, the corpus aggregator, the
 deterministic harnesses) is allowed because it carries no target data;

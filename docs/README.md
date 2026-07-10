@@ -18,6 +18,8 @@ The docs are organized by reader need:
 | First overview | [../README.md](../README.md) |
 | Install, update, uninstall, and first commands | [getting-started.md](getting-started.md) |
 | Current plan and project boundaries | [roadmap.md](roadmap.md) |
+| Dependency-ordered implementation plan | [engineering-refinement-plan.md](engineering-refinement-plan.md) |
+| Time-bound MCP 2026 compatibility plan | [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md) |
 | What recon can and cannot see | [limitations.md](limitations.md) |
 | Rules versus agent judgment | [agentic-balance.md](agentic-balance.md) |
 

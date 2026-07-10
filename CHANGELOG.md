@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- Reframed the canonical roadmap around evidence-semantic integrity, an
+  isolated MCP v2 beta compatibility matrix, and a reproducible product-quality
+  baseline. Publication and process work now remains a separate maintainer
+  track instead of defining product priority.
+- Corrected stale or misleading documentation about MCP v2 availability,
+  bundled AI and sovereignty inference, CT cache lifetime, batch concurrency,
+  fingerprint-catalog size, ephemeral fingerprint behavior, runtime dependency
+  count, and the interpretation of public-evidence scores.
+- Replaced the completed interface-migration detail in the active roadmap with
+  graph-backed hotspot, acceptance, and stop-rule guidance; historical shipped
+  work remains in the changelog, roadmap history, and ADRs.
+
+### Fixed
+
+- Preserved interpreter-bound MCP launcher JSON verbatim in `mcp install
+  --dry-run`; Rich markup no longer consumes the launcher's Python list
+  expression and produces an unusable manual preview.
+- Corrected live MCP instructions and tool descriptions to disclose the default
+  target-visible MTA-STS fetch, distinguish opt-in CSE and BIMI requests, and
+  describe the 0-100 compatibility value as a model-bound public-evidence index
+  rather than an overall security score.
+- Replaced the stale hard-coded MCP startup tool count with an explicitly
+  selected-tool label.
+
 ## [2.3.8] - 2026-07-10
 
 ### Tool Surface Changes

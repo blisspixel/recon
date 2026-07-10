@@ -134,7 +134,10 @@ def mcp_install_command(
     console.print()
     console.print("  [dim]new block:[/dim]")
     for line in json.dumps({"recon": plan.new_block}, indent=2).splitlines():
-        console.print(f"    {line}")
+        # JSON can contain square brackets in the interpreter-bound launcher.
+        # Render it as data so Rich does not consume Python list expressions as
+        # markup and corrupt a dry-run block copied by the operator.
+        console.print(f"    {line}", markup=False, soft_wrap=True)
     console.print()
 
     if dry_run:

@@ -218,28 +218,34 @@ before committing any validation artifact.
 
 ## Roadmap Focus
 
-recon is feature-complete for the current roadmap: the CLI, JSON schema, MCP
-server, validation guards, and release path are in place. Current work is
-hardening and small refinements: clearer docs, stronger validation evidence,
-current citation metadata, OpenSSF posture, and careful pressure tests of the
-correlation model.
-The paper package is now focused on publication boundaries: the
-[public label snapshot decision](docs/public-label-snapshot-decision.md) keeps
-public-list numbers as robustness checks rather than population rates,
-private-corpus rows stay aggregate-only, and M365 tenancy evidence stays named
-as corroboration under the
-[M365 tenancy decision](docs/m365-tenancy-decision.md). As validation runs teach
-us more, the system may get conservative refinements, but new runtime features
-stay behind roadmap review and the project invariants. The final public claim
-audit refresh for the current draft package is recorded in
-[validation/2026-06-29-scorecard-gate-claim-audit.md](validation/2026-06-29-scorecard-gate-claim-audit.md);
-future paper or package changes rerun that gate through the
-[submission freeze checklist](docs/submission-freeze-checklist.md). The latest
-local submission-freeze public proof record is
+recon has a stable baseline, but product quality work remains. The top three
+priorities are:
+
+1. Make every default claim traceable to evidence and remove product-use,
+   cloud-type, or security-maturity conclusions that public metadata cannot
+   support.
+2. Characterize the official MCP v2 beta in an isolated compatibility matrix
+   before the 2026-07-28 final release, while production stays on stable MCP
+   v1.
+3. Establish an aggregate-safe quality baseline for claim precision,
+   abstention, provenance, catalog coverage, degradation, latency, CT value,
+   and agent context cost before expanding inference or graph machinery.
+
+The dependency order, acceptance evidence, stop rules, and current code-graph
+summary live in [docs/roadmap.md](docs/roadmap.md). The implementation plan is
+[docs/engineering-refinement-plan.md](docs/engineering-refinement-plan.md), and
+the current step-back review is
+[docs/strategic-gap-audit.md](docs/strategic-gap-audit.md). Research publication,
+OpenSSF process, outside replication, and archive work remain separate
+maintainer tracks so they do not displace product truthfulness or measured
+utility.
+
+The latest local public proof for the separate publication track is
 [validation/2026-06-30-submission-freeze-local-proof.md](validation/2026-06-30-submission-freeze-local-proof.md).
-Feedback on gaps, wording, and false positives is welcome. The detailed plan lives in
-[docs/external-writeup-plan.md](docs/external-writeup-plan.md), with the
-current step-back audit in [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
+Its [public-label decision](docs/public-label-snapshot-decision.md) keeps public
+lists as robustness checks rather than population rates, and its
+[M365 tenancy decision](docs/m365-tenancy-decision.md) keeps that evidence as
+corroboration rather than independent calibration.
 
 ## Development
 

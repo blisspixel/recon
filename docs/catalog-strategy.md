@@ -1,15 +1,21 @@
 # Catalog Growth and Quality Strategy
 
+Status: measurement-first maintenance plan
+Review date: 2026-07-10
+
 This document is the plan for growing and maintaining the fingerprint catalog
 (`src/recon_tool/data/fingerprints/*.yaml`) so coverage, precision, and
 freshness improve deliberately rather than by accretion. It sets direction; it
 does not change runtime behavior. All corpora and per-domain scan outputs stay
 private and off GitHub per [data-handling-policy.md](data-handling-policy.md);
 only aggregate patterns, generic tooling, and fictional examples are committed.
+This plan implements the catalog-quality track in the canonical
+[roadmap](roadmap.md). Catalog size is not a success metric; classified public
+surface and independently supported precision are.
 
 ## How the catalog grows today
 
-The catalog carries roughly 845 entries across `cname_target`, `txt`, `spf`,
+The catalog carries 847 entries across `cname_target`, `txt`, `spf`,
 `dmarc_rua`, `mx`, `ns`, `caa`, `srv`, and `subdomain_txt` detection types. New
 rules come from a corpus-mining loop:
 
@@ -71,12 +77,23 @@ close the loop:
   same ranking works for those record types, not just CNAME.
 - **Recall, via vendor-seed lists.** On a vendor's known customers, do we detect
   it? Directly measurable per vendor.
-- **Precision.** On the stratified corpus, how often is a vendor attributed when
-  corroborating signals disagree? The Bayesian layer already exposes the
-  single-signal / low-corroboration cases to flag.
+- **Precision, only with independent labels.** Measure false attribution only
+  where a provider-owned endpoint, standards-defined record, or other
+  predeclared authoritative source supplies a label that the matcher did not
+  consume. Apply the product-quality plan's minimum sample and uncertainty
+  rule; otherwise report no precision estimate.
+- **Corroboration diagnostic.** Signal disagreement and single-signal matches
+  are useful review queues, but they are not false-positive denominators or
+  independent correctness labels.
 
 All measurement outputs are aggregate and disclosure-controlled; no apexes,
 organization names, or per-domain rows leave the maintainer machine.
+
+Before the next broad promotion pass, record a dated baseline by record type
+and corpus stratum. The baseline must also report unresolved share, stale-rule
+count, low-corroboration attribution count, and the exact catalog revision.
+Every promotion should name the aggregate gap it is intended to reduce and a
+precision regression budget.
 
 ## 3. Freshness
 
@@ -93,7 +110,7 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. Backfill plan: populate `verified` for new rules as they
+staleness threshold. Backfill plan: require `verified` for new rules, then
 are promoted, backfill the recently-confirmed vendor families in batches, and
 once coverage is high enough, promote the auditor from a report to a ratchet
 (no new undated rules, no rule left stale past the threshold). A dead-reference
@@ -123,10 +140,20 @@ declarative-token space.
 
 ## 6. Prioritized backlog
 
-1. Stand up a Tranco-stratified corpus and run it once to produce a coverage
+1. Record the classified-surface and stale-rule baseline before adding broad
+   new families.
+2. Admit a candidate to the proposal queue only when it has an identifier,
+   exact record type and pattern, source or disclosure-safe aggregate basis,
+   and explicit pending, promoted, rejected, or deferred disposition. A vendor
+   name alone is not an actionable candidate.
+3. Stand up a Tranco-stratified corpus and run it once to produce a coverage
    baseline and the unclassified-pattern ranking (the prioritized growth list).
-2. Add regional strata (the largest coverage gap) and promote the verified
+4. Add regional strata (the largest coverage gap) and promote the verified
    regional vendors they surface.
-3. Backfill `verified` dates and raise the freshness auditor toward a ratchet.
-4. Extend the unclassified-pattern ranking beyond CNAME to SPF and NS.
-5. Measure recall on vendor-seed lists for the top vendors.
+5. Backfill `verified` dates and raise the freshness auditor toward a ratchet.
+6. Extend the unclassified-pattern ranking beyond CNAME to SPF and NS.
+7. Measure recall on vendor-seed lists for the top vendors.
+
+No promotion is complete without a current public reference or
+disclosure-safe aggregate basis, a `verified` date, a positive fixture, a
+lookalike-negative fixture, a sparse-result fixture, and provenance assertions.

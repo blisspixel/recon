@@ -326,14 +326,15 @@ async def analyze_posture(
     ),
 )
 async def assess_exposure(domain: str) -> ExposureAssessmentResult:
-    """Assess a domain's publicly observable security posture for defensive review.
+    """Summarize a domain's public configuration evidence for defensive review.
 
-    For defensive security posture assessment only.
+    This is a model-bound public-evidence assessment, not an overall security
+    score or certification.
 
-    Returns a structured JSON object containing email security posture, identity
-    posture, infrastructure footprint, configuration consistency observations,
-    hardening status, and an overall posture score (0–100) based on publicly
-    observable controls.
+    Returns a structured JSON object containing public email, identity,
+    infrastructure, configuration-consistency, and hardening observations. The
+    compatibility field ``posture_score`` is a 0-100 index based only on
+    publicly observable controls.
 
     The score counts only observed-present controls, so it is a lower bound: the
     ``observability`` block carries ``score_is_lower_bound``,
@@ -380,7 +381,8 @@ async def assess_exposure(domain: str) -> ExposureAssessmentResult:
 async def find_hardening_gaps(domain: str) -> GapReportResult:
     """Identify hardening opportunities in a domain's public configuration.
 
-    For defensive security posture assessment only.
+    This is a defensive review of public observations, not an overall security
+    assessment or certification.
 
     Returns a JSON array of hardening gaps, each with category, severity,
     observation, suggested action, supporting evidence references, and an
@@ -426,9 +428,10 @@ async def find_hardening_gaps(domain: str) -> GapReportResult:
     ),
 )
 async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonResult:
-    """Compare the security postures of two domains side by side.
+    """Compare the public configuration evidence of two domains side by side.
 
-    For defensive security posture assessment only.
+    This is a model-bound comparison of public observations, not an overall
+    security comparison or certification.
 
     Returns a structured comparison with side-by-side metrics,
     control differences, and relative posture assessment.
@@ -695,10 +698,11 @@ def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str]
     ),
 )
 async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulationResult:
-    """What-if simulation: re-compute exposure score with hypothetical fixes.
+    """Re-compute the public-evidence index with hypothetical fixes.
 
     Accepts a list of fix descriptions (e.g., "DMARC reject", "MTA-STS enforce")
-    and simulates what the posture score would be if those fixes were applied.
+    and simulates how the model-bound compatibility index would change if those
+    fixes were applied. This is not a prediction of overall security change.
 
     Operates purely on cached pipeline data — zero additional network calls
     beyond the initial domain resolution.
@@ -786,7 +790,8 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
         "disclaimer": (
             "This simulation is based on publicly observable configuration data. "
             "Consider these results as directional guidance for prioritizing "
-            "hardening actions, not as a guarantee of security posture improvement."
+            "hardening actions, not as a prediction or guarantee of overall "
+            "security improvement."
         ),
     }
     return result
