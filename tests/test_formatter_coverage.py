@@ -736,12 +736,18 @@ class TestRenderVerboseSources:
                 tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 region="NA",
             ),
+            SourceResult(
+                source_name="google_identity",
+                error="No Google Workspace configuration found",
+            ),
             SourceResult(source_name="user_realm", error="HTTP 403"),
         ]
         render_verbose_sources(results)
         out = _strip(buf.getvalue())
         assert "oidc_discovery" in out
         assert "tenant ID found" in out
+        assert "no match google_identity" in out
+        assert "No Google Workspace configuration found" in out
         assert "user_realm" in out
         assert "HTTP 403" in out
 

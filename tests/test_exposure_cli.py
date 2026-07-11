@@ -127,7 +127,7 @@ class TestErrorHandling:
             error_type="all_sources_failed",
         )
         result = runner.invoke(app, ["lookup", "unknown.com", "--exposure", "--no-cache"])
-        assert result.exit_code == 3
+        assert result.exit_code == 4
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_gaps_resolution_failure(self, mock_resolve) -> None:
@@ -137,4 +137,4 @@ class TestErrorHandling:
             error_type="all_sources_failed",
         )
         result = runner.invoke(app, ["lookup", "unknown.com", "--gaps", "--no-cache"])
-        assert result.exit_code == 3
+        assert result.exit_code == 4
