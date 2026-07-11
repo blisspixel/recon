@@ -82,14 +82,14 @@ found real test gaps on its first honest run.
 | parsers / loaders (`_parse_*`, `load_network`, `load_priors_override`) | ~95 | `tests/test_bayesian_validation_rounds.py` + `tests/test_bayesian_topology.py` added to the kill-set; loader edge cases in the unit file |
 | TenantInfo adapters (`infer_from_tenant_info`, `signals_from_tenant_info`, `_conflict_provenance`) | ~35 | adapter unit tests (signal derivation, conflict provenance, interval dampening) |
 | deal-contract predicates | ~30 | direct predicate tests (a weakened contract is invisible on correct code) |
-| annotation-union operators (`X \| None` under `from __future__ import annotations`) | ~170 | equivalent by construction (the annotation never executes); excluded via the operators filter in `mutation.toml`, applied by `cr-filter-operators` |
+| annotation-union operators (`X \| None` under `from __future__ import annotations`) | ~170 | inert under postponed annotations; the current gate uses line-scoped mutation pragmas so runtime unions remain tested |
 | output rounding (`round(x, 4)`) | few | granularity assertions in the unit file (4-decimal exactly: a 3- or 5-decimal emission fails) |
 
 The remaining long tail is re-measured by the corrected sweep; any
 survivor that stays is either killed with a test or accepted in the
 table below with a reason.
 
-## Results (corrected baseline, 2026-06)
+## Results (corrected baseline through 2026-07)
 
 Authoritative run: the CI `mutation-gate` workflow on ubuntu (locked
 venv, baseline-verified, operators filter applied), cross-checked by an
@@ -98,18 +98,20 @@ trajectory, against the false v2.1.16 "1,642 of 1,642":
 
 | Round | Tested | Killed | Survived | Survival | What changed |
 |---|---|---|---|---|---|
-| 1 (corrected) | 1,465 | 1,252 | 213 | 14.5% | interpreter fixed, BitOr filter, unit-math anchors |
+| 1 (corrected) | 1,465 | 1,252 | 213 | 14.5% | interpreter fixed, then-global BitOr filter, unit-math anchors |
 | 2 | 1,465 | 1,312 | 153 | 10.4% | loader-edge + n_eff tests added |
 | 3 (pre-split) | 1,431 | 1,308 | 123 | 8.6% | Is/IsNot filtered, bound + penalty + absence kills |
 | 4 (post-decomposition) | 1,083 | 981 | 102 | 9.4% | bayesian.py split; v2.2 output-field + counterfactual kills |
+| 5 (collection-aware contracts) | 662 | 603 | 59 | 8.9% | exact boundaries, neutral fallbacks, opportunity masking, adapter extraction |
+| 6 (local preflight; CI pending) | 717 | 655 | 62 | 8.6% | line-scoped annotation filter; 55 runtime union mutants restored |
 
-(Round 3 run: 1,642 mutants generated, 210 filtered as equivalent-by-construction,
+(Round 3 run: 1,642 mutants generated, 210 filtered under the then-configured exclusions,
 1 incompetent within tolerance, so 1,431 tested.)
 
 Round 4 re-established the baseline after the god-file decomposition moved the
 YAML loaders and result dataclasses out of `bayesian.py` (1,212 generated, 129
 filtered, 0 incompetent, 1,083 tested). The split removed ~360 readily-killed
-loader / dataclass mutants from the surface, so the equivalent-mutant residue,
+loader / dataclass mutants from the surface, so the accepted residual,
 which lives in the inference core that stayed, became a larger *fraction* of the
 smaller denominator even though the suite's kill strength on that core is
 unchanged. The 2026-06 scheduled sweep first surfaced this at 12.5% (135 of
@@ -126,26 +128,51 @@ they killed 33 survivors (`posterior` / `interval` / `entropy_reduction(_nats)` 
 `delta = posterior - posterior_without` subtraction, and the descending-absolute
 sort-key sign), taking the surface to 9.4%.
 
+Round 5 is the authoritative Cycle 60 run at commit `aee1868`:
+[GitHub Actions run 29154457989](https://github.com/blisspixel/recon/actions/runs/29154457989).
+The semantic-integrity refactor produced 801 jobs; the configured operator
+filter skipped 139 and left 662 tested mutants. The first sweep at `54519fc`
+killed 578 and left 84 survivors, a 12.69 percent survival rate that correctly
+failed the unchanged 12 percent ceiling. A replay of every survivor identified
+exact probability-boundary, neutral-fallback, collection-opportunity, adapter,
+and likelihood-ratio contracts. The strengthened kill set killed 25 additional
+mutants, yielding 603 killed, 59 survived, zero incompetent, zero pending, and
+8.91 percent survival. Independent review removed two proposed entropy tests
+outside the helper's documented probability domain; invalid inputs were not
+used to improve the score.
+
+Round 6 narrows the filter rather than changing the score floor. Six postponed
+annotation unions are marked line by line and account for 66 inert mutants;
+the explicit identity-comparison policy accounts for the other 18 skipped
+jobs. All 55 runtime BitOr mutants now execute. Local UTF-8 preflight killed 52
+and left three behaviorally unchanged under reviewed current invariants: two
+parent-assignment unions add a node name that validation keeps distinct from
+its parents, and one counterfactual union adds a unit selected only after the
+masked set has excluded it. The combined 801-job projection is 84 skipped, 717
+tested, 655 killed, 62 survived, zero incompetent, zero pending, and 8.65
+percent survival. These figures remain local evidence until the next
+authoritative GitHub run completes.
+
 The first two rounds killed 60+ genuine survivors that were real test
 gaps the gate exposed (loaders, n_eff arithmetic, interval math,
 TenantInfo adapters, contract predicates). The third round filters the
-identity-comparison mutants (equivalent by construction) and kills the
+identity-comparison mutants by policy and kills the
 last cheap genuine survivors (out-of-range bound checks, the conflict
 penalty constant asserted as a literal, the `absence_informative` flip).
 
-**The residual (8.6% pre-split, 9.4% post-decomposition) is dominated by
-equivalent mutants**, classified from the survivor diffs (the session DB is
-uploaded as a CI artifact on every run, so this is checkable):
+**The accepted residual (8.6% pre-split, 9.4% post-decomposition, 8.9% in
+Round 5, and 8.65% in the Round 6 local preflight) is dominated by mutants
+classified as equivalent or behaviorally
+irrelevant under the documented valid-input and configuration contracts.** The
+session DB is uploaded as a CI artifact on every run, so this is checkable.
 
-- *Identity for value equality* (`==` to `is`): filtered. Testing object
-  identity for an interned-literal comparison asserts a CPython
-  implementation detail, not behaviour.
+- *Identity for value equality* (`==` to `is`): excluded by explicit policy.
+  Testing object identity for value semantics is a Python anti-pattern; this
+  exclusion is not presented as a proof for arbitrary string objects.
 - *Ordering for equality* (`==` to `<=` / `>=` / `<` / `>` on a string or
-  enum): equivalent, because every `==` in this module compares a string,
-  an enum, or `None`, never a number whose order carries meaning, and the
-  operand domains (`"DKIM"`, `"slug"`, `"declarative"`, ...) have no
-  lexicographic neighbour the test data could exercise. Accepted, not
-  filtered, so a future numeric `==` is not silently masked.
+  enum): configuration-relative. The shipped model and reviewed fixtures do
+  not exercise a lexicographic neighbor that changes the branch, but arbitrary
+  valid node names could. These remain tested and accepted, not filtered.
 - *Arithmetic by 1.0* (`*` to `/` / `**` / `//` on the loaded
   `evidence_n_eff_contrib`, which is `1.0` in the shipped
   `bayesian_network.yaml`): `x * 1.0 == x / 1.0 == x ** 1.0`, so the
@@ -168,17 +195,22 @@ uploaded as a CI artifact on every run, so this is checkable):
   Equivalent. The float-bearing output fields (`posterior`, intervals,
   entropy, counterfactual `delta`) are *not* equivalent and are pinned per
   field, above.
+- *Union to symmetric difference on fresh elements*: configuration-relative.
+  Node names are distinct from their validated parents, and counterfactual
+  units are enumerated only after already-masked units are excluded. Under
+  those invariants, the three surviving runtime-union mutants produce the same
+  sets. Runtime unions remain tested so an invariant change is visible.
 
 ## The floor
 
 `scripts/mutation_floor.py mutation.sqlite --fail-over 12`: survival over
 **tested** mutants (killed + survived) must stay at or under 12% (kill
 score at or above 88%). The floor sits above the documented
-equivalent-mutant residue (measured 8.6% pre-split, 9.4% post-decomposition)
+accepted residual (8.9% in Round 5 and 8.65% in the Round 6 local preflight)
 with margin, so it ratchets the current
 kill strength and fails when real coverage regresses (untested new code
-spikes survival well past the residue), without demanding tests for
-provably-equivalent mutants. This is the standard mutation-testing
+spikes survival well past the residue), without forcing tests against invalid
+inputs or inert configuration-relative behavior. This is the mutation-testing
 posture: kill the genuine survivors, classify and accept the equivalents,
 set a defensible floor, never chase 100%. The 5% figure the v2.1.16 notes
 implied was never real; it was the wrong-interpreter artifact described
@@ -207,13 +239,14 @@ module.
 # A non-OneDrive clone with the locked venv; uv sync works there.
 git clone . $env:TEMP\recon-mutation; cd $env:TEMP\recon-mutation
 $env:UV_PYTHON = "3.11"; $env:UV_LINK_MODE = "copy"
-$env:PYTHONIOENCODING = "utf-8"   # cosmic-ray decodes worker output as UTF-8;
-                                   # Windows pytest otherwise emits cp1252 and
-                                   # a killed mutant is misrecorded as incompetent
+$env:PYTHONUTF8 = "1"              # cosmic-ray decodes worker output as UTF-8;
+                                   # Windows pytest otherwise may emit cp1252
+                                   # and misrecord a killed mutant as incompetent
 uv sync --group mutation
 uv run --group mutation cosmic-ray baseline mutation.toml   # mandatory
 uv run --group mutation cosmic-ray init mutation.toml mutation.sqlite
 uv run --group mutation cr-filter-operators mutation.sqlite mutation.toml
+uv run --group mutation cr-filter-pragma mutation.sqlite
 uv run --group mutation cosmic-ray exec mutation.toml mutation.sqlite
 uv run python scripts/mutation_floor.py mutation.sqlite --fail-over 12
 ```

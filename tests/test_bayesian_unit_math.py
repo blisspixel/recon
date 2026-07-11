@@ -435,6 +435,12 @@ class TestCollectionMaskingContracts:
             network=network,
             priors_override={},
         ).posteriors[0]
+        doubly_masked = infer_from_tenant_info(
+            SimpleNamespace(degraded_sources=("dns",)),
+            network=network,
+            priors_override={},
+            masked_units=("decl-unit",),
+        ).posteriors[0]
 
         assert absent.posterior == 0.2
         assert absent.absence_informative is True
@@ -442,6 +448,7 @@ class TestCollectionMaskingContracts:
         assert unobserved.posterior == 0.5
         assert unobserved.absence_informative is False
         assert unobserved.unit_counterfactuals == ()
+        assert doubly_masked == unobserved
 
 
 # ── Output rounding granularity ────────────────────────────────────────

@@ -16,6 +16,22 @@ operator, corporate group, ownership, or control.
 
 ### Changed
 
+- Narrowed the mutation exclusions from the whole BitOr operator family to six
+  line-scoped postponed-annotation unions. All five runtime set and frozenset
+  union expressions, representing 55 mutants, now remain in the tested
+  surface. A deterministic AST test prevents a mutation pragma from covering a
+  runtime union. Local preflight killed 52 of the newly tested mutants and left
+  three behaviorally unchanged under current invariants; the combined
+  655-killed, 62-survived, 8.65 percent result remains pending authoritative CI.
+- Strengthened the Bayesian mutation gate with exact closed-probability,
+  strictly-positive likelihood, neutral marginal fallback, collection-
+  opportunity, degraded-source adapter, slug extraction, and real-ratio
+  contracts. The authoritative GitHub sweep generated 801 jobs and filtered
+  139 mutants under the configured operator exclusions. It killed 603 of 662
+  tested mutants and left 59 survivors for an 8.91 percent survival rate
+  against the unchanged
+  12 percent ceiling. Independent review rejected out-of-domain entropy tests
+  rather than manufacturing two additional kills.
 - Rebuilt the documented correlation research program around proof-carrying
   public observation and provenance-constrained claim robustness. The formal
   proposal now separates construction, collection, claim state, and time and
