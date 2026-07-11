@@ -24,10 +24,11 @@ on:
     paths:
       - "src/recon_tool/bayesian.py"
       # The inference core stays in bayesian.py (the mutated surface). These
-      # siblings (dataclasses, YAML loaders) were split out of it and feed it,
+      # siblings (dataclasses, YAML loaders, and network data) feed it,
       # so re-run the gate when they change even though they are not mutated.
       - "src/recon_tool/bayesian_models.py"
       - "src/recon_tool/bayesian_loader.py"
+      - "src/recon_tool/data/bayesian_network.yaml"
       - "tests/test_bayesian_unit_math.py"
       - "tests/test_bayesian_loader_edges.py"
       - "tests/test_bayesian_inference.py"
@@ -38,16 +39,18 @@ on:
       - "tests/test_bayesian_topology.py"
       - "tests/test_bayesian_dag.py"
       - "mutation.toml"
+      - "scripts/mutation_floor.py"
       - ".github/workflows/mutation.yml"
   pull_request:
     branches: [main]
     paths:
       - "src/recon_tool/bayesian.py"
       # The inference core stays in bayesian.py (the mutated surface). These
-      # siblings (dataclasses, YAML loaders) were split out of it and feed it,
+      # siblings (dataclasses, YAML loaders, and network data) feed it,
       # so re-run the gate when they change even though they are not mutated.
       - "src/recon_tool/bayesian_models.py"
       - "src/recon_tool/bayesian_loader.py"
+      - "src/recon_tool/data/bayesian_network.yaml"
       - "tests/test_bayesian_unit_math.py"
       - "tests/test_bayesian_loader_edges.py"
       - "tests/test_bayesian_inference.py"
@@ -58,6 +61,7 @@ on:
       - "tests/test_bayesian_topology.py"
       - "tests/test_bayesian_dag.py"
       - "mutation.toml"
+      - "scripts/mutation_floor.py"
       - ".github/workflows/mutation.yml"
   schedule:
     # Weekly, Monday 06:17 UTC (off the top of the hour to avoid the
@@ -82,6 +86,9 @@ jobs:
       # .python-version pins the local toolchain to 3.14; force the CI
       # interpreter, mirroring the test matrix.
       UV_PYTHON: "3.11"
+      # Cosmic Ray decodes captured worker output as UTF-8. Force matching
+      # subprocess output so a real test failure cannot become incompetent.
+      PYTHONUTF8: "1"
     steps:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
@@ -108,11 +115,14 @@ jobs:
       - name: Initialize session
         run: uv run --group mutation cosmic-ray init mutation.toml mutation.sqlite
 
-      - name: Filter equivalent-by-construction operators
-        # Skips the annotation-union mutants (see mutation.toml for the
-        # rationale); they are unkillable by any test and would only pad
-        # the survivor count.
+      - name: Filter policy-excluded comparison operators
+        # The narrow identity-comparison policy is documented in mutation.toml.
         run: uv run --group mutation cr-filter-operators mutation.sqlite mutation.toml
+
+      - name: Filter inert postponed-annotation unions
+        # Only lines marked with a reviewed pragma are skipped. Runtime set and
+        # frozenset unions remain in the tested mutation surface.
+        run: uv run --group mutation cr-filter-pragma mutation.sqlite
 
       - name: Execute mutants
         run: uv run --group mutation cosmic-ray exec mutation.toml mutation.sqlite
@@ -126,12 +136,10 @@ jobs:
         # non-kills, which would inflate the rate; the script's semantics
         # are survived / (killed + survived), with incompetent or pending
         # jobs failing outright. The floor sits above the documented
-        # equivalent-mutant residue (measured survival ~9%, almost all of
-        # it provably equivalent: identity / string-ordering comparisons,
-        # x1.0 arithmetic, frozen-dataclass flags, always-true contract
-        # decorators, order-invariant loops). It ratchets the current kill
-        # strength and fails when real coverage regresses. Full survivor
-        # classification: validation/mutation-gate.md.
+        # accepted residual under the documented valid-input and configuration
+        # contract. It ratchets the current kill strength and fails when real
+        # coverage regresses. Full survivor classification:
+        # validation/mutation-gate.md.
         run: uv run python scripts/mutation_floor.py mutation.sqlite --fail-over 12
 
       - name: Dump surviving mutants (diagnostics)
