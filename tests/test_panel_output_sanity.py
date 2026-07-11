@@ -170,6 +170,16 @@ class TestCeilingPhrasingWellFormed:
                 f"ceiling phrasing must avoid overclaim word {word!r}; keep teaching tone humble"
             )
 
+    def test_ceiling_respects_panel_width(self) -> None:
+        out = _render(_sparse_ceiling_tenant())
+        ceiling_idx = out.find("Passive-DNS ceiling")
+        assert ceiling_idx != -1
+        ceiling_block = out[ceiling_idx:].split("\n\n", 1)[0]
+        lines = ceiling_block.splitlines()
+
+        assert max(len(line) for line in lines) <= 78
+        assert all(line.startswith("  ") for line in lines[1:])
+
 
 class TestRollupBoundedLength:
     def test_rollup_fits_panel_width(self):

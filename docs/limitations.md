@@ -15,7 +15,7 @@ gap as a known unknown.
 
 > **Surfaced in the panel (v1.9.9+).** When a default lookup returns a sparse
 > classified surface alongside a multi-domain tenant-discovery response, the
-> panel adds a one-line "Passive-DNS ceiling" footer naming categories that
+> panel adds a compact "Passive-DNS ceiling" footer naming categories that
 > public DNS cannot reach. The trigger does not estimate organization size.
 > This page is the long-form inventory; the panel footer is the at-a-glance cue.
 
