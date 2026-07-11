@@ -526,7 +526,13 @@ def build_cert_summary(
         issuance_velocity=sum(1 for dt in aware_dates if dt >= ninety_days_ago),
         newest_cert_age_days=max((now - newest_dt).days, 0),
         oldest_cert_age_days=max((now - oldest_dt).days, 0),
-        top_issuers=tuple(name for name, _ in issuer_name_counter.most_common(3)),
+        top_issuers=tuple(
+            name
+            for name, _ in sorted(
+                issuer_name_counter.items(),
+                key=lambda item: (-item[1], item[0]),
+            )[:3]
+        ),
         wildcard_sibling_clusters=wildcard_clusters,
         deployment_bursts=bursts,
     )

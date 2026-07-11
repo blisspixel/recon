@@ -22,10 +22,10 @@ def signals_list(
     category: str | None = typer.Option(None, "--category", "-c", help="Filter by category (substring)"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
-    """List every built-in signal, grouped by category."""
-    from recon_tool.signals import load_signals
+    """List reportable public signals, grouped by category."""
+    from recon_tool.signals import reportable_signals
 
-    sigs = load_signals()
+    sigs = reportable_signals()
     if category:
         needle = category.lower()
         import re
@@ -36,19 +36,19 @@ def signals_list(
                 return needle in cat_lower
             return any(word.startswith(needle) for word in re.findall(r"[a-z0-9]+", cat_lower))
 
-        sigs = tuple(s for s in sigs if _match_cat(s.category))
+        sigs = tuple((signal, label) for signal, label in sigs if _match_cat(signal.category))
 
     if json_output:
         payload = [
             {
-                "name": s.name,
-                "category": s.category,
-                "confidence": s.confidence,
-                "candidate_count": len(s.candidates),
-                "min_matches": s.min_matches,
-                "description": s.description,
+                "name": label,
+                "category": signal.category,
+                "confidence": signal.confidence,
+                "candidate_count": len(signal.candidates),
+                "min_matches": signal.min_matches,
+                "description": signal.description,
             }
-            for s in sigs
+            for signal, label in sigs
         ]
         typer.echo(json.dumps(payload, indent=2))
         return
@@ -60,9 +60,9 @@ def signals_list(
     console.print()
     console.print(f"  [bold]{len(sigs)} signal{'s' if len(sigs) != 1 else ''}[/bold]")
     console.print()
-    name_w = max(len(s.name) for s in sigs)
-    for s in sorted(sigs, key=lambda x: (x.category, x.name)):
-        console.print(f"    {s.name:<{name_w}s}  {s.category:<20s}  {s.confidence}")
+    name_w = max(len(label) for _, label in sigs)
+    for signal, label in sorted(sigs, key=lambda item: (item[0].category, item[1])):
+        console.print(f"    {label:<{name_w}s}  {signal.category:<20s}  {signal.confidence}")
     console.print()
 
 
@@ -73,15 +73,15 @@ def signals_search(
     ),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
-    """Search signals by name, category, description, or candidate slug.
+    """Search reportable signals by label, category, description, or candidate slug.
 
     Case-insensitive substring. Useful for "which signals look at my
     new slug?" (``search <slug>``) and "what signals fire on email
     posture?" (``search email``).
     """
-    from recon_tool.signals import load_signals
+    from recon_tool.signals import reportable_signals
 
-    sigs = load_signals()
+    sigs = reportable_signals()
     needle = query.lower().strip()
     if not needle:
         from recon_tool.formatter import render_error
@@ -90,32 +90,32 @@ def signals_search(
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     ranked: list[tuple[int, Any]] = []
-    for s in sigs:
+    for signal, label in sigs:
         rank: int | None = None
-        if needle in s.name.lower():
+        if needle in label.lower():
             rank = 0
-        elif needle in s.category.lower():
+        elif needle in signal.category.lower():
             rank = 1
-        elif any(needle in c.lower() for c in s.candidates):
+        elif any(needle in candidate.lower() for candidate in signal.candidates):
             rank = 2
-        elif needle in s.description.lower():
+        elif needle in signal.description.lower():
             rank = 3
         if rank is not None:
-            ranked.append((rank, s))
+            ranked.append((rank, (signal, label)))
 
-    ranked.sort(key=lambda x: (x[0], x[1].name))
-    matches = [s for _, s in ranked]
+    ranked.sort(key=lambda item: (item[0], item[1][1]))
+    matches = [item for _, item in ranked]
 
     if json_output:
         payload = [
             {
-                "name": s.name,
-                "category": s.category,
-                "confidence": s.confidence,
-                "candidate_count": len(s.candidates),
-                "description": s.description,
+                "name": label,
+                "category": signal.category,
+                "confidence": signal.confidence,
+                "candidate_count": len(signal.candidates),
+                "description": signal.description,
             }
-            for s in matches
+            for signal, label in matches
         ]
         typer.echo(json.dumps(payload, indent=2))
         return
@@ -127,16 +127,18 @@ def signals_search(
     console.print()
     console.print(f"  [bold]{len(matches)} match{'es' if len(matches) != 1 else ''} for {query!r}[/bold]")
     console.print()
-    name_w = max(len(s.name) for s in matches)
-    for s in matches:
-        console.print(f"    {s.name:<{name_w}s}  {s.category:<20s}  {s.confidence}")
+    name_w = max(len(label) for _, label in matches)
+    for signal, label in matches:
+        console.print(f"    {label:<{name_w}s}  {signal.category:<20s}  {signal.confidence}")
     console.print()
 
 
-def _signal_show_payload(match: Any) -> dict[str, Any]:
+def _signal_show_payload(match: Any, public_label: str) -> dict[str, Any]:
     """Build the JSON payload for `signals show --json`."""
+    from recon_tool.signals import public_signal_names
+
     return {
-        "name": match.name,
+        "name": public_label,
         "category": match.category,
         "confidence": match.confidence,
         "description": match.description,
@@ -144,19 +146,19 @@ def _signal_show_payload(match: Any) -> dict[str, Any]:
         "min_matches": match.min_matches,
         "metadata_conditions": [{"field": m.field, "operator": m.operator, "value": m.value} for m in match.metadata],
         "contradicts": list(match.contradicts),
-        "requires_signals": list(match.requires_signals),
+        "requires_signals": public_signal_names(match.requires_signals),
         "expected_counterparts": list(match.expected_counterparts),
         "positive_when_absent": list(match.positive_when_absent),
         "explain": match.explain,
     }
 
 
-def _render_signal_not_found(name: str, sigs: Sequence[Any]) -> NoReturn:
+def _render_signal_not_found(name: str, labels: Sequence[str]) -> NoReturn:
     """Render a not-found error with near-miss suggestions, then exit."""
     from recon_tool.formatter import render_error
 
     needle = name.lower()
-    candidates = [s.name for s in sigs if needle in s.name.lower()][:5]
+    candidates = [label for label in labels if needle in label.lower()][:5]
     render_error(f"No signal named {name!r}.")
     if candidates:
         get_console().print(f"  Did you mean: {', '.join(repr(c) for c in candidates)}?")
@@ -176,11 +178,13 @@ def _render_signal_section(console: Any, header: str, items: Sequence[str]) -> N
         console.print(f"    - {item}")
 
 
-def _render_signal_detail(match: Any) -> None:
+def _render_signal_detail(match: Any, public_label: str) -> None:
     """Print the full human-readable definition of a single signal."""
+    from recon_tool.signals import public_signal_names
+
     console = get_console()
     console.print()
-    console.print(f"  [bold]{match.name}[/bold]")
+    console.print(f"  [bold]{public_label}[/bold]")
     console.print(f"    Category:    {match.category}")
     console.print(f"    Confidence:  {match.confidence}")
     if match.description:
@@ -196,7 +200,7 @@ def _render_signal_detail(match: Any) -> None:
         for m in match.metadata:
             console.print(f"    - {m.field} {m.operator} {m.value!r}")
     _render_signal_section(console, "Contradicts", list(match.contradicts))
-    _render_signal_section(console, "Requires other signals", list(match.requires_signals))
+    _render_signal_section(console, "Requires other signals", public_signal_names(match.requires_signals))
     _render_signal_section(console, "Expected counterparts (absence engine)", list(match.expected_counterparts))
     _render_signal_section(
         console, "Positive-when-absent (hedged hardening observation)", list(match.positive_when_absent)
@@ -212,17 +216,16 @@ def signals_show(
     name: str = typer.Argument(..., help="Signal name (quote if it contains spaces)"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
-    """Show the full definition of a single signal."""
-    from recon_tool.signals import load_signals
+    """Show the public definition of a single reportable signal."""
+    from recon_tool.signals import reportable_signals, resolve_reportable_signal
 
-    sigs = load_signals()
-    match = next((s for s in sigs if s.name == name), None)
-    if match is None:
-        _render_signal_not_found(name, sigs)
+    resolved = resolve_reportable_signal(name)
+    if resolved is None:
+        _render_signal_not_found(name, [label for _, label in reportable_signals()])
+    match, public_label = resolved
 
     if json_output:
-        typer.echo(json.dumps(_signal_show_payload(match), indent=2))
+        typer.echo(json.dumps(_signal_show_payload(match, public_label), indent=2))
         return
 
-    _render_signal_detail(match)
-
+    _render_signal_detail(match, public_label)

@@ -67,6 +67,7 @@ _VALID_METADATA_FIELDS = frozenset(
         "dmarc_effective_policy",
         "auth_type",
         "email_security_score",
+        "email_posture_observed",
         "spf_include_count",
         "issuance_velocity",
         "dmarc_pct",
@@ -146,6 +147,16 @@ def _parse_slug_condition(condition: dict[str, Any], name: str) -> tuple[tuple[s
     return slugs_any, slugs_min, slugs_max
 
 
+def _parse_rule_explain(name: str, raw_explain: object) -> str:
+    """Return optional curated copy while rejecting non-string values."""
+    if raw_explain is None:
+        return ""
+    if isinstance(raw_explain, str):
+        return raw_explain
+    logger.warning("Posture rule %r has non-string 'explain' - defaulting to empty", name)
+    return ""
+
+
 def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule | None:
     """Validate a single posture rule and return a frozen _PostureRule, or None."""
     if not isinstance(rule, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
@@ -198,13 +209,7 @@ def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule |
         return None
 
     # Parse explain field
-    explain = ""
-    raw_explain = rule.get("explain")
-    if raw_explain is not None:
-        if isinstance(raw_explain, str):
-            explain = raw_explain
-        else:
-            logger.warning("Posture rule %r has non-string 'explain' — defaulting to empty", name)
+    explain = _parse_rule_explain(name, rule.get("explain"))
 
     return _PostureRule(
         name=name,
@@ -270,43 +275,79 @@ def reload_posture() -> None:
 
 def _compute_metadata_value(field: str, info: TenantInfo) -> str | int | None:
     """Compute a metadata field value from TenantInfo."""
-    if field == "dmarc_policy":
-        return info.dmarc_policy
+    direct_values: dict[str, str | int | None] = {
+        "dmarc_policy": info.dmarc_policy,
+        "auth_type": info.auth_type,
+        "dmarc_pct": info.dmarc_pct,
+        "primary_email_provider": info.primary_email_provider,
+    }
+    if field in direct_values:
+        return direct_values[field]
     if field == "dmarc_effective_policy":
         return effective_dmarc_policy(info.dmarc_policy, info.dmarc_pct, info.dmarc_testing)
-    if field == "auth_type":
-        return info.auth_type
     if field == "email_security_score":
-        return email_security_score(info.services, info.dmarc_policy, info.dmarc_pct, info.dmarc_testing)
+        from recon_tool.email_security import observed_email_control_services
+
+        return email_security_score(
+            observed_email_control_services(info.evidence),
+            info.dmarc_policy,
+            info.dmarc_pct,
+            info.dmarc_testing,
+        )
+    if field == "email_posture_observed":
+        email_source_types = {
+            "MX",
+            "SPF",
+            "DMARC",
+            "DKIM",
+            "BIMI",
+            "MTA_STS",
+            "MTA_STS_POLICY",
+            "TLS_RPT",
+        }
+        return int(
+            any(
+                (evidence.source_type.upper() in email_source_types or evidence.slug == "tls-rpt")
+                and not (evidence.source_type.upper() == "MX" and evidence.slug == "null-mx")
+                for evidence in info.evidence
+            )
+        )
     if field == "spf_include_count":
-        for svc in sorted(info.services):
-            if svc.startswith("SPF complexity:"):
-                try:
-                    return int(svc.split(":")[1].strip().split()[0])
-                except (ValueError, IndexError):
-                    continue
-        return None
+        return info.spf_include_count or None
     if field == "issuance_velocity":
         if info.cert_summary is not None:
             return info.cert_summary.issuance_velocity
         return None
-    if field == "dmarc_pct":
-        return info.dmarc_pct
-    if field == "primary_email_provider":
-        return info.primary_email_provider
     return None
 
 
 def _evaluate_metadata_condition(condition: _MetadataCondition, info: TenantInfo) -> bool:
     """Evaluate a single metadata condition against TenantInfo."""
+    from recon_tool.source_status import ObservationChannel, SourceStatus
+
+    status = SourceStatus.from_degraded_sources(info.degraded_sources)
+    channel_by_field: dict[str, ObservationChannel] = {
+        "dmarc_policy": "dmarc",
+        "dmarc_effective_policy": "dmarc",
+        "dmarc_pct": "dmarc",
+        "spf_include_count": "apex_txt",
+        "primary_email_provider": "mx",
+    }
+    channel = channel_by_field.get(condition.field)
+    if channel is not None and status.channel_unavailable(channel):
+        return False
+    if condition.field == "email_security_score" and any(
+        status.channel_unavailable(name) for name in ("dmarc", "dkim", "apex_txt", "mta_sts", "bimi")
+    ):
+        return False
     field_value = _compute_metadata_value(condition.field, info)
 
     op = condition.operator
     target = condition.value
 
-    # neq with None field → True (field doesn't exist, so it's not equal to target)
+    # Unknown is not evidence for equality or inequality.
     if field_value is None:
-        return op == "neq"
+        return False
 
     # For numeric operators, try numeric comparison
     if op in ("gte", "lte"):
@@ -342,6 +383,9 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
     The neutral-language term list is advisory: it logs copy drift but never
     blocks user-supplied data or drops observations at runtime.
     """
+    from recon_tool.collection_view import collection_observable_info
+
+    info = collection_observable_info(info)
     slugs_set = set(info.slugs)
     results: list[Observation] = []
 

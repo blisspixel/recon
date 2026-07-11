@@ -2,19 +2,22 @@
 
 recon is public-metadata-only and zero-credential. Its narrow collection
 boundary limits target interaction, but it also means there are whole classes
-of information the tool cannot see. The standard MTA-STS policy fetch is
-target-visible, and opt-in direct probes add the documented CSE and BIMI
-certificate requests. This document is the honest inventory, not a legal
+of information the tool cannot see. DNS reads use the configured recursive
+resolver, so authoritative DNS infrastructure may observe resulting resolver
+traffic. The standard MTA-STS policy fetch is the only default target-owned HTTP
+or application request, and opt-in direct probes add the documented CSE and
+BIMI certificate requests. This document is the honest inventory, not a legal
 opinion or a claim of invisibility.
 
 If any of these matter for your use case, either pipe recon's output into a
 complementary tool (active scanner, authenticated API consumer) or accept the
 gap as a known unknown.
 
-> **Surfaced in the panel (v1.9.9+).** When a queried apex looks sparse for
-> its likely scale, the default panel adds a one-line "Passive-DNS ceiling"
-> footer naming the categories of evidence that public DNS cannot reach. This
-> page is the long-form inventory; the panel footer is the at-a-glance cue.
+> **Surfaced in the panel (v1.9.9+).** When a default lookup returns a sparse
+> classified surface alongside a multi-domain tenant-discovery response, the
+> panel adds a one-line "Passive-DNS ceiling" footer naming categories that
+> public DNS cannot reach. The trigger does not estimate organization size.
+> This page is the long-form inventory; the panel footer is the at-a-glance cue.
 
 ---
 
@@ -37,15 +40,16 @@ gap as a known unknown.
 - **Email security gateways**: when MX is Proofpoint / Mimecast / Trend
   Micro / Symantec, the actual email platform behind the gateway is only
   visible when DKIM or other public records leak it.
-- **Cloud-hosted landing pages**: when the entire domain is one A record
-  pointing to a shared CDN and no SaaS verification tokens are published,
-  there is nothing to detect.
+- **Cloud-hosted landing pages**: when the apex is one A record pointing to a
+  shared CDN and no SaaS verification tokens are published, the landing-page
+  application or backend may remain unattributed. recon can still observe any
+  available NS, CT, identity-discovery, and bounded subdomain evidence.
 
-See [correlation.md](correlation.md) for how the graph, temporal, and Bayesian
-layers (shipped v1.7-v1.9, stable v2.0+) squeeze more usable defensive
-intelligence from these minimal footprints: wildcard SAN siblings, CT issuance
-bursts, and chain motifs all recover signal that single-record fingerprinting
-cannot.
+See [correlation.md](correlation.md) for the graph, temporal, and Bayesian
+layers shipped across v1.7-v1.9 and stabilized in v2.0. Wildcard SAN siblings,
+CT issuance bursts, and chain motifs describe structure that one record cannot,
+but their incremental operator value over simple evidence plus abstention has
+not yet passed the predeclared product benchmark.
 
 ### Internal-only services
 
@@ -95,6 +99,23 @@ do not infer that the stack is self-hosted.
 These are cases where the evidence does not justify a stronger claim. Some are
 deliberate abstentions.
 
+### Tenant cardinality and public vendor indicators
+
+**Current behavior:** A Microsoft tenant-domain response is reported as a
+tenant-discovery count, not as organization size. Intune, Office ProPlus, Jamf,
+Kandji, and security-vendor fingerprints remain public vendor indicators. They
+do not establish a license tier, device enrollment, operating-system mix,
+fleet composition, active security stack, or SASE / ZTNA deployment.
+
+Email-gateway prose requires an MX-backed `email_gateway` observation. A
+generic vendor slug does not establish mail routing, and a gateway MX record
+does not by itself identify the downstream mailbox provider or establish DKIM.
+
+**Why conservative:** Tenant cardinality is namespace metadata, while DNS and
+administrative records can persist after trials, migrations, or
+decommissioning. Those public observations do not expose contracts, endpoint
+inventory, control-plane state, or live traffic.
+
 ### Bundled AI services
 
 **Current behavior:** Microsoft 365 and Google Workspace observations do not
@@ -105,8 +126,9 @@ use.
 
 ### Dual-provider organizations
 
-**Current:** A domain with M365 tenant + MX → Trend Micro gateway + DKIM for
-M365 correctly reads as "Microsoft 365 via Trend Micro gateway". But if M365
+**Current:** A domain with M365 tenant + MX through a Trend Micro gateway and
+M365 DKIM reads as "Trend Micro gateway (MX delivery path) + Microsoft 365
+(possible downstream indicator)". The ordering does not assert priority. If M365
 is the only detected slug and Google Workspace fires only from a TXT token
 (no DKIM, no MX), Google Workspace remains an account signal and does not enter
 the provider line. Use `--full` or structured output when account-only
@@ -129,33 +151,40 @@ an invariant to preserve, not evidence of a commercial cloud.
 
 ### Federated IdP vendor identification
 
-**Current:** `Federated identity indicators (likely ADFS/Okta/Ping,
-enterprise SSO)` when MX / UserRealm say federated but no IdP-specific slug
-(okta / ping / onelogin / auth0) fires.
+**Current:** A federated UserRealm result is reported as `Federated identity
+observed; external IdP not identified` unless separate public fingerprints name
+identity vendors. When those fingerprints exist, recon labels them as vendor
+indicators rather than claiming that one operates the external IdP.
 
-**Why hedged:** The federation protocol is observable; the vendor is not
-reliably extractable from DNS alone.
+**Why conservative:** The federation state is observable; a DNS verification
+marker or related vendor fingerprint does not establish the live federation
+route or its operator.
 
 ---
 
 ## Calibration and the validation ceiling
 
-The `--fusion` posteriors and their 80% credible intervals are
-**evidence-responsive**, not **calibrated** in the frequentist sense. The
-interval widens as the public channel thins and narrows as evidence
-accumulates (a construction property), but recon has not demonstrated that an
-80% interval contains the truth 80% of the time, because the passive setting
-has no ground-truth oracle to measure coverage against. Read the interval as
-"how much the public channel constrains this claim," not as a validated
-probability.
+The fusion point estimates are exact for one manually encoded, partly
+development-corpus-informed Bayesian network,
+not demonstrated real-world probabilities. `interval_low` and `interval_high`
+form a post-inference, evidence-responsive uncertainty band. Its auxiliary Beta
+distribution has the point estimate as its mean, and the emitted band is
+required to contain that estimate, but equal-tail Beta quantiles are generally
+asymmetric and are not centered on the mean. The band does not integrate CPT,
+likelihood, dependence, or missingness uncertainty and is not a Bayesian
+credible interval or frequentist confidence interval. Its width is not
+generally monotone in added evidence because both the point estimate and
+effective mass can change.
 
-What is validated (numerical correctness, synthetic calibration, determinism,
-sensitivity bounds) and the one experiment that would close the gap
-(frequentist coverage against an independent label set) are in
-[correlation.md](correlation.md) under Validation strategy. One honesty note
-worth repeating from there: the headline real-corpus consistency number is
-near-tautological by construction; it validates the inference plumbing, not the
-CPT values.
+What is validated, what remains model-internal, and the predeclared independent
+label ablation are in [correlation.md](correlation.md). The current synthetic
+experiments and real-corpus consistency checks validate inference plumbing and
+selected assumptions. They do not validate the CPT values. Brier or log score
+is proper-score evidence only for an arm that supplies one frozen probability
+forecast for every eligible row. An arbitrary evidence-strength score first
+needs a development-disjoint fitted probability mapping. Otherwise report only
+descriptive score diagnostics. Do not interpret a probability band as
+containing a binary truth value.
 
 ---
 
@@ -175,6 +204,18 @@ Times recon has been wrong in empirically verified ways:
   views over append-only logs and can be rate-limited, stale, partial, or
   missing an entry that another monitor sees. Treat CT evidence as passive
   certificate telemetry, not as an authoritative asset list.
+- **A lookup is not an atomic snapshot.** DNS, CT, identity providers, and the
+  MTA-STS policy can be read at different times and through different vantage
+  points. Cross-source agreement can therefore mix current, historical, cached,
+  and non-simultaneous observations.
+- **Administrative tokens can be copied or stale.** Exact site-verification
+  token reuse is observable, but it does not establish a shared account,
+  operator, owner, or current product use. Copied configuration, managed
+  service, and historical residue remain compatible explanations.
+- **DNS answers can vary by vantage.** Split-horizon policy, geolocation,
+  resolver cache state, DNSSEC validation behavior, and transient delegation
+  conditions can make two clean lookups differ. recon currently records source
+  degradation but does not yet serialize a complete resolver-vantage capsule.
 - **DKIM selector blind spots.** recon probes common selectors such as `s1`,
   `s2`, `dkim`, `mail`, `k1`, `k2`, and `default`. Services using
   non-standard or per-account selectors (for example some Mailchimp, SendGrid,
@@ -219,19 +260,26 @@ Confident-looking output can still be wrong.
 
 Best practices:
 
-- Treat outputs marked **Confidence: Low** or with **High (1 source)** as
-  investigation leads, not conclusions.
-- `--explain` shows the full evidence chain per signal. Use it when a
-  specific claim matters.
+- Treat outputs marked **Confidence: Low** or supported by only one qualifying
+  source as investigation leads, not conclusions. Under the current merged
+  confidence rule, a one-source result cannot receive the overall High tier.
+- `--explain` shows retained evidence paths plus provenance-completeness and
+  disconnected-terminal diagnostics. Use it when a specific claim matters, and
+  do not assume every terminal has a complete canonical path.
+- Some insight and posture generator associations are reconstructed from
+  rendered text or proxy rule matches. `provenance_complete=true` establishes
+  reachability in the emitted graph, not exact generation-time lineage.
 - `inference_confidence` describes the strongest error-free, same-claim
   corroboration chain. Evidence from failed sources or unrelated provider and
   service claims is not pooled. `--explain` identifies the winning claim and
   its qualifying record types, source names, and evidence.
 - `--confidence-mode strict` or `--strict` only drops hedging when ≥3 sources corroborate
   AND confidence is High. Sparse-data output stays hedged by design.
-- If you spot a false positive, open an issue with the domain and the
-  incorrect detection. Fingerprint PRs are welcome, see
-  [CONTRIBUTING.md](../CONTRIBUTING.md).
+- If you spot a false positive, do not put a real domain or its output in a
+  public issue or pull request. Use a fictionalized minimal reproduction, or
+  report a load-bearing real-domain case through the private path in
+  [SECURITY.md](../SECURITY.md). Fingerprint pull requests are welcome when
+  their fixtures follow [CONTRIBUTING.md](../CONTRIBUTING.md).
 
 ---
 
@@ -243,6 +291,11 @@ Best practices:
 - **Upstream flakiness.** crt.sh, CertSpotter, and Microsoft / Google
   identity endpoints are not operated by the recon project. Outages
   propagate directly to recon output (documented via `degraded_sources`).
-- **Point-in-time lookups.** recon reports what DNS says *now* (or what was
-  cached recently). Continuous monitoring requires re-running on a schedule;
-  `recon delta <domain>` is the supported workflow for run-over-run diffs.
+- **Point-in-time lookups.** recon reports a bounded observation window, or a
+  recently cached result. `recon delta <domain>` is the supported run-over-run
+  output diff. It suppresses additions when the previous endpoint was degraded,
+  removals when the current endpoint was degraded, and dependent scalar changes
+  unless both required observation opportunities existed. It cannot yet
+  separate public-fact changes from catalog, model, version, normalizer,
+  evaluation-time, option, cache, or vantage changes. Continuous monitoring
+  needs a separate retention contract.

@@ -124,10 +124,13 @@ Beyond listing vendors:
 - **Stack archetypes.** Recognizable combinations (enterprise M365 + gateway +
   federated SSO; modern edge + managed database + hosted auth) are higher-signal
   and more memorable than a flat vendor list, and fit the existing motif layer.
-- **Entity resolution.** Shared declarative tokens (SPF includes, a common M365
-  tenant, a shared DMARC `rua`, shared verification tokens) already cluster
-  related domains; leaning into shared tokens strengthens the hedged
-  portfolio/ownership signal.
+- **Typed overlap characterization.** Shared declarative values such as SPF
+  includes, provider-attested tenant IDs, DMARC `rua` destinations, and exact
+  verification tokens can group domains by the observed overlap type. Each
+  grouping must retain stale, copied, delegated, and broad-provider explanations
+  and must not become entity resolution, ownership, or control inference. Its
+  value is descriptive comparison, especially within an operator-supplied
+  portfolio.
 
 ## 5. Boundaries
 

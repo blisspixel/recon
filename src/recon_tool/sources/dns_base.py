@@ -66,7 +66,14 @@ _default_resolver = dns.asyncresolver.Resolver()
 _CANONICAL_GUARD_SKIP_RDTYPES = frozenset({"CNAME", "PTR"})
 
 
-async def safe_resolve(domain: str, rdtype: str, timeout: float = DNS_QUERY_TIMEOUT) -> list[str]:
+async def safe_resolve(
+    domain: str,
+    rdtype: str,
+    timeout: float = DNS_QUERY_TIMEOUT,
+    *,
+    degraded_sources: set[str] | None = None,
+    degraded_name: str | None = None,
+) -> list[str]:
     """Resolve DNS records asynchronously, returning empty list on any error.
 
     Uses dns.asyncresolver for non-blocking DNS queries, allowing multiple
@@ -93,6 +100,12 @@ async def safe_resolve(domain: str, rdtype: str, timeout: float = DNS_QUERY_TIME
         domain: The domain name to query.
         rdtype: DNS record type (TXT, MX, CNAME, etc.).
         timeout: Max wall-clock seconds for this query (default: DNS_QUERY_TIMEOUT).
+        degraded_sources: Optional collection-status accumulator. When supplied
+            with ``degraded_name``, transient resolver failures add that name so
+            callers can distinguish an unobserved record set from an observed
+            empty one.
+        degraded_name: Stable observation-channel name recorded on a transient
+            resolver failure. Ignored when ``degraded_sources`` is ``None``.
     """
     try:
         resolver = get_resolver()
@@ -109,12 +122,21 @@ async def safe_resolve(domain: str, rdtype: str, timeout: float = DNS_QUERY_TIME
                 )
                 return []
         return [parse_rdata(rdata.to_text()) for rdata in answers]  # pyright: ignore[reportGeneralTypeIssues]
-    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer, dns.resolver.NoNameservers):
+    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+        return []
+    except dns.resolver.NoNameservers:
+        if degraded_sources is not None and degraded_name is not None:
+            degraded_sources.add(degraded_name)
+        logger.debug("DNS %s lookup had no usable nameserver for %s", rdtype, domain)
         return []
     except dns.exception.Timeout:
+        if degraded_sources is not None and degraded_name is not None:
+            degraded_sources.add(degraded_name)
         logger.debug("DNS %s lookup timed out for %s (%.1fs)", rdtype, domain, timeout)
         return []
     except Exception as exc:
+        if degraded_sources is not None and degraded_name is not None:
+            degraded_sources.add(degraded_name)
         logger.debug("DNS %s lookup failed for %s: %s", rdtype, domain, exc)
         return []
 

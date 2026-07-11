@@ -1,15 +1,16 @@
 """Coverage tests for explanation.py insight classification + confidence.
 
-explain_insights classifies insight strings into rule categories. Most
-colon-separated formats (like "Email gateway: Proofpoint") route to the
-signal-pattern branch first; only a few patterns reach the specialized
-elif branches. These tests cover what's actually reachable plus
-explain_confidence and explain_observations.
+explain_insights classifies insight strings into rule categories. Declarative
+signal output uses a colon separator, but generator-owned observational prefixes
+must bypass that generic branch. These tests cover current and legacy mappings
+plus explain_confidence and explain_observations.
 """
 
 from __future__ import annotations
 
 from typing import Any
+
+import pytest
 
 from recon_tool.explanation import (
     ExplanationRecord,
@@ -24,7 +25,7 @@ from recon_tool.models import (
     Observation,
     SourceResult,
 )
-from recon_tool.posture import load_posture_rules
+from recon_tool.posture import _PostureRule, load_posture_rules
 
 
 def _ev(source_type: str, slug: str) -> EvidenceRecord:
@@ -56,7 +57,7 @@ class TestExplainInsightsReachableBranches:
         assert "email_security" in records[0].fired_rules[0]
 
     def test_auth_federated(self) -> None:
-        records = _call("Federated identity indicators (likely ADFS/Okta/Ping — enterprise SSO)", slugs=("okta",))
+        records = _call("Federated identity observed; external IdP not identified")
         assert records[0].fired_rules
         assert "auth_insights" in records[0].fired_rules[0]
 
@@ -64,20 +65,16 @@ class TestExplainInsightsReachableBranches:
         records = _call("Cloud-managed identity indicators (Entra ID native)")
         assert records[0].fired_rules
 
-    def test_license_m365_e3(self) -> None:
-        """The license-branch insight matches the auth elif first because
-        'federated' appears in the phrase. Both classifications are valid
-        for coverage purposes — we just need the record to be produced."""
+    def test_legacy_license_m365_e3_is_labeled_removed(self) -> None:
         records = _call("M365 E3/E5 indicators (Intune + federated auth)")
         assert records[0].fired_rules
-        # Either auth or license classification is acceptable
-        assert any(keyword in records[0].fired_rules[0] for keyword in ("auth_insights", "license_insights"))
+        assert records[0].fired_rules == ("legacy-only _license_insights (removed)",)
 
     def test_pki_insight_reaches_pki_rule(self) -> None:
-        # "PKI: ..." contains ": " but is a dedicated insight rule, not a
-        # signal-generated insight; it must classify as _pki_insights, not be
-        # misrouted to the generic "Signal: PKI" branch.
-        records = _call("PKI: Let's Encrypt, DigiCert", slugs=("letsencrypt",))
+        records = _call(
+            "CAA issuer authorization observed: Let's Encrypt, DigiCert",
+            slugs=("letsencrypt",),
+        )
         assert records[0].fired_rules
         assert "_pki_insights" in records[0].fired_rules[0]
 
@@ -86,12 +83,10 @@ class TestExplainInsightsReachableBranches:
         assert records[0].fired_rules
         assert "_infrastructure_insights" in records[0].fired_rules[0]
 
-    def test_license_m365_standalone(self) -> None:
-        """An insight without 'federated' and without a colon reaches the
-        license branch directly."""
+    def test_legacy_license_m365_standalone_is_labeled_removed(self) -> None:
         records = _call("M365 Apps for Enterprise indicators (Office ProPlus)")
         assert records[0].fired_rules
-        assert "license_insights" in records[0].fired_rules[0]
+        assert records[0].fired_rules == ("legacy-only _license_insights (removed)",)
 
     def test_signal_pattern_insight(self) -> None:
         """'SignalName: matched' colon-separated insights route to the
@@ -137,12 +132,12 @@ class TestExplainInsightsSpecializedBranches:
     def test_security_stack_without_colon(self) -> None:
         records = _call("Security stack includes CrowdStrike", slugs=("crowdstrike",))
         assert records[0].fired_rules
-        assert "security_stack" in records[0].fired_rules[0]
+        assert records[0].fired_rules == ("legacy-only _security_stack_insights (removed)",)
 
     def test_sase_without_colon(self) -> None:
         records = _call("SASE provider identified", slugs=("zscaler",))
         assert records[0].fired_rules
-        assert "sase_insights" in records[0].fired_rules[0]
+        assert records[0].fired_rules == ("legacy-only _sase_insights (removed)",)
 
     def test_dual_provider_without_colon(self) -> None:
         records = _call(
@@ -150,12 +145,12 @@ class TestExplainInsightsSpecializedBranches:
             slugs=("google-workspace", "microsoft365"),
         )
         assert records[0].fired_rules
-        assert "migration_insights" in records[0].fired_rules[0]
+        assert records[0].fired_rules == ("legacy-only _migration_insights (removed)",)
 
     def test_mdm_without_colon(self) -> None:
         records = _call("Mac management via Jamf observed", slugs=("jamf",))
         assert records[0].fired_rules
-        assert "mdm_insights" in records[0].fired_rules[0]
+        assert records[0].fired_rules == ("legacy-only _mdm_insights (removed)",)
 
     def test_pki_without_colon(self) -> None:
         records = _call("PKI authority identified as DigiCert", slugs=("digicert",))
@@ -180,7 +175,103 @@ class TestExplainInsightsSpecializedBranches:
     def test_org_size_without_colon(self) -> None:
         records = _call("Large org signal detected (5 domains in tenant, mid-size)")
         assert records[0].fired_rules
-        assert "org_size_insights" in records[0].fired_rules[0]
+        assert records[0].fired_rules == ("legacy-only _org_size_insights (removed)",)
+
+
+class TestCurrentObservationalInsightPrefixes:
+    """Current generator prefixes must not be parsed as declarative signals."""
+
+    def test_mx_gateway_uses_generator_mapping_and_only_mx_evidence(self) -> None:
+        txt = _ev("TXT", "proofpoint")
+        mx = _ev("MX", "proofpoint")
+
+        records = explain_insights(
+            insights=["MX gateway observed: Proofpoint"],
+            slugs=frozenset({"proofpoint"}),
+            services=frozenset(),
+            evidence=(txt, mx),
+            detection_scores=(),
+        )
+
+        assert records[0].fired_rules == ("_gateway_insights",)
+        assert records[0].matched_evidence == (mx,)
+
+    def test_mx_gateway_without_evidence_remains_disconnected(self) -> None:
+        records = _call("MX gateway observed: Proofpoint")
+
+        assert records[0].fired_rules == ("_gateway_insights",)
+        assert records[0].matched_evidence == ()
+
+    @pytest.mark.parametrize(
+        ("insight", "slugs", "expected_rule"),
+        [
+            (
+                "Federated identity observed; identity-vendor indicators: Okta",
+                ("okta",),
+                "_auth_insights",
+            ),
+            (
+                "Provider indicators co-observed: Google Workspace, Microsoft 365",
+                ("google-workspace", "microsoft365"),
+                "_provider_overlap_insights",
+            ),
+            (
+                "Security-vendor indicators observed: CrowdStrike (endpoint)",
+                ("crowdstrike",),
+                "_security_vendor_insights",
+            ),
+            (
+                "Network-security vendor indicators observed: Zscaler, Netskope",
+                ("zscaler", "netskope"),
+                "_network_security_insights",
+            ),
+            (
+                "Device-management vendor indicators observed: Intune, Jamf",
+                ("jamf",),
+                "_device_management_insights",
+            ),
+            (
+                "Google Workspace module indicators observed: Drive, Groups",
+                (),
+                "_google_modules_insights",
+            ),
+            (
+                "Microsoft tenant discovery returned 25 domains",
+                (),
+                "_tenant_domain_insights",
+            ),
+            (
+                "No observable email infrastructure in the bounded checks: no MX or policy records",
+                (),
+                "_no_email_infrastructure_insights",
+            ),
+            (
+                "Sparse public signal \N{EM DASH} edge-heavy footprint",
+                (),
+                "_sparse_signal_insights",
+            ),
+            (
+                "Next step: see docs/weak-areas.md",
+                (),
+                "_sparse_signal_insights",
+            ),
+            (
+                "Non-commercial Microsoft cloud instance observed: example.invalid",
+                (),
+                "_sovereignty_insights",
+            ),
+        ],
+    )
+    def test_current_prefix_uses_generator_mapping(
+        self,
+        insight: str,
+        slugs: tuple[str, ...],
+        expected_rule: str,
+    ) -> None:
+        records = _call(insight, slugs=slugs)
+
+        assert records[0].fired_rules == (expected_rule,)
+        assert not records[0].fired_rules[0].startswith("Signal:")
 
 
 class TestExplainConfidence:
@@ -437,6 +528,38 @@ class TestExplainObservations:
             detection_scores=(),
         )
         assert records == []
+
+    def test_source_name_selects_the_exact_rule_before_legacy_heuristics(self) -> None:
+        rules = (
+            _PostureRule(
+                name="first",
+                category="identity",
+                salience="medium",
+                template="same",
+                slugs_any=("okta",),
+                explain="wrong",
+            ),
+            _PostureRule(
+                name="second",
+                category="identity",
+                salience="medium",
+                template="same",
+                slugs_any=("okta",),
+                explain="exact",
+            ),
+        )
+        observation = Observation(
+            category="identity",
+            salience="medium",
+            statement="same",
+            related_slugs=("okta",),
+            source_name="second",
+        )
+
+        record = explain_observations((observation,), rules, (_ev("TXT", "okta"),), ())[0]
+
+        assert record.curated_explanation == "exact"
+        assert record.fired_rules[0].startswith("Posture rule: second")
 
 
 class TestSerializeExplanation:

@@ -7,17 +7,21 @@ correctness properties across all valid inputs.
 from __future__ import annotations
 
 import ast
+import io
 import re
+from dataclasses import replace
 from pathlib import Path
 
 import hypothesis.strategies as st
 import pytest
 from hypothesis import HealthCheck, given, settings
+from rich.console import Console
 
 from recon_tool.constants import (
     SVC_BIMI,
     SVC_DKIM,
     SVC_DKIM_EXCHANGE,
+    SVC_DKIM_GOOGLE,
     SVC_DMARC,
     SVC_MTA_STS,
     SVC_SPF_SOFTFAIL,
@@ -31,6 +35,7 @@ from recon_tool.exposure import (
     compare_postures_from_infos,
     find_gaps_from_info,
 )
+from recon_tool.formatter.exposure import render_exposure_panel, render_gaps_panel
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
 # ── Custom Hypothesis strategy for TenantInfo ──────────────────────────
@@ -203,18 +208,20 @@ class TestProperty2SubsectionFaithfulness:
     @given(info=tenant_info_strategy())
     @_PBT_SETTINGS
     def test_email_posture_reflects_input(self, info: TenantInfo) -> None:
-        """Email posture fields faithfully reflect TenantInfo input."""
+        """Email posture fields reflect typed control evidence, not labels."""
+        from recon_tool.email_security import observed_email_control_services
+
         result = assess_exposure_from_info(info)
         ep = result.email_posture
 
         assert ep.dmarc_policy == info.dmarc_policy
         assert ep.mta_sts_mode == info.mta_sts_mode
 
-        services_set = set(info.services)
-        expected_dkim = SVC_DKIM in services_set or SVC_DKIM_EXCHANGE in services_set
+        control_services = observed_email_control_services(info.evidence)
+        expected_dkim = bool(control_services & {SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE})
         assert ep.dkim_configured == expected_dkim
 
-        expected_spf = SVC_SPF_STRICT in services_set
+        expected_spf = SVC_SPF_STRICT in control_services
         assert ep.spf_strict == expected_spf
 
     @given(info=tenant_info_strategy())
@@ -236,8 +243,10 @@ class TestProperty2SubsectionFaithfulness:
         result = assess_exposure_from_info(info)
         infra = result.infrastructure_footprint
 
-        # Every cloud provider in the output must come from a slug in the input
-        expected_providers = {_CLOUD_PROVIDER_SLUGS[s] for s in info.slugs if s in _CLOUD_PROVIDER_SLUGS}
+        # A cloud-footprint role requires CNAME evidence; a generic slug or an
+        # NS-only DNS-provider observation is not enough.
+        cname_slugs = {ev.slug for ev in info.evidence if ev.source_type.upper() == "CNAME"}
+        expected_providers = {_CLOUD_PROVIDER_SLUGS[s] for s in cname_slugs if s in _CLOUD_PROVIDER_SLUGS}
         assert set(infra.cloud_providers) == expected_providers
 
 
@@ -339,9 +348,8 @@ class TestProperty6GapDetectionCorrectness:
     @given(info=tenant_info_strategy())
     @_PBT_SETTINGS
     def test_missing_dkim_produces_gap(self, info: TenantInfo) -> None:
-        """If no DKIM service is detected, a DKIM gap is present."""
-        services_set = set(info.services)
-        has_dkim = SVC_DKIM in services_set or SVC_DKIM_EXCHANGE in services_set
+        """If no typed DKIM response is retained, a bounded DKIM gap is present."""
+        has_dkim = any(record.source_type.upper() == "DKIM" for record in info.evidence)
         result = find_gaps_from_info(info)
         gap_observations = " ".join(g.observation.lower() for g in result.gaps)
 
@@ -361,10 +369,10 @@ class TestProperty6GapDetectionCorrectness:
     @given(info=tenant_info_strategy())
     @_PBT_SETTINGS
     def test_spf_softfail_produces_gap(self, info: TenantInfo) -> None:
-        """If SPF softfail is detected without strict, an SPF gap is present."""
-        services_set = set(info.services)
-        has_softfail = SVC_SPF_SOFTFAIL in services_set
-        has_strict = SVC_SPF_STRICT in services_set
+        """Typed SPF softfail evidence without strict evidence produces a gap."""
+        spf_slugs = {record.slug for record in info.evidence if record.source_type.upper() == "SPF"}
+        has_softfail = "spf-softfail" in spf_slugs
+        has_strict = "spf-strict" in spf_slugs
         result = find_gaps_from_info(info)
         gap_observations = " ".join(g.observation.lower() for g in result.gaps)
 
@@ -374,11 +382,11 @@ class TestProperty6GapDetectionCorrectness:
     @given(info=tenant_info_strategy())
     @_PBT_SETTINGS
     def test_gateway_without_dmarc_reject_produces_gap(self, info: TenantInfo) -> None:
-        """If an email gateway slug is present but DMARC is not 'reject', an inconsistency gap is present."""
+        """An MX-backed gateway without DMARC reject produces a consistency gap."""
         from recon_tool.exposure import _EMAIL_GATEWAY_SLUGS
 
-        slugs_set = set(info.slugs)
-        gateway_present = bool(slugs_set & set(_EMAIL_GATEWAY_SLUGS.keys()))
+        mx_slugs = {ev.slug for ev in info.evidence if ev.source_type.upper() == "MX"}
+        gateway_present = info.email_gateway is not None and bool(mx_slugs & set(_EMAIL_GATEWAY_SLUGS))
         result = find_gaps_from_info(info)
         gap_observations = " ".join(g.observation.lower() for g in result.gaps)
 
@@ -418,6 +426,8 @@ class TestProperty6GapDetectionCorrectness:
             slugs=("dmarc", "proofpoint"),
             dmarc_policy="reject",
             dmarc_testing=True,
+            email_gateway="Proofpoint",
+            evidence=(EvidenceRecord("MX", "10 mx.example.net", "Proofpoint", "proofpoint"),),
         )
 
         gaps = find_gaps_from_info(info)
@@ -605,6 +615,52 @@ class TestProperty12RelativeAssessmentConsistency:
         else:
             assert "comparable" in summary_lower
 
+    @pytest.mark.parametrize(
+        ("auth_a", "auth_b", "expected"),
+        [
+            (None, None, "For both domains, the identity federation state is unknown"),
+            (
+                "Federated",
+                None,
+                "For example.com, federated identity was observed; "
+                "for other.example, the identity federation state is unknown",
+            ),
+            (
+                "Managed",
+                "Federated",
+                "For example.com, a managed identity response was observed; "
+                "for other.example, federated identity was observed",
+            ),
+        ],
+    )
+    def test_identity_federation_preserves_unknown_state(
+        self,
+        auth_a: str | None,
+        auth_b: str | None,
+        expected: str,
+    ) -> None:
+        """Unknown identity discovery is not converted into a negative claim."""
+        info_a = TenantInfo(
+            tenant_id=None,
+            display_name="example.com",
+            default_domain="example.com",
+            queried_domain="example.com",
+            auth_type=auth_a,
+        )
+        info_b = TenantInfo(
+            tenant_id=None,
+            display_name="other.example",
+            default_domain="other.example",
+            queried_domain="other.example",
+            auth_type=auth_b,
+        )
+
+        result = compare_postures_from_infos(info_a, info_b)
+
+        assessment = next(item for item in result.relative_assessment if item.dimension == "identity_federation")
+        assert assessment.summary == expected
+        assert "does not" not in assessment.summary
+
 
 # ── Task 6.1: Import safety test ─────────────────────────────────────
 
@@ -775,7 +831,12 @@ class TestNeutralCopyIntegration:
 
 class TestScoreObservability:
     @staticmethod
-    def _info(*, services: tuple[str, ...] = (), slugs: tuple[str, ...] = ()) -> TenantInfo:
+    def _info(
+        *,
+        services: tuple[str, ...] = (),
+        slugs: tuple[str, ...] = (),
+        evidence: tuple[EvidenceRecord, ...] = (),
+    ) -> TenantInfo:
         return TenantInfo(
             tenant_id=None,
             display_name="Test Corp",
@@ -785,26 +846,132 @@ class TestScoreObservability:
             sources=("test_source",),
             services=services,
             slugs=slugs,
+            evidence=evidence,
         )
 
-    def test_bare_domain_floor_is_thirty(self) -> None:
-        # No DKIM (+15), <2 security tools (+10), no email gateway (+5) = 30.
+    def test_bare_domain_floor_is_twenty(self) -> None:
+        # No DKIM (+15) and no MX-backed email gateway (+5). Generic vendor
+        # indicators do not receive active-control credit.
         result = assess_exposure_from_info(self._info())
-        assert result.unconfirmable_absent_points == 30
+        assert result.unconfirmable_absent_points == 20
 
     def test_observed_dkim_drops_the_floor_by_fifteen(self) -> None:
         from recon_tool.constants import SVC_DKIM
 
-        result = assess_exposure_from_info(self._info(services=(SVC_DKIM,)))
-        assert result.unconfirmable_absent_points == 15
+        result = assess_exposure_from_info(
+            self._info(
+                services=(SVC_DKIM,),
+                evidence=(EvidenceRecord("DKIM", "selector response", SVC_DKIM, "dkim"),),
+            )
+        )
+        assert result.unconfirmable_absent_points == 5
 
-    def test_two_security_tools_drop_the_floor_by_ten(self) -> None:
+    def test_two_vendor_indicators_do_not_change_the_control_floor(self) -> None:
         result = assess_exposure_from_info(self._info(slugs=("crowdstrike", "okta")))
         assert result.unconfirmable_absent_points == 20
 
-    def test_descope_counts_as_identity_provider(self) -> None:
+    def test_generic_identity_vendor_slug_does_not_name_the_operating_idp(self) -> None:
         result = assess_exposure_from_info(self._info(slugs=("descope",)))
-        assert result.identity_posture.identity_provider == "Descope"
+        assert result.identity_posture.identity_provider is None
+
+    def test_txt_vendor_indicators_receive_no_role_or_control_credit(self) -> None:
+        slugs = ("okta", "crowdstrike", "proofpoint", "microsoft365", "google-workspace")
+        info = replace(
+            self._info(slugs=slugs),
+            services=("Okta", "CrowdStrike", "Proofpoint", "Microsoft 365", "Google Workspace"),
+            evidence=tuple(EvidenceRecord("TXT", f"token={slug}", slug, slug) for slug in slugs),
+        )
+
+        assessment = assess_exposure_from_info(info)
+        gaps = find_gaps_from_info(info)
+
+        assert assessment.identity_posture.identity_provider is None
+        assert assessment.email_posture.email_gateway is None
+        assert assessment.consistency_observations == ()
+        assert assessment.posture_score == 0
+        assert not any("gateway" in gap.observation.lower() for gap in gaps.gaps)
+
+    def test_explicit_google_federation_response_can_name_the_idp(self) -> None:
+        info = replace(
+            self._info(slugs=("google-workspace",)),
+            google_auth_type="Federated",
+            google_idp_name="Okta",
+            evidence=(EvidenceRecord("HTTP", "redirect=okta", "Google federation", "google-workspace"),),
+        )
+
+        assessment = assess_exposure_from_info(info)
+
+        assert assessment.identity_posture.identity_provider == "Okta"
+
+    @pytest.mark.parametrize(
+        ("slug", "provider"),
+        [("cloudflare", "Cloudflare"), ("aws-route53", "AWS Route 53")],
+    )
+    def test_ns_role_does_not_expand_into_cloud_or_cdn_role(self, slug: str, provider: str) -> None:
+        info = replace(
+            self._info(slugs=(slug,)),
+            evidence=(EvidenceRecord("NS", f"ns.{slug}.example", provider, slug),),
+        )
+
+        infra = assess_exposure_from_info(info).infrastructure_footprint
+
+        assert infra.dns_provider == provider
+        assert infra.cloud_providers == ()
+        assert infra.cdn_waf == ()
+
+    def test_txt_ca_vendor_indicator_is_not_a_caa_record(self) -> None:
+        info = replace(
+            self._info(slugs=("globalsign",)),
+            evidence=(EvidenceRecord("TXT", "_globalsign-domain-verification=opaque", "GlobalSign", "globalsign"),),
+        )
+
+        assessment = assess_exposure_from_info(info)
+        gaps = find_gaps_from_info(info)
+        caa = next(control for control in assessment.hardening_status.controls if control.name == "CAA")
+
+        assert assessment.infrastructure_footprint.certificate_authorities == ()
+        assert not caa.present
+        assert any("caa" in gap.observation.lower() for gap in gaps.gaps)
+
+    def test_unmodeled_caa_issuer_still_establishes_record_presence(self) -> None:
+        info = replace(
+            self._info(),
+            evidence=(EvidenceRecord("CAA", '0 issue "new-ca.example"', "CAA record", "caa"),),
+        )
+
+        assessment = assess_exposure_from_info(info)
+        gaps = find_gaps_from_info(info)
+        caa = next(control for control in assessment.hardening_status.controls if control.name == "CAA")
+
+        assert caa.present
+        assert assessment.infrastructure_footprint.certificate_authorities == ()
+        assert not any("caa" in gap.observation.lower() for gap in gaps.gaps)
+
+    def test_amazon_caa_authorization_is_not_named_as_an_acm_workload(self) -> None:
+        info = replace(
+            self._info(slugs=("aws-acm",)),
+            evidence=(EvidenceRecord("CAA", '0 issue "amazon.com"', "CAA: AWS Certificate Manager", "aws-acm"),),
+        )
+
+        authorities = assess_exposure_from_info(info).infrastructure_footprint.certificate_authorities
+
+        assert authorities == ("Amazon",)
+
+    def test_google_dkim_is_consistent_across_assessment_and_degradation(self) -> None:
+        observed = replace(
+            self._info(services=(SVC_DKIM_GOOGLE,), slugs=("google-workspace",)),
+            evidence=(EvidenceRecord("DKIM", "v=DKIM1; p=opaque", SVC_DKIM_GOOGLE, "google-workspace"),),
+        )
+
+        available = assess_exposure_from_info(observed)
+        unavailable = assess_exposure_from_info(replace(observed, degraded_sources=("dns:dkim",)))
+
+        assert available.email_posture.dkim_configured
+        assert next(control for control in available.hardening_status.controls if control.name == "DKIM").present
+        assert not unavailable.email_posture.dkim_configured
+        assert next(control for control in unavailable.hardening_status.controls if control.name == "DKIM").detail == (
+            "source unavailable"
+        )
 
     def test_floor_never_pushes_ceiling_past_100(self) -> None:
         result = assess_exposure_from_info(self._info())
@@ -825,3 +992,159 @@ class TestScoreObservability:
         dmarc_gaps = [g for g in report.gaps if "dmarc" in g.observation.lower()]
         assert dmarc_gaps
         assert all(g.absence_confirmable for g in dmarc_gaps)
+
+    @staticmethod
+    def _complete_info(degraded_sources: tuple[str, ...]) -> TenantInfo:
+        return TenantInfo(
+            tenant_id="tid-test",
+            display_name="Test Corp",
+            default_domain="test.onmicrosoft.com",
+            queried_domain="test.com",
+            confidence=ConfidenceLevel.HIGH,
+            sources=("dns_records",),
+            services=(SVC_DMARC, SVC_DKIM, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI),
+            slugs=(
+                "dmarc",
+                "mta-sts",
+                "mta-sts-enforce",
+                "proofpoint",
+                "crowdstrike",
+                "okta",
+                "tls-rpt",
+                "letsencrypt",
+            ),
+            dmarc_policy="reject",
+            auth_type="Federated",
+            mta_sts_mode="enforce",
+            email_gateway="Proofpoint",
+            evidence=(
+                EvidenceRecord("DMARC", "v=DMARC1; p=reject", SVC_DMARC, "dmarc"),
+                EvidenceRecord("DKIM", "v=DKIM1; p=opaque", SVC_DKIM, "dkim"),
+                EvidenceRecord("SPF", "v=spf1 -all", SVC_SPF_STRICT, "spf-strict"),
+                EvidenceRecord("MTA_STS", "v=STSv1; id=1", SVC_MTA_STS, "mta-sts"),
+                EvidenceRecord("BIMI", "v=BIMI1; l=https://example/logo.svg", SVC_BIMI, "bimi"),
+                EvidenceRecord("TXT", "v=TLSRPTv1; rua=mailto:tls@example.com", "TLS-RPT", "tls-rpt"),
+                EvidenceRecord("CAA", '0 issue "letsencrypt.org"', "CAA record", "caa"),
+                EvidenceRecord("CAA", '0 issue "letsencrypt.org"', "Let's Encrypt", "letsencrypt"),
+                EvidenceRecord("MX", "10 mx.example.net", "Proofpoint", "proofpoint"),
+            ),
+            degraded_sources=degraded_sources,
+        )
+
+    @pytest.mark.parametrize(
+        ("marker", "expected_score", "expected_ceiling_points", "unavailable_controls"),
+        [
+            ("dns:dmarc", 70, 20, {"DMARC"}),
+            ("dns:mta_sts", 75, 15, {"MTA-STS"}),
+            ("http:mta_sts_policy", 75, 15, {"MTA-STS"}),
+            ("dns:apex_txt", 80, 10, set()),
+            ("dns:mx", 85, 5, set()),
+            ("detector:dkim", 75, 15, {"DKIM"}),
+            ("detector:caa", 85, 5, {"CAA"}),
+            ("detector:email_security", 45, 45, {"DMARC", "MTA-STS", "BIMI", "TLS-RPT"}),
+            ("dns", 10, 80, {"DMARC", "DKIM", "MTA-STS", "BIMI", "TLS-RPT", "CAA"}),
+            ("dns_records", 10, 80, {"DMARC", "DKIM", "MTA-STS", "BIMI", "TLS-RPT", "CAA"}),
+        ],
+    )
+    def test_degraded_declarative_channels_are_unobserved(
+        self,
+        marker: str,
+        expected_score: int,
+        expected_ceiling_points: int,
+        unavailable_controls: set[str],
+    ) -> None:
+        info = self._complete_info((marker,))
+        assessment = assess_exposure_from_info(info)
+        report = find_gaps_from_info(info)
+        controls = {control.name: control for control in assessment.hardening_status.controls}
+
+        assert assessment.posture_score == expected_score
+        assert assessment.unconfirmable_absent_points == expected_ceiling_points
+        expected_unavailable = set(unavailable_controls)
+        if marker == "dns:apex_txt":
+            expected_unavailable.add("SPF")
+        if marker == "dns:mx":
+            expected_unavailable.add("Email gateway")
+        if marker in {"dns", "dns_records"}:
+            expected_unavailable.update({"SPF", "Email gateway"})
+        assert set(assessment.unavailable_controls) == expected_unavailable
+        assert set(report.unavailable_controls) == expected_unavailable
+        assert report.degraded_sources == (marker,)
+        assert all(controls[name].detail == "source unavailable" for name in unavailable_controls)
+        if "DMARC" in unavailable_controls:
+            assert assessment.email_posture.dmarc_policy is None
+            assert not any("dmarc" in gap.observation.lower() for gap in report.gaps)
+        if "MTA-STS" in unavailable_controls:
+            assert assessment.email_posture.mta_sts_mode is None
+            assert not any("mta-sts" in gap.observation.lower() for gap in report.gaps)
+        if marker == "dns:apex_txt":
+            assert assessment.email_posture.spf_strict is False
+        if marker == "dns:mx":
+            assert assessment.email_posture.email_gateway is None
+        if marker in {"dns", "dns_records"}:
+            assert assessment.email_posture.dkim_configured is False
+            assert assessment.email_posture.bimi_configured is False
+            assert not any("tls-rpt" in gap.observation.lower() for gap in report.gaps)
+            assert not any("caa" in gap.observation.lower() for gap in report.gaps)
+
+        output = io.StringIO()
+        Console(file=output, width=100, force_terminal=False).print(render_exposure_panel(assessment))
+        assert output.getvalue().count("source unavailable") >= len(unavailable_controls)
+
+        gap_output = io.StringIO()
+        Console(file=gap_output, width=100, force_terminal=False).print(render_gaps_panel(report))
+        assert "Collection unavailable for:" in gap_output.getvalue()
+
+    def test_comparison_does_not_treat_unavailable_control_as_absent(self) -> None:
+        observed = self._complete_info(())
+        degraded = replace(
+            observed,
+            queried_domain="degraded.example",
+            degraded_sources=("dns:dmarc",),
+        )
+
+        comparison = compare_postures_from_infos(degraded, observed)
+        metrics = {metric.metric_name: metric for metric in comparison.metrics}
+
+        assert metrics["dmarc_policy"].domain_a_value == "source unavailable"
+        assert not any(diff.description.startswith("DMARC present") for diff in comparison.differences)
+
+    def test_unobserved_dkim_is_bounded_to_common_selectors(self) -> None:
+        assessment = assess_exposure_from_info(self._info())
+        dkim = next(control for control in assessment.hardening_status.controls if control.name == "DKIM")
+
+        assert dkim.detail == "not observed at recon's bounded common-selector set"
+        assert "not configured" not in dkim.detail
+
+    def test_dkim_difference_does_not_claim_absence(self) -> None:
+        observed = replace(
+            self._info(services=(SVC_DKIM,)),
+            queried_domain="observed.example",
+            evidence=(EvidenceRecord("DKIM", "v=DKIM1; p=opaque", SVC_DKIM, "dkim"),),
+        )
+        unobserved = replace(self._info(), queried_domain="unobserved.example")
+
+        comparison = compare_postures_from_infos(observed, unobserved)
+        dkim = next(difference for difference in comparison.differences if difference.description.startswith("DKIM"))
+
+        assert "bounded common-selector set" in dkim.description
+        assert "absent" not in dkim.description
+
+    def test_comparison_marks_incomplete_opportunity_instead_of_ranking_zero(self) -> None:
+        observed = self._complete_info(())
+        degraded = replace(
+            self._complete_info(("dns:dkim",)),
+            queried_domain="degraded.example",
+            services=(),
+            slugs=(),
+            evidence=(),
+        )
+
+        comparison = compare_postures_from_infos(degraded, observed)
+        metrics = {metric.metric_name: metric for metric in comparison.metrics}
+        assessments = {item.dimension: item.summary for item in comparison.relative_assessment}
+
+        assert metrics["email_security_score"].domain_a_value == "source unavailable"
+        assert metrics["service_count"].domain_a_value == "0 observed (partial collection)"
+        assert "not comparable" in assessments["email_security"]
+        assert "not compared" in assessments["public_fingerprints"]

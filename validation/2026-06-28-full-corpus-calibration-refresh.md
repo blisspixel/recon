@@ -1,22 +1,37 @@
 # Full-Corpus Calibration Refresh (2026-06-28)
 
+Interpretation corrected 2026-07-10. The recorded aggregate values are
+unchanged. Repeated conformal splits reuse one selected corpus, and the legacy
+run did not record set-composition rates.
+
+The 2,906-row email-policy block is publisher-conditional: the historical
+collector retained published DMARC policies and excluded successfully observed
+no-record domains. The current harness labels successful no-record observations
+as 0 and leaves collection failures unlabeled, so reruns use a broader label
+cohort. The 4,290-row conformal block is a separately recorded legacy
+extraction; surviving provenance does not establish that it shares the same
+collection run or label cohort as the reference block.
+
 ## Disclosure Controls
 
 - Source apex lists and per-domain outputs remain under gitignored private validation paths.
 - This memo is generated from aggregate JSON only.
 - No apexes, subdomains, organization names, tenant IDs, or per-domain rows are included.
 - Strata below 10 domains are suppressed or rejected before rendering.
-- ECE columns report both legacy fixed-bin ECE and equal-mass mean-confidence ECE when available.
+- ECE columns preserve legacy fixed-bin and legacy equal-mass mean-confidence
+  ECE. The historical equal-mass implementation could split tied scores across
+  bins; current runs use a tie-preserving estimator and require fresh values.
+- Bootstrap and Wilson ranges use naive iid rows and have no coverage interpretation for this selected cohort.
 
 ## Email Policy Reference Calibration
 
 ### Full posterior
 
-| Block | n | Log score | Brier | ECE fixed-bin | ECE equal-mass | ECE equal-mass CI80 | Agreement | Base rate |
+| Block | n | Log score | Brier | ECE fixed-bin | ECE legacy equal-mass | ECE naive-iid bootstrap range80 | Agreement | Base rate |
 |---|---:|---:|---:|---:|---:|---|---:|---:|
 | Pooled | 2906 | 0.0769 | 0.0077 | 0.0761 | 0.0651 | 0.0639, 0.0668 | 1 | 0.8352 |
 
-| Stratum | n | ECE fixed-bin | ECE equal-mass | ECE equal-mass CI80 | Agreement | Base rate |
+| Stratum | n | ECE fixed-bin | ECE legacy equal-mass | ECE naive-iid bootstrap range80 | Agreement | Base rate |
 |---|---:|---:|---:|---|---:|---:|
 | aerospace-defense | 28 | 0.0714 | 0.0621 | 0.0519, 0.0749 | 1 | 0.8929 |
 | agriculture-agtech | 27 | 0.0981 | 0.0948 | 0.0817, 0.1073 | 1 | 0.7778 |
@@ -43,11 +58,11 @@
 
 ### Held-out residual
 
-| Block | n | Log score | Brier | ECE fixed-bin | ECE equal-mass | ECE equal-mass CI80 | Agreement | Base rate |
+| Block | n | Log score | Brier | ECE fixed-bin | ECE legacy equal-mass | ECE naive-iid bootstrap range80 | Agreement | Base rate |
 |---|---:|---:|---:|---:|---:|---|---:|---:|
 | Pooled | 2906 | 0.6809 | 0.2448 | 0.3747 | 0.3263 | 0.3177, 0.3349 | 0.1896 | 0.8352 |
 
-| Stratum | n | ECE fixed-bin | ECE equal-mass | ECE equal-mass CI80 | Agreement | Base rate |
+| Stratum | n | ECE fixed-bin | ECE legacy equal-mass | ECE naive-iid bootstrap range80 | Agreement | Base rate |
 |---|---:|---:|---:|---|---:|---:|
 | aerospace-defense | 28 | 0.4286 | 0.3805 | 0.3219, 0.4519 | 0.1429 | 0.8929 |
 | agriculture-agtech | 27 | 0.3278 | 0.3893 | 0.2412, 0.3932 | 0.2222 | 0.7778 |
@@ -78,11 +93,11 @@
 
 ### Pooled and per-stratum
 
-| Block | n | Log score | Brier | ECE fixed-bin | ECE equal-mass | ECE equal-mass CI80 | Agreement | Base rate |
+| Block | n | Log score | Brier | ECE fixed-bin | ECE legacy equal-mass | ECE naive-iid bootstrap range80 | Agreement | Base rate |
 |---|---:|---:|---:|---:|---:|---|---:|---:|
 | Pooled | 3296 | 0.2695 | 0.0796 | 0.0471 | 0.044 | 0.0402, 0.0506 | 0.889 | 0.7897 |
 
-| Stratum | n | ECE fixed-bin | ECE equal-mass | ECE equal-mass CI80 | Agreement | Base rate |
+| Stratum | n | ECE fixed-bin | ECE legacy equal-mass | ECE naive-iid bootstrap range80 | Agreement | Base rate |
 |---|---:|---:|---:|---|---:|---:|
 | aerospace-defense | 9 | suppressed | suppressed | suppressed | suppressed | suppressed |
 | agriculture-agtech | 29 | 0.0431 | 0.1471 | 0.0818, 0.1709 | 0.8966 | 0.8966 |
@@ -112,25 +127,28 @@
 | Attested positives | 11 |
 | Threshold | 0.5 |
 | Recall | 0.3636 |
-| Recall Wilson80 | 0.2071, 0.5556 |
+| Recall naive-iid Wilson diagnostic range80 | 0.2071, 0.5556 |
 | Posterior quartiles | 0.25, 0.25, 0.8846 |
 
-## Conformal Coverage
+## Conformal Re-split Diagnostics
 
 | Metric | Value |
 |---|---:|
 | Labeled records | 4290 |
 | Splits | 20 |
-| Target coverage | 0.9 |
-| Mean coverage | 0.9992 |
-| Worst split coverage | 0.9981 |
-| Mean set size | 0.9992 |
+| Nominal 1-alpha reference | 0.9 |
+| Mean empirical label-inclusion across dependent re-splits | 0.9992 |
+| Minimum empirical label-inclusion across re-splits | 0.9981 |
+| Mean singleton-set rate | not recorded |
+| Mean multi-label-set rate | not recorded |
+| Mean empty-set rate | not recorded |
+| Mean set size, legacy shape diagnostic | 0.9992 |
 
 ## Interpretation Guardrails
 
-- Full email-policy calibration overlaps the DMARC predictor and label by design.
-- The held-out residual masks the DMARC evidence unit, so predictor and label are disjoint.
-- M365 DNS-only tenancy corroboration splits predictor and provider-attested label by channel.
+- Full email-policy scoring overlaps the DMARC predictor and label by design, so its metrics are corroboration.
+- The held-out residual masks the DMARC evidence unit, so predictor and label are disjoint inside recon. The selected observations are not independent.
+- M365 DNS-only tenancy corroboration splits predictor and provider-attested label by channel, but both share tenant provisioning.
 - M365 full-pipeline tenancy agreement is a consistency check, not independent calibration.
 - GWS is one-sided recall on provider-attested positives, not two-class calibration.
-- Conformal coverage depends on exchangeability and is not claimed for adversarially hardened targets.
+- Conformal values are dependent empirical re-split diagnostics from a separately recorded legacy extraction. Scorer-development disjointness is not established, so no future-point coverage theorem is claimed. Mean set size does not establish decisiveness.

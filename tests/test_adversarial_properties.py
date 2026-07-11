@@ -1,7 +1,7 @@
 """The suppression-monotonicity property, as a CI gate.
 
 `validation/adversarial_properties.py` ships the proposition of
-correlation.md section 4.3 (an operator who hides indicators can only
+correlation.md section 3.4 (an operator who hides indicators can only
 move a claim toward "we cannot tell," never toward a confident false
 positive) as a machine-checked invariant. The shipped network must
 satisfy three checks, which ARE the gate: the positive-indicator

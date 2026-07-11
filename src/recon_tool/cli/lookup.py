@@ -64,7 +64,7 @@ _STATUS_MESSAGES = (
     "Propagating beliefs through the network...",
     "Widening the interval where evidence is thin...",
     "Letting absent evidence stay absent...",
-    "Computing credible intervals, not false certainties...",
+    "Computing model-relative uncertainty bands...",
     "Counting clues before drawing conclusions...",
     "Keeping the confidence meter honest...",
     "Letting uncertainty keep its seat at the table...",
@@ -97,6 +97,11 @@ def _build_explanations(
     Generates explanations for signals, insights, confidence, and observations.
     """
     from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
+    from recon_tool.collection_view import (
+        collection_observable_evidence,
+        collection_observable_info,
+        collection_observable_results,
+    )
     from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
     from recon_tool.explanation import (
         explain_confidence,
@@ -109,6 +114,8 @@ def _build_explanations(
     from recon_tool.posture import analyze_posture, load_posture_rules
     from recon_tool.signals import evaluate_signals, load_signals
 
+    info = collection_observable_info(info)
+    observable_evidence = collection_observable_evidence(info)
     explanations: list[ExplanationRecord] = []
 
     context = signal_context_from_tenant_info(info)
@@ -127,7 +134,7 @@ def _build_explanations(
         signals,
         frozenset(info.slugs),
         context_metadata,
-        info.evidence,
+        observable_evidence,
         info.detection_scores,
     )
     explanations.extend(signal_recs)
@@ -137,22 +144,23 @@ def _build_explanations(
         list(info.insights),
         frozenset(info.slugs),
         frozenset(info.services),
-        info.evidence,
+        observable_evidence,
         info.detection_scores,
     )
     explanations.extend(insight_recs)
 
     # Confidence explanation
     if results:
-        evidence_conf = compute_evidence_confidence(results)
-        inference_conf = compute_inference_confidence(results)
-        conf_rec = explain_confidence(results, evidence_conf, inference_conf, info.confidence)
+        observable_results = collection_observable_results(results)
+        evidence_conf = compute_evidence_confidence(observable_results)
+        inference_conf = compute_inference_confidence(observable_results)
+        conf_rec = explain_confidence(observable_results, evidence_conf, inference_conf, info.confidence)
         explanations.append(conf_rec)
 
     # Observation explanations
     observations = analyze_posture(info)
     posture_rules = load_posture_rules()
-    obs_recs = explain_observations(observations, posture_rules, info.evidence, info.detection_scores)
+    obs_recs = explain_observations(observations, posture_rules, observable_evidence, info.detection_scores)
     explanations.extend(obs_recs)
 
     return explanations
@@ -416,6 +424,7 @@ def _lookup_apply_fusion(info: Any) -> Any:
     from dataclasses import replace
 
     from recon_tool.bayesian import infer_from_tenant_info
+    from recon_tool.collection_view import collection_observable_evidence
     from recon_tool.fusion import compute_slug_posteriors
     from recon_tool.models import NodeConflict, NodeEvidence, NodeUnitCounterfactual, PosteriorObservation
 
@@ -458,7 +467,7 @@ def _lookup_apply_fusion(info: Any) -> Any:
     )
     return replace(
         info,
-        slug_confidences=compute_slug_posteriors(info.evidence),
+        slug_confidences=compute_slug_posteriors(collection_observable_evidence(info)),
         posterior_observations=bayesian_observations,
     )
 
@@ -545,19 +554,36 @@ def _lookup_compute_observations(info: Any, profile_name: str | None, show_postu
 
 def _lookup_emit_explain_dag(validated: str, info: Any, explain_dag_format: str) -> None:
     """Render the Bayesian evidence DAG in the requested format (`--explain-dag`)."""
-    from recon_tool.bayesian import infer_from_tenant_info, load_network
+    from recon_tool.bayesian import collection_masked_units, infer_from_tenant_info, load_network
     from recon_tool.bayesian_dag import render_dag_dot, render_dag_mermaid, render_dag_text
     from recon_tool.formatter import render_error
 
     network = load_network()
     inference = infer_from_tenant_info(info, network=network)
     fmt = (explain_dag_format or "text").lower()
+    degraded = sorted(set(getattr(info, "degraded_sources", ()) or ()))
+    masked = sorted(collection_masked_units(degraded, network=network))
+    if degraded:
+        degraded_text = ", ".join(degraded)
+        masked_text = ", ".join(masked) if masked else "none"
+        if fmt == "dot":
+            provenance_prefix = f"// degraded_sources: {degraded_text}\n// collection_masked_units: {masked_text}\n"
+        elif fmt == "mermaid":
+            provenance_prefix = f"%% degraded_sources: {degraded_text}\n%% collection_masked_units: {masked_text}\n"
+        else:
+            provenance_prefix = (
+                "Collection provenance:\n"
+                f"- degraded_sources: {degraded_text}\n"
+                f"- collection-masked units: {masked_text}\n\n"
+            )
+    else:
+        provenance_prefix = ""
     if fmt == "dot":
-        typer.echo(render_dag_dot(network, inference, domain=validated))
+        typer.echo(provenance_prefix + render_dag_dot(network, inference, domain=validated))
     elif fmt == "mermaid":
-        typer.echo(render_dag_mermaid(network, inference, domain=validated))
+        typer.echo(provenance_prefix + render_dag_mermaid(network, inference, domain=validated))
     elif fmt == "text":
-        typer.echo(render_dag_text(network, inference, domain=validated))
+        typer.echo(provenance_prefix + render_dag_text(network, inference, domain=validated))
     else:
         render_error(f"--explain-dag-format must be 'text', 'dot', or 'mermaid', got {explain_dag_format!r}")
         raise typer.Exit(code=EXIT_VALIDATION) from None
@@ -579,6 +605,7 @@ def _lookup_emit_json(
     if show_posture:
         tenant_dict["posture"] = format_posture_observations(observations)
     if show_explain:
+        from recon_tool.collection_view import collection_observable_evidence
         from recon_tool.explanation import build_explanation_dag
         from recon_tool.formatter import format_explanations_list
         from recon_tool.models import serialize_conflicts
@@ -588,7 +615,7 @@ def _lookup_emit_json(
         # Structured provenance DAG for programmatic consumers. Lives
         # alongside the flat list; both are emitted so existing tooling doesn't
         # break.
-        tenant_dict["explanation_dag"] = build_explanation_dag(explanations, info.evidence)
+        tenant_dict["explanation_dag"] = build_explanation_dag(explanations, collection_observable_evidence(info))
         if info.merge_conflicts and info.merge_conflicts.has_conflicts:
             tenant_dict["conflicts"] = serialize_conflicts(info.merge_conflicts)
     typer.echo(json.dumps(tenant_dict, indent=2))
@@ -678,7 +705,10 @@ def _lookup_emit_panel(
     confidence_mode: str,
 ) -> None:
     """Render the default human-readable panel, plus optional sources/posture/explain."""
+    from recon_tool.collection_view import collection_observable_results
     from recon_tool.formatter import render_sources_detail, render_tenant_panel
+
+    visible_results = collection_observable_results(results)
 
     console.print(
         render_tenant_panel(
@@ -692,7 +722,7 @@ def _lookup_emit_panel(
     )
 
     if show_sources:
-        console.print(render_sources_detail(results))
+        console.print(render_sources_detail(visible_results))
 
     # Posture panel after main output
     if show_posture and observations:
@@ -709,7 +739,7 @@ def _lookup_emit_panel(
         # U1: always render per-source status under --explain so users
         # can see which sources succeeded, which failed, and why. Previously this
         # was only available via --verbose.
-        status_results: list[Any] = results
+        status_results: list[Any] = visible_results
         if not status_results and info is not None:
             status_results = _synthetic_source_results(info)
 
@@ -717,7 +747,7 @@ def _lookup_emit_panel(
         if status_panel:
             console.print(status_panel)
 
-        explanations = _build_explanations(info, results)
+        explanations = _build_explanations(info, visible_results)
         if explanations:
             console.print(render_explanations_panel(explanations))
 
@@ -740,7 +770,9 @@ async def _lookup_standard(
         )
 
         if options.verbose:
-            render_verbose_sources(results)
+            from recon_tool.collection_view import collection_observable_results
+
+            render_verbose_sources(collection_observable_results(results))
 
         observations = _lookup_compute_observations(info, options.profile_name, options.show_posture)
 

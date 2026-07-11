@@ -16,19 +16,18 @@
 ## Google Workspace Services
 
 - Google Workspace
-- Google Workspace\: Drive
-- Google Workspace\: CSE
+- Google Workspace CSE configuration indicator
 
 ## Tech Stack
 
-- Slack
+- Slack \(public TXT account indicator\)
 
 ## Google Workspace
 
 **Auth Type:** SSO \(SAML\)\
 **Identity Provider:** Okta\
-**Active Modules:** Drive, CSE\
-**CSE:** Google Workspace\: CSE
+**Module Indicators:** Drive\
+**CSE Configuration Indicators:** Google Workspace CSE
 
 ## Insights
 

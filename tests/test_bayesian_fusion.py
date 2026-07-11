@@ -43,6 +43,19 @@ class TestComputeSlugPosteriors:
         a_post = compute_slug_posteriors((_ev("A", "exchange-onprem"),))
         assert oidc_post[0][1] > a_post[0][1]
 
+    def test_a_record_uses_its_configured_prior(self) -> None:
+        posteriors = compute_slug_posteriors((_ev("A", "exchange-onprem"),))
+        assert posteriors == (("exchange-onprem", 0.5556),)
+
+    def test_cname_record_uses_its_configured_prior(self) -> None:
+        posteriors = compute_slug_posteriors((_ev("CNAME", "cloud-service"),))
+        assert posteriors == (("cloud-service", 0.6),)
+
+    def test_mixed_sources_use_strongest_observed_prior_regardless_of_order(self) -> None:
+        forward = compute_slug_posteriors((_ev("A", "service"), _ev("TXT", "service")))
+        reverse = compute_slug_posteriors((_ev("TXT", "service"), _ev("A", "service")))
+        assert forward == reverse == (("service", 0.75),)
+
     def test_corroboration_strictly_increases_posterior(self) -> None:
         """Two MX observations should beat one MX observation."""
         one = compute_slug_posteriors((_ev("MX", "google-workspace"),))

@@ -160,12 +160,12 @@ def _fmt(value: object, *, digits: int = 4) -> str:
 
 
 CALIBRATION_TABLE_HEADER = (
-    "| Block | n | Log score | Brier | ECE fixed-bin | ECE equal-mass | "
-    "ECE equal-mass CI80 | Agreement | Base rate |"
+    "| Block | n | Log score | Brier | ECE fixed-bin | ECE tie-preserving | "
+    "ECE naive-iid bootstrap range80 | Agreement | Base rate |"
 )
 CALIBRATION_TABLE_RULE = "|---|---:|---:|---:|---:|---:|---|---:|---:|"
 STRATUM_TABLE_HEADER = (
-    "| Stratum | n | ECE fixed-bin | ECE equal-mass | ECE equal-mass CI80 | "
+    "| Stratum | n | ECE fixed-bin | ECE tie-preserving | ECE naive-iid bootstrap range80 | "
     "Agreement | Base rate |"
 )
 STRATUM_TABLE_RULE = "|---|---:|---:|---:|---|---:|---:|"
@@ -279,7 +279,7 @@ def _render_tenancy_block(payload: Mapping[str, object]) -> list[str]:
             f"| Attested positives | {_fmt(gws.get('n'))} |",
             f"| Threshold | {_fmt(gws.get('threshold'))} |",
             f"| Recall | {_fmt(gws.get('recall'))} |",
-            f"| Recall Wilson80 | {_fmt(gws.get('recall_wilson80'))} |",
+            f"| Recall naive-iid Wilson range80 | {_fmt(gws.get('recall_wilson80'))} |",
             f"| Posterior quartiles | {_fmt(gws.get('posterior_quartiles'))} |",
             "",
         ]
@@ -289,9 +289,11 @@ def _render_tenancy_block(payload: Mapping[str, object]) -> list[str]:
 
 def _render_conformal_block(payload: Mapping[str, object]) -> list[str]:
     summary = _as_mapping(payload.get("summary"))
-    lines = ["## Conformal Coverage", ""]
+    lines = ["## Conformal Re-split Diagnostics", ""]
     if summary.get("insufficient"):
-        lines.extend([f"Only {_fmt(summary.get('n'))} labeled records were available; coverage was not reported.", ""])
+        lines.extend(
+            [f"Only {_fmt(summary.get('n'))} labeled records were available; diagnostics were not reported.", ""]
+        )
         return lines
     lines.extend(
         [
@@ -299,10 +301,18 @@ def _render_conformal_block(payload: Mapping[str, object]) -> list[str]:
             "|---|---:|",
             f"| Labeled records | {_fmt(summary.get('n'))} |",
             f"| Splits | {_fmt(summary.get('trials'))} |",
-            f"| Target coverage | {_fmt(summary.get('target_coverage'))} |",
-            f"| Mean coverage | {_fmt(summary.get('mean_coverage'))} |",
-            f"| Worst split coverage | {_fmt(summary.get('min_coverage'))} |",
-            f"| Mean set size | {_fmt(summary.get('mean_set_size'))} |",
+            f"| Nominal 1-alpha reference | {_fmt(summary.get('target_coverage'))} |",
+            f"| Mean empirical label-inclusion across dependent re-splits | {_fmt(summary.get('mean_coverage'))} |",
+            f"| Minimum empirical label-inclusion across re-splits | {_fmt(summary.get('min_coverage'))} |",
+            f"| Mean singleton-set rate | {_fmt(summary.get('mean_singleton_rate'))} |",
+            f"| Mean multi-label-set rate | {_fmt(summary.get('mean_multi_label_rate'))} |",
+            f"| Mean empty-set rate | {_fmt(summary.get('mean_empty_set_rate'))} |",
+            f"| Mean set size (legacy shape diagnostic) | {_fmt(summary.get('mean_set_size'))} |",
+            "",
+            "The rank-quantile helper has the ordinary split-conformal theorem only for a scorer fixed "
+            "independently of calibration and exchangeable future data. Scorer-development disjointness "
+            "is not established here, and the repeated splits reuse one selected list. These are dependent "
+            "empirical diagnostics only, with no future-point coverage claim.",
             "",
         ]
     )
@@ -327,7 +337,8 @@ def render_memo(
         "- This memo is generated from aggregate JSON only.",
         "- No apexes, subdomains, organization names, tenant IDs, or per-domain rows are included.",
         f"- Strata below {small_cell_threshold} domains are suppressed or rejected before rendering.",
-        "- ECE columns report both legacy fixed-bin ECE and equal-mass mean-confidence ECE when available.",
+        "- ECE columns report legacy fixed-bin ECE and tie-preserving mean-confidence ECE when available.",
+        "- Bootstrap and Wilson ranges use naive iid rows and have no coverage interpretation for these cohorts.",
         "",
     ]
     if reference is not None:
@@ -345,7 +356,8 @@ def render_memo(
             "- M365 DNS-only tenancy corroboration splits predictor and provider-attested label by channel.",
             "- M365 full-pipeline tenancy agreement is a consistency check, not independent calibration.",
             "- GWS is one-sided recall on provider-attested positives, not two-class calibration.",
-            "- Conformal coverage depends on exchangeability and is not claimed for adversarially hardened targets.",
+            "- Conformal outputs are dependent empirical re-split diagnostics. Scorer-development disjointness "
+            "is not established, so no future-point coverage theorem is claimed for this experiment.",
             "",
         ]
     )
@@ -356,7 +368,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Render an aggregate-only calibration validation memo.")
     parser.add_argument("--reference", type=Path, help="Aggregate JSON from validation.reference_calibration.")
     parser.add_argument("--tenancy", type=Path, help="Aggregate JSON from validation.tenancy_reference_calibration.")
-    parser.add_argument("--conformal", type=Path, help="Aggregate JSON from validation.conformal_coverage.")
+    parser.add_argument(
+        "--conformal",
+        type=Path,
+        help="Aggregate re-split diagnostic JSON from validation.conformal_coverage.",
+    )
     parser.add_argument("--output", type=Path, help="Write the memo here. Defaults to stdout.")
     parser.add_argument("--title", default="Aggregate Calibration Validation Memo")
     parser.add_argument(

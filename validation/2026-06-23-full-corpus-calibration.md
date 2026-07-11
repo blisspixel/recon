@@ -1,37 +1,53 @@
 # Full-Corpus Calibration Validation Memo (2026-06-23)
 
+Interpretation corrected 2026-07-10. This memo preserves the recorded aggregate
+values. The current terminology and refreshed estimates are in
+`2026-06-28-full-corpus-calibration-refresh.md`.
+
 ## Headline reading (honest)
 
 A maintainer-local run over the gitignored 5,241-domain corpus at concurrency 2,
 2026-06-23. Aggregates only; the run directory and per-domain pairings stayed
 local. Four results, read under the CAL1 consistency-vs-calibration discipline:
 
-- **Email-policy node, full posterior (n=2,905 with a published DMARC policy):**
-  strongly calibrated against the authoritative DMARC label (ECE 0.076, Brier
+Provenance limitation: the 2,905-row email-policy reference cohort was
+publisher-conditional. The historical collector retained domains with a
+published DMARC policy and excluded successfully observed no-record domains.
+The current harness labels a successfully observed no-record as 0 and reserves
+unlabeled status for collection failures, so a new run is not numerically
+comparable without reconstructing the old selection rule. The 4,290-row
+conformal block is a separately recorded legacy extraction. Surviving artifacts
+do not establish that it came from the same collection run or label cohort as
+the 2,905-row reference block, so the two row counts must not be reconciled or
+compared.
+
+- **Email-policy node, full score (n=2,905 with a published DMARC policy):**
+  strongly agrees with the DMARC declaration (ECE 0.076, Brier
   0.008, empirical enforcing-rate matching the bin in every populated reliability
   bin, stable across all 22 verticals). Caveat by construction: DMARC is both a
   predictor input and the label, so this leans toward consistency, not
   independent calibration.
 - **Email-policy node, held-out residual (DMARC masked, predictor and label
-  disjoint):** weak and poorly calibrated (ECE 0.373, agreement 0.189). The
-  honest conclusion is that the strict-SPF + MTA-STS channel alone does not
-  independently predict enforcement, so the node's strong calibration is
-  DMARC-anchored. This is the modest, truthful tier-4 reading, not a clean one.
-- **M365 tenancy, DNS-only vs provider attestation (n=3,309, channels split so
-  predictor and label are disjoint):** well calibrated and corroborated (ECE
-  0.048, agreement 0.889). The strongest independent result here.
-- **GWS (n=12 attested positives):** one-sided recall 0.58, Wilson80 [0.40,
-  0.74]. Low power; not a two-class calibration claim.
-- **Conformal coverage (n=4,290, 20 splits):** 0.999 mean coverage against a 0.90
-  target, mean set size near 1. Over-covers conservatively, consistent with the
-  bimodal posterior. The distribution-free guarantee holds and then some, under
-  the exchangeability assumption that excludes adversarially hardened targets.
+  disjoint inside recon):** weak and poorly aligned (ECE 0.373, agreement
+  0.189). The strict-SPF + MTA-STS channel alone does not predict the selected
+  corpus's DMARC declaration well. This does not establish independent samples.
+- **M365 tenancy, DNS-only vs provider attestation (n=3,309, channels split):**
+  ECE 0.048 and agreement 0.889. This is corroboration between two observation
+  channels that share tenant provisioning, not independent calibration.
+- **GWS (n=12 attested positives):** one-sided recall 0.58, naive-iid Wilson
+  diagnostic range80 [0.40, 0.74]. Low power; not a two-class calibration or
+  coverage claim.
+- **Split-conformal diagnostics (n=4,290, 20 dependent re-splits):** 0.999 mean
+  empirical label-inclusion against a nominal 0.90 reference. This is the
+  separately recorded legacy extraction described above. The run recorded mean set
+  size but not singleton, multi-label, and empty-set rates, so it does not
+  establish decisiveness. Scorer-development disjointness was not established,
+  so no future-point coverage theorem is claimed for this experiment.
 
-Net: the email-policy calibration and the M365 tenancy corroboration are real and
-strong against authoritative external labels; the clean DMARC-disjoint residual
-is weak, which disciplines rather than inflates the node-level claim. None of this
-upgrades the Bayesian 80% credible intervals from evidence-responsive to
-frequentist-calibrated; that remains a separate, unclaimed property.
+Net: the full email-policy comparison and M365 tenancy result are selected-corpus
+corroboration. The predictor-disjoint DMARC residual is weak, which disciplines
+rather than inflates the node-level claim. None of these diagnostics validates
+recon's model-relative uncertainty band.
 
 ## Disclosure Controls
 
@@ -144,26 +160,30 @@ frequentist-calibrated; that remains a separate, unclaimed property.
 | Attested positives | 12 |
 | Threshold | 0.5 |
 | Recall | 0.5833 |
-| Recall Wilson80 | 0.4019, 0.7447 |
+| Recall naive-iid Wilson diagnostic range80 | 0.4019, 0.7447 |
 | Posterior quartiles | 0.25, 0.8846, 0.8846 |
 
-## Conformal Coverage
+## Conformal Re-split Diagnostics
 
 | Metric | Value |
 |---|---:|
 | Labeled records | 4290 |
 | Splits | 20 |
-| Target coverage | 0.9 |
-| Mean coverage | 0.999 |
-| Worst split coverage | 0.9981 |
-| Mean set size | 0.999 |
+| Nominal 1-alpha reference | 0.9 |
+| Mean empirical label-inclusion across dependent re-splits | 0.999 |
+| Minimum empirical label-inclusion across re-splits | 0.9981 |
+| Mean singleton-set rate | not recorded |
+| Mean multi-label-set rate | not recorded |
+| Mean empty-set rate | not recorded |
+| Mean set size, legacy shape diagnostic | 0.999 |
 
 ## Interpretation Guardrails
 
-- Full email-policy calibration overlaps the DMARC predictor and label by design.
-- The held-out residual masks the DMARC evidence unit, so predictor and label are disjoint.
-- M365 DNS-only tenancy corroboration splits predictor and provider-attested label by channel.
+- Full email-policy scoring overlaps the DMARC predictor and label by design, so its metrics are corroboration.
+- The held-out residual masks the DMARC evidence unit, so predictor and label are disjoint inside recon. The selected observations are not independent.
+- M365 DNS-only tenancy corroboration splits predictor and provider-attested label by channel, but both share tenant provisioning.
 - M365 full-pipeline tenancy agreement is a consistency check, not independent calibration.
 - GWS is one-sided recall on provider-attested positives, not two-class calibration.
-- Conformal coverage depends on exchangeability and is not claimed for adversarially hardened targets.
+- Conformal values are dependent empirical re-split diagnostics from a separately recorded legacy extraction. Scorer-development disjointness is not established, so no future-point coverage theorem is claimed. Mean set size does not establish decisiveness.
+- Wilson ranges use naive iid rows and have no coverage interpretation for this selected cohort.
 

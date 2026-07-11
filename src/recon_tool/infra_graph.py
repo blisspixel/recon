@@ -2,8 +2,8 @@
 
 Build an in-memory undirected graph from a domain's certificate
 transparency entries, then run Louvain community detection (via
-pure-Python ``networkx``) to expose substructure that single-cert
-fingerprinting misses.
+pure-Python ``networkx``) to summarize co-occurrence structure that
+single-certificate fingerprinting misses.
 
 Graph shape
 -----------
@@ -14,18 +14,18 @@ edge whose weight aggregates:
   * ``shared_certs``: number of certs both SANs appeared on together.
   * ``issuers``: set of issuer names contributing to the edge.
 
-The aggregate edge weight passed to Louvain is ``shared_certs``
-itself (the count is the natural "how strongly do these names go
-together" signal). Issuer overlap is preserved in the edge
-attributes for downstream attribution but does not double-count.
+The aggregate edge weight passed to Louvain is ``shared_certs`` itself. This is
+the current heuristic, not calibrated relationship strength; large SAN sets can
+bias the clique projection. Issuer overlap is preserved in the edge attributes
+for downstream attribution but does not double-count.
 
 Algorithm choice
 ----------------
-Louvain (``networkx.algorithms.community.louvain_communities``) over
-Leiden — see ``docs/correlation.md §4.5`` for the rationale. Briefly:
-Leiden's well-connectedness guarantee only matters on dense graphs;
-our caps keep us well below that threshold, and Louvain ships pure-
-Python in networkx while ``leidenalg`` would pull in C extensions.
+Louvain (``networkx.algorithms.community.louvain_communities``) is retained as
+the dependency-minimal shipped heuristic. This is not a claim of theoretical
+superiority over Leiden or a statistically inferred community model. See
+``docs/correlation.md`` section 2.3 for the current semantics and section 6 for
+the benchmark required before changing graph machinery.
 
 Determinism
 -----------

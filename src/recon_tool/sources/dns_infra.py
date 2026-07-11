@@ -28,6 +28,7 @@ from recon_tool.fingerprints import (
     get_ns_patterns,
     get_subdomain_txt_patterns,
 )
+from recon_tool.models import EvidenceRecord
 from recon_tool.sources import dns_base
 from recon_tool.sources.cert_providers import CertIntelProvider, CertSpotterProvider, CrtshProvider
 from recon_tool.sources.dns_tables import (
@@ -75,12 +76,42 @@ async def detect_m365_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
     are independent of each other.
     """
     # Fire all CNAME/SRV queries concurrently
-    autodiscover_task = dns_base.safe_resolve(f"autodiscover.{domain}", "CNAME")
-    lyncdiscover_task = dns_base.safe_resolve(f"lyncdiscover.{domain}", "CNAME")
-    sip_task = dns_base.safe_resolve(f"sip.{domain}", "CNAME")
-    srv_task = dns_base.safe_resolve(f"_sipfederationtls._tcp.{domain}", "SRV")
-    enterprise_task = dns_base.safe_resolve(f"enterpriseregistration.{domain}", "CNAME")
-    msoid_task = dns_base.safe_resolve(f"msoid.{domain}", "CNAME")
+    autodiscover_task = dns_base.safe_resolve(
+        f"autodiscover.{domain}",
+        "CNAME",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:cname",
+    )
+    lyncdiscover_task = dns_base.safe_resolve(
+        f"lyncdiscover.{domain}",
+        "CNAME",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:cname",
+    )
+    sip_task = dns_base.safe_resolve(
+        f"sip.{domain}",
+        "CNAME",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:cname",
+    )
+    srv_task = dns_base.safe_resolve(
+        f"_sipfederationtls._tcp.{domain}",
+        "SRV",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:srv",
+    )
+    enterprise_task = dns_base.safe_resolve(
+        f"enterpriseregistration.{domain}",
+        "CNAME",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:cname",
+    )
+    msoid_task = dns_base.safe_resolve(
+        f"msoid.{domain}",
+        "CNAME",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:cname",
+    )
 
     (
         autodiscover_results,
@@ -102,7 +133,7 @@ async def detect_m365_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
         cl = cname.lower()
         host = _dns_target_host(cname)
         if host_has_suffix(host, "outlook.com"):
-            ctx.add(SVC_EXCHANGE_AUTODISCOVER, "microsoft365")
+            ctx.add(SVC_EXCHANGE_AUTODISCOVER, "microsoft365", source_type="CNAME", raw_value=cname)
             ctx.m365 = True
         elif cl and not cl.endswith(domain.lower()):
             redirect_domain = cl.split(".", 1)[1] if "." in cl else None
@@ -124,27 +155,25 @@ async def detect_m365_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
         for cname in cname_list:
             host = _dns_target_host(cname)
             if host_has_suffix(host, "lync.com") or host_has_suffix(host, "teams.microsoft.com"):
-                ctx.add(SVC_MICROSOFT_TEAMS, "microsoft365")
+                ctx.add(SVC_MICROSOFT_TEAMS, "microsoft365", source_type="CNAME", raw_value=cname)
                 ctx.m365 = True
 
     for srv in srv_results:
         host = _dns_target_host(srv)
         if host_has_suffix(host, "lync.com") or host_has_suffix(host, "teams.microsoft.com"):
-            ctx.add(SVC_MICROSOFT_TEAMS, "microsoft365")
+            ctx.add(SVC_MICROSOFT_TEAMS, "microsoft365", source_type="SRV", raw_value=srv)
             ctx.m365 = True
 
     for cname in enterprise_results:
         host = _dns_target_host(cname)
-        if host_has_suffix(host, "manage.microsoft.com") or host_has_suffix(
-            host, "enterpriseregistration.windows.net"
-        ):
-            ctx.add(SVC_INTUNE_MDM, "microsoft365")
+        if host_has_suffix(host, "manage.microsoft.com") or host_has_suffix(host, "enterpriseregistration.windows.net"):
+            ctx.add(SVC_INTUNE_MDM, "microsoft365", source_type="CNAME", raw_value=cname)
             ctx.m365 = True
 
     for cname in msoid_results:
         host = _dns_target_host(cname)
         if host_has_suffix(host, "microsoftonline.com"):
-            ctx.add(SVC_OFFICE_PROPLUS, "microsoft365")
+            ctx.add(SVC_OFFICE_PROPLUS, "microsoft365", source_type="CNAME", raw_value=cname)
             ctx.m365 = True
 
 
@@ -161,7 +190,15 @@ async def detect_gws_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
     resolve to ghs.googlehosted.com. Detecting these reveals which
     specific Workspace modules are actively deployed and branded.
     """
-    tasks = [dns_base.safe_resolve(f"{prefix}.{domain}", "CNAME") for prefix in _GWS_MODULE_PREFIXES]
+    tasks = [
+        dns_base.safe_resolve(
+            f"{prefix}.{domain}",
+            "CNAME",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:cname",
+        )
+        for prefix in _GWS_MODULE_PREFIXES
+    ]
     results = await asyncio.gather(*tasks)
 
     active_modules: list[str] = []
@@ -185,7 +222,12 @@ async def detect_gws_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
 
 async def detect_ns(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Scan NS records for DNS provider / infrastructure detection."""
-    ns_records = await dns_base.safe_resolve(domain, "NS")
+    ns_records = await dns_base.safe_resolve(
+        domain,
+        "NS",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:ns",
+    )
     ctx.raw_dns_records.setdefault("NS", []).extend(ns_records)
 
     # Sort longest-first so the most specific pattern wins (consistent with
@@ -196,15 +238,25 @@ async def detect_ns(ctx: dns_base.DetectionCtx, domain: str) -> None:
         ns_lower = ns.lower()
         for det in ns_patterns_sorted:
             if det.pattern in ns_lower:
-                ctx.add(det.name, det.slug)
+                ctx.add(det.name, det.slug, source_type="NS", raw_value=ns)
                 ctx.record_fp_match(det.slug, "ns", det.pattern)
                 break
 
 
 async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Check www/root CNAME for CDN, hosting, and SaaS infrastructure."""
-    www_task = dns_base.safe_resolve(f"www.{domain}", "CNAME")
-    root_task = dns_base.safe_resolve(domain, "CNAME")
+    www_task = dns_base.safe_resolve(
+        f"www.{domain}",
+        "CNAME",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:cname",
+    )
+    root_task = dns_base.safe_resolve(
+        domain,
+        "CNAME",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:cname",
+    )
 
     www_results, root_results = await asyncio.gather(www_task, root_task)
 
@@ -252,7 +304,12 @@ async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
 
 async def detect_domain_connect(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Check _domainconnect CNAME for domain management provider."""
-    for cname in await dns_base.safe_resolve(f"_domainconnect.{domain}", "CNAME"):
+    for cname in await dns_base.safe_resolve(
+        f"_domainconnect.{domain}",
+        "CNAME",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:cname",
+    ):
         cl = cname.lower()
         if "azure" in cl:
             ctx.services.add("Domain Connect (Azure)")
@@ -278,7 +335,12 @@ async def detect_hosting_from_a_record(ctx: dns_base.DetectionCtx, domain: str) 
     import ipaddress
     import re
 
-    a_records = await dns_base.safe_resolve(domain, "A")
+    a_records = await dns_base.safe_resolve(
+        domain,
+        "A",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:a",
+    )
     if not a_records:
         return
     ctx.raw_dns_records.setdefault("A", []).extend(a_records)
@@ -315,7 +377,12 @@ async def detect_hosting_from_a_record(ctx: dns_base.DetectionCtx, domain: str) 
         import dns.reversename  # pyright: ignore[reportMissingTypeStubs]
 
         ptr_name = dns.reversename.from_address(str(ip))
-        ptr_results = await dns_base.safe_resolve(str(ptr_name), "PTR")
+        ptr_results = await dns_base.safe_resolve(
+            str(ptr_name),
+            "PTR",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:a",
+        )
     except Exception:
         return
     if not ptr_results:
@@ -371,7 +438,15 @@ async def detect_subdomain_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
         return
 
     # Fire all subdomain TXT queries concurrently
-    tasks = [dns_base.safe_resolve(f"{subdomain}.{domain}", "TXT") for subdomain, _, _, _, _ in parsed]
+    tasks = [
+        dns_base.safe_resolve(
+            f"{subdomain}.{domain}",
+            "TXT",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:subdomain_txt",
+        )
+        for subdomain, _, _, _, _ in parsed
+    ]
     results = await asyncio.gather(*tasks)
 
     for (_, regex, name, slug, original_pattern), txt_records in zip(parsed, results, strict=True):
@@ -385,7 +460,7 @@ async def detect_subdomain_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
                 continue
             try:
                 if re.search(regex, txt, re.IGNORECASE):
-                    ctx.add(name, slug)
+                    ctx.add(name, slug, source_type="SUBDOMAIN_TXT", raw_value=txt)
                     ctx.record_fp_match(slug, "subdomain_txt", original_pattern)
                     break
             except re.error:
@@ -397,11 +472,24 @@ async def detect_caa(ctx: dns_base.DetectionCtx, domain: str) -> None:
     # Sort longest-first so the most specific pattern wins (consistent
     # with MX / NS / cname_target , see filter_shadowed_matches).
     caa_patterns_sorted = sorted(get_caa_patterns(), key=lambda d: -len(d.pattern))
-    for caa in await dns_base.safe_resolve(domain, "CAA"):
+    for caa in await dns_base.safe_resolve(
+        domain,
+        "CAA",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:caa",
+    ):
+        ctx.evidence.append(
+            EvidenceRecord(
+                source_type="CAA",
+                raw_value=caa,
+                rule_name="CAA record",
+                slug="caa",
+            )
+        )
         caa_lower = caa.lower()
         for det in caa_patterns_sorted:
             if det.pattern in caa_lower:
-                ctx.add(det.name, det.slug)
+                ctx.add(det.name, det.slug, source_type="CAA", raw_value=caa)
                 ctx.record_fp_match(det.slug, "caa", det.pattern)
                 break
 
@@ -427,7 +515,15 @@ async def detect_srv(ctx: dns_base.DetectionCtx, domain: str) -> None:
         ("_carddavs._tcp", None, "CardDAV", ""),
     ]
 
-    tasks = [dns_base.safe_resolve(f"{srv}.{domain}", "SRV") for srv, _, _, _ in _SRV_CHECKS]
+    tasks = [
+        dns_base.safe_resolve(
+            f"{srv}.{domain}",
+            "SRV",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:srv",
+        )
+        for srv, _, _, _ in _SRV_CHECKS
+    ]
     results = await asyncio.gather(*tasks)
 
     for (_, hint, svc_name, slug), srv_records in zip(_SRV_CHECKS, results, strict=True):
@@ -437,7 +533,12 @@ async def detect_srv(ctx: dns_base.DetectionCtx, domain: str) -> None:
             if not target:
                 continue
             if hint is None or host_has_suffix(target, hint):
-                ctx.add(svc_name, slug if slug else None)
+                ctx.add(
+                    svc_name,
+                    slug if slug else None,
+                    source_type="SRV" if slug else "",
+                    raw_value=record if slug else "",
+                )
                 break
 
 

@@ -55,6 +55,20 @@ def test_generated_top_level_fields_are_code_owned() -> None:
     assert len(fields) == len(set(fields))
 
 
+def test_explanation_dag_fragment_describes_emitted_shape() -> None:
+    schema = GENERATOR.load_schema(GENERATOR._DOCS_SCHEMA)
+    fragment = schema["properties"]["explanation_dag"]
+
+    assert fragment["required"] == [
+        "nodes",
+        "edges",
+        "schema_version",
+    ]
+    assert fragment["properties"]["schema_version"] == {"const": 1}
+    assert fragment["properties"]["provenance_complete"]["type"] == "boolean"
+    assert fragment["properties"]["disconnected_terminals"]["items"] == {"type": "string"}
+
+
 def test_build_schema_rejects_missing_property_fragment() -> None:
     template = GENERATOR.load_schema(GENERATOR._DOCS_SCHEMA)
     broken = dict(template)

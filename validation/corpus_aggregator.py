@@ -62,8 +62,8 @@ from rich.console import Console  # noqa: E402
 
 from recon_tool.cache import tenant_info_from_dict  # noqa: E402
 from recon_tool.formatter import (  # noqa: E402
-    canonical_cloud_vendor,
     category_for_slug,
+    count_cloud_vendors,
     render_tenant_panel,
 )
 
@@ -81,16 +81,18 @@ def _surface_slug_stream(info: Any) -> list[str]:
 def _multi_cloud_fired(info: Any) -> tuple[bool, int]:
     """Return ``(fired, distinct_vendor_count)``.
 
-    Mirrors the trigger logic in ``render_tenant_panel``: canonicalize
-    apex slugs and surface-attribution slugs together; count distinct
-    vendors; fire when ``>= 2``.
+    Mirrors the trigger logic in ``render_tenant_panel``: apex slugs count
+    only when retained evidence establishes an endpoint-binding role, while
+    surface-attribution slugs already carry CNAME lineage. Distinct vendors
+    are then counted and the summary fires when ``>= 2``.
     """
-    vendors: set[str] = set()
-    for slug in (*info.slugs, *_surface_slug_stream(info)):
-        v = canonical_cloud_vendor(slug)
-        if v is not None:
-            vendors.add(v)
-    return (len(vendors) >= 2, len(vendors))
+    vendor_counts = count_cloud_vendors(
+        info.slugs,
+        _surface_slug_stream(info),
+        apex_evidence=info.evidence,
+    )
+    vendor_count = len(vendor_counts)
+    return (vendor_count >= 2, vendor_count)
 
 
 def _ceiling_fired(info: Any, categorized_count: int) -> bool:

@@ -27,6 +27,7 @@ from recon_tool.formatter import format_tenant_markdown, render_tenant_panel
 from recon_tool.models import (
     CertSummary,
     ConfidenceLevel,
+    EvidenceRecord,
     SurfaceAttribution,
     TenantInfo,
     UnclassifiedCnameChain,
@@ -181,7 +182,7 @@ def _surface_rich_info() -> TenantInfo:
 def _markdown_rich_info() -> TenantInfo:
     """A tenant exercising the markdown branches the dense/sparse fixtures leave
     dark: a Google Workspace services split, the GWS details block (auth type,
-    IdP, active modules, CSE), and the degraded-sources footer note. Contoso,
+    IdP, module indicators, CSE), and the degraded-sources footer note. Contoso,
     fictional.
 
     Pins ``format_tenant_markdown`` paths that ``fully_populated_tenant_info``
@@ -200,10 +201,10 @@ def _markdown_rich_info() -> TenantInfo:
             "Microsoft 365",
             "Google Workspace",
             "Google Workspace: Drive",
-            "Google Workspace: CSE",
+            "Google Workspace CSE",
             "Slack",
         ),
-        slugs=("microsoft365", "google-workspace", "slack"),
+        slugs=("microsoft365", "google-workspace", "google-workspace-modules", "google-cse", "slack"),
         auth_type="Federated",
         domain_count=2,
         tenant_domains=("contoso.com", "contoso.onmicrosoft.com"),
@@ -212,6 +213,32 @@ def _markdown_rich_info() -> TenantInfo:
         degraded_sources=("crt.sh",),
         google_auth_type="SSO (SAML)",
         google_idp_name="Okta",
+        evidence=(
+            EvidenceRecord(
+                source_type="MX",
+                raw_value="contoso-com.mail.protection.outlook.com",
+                rule_name="Microsoft 365",
+                slug="microsoft365",
+            ),
+            EvidenceRecord(
+                source_type="CNAME",
+                raw_value="drive.contoso.com -> ghs.googlehosted.com",
+                rule_name="Google Workspace: Drive",
+                slug="google-workspace",
+            ),
+            EvidenceRecord(
+                source_type="HTTP",
+                raw_value="CSE configuration found",
+                rule_name="Google Workspace CSE",
+                slug="google-cse",
+            ),
+            EvidenceRecord(
+                source_type="TXT",
+                raw_value="slack-domain-verification=opaque",
+                rule_name="Slack",
+                slug="slack",
+            ),
+        ),
         cert_summary=CertSummary(
             cert_count=42,
             issuer_diversity=3,

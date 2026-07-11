@@ -18,6 +18,16 @@ from recon_tool.confidence import (
     inference_confidence_basis,
     is_confidence_contributor,
 )
+from recon_tool.explanation_dag import (
+    add_evidence_node,
+    evidence_node_id,
+    evidence_sort_key,
+    finalize_dag,
+    item_node_id,
+    record_sort_key,
+    rule_node_id,
+    slug_node_id,
+)
 from recon_tool.models import (
     ConfidenceLevel,
     EvidenceRecord,
@@ -25,7 +35,13 @@ from recon_tool.models import (
     Observation,
     SourceResult,
 )
-from recon_tool.signals import Signal, SignalMatch
+from recon_tool.signals import (
+    Signal,
+    SignalMatch,
+    load_signals,
+    signal_observation_label,
+    signal_rule_names_from_observation,
+)
 
 if TYPE_CHECKING:
     from recon_tool.posture import _PostureRule  # pyright: ignore[reportPrivateUsage]
@@ -155,19 +171,24 @@ def explain_signals(
             # Check if this is an absence signal (category="Absence")
             if match.category == "Absence":
                 # Absence signals carry missing slugs in matched and the
-                # parent signal name in the name (e.g. "X — Missing Counterparts").
+                # parent signal name in the derived name.
                 # Extract parent signal name for fired_rules.
                 parent_name = match.name.replace(" \u2014 Missing Counterparts", "")
+                parent_label = signal_observation_label(parent_name)
+                if parent_label is None:
+                    continue
                 weakening_abs = tuple(
                     f"Detecting slug '{slug}' would suppress this absence signal" for slug in match.matched
                 )
                 records.append(
                     ExplanationRecord(
-                        item_name=match.name,
+                        item_name=f"{parent_label}: configured counterpart indicators not observed",
                         item_type="signal",
                         matched_evidence=(),
                         fired_rules=(parent_name,),
-                        confidence_derivation="Absence signal \u2014 expected counterparts not observed",
+                        confidence_derivation=(
+                            "Absence observation: configured counterpart indicators were not observed"
+                        ),
                         weakening_conditions=weakening_abs,
                         curated_explanation=match.description,
                     )
@@ -175,9 +196,12 @@ def explain_signals(
                 continue
 
             # Defensive: signal match without a definition — produce minimal record
+            public_label = signal_observation_label(match.name)
+            if public_label is None:
+                continue
             records.append(
                 ExplanationRecord(
-                    item_name=match.name,
+                    item_name=public_label,
                     item_type="signal",
                     matched_evidence=(),
                     fired_rules=(f"{match.name} (definition not found)",),
@@ -185,6 +209,10 @@ def explain_signals(
                     weakening_conditions=(),
                 )
             )
+            continue
+
+        public_label = signal_observation_label(sig.name)
+        if public_label is None:
             continue
 
         # Matched slugs: candidates that are present in detected_slugs
@@ -230,7 +258,7 @@ def explain_signals(
 
         records.append(
             ExplanationRecord(
-                item_name=match.name,
+                item_name=public_label,
                 item_type="signal",
                 matched_evidence=tuple(all_evidence),
                 fired_rules=(fired_rule,),
@@ -243,6 +271,40 @@ def explain_signals(
     return records
 
 
+# Generator-owned prefixes must bypass the generic ``Signal: matches`` parser.
+# Keep this bounded to emitted formats; a colon alone is not enough to establish
+# that an insight came from the declarative signal engine.
+_GENERATOR_OWNED_INSIGHT_PREFIXES = (
+    "email security",
+    "dmarc",
+    "no dmarc",
+    "no dkim",
+    "pki:",
+    "caa issuer authorization observed:",
+    "infrastructure:",
+    "federated identity observed",
+    "mx gateway observed:",
+    "provider indicators co-observed:",
+    "security-vendor indicator",
+    "network-security vendor indicator",
+    "device-management vendor indicator",
+    "google workspace module indicators observed:",
+    "google workspace:",
+    "no observable email infrastructure",
+    "next step:",
+    "non-commercial microsoft cloud instance observed:",
+    # Legacy-only cached formats. Their removed generators remain classifiable
+    # for raw-cache diagnostics, but collection_view suppresses them from
+    # current user-facing output.
+    "email gateway:",
+    "security stack:",
+    "sase/ztna:",
+    "dual provider:",
+    "dual mdm:",
+    "google workspace modules:",
+)
+
+
 # Keyword-driven insight classification. Each rule is
 # (predicate over the lowercased insight, generator label, candidate slugs to
 # attribute when present, confidence note). Order matters: the first matching
@@ -251,20 +313,36 @@ def explain_signals(
 # this table in _classify_insight.
 _INSIGHT_RULES: list[tuple[Callable[[str], bool], str, tuple[str, ...], str]] = [
     (
-        lambda low: "federated" in low or "cloud-managed" in low or "entra id" in low,
+        lambda low: (
+            low.startswith(("federated identity observed", "federated identity indicators"))
+            or "cloud-managed" in low
+            or "entra id" in low
+        ),
         "_auth_insights",
-        ("okta", "duo", "cisco-identity", "microsoft365"),
-        "Authentication type derived from identity provider detection",
+        ("okta", "duo", "microsoft365"),
+        "Federation state plus separately observed identity-vendor indicators",
     ),
     (
-        lambda low: "email gateway" in low,
+        lambda low: low.startswith("mx gateway observed:"),
         "_gateway_insights",
         ("proofpoint", "mimecast", "barracuda", "cisco-ironport", "cisco-email", "trendmicro", "symantec", "trellix"),
-        "Email gateway detected via DNS fingerprinting",
+        "MX-backed gateway observation",
     ),
     (
-        lambda low: "security stack" in low,
-        "_security_stack_insights",
+        lambda low: low.startswith("provider indicators co-observed:"),
+        "_provider_overlap_insights",
+        ("google-workspace", "microsoft365"),
+        "Simultaneous Google and Microsoft public indicators",
+    ),
+    (
+        lambda low: low.startswith("microsoft tenant discovery returned ") and low.endswith(" domains"),
+        "_tenant_domain_insights",
+        (),
+        "Microsoft tenant-discovery domain count",
+    ),
+    (
+        lambda low: low.startswith("security-vendor indicator"),
+        "_security_vendor_insights",
         (
             "knowbe4",
             "crowdstrike",
@@ -279,43 +357,111 @@ _INSIGHT_RULES: list[tuple[Callable[[str], bool], str, tuple[str, ...], str]] = 
             "wiz",
             "imperva",
         ),
-        "Security tools detected via DNS fingerprinting",
+        "Public security-vendor indicator observation",
+    ),
+    (
+        lambda low: low.startswith("network-security vendor indicator"),
+        "_network_security_insights",
+        ("zscaler", "netskope", "paloalto"),
+        "Public network-security vendor indicator observation",
+    ),
+    (
+        lambda low: low.startswith("device-management vendor indicator"),
+        "_device_management_insights",
+        ("jamf", "kandji"),
+        "Public device-management vendor indicator observation",
+    ),
+    (
+        lambda low: low.startswith("google workspace module indicators observed:"),
+        "_google_modules_insights",
+        (),
+        "Google Workspace module indicators observed in public DNS",
+    ),
+    (
+        lambda low: low.startswith("no observable email infrastructure"),
+        "_no_email_infrastructure_insights",
+        (),
+        "Observed-empty email channels; no positive evidence edge is synthesized",
+    ),
+    (
+        lambda low: low.startswith(("sparse public signal", "next step:")),
+        "_sparse_signal_insights",
+        (),
+        "Sparse public-observation guidance; no positive evidence edge is synthesized",
+    ),
+    (
+        lambda low: low.startswith(
+            (
+                "likely us government",
+                "likely azure china",
+                "azure ad b2c tenant",
+                "non-commercial microsoft cloud instance observed:",
+            )
+        ),
+        "_sovereignty_insights",
+        (),
+        "Microsoft cloud-instance metadata observation; exact lineage is not reconstructed here",
+    ),
+    (
+        lambda low: low.startswith("email gateway") or "email gateway identified" in low,
+        "_gateway_insights",
+        ("proofpoint", "mimecast", "barracuda", "cisco-ironport", "cisco-email", "trendmicro", "symantec", "trellix"),
+        "Legacy gateway insight format; current output uses the MX-backed gateway field",
+    ),
+    (
+        lambda low: "security stack" in low,
+        "legacy-only _security_stack_insights (removed)",
+        (
+            "knowbe4",
+            "crowdstrike",
+            "sentinelone",
+            "sophos",
+            "duo",
+            "okta",
+            "1password",
+            "paloalto",
+            "zscaler",
+            "netskope",
+            "wiz",
+            "imperva",
+        ),
+        "Legacy-only active-stack wording; removed from current generation",
     ),
     (
         lambda low: "sase" in low or "ztna" in low,
-        "_sase_insights",
+        "legacy-only _sase_insights (removed)",
         ("zscaler", "netskope", "paloalto"),
-        "SASE/ZTNA provider detected via DNS fingerprinting",
+        "Legacy-only deployment wording; removed from current generation",
     ),
     (
         lambda low: "dual provider" in low or "coexistence" in low,
-        "_migration_insights",
+        "legacy-only _migration_insights (removed)",
         ("google-workspace", "microsoft365"),
-        "Dual provider detected from simultaneous Google and Microsoft fingerprints",
+        "Legacy-only coexistence wording; removed from current generation",
     ),
     (
         lambda low: "domains" in low and ("enterprise" in low or "mid-size" in low or "in tenant" in low),
-        "_org_size_insights",
+        "legacy-only _org_size_insights (removed)",
         (),
-        "Organization size estimated from domain count and SPF complexity",
+        "Legacy-only organization-size wording; removed from current generation",
     ),
     (
         lambda low: "m365" in low and ("e3" in low or "e5" in low or "proplus" in low or "apps for" in low),
-        "_license_insights",
+        "legacy-only _license_insights (removed)",
         (),
-        "License tier inferred from Intune enrollment and auth type",
+        "Legacy-only license-tier wording; removed from current generation",
     ),
     (
         lambda low: "dual mdm" in low or "mac management" in low,
-        "_mdm_insights",
+        "legacy-only _mdm_insights (removed)",
         ("jamf", "kandji"),
-        "MDM detection from DNS fingerprinting",
+        "Legacy-only fleet wording; removed from current generation",
     ),
     (
-        lambda low: low.startswith("pki:"),
+        lambda low: low.startswith("caa issuer authorization observed:"),
         "_pki_insights",
         ("letsencrypt", "digicert", "sectigo", "aws-acm", "google-trust", "globalsign"),
-        "Certificate authority detected from CAA records",
+        "CAA records authorize these issuers; issuance is not established",
     ),
     (
         lambda low: low.startswith("infrastructure:"),
@@ -333,7 +479,7 @@ _INSIGHT_RULES: list[tuple[Callable[[str], bool], str, tuple[str, ...], str]] = 
         lambda low: "google workspace modules" in low,
         "_google_modules_insights",
         (),
-        "Google Workspace modules detected from DNS records",
+        "Legacy module-label format from public DNS indicators",
     ),
     (
         lambda low: "dmarc" in low or "dkim" in low,
@@ -349,11 +495,44 @@ _INSIGHT_RULES: list[tuple[Callable[[str], bool], str, tuple[str, ...], str]] = 
     ),
     (
         lambda low: "large org signal" in low,
-        "_org_size_insights",
+        "legacy-only _org_size_insights (removed)",
         (),
-        "Organization size estimated from SPF include count",
+        "Legacy-only organization-size wording; removed from current generation",
     ),
 ]
+
+
+def _evidence_for_insight_rule(
+    rule: str,
+    slug: str,
+    evidence: tuple[EvidenceRecord, ...],
+) -> tuple[EvidenceRecord, ...]:
+    """Return only evidence types that can support the classified observation."""
+    matched = _evidence_for_slug(slug, evidence)
+    if rule == "_gateway_insights":
+        return tuple(item for item in matched if item.source_type.upper() == "MX")
+    return matched
+
+
+def _classify_structured_slug_insight(
+    insight: str,
+    slugs: frozenset[str],
+    evidence: tuple[EvidenceRecord, ...],
+) -> tuple[list[str], list[EvidenceRecord], list[str], list[str]] | None:
+    """Classify non-signal ``prefix: raw-slug`` insight text."""
+    if ": " not in insight or insight.lower().startswith(_GENERATOR_OWNED_INSIGHT_PREFIXES):
+        return None
+    prefix, matched_text = insight.split(": ", 1)
+    relevant_slugs = [
+        slug for slug in (item.strip() for item in matched_text.split(",") if item.strip()) if slug in slugs
+    ]
+    relevant_evidence = [item for slug in relevant_slugs for item in _evidence_for_slug(slug, evidence)]
+    return (
+        relevant_slugs,
+        relevant_evidence,
+        [f"Structured insight: {prefix}"],
+        [f"Structured insight referencing {len(relevant_slugs)} slug(s)"],
+    )
 
 
 def _classify_insight(
@@ -373,19 +552,30 @@ def _classify_insight(
     fired_rules: list[str] = []
     confidence_parts: list[str] = []
 
-    # Signal-generated insights have the pattern "SignalName: matched1, matched2".
-    if ": " in insight and not lower.startswith(
-        ("email security", "dmarc", "no dmarc", "no dkim", "pki:", "infrastructure:")
-    ):
-        parts = insight.split(": ", 1)
-        matched_str = parts[1] if len(parts) > 1 else ""
-        for slug in (s.strip() for s in matched_str.split(",") if s.strip()):
-            if slug in slugs:
-                relevant_slugs.append(slug)
-                relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-        fired_rules.append(f"Signal: {parts[0]}")
+    # Signal-generated insights use a claim-safe label. Resolve that label to
+    # stable rule IDs, then reconstruct matched slugs from the rule catalog
+    # instead of attempting to reverse humanized display names.
+    rule_names = signal_rule_names_from_observation(insight)
+    if rule_names and not lower.startswith(_GENERATOR_OWNED_INSIGHT_PREFIXES):
+        signal_by_name = {signal.name: signal for signal in load_signals()}
+        for rule_name in rule_names:
+            signal = signal_by_name.get(rule_name)
+            if signal is None:
+                continue
+            fired_rules.append(f"Signal: {rule_name}")
+            for slug in signal.candidates:
+                if slug in slugs and slug not in relevant_slugs:
+                    relevant_slugs.append(slug)
+                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
         confidence_parts.append(f"Signal-generated insight referencing {len(relevant_slugs)} slug(s)")
         return relevant_slugs, relevant_evidence, fired_rules, confidence_parts
+
+    # Other structured insights may carry canonical raw slugs on the right
+    # side even though their prefix is not a declarative signal label. Preserve
+    # those evidence links without misclassifying the prefix as a signal rule.
+    structured = _classify_structured_slug_insight(insight, slugs, evidence)
+    if structured is not None:
+        return structured
 
     # Email security score insight scans all slugs for parenthetical references.
     if lower.startswith("email security"):
@@ -403,7 +593,7 @@ def _classify_insight(
             for slug in candidate_slugs:
                 if slug in slugs:
                     relevant_slugs.append(slug)
-                    relevant_evidence.extend(_evidence_for_slug(slug, evidence))
+                    relevant_evidence.extend(_evidence_for_insight_rule(rule, slug, evidence))
             confidence_parts.append(note)
             return relevant_slugs, relevant_evidence, fired_rules, confidence_parts
 
@@ -549,14 +739,14 @@ def explain_observations(
     and list matched slugs and their evidence.
     """
     records: list[ExplanationRecord] = []
+    rules_by_name = {rule.name: rule for rule in posture_rules}
 
     for obs in observations:
-        # Find matching rule — observations don't carry the rule name directly,
-        # so we match by checking which rule's template could have produced
-        # this observation's statement. We use the rule name as a proxy by
-        # looking at related_slugs overlap with rule.slugs_any.
-        matched_rule: _PostureRule | None = None
-        for rule in posture_rules:
+        # New observations retain their exact source rule. The bounded heuristic
+        # remains only for legacy callers that constructed Observation before
+        # source_name was added.
+        matched_rule = rules_by_name.get(obs.source_name) if obs.source_name else None
+        for rule in posture_rules if matched_rule is None and not obs.source_name else ():
             # Match by slug overlap: if the observation's related_slugs are a
             # subset of the rule's slugs_any, it's likely the right rule.
             if (
@@ -647,27 +837,6 @@ def serialize_explanation(record: ExplanationRecord) -> dict[str, Any]:
 # ── Explanation DAG (v0.9.3) ────────────────────────────────────────────
 
 
-def _evidence_node_id(ev: EvidenceRecord, idx: int) -> str:
-    """Stable deterministic node id for an evidence record.
-
-    Uses the (source_type, slug, rule_name, idx) tuple so two records
-    with identical fields still get distinct ids when they co-occur.
-    """
-    return f"evidence:{ev.source_type}:{ev.slug}:{ev.rule_name}:{idx}"
-
-
-def _slug_node_id(slug: str) -> str:
-    return f"slug:{slug}"
-
-
-def _rule_node_id(rule: str) -> str:
-    return f"rule:{rule}"
-
-
-def _item_node_id(item_type: str, name: str) -> str:
-    return f"{item_type}:{name}"
-
-
 def build_explanation_dag(
     records: list[ExplanationRecord],
     all_evidence: tuple[EvidenceRecord, ...] = (),
@@ -675,72 +844,86 @@ def build_explanation_dag(
     """Build a JSON-serialisable provenance DAG from ExplanationRecords.
 
     v0.9.3. Node types:
-        * ``evidence``  — one node per raw EvidenceRecord
-        * ``slug``      — one node per detected fingerprint slug
-        * ``rule``      — one node per fingerprint / signal rule
-                          that fired
-        * ``signal``    — one node per fired signal (incl. absence
+        * ``evidence``  - one node per raw EvidenceRecord occurrence
+        * ``slug``      - one node per detected fingerprint slug
+        * ``rule``      - one occurrence-scoped node per fired rule and
+                          explanation terminal
+        * ``signal``    - one node per fired signal (incl. absence
                           and hardening observations)
-        * ``insight``   — one node per generated insight string
-        * ``observation`` — one node per posture observation
-        * ``confidence`` — the overall confidence node (singleton)
+        * ``insight``   - one node per generated insight string
+        * ``observation`` - one node per posture observation
+        * ``confidence`` - the overall confidence node (singleton)
 
     Edge types:
-        * ``detected-by``        — evidence → slug
-        * ``matched-rule``       — evidence → rule
-        * ``contributes-to``     — slug → signal | insight |
+        * ``detected-by``        - evidence to slug
+        * ``matched-rule``       - evidence to rule only when the retained
+                                   evidence rule name exactly matches the label
+        * ``contributes-to``     - slug to signal | insight |
                                    observation | confidence
-        * ``synthesized-into``   — signal → insight | observation
-        * ``weakened-by``        — label-only attribute (no outgoing
-                                   edge); each weakening condition
-                                   hangs off the item node as metadata
+        * ``fired``              - rule to signal | insight |
+                                   observation | confidence
 
-    Invariants
-        * Every terminal node (``signal``, ``insight``,
-          ``observation``, ``confidence``) must be reachable from at
-          least one ``evidence`` node via a path of length ≤ 3.
-        * Every node carries ``item_type`` equal to its category,
-          ``name`` equal to a human-readable label, and, when
-          relevant, ``confidence_derivation`` and ``weakening``.
-        * The DAG is acyclic: edges only flow from evidence →
-          slug/rule → signal → insight/observation → confidence.
+    Diagnostics:
+        * ``provenance_complete`` is true exactly when every terminal
+          explanation node is reachable from at least one evidence node.
+        * ``disconnected_terminals`` contains the sorted ids of any terminal
+          explanation nodes for which that evidence path is unavailable.
 
-    The DAG is additive — the existing flat ``explanations`` list is
+    The graph is acyclic: edges flow from evidence to slug or rule, then to
+    terminal explanation nodes. Weakening conditions remain item-node metadata.
+
+    The DAG is additive; the existing flat ``explanations`` list is
     still emitted alongside it for callers that prefer the old shape.
     Downstream tooling can pick whichever view fits.
     """
     nodes: dict[str, dict[str, Any]] = {}
     edges: list[dict[str, Any]] = []
 
-    # Step 1: seed with every evidence record, regardless of whether
-    # an explanation record references it. This ensures the DAG's
-    # "every terminal reachable from evidence" invariant holds even
-    # for terminal nodes whose explanation records failed to pin
-    # down specific evidence.
-    for idx, ev in enumerate(all_evidence):
-        eid = _evidence_node_id(ev, idx)
-        if eid in nodes:
-            continue
-        nodes[eid] = {
-            "id": eid,
-            "type": "evidence",
-            "name": f"{ev.source_type}: {ev.rule_name}",
-            "source_type": ev.source_type,
-            "raw_value": ev.raw_value,
-            "rule_name": ev.rule_name,
-            "slug": ev.slug,
-        }
-        # evidence → slug edge
-        sid = _slug_node_id(ev.slug)
-        if sid not in nodes:
-            nodes[sid] = {"id": sid, "type": "slug", "name": ev.slug}
-        edges.append({"source": eid, "target": sid, "relation": "detected-by"})
+    evidence_ids_by_identity: dict[int, list[str]] = {}
+    evidence_ids_by_value: dict[EvidenceRecord, list[str]] = {}
+    next_evidence_index = 0
+
+    def register_evidence(ev: EvidenceRecord) -> str:
+        """Register one occurrence and retain both exact and value lookups."""
+        nonlocal next_evidence_index
+        eid = evidence_node_id(ev, next_evidence_index)
+        next_evidence_index += 1
+        add_evidence_node(nodes, edges, ev, eid)
+        evidence_ids_by_identity.setdefault(id(ev), []).append(eid)
+        evidence_ids_by_value.setdefault(ev, []).append(eid)
+        return eid
+
+    ordered_records = sorted(records, key=record_sort_key)
+    evidence_contexts: dict[int, list[tuple[tuple[Any, ...], int]]] = {}
+    for record in ordered_records:
+        record_key = record_sort_key(record)
+        for occurrence, evidence in enumerate(record.matched_evidence):
+            evidence_contexts.setdefault(id(evidence), []).append((record_key, occurrence))
+
+    # Seed every occurrence in canonical authoritative order. The two
+    # lookup maps let later ExplanationRecords reuse these ids without deriving
+    # a new, record-local index that can collide with another occurrence.
+    for ev in sorted(
+        all_evidence,
+        key=lambda evidence: (evidence_sort_key(evidence), tuple(evidence_contexts.get(id(evidence), ()))),
+    ):
+        register_evidence(ev)
 
     # Step 2: add one node per ExplanationRecord and link the evidence
     # it cites to it. For signal records, link via the slug node too
     # so the DAG walker can walk evidence → slug → signal either way.
-    for rec in records:
-        item_id = _item_node_id(rec.item_type, rec.item_name)
+    item_totals: dict[tuple[str, str], int] = {}
+    for record in ordered_records:
+        key = (record.item_type, record.item_name)
+        item_totals[key] = item_totals.get(key, 0) + 1
+    item_occurrences: dict[tuple[str, str], int] = {}
+
+    for rec in ordered_records:
+        used_evidence_ids: set[str] = set()
+        item_key = (rec.item_type, rec.item_name)
+        item_occurrence = item_occurrences.get(item_key, 0)
+        item_occurrences[item_key] = item_occurrence + 1
+        item_id = item_node_id(rec.item_type, rec.item_name, item_occurrence, item_totals[item_key])
         # If a signal and an observation happen to share the same
         # name, distinguish them by item_type in the id.
         nodes[item_id] = {
@@ -748,54 +931,40 @@ def build_explanation_dag(
             "type": rec.item_type,
             "name": rec.item_name,
             "confidence_derivation": rec.confidence_derivation,
-            "weakening_conditions": list(rec.weakening_conditions),
+            "weakening_conditions": sorted(rec.weakening_conditions),
             "curated_explanation": rec.curated_explanation,
         }
-
-        # Attach each fired_rules entry as its own node so the DAG
-        # can show which rules contributed. Link evidence → rule →
-        # item where possible.
-        for rule in rec.fired_rules:
-            rid = _rule_node_id(rule)
-            if rid not in nodes:
-                nodes[rid] = {"id": rid, "type": "rule", "name": rule}
-            edges.append({"source": rid, "target": item_id, "relation": "fired"})
 
         # For each cited evidence, add (evidence) → slug → item via
         # contributes-to. If the evidence is also in all_evidence we
         # already seeded it; otherwise seed it now.
-        for eidx, ev in enumerate(rec.matched_evidence):
-            eid = _evidence_node_id(ev, eidx)
-            if eid not in nodes:
-                nodes[eid] = {
-                    "id": eid,
-                    "type": "evidence",
-                    "name": f"{ev.source_type}: {ev.rule_name}",
-                    "source_type": ev.source_type,
-                    "raw_value": ev.raw_value,
-                    "rule_name": ev.rule_name,
-                    "slug": ev.slug,
-                }
-            sid = _slug_node_id(ev.slug)
-            if sid not in nodes:
-                nodes[sid] = {"id": sid, "type": "slug", "name": ev.slug}
-            # evidence → slug (may already exist from step 1)
-            edges.append({"source": eid, "target": sid, "relation": "detected-by"})
+        record_evidence_occurrences: list[tuple[EvidenceRecord, str]] = []
+        for ev in sorted(rec.matched_evidence, key=evidence_sort_key):
+            candidates = [
+                *evidence_ids_by_identity.get(id(ev), ()),
+                *evidence_ids_by_value.get(ev, ()),
+            ]
+            eid = next((candidate for candidate in candidates if candidate not in used_evidence_ids), None)
+            if eid is None:
+                eid = register_evidence(ev)
+            used_evidence_ids.add(eid)
+            record_evidence_occurrences.append((ev, eid))
+            sid = slug_node_id(ev.slug)
             # slug → item
             edges.append({"source": sid, "target": item_id, "relation": "contributes-to"})
 
-    # Deduplicate edges while preserving order
-    seen_edges: set[tuple[str, str, str]] = set()
-    deduped: list[dict[str, Any]] = []
-    for e in edges:
-        key = (e["source"], e["target"], e["relation"])
-        if key in seen_edges:
-            continue
-        seen_edges.add(key)
-        deduped.append(e)
+        # Rule labels can recur across independent explanation records, so
+        # every fired rule gets an item-scoped occurrence node. ExplanationRecord
+        # does not retain a general evidence-to-fired-rule mapping, so add the
+        # matched-rule edge only for the defensible exact-name association.
+        # Other cited evidence reaches the terminal through its slug without
+        # inventing rule-specific lineage.
+        for occurrence, rule in enumerate(sorted(rec.fired_rules)):
+            rid = rule_node_id(rule, item_id, occurrence)
+            nodes[rid] = {"id": rid, "type": "rule", "name": rule}
+            for evidence, eid in record_evidence_occurrences:
+                if evidence.rule_name == rule:
+                    edges.append({"source": eid, "target": rid, "relation": "matched-rule"})
+            edges.append({"source": rid, "target": item_id, "relation": "fired"})
 
-    return {
-        "nodes": list(nodes.values()),
-        "edges": deduped,
-        "schema_version": 1,
-    }
+    return finalize_dag(nodes, edges)

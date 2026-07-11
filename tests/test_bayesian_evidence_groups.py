@@ -2,7 +2,7 @@
 
 Co-firing bindings that share a `group` are redundant readings of one fact, so
 they must contribute a single effective likelihood ratio (the strongest), not
-the over-counted independent product. See correlation.md §4.3.
+the over-counted independent product. See correlation.md section 3.2.
 """
 
 from __future__ import annotations

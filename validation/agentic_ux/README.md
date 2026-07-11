@@ -12,8 +12,8 @@ primary user personas *is* the AI agent: the MCP server is a real
 production surface, and an agent reading recon JSON is a first-class
 consumer. v1.9.2 is the bridge milestone that validates whether the
 v1.9 fusion fields (`posterior_observations`, `slug_confidences`,
-credible intervals, `sparse=true` flags) are actually load-bearing for
-that audience  -  i.e. whether agents read them, cite them, and let them
+model-relative uncertainty bands, `sparse=true` flags) are actually used by
+that audience, meaning whether agents read them, cite them, and let them
 change a conclusion.
 
 The harness drives three persona prompts (security analyst,

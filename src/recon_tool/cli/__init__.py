@@ -190,10 +190,10 @@ def main(
     ),
 ) -> None:
     """
-    [bold]recon[/bold] — domain intelligence from the command line.
+    [bold]recon[/bold] - domain intelligence from the command line.
 
-    Give it any domain. Get back company name, email provider, tenant ID,
-    tech stack, email security score, and signal intelligence.
+    Give it any domain. Get back public identity responses, email-routing
+    observations, domain-control indicators, and their provenance.
     All from public sources. No credentials needed.
     """
     if ctx.invoked_subcommand is None:
@@ -217,11 +217,11 @@ def _print_welcome_banner() -> None:
     console = get_console()
     # Subtle cyan for the header and section labels — matches the
     # panel redesign tone. No red, no yellow, no alarmism.
-    console.print(f"[bold cyan]recon {__version__}[/bold cyan] — Passive domain intelligence")
+    console.print(f"[bold cyan]recon {__version__}[/bold cyan] - Passive domain intelligence")
     console.print()
     console.print(
-        "Tell me what technology stack an organization is running — from public DNS\n"
-        "and identity endpoints only. Zero credentials. Zero scanning."
+        "Observe what a domain publishes through public DNS and identity endpoints.\n"
+        "Evidence is role-scoped and hedged. Zero credentials. Zero scanning."
     )
     console.print()
     console.print("[bold cyan]Usage[/bold cyan]")
@@ -283,8 +283,9 @@ def lookup(
         True,
         "--fusion/--no-fusion",
         help=(
-            "Compute Bayesian per-slug posteriors and credible intervals from "
-            "evidence (on by default from v2.0; --no-fusion to skip)"
+            "Compute per-slug evidence strength plus model-relative Bayesian "
+            "posteriors and uncertainty bands (on by default from v2.0; "
+            "--no-fusion to skip)"
         ),
     ),
     explain_dag: bool = typer.Option(
@@ -329,9 +330,11 @@ def lookup(
         help=(
             "Opt in to direct HTTPS probes of target-controlled endpoints "
             "(the Google CSE discovery probe at cse.<domain>, and the BIMI VMC "
-            "certificate fetch). Off by default: recon stays passive and the only "
-            "request the queried domain's own servers see is the standard MTA-STS "
-            "policy fetch. BIMI presence is detected from DNS either way."
+            "certificate fetch). Off by default, DNS queries use the configured "
+            "recursive resolver, and authoritative DNS may observe the resulting "
+            "traffic. The standard MTA-STS policy fetch is the only default "
+            "target-owned HTTP/application request. BIMI presence is detected from "
+            "DNS either way."
         ),
     ),
     exact: bool = typer.Option(
@@ -454,7 +457,8 @@ def batch(
         True,
         "--fusion/--no-fusion",
         help=(
-            "Compute Bayesian-network posteriors and credible intervals "
+            "Compute model-relative Bayesian-network posteriors and "
+            "evidence-responsive uncertainty bands "
             "over high-level claims for every domain. On by default from v2.0; "
             "--no-fusion skips it. Adds the ``posterior_observations`` field to "
             "each domain's JSON. Pure post-processing, no extra network calls."
@@ -465,8 +469,9 @@ def batch(
         "--summary",
         help=(
             "Emit one aggregate-only cohort summary over the whole batch instead "
-            "of per-domain records: observability-adjusted prevalence, posterior "
-            "mass, and provider / cloud concentration. Stateless, ships no "
+            "of per-domain records: declarative public-claim rates, hideable "
+            "model support coverage, model-score mass, and provider / cloud "
+            "concentration. Stateless, ships no "
             "baselines, names no domain. Add --json for machine output. For "
             "caller-grouped analysis, see docs/aggregate-state.md."
         ),

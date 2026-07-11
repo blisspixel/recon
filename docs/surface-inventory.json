@@ -1559,7 +1559,7 @@
           "signals",
           "list"
         ],
-        "summary": "List every built-in signal, grouped by category.",
+        "summary": "List reportable public signals, grouped by category.",
         "usage": "recon signals list"
       },
       {
@@ -1591,7 +1591,7 @@
           "signals",
           "search"
         ],
-        "summary": "Search signals by name, category, description, or candidate slug.",
+        "summary": "Search reportable signals by label, category, description, or candidate slug.",
         "usage": "recon signals search"
       },
       {
@@ -1623,7 +1623,7 @@
           "signals",
           "show"
         ],
-        "summary": "Show the full definition of a single signal.",
+        "summary": "Show the public definition of a single reportable signal.",
         "usage": "recon signals show"
       }
     ],
@@ -2289,14 +2289,18 @@
         "output_schema": {
           "definition_count": 2,
           "properties": [
+            "degraded_sources",
             "disclaimer",
             "domain",
-            "gaps"
+            "gaps",
+            "unavailable_controls"
           ],
           "required": [
+            "degraded_sources",
             "disclaimer",
             "domain",
-            "gaps"
+            "gaps",
+            "unavailable_controls"
           ],
           "type": "object"
         },
@@ -2430,7 +2434,9 @@
         "output_schema": {
           "definition_count": 2,
           "properties": [
+            "collection_masked_units",
             "conflict_count",
+            "degraded_sources",
             "domain",
             "entropy_reduction_nats",
             "evidence_count",
@@ -2438,7 +2444,9 @@
             "sparse_count"
           ],
           "required": [
+            "collection_masked_units",
             "conflict_count",
+            "degraded_sources",
             "domain",
             "entropy_reduction_nats",
             "evidence_count",
@@ -2489,7 +2497,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "List all loaded signals with rules, layers, and conditions."
+        "summary": "List reportable public signals with rules, layers, and conditions."
       },
       {
         "annotations": {
@@ -2621,7 +2629,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Look up domain intelligence - company name, email provider, tenant ID,"
+        "summary": "Look up public domain observations including display label, tenant ID,"
       },
       {
         "annotations": {

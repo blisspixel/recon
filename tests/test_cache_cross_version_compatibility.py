@@ -118,12 +118,11 @@ class TestV199SurfacesDeriveFromOlderCache:
     """The renderer-side v1.9.9 surfaces work on cached data that
     pre-dates v1.9.9. No re-collection or data migration is needed."""
 
-    def test_multi_cloud_rollup_fires_on_v198_cache(self):
+    def test_v198_cache_without_lineage_does_not_claim_multi_cloud(self):
         info = tenant_info_from_dict(_v198_shape_multi_cloud_cache())
         out = _render(info)
-        assert "Multi-cloud" in out, (
-            "v1.9.9 panel must derive the Multi-cloud rollup from v1.9.8-shape cache data without re-collection"
-        )
+        assert "Multi-cloud" not in out
+        assert "role unavailable" in out
 
     def test_ceiling_footer_fires_on_v198_sparse_cache(self):
         info = tenant_info_from_dict(_v198_shape_sparse_cache())
@@ -152,7 +151,7 @@ class TestCacheVersionConstantPinning:
     commit time. To intentionally bump, update both this constant
     and the synthesized fixtures above."""
 
-    _EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING = 2
+    _EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING = 3
 
     def test_cache_version_constant_matches_pinned_value(self):
         # The actual constant in cache.py may evolve. This test

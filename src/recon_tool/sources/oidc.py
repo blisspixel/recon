@@ -131,21 +131,28 @@ class OIDCSource:
                 return SourceResult(
                     source_name="oidc_discovery",
                     error=f"HTTP {exc.response.status_code} from OIDC discovery endpoint",
+                    source_unavailable=exc.response.status_code == 429 or exc.response.status_code >= 500,
                 )
             except ValueError:
                 return SourceResult(
                     source_name="oidc_discovery",
                     error="Invalid JSON from OIDC discovery endpoint",
+                    source_unavailable=True,
                 )
         if not isinstance(data, dict):
             return SourceResult(
                 source_name="oidc_discovery",
                 error="Invalid JSON response shape from OIDC discovery endpoint",
+                source_unavailable=True,
             )
         try:
             return parse_tenant_info_from_oidc(data)
         except ReconLookupError as exc:
-            return SourceResult(source_name="oidc_discovery", error=exc.message)
+            return SourceResult(
+                source_name="oidc_discovery",
+                error=exc.message,
+                source_unavailable=True,
+            )
 
     async def lookup(self, domain: str, **kwargs: Any) -> SourceResult:
         """Queries the OIDC discovery endpoint and extracts tenant information.
@@ -171,4 +178,5 @@ class OIDCSource:
             return SourceResult(
                 source_name="oidc_discovery",
                 error=f"Network error querying OIDC discovery endpoint after retries: {exc}",
+                source_unavailable=True,
             )

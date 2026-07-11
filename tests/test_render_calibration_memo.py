@@ -84,6 +84,9 @@ CONFORMAL_SINGLE = {
         "mean_coverage": 0.93,
         "min_coverage": 0.87,
         "mean_set_size": 1.21,
+        "mean_singleton_rate": 0.72,
+        "mean_multi_label_rate": 0.245,
+        "mean_empty_set_rate": 0.035,
     },
 }
 
@@ -145,9 +148,15 @@ def test_render_memo_includes_aggregate_sections_only() -> None:
 
     assert "Email Policy Reference Calibration" in memo
     assert "Tenancy Provider Corroboration" in memo
-    assert "Conformal Coverage" in memo
+    assert "Conformal Re-split Diagnostics" in memo
+    assert "Mean singleton-set rate" in memo
+    assert "Mean multi-label-set rate" in memo
+    assert "Mean empty-set rate" in memo
+    assert "dependent re-splits" in memo
     assert "30" in memo
-    assert "ECE equal-mass" in memo
+    assert "ECE tie-preserving" in memo
+    assert "no future-point coverage claim" in memo
+    assert "naive iid rows" in memo
     assert "| Full posterior | 30 | 0.24 | 0.08 | 0.04 | 0.03 | 0.02, 0.05 | 0.9 | 0.6 |" in memo
     assert "apexes" in memo.lower()
     assert "tenant IDs" in memo
@@ -261,4 +270,4 @@ def test_main_writes_memo_from_json_inputs(tmp_path) -> None:
     assert rc == 0
     text = output.read_text(encoding="utf-8")
     assert "Disclosure Controls" in text
-    assert "Conformal Coverage" in text
+    assert "Conformal Re-split Diagnostics" in text

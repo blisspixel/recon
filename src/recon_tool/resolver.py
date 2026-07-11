@@ -100,6 +100,7 @@ async def _safe_lookup(
         return SourceResult(
             source_name=source.name,
             error=f"Unexpected error: {exc}",
+            source_unavailable=True,
         )
 
 
@@ -255,23 +256,20 @@ async def _enrich_from_related(
     # Collect additional services and slugs from related domains
     extra_services: set[str] = set(info.services)
     extra_slugs: set[str] = set(info.slugs)
-    extra_evidence = [*info.evidence]
-    seen_evidence = {(ev.source_type, ev.raw_value, ev.rule_name, ev.slug) for ev in info.evidence}
     found_new = False
 
-    for result in related_results:
+    from recon_tool.collection_view import collection_observable_result
+
+    for raw_result in related_results:
+        # A related-host subchannel failure limits only that enrichment result.
+        # Project it locally, but do not mark the apex channel unavailable.
+        result = collection_observable_result(raw_result)
         new_services = set(result.detected_services) - extra_services
         new_slugs = set(result.detected_slugs) - extra_slugs
         if new_services or new_slugs:
             found_new = True
             extra_services.update(result.detected_services)
             extra_slugs.update(result.detected_slugs)
-            for ev in result.evidence:
-                ev_key = (ev.source_type, ev.raw_value, ev.rule_name, ev.slug)
-                if ev_key in seen_evidence:
-                    continue
-                extra_evidence.append(ev)
-                seen_evidence.add(ev_key)
 
     if not found_new:
         return info, all_results
@@ -287,14 +285,12 @@ async def _enrich_from_related(
 
     # Re-run insight generation with the enriched data to get updated signals
     from recon_tool.constants import effective_dmarc_policy, email_security_score
-    from recon_tool.merger import (
-        build_insights_with_signals,
-        compute_detection_scores,
-        extract_spf_include_count,
-    )
+    from recon_tool.email_security import claim_safe_email_services, observed_email_control_services
+    from recon_tool.merger import build_insights_with_signals
 
+    claim_services = claim_safe_email_services(extra_services, info.evidence)
     enriched_insights = build_insights_with_signals(
-        extra_services,
+        claim_services,
         extra_slugs,
         info.auth_type,
         info.dmarc_policy,
@@ -304,12 +300,12 @@ async def _enrich_from_related(
         # silenced the score / SPF / issuance signals on enriched-then-cached
         # results.
         email_security_score=email_security_score(
-            extra_services,
+            observed_email_control_services(info.evidence),
             info.dmarc_policy,
             info.dmarc_pct,
             info.dmarc_testing,
         ),
-        spf_include_count=extract_spf_include_count(extra_services),
+        spf_include_count=info.spf_include_count or None,
         issuance_velocity=(info.cert_summary.issuance_velocity if info.cert_summary else None),
         dmarc_pct=info.dmarc_pct,
         has_mx_records=any(e.source_type == "MX" for e in info.evidence),
@@ -322,6 +318,7 @@ async def _enrich_from_related(
         tenant_region_sub_scope=info.tenant_region_sub_scope,
         msgraph_host=info.msgraph_host,
         dmarc_effective_policy=effective_dmarc_policy(info.dmarc_policy, info.dmarc_pct, info.dmarc_testing),
+        evidence=info.evidence,
     )
 
     # Build enriched TenantInfo — keep identity fields, update services/slugs/insights
@@ -330,8 +327,6 @@ async def _enrich_from_related(
         services=tuple(sorted(extra_services)),
         slugs=tuple(sorted(extra_slugs)),
         insights=tuple(enriched_insights),
-        evidence=tuple(extra_evidence),
-        detection_scores=compute_detection_scores(tuple(extra_evidence)),
     )
 
     return enriched, all_results + list(related_results)
@@ -362,8 +357,11 @@ async def _resolve_tenant_inner(
         kwargs["skip_ct"] = True
     if active_probes:
         # Opt-in direct probes to target-controlled hosts (Google CSE at
-        # cse.<domain>, the BIMI VMC fetch). Off by default keeps collection
-        # passive; threaded to GoogleSource and DNSSource, other sources ignore it.
+        # cse.<domain>, the BIMI VMC fetch). Off by default, DNS still uses the
+        # configured recursive resolver and authoritative DNS may observe the
+        # resulting traffic. MTA-STS remains the only default target-owned
+        # HTTP/application request. The opt-in is threaded to GoogleSource and
+        # DNSSource; other sources ignore it.
         kwargs["active_probes"] = True
 
     # Run all sources concurrently
@@ -407,9 +405,11 @@ async def resolve_tenant(
         skip_ct: When True, skip the cert-transparency providers.
         active_probes: When True, opt in to direct HTTPS probes of
             target-controlled hosts (the Google CSE discovery probe at
-            cse.<domain> and the BIMI VMC certificate fetch). Off by default so
-            collection stays passive: the only request the queried domain's own
-            servers see by default is the standard MTA-STS policy fetch.
+            cse.<domain> and the BIMI VMC certificate fetch). Off by default,
+            DNS queries still use the configured recursive resolver, so
+            authoritative DNS may observe the resulting traffic. The standard
+            MTA-STS policy fetch is the only default target-owned
+            HTTP/application request.
 
     Returns:
         Tuple of (TenantInfo, list[SourceResult]) so the CLI can show verbose info.

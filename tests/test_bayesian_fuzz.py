@@ -329,8 +329,8 @@ class TestAdversarialInference:
         # Should accept any Iterable, not just lists.
         result = infer(
             shipped_net,
-            observed_slugs=(s for s in ["microsoft365"]),
-            observed_signals=iter(["dmarc_reject"]),
+            observed_slugs=iter(()),
+            observed_signals=(signal for signal in ["m365_tenant_observed", "dmarc_reject"]),
             priors_override={},
         )
         m365 = next(p for p in result.posteriors if p.name == "m365_tenant")

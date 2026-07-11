@@ -518,39 +518,29 @@ class TestCredibleIntervals:
 
 
 class TestEvidenceGroupingShippedNetwork:
-    """Regression guard for the §4.3 over-counting correction as shipped.
+    """Role-bearing observations, not generic vendor slugs, drive role claims."""
 
-    aws_hosting and email_gateway_present declare correlation groups, so
-    co-firing redundant indicators contribute one effective likelihood ratio
-    (the strongest member), not the over-counted independent product. See
-    docs/correlation.md §4.3 and the group comments in bayesian_network.yaml.
-    """
+    def test_aws_role_requires_cname_signal(self, shipped_network: BayesianNetwork) -> None:
+        baseline = infer(shipped_network, [], [], priors_override={})
+        generic = infer(shipped_network, ["aws", "aws-cloudfront", "aws-route53"], [], priors_override={})
+        role = infer(shipped_network, [], ["aws_endpoint_cname_observed"], priors_override={})
+        b = next(p for p in baseline.posteriors if p.name == "aws_hosting")
+        g = next(p for p in generic.posteriors if p.name == "aws_hosting")
+        r = next(p for p in role.posteriors if p.name == "aws_hosting")
+        assert g.posterior == b.posterior
+        assert r.posterior > b.posterior
+        assert r.n_eff == 5.0
 
-    def test_aws_facets_group_to_strongest_member(self, shipped_network: BayesianNetwork) -> None:
-        # aws-cloudfront has the strongest LLR (log(0.80/0.03), about 3.28), so
-        # firing all three AWS facets must match firing that one alone: they are
-        # one observation of "runs on AWS", not three independent confirmations.
-        strongest = infer(shipped_network, ["aws-cloudfront"], [], priors_override={})
-        all_three = infer(shipped_network, ["aws", "aws-cloudfront", "aws-route53"], [], priors_override={})
-        s = next(p for p in strongest.posteriors if p.name == "aws_hosting")
-        a = next(p for p in all_three.posteriors if p.name == "aws_hosting")
-        assert abs(a.posterior - s.posterior) < 1e-9
-        # One effective unit, so n_eff = min_n_eff (4) + 1 = 5, not 4 + 3 = 7.
-        assert a.n_eff == 5.0
-        # The un-grouped independent product would slam this to about 0.9998;
-        # grouping keeps it honest (well under 0.96) with a wider interval.
-        assert a.posterior < 0.96
-        assert (a.interval_high - a.interval_low) == pytest.approx(s.interval_high - s.interval_low)
-
-    def test_gateway_vendors_group_to_strongest_member(self, shipped_network: BayesianNetwork) -> None:
-        # proofpoint's LLR (log(0.90/0.02), about 3.81) dominates barracuda's, so
-        # a co-fire equals proofpoint alone: one "gateway present" claim, not two.
-        one = infer(shipped_network, ["proofpoint"], [], priors_override={})
-        two = infer(shipped_network, ["proofpoint", "barracuda"], [], priors_override={})
-        o = next(p for p in one.posteriors if p.name == "email_gateway_present")
-        t = next(p for p in two.posteriors if p.name == "email_gateway_present")
-        assert abs(t.posterior - o.posterior) < 1e-9
-        assert t.n_eff == 5.0
+    def test_gateway_role_requires_mx_signal(self, shipped_network: BayesianNetwork) -> None:
+        baseline = infer(shipped_network, [], [], priors_override={})
+        generic = infer(shipped_network, ["proofpoint", "barracuda"], [], priors_override={})
+        role = infer(shipped_network, [], ["email_gateway_mx_observed"], priors_override={})
+        b = next(p for p in baseline.posteriors if p.name == "email_gateway_present")
+        g = next(p for p in generic.posteriors if p.name == "email_gateway_present")
+        r = next(p for p in role.posteriors if p.name == "email_gateway_present")
+        assert g.posterior == b.posterior
+        assert r.posterior > b.posterior
+        assert r.n_eff == 5.0
 
 
 # ── Helpers ──────────────────────────────────────────────────────────
@@ -572,9 +562,10 @@ class TestHelpers:
 
 
 class _FakeEvidence:
-    def __init__(self, source_type: str, raw_value: str = "") -> None:
+    def __init__(self, source_type: str, raw_value: str = "", slug: str = "") -> None:
         self.source_type = source_type
         self.raw_value = raw_value
+        self.slug = slug
 
 
 class _FakeMergeConflicts:
@@ -597,6 +588,7 @@ class _FakeTenantInfo:
         evidence: tuple[_FakeEvidence, ...] = (),
         auth_type: str | None = None,
         google_auth_type: str | None = None,
+        google_idp_name: str | None = None,
         dmarc_policy: str | None = None,
         mta_sts_mode: str | None = None,
         merge_conflicts: _FakeMergeConflicts | None = None,
@@ -606,6 +598,7 @@ class _FakeTenantInfo:
         self.evidence = evidence
         self.auth_type = auth_type
         self.google_auth_type = google_auth_type
+        self.google_idp_name = google_idp_name
         self.dmarc_policy = dmarc_policy
         self.mta_sts_mode = mta_sts_mode
         self.merge_conflicts = merge_conflicts
@@ -642,9 +635,11 @@ class TestTenantInfoAdapter:
         assert "dkim_present" in signals_from_tenant_info(info)
 
     def test_signals_from_strict_spf(self) -> None:
-        # Strict SPF is carried on the merged service set (SVC_SPF_STRICT), not
-        # as an SPF-typed evidence record, so the signal is derived from there.
-        info = _FakeTenantInfo(services=(SVC_SPF_STRICT,))
+        # A display label alone is extensible and cannot prove strict SPF.
+        info = _FakeTenantInfo(
+            services=(SVC_SPF_STRICT,),
+            evidence=(_FakeEvidence("SPF", "v=spf1 -all", "spf-strict"),),
+        )
         assert "spf_strict" in signals_from_tenant_info(info)
 
     def test_no_signals_from_soft_spf(self) -> None:
@@ -661,6 +656,7 @@ class TestTenantInfoAdapter:
         info = _FakeTenantInfo(
             slugs=("microsoft365", "entra-id", "okta"),
             auth_type="Federated",
+            google_idp_name="Okta",
             dmarc_policy="reject",
             evidence=(
                 _FakeEvidence("DKIM", "selector1.example.com"),

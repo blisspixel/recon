@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import re
 import sys
 from pathlib import Path
 
@@ -11,24 +12,36 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 SECTION6_ROWS: tuple[tuple[str, str], ...] = (
-    ("Differential verification", "Exact inference matches a full-joint reference"),
+    ("Differential verification", "Exact inference matches a full-latent-joint reference on the committed sweep"),
     ("Adversarial add/remove perturbation", "Planted evidence can move posteriors across the decision boundary"),
-    ("Interval coverage (synthetic)", "The 80 percent interval absorbs the CAL8 likelihood band"),
+    (
+        "Uncertainty-band scenario containment",
+        "The 80 percent uncertainty band contains selected CAL8 perturbed-model conditionals",
+    ),
     ("Likelihood sensitivity", "Posteriors are stable under +/-20 percent likelihood perturbation"),
-    ("Layer ablations (synthetic)", "The Bayesian and graph layers add value over simple matching"),
-    ("Held-out residual", "DMARC-held-out residual fails as an independent predictor"),
-    ("DMARC full posterior", "DMARC full posterior agrees strongly with the DMARC record"),
+    (
+        "Layer ablations (synthetic)",
+        "The Bayesian and graph layers have recorded behavior against simple baselines",
+    ),
+    ("Held-out residual negative result", "DMARC-held-out residual is weak after label-input masking"),
+    ("DMARC-anchored agreement", "DMARC full posterior agrees strongly with the DMARC record"),
     ("Tenancy corroboration", "M365 tenancy DNS-only predictor corroborates provider attestation"),
-    ("Conformal coverage", "Split conformal coverage is measured on labelable nodes"),
+    (
+        "Legacy conformal re-split diagnostic",
+        "Split-conformal logic is implemented; the current corpus artifact is a dependent re-split diagnostic",
+    ),
 )
 
 REQUIRED_BOUNDARIES: tuple[tuple[str, str], ...] = (
     ("draft", "not attacker prevalence"),
-    ("draft", "CONSISTENCY, not calibration"),
+    ("draft", "consistency, not calibration"),
     ("draft", "private-corpus rows are maintainer-reproducible aggregates only"),
     ("outline", "corroboration rather than calibration"),
     ("outline", "robustness checks rather than population rates"),
-    ("claim-map", "not ground-truth frequentist coverage"),
+    (
+        "claim-map",
+        "not a credible interval, confidence interval, identification region, or general misspecification bound",
+    ),
     ("claim-map", "robustness checks rather than population rates"),
     ("claim-map", "Do not state attacker prevalence, exploitability, or real-world false-positive rate"),
     ("claim-map", "Do not state independent calibration"),
@@ -89,6 +102,125 @@ FORBIDDEN_M365_WORDING: tuple[tuple[str, str], ...] = (
     ("outline", "calibrated against Microsoft's own endpoint attestation"),
 )
 
+REQUIRED_CURRENT_SEMANTICS: tuple[tuple[str, str], ...] = (
+    ("draft", "model-relative posterior"),
+    ("draft", "evidence-responsive uncertainty band"),
+    ("draft", "local deletion nonincrease"),
+    ("draft", "dependent empirical re-split diagnostics"),
+    ("draft", "no future-point coverage claim"),
+    ("draft", "does not validate the Bayesian uncertainty band"),
+    ("outline", "model-relative"),
+    ("outline", "evidence-responsive uncertainty band"),
+    ("outline", "local deletion nonincrease"),
+    ("outline", "dependent empirical re-split diagnostics"),
+    ("outline", "does not validate the Bayesian uncertainty band"),
+)
+
+FORBIDDEN_STATISTICAL_OVERCLAIMS: tuple[tuple[str, str, str], ...] = (
+    (
+        "band widening",
+        r"reported (?:80% )?credible interval widens",
+        "the display band is not guaranteed to widen under evidence removal",
+    ),
+    (
+        "band widening",
+        r"interval-widening \(the interval grows as effective evidence falls\)",
+        "band width is not generally monotone in evidence",
+    ),
+    (
+        "credible interval",
+        r"each node reports an 80% credible interval",
+        "the fields are an evidence-responsive uncertainty band",
+    ),
+    (
+        "credible interval",
+        r"beta-style credible intervals",
+        "the Beta-shaped display is not a credible interval",
+    ),
+    (
+        "suppression baseline",
+        r"can only move a claim toward (?:its|the) all-absent baseline",
+        "the local lemma does not imply full-network movement toward a baseline",
+    ),
+    (
+        "suppression floor",
+        r"toward the node's suppression floor",
+        "the local lemma does not establish an all-absent floor for full claims",
+    ),
+    (
+        "suppression interpretation",
+        r"it can only move a claim toward [\"']we cannot tell",
+        "deletion does not guarantee an unresolved posterior",
+    ),
+    (
+        "suppression interpretation",
+        r"outside the all-absent floor",
+        "selected deletion checks do not establish a general floor guarantee",
+    ),
+    (
+        "tier-4 calibration",
+        r"one carries a clean two-class external reference",
+        "no current claim family has a clean passing level-4 result",
+    ),
+    (
+        "tier-4 calibration",
+        r"full-posterior calibration strong",
+        "DMARC agreement is dependency-qualified corroboration",
+    ),
+    (
+        "tier-4 calibration",
+        r"calibration where a self-defining reference exists",
+        "a self-defining reference provides DMARC-anchored agreement, not independence",
+    ),
+    (
+        "conformal scope",
+        r"conformal (?:set|coverage statement) (?:beside|on) the bayesian interval",
+        "the conformal diagnostic is separate from and does not validate the band",
+    ),
+    (
+        "conformal scope",
+        r"conformal coverage on labelable nodes",
+        "the current experiment uses one selected DMARC-labeled output",
+    ),
+    (
+        "conformal scope",
+        r"conformal coverage statement on the labelable nodes",
+        "the current experiment uses one selected DMARC-labeled output",
+    ),
+    (
+        "global exhaustiveness",
+        r"(?:verified exhaustively against its full joint|"
+        r"exhaustively-verified bayesian network|"
+        r"every (?:enumerable )?evidence configuration)",
+        "the harness enumerates the latent joint per tested query over a structured evidence sweep",
+    ),
+    (
+        "forced false positive",
+        r"(?:force(?:s|d)? a confident false positive|plant a model-relative false positive)",
+        "the harness shows selected synthetic threshold crossings only",
+    ),
+    (
+        "result reproducibility",
+        r"every empirical claim (?:is reproducible|is checkable)",
+        "private-cohort aggregates are not independently result-reproducible",
+    ),
+    (
+        "training-disjoint evaluation",
+        r"construction (?:that )?makes a predictor disjoint from its label",
+        "masking a label input does not undo same-corpus parameter development",
+    ),
+    (
+        "synthetic generator",
+        r"(?:model's own generative process|model-generated behavior|quantif(?:y|ies|ying) the MNAR price)",
+        "the independent-Bernoulli binding sampler can violate declared group semantics",
+    ),
+    (
+        "conformal training scope",
+        r"(?:selected-sample marginal coverage|marginal prediction-set coverage on a selected)",
+        "the recorded scorer was not trained independently, so the run is descriptive only",
+    ),
+)
+
 
 def _read(root: Path, relative: str) -> str:
     return (root / relative).read_text(encoding="utf-8")
@@ -96,6 +228,11 @@ def _read(root: Path, relative: str) -> str:
 
 def _load_docs(root: Path) -> dict[str, str]:
     return {doc_name: _read(root, relative) for doc_name, relative in DOC_PATHS.items()}
+
+
+def _contains_prose(text: str, phrase: str) -> bool:
+    """Match prose across Markdown line wrapping without changing case."""
+    return " ".join(phrase.split()) in " ".join(text.split())
 
 
 def _section_issues(docs: dict[str, str]) -> list[str]:
@@ -113,12 +250,26 @@ def _boundary_issues(docs: dict[str, str]) -> list[str]:
     issues: list[str] = []
 
     for doc_name, phrase in REQUIRED_BOUNDARIES:
-        if phrase not in docs[doc_name]:
+        if not _contains_prose(docs[doc_name], phrase):
             issues.append(f"{doc_name} missing required boundary phrase: {phrase}")
 
     for doc_name, phrase in FORBIDDEN_M365_WORDING:
-        if phrase in docs[doc_name]:
+        if _contains_prose(docs[doc_name], phrase):
             issues.append(f"{doc_name} contains forbidden M365 calibration wording: {phrase}")
+
+    for doc_name, phrase in REQUIRED_CURRENT_SEMANTICS:
+        if not _contains_prose(docs[doc_name], phrase):
+            issues.append(f"{doc_name} missing current statistical boundary: {phrase}")
+    return issues
+
+
+def _statistical_overclaim_issues(docs: dict[str, str]) -> list[str]:
+    issues: list[str] = []
+    for doc_name in ("draft", "outline"):
+        text = " ".join(docs[doc_name].split())
+        for category, pattern, boundary in FORBIDDEN_STATISTICAL_OVERCLAIMS:
+            if re.search(pattern, text, flags=re.IGNORECASE):
+                issues.append(f"{doc_name} contains {category} overclaim; {boundary}: /{pattern}/")
     return issues
 
 
@@ -160,6 +311,7 @@ def collect_issues(root: Path = ROOT) -> list[str]:
     issues: list[str] = []
     issues.extend(_section_issues(docs))
     issues.extend(_boundary_issues(docs))
+    issues.extend(_statistical_overclaim_issues(docs))
     issues.extend(_latest_proof_issues(docs))
     issues.extend(_submission_gate_issues(docs))
     return issues

@@ -173,9 +173,10 @@ distribution" is a concept comment.
 
 CAL12 requires the elicitation of every root prior to be written down
 against the observed corpus base rate, because the prior is load-bearing
-exactly where recon says the honest field lives: strong likelihoods wash
-the prior out of a densely-evidenced point estimate, but the sparse-case
-posterior and the credible interval inherit it directly. This ledger is
+exactly where recon says the model assumption is most visible: strong
+likelihoods can wash the prior out of a densely evidenced point estimate, but a
+sparse-case posterior inherits it directly. The uncertainty band is centered on
+that posterior and does not integrate prior uncertainty. This ledger is
 that record. Two readings to hold while using it:
 
 - A corpus *detection* rate is not a population base rate. The

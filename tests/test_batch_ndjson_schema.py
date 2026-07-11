@@ -26,7 +26,7 @@ from pathlib import Path
 import pytest
 
 from recon_tool.formatter import format_tenant_dict
-from recon_tool.models import TenantInfo
+from recon_tool.models import BIMIIdentity, CandidateValue, MergeConflicts, TenantInfo
 from recon_tool.schema_contract import (
     BATCH_ERROR_RECORD_KEYS,
     REQUIRED_TOP_LEVEL_FIELDS,
@@ -169,6 +169,135 @@ def test_include_ecosystem_always_emits_wrapper_on_all_failed_batch(capsys) -> N
     assert out["record_type"] == "batch_result"
     assert out["ecosystem_hyperedges"] == []
     assert out["domains"] == [error_record]
+
+
+def _cross_domain_info(
+    domain: str,
+    *,
+    tenant_id: str | None = None,
+    tokens: tuple[str, ...] = (),
+    slugs: tuple[str, ...] = (),
+    bimi_org: str | None = None,
+    degraded_sources: tuple[str, ...] = (),
+    merge_conflicts: MergeConflicts | None = None,
+) -> TenantInfo:
+    """Build a minimal batch-correlation fixture with controlled channels."""
+    return TenantInfo(
+        tenant_id=tenant_id,
+        display_name=domain,
+        default_domain=domain,
+        queried_domain=domain,
+        slugs=slugs,
+        site_verification_tokens=tokens,
+        bimi_identity=BIMIIdentity(organization=bimi_org) if bimi_org else None,
+        degraded_sources=degraded_sources,
+        merge_conflicts=merge_conflicts,
+    )
+
+
+def test_batch_token_overlap_ignores_unavailable_apex_txt(capsys) -> None:
+    """Raw partial TXT state must not leak into cross-domain token output."""
+    infos = {
+        "a.com": _cross_domain_info("a.com", tokens=("MS=shared",)),
+        "b.com": _cross_domain_info(
+            "b.com",
+            tokens=("MS=shared",),
+            degraded_sources=("dns:apex_txt",),
+        ),
+    }
+    records = [{"queried_domain": domain} for domain in infos]
+
+    from recon_tool.cli import _batch_emit_json
+
+    _batch_emit_json(records, infos, include_ecosystem=False)
+    out = json.loads(capsys.readouterr().out)
+
+    assert all("shared_verification_tokens" not in record for record in out)
+
+
+def test_batch_ecosystem_ignores_unavailable_bimi(capsys) -> None:
+    """Raw partial BIMI identity must not produce a BIMI organization edge."""
+    infos = {
+        "a.com": _cross_domain_info("a.com", bimi_org="Example Corp"),
+        "b.com": _cross_domain_info(
+            "b.com",
+            bimi_org="Example Corp",
+            degraded_sources=("dns:bimi",),
+        ),
+    }
+    records = [{"queried_domain": domain} for domain in infos]
+
+    from recon_tool.cli import _batch_emit_json
+
+    _batch_emit_json(records, infos, include_ecosystem=True)
+    out = json.loads(capsys.readouterr().out)
+
+    assert all(edge["edge_type"] != "bimi_org" for edge in out["ecosystem_hyperedges"])
+
+
+def test_batch_ecosystem_uses_collection_observable_slugs(capsys) -> None:
+    """An unavailable apex TXT channel cannot contribute shared slug overlap."""
+    txt_slugs = ("microsoft365", "google-site", "spf-strict")
+    infos = {
+        "a.com": _cross_domain_info("a.com", slugs=txt_slugs),
+        "b.com": _cross_domain_info(
+            "b.com",
+            slugs=txt_slugs,
+            degraded_sources=("dns:apex_txt",),
+        ),
+    }
+    records = [{"queried_domain": domain} for domain in infos]
+
+    from recon_tool.cli import _batch_emit_json
+
+    _batch_emit_json(records, infos, include_ecosystem=True)
+    out = json.loads(capsys.readouterr().out)
+
+    assert all(edge["edge_type"] != "shared_slugs" for edge in out["ecosystem_hyperedges"])
+
+
+def test_shared_tenant_uses_positive_identity_across_dns_degradation(capsys) -> None:
+    """DNS availability does not mask a positive provider identity response."""
+    tenant_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    infos = {
+        "a.com": _cross_domain_info("a.com", tenant_id=tenant_id),
+        "b.com": _cross_domain_info("b.com", tenant_id=tenant_id, degraded_sources=("dns",)),
+    }
+    records = [{"queried_domain": domain} for domain in infos]
+
+    from recon_tool.cli import _batch_emit_json
+
+    _batch_emit_json(records, infos, include_ecosystem=False)
+    out = json.loads(capsys.readouterr().out)
+
+    assert all(record["shared_tenant"][0]["tenant_id"] == tenant_id for record in out)
+
+
+def test_shared_tenant_excludes_conflicted_identity(capsys) -> None:
+    """A selected first-wins tenant value is not clustered when sources disagree."""
+    tenant_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
+    conflicts = MergeConflicts(
+        tenant_id=(
+            CandidateValue(value=tenant_id, source="oidc_discovery", confidence="medium"),
+            CandidateValue(
+                value="00000000-0000-0000-0000-000000000001",
+                source="identity_peer",
+                confidence="medium",
+            ),
+        )
+    )
+    infos = {
+        "a.com": _cross_domain_info("a.com", tenant_id=tenant_id),
+        "b.com": _cross_domain_info("b.com", tenant_id=tenant_id, merge_conflicts=conflicts),
+    }
+    records = [{"queried_domain": domain} for domain in infos]
+
+    from recon_tool.cli import _batch_emit_json
+
+    _batch_emit_json(records, infos, include_ecosystem=False)
+    out = json.loads(capsys.readouterr().out)
+
+    assert all("shared_tenant" not in record for record in out)
 
 
 def test_batch_only_fields_keep_a_record_classified_as_success(

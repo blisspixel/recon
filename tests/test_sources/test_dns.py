@@ -322,10 +322,23 @@ class TestTechStackFingerprinting:
         )
         result = await DNSSource().lookup("example.com")
         assert result.m365_detected is False
-        # An unrecognized MX host now synthesizes a ``Self-hosted mail``
-        # detection so the provider line has a concrete label instead of
-        # falling through to weaker signals. No other services should fire.
-        assert result.detected_services == ("Self-hosted mail",)
+        assert result.detected_services == ("Custom or unclassified MX",)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_null_mx_is_not_classified_as_a_delivery_host(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": ["0 ."],
+            }
+        )
+
+        result = await DNSSource().lookup("example.com")
+
+        assert result.detected_services == ("Null MX (domain does not accept email)",)
+        assert result.detected_slugs == ("null-mx",)
+        assert not any(evidence.slug == "self-hosted-mail" for evidence in result.evidence)
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")

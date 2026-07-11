@@ -1,11 +1,9 @@
-"""Section-link gate: every correlation.md section cross-reference resolves.
+"""Section-link gate: every correlation.md cross-reference resolves.
 
 ``scripts/check_section_links.py`` parses correlation.md's headings and verifies
-that every "correlation.md <section>" reference across the repo points at a real
-heading. The first test IS the CI gate, so a renumbering that orphans a
-reference fails the build, the way the traceability matrix is gated. The
-remaining tests prove the checker catches a dead reference and ignores academic
-citations and version numbers, so a green gate means "every reference resolves".
+that every prose section reference and Markdown anchor across the repo points at
+a real heading. The first test IS the CI gate, so a renumbering that orphans a
+reference fails the build, the way the traceability matrix is gated.
 """
 
 from __future__ import annotations
@@ -46,6 +44,50 @@ def test_checker_catches_a_dead_section_reference(tmp_path: Path) -> None:
     result = _run(str(doc))
     assert result.returncode == 1
     assert bad in result.stdout
+
+
+def test_checker_catches_a_dead_whole_number_section_reference(tmp_path: Path) -> None:
+    doc = tmp_path / "doc.md"
+    bad = "9" + "99"
+    doc.write_text(f"See correlation.md section {bad} for details.", encoding="utf-8")
+    result = _run(str(doc))
+    assert result.returncode == 1
+    assert f"section {bad}" in result.stdout
+
+
+def test_checker_validates_every_identifier_in_a_mixed_section_list(tmp_path: Path) -> None:
+    doc = tmp_path / "doc.md"
+    bad = "9" + "99"
+    doc.write_text(f"See correlation.md sections 3.4 and {bad} for details.", encoding="utf-8")
+    result = _run(str(doc))
+    assert result.returncode == 1
+    assert f"section {bad}" in result.stdout
+
+
+def test_checker_accepts_current_whole_and_dotted_section_list(tmp_path: Path) -> None:
+    doc = tmp_path / "doc.md"
+    doc.write_text("See correlation.md sections 3.4 and 5 for details.", encoding="utf-8")
+    result = _run(str(doc))
+    assert result.returncode == 0, result.stdout
+
+
+def test_checker_catches_a_dead_markdown_anchor(tmp_path: Path) -> None:
+    doc = tmp_path / "doc.md"
+    anchor = "missing" + "-correlation-heading"
+    doc.write_text(f"See [the model](correlation.md#{anchor}).", encoding="utf-8")
+    result = _run(str(doc))
+    assert result.returncode == 1
+    assert anchor in result.stdout
+
+
+def test_checker_accepts_a_current_markdown_anchor(tmp_path: Path) -> None:
+    doc = tmp_path / "doc.md"
+    doc.write_text(
+        "See [output semantics](correlation.md#11-orthogonal-output-semantics).",
+        encoding="utf-8",
+    )
+    result = _run(str(doc))
+    assert result.returncode == 0, result.stdout
 
 
 def test_checker_ignores_external_citations(tmp_path: Path) -> None:

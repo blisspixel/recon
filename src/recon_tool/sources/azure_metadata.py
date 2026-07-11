@@ -62,21 +62,25 @@ class AzureMetadataSource:
                 return SourceResult(
                     source_name="azure_ad_metadata",
                     error=f"HTTP {exc.response.status_code} from Azure AD metadata endpoint",
+                    source_unavailable=exc.response.status_code == 429 or exc.response.status_code >= 500,
                 )
             except ValueError:
                 return SourceResult(
                     source_name="azure_ad_metadata",
                     error="Invalid JSON from Azure AD metadata endpoint",
+                    source_unavailable=True,
                 )
             except httpx.HTTPError as exc:
                 return SourceResult(
                     source_name="azure_ad_metadata",
                     error=f"Network error querying Azure AD metadata endpoint: {exc}",
+                    source_unavailable=True,
                 )
             if not isinstance(data, dict):
                 return SourceResult(
                     source_name="azure_ad_metadata",
                     error="Invalid JSON response shape from Azure AD metadata endpoint",
+                    source_unavailable=True,
                 )
             # Scrub control bytes and bound the tenant-influenced region at the
             # source. This source runs outside the default pool (direct/sequential

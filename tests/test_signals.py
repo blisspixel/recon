@@ -2,8 +2,15 @@
 
 from __future__ import annotations
 
+from recon_tool.merger import build_insights_with_signals
 from recon_tool.models import SignalContext
-from recon_tool.signals import evaluate_signals, load_signals
+from recon_tool.signals import (
+    canonicalize_signal_observation,
+    evaluate_signals,
+    load_signals,
+    signal_observation_label,
+    signal_rule_names_from_observation,
+)
 
 
 def _ctx(
@@ -132,11 +139,11 @@ class TestEvaluateSignals:
         names = {r.name for r in results}
         assert "Security Gap — Gateway Without DMARC Enforcement" in names
 
-    def test_gateway_without_dmarc_fires_when_dmarc_missing(self):
-        """Gateway present + no DMARC at all = inconsistency signal fires."""
+    def test_gateway_without_dmarc_does_not_treat_unknown_as_inequality(self):
+        """An unknown DMARC value cannot satisfy a declarative neq condition."""
         results = evaluate_signals(_ctx({"mimecast"}, dmarc_policy=None))
         names = {r.name for r in results}
-        assert "Security Gap — Gateway Without DMARC Enforcement" in names
+        assert "Security Gap \N{EM DASH} Gateway Without DMARC Enforcement" not in names
 
     def test_gateway_with_dmarc_reject_does_not_fire(self):
         """Gateway present + DMARC reject = no inconsistency."""
@@ -155,6 +162,88 @@ class TestEvaluateSignals:
         results = evaluate_signals(_ctx({"proofpoint"}, dmarc_policy="quarantine", dmarc_effective_policy="none"))
         names = {r.name for r in results}
         assert any("Gateway Without DMARC Enforcement" in name for name in names)
+
+
+class TestSignalObservationContract:
+    def test_labels_round_trip_to_stable_rule_ids(self):
+        label = signal_observation_label("AI Adoption")
+
+        assert label == "AI-platform indicators observed"
+        assert signal_rule_names_from_observation(f"{label}: OpenAI") == ("AI Adoption",)
+        assert signal_rule_names_from_observation("AI Adoption: OpenAI") == ("AI Adoption",)
+
+    def test_nonreportable_rules_have_no_public_or_delta_projection(self):
+        for rule_name in ("Incomplete Identity Migration", "Dual Email Delivery Path"):
+            assert signal_observation_label(rule_name) is None
+            assert signal_rule_names_from_observation(f"{rule_name}: Okta") == ()
+
+    def test_cached_raw_signal_text_is_canonicalized(self):
+        assert canonicalize_signal_observation("AI Adoption: OpenAI") == ("AI-platform indicators observed: OpenAI")
+        assert canonicalize_signal_observation("Incomplete Identity Migration: Okta") is None
+        assert (
+            canonicalize_signal_observation(
+                "Edge Layering \N{EM DASH} Hardening Pattern Observed: fits deliberate hardening"
+            )
+            is None
+        )
+        assert (
+            canonicalize_signal_observation("High-maturity hardening pattern (observed): dormant or parked domain")
+            is None
+        )
+        assert canonicalize_signal_observation("Unrelated observation") == "Unrelated observation"
+
+    def test_generic_indicators_do_not_become_operational_claims(self):
+        insights = build_insights_with_signals(
+            services=set(),
+            slugs={
+                "anthropic",
+                "openai",
+                "github",
+                "gitlab",
+                "okta",
+                "zscaler",
+                "crowdstrike",
+                "microsoft365",
+                "google-workspace",
+                "proofpoint",
+            },
+            auth_type=None,
+            dmarc_policy="none",
+            domain_count=0,
+            email_security_score=0,
+            primary_email_provider="Microsoft 365",
+        )
+        rendered = "\n".join(insights).lower()
+
+        for forbidden in (
+            "ai adoption",
+            "dev & engineering heavy",
+            "enterprise security stack",
+            "zero trust",
+            "sase",
+            "migration",
+            "dual email provider",
+            "dual email delivery path",
+            "email gateway topology",
+        ):
+            assert forbidden not in rendered
+
+        assert "ai-platform indicators" in rendered
+        assert "developer-tool indicators" in rendered
+        assert "email-security vendor and primary-provider indicators" in rendered
+
+    def test_generic_proofpoint_indicator_does_not_claim_gateway(self):
+        insights = build_insights_with_signals(
+            services=set(),
+            slugs={"proofpoint"},
+            auth_type=None,
+            dmarc_policy="none",
+            domain_count=0,
+            email_security_score=0,
+        )
+
+        assert any("Email-security vendor indicator" in insight for insight in insights)
+        assert not any("gateway" in insight.lower() or "active" in insight.lower() for insight in insights)
 
 
 class TestReloadFingerprints:

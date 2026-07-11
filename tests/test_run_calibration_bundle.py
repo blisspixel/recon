@@ -74,6 +74,9 @@ CONFORMAL = {
         "mean_coverage": 0.92,
         "min_coverage": 0.86,
         "mean_set_size": 1.18,
+        "mean_singleton_rate": 0.76,
+        "mean_multi_label_rate": 0.21,
+        "mean_empty_set_rate": 0.03,
     },
 }
 
@@ -171,7 +174,8 @@ def test_run_bundle_writes_json_memo_and_meta(tmp_path) -> None:
     memo = outputs.memo_md.read_text(encoding="utf-8")
     assert "Disclosure Controls" in memo
     assert "M365 DNS-only Stratified Corroboration" in memo
-    assert "Conformal Coverage" in memo
+    assert "Conformal Re-split Diagnostics" in memo
+    assert "no future-point coverage claim" in memo
     meta = json.loads(outputs.meta_json.read_text(encoding="utf-8"))
     assert meta["strata_count"] == 3
     assert meta["eligible_strata_count"] == 2

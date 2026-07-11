@@ -81,10 +81,28 @@ def fully_populated_tenant_info() -> TenantInfo:
         ),
         evidence=(
             EvidenceRecord(
-                source_type="TXT",
+                source_type="SPF",
                 raw_value="v=spf1 include:spf.protection.outlook.com ~all",
                 rule_name="SPF M365",
                 slug="microsoft365",
+            ),
+            EvidenceRecord(
+                source_type="MX",
+                raw_value="10 contoso-com.mail.protection.outlook.com",
+                rule_name="Microsoft 365",
+                slug="microsoft365",
+            ),
+            EvidenceRecord(
+                source_type="MX",
+                raw_value="20 mx.proofpoint.example",
+                rule_name="Proofpoint",
+                slug="proofpoint",
+            ),
+            EvidenceRecord(
+                source_type="TXT",
+                raw_value="slack-domain-verification=opaque",
+                rule_name="Slack",
+                slug="slack",
             ),
         ),
         evidence_confidence=ConfidenceLevel.HIGH,

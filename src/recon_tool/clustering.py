@@ -2,10 +2,9 @@
 
 Batch-scope correlation: when the same ``google-site-verification``,
 ``MS=``, or similar TXT verification token appears on multiple domains
-in a single batch run, those domains are *possibly related* (shared
-operator, subsidiary, acquisition, or cross-company infrastructure).
-The clustering is hedged — the output never commits to a verdict,
-only surfaces the observation.
+in a single batch run, recon reports the exact token reuse. Shared
+administration is one compatible explanation, alongside copied configuration,
+managed service, or stale residue. The output never chooses among them.
 
 This module is a pure function layer. It takes a list of
 ``TenantInfo`` (or a list of ``(domain, tokens)`` pairs) and returns a
@@ -15,19 +14,15 @@ the caller — batch runs throw it away when they finish; the MCP tool
 re-computes on demand from cached ``TenantInfo``.
 
 Design rationale
-    Site-verification tokens are issued per-account by the SaaS
-    provider (Google, Microsoft, Atlassian, Zoom, etc.). A reused
-    token across two apex domains means the same account provisioned
-    the verification, which in turn implies a shared operator — but
-    does NOT prove corporate identity. Common false-positive cases:
-    a managed-services provider handling DNS for multiple customers,
-    a historical migration where the same admin owned both before the
-    split, a subsidiary that kept the parent's account. The observation
-    is genuinely two-sided and stays hedged.
+    Site-verification tokens are administrative DNS evidence. Exact reuse is
+    observable, but the public record does not establish whether it came from
+    one account, copied configuration, a managed-services provider, or stale
+    residue. It therefore does not establish shared control, ownership, or
+    current product use.
 
     This is intentionally weaker than brand-matching or legal-name
-    correlation. It's the passive observation floor: *these domains
-    are linked by at least one operator-scoped credential*.
+    correlation. The passive observation is only that the same token string
+    was published at both domains.
 """
 
 from __future__ import annotations
@@ -52,10 +47,8 @@ __all__ = [
 class TenantCluster:
     """Domains that share the same Microsoft 365 tenant ID.
 
-    This is a cryptographically strong signal — two domains under the
-    same tenant ID are provably registered to the same M365 customer
-    account. Unlike token-sharing or display-name matching, this is
-    not hedged.
+    This is a strong provider-attested administrative co-tenancy observation.
+    It does not establish ownership, corporate identity, or product use.
     """
 
     tenant_id: str
@@ -116,7 +109,7 @@ _WS_RE = re.compile(r"[\s,\-_/]+")
 
 @dataclass(frozen=True)
 class ClusterEntry:
-    """A shared-token peer relationship between two domains.
+    """An exact shared-token overlap between two domains.
 
     ``token`` is the verification token that both domains carry.
     ``peer`` is the other domain (relative to the subject domain when
@@ -157,9 +150,9 @@ def cluster_tokens(
 
     Returns:
         Mapping from each normalized token to the set of domain names
-        that carry it. Tokens that appear on only one domain are
-        included in the output but with a singleton set — callers
-        filter for len >= 2 when surfacing peer relationships.
+        that carry it. Tokens that appear on only one domain are included in
+        the output but with a singleton set; callers filter for length at least
+        two when surfacing overlap.
     """
     token_map: dict[str, set[str]] = defaultdict(set)
     for domain, tokens in domain_tokens.items():
@@ -175,9 +168,8 @@ def cluster_tokens(
     return dict(token_map)
 
 
-# A single token shared by more than this many domains is treated as
-# low-signal noise (e.g. a managed-DNS provider's common verification
-# record) and skipped. It also bounds the per-token peer cross-product
+# A single token shared by more than this many domains is treated as a
+# low-specificity cohort coincidence and skipped. It also bounds the per-token peer cross-product
 # below: the CLI batch path allows up to 10k domains, and a token shared
 # across all of them would otherwise materialize ~k^2 ClusterEntry objects.
 _MAX_CLUSTER_DOMAINS_PER_TOKEN = 200
@@ -186,7 +178,7 @@ _MAX_CLUSTER_DOMAINS_PER_TOKEN = 200
 def compute_shared_tokens(
     domain_tokens: dict[str, tuple[str, ...]],
 ) -> dict[str, tuple[ClusterEntry, ...]]:
-    """Compute peer relationships for each domain.
+    """Compute exact shared-token peer entries for each domain.
 
     Args:
         domain_tokens: Mapping from domain to verification tokens.
@@ -195,8 +187,10 @@ def compute_shared_tokens(
         Mapping from each domain to a tuple of ClusterEntry values
         listing the tokens that link it to at least one other domain
         in the input, and the peer that shares each token. Domains
-        with no shared tokens are omitted from the output entirely —
-        callers can iterate freely without filtering.
+        with no surfaced shared tokens are omitted from the output entirely.
+        This function also omits tokens above
+        ``_MAX_CLUSTER_DOMAINS_PER_TOKEN``; an empty result is therefore not a
+        completeness certificate for batches larger than that cap.
 
     Invariants:
         * Symmetric — if A shares token X with B, both A's and B's
@@ -213,10 +207,10 @@ def compute_shared_tokens(
     for token, domains in token_map.items():
         if len(domains) < 2:
             continue
-        # Skip very high-cardinality tokens: a token shared by hundreds of
-        # domains is noise (a shared provider record), not a meaningful
-        # relationship, and the peer cross-product below is O(k^2). Skipping
-        # keeps a 10k-domain CLI batch from spiking CPU/memory on one token.
+        # Skip very high-cardinality tokens: the observation is low-specificity
+        # and the peer cross-product below is O(k^2). Skipping keeps a 10k-domain
+        # CLI batch from spiking CPU or memory on one token. Callers must not
+        # interpret omitted output as proof that no reuse was observed.
         if len(domains) > _MAX_CLUSTER_DOMAINS_PER_TOKEN:
             continue
         # For each domain in the cluster, every other domain is a peer

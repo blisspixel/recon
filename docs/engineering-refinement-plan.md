@@ -1,7 +1,7 @@
 # Engineering Refinement Plan
 
 Status: active implementation plan
-Review date: 2026-07-10
+Review date: 2026-07-11
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
 engineering tracks. It does not authorize unrelated runtime expansion. Every
@@ -10,16 +10,20 @@ track preserves the public-metadata-only boundary in
 discipline in [ADR-0002](adr/0002-mnar-adversarial-absence.md), and stable v2
 contract discipline in [ADR-0003](adr/0003-v2-schema-lock.md).
 
+Default collection performs no active scanning or port probing. Authoritative
+DNS may observe recursive-resolver traffic, MTA-STS is the only default
+target-owned HTTP/application request, and the documented Google CSE and BIMI
+certificate requests are explicit opt-in direct probes.
+
 ## Baseline
 
 - v2.3.9 is current on GitHub and PyPI.
 - Local and remote release readiness pass on current main.
 - Meaningful branch-aware coverage is approximately 89 percent, above the 82
   percent enforced project gate and the 80 percent user bar.
-- The ignored local code graph was refreshed from clean main on 2026-07-10 and
-  reported high trust, every graph check passing, and no import cycles. Read
-  `.agent/codegraph/manifest.json` for exact current counts and refresh it after
-  tracked changes.
+- The ignored local code graph must be refreshed after each tracked milestone.
+  Read `.agent/codegraph/manifest.json` for its exact build commit, trust level,
+  checks, and counts rather than copying volatile metrics into this plan.
 - Interface locality, typed lookup options, named high-volume MCP caps,
   generated schema and surface guards, provider-drift checks, and release
   provenance are shipped.
@@ -66,17 +70,23 @@ Risk: high product-trust risk, high compatibility sensitivity
    behavior that keeps absent sovereignty metadata unknown.
 4. Preserve current stable JSON names while correcting presentation and
    inference semantics.
-5. Draft a provenance-envelope ADR before changing `EvidenceRecord` or public
+5. Build one narrow machine-enforced internal claim contract and
+   observation-opportunity ledger before benchmark enrollment or a scored
+   robustness solver. Include positive and authoritative-negative alternatives,
+   unavailable and observed-empty opportunities, dependency units, four-state
+   output, time semantics, and renderer obligations.
+6. Draft a provenance-envelope ADR before changing `EvidenceRecord` or public
    schemas. The ADR must define source family, record owner, observation time,
    scope, and freshness semantics, plus migration and cache behavior.
 
 ### Graph and test guidance
 
-- `models.py` is deceptively central: the graph sees 508 high-confidence
-  symbol-import edges and 669 cross-file call edges into its model surface.
-- `merger.py` is high blast radius with fan-out 31 and contract risk.
+- `models.py` is deceptively central, with a large high-confidence import and
+  cross-file call surface in the current graph.
+- `merger.py` has high blast radius and contract risk.
 - Consult `impact.jsonl`, `edges.jsonl`, `refs.jsonl`, and `checks.json` before
-  touching either file.
+  touching either file, and take exact counts from the current ignored graph
+  rather than this tracked plan.
 - Likely tests include panel golden and disclosure tests, cache round trips,
   schema contracts, explanation DAGs, staleness timestamps, MCP structured
   output, server instructions, generated agent guidance, and merger tests.
@@ -88,6 +98,9 @@ Risk: high product-trust risk, high compatibility sensitivity
   presence.
 - Unknown sovereignty metadata remains unknown.
 - Public-evidence values are not described as overall security scores.
+- The first claim contract passes positive, authoritative-negative, conflict,
+  unavailable, stale, and duplicate-derivation fixtures; its certificate
+  antichains map every derivation to canonical dependency units.
 - Stable JSON remains compatible unless an additive change completes the full
   schema-lock process.
 - Full local CI passes with no coverage regression.
@@ -142,7 +155,8 @@ Detailed phases are in
 ## Track 3: Product-Quality Baseline and Ablation
 
 Status: specified
-Dependencies: Track 1 claim taxonomy
+Dependencies: Track 1's first machine-enforced claim contract and
+observation-opportunity ledger
 Risk: measurement-design and disclosure risk
 
 ### Scope
@@ -167,28 +181,61 @@ The resolver latency, allocation, CT-value, and current-schema measurements are
 produced by Track 5's stable-v1 characterization and consumed by this scorecard;
 they are not measured twice.
 
-Run a predeclared ablation comparing the current inference path against
-deterministic evidence plus explicit abstention. Freeze the decision rule before
-the run. Do not tune it after seeing the result.
+Run a predeclared ablation with four distinct arms: deterministic evidence plus
+explicit abstention, per-slug evidence strength, the strongest reviewed evidence
+unit, and the current Bayesian network. Freeze the decision rule before the run.
+Do not tune it after seeing the result.
 
 Primary design:
 
 - Operator decision: accept one material single-domain claim as supported by
   the public channel, or leave it unresolved.
-- Unit: `(domain, claim_family, observation_time)`, with domain groups kept
-  intact across design and evaluation splits.
+- Unit: one frozen row per domain for one predeclared claim family. Admit at
+  most one domain from each known administrative, ownership, or tenant cluster
+  in the primary analysis. This makes the domain row the Bernoulli unit used by
+  the paired decision rule. Treat any clustered multi-domain analysis as
+  secondary until it defines a cluster-level estimand, outcome, and decision
+  rule. Keep groups intact across parameter development and evaluation.
+- Sampling model: name the target population, eligibility window,
+  stratum-specific sampling frames, and sampling mechanism before collection.
+  Population interpretation of binomial bounds and power requires independent
+  exchangeable units within strata after known-cluster exclusion, or a
+  probability design with matching design-based inference. A fixed or
+  purposively selected corpus yields only an empirical corpus effect; its
+  binomial bounds are model-based and cannot support population promotion.
 - Independent labels: provider-owned endpoints, standards-defined records, or
   other predeclared authoritative sources not consumed by the compared
   predictor. Unlabeled families report coverage and corroboration diagnostics,
   not precision.
-- Minimum: 100 independently labeled units per primary family, including at
-  least 30 reference-positive, 30 reference-negative, and 30 emitted-claim
-  units. Smaller strata are descriptive only.
-- Go or no-go: fusion remains primary only when a predeclared paired 95 percent
-  interval shows a positive supported-claim coverage gain and its upper bound
-  shows no increase in unsupported emitted claims relative to deterministic
-  evidence plus abstention. Inconclusive or negative results move fusion to an
-  advanced diagnostic.
+- Minimum: 100 independently labeled primary sampling units, including at least
+  30 reference-positive and 30 reference-negative units. Run a power analysis
+  under the exact paired rule and plausible discordances before collection.
+  Supported-emission count governs whether selective risk is estimable, not
+  primary-gate eligibility.
+- Evaluation: reference-positive support rate and reference-negative
+  unsupported-emission rate are co-primary. Report abstention, tie-preserving
+  reliability, selective risk versus coverage, provenance completeness,
+  latency, and allocation as secondary measures. Report Brier and log score
+  only for an arm whose total frozen forecast is explicitly interpreted as
+  `P(reference-positive | frozen inputs)` on every eligible two-class row and
+  has a predeclared abstention convention. An evidence-strength score qualifies
+  only after its mapping is fitted on disjoint development data and frozen.
+  Otherwise omit proper-score comparison or label a plug-in loss descriptive.
+- Weighting: if label strata are sampled at different rates, pooled abstention,
+  unresolved, overall emission, proper scores, reliability, and selective risk
+  require known inclusion probabilities and frozen design or
+  post-stratification weights for the target population. Otherwise report
+  stratum-specific or fixed-sample descriptive values without a population
+  rate or calibration claim.
+- Go or no-go: within each label stratum, use conservative one-sided 95 percent
+  bounds on candidate-only minus baseline-only support from
+  Bonferroni-adjusted Clopper-Pearson discordance bounds. Fusion remains primary
+  only when the positive-stratum benefit lower bound exceeds zero, the
+  negative-stratum safety upper bound is below a predeclared positive absolute
+  noninferiority margin, and the candidate introduces no unsupported emission
+  on a negative unit left unresolved by the baseline. Inconclusive or negative
+  results move fusion to an advanced diagnostic. Bootstrap intervals remain
+  secondary and cannot rescue the gate.
 
 ### Acceptance
 
@@ -203,6 +250,29 @@ Primary design:
 - A negative or mixed result is recorded without relabeling it as success.
 - Each proposed inference, source, graph, or catalog change names a target
   metric before implementation.
+
+Dependency-ordered work around this decision:
+
+- Before benchmark enrollment or any scored solver, build one internal
+  machine-enforced claim contract and observation-opportunity ledger. Require
+  separate positive and authoritative-negative certificate antichains,
+  explicit opportunity atoms, dependency groups, four-state output,
+  duplicate-derivation invariance, and incomplete-provenance diagnostics.
+- After the first contract is stable, define a caller-held observation capsule
+  and separate observation, collection-regime, time-evaluation, and
+  interpretation deltas before statistical temporal modeling.
+- Prototype provenance-constrained Boolean must/may robustness in
+  [correlation.md](correlation.md) behind an advanced-only surface. Prefer
+  Pareto or lexicographic budgets across unlike manipulation classes. Keep any
+  robust score envelope secondary. Require finite-prototype witnesses or
+  declared epsilon-optimal witnesses, minimal inverse and forward certificates,
+  and exact agreement on bounded fixtures. Promote it only if it beats
+  deterministic abstention on a predeclared operator outcome.
+- Qualify the CT graph by comparing its clique projection with fixed-total
+  certificate weighting and bipartite or hypergraph representations. Separate
+  seed, data, and model stability; include a degree-aware null and heavy-tailed
+  multi-tenant fixtures. Do not add a graph dependency before a simpler method
+  leaves a measured residual gap.
 
 ## Track 4: Dimensioned Email Observations
 
@@ -362,8 +432,9 @@ tighter file-size ratchets. Consider `merger.py` only after the interface splits
 
 - No remote MCP server, OAuth, Apps, Tasks, Roots, Sampling, or protocol logging
   without a named consumer and new architecture review.
-- No active probing, port scanning, credentialed access, paid feeds, or broader
-  target-side HTTP behavior.
+- No active scanning, port probing, credentialed access, paid feeds, or broader
+  target-side HTTP behavior beyond the default MTA-STS request and explicit
+  opt-in Google CSE / BIMI certificate probes.
 - No blanket executor around resolver or detector logic.
 - No stable JSON, CLI, MCP, cache, or import change outside its compatibility
   process.
@@ -375,14 +446,21 @@ tighter file-size ratchets. Consider `merger.py` only after the interface splits
 1. Treat evidence-semantic corrections and the time-bound MCP v2 matrix as two
    independent Now streams. Keep one atomic implementation item in progress at
    a time, but do not make either stream wait on a false technical dependency.
+   Complete the first machine-enforced claim contract before benchmark
+   enrollment.
 2. Run the stable-v1 resolver, allocation, CT-value, and schema
    characterization from Track 5.
 3. Complete the product-quality scorecard and ablation using that artifact.
-4. Decide the dimensioned email-observation model from measured evidence.
-5. Apply candidate-SDK deltas to the Track 5 characterization after Track 2.
-6. Baseline and improve catalog quality.
-7. Measure and, only if justified, simplify operator and agent discovery.
-8. Decompose critical interface hotspots without changing behavior.
+4. Separate observation, collection-regime, time-evaluation, and interpretation
+   deltas with caller-held replayable capsules.
+5. Prototype claim-scoped Boolean robustness only under the formal acceptance
+   and retirement rule.
+6. Qualify or demote CT graph correlation before adding graph machinery.
+7. Decide the dimensioned email-observation model from measured evidence.
+8. Apply candidate-SDK deltas to the Track 5 characterization after Track 2.
+9. Baseline and improve catalog quality.
+10. Measure and, only if justified, simplify operator and agent discovery.
+11. Decompose critical interface hotspots without changing behavior.
 
 Each step closes only with its named acceptance evidence, full local CI, the 82
 percent branch-aware project gate, no regression from the current coverage

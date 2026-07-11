@@ -83,7 +83,7 @@ recon "<domain>"
 Contoso Ltd
 contoso.com
 ──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)
+  Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
   Auth         Federated (Entra ID + Google Workspace)
   Confidence   ●●● High (4 sources)
@@ -98,8 +98,8 @@ Services
 
 Insights
   Federated identity indicators observed (likely Okta - enterprise SSO)
-  Email security 4/5: DMARC reject, DKIM, SPF strict, BIMI
-  Email gateway: Proofpoint in front of Exchange
+  Email security: observed controls: DMARC reject, DKIM, SPF strict, BIMI
+  MX gateway observed: Proofpoint
 ```
 
 That is the shape recon emits. Pass it through unchanged.
@@ -127,7 +127,7 @@ If the user later asks for a structured summary of the JSON, follow the output-v
 
 ### Explain mode - `--explain`
 
-Use when the user asks "why", "how do you know", or "show your reasoning". The CLI emits the panel plus a provenance DAG (`evidence → slug → rule → signal → insight`). The MCP `lookup_tenant(domain, explain=true)` returns the same chain as a structured `explanation_dag` field for programmatic consumption.
+Use when the user asks "why", "how do you know", or "show your reasoning". The CLI emits the panel plus a provenance DAG. Evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. The MCP `lookup_tenant(domain, explain=true)` returns the graph as a structured `explanation_dag` field with explicit completeness diagnostics.
 
 Surface the *summary* of the chain - which evidence drove which insight - rather than dumping the full DAG. Offer the full DAG on follow-up.
 
@@ -141,7 +141,7 @@ When the `recon` MCP server is connected, use it instead of shelling out - it re
 - `find_hardening_gaps(domain)` - categorized gaps with neutral "Consider" notes.
 - `simulate_hardening(domain, fixes=[...])` - what-if scoring with hypothetical fixes applied.
 - `compare_postures(domain_a, domain_b)` - side-by-side comparison of public configuration evidence, not overall security.
-- `cluster_verification_tokens(domains=[...])` - group domains by shared TXT site-verification tokens (hedged "possible relationship" signal).
+- `cluster_verification_tokens(domains=[...])` - report exact administrative TXT token reuse while leaving shared administration, copied configuration, managed service, and stale residue as compatible explanations.
 - `chain_lookup(domain, depth)` - recursive related-domain discovery via CNAME and CT breadcrumbs.
 
 Browse `recon://fingerprints`, `recon://signals`, and `recon://profiles` resources before guessing what recon can detect - they're free (no network) and return the live catalog.
@@ -157,7 +157,7 @@ Most of the analysis the MCP tools expose is reachable from the CLI too. Reach f
 
 - `recon <domain> --exposure --json` produces the 0-100 model-bound public-evidence index. This is the CLI equivalent of `assess_exposure`; the plain panel does not carry this compatibility value, and it is not an overall security score.
 - `recon <domain> --gaps --json` produces the categorized hardening gaps with neutral "Consider" notes. CLI equivalent of `find_hardening_gaps`.
-- `recon <domain> --fusion` adds the Bayesian per-slug posteriors. `recon <domain> --explain-dag --explain-dag-format mermaid` renders the evidence DAG inline in chat. CLI equivalent of `get_posteriors` and `explain_dag`.
+- `recon <domain> --fusion` adds per-slug evidence strength and model-relative Bayesian diagnostics. `recon <domain> --explain-dag --explain-dag-format mermaid` renders the evidence DAG inline in chat. CLI equivalent of `get_posteriors` and `explain_dag`.
 
 What stays MCP-only, because it needs cached session state or an iterative loop: `simulate_hardening` what-if loops, the ephemeral-fingerprint reevaluate loop (`inject_ephemeral_fingerprint` then `reevaluate_domain` without re-resolving), live two-domain `compare_postures`, and `test_hypothesis`. When the MCP server is not connected and the user asks for one of these, say so plainly rather than approximating it.
 
@@ -172,7 +172,7 @@ Single-domain assessment (the common case):
 
 Vendor diligence across many domains:
 
-1. `cluster_verification_tokens` over the list to find shared-credential clusters.
+1. `cluster_verification_tokens` over the list to find exact token-reuse groups.
 2. `lookup_tenant` only the domains the user wants to drill into - don't fan out unprompted.
 
 Family-of-companies / portfolio rollup:
@@ -181,7 +181,7 @@ The operator supplies a group of related apexes - parent + subsidiaries, an M&A 
 
 1. **Confirm the input list explicitly.** Ask for the apexes one per line; do not derive them from a company name or external research. The operator's list is authoritative.
 2. **Fan out.** For ~5 or fewer apexes, call `lookup_tenant(domain, explain=true)` per apex. For larger sets, `recon batch <file> --json --include-ecosystem` returns the per-domain lookups plus the v1.8 ecosystem hypergraph and cross-domain token clustering in one payload.
-3. **Sanity-check the asserted relationship.** `cluster_verification_tokens(domains=[...])` surfaces shared TXT verification tokens - a hedged "consistent with stated relationship" signal. Their absence is also worth reporting: *"no shared verification tokens observed; the brands appear administratively separate at the DNS level."*
+3. **Report administrative token overlap without validating the relationship.** `cluster_verification_tokens(domains=[...])` surfaces exact shared TXT token strings. Reuse is compatible with shared administration, copied configuration, managed service, or stale residue. Absence is non-informative because publication is optional; do not call the domains administratively separate.
 4. **Synthesize the rollup along these axes:**
    - Identity stack consistency - same M365 tenant across siblings, or distinct tenants per brand?
    - Email gateway consistency - same Proofpoint / Mimecast / Cisco upstream, mixed, or none?
@@ -266,7 +266,7 @@ the detail for each lives in the section above.
 - **`--full --json` is 3-10 KB; never dump it inline.** Save it to a file and reply with the 3-line headline. Inline JSON burns context for no benefit.
 - **Do not test MCP connectivity by calling a tool.** Read your own tool list for `mcp__recon__*`; a speculative call to "check" is a wasted, confusing round-trip.
 - **`--exposure` / `assess_exposure` is cache first and may resolve on a miss.** The index calculation adds no network calls after the ordinary base lookup. Do not imply that the 0-100 value comes from a separate scan or measures overall security.
-- **Low confidence means sparse DNS, not a suspicious org.** Sparse output is the passive-collection ceiling, not a finding. Do not manufacture confidence or insinuation.
+- **Low confidence means sparse DNS, not a suspicious org.** Sparse output marks limited public evidence, not a finding or calibrated uncertainty level. Do not manufacture confidence or insinuation.
 - **Do not guess a profile from a thin hint.** A wrong posture lens skews emphasis; omit `--profile` when the target type is unclear.
 - **Serve cache honestly.** Check `resolved_at` / `cached_at`; if the user wants current data and the entry is old, offer to re-resolve rather than passing stale data as fresh.
 

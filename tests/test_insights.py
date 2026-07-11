@@ -10,7 +10,7 @@ from rich.console import Console
 
 from recon_tool.formatter import format_tenant_json, render_tenant_panel
 from recon_tool.insights import generate_insights
-from recon_tool.models import ConfidenceLevel, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
 _ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
 
@@ -69,15 +69,17 @@ class TestInsightGeneration:
             0,
             primary_email_provider="Microsoft 365",
         )
-        assert any("No DMARC" in i for i in insights)
+        assert any("No valid DMARC policy record observed" in i for i in insights)
 
-    def test_large_enterprise_domains(self):
+    def test_large_tenant_domain_count_does_not_infer_organization_size(self):
         insights = generate_insights(set(), set(), None, None, 25)
-        assert any("large enterprise" in i for i in insights)
+        assert "Microsoft tenant discovery returned 25 domains" in insights
+        assert not any("enterprise" in i.lower() or "organization" in i.lower() for i in insights)
 
-    def test_midsize_domains(self):
+    def test_midrange_tenant_domain_count_does_not_infer_organization_size(self):
         insights = generate_insights(set(), set(), None, None, 8)
-        assert any("mid-size" in i for i in insights)
+        assert "Microsoft tenant discovery returned 8 domains" in insights
+        assert not any("mid-size" in i.lower() for i in insights)
 
     def test_small_domain_count(self):
         insights = generate_insights(set(), set(), None, None, 3)
@@ -86,24 +88,27 @@ class TestInsightGeneration:
     def test_proofpoint_gateway(self):
         services = {"Exchange Online"}
         slugs = {"microsoft365", "proofpoint"}
-        insights = generate_insights(services, slugs, None, None, 0)
-        assert any("Proofpoint" in i and "gateway" in i.lower() for i in insights)
+        insights = generate_insights(services, slugs, None, None, 0, email_gateway="Proofpoint")
+        assert "MX gateway observed: Proofpoint" in insights
+        assert not any("in front of" in i.lower() or "delivery path" in i.lower() for i in insights)
 
     def test_mimecast_gateway(self):
         services = {"Exchange Online"}
         slugs = {"microsoft365", "mimecast"}
-        insights = generate_insights(services, slugs, None, None, 0)
-        assert any("Mimecast" in i for i in insights)
+        insights = generate_insights(services, slugs, None, None, 0, email_gateway="Mimecast")
+        assert "MX gateway observed: Mimecast" in insights
 
-    def test_google_mx_microsoft_txt_migration(self):
+    def test_google_and_microsoft_provider_indicators_are_co_observed(self):
         slugs = {"google-workspace", "microsoft365"}
         insights = generate_insights(set(), slugs, None, None, 0)
-        assert any("dual provider" in i.lower() for i in insights)
+        assert "Provider indicators co-observed: Google Workspace, Microsoft 365" in insights
+        assert not any("migration" in i.lower() or "coexistence" in i.lower() for i in insights)
 
-    def test_exchange_mx_google_spf_migration(self):
+    def test_provider_overlap_does_not_claim_migration(self):
         slugs = {"microsoft365", "google-workspace"}
         insights = generate_insights(set(), slugs, None, None, 0)
-        assert any("dual provider" in i.lower() for i in insights)
+        assert "Provider indicators co-observed: Google Workspace, Microsoft 365" in insights
+        assert not any("migration" in i.lower() for i in insights)
 
     def test_google_site_verified_no_migration(self):
         """google-site-verification alone should NOT trigger migration signal."""
@@ -128,11 +133,12 @@ class TestInsightGeneration:
         insights = generate_insights(set(), {"okta"}, None, None, 0)
         assert any("Okta" in i for i in insights)
 
-    def test_dual_mdm(self):
+    def test_device_management_vendor_overlap(self):
         services = {"Intune / MDM"}
         slugs = {"microsoft365", "jamf"}
         insights = generate_insights(services, slugs, None, None, 0)
-        assert any("Dual MDM" in i for i in insights)
+        assert "Device-management vendor indicators observed: Intune, Jamf" in insights
+        assert not any("fleet" in i.lower() or "windows" in i.lower() for i in insights)
 
     def test_jamf_only(self):
         insights = generate_insights(set(), {"jamf"}, None, None, 0)
@@ -151,19 +157,19 @@ class TestInsightGeneration:
     def test_barracuda_gateway(self):
         services = {"Exchange Online"}
         slugs = {"microsoft365", "barracuda"}
-        insights = generate_insights(services, slugs, None, None, 0)
-        assert any("Barracuda" in i for i in insights)
+        insights = generate_insights(services, slugs, None, None, 0, email_gateway="Barracuda")
+        assert "MX gateway observed: Barracuda" in insights
 
     def test_cisco_email_gateway(self):
         services = {"Exchange Online"}
         slugs = {"microsoft365", "cisco-ironport"}
-        insights = generate_insights(services, slugs, None, None, 0)
-        assert any("Cisco" in i for i in insights)
+        insights = generate_insights(services, slugs, None, None, 0, email_gateway="Cisco IronPort")
+        assert "MX gateway observed: Cisco IronPort" in insights
 
     def test_gateway_without_exchange(self):
         slugs = {"proofpoint"}
-        insights = generate_insights(set(), slugs, None, None, 0)
-        assert any("Proofpoint" in i for i in insights)
+        insights = generate_insights(set(), slugs, None, None, 0, email_gateway="Proofpoint")
+        assert "MX gateway observed: Proofpoint" in insights
 
     def test_sparse_edge_heavy_run_gets_specific_guidance(self):
         insights = generate_insights(
@@ -172,20 +178,25 @@ class TestInsightGeneration:
             None,
             "reject",
             0,
+            evidence=(
+                EvidenceRecord("NS", "ns.cloudflare.com", "DNS: Cloudflare", "cloudflare"),
+                EvidenceRecord("CNAME", "edge.cloudflare.net", "CDN: Cloudflare", "cloudflare"),
+            ),
         )
         assert any("edge-heavy footprint" in i for i in insights)
         assert any("docs/weak-areas.md" in i for i in insights)
 
-    def test_sparse_self_hosted_mail_run_gets_specific_guidance(self):
+    def test_sparse_unclassified_mx_run_gets_bounded_guidance(self):
         insights = generate_insights(
-            {"Self-hosted mail", "DMARC"},
+            {"Custom or unclassified MX", "DMARC"},
             {"self-hosted-mail"},
             None,
             "reject",
             0,
             has_mx_records=True,
         )
-        assert any("self-hosted mail infrastructure" in i for i in insights)
+        assert any("custom or unclassified MX" in i for i in insights)
+        assert not any("self-hosted" in i.lower() or "hybrid" in i.lower() for i in insights)
 
 
 class TestTieredOutput:
@@ -223,6 +234,23 @@ class TestTieredOutput:
         assert "DMARC: reject" in output
         assert "Tech Stack:" not in output
         assert "M365:" not in output
+
+    def test_default_curates_exact_vendor_and_topology_restatements(self):
+        info = self._make_info(
+            insights=(
+                "Security-vendor indicators observed: CrowdStrike (endpoint)",
+                "Network-security vendor indicator observed: Zscaler",
+                "Device-management vendor indicator observed: Intune",
+                "Google Workspace module indicators observed: Drive",
+                "Provider indicators co-observed: Google Workspace, Microsoft 365",
+                "MX gateway observed: Proofpoint",
+            )
+        )
+
+        output = self._render(render_tenant_panel(info))
+
+        for restatement in info.insights:
+            assert restatement not in output
 
     def test_services_flag_shows_services(self):
         info = self._make_info()

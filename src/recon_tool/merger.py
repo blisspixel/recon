@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 from typing import Any, NamedTuple
 
 from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
@@ -21,6 +20,7 @@ from recon_tool.constants import (
 from recon_tool.constants import (
     email_security_score as _email_security_score,
 )
+from recon_tool.email_security import claim_safe_email_services, observed_email_control_services
 from recon_tool.insights import generate_insights
 from recon_tool.lexical import lexical_observations
 from recon_tool.models import (
@@ -39,13 +39,14 @@ from recon_tool.models import (
     TenantInfo,
     UnclassifiedCnameChain,
 )
-from recon_tool.signals import evaluate_signals, load_signals
+from recon_tool.signals import SignalMatch, evaluate_signals, load_signals, signal_observation_label
 from recon_tool.validator import strip_control_chars
 
 __all__ = [
     "build_insights_with_signals",
     "compute_confidence",
     "compute_detection_scores",
+    "compute_email_topology",
     "compute_evidence_confidence",
     "compute_inference_confidence",
     "merge_results",
@@ -103,7 +104,19 @@ def _dedup_variant_slugs(slugs: tuple[str, ...]) -> tuple[str, ...]:
     return tuple(out)
 
 
-def _compute_email_topology(
+def _render_signal_observation(signal: SignalMatch) -> str | None:
+    """Render one signal without upgrading catalog matches into active use."""
+    label = signal_observation_label(signal.name)
+    if label is None:
+        return None
+    if not signal.matched:
+        return label
+    deduped = _dedup_variant_slugs(signal.matched)
+    matched_names = ", ".join(_humanize_slug(slug) for slug in deduped)
+    return f"{label}: {matched_names}"
+
+
+def compute_email_topology(
     evidence: tuple[EvidenceRecord, ...],
 ) -> tuple[str | None, str | None, str | None]:
     """Compute email topology from evidence records.
@@ -140,38 +153,26 @@ def _compute_email_topology(
     provider_names = sorted(_EMAIL_PROVIDER_SLUG_NAMES[s] for s in provider_slugs if s in _EMAIL_PROVIDER_SLUG_NAMES)
     primary_email_provider = " + ".join(provider_names) if provider_names else None
 
-    # Inference: when a gateway is present but no MX-based primary, look at
-    # non-MX evidence for provider slugs. Two tiers:
-    #
-    # (1) DKIM evidence — strong. DKIM selectors prove the provider handles
-    #     email signing for this domain. Promotes to primary_email_provider.
-    #
-    # (2) Other non-MX evidence (TXT tokens, OIDC, UserRealm) — weaker.
-    #     Sets likely_primary_email_provider (hedged).
-    #
-    # Only fires if an actual gateway is in MX — without that anchor we
-    # can't distinguish legacy residue from a missed primary.
+    # When a gateway is present but no MX-based primary, non-MX provider
+    # evidence can identify a plausible downstream only. DKIM establishes a
+    # signing role, not the primary inbound mailbox system, so every such result
+    # remains in the explicitly hedged likely-primary field.
     likely_primary_email_provider: str | None = None
     if email_gateway and primary_email_provider is None:
-        # Tier 1: DKIM-confirmed providers (strong signal)
-        dkim_provider_slugs = {
-            e.slug for e in evidence if e.source_type == "DKIM" and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
+        non_mx_provider_slugs = {
+            e.slug
+            for e in evidence
+            if e.source_type in _PROVIDER_INFERENCE_SOURCES and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
         }
-        if dkim_provider_slugs:
-            dkim_names = sorted(_LIKELY_PROVIDER_SLUG_NAMES[s] for s in dkim_provider_slugs)
-            primary_email_provider = " + ".join(dkim_names)
-        else:
-            # Tier 2: weaker non-MX evidence
-            non_mx_provider_slugs = {
-                e.slug
-                for e in evidence
-                if e.source_type in _PROVIDER_INFERENCE_SOURCES and e.slug in _LIKELY_PROVIDER_SLUG_NAMES
-            }
-            if non_mx_provider_slugs:
-                likely_names = sorted(_LIKELY_PROVIDER_SLUG_NAMES[s] for s in non_mx_provider_slugs)
-                likely_primary_email_provider = " + ".join(likely_names)
+        if non_mx_provider_slugs:
+            likely_names = sorted(_LIKELY_PROVIDER_SLUG_NAMES[s] for s in non_mx_provider_slugs)
+            likely_primary_email_provider = " + ".join(likely_names)
 
     return primary_email_provider, email_gateway, likely_primary_email_provider
+
+
+# Compatibility alias for existing internal tests and integrations.
+_compute_email_topology = compute_email_topology
 
 
 def _downgrade_confidence(level: ConfidenceLevel) -> ConfidenceLevel:
@@ -273,6 +274,7 @@ def build_insights_with_signals(
     msgraph_host: str | None = None,
     has_mx_records: bool = False,
     dmarc_effective_policy: str | None = None,
+    evidence: tuple[EvidenceRecord, ...] = (),
 ) -> list[str]:
     """Generate insights and append signal intelligence.
 
@@ -297,6 +299,7 @@ def build_insights_with_signals(
         email_gateway=email_gateway,
         has_mx_records=has_mx_records,
         dmarc_effective_policy=dmarc_effective_policy,
+        evidence=evidence,
     )
     context = SignalContext(
         detected_slugs=frozenset(slugs),
@@ -312,29 +315,17 @@ def build_insights_with_signals(
     )
     active_signals = evaluate_signals(context)
     for sig in active_signals:
-        # Hardening: meta-signals (requires_signals only, no
-        # candidates) have empty sig.matched. Emit a bare name instead
-        # of a "Name: " dead-end that used to render with no value.
-        # Also humanize known slugs and dedup variant slugs so
-        # insight text doesn't leak raw identifiers like
-        # "google-managed" to users.
-        if sig.matched:
-            deduped = _dedup_variant_slugs(tuple(sig.matched))
-            matched_names = ", ".join(_humanize_slug(s) for s in deduped)
-            insights.append(f"{sig.name}: {matched_names}")
-        else:
-            insights.append(sig.name)
+        observation = _render_signal_observation(sig)
+        if observation is not None and observation not in insights:
+            insights.append(observation)
 
     # Third pass: absence evaluation (missing counterparts)
     all_signal_defs = load_signals()
     absence_signals = evaluate_absence_signals(active_signals, all_signal_defs, context.detected_slugs)
     for sig in absence_signals:
-        if sig.matched:
-            deduped = _dedup_variant_slugs(tuple(sig.matched))
-            matched_names = ", ".join(_humanize_slug(s) for s in deduped)
-            insights.append(f"{sig.name}: {matched_names}")
-        else:
-            insights.append(sig.name)
+        observation = _render_signal_observation(sig)
+        if observation is not None and observation not in insights:
+            insights.append(observation)
 
     # Positive-when-absent pass for hedged hardening observations.
     # Runs on the *base* fired set (not including absence signals) so a
@@ -497,14 +488,10 @@ def _raise_if_all_sources_failed(results: list[SourceResult], queried_domain: st
     )
 
 
-def _resolve_display_name(display_name: str | None, bimi_identity: BIMIIdentity | None, queried_domain: str) -> str:
-    """Pick the best display name, preferring a real name, then BIMI VMC org, then the domain."""
+def _resolve_display_name(display_name: str | None, queried_domain: str) -> str:
+    """Use an observed identity brand when available, otherwise the domain."""
     if display_name is not None and not _is_placeholder_name(display_name):
         return display_name
-    # BIMI VMC organization name as fallback. Otherwise prefer the queried domain
-    # over a raw tenant_id UUID, which reads as debugging output.
-    if bimi_identity is not None and bimi_identity.organization:
-        return bimi_identity.organization
     return queried_domain
 
 
@@ -544,19 +531,10 @@ def _aggregate_detections(results: list[SourceResult]) -> tuple[set[str], set[st
     return services, slugs, related
 
 
-def extract_spf_include_count(services: set[str]) -> int | None:
-    """Parse the include count out of an "SPF complexity: N includes" service string.
-
-    Iterates in sorted order so that if two differing complexity strings ever
-    coexist in the merged set the result is deterministic rather than dependent
-    on set iteration order (the determinism gate relies on this).
-    """
-    for svc in sorted(services):
-        if svc.startswith("SPF complexity:"):
-            with contextlib.suppress(ValueError, IndexError):
-                return int(svc.split(":")[1].strip().split()[0])
-            return None
-    return None
+def extract_spf_include_count(results: list[SourceResult]) -> int | None:
+    """Return the maximum typed apex-SPF include count across source results."""
+    counts = [result.spf_include_count for result in results if result.spf_include_count > 0]
+    return max(counts, default=None)
 
 
 def _merge_ct_metadata(results: list[SourceResult]) -> tuple[str | None, int, int | None, str | None]:
@@ -608,10 +586,11 @@ def _collect_evidence(results: list[SourceResult]) -> tuple[EvidenceRecord, ...]
 
 
 def _collect_degraded(results: list[SourceResult]) -> set[str]:
-    """Deduplicated union of degraded source names across results."""
-    degraded: set[str] = set()
-    for result in results:
-        degraded.update(result.degraded_sources)
+    """Deduplicate granular markers and preserve whole DNS failure status."""
+    degraded = {source for result in results for source in result.degraded_sources}
+    degraded.update(f"source:{result.source_name}" for result in results if result.source_unavailable)
+    if any(result.source_name == "dns_records" and result.error is not None for result in results):
+        degraded.add("dns_records")
     return degraded
 
 
@@ -694,14 +673,18 @@ def merge_results(
 ) -> TenantInfo:
     """Merge multiple SourceResults into a single TenantInfo with insights."""
     usable_results = [result for result in results if result.error is None]
+    from recon_tool.collection_view import collection_observable_results
+
+    observable_results = collection_observable_results(usable_results)
     scalars = _merge_scalar_fields(usable_results)
+    observable_scalars = _merge_scalar_fields(observable_results)
     tenant_id = scalars.tenant_id
     all_domains = scalars.all_domains
     merge_conflicts = _compute_merge_conflicts(usable_results)
 
     _raise_if_all_sources_failed(results, queried_domain, tenant_id)
 
-    display_name = _resolve_display_name(scalars.display_name, scalars.bimi_identity, queried_domain)
+    display_name = _resolve_display_name(scalars.display_name, queried_domain)
     default_domain = scalars.default_domain if scalars.default_domain is not None else queried_domain
     display_name, auth_type, region = _scrub_free_text(display_name, scalars.auth_type, scalars.region)
     # Round 6 (Track D): dmarc_policy is source-derived free text (the DMARC
@@ -711,15 +694,17 @@ def merge_results(
     dmarc_policy = _scrub_optional(scalars.dmarc_policy)
     google_idp_name = _scrub_optional(scalars.google_idp_name)
 
-    base_confidence, has_id_conflict = compute_confidence(usable_results)
+    base_confidence, has_id_conflict = compute_confidence(observable_results)
     sources = confidence_source_names(usable_results)
 
     all_services, all_slugs, all_related = _aggregate_detections(usable_results)
+    observable_services, observable_slugs, _ = _aggregate_detections(observable_results)
     # Round 6 (Track D): a service string can carry attacker-controlled bytes
     # (e.g. a Google CSE discovery_uri host parsed in sources/google.py), so
     # strip control characters before the set reaches the email-security score,
     # the insight logic, and the terminal panel.
     all_services = {strip_control_chars(s) for s in all_services}
+    observable_services = {strip_control_chars(s) for s in observable_services}
     # Remove domains we already know about from related_domains
     all_related -= all_domains
     all_related.discard(queried_domain.lower())
@@ -727,15 +712,24 @@ def merge_results(
     domain_count = len(all_domains)
     tenant_domains = tuple(sorted(all_domains))
 
+    evidence_tuple = _collect_evidence(usable_results)
+    observable_evidence = _collect_evidence(observable_results)
+
     dmarc_pct = scalars.dmarc_pct
-    dmarc_effective_policy = _effective_dmarc_policy(dmarc_policy, dmarc_pct, scalars.dmarc_testing)
-    email_security_score = _email_security_score(
-        all_services,
-        dmarc_policy,
-        dmarc_pct,
-        scalars.dmarc_testing,
+    observable_dmarc_policy = _scrub_optional(observable_scalars.dmarc_policy)
+    observable_dmarc_pct = observable_scalars.dmarc_pct
+    dmarc_effective_policy = _effective_dmarc_policy(
+        observable_dmarc_policy,
+        observable_dmarc_pct,
+        observable_scalars.dmarc_testing,
     )
-    spf_include_count = extract_spf_include_count(all_services)
+    email_security_score = _email_security_score(
+        observed_email_control_services(observable_evidence),
+        observable_dmarc_policy,
+        observable_dmarc_pct,
+        observable_scalars.dmarc_testing,
+    )
+    spf_include_count = extract_spf_include_count(observable_results)
 
     cert_summary: CertSummary | None = _first_non_none(usable_results, "cert_summary")
     issuance_velocity = cert_summary.issuance_velocity if cert_summary is not None else None
@@ -743,25 +737,24 @@ def merge_results(
     ct_provider_used, ct_subdomain_count, ct_cache_age_days, ct_attempt_outcome = _merge_ct_metadata(usable_results)
     cloud_instance, tenant_region_sub_scope, msgraph_host = _merge_oidc_metadata(usable_results)
 
-    evidence_tuple = _collect_evidence(usable_results)
-    primary_email_provider, email_gateway, likely_primary_email_provider = _compute_email_topology(evidence_tuple)
+    primary_email_provider, email_gateway, likely_primary_email_provider = compute_email_topology(observable_evidence)
     # True if ANY MX evidence exists, regardless of slug match — lets
     # downstream insights distinguish "no email" from "custom / self-hosted".
-    has_mx_records = any(e.source_type == "MX" for e in evidence_tuple)
+    has_mx_records = any(e.source_type == "MX" for e in observable_evidence)
 
     # Build insights list, then append signal intelligence.
     insights = build_insights_with_signals(
-        all_services,
-        all_slugs,
+        claim_safe_email_services(observable_services, observable_evidence),
+        observable_slugs,
         auth_type,
-        dmarc_policy,
+        observable_dmarc_policy,
         domain_count,
         email_security_score=email_security_score,
         spf_include_count=spf_include_count,
         issuance_velocity=issuance_velocity,
-        google_auth_type=scalars.google_auth_type,
-        google_idp_name=google_idp_name,
-        dmarc_pct=dmarc_pct,
+        google_auth_type=observable_scalars.google_auth_type,
+        google_idp_name=_scrub_optional(observable_scalars.google_idp_name),
+        dmarc_pct=observable_dmarc_pct,
         primary_email_provider=primary_email_provider,
         likely_primary_email_provider=likely_primary_email_provider,
         email_gateway=email_gateway,
@@ -770,6 +763,7 @@ def merge_results(
         msgraph_host=msgraph_host,
         has_mx_records=has_mx_records,
         dmarc_effective_policy=dmarc_effective_policy,
+        evidence=observable_evidence,
     )
 
     # Surface conflicting tenant IDs — high-value intel that explains why
@@ -778,9 +772,9 @@ def merge_results(
         conflicting = sorted({strip_control_chars(r.tenant_id) for r in usable_results if r.tenant_id is not None})
         insights.insert(0, f"Conflicting tenant IDs detected: {', '.join(conflicting)}")
 
-    all_degraded = _collect_degraded(usable_results)
+    all_degraded = _collect_degraded(results)
     confidence, evidence_confidence, inference_confidence = _finalize_confidence(
-        base_confidence, usable_results, all_degraded, ct_provider_used
+        base_confidence, observable_results, all_degraded, ct_provider_used
     )
 
     detection_scores = compute_detection_scores(evidence_tuple)
@@ -815,7 +809,7 @@ def merge_results(
         evidence_confidence=evidence_confidence,
         inference_confidence=inference_confidence,
         detection_scores=detection_scores,
-        bimi_identity=scalars.bimi_identity,
+        bimi_identity=None,
         site_verification_tokens=tuple(sorted(scalars.site_verification_tokens)),
         mta_sts_mode=scalars.mta_sts_mode,
         google_auth_type=scalars.google_auth_type,
@@ -825,6 +819,7 @@ def merge_results(
         email_gateway=email_gateway,
         dmarc_pct=dmarc_pct,
         dmarc_testing=scalars.dmarc_testing,
+        spf_include_count=spf_include_count or 0,
         likely_primary_email_provider=likely_primary_email_provider,
         ct_provider_used=ct_provider_used,
         ct_subdomain_count=ct_subdomain_count,

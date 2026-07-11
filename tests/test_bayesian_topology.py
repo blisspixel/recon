@@ -83,9 +83,9 @@ def test_modern_provider_responds_to_provider_evidence(network):
     """The modern_provider posterior moves up when M365 / GWS / gateway
     slugs fire, and stays flat when only policy signals fire."""
     no_evidence = _posterior(network, [], [], "email_security_modern_provider")
-    with_m365 = _posterior(network, ["microsoft365"], [], "email_security_modern_provider")
-    with_gws = _posterior(network, ["google-workspace"], [], "email_security_modern_provider")
-    with_gateway = _posterior(network, ["proofpoint"], [], "email_security_modern_provider")
+    with_m365 = _posterior(network, [], ["m365_tenant_observed"], "email_security_modern_provider")
+    with_gws = _posterior(network, [], ["google_workspace_tenant_observed"], "email_security_modern_provider")
+    with_gateway = _posterior(network, [], ["email_gateway_mx_observed"], "email_security_modern_provider")
 
     # Each parent slug should lift modern_provider materially.
     assert with_m365 > no_evidence + 0.10
@@ -132,9 +132,9 @@ def test_policy_enforcing_does_not_move_on_provider_slugs(network):
     This is the key v1.9.3 invariant — the v1.9.0 node entangled the
     two and produced 52.6% disagreement on the corpus."""
     no_evidence = _posterior(network, [], [], "email_security_policy_enforcing")
-    with_m365 = _posterior(network, ["microsoft365"], [], "email_security_policy_enforcing")
-    with_gws = _posterior(network, ["google-workspace"], [], "email_security_policy_enforcing")
-    with_gateway = _posterior(network, ["proofpoint"], [], "email_security_policy_enforcing")
+    with_m365 = _posterior(network, [], ["m365_tenant_observed"], "email_security_policy_enforcing")
+    with_gws = _posterior(network, [], ["google_workspace_tenant_observed"], "email_security_policy_enforcing")
+    with_gateway = _posterior(network, [], ["email_gateway_mx_observed"], "email_security_policy_enforcing")
 
     # Root node with no parents: provider slugs cannot reach it.
     assert abs(with_m365 - no_evidence) < 0.005
@@ -148,7 +148,7 @@ def test_federated_identity_lifts_on_gws_evidence(network):
     fixes this — the GWS path must materially lift the posterior in
     the absence of M365 evidence."""
     no_evidence = _posterior(network, [], [], "federated_identity")
-    gws_only = _posterior(network, ["google-workspace"], [], "federated_identity")
+    gws_only = _posterior(network, [], ["google_workspace_tenant_observed"], "federated_identity")
     # 0.35 (GWS-only CPT) should beat 0.08 (neither) by a clear margin.
     assert gws_only > no_evidence + 0.10
 
@@ -156,7 +156,7 @@ def test_federated_identity_lifts_on_gws_evidence(network):
 def test_federated_identity_old_m365_path_preserved(network):
     """The M365 path numbers were preserved (0.45). Adding GWS as a
     parent should not regress M365-driven federation attribution."""
-    m365_only = _posterior(network, ["microsoft365"], [], "federated_identity")
+    m365_only = _posterior(network, [], ["m365_tenant_observed"], "federated_identity")
     # 0.45 CPT entry, propagated through M365 prior 0.30 → marginal
     # should land in the 0.30 range when only M365 fires (no
     # federated_sso_hub signal). Exact value depends on inference,

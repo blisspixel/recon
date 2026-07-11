@@ -44,13 +44,13 @@ and the use case that field supports.
 | `cloud_instance` | `cloud_instance` | Sovereignty drift (`microsoftonline.com` vs `.us`) |
 | `insights` | `insights{}` (mv field) | Pre-computed defensive narrative |
 
-### Fusion-layer fields (present when `recon --fusion`)
+### Fusion-layer fields (present unless fusion is disabled)
 
 | recon JSON path | Splunk field | Use case |
 |---|---|---|
 | `posterior_observations{}.name` | `posterior_observations{}.name` | Per-claim Bayesian posterior label |
-| `posterior_observations{}.posterior` | `posterior_observations{}.posterior` | Calibrated probability for the claim |
-| `posterior_observations{}.sparse` | `posterior_observations{}.sparse` | True when interval is wide (hardened target) |
+| `posterior_observations{}.posterior` | `posterior_observations{}.posterior` | Model-relative support for the claim under the committed network |
+| `posterior_observations{}.sparse` | `posterior_observations{}.sparse` | True when effective display mass is at its configured floor |
 | `evidence_conflicts{}.field` | `evidence_conflicts{}.field` | Which TenantInfo field had cross-source disagreement |
 
 ## Severity mapping

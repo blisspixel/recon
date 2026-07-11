@@ -67,8 +67,8 @@ class TestEnrichFromRelated:
         assert len(results) <= 15
 
     @pytest.mark.asyncio
-    async def test_related_subdomain_evidence_is_merged(self, monkeypatch):
-        """Subdomain enrichment should preserve evidence for added services."""
+    async def test_related_subdomain_inventory_does_not_become_apex_evidence(self, monkeypatch):
+        """Unscoped related evidence cannot support apex role claims."""
 
         async def fake_lightweight_lookup(_domain: str) -> SourceResult:
             return SourceResult(
@@ -95,8 +95,73 @@ class TestEnrichFromRelated:
         )
         enriched, _results = await _enrich_from_related(info, [])
         assert "Kartra" in enriched.services
-        assert any(e.source_type == "CNAME" and e.slug == "kartra" for e in enriched.evidence)
-        assert ("kartra", "low") in enriched.detection_scores
+        assert "kartra" in enriched.slugs
+        assert all(e.slug != "kartra" for e in enriched.evidence)
+        assert all(slug != "kartra" for slug, _score in enriched.detection_scores)
+
+    @pytest.mark.asyncio
+    async def test_failed_related_channel_cannot_contribute_partial_inventory(self, monkeypatch):
+        async def fake_lightweight_lookup(_domain: str) -> SourceResult:
+            return SourceResult(
+                source_name="dns_records",
+                detected_services=("Kartra",),
+                detected_slugs=("kartra",),
+                evidence=(EvidenceRecord("CNAME", "example.kartra.com", "Kartra", "kartra"),),
+                degraded_sources=("dns:cname",),
+            )
+
+        monkeypatch.setattr("recon_tool.sources.dns.lightweight_subdomain_lookup", fake_lightweight_lookup)
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain="example.com",
+            queried_domain="example.com",
+            related_domains=("learn.example.com",),
+        )
+
+        enriched, _results = await _enrich_from_related(info, [])
+
+        assert enriched is info
+
+    @pytest.mark.asyncio
+    async def test_separate_related_domain_email_records_do_not_change_apex_posture(self, monkeypatch):
+        """MX and DKIM from a breadcrumb domain stay outside the queried apex."""
+
+        async def fake_dns_lookup(_self, _domain: str, **_kwargs) -> SourceResult:
+            return SourceResult(
+                source_name="dns_records",
+                detected_services=("Google Workspace", "DKIM (Google Workspace)"),
+                detected_slugs=("google-workspace",),
+                evidence=(
+                    EvidenceRecord("MX", "1 aspmx.l.google.com", "Google Workspace", "google-workspace"),
+                    EvidenceRecord(
+                        "DKIM",
+                        "google._domainkey.brand2.com",
+                        "DKIM (Google Workspace)",
+                        "google-workspace",
+                    ),
+                ),
+            )
+
+        monkeypatch.setattr("recon_tool.sources.dns.DNSSource.lookup", fake_dns_lookup)
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Brand 1",
+            default_domain="brand1.com",
+            queried_domain="brand1.com",
+            related_domains=("brand2.com",),
+        )
+
+        enriched, _results = await _enrich_from_related(info, [])
+
+        from recon_tool.exposure import assess_exposure_from_info
+
+        posture = assess_exposure_from_info(enriched).email_posture
+        assert enriched.primary_email_provider is None
+        assert enriched.email_gateway is None
+        assert enriched.evidence == ()
+        assert posture.email_security_score == 0
+        assert posture.dkim_configured is False
 
 
 class TestEnrichmentIntegration:

@@ -2,14 +2,14 @@
 
 Implements the three stability criteria from ``docs/roadmap.md`` §v1.9.5:
 
-* **(b1) Det-positive → Bayesian high.** When ``evidence_used`` is
+* **(b1) Det-positive -> model score high.** When ``evidence_used`` is
   non-empty (the deterministic pipeline observed bindings firing) and
-  ``sparse=false``, the posterior should be > 0.5 and the credible
-  interval should not span the full [0, 1] range.
-* **(b2) Det-silent → interval widens.** When ``evidence_used`` is
-  empty (no deterministic bindings fired), the posterior should be
-  flagged ``sparse=true`` (the layer's own signal that it widened the
-  interval rather than collapsing on a confident point estimate).
+  ``sparse=false``, the model-relative posterior should be > 0.5 and the
+  uncertainty band should not span the full [0, 1] range.
+* **(b2) Det-silent floor diagnostic.** The historical criterion checks whether
+  no fired bindings coincides with ``sparse=true``. Declarative absences can now
+  make that implication false, so the result is descriptive rather than a
+  general uncertainty property.
 * **(c) Independent firings.** Number of distinct domains where
   ``evidence_used`` is non-empty for this node, across the combined
   hardened + soft corpus.

@@ -1,10 +1,11 @@
 """Passive-by-default contract: direct probes to target-controlled hosts are opt-in.
 
-recon's collection is passive. The two requests that reach a host the queried
-domain controls (the Google CSE discovery probe at ``cse.<domain>`` and the BIMI
-VMC certificate fetch) are gated behind the ``active_probes`` opt-in
-(``--direct-probes``). By default neither is performed, so the only request the
-target's own servers see is the standard MTA-STS policy fetch. BIMI *presence* is
+recon's collection is passive. DNS queries use the configured recursive
+resolver, and authoritative DNS may observe the resulting traffic. The two
+optional requests to target-owned hosts (the Google CSE discovery probe at
+``cse.<domain>`` and the BIMI VMC certificate fetch) are gated behind the
+``active_probes`` opt-in (``--direct-probes``). The standard MTA-STS policy fetch
+is the only default target-owned HTTP/application request. BIMI *presence* is
 still read from the DNS TXT record either way.
 
 Also covers the ``analyze_posture`` MCP tool's non-string ``profile`` guard:
@@ -167,6 +168,14 @@ async def test_resolve_tenant_passive_by_default() -> None:
     await resolve_tenant("contoso.com", pool=SourcePool([src]), timeout=10.0)
     assert src.kwargs_seen
     assert src.kwargs_seen[0].get("active_probes", False) is False
+
+
+def test_resolve_tenant_documents_recursive_dns_visibility() -> None:
+    """The runtime API disclosure distinguishes DNS traffic from HTTP probes."""
+    doc = " ".join((resolve_tenant.__doc__ or "").split())
+    assert "configured recursive resolver" in doc
+    assert "authoritative DNS may observe the resulting traffic" in doc
+    assert "MTA-STS policy fetch is the only default target-owned HTTP/application request" in doc
 
 
 @pytest.mark.asyncio

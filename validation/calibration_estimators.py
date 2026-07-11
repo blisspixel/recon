@@ -5,10 +5,14 @@ the representative confidence. That is useful for continuity, but it blends two
 things: model error and estimator error from arbitrary bin placement. This module
 adds the paper-facing estimator:
 
-1. Sort predictions into equal-mass bins, so sparse tails do not dominate by
-   occupying many empty fixed-width intervals.
+1. Sort predictions into approximately equal-mass bins without splitting equal
+   score values across bins. Sparse tails therefore do not dominate through
+   empty fixed-width intervals, and arbitrary input order cannot change which
+   labels accompany a tied score in a bin.
 2. Use the in-bin mean confidence, not the bin midpoint.
-3. Bootstrap the estimator to expose sampling uncertainty.
+3. Apply a deterministic naive iid row bootstrap as a sensitivity diagnostic.
+   Its percentile range has no coverage interpretation for the selected,
+   dependent validation rows.
 
 All functions are pure and aggregate-only. They receive already de-identified
 posterior and label lists and never know domain names.
@@ -18,6 +22,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass
+from itertools import pairwise
 
 
 @dataclass(frozen=True)
@@ -33,7 +38,12 @@ class EqualMassBin:
 
 @dataclass(frozen=True)
 class EceBootstrapSummary:
-    """ECE point estimate plus percentile bootstrap interval."""
+    """ECE estimate plus a naive iid row-bootstrap diagnostic range.
+
+    Field names retain ``ci_*`` for compatibility with recorded artifacts. The
+    range is not a confidence interval for a target population because the
+    selected validation rows are not established to be iid.
+    """
 
     estimate: float
     ci_low: float
@@ -59,11 +69,14 @@ def _validate_inputs(predicted: list[float], outcome: list[int], bins: int) -> N
 def equal_mass_reliability_bins(
     predicted: list[float], outcome: list[int], bins: int = 10
 ) -> list[EqualMassBin]:
-    """Return reliability bins with near-equal counts.
+    """Return tie-preserving reliability bins with near-equal counts.
 
-    Bins are sorted by posterior and divided into at most ``bins`` non-empty
-    contiguous groups. When there are fewer records than requested bins, each
-    record becomes its own bin.
+    Records are sorted by posterior, but equal posterior values are indivisible:
+    every row at one score stays in the same bin. Boundaries are selected at
+    distinct-score group boundaries nearest the cumulative equal-mass targets,
+    subject to leaving at least one score group for every remaining bin. The
+    result therefore has at most ``bins`` non-empty bins and may have fewer when
+    there are fewer distinct scores.
     """
     _validate_inputs(predicted, outcome, bins)
     n = len(predicted)
@@ -71,14 +84,35 @@ def equal_mass_reliability_bins(
         return []
 
     pairs = sorted(zip(predicted, outcome, strict=True), key=lambda item: item[0])
-    bin_count = min(bins, n)
+    score_groups: list[list[tuple[float, int]]] = []
+    for pair in pairs:
+        if not score_groups or score_groups[-1][0][0] != pair[0]:
+            score_groups.append([])
+        score_groups[-1].append(pair)
+
+    bin_count = min(bins, len(score_groups))
+    cumulative = [0]
+    for group in score_groups:
+        cumulative.append(cumulative[-1] + len(group))
+
+    boundaries = [0]
+    start = 0
+    for bin_index in range(1, bin_count):
+        min_end = start + 1
+        groups_remaining = bin_count - bin_index
+        max_end = len(score_groups) - groups_remaining
+        target = bin_index * n / bin_count
+        end = min(
+            range(min_end, max_end + 1),
+            key=lambda candidate: (abs(cumulative[candidate] - target), candidate),
+        )
+        boundaries.append(end)
+        start = end
+    boundaries.append(len(score_groups))
+
     out: list[EqualMassBin] = []
-    for idx in range(bin_count):
-        start = idx * n // bin_count
-        end = (idx + 1) * n // bin_count
-        chunk = pairs[start:end]
-        if not chunk:
-            continue
+    for start, end in pairwise(boundaries):
+        chunk = [pair for group in score_groups[start:end] for pair in group]
         confidences = [p for p, _label in chunk]
         labels = [label for _p, label in chunk]
         out.append(
@@ -94,7 +128,7 @@ def equal_mass_reliability_bins(
 
 
 def mean_confidence_ece(predicted: list[float], outcome: list[int], bins: int = 10) -> float:
-    """Equal-mass ECE using the in-bin mean confidence."""
+    """Tie-preserving, approximately equal-mass ECE using mean confidence."""
     table = equal_mass_reliability_bins(predicted, outcome, bins=bins)
     total = len(predicted)
     if total == 0:
@@ -127,10 +161,13 @@ def bootstrap_mean_confidence_ece(
     confidence_level: float = 0.80,
     seed: int = 1729,
 ) -> EceBootstrapSummary:
-    """Bootstrap the equal-mass, mean-confidence ECE estimator.
+    """Naively row-bootstrap the tie-preserving mean-confidence ECE.
 
-    Returns a deterministic percentile interval under the supplied seed. Empty
-    input returns a zero-width zero estimate; callers should still report ``n``.
+    Returns a deterministic percentile diagnostic range under the supplied
+    seed. Resampling treats rows as iid and does not account for clustering,
+    shared infrastructure, list selection, or repeated organizations. It has no
+    coverage interpretation for these validation cohorts. Empty input returns a
+    zero-width zero estimate; callers should still report ``n``.
     """
     _validate_inputs(predicted, outcome, bins)
     if samples < 1:

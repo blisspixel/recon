@@ -361,7 +361,7 @@ class TestAbsenceExplanationRecords:
             detection_scores=(),
         )
 
-        absence_recs = [r for r in records if "Missing Counterparts" in r.item_name]
+        absence_recs = [r for r in records if "configured counterpart indicators not observed" in r.item_name]
         assert len(absence_recs) >= 1
 
         rec = absence_recs[0]
@@ -395,7 +395,7 @@ class TestAbsenceExplanationRecords:
             detection_scores=(),
         )
 
-        absence_recs = [r for r in records if "Missing Counterparts" in r.item_name]
+        absence_recs = [r for r in records if "configured counterpart indicators not observed" in r.item_name]
         assert len(absence_recs) >= 1
         assert "not observed" in absence_recs[0].curated_explanation
 

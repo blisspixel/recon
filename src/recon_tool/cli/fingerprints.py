@@ -20,6 +20,25 @@ from recon_tool.validator import strip_control_chars
 
 fingerprints_app = typer.Typer(help="Inspect the built-in fingerprint catalog.")
 
+_PUBLIC_DETECTION_CONTRACTS: dict[str, str] = {
+    "txt": "a public TXT domain-control or account-registration indicator",
+    "subdomain_txt": "a public TXT indicator at a named subdomain",
+    "spf": "an SPF sender-authorization reference",
+    "mx": "an MX mail-routing reference",
+    "cname": "a CNAME endpoint binding",
+    "cname_target": "a CNAME-chain endpoint binding",
+    "srv": "an SRV service-discovery reference",
+    "caa": "a CAA certificate-issuer authorization",
+    "ns": "an authoritative DNS delegation",
+    "dmarc_rua": "a DMARC aggregate-report destination",
+}
+
+
+def _public_detection_description(detection_type: str) -> str:
+    """Return the bounded public meaning of a fingerprint-rule match."""
+    meaning = _PUBLIC_DETECTION_CONTRACTS.get(detection_type, f"a public {detection_type} record indicator")
+    return f"If matched, this rule records {meaning}; active product use is not established beyond that role."
+
 
 def _find_example_corpus_path() -> Path | None:
     for root in (Path.cwd(), *Path(__file__).resolve().parents):
@@ -236,18 +255,24 @@ def fingerprints_show(
     # grepping the code.
     _SYNTHETIC_SLUGS: dict[str, tuple[str, str]] = {
         "exchange-onprem": (
-            "Exchange Server (on-prem / hybrid)",
-            "Emitted by recon_tool.sources.dns._detect_exchange_onprem when "
+            "Exchange-style endpoint indicator",
+            "Emitted by recon_tool.sources.dns._detect_exchange_endpoints when "
             "owa./outlook./exchange./mail-ex./autodiscover. subdomains resolve "
-            "(wildcard-guarded). Indicates self-hosted or hybrid Exchange — "
-            "not Exchange Online.",
+            "(wildcard-guarded). This is a public naming observation; it does "
+            "not establish server software or deployment model.",
         ),
         "self-hosted-mail": (
-            "Self-hosted mail",
-            "Emitted by recon_tool.sources.dns._detect_mx when MX records "
+            "Custom or unclassified MX",
+            "Emitted by recon_tool.sources.dns_email.detect_mx when MX records "
             "exist and no known cloud-provider or gateway fingerprint matched. "
-            "The raw_value field carries the actual MX hosts so the user can "
-            "see the underlying infrastructure.",
+            "The raw_value field carries the MX hosts, but recon does not infer "
+            "who operates them or whether they are self-hosted.",
+        ),
+        "null-mx": (
+            "Null MX (domain does not accept email)",
+            "Emitted by recon_tool.sources.dns_email.detect_mx for the RFC 7505 "
+            "Null MX form `0 .`. This is an explicit public declaration that "
+            "the domain does not accept email.",
         ),
     }
 
@@ -291,7 +316,7 @@ def fingerprints_show(
                 {
                     "type": d.type,
                     "pattern": d.pattern,
-                    "description": d.description,
+                    "description": _public_detection_description(d.type),
                     "reference": d.reference,
                     "weight": d.weight,
                 }
@@ -316,8 +341,7 @@ def fingerprints_show(
     console.print(f"  [bold]Detection rules ({len(match.detections)})[/bold]")
     for i, d in enumerate(match.detections, 1):
         console.print(f"    {i}. [{d.type}] {d.pattern}")
-        if d.description:
-            console.print(f"         {d.description}")
+        console.print(f"         {_public_detection_description(d.type)}")
         if d.reference:
             console.print(f"         ref: [link={d.reference}]{escape(d.reference)}[/link]")
     console.print()
@@ -599,5 +623,3 @@ def fingerprints_check(
     from recon_tool.fingerprint_validator import validate_path
 
     raise typer.Exit(code=validate_path(target, quiet=quiet))
-
-

@@ -40,12 +40,9 @@ EMAIL_PROVIDER_SLUG_NAMES: dict[str, str] = {
     "zoho": "Zoho Mail",
     "protonmail": "ProtonMail",
     "aws-ses": "AWS SES",
-    # Synthetic slug emitted by dns._detect_mx when every MX host lives
-    # under the queried apex (i.e. operator-owned mail infrastructure).
-    # Gives large orgs with self-operated mail a concrete primary-provider
-    # label instead of falling through to the weaker "Exchange Server
-    # (on-prem / hybrid)" attribution.
-    "self-hosted-mail": "Self-hosted mail",
+    # Compatibility slug for MX hosts that do not match the catalog. Their
+    # operator and hosting model are unknown, so the label stays unclassified.
+    "self-hosted-mail": "Custom or unclassified MX",
 }
 
 GATEWAY_SLUG_NAMES: dict[str, str] = {

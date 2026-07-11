@@ -6,9 +6,9 @@ abstract: >-
   tool. It reads public DNS records, certificate-transparency logs,
   unauthenticated provider identity-discovery endpoints, and the standard
   target-visible MTA-STS policy endpoint, then reports each high-level claim
-  through a small, auditable Bayesian network as an evidence-responsive
-  credible interval rather than a yes/no verdict, with full provenance and no
-  active scanning or credentialed access.
+  through a small, auditable Bayesian network as a model-relative posterior and
+  evidence-responsive uncertainty band rather than a yes/no verdict, with full
+  provenance and no active scanning or credentialed access.
 type: software
 authors:
   - family-names: Seal
@@ -24,7 +24,7 @@ keywords:
   - external attack surface management
   - certificate transparency
   - Bayesian inference
-  - uncertainty calibration
+  - model-relative uncertainty
   - provenance
 # When the paper lands, add a preferred-citation block (type: article, with the
 # arXiv id / DOI) so "Cite this repository" points at the paper, not just the code.

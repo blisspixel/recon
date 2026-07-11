@@ -34,6 +34,7 @@ def packaged_schema_text() -> str:
     """
     return (files("recon_tool") / "data" / "recon-schema.json").read_text(encoding="utf-8")
 
+
 REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "auth_type",
     "bimi_identity",

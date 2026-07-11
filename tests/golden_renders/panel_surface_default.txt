@@ -1,7 +1,7 @@
 Contoso Ltd
 contoso.com
 ──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 (account detected, no MX)
+  Provider     Microsoft 365 (role unavailable)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
   Auth         Federated
   Multi-cloud  2 providers observed (Fastly, Cloudflare)
@@ -9,8 +9,8 @@ contoso.com
 
 
 Services
-  Email          Microsoft 365
-  Collaboration  Slack
+  Email          Microsoft 365 (role unavailable)
+  Collaboration  Slack (role unavailable)
   Subdomain      Fastly (6), Auth0 (2), Zendesk (1)
 
 

@@ -154,7 +154,7 @@ class TestObservationThreshold:
             "contoso.com",
         )
         assert len(obs) == 1
-        assert obs[0].category == "Environment Separation"
+        assert obs[0].category == "Environment-like Labels"
         assert obs[0].match_count >= MIN_MATCHES
 
     def test_min_matches_is_two(self):
@@ -162,31 +162,38 @@ class TestObservationThreshold:
 
 
 class TestObservationLanguage:
-    def test_env_observation_is_hedged(self):
+    def test_env_observation_reports_count_and_compatible_explanations(self):
         obs = lexical_observations(
             ["dev.contoso.com", "stg.contoso.com", "prod.contoso.com"],
             "contoso.com",
         )
         assert obs
         stmt = obs[0].statement.lower()
-        assert "observed" in stmt
-        assert "observation" in stmt or "not a verdict" in stmt
+        assert stmt.startswith("3 observed public names")
+        assert "compatible explanations" in stmt
+        assert "mature environment" not in stmt
+        assert "deployment pipeline" not in stmt
 
     def test_region_observation_is_hedged(self):
         obs = lexical_observations(
             ["us-east-1.contoso.com", "eu-west-1.contoso.com"],
             "contoso.com",
         )
-        assert any(o.category == "Geo-Distribution" for o in obs)
-        geo = next(o for o in obs if o.category == "Geo-Distribution")
-        assert "observed" in geo.statement.lower()
+        assert any(o.category == "Region-like Labels" for o in obs)
+        geo = next(o for o in obs if o.category == "Region-like Labels")
+        assert geo.statement.lower().startswith("2 observed public names")
+        assert "geo-distributed infrastructure" not in geo.statement.lower()
+        assert "multi-region deployment" not in geo.statement.lower()
 
     def test_shard_observation_is_hedged(self):
         obs = lexical_observations(
             ["t-1234.contoso.com", "org-acme.contoso.com"],
             "contoso.com",
         )
-        assert any(o.category == "Multi-Tenant Sharding" for o in obs)
+        tenant = next(o for o in obs if o.category == "Tenant-like Labels")
+        assert tenant.statement.lower().startswith("2 observed public names")
+        assert "multi-tenant sharding" not in tenant.statement.lower()
+        assert "isolation architecture" not in tenant.statement.lower()
 
     def test_sample_labels_capped_at_3(self):
         subs = [
@@ -211,8 +218,8 @@ class TestMultipleCategoriesObserved:
         ]
         obs = lexical_observations(subs, "contoso.com")
         categories = {o.category for o in obs}
-        assert "Environment Separation" in categories
-        assert "Geo-Distribution" in categories
+        assert "Environment-like Labels" in categories
+        assert "Region-like Labels" in categories
 
 
 # ── Data class ──────────────────────────────────────────────────────────

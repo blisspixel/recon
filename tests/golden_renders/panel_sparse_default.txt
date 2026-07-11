@@ -1,12 +1,12 @@
 Northwind Traders
 northwindtraders.com
 ──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 (account detected, no MX)
+  Provider     Microsoft 365 (role unavailable)
   Confidence   ●○○ Low (1 sources)
 
 
 Services
-  Email          Microsoft 365
+  Email          Microsoft 365 (role unavailable)
 
 
 Insights

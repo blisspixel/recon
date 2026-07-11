@@ -1,206 +1,230 @@
-# Statistical-assurance dossier
+# Statistical assurance
 
-This document is one honest ledger of what recon's numbers are backed by. For
-each statistical claim the tool emits, it names the highest tier of evidence that
-supports it, and says plainly where that support stops. It is written for a
-reader deciding how much weight to put on a recon posterior or interval, and for
-an external write-up that must not overstate what the passive channel can show.
+Current for recon v2.3.9. Reviewed 2026-07-10.
 
-The discipline behind it is the calibration-legitimacy track (CAL1 to CAL14 in
-[correlation.md](correlation.md)): name what each number tests, never let a
-self-consistency check read as ground-truth calibration, and reserve the firmest
-words for the best-supported evidence. This dossier collects that discipline into
-a single map. The mechanism-to-test mapping is in
-[assurance-case.md](assurance-case.md); the interval coverage detail is in
-[interval-coverage.md](../validation/interval-coverage.md); the publication
-constraint that shapes how any of this can be reported is in
-[data-handling-policy.md](data-handling-policy.md).
+This document records what recon's numerical outputs establish and where their
+support stops. Faithful computation, model-relative uncertainty, external
+corroboration, and independent validation are different claims. A green test in
+one category cannot be promoted into another.
 
-## The four tiers of evidence, on two axes
+The formal model and research direction are in
+[correlation.md](correlation.md). The mechanism-to-test map is in
+[assurance-case.md](assurance-case.md). Validation artifacts are indexed in
+[validation/README.md](../validation/README.md).
 
-Every recon claim sits at one of four tiers, but the tiers are not one monotone
-scale of trust. Reading them as "a higher tier means the number is more likely
-right" is the specific error this dossier exists to prevent. They answer two
-different questions:
+## Four evidence levels on two axes
 
-- **Provenance and internal soundness:** is the observation a real,
-  re-queryable fact, and is the inference computed faithfully from the model?
-  Tier 1 (Observed) and tier 3 (Evidence-responsive) live here, with tier 2
-  (Consistency) a near-tautological special case.
-- **External validation:** is the inferred number right against a truth recon
-  did not itself produce? Only tier 4 (Empirical coverage) lives here.
+The levels are not a single scale of truth. Levels 1 and 2 concern provenance
+and implementation soundness. Levels 3 and 4 concern comparison with external
+evidence.
 
-The consequence a careful reader must hold onto: a tier-3 node has a
-faithfully-computed, honestly-widening interval, but with respect to whether its
-point estimate is *correct* it is just as unvalidated as a tier-1 raw fact. Tiers
-2 and 3 are properties that hold by construction, and a property true by
-construction carries no information about whether the model tracks reality. A
-claim is reported at the highest tier its evidence reaches, and the gap above it
-is stated, not hidden.
+### Level 1: observed
 
-1. **Observed.** A direct, re-queryable fact: a DNS record, a
-   certificate-transparency SAN, a fired fingerprint slug, an identity-endpoint
-   response. Anyone can re-run the underlying query and see the same observation.
-   This is the evidence layer, and it is the highest tier because it asserts
-   nothing beyond what the public channel literally returned.
+A bounded collector returned a re-queryable public fact, such as a DNS record,
+certificate SAN, or identity endpoint response. This licenses:
 
-2. **Consistency.** Agreement between the deterministic pipeline and the Bayesian
-   layer: a high, non-sparse posterior is backed by a fired deterministic
-   detection. CAL1 shows this agreement is near-tautological under the
-   virtual-evidence construction (a high non-sparse posterior requires a fired
-   positive binding, which is itself a deterministic detection), so it tests the
-   inference plumbing and the binding wiring, not the CPT or likelihood values.
-   It is reported as a real but weak regression guard, never as calibration. The
-   full-corpus result to date is that every high-confidence posterior is backed
-   by a deterministic detection, which is near-tautological by construction.
+> The public channel returned this value at this time.
 
-3. **Evidence-responsive.** The credible interval widens on sparse or hardened
-   evidence and narrows as the channel constrains the claim. CAL13 reserves this
-   term: it is a monotonicity property of the interval, shown two ways. The
-   differential-verification harness proves the interval is computed faithfully
-   from the model, exhaustively over the enumerable joint (nine binary nodes), and
-   the perturbation-coverage gate (v2.1.15) shows the 80% interval contains the
-   correct-world conditional under a plus-or-minus 20% likelihood-imprecision band
-   on every node, measured at or above 0.999 and gated at the nominal 0.80. This
-   is model-internal coverage against parameter misspecification, not ground-truth
-   calibration.
+It does not establish current product use, ownership, control effectiveness, or
+private state. Public records can be stale, ambiguous, or intentionally planted.
 
-4. **Empirical coverage.** Frequentist coverage against an independent
-   ground-truth label: over many domains whose true state is known, does the 80%
-   interval contain the truth about 80% of the time? This is the only tier that
-   can falsify the CPT and likelihood values themselves (CAL3). For most of
-   recon's claims this tier is structurally unavailable, and the dossier says so
-   rather than implying it is met.
+### Level 2: internally sound and model-relative
 
-The honest shape of recon's assurance is: provenance and internal soundness
-established at tiers 1 to 3, external validation (tier 4) reached in part on the
-email-policy node (full-posterior calibration strong but DMARC-anchored, the clean
-residual disconfirmed) and reached as channel-split corroboration on the M365
-tenancy node, and absent by the nature of the setting on the hideable nodes. Tiers 1 to 3 are not a
-substitute for tier 4; they are a different axis, and on the hideable nodes the
-point estimate stays unvalidated against truth.
+A deterministic rule or committed model computed its documented output
+faithfully. Examples include exact variable elimination, dependency-group
+selection, counterfactual masking, graph seed stability, and ordered bounded
+uncertainty bands.
 
-## Why tier 4 is reachable for some nodes and not others
+This licenses:
 
-The dividing line is not "is the claim important" but "does an external attestor
-exist that the operator cannot hide." recon's evidence sits on a spectrum from
-operator-controlled to provider-attested ([correlation.md](correlation.md)
-section 4.3, the operator/provider hideability spectrum), and tier 4 is reachable
-exactly where the top of that spectrum reaches:
+> Given these inputs and committed assumptions, the implementation produced the
+> documented result.
 
-- **An external attestor exists (tier 4 reachable only when the reference is
-  independent enough for the claim).** Two kinds. A *public declaration*: the
-  email policy's DMARC record is its own ground truth (an enforcing `p=reject` is
-  a fact anyone can read, not an inference; CAL14 made the node `declarative`).
-  And *provider attestation*: whether a domain is a Microsoft 365 tenant is
-  answered by Microsoft's own unauthenticated identity endpoints, keyed on the
-  domain, in both directions (a resolved tenant ID or Managed/Federated namespace
-  attests presence; the documented tenant-not-found response attests absence).
-  That provider channel is useful, but it still shares tenant provisioning with
-  the DNS footprints used as the predictor, so
-  [m365-tenancy-decision.md](m365-tenancy-decision.md) keeps the result named
-  corroboration rather than independent calibration. For the
-  policy node the calibration has run at full corpus (n=2,906 with a published
-  DMARC policy, 2026-06 refresh): the full posterior is strongly calibrated
-  against the DMARC record (fixed-bin ECE 0.0761, equal-mass ECE 0.0651, stable
-  across all 22 verticals, the miss in the conservative under-confident
-  direction), but the held-out DMARC-disjoint residual is weak and poorly
-  calibrated (fixed-bin ECE 0.3747, equal-mass ECE 0.3263). The honest reading
-  is a strong but DMARC-anchored full-posterior calibration plus an agreement
-  check for the DMARC-driven bulk; the strict-SPF + MTA-STS residual is not a
-  clean tier-4 result, the disjoint construction disconfirms it
-  (`validation/reference-calibration.md`,
-  `validation/2026-06-28-full-corpus-calibration-refresh.md`). For
-  `m365_tenant` the channel-split corroboration run also landed (n=3,296, the
-  DNS-driven posterior against the provider endpoint attestation): fixed-bin ECE
-  0.0471, equal-mass ECE 0.0440, agreement 0.889, useful corroboration rather
-  than clean independent calibration
-  (`validation/tenancy_reference_calibration.py`). The
-  Google channel is one-sided (it attests only observed federated routing,
-  never managed tenancy, and has no authoritative negative; correlation.md
-  4.3), so `google_workspace_tenant` admits a recall check on attested
-  positives, not a calibration, and stays at tier 3.
+It does not establish that a prior, CPT, likelihood, dependency assumption,
+graph projection, or heuristic score tracks reality. Synthetic worlds sampled
+from the same model are level 2 evidence.
 
-- **No external attestor (tier 4 unavailable by the nature of the setting).**
-  `cdn_fronting`, `aws_hosting`, `okta_idp`, `email_gateway_present`, and the
-  non-provider parts of `federated_identity` rest on operator-controlled DNS and
-  CT. A hardened operator can strip those indicators, so their absence is
-  adversarially missing and there is no label set to compute frequentist coverage
-  against. These claims are honest at tiers 1 to 3, tier 4 is not available, and
-  the interval's widening is the model declining to claim what it cannot see. The
-  suppression proposition (correlation.md 4.3) is what makes that honest rather
-  than merely cautious in the hiding direction: hiding can only push these toward
-  "we cannot tell," never to a confident false answer. It does not protect the
-  other direction: a forged administrative token fires these nodes at full
-  strength (correlation.md 4.11, Pattern I) and the ungrouped dense nodes
-  over-count co-firing evidence (correlation.md 4.3), so a confident false
-  positive can be planted or over-counted here even though it cannot be hidden
-  into existence.
+### Level 3: external corroboration with a stated dependency
 
-## The ledger
+The output agrees with a real external channel, but the comparison is
+overlapping, one-sided, selection-biased, or otherwise not an independent
+two-class test of the claim. This can be useful corroboration when the dependency
+is named.
 
-| Claim / node | Highest tier today | What backs it | Where it stops |
-|---|---|---|---|
-| Fired slugs and signals (the evidence layer) | Observed | The underlying DNS / CT / identity query, re-runnable | Heuristic catalogue; a rule can mis-fire, so each carries a vendor-doc reference |
-| `m365_tenant` | Evidence-responsive | Tiers 1 to 3; two-class provider attestation exists (tenant ID / namespace, and the documented not-found response), and the channel-split corroboration harness ships (`validation/tenancy_reference_calibration.py`) | The channel-split refresh landed 2026-06-28 (fixed-bin ECE 0.0471, equal-mass ECE 0.0440, agreement 0.889, n=3,296), a reached corroboration result against provider attestation |
-| `google_workspace_tenant` | Evidence-responsive | Tiers 1 to 3; the provider channel attests only observed federated routing (one-sided, no authoritative negative, no managed detection) | Tier 4 unreachable on this channel: a one-sided recall check on attested positives is reported, never a calibration |
-| `okta_idp`, `federated_identity` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: federation indicators are hideable |
-| `email_gateway_present`, `cdn_fronting`, `aws_hosting` | Evidence-responsive | Tiers 1 to 3 | Tier 4 unavailable: all hideable infrastructure |
-| `email_security_modern_provider` | Consistency | Pure propagation from parents (no own evidence), so it inherits its parents' tier | Not an independent measurement |
-| `email_security_policy_enforcing` | Full-posterior calibration (strong, DMARC-anchored); the clean residual disconfirmed | Calibrated against the DMARC record on real domains (full posterior fixed-bin ECE 0.0761, equal-mass ECE 0.0651, n=2,906, stable across 22 verticals, miss conservative). DMARC is also the node's dominant input, so the full-posterior agreement is largely definitional; the full-corpus held-out run shows the DMARC-disjoint residual is weak and poorly calibrated (fixed-bin ECE 0.3747, equal-mass ECE 0.3263), so it is not a clean tier-4 result. See `validation/reference-calibration.md` and `validation/2026-06-28-full-corpus-calibration-refresh.md` | The result is for a domain *declaring* an enforcing policy, not enforcing it, and the declaration is forgeable at zero cost (correlation.md 4.11, Pattern I) |
-| The 80% credible interval (all nodes) | Evidence-responsive | Differential verification plus perturbation coverage (v2.1.15) | Frequentist ground-truth coverage (tier 4) only where a public reference exists |
-| Cohort-summary prevalences (PV1) | Observed plus evidence-responsive | Observability-adjusted rates over the caller's set, with denominators | Ecological-fallacy discipline; never a population claim |
+Examples include comparing a policy posterior dominated by DMARC with the DMARC
+record, or comparing DNS-driven M365 evidence with provider identity endpoints
+that are related to the same tenancy state.
 
-## What each tier licenses, and what it does not
+This licenses only the exact corroboration statement. It does not license a
+general calibration claim.
 
-- **Observed** licenses "the public channel returned this." It does not license
-  "the organization runs this," because a record can be stale or a slug can
-  mis-fire; that is why every detection carries a re-verification reference.
-- **Consistency** licenses "the two layers agree." It does not license "the CPT
-  values are right," because the agreement is near-tautological (CAL1). Reading
-  the consistency number as calibration is the specific error this dossier exists
-  to prevent.
-- **Evidence-responsive** licenses "the interval honestly tracks how much the
-  channel constrains the claim, and absorbs the acknowledged likelihood
-  imprecision." It governs the interval's *width* and is silent about its
-  *location*: a wrong CPT produces a tight interval around the wrong mean, and
-  evidence-responsiveness does not catch that. It does not license "the interval
-  has 80% frequentist coverage against ground truth," which is tier 4.
-- **Empirical coverage** licenses the frequentist statement. It is claimed only
-  where measured, and today it is the open frontier.
+### Level 4: independent predictive validation
 
-## The frontier
+A two-class external reference evaluates the named claim family on a predeclared
+population with parameter development disjoint from evaluation and predictor
+inputs disjoint from the label. Appropriate evidence includes proper scores,
+tie-preserving reliability diagnostics with domain-cluster uncertainty,
+selective risk versus coverage, and supported versus unsupported claim rates.
 
-The CAL3 / CAL4 reference calibration has run at full corpus on the nodes where it
-is possible: `email_security_policy_enforcing` against the DMARC record and
-`m365_tenant` against the provider endpoints (aggregates only, no apexes
-committed, per [data-handling-policy.md](data-handling-policy.md); detail in
-`validation/reference-calibration.md` and
-`validation/2026-06-28-full-corpus-calibration-refresh.md`). For the policy node
-the full posterior is strongly calibrated (fixed-bin ECE 0.0761, equal-mass ECE
-0.0651, n=2,906, stable across 22 verticals), but because DMARC is also its
-dominant input that agreement is largely definitional; the held-out
-DMARC-disjoint residual, the construction that would make the residual a clean
-tier-4 result, instead runs weak and poorly calibrated (fixed-bin ECE 0.3747,
-equal-mass ECE 0.3263), so it disconfirms the clean claim rather than
-establishing it. What remains is bounded and honest:
+This is the level required before calling a score empirically calibrated for a
+population. No current recon claim family has a clean level 4 result that
+supports general calibration language.
 
-- The `m365_tenant` claim is corroborated against Microsoft's own identity
-  endpoints with both label classes; the channel-split refresh landed
-  (fixed-bin ECE 0.0471, equal-mass ECE 0.0440, agreement 0.889, n=3,296 over
-  the DNS-driven posterior against the endpoint attestation), a reached result.
-  `google_workspace_tenant` gets only the one-sided recall check the Google
-  channel supports (n=11 attested positives, recall 0.3636); a calibration there
-  would need a two-class attestor recon's passive channel does not have.
-- The hideable-infrastructure nodes have no external reference by the nature of
-  the adversarial-missingness setting, so they stay at tier 3 by design, not by
-  omission. The dossier reports them that way rather than implying coverage it
-  cannot have.
+## Current numeric semantics
 
-This is the honest position: recon's numbers have sound provenance and a faithful,
-verified inference engine behind them, the email-policy node has a strong
-full-posterior calibration against the DMARC record (DMARC-anchored, the clean
-residual disconfirmed) and the M365 tenancy node a strong channel-split
-corroboration against provider attestation, and recon says where that support ends
-rather than implying more. The point estimates on the hideable nodes remain
-unvalidated against truth, by the nature of the passive setting.
+### Per-slug `slug_confidences`
+
+The per-slug value is a Beta-shaped additive evidence-strength score. It uses
+hand-set source priors and positive weights, has no fitted negative likelihood,
+and can increase with repeated evidence records. It is level 2. It is not an
+externally calibrated posterior probability.
+
+### Bayesian-network posterior
+
+`posterior_observations[*].posterior` is an exact marginal for the committed
+nine-node Bayesian network. Exact arithmetic is level 2. The value is
+model-relative because the priors, CPTs, likelihoods, dependence groups, and
+missingness rules are manually encoded, and several parameters were informed
+by a June 2026 development corpus. They were not fitted by a runtime training
+algorithm, but "not machine learned" does not mean independently validated.
+
+### Evidence-responsive uncertainty band
+
+`interval_low` and `interval_high` come from a post-inference Beta-shaped
+display with mean equal to the network posterior and concentration equal to
+`n_eff`: `alpha = posterior * n_eff` and
+`beta = (1 - posterior) * n_eff`. The concentration is hand constructed, not an
+observed sample size. It increases with counted evidence units and decreases
+with a global conflict penalty, subject to a floor of four.
+
+When `alpha >= 1` and `beta >= 1`, the implementation uses central 80 percent
+Beta quantiles if they contain the reported mean. That exact branch includes
+uniform and boundary-mode cases, so it is not strictly an interior-unimodality
+test. Other shapes, or quantiles that miss the mean, use a clamped mean-centered
+normal approximation. Exact zero and one inputs produce degenerate endpoint
+bands. The result is therefore a mixed display rule, not a single
+posterior-quantile construction.
+
+The band is level 2. It is not:
+
+- a Bayesian credible interval over uncertain CPTs or likelihoods;
+- a frequentist confidence interval;
+- an identification region under unknown MNAR;
+- guaranteed to widen whenever evidence is removed or narrow whenever evidence
+  is added.
+
+The current perturbation harness shows selected model-internal containment under
+its elicitation scenarios. That is a useful regression property, not empirical
+coverage.
+
+### `sparse`
+
+`sparse=true` means the effective display mass is at its configured floor after
+counted fired or declarative-absence units and global conflict penalties. This
+can mean no units were counted, or that conflict penalties offset their display
+mass. It is not synonymous with no observed evidence, a passive-observation
+ceiling, or an absence finding. It does not quantify a calibrated uncertainty
+level and does not guarantee that the posterior is near 0.5.
+
+### Signed marginal entropy change
+
+`entropy_reduction_nats` is
+
+\[
+H(P_m(X))-H(P_m(X\mid e)).
+\]
+
+It can be negative. It is a signed marginal entropy change, not realized
+pointwise information gain. Summing it across dependent nodes can double count
+belief changes.
+
+### Graph values
+
+When `algorithm == "louvain"`, `modularity` is the objective value for the
+observed clique projection, not confidence or statistical significance.
+Connected-component and skipped paths use `0.0` as a sentinel.
+`partition_stability` is mean pairwise adjusted Rand index across seeds on one
+fixed graph. It does not measure stability to missing CT entries, hub
+certificates, or graph weighting choices.
+
+## External evidence ledger
+
+| Claim or output | Highest level | Evidence | Limit |
+|---|---:|---|---|
+| Raw DNS, CT, and identity responses | 1 | Re-queryable public response with source status and time | Can be stale, partial, or ambiguous |
+| Fingerprint slugs and signals | 2 | Deterministic rules and fixtures | Catalog precision is not established for every rule |
+| Per-slug evidence strength | 2 | Deterministic additive score | No fitted two-class likelihood or independent calibration |
+| `m365_tenant` posterior | 3 | DNS-driven score compared with provider endpoint attestation: historical fixed-bin ECE 0.0471, historical legacy index-sliced equal-mass ECE 0.0440, agreement 0.889, n=3,296 in the 2026-06-28 development aggregate; see the [M365 tenancy decision](m365-tenancy-decision.md) | In-sample corroboration between related channels, not clean independent calibration |
+| `google_workspace_tenant` posterior | 3 | One-sided provider routing attestation, n=11 positives and recall 0.3636 | No authoritative negative class, so calibration is not identified |
+| `email_security_policy_enforcing` posterior | 3 | Full score compared with DMARC: historical fixed-bin ECE 0.0761, historical legacy index-sliced equal-mass ECE 0.0651, n=2,906 DMARC publishers across 22 development strata | DMARC is the dominant input; the input-disjoint residual reuses parameter-development data and performs poorly, with historical fixed-bin ECE 0.3747 and historical legacy equal-mass ECE 0.3263 |
+| Hideable IdP, gateway, CDN, and hosting posteriors | 2 | Exact model computation and selected synthetic properties | No training-disjoint and predictor-input-disjoint two-class reference |
+| `email_security_modern_provider` | 2 | Pure propagation from parent nodes | Not an independent measurement |
+| Uncertainty band | 2 | Deterministic mean/concentration Beta display with a boundary fallback, plus finite model-internal scenario checks | No coherent parameter posterior, identification region, or empirical coverage claim |
+| CT graph partition | 2 | Deterministic fixed-seed partition plus seed sweep | Clique-projection bias and data stability remain unmeasured |
+| Cohort summaries | 1 plus 2 | Caller-supplied set, explicit denominators, model-relative reductions | No population inference or ownership claim |
+
+The M365 and policy figures are development-corpus aggregate diagnostics, not
+universal performance rates. The policy rows are publisher-conditional, and
+several parameters were informed by the same corpus. No current tie-preserving
+numeric estimate is available. Historical equal-mass bins
+split tied scores by index; historical row-bootstrap and Wilson intervals assume
+iid rows and carry no coverage interpretation. The held-out residual prevents a
+clean calibration claim but is not itself a level-4 training-disjoint result.
+
+## Validation that remains necessary
+
+The roadmap's first statistical task is a paired, predeclared product ablation:
+
+1. deterministic evidence plus explicit abstention;
+2. per-slug evidence strength;
+3. strongest reviewed evidence unit;
+4. current Bayesian network.
+
+Predeclare one primary family, candidate, and comparator. Use one frozen
+`(domain, claim_family, observation_time)` row per unique domain, admit at most
+one domain per known administrative, ownership, or tenant cluster in the
+primary analysis, keep domain groups intact across parameter development and
+evaluation, and require predictor-input-disjoint labels. A clustered
+multi-domain analysis remains secondary until it defines a cluster-level
+estimand, outcome, and decision rule. Report the precisely defined
+reference-positive support rate and reference-negative unsupported-emission
+rate, abstention, selective risk versus coverage, tie-preserving reliability,
+provenance completeness, latency, and allocation. Report Brier and log score
+only for an arm that supplies one frozen probability forecast for every
+eligible row; arbitrary evidence-strength scores require a development-disjoint
+fitted probability mapping first. The primary paired bounds must remain valid
+at zero discordance. Bootstrap intervals are secondary, must preserve the
+predeclared label strata and paired structure, and cannot repair unknown
+cross-domain dependence. Every interval must name its assumptions.
+
+The minimum sample sizes and go or no-go rule live in
+[roadmap.md](roadmap.md). An inconclusive or negative result moves advanced
+fusion out of the primary path. No secondary metric can override that decision
+after results are visible.
+
+The proposed claim-robustness envelope adds a separate test: evidence removal
+and planting under explicit provenance classes, dependency units, costs, and
+budgets. Its first bounds are pointwise, model-and-threat-relative robust scores,
+not probability bounds. Identification of `P(C | O=o)` additionally requires a
+coherent normalized joint law over the claim, full latent target state, and
+observation-process state, plus a possibly claim-dependent observation kernel
+and an explicit ambiguity class. Support compatibility alone supplies no
+observation likelihoods. See
+[correlation.md](correlation.md#5-claim-robustness-envelopes).
+
+## Wording rules
+
+- Say "observed" for a public fact.
+- Say "deterministically derived" for a rule output.
+- Say "evidence strength" for `slug_confidences`.
+- Say "model-relative posterior" for the Bayesian-network mean.
+- Say "evidence-responsive uncertainty band" for `interval_low` and
+  `interval_high`.
+- Say "external corroboration" for an overlapping or related reference.
+- Say "empirically calibrated" only after a predeclared, training-disjoint and
+  predictor-input-disjoint level 4 evaluation supports it for the named
+  population.
+- Say "unresolved" when the public channel and admitted assumptions do not
+  identify the claim.
+
+These terms are compatibility-neutral. Stable field names remain unchanged.

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json",
   "title": "recon JSON output",
-  "description": "Stable v2.0 contract for the single-domain success output of `recon <domain> --json`. This root object describes exactly one output mode: a successful single-domain lookup. The other output modes have their own shapes, documented in $defs and in docs/schema.md. `recon batch <file> --json` (default) emits a bare array of records, one per input domain (see $defs/BatchArray); each element is either a single-domain success object (this root) or a $defs/BatchErrorRecord. `recon batch <file> --json --include-ecosystem` always wraps that array in a $defs/BatchResult object; on an all-failed batch the wrapper is still emitted, with the error records under `domains` and an empty `ecosystem_hyperedges`. `recon batch <file> --ndjson` emits one $defs/BatchNdjsonRecord per line. `recon delta <domain>` emits a $defs/DeltaReport. The dataclass in recon_tool.models.TenantInfo and the formatter in recon_tool.formatter.format_tenant_dict are the implementation source of truth. Consumers should ignore unknown properties; additive changes are non-breaking within 2.x. A few top-level fields are emitted only in specific modes or behind specific flags and are intentionally absent from `required`; each such property states its condition in its own description. See tests/test_json_schema_contract.py for the executable single-domain contract and tests/test_batch_ndjson_schema.py for the batch-record rule set.",
+  "description": "Stable v2.0 contract for the single-domain success output of `recon <domain> --json`. This root object describes exactly one output mode: a successful single-domain lookup. The other output modes have their own shapes, documented in $defs and in docs/schema.md. `recon batch <file> --json` (default) emits a bare array of records, one per input domain (see $defs/BatchArray); each element is either a single-domain success object (this root) or a $defs/BatchErrorRecord. `recon batch <file> --json --include-ecosystem` always wraps that array in a $defs/BatchResult object; on an all-failed batch the wrapper is still emitted, with the error records under `domains` and an empty `ecosystem_hyperedges`. `recon batch <file> --ndjson` emits one $defs/BatchNdjsonRecord per line. `recon delta <domain> --json` and `recon <domain> --compare <file> --json` emit a $defs/DeltaReport. The dataclass in recon_tool.models.TenantInfo and the formatter in recon_tool.formatter.format_tenant_dict are the implementation source of truth. Consumers should ignore unknown properties; additive changes are non-breaking within 2.x. A few top-level fields are emitted only in specific modes or behind specific flags and are intentionally absent from `required`; each such property states its condition in its own description. See tests/test_json_schema_contract.py for the executable single-domain contract and tests/test_batch_ndjson_schema.py for the batch-record rule set.",
   "type": "object",
   "required": [
     "tenant_id",
@@ -55,14 +55,14 @@
   ],
   "properties": {
     "tenant_id": {
-      "description": "Microsoft 365 tenant UUID. Null for non-M365 domains.",
+      "description": "Microsoft 365 tenant UUID when observed. Null means no UUID was observed; it does not distinguish a non-M365 domain from unavailable, incomplete, or non-disclosing tenant discovery.",
       "type": [
         "string",
         "null"
       ]
     },
     "display_name": {
-      "description": "Organization display name. Falls back to the queried domain when no better signal is available.",
+      "description": "Best available public display label, which may be an identity-provider federation brand; falls back to the queried domain. It is not a verified legal organization name or ownership claim.",
       "type": "string"
     },
     "default_domain": {
@@ -74,11 +74,11 @@
       "type": "string"
     },
     "provider": {
-      "description": "One-line provider summary (e.g. 'Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)').",
+      "description": "Evidence-role summary of MX delivery paths, gateways, and possible downstream indicators (e.g. 'Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)'). Joined entries have no primary or secondary ordering semantics and do not prove complete product use.",
       "type": "string"
     },
     "confidence": {
-      "description": "Overall confidence in the merged result.",
+      "description": "Deterministic merged-output summary tier derived from source, same-claim corroboration, and degradation heuristics. It is not confidence in every claim or a calibrated probability.",
       "type": "string",
       "enum": [
         "high",
@@ -143,14 +143,14 @@
       ]
     },
     "primary_email_provider": {
-      "description": "MX-confirmed primary email provider.",
+      "description": "Schema-compatible field containing provider names observed directly in MX. Joined values are an unordered set and do not assert primacy.",
       "type": [
         "string",
         "null"
       ]
     },
     "likely_primary_email_provider": {
-      "description": "Inferred primary (hedged) when MX is a gateway and DKIM/TXT/OIDC points to a specific downstream.",
+      "description": "Possible downstream provider indicator from non-MX role evidence when MX names only a gateway. It is not a primary-provider claim.",
       "type": [
         "string",
         "null"
@@ -171,32 +171,32 @@
       }
     },
     "partial": {
-      "description": "True when any core source is in degraded_sources (CT-only degradation does not flip this flag).",
+      "description": "True when any core source or core collector-channel marker is in degraded_sources (CT-only degradation does not flip this flag).",
       "type": "boolean"
     },
     "degraded_sources": {
-      "description": "Source names that failed or were unavailable.",
+      "description": "Stable source, collector-channel, or detector identifiers that failed or were unavailable. Values can be finer-grained than top-level sources, for example dns_records, dns:dmarc, dns:mx, or detector:email_security. An unavailable channel is unobserved, not a negative result.",
       "type": "array",
       "items": {
         "type": "string"
       }
     },
     "services": {
-      "description": "Human-readable service names ('Microsoft 365', 'Slack', etc.).",
+      "description": "Human-readable labels derived from public fingerprints and reviewed rules. They are not proof of active product use.",
       "type": "array",
       "items": {
         "type": "string"
       }
     },
     "slugs": {
-      "description": "Stable fingerprint slugs for programmatic matching.",
+      "description": "Stable identifiers for observed fingerprint patterns. They are not product-use claims.",
       "type": "array",
       "items": {
         "type": "string"
       }
     },
     "detection_scores": {
-      "description": "Per-slug detection score level aggregated from evidence.",
+      "description": "Per-slug evidence-strength level aggregated from observations. It is not a probability or truth confidence.",
       "type": "object",
       "additionalProperties": {
         "type": "string",
@@ -208,33 +208,33 @@
       }
     },
     "insights": {
-      "description": "Derived intelligence lines. Exact wording may evolve; presence and signal types are stable.",
+      "description": "Derived, hedged observations from public evidence. Exact wording may evolve; they are not verified private-state intelligence or proof of product use.",
       "type": "array",
       "items": {
         "type": "string"
       }
     },
     "domain_count": {
-      "description": "Number of domains in the tenant.",
+      "description": "Number of domain strings retained from bounded public tenant-discovery responses. It is not organization size or guaranteed tenant cardinality.",
       "type": "integer",
       "minimum": 0
     },
     "tenant_domains": {
-      "description": "All domains found in the tenant.",
+      "description": "Domain strings retained from bounded public tenant-discovery responses. The list may be incomplete and does not establish ownership or an exhaustive tenant namespace.",
       "type": "array",
       "items": {
         "type": "string"
       }
     },
     "related_domains": {
-      "description": "Domains inferred from CNAME breadcrumbs, CT logs, or autodiscover delegation.",
+      "description": "Domain names linked by bounded CNAME, CT, or autodiscover breadcrumbs. The stable field name does not imply ownership or an organizational relationship.",
       "type": "array",
       "items": {
         "type": "string"
       }
     },
     "email_security_score": {
-      "description": "Count of the 5 email controls present: effectively enforcing DMARC, DKIM selectors, SPF strict (-all), MTA-STS, BIMI.",
+      "description": "Compatibility count of five observed-present public controls: effectively enforcing DMARC, DKIM selectors, SPF strict (-all), MTA-STS, and BIMI. If a constituent channel is unavailable, the count is incomplete; consult degraded_sources rather than treating uncounted controls as completed negatives.",
       "type": "integer",
       "minimum": 0,
       "maximum": 5
@@ -380,7 +380,7 @@
       ]
     },
     "fusion_enabled": {
-      "description": "True when the Bayesian fusion layer ran for this lookup (under --fusion, or default-on from v2.0). Disambiguates the fusion arrays: when false, slug_confidences and posterior_observations are empty because fusion was not computed; when true, an empty array means fusion ran and found nothing.",
+      "description": "True when the default-on evidence-strength and Bayesian-network post-processing ran for this lookup. When false, slug_confidences is an empty object and posterior_observations is an empty array. When true, slug_confidences can still be empty if no retained evidence carries a slug, while posterior_observations carries the network's fixed nodes.",
       "type": "boolean"
     },
     "schema_version": {
@@ -393,7 +393,7 @@
       "const": "lookup"
     },
     "slug_confidences": {
-      "description": "Bayesian per-slug posterior means (stable v2.0+). An object mapping each detected slug to its posterior mean in [0, 1], parallel to detection_scores. Populated only when fusion runs (see fusion_enabled); empty object otherwise. The Beta layer operates on raw evidence; the network layer (posterior_observations) propagates through chained claims.",
+      "description": "Per-slug evidence-strength scores from a Beta-shaped additive heuristic over retained positive evidence occurrences (stable v2.0+). An object mapping each detected slug to a score in [0, 1], parallel to detection_scores. Occurrences are not asserted independent, and scores are not externally calibrated probabilities. Populated only when fusion runs (see fusion_enabled); empty object otherwise. The network layer (posterior_observations) separately propagates evidence through chained claims.",
       "type": "object",
       "additionalProperties": {
         "type": "number",
@@ -402,7 +402,7 @@
       }
     },
     "posterior_observations": {
-      "description": "Marginal posteriors over high-level claims from the Bayesian network at recon_tool/data/bayesian_network.yaml (v1.9; stable v2.0+). Each entry includes the posterior P(node=present | E) and the central 80% credible interval. Populated only when fusion runs (see fusion_enabled); empty array otherwise. The Beta layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
+      "description": "Model-relative marginal posteriors over high-level claims from the manually encoded, partly development-corpus-informed Bayesian network at recon_tool/data/bayesian_network.yaml (v1.9; stable v2.0+). Each entry includes P(node=present | E) under that model and an 80% evidence-responsive uncertainty band. Populated only when fusion runs (see fusion_enabled); empty array otherwise. The evidence-strength layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
       "type": "array",
       "items": {
         "$ref": "#/$defs/PosteriorObservation"
@@ -416,7 +416,7 @@
       }
     },
     "evidence_conflicts": {
-      "description": "Top-level array of cross-source disagreements (v1.7+). Each entry names a merged field where 2+ sources provided different non-None values, with every candidate preserved. Empty array when sources agreed. The conflict-aware merger picks a winner using source-confidence ordering; this array surfaces the alternates so consumers can see what was discarded. The legacy `conflicts` dict that --explain emits remains for backwards compatibility.",
+      "description": "Top-level array of tracked cross-source disagreements (v1.7+). Each entry names one of six merged fields where 2+ sources provided different non-None values, with every candidate preserved. Empty means no disagreement among those tracked fields, not complete claim-level conflict coverage. The merger uses source-result completeness ordering; candidate confidence is not field-specific reliability or calibrated truth confidence. The legacy `conflicts` dict that --explain emits remains for backwards compatibility.",
       "type": "array",
       "items": {
         "$ref": "#/$defs/EvidenceConflict"
@@ -434,7 +434,7 @@
       "$ref": "#/$defs/InfrastructureClusterReport"
     },
     "fingerprint_metadata": {
-      "description": "Per-slug relationship metadata (v1.8+). Object keyed by detected fingerprint slug. Each value is `{product_family, parent_vendor, bimi_org}` \u2014 descriptive hints sourced from the fingerprint YAML. Slugs without any populated metadata are omitted entirely. Empty object when no detected slug carries metadata. Drives the v1.8 ecosystem hypergraph; never an ownership assertion.",
+      "description": "Per-slug typed catalog or grouping metadata (v1.8+), keyed by detected fingerprint slug. Each value is `{product_family, parent_vendor, bimi_org}` from fingerprint YAML. Slugs without populated metadata are omitted. Empty object when nothing applies. Drives exact batch hyperedge labels and never implies ownership, administrative control, or a business relationship.",
       "type": "object",
       "additionalProperties": {
         "$ref": "#/$defs/FingerprintMetadata"
@@ -455,8 +455,41 @@
       }
     },
     "explanation_dag": {
-      "description": "Conditional. Present only with --explain on the lookup_tenant MCP tool, absent otherwise; consumers should not treat it as always present. Top-level keys: evidence, slugs, rules, signals, insights, each a list of records with id and references.",
-      "type": "object"
+      "description": "Conditional. Present only with --explain through the CLI or lookup_tenant MCP tool, absent otherwise; consumers should not treat it as always present. Occurrence-aware provenance graph with additive completeness diagnostics.",
+      "type": "object",
+      "required": [
+        "nodes",
+        "edges",
+        "schema_version"
+      ],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "provenance_complete": {
+          "type": "boolean",
+          "description": "True exactly when every signal, insight, observation, and confidence terminal is reachable from at least one evidence node in the emitted reconstructed graph. Reachability does not prove exact generation-time lineage for associations reconstructed from text or proxy matches."
+        },
+        "disconnected_terminals": {
+          "type": "array",
+          "description": "Sorted terminal node ids that are not reachable from any evidence node.",
+          "items": {
+            "type": "string"
+          }
+        }
+      }
     },
     "shared_verification_tokens": {
       "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch shared a TXT verification token. Never emitted in single-domain --json or in --ndjson (which streams before the batch-wide pass runs). Each entry pairs a shared token with the peer domain that also carried it.",
@@ -804,7 +837,7 @@
             "number",
             "null"
           ],
-          "description": "Partition consensus across a Louvain seed sweep: the mean pairwise adjusted Rand index between the partitions produced by stability_runs different seeds (CAL11). 1.0 means every seed produced the identical partition; lower values flag partition degeneracy that a single modularity score cannot see. null outside the Louvain path (fallback / skipped), where the partition is deterministic and the measure is not applicable. Added 2.2.0; schema-additive."
+          "description": "Optimizer consensus across a Louvain seed sweep: the mean pairwise adjusted Rand index between the partitions produced by stability_runs different seeds (CAL11). 1.0 means every seed produced the identical partition; lower values show seed sensitivity on that one fixed graph. This does not measure CT data stability, model stability, significance, or partition correctness. null outside the Louvain path (fallback / skipped), where the partition is deterministic and the measure is not applicable. Added 2.2.0; schema-additive."
         },
         "stability_runs": {
           "type": "integer",
@@ -846,7 +879,7 @@
             "parent_vendor",
             "shared_slugs"
           ],
-          "description": "Rule that produced the edge: shared CT top issuer, shared BIMI VMC organization, shared fingerprint parent_vendor, or shared fingerprint-slug pair (\u22652 overlap)."
+          "description": "Rule that produced the edge: shared CT top issuer, shared BIMI VMC organization, shared fingerprint parent_vendor, or shared fingerprint-slug pair (at least 3 overlapping non-ubiquitous slugs)."
         },
         "key": {
           "type": "string",
@@ -863,7 +896,7 @@
       }
     },
     "FingerprintMetadata": {
-      "description": "Relationship hints for one fingerprint slug. Stable v1.8+. Each field is optional \u2014 at least one will be non-null when this record appears.",
+      "description": "Typed catalog or grouping metadata for one fingerprint slug. Stable v1.8+. Each field is optional; at least one is non-null when this record appears. These fields do not imply ownership, control, or a business relationship.",
       "type": "object",
       "required": [
         "product_family",
@@ -966,6 +999,7 @@
               },
               "confidence": {
                 "type": "string",
+                "description": "Overall completeness tier of the contributing source result, not field-specific reliability or calibrated truth confidence.",
                 "enum": [
                   "high",
                   "medium",
@@ -998,7 +1032,7 @@
       }
     },
     "PosteriorObservation": {
-      "description": "Per-node Bayesian posterior with an 80% credible interval (v1.9; stable v2.0+). The interval is evidence-responsive: it widens monotonically as evidence thins and narrows as it accumulates (a construction property; it is not a frequentist coverage interval, see correlation.md section 4.4). ``sparse=true`` flags the passive-observation ceiling for a node whose absence carries no disconfirming weight; a declarative node (one whose absent public-declaration signals are themselves evidence, CAL14) can be confidently-absent, with a low posterior, a narrow interval, and ``sparse=false``. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty.",
+      "description": "Per-node model-relative Bayesian posterior with an 80% evidence-responsive uncertainty band (v1.9; stable v2.0+). The band uses the model mean and hand-set effective display mass to parameterize a Beta shape, with a mean-centered fallback at boundaries. It is not a Bayesian credible interval or frequentist confidence interval, and its width is not generally monotone when evidence changes both the posterior and the mass. ``sparse=true`` marks only the minimum display-mass case; it does not state whether informative absence was counted. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty.",
       "type": "object",
       "required": [
         "name",
@@ -1024,19 +1058,19 @@
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "P(node=present | observed evidence)."
+          "description": "P(node=present | observed evidence) under the committed manually encoded, partly development-corpus-informed model."
         },
         "interval_low": {
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "Lower bound of the 80% credible interval (evidence-responsive, not frequentist coverage)."
+          "description": "Lower bound of the 80% evidence-responsive uncertainty band. Not a Bayesian credible interval or frequentist confidence interval."
         },
         "interval_high": {
           "type": "number",
           "minimum": 0,
           "maximum": 1,
-          "description": "Upper bound of the 80% credible interval (evidence-responsive, not frequentist coverage)."
+          "description": "Upper bound of the 80% evidence-responsive uncertainty band. Not a Bayesian credible interval or frequentist confidence interval."
         },
         "evidence_used": {
           "type": "array",
@@ -1048,11 +1082,11 @@
         "n_eff": {
           "type": "number",
           "minimum": 0,
-          "description": "Effective sample size used to derive the interval; lower means wider interval."
+          "description": "Effective display mass used to derive the uncertainty band; lower usually means wider for a fixed posterior."
         },
         "sparse": {
           "type": "boolean",
-          "description": "True when n_eff is at the floor and absence carried no disconfirming weight for this node; the interval reflects the passive-observation ceiling, not strong belief. For a declarative node (CAL14) absence is evidence, so a confidently-absent declarative node has n_eff above the floor and ``sparse=false`` despite a low posterior."
+          "description": "True when n_eff is at the configured floor. This marks the minimum display-mass case, not a calibrated uncertainty level and not whether informative absence was counted."
         },
         "conflict_provenance": {
           "type": "array",
@@ -1070,7 +1104,7 @@
         },
         "entropy_reduction_nats": {
           "type": "number",
-          "description": "This node's share of the information recovered: H(prior marginal) - H(posterior) in nats, signed (negative when evidence widens the node). Per-node breakdown of the top-level entropy-reduction total (CAL10). Added 2.2.0; schema-additive."
+          "description": "Signed marginal entropy change H(prior marginal) - H(posterior) in nats. It can be negative, is not pointwise information gain, and the sum can double count dependent nodes. Added 2.2.0; schema-additive."
         },
         "unit_counterfactuals": {
           "type": "array",
@@ -1189,7 +1223,7 @@
       }
     },
     "DeltaReport": {
-      "description": "Output shape of `recon delta <domain>` and `recon <domain> --compare <file>`. Stable.",
+      "description": "JSON output shape of `recon delta <domain> --json` and `recon <domain> --compare <file> --json`. A null changed_* field means either no detected comparable change or a withheld comparison; consult incomplete_comparison.suppressed_fields. Stable.",
       "type": "object",
       "required": [
         "record_type",
@@ -1243,13 +1277,15 @@
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Best-effort signal additions reconstructed from rendered insight text so legacy snapshots remain comparable. Additions are withheld when previous collection is degraded. This is not a raw signal-registry diff."
         },
         "removed_signals": {
           "type": "array",
           "items": {
             "type": "string"
-          }
+          },
+          "description": "Best-effort signal removals reconstructed from rendered insight text. Removals are withheld when current collection is degraded. This is not a raw signal-registry diff."
         },
         "changed_auth_type": {
           "oneOf": [
@@ -1378,6 +1414,52 @@
               }
             }
           ]
+        },
+        "incomplete_comparison": {
+          "description": "Additive diagnostic for fields withheld because one or both snapshot collections were degraded. null means no degradation-triggered suppression was recorded; it does not prove complete observation opportunity or equivalence of options, versions, cache, time, or resolver vantage. The endpoint-specific source lists identify whether additions, removals, or dependent scalar comparisons lacked an observation opportunity represented by the current compatibility markers.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "required": [
+                "degraded_sources",
+                "suppressed_fields"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "degraded_sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Sorted union of previous and current collection markers that made the comparison incomplete."
+                },
+                "suppressed_fields": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Delta fields intentionally withheld rather than treating unavailable evidence at either endpoint as a temporal change."
+                },
+                "previous_degraded_sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Previous-snapshot collection markers. A non-empty list can make additions and dependent scalar changes unidentifiable."
+                },
+                "current_degraded_sources": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  },
+                  "description": "Current-snapshot collection markers. A non-empty list can make removals and dependent scalar changes unidentifiable."
+                }
+              }
+            }
+          ]
         }
       }
     },
@@ -1417,7 +1499,7 @@
       }
     },
     "BatchArray": {
-      "description": "Default shape of ``recon batch <file> --json`` (without --include-ecosystem): a bare JSON array, one element per input domain, in input-file order. Each element is either a single-domain success object (the root schema of this file) or a BatchErrorRecord. Success elements may additionally carry the batch-only cross-domain fields (shared_verification_tokens, shared_tenant, shared_display_name) when the batch surfaced a peer relationship.",
+      "description": "Default shape of ``recon batch <file> --json`` (without --include-ecosystem): a bare JSON array, one element per input domain, in input-file order. Each element is either a single-domain success object (the root schema of this file) or a BatchErrorRecord. Success elements may additionally carry batch-only typed overlap fields (shared_verification_tokens, shared_tenant, shared_display_name); none establishes ownership or a business relationship.",
       "type": "array",
       "items": {
         "oneOf": [

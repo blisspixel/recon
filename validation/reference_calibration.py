@@ -1,27 +1,23 @@
-"""CAL3 / CAL4: calibrate a posterior against a public reference (the record
-that is its own ground truth).
+"""Compare the email-policy model score with the public DMARC channel.
 
-Most recon claims have no passive ground truth (a hardened operator can
-hide the indicators, so the absence is adversarially missing; see
-correlation.md section 4.3 and docs/statistical-assurance.md). One node
-is the exception. ``email_security_policy_enforcing`` infers a
-probability that a domain's email-authentication policy is enforcing,
-and the authoritative definition of "enforcing" is a public declaration
-anyone can read: a DMARC policy of ``reject`` or ``quarantine`` (RFC
-9989). The published DMARC record is its own ground truth, so it is a
-known-truth reference the posterior can be calibrated against, not merely
-a self-consistency check.
+Most recon claims have no predictor-disjoint passive reference. See
+correlation.md section 3.3 and docs/statistical-assurance.md.
+``email_security_policy_enforcing`` infers a
+probability that a domain's email-authentication policy is enforcing.
+An observed DMARC channel supplies a public comparison label: ``reject`` or
+``quarantine`` is enforcing, while ``none`` or a successfully observed missing
+record is not enforcing (RFC 9989). A collection failure is unlabeled rather
+than silently converted into a negative. Because DMARC is also the dominant predictor input,
+the full-score comparison is overlapping corroboration, not independent
+calibration.
 
 What this measures, and what it does not. The reference label here comes
-from an authoritative external definition (the published DMARC policy
-level), not from recon's own posterior, so this is firmer than the
-near-tautological deterministic-vs-Bayesian consistency check (tier 2 in
-the statistical-assurance dossier). It is not the fully-independent
-ground truth of an ideal frequentist study, because the node's own
-evidence includes the DMARC signal, so the posterior and the reference
-overlap on input. What it does test honestly: whether recon's combined
+from the observed DMARC channel rather than recon's posterior. The full-score
+comparison is nevertheless selected-list corroboration, not independent
+calibration: the node's own evidence includes the DMARC signal, so predictor
+and label overlap on input. What it does test honestly is whether recon's combined
 multi-signal posterior (DMARC plus strict SPF plus MTA-STS, under the
-node's definition) is calibrated against the authoritative DMARC-only
+  node's definition) agrees with the authoritative DMARC-only
 definition. Where recon over-weights SPF or MTA-STS and reports a high
 posterior on a domain whose DMARC is ``p=none``, the reference catches it.
 
@@ -30,27 +26,31 @@ entirely, each run also computes a *held-out residual* posterior: the same
 inference with the ``dmarc_policy`` evidence unit masked as structurally
 unobserved (``infer(..., masked_units=("dmarc_policy",))``), so the
 predictor sees only the strict-SPF and MTA-STS channel and the DMARC
-record serves purely as the label. Masking is not the same as the signal
+observation serves purely as the label. Masking is not the same as the signal
 not firing — the policy node is declarative, so a non-firing DMARC group
 would count as disconfirming absence; the mask suppresses both directions
-(see ``recon_tool/bayesian.py``). Predictor and label are disjoint by
-construction, which is the clean tier-4 claim: it asks how much the
-residual public channel alone says about enforcement. Expect it to be much
-weaker than the full posterior (DMARC is the dominant input by design);
-the honest result is the calibration of that weak predictor, not its
-strength.
+(see ``recon_tool/bayesian.py``). Predictor and label are disjoint inside
+recon's computation. This residual evaluation asks how much the remaining
+public channel says about the DMARC declaration on the selected corpus. It does
+not make the observations statistically independent, remove shared causes, or
+turn a convenience sample into a population sample. Expect the residual to be
+much weaker than the full score because DMARC is the dominant input by design.
+Its reliability and proper scores are descriptive results for the evaluated
+corpus.
 
-Why calibration and not interval coverage. The reference label is binary
-(enforcing or not), and a credible interval is for the probability, so
+Why score reliability and not band coverage. The reference label is binary
+(enforcing or not), and the uncertainty band is over a model probability, so
 "does the 80% interval contain the label" is a category mismatch.
-Calibration against a binary label is the measurable thing: bin the
+Reliability against a binary label is the measurable thing: bin the
 posteriors and check the empirical enforcing-rate in each bin against
 the posterior (reliability / ECE), and score the posterior against the
-label (Brier). Frequentist interval coverage in the CAL3 sense needs a
-probability truth or repeated trials per evidence pattern, which the
-synthetic perturbation harness supplies (validation/interval_coverage.py);
-this harness supplies the real-record calibration that the synthetic one
-cannot.
+label (Brier). Frequentist coverage would need a defined repeated-data target
+and sampling design. The synthetic perturbation harness
+(``validation/interval_coverage.py``) supplies only finite model-relative
+scenario containment, not empirical coverage; this harness supplies a
+real-record score comparison. Masking the label-defining unit
+removes direct predictor-label input overlap; it does not establish sample or
+channel independence.
 
 Data handling. The harness reads real apex domains (a public DMARC
 record is read for each), so a run stays maintainer-local against the
@@ -84,12 +84,14 @@ import asyncio
 import json
 import math
 import sys
+from collections.abc import Collection
 from dataclasses import dataclass
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
+from recon_tool.source_status import SourceStatus  # noqa: E402
 from validation.calibration_estimators import (  # noqa: E402
     bootstrap_mean_confidence_ece,
     equal_mass_reliability_bins,
@@ -118,24 +120,28 @@ def held_out_policy_posterior(
     slugs: set[str],
     signals: set[str],
     network: object | None = None,
-    priors_override: dict[str, float] | None = None,
+    degraded_sources: Collection[str] = (),
 ) -> float | None:
     """The policy-node posterior with the DMARC evidence unit masked.
 
     This is the held-out residual predictor: inference over the same
     observation set but with the ``dmarc_policy`` unit treated as
     structurally unobserved, so the DMARC record influences the label only.
-    Returns None if the policy node is absent (a custom network).
+    Returns None if the policy node is absent (a custom network). Inference is
+    always pinned to the committed priors; user-local prior overrides are not
+    part of a reproducible validation experiment.
     """
-    from recon_tool.bayesian import infer, load_network
+    from recon_tool.bayesian import collection_masked_units, infer, load_network
 
     net = network if network is not None else load_network()
+    masked_units = set(collection_masked_units(degraded_sources, network=net))  # type: ignore[arg-type]
+    masked_units.add(_DMARC_UNIT)
     result = infer(
         net,  # type: ignore[arg-type]
         observed_slugs=slugs,
         observed_signals=signals,
-        priors_override=priors_override,
-        masked_units=(_DMARC_UNIT,),
+        priors_override={},
+        masked_units=masked_units,
     )
     for p in result.posteriors:
         if p.name == _POLICY_NODE:
@@ -143,16 +149,23 @@ def held_out_policy_posterior(
     return None
 
 
-def reference_label_email_policy(dmarc_policy: str | None) -> int | None:
+def reference_label_email_policy(
+    dmarc_policy: str | None,
+    degraded_sources: Collection[str] = (),
+) -> int | None:
     """The authoritative enforcing/not label from a domain's DMARC policy.
 
     Returns 1 when the published policy is enforcing (reject / quarantine),
-    0 when it is explicitly non-enforcing (none), and None when no DMARC
-    record was observed, in which case the domain carries no reference
-    truth and is excluded from the calibration rather than guessed.
+    and 0 when it is explicitly non-enforcing (none) or a successful lookup
+    observed no record. Returns None when a DMARC-relevant collection channel
+    failed or a nonempty parsed value is unrecognized. This separates observed
+    absence from missing observation.
     """
-    if dmarc_policy is None:
+    status = SourceStatus.from_degraded_sources(degraded_sources)
+    if status.channel_unavailable("dmarc"):
         return None
+    if dmarc_policy is None:
+        return 0
     policy = dmarc_policy.strip().lower()
     if policy in _ENFORCING_POLICIES:
         return 1
@@ -162,11 +175,13 @@ def reference_label_email_policy(dmarc_policy: str | None) -> int | None:
 
 
 def wilson_interval(successes: int, n: int, z: float = 1.2816) -> tuple[float, float]:
-    """Wilson score interval for a binomial proportion.
+    """Wilson score diagnostic range for a binomial row proportion.
 
-    Preferred over the normal approximation for rates near 0 or 1 and for
-    small n. Default ``z`` is the 80% two-sided quantile, matching recon's
-    80% interval convention; pass 1.96 for 95%.
+    Preferred over the normal approximation for iid binomial samples near 0 or
+    1 and for small n. In these selected validation cohorts, row independence
+    and population sampling are not established, so the returned range is a
+    naive iid diagnostic with no population-coverage interpretation. Default
+    ``z`` is the 80% two-sided quantile; pass 1.96 for 95%.
     """
     if n == 0:
         return (0.0, 1.0)
@@ -228,8 +243,10 @@ def calibration_summary(records: list[CalibrationRecord], bins: int = 10) -> dic
 
     Returns Brier, the mean log-score (the proper scoring rule, per CAL9),
     ECE, the reliability table, the agreement rate (point estimate
-    ``posterior >= 0.5`` versus the label) with an 80% Wilson interval, and
-    the base rate. All aggregate; no per-record data.
+    ``posterior >= 0.5`` versus the label) with a naive iid Wilson diagnostic
+    range, and the base rate. The ECE bootstrap likewise resamples rows as iid.
+    Neither range has a coverage interpretation for a selected, dependent
+    cohort. All output is aggregate; no per-record data.
     """
     n = len(records)
     if n == 0:
@@ -255,6 +272,10 @@ def calibration_summary(records: list[CalibrationRecord], bins: int = 10) -> dic
         "ece_equal_mass_ci80": (round(mean_bin_ece.ci_low, 4), round(mean_bin_ece.ci_high, 4)),
         "agreement_rate": round(agree / n, 4),
         "agreement_wilson80": (round(wlo, 4), round(whi, 4)),
+        "interval_interpretation": {
+            "ece_equal_mass_ci80": "naive iid row-bootstrap diagnostic range; no coverage claim",
+            "agreement_wilson80": "naive iid Wilson diagnostic range; no population-coverage claim",
+        },
         "reliability": [
             {"bin_low": round(low, 2), "bin_high": round(high, 2), "enforcing_rate": round(freq, 4), "count": count}
             for (low, high, freq, count) in table
@@ -275,7 +296,7 @@ def calibration_summary(records: list[CalibrationRecord], bins: int = 10) -> dic
 def stratified_summary(
     strata: dict[str, list[CalibrationRecord]], min_cell: int = 10, bins: int = 10
 ) -> dict[str, object]:
-    """Per-stratum calibration plus the pooled total.
+    """Per-stratum diagnostics plus a descriptive pooled total.
 
     Each stratum (e.g. a vertical) reports its own ``calibration_summary``.
     A stratum with fewer than ``min_cell`` usable records is suppressed to a
@@ -300,7 +321,8 @@ async def _collect_one(
     domain: str, *, timeout: float, skip_ct: bool, sem: asyncio.Semaphore
 ) -> CalibrationPair | None:
     """Resolve one domain, infer, and pair both posteriors with the
-    reference label. Returns None when the domain has no DMARC reference truth.
+    reference label. Returns None when the DMARC observation failed or its
+    nonempty parsed policy is unrecognized.
 
     The apex is used only to resolve; it is never returned or logged.
     """
@@ -312,16 +334,22 @@ async def _collect_one(
             info, _results = await resolve_tenant(domain, timeout=timeout, skip_ct=skip_ct)
         except Exception:  # one domain failing must not abort the sweep
             return None
-    label = reference_label_email_policy(getattr(info, "dmarc_policy", None))
+    label = reference_label_email_policy(
+        getattr(info, "dmarc_policy", None),
+        getattr(info, "degraded_sources", ()) or (),
+    )
     if label is None:
         return None
-    posteriors = {p.name: p for p in infer_from_tenant_info(info).posteriors}
+    posteriors = {
+        p.name: p for p in infer_from_tenant_info(info, priors_override={}).posteriors
+    }
     node = posteriors.get(_POLICY_NODE)
     if node is None:
         return None
     residual = held_out_policy_posterior(
         set(getattr(info, "slugs", ()) or ()),
         signals_from_tenant_info(info),
+        degraded_sources=getattr(info, "degraded_sources", ()) or (),
     )
     if residual is None:
         return None
@@ -350,34 +378,41 @@ def _read_domains(path: Path) -> list[str]:
 
 
 def _print_summary(summary: dict[str, object], header: str) -> None:
-    print(f"\n{header} (n={summary['n']} with a published policy)")
+    print(f"\n{header} (n={summary['n']} with an observed DMARC label)")
     print(f"  base rate enforcing:   {summary['base_rate_enforcing']}")
     print(f"  log score (proper):    {summary['log_score']}")
     print(f"  Brier:                 {summary['brier']}")
     print(f"  ECE fixed-width:       {summary['ece']}")
-    print(f"  ECE equal-mass:        {summary['ece_equal_mass']}  CI80 {summary['ece_equal_mass_ci80']}")
-    print(f"  agreement rate:        {summary['agreement_rate']}  Wilson80 {summary['agreement_wilson80']}")
+    print(
+        f"  ECE tie-preserving:    {summary['ece_equal_mass']}  "
+        f"naive-iid bootstrap range80 {summary['ece_equal_mass_ci80']}"
+    )
+    print(
+        f"  agreement rate:        {summary['agreement_rate']}  "
+        f"naive-iid Wilson range80 {summary['agreement_wilson80']}"
+    )
     print("  reliability (posterior bin -> empirical enforcing rate):")
     for row in summary["reliability"]:  # type: ignore[attr-defined]
         print(f"    [{row['bin_low']:.2f}, {row['bin_high']:.2f})  rate {row['enforcing_rate']:.3f}  n {row['count']}")
 
 
 _TRAILER = (
-    "\nTwo constructions, two tiers. The full-posterior block is reference-anchored\n"
-    "calibration (the label is the authoritative DMARC policy, an external\n"
-    "definition), firmer than tier-2 consistency but with predictor/label overlap\n"
-    "on the DMARC input. The held-out block masks the dmarc_policy evidence unit,\n"
-    "so predictor and label are disjoint — the clean tier-4 construction; expect a\n"
-    "weak (near-prior) predictor there, and judge its calibration, not its\n"
-    "strength. See docs/statistical-assurance.md."
+    "\nTwo constructions. The full-score block is selected-list corroboration with\n"
+    "predictor-label overlap on the DMARC input. The held-out block masks the\n"
+    "dmarc_policy evidence unit, making predictor and label disjoint inside recon's\n"
+    "computation. It remains a descriptive residual evaluation on the selected\n"
+    "corpus, not proof of independent observations or population calibration.\n"
+    "Bootstrap and Wilson ranges use naive iid rows and have no coverage\n"
+    "interpretation for this selected cohort.\n"
+    "See docs/statistical-assurance.md."
 )
 
 
 def _print_both(pairs: list[CalibrationPair], *, bins: int) -> None:
     full = calibration_summary([p.full for p in pairs], bins=bins)
-    _print_summary(full, "Email-policy node calibrated against the DMARC record (full posterior)")
+    _print_summary(full, "Email-policy full score versus DMARC (overlapping corroboration)")
     held_out = calibration_summary([p.held_out for p in pairs], bins=bins)
-    _print_summary(held_out, "Held-out residual (dmarc_policy masked; predictor and label disjoint)")
+    _print_summary(held_out, "Predictor-disjoint residual (dmarc_policy masked)")
 
 
 def _run_single(path: Path, *, bins: int, concurrency: int, timeout: float, as_json: bool = False) -> int:
@@ -446,17 +481,17 @@ def _run_stratified(
         print(json.dumps({"mode": "stratified", "full": full_result, "held_out": held_out_result}, indent=2))
         return 0
     _print_strata_table(full_result, min_cell=min_cell, title="Per-stratum email-policy calibration (full posterior)")
-    _print_summary(full_result["pooled"], "Pooled across all strata (full posterior)")  # type: ignore[arg-type]
+    _print_summary(full_result["pooled"], "Descriptive pool across strata (full score)")  # type: ignore[arg-type]
     _print_strata_table(
         held_out_result, min_cell=min_cell, title="Per-stratum held-out residual (dmarc_policy masked)"
     )
-    _print_summary(held_out_result["pooled"], "Pooled across all strata (held-out residual)")  # type: ignore[arg-type]
+    _print_summary(held_out_result["pooled"], "Descriptive pool across strata (predictor-disjoint residual)")  # type: ignore[arg-type]
     print(_TRAILER)
     return 0
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Calibrate the email-policy posterior against the DMARC record.")
+    parser = argparse.ArgumentParser(description="Compare the email-policy score with the DMARC declaration.")
     parser.add_argument("domains", type=Path, nargs="?", help="File with one apex per line (gitignored; local).")
     parser.add_argument(
         "--stratify-dir", type=Path, default=None, help="Directory of per-stratum *.txt lists; calibrate each."

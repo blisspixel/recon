@@ -7,7 +7,7 @@ import pytest
 from recon_tool.bayesian import infer, load_network
 from recon_tool.bayesian_dag import (
     _color_for_posterior,
-    _confidence_label,
+    _model_support_label,
     _node_evidence_phrase,
     render_dag_dot,
     render_dag_mermaid,
@@ -24,8 +24,14 @@ def network():
 def dense_inference(network):
     return infer(
         network,
-        observed_slugs=["microsoft365", "entra-id", "okta"],
-        observed_signals=["federated_sso_hub", "dmarc_reject", "dkim_present"],
+        observed_slugs=[],
+        observed_signals=[
+            "m365_tenant_observed",
+            "okta_idp_observed",
+            "federated_sso_hub",
+            "dmarc_reject",
+            "dkim_present",
+        ],
         priors_override={},
     )
 
@@ -46,8 +52,8 @@ class TestTextRenderer:
 
     def test_includes_inference_summary(self, network, dense_inference):
         out = render_dag_text(network, dense_inference)
-        assert "bound observation" in out
-        assert "entropy reduction" in out
+        assert "fired bound observation" in out
+        assert "summed marginal entropy change" in out
 
     def test_each_node_appears(self, network, dense_inference):
         out = render_dag_text(network, dense_inference)
@@ -65,8 +71,7 @@ class TestTextRenderer:
 
     def test_evidence_listed(self, network, dense_inference):
         out = render_dag_text(network, dense_inference)
-        # microsoft365 slug fired for m365_tenant
-        assert "slug `microsoft365`" in out
+        assert "signal `m365_tenant_observed`" in out
         # federated_sso_hub signal fired for federated_identity
         assert "signal `federated_sso_hub`" in out
 
@@ -83,13 +88,14 @@ class TestTextRenderer:
         assert "Depends on:" in section
         assert "federated_identity" in section
 
-    def test_confidence_label_for_dense_evidence(self, network, dense_inference):
+    def test_model_support_label_for_dense_evidence(self, network, dense_inference):
         out = render_dag_text(network, dense_inference)
-        assert "high-confidence" in out
+        assert "high model support" in out
+        assert "Confidence label" not in out
 
     def test_sparse_label_for_no_evidence(self, network, sparse_inference):
         out = render_dag_text(network, sparse_inference)
-        # All nodes are sparse — confidence label should be tentative
+        # All nodes are sparse, so model-support language should be tentative.
         assert "tentative" in out
 
     def test_ends_with_newline(self, network, dense_inference):
@@ -140,20 +146,25 @@ class TestDotRenderer:
 
 
 class TestHelpers:
-    def test_confidence_label_high_dense(self):
-        assert _confidence_label(0.95, sparse=False) == "high-confidence"
+    def test_model_support_label_high_dense(self):
+        assert _model_support_label(0.95, sparse=False) == "high model support"
 
-    def test_confidence_label_moderate_dense(self):
-        assert _confidence_label(0.75, sparse=False) == "moderate-confidence"
+    def test_model_support_label_moderate_dense(self):
+        assert _model_support_label(0.75, sparse=False) == "moderate model support"
 
-    def test_confidence_label_uncertain_dense(self):
-        assert _confidence_label(0.45, sparse=False) == "uncertain"
+    def test_model_support_label_ambiguous_dense(self):
+        assert _model_support_label(0.45, sparse=False) == "threshold-ambiguous model support"
 
-    def test_confidence_label_sparse_high(self):
-        assert _confidence_label(0.85, sparse=True) == "tentative high"
+    def test_model_support_label_sparse_high(self):
+        assert _model_support_label(0.85, sparse=True) == "tentative high model support"
 
-    def test_confidence_label_sparse_low(self):
-        assert _confidence_label(0.10, sparse=True) == "tentative absent"
+    def test_model_support_label_sparse_low(self):
+        assert _model_support_label(0.10, sparse=True) == "tentative low model support"
+
+    def test_model_support_label_sparse_declarative_absence(self):
+        assert (
+            _model_support_label(0.10, sparse=True, absence_informative=True) == "tentative support for public absence"
+        )
 
     def test_color_palette_monotonic(self):
         # Higher posterior → "stronger" color in our hedged palette

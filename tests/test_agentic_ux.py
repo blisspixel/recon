@@ -199,8 +199,14 @@ def test_score_session_detects_posterior_reference() -> None:
     assert s.read_posterior_block is True
 
 
-def test_score_session_detects_credible_interval_phrase() -> None:
+def test_score_session_rejects_credible_interval_mislabel() -> None:
     text = "The credible interval [0.83, 1.0] suggests high confidence."
+    s = score.score_session("ops", "contoso-dense", True, text)
+    assert s.cited_credible_interval is False
+
+
+def test_score_session_detects_uncertainty_band_phrase() -> None:
+    text = "The 80% uncertainty band [0.83, 1.0] is model-relative."
     s = score.score_session("ops", "contoso-dense", True, text)
     assert s.cited_credible_interval is True
 
@@ -249,7 +255,7 @@ def test_diff_sparse_vs_dense_negative_when_identical_tone() -> None:
 
 
 def test_diff_fusion_on_vs_off_positive() -> None:
-    on_text = "Posterior 0.95 for m365_tenant — credible interval [0.83, 1.0]."
+    on_text = "Posterior 0.95 for m365_tenant, uncertainty band [0.83, 1.0]."
     off_text = "Microsoft 365 detected from the tenant ID."
     on_score = score.score_session("analyst", "contoso-dense", True, on_text)
     off_score = score.score_session("analyst", "contoso-dense", False, off_text)

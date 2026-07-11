@@ -261,7 +261,7 @@ def run_bundle(
             "--json",
         ],
         output=outputs.conformal_json,
-        description="conformal coverage",
+        description="conformal re-split diagnostics",
         runner=runner,
         dry_run=dry_run,
     )
@@ -324,7 +324,7 @@ def _build_parser() -> argparse.ArgumentParser:
         "--consolidated",
         type=Path,
         default=VALIDATION_ROOT / "corpus-private" / "consolidated.txt",
-        help="Private consolidated corpus for conformal coverage.",
+        help="Private consolidated corpus for conformal re-split diagnostics.",
     )
     parser.add_argument(
         "--output-root",
@@ -338,7 +338,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--bins", type=int, default=10, help="Reliability bins for calibration harnesses.")
     parser.add_argument("--concurrency", type=int, default=5, help="Concurrent resolves.")
     parser.add_argument("--timeout", type=float, default=120.0, help="Per-domain resolve timeout seconds.")
-    parser.add_argument("--alpha", type=float, default=0.1, help="Conformal miscoverage level.")
+    parser.add_argument("--alpha", type=float, default=0.1, help="Nominal conformal miscoverage reference.")
     parser.add_argument("--trials", type=int, default=20, help="Conformal split count.")
     parser.add_argument("--dry-run", action="store_true", help="Print commands without running network calls.")
     return parser

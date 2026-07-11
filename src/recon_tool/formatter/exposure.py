@@ -44,19 +44,21 @@ def format_exposure_dict(assessment: ExposureAssessment) -> dict[str, Any]:
         # The score counts only observed-present controls, so it is a lower
         # bound. This envelope tells a consuming agent how much that floor could
         # understate the true posture: a low score may mean "hardened but quiet",
-        # not "weak". Absent declarative records (DMARC/MTA-STS/TLS-RPT/CAA) are
-        # genuinely absent and are not part of this ambiguity.
+        # not "weak". A declarative record counts toward the ceiling only when
+        # its collection channel was unavailable.
         "observability": {
             "score_is_lower_bound": unconfirmable > 0,
             "unconfirmable_absent_points": unconfirmable,
             "score_ceiling": min(100, assessment.posture_score + unconfirmable),
+            "unavailable_controls": list(assessment.unavailable_controls),
             "note": (
                 "posture_score counts only observed-present controls; up to "
                 f"{unconfirmable} more point(s) come from controls whose absence "
                 "the passive channel cannot confirm (DKIM at non-standard "
-                "selectors, security tooling, an email gateway behind non-MX "
-                "routing). A low score may reflect limited observability, not "
-                "weak posture."
+                "selectors, an email gateway behind non-MX routing, or a "
+                "temporarily unavailable declarative channel). Generic vendor "
+                "indicators receive no active-control credit. "
+                "A low score may reflect limited observability, not weak posture."
             ),
         },
         "email_posture": {
@@ -113,6 +115,37 @@ def format_exposure_json(assessment: ExposureAssessment) -> str:
     return json.dumps(format_exposure_dict(assessment), indent=2)
 
 
+def _append_hardening_status(text: Text, assessment: ExposureAssessment) -> None:
+    """Append collection-aware hardening rows to an exposure panel."""
+    text.append("\n  Hardening Controls\n", style="bold")
+    for control in assessment.hardening_status.controls:
+        unavailable = control.detail == "source unavailable"
+        mark = "?" if unavailable else "+" if control.present else "-"
+        style = "yellow" if unavailable else "green" if control.present else "red"
+        text.append("    ")
+        text.append(mark, style=style)
+        text.append(f" {control.name}: {control.detail}\n")
+
+
+def _append_email_posture(text: Text, assessment: ExposureAssessment) -> None:
+    """Append email controls with unavailable channels stated explicitly."""
+    email = assessment.email_posture
+    details = {control.name: control.detail for control in assessment.hardening_status.controls}
+    unavailable = set(assessment.unavailable_controls)
+    dkim = details.get("DKIM", "observed" if email.dkim_configured else "not observed at common names")
+    spf = "source unavailable" if "SPF" in unavailable else "strict (-all)" if email.spf_strict else "not strict"
+    text.append("\n  Email Security\n", style="bold")
+    text.append(f"    DMARC:     {email.dmarc_policy or details.get('DMARC', 'not configured')}\n")
+    text.append(f"    DKIM:      {dkim}\n")
+    text.append(f"    SPF:       {spf}\n")
+    text.append(f"    MTA-STS:   {email.mta_sts_mode or details.get('MTA-STS', 'not configured')}\n")
+    text.append(f"    BIMI:      {details.get('BIMI', 'configured' if email.bimi_configured else 'not configured')}\n")
+    if email.email_gateway:
+        text.append(f"    Gateway:   {email.email_gateway}\n")
+    elif "Email gateway" in unavailable:
+        text.append("    Gateway:   source unavailable\n")
+
+
 def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
     """Render ExposureAssessment as a Rich panel with categorized sections."""
     text = Text()
@@ -131,16 +164,7 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
             style="dim",
         )
 
-    # Email posture
-    ep = assessment.email_posture
-    text.append("\n  Email Security\n", style="bold")
-    text.append(f"    DMARC:     {ep.dmarc_policy or 'not configured'}\n")
-    text.append(f"    DKIM:      {'observed' if ep.dkim_configured else 'not observed at common names'}\n")
-    text.append(f"    SPF:       {'strict (-all)' if ep.spf_strict else 'not strict'}\n")
-    text.append(f"    MTA-STS:   {ep.mta_sts_mode or 'not configured'}\n")
-    text.append(f"    BIMI:      {'configured' if ep.bimi_configured else 'not configured'}\n")
-    if ep.email_gateway:
-        text.append(f"    Gateway:   {ep.email_gateway}\n")
+    _append_email_posture(text, assessment)
 
     # Identity posture
     ip = assessment.identity_posture
@@ -164,24 +188,15 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
     if infra.cdn_waf:
         text.append(f"    CDN/WAF:   {', '.join(infra.cdn_waf)}\n")
     if infra.certificate_authorities:
-        text.append(f"    CAs:       {', '.join(infra.certificate_authorities)}\n")
+        text.append(f"    CAA issuers: {', '.join(infra.certificate_authorities)}\n")
 
     # Consistency observations
     if assessment.consistency_observations:
         text.append("\n  Consistency\n", style="bold")
         for obs in assessment.consistency_observations:
-            text.append(f"    ◐ {obs.observation}\n", style="#e6c07b")
+            text.append(f"    - {obs.observation}\n", style="#e6c07b")
 
-    # Hardening status. ``Text.append`` does not parse Rich markup — the
-    # style must be passed as the ``style`` kwarg. Writing ``[green]✓[/green]``
-    # directly into the string rendered it as literal tags.
-    text.append("\n  Hardening Controls\n", style="bold")
-    for ctrl in assessment.hardening_status.controls:
-        mark = "✓" if ctrl.present else "✗"
-        style = "green" if ctrl.present else "red"
-        text.append("    ")
-        text.append(mark, style=style)
-        text.append(f" {ctrl.name}: {ctrl.detail}\n")
+    _append_hardening_status(text, assessment)
 
     return Panel(
         text,
@@ -234,6 +249,8 @@ def format_gaps_dict(report: GapReport) -> dict[str, Any]:
             for gap in report.gaps
         ],
         "disclaimer": report.disclaimer,
+        "unavailable_controls": list(report.unavailable_controls),
+        "degraded_sources": list(report.degraded_sources),
     }
 
 
@@ -249,8 +266,18 @@ def render_gaps_panel(report: GapReport) -> Panel:
     text.append("  Domain: ", style="dim")
     text.append(f"{report.domain}\n")
 
+    if report.unavailable_controls:
+        text.append("\n  Collection unavailable for: ", style="yellow")
+        text.append(", ".join(report.unavailable_controls), style="yellow")
+        text.append(". No absence conclusion is drawn for those controls.\n", style="dim")
+
     if not report.gaps:
-        text.append("\n  No hardening gaps detected.", style="dim italic")
+        message = (
+            "No additional observed hardening gaps detected."
+            if report.unavailable_controls
+            else "No hardening gaps detected."
+        )
+        text.append(f"\n  {message}", style="dim italic")
     else:
         # Group by category
         groups: dict[str, list[Any]] = {}

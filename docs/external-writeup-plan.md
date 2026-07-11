@@ -134,9 +134,11 @@ requirements:
 - `CITATION.cff` is the citation metadata source and release readiness now
   checks it against `pyproject.toml` and the current `CHANGELOG.md` release
   section.
-- The 2026-06-28 private aggregate calibration refresh now reports both legacy
-  fixed-bin ECE and equal-mass, mean-confidence ECE with deterministic bootstrap
-  CI in the committed aggregate memo.
+- The 2026-06-28 private aggregate calibration refresh retains its historical
+  fixed-bin and index-sliced equal-mass ECE values. Its iid row-bootstrap and
+  Wilson ranges are now labeled descriptive diagnostics without coverage
+  interpretation. The next private rerun must use tie-preserving reliability
+  bins; no current tie-preserving numeric estimate is available.
 - Private corpus calibration remains maintainer-local. Public artifacts may
   include aggregate counts, rates, intervals, and suppressed-cell statements
   only.
@@ -185,9 +187,10 @@ Reasoning:
 - Keep private corpus identifiers out of committed docs and artifacts: no real
   apexes, organization names, tenant IDs, per-domain rows, or unsuppressed small
   strata.
-- Claims about the Bayesian intervals must distinguish reference calibration,
-  synthetic evidence-responsiveness, and structural guarantees. Do not claim
-  frequentist coverage for unlabeled nodes.
+- Claims about Bayesian output must call the mean model-relative and the band an
+  evidence-responsive display. Do not call the band a credible or confidence
+  interval, interpret finite perturbation containment as general coverage, or
+  claim calibration from overlapping or one-sided references.
 - Use existing gates: `scripts/check.py`, validation hygiene, text hygiene,
   markdown links, and release readiness.
 

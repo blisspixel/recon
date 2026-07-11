@@ -232,8 +232,8 @@ class TestLikelyPrimaryInference:
             slug=slug,
         )
 
-    def test_gateway_with_dkim_downstream_confirms_google(self) -> None:
-        """DKIM behind a gateway promotes to primary (confirmed)."""
+    def test_gateway_with_dkim_downstream_remains_likely(self) -> None:
+        """DKIM proves signing, not primary inbound delivery."""
         from recon_tool.merger import _compute_email_topology
 
         evidence = (
@@ -241,9 +241,9 @@ class TestLikelyPrimaryInference:
             self._ev("DKIM", "google-workspace"),
         )
         primary, gateway, likely = _compute_email_topology(evidence)
-        assert primary == "Google Workspace"
+        assert primary is None
         assert gateway == "Symantec/Broadcom"
-        assert likely is None
+        assert likely == "Google Workspace"
 
     def test_gateway_with_microsoft_oidc_infers_m365(self) -> None:
         from recon_tool.merger import _compute_email_topology

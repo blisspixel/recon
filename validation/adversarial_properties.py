@@ -1,9 +1,10 @@
 """Machine-checked adversarial properties of the inference layer.
 
-This harness ships the suppression-monotonicity proposition
-(correlation.md section 4.3) as an exhaustive, checkable invariant. The
-plain statement: an operator who hides indicators can only move a claim
-toward "we cannot tell," never toward a confident wrong answer. Formally,
+This harness checks the local suppression property described in
+correlation.md section 3.4. The narrow statement is that, under the listed
+hypotheses and sampled external contexts, deleting positive fired bindings does
+not raise the presence posterior. It does not guarantee movement toward 0.5, a
+wider uncertainty band, or protection from a confident absence error. Formally,
 fixing all evidence outside a node X, the presence posterior is monotone
 non-decreasing in X's fired set and bounded in [B_X, fully-observed], under
 the hypotheses (every fired binding a positive indicator, alpha_b >= beta_b;
@@ -16,9 +17,9 @@ of per-unit likelihood ratios" is exact only for an evidence-isolated root;
 for a node with parents or children the external evidence rescales the
 baseline (and B_X) and couples slightly through the polytree, so the
 no-external-evidence instance does not by itself settle the conclusion. The
-monotonicity still holds in every external context (X's observation factor is
-non-decreasing in the fired set and enters multiplicatively), which is what
-this harness checks directly rather than assuming.
+proposition predicts monotonicity under any fixed external context because the
+local observation factor enters multiplicatively. The harness checks every
+local subset under a representative, not exhaustive, set of external contexts.
 
 Three checks, all over the shipped network:
 
@@ -309,7 +310,7 @@ def main() -> int:
         for v in sup:
             print(f"  {v}")
     if pos or absent or sup:
-        print("\nFAIL: the suppression guarantee (correlation.md 4.3) does not hold as stated.")
+        print("\nFAIL: the local suppression property (correlation.md section 3.4) failed.")
         return 1
     print("\nAdd/remove perturbation measurement:")
     for row in perturbations:
@@ -320,10 +321,9 @@ def main() -> int:
             f"threshold_crossings={row.threshold_crossings}, "
             f"max_planted_posterior={row.max_planted_posterior:.4f}"
         )
-    print("\nOK: hiding any fired binding only moves a claim toward the all-absent floor;")
-    print("no false positive can be manufactured by suppression. Planting measurements")
-    print("show the opposite boundary: adding evidence can raise posteriors because a")
-    print("passive engine cannot distinguish a truthful decoy from an operational signal.")
+    print("\nOK: in the tested contexts, deleting fired bindings does not raise the")
+    print("presence posterior and moves it toward the context-specific all-absent floor.")
+    print("This does not imply movement toward 0.5 or robustness to planted evidence.")
     return 0
 
 

@@ -15,7 +15,7 @@
 
 ## Tech Stack
 
-- Slack
+- Slack \(public TXT account indicator\)
 
 ## Insights
 
