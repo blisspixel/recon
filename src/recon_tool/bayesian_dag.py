@@ -7,7 +7,8 @@ Three outputs:
   shaped it. Designed to read aloud to a non-statistician.
 * ``render_dag_dot`` — Graphviz DOT format for image rendering. Edge
   labels carry the conditional dependency, node labels carry the
-  posterior + 80% credible interval. Pipe through ``dot -Tpng`` or
+  model-relative posterior plus 80% uncertainty band. Pipe through
+  ``dot -Tpng`` or
   paste into a Graphviz online viewer.
 * ``render_dag_mermaid`` — Mermaid.js directed-graph syntax. Renders
   natively in GitHub, GitLab, Notion, and most AI chat clients
@@ -32,26 +33,28 @@ __all__ = [
 ]
 
 
-def _confidence_label(posterior: float, sparse: bool) -> str:
-    """Return a hedged English confidence label for a posterior."""
+def _model_support_label(posterior: float, sparse: bool, absence_informative: bool = False) -> str:
+    """Return a hedged, explicitly model-relative support label."""
     if sparse:
-        # Passive-observation ceiling — language stays softer.
+        # Minimum display-mass case, so language stays tentative. A low model
+        # value for a hideable node is unresolved rather than evidence of
+        # real-world absence.
         if posterior >= 0.75:
-            return "tentative high"
+            return "tentative high model support"
         if posterior >= 0.50:
-            return "tentative moderate"
+            return "tentative moderate model support"
         if posterior >= 0.25:
-            return "tentative low"
-        return "tentative absent"
+            return "tentative low model support"
+        return "tentative support for public absence" if absence_informative else "tentative low model support"
     if posterior >= 0.90:
-        return "high-confidence"
+        return "high model support"
     if posterior >= 0.70:
-        return "moderate-confidence"
+        return "moderate model support"
     if posterior >= 0.40:
-        return "uncertain"
+        return "threshold-ambiguous model support"
     if posterior >= 0.15:
-        return "low-confidence"
-    return "very-low-confidence"
+        return "low model support"
+    return "very low model support"
 
 
 def _node_evidence_phrase(posterior: NodePosterior) -> str:
@@ -117,7 +120,7 @@ def _node_influence_lines(posterior: NodePosterior) -> list[str]:
             label = f"signal `{ec.name}`"
         else:
             label = f"{ec.kind}:{ec.name}"
-        lines.append(f"    {idx}. {label} — LLR {ec.llr:+.2f} ({ec.influence_pct:.1f}% of evidence influence)")
+        lines.append(f"    {idx}. {label}, LLR {ec.llr:+.2f} ({ec.influence_pct:.1f}% of evidence influence)")
     return lines
 
 
@@ -126,7 +129,7 @@ def _node_conflict_phrase(posterior: NodePosterior) -> str | None:
 
     Each conflict surfaces as ``field (source-a vs source-b) -Nu n_eff``
     so an operator can read both *what* disagreed and *which sources*
-    drove the interval widening.
+    lowered the display mass used by the uncertainty band.
     """
     if not posterior.conflict_provenance:
         return None
@@ -146,7 +149,7 @@ def render_dag_text(
 
     The text walks the network in topological order so parent claims
     explain themselves before children depend on them. Each node block
-    states the posterior, the credible interval, the bound evidence
+    states the model-relative posterior, uncertainty band, bound evidence
     that fired, and (when the node has parents) the structural
     dependency that shaped the prior.
     """
@@ -173,25 +176,25 @@ def render_dag_text(
     lines.append(f"# Bayesian evidence DAG — {header_target}")
     lines.append("")
     lines.append(
-        f"Inference summary: {result.evidence_count} bound observation(s) across "
-        f"{len(network.nodes)} node(s); total entropy reduction "
+        f"Inference summary: {result.evidence_count} fired bound observation(s) across "
+        f"{len(network.nodes)} node(s); summed marginal entropy change "
         f"{result.entropy_reduction:.3f} nats; "
-        f"{result.conflict_count} cross-source conflict(s) dampening intervals."
+        f"{result.conflict_count} cross-source conflict(s) lowering band display mass."
     )
     lines.append("")
     lines.append(
-        "Each node below is a discrete claim. The posterior is "
-        "P(claim | observed evidence); the 80% credible interval reflects "
-        "evidence sparsity and conflict. ``Sparse`` flags the passive-"
-        "observation ceiling: when DNS / CT publishes little, the interval "
-        "stays wide regardless of where the point estimate lands."
+        "Each node below is a discrete claim. The posterior is model-relative "
+        "P(claim | observed evidence). The 80% uncertainty band is a separate "
+        "evidence-strength display, not a credible or confidence interval. "
+        "``Sparse`` flags display mass at the configured floor; it is not an "
+        "absence finding."
     )
     lines.append("")
 
     for name in order:
         node = by_name[name]
         post = posteriors_by_name[name]
-        confidence = _confidence_label(post.posterior, post.sparse)
+        model_support = _model_support_label(post.posterior, post.sparse, post.absence_informative)
         evidence_phrase = _node_evidence_phrase(post)
 
         lines.append(f"## {node.name}")
@@ -199,10 +202,10 @@ def render_dag_text(
         lines.append("")
         lines.append(
             f"- **Posterior:** {post.posterior:.3f} "
-            f"_(80% credible interval: [{post.interval_low:.3f}, {post.interval_high:.3f}], "
+            f"_(80% uncertainty band: [{post.interval_low:.3f}, {post.interval_high:.3f}], "
             f"n_eff={post.n_eff:.2f}{', sparse' if post.sparse else ''})_"
         )
-        lines.append(f"- **Confidence label:** {confidence}")
+        lines.append(f"- **Model-support label:** {model_support}")
         lines.append(f"- **Evidence:** {evidence_phrase}")
         influence_lines = _node_influence_lines(post)
         lines.extend(influence_lines)
@@ -232,8 +235,8 @@ def render_dag_dot(
 ) -> str:
     """Render the network + inference result as Graphviz DOT.
 
-    Node label includes the description, posterior, and credible
-    interval. Edges run parent → child; the parent's CPT shapes the
+    Node labels include the description, model-relative posterior, and
+    evidence-responsive uncertainty band. Edges run parent → child; the parent's CPT shapes the
     child's prior, so the arrow direction matches dependency. Sparse
     nodes get a dashed border, dense nodes a solid one.
     """
@@ -272,7 +275,7 @@ def render_dag_dot(
                 f"{node.name}\\n"
                 f"{node.description}\\n"
                 f"posterior {post.posterior:.3f}\\n"
-                f"[{post.interval_low:.3f}, {post.interval_high:.3f}]"
+                f"80% uncertainty band [{post.interval_low:.3f}, {post.interval_high:.3f}]"
                 f"{' (sparse)' if post.sparse else ''}"
                 f"{conflict_suffix}"
                 f"{influence_suffix}"
@@ -350,7 +353,8 @@ def render_dag_mermaid(
 
     Output is Mermaid v10+ syntax, accepted by GitHub, GitLab, Notion,
     Obsidian, and most AI chat clients. Mirrors ``render_dag_dot`` in
-    information density: each node carries posterior, interval, top
+    information density: each node carries a model-relative posterior,
+    uncertainty band, top
     influential bindings, and conflict provenance; sparse nodes get a
     dashed border via the ``style`` directive.
 
@@ -384,7 +388,7 @@ def render_dag_mermaid(
                 f"{node.name}\n"
                 f"{node.description}\n"
                 f"posterior {post.posterior:.3f}\n"
-                f"[{post.interval_low:.3f}, {post.interval_high:.3f}]"
+                f"80% uncertainty band [{post.interval_low:.3f}, {post.interval_high:.3f}]"
                 f"{' (sparse)' if post.sparse else ''}"
                 f"{conflict_suffix}"
                 f"{influence_suffix}"

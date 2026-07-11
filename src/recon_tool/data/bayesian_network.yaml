@@ -7,7 +7,9 @@
 # public-facing posture. Nodes are binary unless otherwise noted.
 # Evidence binds to nodes via observable slugs and signals already
 # emitted by the deterministic pipeline. The network is committed
-# as a YAML data file — no learned weights, no trained models.
+# as a YAML data file. There is no runtime training or bundled estimator.
+# Parameters are manually encoded, and selected values were informed by the
+# dated development-corpus measurements documented below.
 #
 # Topology stability contract: the SET of nodes and the parent
 # relationships in this file are stable across v1.9.x releases
@@ -26,8 +28,8 @@
 #            on DMARC/DKIM/SPF/MTA-STS). Expanded federated_identity
 #            parents to include google_workspace_tenant. Resolves the
 #            52.6% v1.9.0 corpus disagreement on email_security_strong
-#            (definitional gap — see docs/correlation.md §4.3 and
-#            validation/v1.9.3-calibration.md). Net: 9 nodes.
+#            (definitional gap; see validation/v1.9.3-calibration.md).
+#            Net: 9 nodes.
 #
 # Validation: see validation/v1.9-validation-summary.md for
 # numerical correctness, sensitivity bound, synthetic calibration
@@ -62,12 +64,13 @@
 #       Both in (0, 1). The "observed" side is what enters as
 #       evidence; the "not observed" side is implicit (1 - likelihood).
 #
-# calibration (optional, mapping): effective-sample-size settings for
-#   the reported credible interval. All values are positive finite
+# calibration (optional, mapping): effective display-mass settings for
+#   the reported uncertainty band. The key name is retained for file-format
+#   compatibility. All values are positive finite
 #   numbers. Defaults live in the loader for old test fixtures, but the
 #   shipped network carries the explicit block below so tuning can be
 #   reviewed as data rather than inference-code edits.
-#   min_n_eff: floor for interval evidence strength.
+#   min_n_eff: floor for effective display mass.
 #   evidence_n_eff_contrib: per effective evidence-unit contribution.
 #   conflict_n_eff_penalty: per cross-source conflict subtraction.
 #
@@ -104,39 +107,26 @@ calibration:
 nodes:
   # ── Identity layer ─────────────────────────────────────────────────
   - name: m365_tenant
-    description: "Domain has a Microsoft 365 / Entra tenant."
+    description: "A Microsoft 365 or Entra tenant-compatible identity response, mail route, or DKIM endpoint was observed."
     prior: 0.30
-    # These three slugs are redundant readings of one fact (the org runs M365):
-    # a domain exposing one usually exposes the others, so they co-fire and are
-    # not conditionally independent. The shared `group` makes them contribute a
-    # single effective likelihood ratio rather than the over-counted product.
-    # See correlation.md §4.3.
+    # The adapter emits this signal only for role-bearing identity, MX, or DKIM
+    # evidence. A generic verification TXT fingerprint does not satisfy it.
     evidence:
-      - slug: microsoft365
+      - signal: m365_tenant_observed
         likelihood: [0.95, 0.03]
-        group: m365_indicators
-      - slug: entra-id
-        likelihood: [0.88, 0.02]
-        group: m365_indicators
-      - slug: exchange-online
-        likelihood: [0.85, 0.02]
-        group: m365_indicators
 
   - name: google_workspace_tenant
-    description: "Domain has a Google Workspace tenant."
+    description: "A Google Workspace-compatible identity response, mail route, DKIM endpoint, or branded application CNAME was observed."
     prior: 0.25
-    # Co-firing readings of one fact (the org runs Google Workspace); grouped
-    # so they are not multiplied as independent confirmations.
+    # The adapter emits this signal only for role-bearing identity, MX, DKIM,
+    # or branded-application CNAME evidence. Verification TXT and NS records
+    # do not satisfy it.
     evidence:
-      - slug: google-workspace
+      - signal: google_workspace_tenant_observed
         likelihood: [0.92, 0.04]
-        group: gws_indicators
-      - slug: gmail
-        likelihood: [0.85, 0.05]
-        group: gws_indicators
 
   - name: federated_identity
-    description: "Domain uses an external IdP for SSO (Okta, Auth0, Ping, etc.)."
+    description: "An identity-discovery response reported or routed through federation."
     # v1.9.3: parents expanded to include google_workspace_tenant.
     # Federation exists without M365 (Okta + GWS, Auth0 + custom IdP,
     # standalone SAML); the v1.9.0 single-parent network systematically
@@ -154,7 +144,7 @@ nodes:
         likelihood: [0.90, 0.05]
 
   - name: okta_idp
-    description: "Identity provider is Okta."
+    description: "An identity-discovery redirect explicitly named Okta."
     # Stability note (v1.9.5 → v1.9.11): node clears criteria (a) and (b)
     # (evidence-response correctness, calibration in both regimes). v1.9.5
     # flagged criterion (c) (N >= 10 independent firings) as 'not yet';
@@ -168,29 +158,19 @@ nodes:
       "federated_identity=present": 0.30
       "federated_identity=absent": 0.005
     evidence:
-      - slug: okta
+      - signal: okta_idp_observed
         likelihood: [0.92, 0.02]
 
   # ── Email security layer ──────────────────────────────────────────
   - name: email_gateway_present
-    description: "Third-party email security gateway in front of MX."
+    description: "The domain's MX route references a recognized third-party email gateway."
     prior: 0.18
-    # The gateway vendors are near-mutually-exclusive (an org fronts MX with one
-    # gateway), so a co-firing pair is redundant confirmation of the single
-    # "a gateway is present" claim, not two independent signals. The shared
-    # `group` reduces any co-fire to its strongest member rather than multiplying
-    # distinct-vendor detections into over-confidence, matching the
-    # m365_indicators / gws_indicators treatment. See docs/correlation.md §4.3.
+    # This signal requires both a recognized gateway value and supporting MX
+    # evidence. TXT account indicators and DMARC-report destinations do not
+    # satisfy the gateway-route claim.
     evidence:
-      - slug: proofpoint
+      - signal: email_gateway_mx_observed
         likelihood: [0.90, 0.02]
-        group: gateway_vendors
-      - slug: mimecast
-        likelihood: [0.90, 0.02]
-        group: gateway_vendors
-      - slug: barracuda
-        likelihood: [0.85, 0.02]
-        group: gateway_vendors
 
   # v1.9.3: replaced email_security_strong with two separate nodes
   # below. The v1.9.0 node parameterized its CPT over modern-mail-
@@ -201,7 +181,7 @@ nodes:
   # compute it downstream from the two posteriors.
 
   - name: email_security_modern_provider
-    description: "Domain runs a modern, managed mail provider (M365 or Google Workspace) and/or a third-party email gateway in front of MX."
+    description: "A recognized managed-mail identity response, mail route, DKIM endpoint, or third-party MX gateway was observed."
     parents: [m365_tenant, google_workspace_tenant, email_gateway_present]
     # CPT calibrated to *provider presence* given parents. Pure
     # propagation: no evidence bindings — provider presence is fully
@@ -218,7 +198,7 @@ nodes:
       "m365_tenant=absent,google_workspace_tenant=absent,email_gateway_present=absent":    0.05
 
   - name: email_security_policy_enforcing
-    description: "Observable email-authentication policy is enforcing (DMARC reject/quarantine + strict SPF + optional MTA-STS enforce)."
+    description: "Observable DMARC policy is enforcing (reject or quarantine); strict SPF and MTA-STS are supporting public signals."
     # Root node — policy enforcement is provider-independent. Many M365
     # / GWS tenants ship with weak policy (p=none); some self-hosted /
     # gateway-fronted setups enforce strictly. The two claims should
@@ -277,7 +257,7 @@ nodes:
       # off; CAL12 base-rate correction, re-checked by PV2). The low present-
       # likelihood also makes its absence near-neutral (complement [0.94, 0.99],
       # LR ~1), which is correct: MTA-STS non-adoption is the norm even among
-      # enforcers, so it must not disconfirm.
+      # enforcers, so it disconfirms only weakly.
       - signal: mta_sts_enforce
         likelihood: [0.06, 0.01]
       # spf_strict regrounded on the 2026-06 corpus: P(strict SPF | enforcing)
@@ -289,32 +269,17 @@ nodes:
 
   # ── Infrastructure layer ──────────────────────────────────────────
   - name: cdn_fronting
-    description: "A CDN or edge proxy fronts the apex/origin."
+    description: "A public CNAME references a recognized CDN or edge endpoint."
     prior: 0.45
     evidence:
-      - slug: cloudflare
+      - signal: cdn_cname_observed
         likelihood: [0.92, 0.03]
-      - slug: akamai
-        likelihood: [0.85, 0.02]
-      - slug: fastly
-        likelihood: [0.85, 0.02]
 
   - name: aws_hosting
-    description: "AWS-hosted infrastructure observed in chains or fingerprints."
+    description: "A public CNAME references a recognized AWS service endpoint."
     prior: 0.40
-    # These three slugs are facets of one underlying fact (the org runs on AWS):
-    # a general-AWS fingerprint, CloudFront, and Route 53 co-fire for an AWS shop
-    # and are not conditionally independent readings. The shared `group` makes
-    # them contribute a single effective likelihood ratio (the strongest member)
-    # rather than the over-counted product, matching the m365_indicators /
-    # gws_indicators treatment. See docs/correlation.md §4.3.
+    # The signal is emitted only for a role-bearing AWS CNAME. Route 53 NS and
+    # AWS CAA authorization are separate DNS/PKI roles and do not satisfy it.
     evidence:
-      - slug: aws
+      - signal: aws_endpoint_cname_observed
         likelihood: [0.85, 0.05]
-        group: aws_indicators
-      - slug: aws-cloudfront
-        likelihood: [0.80, 0.03]
-        group: aws_indicators
-      - slug: aws-route53
-        likelihood: [0.70, 0.05]
-        group: aws_indicators

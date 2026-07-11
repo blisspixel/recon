@@ -11,11 +11,12 @@ SourceResults (no network, no real apex — fictional brands only).
 
 from __future__ import annotations
 
+import asyncio
 import json
 
 import pytest
 
-from recon_tool.models import SourceResult
+from recon_tool.models import EvidenceRecord, SourceResult
 from validation import tenancy_reference_calibration as tenancy
 from validation.tenancy_reference_calibration import (
     CONFLICT,
@@ -87,8 +88,16 @@ class TestDnsOnlyPosteriors:
             source_name="dns_records",
             detected_services=("Microsoft 365", "Exchange Online"),
             detected_slugs=("microsoft365", "exchange-online"),
+            evidence=(
+                EvidenceRecord(
+                    source_type="MX",
+                    raw_value="contoso-com.mail.protection.outlook.com",
+                    rule_name="Microsoft 365",
+                    slug="microsoft365",
+                ),
+            ),
         )
-        pair = dns_only_tenancy_posteriors([dns], "contoso.com", priors_override={})
+        pair = dns_only_tenancy_posteriors([dns], "contoso.com")
         assert pair is not None
         m365, gws = pair
         assert m365 > 0.9  # strong DNS evidence
@@ -98,7 +107,7 @@ class TestDnsOnlyPosteriors:
         # "We looked and found nothing" must stay in the calibration as a
         # near-prior predictor, or the negative stratum is biased away.
         dns = SourceResult(source_name="dns_records")
-        pair = dns_only_tenancy_posteriors([dns], "contoso.com", priors_override={})
+        pair = dns_only_tenancy_posteriors([dns], "contoso.com")
         assert pair is not None
         m365, gws = pair
         assert m365 == pytest.approx(0.30, abs=1e-2)
@@ -115,17 +124,32 @@ class TestDnsOnlyPosteriors:
             detected_slugs=("microsoft365",),
         )
         realm = SourceResult(source_name="user_realm", auth_type="Managed", m365_detected=True)
-        with_endpoints = dns_only_tenancy_posteriors([dns, oidc, realm], "contoso.com", priors_override={})
-        without_endpoints = dns_only_tenancy_posteriors([dns], "contoso.com", priors_override={})
+        with_endpoints = dns_only_tenancy_posteriors([dns, oidc, realm], "contoso.com")
+        without_endpoints = dns_only_tenancy_posteriors([dns], "contoso.com")
         assert with_endpoints == without_endpoints
 
     def test_no_dns_channel_returns_none(self) -> None:
         oidc = SourceResult(source_name="oidc_discovery", tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-        assert dns_only_tenancy_posteriors([oidc], "contoso.com", priors_override={}) is None
+        assert dns_only_tenancy_posteriors([oidc], "contoso.com") is None
 
     def test_errored_dns_channel_returns_none(self) -> None:
         dns = SourceResult(source_name="dns_records", error="timeout")
-        assert dns_only_tenancy_posteriors([dns], "contoso.com", priors_override={}) is None
+        assert dns_only_tenancy_posteriors([dns], "contoso.com") is None
+
+    def test_user_local_priors_cannot_leak_into_dns_predictor(self, monkeypatch) -> None:
+        import recon_tool.bayesian as bayesian
+
+        def _fail_if_loaded():
+            raise AssertionError("validation attempted to load user-local priors")
+
+        monkeypatch.setattr(bayesian, "load_priors_override", _fail_if_loaded)
+        pair = dns_only_tenancy_posteriors(
+            [SourceResult(source_name="dns_records")],
+            "example.test",
+        )
+        assert pair is not None
+        assert pair[0] == pytest.approx(0.30, abs=1e-2)
+        assert pair[1] == pytest.approx(0.25, abs=1e-2)
 
 
 class TestPercentile:
@@ -157,6 +181,37 @@ class TestOneSidedRecallSummary:
         )
         lo, hi = s["recall_wilson80"]  # type: ignore[misc]
         assert 0.0 <= lo <= s["recall"] <= hi <= 1.0
+        assert "no population-coverage claim" in s["interval_interpretation"]
+
+
+def test_tenancy_collector_pins_full_and_dns_inference_to_committed_priors(monkeypatch) -> None:
+    import recon_tool.bayesian as bayesian
+    import recon_tool.resolver as resolver
+    from recon_tool.merger import merge_results
+
+    dns = SourceResult(source_name="dns_records")
+    info = merge_results([dns], "example.test")
+
+    def _fail_if_loaded():
+        raise AssertionError("validation attempted to load user-local priors")
+
+    async def _resolve(_domain: str, *, timeout: float, skip_ct: bool):
+        del timeout, skip_ct
+        return info, [dns]
+
+    monkeypatch.setattr(bayesian, "load_priors_override", _fail_if_loaded)
+    monkeypatch.setattr(resolver, "resolve_tenant", _resolve)
+    record = asyncio.run(
+        tenancy._collect_one(
+            "example.test",
+            timeout=1.0,
+            skip_ct=True,
+            sem=asyncio.Semaphore(1),
+        )
+    )
+    assert record is not None
+    assert record.m365_dns_only == pytest.approx(0.30, abs=1e-2)
+    assert record.m365_full == pytest.approx(0.30, abs=1e-2)
 
 
 def _record(
@@ -262,8 +317,7 @@ class TestJsonMain:
         domains_file = tmp_path / "domains.txt"
         domains_file.write_text("contoso.com\n", encoding="utf-8")
         records = [
-            _record(POSITIVE if i % 2 else NEGATIVE, dns_only=None, full=0.95 if i % 2 else 0.05)
-            for i in range(12)
+            _record(POSITIVE if i % 2 else NEGATIVE, dns_only=None, full=0.95 if i % 2 else 0.05) for i in range(12)
         ]
 
         async def _fake_collect(domains, *, timeout, skip_ct, concurrency, label="resolving"):

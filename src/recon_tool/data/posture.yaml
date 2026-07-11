@@ -20,7 +20,7 @@ observations:
         - field: dmarc_effective_policy
           operator: neq
           value: quarantine
-    template: "Email gateway ({matched_slugs}) is active while effective DMARC policy is not reject or quarantine"
+    template: "Email-security vendor indicator ({matched_slugs}) is observed while effective DMARC policy is not reject or quarantine"
 
   - name: no_dmarc_record
     category: email
@@ -40,17 +40,20 @@ observations:
         - field: email_security_score
           operator: gte
           value: 4
-    template: "DMARC, DKIM, SPF, and additional controls are all in place"
+    template: "Public email-control evidence score is {email_security_score}/5; at least four modelled control indicators were observed"
 
   - name: weak_email_security
     category: email
     salience: high
     condition:
       metadata:
+        - field: email_posture_observed
+          operator: eq
+          value: 1
         - field: email_security_score
           operator: lte
           value: 1
-    template: "Minimal email authentication controls detected (DMARC/DKIM/SPF largely missing or weak)"
+    template: "At most one of five modelled public email-control indicators was observed"
 
   - name: heavy_outbound_email
     category: email
@@ -58,7 +61,7 @@ observations:
     condition:
       slugs_any: [sendgrid, mailgun, postmark, sparkpost, brevo, mailchimp, aws-ses]
       slugs_min: 2
-    template: "Multiple email sending services detected ({matched_slugs}) — high-volume outbound email operation"
+    template: "Multiple email-sender vendor indicators observed ({matched_slugs})"
 
   - name: email_deliverability_management
     category: email
@@ -66,7 +69,7 @@ observations:
     condition:
       slugs_any: [autospf, ondmarc, dmarcian, easydmarc, valimail]
       slugs_min: 1
-    template: "SPF flattening or DMARC management service detected ({matched_slugs}) — dedicated email deliverability operations"
+    template: "SPF-flattening or DMARC-management vendor indicator observed ({matched_slugs})"
 
   - name: dmarc_phased_rollout
     category: email
@@ -79,8 +82,8 @@ observations:
         - field: dmarc_policy
           operator: neq
           value: none
-    template: "DMARC enforcement in phased rollout (pct={dmarc_pct}%) — domain is actively tightening email authentication"
-    explain: "The DMARC pct= tag is set below 100%, meaning only a fraction of failing messages are subject to the stated policy. This is a common pattern during DMARC enforcement rollout — the domain is gradually increasing the percentage to avoid disrupting legitimate email flows."
+    template: "Published DMARC pct is below 100 (pct={dmarc_pct}%); only that fraction is subject to the stated policy"
+    explain: "The published DMARC pct tag is below 100, so only that fraction of failing messages is subject to the stated policy. The record does not establish why the publisher selected that value."
 
   # ── Identity posture ──────────────────────────────────────────────────
 
@@ -92,7 +95,7 @@ observations:
         - field: auth_type
           operator: eq
           value: Federated
-    template: "Authentication is federated — identity is managed by an external provider"
+    template: "Microsoft namespace discovery returned Federated; an external authentication endpoint was advertised"
 
   - name: managed_identity
     category: identity
@@ -102,7 +105,7 @@ observations:
         - field: auth_type
           operator: eq
           value: Managed
-    template: "Authentication is managed directly by the email provider — no external identity federation detected"
+    template: "Microsoft namespace discovery returned Managed; the response did not identify an external federation endpoint"
 
   - name: identity_provider_detected
     category: identity
@@ -110,7 +113,7 @@ observations:
     condition:
       slugs_any: [okta, auth0, descope, onelogin, duo, ping-identity, cyberark]
       slugs_min: 1
-    template: "Identity provider detected ({matched_slugs})"
+    template: "Identity-vendor indicator observed ({matched_slugs})"
 
   # ── Infrastructure posture ────────────────────────────────────────────
 
@@ -120,7 +123,7 @@ observations:
     condition:
       slugs_any: [aws-route53, aws-cloudfront, aws-elb, aws-s3, azure-dns, azure-cdn, azure-appservice, gcp-dns, gcp-app]
       slugs_min: 3
-    template: "Infrastructure spans multiple cloud providers ({matched_slugs})"
+    template: "Multiple cloud-vendor catalog indicators co-observed ({matched_slugs}); provider roles and diversity are unresolved"
 
   - name: edge_layering
     category: infrastructure
@@ -128,7 +131,7 @@ observations:
     condition:
       slugs_any: [cloudflare, akamai, fastly, imperva]
       slugs_min: 2
-    template: "Multiple CDN/edge providers observed ({matched_slugs})"
+    template: "Multiple edge-vendor catalog indicators co-observed ({matched_slugs}); source roles may differ"
 
   - name: single_dns_provider
     category: infrastructure
@@ -137,7 +140,7 @@ observations:
       slugs_any: [aws-route53, azure-dns, gcp-dns, cloudflare]
       slugs_min: 1
       slugs_max: 1
-    template: "DNS is managed by a single provider ({matched_slugs})"
+    template: "One infrastructure-provider indicator observed ({matched_slugs}); this rule does not retain the evidence role"
 
   - name: edge_compute_detected
     category: infrastructure
@@ -145,7 +148,7 @@ observations:
     condition:
       slugs_any: [vercel, netlify, flyio, railway, fastly, render]
       slugs_min: 2
-    template: "Multiple edge/serverless platforms detected ({matched_slugs}) — edge-native deployment pattern"
+    template: "Multiple edge or serverless platform indicators observed ({matched_slugs})"
 
   # ── SaaS footprint ───────────────────────────────────────────────────
 
@@ -155,7 +158,7 @@ observations:
     condition:
       slugs_any: [slack, notion, miro, atlassian, figma, dropbox, clickup, asana, monday, loom, canva, zoom, airtable, github, gitlab, vercel, netlify, salesforce, hubspot, zendesk, intercom, datadog, newrelic]
       slugs_min: 6
-    template: "Broad SaaS adoption detected — {matched_count} services across collaboration, dev, and business tools"
+    template: "Broad public SaaS indicator set observed: {matched_count} catalog matches across collaboration, development, and business categories"
 
   - name: ai_tooling_detected
     category: saas_footprint
@@ -163,7 +166,7 @@ observations:
     condition:
       slugs_any: [openai, anthropic, mistral, perplexity, crewai-aid, langsmith, mcp-discovery, dify, n8n, autogen]
       slugs_min: 1
-    template: "AI/LLM tooling detected ({matched_slugs})"
+    template: "AI/LLM vendor indicator observed ({matched_slugs})"
 
   - name: agentic_ai_detected
     category: saas_footprint
@@ -171,7 +174,7 @@ observations:
     condition:
       slugs_any: [crewai-aid, langsmith, mcp-discovery, dify, n8n, autogen]
       slugs_min: 1
-    template: "Agentic AI platform indicators detected ({matched_slugs})"
+    template: "Agentic AI platform indicators observed ({matched_slugs})"
 
   - name: supply_chain_security_detected
     category: saas_footprint
@@ -179,7 +182,7 @@ observations:
     condition:
       slugs_any: [github-advanced-security, sonatype, snyk, cosign-attestation]
       slugs_min: 1
-    template: "Software supply chain security tooling detected ({matched_slugs})"
+    template: "Software-supply-chain security vendor indicator observed ({matched_slugs})"
 
   - name: security_tooling_detected
     category: saas_footprint
@@ -187,7 +190,7 @@ observations:
     condition:
       slugs_any: [crowdstrike, sentinelone, sophos, zscaler, netskope, paloalto, cato, wiz, knowbe4]
       slugs_min: 2
-    template: "Multiple security tools detected ({matched_slugs})"
+    template: "Multiple security-vendor indicators observed ({matched_slugs})"
 
   # ── Certificate posture ───────────────────────────────────────────────
 
@@ -219,7 +222,7 @@ observations:
     condition:
       slugs_any: [microsoft365, google-workspace]
       slugs_min: 2
-    template: "Both Microsoft 365 and Google Workspace detected — possible migration in progress or hybrid configuration"
+    template: "Microsoft 365 and Google Workspace indicators are co-observed; active delivery, historical residue, and verification-only registration remain compatible explanations"
 
   - name: file_sharing_sprawl
     category: consistency
@@ -227,7 +230,7 @@ observations:
     condition:
       slugs_any: [dropbox, box, egnyte]
       slugs_min: 2
-    template: "Multiple enterprise file-sharing platforms detected ({matched_slugs}) — possible duplication or migration"
+    template: "Multiple file-sharing platform indicators observed ({matched_slugs})"
 
   - name: consumer_saas_sprawl
     category: consistency
@@ -235,7 +238,7 @@ observations:
     condition:
       slugs_any: [canva, dropbox, mailchimp, zoom, airtable, notion, monday, clickup, loom]
       slugs_min: 3
-    template: "Multiple consumer-grade SaaS tools detected ({matched_slugs}) alongside enterprise infrastructure"
+    template: "Multiple SaaS vendor indicators observed ({matched_slugs})"
 
   # ── Google Workspace posture ──────────────────────────────────────────
 
@@ -245,7 +248,7 @@ observations:
     condition:
       slugs_any: [google-federated]
       slugs_min: 1
-    template: "Google Workspace uses federated authentication via an external identity provider"
+    template: "Google Workspace identity discovery routed to an external identity provider"
 
   - name: google_managed_identity
     category: identity
@@ -253,7 +256,7 @@ observations:
     condition:
       slugs_any: [google-managed]
       slugs_min: 1
-    template: "Google Workspace uses Google-native authentication — no external identity federation"
+    template: "Google managed-identity indicator observed; external federation was not observed in the bounded response"
 
   - name: mta_sts_enforcing
     category: email
@@ -261,7 +264,7 @@ observations:
     condition:
       slugs_any: [mta-sts-enforce]
       slugs_min: 1
-    template: "MTA-STS policy is set to enforce — email transport encryption is mandatory"
+    template: "MTA-STS policy mode enforce observed"
 
   - name: tls_rpt_configured
     category: email
@@ -269,4 +272,4 @@ observations:
     condition:
       slugs_any: [tls-rpt]
       slugs_min: 1
-    template: "TLS-RPT is configured — the domain receives TLS failure reports"
+    template: "TLS-RPT record observed; report delivery is not verified"

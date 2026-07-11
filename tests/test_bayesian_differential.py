@@ -33,6 +33,7 @@ from validation.differential_verification import (
     iter_tricky_configs,
     prior_joint,
     reference_posteriors,
+    structured_config_count,
 )
 
 # Half a unit in the engine's fourth-decimal rounding, plus slack. A real
@@ -111,13 +112,13 @@ def test_ve_matches_reference_tricky_nodes_exhaustive(network):
 def test_ve_matches_reference_sampled_full_sweep(network):
     """A seeded sample of the full none/one/all cross product agrees everywhere.
 
-    The complete ~2.9k-config sweep lives in the validation harness; here an
+    The complete structured sweep lives in the validation harness; here an
     evenly-strided deterministic sample keeps the default suite fast while still
     spanning the joint evidence space across all nine nodes.
     """
     joint = prior_joint(network)
     configs = list(iter_structured_configs(network))
-    assert len(configs) > 2000  # the enumerable cross product is large
+    assert len(configs) >= 256
     stride = max(1, len(configs) // 400)
     sample = configs[::stride]
     worst = 0.0
@@ -132,6 +133,16 @@ def test_ve_matches_reference_sampled_full_sweep(network):
             )
     # Sanity: the only gap should be the engine's 4-dp rounding, never structural.
     assert worst <= 5.05e-5
+
+
+def test_structured_sweep_is_smaller_than_full_evidence_power_set(network):
+    """Guard the report wording: the harness verifies swept configurations."""
+    binding_keys = {
+        (evidence.kind, evidence.name)
+        for node in network.nodes
+        for evidence in node.evidence
+    }
+    assert structured_config_count(network) < 2 ** len(binding_keys)
 
 
 def test_declarative_absence_moves_posterior_down(network):

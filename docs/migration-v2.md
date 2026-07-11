@@ -27,7 +27,7 @@ they would not need a breaking change after the freeze.
 | Field | First shipped | v2.0 status |
 |---|---|---|
 | `posterior_observations` | v1.9.0 | Stable. Shape pinned: `name`, `description`, `posterior`, `interval_low`, `interval_high`, `evidence_used`, `n_eff`, `sparse`, `conflict_provenance`. |
-| `slug_confidences` | v1.9.0 | Stable. Reshaped in v2.0 (SH2) from a `[slug, posterior]` pair array to an object map `{slug: posterior}`, parallel to `detection_scores`. |
+| `slug_confidences` | v1.9.0 | Stable. Reshaped in v2.0 (SH2) from a `[slug, value]` pair array to an object map `{slug: value}`, parallel to `detection_scores`. The value is now documented precisely as additive evidence strength, not an externally calibrated posterior. |
 | `chain_motifs` | v1.7.0 | Stable. |
 | `wildcard_sibling_clusters` | v1.7.0 | Stable. Reshaped in v2.0 (SH5) from a list of string lists to a list of `{names: [...]}` objects. |
 | `deployment_bursts` | v1.7.0 | Stable. |
@@ -50,12 +50,15 @@ unknown fields is unaffected.
 
 The v1.9.5 per-node stability validation classified each node
 in `bayesian_network.yaml` as `stable` or `not yet`. v2.0 ships
-only the nodes that cleared all three criteria
-(evidence-response, calibration, independent-firing count).
+only the nodes that cleared the three historical bridge criteria then named
+evidence-response, calibration, and independent-firing count. The word
+"calibration" in that historical disposition meant internal behavior, not the
+training-disjoint and predictor-input-disjoint empirical standard now defined in
+`statistical-assurance.md`.
 
 The one `not yet` node after v1.9.6, `okta_idp`, ships in v2.0 with a
-keep-with-caveat disposition: it cleared the evidence-response and
-calibration criteria, and its independent-firing count is recorded in
+keep-with-caveat disposition: it cleared the historical evidence-response and
+internal-consistency criteria, and its independent-firing count is recorded in
 the YAML as a corpus-exposure caveat rather than a blocker. All nine
 nodes ship.
 

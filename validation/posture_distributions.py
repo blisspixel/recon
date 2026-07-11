@@ -1,28 +1,22 @@
-"""Posture-stratified distributions: information recovered, interval width.
+"""Posture-stratified model diagnostics: entropy change and band width.
 
 The two paper experiments that read the engine's per-domain behaviour as
 *distributions* rather than point checks, both consuming what the 2.2
 diagnostics now expose:
 
-1. **Information recovered (CAL10) across hardening postures.** The
-   operational reading of "what the public channel still leaks after
-   hardening": the per-domain posterior entropy reduction
-   (H(prior) - H(posterior), summed over nodes, in nats), bucketed by an
-   observable hardening posture. The sharpest observable hardening move is
-   edge-proxying — a CDN/edge in front of the origin hides infrastructure —
-   so the primary cut is edge-proxied vs direct, crossed with an
-   evidence-richness tier. If hardening reduces what the channel leaks, the
-   edge-proxied / sparse buckets show lower entropy reduction; the harness
-   measures that instead of asserting it.
+1. **Signed marginal entropy change across observable postures.** The
+   per-domain model diagnostic
+   (H(prior) - H(posterior), summed over nodes, in nats), bucketed by a
+   model-derived edge label and evidence-richness tier. The harness measures a
+   descriptive association instead of asserting a causal hardening effect. The
+   summed marginals can double count dependent nodes and are not information
+   recovered from the world.
 
-2. **Interval width vs evidence (the CAL7 over-confidence diagnostic).**
-   The credible interval is meant to be evidence-responsive: wider on
-   sparse nodes, narrower as evidence accumulates. This reports the mean
-   80% interval width per node bucketed by that node's effective sample
-   size, separating grouped nodes (whose co-firing bindings are reduced to
-   one effective unit, correlation.md 4.3 / CAL7) from ungrouped ones, so
-   the documented residual over-confidence on richly-instrumented grouped
-   nodes is visible as a number, not just catalogued. This is the data
+2. **Uncertainty-band width vs display mass.** This reports the mean
+   80% band width per node bucketed by that node's effective display
+   mass, separating grouped nodes (whose co-firing bindings are reduced to
+   one effective unit, correlation.md section 3.2) from ungrouped ones, so
+   differences between grouped and ungrouped rows are visible. This is the data
    behind the paper's interval-width-vs-evidence-count figure.
 
 Everything reported is aggregate (quantiles, bucket means, counts); no
@@ -51,9 +45,8 @@ from typing import Any
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
 
-# Observable hardening: a CDN/edge fronts the origin when this node's posterior
-# clears 0.5. The dominant passive-hardening move, and the one the entropy cut
-# is built around.
+# Model-derived posture label: a CDN/edge score clears 0.5. This is a
+# descriptive bucket and not an observed hardening action.
 _CDN_NODE = "cdn_fronting"
 _EDGE_THRESHOLD = 0.5
 
@@ -63,10 +56,10 @@ _EDGE_THRESHOLD = 0.5
 _SPARSE_MAX = 2
 _MODERATE_MAX = 6
 
-# n_eff buckets for the interval-width diagnostic. The shipped calibration floor
-# is 4.0, so the first bucket is the passive-observation ceiling.
+# n_eff buckets for the band-width diagnostic. The shipped display-mass floor is
+# 4.0, so the first bucket is the floor case.
 _NEFF_BUCKETS: tuple[tuple[str, float, float], ...] = (
-    ("ceiling (<=4)", 0.0, 4.0001),
+    ("floor (<=4)", 0.0, 4.0001),
     ("5-6", 4.0001, 6.0001),
     ("7-9", 6.0001, 9.0001),
     ("10+", 9.0001, float("inf")),
@@ -90,7 +83,7 @@ def evidence_tier(evidence_count: int) -> str:
 
 
 def neff_bucket(n_eff: float) -> str:
-    """Label the n_eff bucket for the interval-width diagnostic."""
+    """Label the n_eff bucket for the uncertainty-band diagnostic."""
     for label, low, high in _NEFF_BUCKETS:
         if low < n_eff <= high or (low == 0.0 and n_eff <= high):
             return label
@@ -125,7 +118,7 @@ class DomainRecord:
 
 @dataclass(frozen=True)
 class NodeWidthRecord:
-    """One (node, domain) interval-width observation (no apex)."""
+    """One (node, domain) uncertainty-band-width observation (no apex)."""
 
     node: str
     grouped: bool
@@ -151,7 +144,7 @@ def entropy_by_posture(records: list[DomainRecord]) -> dict[str, Any]:
 
 
 def width_by_evidence(records: list[NodeWidthRecord]) -> dict[str, Any]:
-    """Mean 80% interval width per (grouped?, n_eff bucket).
+    """Mean 80% uncertainty-band width per (grouped?, n_eff bucket).
 
     The evidence-responsiveness signal is the width falling as n_eff rises;
     the CAL7 signal is the grouped rows staying at least as tight as the
@@ -186,7 +179,7 @@ async def _collect_one(
             info, _results = await resolve_tenant(domain, timeout=timeout, skip_ct=True)
         except Exception:
             return None
-    result = infer_from_tenant_info(info, network=network)
+    result = infer_from_tenant_info(info, network=network, priors_override={})
     posteriors = {p.name: p for p in result.posteriors}
     cdn = posteriors.get(_CDN_NODE)
     domain_record = DomainRecord(
@@ -232,7 +225,7 @@ def _read_domains(path: Path) -> list[str]:
 
 def _print(domain_records: list[DomainRecord], width_records: list[NodeWidthRecord]) -> None:
     ent = entropy_by_posture(domain_records)
-    print(f"\nInformation recovered (CAL10): per-domain entropy reduction in nats (n={ent['n']})")
+    print(f"\nSigned marginal entropy change: summed per domain in nats (n={ent['n']})")
     q = ent["overall_quartiles"]  # type: ignore[index]
     print(f"  overall                        p25 {q[0]:.3f}  p50 {q[1]:.3f}  p75 {q[2]:.3f}")
     for name, cell in ent["buckets"].items():  # type: ignore[attr-defined]
@@ -240,7 +233,7 @@ def _print(domain_records: list[DomainRecord], width_records: list[NodeWidthReco
         print(f"  {name:<30} n {cell['n']:<5} p25 {cq[0]:.3f}  p50 {cq[1]:.3f}  p75 {cq[2]:.3f}")
 
     width = width_by_evidence(width_records)
-    print("\nInterval width vs evidence (CAL7 diagnostic): mean 80% interval width by n_eff")
+    print("\nUncertainty-band width vs display mass: mean 80% width by n_eff")
     for kind in ("ungrouped", "grouped"):
         print(f"  {kind} nodes:")
         rows = width[kind]  # type: ignore[index]
@@ -251,18 +244,16 @@ def _print(domain_records: list[DomainRecord], width_records: list[NodeWidthReco
                 cell = rows[label]
                 print(f"    n_eff {label:<14} mean width {cell['mean_width']:.4f}  (n {cell['n']})")
     print(
-        "\nReading: the hardening signal is the SPARSE evidence tier (little fired, so"
-        "\nlittle recovered) — not the edge-proxied flag, which marks a CDN that was"
-        "\nDETECTED and so adds information rather than hiding it. Interval width should"
-        "\nfall as n_eff rises (evidence-responsiveness); grouped nodes are not narrower"
-        "\nthan ungrouped at matched n_eff, which is the CAL7 co-firing correction"
-        "\nworking (it prevents over-confidence rather than causing it). Aggregates"
-        "\nonly; see docs/statistical-assurance.md and validation/layer-ablation.md."
+        "\nReading: these are descriptive model diagnostics. The posture buckets use"
+        "\nmodel outputs and evidence counts, and summed marginals can double count."
+        "\nFor fixed posterior, band width falls as n_eff rises; across rows the mean"
+        "\nalso changes. Group comparisons do not establish coverage or independence."
+        "\nAggregates only; see docs/statistical-assurance.md."
     )
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(description="Posture-stratified entropy + interval-width distributions.")
+    parser = argparse.ArgumentParser(description="Posture-stratified model entropy and band-width diagnostics.")
     parser.add_argument("domains", type=Path, help="File with one apex per line (gitignored / outside the tree).")
     parser.add_argument("--concurrency", type=int, default=6, help="Concurrent resolves (default 6).")
     parser.add_argument("--timeout", type=float, default=120.0, help="Per-domain resolve timeout seconds.")

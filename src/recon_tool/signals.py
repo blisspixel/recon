@@ -30,10 +30,130 @@ logger = logging.getLogger("recon")
 __all__ = [
     "Signal",
     "SignalMatch",
+    "canonicalize_signal_observation",
     "evaluate_signals",
     "load_signals",
+    "public_signal_names",
     "reload_signals",
+    "reportable_signals",
+    "resolve_reportable_signal",
+    "signal_observation_label",
+    "signal_rule_names_from_observation",
 ]
+
+
+# Signal names are stable rule identifiers used by profiles and saved output.
+# Several historic identifiers encode conclusions that generic public catalog
+# matches cannot support. All public projections must use these claim-safe
+# observation labels while retaining the rule identifier only as provenance.
+_SIGNAL_OBSERVATION_LABELS: dict[str, str] = {
+    "AI Adoption": "AI-platform indicators observed",
+    "High GTM Maturity": "Sales and marketing platform indicators observed",
+    "Enterprise Security Stack": "Multiple security-vendor indicators observed",
+    "Modern Collaboration": "Collaboration-platform indicators observed",
+    "Dev & Engineering Heavy": "Developer-tool indicators observed",
+    "Data & Analytics Investment": "Data and analytics platform indicators observed",
+    "Multi-Cloud": (
+        "Multiple cloud-vendor catalog indicators co-observed; provider roles and diversity are unresolved"
+    ),
+    "Edge Layering": "Multiple edge-vendor catalog indicators co-observed; source roles may differ",
+    "Observability & SRE": "Observability-vendor indicators observed",
+    "Digital Transformation": "AI, collaboration, and cloud-platform indicators co-observed",
+    "Sales-Led Growth": "CRM, sales-engagement, and marketing-platform indicators co-observed",
+    "Product-Led Growth": "Analytics, engagement, and support-platform indicators co-observed",
+    "Multi-Layer Security Tooling": "Multiple security-category vendor indicators observed",
+    "Security Gap \N{EM DASH} Gateway Without DMARC Enforcement": (
+        "Email-security vendor indicator with no effective DMARC enforcement observed"
+    ),
+    "Heavy Outbound Stack": "Multiple email-sender vendor indicators observed",
+    "File Collaboration Sprawl": "File-sharing platform indicators co-observed",
+    "Zero Trust Pattern Observed": "Identity, network-security, and endpoint-vendor indicators co-observed",
+    "Startup Tool Mix": "Developer, collaboration, and analytics-platform indicators co-observed",
+    "Dual Email Provider": "Microsoft 365 and Google Workspace indicators co-observed",
+    "Google-Native Identity": "Google service and identity indicators co-observed",
+    "High-Security Posture (CSE)": "Google Workspace CSE indicator observed",
+    "Google Cloud Investment": "Google cloud-service indicators observed",
+    "Google Workspace Full Suite": "Google Workspace provider and module indicators co-observed",
+    "Google Federated Identity": "Google federated-identity observation",
+    "Google MTA-STS Enforcing": "Google MTA-STS enforce policy observed",
+    "Federated Identity with Complex Email Delegation": (
+        "Identity-vendor indicator with complex SPF delegation observed"
+    ),
+    "Active Email Sending with Minimal Security": (
+        "Email-sender vendor indicator with a low public email-control score"
+    ),
+    "High Certificate Issuance Activity": "High certificate issuance activity observed",
+    "Agentic AI Infrastructure": "Multiple AI or automation-platform indicators observed",
+    "AI Platform Diversity": "Multiple AI-platform indicators observed",
+    "Software Supply Chain Maturity": "Software-supply-chain vendor indicators observed",
+    "Edge-Native Architecture": "Edge-platform indicators observed",
+    "Enterprise Email Deliverability": "Email-deliverability vendor indicator observed",
+    "DMARC Governance Investment": "DMARC-reporting vendor indicator observed",
+    "Email Gateway Topology": "Email-security vendor and primary-provider indicators co-observed",
+    "Secondary Email Provider Observed": ("Secondary email-service indicator co-observed with an MX-based primary"),
+}
+
+# These rules depend on negative premises whose observation opportunity is not
+# represented in SignalContext. They remain stable identifiers for backward
+# compatibility but cannot support a public observation.
+_NONREPORTABLE_SIGNAL_NAMES = frozenset(
+    {
+        "Dual Email Delivery Path",
+        "Incomplete Identity Migration",
+    }
+)
+
+
+def signal_observation_label(rule_name: str) -> str | None:
+    """Return claim-safe public copy for a stable signal rule identifier.
+
+    Custom signal names pass through unchanged because they are operator-owned.
+    ``None`` means the rule lacks a supportable public projection and must be
+    omitted from insights, explanations, posture hypotheses, and deltas.
+    """
+    if rule_name in _NONREPORTABLE_SIGNAL_NAMES:
+        return None
+    return _SIGNAL_OBSERVATION_LABELS.get(rule_name, rule_name)
+
+
+def signal_rule_names_from_observation(observation: str) -> tuple[str, ...]:
+    """Resolve a rendered observation prefix to stable signal rule IDs.
+
+    Both current claim-safe labels and reportable historical raw identifiers
+    are recognized. Unknown prose and nonreportable rules return an empty
+    tuple. The tuple shape makes any future many-to-one label explicit.
+    """
+    prefix = observation.partition(": ")[0] if ": " in observation else observation
+    matching_labels = tuple(rule_name for rule_name, label in _SIGNAL_OBSERVATION_LABELS.items() if label == prefix)
+    if matching_labels:
+        return matching_labels
+    if prefix in _NONREPORTABLE_SIGNAL_NAMES:
+        return ()
+    if any(signal.name == prefix for signal in load_signals()):
+        return (prefix,)
+    return ()
+
+
+def canonicalize_signal_observation(observation: str) -> str | None:
+    """Project current or cached signal text through the public claim policy.
+
+    Recognized historical raw rule prefixes are rewritten to their claim-safe
+    label. Nonreportable rules are dropped. Non-signal prose passes through
+    unchanged so callers can apply this function to a complete insight list.
+    """
+    normalized = observation.casefold()
+    if normalized.startswith("high-maturity hardening pattern") or "hardening pattern observed" in normalized:
+        return None
+    prefix, separator, details = observation.partition(": ")
+    if prefix in _NONREPORTABLE_SIGNAL_NAMES:
+        return None
+    rule_names = signal_rule_names_from_observation(observation)
+    if not rule_names:
+        return observation
+    label = signal_observation_label(rule_names[0])
+    if label is None:
+        return None
+    return f"{label}: {details}" if separator else label
 
 
 @dataclass(frozen=True)
@@ -372,6 +492,36 @@ def reload_signals() -> None:
     load_signals.cache_clear()
 
 
+def reportable_signals() -> tuple[tuple[Signal, str], ...]:
+    """Return signal definitions paired with their public observation labels.
+
+    Stable rule identifiers remain an internal provenance contract. Public
+    catalog surfaces consume this projection so a historical identifier cannot
+    bypass the claim policy merely because no domain is being evaluated.
+    """
+    return tuple(
+        (signal, label) for signal in load_signals() if (label := signal_observation_label(signal.name)) is not None
+    )
+
+
+def public_signal_names(names: tuple[str, ...] | list[str]) -> list[str]:
+    """Project a sequence of rule identifiers to reportable public labels."""
+    return [label for name in names if (label := signal_observation_label(name)) is not None]
+
+
+def resolve_reportable_signal(name: str) -> tuple[Signal, str] | None:
+    """Resolve a public label or reportable legacy rule identifier.
+
+    Accepting a reportable legacy identifier preserves invocation
+    compatibility, but callers must render only the returned public label.
+    Nonreportable identifiers deliberately resolve to ``None``.
+    """
+    for signal, label in reportable_signals():
+        if name in {label, signal.name}:
+            return signal, label
+    return None
+
+
 @dataclass(frozen=True)
 class SignalMatch:
     """Result of a signal evaluation — immutable."""
@@ -385,14 +535,16 @@ class SignalMatch:
 
 def _evaluate_metadata_condition(condition: MetadataCondition, context: SignalContext) -> bool:
     """Evaluate a single metadata condition against the context."""
+    if condition.field in context.unavailable_metadata_fields:
+        return False
     field_value = getattr(context, condition.field, None)
 
     op = condition.operator
     target = condition.value
 
-    # neq with None field → True (field doesn't exist, so it's not equal to target)
+    # Unknown is not evidence for equality or inequality.
     if field_value is None:
-        return op == "neq"
+        return False
 
     # For numeric operators, try numeric comparison
     if op in ("gte", "lte"):

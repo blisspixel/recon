@@ -93,6 +93,16 @@ def test_unrelated_evidence_does_not_change_unrelated_posterior(network):
     assert abs(m1.posterior - m2.posterior) < 1e-3
 
 
+def test_google_domains_dns_slug_does_not_move_identity_posteriors(network):
+    baseline = infer(network, [], [], priors_override={})
+    dns_only = infer(network, ["google-domains-dns"], [], priors_override={})
+
+    baseline_by_name = {posterior.name: posterior.posterior for posterior in baseline.posteriors}
+    dns_by_name = {posterior.name: posterior.posterior for posterior in dns_only.posteriors}
+
+    assert dns_by_name == baseline_by_name
+
+
 # ── Invariant 4: interval width inversely correlates with n_eff ─────
 
 
@@ -139,8 +149,7 @@ def test_sparse_flag_set_under_no_evidence(network):
 
 
 def test_sparse_flag_clears_with_sufficient_evidence(network):
-    # Two pieces of evidence on m365_tenant clear the sparse flag.
-    result = infer(network, ["microsoft365", "entra-id"], [], priors_override={})
+    result = infer(network, [], ["m365_tenant_observed"], priors_override={})
     m365 = next(p for p in result.posteriors if p.name == "m365_tenant")
     assert not m365.sparse
 
@@ -154,8 +163,17 @@ def test_entropy_reduction_per_node_bounded(network):
     N nodes is at most N · ln 2."""
     result = infer(
         network,
-        ["microsoft365", "entra-id", "okta", "cloudflare", "aws"],
-        ["federated_sso_hub", "dmarc_reject", "dkim_present", "spf_strict"],
+        [],
+        [
+            "m365_tenant_observed",
+            "okta_idp_observed",
+            "cdn_cname_observed",
+            "aws_endpoint_cname_observed",
+            "federated_sso_hub",
+            "dmarc_reject",
+            "dkim_present",
+            "spf_strict",
+        ],
         priors_override={},
     )
     max_possible = len(network.nodes) * math.log(2.0)
@@ -201,9 +219,9 @@ def test_override_on_child_node_is_ignored(network):
 @pytest.mark.parametrize(
     ("slugs", "signals"),
     [
-        (["microsoft365", "entra-id", "exchange-online"], ["federated_sso_hub", "dmarc_reject"]),
-        (["okta"], ["federated_sso_hub"]),
-        (["proofpoint"], ["dmarc_reject", "dkim_present", "spf_strict"]),
+        ([], ["m365_tenant_observed", "federated_sso_hub", "dmarc_reject"]),
+        ([], ["okta_idp_observed", "federated_sso_hub"]),
+        ([], ["email_gateway_mx_observed", "dmarc_reject", "dkim_present", "spf_strict"]),
     ],
 )
 def test_dense_corroborating_evidence_reduces_total_entropy(network, slugs, signals):
@@ -227,13 +245,10 @@ def test_n_eff_never_below_floor(network):
 def test_evidence_count_in_inference_result(network):
     result = infer(
         network,
-        ["microsoft365", "entra-id"],
-        ["dmarc_reject"],
+        [],
+        ["m365_tenant_observed", "dmarc_reject"],
         priors_override={},
     )
-    # CAL7: evidence_count is the contributing (group-reduced) count, not the
-    # raw fired count. microsoft365 and entra-id share the m365_indicators group,
-    # so they collapse to one effective binding on m365_tenant; dmarc_reject is
-    # one on email_security_policy_enforcing. 1 + 1 = 2.
+    # One role observation and one DMARC policy observation contribute.
     assert result.evidence_count == 2
     assert result.conflict_count == 0

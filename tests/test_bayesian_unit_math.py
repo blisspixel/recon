@@ -50,8 +50,15 @@ def _ev(name: str, lp: float, la: float, group: str | None = None, kind: str = "
 # Deterministic rich-evidence input shared by the output-field anchors: fires
 # bindings across hideable and declarative nodes so posteriors, intervals,
 # entropy reductions, and unit counterfactuals all carry pinnable values.
-_RICH_SLUGS = ["microsoft365", "okta", "cloudflare"]
-_RICH_SIGNALS = ["dmarc_reject", "spf_strict", "federated_sso_hub"]
+_RICH_SLUGS: list[str] = []
+_RICH_SIGNALS = [
+    "m365_tenant_observed",
+    "okta_idp_observed",
+    "cdn_cname_observed",
+    "dmarc_reject",
+    "spf_strict",
+    "federated_sso_hub",
+]
 
 
 # ── _credible_interval ─────────────────────────────────────────────────
@@ -109,12 +116,9 @@ class TestDeclarativeEvidenceCount:
         )
 
     def test_counts_fired_strong_absent_and_informative_groups(self) -> None:
-        # By hand: fired A contributes 1. Absent B has
-        # |log(0.1/0.7)| = 1.95 > 0.2 (counts). Absent C has
-        # |log(0.5/0.45)| = 0.105 < 0.2 (does not). The fully-absent
-        # group g has |log(0.2/0.8)| = 1.39 > 0.2 (counts once for two
-        # members). The fully-absent group h has |log(0.5/0.55)| = 0.095
-        # (does not). Total: 3.
+        # Fired A contributes one unit. Every applied non-neutral absence also
+        # counts: B, weak C, group g, and weak group h. Group g still counts
+        # only once for its two mutually exclusive members. Total: 5.
         node = self._node(
             evidence=(
                 _ev("a", 0.9, 0.1),
@@ -127,7 +131,7 @@ class TestDeclarativeEvidenceCount:
             group_absence=(("g", 0.2, 0.8), ("h", 0.5, 0.55)),
         )
         fired = [node.evidence[0]]
-        assert _declarative_evidence_count(node, fired) == 3
+        assert _declarative_evidence_count(node, fired) == 5
 
     def test_fired_group_not_double_counted_as_absent(self) -> None:
         node = self._node(
@@ -255,20 +259,26 @@ class TestNEffExactValues:
     # a deliberate network change that moves them shows up here next to
     # the drift-gate baseline it also has to update.
 
-    def test_two_ungrouped_bindings(self) -> None:
+    def test_one_role_binding(self) -> None:
         net = load_network()
-        result = infer(net, ["cloudflare", "akamai"], [], priors_override={})
+        result = infer(net, [], ["cdn_cname_observed"], priors_override={})
         post = {p.name: p for p in result.posteriors}
-        assert post["cdn_fronting"].n_eff == 6.0
+        assert post["cdn_fronting"].n_eff == 5.0
 
     def test_conflict_subtracts_exactly_its_penalty(self) -> None:
         net = load_network()
-        result = infer(net, ["cloudflare", "akamai"], [], conflict_field_count=1, priors_override={})
+        result = infer(
+            net,
+            [],
+            ["dmarc_reject", "spf_strict"],
+            conflict_field_count=1,
+            priors_override={},
+        )
         post = {p.name: p for p in result.posteriors}
-        # Asserted as a literal (6.0 - 1.5), not 6.0 - _CONFLICT_N_EFF_PENALTY:
+        # Three applied declarative units plus two firings, less one conflict.
         # the symbolic form moves with a mutation to the constant and so
         # cannot catch it. The constant is cross-checked separately below.
-        assert post["cdn_fronting"].n_eff == 4.5
+        assert post["email_security_policy_enforcing"].n_eff == 5.5
         assert _CONFLICT_N_EFF_PENALTY == 1.5
 
     def test_floor_holds_for_evidence_free_node_under_conflict(self) -> None:
@@ -280,12 +290,24 @@ class TestNEffExactValues:
     def test_declarative_informative_absences_count(self) -> None:
         # With nothing fired, the declarative policy node still earns
         # n_eff from its informative absences: the absent dmarc_policy
-        # group (|LLR| 2.8) and the absent spf_strict complement (|LLR|
-        # 0.44) count; the near-neutral mta_sts complement does not.
+        # group, the absent spf_strict complement, and the weak but non-neutral
+        # mta_sts complement. Every absence actually applied by inference is
+        # surfaced and counted.
         net = load_network()
         result = infer(net, [], [], priors_override={})
         post = {p.name: p for p in result.posteriors}
-        assert post["email_security_policy_enforcing"].n_eff == 6.0
+        assert post["email_security_policy_enforcing"].n_eff == 7.0
+
+    def test_every_applied_declarative_absence_has_provenance(self) -> None:
+        net = load_network()
+        post = {p.name: p for p in infer(net, [], [], priors_override={}).posteriors}
+        policy = post["email_security_policy_enforcing"]
+        absences = {item.unit: item for item in policy.unit_counterfactuals}
+
+        assert policy.absence_informative is True
+        assert set(absences) == {"dmarc_policy", "mta_sts_enforce", "spf_strict"}
+        assert all(item.observed == "absent" for item in absences.values())
+        assert all(item.delta != 0.0 for item in absences.values())
 
     def test_network_calibration_drives_n_eff_arithmetic(self) -> None:
         base = load_network()
@@ -298,7 +320,7 @@ class TestNEffExactValues:
                 conflict_n_eff_penalty=1.0,
             ),
         )
-        result = infer(net, ["cloudflare"], [], conflict_field_count=1, priors_override={})
+        result = infer(net, [], ["cdn_cname_observed"], conflict_field_count=1, priors_override={})
         post = {p.name: p for p in result.posteriors}
         assert post["cdn_fronting"].n_eff == 12.0
         assert post["cdn_fronting"].sparse is False
@@ -366,7 +388,12 @@ class TestOutputRounding:
         # carry a nonzero fourth decimal (a 3-decimal emission fails the
         # any()). The per-field anchors below close the single-field gap.
         net = load_network()
-        result = infer(net, ["microsoft365", "okta"], ["dmarc_reject", "spf_strict"], priors_override={})
+        result = infer(
+            net,
+            [],
+            ["m365_tenant_observed", "okta_idp_observed", "dmarc_reject", "spf_strict"],
+            priors_override={},
+        )
         values = [v for p in result.posteriors for v in (p.posterior, p.interval_low, p.interval_high)]
         assert all(v == round(v, 4) for v in values)
         assert any(round(v, 3) != v for v in values)
@@ -389,7 +416,7 @@ class TestOutputRounding:
         # The InferenceResult-level total. raw 0.99850...: a 3-decimal
         # emission (0.999) fails the literal, pinning round(_, 4).
         net = load_network()
-        result = infer(net, ["microsoft365"], ["dmarc_reject"], priors_override={})
+        result = infer(net, [], ["m365_tenant_observed", "dmarc_reject"], priors_override={})
         assert result.entropy_reduction == 0.9985
 
 
@@ -406,7 +433,7 @@ class TestUnitCounterfactuals:
         net = load_network()
         post = {p.name: p for p in infer(net, _RICH_SLUGS, _RICH_SIGNALS, priors_override={}).posteriors}
         cfs = {c.unit: c for c in post["m365_tenant"].unit_counterfactuals}
-        cf = cfs["m365_indicators"]
+        cf = cfs["m365_tenant_observed"]
         # posterior_without raw 0.56812246..., delta raw 0.40843449...: the
         # 4-decimal literals differ from their 3- and 5-decimal forms, and
         # the delta literal also dies under any non-subtraction operator
@@ -417,12 +444,13 @@ class TestUnitCounterfactuals:
     def test_counterfactuals_sorted_by_descending_absolute_delta(self) -> None:
         # The policy node fires two units with unequal influence. The
         # stronger (dmarc_policy, delta 0.2334) must precede the weaker
-        # (spf_strict, delta 0.0132); an ascending or unsigned sort key flips
-        # the order.
+        # (spf_strict, delta 0.0132), followed by the applied weak MTA-STS
+        # absence (delta -0.0007). An ascending or unsigned sort key flips the
+        # order.
         net = load_network()
         post = {p.name: p for p in infer(net, _RICH_SLUGS, _RICH_SIGNALS, priors_override={}).posteriors}
         order = [c.unit for c in post["email_security_policy_enforcing"].unit_counterfactuals]
-        assert order == ["dmarc_policy", "spf_strict"]
+        assert order == ["dmarc_policy", "spf_strict", "mta_sts_enforce"]
 
 
 class TestCalibrationLoaderValidation:
@@ -449,9 +477,13 @@ class TestSignalsFromTenantInfo:
             dmarc_policy="reject",
             mta_sts_mode="enforce",
             services=(SVC_SPF_STRICT,),
-            evidence=(SimpleNamespace(source_type="DKIM", raw_value="v=DKIM1"),),
+            evidence=(
+                SimpleNamespace(source_type="DKIM", raw_value="v=DKIM1", slug="dkim"),
+                SimpleNamespace(source_type="SPF", raw_value="v=spf1 -all", slug="spf-strict"),
+            ),
         )
         assert signals_from_tenant_info(info) == {
+            "m365_tenant_observed",
             "federated_sso_hub",
             "dmarc_reject",
             "mta_sts_enforce",
@@ -461,7 +493,11 @@ class TestSignalsFromTenantInfo:
 
     def test_quarantine_and_google_federation(self) -> None:
         info = SimpleNamespace(google_auth_type="Federated", dmarc_policy="quarantine")
-        assert signals_from_tenant_info(info) == {"federated_sso_hub", "dmarc_quarantine"}
+        assert signals_from_tenant_info(info) == {
+            "google_workspace_tenant_observed",
+            "federated_sso_hub",
+            "dmarc_quarantine",
+        }
 
     def test_dmarc_reject_full_pct_enforces(self) -> None:
         assert "dmarc_reject" in signals_from_tenant_info(SimpleNamespace(dmarc_policy="reject", dmarc_pct=100))
@@ -504,14 +540,17 @@ class TestSignalsFromTenantInfo:
     def test_dmarc_pct_and_testing_compose(self, info: SimpleNamespace, expected: set[str]) -> None:
         assert signals_from_tenant_info(info) == expected
 
-    def test_spf_strict_from_service_marker_only(self) -> None:
-        # spf_strict is derived from the strict (-all) marker on the merged
-        # service set, not from an SPF-typed evidence record. A soft SPF domain
-        # (no strict marker) yields nothing; the strict marker yields the signal.
-        # The -all detection itself lives in the DNS producer that records the
-        # marker, keeping the fusion layer consistent with the rest of the tool.
+    def test_spf_strict_requires_typed_spf_evidence(self) -> None:
+        # Extensible service names cannot satisfy a policy node. The typed SPF
+        # record and parser-owned slug are the claim boundary.
         assert signals_from_tenant_info(SimpleNamespace(services=("SPF: softfail (~all)",))) == set()
-        assert signals_from_tenant_info(SimpleNamespace(services=(SVC_SPF_STRICT,))) == {"spf_strict"}
+        assert signals_from_tenant_info(SimpleNamespace(services=(SVC_SPF_STRICT,))) == set()
+        assert signals_from_tenant_info(
+            SimpleNamespace(
+                services=(SVC_SPF_STRICT,),
+                evidence=(SimpleNamespace(source_type="SPF", slug="spf-strict"),),
+            )
+        ) == {"spf_strict"}
 
     def test_empty_info_yields_nothing(self) -> None:
         assert signals_from_tenant_info(SimpleNamespace()) == set()
@@ -543,18 +582,18 @@ class TestConflictProvenance:
 
 
 class TestInferFromTenantInfo:
-    def test_slug_raises_posterior_and_counts_conflicts(self) -> None:
+    def test_role_observation_raises_posterior_and_counts_conflicts(self) -> None:
         net = load_network()
         empty = infer_from_tenant_info(SimpleNamespace(), network=net, priors_override={})
         base = {p.name: p for p in empty.posteriors}
-        info = SimpleNamespace(slugs=("microsoft365",))
+        info = SimpleNamespace(auth_type="Managed")
         result = infer_from_tenant_info(info, network=net, priors_override={})
         post = {p.name: p for p in result.posteriors}
         assert post["m365_tenant"].posterior > base["m365_tenant"].posterior
         assert result.conflict_count == 0
 
         conflicted = SimpleNamespace(
-            slugs=("microsoft365",),
+            auth_type="Managed",
             merge_conflicts=SimpleNamespace(
                 display_name=(),
                 auth_type=(SimpleNamespace(source="dns"), SimpleNamespace(source="oidc")),
@@ -567,7 +606,7 @@ class TestInferFromTenantInfo:
         result2 = infer_from_tenant_info(conflicted, network=net, priors_override={})
         assert result2.conflict_count == 1
         post2 = {p.name: p for p in result2.posteriors}
-        # The conflict dampens n_eff, so the interval widens relative to
+        # The conflict lowers n_eff, so the band widens relative to
         # the unconflicted run of the same evidence.
         width = post["m365_tenant"].interval_high - post["m365_tenant"].interval_low
         width2 = post2["m365_tenant"].interval_high - post2["m365_tenant"].interval_low
@@ -581,7 +620,7 @@ class TestInferFromTenantInfo:
             calibration=CalibrationSettings(conflict_n_eff_penalty=2.0),
         )
         conflicted = SimpleNamespace(
-            slugs=("microsoft365",),
+            auth_type="Managed",
             merge_conflicts=SimpleNamespace(
                 display_name=(),
                 auth_type=(SimpleNamespace(source="dns"), SimpleNamespace(source="oidc")),

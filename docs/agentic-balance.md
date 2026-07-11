@@ -16,16 +16,19 @@ data primitive, not to be agentic itself.
 This is not a bias toward rules for their own sake. It follows from what recon
 promises: full provenance, reproducible output, and honest uncertainty. A
 learned or LLM-driven component anywhere in the core would break byte-identical
-output, sever the evidence DAG, and violate the no-learned-weights invariant.
+output, sever the evidence DAG, and violate the no-opaque-runtime-model invariant.
 
 ## The decision guide
 
 Three questions, in order. Stop at the first that fits.
 
 1. **Is this in the observation, inference, or output core?** (collection,
-   fingerprint matching, the Bayesian layer, graph correlation, the credible
-   interval, JSON/exit-code emission) Then it is **rules-based, never agentic.**
-   No learned weights, no LLM call, no network-dependent nondeterminism. The
+   fingerprint matching, the Bayesian layer, graph correlation, the
+   model-relative uncertainty band, JSON/exit-code emission) Then it is
+   **rules-based, never agentic.**
+   No runtime training, opaque bundled estimator, LLM call, or network-dependent
+   nondeterminism. Manually encoded parameters, including values informed by a
+   dated development corpus, remain reviewable committed data. The
    invariants in [the concept that orders the plan](roadmap.md) and the
    reproducible-build gate enforce this.
 
@@ -55,8 +58,8 @@ matches one, generalize it before merging.
 |---|---|---|
 | Substring match where structure matters (`"-all" in spf`, `pattern in hostname`, vendor host inside a URL) | Token-aware, label-aware, or parsed-host match | spf `-all` substring to token match (v2.1.6); `cname_target` substring overmatch (v2.1.4); label-aware chain match so `vendor.com.attacker.tld` no longer matches `vendor.com` (`dns_tables.classify_chain`); Google identity redirect routing checks the parsed URL host |
 | Hard-coded vendor string in code | A catalog entry in `fingerprints.yaml` / `signals.yaml`, additive and vendor-doc-sourced | The whole fingerprint catalog exists so detection grows by data, not code |
-| Treating absence of a signal as proof of absence | Absence is no evidence by default (MNAR, `LR = 1`); only public-declaration signals disconfirm on absence | The MNAR absence rule in [correlation.md](correlation.md); the declarative-missingness model and `group_absence` for the email-policy node (CAL14) |
-| A confident yes/no verdict on sparse evidence | Emit the claim as a credible interval that widens on sparse input; set `sparse=true` | The credible interval is the load-bearing field by design; the Bayesian layer exists to discipline claims, not decorate them |
+| Treating absence of a signal as proof of absence | Non-fired hideable bindings use the explicit conservative `LR = 1` policy; only reviewed, successfully observed public declarations can disconfirm on absence | The missingness policy in [correlation.md](correlation.md); MNAR itself does not derive `LR = 1` |
+| A confident yes/no verdict from a model score | Keep facts separate from model-relative posteriors and evidence-responsive uncertainty bands; set `sparse=true` at the display-mass floor and remain unresolved when evidence does not identify the claim | The band is not a credible interval or calibrated probability; the benchmark decides whether Bayesian fusion remains primary |
 | Co-firing observations multiplied as if independent | Group correlated bindings (one evidence cluster contributes once) | Evidence groups / CAL7 over-confidence treatment |
 | A rule tuned to make the local corpus look right | Validate against the corpus as a distribution, keep priors at observed base rates, never over-fit | The calibration track (CAL6/CAL12) and the no-over-fit discipline |
 

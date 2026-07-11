@@ -3,7 +3,7 @@
 Validates:
 - _compute_email_topology() classification (11.1)
 - Enhanced detect_provider() formatting — all 5 topology cases + backward compat (11.2)
-- Email topology insights (11.3)
+- MX-backed gateway insight semantics (11.3)
 - "Email Gateway Topology" signal (11.4)
 - "Secondary Email Provider Observed" signal (11.5)
 - Property 1: Primary Email Provider Classification from EvidenceRecords (11.6)
@@ -17,7 +17,7 @@ from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
 from recon_tool.formatter import detect_provider, format_tenant_csv_row, format_tenant_dict
-from recon_tool.insights import InsightContext, _email_topology_insights
+from recon_tool.insights import InsightContext, _gateway_insights
 from recon_tool.merger import (
     _EMAIL_PROVIDER_SLUG_NAMES,
     _GATEWAY_SLUG_NAMES,
@@ -157,37 +157,33 @@ class TestDetectProviderFormatting:
     """Verify detect_provider() topology-aware formatting for all 5 cases."""
 
     def test_primary_plus_gateway(self) -> None:
-        """Format: '{primary} (primary) via {gateway} gateway'."""
+        """Provider and gateway MX records remain separate observed paths."""
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
             primary_email_provider="Microsoft 365",
             email_gateway="Proofpoint",
         )
-        assert result == "Microsoft 365 (primary) via Proofpoint gateway"
+        assert result == "Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)"
 
     def test_gateway_only(self) -> None:
-        """Format: '{gateway} gateway (no inferable downstream)' when
-        no primary can be inferred."""
+        """A gateway-only MX path does not invent a downstream."""
         result = detect_provider(
             services=(),
             slugs=(),
             primary_email_provider=None,
             email_gateway="Mimecast",
         )
-        assert result == "Mimecast gateway (no inferable downstream)"
+        assert result == "Mimecast gateway (MX delivery path; downstream unobserved)"
 
-    def test_primary_plus_secondary(self) -> None:
-        """Primary + secondary slug → primary prominent, secondary annotated."""
+    def test_direct_mx_path_does_not_assign_an_untyped_slug_a_secondary_role(self) -> None:
         result = detect_provider(
             services=(),
             slugs=("microsoft365", "google-workspace"),
             primary_email_provider="Microsoft 365",
             email_gateway=None,
         )
-        assert "Microsoft 365" in result
-        assert "Google Workspace" in result
-        assert "(secondary)" in result
+        assert result == "Microsoft 365 (MX delivery path)"
 
     def test_secondary_only_no_primary(self) -> None:
         """Secondary only (no MX-based primary) → '(no MX-based primary detected)'."""
@@ -202,31 +198,22 @@ class TestDetectProviderFormatting:
         # the fallback path handles it
         assert "Microsoft 365" in result
 
-    def test_secondary_only_with_gateway(self) -> None:
-        """Format: gateway shown as 'gateway (no inferable downstream)'
-        and a slug-detected provider becomes '(secondary)'."""
+    def test_gateway_does_not_promote_an_untyped_account_slug(self) -> None:
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
             primary_email_provider=None,
             email_gateway="Proofpoint",
         )
-        assert "Proofpoint gateway" in result
-        assert "Microsoft 365" in result
-        assert "(secondary)" in result
+        assert result == "Proofpoint gateway (MX delivery path; downstream unobserved)"
 
     def test_backward_compat_no_topology_fields(self) -> None:
-        """Slug-only fallback uses
-        "(account detected, custom MX)" by default — assuming MX
-        records exist but point to an unrecognized host. This is
-        the common real-world case (Apache / Debian / Python all
-        self-host mail). The "no MX" label only fires when the
-        caller explicitly passes has_mx_records=False."""
+        """Slug-only fallback separates account and unclassified-MX roles."""
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
         )
-        assert result == "Microsoft 365 (account detected, custom MX)"
+        assert result == ("Microsoft 365 (account indicator) + Custom or unclassified MX (MX delivery path)")
 
     def test_backward_compat_google_workspace(self) -> None:
         """Same rationale as above."""
@@ -234,7 +221,7 @@ class TestDetectProviderFormatting:
             services=(),
             slugs=("google-workspace",),
         )
-        assert result == "Google Workspace (account detected, custom MX)"
+        assert result == ("Google Workspace (account indicator) + Custom or unclassified MX (MX delivery path)")
 
     def test_backward_compat_dual_provider(self) -> None:
         """Backward compat: Both M365 + GWS slugs → 'Microsoft 365 + Google Workspace'."""
@@ -256,16 +243,14 @@ class TestDetectProviderFormatting:
         assert "no known provider pattern matched" in result
 
     def test_primary_only_no_gateway_no_secondary(self) -> None:
-        """Format: '{primary} (primary)' — the ``(primary)``
-        label is always present when topology fields were supplied,
-        so users can tell whether the label is strict or inferred."""
+        """A single named MX provider is one observed delivery path."""
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
             primary_email_provider="Microsoft 365",
             email_gateway=None,
         )
-        assert result == "Microsoft 365 (primary)"
+        assert result == "Microsoft 365 (MX delivery path)"
 
     def test_primary_does_not_duplicate_in_secondary(self) -> None:
         """Primary provider slug should not appear in secondary list."""
@@ -277,12 +262,9 @@ class TestDetectProviderFormatting:
         )
         assert "(secondary)" not in result
 
-    # Multi-likely primary disambiguation ──────────────────────────────
+    # Multiple possible downstream indicators ─────────────────────────
 
-    def test_multi_likely_promoted_to_single_primary(self) -> None:
-        """When likely_primary_email_provider lists multiple
-        providers, one is promoted to '(likely primary)' and the rest
-        become '(secondary)' — never '(dual)'."""
+    def test_multi_likely_candidates_preserve_equal_possible_downstream_roles(self) -> None:
         result = detect_provider(
             services=(),
             slugs=("microsoft365", "google-workspace"),
@@ -290,16 +272,15 @@ class TestDetectProviderFormatting:
             email_gateway="Trend Micro",
             likely_primary_email_provider="Google Workspace + Microsoft 365",
         )
-        # Microsoft 365 is preferred as primary per the selection rule
-        assert "Microsoft 365 (likely primary)" in result
-        assert "via Trend Micro gateway" in result
-        assert "Google Workspace (secondary)" in result
-        # Must NOT contain the old ambiguous "(dual)" wording
-        assert "(dual)" not in result
+        assert result == (
+            "Trend Micro gateway (MX delivery path) + "
+            "Google Workspace (possible downstream indicator) + "
+            "Microsoft 365 (possible downstream indicator)"
+        )
+        assert "primary" not in result
+        assert "secondary" not in result
 
-    def test_multi_likely_preference_order(self) -> None:
-        """Preference rule: Microsoft 365 first, then Google Workspace,
-        then order-preserved fallback."""
+    def test_multi_likely_candidates_preserve_input_order_without_precedence(self) -> None:
         result = detect_provider(
             services=(),
             slugs=(),
@@ -307,20 +288,16 @@ class TestDetectProviderFormatting:
             email_gateway=None,
             likely_primary_email_provider="Zoho Mail + ProtonMail",
         )
-        # Zoho comes first in the input — falls through to order-preserved
-        assert "Zoho Mail (likely primary)" in result
-        assert "ProtonMail (secondary)" in result
+        assert result == ("Zoho Mail (possible downstream indicator) + ProtonMail (possible downstream indicator)")
 
-    def test_strict_primary_plus_gateway_plus_slug_secondary(self) -> None:
-        """The target format from the UX feedback:
-        'Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)'."""
+    def test_direct_provider_and_gateway_paths_do_not_invent_a_secondary(self) -> None:
         result = detect_provider(
             services=(),
             slugs=("microsoft365", "google-workspace"),
             primary_email_provider="Microsoft 365",
             email_gateway="Trend Micro",
         )
-        assert result == "Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)"
+        assert result == "Microsoft 365 (MX delivery path) + Trend Micro gateway (MX delivery path)"
 
     @pytest.mark.parametrize("secondary_slug", ["aws-ses", "self-hosted-mail"])
     def test_legacy_direct_call_does_not_promote_new_secondary_types(
@@ -333,7 +310,7 @@ class TestDetectProviderFormatting:
             primary_email_provider="Microsoft 365",
         )
 
-        assert result == "Microsoft 365 (primary)"
+        assert result == "Microsoft 365 (MX delivery path)"
 
 
 class TestProviderSurfaceConsistency:
@@ -341,7 +318,7 @@ class TestProviderSurfaceConsistency:
         ("secondary_slug", "secondary_name"),
         [
             ("aws-ses", "AWS SES"),
-            ("self-hosted-mail", "Self-hosted mail"),
+            ("self-hosted-mail", "Custom or unclassified MX"),
         ],
     )
     def test_mx_confirmed_secondary_provider_is_preserved(
@@ -364,7 +341,7 @@ class TestProviderSurfaceConsistency:
             primary_email_provider=f"{secondary_name} + Microsoft 365",
         )
 
-        expected = f"Microsoft 365 (primary) + {secondary_name} (secondary)"
+        expected = f"{secondary_name} (MX delivery path) + Microsoft 365 (MX delivery path)"
         assert format_tenant_dict(info)["provider"] == expected
         assert format_tenant_csv_row(info)["provider"] == expected
 
@@ -384,7 +361,7 @@ class TestProviderSurfaceConsistency:
             primary_email_provider="Microsoft 365",
         )
 
-        expected = "Microsoft 365 (primary)"
+        expected = "Microsoft 365 (MX delivery path)"
         assert format_tenant_dict(info)["provider"] == expected
         assert format_tenant_csv_row(info)["provider"] == expected
 
@@ -406,19 +383,45 @@ class TestProviderSurfaceConsistency:
             likely_primary_email_provider="Google Workspace + Microsoft 365",
         )
 
-        expected = "Microsoft 365 (likely primary) via Proofpoint gateway"
+        expected = (
+            "Proofpoint gateway (MX delivery path) + "
+            "Google Workspace (possible downstream indicator) + "
+            "Microsoft 365 (possible downstream indicator)"
+        )
         assert format_tenant_dict(info)["provider"] == expected
         assert format_tenant_csv_row(info)["provider"] == expected
 
+    def test_structured_topology_fields_require_observable_lineage(self) -> None:
+        """Legacy cache fields cannot survive without supporting evidence."""
+        info = TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Contoso Ltd",
+            default_domain="contoso.onmicrosoft.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.MEDIUM,
+            services=("Microsoft 365",),
+            slugs=("microsoft365",),
+            evidence=(_ev("TXT", "microsoft365"),),
+            primary_email_provider="Google Workspace",
+            email_gateway="Proofpoint",
+            likely_primary_email_provider="Microsoft 365",
+        )
 
-# ── 11.3: Email topology insights ────────────────────────────────────
+        data = format_tenant_dict(info)
+
+        assert data["provider"] == "Microsoft 365 (account indicator; no MX observed)"
+        assert data["primary_email_provider"] is None
+        assert data["email_gateway"] is None
+        assert data["likely_primary_email_provider"] is None
 
 
-class TestEmailTopologyInsights:
-    """Verify _email_topology_insights() generates correct insights."""
+# ── 11.3: MX-backed gateway insights ─────────────────────────────────
 
-    def test_gateway_plus_primary_insight(self) -> None:
-        """Gateway + primary → 'Email delivery path: ...' insight produced."""
+
+class TestGatewayInsights:
+    """Gateway prose must be anchored to functional MX evidence."""
+
+    def test_generic_vendor_and_provider_slugs_do_not_establish_routing(self) -> None:
         ctx = InsightContext.from_sets(
             services=set(),
             slugs={"proofpoint", "microsoft365"},
@@ -426,63 +429,34 @@ class TestEmailTopologyInsights:
             dmarc_policy=None,
             domain_count=0,
         )
-        insights = _email_topology_insights(ctx)
-        assert len(insights) == 1
-        assert "Email delivery path:" in insights[0]
-        assert "Proofpoint" in insights[0]
-        assert "Microsoft 365" in insights[0]
+        assert _gateway_insights(ctx) == []
 
-    def test_gateway_plus_google_insight(self) -> None:
-        """Gateway + Google Workspace → insight with Google Workspace."""
+    def test_mx_backed_gateway_is_reported_without_downstream_claim(self) -> None:
         ctx = InsightContext.from_sets(
             services=set(),
-            slugs={"mimecast", "google-workspace"},
+            slugs={"proofpoint", "microsoft365"},
             auth_type=None,
             dmarc_policy=None,
             domain_count=0,
+            email_gateway="Proofpoint",
         )
-        insights = _email_topology_insights(ctx)
-        assert len(insights) == 1
-        assert "Mimecast" in insights[0]
-        assert "Google Workspace" in insights[0]
+        insights = _gateway_insights(ctx)
 
-    def test_no_gateway_no_insight(self) -> None:
-        """No gateway, no secondary → no topology insights."""
+        assert insights == ["MX gateway observed: Proofpoint"]
+        assert "Microsoft 365" not in insights[0]
+        assert "path" not in insights[0].lower()
+        assert "in front of" not in insights[0].lower()
+
+    def test_multiple_mx_gateways_are_reported_as_observed(self) -> None:
         ctx = InsightContext.from_sets(
             services=set(),
-            slugs={"microsoft365"},
+            slugs={"proofpoint", "mimecast"},
             auth_type=None,
             dmarc_policy=None,
             domain_count=0,
+            email_gateway="Mimecast + Proofpoint",
         )
-        insights = _email_topology_insights(ctx)
-        assert len(insights) == 0
-
-    def test_gateway_without_primary_no_insight(self) -> None:
-        """Gateway without primary provider → no topology insight."""
-        ctx = InsightContext.from_sets(
-            services=set(),
-            slugs={"proofpoint"},
-            auth_type=None,
-            dmarc_policy=None,
-            domain_count=0,
-        )
-        insights = _email_topology_insights(ctx)
-        assert len(insights) == 0
-
-    def test_multiple_gateways_plus_primary(self) -> None:
-        """Multiple gateways + primary → single insight with all gateways."""
-        ctx = InsightContext.from_sets(
-            services=set(),
-            slugs={"proofpoint", "mimecast", "microsoft365"},
-            auth_type=None,
-            dmarc_policy=None,
-            domain_count=0,
-        )
-        insights = _email_topology_insights(ctx)
-        assert len(insights) == 1
-        assert "Mimecast" in insights[0]
-        assert "Proofpoint" in insights[0]
+        assert _gateway_insights(ctx) == ["MX gateway observed: Mimecast + Proofpoint"]
 
 
 # ── 11.4: "Email Gateway Topology" signal ────────────────────────────
@@ -518,11 +492,11 @@ class TestEmailGatewayTopologySignal:
         topology = [s for s in result if s.name == "Email Gateway Topology"]
         assert len(topology) == 1
 
-    def test_fires_when_primary_is_none(self) -> None:
-        """Signal fires when primary_email_provider is None — gateway topology is still useful."""
+    def test_does_not_treat_unknown_primary_as_inequality(self) -> None:
+        """Unknown provider state cannot satisfy the topology neq condition."""
         result = evaluate_signals(_ctx({"proofpoint"}, primary_email_provider=None))
         topology = [s for s in result if s.name == "Email Gateway Topology"]
-        assert len(topology) == 1
+        assert len(topology) == 0
 
     def test_does_not_fire_when_primary_is_empty(self) -> None:
         """Signal does not fire when primary_email_provider is empty string."""

@@ -189,7 +189,7 @@ class TestDmarcRfc9989Tags:
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_invalid_policy_with_valid_rua_falls_back_to_none(
+    async def test_invalid_policy_with_valid_rua_remains_invalid(
         self, mock_resolve, caplog: pytest.LogCaptureFixture
     ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -197,21 +197,23 @@ class TestDmarcRfc9989Tags:
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
             result = await DNSSource().lookup("contoso.com")
-        assert result.dmarc_policy == "none"
-        assert "DMARC" in result.detected_services
-        assert "valimail" in result.detected_slugs
-        assert any("treating as p=none" in r.message for r in caplog.records)
+        assert result.dmarc_policy is None
+        assert "DMARC" not in result.detected_services
+        assert "valimail" not in result.detected_slugs
+        assert any(evidence.slug == "dmarc-invalid" for evidence in result.evidence)
+        assert any("not a valid policy" in r.message for r in caplog.records)
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_missing_policy_with_valid_rua_falls_back_to_none(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
+    async def test_missing_policy_with_valid_rua_remains_invalid(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {"_dmarc.contoso.com/TXT": ["v=DMARC1; rua=mailto:dmarc@agari.com"]}
         )
         result = await DNSSource().lookup("contoso.com")
-        assert result.dmarc_policy == "none"
-        assert "DMARC" in result.detected_services
-        assert "agari" in result.detected_slugs
+        assert result.dmarc_policy is None
+        assert "DMARC" not in result.detected_services
+        assert "agari" not in result.detected_slugs
+        assert any(evidence.slug == "dmarc-invalid" for evidence in result.evidence)
 
     @pytest.mark.parametrize(
         "record",
@@ -538,7 +540,7 @@ class TestDmarcPhasedRolloutPosture:
             services=("DMARC",),
         )
         observations = analyze_posture(info)
-        phased = [o for o in observations if "phased rollout" in o.statement.lower()]
+        phased = [o for o in observations if o.source_name == "dmarc_phased_rollout"]
         assert len(phased) == 1
         assert "50%" in phased[0].statement
 
@@ -550,7 +552,7 @@ class TestDmarcPhasedRolloutPosture:
             services=("DMARC",),
         )
         observations = analyze_posture(info)
-        phased = [o for o in observations if "phased rollout" in o.statement.lower()]
+        phased = [o for o in observations if o.source_name == "dmarc_phased_rollout"]
         assert len(phased) == 1
         assert "25%" in phased[0].statement
 
@@ -562,7 +564,7 @@ class TestDmarcPhasedRolloutPosture:
             services=("DMARC",),
         )
         observations = analyze_posture(info)
-        phased = [o for o in observations if "phased rollout" in o.statement.lower()]
+        phased = [o for o in observations if o.source_name == "dmarc_phased_rollout"]
         assert len(phased) == 0
 
     def test_does_not_fire_when_policy_is_none(self) -> None:
@@ -573,7 +575,7 @@ class TestDmarcPhasedRolloutPosture:
             services=("DMARC",),
         )
         observations = analyze_posture(info)
-        phased = [o for o in observations if "phased rollout" in o.statement.lower()]
+        phased = [o for o in observations if o.source_name == "dmarc_phased_rollout"]
         assert len(phased) == 0
 
     def test_template_includes_percentage(self) -> None:
@@ -584,7 +586,7 @@ class TestDmarcPhasedRolloutPosture:
             services=("DMARC",),
         )
         observations = analyze_posture(info)
-        phased = [o for o in observations if "phased rollout" in o.statement.lower()]
+        phased = [o for o in observations if o.source_name == "dmarc_phased_rollout"]
         assert len(phased) == 1
         assert "75%" in phased[0].statement
         assert phased[0].category == "email"

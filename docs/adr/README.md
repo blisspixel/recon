@@ -21,9 +21,9 @@ deeper rationale for several lives in [correlation.md](../correlation.md),
 | ADR | Decision |
 |---|---|
 | [0001](0001-passive-zero-credential.md) | Strictly passive, zero-credential collection |
-| [0002](0002-mnar-adversarial-absence.md) | Treat missing evidence as adversarially missing (MNAR / LR=1) |
+| [0002](0002-mnar-adversarial-absence.md) | Ignore non-fired hideable bindings (`LR=1` policy) |
 | [0003](0003-v2-schema-lock.md) | Lock the v2.0 JSON/MCP output contract |
-| [0004](0004-small-handspecified-bayes-no-numpy.md) | A small hand-specified Bayesian network; no numpy/ML |
+| [0004](0004-small-handspecified-bayes-no-numpy.md) | A small manually encoded Bayesian network; no runtime ML |
 | [0005](0005-flat-package-layout.md) | Keep flat package layout (not src-layout), superseded by ADR-0006 |
 | [0006](0006-src-package-layout.md) | Adopt src package layout |
 | [0007](0007-surface-inventory-discovery-context.md) | Keep surface inventory as discovery context |

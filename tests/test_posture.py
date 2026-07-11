@@ -1,6 +1,6 @@
 """Tests for the posture analyzer."""
 
-from recon_tool.models import CertSummary, ConfidenceLevel, TenantInfo
+from recon_tool.models import CertSummary, ConfidenceLevel, EvidenceRecord, TenantInfo
 from recon_tool.posture import DISCOURAGED_COPY_TERMS, analyze_posture
 
 
@@ -30,7 +30,8 @@ class TestAnalyzePosture:
         )
         result = analyze_posture(info)
         statements = [o.statement for o in result]
-        assert any("gateway" in s.lower() or "dmarc" in s.lower() for s in statements)
+        assert any("proofpoint" in s.lower() and "indicator" in s.lower() for s in statements)
+        assert not any("gateway" in s.lower() or "active" in s.lower() for s in statements)
 
     def test_gateway_with_testing_mode_dmarc_uses_effective_policy(self):
         info = _make_info(
@@ -41,7 +42,8 @@ class TestAnalyzePosture:
         )
         result = analyze_posture(info)
         statements = [o.statement for o in result]
-        assert any("gateway" in s.lower() and "effective dmarc" in s.lower() for s in statements)
+        assert any("indicator" in s.lower() and "effective dmarc" in s.lower() for s in statements)
+        assert not any("gateway" in s.lower() or "active" in s.lower() for s in statements)
 
     def test_federated_identity_observation(self):
         info = _make_info(auth_type="Federated")
@@ -118,3 +120,50 @@ class TestAnalyzePosture:
         result = analyze_posture(info)
         statements = [o.statement for o in result]
         assert any("microsoft" in s.lower() and "google" in s.lower() for s in statements)
+        assert not any("migration" in s.lower() or "hybrid" in s.lower() for s in statements)
+
+    def test_generic_vendor_slugs_remain_indicators(self):
+        info = _make_info(slugs=("okta", "crowdstrike", "zscaler"))
+
+        statements = [observation.statement for observation in analyze_posture(info)]
+
+        assert any("identity-vendor indicator" in statement.lower() for statement in statements)
+        assert any("security-vendor indicators" in statement.lower() for statement in statements)
+        assert not any("identity provider detected" in statement.lower() for statement in statements)
+        assert not any("security tools detected" in statement.lower() for statement in statements)
+
+    def test_high_aggregate_email_score_does_not_invent_dkim(self):
+        info = _make_info(
+            services=("SPF: strict (-all)", "MTA-STS", "BIMI"),
+            dmarc_policy="reject",
+            evidence=(
+                EvidenceRecord("SPF", "v=spf1 -all", "SPF: strict (-all)", "spf-strict"),
+                EvidenceRecord("MTA_STS", "v=STSv1", "MTA-STS", "mta-sts"),
+                EvidenceRecord("BIMI", "v=BIMI1", "BIMI", "bimi"),
+            ),
+        )
+
+        strong = [
+            observation for observation in analyze_posture(info) if observation.source_name == "strong_email_security"
+        ]
+
+        assert len(strong) == 1
+        assert "DKIM" not in strong[0].statement
+
+    def test_tls_rpt_record_establishes_email_posture_observation_opportunity(self):
+        info = _make_info(
+            services=("TLS-RPT",),
+            slugs=("tls-rpt",),
+            evidence=(
+                EvidenceRecord(
+                    "TXT",
+                    "v=TLSRPTv1; rua=mailto:reports@example.net",
+                    "TLS-RPT",
+                    "tls-rpt",
+                ),
+            ),
+        )
+
+        names = {observation.source_name for observation in analyze_posture(info)}
+
+        assert "weak_email_security" in names

@@ -23,7 +23,7 @@ from recon_tool.constants import (
 from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
 from recon_tool.exposure import _compute_email_security_score
 from recon_tool.formatter_serialize import compute_email_security_score
-from recon_tool.models import ConfidenceLevel, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 from recon_tool.posture import _compute_metadata_value
 from recon_tool.signals import evaluate_signals
 
@@ -38,7 +38,19 @@ def _info(
     dmarc_testing: bool = False,
     slugs: tuple[str, ...] = (),
     likely_primary_email_provider: str | None = None,
+    spf_include_count: int = 0,
 ) -> TenantInfo:
+    evidence: list[EvidenceRecord] = []
+    for service in services:
+        if service in {SVC_DKIM, SVC_DKIM_EXCHANGE}:
+            slug = "microsoft365" if service == SVC_DKIM_EXCHANGE else "dkim"
+            evidence.append(EvidenceRecord("DKIM", "selector response", service, slug))
+        elif service == SVC_SPF_STRICT:
+            evidence.append(EvidenceRecord("SPF", "v=spf1 -all", service, "spf-strict"))
+        elif service == SVC_MTA_STS:
+            evidence.append(EvidenceRecord("MTA_STS", "v=STSv1", service, "mta-sts"))
+        elif service == SVC_BIMI:
+            evidence.append(EvidenceRecord("BIMI", "v=BIMI1", service, "bimi"))
     return TenantInfo(
         tenant_id=None,
         display_name="Test Corp",
@@ -52,6 +64,8 @@ def _info(
         dmarc_pct=dmarc_pct,
         dmarc_testing=dmarc_testing,
         likely_primary_email_provider=likely_primary_email_provider,
+        evidence=tuple(evidence),
+        spf_include_count=spf_include_count,
     )
 
 
@@ -134,6 +148,7 @@ class TestSignalContextFromTenantInfo:
             "reject",
             slugs=("proofpoint",),
             likely_primary_email_provider="Microsoft 365",
+            spf_include_count=5,
         )
         context = signal_context_from_tenant_info(info)
         metadata = signal_context_metadata(context)

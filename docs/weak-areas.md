@@ -115,8 +115,9 @@ selector name. A missing DKIM match therefore means "not observed at
 the probed selectors," not "DKIM is absent."
 
 What to do: use `--explain` to see which selectors and records were
-actually observed. If a commercial gateway plus enforcing DMARC gives
-enough evidence, recon may credit DKIM as inferred via the gateway.
+actually observed. A commercial gateway plus enforcing DMARC does not
+establish DKIM, so recon does not credit it as a substitute for an observed
+selector.
 If you contribute a DKIM fingerprint, keep it provider-specific and
 anchored to a stable public selector pattern; do not add broad
 selector guesses.

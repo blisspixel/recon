@@ -26,10 +26,11 @@ from recon_tool.formatter import (
     render_verbose_sources,
     set_console,
 )
-from recon_tool.formatter.classify import categorize_services
+from recon_tool.formatter.classify import categorize_services, provider_line
 from recon_tool.models import (
     CertSummary,
     ConfidenceLevel,
+    EvidenceRecord,
     SourceResult,
     SurfaceAttribution,
     TenantInfo,
@@ -93,7 +94,13 @@ class TestEvidenceSemanticServiceClassification:
         parent_service: str,
         unsupported_child: str,
     ) -> None:
-        categorized = categorize_services(_minimal_info(services=(parent_service,), slugs=(parent_slug,)))
+        categorized = categorize_services(
+            _minimal_info(
+                services=(parent_service,),
+                slugs=(parent_slug,),
+                evidence=(EvidenceRecord("MX", f"mx.{parent_slug}.example", parent_service, parent_slug),),
+            )
+        )
 
         assert parent_service in categorized["Email"]
         assert unsupported_child not in {service for services in categorized.values() for service in services}
@@ -103,10 +110,217 @@ class TestEvidenceSemanticServiceClassification:
             _minimal_info(
                 services=("Microsoft 365", "OpenAI Enterprise"),
                 slugs=("microsoft365", "openai"),
+                evidence=(
+                    EvidenceRecord("TXT", "MS=opaque", "Microsoft 365", "microsoft365"),
+                    EvidenceRecord("TXT", "openai-domain-verification=opaque", "OpenAI Enterprise", "openai"),
+                ),
             )
         )
 
-        assert categorized["AI"] == ["OpenAI Enterprise"]
+        assert categorized["AI"] == ["OpenAI Enterprise (public TXT account indicator)"]
+
+
+class TestEvidenceRoleAwareServiceClassification:
+    def test_public_categorizer_masks_an_unavailable_collection_channel(self) -> None:
+        info = _minimal_info(
+            services=("Proofpoint",),
+            slugs=("proofpoint",),
+            evidence=(EvidenceRecord("MX", "10 mx.proofpoint.example", "Proofpoint", "proofpoint"),),
+            degraded_sources=("dns:mx",),
+        )
+
+        assert categorize_services(info) == {}
+
+    def test_legacy_topology_fields_without_lineage_do_not_create_mx_roles(self) -> None:
+        info = _minimal_info(
+            services=("Microsoft 365", "Proofpoint"),
+            slugs=("microsoft365", "proofpoint"),
+            primary_email_provider="Microsoft 365",
+            email_gateway="Proofpoint",
+            evidence=(),
+        )
+
+        assert provider_line(info) == "Microsoft 365 (role unavailable)"
+
+    def test_null_mx_renders_as_no_mail_observation_not_delivery(self) -> None:
+        info = _minimal_info(
+            services=("Null MX (domain does not accept email)",),
+            slugs=("null-mx",),
+            evidence=(
+                EvidenceRecord(
+                    "MX",
+                    "0 .",
+                    "Null MX (domain does not accept email)",
+                    "null-mx",
+                ),
+            ),
+        )
+
+        assert provider_line(info) == "Null MX (domain does not accept email)"
+        assert categorize_services(info) == {"Email": ["Null MX (domain does not accept email)"]}
+
+    def test_google_domains_nameserver_stays_a_dns_role(self) -> None:
+        info = _minimal_info(
+            services=("Google Domains DNS",),
+            slugs=("google-domains-dns",),
+            evidence=(
+                EvidenceRecord(
+                    "NS",
+                    "ns-cloud-a1.googledomains.com",
+                    "Google Domains DNS",
+                    "google-domains-dns",
+                ),
+            ),
+        )
+
+        assert categorize_services(info) == {"Cloud": ["Google Domains DNS (DNS)"]}
+        assert "Google Workspace" not in provider_line(info)
+
+    @pytest.mark.parametrize(
+        ("slug", "service", "category", "expected"),
+        [
+            ("proofpoint", "Proofpoint", "Email", "Proofpoint (public TXT account indicator)"),
+            ("okta", "Okta", "Identity", "Okta (public TXT account indicator)"),
+            (
+                "crowdstrike",
+                "CrowdStrike Falcon",
+                "Security",
+                "CrowdStrike Falcon (public TXT account indicator)",
+            ),
+            ("zscaler", "Zscaler", "Security", "Zscaler (public TXT account indicator)"),
+            ("openai", "OpenAI Enterprise", "AI", "OpenAI Enterprise (public TXT account indicator)"),
+            ("slack", "Slack", "Collaboration", "Slack (public TXT account indicator)"),
+            ("github", "GitHub", "Collaboration", "GitHub (public TXT account indicator)"),
+            ("jamf", "Jamf", "Security", "Jamf (public TXT account indicator)"),
+            (
+                "github-advanced-security",
+                "GitHub Advanced Security",
+                "Security",
+                "GitHub Advanced Security (public TXT account indicator)",
+            ),
+        ],
+    )
+    def test_txt_only_vendor_receipt_is_not_rendered_as_an_active_role(
+        self,
+        slug: str,
+        service: str,
+        category: str,
+        expected: str,
+    ) -> None:
+        info = _minimal_info(
+            services=(service,),
+            slugs=(slug,),
+            evidence=(
+                EvidenceRecord(
+                    "SUBDOMAIN_TXT" if slug == "github-advanced-security" else "TXT",
+                    f"{slug}=opaque",
+                    service,
+                    slug,
+                ),
+            ),
+        )
+
+        categorized = categorize_services(info)
+
+        assert categorized[category] == [expected]
+        assert sum(item.startswith(service) for items in categorized.values() for item in items) == 1
+
+    @pytest.mark.parametrize(
+        ("slug", "service", "expected"),
+        [
+            ("cloudflare", "Cloudflare", "Cloudflare (DNS)"),
+            ("aws-route53", "AWS Route 53", "AWS Route 53 (DNS)"),
+        ],
+    )
+    def test_ns_only_evidence_renders_only_the_dns_role(
+        self,
+        slug: str,
+        service: str,
+        expected: str,
+    ) -> None:
+        info = _minimal_info(
+            services=(service,),
+            slugs=(slug,),
+            evidence=(EvidenceRecord("NS", f"ns.{slug}.example", service, slug),),
+        )
+
+        categorized = categorize_services(info)
+
+        assert categorized["Cloud"] == [expected]
+        assert "CDN" not in categorized["Cloud"][0]
+
+    def test_cloudflare_cname_can_render_an_edge_role(self) -> None:
+        info = _minimal_info(
+            services=("Cloudflare",),
+            slugs=("cloudflare",),
+            evidence=(EvidenceRecord("CNAME", "www.contoso.com -> edge.cloudflare.net", "Cloudflare", "cloudflare"),),
+        )
+
+        assert categorize_services(info)["Cloud"] == ["Cloudflare (CDN/edge)"]
+
+    def test_cloudflare_txt_only_is_an_account_indicator_not_a_cdn(self) -> None:
+        info = _minimal_info(
+            services=("Cloudflare",),
+            slugs=("cloudflare",),
+            evidence=(EvidenceRecord("TXT", "cloudflare-verify=opaque", "Cloudflare", "cloudflare"),),
+        )
+
+        assert categorize_services(info)["Cloud"] == ["Cloudflare (public TXT account indicator)"]
+
+    def test_evidence_linked_crowdstrike_alias_is_not_filed_twice(self) -> None:
+        info = _minimal_info(
+            services=("CrowdStrike",),
+            slugs=("crowdstrike",),
+            evidence=(
+                EvidenceRecord(
+                    "TXT",
+                    "crowdstrike-falcon-site-verification=opaque",
+                    "CrowdStrike",
+                    "crowdstrike",
+                ),
+            ),
+        )
+
+        categorized = categorize_services(info)
+
+        assert categorized == {"Security": ["CrowdStrike Falcon (public TXT account indicator)"]}
+
+    def test_amazon_caa_authorization_is_not_rendered_as_a_cloud_workload(self) -> None:
+        info = _minimal_info(
+            services=("CAA: AWS Certificate Manager",),
+            slugs=("aws-acm",),
+            evidence=(EvidenceRecord("CAA", '0 issue "amazon.com"', "CAA: AWS Certificate Manager", "aws-acm"),),
+        )
+
+        categorized = categorize_services(info)
+
+        assert categorized == {"Security": ["CAA: Amazon authorized"]}
+
+    def test_legacy_amazon_caa_slug_marks_authorization_role_unavailable(self) -> None:
+        info = _minimal_info(
+            services=("CAA: AWS Certificate Manager",),
+            slugs=("aws-acm",),
+        )
+
+        assert categorize_services(info) == {"Security": ["CAA: AWS Certificate Manager (role unavailable)"]}
+
+    @pytest.mark.parametrize(
+        ("slug", "service", "category"),
+        [
+            ("cloudflare", "Cloudflare", "Cloud"),
+            ("aws-route53", "AWS Route 53", "Cloud"),
+            ("slack", "Slack", "Collaboration"),
+        ],
+    )
+    def test_legacy_slug_without_evidence_does_not_invent_a_role(
+        self,
+        slug: str,
+        service: str,
+        category: str,
+    ) -> None:
+        info = _minimal_info(services=(service,), slugs=(slug,))
+
+        assert categorize_services(info)[category] == [f"{service} (role unavailable)"]
 
 
 class TestCsvFormulaNeutralization:
@@ -182,14 +396,10 @@ class TestDetectProviderEdgeCases:
             email_gateway="Proofpoint",
             likely_primary_email_provider=None,
         )
-        # Format: "{gateway} gateway (no inferable downstream)"
-        assert "Proofpoint" in result
-        assert "gateway" in result
-        assert "no inferable downstream" in result
+        assert result == "Proofpoint gateway (MX delivery path; downstream unobserved)"
 
     def test_likely_only_no_primary_no_gateway(self) -> None:
-        """When only likely_primary is set (weird but possible), render it
-        with the '(likely primary)' qualifier."""
+        """A non-MX candidate remains a possible downstream indicator."""
         result = detect_provider(
             services=(),
             slugs=(),
@@ -197,45 +407,40 @@ class TestDetectProviderEdgeCases:
             email_gateway=None,
             likely_primary_email_provider="Google Workspace",
         )
-        assert "Google Workspace" in result
-        assert "likely primary" in result
+        assert result == "Google Workspace (possible downstream indicator)"
 
-    def test_secondary_providers_from_slugs_when_primary_set(self) -> None:
+    def test_untyped_slug_does_not_gain_a_secondary_role_when_mx_path_is_set(self) -> None:
         result = detect_provider(
             services=(),
             slugs=("microsoft365", "google-workspace"),
             primary_email_provider="Microsoft 365",
             email_gateway=None,
         )
-        assert "Microsoft 365" in result
-        assert "Google Workspace" in result
-        assert "secondary" in result
+        assert result == "Microsoft 365 (MX delivery path)"
 
-    def test_secondary_providers_when_no_primary_or_likely(self) -> None:
+    def test_gateway_does_not_promote_untyped_account_slug(self) -> None:
         result = detect_provider(
             services=(),
             slugs=("microsoft365",),
             primary_email_provider=None,
             email_gateway="Proofpoint",
         )
-        # Microsoft 365 appears as secondary alongside the gateway
-        assert "Proofpoint" in result
-        assert "Microsoft 365" in result
+        assert result == "Proofpoint gateway (MX delivery path; downstream unobserved)"
 
     def test_zoho_slug_fallback(self) -> None:
         # Default has_mx_records=True — assumes custom MX unless the
         # caller explicitly passes has_mx_records=False. See
         # TestBackwardCompatDetectProvider for the full rationale.
         result = detect_provider(services=(), slugs=("zoho",))
-        assert result == "Zoho Mail (account detected, custom MX)"
+        assert result == "Zoho Mail (account indicator) + Custom or unclassified MX (MX delivery path)"
 
     def test_protonmail_slug_fallback(self) -> None:
         result = detect_provider(services=(), slugs=("protonmail",))
-        assert result == "ProtonMail (account detected, custom MX)"
+        assert result == "ProtonMail (account indicator) + Custom or unclassified MX (MX delivery path)"
 
     def test_aws_ses_only_slug(self) -> None:
         result = detect_provider(services=(), slugs=("aws-ses",))
-        assert result == "AWS SES (account detected, custom MX)"
+        assert result == "AWS SES (account indicator) + Custom or unclassified MX (MX delivery path)"
 
 
 class TestRenderTenantPanelEdgeCases:
@@ -443,6 +648,10 @@ class TestRenderTenantPanelEdgeCases:
             dmarc_policy="quarantine",
             primary_email_provider="Microsoft 365",
             email_gateway="Mimecast",
+            evidence=(
+                EvidenceRecord("MX", "contoso-com.mail.protection.outlook.com", "Microsoft 365", "microsoft365"),
+                EvidenceRecord("MX", "us-smtp-inbound.mimecast.com", "Mimecast", "mimecast"),
+            ),
         )
         from recon_tool.formatter import get_console
 
@@ -463,15 +672,20 @@ class TestRenderTenantPanelEdgeCases:
             slugs=("microsoft365", "google-workspace"),
             primary_email_provider="Microsoft 365",
             email_gateway="Proofpoint",
+            evidence=(
+                EvidenceRecord("MX", "mx.microsoft.example", "Microsoft 365", "microsoft365"),
+                EvidenceRecord("MX", "mx.proofpoint.example", "Proofpoint", "proofpoint"),
+            ),
         )
         from recon_tool.formatter import get_console
 
+        assert provider_line(info) == ("Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)")
         get_console().print(render_tenant_panel(info, explain=True))
         out = _strip(buf.getvalue())
         # Format: the Provider line carries the primary/gateway
         # classification inline. No separate "[Primary (MX): …]"
         # classification block.
-        assert "Microsoft 365 (primary)" in out
+        assert "Microsoft 365 (MX delivery path)" in out
         assert "Proofpoint gateway" in out
 
 

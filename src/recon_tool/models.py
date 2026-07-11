@@ -15,6 +15,7 @@ __all__ = [
     "ChainReport",
     "ChainResult",
     "ConfidenceLevel",
+    "DeltaComparisonIncomplete",
     "DeltaReport",
     "EvidenceRecord",
     "ExplanationRecord",
@@ -145,6 +146,9 @@ class SignalContext:
     dmarc_pct: int | None = None
     primary_email_provider: str | None = None
     likely_primary_email_provider: str | None = None
+    # Metadata fields whose collection channel was unavailable. Conditions on
+    # these fields remain unresolved instead of treating None as not equal.
+    unavailable_metadata_fields: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -230,21 +234,22 @@ class PosteriorObservation:
     Each entry corresponds to a node in
     ``recon_tool/data/bayesian_network.yaml``. ``posterior`` is
     ``P(node=present | E)`` where ``E`` is the observed-evidence set
-    for the queried domain (slugs and signals). ``interval_low`` and
-    ``interval_high`` form the 80% credible interval; sparse evidence
-    produces wider intervals (``sparse=True``) and dense, corroborating
-    evidence produces tight intervals.
+    for the queried domain (slugs and signals), under the committed model.
+    ``interval_low`` and ``interval_high`` form an 80% evidence-responsive
+    uncertainty band from ``Beta(p * n_eff, (1 - p) * n_eff)``, where ``p`` is
+    the posterior. When both parameters are at least one, central quantiles are
+    used if they contain ``p``; otherwise a clamped mean-centered normal
+    fallback is used. It is not a credible or confidence interval.
 
-    The interval is calibration on top of exact inference, not a
-    different inference method — the network math is exact, the
-    interval expresses how much we trust the model's exactness given
-    sparsity. See ``docs/correlation.md §5`` for the full derivation
-    and the passive-observation ceiling that floors the interval width.
+    The band is a post-inference display heuristic, not a different inference
+    method. The network math is exact for its model; the band does not quantify
+    model validity. See
+    ``docs/correlation.md`` section 4 for the exact semantics.
 
     ``conflict_provenance`` lists the cross-source
     disagreements that contributed to this node's n_eff penalty,
     alongside the existing top-level ``evidence_conflicts`` array.
-    Empty tuple when no conflicts dampened the interval.
+    Empty tuple when no conflicts lowered the band's display mass.
     """
 
     name: str
@@ -264,10 +269,11 @@ class PosteriorObservation:
     backward-compatibility with v1.9.0 / v1.9.3 JSON consumers."""
 
     entropy_reduction_nats: float = 0.0
-    """This node's share of the information recovered: H(prior marginal) -
-    H(posterior) in nats, signed. Per-node breakdown of the result-level
-    total (CAL10). Added 2.2.0; schema-additive (default 0.0 preserves
-    prior shapes)."""
+    """Signed marginal entropy change H(prior marginal) - H(posterior).
+
+    This is not pointwise information gain and can double count dependence when
+    summed. Added 2.2.0; schema-additive (default 0.0 preserves prior shapes).
+    """
 
     unit_counterfactuals: tuple[NodeUnitCounterfactual, ...] = ()
     """Exact leave-one-unit-out counterfactuals for the evidence units
@@ -277,11 +283,15 @@ class PosteriorObservation:
 
 @dataclass(frozen=True)
 class CandidateValue:
-    """A per-source value for a merged field."""
+    """A per-source value for a merged field.
+
+    ``confidence`` is the contributing source result's overall completeness
+    tier. It is not field-specific reliability or calibrated truth confidence.
+    """
 
     value: str
     source: str
-    confidence: str  # "high" | "medium" | "low"
+    confidence: str  # source-result completeness: "high" | "medium" | "low"
 
 
 @dataclass(frozen=True)
@@ -452,8 +462,8 @@ class InfrastructureClusterReport:
     # Partition stability across a Louvain seed sweep (CAL11): the mean
     # pairwise adjusted Rand index between the partitions produced by
     # ``stability_runs`` different seeds. 1.0 means every seed produced
-    # the identical partition; lower values flag partition degeneracy
-    # (Good et al. 2010), which a single modularity score cannot see.
+    # the identical partition; lower values show optimizer seed sensitivity on
+    # that fixed graph. They do not establish data or model stability.
     # None when the Louvain path did not run (skipped / fallback), where
     # the partition is deterministic and the measure is not applicable.
     # Added 2.2.0; schema-additive.
@@ -520,12 +530,13 @@ class SourceResult:
     dmarc_policy: str | None = None  # "reject", "quarantine", "none"
     tenant_domains: tuple[str, ...] = ()  # All domains in the tenant
     detected_slugs: tuple[str, ...] = ()  # Fingerprint slugs that matched
-    # Domains discovered from CNAME targets (autodiscover redirects, DKIM
-    # delegation) that likely belong to the same organization but weren't
-    # in the Autodiscover tenant domain list.
+    # Domains linked by bounded public CNAME, autodiscover, or DKIM breadcrumbs
+    # and absent from the Autodiscover tenant-domain list. This does not
+    # establish common ownership.
     related_domains: tuple[str, ...] = ()
 
-    # Names of data sources that were unavailable during lookup
+    # Stable source, collector-channel, or detector identifiers unavailable
+    # during lookup.
     degraded_sources: tuple[str, ...] = ()
 
     cert_summary: CertSummary | None = None
@@ -543,6 +554,10 @@ class SourceResult:
     dmarc_testing: bool = False  # Internal RFC 9989 t=y signal; not stable JSON output.
     dmarc_np: str | None = None  # Internal RFC 9989 np= policy; not stable JSON output.
     raw_dns_records: tuple[tuple[str, str], ...] = ()  # (record_type, value) pairs for reevaluation cache
+    # Maximum include: mechanism count observed across apex SPF records.
+    # Stored as a typed collector scalar so extensible service names cannot
+    # fabricate the signal by resembling the display label.
+    spf_include_count: int = 0
 
     # --- CT provider attribution ---
     # Name of the CT provider ("crt.sh" or "certspotter") that actually
@@ -596,6 +611,11 @@ class SourceResult:
     # empty ``clusters`` tuple when the graph was too small or trivial).
     # See ``recon_tool/infra_graph.py`` for the builder.
     infrastructure_clusters: InfrastructureClusterReport | None = None
+    # True only when the source had no observation opportunity because of a
+    # transport, protocol, or internal failure. A stable negative response uses
+    # ``error`` with this flag false. The distinction prevents failed sources
+    # from being interpreted as observed absence during merge and delta.
+    source_unavailable: bool = False
 
     @property
     def crtsh_degraded(self) -> bool:
@@ -617,12 +637,13 @@ class SourceResult:
 class TenantInfo:
     """Structured tenant information merged from one or more sources.
 
-    tenant_id is None when no M365 tenant was found but DNS services were
-    detected. Downstream code should check `if info.tenant_id` or `is not None`.
+    ``tenant_id is None`` means no tenant identifier was observed. It is not a
+    proof that no Microsoft tenant exists; collection status determines whether
+    the field was observable.
     """
 
-    # NOTE: tenant_id is Optional — None means "no M365 tenant found, but
-    # we still have DNS-based service data worth showing."
+    # Optional because the identifier may be absent, unavailable, or outside
+    # the bounded discovery response even when other public signals exist.
     tenant_id: str | None
     display_name: str
     default_domain: str
@@ -637,9 +658,11 @@ class TenantInfo:
     dmarc_policy: str | None = None  # "reject", "quarantine", "none"
     domain_count: int = 0  # Number of domains in tenant
     tenant_domains: tuple[str, ...] = ()  # All domains found
-    related_domains: tuple[str, ...] = ()  # Domains inferred from CNAME targets
+    related_domains: tuple[str, ...] = ()  # Domain names linked by bounded public breadcrumbs
     insights: tuple[str, ...] = ()  # Derived intelligence signals
-    degraded_sources: tuple[str, ...] = ()  # Names of unavailable data sources
+    # Stable source, collector-channel, or detector identifiers unavailable
+    # during lookup.
+    degraded_sources: tuple[str, ...] = ()
     cert_summary: CertSummary | None = None
 
     # --- Google Workspace, evidence & confidence fields ---
@@ -658,6 +681,9 @@ class TenantInfo:
     email_gateway: str | None = None  # MX-detected gateway name
     dmarc_pct: int | None = None  # DMARC pct= value (0-100)
     dmarc_testing: bool = False  # Internal RFC 9989 t=y signal; not stable JSON output.
+    # Typed apex-SPF collector scalar used by declarative signal evaluation.
+    # It is internal reporting state, not a claim about SPF lookup expansion.
+    spf_include_count: int = 0
     # Downstream provider inferred from non-MX evidence (DKIM, identity
     # endpoints, TXT tokens) when a gateway is present in MX but no
     # direct provider appears there. Hedged: "likely" in the name is
@@ -712,13 +738,15 @@ class TenantInfo:
     cached_at: str | None = None
 
     # --- Bayesian fusion (stable v2.0+) ---
-    # Per-slug posterior mean in [0, 1] from the Bayesian fusion layer.
+    # Per-slug evidence-strength score in [0, 1] from the additive Beta-shaped
+    # heuristic. Not an externally calibrated probability.
     # Populated only when `--fusion` is passed. Empty otherwise.
-    # Shape: ``[(slug, posterior_mean), ...]``. Stable v2.0.
+    # Shape: ``[(slug, score), ...]``. Stable v2.0.
     slug_confidences: tuple[tuple[str, float], ...] = ()
 
     # --- Bayesian-network posteriors (stable v2.0+) ---
-    # Posterior P(node=present | E) and 80% credible interval for each
+    # Model-relative posterior P(node=present | E) and 80% evidence-responsive
+    # uncertainty band for each
     # node in the v1.9 Bayesian network. Populated only when
     # ``--fusion`` is passed. Empty otherwise. The Beta layer
     # (``slug_confidences``) and the network layer
@@ -790,6 +818,17 @@ class TenantInfo:
 
 
 @dataclass(frozen=True)
+class DeltaComparisonIncomplete:
+    """Why a delta could not safely compare every field."""
+
+    # Union retained for compatibility with the first additive diagnostic.
+    degraded_sources: tuple[str, ...]
+    suppressed_fields: tuple[str, ...]
+    previous_degraded_sources: tuple[str, ...] = ()
+    current_degraded_sources: tuple[str, ...] = ()
+
+
+@dataclass(frozen=True)
 class DeltaReport:
     """Structured diff between two domain intelligence snapshots."""
 
@@ -805,6 +844,7 @@ class DeltaReport:
     changed_email_security_score: tuple[int | None, int | None] | None = None
     changed_confidence: tuple[str, str] | None = None
     changed_domain_count: tuple[int, int] | None = None
+    incomplete_comparison: DeltaComparisonIncomplete | None = None
 
     @property
     def has_changes(self) -> bool:

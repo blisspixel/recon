@@ -5,23 +5,23 @@
     "nodes": {
       "m365_tenant": {
         "prior": 0.3,
-        "all_present": 0.9668,
-        "all_present_interval_width": 0.136
+        "all_present": 0.9544,
+        "all_present_interval_width": 0.1652
       },
       "google_workspace_tenant": {
         "prior": 0.25,
-        "all_present": 0.8973,
-        "all_present_interval_width": 0.2766
+        "all_present": 0.8983,
+        "all_present_interval_width": 0.275
       },
       "federated_identity": {
         "prior": 0.242,
         "all_present": 0.995,
-        "all_present_interval_width": 0.0452
+        "all_present_interval_width": 0.0455
       },
       "okta_idp": {
         "prior": 0.0764,
         "all_present": 0.9479,
-        "all_present_interval_width": 0.1794
+        "all_present_interval_width": 0.1795
       },
       "email_gateway_present": {
         "prior": 0.18,
@@ -30,8 +30,8 @@
       },
       "email_security_modern_provider": {
         "prior": 0.5563,
-        "all_present": 0.9853,
-        "all_present_interval_width": 0.0919
+        "all_present": 0.985,
+        "all_present_interval_width": 0.093
       },
       "email_security_policy_enforcing": {
         "prior": 0.0554,
@@ -40,13 +40,13 @@
       },
       "cdn_fronting": {
         "prior": 0.45,
-        "all_present": 1.0,
-        "all_present_interval_width": 0.0023
+        "all_present": 0.9617,
+        "all_present_interval_width": 0.1484
       },
       "aws_hosting": {
         "prior": 0.4,
-        "all_present": 0.9467,
-        "all_present_interval_width": 0.1819
+        "all_present": 0.9189,
+        "all_present_interval_width": 0.2375
       }
     }
   }

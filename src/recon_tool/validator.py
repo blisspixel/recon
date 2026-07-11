@@ -61,12 +61,7 @@ def _has_no_control_chars(value: str) -> bool:
     """No terminal or bidirectional formatting control survives."""
 
     return all(
-        not (
-            ord(c) < 0x20
-            or ord(c) == 0x7F
-            or 0x80 <= ord(c) <= 0x9F
-            or ord(c) in _BIDI_CONTROL_CODEPOINTS
-        )
+        not (ord(c) < 0x20 or ord(c) == 0x7F or 0x80 <= ord(c) <= 0x9F or ord(c) in _BIDI_CONTROL_CODEPOINTS)
         for c in value
     )
 
@@ -95,12 +90,7 @@ def strip_control_chars(value: str, max_len: int = _MAX_DISPLAY_LEN) -> str:
     cleaned = "".join(
         c
         for c in value
-        if not (
-            ord(c) < 0x20
-            or ord(c) == 0x7F
-            or 0x80 <= ord(c) <= 0x9F
-            or ord(c) in _BIDI_CONTROL_CODEPOINTS
-        )
+        if not (ord(c) < 0x20 or ord(c) == 0x7F or 0x80 <= ord(c) <= 0x9F or ord(c) in _BIDI_CONTROL_CODEPOINTS)
     )
     return cleaned[:max_len]
 

@@ -28,6 +28,13 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     Off by default to keep the v2.0 schema contract narrow; opt-in for the
     fingerprint-discovery loop.
     """
+    from recon_tool.collection_view import collection_observable_evidence, collection_observable_info
+    from recon_tool.merger import compute_email_topology
+
+    info = collection_observable_info(info)
+    primary_email_provider, email_gateway, likely_primary_email_provider = compute_email_topology(
+        collection_observable_evidence(info)
+    )
     provider = provider_line(info)
     d: dict[str, Any] = {
         "tenant_id": info.tenant_id,
@@ -52,8 +59,8 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "insights": list(info.insights),
         "tenant_domains": list(info.tenant_domains),
         "related_domains": list(info.related_domains),
-        # `partial` means "result is meaningfully incomplete" — reserve it for
-        # core-source failures (OIDC, UserRealm, Google Identity, DNS), not
+        # `partial` means "result is meaningfully incomplete". Reserve it for
+        # core-source or core-channel failures (OIDC, identity, DNS), not
         # CT-provider degradation. crt.sh is chronically flaky and CertSpotter
         # rate-limits frequently; the CT pipeline handles both gracefully via
         # fallback + cache, so their degradation should NOT flip the global
@@ -65,18 +72,18 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "google_idp_name": info.google_idp_name,
         "mta_sts_mode": info.mta_sts_mode,
         "site_verification_tokens": list(info.site_verification_tokens),
-        "primary_email_provider": info.primary_email_provider,
-        "likely_primary_email_provider": info.likely_primary_email_provider,
-        "email_gateway": info.email_gateway,
+        "primary_email_provider": primary_email_provider,
+        "likely_primary_email_provider": likely_primary_email_provider,
+        "email_gateway": email_gateway,
         "dmarc_pct": info.dmarc_pct,
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
         "ct_cache_age_days": info.ct_cache_age_days,
         "ct_attempt_outcome": info.ct_attempt_outcome,
         "slug_confidences": dict(info.slug_confidences),
-        # v1.9 Bayesian network — populated only when --fusion is on.
+        # v1.9 Bayesian network, populated unless fusion is disabled.
         # ``conflict_provenance`` is always present per posterior;
-        # empty list when no cross-source conflicts dampened the interval.
+        # empty list when no cross-source conflicts lowered band display mass.
         # ``evidence_ranked`` ranks fired bindings by absolute
         # LLR contribution so consumers can surface the highest-leverage
         # evidence per node. Empty list when no bindings fired.
@@ -161,16 +168,8 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         }
     else:
         d["cert_summary"] = None
-    if info.bimi_identity is not None:
-        d["bimi_identity"] = {
-            "organization": info.bimi_identity.organization,
-            "country": info.bimi_identity.country,
-            "state": info.bimi_identity.state,
-            "locality": info.bimi_identity.locality,
-            "trademark": info.bimi_identity.trademark,
-        }
-    else:
-        d["bimi_identity"] = None
+    # Reserved until VMC chain and profile validation can support identity.
+    d["bimi_identity"] = None
     if info.evidence:
         d["evidence"] = [
             {
@@ -338,11 +337,19 @@ def format_tenant_plain(info: TenantInfo, *, include_unclassified: bool = False)
     linearly and ``grep``/``awk`` can slice, with no color or box-drawing. This
     is the accessibility / scripting complement to the default panel.
     """
-    data = format_tenant_dict(info, include_unclassified=include_unclassified)
+    from recon_tool.collection_view import collection_observable_info
+    from recon_tool.formatter.classify import categorize_services
+
+    observable = collection_observable_info(info)
+    data = format_tenant_dict(observable, include_unclassified=include_unclassified)
+    categorized = categorize_services(observable)
+    data["services"] = [service for services in categorized.values() for service in services]
     lines: list[str] = []
     for key, value in data.items():
         lines.extend(plain_lines(value, str(key), 0))
     return "\n".join(lines)
+
+
 # ── CSV output ───────────────────────────────────────────────────────────
 
 CSV_COLUMNS: tuple[str, ...] = (
@@ -396,6 +403,9 @@ def format_tenant_csv_row(info: TenantInfo) -> dict[str, str]:
     ``FederationBrandName`` (or any other attacker-influenced field)
     can't execute as a formula when the CSV is opened in a spreadsheet.
     """
+    from recon_tool.collection_view import collection_observable_info
+
+    info = collection_observable_info(info)
     provider = provider_line(info)
     return {
         "domain": _csv_safe(info.queried_domain),
@@ -434,7 +444,3 @@ def format_batch_csv(infos: list[tuple[str, TenantInfo | None, str | None]]) -> 
             writer.writerow(row)
 
     return buf.getvalue()
-
-
-
-

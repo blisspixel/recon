@@ -55,7 +55,9 @@ four blocks:
 - **Observability.** Cohort size, how many domains resolved, the degraded-source
   rate, and the mean sparse share across the Bayesian nodes. This is the
   denominator story, reported first, not buried.
-- **Prevalence.** For each signal, the observability-adjusted triple (below).
+- **Public-claim rates and model support.** Declarative claims use successful
+  observation opportunities as denominators. Hideable Bayesian claims report
+  model support coverage over the whole cohort, never prevalence.
 - **Posterior claims.** For each Bayesian node, the aggregated posterior mass and
   a separate high-confidence share (below).
 - **Mix.** For provider and cloud, the share vector with its concentration
@@ -67,54 +69,75 @@ cohort.
 
 ## 5. Metrics
 
-### 5.1 Observability-adjusted prevalence
+### 5.1 Public-claim rates and hideable model support
 
-recon's channel is missing-not-at-random for hideable infrastructure: a signal
-can be absent because it is genuinely absent or because the target hid it. A
-single "62% adoption" number hides which. So for a binary signal in a cohort of
-size $N$, with $p$ positives among $m$ domains where the signal was observable,
-the reducer reports three numbers and an interval, never one:
+Two different estimands must not share one interpretation.
+
+For a declarative public claim such as DMARC reject, a successful authoritative
+observation opportunity supplies positive or negative semantics. With cohort
+size $N$, $p$ positives, and $m$ completed opportunities, the reducer reports:
 
 $$
-\text{observed rate} = \frac{p}{m}, \qquad
-\text{lower bound} = \frac{p}{N}, \qquad
-\text{observability fraction} = \frac{m}{N}.
+\text{observed public-claim rate} = \frac{p}{m}, \qquad
+\text{support coverage} = \frac{p}{N}, \qquad
+\text{opportunity fraction} = \frac{m}{N}.
 $$
 
-The interval on the observed rate is an 80% Wilson score interval (closed form,
-matching recon's 80% house style):
+The interval on $p/m$ is an 80% Wilson score interval:
 
 $$
 \frac{\hat p + \frac{z^2}{2m} \pm z\sqrt{\frac{\hat p(1-\hat p)}{m} + \frac{z^2}{4m^2}}}{1 + \frac{z^2}{m}},
 \qquad \hat p = \frac{p}{m}, \quad z = z_{0.9}.
 $$
 
-A Jeffreys interval from a $\mathrm{Beta}(p + \tfrac12, m - p + \tfrac12)$
-posterior is the Bayesian sibling; the reference reducer uses Wilson for the
-closed form.
+This is a descriptive rate for the named public claim in the caller's cohort,
+not an industry estimate or a private-control prevalence. An unavailable source
+contributes neither a positive nor a negative.
 
-Declarative signals (DMARC, MTA-STS) are observable whenever DNS resolved, so
-their observability fraction is near one and the lower bound nearly equals the
-observed rate. Hideable claims (an M365 tenant) are observable only where the
-node fired with enough evidence to be non-sparse, so the observability fraction
-falls below one and the gap between the observed rate and the lower bound is the
-honest measure of what the channel could not see.
+M365 and Google Workspace Bayesian nodes are different. The public channel has
+no authoritative negative for those hideable claims, and a model posterior over
+0.5 is not established truth. Selecting the denominator from evidence-bearing
+or non-sparse positives would make $p/m$ outcome-dependent and positively
+biased. Even $p/N$ is not a prevalence lower bound unless every positive is
+sound, which has not been established.
 
-### 5.2 Aggregate posterior mass
-
-For a Bayesian node, hard-thresholding each domain to yes or no and tallying
-throws away the credible interval. Instead the reducer aggregates the posterior:
+Those compatibility entries therefore use
+`metric_kind: model_support_coverage`, set `observed_rate` and
+`lower_bound_over_cohort` to null, and report:
 
 $$
-\text{expected prevalence} = \frac{1}{N}\sum_{i=1}^{N} P_i(X), \qquad
-\text{high-confidence share} = \frac{\#\{i : P_i(X) > 0.8 \text{ and not sparse}_i\}}{N}.
+\text{model support coverage}=
+\frac{\#\{\text{domains whose model output crosses the support rule}\}}{N}.
 $$
 
-These answer different questions. The first is "the model leans this way on
-average"; the second is "this fraction had dense enough public evidence to say so
-confidently." The reducer also reports the mean interval width and the sparse
-share, so a cohort that is confident is distinguishable from one that is merely
-not-sparse.
+`model_evidence_n` reports how many rows carried an evidence-bearing non-sparse
+node. `unresolved_share` is one minus support coverage. The legacy
+`observable_n` and `observability_fraction` fields remain zero for these entries
+because no row supplies a two-sided authoritative observation opportunity.
+These are product-emission diagnostics, not adoption or prevalence estimates.
+
+### 5.2 Aggregate model-score mass
+
+For a Bayesian node, hard-thresholding each domain to yes or no discards useful
+model-relative detail. The reducer therefore aggregates the score and its
+evidence-responsive band:
+
+$$
+\text{mean model score} = \frac{1}{N}\sum_{i=1}^{N} P_{m,i}(X), \qquad
+\text{high-score share} = \frac{\#\{i : P_{m,i}(X) > 0.8 \text{ and not sparse}_i\}}{N}.
+$$
+
+These answer model questions, not population-prevalence questions. The first is
+"the committed model leans this way on average"; the second is "this fraction
+crossed one model threshold outside the minimum display-mass case." The reducer
+also reports mean band width and sparse share. None of these values is a
+calibrated prevalence estimate.
+
+The honest additive field names are `mean_model_score` and `high_score_share`.
+The v2.1 compatibility aliases `expected_prevalence` and
+`high_confidence_share` currently carry the same numbers, but their names
+overstate the semantics and are deprecated for interpretation. They cannot be
+removed or renamed without a versioned cohort-contract decision.
 
 ### 5.3 Compositional concentration
 
@@ -196,23 +219,29 @@ anyone.
 Global cohort observability shows a fully resolving set with a mean sparse share
 of 0.43, so roughly two in five node observations carried thin evidence.
 
-The prevalence block shows the MNAR split clearly. The M365 tenant claim reads:
+The compatibility block keeps the hideable M365 model output out of prevalence:
 
 ```
 m365_tenant:
-  observed_rate: 1.00  (interval 0.92 to 1.00)
-  lower_bound_over_cohort: 0.79
-  observability_fraction: 0.79
+  metric_kind: model_support_coverage
+  observed_rate: null
+  lower_bound_over_cohort: null
+  model_evidence_n: 19
+  support_coverage: 0.7917
+  unresolved_share: 0.2083
 ```
 
-Every domain where the tenant was observable was M365, but it was observable for
-only 79% of the cohort, so the honest lower bound is 0.79, not 1.00. The
-declarative signals tell the opposite story: `dmarc_enforcing` has an
-observability fraction of 1.00, so its observed rate and lower bound coincide at
-0.58. The posterior-claims block confirms the missingness model: the declarative
+The 0.7917 value is the share of synthetic rows where the model emitted support,
+not M365 prevalence and not a lower bound on it. The exact synthetic count is
+regenerated from the fixture; the example is illustrative. The declarative
+signals have different semantics: `dmarc_enforcing` has a successful
+observation opportunity for every fixture row, so its observed public-claim rate
+is 0.58. The posterior-claims block illustrates the committed missingness policy:
+the declarative
 `email_security_policy_enforcing` node has a sparse share of 0.00 (absence is
 informative, never sparse), while the hideable `google_workspace_tenant` node has
-a sparse share of 0.79 (mostly not determinable).
+  a sparse share of 0.79 (mostly at the display-mass floor). This construction
+  check does not validate the policy against private state.
 
 Concentration separates the groups. The fabricated fintech group is a provider
 monoculture (normalized entropy 0.00, HHI 1.00); the saas group is fragmented

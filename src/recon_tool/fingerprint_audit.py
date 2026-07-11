@@ -107,9 +107,7 @@ def summarize_fingerprint_freshness(
     detections = [rule for fp in fps for rule in fp.detections]
     dated = [rule for rule in detections if rule.verified]
     stale = sum(
-        1
-        for rule in dated
-        if (age := _verified_age_days(rule.verified, today)) is not None and age > stale_after_days
+        1 for rule in dated if (age := _verified_age_days(rule.verified, today)) is not None and age > stale_after_days
     )
     total = len(detections)
     return {
@@ -175,7 +173,7 @@ def _classify_fingerprint(fp: Fingerprint) -> tuple[AuditClassification, AuditRe
         return "too_broad", "tighten_patterns", tuple(reasons)
 
     if broad_routing_count and verification_count:
-        reasons.append("broad routing evidence is paired with explicit ownership evidence")
+        reasons.append("broad routing evidence is paired with administrative domain-verification evidence")
         return "corroborating", "review_for_all", tuple(reasons)
 
     if verification_count == len(rules):

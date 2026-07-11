@@ -16,7 +16,7 @@ import re
 from rich.console import Console
 
 from recon_tool.formatter import render_tenant_panel
-from recon_tool.models import ConfidenceLevel, SurfaceAttribution, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, SurfaceAttribution, TenantInfo
 
 
 def _render(info: TenantInfo) -> str:
@@ -45,6 +45,10 @@ def _multi_cloud_with_duplicate_potential() -> TenantInfo:
         tenant_domains=("contoso.com", "contoso.net", "contoso.co.uk"),
         services=("AWS Route 53", "Cloudflare"),
         slugs=("aws-route53", "cloudflare"),
+        evidence=(
+            EvidenceRecord("NS", "ns-1.awsdns.example", "AWS Route 53", "aws-route53"),
+            EvidenceRecord("CNAME", "www -> cloudflare.net", "Cloudflare", "cloudflare"),
+        ),
         surface_attributions=tuple(
             SurfaceAttribution(
                 subdomain=f"sub{i}.contoso.com",
@@ -68,6 +72,11 @@ def _three_vendor_apex() -> TenantInfo:
         tenant_domains=("contoso.com",),
         services=("AWS CloudFront", "Cloudflare", "GCP Compute Engine"),
         slugs=("aws-cloudfront", "cloudflare", "gcp-compute"),
+        evidence=(
+            EvidenceRecord("CNAME", "www -> cloudfront.net", "AWS CloudFront", "aws-cloudfront"),
+            EvidenceRecord("CNAME", "edge -> cloudflare.net", "Cloudflare", "cloudflare"),
+            EvidenceRecord("A", "192.0.2.1 -> googleusercontent.com", "GCP Compute Engine", "gcp-compute"),
+        ),
     )
 
 

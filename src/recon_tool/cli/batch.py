@@ -242,13 +242,14 @@ def _batch_apply_fusion(info: Any) -> Any:
     from dataclasses import replace
 
     from recon_tool.bayesian import infer_from_tenant_info
+    from recon_tool.collection_view import collection_observable_evidence
     from recon_tool.fusion import compute_slug_posteriors
     from recon_tool.models import NodeConflict, NodeUnitCounterfactual, PosteriorObservation
 
     result = infer_from_tenant_info(info)
     return replace(
         info,
-        slug_confidences=compute_slug_posteriors(info.evidence),
+        slug_confidences=compute_slug_posteriors(collection_observable_evidence(info)),
         posterior_observations=tuple(
             PosteriorObservation(
                 name=p.name,
@@ -306,14 +307,23 @@ def _batch_attach_shared_tokens(json_results: list[dict[str, Any]], batch_infos:
 def _batch_attach_peers(json_results: list[dict[str, Any]], batch_infos: dict[str, Any]) -> None:
     """Attach ``shared_tenant`` and ``shared_display_name`` peer lists in place.
 
-    Tenant-ID sharing is cryptographically strong (same M365 customer account);
-    display-name overlap is hedged (same brand / likely related, but
-    customer-supplied so not cryptographic). Both surface as a per-domain peer
-    list so batch consumers can pull related apexes without re-resolving them.
+    A shared tenant ID is a provider-attested administrative co-tenancy
+    observation, not ownership or product-use proof. Identity follows an
+    explicit positive-only policy: ``SourceStatus`` currently defines no
+    identity channel, so a non-null tenant ID from a successful identity
+    response stays observable across DNS degradation, while a missing or
+    conflicted tenant ID is never treated as negative evidence or clustered.
+    Display-name overlap is
+    a weaker customer-supplied coincidence. Both surface as per-domain peer
+    lists so batch consumers can inspect the observations without re-resolving
+    them.
     """
     from recon_tool.clustering import compute_display_name_clusters, compute_tenant_clusters
 
-    domain_tenants = {d: info.tenant_id for d, info in batch_infos.items()}
+    domain_tenants = {
+        d: None if info.merge_conflicts is not None and info.merge_conflicts.tenant_id else info.tenant_id
+        for d, info in batch_infos.items()
+    }
     domain_names = {d: info.display_name for d, info in batch_infos.items()}
     tenant_clusters = compute_tenant_clusters(domain_tenants)
     display_clusters = compute_display_name_clusters(domain_names)
@@ -355,11 +365,19 @@ def batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, inclu
     """Assemble the batch JSON array (with cross-domain enrichment) and emit it."""
     import json as json_mod
 
+    from recon_tool.collection_view import collection_observable_info
+
     json_results: list[dict[str, Any]] = [r for r in results if r is not None]  # type: ignore[misc]
 
-    if batch_infos:
-        _batch_attach_shared_tokens(json_results, batch_infos)
-        _batch_attach_peers(json_results, batch_infos)
+    # Cross-domain projections must consume the same collection-aware view as
+    # each serialized domain. Otherwise raw partial detector state can leak a
+    # shared TXT token, BIMI organization, or channel-owned slug after that
+    # observation channel has been marked unavailable.
+    observable_infos = {domain: collection_observable_info(info) for domain, info in batch_infos.items()}
+
+    if observable_infos:
+        _batch_attach_shared_tokens(json_results, observable_infos)
+        _batch_attach_peers(json_results, observable_infos)
 
     # Ecosystem hypergraph. Off by default. When opted in via
     # --include-ecosystem, emit hyperedges over the batch's TenantInfo set as a
@@ -371,10 +389,10 @@ def batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, inclu
         # when a consumer's error path is already stressed. Errors ride under
         # domains; hyperedges are empty when there were no resolved infos.
         hyperedges: list[Any] = []
-        if batch_infos:
+        if observable_infos:
             from recon_tool.ecosystem import build_ecosystem_hyperedges
 
-            hyperedges = list(build_ecosystem_hyperedges(batch_infos))
+            hyperedges = list(build_ecosystem_hyperedges(observable_infos))
         ecosystem_payload = {
             "record_type": "batch_result",  # SH7 discriminator
             "ecosystem_hyperedges": [

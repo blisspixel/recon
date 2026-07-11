@@ -206,15 +206,10 @@ class TestJSONSchemaContract:
             assert isinstance(cs[field], int)
         assert isinstance(cs["top_issuers"], list)
 
-    def test_bimi_identity_nested_shape(self) -> None:
+    def test_bimi_identity_is_null_without_trust_validation(self) -> None:
         info = _build_fixture()
         payload = json.loads(format_tenant_json(info))
-        bi = payload["bimi_identity"]
-        assert bi is not None
-        assert isinstance(bi["organization"], str)
-        for field in ("country", "state", "locality", "trademark"):
-            # nullable string fields
-            assert bi[field] is None or isinstance(bi[field], str)
+        assert payload["bimi_identity"] is None
 
     def test_slug_confidences_map_shape(self) -> None:
         # SH2 (v2.0): slug_confidences is an object map {slug: posterior},

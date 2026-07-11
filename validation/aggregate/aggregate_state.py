@@ -1,7 +1,8 @@
 """Stateless cohort reducer with caller grouping over recon output (v2.1).
 
 Downstream sidecar, not recon core. The per-cohort statistics (observability,
-prevalence, posterior mass, mix concentration) and the math live in
+public-claim rates, hideable model support, model-score mass, and mix
+concentration) and the math live in
 ``recon_tool.cohort_summary`` and are shared with the in-core ``recon batch
 --summary`` so the two never drift. This reducer adds only the downstream parts:
 caller-supplied grouping, distinctive-slug ranking (weighted log-odds with a

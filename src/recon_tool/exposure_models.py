@@ -43,6 +43,8 @@ class IdentityPosture:
     """Identity and authentication posture."""
 
     auth_type: str | None
+    # Named only when an explicit federation response identifies the provider;
+    # generic DNS verification fingerprints do not populate this field.
     identity_provider: str | None
     google_auth_type: str | None
     google_idp_name: str | None
@@ -56,7 +58,7 @@ class InfrastructureFootprint:
     cloud_providers: tuple[str, ...]
     dns_provider: str | None
     cdn_waf: tuple[str, ...]
-    certificate_authorities: tuple[str, ...]
+    certificate_authorities: tuple[str, ...]  # Issuers authorized by observed CAA records.
     evidence: tuple[EvidenceReference, ...]
 
 
@@ -102,12 +104,17 @@ class ExposureAssessment:
     evidence: tuple[EvidenceReference, ...]
     # The score counts only observed-present controls, so it is a *lower bound*:
     # this is how many points come from controls whose absence the passive
-    # channel cannot confirm (DKIM at non-standard selectors, security tooling,
-    # an email gateway behind non-MX routing). The true posture may be this much
-    # higher. Declarative-record absence (DMARC/MTA-STS/TLS-RPT/CAA) is genuine
-    # and is not counted here. See the "Reading the exposure score" MCP note and
-    # docs/correlation.md on the hideability spectrum.
+    # channel cannot confirm (DKIM at non-standard selectors or an email gateway
+    # hidden behind non-MX routing). Generic vendor indicators receive no control
+    # credit. The true posture may be this much
+    # higher. Declarative-record absence is genuine when collection succeeded;
+    # an unavailable DMARC or MTA-STS channel contributes its full weight to
+    # this ceiling instead. See the "Reading the exposure score" MCP note and
+    # docs/correlation.md.
     unconfirmable_absent_points: int = 0
+    # Names of controls whose collection channel failed. This distinguishes an
+    # unobserved value from an observed negative in structured output.
+    unavailable_controls: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -134,6 +141,8 @@ class GapReport:
     domain: str
     gaps: tuple[HardeningGap, ...]
     disclaimer: str
+    unavailable_controls: tuple[str, ...] = ()
+    degraded_sources: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -172,4 +181,3 @@ class PostureComparison:
     differences: tuple[PostureDifference, ...]
     relative_assessment: tuple[RelativeAssessment, ...]
     disclaimer: str
-

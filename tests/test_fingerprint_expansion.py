@@ -376,11 +376,11 @@ class TestNewPostureRules:
 
     def test_supply_chain_security_detected_fires(self) -> None:
         stmts = self._observation_statements(("sonatype",))
-        assert any("supply chain" in s.lower() for s in stmts)
+        assert any("software-supply-chain" in s.lower() and "indicator" in s.lower() for s in stmts)
 
     def test_supply_chain_security_detected_fires_with_snyk(self) -> None:
         stmts = self._observation_statements(("snyk",))
-        assert any("supply chain" in s.lower() for s in stmts)
+        assert any("software-supply-chain" in s.lower() and "indicator" in s.lower() for s in stmts)
 
     def test_edge_compute_detected_fires_with_two(self) -> None:
         stmts = self._observation_statements(("vercel", "fastly"))
@@ -392,19 +392,19 @@ class TestNewPostureRules:
 
     def test_email_deliverability_management_fires(self) -> None:
         stmts = self._observation_statements(("ondmarc",))
-        assert any("SPF flattening" in s or "DMARC management" in s for s in stmts)
+        assert any("SPF-flattening" in s or "DMARC-management" in s for s in stmts)
 
     def test_email_deliverability_management_fires_with_valimail(self) -> None:
         stmts = self._observation_statements(("valimail",))
-        assert any("SPF flattening" in s or "DMARC management" in s for s in stmts)
+        assert any("SPF-flattening" in s or "DMARC-management" in s for s in stmts)
 
     def test_updated_ai_tooling_fires_with_langsmith(self) -> None:
         stmts = self._observation_statements(("langsmith",))
-        assert any("AI/LLM tooling" in s for s in stmts)
+        assert any("AI/LLM vendor indicator" in s for s in stmts)
 
     def test_updated_ai_tooling_fires_with_mcp_discovery(self) -> None:
         stmts = self._observation_statements(("mcp-discovery",))
-        assert any("AI/LLM tooling" in s for s in stmts)
+        assert any("AI/LLM vendor indicator" in s for s in stmts)
 
 
 # ── 9.7: Backward compatibility ──────────────────────────────────────

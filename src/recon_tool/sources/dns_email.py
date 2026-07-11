@@ -53,7 +53,12 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
     txt_patterns = get_txt_patterns()
     spf_patterns = get_spf_patterns()
 
-    txt_records = await dns_base.safe_resolve(domain, "TXT")
+    txt_records = await dns_base.safe_resolve(
+        domain,
+        "TXT",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:apex_txt",
+    )
     ctx.raw_dns_records.setdefault("TXT", []).extend(txt_records)
 
     for txt in txt_records:
@@ -95,12 +100,14 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # slug fires , preventing double-counting of the same vendor.
             spf_matches = [det for det in spf_patterns if det.pattern.lower() in txt_lower]
             for det in filter_shadowed_matches(spf_matches):
-                ctx.add(det.name, det.slug)
+                ctx.add(det.name, det.slug, source_type="SPF", raw_value=txt)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
             if txt_lower.rstrip().endswith("-all"):
                 ctx.services.add(SVC_SPF_STRICT)
+                ctx.evidence.append(EvidenceRecord("SPF", txt, SVC_SPF_STRICT, "spf-strict"))
             elif txt_lower.rstrip().endswith("~all"):
                 ctx.services.add(SVC_SPF_SOFTFAIL)
+                ctx.evidence.append(EvidenceRecord("SPF", txt, SVC_SPF_SOFTFAIL, "spf-softfail"))
             # Follow SPF redirect= chains. A record like
             # "v=spf1 redirect=_spf.mail.umich.edu" means "use that
             # domain's SPF as mine" - RFC 7208 §6.1. Higher-ed and
@@ -167,7 +174,12 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
                 target,
             )
             return
-        target_records = await dns_base.safe_resolve(target, "TXT")
+        target_records = await dns_base.safe_resolve(
+            target,
+            "TXT",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:apex_txt",
+        )
         patterns = get_spf_patterns()
         for record in target_records:
             rec_lower = record.strip().lower()
@@ -178,7 +190,7 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
             # comment in detect_txt above).
             spf_matches = [det for det in patterns if det.pattern.lower() in rec_lower]
             for det in filter_shadowed_matches(spf_matches):
-                ctx.add(det.name, det.slug)
+                ctx.add(det.name, det.slug, source_type="SPF", raw_value=record)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
             # Propagate the policy qualifier from the redirect
             # target up to the origin - if _spf.mail.umich.edu
@@ -187,9 +199,11 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
             # with SPF strict.
             if rec_lower.rstrip().endswith("-all"):
                 ctx.services.add(SVC_SPF_STRICT)
+                ctx.evidence.append(EvidenceRecord("SPF", record, SVC_SPF_STRICT, "spf-strict"))
                 return
             if rec_lower.rstrip().endswith("~all"):
                 ctx.services.add(SVC_SPF_SOFTFAIL)
+                ctx.evidence.append(EvidenceRecord("SPF", record, SVC_SPF_SOFTFAIL, "spf-softfail"))
                 return
             # Chain continues: recurse one more hop.
             if "redirect=" in rec_lower:
@@ -218,7 +232,12 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
     MX hosts. The "generic MX evidence" carries an empty slug so it
     doesn't pollute the detected_slugs set.
     """
-    mx_records = await dns_base.safe_resolve(domain, "MX")
+    mx_records = await dns_base.safe_resolve(
+        domain,
+        "MX",
+        degraded_sources=ctx.degraded_sources,
+        degraded_name="dns:mx",
+    )
     ctx.raw_dns_records.setdefault("MX", []).extend(mx_records)
 
     # Sort MX patterns longest-first so the most specific pattern wins per
@@ -229,7 +248,18 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
 
     unmatched_hosts: list[str] = []
     any_matched = False
+    null_mx_observed = False
     for mx in mx_records:
+        parts = mx.strip().split()
+        if len(parts) >= 2 and parts[0] == "0" and parts[-1].rstrip(".") == "":
+            ctx.add(
+                "Null MX (domain does not accept email)",
+                "null-mx",
+                source_type="MX",
+                raw_value=mx,
+            )
+            null_mx_observed = True
+            continue
         mx_lower = mx.lower()
         matched = False
         for det in mx_patterns_sorted:
@@ -249,29 +279,23 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
                 EvidenceRecord(
                     source_type="MX",
                     raw_value=mx,
-                    rule_name="Custom MX host",
+                    rule_name="Custom or unclassified MX host",
                     slug="",
                 )
             )
-            # Track unmatched MX hosts for self-hosted-mail inference.
+            # Track unmatched MX hosts for the bounded unclassified-MX label.
             # MX record format is ``<priority> <host>`` - extract host.
-            parts = mx.strip().split()
             if len(parts) >= 2:
                 unmatched_hosts.append(parts[-1].rstrip(".").lower())
 
-    # Self-hosted-mail inference. When MX records exist and none of
-    # them match a known cloud provider or gateway, attribute the
-    # primary provider as "Self-hosted mail". This rescues orgs whose
-    # MX targets live under the queried apex or under an operator-owned
-    # sibling domain - they otherwise fall through to the weaker
-    # ``exchange-onprem`` attribution driven by ``owa.`` / ``autodiscover.``
-    # probes. ``Self-hosted`` is a conservative label that may in rare
-    # cases cover obscure cloud providers we don't yet fingerprint - in
-    # both cases the MX hosts are surfaced in the evidence so the user
-    # can see what's actually being used.
-    if unmatched_hosts and not any_matched:
+    # The compatibility slug is retained for serialized-cache stability, but
+    # the observation does not infer who operates an unmatched MX host. It may
+    # be self-managed, hosted by an uncatalogued provider, or delegated through
+    # another public namespace. A Null MX is an explicit no-mail declaration,
+    # not an unclassified delivery path.
+    if unmatched_hosts and not any_matched and not null_mx_observed:
         ctx.add(
-            "Self-hosted mail",
+            "Custom or unclassified MX",
             "self-hosted-mail",
             source_type="MX",
             raw_value=", ".join(sorted(set(unmatched_hosts))),
@@ -339,6 +363,7 @@ def _apply_generic_dkim(ctx: dns_base.DetectionCtx, generic_results: list[list[s
         for record in txt_records:
             if "v=dkim1" in record.lower():
                 ctx.services.add(SVC_DKIM)
+                ctx.evidence.append(EvidenceRecord("DKIM", record, SVC_DKIM, "dkim"))
                 return
 
 
@@ -351,12 +376,21 @@ async def detect_dkim(ctx: dns_base.DetectionCtx, domain: str) -> None:
     attribution. Also extracts the onmicrosoft.com domain from Exchange DKIM
     CNAMEs, which reveals the tenant's internal domain name.
     """
-    sel1_task = dns_base.safe_resolve(f"selector1._domainkey.{domain}", "CNAME")
-    sel2_task = dns_base.safe_resolve(f"selector2._domainkey.{domain}", "CNAME")
-    google_txt_task = dns_base.safe_resolve(f"google._domainkey.{domain}", "TXT")
-    google_cname_task = dns_base.safe_resolve(f"google._domainkey.{domain}", "CNAME")
-    esp_tasks = [dns_base.safe_resolve(f"{sel}._domainkey.{domain}", "CNAME") for sel, _, _, _ in ESP_DKIM_SELECTORS]
-    generic_dkim_tasks = [dns_base.safe_resolve(f"{sel}._domainkey.{domain}", "TXT") for sel in GENERIC_DKIM_SELECTORS]
+
+    def resolve_selector(selector: str, rdtype: str):
+        return dns_base.safe_resolve(
+            f"{selector}._domainkey.{domain}",
+            rdtype,
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:dkim",
+        )
+
+    sel1_task = resolve_selector("selector1", "CNAME")
+    sel2_task = resolve_selector("selector2", "CNAME")
+    google_txt_task = resolve_selector("google", "TXT")
+    google_cname_task = resolve_selector("google", "CNAME")
+    esp_tasks = [resolve_selector(sel, "CNAME") for sel, _, _, _ in ESP_DKIM_SELECTORS]
+    generic_dkim_tasks = [resolve_selector(sel, "TXT") for sel in GENERIC_DKIM_SELECTORS]
 
     all_results = await asyncio.gather(
         sel1_task,
@@ -426,16 +460,24 @@ def _has_certificate_pem_shape(pem_data: str) -> bool:
     return len(der) >= 2 and der[0] == 0x30
 
 
-async def _fetch_mta_sts_policy(domain: str) -> str | None:
+async def _fetch_mta_sts_policy(domain: str, degraded_sources: set[str] | None = None) -> str | None:
     """Fetch MTA-STS policy mode from the well-known endpoint.
 
     Returns the policy mode ("enforce", "testing", "none") or None
-    if the policy file is unreachable or malformed.
+    if the policy file is unavailable or malformed. Transport failures and
+    transient HTTP responses are recorded as degraded collection. Stable HTTP
+    responses such as 404 remain observed invalid policy states, so callers can
+    distinguish an unavailable channel from observed non-enforcement.
     """
     url = f"https://mta-sts.{domain}/.well-known/mta-sts.txt"
     try:
         async with _http_client(timeout=5.0) as client:
             resp = await client.get(url)
+            if resp.status_code in (408, 429) or 500 <= resp.status_code <= 599:
+                if degraded_sources is not None:
+                    degraded_sources.add("http:mta_sts_policy")
+                logger.debug("MTA-STS policy fetch returned transient HTTP %d for %s", resp.status_code, domain)
+                return None
             if resp.status_code == 200:
                 for line in resp.text.splitlines():
                     stripped = line.strip().lower()
@@ -444,6 +486,8 @@ async def _fetch_mta_sts_policy(domain: str) -> str | None:
                         if mode in ("enforce", "testing", "none"):
                             return mode
     except Exception as exc:
+        if degraded_sources is not None:
+            degraded_sources.add("http:mta_sts_policy")
         logger.debug("MTA-STS policy fetch failed for %s: %s", domain, exc)
     return None
 
@@ -559,39 +603,29 @@ def _leading_dmarc_version_value(dmarc_record: str) -> str | None:
     return first_tag.removeprefix("v=")
 
 
-def _dmarc_rua_address_domain(addr: str) -> str | None:
-    """Return a usable public reporting-address domain, if the RUA is valid."""
-    local, sep, domain = addr.partition("@")
-    domain = domain.lower().rstrip(".")
-    if not sep or not local or not domain or "." not in domain or not is_public_dns_name(domain):
-        return None
-    return domain
-
-
-def _has_valid_dmarc_rua(tags: dict[str, str]) -> bool:
-    """Return whether the record carries at least one usable aggregate-report URI."""
-    return any(_dmarc_rua_address_domain(addr) is not None for addr in _RUA_MAILTO_RE.findall(tags.get("rua", "")))
-
-
-def _dmarc_policy_or_rua_fallback(tags: dict[str, str], domain: str) -> str | None:
-    """Return a valid DMARC policy, including RUA-backed monitoring fallback."""
+def _valid_dmarc_policy(tags: dict[str, str], domain: str) -> str | None:
+    """Return the required valid DMARC policy without repairing malformed input."""
     raw_policy = tags.get("p")
     if raw_policy is not None:
-        policy = _parse_dmarc_policy(raw_policy, domain)
-        if policy is not None:
-            return policy
-    if _has_valid_dmarc_rua(tags):
-        logger.warning(
-            "DMARC policy for %s is missing or invalid; valid rua= present, treating as p=none",
-            domain,
-        )
-        return "none"
-    if raw_policy is None:
-        logger.warning(
-            "DMARC p= tag missing for %s and no valid rua= fallback is present - ignored",
-            domain,
-        )
+        return _parse_dmarc_policy(raw_policy, domain)
+    logger.warning("DMARC p= tag missing for %s - record is not a valid policy record", domain)
     return None
+
+
+def _record_non_policy_dmarc_evidence(
+    ctx: dns_base.DetectionCtx,
+    records: list[tuple[str, dict[str, str] | None]],
+) -> None:
+    """Retain observed DMARC-shaped records without awarding policy credit."""
+    for record, _ in records:
+        ctx.evidence.append(
+            EvidenceRecord(
+                "DMARC",
+                record,
+                "DMARC record observed without one valid policy",
+                "dmarc-invalid",
+            )
+        )
 
 
 def _apply_dmarc(ctx: dns_base.DetectionCtx, dmarc_results: list[str], domain: str) -> None:
@@ -606,14 +640,18 @@ def _apply_dmarc(ctx: dns_base.DetectionCtx, dmarc_results: list[str], domain: s
 
     if len(records) > 1:
         logger.warning("Multiple DMARC records found for %s - ignored", domain)
+        _record_non_policy_dmarc_evidence(ctx, records)
         return
     for txt, tags in records:
         if tags is None:
+            _record_non_policy_dmarc_evidence(ctx, records)
             continue
-        policy = _dmarc_policy_or_rua_fallback(tags, domain)
+        policy = _valid_dmarc_policy(tags, domain)
         if policy is None:
+            _record_non_policy_dmarc_evidence(ctx, records)
             continue
         ctx.services.add(SVC_DMARC)
+        ctx.evidence.append(EvidenceRecord("DMARC", txt, SVC_DMARC, "dmarc"))
         ctx.dmarc_policy = policy
         if (value := tags.get("pct")) is not None and (pct := _parse_dmarc_pct(value, domain)) is not None:
             ctx.dmarc_pct = pct
@@ -638,6 +676,7 @@ async def _apply_bimi(ctx: dns_base.DetectionCtx, bimi_results: list[str], domai
     for txt in bimi_results:
         if "v=bimi1" in txt.lower():
             ctx.services.add(SVC_BIMI)
+            ctx.evidence.append(EvidenceRecord("BIMI", txt, SVC_BIMI, "bimi"))
             if not ctx.active_probes:
                 continue
             try:
@@ -652,9 +691,13 @@ async def _apply_mta_sts(ctx: dns_base.DetectionCtx, mta_sts_results: list[str],
     if not mta_sts_detected:
         return
     ctx.services.add(SVC_MTA_STS)
-    policy_mode = await _fetch_mta_sts_policy(domain)
+    mta_sts_txt = next(txt for txt in mta_sts_results if "v=stsv1" in txt.lower())
+    ctx.evidence.append(EvidenceRecord("MTA_STS", mta_sts_txt, SVC_MTA_STS, "mta-sts"))
+    policy_mode = await _fetch_mta_sts_policy(domain, ctx.degraded_sources)
     if policy_mode:
         ctx.mta_sts_mode = policy_mode
+        policy_slug = "mta-sts-enforce" if policy_mode == "enforce" else "mta-sts"
+        ctx.evidence.append(EvidenceRecord("MTA_STS_POLICY", f"mode: {policy_mode}", SVC_MTA_STS, policy_slug))
         if policy_mode == "enforce":
             ctx.slugs.add("mta-sts-enforce")
 
@@ -670,10 +713,30 @@ def _apply_tls_rpt(ctx: dns_base.DetectionCtx, tls_rpt_results: list[str]) -> No
 async def detect_email_security(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Check DMARC, BIMI, MTA-STS, and TLS-RPT records concurrently."""
     dmarc_results, bimi_results, mta_sts_results, tls_rpt_results = await asyncio.gather(
-        dns_base.safe_resolve(f"_dmarc.{domain}", "TXT"),
-        dns_base.safe_resolve(f"default._bimi.{domain}", "TXT"),
-        dns_base.safe_resolve(f"_mta-sts.{domain}", "TXT"),
-        dns_base.safe_resolve(f"_smtp._tls.{domain}", "TXT"),
+        dns_base.safe_resolve(
+            f"_dmarc.{domain}",
+            "TXT",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:dmarc",
+        ),
+        dns_base.safe_resolve(
+            f"default._bimi.{domain}",
+            "TXT",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:bimi",
+        ),
+        dns_base.safe_resolve(
+            f"_mta-sts.{domain}",
+            "TXT",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:mta_sts",
+        ),
+        dns_base.safe_resolve(
+            f"_smtp._tls.{domain}",
+            "TXT",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:tls_rpt",
+        ),
     )
     _apply_dmarc(ctx, dmarc_results, domain)
     await _apply_bimi(ctx, bimi_results, domain)

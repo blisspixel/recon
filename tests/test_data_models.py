@@ -179,13 +179,13 @@ class TestSignalContextNewFields:
         ctx = _ctx(set(), primary_email_provider="Microsoft 365")
         assert _evaluate_metadata_condition(cond, ctx) is True
 
-    def test_metadata_evaluator_dmarc_pct_none_neq_returns_true(self) -> None:
-        """When dmarc_pct is None, neq should return True (field doesn't exist)."""
+    def test_metadata_evaluator_dmarc_pct_none_does_not_satisfy_neq(self) -> None:
+        """An unobserved value cannot establish a negative comparison."""
         from recon_tool.models import MetadataCondition
 
         cond = MetadataCondition(field="dmarc_pct", operator="neq", value=100)
         ctx = _ctx(set())
-        assert _evaluate_metadata_condition(cond, ctx) is True
+        assert _evaluate_metadata_condition(cond, ctx) is False
 
     def test_metadata_evaluator_primary_email_provider_none_eq_returns_false(self) -> None:
         """When primary_email_provider is None, eq should return False."""

@@ -15,8 +15,8 @@ data is involved.
 
 ## The problem class
 
-recon is a probabilistic classifier whose ground truth is, for most of
-its claims, not observable. A passive external observer cannot see
+recon is a passive evidence-correlation system with a probabilistic diagnostic
+layer. For most high-level claims, external ground truth is not observable. A passive external observer cannot see
 whether an organization actually runs Okta, only what the public channel
 happens to reveal, and the target can choose to reveal less. This is the
 hard corner of a problem the machine-learning literature has been
@@ -66,34 +66,27 @@ truth, and the paper names feature-dependent noise as out of scope.
 recon's missingness is feature-dependent by construction: whether a
 signal is absent depends on what that signal would have revealed and on
 the target's intent. recon is precisely the case that thread excludes.
-And the conformal coverage guarantee holds only under exchangeability,
-which fails on the adversarially-hardened targets recon flags as
-the interesting ones.
+And the conformal coverage guarantee holds only under exchangeability, which is
+not established when transferring from recon's selected development corpus to
+adversarially hardened targets.
 
 What recon can take, on the nodes where a label exists: split conformal
-is adoptable as a complementary, distribution-free coverage statement for
-any node that has an external reference. That is cleanest for the email-policy
-node (the DMARC record is its own reference, per the existing reference
-calibration). The M365 tenancy node has Microsoft's identity endpoints as a
-two-class provider attestation, but the paper treats that result as
-channel-split corroboration rather than independent calibration because the
-DNS predictor and provider label still share tenant provisioning as a common
-cause ([m365-tenancy-decision.md](m365-tenancy-decision.md)). The Google channel
-turned out one-sided on source review - federated redirects only, no managed
-detection, no authoritative negative - so `google_workspace_tenant` carries a
-recall check, not a label, see correlation.md 4.3. For the labelable nodes recon
-can report a conformal prediction
-set beside the Bayesian credible interval: two guarantees of different
-kinds, one subjective-Bayesian and one frequentist-distribution-free,
-with an explicit note that the conformal guarantee is conditional on
-exchangeability and so is not claimed for hardened targets. The boundary
-where conformal coverage stops being guaranteed is the same boundary
-where the suppression guarantee keeps holding, which is the honest seam
-the paper is built around. This was the one concrete validate-differently
-implication of the library; it has since shipped as
-`validation/conformal_coverage.py` (with a deliberate falsifiability
-split demonstrating the exchangeability boundary), and the tenancy label
-side as `validation/tenancy_reference_calibration.py`.
+can support a separate risk or prediction-set statement only where the scorer
+is fixed independently of the calibration sample and the calibration and future
+points are exchangeable. recon's stricter level-4 interpretation rule also
+requires predictor inputs not to consume the label-defining field.
+DMARC is not a clean reference for the full email-policy predictor
+because it is also the dominant input. The M365 provider endpoint is useful
+channel-split corroboration, not fully independent calibration, because the DNS
+predictor and provider label share tenant provisioning as a common cause
+([m365-tenancy-decision.md](m365-tenancy-decision.md)). The Google channel is
+one-sided: federated redirects only, no managed detection, and no authoritative
+negative. It supports a recall check on observed positives, not calibration.
+`validation/conformal_coverage.py` implements and unit-tests the split-conformal
+construction. The recorded private-corpus run reused parameter-development data,
+so it is a dependent empirical re-split diagnostic, not an application of the
+future-point coverage theorem. It does not turn recon's model-relative
+uncertainty band into a credible or confidence interval.
 
 ## Principle-based calibration of epistemic uncertainty (arXiv:2407.12211)
 
@@ -103,21 +96,14 @@ principles, and it proposes two (uncertainty falls as data grows,
 uncertainty rises as model expressiveness grows) and tests compliance
 rather than coverage.
 
-This is the methodology recon already follows without having named it.
-The suppression-monotonicity property (correlation.md section 4.3) is a
-principle-compliance result: hiding an observed binding moves a node's
-presence posterior toward its all-absent baseline, never to a confident
-false positive (it bounds evidence removal, and not the addition of decoy
-records). The interval-widening property (the credible interval grows as
-n_eff falls) is a second such principle, governing interval width. Framing recon's guarantees this
-way places them in a recognized methodological tradition and makes the
-reservation precise: recon says "calibrated" only where an external
-reference exists, and even there only partially (the DMARC node shares its
-label with its dominant input, so only the residual is independently
-checked), and "evidence-responsive, principle-compliant" everywhere else
-(CAL13). recon can name its principle suite
-explicitly and test compliance as a standing gate, which the existing
-`validation/adversarial_properties.py` already begins.
+recon has related construction properties, but their scope is narrower. Under
+fixed local positive-factor assumptions, deleting evidence cannot raise local
+presence odds. For a fixed posterior, lowering `n_eff` widens the current band.
+Neither result establishes movement toward 0.5, general evidence-monotone width,
+global DAG robustness, or empirical calibration. The current harnesses are
+useful standing regression gates when reported with those limits. The proposed
+claim-robustness envelope tests evidence removal and planting directly instead
+of extending the narrow propositions by analogy.
 
 ## Surrogate-label calibration (arXiv:2209.05486)
 
@@ -131,12 +117,11 @@ CAL1 already warns about: the deterministic-versus-Bayesian consistency
 check is near-tautological under the virtual-evidence construction, so it
 tests the inference plumbing, not the CPT values, and a surrogate-label
 calibration would dress that same circularity up as a coverage number.
-recon's answer is the opposite discipline: find the one kind of observable
-that is its own external reference (a public self-declaration like a DMARC
-record) and calibrate only there, and state plainly that the result does
-not generalize to the hideable nodes. The contrast is worth stating in
-the paper, because the tempting shortcut is common and recon's refusal of
-it is part of the honest-evaluation posture.
+recon's answer is the opposite discipline: use training-disjoint,
+predictor-input-disjoint references where they exist, call overlapping
+self-declarations agreement rather than independent calibration, and state
+plainly when a hideable node has no suitable reference. The contrast is worth stating because surrogate-label circularity is
+tempting and easy to overstate.
 
 ## Bayesian-network inference lineage
 
@@ -146,19 +131,18 @@ variable elimination and functional CPTs, arXiv:2002.09320; treewidth and
 exact-versus-approximate selection, arXiv:1506.08544; junction-tree and
 recursive-conditioning methods; credal-network benchmarking, CREPO
 arXiv:2105.04158) is about making inference tractable at scale. recon does
-not need that: nine binary nodes are fully enumerable (512 states), which
-is why the differential-verification harness can cross-check variable
-elimination against a brute-force full-joint reference on every evidence
-configuration. So this literature is recon's correctness backdrop, not a
-source of methods to add; the paper cites it to explain why recon's
-inference is verifiable by exhaustion rather than trusted by reputation.
+not need that: each nine-binary-node query can enumerate its 512 latent states.
+The differential-verification harness cross-checks variable elimination against
+that brute-force latent-joint reference over a structured none/one/all evidence
+sweep plus exhaustive local subsets for three factor-heavy nodes. It does not
+enumerate the global evidence power set. This literature is recon's correctness
+backdrop, not a source of methods to add.
 
-One forward pointer worth recording: the credal-network framing (sets of
-CPTs, imprecise probabilities) would give guaranteed posterior bounds
-over the hand-elicitation uncertainty, in place of the current CAL8
-plus-or-minus-20-percent sensitivity sweep. It is heavier than the
-deliberately-small ethos wants, so it stays a noted alternative, not a
-plan.
+One forward pointer worth recording: a coherent credal-network framing could
+give model-relative posterior bounds over admitted CPT sets, in place of the
+current CAL8 plus-or-minus-20-percent sensitivity sweep. It would not identify
+the real-world claim without a defensible joint evidence and observation model.
+It stays a noted alternative, not a plan.
 
 A closer neighbor in subject matter is cGraph (arXiv:2202.07883), which
 runs belief propagation over passive-DNS domain graphs for threat
@@ -177,22 +161,22 @@ it, and that tracks the hideability spectrum in correlation.md.
 
 | Node class | Example nodes | Reference label | Guarantees available |
 |---|---|---|---|
-| Provider-attested | m365_tenant, google_workspace_tenant | the provider's own identity endpoint (authoritative) | calibration (CAL3/CAL4) and, as a candidate, conformal coverage; plus the structural guarantees |
-| Public-declaration | email_security_policy_enforcing | the DMARC record (its own definition of enforcing) | full-posterior calibration strong but DMARC-anchored (fixed-bin ECE 0.0761, equal-mass ECE 0.0651; DMARC is also the input, so the bulk is a definitional agreement check), the clean DMARC-disjoint residual disconfirmed (fixed-bin ECE 0.3747, equal-mass ECE 0.3263); conformal coverage measured (0.9992 at a 0.90 target); plus the structural guarantees |
-| Hideable | okta_idp, federated_identity, cdn_fronting, aws_hosting, email_gateway_present | none (absence may be genuine or adversarial) | structural guarantees only: suppression-monotonicity and interval widening (evidence-responsive, CAL13) |
+| Provider-attested | m365_tenant | Microsoft's identity endpoint | Channel-split corroboration plus internal soundness; not fully independent calibration |
+| One-sided provider channel | google_workspace_tenant | observed federated redirect only | Positive-class recall check plus internal soundness; no two-class calibration |
+| Public-declaration | email_security_policy_enforcing | DMARC, also the dominant predictor input | Low-ECE overlapping agreement; the DMARC-disjoint residual is poorly calibrated, so no clean calibration claim |
+| Hideable | okta_idp, federated_identity, cdn_fronting, aws_hosting, email_gateway_present | no training-disjoint and predictor-input-disjoint two-class reference | Internal computation and selected construction properties only |
 
-The paper's claim is not that recon calibrates everything. It is that the
-honest envelope for a passive classifier is this tiering: full
-calibration where a self-defining reference exists, principle-compliant
-evidence-responsiveness everywhere else, and a clear statement of the
-boundary between them: a node is calibratable only where a reference an
-operator cannot hide exists (the labelable-versus-hideable line), which is a
-different cut than the suppression proposition's removal-versus-addition
-boundary.
+The defensible claim is narrower: observed facts, faithful model computation,
+overlapping corroboration, and independent validation are distinct levels.
+Self-defining references can test agreement but do not independently validate
+the predictor that consumes them. Hideable claims remain model-relative until a
+training-disjoint, predictor-input-disjoint reference and evaluation population
+exist.
 
 ## Pointers
 
-- The formal model and the suppression proposition: [correlation.md](correlation.md), sections 1.5 and 4.3.
+- The formal model, removal proposition, and robustness research program:
+  [correlation.md](correlation.md), sections 3.4 and 5.
 - Where each claim sits on the evidence ledger: [statistical-assurance.md](statistical-assurance.md).
 - The reference-calibration result: [../validation/reference-calibration.md](../validation/reference-calibration.md).
 - The paper skeleton these notes feed: [paper-outline.md](paper-outline.md).

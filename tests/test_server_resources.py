@@ -22,7 +22,7 @@ from recon_tool.server_introspection import (
     _resource_signals,
     _resource_surface_inventory,
 )
-from recon_tool.signals import load_signals
+from recon_tool.signals import reportable_signals
 
 
 class TestFingerprintsResource:
@@ -69,8 +69,15 @@ class TestSignalsResource:
     def test_count_matches_loaded_catalog(self) -> None:
         payload = json.loads(_resource_signals())
 
-        assert payload["count"] == len(load_signals())
+        assert payload["count"] == len(reportable_signals())
         assert len(payload["signals"]) == payload["count"]
+
+    def test_omits_nonreportable_rule_identifiers(self) -> None:
+        payload = json.loads(_resource_signals())
+
+        names = {signal["name"] for signal in payload["signals"]}
+        assert "Dual Email Delivery Path" not in names
+        assert "Incomplete Identity Migration" not in names
 
     def test_entry_includes_relationships(self) -> None:
         payload = json.loads(_resource_signals())

@@ -206,7 +206,9 @@ def test_show_synthetic_slug_text_mode_documents_probe_origin() -> None:
     result = runner.invoke(app, ["fingerprints", "show", "exchange-onprem"])
 
     assert result.exit_code == 0
-    assert "Exchange Server" in result.output
+    assert "Exchange-style endpoint indicator" in result.output
+    assert "does not establish" in result.output
+    assert "server software or deployment model" in result.output
     assert "synthetic slug" in result.output
 
 
