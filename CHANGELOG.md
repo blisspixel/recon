@@ -21,8 +21,9 @@ operator, corporate group, ownership, or control.
   union expressions, representing 55 mutants, now remain in the tested
   surface. A deterministic AST test prevents a mutation pragma from covering a
   runtime union. Local preflight killed 52 of the newly tested mutants and left
-  three behaviorally unchanged under current invariants; the combined
-  655-killed, 62-survived, 8.65 percent result remains pending authoritative CI.
+  three behaviorally unchanged under current invariants. The authoritative
+  sweep confirmed 655 killed, 62 survived, and 8.65 percent survival across 717
+  tested mutants, with zero incompetent or pending jobs.
 - Strengthened the Bayesian mutation gate with exact closed-probability,
   strictly-positive likelihood, neutral marginal fallback, collection-
   opportunity, degraded-source adapter, slug extraction, and real-ratio

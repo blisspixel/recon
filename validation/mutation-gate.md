@@ -103,7 +103,7 @@ trajectory, against the false v2.1.16 "1,642 of 1,642":
 | 3 (pre-split) | 1,431 | 1,308 | 123 | 8.6% | Is/IsNot filtered, bound + penalty + absence kills |
 | 4 (post-decomposition) | 1,083 | 981 | 102 | 9.4% | bayesian.py split; v2.2 output-field + counterfactual kills |
 | 5 (collection-aware contracts) | 662 | 603 | 59 | 8.9% | exact boundaries, neutral fallbacks, opportunity masking, adapter extraction |
-| 6 (local preflight; CI pending) | 717 | 655 | 62 | 8.6% | line-scoped annotation filter; 55 runtime union mutants restored |
+| 6 (narrowed runtime scope) | 717 | 655 | 62 | 8.6% | line-scoped annotation filter; 55 runtime union mutants restored |
 
 (Round 3 run: 1,642 mutants generated, 210 filtered under the then-configured exclusions,
 1 incompetent within tolerance, so 1,431 tested.)
@@ -141,17 +141,18 @@ mutants, yielding 603 killed, 59 survived, zero incompetent, zero pending, and
 outside the helper's documented probability domain; invalid inputs were not
 used to improve the score.
 
-Round 6 narrows the filter rather than changing the score floor. Six postponed
+Round 6 is the authoritative narrowed-filter run at commit `10e4a85`:
+[GitHub Actions run 29160654831](https://github.com/blisspixel/recon/actions/runs/29160654831).
+It narrows the filter rather than changing the score floor. Six postponed
 annotation unions are marked line by line and account for 66 inert mutants;
 the explicit identity-comparison policy accounts for the other 18 skipped
-jobs. All 55 runtime BitOr mutants now execute. Local UTF-8 preflight killed 52
+jobs. All 55 runtime BitOr mutants now execute. UTF-8 preflight killed 52
 and left three behaviorally unchanged under reviewed current invariants: two
 parent-assignment unions add a node name that validation keeps distinct from
 its parents, and one counterfactual union adds a unit selected only after the
-masked set has excluded it. The combined 801-job projection is 84 skipped, 717
+masked set has excluded it. The authoritative 801-job result is 84 skipped, 717
 tested, 655 killed, 62 survived, zero incompetent, zero pending, and 8.65
-percent survival. These figures remain local evidence until the next
-authoritative GitHub run completes.
+percent survival, exactly matching the preflight.
 
 The first two rounds killed 60+ genuine survivors that were real test
 gaps the gate exposed (loaders, n_eff arithmetic, interval math,
@@ -161,7 +162,7 @@ last cheap genuine survivors (out-of-range bound checks, the conflict
 penalty constant asserted as a literal, the `absence_informative` flip).
 
 **The accepted residual (8.6% pre-split, 9.4% post-decomposition, 8.9% in
-Round 5, and 8.65% in the Round 6 local preflight) is dominated by mutants
+Round 5, and 8.65% in Round 6) is dominated by mutants
 classified as equivalent or behaviorally
 irrelevant under the documented valid-input and configuration contracts.** The
 session DB is uploaded as a CI artifact on every run, so this is checkable.
@@ -206,7 +207,7 @@ session DB is uploaded as a CI artifact on every run, so this is checkable.
 `scripts/mutation_floor.py mutation.sqlite --fail-over 12`: survival over
 **tested** mutants (killed + survived) must stay at or under 12% (kill
 score at or above 88%). The floor sits above the documented
-accepted residual (8.9% in Round 5 and 8.65% in the Round 6 local preflight)
+accepted residual (8.9% in Round 5 and 8.65% in Round 6)
 with margin, so it ratchets the current
 kill strength and fails when real coverage regresses (untested new code
 spikes survival well past the residue), without forcing tests against invalid
