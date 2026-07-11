@@ -49,7 +49,8 @@ Status: active; live MCP boundary, score wording, and parent-platform
 child-product inference corrected in Unreleased; provider summaries now share
 one evidence-aware derivation across output surfaces; Markdown service labels
 now cross one escaped output boundary and use mutually exclusive provider
-groups
+groups; confidence scoring now has a dedicated module with distinct-source,
+canonical-claim aggregation and winning-claim provenance
 Dependencies: none
 Risk: high product-trust risk, high compatibility sensitivity
 

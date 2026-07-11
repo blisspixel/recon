@@ -57,10 +57,13 @@ tests. Provider topology now also uses one evidence-aware summary across panel,
 JSON, CSV, MCP, and chain output. Source-derived Markdown service labels now
 cross an escaped output boundary, and service sections use exact,
 mutually exclusive provider grouping instead of broad substring matches. The
-wider default-claim, generated-guidance, and recommendation audit remains open.
-Current sovereignty
-handling preserves absent metadata as unknown; that invariant should remain
-explicit and tested.
+inference-confidence path now groups error-free source types and sources by
+canonical claim, so failed or unrelated provider evidence cannot corroborate
+a different claim. Duplicate result objects from one source count once, and
+explanations name the exact winning claim and qualifying evidence.
+The wider default-claim, generated-guidance, and recommendation audit remains
+open. Current sovereignty handling preserves absent metadata as unknown; that
+invariant should remain explicit and tested.
 
 Work:
 

@@ -12,7 +12,7 @@ from __future__ import annotations
 import pytest
 
 from recon_tool.merger import merge_results
-from recon_tool.models import ReconLookupError, SourceResult
+from recon_tool.models import ConfidenceLevel, ReconLookupError, SourceResult
 
 
 def _failed(name: str, error: str) -> SourceResult:
@@ -97,6 +97,29 @@ class TestPartialSuccessStillRenders:
         assert info.tenant_id is None
         assert "Cloudflare" in info.services
         assert info.queried_domain == "example.com"
+
+    def test_errored_degradation_payload_does_not_lower_confidence(self) -> None:
+        results = [
+            SourceResult(source_name="oidc_discovery", tenant_id="tid"),
+            SourceResult(source_name="user_realm", m365_detected=True, display_name="Contoso"),
+            SourceResult(
+                source_name="dns_records",
+                m365_detected=True,
+                detected_services=("Microsoft 365",),
+            ),
+            SourceResult(
+                source_name="failed_source",
+                error="upstream failed",
+                degraded_sources=("upstream",),
+            ),
+        ]
+
+        info = merge_results(results, "example.com")
+
+        assert info.confidence == ConfidenceLevel.HIGH
+        assert info.evidence_confidence == ConfidenceLevel.HIGH
+        assert info.inference_confidence == ConfidenceLevel.HIGH
+        assert info.degraded_sources == ()
 
     def test_partial_success_renders_through_cli(self) -> None:
         """Phase 2e end-to-end: the CLI should render a panel for a

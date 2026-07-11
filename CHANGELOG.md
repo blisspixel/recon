@@ -16,6 +16,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Grouped inference confidence by canonical claim. Record types and successful
+  sources for unrelated slugs no longer combine into stronger inference, and a
+  Google authentication observation no longer corroborates a separate
+  Microsoft tenant ID. Two record types or sources for one claim produce
+  medium confidence; three record types, or OIDC plus independent Microsoft
+  tenant evidence, produce high confidence. Duplicate result objects from one
+  source count once, and source results carrying an error cannot contribute
+  merged data or confidence. Google Workspace CSE evidence correctly supports
+  the canonical Google Workspace claim. All source-status views apply the same
+  error-safe contributor rule. Confidence explanations now identify the winning
+  claim, qualifying source types and sources, and only that claim's evidence.
 - Escaped source-derived service labels, posture observations, and explanation
   text at every Markdown sink using the complete CommonMark punctuation set,
   including pre-existing backslashes. Dynamic text can no longer introduce
