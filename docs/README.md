@@ -59,7 +59,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Topic | Read |
 |---|---|
 | Plain-language model overview | [how-it-works.md](how-it-works.md) |
-| Formal correlation and Bayesian model | [correlation.md](correlation.md) |
+| Formal correlation model and robustness research program | [correlation.md](correlation.md) |
 | Known weak areas and conservative wording | [weak-areas.md](weak-areas.md) |
 | Security threat model | [security.md](security.md) |
 | Audit-ready claim to mechanism to test map | [assurance-case.md](assurance-case.md) |

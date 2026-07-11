@@ -49,7 +49,8 @@ Two mechanical fixes prevent recurrence:
 ## Scope: the inference core first
 
 The mutated surface is `recon_tool/bayesian.py`: factor construction,
-variable elimination, the credible interval, and the n_eff machinery.
+variable elimination, the evidence-responsive uncertainty band, and the
+`n_eff` display-mass machinery.
 (The YAML network loaders and the result dataclasses were later split into
 `bayesian_loader.py` and `bayesian_models.py` as part of the god-file
 decomposition. They sit outside this mutation surface by design: the loaders

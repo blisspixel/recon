@@ -1,100 +1,88 @@
-# Layer ablations: what each inference layer adds, measured
+# Synthetic layer ablations
 
-Harness: `validation/layer_ablation.py` (fully synthetic, deterministic,
-publishable  -  no corpus, no network). Unit tests:
-`tests/test_layer_ablation.py`. This is the "layer ablations" experiment the
-paper outline names; the numbers below are from the committed default run
-(`--samples 20000 --seed 7`) and are reproducible by anyone.
+Interpretation reviewed 2026-07-10. Recorded measurements are unchanged.
 
-## What is being asked
+Harness: `validation/layer_ablation.py`. Tests:
+`tests/test_layer_ablation.py`. Default run: `--samples 20000 --seed 7`.
 
-recon pairs deterministic slug matching with a small Bayesian network and a
-CT co-occurrence graph layer. The architecture begs the question: what does
-each layer *add* over the simpler thing? Two experiments, each with the
-honest framing attached.
+These experiments test implementation behavior in constructed worlds. They do
+not decide whether either advanced layer improves real operator outcomes.
 
-## Experiment A  -  the Bayesian layer vs slug-matching baselines
+## Experiment A: Bayesian network versus simple score baselines
 
-Worlds are sampled from the network's own generative process (true states
-from the priors/CPTs, evidence from the likelihoods  -  the
-synthetic-calibration sampler), so this measures the inference machinery
-*under the model's own assumptions* (CAL1 discipline: not a real-world
-validity claim; those live in the reference calibrations against public
-records). Three predictors per node: the shipped posterior (`full`), the
-deterministic detection baseline (`any_fired`: present iff any binding
-fired), and `strongest_only` (the node's marginal prior updated by the
-single strongest fired binding  -  no co-evidence, no absence semantics, no
-DAG).
+The sampler draws latent states from the committed prior/CPT graph, then draws
+each evidence binding independently as a Bernoulli variable using its marginal
+likelihood. It does not implement correlation-group observation structure or
+the shipped missingness semantics. Three predictors are scored:
 
-Pooled over all 20,000 worlds (Brier; lower is better):
+- `full`: shipped Bayesian network;
+- `any_fired`: hard 1 when any binding on the node fires, otherwise 0;
+- `strongest_only`: marginal prior updated by the one fired binding with largest
+  absolute log likelihood ratio.
+
+This is an independent-Bernoulli misspecification stress test that shares
+parameters with the committed model. It is not the committed model's generative
+process. It cannot validate the model against reality or estimate the cost of
+its missingness assumptions.
+
+### Pooled Brier score
+
+Lower is better.
 
 | node | full | any-fired | strongest |
-|---|---|---|---|
-| m365_tenant | 0.1171 | 0.0476 | 0.1015 |
-| google_workspace_tenant | 0.1029 | 0.0678 | 0.0966 |
-| federated_identity | 0.1315 | 0.0655 | 0.0906 |
-| okta_idp | 0.0391 | 0.0245 | 0.0251 |
-| email_gateway_present | 0.0662 | 0.0499 | 0.0675 |
-| email_security_modern_provider | 0.2158 | 0.5565 | 0.2468 |
-| email_security_policy_enforcing | 0.0630 | 0.1522 | 0.1921 |
-| cdn_fronting | 0.1384 | 0.0379 | 0.1387 |
-| aws_hosting | 0.1509 | 0.0796 | 0.1517 |
+|---|---:|---:|---:|
+| `m365_tenant` | 0.1171 | 0.0476 | 0.1015 |
+| `google_workspace_tenant` | 0.1029 | 0.0678 | 0.0966 |
+| `federated_identity` | 0.1315 | 0.0655 | 0.0906 |
+| `okta_idp` | 0.0391 | 0.0245 | 0.0251 |
+| `email_gateway_present` | 0.0662 | 0.0499 | 0.0675 |
+| `email_security_modern_provider` | 0.2158 | 0.5565 | 0.2468 |
+| `email_security_policy_enforcing` | 0.0630 | 0.1522 | 0.1921 |
+| `cdn_fronting` | 0.1384 | 0.0379 | 0.1387 |
+| `aws_hosting` | 0.1509 | 0.0796 | 0.1517 |
 
-Fired regime only (at least one of the node's bindings fired  -  the regime
-where the predictors actually compete):
+The hard any-fired baseline wins on seven of nine nodes in the pooled synthetic
+regime. The full model wins on the propagation node and declarative policy node.
+The no-fire regime drives much of the gap because the independent-Bernoulli
+generator samples non-fire while shipped hideable-node inference ignores it.
+That is a specified generator/inference mismatch, not an estimate of an MNAR
+price and not evidence that the real world favors either rule.
+
+### Fired-only Brier score
 
 | node | n fired | full | any-fired | strongest |
-|---|---|---|---|---|
-| m365_tenant | 6,947 | 0.1235 | 0.1360 | 0.1228 |
-| google_workspace_tenant | 6,260 | 0.1677 | 0.2081 | 0.1670 |
-| federated_identity | 5,009 | 0.1290 | 0.1569 | 0.1324 |
-| okta_idp | 1,741 | 0.1568 | 0.2085 | 0.1650 |
-| email_gateway_present | 4,551 | 0.1806 | 0.2184 | 0.1860 |
-| email_security_modern_provider | 0 |  -  |  -  |  -  |
-| email_security_policy_enforcing | 15,031 | 0.0718 | 0.1902 | 0.1316 |
-| cdn_fronting | 9,771 | 0.0711 | 0.0758 | 0.0717 |
-| aws_hosting | 9,382 | 0.1393 | 0.1630 | 0.1410 |
+|---|---:|---:|---:|---:|
+| `m365_tenant` | 6,947 | 0.1235 | 0.1360 | 0.1228 |
+| `google_workspace_tenant` | 6,260 | 0.1677 | 0.2081 | 0.1670 |
+| `federated_identity` | 5,009 | 0.1290 | 0.1569 | 0.1324 |
+| `okta_idp` | 1,741 | 0.1568 | 0.2085 | 0.1650 |
+| `email_gateway_present` | 4,551 | 0.1806 | 0.2184 | 0.1860 |
+| `email_security_modern_provider` | 0 | n/a | n/a | n/a |
+| `email_security_policy_enforcing` | 15,031 | 0.0718 | 0.1902 | 0.1316 |
+| `cdn_fronting` | 9,771 | 0.0711 | 0.0758 | 0.0717 |
+| `aws_hosting` | 9,382 | 0.1393 | 0.1630 | 0.1410 |
 
-**The honest reading, which is the result:**
+The full model beats the hard baseline in the fired-only regime. The strongest
+single binding nearly ties or slightly beats the full model on several simple
+roots, including M365 and Google Workspace in this run. Most measured residual
+value appears on the policy and propagation structure. The tested any-fired
+baseline has no parent-propagation rule, so its loss on
+`email_security_modern_provider` does not prove that a Bayesian DAG is the only
+simple way to derive that claim.
 
-- **The pooled table shows the measured price of the MNAR stance.** On the
-  hideable root nodes the hard baselines beat the posterior pooled  -  almost
-  entirely from the no-fire regime, where the engine deliberately sits at
-  the prior (absence of hideable evidence is not evidence of absence) while
-  the baselines exploit the synthetic world's benign missingness, which
-  makes absence genuinely informative. That gap is not the machinery
-  losing; it is the price recon knowingly pays to avoid confident false
-  negatives on hardened real-world targets, here quantified (roughly 0.05
-  to 0.10 Brier on the dense roots).
-- **Where absence is honestly informative, conditioning on it wins
-  outright.** The declarative policy node (CAL14) reads absence as
-  evidence, and the full posterior wins pooled *and* fired (0.0630 /
-  0.0718 vs 0.1522 / 0.1902 against any-fired)  -  the asymmetric
-  missingness design demonstrated in one row.
-- **In the fired regime the full posterior beats the deterministic baseline
-  on every node.** Hedged probabilities out-score hard calls everywhere the
-  evidence actually appears.
-- **The DAG is irreplaceable for the propagation node.**
-  `email_security_modern_provider` has no bindings; slug matching simply
-  cannot address it (0.5565, worse than predicting the base rate), while
-  the CPT propagation scores 0.2158.
-- **One strong signal is nearly sufficient on simple roots.** `strongest`
-  ties `full` on m365/gws/cdn/aws in the fired regime  -  consistent with the
-  CAL7 grouping design, which deliberately reduces co-firing grouped
-  bindings to their strongest member. The fusion gain concentrates where
-  the model has structure to use: multi-signal declarative nodes and
-  DAG-derived nodes.
+The product implication is a benchmark requirement, not a victory claim. Compare
+deterministic abstention, per-slug evidence strength, strongest reviewed unit,
+and full Bayesian fusion on predictor-disjoint labels before deciding which path
+belongs in primary output.
 
-## Experiment B  -  the graph layer vs naive grouping
+## Experiment B: Louvain versus connected components
 
-Six planted org clusters of eight hosts each (12 intra-org certs per
-cluster), plus shared-CDN-style noise certs each bridging two random
-clusters. Recovered partitions scored against the planted truth with the
-adjusted Rand index (`recon_tool.infra_graph.adjusted_rand_index`, the same
-implementation behind the 2.2 `partition_stability` field):
+The generator creates six equal planted clusters of eight hosts, twelve dense
+within-cluster certificates per cluster, and a grid of two-host cross-cluster
+bridge certificates. It scores recovered partitions with adjusted Rand index.
 
-| bridging noise certs | ARI Louvain | ARI connected components |
-|---|---|---|
+| bridging certificates | ARI Louvain | ARI connected components |
+|---:|---:|---:|
 | 0 | 1.0000 | 1.0000 |
 | 2 | 1.0000 | 0.5437 |
 | 5 | 1.0000 | 0.0000 |
@@ -102,22 +90,30 @@ implementation behind the 2.2 `partition_stability` field):
 | 20 | 1.0000 | 0.0000 |
 | 40 | 1.0000 | 0.0000 |
 
-With zero noise the layers are equivalent. With even two bridging certs,
-naive grouping starts collapsing planted clusters into one blob, and by
-five it has lost the structure entirely, while Louvain holds the planted
-partition exactly across the whole grid. This is precisely the
-shared-infrastructure failure mode the EXT2 backlog item (SAN-count edge
-weighting) targets at the *edge* level; community detection already
-absorbs much of it at the *partition* level, and the ablation quantifies
-that.
+This benchmark is tailored to assortative community detection: uniform dense
+clusters are joined by sparse pairwise bridges. It demonstrates that connected
+components collapse under bridges and that Louvain recovers this planted family.
+It does not establish robustness on real certificate-transparency graphs.
 
-## Scope and limits
+Important omitted structures include:
 
-- Experiment A's truth is sampled from the model, so it cannot validate the
-  CPT values (only the reference calibrations can); it isolates the value
-  of the *machinery* given the model.
-- Experiment B's noise model (uniform two-cluster bridges) is the simplest
-  adversary; real shared-CDN certs are heavier-tailed. The result is a
-  lower bound on the failure of naive grouping, not an upper bound on
-  Louvain's robustness  -  and `partition_stability` (2.2) reports the
-  seed-consensus caveat on real graphs.
+- heavy-tailed certificate SAN counts;
+- multi-tenant hub certificates;
+- clique-projection bias;
+- missing or duplicated CT entries;
+- degree heterogeneity;
+- temporal sampling variation;
+- non-assortative or overlapping structure.
+
+Seed-sweep ARI on the observed graph tests optimizer stability only. The graph
+research gate in `docs/correlation.md` requires data resampling, alternative
+representations, a degree-aware null, and operator-supplied grouping evaluation
+before graph output can claim measured product value.
+
+## Decision
+
+Both experiments remain useful misspecification, regression, and falsification
+scaffolds. Neither
+meets the roadmap's product-quality decision rule. Advanced inference and graph
+machinery must not expand until the predeclared external benchmark establishes a
+named operator benefit over simpler evidence plus abstention.

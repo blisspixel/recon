@@ -1,14 +1,13 @@
-"""Tests for the positive_when_absent hardening observation engine.
+"""Tests for the legacy positive_when_absent comparison-set engine.
 
 Covers:
 - Signal schema parses positive_when_absent correctly.
 - evaluate_positive_absence fires only when the parent signal fires AND
   none of the listed slugs are detected.
-- Hedged two-sided language is present in the emitted description.
+- Bounded non-observation language is present in the emitted description.
 - The observation does NOT fire when any one of the listed slugs is present.
-- Signals without positive_when_absent never produce hardening observations.
-- Built-in Edge Layering signal fires a hardening observation on a proxy-only
-  target and does not on a target with consumer SaaS.
+- Signals without positive_when_absent never produce absence observations.
+- No built-in rule uses this context-poor comparison feature.
 """
 
 from __future__ import annotations
@@ -58,15 +57,9 @@ class TestSchema:
         assert sig.positive_when_absent == ()
 
     def test_loads_from_yaml(self):
-        """Edge Layering signal in built-in data/signals.yaml carries
-        positive_when_absent entries after v0.9.3."""
+        """Built-in rules do not infer meaning from generic non-observation."""
         reload_signals()
-        sigs = {s.name: s for s in load_signals()}
-        edge = sigs["Edge Layering"]
-        assert edge.positive_when_absent
-        # The canonical consumer SaaS exclusion set must include these.
-        assert "slack" in edge.positive_when_absent
-        assert "notion" in edge.positive_when_absent
+        assert not any(signal.positive_when_absent for signal in load_signals())
 
 
 # ── Evaluation ──────────────────────────────────────────────────────────
@@ -86,8 +79,8 @@ class TestEvaluation:
         fired = [SignalMatch(name="P", category="Test", confidence="high", matched=("a", "b"))]
         out = evaluate_positive_absence(fired, (parent,), frozenset({"a", "b"}))
         assert len(out) == 1
-        assert "P \u2014 Hardening Pattern Observed" in _names(out)
-        assert out[0].category == "Hardening Observation"
+        assert "P: Configured Indicators Not Observed" in _names(out)
+        assert out[0].category == "Absence"
         assert out[0].confidence == "low"
 
     def test_does_not_fire_when_any_listed_slug_present(self):
@@ -101,7 +94,7 @@ class TestEvaluation:
             positive_when_absent=("consumer-x", "consumer-y"),
         )
         fired = [SignalMatch(name="P", category="Test", confidence="high", matched=("a",))]
-        # consumer-x present — disqualifies the hardening reading
+        # A listed comparison indicator disqualifies the absence observation.
         out = evaluate_positive_absence(fired, (parent,), frozenset({"a", "consumer-x"}))
         assert out == []
 
@@ -115,7 +108,7 @@ class TestEvaluation:
             min_matches=1,
             positive_when_absent=("consumer",),
         )
-        # Parent not in fired list — no hardening observation
+        # Parent not in fired list, so there is no derived observation.
         out = evaluate_positive_absence([], (parent,), frozenset({"a"}))
         assert out == []
 
@@ -132,7 +125,7 @@ class TestEvaluation:
         out = evaluate_positive_absence(fired, (parent,), frozenset({"a"}))
         assert out == []
 
-    def test_description_is_two_sided_hedged(self):
+    def test_description_is_bounded_and_non_inferential(self):
         parent = Signal(
             name="P",
             category="Test",
@@ -145,13 +138,11 @@ class TestEvaluation:
         fired = [SignalMatch(name="P", category="Test", confidence="high", matched=("a",))]
         out = evaluate_positive_absence(fired, (parent,), frozenset({"a"}))
         desc = out[0].description.lower()
-        # Must include the alternative readings
-        assert "dormant" in desc or "parked" in desc
-        assert "small shop" in desc
-        # Must be hedged
-        assert "observation" in desc or "not a verdict" in desc
+        assert "bounded non-observation" in desc
+        assert "does not establish" in desc
+        assert not any(term in desc for term in ("hardening", "dormant", "parked", "small shop"))
 
-    def test_name_has_hardening_suffix(self):
+    def test_name_has_configured_absence_suffix(self):
         parent = Signal(
             name="My Signal",
             category="Test",
@@ -164,39 +155,35 @@ class TestEvaluation:
         fired = [SignalMatch(name="My Signal", category="Test", confidence="high", matched=("a",))]
         out = evaluate_positive_absence(fired, (parent,), frozenset({"a"}))
         assert out[0].name.startswith("My Signal")
-        assert "Hardening Pattern Observed" in out[0].name
+        assert "Configured Indicators Not Observed" in out[0].name
 
 
-# ── End-to-end with built-in Edge Layering ──────────────────────────────
+# ── End-to-end retirement for built-in Edge Layering ───────────────────
 
 
 class TestEdgeLayeringIntegration:
-    def test_fires_on_proxy_only_target(self):
-        """Two CDN providers present, no consumer SaaS — should emit
-        hardening observation."""
+    def test_does_not_infer_hardening_on_proxy_only_target(self):
         reload_signals()
         ctx = _ctx({"cloudflare", "akamai"})
         fired = evaluate_signals(ctx)
         observations = evaluate_positive_absence(fired, load_signals(), ctx.detected_slugs)
-        assert any("Edge Layering" in m.name and "Hardening Pattern Observed" in m.name for m in observations)
+        assert observations == []
 
     def test_does_not_fire_when_consumer_saas_present(self):
-        """Edge layering with Slack detected — hardening reading is
-        disqualified because Slack is a consumer SaaS indicator."""
+        """No built-in comparison observation fires with extra SaaS either."""
         reload_signals()
         ctx = _ctx({"cloudflare", "akamai", "slack"})
         fired = evaluate_signals(ctx)
         observations = evaluate_positive_absence(fired, load_signals(), ctx.detected_slugs)
-        assert not any("Edge Layering" in m.name and "Hardening Pattern Observed" in m.name for m in observations)
+        assert observations == []
 
     def test_does_not_fire_without_edge_layering(self):
-        """Only one CDN — Edge Layering does not fire, so no
-        hardening observation regardless of consumer SaaS."""
+        """Only one edge indicator also yields no comparison observation."""
         reload_signals()
         ctx = _ctx({"cloudflare"})
         fired = evaluate_signals(ctx)
         observations = evaluate_positive_absence(fired, load_signals(), ctx.detected_slugs)
-        assert not any("Hardening Pattern Observed" in m.name for m in observations)
+        assert observations == []
 
 
 # ── Invalid YAML handling ───────────────────────────────────────────────

@@ -6,7 +6,7 @@ If you are an AI agent reading this in a recon-aware project: this is how to use
 
 ## What recon is
 
-Passive domain intelligence. Given an apex domain, recon returns hedged observations about an organization's public technology stack and identity posture using public DNS, certificate transparency, and unauthenticated identity-discovery endpoints. No credentials, no API keys, no active probing. recon ships as a CLI and an MCP server.
+Public-metadata domain intelligence. Given an apex domain, recon returns hedged observations about that queried public namespace and its evidence-linked service and identity indicators. It uses public DNS, certificate transparency, and unauthenticated identity-discovery endpoints without credentials or API keys. Default collection performs no active scanning or port probing: authoritative DNS may observe resolver traffic, and MTA-STS is the only default target-owned HTTP/application request. Google CSE and BIMI certificate requests are explicit opt-in direct probes. recon ships as a CLI and an MCP server.
 
 ## When to reach for recon
 
@@ -23,7 +23,7 @@ Do not use recon for:
 - Active scanning, port scans, or credentialed inventory.
 - Vulnerability assessment or exploit checks.
 - Company financials, news, hiring signals, or firmographic data.
-- Anything that would require touching the target's own servers beyond reading their published DNS records and the standards-compliant `mta-sts.{domain}` endpoint.
+- Generic target-owned application crawling. The only direct target interactions are the standards-compliant `mta-sts.{domain}` request on the default path and the documented CSE / BIMI certificate probes when explicitly enabled.
 
 If the user wants a verdict like "is this company secure," recon is not that tool. It surfaces observations; the user supplies the judgment.
 
@@ -82,23 +82,22 @@ recon "<domain>"
 Contoso Ltd
 contoso.com
 ──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)
+  Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
-  Auth         Federated (Entra ID + Google Workspace)
+  Auth         Federated
   Confidence   ●●● High (4 sources)
 
 Services
-  Email          Microsoft 365, Google Workspace, Proofpoint, DMARC, DKIM,
-                 SPF: strict (-all), BIMI
-  Identity       Okta, Google Workspace (managed identity)
+  Email          Microsoft 365, Proofpoint, DMARC, DKIM, SPF: strict (-all), BIMI
+  Identity       Okta, Entra ID
   Cloud          Cloudflare (CDN), AWS Route 53 (DNS)
   Security       Wiz, CAA: 3 issuers restricted
   Collaboration  Slack, Atlassian (Jira/Confluence)
 
 Insights
-  Federated identity indicators observed (likely Okta, enterprise SSO)
-  Email security 4/5: DMARC reject, DKIM, SPF strict, BIMI
-  Email gateway: Proofpoint in front of Exchange
+  Federated identity observed; identity-vendor indicators: Okta
+  Email security: observed controls: DMARC reject, DKIM, SPF strict, BIMI
+  MX gateway observed: Proofpoint
 ```
 
 That is the shape recon emits. Pass it through unchanged.
@@ -126,7 +125,7 @@ If the user later asks for a structured summary of the JSON, follow the output-v
 
 ### Explain mode: `--explain`
 
-Use when the user asks "why", "how do you know", or "show your reasoning". The CLI emits the panel plus a provenance DAG (`evidence → slug → rule → signal → insight`). The MCP `lookup_tenant(domain, explain=true)` returns the same chain as a structured `explanation_dag` field for programmatic consumption.
+Use when the user asks "why", "how do you know", or "show your reasoning". The CLI emits the panel plus a reconstructed provenance DAG. Evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. The MCP `lookup_tenant(domain, explain=true)` returns the graph as a structured `explanation_dag` field with explicit completeness diagnostics. Some insight and posture associations are reconstructed from rendered text or proxy rule matches, so reachability does not prove exact generation-time lineage.
 
 Surface the *summary* of the chain (which evidence drove which insight) rather than dumping the full DAG. Offer the full DAG on follow-up.
 
@@ -140,7 +139,7 @@ When the `recon` MCP server is connected, use it instead of shelling out; it ret
 - `find_hardening_gaps(domain)`: categorized gaps with neutral "Consider" notes.
 - `simulate_hardening(domain, fixes=[...])`: what-if scoring with hypothetical fixes applied.
 - `compare_postures(domain_a, domain_b)`: side-by-side comparison of public configuration evidence, not overall security.
-- `cluster_verification_tokens(domains=[...])`: group domains by shared TXT site-verification tokens (hedged "possible relationship" signal).
+- `cluster_verification_tokens(domains=[...])`: report exact administrative TXT token reuse while leaving shared administration, copied configuration, managed service, and stale residue as compatible explanations.
 - `chain_lookup(domain, depth)`: recursive related-domain discovery via CNAME and CT breadcrumbs.
 
 Browse `recon://fingerprints`, `recon://signals`, and `recon://profiles` resources before guessing what recon can detect; they're free (no network) and return the live catalog.
@@ -148,7 +147,7 @@ Browse `recon://fingerprints`, `recon://signals`, and `recon://profiles` resourc
 CLI fallbacks when the MCP server is not connected:
 
 - `recon <domain> --json`: structured output.
-- `recon <domain> --explain`: full reasoning and provenance DAG.
+- `recon <domain> --explain`: retained evidence paths and a reconstructed provenance DAG.
 - `recon batch <file> --json`: list of domains with cross-domain token clustering.
 - `recon delta <domain>`: diff against the last cached snapshot. Relay verbatim like the default panel.
 
@@ -163,7 +162,7 @@ Single-domain assessment (the common case):
 
 Vendor diligence across many domains:
 
-1. `cluster_verification_tokens` over the list to find shared-credential clusters.
+1. `cluster_verification_tokens` over the list to find exact token-reuse groups.
 2. `lookup_tenant` only the domains the user wants to drill into; don't fan out unprompted.
 
 Family-of-companies / portfolio rollup:
@@ -172,7 +171,7 @@ The operator supplies a group of related apexes (parent + subsidiaries, an M&A t
 
 1. **Confirm the input list explicitly.** Ask for the apexes one per line; do not derive them from a company name or external research. The operator's list is authoritative.
 2. **Fan out.** For ~5 or fewer apexes, call `lookup_tenant(domain, explain=true)` per apex. For larger sets, `recon batch <file> --json --include-ecosystem` returns the per-domain lookups plus the v1.8 ecosystem hypergraph and cross-domain token clustering in one payload.
-3. **Sanity-check the asserted relationship.** `cluster_verification_tokens(domains=[...])` surfaces shared TXT verification tokens, a hedged "consistent with stated relationship" signal. Their absence is also worth reporting: *"no shared verification tokens observed; the brands appear administratively separate at the DNS level."*
+3. **Report administrative token overlap without validating the relationship.** `cluster_verification_tokens(domains=[...])` surfaces exact shared TXT token strings. Reuse is compatible with shared administration, copied configuration, managed service, or stale residue. Absence is non-informative because publication is optional; do not call the domains administratively separate.
 4. **Synthesize the rollup along these axes:**
    - Identity stack consistency: same M365 tenant across siblings, or distinct tenants per brand?
    - Email gateway consistency: same Proofpoint / Mimecast / Cisco upstream, mixed, or none?
@@ -184,7 +183,7 @@ The operator supplies a group of related apexes (parent + subsidiaries, an M&A t
 Tracking change over time:
 
 1. `recon delta <domain>` (CLI) compares the current resolution against the cached snapshot at `~/.recon/cache/`. The output is a `DeltaReport` (see `$defs/DeltaReport` in `docs/recon-schema.json`) with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.
-2. **First-run case.** A domain that has never been resolved on this machine has no baseline. `recon delta` returns an empty diff in that case; surface this explicitly ("no prior snapshot, this is the first lookup, so nothing to compare against") rather than reporting "no changes" as if change had been ruled out.
+2. **First-run case.** A domain that has never been resolved on this machine has no baseline. `recon delta` reports "No cached snapshot," asks the operator to run the ordinary lookup first, and exits with code 3 without emitting a delta. Surface that no-baseline state rather than reporting "no changes."
 
 ## Picking a profile
 
@@ -211,7 +210,7 @@ recon's voice is **hedged observation**, not verdict. Mirror that voice when rep
 - Say "DMARC policy is `p=none`" or "no DMARC record observed", not "this domain is vulnerable."
 - Say "Microsoft 365 tenant observed; identity is federated", not "they use Okta" unless the IdP is explicitly named in the output (`google_idp_name` or evidence-backed insight).
 - Say "passive observation only; there may be additional controls not visible in DNS" when summarizing posture, especially on sparse results.
-- Surface the `confidence` field. `low` confidence with thin sources means "DNS is sparse for this org," not "this org is suspicious."
+- Surface the `confidence` field. `low` confidence with thin sources means "public evidence is sparse for this queried namespace," not that the domain or any organization behind it is suspicious.
 - Cite the evidence type when stating a fingerprint: MX, TXT, CNAME, NS, SRV, CAA, SPF, certificate SAN. Don't just assert.
 - Never claim a vulnerability is *confirmed*. recon does not test exploitability. A missing DMARC record is a missing record; what it implies is a separate conversation.
 
@@ -249,7 +248,7 @@ Ephemeral fingerprints live only in the current MCP session and are quota-bounde
 
 ## Hard rules
 
-- recon is **passive**. Never claim it confirmed an active service, a running version, or an exploitable vulnerability. It infers from public records.
+- recon is **passive in scope**: it does not scan ports, crawl target applications, use credentials, or test exploitability. Default DNS can be visible to authoritative infrastructure, MTA-STS is the one default target-owned HTTP/application request, and the documented CSE / BIMI direct probes require explicit opt-in. Never claim recon confirmed an active service, a running version, or an exploitable vulnerability.
 - Fingerprints are **probabilistic**. Detection scores (`low` / `medium` / `high`) reflect evidence corroboration, not ground truth.
 - recon does **not require authorization** to query; every endpoint it touches is one anyone can hit with `dig` or a browser. Do not ask the user whether they have authorization to query a domain unless the user's stated intent suggests something other than legitimate research, due diligence, or defensive review.
 - Output uses **neutral language**. No takeover hints, maturity verdicts, or offensive guidance. Mirror this in your reply.

@@ -116,28 +116,26 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "federated-sso-hub": "Identity",
     "okta-sso-hub": "Identity",
     "adfs-sso-hub": "Identity",
-    # Exchange on-prem / hybrid slug emitted by
-    # _detect_exchange_onprem when owa./outlook./exchange.
-    # subdomains resolve. Indicates self-hosted or hybrid
-    # Exchange deployment rather than Exchange Online.
+    # Compatibility slug for conventionally named public Exchange-style
+    # endpoints. Resolution does not establish software or deployment model.
     "exchange-onprem": "Email",
-    # Synthetic slug for orgs running their own mail infrastructure
-    # (MX hosts under the queried apex or otherwise not matching any
-    # recognized cloud / gateway fingerprint).
+    # Compatibility slug for MX hosts that do not match the provider catalog.
     "self-hosted-mail": "Email",
+    "null-mx": "Email",
     # Cloud / Infrastructure
     "aws-route53": "Cloud",
     "aws-cloudfront": "Cloud",
     "aws-elb": "Cloud",
     "aws-s3": "Cloud",
     "aws-eb": "Cloud",
-    "aws-acm": "Cloud",
+    "aws-acm": "Security",
     "azure-dns": "Cloud",
     "azure-cdn": "Cloud",
     "azure-appservice": "Cloud",
     "azure-fd": "Cloud",
     "azure-tm": "Cloud",
     "gcp-dns": "Cloud",
+    "google-domains-dns": "Cloud",
     "gcp-app": "Cloud",
     "cloudflare": "Cloud",
     "akamai": "Cloud",
@@ -591,10 +589,10 @@ EMAIL_SERVICE_PREFIXES: tuple[str, ...] = (
 )
 
 # Service entries that are verification receipts,
-# domain-ownership tokens, or registrar artefacts rather than deployed
+# administrative domain-verification tokens, or registrar artefacts rather than deployed
 # products. These get filtered out of the categorized Services block
 # because showing "Google (site verified)" alongside "Google Workspace"
-# reads as if the org uses two Google products when actually it's the
+# reads as if the queried domain uses two Google products when actually it's the
 # same Search Console verification token counted twice.
 FILTERED_SERVICE_SUFFIXES: tuple[str, ...] = (
     "(site verified)",
@@ -622,6 +620,7 @@ CLOUD_SLUG_QUALIFIERS: dict[str, str] = {
     "aws-route53": "DNS",
     "azure-dns": "DNS",
     "gcp-dns": "DNS",
+    "google-domains-dns": "DNS",
     # CDN
     "aws-cloudfront": "CDN",
     "azure-cdn": "CDN",
@@ -688,11 +687,10 @@ SLUG_DISPLAY_OVERRIDES: dict[str, str] = {
     "federated-sso-hub": "SSO hub",
     "okta-sso-hub": "Okta SSO hub",
     "adfs-sso-hub": "ADFS SSO hub",
-    # Exchange on-prem / hybrid slug emitted by
-    # dns._detect_exchange_onprem. No fingerprint backs it,
-    # the display override is how the Email-row entry gets a
-    # human-readable name.
-    "exchange-onprem": "Exchange Server (on-prem / hybrid)",
+    # Source-derived endpoint and MX observations without fingerprint entries.
+    "exchange-onprem": "Exchange-style endpoint indicator",
+    "self-hosted-mail": "Custom or unclassified MX",
+    "null-mx": "Null MX (domain does not accept email)",
 }
 
 # Canonicalization from per-slug cloud entries to a single
@@ -719,7 +717,6 @@ CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
     "aws-nlb": "AWS",
     "aws-s3": "AWS",
     "aws-eb": "AWS",
-    "aws-acm": "AWS",
     "aws-ec2": "AWS",
     "aws-compute": "AWS",
     "aws-amplify": "AWS",
@@ -903,6 +900,7 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "com-laude",
         "level3",
         "dnspod",
+        "google-domains-dns",
         # cname_target batch: Cloud-categorized slugs that are
         # specialty SaaS-hosting / CDN / colo, not general multi-cloud
         # vendors. Same shape as wpengine / kinsta / pagely above.
@@ -919,4 +917,3 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "whecloud",
     }
 )
-

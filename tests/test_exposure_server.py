@@ -114,7 +114,14 @@ class TestAssessExposure:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         data = await assess_exposure("northwindtraders.com")
         obs = data["observability"]
-        assert {"score_is_lower_bound", "unconfirmable_absent_points", "score_ceiling", "note"} <= set(obs)
+        assert {
+            "score_is_lower_bound",
+            "unconfirmable_absent_points",
+            "score_ceiling",
+            "unavailable_controls",
+            "note",
+        } <= set(obs)
+        assert isinstance(obs["unavailable_controls"], list)
         assert obs["unconfirmable_absent_points"] >= 0
         assert data["posture_score"] <= obs["score_ceiling"] <= 100
         assert obs["score_is_lower_bound"] == (obs["unconfirmable_absent_points"] > 0)
@@ -167,6 +174,8 @@ class TestFindHardeningGaps:
         assert "domain" in data
         assert "gaps" in data
         assert "disclaimer" in data
+        assert "unavailable_controls" in data
+        assert "degraded_sources" in data
         assert isinstance(data["gaps"], list)
         # Every gap carries the confirmability flag so an agent can tell a real
         # public-records fact from a "could not observe" (possibly false) gap.

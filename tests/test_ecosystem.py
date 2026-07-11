@@ -2,14 +2,19 @@
 
 Covers each hyperedge type:
 - top_issuer: domains sharing CT top-issuer
-- bimi_org: domains sharing BIMI VMC organization
+- legacy BIMI subject identity is never correlated
 - parent_vendor: domains with detected slugs sharing parent_vendor metadata
-- shared_slugs: pairwise slug overlap ≥2
+- shared_slugs: pairwise slug overlap of at least 3
 
 Plus invariants: empty input, single-domain input, output sorting, caps.
 """
 
 from __future__ import annotations
+
+import json
+from dataclasses import replace
+from datetime import UTC, datetime
+from pathlib import Path
 
 from recon_tool.ecosystem import (
     MAX_HYPEREDGES,
@@ -22,6 +27,7 @@ from recon_tool.models import (
     ConfidenceLevel,
     TenantInfo,
 )
+from recon_tool.sources.cert_providers import build_cert_summary
 
 
 def _info(
@@ -30,6 +36,7 @@ def _info(
     top_issuer: str | None = None,
     bimi_org: str | None = None,
     slugs: tuple[str, ...] = (),
+    degraded_sources: tuple[str, ...] = (),
 ) -> TenantInfo:
     cert_summary = None
     if top_issuer is not None:
@@ -51,6 +58,7 @@ def _info(
         slugs=slugs,
         cert_summary=cert_summary,
         bimi_identity=bimi,
+        degraded_sources=degraded_sources,
     )
 
 
@@ -93,26 +101,77 @@ class TestTopIssuer:
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "top_issuer"]
         assert edges == []
 
+    def test_tied_issuer_order_is_deterministic_through_the_public_builder(self) -> None:
+        now = datetime(2026, 7, 11, tzinfo=UTC)
+        entries = [
+            {
+                "issuer_id": issuer,
+                "issuer_name": issuer,
+                "not_before": "2026-07-01T00:00:00Z",
+                "not_after": "2026-10-01T00:00:00Z",
+            }
+            for issuer in ("Zulu CA", "Alpha CA")
+        ]
+        forward = build_cert_summary(entries, now)
+        reverse = build_cert_summary(list(reversed(entries)), now)
 
-class TestBimiOrg:
-    def test_two_domains_same_bimi_fire(self):
+        assert forward is not None
+        assert reverse is not None
+        assert forward.top_issuers == reverse.top_issuers == ("Alpha CA", "Zulu CA")
+        infos = {
+            "a.com": replace(_info("a.com"), cert_summary=forward),
+            "b.com": replace(_info("b.com"), cert_summary=reverse),
+        }
+
+        edges = [edge for edge in build_ecosystem_hyperedges(infos) if edge.edge_type == "top_issuer"]
+
+        assert len(edges) == 1
+        assert edges[0].key == "Alpha CA"
+
+
+class TestLegacyBimiOrgRetirement:
+    def test_two_domains_same_legacy_bimi_do_not_fire(self):
         infos = {
             "a.com": _info("a.com", bimi_org="Example Corp"),
             "b.com": _info("b.com", bimi_org="Example Corp"),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "bimi_org"]
-        assert len(edges) == 1
-        assert edges[0].members == ("a.com", "b.com")
-        assert edges[0].key == "Example Corp"
+        assert edges == []
 
-    def test_case_and_whitespace_normalised(self):
+    def test_case_and_whitespace_do_not_restore_legacy_identity(self):
         infos = {
             "a.com": _info("a.com", bimi_org="Example  Corp"),
             "b.com": _info("b.com", bimi_org="example corp"),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "bimi_org"]
-        assert len(edges) == 1
-        assert edges[0].members == ("a.com", "b.com")
+        assert edges == []
+
+    def test_retirement_is_input_order_invariant(self):
+        forward = {
+            "a.com": _info("a.com", bimi_org="Example  Corp"),
+            "b.com": _info("b.com", bimi_org="example corp"),
+        }
+        reverse = dict(reversed(tuple(forward.items())))
+
+        forward_edges = tuple(edge for edge in build_ecosystem_hyperedges(forward) if edge.edge_type == "bimi_org")
+        reverse_edges = tuple(edge for edge in build_ecosystem_hyperedges(reverse) if edge.edge_type == "bimi_org")
+
+        assert forward_edges == reverse_edges
+        assert forward_edges == ()
+
+    def test_public_builder_masks_unavailable_bimi_channel(self):
+        infos = {
+            "a.com": _info("a.com", bimi_org="Example Corp"),
+            "b.com": _info(
+                "b.com",
+                bimi_org="Example Corp",
+                degraded_sources=("dns:bimi",),
+            ),
+        }
+
+        edges = build_ecosystem_hyperedges(infos)
+
+        assert all(edge.edge_type != "bimi_org" for edge in edges)
 
 
 class TestParentVendor:
@@ -136,6 +195,11 @@ class TestParentVendor:
 
 
 class TestSharedSlugs:
+    def test_schema_documents_runtime_overlap_threshold(self):
+        schema = json.loads((Path(__file__).parents[1] / "docs" / "recon-schema.json").read_text(encoding="utf-8"))
+        description = schema["$defs"]["EcosystemHyperedge"]["properties"]["edge_type"]["description"]
+        assert "at least 3" in description
+
     def test_three_overlapping_slugs_fire(self):
         """MIN_SLUG_OVERLAP raised to 3 to suppress trivial pairs."""
         infos = {
@@ -146,6 +210,14 @@ class TestSharedSlugs:
         assert len(edges) == 1
         assert edges[0].members == ("a.com", "b.com")
         assert edges[0].key == "slug1,slug2,slug3"
+
+    def test_unavailable_legacy_caa_slugs_cannot_form_an_overlap_edge(self) -> None:
+        stale = ("letsencrypt", "digicert", "sectigo")
+        infos = {domain: _info(domain, slugs=stale, degraded_sources=("dns:caa",)) for domain in ("a.com", "b.com")}
+
+        edges = build_ecosystem_hyperedges(infos)
+
+        assert all(edge.edge_type != "shared_slugs" for edge in edges)
 
     def test_two_overlap_no_longer_fires(self):
         """2-slug overlap is below MIN_SLUG_OVERLAP and stays silent."""
@@ -183,6 +255,21 @@ class TestSharedSlugs:
         # overlap left — silent.
         assert edges == []
 
+    def test_baseline_denominator_includes_empty_slug_rows(self):
+        shared = ("shared-1", "shared-2", "shared-3")
+        infos = {
+            **{f"empty-{i}.com": _info(f"empty-{i}.com") for i in range(97)},
+            **{f"hit-{i}.com": _info(f"hit-{i}.com", slugs=shared) for i in range(3)},
+        }
+
+        edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "shared_slugs"]
+
+        assert {edge.members for edge in edges} == {
+            ("hit-0.com", "hit-1.com"),
+            ("hit-0.com", "hit-2.com"),
+            ("hit-1.com", "hit-2.com"),
+        }
+
     def test_pairs_not_transitive(self):
         """A∩B and B∩C fire independently; A↔C may stay silent if their
         non-baseline overlap is below the threshold."""
@@ -202,21 +289,14 @@ class TestSharedSlugs:
 
 
 class TestSortingAndCaps:
-    def test_output_sorted_by_type_then_key(self):
+    def test_output_respects_documented_type_precedence(self):
         infos = {
-            "a.com": _info("a.com", top_issuer="LE"),
-            "b.com": _info("b.com", top_issuer="LE"),
-            "c.com": _info("c.com", bimi_org="Org"),
-            "d.com": _info("d.com", bimi_org="Org"),
+            "a.com": _info("a.com", top_issuer="LE", slugs=("microsoft365",)),
+            "b.com": _info("b.com", top_issuer="LE", slugs=("github",)),
         }
         edges = build_ecosystem_hyperedges(infos)
         types_in_order = [e.edge_type for e in edges]
-        # bimi_org sorts before top_issuer alphabetically; both should appear.
-        assert "bimi_org" in types_in_order
-        assert "top_issuer" in types_in_order
-        # Within a type, keys are sorted lexicographically.
-        bimi_keys = [e.key for e in edges if e.edge_type == "bimi_org"]
-        assert bimi_keys == sorted(bimi_keys)
+        assert types_in_order == ["parent_vendor", "top_issuer"]
 
     def test_global_cap_applied(self):
         # Build many shared_slugs pairs to push past MAX_HYPEREDGES.

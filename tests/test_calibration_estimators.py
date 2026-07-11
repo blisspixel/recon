@@ -31,6 +31,29 @@ class TestEqualMassReliabilityBins:
         assert len(rows) == 2
         assert [row.count for row in rows] == [1, 1]
 
+    def test_tied_scores_are_never_split_across_bins(self) -> None:
+        predicted = [0.1] * 3 + [0.5] * 7 + [0.9] * 2
+        outcome = [0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 1, 0]
+
+        rows = equal_mass_reliability_bins(predicted, outcome, bins=4)
+
+        assert len(rows) == 3
+        assert [(row.bin_low, row.bin_high, row.count) for row in rows] == [
+            (0.1, 0.1, 3),
+            (0.5, 0.5, 7),
+            (0.9, 0.9, 2),
+        ]
+
+    def test_tie_preservation_makes_result_input_order_invariant(self) -> None:
+        predicted_a = [0.2, 0.2, 0.2, 0.8, 0.8, 0.8]
+        outcome_a = [0, 1, 0, 1, 0, 1]
+        predicted_b = list(reversed(predicted_a))
+        outcome_b = list(reversed(outcome_a))
+
+        assert equal_mass_reliability_bins(predicted_a, outcome_a, bins=4) == equal_mass_reliability_bins(
+            predicted_b, outcome_b, bins=4
+        )
+
     def test_empty_input_returns_empty_table(self) -> None:
         assert equal_mass_reliability_bins([], [], bins=10) == []
 

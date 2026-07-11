@@ -2,27 +2,53 @@
 
 from __future__ import annotations
 
+from typing import Any, cast
+
+from recon_tool.constants import SVC_BIMI, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE, SVC_MTA_STS, SVC_SPF_STRICT
 from recon_tool.insights import (
     InsightContext,
     _auth_insights,
+    _device_management_insights,
     _email_security_insights,
     _gateway_insights,
+    _google_modules_insights,
     _infrastructure_insights,
-    _license_insights,
-    _mdm_insights,
-    _migration_insights,
-    _org_size_insights,
+    _network_security_insights,
     _pki_insights,
-    _sase_insights,
-    _security_stack_insights,
+    _provider_overlap_insights,
+    _security_vendor_insights,
     _sparse_signal_insights,
+    _tenant_domain_insights,
     generate_insights,
 )
+from recon_tool.models import EvidenceRecord
 
 
 def _ctx(**kwargs) -> InsightContext:
-    defaults = {"services": set(), "slugs": set(), "auth_type": None, "dmarc_policy": None, "domain_count": 0}
+    defaults: dict[str, Any] = {
+        "services": set(),
+        "slugs": set(),
+        "auth_type": None,
+        "dmarc_policy": None,
+        "domain_count": 0,
+    }
     defaults.update(kwargs)
+    if "evidence" not in defaults:
+        evidence: list[EvidenceRecord] = []
+        for service in cast(set[str], defaults["services"]):
+            if service in {SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE}:
+                evidence.append(EvidenceRecord("DKIM", "selector response", service, "dkim"))
+            elif service == SVC_SPF_STRICT:
+                evidence.append(EvidenceRecord("SPF", "v=spf1 -all", service, "spf-strict"))
+            elif service == SVC_MTA_STS:
+                evidence.append(EvidenceRecord("MTA_STS", "v=STSv1", service, "mta-sts"))
+            elif service == SVC_BIMI:
+                evidence.append(EvidenceRecord("BIMI", "v=BIMI1", service, "bimi"))
+            elif service.startswith("DNS:"):
+                evidence.append(EvidenceRecord("NS", "ns.example.net", service, "test-dns"))
+            elif service.startswith(("CDN:", "Hosting:", "WAF:", "Google Workspace: ")):
+                evidence.append(EvidenceRecord("CNAME", "edge.example.net", service, "test-endpoint"))
+        defaults["evidence"] = tuple(evidence)
     return InsightContext.from_sets(**defaults)
 
 
@@ -66,18 +92,50 @@ class TestEmailSecurityInsights:
         insights = _email_security_insights(ctx)
         assert any("not enforced" in i for i in insights)
 
-    def test_dmarc_effective_none_suppresses_gateway_dkim_inference(self):
+    def test_gateway_does_not_substitute_for_observed_dkim(self):
         ctx = _ctx(
             slugs={"microsoft365"},
-            dmarc_policy="quarantine",
-            dmarc_effective_policy="none",
+            dmarc_policy="reject",
             email_gateway="Proofpoint",
         )
         insights = _email_security_insights(ctx)
         score_line = next(i for i in insights if i.startswith("Email security:"))
-        assert "DMARC quarantine" not in score_line
+
+        assert "DMARC reject" in score_line
         assert "DKIM (inferred" not in score_line
-        assert any("effective none" in i for i in insights)
+        assert "No DKIM at common selectors observed (other selector names may exist)" in insights
+
+    def test_google_workspace_dkim_is_recognized_as_observed(self):
+        ctx = _ctx(
+            services={"DKIM (Google Workspace)"},
+            slugs={"google-workspace"},
+            dmarc_policy="reject",
+        )
+
+        insights = _email_security_insights(ctx)
+
+        assert "DKIM" in next(i for i in insights if i.startswith("Email security:"))
+        assert not any(i.startswith("No DKIM") for i in insights)
+
+    def test_extensible_email_name_does_not_make_email_scoreable(self):
+        ctx = _ctx(
+            services={"Acme Email"},
+            slugs={"acme-email"},
+            evidence=(EvidenceRecord("TXT", "acme=token", "Acme Email", "acme-email"),),
+        )
+
+        assert _email_security_insights(ctx) == []
+
+    def test_extensible_spf_prefix_does_not_claim_spf_policy(self):
+        ctx = _ctx(
+            services={"SPF: neutral"},
+            slugs={"acme-spf"},
+            evidence=(EvidenceRecord("TXT", "acme=token", "SPF: neutral", "acme-spf"),),
+            has_mx_records=True,
+        )
+
+        summary = next(line for line in _email_security_insights(ctx) if line.startswith("Email security:"))
+        assert "SPF" not in summary
 
     def test_dmarc_effective_policy_used_in_score_line(self):
         ctx = _ctx(dmarc_policy="reject", dmarc_effective_policy="quarantine")
@@ -87,76 +145,81 @@ class TestEmailSecurityInsights:
         assert "DMARC reject" not in score_line
 
 
-class TestOrgSizeInsights:
-    def test_large(self):
-        assert any("large" in i for i in _org_size_insights(_ctx(domain_count=25)))
+class TestTenantDomainInsights:
+    def test_domain_count_is_reported_without_inferring_organization_size(self):
+        insights = _tenant_domain_insights(_ctx(domain_count=25))
 
-    def test_mid(self):
-        assert any("mid-size" in i for i in _org_size_insights(_ctx(domain_count=8)))
+        assert insights == ["Microsoft tenant discovery returned 25 domains"]
+        assert not any("enterprise" in insight.lower() or "organization" in insight.lower() for insight in insights)
 
-    def test_small(self):
-        assert any("3 domains" in i for i in _org_size_insights(_ctx(domain_count=3)))
+    def test_spf_complexity_does_not_infer_organization_size(self):
+        insights = _tenant_domain_insights(_ctx(services={"SPF complexity: large (12 includes)"}, domain_count=0))
+
+        assert insights == []
+
+    def test_multiple_tenant_domains_are_reported_exactly(self):
+        assert _tenant_domain_insights(_ctx(domain_count=3)) == ["Microsoft tenant discovery returned 3 domains"]
 
     def test_zero(self):
-        assert _org_size_insights(_ctx(domain_count=0)) == []
+        assert _tenant_domain_insights(_ctx(domain_count=0)) == []
 
 
 class TestGatewayInsights:
-    def test_proofpoint_with_exchange(self):
+    def test_mx_backed_gateway_is_reported_as_observed(self):
+        insights = _gateway_insights(_ctx(email_gateway="Proofpoint"))
+
+        assert insights == ["MX gateway observed: Proofpoint"]
+
+    def test_generic_vendor_slugs_do_not_establish_email_routing(self):
         ctx = _ctx(slugs={"microsoft365", "proofpoint"})
-        insights = _gateway_insights(ctx)
-        assert any("Proofpoint" in i and "Exchange" in i for i in insights)
 
-    def test_proofpoint_without_exchange(self):
-        ctx = _ctx(slugs={"proofpoint"})
-        insights = _gateway_insights(ctx)
-        assert any("Proofpoint" in i for i in insights)
-        assert not any("Exchange" in i for i in insights)
+        assert _gateway_insights(ctx) == []
 
 
-class TestMigrationInsights:
+class TestProviderOverlapInsights:
     def test_google_and_microsoft(self):
         ctx = _ctx(slugs={"google-workspace", "microsoft365"})
-        assert len(_migration_insights(ctx)) == 1
+        insights = _provider_overlap_insights(ctx)
 
-    def test_no_migration(self):
-        assert _migration_insights(_ctx()) == []
+        assert insights == ["Provider indicators co-observed: Google Workspace, Microsoft 365"]
+        assert not any("migration" in insight.lower() or "coexistence" in insight.lower() for insight in insights)
 
-
-class TestLicenseInsights:
-    def test_intune_federated(self):
-        ctx = _ctx(services={"Intune / MDM"}, auth_type="Federated")
-        assert any("E3/E5" in i for i in _license_insights(ctx))
-
-    def test_intune_managed(self):
-        ctx = _ctx(services={"Intune / MDM"}, auth_type="Managed")
-        assert any("E3+" in i for i in _license_insights(ctx))
+    def test_no_overlap(self):
+        assert _provider_overlap_insights(_ctx()) == []
 
 
-class TestSecurityStackInsights:
+class TestSecurityVendorInsights:
     def test_multiple_tools(self):
         ctx = _ctx(slugs={"crowdstrike", "okta"})
-        insights = _security_stack_insights(ctx)
+        insights = _security_vendor_insights(ctx)
+
+        assert insights == ["Security-vendor indicators observed: CrowdStrike (endpoint), Okta (identity)"]
         assert any("CrowdStrike" in i and "Okta" in i for i in insights)
 
 
-class TestMdmInsights:
-    def test_dual_mdm(self):
+class TestDeviceManagementInsights:
+    def test_multiple_vendor_indicators_do_not_infer_fleet_composition(self):
         ctx = _ctx(services={"Intune / MDM"}, slugs={"jamf"})
-        assert any("Dual MDM" in i for i in _mdm_insights(ctx))
+        insights = _device_management_insights(ctx)
 
-    def test_dual_mdm_kandji(self):
+        assert insights == ["Device-management vendor indicators observed: Intune, Jamf"]
+        assert not any("fleet" in insight.lower() or "windows" in insight.lower() for insight in insights)
+
+    def test_intune_and_kandji(self):
         ctx = _ctx(services={"Intune / MDM"}, slugs={"kandji"})
-        insights = _mdm_insights(ctx)
-        assert any("Dual MDM" in i and "Kandji" in i for i in insights)
+        assert _device_management_insights(ctx) == ["Device-management vendor indicators observed: Intune, Kandji"]
 
     def test_jamf_only(self):
         ctx = _ctx(slugs={"jamf"})
-        assert any("Jamf" in i for i in _mdm_insights(ctx))
+        assert _device_management_insights(ctx) == ["Device-management vendor indicator observed: Jamf"]
 
     def test_kandji_only(self):
         ctx = _ctx(slugs={"kandji"})
-        assert any("Kandji" in i for i in _mdm_insights(ctx))
+        assert _device_management_insights(ctx) == ["Device-management vendor indicator observed: Kandji"]
+
+    def test_intune_only(self):
+        ctx = _ctx(services={"Intune / MDM"})
+        assert _device_management_insights(ctx) == ["Device-management vendor indicator observed: Intune"]
 
 
 class TestInfrastructureInsights:
@@ -172,20 +235,24 @@ class TestSparseSignalInsights:
         insights = _sparse_signal_insights(ctx)
         assert any("edge-heavy footprint" in i for i in insights)
         assert any("docs/weak-areas.md" in i for i in insights)
+        assert any("recon <domain> --chain --depth 2" in i for i in insights)
+        assert not any("DNS-only" in i or "passive DNS" in i for i in insights)
 
-    def test_custom_mail_sparse_domain_gets_self_hosted_diagnosis(self):
+    def test_custom_mail_sparse_domain_gets_unclassified_mx_diagnosis(self):
         ctx = _ctx(
-            services={"Self-hosted mail", "DMARC"},
+            services={"Custom or unclassified MX", "DMARC"},
             slugs={"self-hosted-mail"},
             has_mx_records=True,
         )
         insights = _sparse_signal_insights(ctx)
-        assert any("self-hosted mail infrastructure" in i for i in insights)
+        assert any("custom or unclassified MX" in i for i in insights)
+        assert not any("self-hosted" in i.lower() or "hybrid" in i.lower() for i in insights)
 
     def test_minimal_public_dns_domain_gets_minimal_dns_diagnosis(self):
         ctx = _ctx(services={"DMARC"})
         insights = _sparse_signal_insights(ctx)
         assert any("minimal public DNS footprint" in i for i in insights)
+        assert not any("small" in i.lower() or "holding" in i.lower() or "portfolio" in i.lower() for i in insights)
 
     def test_dense_domain_does_not_get_sparse_diagnosis(self):
         ctx = _ctx(
@@ -211,27 +278,33 @@ class TestGenerateInsightsIntegration:
             dmarc_policy="reject",
             domain_count=25,
         )
-        # Should have auth, email security, org size, gateway, license, security stack
-        assert len(insights) >= 5
+        assert any(insight == "Microsoft tenant discovery returned 25 domains" for insight in insights)
+        assert any(insight == "MX gateway observed: Proofpoint" for insight in insights) is False
+        assert any("Security-vendor indicators observed:" in insight for insight in insights)
+        assert any(insight == "Device-management vendor indicator observed: Intune" for insight in insights)
+        assert not any("E3" in insight or "E5" in insight or "license" in insight.lower() for insight in insights)
 
 
 class TestAuthInsightsWithIdP:
     def test_federated_with_okta_detected(self):
         ctx = _ctx(auth_type="Federated", slugs={"okta"})
         insights = _auth_insights(ctx)
-        assert any("Okta" in i for i in insights)
-        # Should say "indicators observed (likely Okta)" — not the generic ADFS/Okta/Ping fallback
-        assert any("indicators observed" in i for i in insights)
+
+        assert insights == ["Federated identity observed; identity-vendor indicators: Okta"]
+        assert not any("likely" in insight.lower() or " via " in insight.lower() for insight in insights)
 
     def test_federated_with_duo_detected(self):
         ctx = _ctx(auth_type="Federated", slugs={"duo"})
         insights = _auth_insights(ctx)
-        assert any("Duo" in i for i in insights)
 
-    def test_federated_without_idp_is_generic(self):
+        assert insights == ["Federated identity observed; identity-vendor indicators: Duo"]
+
+    def test_federated_without_idp_vendor_does_not_guess(self):
         ctx = _ctx(auth_type="Federated")
         insights = _auth_insights(ctx)
-        assert any("likely" in i for i in insights)
+
+        assert insights == ["Federated identity observed; external IdP not identified"]
+        assert not any(vendor in insight for insight in insights for vendor in ("ADFS", "Okta", "Ping"))
 
     def test_federated_with_cisco_identity_does_not_claim_cisco_idp(self):
         # cisco-identity matches any TXT of the form cisco-ci-domain-verification=*.
@@ -242,28 +315,40 @@ class TestAuthInsightsWithIdP:
         ctx = _ctx(auth_type="Federated", slugs={"cisco-identity"})
         insights = _auth_insights(ctx)
         assert not any("Cisco" in i for i in insights)
-        assert any("ADFS/Okta/Ping" in i for i in insights)
+        assert insights == ["Federated identity observed; external IdP not identified"]
 
 
-class TestSaseInsights:
+class TestGoogleModuleInsights:
+    def test_module_names_remain_observed_indicators(self):
+        ctx = _ctx(services={"Google Workspace: Drive", "Google Workspace: Groups"})
+
+        insights = _google_modules_insights(ctx)
+
+        assert insights == ["Google Workspace module indicators observed: Drive, Groups"]
+        assert not any("active" in insight.lower() or "enabled" in insight.lower() for insight in insights)
+
+
+class TestNetworkSecurityInsights:
     def test_zscaler_detected(self):
         ctx = _ctx(slugs={"zscaler"})
-        insights = _sase_insights(ctx)
-        assert any("Zscaler" in i for i in insights)
+        insights = _network_security_insights(ctx)
+        assert insights == ["Network-security vendor indicator observed: Zscaler"]
 
     def test_netskope_detected(self):
         ctx = _ctx(slugs={"netskope"})
-        insights = _sase_insights(ctx)
-        assert any("Netskope" in i for i in insights)
+        insights = _network_security_insights(ctx)
+        assert insights == ["Network-security vendor indicator observed: Netskope"]
 
-    def test_multi_vendor_sase(self):
+    def test_multiple_vendor_indicators_do_not_infer_deployment(self):
         ctx = _ctx(slugs={"zscaler", "netskope"})
-        insights = _sase_insights(ctx)
-        assert any("multi-vendor" in i for i in insights)
+        insights = _network_security_insights(ctx)
 
-    def test_no_sase(self):
+        assert insights == ["Network-security vendor indicators observed: Zscaler, Netskope"]
+        assert not any("SASE" in insight or "ZTNA" in insight or "deployment" in insight for insight in insights)
+
+    def test_no_vendor_indicator(self):
         ctx = _ctx(slugs={"crowdstrike"})
-        assert _sase_insights(ctx) == []
+        assert _network_security_insights(ctx) == []
 
 
 class TestPkiInsights:
@@ -280,36 +365,39 @@ class TestPkiInsights:
     def test_no_caa(self):
         assert _pki_insights(_ctx()) == []
 
+    def test_globalsign_txt_verification_is_not_a_caa_choice(self):
+        assert _pki_insights(_ctx(slugs={"globalsign"})) == []
+
 
 class TestExpandedSecurityStack:
     def test_sentinelone_in_stack(self):
         ctx = _ctx(slugs={"sentinelone", "okta"})
-        insights = _security_stack_insights(ctx)
+        insights = _security_vendor_insights(ctx)
         assert any("SentinelOne" in i for i in insights)
 
     def test_netskope_in_stack(self):
         ctx = _ctx(slugs={"netskope", "crowdstrike"})
-        insights = _security_stack_insights(ctx)
+        insights = _security_vendor_insights(ctx)
         assert any("Netskope" in i for i in insights)
 
     def test_1password_in_stack(self):
         ctx = _ctx(slugs={"1password", "okta"})
-        insights = _security_stack_insights(ctx)
+        insights = _security_vendor_insights(ctx)
         assert any("1Password" in i for i in insights)
 
 
 class TestExpandedGateway:
     def test_symantec_gateway(self):
-        ctx = _ctx(slugs={"symantec", "microsoft365"})
+        ctx = _ctx(email_gateway="Symantec/Broadcom")
         insights = _gateway_insights(ctx)
         assert any("Symantec" in i for i in insights)
 
     def test_trellix_gateway(self):
-        ctx = _ctx(slugs={"trellix"})
+        ctx = _ctx(email_gateway="Trellix (FireEye)")
         insights = _gateway_insights(ctx)
         assert any("Trellix" in i for i in insights)
 
     def test_cisco_email_gateway(self):
-        ctx = _ctx(slugs={"cisco-email", "microsoft365"})
+        ctx = _ctx(email_gateway="Cisco Secure Email")
         insights = _gateway_insights(ctx)
         assert any("Cisco Secure Email" in i for i in insights)

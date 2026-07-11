@@ -173,7 +173,7 @@ class TestExplainSignal:
         from recon_tool.server import explain_signal
 
         result = await explain_signal("AI Adoption")
-        assert result["name"] == "AI Adoption"
+        assert result["name"] == "AI-platform indicators observed"
         assert "trigger_conditions" in result
         assert "weakening_conditions" in result
         # No domain → no "fired" or "matched_evidence" key
@@ -218,16 +218,15 @@ class TestHypothesis:
         ):
             assert key in result, f"missing key: {key}"
         assert result["domain"] == "contoso.com"
-        assert result["likelihood"] in {"strong", "moderate", "weak", "unsupported"}
+        assert result["likelihood"] == "unresolved"
         assert result["confidence"] in {"high", "medium", "low"}
 
     @pytest.mark.asyncio
-    async def test_unsupported_when_no_relevant_signals(self, mocked_resolve) -> None:
+    async def test_unresolved_when_no_relevant_signals(self, mocked_resolve) -> None:
         from recon_tool.server import test_hypothesis
 
         result = await test_hypothesis("contoso.com", "this organization is using a quantum SaaS")
-        # No matching signals → unsupported
-        assert result["likelihood"] == "unsupported"
+        assert result["likelihood"] == "unresolved"
 
     @pytest.mark.asyncio
     async def test_disclaimer_always_present(self, mocked_resolve) -> None:
@@ -235,6 +234,51 @@ class TestHypothesis:
 
         result = await test_hypothesis("contoso.com", "they use cloud identity")
         assert "indicators" in result["disclaimer"].lower()
+
+    @pytest.mark.asyncio
+    async def test_public_signal_copy_is_safe_and_nonreportable_rules_are_omitted(self) -> None:
+        from recon_tool.server import test_hypothesis
+
+        async def fake(domain: str):
+            return _info(
+                queried_domain=domain,
+                services=(),
+                slugs=("openai", "okta"),
+                auth_type=None,
+            ), _results()
+
+        with patch("recon_tool.server_app.resolve_or_cache", side_effect=fake):
+            result = await test_hypothesis("contoso.com", "AI identity migration")
+
+        public_copy = "\n".join(
+            [
+                *result["supporting_signals"],
+                *result["contradicting_signals"],
+                *result["missing_evidence"],
+            ]
+        )
+        assert "AI-platform indicators observed" in public_copy
+        assert "AI Adoption" not in public_copy
+        assert "Incomplete Identity Migration" not in public_copy
+
+    @pytest.mark.asyncio
+    async def test_lone_openai_verification_cannot_resolve_active_use(self) -> None:
+        from recon_tool.server import test_hypothesis
+
+        async def fake(domain: str):
+            return _info(
+                queried_domain=domain,
+                services=(),
+                slugs=("openai",),
+                auth_type=None,
+            ), _results()
+
+        with patch("recon_tool.server_app.resolve_or_cache", side_effect=fake):
+            result = await test_hypothesis("contoso.com", "the organization actively uses OpenAI")
+
+        assert result["likelihood"] == "unresolved"
+        assert result["supporting_signals"] == ["AI-platform indicators observed"]
+        assert "active use" in result["disclaimer"]
 
 
 # ── simulate_hardening ───────────────────────────────────────────────

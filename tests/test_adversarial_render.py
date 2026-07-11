@@ -30,7 +30,7 @@ from __future__ import annotations
 from rich.console import Console
 
 from recon_tool.formatter import render_tenant_panel
-from recon_tool.models import ConfidenceLevel, SurfaceAttribution, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, SurfaceAttribution, TenantInfo
 
 
 def _render(info: TenantInfo, **kwargs: object) -> str:
@@ -185,6 +185,14 @@ class TestLargeInputs:
         info = _make_tenant(
             slugs=("aws-cloudfront", "fastly"),
             services=("AWS CloudFront", "Fastly"),
+            evidence=(
+                EvidenceRecord(
+                    "CNAME",
+                    "www.contoso.com -> d111111abcdef8.cloudfront.net",
+                    "AWS CloudFront",
+                    "aws-cloudfront",
+                ),
+            ),
             surface_attributions=many_attribs,
         )
         out = _render(info)

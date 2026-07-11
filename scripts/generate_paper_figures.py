@@ -346,6 +346,7 @@ def render_calibration_reliability() -> str:
                 "DMARC bins pool Lists A, B, and C.",
                 "M365 bins show the published A and B low and high bins.",
                 "Diagonal line is perfect reliability.",
+                "Dependency-qualified, not independent calibration.",
             ],
             690,
             170,
@@ -357,11 +358,11 @@ def render_calibration_reliability() -> str:
     body.append(_text((724, 347), "DMARC full posterior", size=14))
     body.append(_rect((690, 365), (22, 22), COLORS["purple"], COLORS["purple"]))
     body.append(_text((724, 382), "M365 DNS-only predictor", size=14))
-    return _svg(980, 610, body, title="Calibration reliability bins")
+    return _svg(980, 610, body, title="Selected-list reliability bins")
 
 
 def render_interval_width() -> str:
-    body = [_text((40, 45), "Figure 4. Interval width falls as effective evidence rises", size=24, weight=700)]
+    body = [_text((40, 45), "Figure 4. Observed band width by display-mass bucket", size=24, weight=700)]
     left, top, width, height = 95.0, 95.0, 650.0, 380.0
     buckets = ["ceiling", "5-6", "7-9"]
     grouped = [0.552, 0.193, 0.050]
@@ -399,8 +400,8 @@ def render_interval_width() -> str:
     for index, label in enumerate(buckets):
         x = left + 90 + index * 230
         body.append(_text((x, top + height + 32), label, size=14, anchor="middle"))
-    body.append(_text((left + width / 2, top + height + 62), "Effective evidence bucket", size=14, anchor="middle"))
-    body.append(_text((28, top + height / 2), "Mean 80% interval width", size=14, anchor="middle"))
+    body.append(_text((left + width / 2, top + height + 62), "Effective display-mass bucket", size=14, anchor="middle"))
+    body.append(_text((28, top + height / 2), "Mean 80% uncertainty-band width", size=14, anchor="middle"))
     body.append(_rect((805, 145), (22, 22), COLORS["blue"], COLORS["blue"]))
     body.append(_text((840, 162), "Grouped nodes", size=14))
     body.append(_rect((805, 180), (22, 22), COLORS["amber"], COLORS["amber"]))
@@ -411,6 +412,7 @@ def render_interval_width() -> str:
                 "Values are means across public Lists A, B, and C.",
                 "Grouped nodes stay wider at matched low evidence.",
                 "The 7-9 ungrouped bucket is empty in the public lists.",
+                "Descriptive only: no monotonicity or coverage claim.",
             ],
             805,
             245,
@@ -418,7 +420,7 @@ def render_interval_width() -> str:
             step=24,
         )
     )
-    return _svg(1060, 590, body, title="Interval width vs effective evidence")
+    return _svg(1060, 590, body, title="Observed uncertainty-band width by display mass")
 
 
 def build_assets() -> dict[str, str]:

@@ -34,6 +34,7 @@ INTENTIONAL_TENANTINFO_OMISSIONS: Mapping[str, str] = {
     "dmarc_testing": "internal RFC 9989 effective-policy input, not a stable output field",
     "merge_conflicts": "serialized as top-level evidence_conflicts",
     "resolved_at": "cache metadata, not emitted by the lookup JSON formatter",
+    "spf_include_count": "internal typed SPF signal input, not a stable output field",
 }
 
 

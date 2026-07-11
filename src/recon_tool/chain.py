@@ -182,10 +182,14 @@ def _correlate_site_verification(
     When two or more domains share the same token, an insight is added
     to each domain's TenantInfo noting the relationship.
     """
-    # Build token → list of domains mapping
+    # Build token → list of domains mapping. A retained raw token from a failed
+    # apex-TXT query is diagnostic provenance, not an observed correlation.
+    from recon_tool.collection_view import collection_observable_info
+
     token_to_domains: dict[str, list[str]] = defaultdict(list)
     for r in results:
-        for token in r.info.site_verification_tokens:
+        observable = collection_observable_info(r.info)
+        for token in observable.site_verification_tokens:
             token_to_domains[token].append(r.domain)
 
     # Find tokens shared by 2+ domains

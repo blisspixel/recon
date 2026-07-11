@@ -9,13 +9,14 @@ Use this with the generic loop guardrails in
 deterministic gates, explicit stop conditions, spend tracking, and maintainer
 review for semantic changes.
 
-The premise sets the discipline: the priors and likelihoods are
-directionally-accurate, corpus-grounded estimates, not values precise to many
-decimals, and they are not meant to be. The credible interval already carries
-the residual uncertainty (see [correlation.md](correlation.md)). So the right
-posture is "grounded this release, re-checked next," not false precision. The
-loop's job is to notice when a number has moved enough to matter and surface it
-for review.
+The premise sets the discipline: priors and likelihoods are manually encoded
+model assumptions, with selected values informed by a dated development corpus.
+They are not values precise to many decimals or established population
+parameters. The evidence-responsive band does not carry their residual
+uncertainty (see [correlation.md](correlation.md)). The loop's job is to detect
+drift, run training-disjoint and predictor-input-disjoint checks where possible,
+and surface proposed model changes for review. It must not tune values merely to
+improve an overlapping or self-generated benchmark.
 
 The steps are tiered by data sensitivity, from "runs anywhere, committed and
 CI-gated" to "stays on the maintainer's machine against the gitignored corpus."

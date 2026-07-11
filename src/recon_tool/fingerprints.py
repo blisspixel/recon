@@ -389,6 +389,7 @@ _ephemeral_fingerprints: list[Fingerprint] = []
 @dataclass(slots=True)
 class _FingerprintCacheState:
     fingerprints: tuple[Fingerprint, ...] | None = None
+    catalog_fingerprints: tuple[Fingerprint, ...] | None = None
     detections: dict[str, tuple[Detection, ...]] = field(default_factory=dict)
     m365_names: frozenset[str] | None = None
     m365_slugs: frozenset[str] | None = None
@@ -407,6 +408,66 @@ _MAX_EPHEMERAL_FINGERPRINTS: int = 100
 _MAX_EPHEMERAL_DETECTIONS_PER_FINGERPRINT: int = 20
 _MAX_EPHEMERAL_DETECTIONS_TOTAL: int = 500
 _MAX_EPHEMERAL_TEXT_FIELD_LENGTH: int = 200
+
+_PARSER_OWNED_SLUGS = frozenset(
+    {
+        "adfs-sso-hub",
+        "bimi",
+        "bimi-vmc",
+        "caa",
+        "dkim",
+        "dkim-exchange",
+        "dmarc",
+        "dmarc-invalid",
+        "exchange-onprem",
+        "federated-sso-hub",
+        "google-cse",
+        "google-federated",
+        "google-managed",
+        "google-workspace-modules",
+        "mta-sts",
+        "mta-sts-enforce",
+        "null-mx",
+        "okta-sso-hub",
+        "self-hosted-mail",
+        "spf-softfail",
+        "spf-strict",
+        "tls-rpt",
+    }
+)
+
+_PARSER_OWNED_NAMES = frozenset(
+    {
+        "bimi",
+        "caa",
+        "dkim",
+        "dkim (exchange online)",
+        "dkim (google workspace)",
+        "dmarc",
+        "domain connect (azure)",
+        "domain connect (godaddy)",
+        "exchange autodiscover",
+        "google workspace cse",
+        "intune / mdm",
+        "mta-sts",
+        "microsoft teams",
+        "office proplus (msoid)",
+        "spf: softfail (~all)",
+        "spf: strict (-all)",
+        "tls-rpt",
+    }
+)
+_PARSER_OWNED_NAME_PREFIXES = (
+    "caa:",
+    "cdn:",
+    "cse key manager:",
+    "dns:",
+    "google workspace:",
+    "hosting:",
+    "microsoft 365:",
+    "spf complexity:",
+    "waf:",
+)
 
 
 class EphemeralCapacityError(RuntimeError):
@@ -448,6 +509,32 @@ def _invalidate_caches_locked() -> None:
     _cache_state.m365_slugs = None
 
 
+def _reserved_semantic_slugs() -> frozenset[str]:
+    """Return every slug whose meaning is owned by built-in claim logic."""
+    from recon_tool.posture import load_posture_rules
+    from recon_tool.signals import load_signals
+
+    load_fingerprints()
+    reserved = set(_PARSER_OWNED_SLUGS)
+    reserved.update(fp.slug for fp in _cache_state.catalog_fingerprints or ())
+    reserved.update(fp.slug for fp in _ephemeral_fingerprints)
+    for signal in load_signals():
+        reserved.update(signal.candidates)
+        reserved.update(signal.contradicts)
+        reserved.update(signal.expected_counterparts)
+    for rule in load_posture_rules():
+        reserved.update(rule.slugs_any)
+    return frozenset(reserved)
+
+
+def _reserved_semantic_names() -> frozenset[str]:
+    """Return canonical names that cannot be redefined as inventory labels."""
+    load_fingerprints()
+    reserved = set(_PARSER_OWNED_NAMES)
+    reserved.update(fingerprint.name.casefold() for fingerprint in _cache_state.catalog_fingerprints or ())
+    return frozenset(reserved)
+
+
 def inject_ephemeral(fp: Fingerprint) -> None:
     """Add a validated Fingerprint to the ephemeral collection.
 
@@ -470,6 +557,15 @@ def inject_ephemeral(fp: Fingerprint) -> None:
         detection_count=len(fp.detections),
     )
     with _ephemeral_lock:
+        if fp.slug in _reserved_semantic_slugs():
+            raise ValueError(
+                f"Fingerprint slug {fp.slug!r} already exists; ephemeral fingerprints require a unique slug."
+            )
+        normalized_name = fp.name.casefold()
+        if normalized_name in _reserved_semantic_names() or normalized_name.startswith(_PARSER_OWNED_NAME_PREFIXES):
+            raise ValueError(
+                f"Fingerprint name {fp.name!r} already has reserved semantics; choose a unique inventory label."
+            )
         if len(_ephemeral_fingerprints) >= _MAX_EPHEMERAL_FINGERPRINTS:
             raise EphemeralCapacityError(
                 f"Ephemeral fingerprint cap reached ({_MAX_EPHEMERAL_FINGERPRINTS}). "
@@ -545,28 +641,30 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
         if _cache_state.fingerprints is not None:
             return _cache_state.fingerprints
 
-        base = Path(__file__).parent / "data"
-        data_dir = base / "fingerprints"
-        data_file = base / "fingerprints.yaml"
+        if _cache_state.catalog_fingerprints is None:
+            base = Path(__file__).parent / "data"
+            data_dir = base / "fingerprints"
+            data_file = base / "fingerprints.yaml"
 
-        from recon_tool.paths import config_dir
+            from recon_tool.paths import config_dir
 
-        custom_base = config_dir()
-        custom_file = custom_base / "fingerprints.yaml"
-        custom_dir = custom_base / "fingerprints"
+            custom_base = config_dir()
+            custom_file = custom_base / "fingerprints.yaml"
+            custom_dir = custom_base / "fingerprints"
 
-        entries: list[Fingerprint] = []
-        # Built-in: prefer the split directory when present; fall back to the
-        # monolith only if the directory doesn't exist. Avoiding both-load
-        # keeps slug uniqueness tractable during the migration window.
-        if data_dir.is_dir():
-            entries.extend(_load_from_dir(data_dir))
-        else:
-            entries.extend(_load_from_path(data_file))
-        # Custom: file and directory are both valid (additive). A user might
-        # keep their legacy single-file override even after the built-in split.
-        entries.extend(_load_from_path(custom_file))
-        entries.extend(_load_from_dir(custom_dir))
+            catalog: list[Fingerprint] = []
+            # Built-in: prefer the split directory when present; fall back to
+            # the monolith only if the directory doesn't exist.
+            if data_dir.is_dir():
+                catalog.extend(_load_from_dir(data_dir))
+            else:
+                catalog.extend(_load_from_path(data_file))
+            # Custom file and directory are both additive catalog sources.
+            catalog.extend(_load_from_path(custom_file))
+            catalog.extend(_load_from_dir(custom_dir))
+            _cache_state.catalog_fingerprints = tuple(catalog)
+
+        entries = list(_cache_state.catalog_fingerprints)
         entries.extend(_ephemeral_fingerprints)
 
         result = tuple(entries)
@@ -580,6 +678,7 @@ def reload_fingerprints() -> None:
     Useful for long-lived processes (MCP server) when custom fingerprints change.
     """
     with _ephemeral_lock:
+        _cache_state.catalog_fingerprints = None
         _invalidate_caches_locked()
 
 

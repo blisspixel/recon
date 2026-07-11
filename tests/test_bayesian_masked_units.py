@@ -169,10 +169,9 @@ class TestDeclarativeMasking:
         assert _posterior(masked, _POLICY) != _posterior(unfired, _POLICY)
 
     def test_masked_unit_does_not_count_toward_n_eff(self, network: BayesianNetwork) -> None:
-        # Full: dmarc unit fired (1) + spf fired (1) = 2 -> n_eff 6.0.
-        # Masked dmarc: spf fired (1) only -> n_eff 5.0 (the masked unit is
-        # neither fired evidence nor an informative absence).
-        # Unfired dmarc: spf fired (1) + dmarc informative absence (1) -> 6.0.
+        # Full: dmarc and spf fire, while MTA-STS is observed absent, so three
+        # units produce n_eff 7.0. Masking dmarc leaves spf plus MTA-STS at
+        # n_eff 6.0. An observed dmarc absence restores the third unit.
         signals = {"dmarc_reject", "spf_strict"}
         full = _node_posterior(infer(network, set(), signals, priors_override={}), _POLICY)
         masked = _node_posterior(
@@ -180,9 +179,9 @@ class TestDeclarativeMasking:
             _POLICY,
         )
         unfired = _node_posterior(infer(network, set(), {"spf_strict"}, priors_override={}), _POLICY)
-        assert full.n_eff == pytest.approx(6.0)
-        assert masked.n_eff == pytest.approx(5.0)
-        assert unfired.n_eff == pytest.approx(6.0)
+        assert full.n_eff == pytest.approx(7.0)
+        assert masked.n_eff == pytest.approx(6.0)
+        assert unfired.n_eff == pytest.approx(7.0)
 
 
 class TestNetworkDeletionEquivalence:

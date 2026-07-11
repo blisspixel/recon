@@ -62,6 +62,7 @@ def _make_info(
     domain: str,
     site_verification_tokens: tuple[str, ...] = (),
     insights: tuple[str, ...] = (),
+    degraded_sources: tuple[str, ...] = (),
 ) -> TenantInfo:
     return TenantInfo(
         tenant_id=None,
@@ -72,6 +73,7 @@ def _make_info(
         services=("svc",),
         site_verification_tokens=site_verification_tokens,
         insights=insights,
+        degraded_sources=degraded_sources,
     )
 
 
@@ -1051,6 +1053,27 @@ class TestCorrelateSiteVerification:
         # No correlation insights should be added
         for r in updated:
             assert not any("Shares google-site-verification" in i for i in r.info.insights)
+
+    def test_unavailable_apex_txt_cannot_create_a_correlation_insight(self) -> None:
+        results = [
+            ChainResult(
+                domain=domain,
+                info=_make_info(
+                    domain,
+                    site_verification_tokens=("shared",),
+                    degraded_sources=("dns:apex_txt",),
+                ),
+                chain_depth=depth,
+            )
+            for domain, depth in (("a.com", 0), ("b.com", 1))
+        ]
+
+        updated = _correlate_site_verification(results)
+
+        assert all(
+            not any("Shares google-site-verification" in insight for insight in result.info.insights)
+            for result in updated
+        )
 
     def test_empty_results(self):
         assert _correlate_site_verification([]) == []

@@ -20,7 +20,9 @@ from recon_tool.models import (
     ChainReport,
     ChainResult,
     ConfidenceLevel,
+    DeltaComparisonIncomplete,
     DeltaReport,
+    EvidenceRecord,
     Observation,
     TenantInfo,
 )
@@ -94,6 +96,7 @@ class TestDeltaRendering:
         d = format_delta_dict(delta)
         assert d["has_changes"] is False
         assert d["domain"] == "test.com"
+        assert d["incomplete_comparison"] is None
 
     def test_format_delta_with_changes(self):
         delta = DeltaReport(
@@ -137,6 +140,61 @@ class TestDeltaRendering:
         )
         panel = render_delta_panel(delta)
         assert panel is not None
+
+    def test_incomplete_delta_is_machine_readable_and_warned(self) -> None:
+        delta = DeltaReport(
+            domain="test.com",
+            added_services=(),
+            removed_services=(),
+            added_slugs=(),
+            removed_slugs=(),
+            added_signals=(),
+            removed_signals=(),
+            incomplete_comparison=DeltaComparisonIncomplete(
+                degraded_sources=("dns:dmarc",),
+                suppressed_fields=("changed_dmarc_policy", "removed_services"),
+            ),
+        )
+
+        data = format_delta_dict(delta)
+        assert data["incomplete_comparison"] == {
+            "degraded_sources": ["dns:dmarc"],
+            "suppressed_fields": ["changed_dmarc_policy", "removed_services"],
+            "previous_degraded_sources": [],
+            "current_degraded_sources": ["dns:dmarc"],
+        }
+
+        console = Console(no_color=True, record=True, width=120)
+        console.print(render_delta_panel(delta))
+        rendered = console.export_text()
+        assert "one or both snapshot collections were incomplete" in rendered
+        assert "dependent changes were withheld" in rendered
+        assert "No confirmed changes detected" in rendered
+
+    def test_incomplete_delta_panel_distinguishes_previous_and_current(self) -> None:
+        delta = DeltaReport(
+            domain="test.com",
+            added_services=(),
+            removed_services=(),
+            added_slugs=(),
+            removed_slugs=(),
+            added_signals=(),
+            removed_signals=(),
+            incomplete_comparison=DeltaComparisonIncomplete(
+                degraded_sources=("dns:dmarc", "oidc_discovery"),
+                suppressed_fields=("added_services", "removed_services"),
+                previous_degraded_sources=("oidc_discovery",),
+                current_degraded_sources=("dns:dmarc",),
+            ),
+        )
+
+        console = Console(no_color=True, record=True, width=120)
+        console.print(render_delta_panel(delta))
+        rendered = console.export_text()
+
+        assert "one or both snapshot collections were incomplete" in rendered
+        assert "Previous degraded sources: oidc_discovery" in rendered
+        assert "Current degraded sources: dns:dmarc" in rendered
 
 
 class TestChainRendering:
@@ -322,11 +380,44 @@ class TestMarkdownRendering:
         assert "- Microsoft Teams" in m365_section
         assert r"- Google Workspace\: DKIM" in gws_section
         assert r"- DKIM \(Google Workspace\)" in gws_section
-        assert "- DKIM" in tech_section
+        assert "- DKIM\n" not in tech_section
         assert r"- AutoGen \(Microsoft\)" in tech_section
         assert r"- Microsoft Edge \(Front Door\)" in tech_section
         assert md.count(r"- Google Workspace\: DKIM") == 1
         assert md.count(r"- DKIM \(Google Workspace\)") == 1
+
+    def test_markdown_gws_details_require_retained_typed_evidence(self):
+        from recon_tool.formatter import format_tenant_markdown
+
+        legacy = _make_info(
+            services=("Google Workspace: Drive", "Google Workspace CSE"),
+            slugs=("google-workspace", "google-cse"),
+        )
+        observed = _make_info(
+            services=("Google Workspace: Drive", "Google Workspace CSE"),
+            slugs=("google-workspace", "google-cse"),
+            evidence=(
+                EvidenceRecord(
+                    source_type="CNAME",
+                    raw_value="drive.test.com -> ghs.googlehosted.com",
+                    rule_name="Google Workspace: Drive",
+                    slug="google-workspace",
+                ),
+                EvidenceRecord(
+                    source_type="HTTP",
+                    raw_value="CSE configuration found",
+                    rule_name="Google Workspace CSE",
+                    slug="google-cse",
+                ),
+            ),
+        )
+
+        legacy_markdown = format_tenant_markdown(legacy)
+        observed_markdown = format_tenant_markdown(observed)
+
+        assert "## Google Workspace\n" not in legacy_markdown
+        assert "**Module Indicators:** Drive" in observed_markdown
+        assert "**CSE Configuration Indicators:** Google Workspace CSE" in observed_markdown
 
     def test_m365_fallbacks_are_exact_source_labels(self):
         from recon_tool.formatter import _is_m365_service

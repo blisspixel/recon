@@ -1,20 +1,18 @@
-"""CT subdomain lexical taxonomy — pure-rule classification of
-CT-discovered subdomains for hedged maturity observations.
+"""Pure-rule lexical classification of observed public subdomain names.
 
 This module categorizes subdomains by recognised prefix / suffix
-patterns. It is deliberately narrow: only environment, region, and
-tenancy-shard patterns produce signals. Function prefixes (``api.``,
+patterns. It is deliberately narrow: only environment-like, region-like, and
+tenant-like patterns produce observations. Function prefixes (``api.``,
 ``login.``, ``cdn.``) are observed but never emitted as a signal on
-their own — they are too common to warrant a posture claim, and the
-signal-to-noise would be poor. No ML, no bundled embeddings, no
-generated candidates — the taxonomy is a pure re-projection of
+their own because they are too common to warrant a lexical summary. No ML, no
+bundled embeddings, and no generated candidates are used. The taxonomy is a
+pure re-projection of
 subdomains recon already observed via CT or DNS.
 
-Every emitted observation is hedged. The same evidence fits many
-interpretations, so the classification output uses neutral language
-("observed", "pattern consistent with") and never commits to a
-confidence verdict. The minimum match threshold (``MIN_MATCHES``)
-prevents single-subdomain coincidences from firing signals.
+Every emitted observation reports an exact count and examples. It also names
+compatible explanations without selecting one. The minimum match threshold
+(``MIN_MATCHES``) suppresses one-off labels but does not validate what a label
+means operationally.
 
 Called from ``merger.py`` after ``merge_results`` assembles the
 TenantInfo. Populates ``TenantInfo.lexical_observations`` (a tuple of
@@ -47,12 +45,9 @@ __all__ = [
 
 
 # Minimum number of distinct subdomains that must match a category
-# before that category is allowed to emit an observation. Prevents a
-# single ``dev.contoso.com`` from implying "mature environment
-# separation". Tuned empirically: below 2 is coincidence, at 2 a
-# pattern is plausible, at 3+ a pattern is solid. We use 2 as the
-# floor and surface the count in the observation so users can see
-# the signal density.
+# before that category is allowed to emit an observation. The threshold
+# reduces one-off lexical noise. It does not establish that the labels map to
+# environments, regions, tenants, or any particular operational design.
 MIN_MATCHES = 2
 
 
@@ -145,12 +140,44 @@ _SEPARATORS = frozenset("-_.0123456789")
 
 @dataclass(frozen=True)
 class LexicalObservation:
-    """A single hedged observation derived from the lexical taxonomy."""
+    """One count-and-example observation derived from the lexical taxonomy."""
 
-    category: str  # "Environment Separation", "Geo-Distribution", "Multi-Tenant Sharding"
+    category: str  # "Environment-like Labels", "Region-like Labels", "Tenant-like Labels"
     statement: str
     match_count: int
     sample_labels: tuple[str, ...]
+
+
+@dataclass(frozen=True)
+class _ObservationCopy:
+    """Claim-safe rendering contract for one lexical category."""
+
+    category: str
+    label_shape: str
+    compatible_explanations: str
+    limitation: str
+
+
+_OBSERVATION_COPY: dict[str, _ObservationCopy] = {
+    "env": _ObservationCopy(
+        category="Environment-like Labels",
+        label_shape="environment-like",
+        compatible_explanations="environment naming, test fixtures, vendor defaults, or unrelated label conventions",
+        limitation="the labels alone do not establish operational design or maturity",
+    ),
+    "region": _ObservationCopy(
+        category="Region-like Labels",
+        label_shape="region-like",
+        compatible_explanations="regional naming, service replicas, vendor conventions, or unrelated label conventions",
+        limitation="the labels alone do not establish where infrastructure runs",
+    ),
+    "shard": _ObservationCopy(
+        category="Tenant-like Labels",
+        label_shape="tenant-like",
+        compatible_explanations="customer naming, opaque identifiers, test data, or unrelated label conventions",
+        limitation="the labels alone do not establish tenancy boundaries or data separation",
+    ),
+}
 
 
 # ── Matching helpers ────────────────────────────────────────────────────
@@ -278,16 +305,15 @@ def lexical_observations(
     subdomains: list[str] | tuple[str, ...],
     base_domain: str | None = None,
 ) -> list[LexicalObservation]:
-    """Produce hedged observations from classified subdomains.
+    """Produce count-and-example observations from classified subdomains.
 
     Returns an observation for each category with at least
     ``MIN_MATCHES`` distinct matching labels. Categories below the
-    threshold are not reported — a single ``dev.example.com`` is not
-    a maturity signal, it is a coincidence.
+    threshold are not reported. Crossing the threshold reports repeated
+    lexical shape only, not operational meaning.
 
-    All observations use neutral hedged language. The
-    ``sample_labels`` field carries up to 3 labels cited as evidence
-    in the ``--explain`` output.
+    The ``sample_labels`` field carries up to 3 labels cited as evidence in
+    the ``--explain`` output.
 
     Args:
         subdomains: Subdomains discovered via CT / DNS enrichment.
@@ -299,56 +325,21 @@ def lexical_observations(
     by_cat = classify_subdomains(subdomains, base_domain)
 
     observations: list[LexicalObservation] = []
-
-    env_matches = by_cat["env"]
-    if len(env_matches) >= MIN_MATCHES:
-        sample = tuple(env_matches[:3])
+    for key in ("env", "region", "shard"):
+        matches = by_cat[key]
+        if len(matches) < MIN_MATCHES:
+            continue
+        copy = _OBSERVATION_COPY[key]
+        sample = tuple(matches[:3])
         observations.append(
             LexicalObservation(
-                category="Environment Separation",
+                category=copy.category,
                 statement=(
-                    "Mature environment separation pattern observed "
-                    f"({len(env_matches)} environment-prefixed subdomains "
-                    "e.g. " + ", ".join(sample) + ") — consistent with "
-                    "multi-environment deployment pipelines. Observation, "
-                    "not a verdict."
+                    f"{len(matches)} observed public names have {copy.label_shape} first labels "
+                    f"(examples: {', '.join(sample)}). Compatible explanations include "
+                    f"{copy.compatible_explanations}; {copy.limitation}."
                 ),
-                match_count=len(env_matches),
-                sample_labels=sample,
-            )
-        )
-
-    region_matches = by_cat["region"]
-    if len(region_matches) >= MIN_MATCHES:
-        sample = tuple(region_matches[:3])
-        observations.append(
-            LexicalObservation(
-                category="Geo-Distribution",
-                statement=(
-                    "Geo-distributed infrastructure pattern observed "
-                    f"({len(region_matches)} region-prefixed subdomains "
-                    "e.g. " + ", ".join(sample) + ") — consistent with "
-                    "multi-region deployment. Observation, not a verdict."
-                ),
-                match_count=len(region_matches),
-                sample_labels=sample,
-            )
-        )
-
-    shard_matches = by_cat["shard"]
-    if len(shard_matches) >= MIN_MATCHES:
-        sample = tuple(shard_matches[:3])
-        observations.append(
-            LexicalObservation(
-                category="Multi-Tenant Sharding",
-                statement=(
-                    "Multi-tenant sharding pattern observed "
-                    f"({len(shard_matches)} tenant-sharded subdomains "
-                    "e.g. " + ", ".join(sample) + ") — consistent with "
-                    "per-tenant isolation architectures. Observation, "
-                    "not a verdict."
-                ),
-                match_count=len(shard_matches),
+                match_count=len(matches),
                 sample_labels=sample,
             )
         )

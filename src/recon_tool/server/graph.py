@@ -32,8 +32,7 @@ from recon_tool.validator import validate_domain
 logger = logging.getLogger("recon")
 
 GRAPH_EXPORT_DISCLAIMER = (
-    "Graph describes observable certificate SAN co-occurrence. "
-    "Edges are co-issuance evidence, not ownership claims."
+    "Graph describes observable certificate SAN co-occurrence. Edges are co-issuance evidence, not ownership claims."
 )
 
 
@@ -269,15 +268,14 @@ async def cluster_verification_tokens(
     Looks up each domain (using the TTL cache when available) and
     computes a map of shared TXT verification tokens across the input
     set. When two domains share a ``google-site-verification=``,
-    ``MS=``, Atlassian, Zoom, or similar token, it surfaces a hedged
-    "possible relationship" observation — not a verdict.
+    ``MS=``, Atlassian, Zoom, or similar token, it reports the exact
+    administrative token reuse and does not infer a relationship.
 
-    A reused token implies a shared operator scope: the same SaaS
-    account provisioned the verification on both domains. Common
-    interpretations include shared infrastructure, acquisition history,
-    subsidiary relationships, managed-services providers, or
-    historical residue. The tool does NOT commit to any of these —
-    it reports the observation and leaves synthesis to the caller.
+    Exact token reuse is consistent with shared administration, copied
+    configuration, a managed-services provider, or stale residue. The public
+    record does not establish a shared account, operator, ownership, or current
+    product use. The tool reports the observation and leaves synthesis to the
+    caller.
 
     Zero additional network calls beyond whatever initial resolves are
     required to populate the cache. Every result is computed from
@@ -330,6 +328,9 @@ async def cluster_verification_tokens(
             errors.append({"domain": raw, "error": resolved})
             continue
         info, _results = resolved
+        from recon_tool.collection_view import collection_observable_info
+
+        info = collection_observable_info(info)
         domain_tokens[info.queried_domain] = info.site_verification_tokens
 
     clusters = compute_shared_tokens(domain_tokens)
@@ -353,11 +354,10 @@ async def cluster_verification_tokens(
         ),
         "raw_request": "Call cluster_verification_tokens with peer_limit_per_domain=0 for raw peer lists.",
         "disclaimer": (
-            "Shared verification tokens imply operator-scoped credential "
-            "reuse across domains. This is consistent with shared "
-            "infrastructure, subsidiary relationships, or managed-services "
-            "providers — it is not a corporate-identity verdict. Observation, "
-            "not a verdict."
+            "Exact administrative token reuse was observed. It is consistent "
+            "with shared administration, copied configuration, a managed "
+            "service, or stale residue, but does not establish a shared "
+            "account, operator, ownership, or current product use."
         ),
     }
     return payload
@@ -378,7 +378,7 @@ async def get_infrastructure_clusters(domain: str, member_limit_per_cluster: int
     the default ``--json`` output: cluster membership, modularity score,
     algorithm path, and underlying graph metrics. The report describes
     observable structure — names that co-occur on the same certificates,
-    grouped by Louvain community detection — never an ownership claim.
+    grouped by the Louvain co-occurrence heuristic, never an ownership claim.
 
     No new network surface: the report was already computed during the
     last ``lookup_tenant`` (or implicit resolve). This tool just exposes
@@ -399,10 +399,11 @@ async def get_infrastructure_clusters(domain: str, member_limit_per_cluster: int
         ``connected_components`` | ``skipped``); ``skipped`` means the
         graph was empty or had no edges. ``partition_stability`` (2.2.0+)
         is the Louvain seed-sweep consensus (mean pairwise adjusted Rand
-        index over ``stability_runs`` seeds; null outside the Louvain
-        path) — 1.0 means every seed produced the identical partition,
-        lower values flag partition degeneracy a single modularity score
-        cannot see.
+        index over ``stability_runs`` seeds; null outside the Louvain path).
+        A value of 1.0 means every seed produced the identical partition;
+        lower values show optimizer seed sensitivity on the same fixed graph.
+        The field does not measure CT data stability, model stability,
+        significance, or partition correctness.
     """
     member_limit_per_cluster = _normalize_limit(member_limit_per_cluster, "member_limit_per_cluster")
     resolved = await server_app.resolve_or_cache(domain)

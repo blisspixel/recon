@@ -123,13 +123,14 @@ class TestConflictProvenanceInfer:
 
 class TestSerialization:
     def _info_with_one_posterior(self) -> TenantInfo:
+        node = load_network().get("m365_tenant")
         po = PosteriorObservation(
             name="m365_tenant",
-            description="Microsoft 365 tenant.",
+            description=node.description,
             posterior=0.7,
             interval_low=0.4,
             interval_high=0.9,
-            evidence_used=("slug:microsoft365",),
+            evidence_used=("signal:m365_tenant_observed",),
             n_eff=5.0,
             sparse=False,
             conflict_provenance=(
@@ -153,13 +154,14 @@ class TestSerialization:
         assert cp == [{"field": "auth_type", "sources": ["graph", "openid_config"], "magnitude": 1.5}]
 
     def test_json_empty_array_when_no_conflicts(self) -> None:
+        node = load_network().get("m365_tenant")
         po = PosteriorObservation(
             name="m365_tenant",
-            description="Microsoft 365 tenant.",
+            description=node.description,
             posterior=0.7,
             interval_low=0.4,
             interval_high=0.9,
-            evidence_used=("slug:microsoft365",),
+            evidence_used=("signal:m365_tenant_observed",),
             n_eff=5.0,
             sparse=False,
         )

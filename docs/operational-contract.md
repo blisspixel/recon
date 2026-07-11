@@ -77,6 +77,13 @@ validated (package missing, server import failure, or no tools registered).
   `degraded_sources`, and confidence is downgraded one level when a source is
   degraded, except when only the CT providers degraded and a CT cache fallback
   recovered the data.
+- **Granular failure is not negative evidence.** DNS and detector markers may
+  identify one unavailable observation channel, including `dns:apex_txt`,
+  `dns:dmarc`, `dns:mta_sts`, `http:mta_sts_policy`, or `dns:mx`. Bayesian
+  absence factors, cohort denominators, exposure scores, and hardening-gap
+  output mask only the affected channel. `NXDOMAIN` and `NoAnswer` remain clean,
+  observed empty responses. Legacy `dns` and current `dns_records` markers mask
+  every DNS channel.
 - **CT is cache-first and fault-tolerant.** A fresh CT cache entry short-circuits
   the live providers; on live failure the cache is the final fallback, annotated
   with `ct_attempt_outcome` (`cache_hit`, `live_success`, `cache_miss`,
@@ -84,17 +91,22 @@ validated (package missing, server import failure, or no tools registered).
   429 returns partial CT data rather than an error. When providers fail in
   different ways, live attempted failures are labeled ahead of a separate open
   breaker so `breaker_open` means every failed provider was stopped locally.
-- **Sparse is flagged, not hidden.** A thin result carries `sparse=true` in the
-  JSON; the credible interval widens rather than collapsing on a fake-confident
-  point estimate (see [correlation.md](correlation.md)).
+- **Sparse is flagged, not hidden.** `sparse=true` means the uncertainty band's
+  effective display mass is at its floor. The model score and band remain
+  model-relative and do not replace explicit unresolved output (see
+  [correlation.md](correlation.md)).
 
 ## Determinism and reproducibility
 
-- **Same input, same output.** The CT community-detection layer uses a fixed
-  Louvain seed and normalizes node insertion order before partitioning (network
-  responses arrive in non-stable order); above the node cap it falls back to
+- **Same captured evidence and version, same interpretation.** A domain string
+  alone is not the complete input: DNS, CT, identity responses, cache state,
+  catalog data, model data, and software versions can change. Given the same
+  normalized evidence snapshot, options, and installed recon, catalog, model,
+  and Public Suffix List versions, interpretation is deterministic. The CT
+  community-detection layer uses a fixed Louvain seed and normalizes node
+  insertion order before partitioning; above the node cap it falls back to
   deterministic connected components. Cluster, member, edge, burst, and
-  subdomain orderings are all sorted/canonical. Enriched services/slugs and
+  subdomain orderings are sorted and canonical. Enriched services, slugs, and
   `degraded_sources` are emitted sorted.
 - **Same source, same artifact.** The release build is bit-for-bit reproducible
   (`SOURCE_DATE_EPOCH` pinned to the tagged commit), gated by the

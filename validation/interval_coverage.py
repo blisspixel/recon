@@ -1,19 +1,15 @@
-"""Credible-interval perturbation coverage for the Bayesian layer.
+"""Model-relative uncertainty-band perturbation experiment.
 
-The 80% credible interval is the output recon asks operators to trust
-(README "the interval is the load-bearing field"), and the roadmap
-assurance track calls for a coverage check on it, framed as honestly as
-CAL1 requires. This harness provides that check without claiming
-ground-truth calibration, which no passive tool can observe (CAL13).
+The shipped 80% uncertainty band is a post-inference display heuristic. This
+harness checks one finite sensitivity scenario without treating the result as a
+credible interval, confidence interval, identification region, or ground-truth
+calibration claim.
 
-What the interval claims. ``credible_interval`` widens with low
-``n_eff``: the width exists to absorb the acknowledged imprecision of
-the hand-elicited CPT likelihoods (directionally-accurate,
-corpus-grounded estimates, not values precise to many decimals; see
-``docs/maintainer-validation.md``). That claim is testable without any
-real-world label: if the likelihoods recon believes are off by up to a
-multiplicative band, the interval should still contain the conditional
-probability a correctly-parameterized model would report.
+What the experiment checks. For selected multiplicative likelihood
+perturbations, measure whether the shipped band contains the conditional
+probability under each perturbed model. This is scenario containment over a
+finite sampled set, not a bound over all parameter, dependence, or missingness
+uncertainty.
 
 Method, per perturbation level ``delta``:
 
@@ -22,31 +18,32 @@ Method, per perturbation level ``delta``:
    independent factor drawn from ``[1 - delta, 1 + delta]``, clipped to
    the valid open interval. ``delta = 0.2`` is the CAL8 sensitivity
    band.
-2. Sample synthetic domains from each world (ground-truth assignment,
-   then observed bindings), the same generative procedure as
-   ``synthetic_calibration.py`` and ``likelihood_sensitivity.py``.
+2. Sample latent assignments from each prior/CPT graph, then sample bindings
+   independently as Bernoulli variables, the same misspecification stress
+   procedure as ``synthetic_calibration.py``. This is not the committed grouped
+   observation or missingness model.
 3. For each sample, run the SHIPPED model's ``infer()`` to get each
    node's posterior and 80% interval, and compute the world's own
    conditional probability ``P(node = present | observations)`` with
    the independent full-joint reference from
    ``differential_verification.py`` (no engine code in the truth path).
-4. Report, per node, how often the shipped interval contains the
-   world's conditional probability: marginally and conditional on at
-   least one binding having fired (the regime where the model makes a
-   claim; see correlation.md 4.3).
+4. Report, per node, how often the shipped band contains the world's
+   conditional probability: over all samples and over the selected subset in
+   which at least one binding fired. The selected subset is reported as a
+   diagnostic, not as a population or assurance claim.
 
 At ``delta = 0`` the world equals the model, the reference equals the
 engine (verified differentially in v2.1.7), and coverage is total by
 construction. That row is a consistency sanity check in the CAL1 sense,
 not evidence; the informative rows are ``delta > 0``.
 
-A second, diagnostic truth is also reported: the raw generative (MAR)
-conditional, where every non-fired binding contributes its complement
-for every node. The shipped model deliberately refuses that conditioning
-for hideable nodes (the MNAR absence rule), so MAR coverage quantifies
-the documented cost of that refusal in a world where absence is genuine
-evidence. It is reported for honesty, not gated: recon's position is
-that the real world is MNAR for hideable infrastructure.
+A second diagnostic reference is also reported: the fully observed Bernoulli
+conditional, where each binding's fired or non-fired outcome is observed and a
+non-fire contributes its Bernoulli complement for every node. This is a
+nonfire-informative synthetic observation model, not a MAR missing-data model.
+The shipped model deliberately declines to condition on non-fire for hideable
+nodes. Their comparison describes two synthetic conditioning rules; it does not
+identify public-channel missingness.
 
 Synthetic-only and publishable: no real targets anywhere. Reproducible
 under a fixed seed. Aggregate output only.
@@ -92,7 +89,7 @@ from validation.likelihood_sensitivity import (  # noqa: E402
 _EDGE_TOL = 6e-5
 
 # Default perturbation sweep. 0.0 is the consistency sanity row;
-# 0.2 is the CAL8 band and the gated level; 0.1 / 0.3 show the response.
+# 0.2 is the recorded CAL8 scenario; 0.1 / 0.3 show the response.
 _DEFAULT_DELTAS = (0.0, 0.1, 0.2, 0.3)
 
 
@@ -102,10 +99,9 @@ def perturb_world(net: BayesianNetwork, delta: float, rng: random.Random) -> Bay
     Each binding's ``likelihood_present`` / ``likelihood_absent`` and each
     declarative ``group_absence`` pair is scaled by its own factor drawn
     uniformly from ``[1 - delta, 1 + delta]``, clipped to the valid open
-    interval. Priors and CPT entries are left alone: the interval's
-    ``n_eff`` machinery keys off evidence volume, so the evidence model
-    is the surface whose imprecision it claims to absorb (prior
-    grounding is tracked separately as CAL12).
+    interval. Priors and CPT entries are left alone because this finite
+    experiment varies only the evidence-likelihood surface. It does not claim
+    to bound prior, CPT, dependence, or missingness uncertainty.
     """
 
     def factor() -> float:
@@ -126,11 +122,13 @@ def perturb_world(net: BayesianNetwork, delta: float, rng: random.Random) -> Bay
     return dataclasses.replace(net, nodes=tuple(nodes))
 
 
-def _generative_node_likelihood(node: _Node, fired_names: set[str]) -> tuple[float, float]:
-    """``P(this node's full firing pattern | node state)`` under the raw
-    generative (MAR) semantics: every binding is an independent coin given
-    the node state, so a non-fired binding contributes its complement for
-    every node, hideable or not."""
+def _fully_observed_node_likelihood(node: _Node, fired_names: set[str]) -> tuple[float, float]:
+    """``P(full fired/non-fired pattern | node state)`` for Bernoulli bindings.
+
+    Every binding outcome is observed, so a non-fire contributes its complement
+    for every node. This is a fully observed synthetic likelihood, not a MAR
+    missing-data construction.
+    """
     like_present = 1.0
     like_absent = 1.0
     for ev in node.evidence:
@@ -175,8 +173,8 @@ class _NodeTally:
     fired_n: int = 0
     covered: int = 0
     fired_covered: int = 0
-    mar_covered: int = 0
-    mar_fired_covered: int = 0
+    fully_observed_covered: int = 0
+    fully_observed_fired_covered: int = 0
     width_sum: float = 0.0
 
     def as_dict(self) -> dict[str, Any]:
@@ -185,8 +183,13 @@ class _NodeTally:
             "fired_n": self.fired_n,
             "coverage": round(self.covered / self.n, 4) if self.n else None,
             "fired_coverage": round(self.fired_covered / self.fired_n, 4) if self.fired_n else None,
-            "mar_coverage": round(self.mar_covered / self.n, 4) if self.n else None,
-            "mar_fired_coverage": round(self.mar_fired_covered / self.fired_n, 4) if self.fired_n else None,
+            # Historical JSON keys are retained for compatibility with recorded
+            # validation artifacts. They mean fully observed Bernoulli-pattern
+            # containment, not missing-at-random coverage.
+            "mar_coverage": round(self.fully_observed_covered / self.n, 4) if self.n else None,
+            "mar_fired_coverage": (
+                round(self.fully_observed_fired_covered / self.fired_n, 4) if self.fired_n else None
+            ),
             "mean_width": round(self.width_sum / self.n, 4) if self.n else None,
         }
 
@@ -214,6 +217,11 @@ def run_coverage(
         "worlds": worlds,
         "samples_per_world": samples,
         "edge_tolerance": _EDGE_TOL,
+        "legacy_metric_names": {
+            "mar_coverage": "fully observed Bernoulli-pattern containment",
+            "mar_fired_coverage": "the same metric on the fired-evidence subset",
+            "note": "mar_* keys are historical compatibility names, not MAR assumptions",
+        },
         "deltas": {},
     }
     for delta in deltas:
@@ -227,14 +235,14 @@ def run_coverage(
                 observed = set(obs_slugs) | set(obs_signals)
 
                 model_like: dict[str, tuple[float, float]] = {}
-                mar_like: dict[str, tuple[float, float]] = {}
+                fully_observed_like: dict[str, tuple[float, float]] = {}
                 for name in node_names:
                     node = world.get(name)
                     fired = [ev for ev in node.evidence if ev.name in observed]
                     model_like[name] = _reference_node_likelihood(node, fired)
-                    mar_like[name] = _generative_node_likelihood(node, observed)
+                    fully_observed_like[name] = _fully_observed_node_likelihood(node, observed)
                 truth = _posteriors_from_likelihoods(joint, model_like)
-                mar_truth = _posteriors_from_likelihoods(joint, mar_like)
+                fully_observed_truth = _posteriors_from_likelihoods(joint, fully_observed_like)
 
                 result = infer(shipped, obs_slugs, obs_signals, priors_override={})
                 for p in result.posteriors:
@@ -245,17 +253,17 @@ def run_coverage(
                     tally.n += 1
                     tally.width_sum += p.interval_high - p.interval_low
                     in_model = lo <= truth[p.name] <= hi
-                    in_mar = lo <= mar_truth[p.name] <= hi
+                    in_fully_observed = lo <= fully_observed_truth[p.name] <= hi
                     if in_model:
                         tally.covered += 1
-                    if in_mar:
-                        tally.mar_covered += 1
+                    if in_fully_observed:
+                        tally.fully_observed_covered += 1
                     if fired_any:
                         tally.fired_n += 1
                         if in_model:
                             tally.fired_covered += 1
-                        if in_mar:
-                            tally.mar_fired_covered += 1
+                        if in_fully_observed:
+                            tally.fully_observed_fired_covered += 1
         out["deltas"][f"{delta:.2f}"] = {
             "nodes": {name: tallies[name].as_dict() for name in node_names},
             "missingness": {name: by_name[name].missingness for name in node_names},
@@ -265,21 +273,23 @@ def run_coverage(
 
 def _print_report(results: dict[str, Any]) -> None:
     print(
-        f"Credible-interval perturbation coverage "
+        f"Uncertainty-band perturbation containment "
         f"(seed={results['seed']}, {results['worlds']} worlds x "
         f"{results['samples_per_world']} samples per delta)"
     )
     print()
-    print("coverage: share of samples where the shipped 80% interval contains the")
+    print("coverage: historical metric key for the sampled share where the shipped")
+    print("80% uncertainty band contains the")
     print("perturbed world's conditional probability under the model's own")
-    print("conditioning semantics (the gated number, conditional on fired evidence).")
-    print("mar: the same against the raw generative conditional where absence is")
-    print("informative for every node; diagnostic only (correlation.md 4.3).")
+    print("conditioning semantics; fired evidence is a separately selected subset.")
+    print("fullobs: the same against a fully observed Bernoulli conditional where")
+    print("non-fire is informative for every node; diagnostic only. JSON retains")
+    print("historical mar_* keys for artifact compatibility, not as a MAR claim.")
     for delta_key, level in results["deltas"].items():
         print()
         tautological = " (consistency sanity row; total by construction)" if float(delta_key) == 0.0 else ""
         print(f"=== delta = {delta_key}{tautological} ===")
-        header = f"{'node':<34}{'n':>7}{'fired':>7}{'cov':>8}{'cov|f':>8}{'mar':>8}{'mar|f':>8}{'width':>8}"
+        header = f"{'node':<34}{'n':>7}{'fired':>7}{'cov':>8}{'cov|f':>8}{'fullobs':>8}{'full|f':>8}{'width':>8}"
         print(header)
         print("-" * len(header))
         for name, row in level["nodes"].items():
@@ -294,15 +304,14 @@ def _print_report(results: dict[str, Any]) -> None:
                 f"{fmt(row['mean_width']):>8}"
             )
     print()
-    print("The delta=0.20 fired-evidence coverage is the assurance claim: under the")
-    print("CAL8 likelihood-imprecision band, the 80% interval should contain the")
-    print("correct-world conditional at least 80% of the time. This is model-internal")
-    print("coverage against parameter misspecification, not ground-truth calibration")
-    print("(CAL13); no real-world labels are involved.")
+    print("The delta=0.20 row is a finite, seeded scenario-containment regression.")
+    print("Its 0.80 test threshold preserves recorded behavior for these sampled")
+    print("worlds. It is not a nominal coverage guarantee or a bound on parameter,")
+    print("dependence, missingness, or real-world uncertainty.")
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Credible-interval perturbation coverage (synthetic, aggregate-only).")
+    parser = argparse.ArgumentParser(description="Uncertainty-band scenario containment (synthetic, aggregate-only).")
     parser.add_argument(
         "--deltas",
         type=str,

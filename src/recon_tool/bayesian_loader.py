@@ -59,7 +59,7 @@ def load_network(path: Path | None = None) -> BayesianNetwork:
 
 
 def _parse_calibration(raw: Any) -> CalibrationSettings:
-    """Validate top-level interval calibration settings, with defaults."""
+    """Validate top-level uncertainty-band display settings, with defaults."""
     defaults = CalibrationSettings()
     if raw is None:
         return defaults

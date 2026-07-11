@@ -23,7 +23,7 @@ class Evidence:
     # redundant readings of one underlying fact (conditionally dependent given
     # the node), so a group contributes only its strongest fired binding rather
     # than the naive independent product. None = independent (legacy behaviour).
-    # See correlation.md §4.3 "Conditionally-dependent bindings".
+    # See correlation.md section 3.2, "Dependency groups".
     group: str | None = None
 
 
@@ -57,7 +57,7 @@ class Node:
 
 @dataclass(frozen=True)
 class CalibrationSettings:
-    """Effective-sample-size settings for Bayesian interval reporting."""
+    """Effective display-mass settings for uncertainty-band reporting."""
 
     min_n_eff: float = 4.0
     evidence_n_eff_contrib: float = 1.0
@@ -85,13 +85,13 @@ class BayesianNetwork:
 
 @dataclass(frozen=True)
 class ConflictProvenance:
-    """One cross-source disagreement that dampened a node's interval.
+    """One cross-source disagreement that lowered a node's display mass.
 
     ``field`` is the merged ``TenantInfo`` field whose sources disagreed
     (e.g. ``auth_type``, ``dmarc_policy``). ``sources`` lists every
     distinct source that contributed a candidate value for that field.
-    ``magnitude`` is the n_eff penalty (in n_eff units) this single
-    conflict subtracted from the node's effective sample size — uniform
+    ``magnitude`` is the n_eff penalty (in display-mass units) this single
+    conflict subtracted from the node's evidence-responsive display mass, uniform
     at v1.9.1 ship time, but exposed as a number so future per-node
     relevance weighting can refine without breaking the JSON shape.
     """
@@ -173,14 +173,14 @@ class NodePosterior:
     name: str
     description: str
     posterior: float  # P(node=present | E) in [0, 1]
-    interval_low: float  # 80% credible interval lower bound
-    interval_high: float  # 80% credible interval upper bound
+    interval_low: float  # 80% evidence-responsive band lower bound
+    interval_high: float  # 80% evidence-responsive band upper bound
     evidence_used: tuple[str, ...]  # observed bindings that fired for this node
-    n_eff: float  # effective sample size used to derive interval
-    sparse: bool  # True when n_eff <= _MIN_N_EFF (wide interval)
+    n_eff: float  # effective display mass used to derive the band
+    sparse: bool  # True when n_eff is at the configured floor
     conflict_provenance: tuple[ConflictProvenance, ...] = ()
     """Cross-source conflicts that contributed to this node's n_eff
-    penalty. Empty tuple when no conflicts dampened the interval. v1.9.1
+    penalty. Empty tuple when no conflicts lowered the band display mass. v1.9.1
     surfaces the same provenance on every node (penalty is global);
     schema is stable for future per-node relevance refinement."""
     evidence_ranked: tuple[EvidenceContribution, ...] = ()
@@ -192,18 +192,18 @@ class NodePosterior:
     ``--explain-dag``; schema-additive."""
 
     absence_informative: bool = False
-    """True for a declarative node (CAL14), where the absence of an expected
-    public declaration (DMARC / SPF / MTA-STS) is itself evidence that moves
-    the posterior. Lets the explanation renderer avoid the "no evidence,
-    follows priors" phrasing when an empty ``evidence_used`` reflects
-    informative absence rather than missing data. Default False keeps
-    hideable nodes unchanged."""
+    """True when this run applied at least one unmasked, non-neutral absence
+    factor for a declarative node (CAL14). Lets the explanation renderer avoid
+    the "no evidence, follows priors" phrasing when an empty ``evidence_used``
+    reflects successfully observed public absence rather than missing data.
+    False for hideable nodes and fully masked declarative nodes."""
 
     entropy_reduction_nats: float = 0.0
-    """This node's share of the information recovered: H(prior marginal) -
-    H(posterior), in nats, signed (negative when evidence widens the node).
-    The per-node breakdown of the existing ``InferenceResult``-level total
-    (CAL10). Added in 2.2.0; schema-additive."""
+    """Signed marginal entropy change H(prior marginal) - H(posterior).
+
+    This can be negative, is not pointwise information gain, and can double
+    count dependence when summed across nodes. Added in 2.2.0; schema-additive.
+    """
 
     unit_counterfactuals: tuple[UnitCounterfactual, ...] = ()
     """Exact leave-one-unit-out counterfactuals for every evidence unit that
@@ -219,4 +219,4 @@ class InferenceResult:
     posteriors: tuple[NodePosterior, ...]
     entropy_reduction: float  # nats, signed: sum of H(prior) - H(posterior); negative when evidence widens a node
     evidence_count: int  # total observed bindings across all nodes
-    conflict_count: int  # cross-source conflicts that dampened intervals
+    conflict_count: int  # cross-source conflicts that lower band display mass

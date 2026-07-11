@@ -52,8 +52,8 @@ def test_claim_map_names_load_bearing_paper_claims() -> None:
         "DMARC-held-out residual",
         "residual collapse",
         "M365 tenancy",
-        "Split conformal coverage",
-        "ECE estimator uncertainty",
+        "Split-conformal logic",
+        "Reliability-estimator assumptions",
         "Entropy reduction",
         "2026-06-28-full-corpus-calibration-refresh.md",
         "public-list-calibration.md",
@@ -104,9 +104,9 @@ def test_metric_lineage_wording_matches_june_28_refresh() -> None:
     ).replace("\n", " ")
 
     for required in (
-        "The June 28 refresh reports fixed-bin ECE and",
-        "equal-mass, mean-confidence ECE with deterministic bootstrap CI side by side",
-        "estimator choice is visible in the current cited rows",
+        "historical legacy index-sliced equal-mass",
+        "tie-preserving reliability",
+        "naive-iid diagnostics with no coverage interpretation",
         "Older memos keep their dated estimator labels",
         "2026-06-28-full-corpus-calibration-refresh.md",
     ):
@@ -117,6 +117,7 @@ def test_metric_lineage_wording_matches_june_28_refresh() -> None:
         "future calibration summaries report equal-mass",
         "shipped for future reruns",
         "Do not revise older memo numbers until the corpus runs are rerun",
+        "equal-mass, mean-confidence ECE with deterministic bootstrap CI side by side",
     ):
         assert stale not in combined
 
@@ -151,9 +152,9 @@ def test_paper_discussion_and_conclusion_preserve_final_evidence_tiers() -> None
     ).replace("\n", " ")
 
     for required in (
-        "no clean independent calibration result",
-        "DMARC-held-out residual is the clean",
-        "disjoint-predictor attempt and it fails",
+        "no training-disjoint, predictor-input-disjoint passing calibration result today",
+        "input-disjoint but not parameter-development-disjoint",
+        "performs poorly",
         "channel-split corroboration",
         "Google Workspace remains one-sided recall",
         "not a broadly calibrated truth oracle",

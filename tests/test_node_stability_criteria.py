@@ -67,26 +67,13 @@ MIN_BOUND_LIFT = 0.01
 # binding actually moves its node's posterior; a typo here surfaces
 # as a real failure, not silent skip.
 _NODE_BINDINGS: dict[str, list[tuple[str, str]]] = {
-    "m365_tenant": [
-        ("slug", "microsoft365"),
-        ("slug", "entra-id"),
-        ("slug", "exchange-online"),
-    ],
-    "google_workspace_tenant": [
-        ("slug", "google-workspace"),
-        ("slug", "gmail"),
-    ],
+    "m365_tenant": [("signal", "m365_tenant_observed")],
+    "google_workspace_tenant": [("signal", "google_workspace_tenant_observed")],
     "federated_identity": [
         ("signal", "federated_sso_hub"),
     ],
-    "okta_idp": [
-        ("slug", "okta"),
-    ],
-    "email_gateway_present": [
-        ("slug", "proofpoint"),
-        ("slug", "mimecast"),
-        ("slug", "barracuda"),
-    ],
+    "okta_idp": [("signal", "okta_idp_observed")],
+    "email_gateway_present": [("signal", "email_gateway_mx_observed")],
     "email_security_policy_enforcing": [
         ("signal", "dmarc_reject"),
         ("signal", "dmarc_quarantine"),
@@ -99,16 +86,8 @@ _NODE_BINDINGS: dict[str, list[tuple[str, str]]] = {
         # rejection of the corpus-fitting alternative.
         ("signal", "spf_strict"),
     ],
-    "cdn_fronting": [
-        ("slug", "cloudflare"),
-        ("slug", "akamai"),
-        ("slug", "fastly"),
-    ],
-    "aws_hosting": [
-        ("slug", "aws"),
-        ("slug", "aws-cloudfront"),
-        ("slug", "aws-route53"),
-    ],
+    "cdn_fronting": [("signal", "cdn_cname_observed")],
+    "aws_hosting": [("signal", "aws_endpoint_cname_observed")],
 }
 
 # Pure-propagation nodes have no direct bindings; the criterion-(a)
@@ -117,11 +96,11 @@ _PURE_PROPAGATION_NODES: dict[str, list[tuple[str, str]]] = {
     "email_security_modern_provider": [
         # Parent: m365_tenant — any m365 slug observation must move
         # modern_provider via the CPT.
-        ("slug", "microsoft365"),
+        ("signal", "m365_tenant_observed"),
         # Parent: google_workspace_tenant.
-        ("slug", "google-workspace"),
+        ("signal", "google_workspace_tenant_observed"),
         # Parent: email_gateway_present.
-        ("slug", "proofpoint"),
+        ("signal", "email_gateway_mx_observed"),
     ],
 }
 
@@ -131,15 +110,15 @@ _PURE_PROPAGATION_NODES: dict[str, list[tuple[str, str]]] = {
 # through the marginal. For the cdn_fronting test itself, use a
 # different isolated root's binding.
 _UNRELATED_BINDING_FOR_NODE: dict[str, tuple[str, str]] = {
-    "m365_tenant": ("slug", "cloudflare"),
-    "google_workspace_tenant": ("slug", "cloudflare"),
-    "federated_identity": ("slug", "cloudflare"),
-    "okta_idp": ("slug", "cloudflare"),
-    "email_gateway_present": ("slug", "cloudflare"),
-    "email_security_modern_provider": ("slug", "cloudflare"),
-    "email_security_policy_enforcing": ("slug", "cloudflare"),
-    "cdn_fronting": ("slug", "proofpoint"),  # gateway is isolated; doesn't touch cdn
-    "aws_hosting": ("slug", "cloudflare"),
+    "m365_tenant": ("signal", "cdn_cname_observed"),
+    "google_workspace_tenant": ("signal", "cdn_cname_observed"),
+    "federated_identity": ("signal", "cdn_cname_observed"),
+    "okta_idp": ("signal", "cdn_cname_observed"),
+    "email_gateway_present": ("signal", "cdn_cname_observed"),
+    "email_security_modern_provider": ("signal", "cdn_cname_observed"),
+    "email_security_policy_enforcing": ("signal", "cdn_cname_observed"),
+    "cdn_fronting": ("signal", "aws_endpoint_cname_observed"),
+    "aws_hosting": ("signal", "cdn_cname_observed"),
 }
 
 

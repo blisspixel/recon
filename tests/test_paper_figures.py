@@ -64,6 +64,40 @@ def test_paper_figure_doc_names_assets_and_regeneration_gate() -> None:
         assert required in text
 
 
+def test_band_figure_uses_current_uncertainty_semantics() -> None:
+    generator = _load_generator()
+    figure = generator.render_interval_width()
+    documentation = FIGURE_DOC.read_text(encoding="utf-8")
+
+    for stale_claim in (
+        "Interval width falls as effective evidence rises",
+        "Effective evidence bucket",
+        "Mean 80% interval width",
+    ):
+        assert stale_claim not in figure
+        assert stale_claim not in documentation
+
+    for required in (
+        "Observed band width by display-mass bucket",
+        "Effective display-mass bucket",
+        "Mean 80% uncertainty-band width",
+        "no monotonicity or coverage claim",
+    ):
+        assert required in figure
+
+    assert "not a general monotonicity result" in documentation
+    assert "effective sample size" in documentation
+
+
+def test_reliability_figure_names_its_dependency_boundary() -> None:
+    generator = _load_generator()
+    figure = generator.render_calibration_reliability()
+    documentation = FIGURE_DOC.read_text(encoding="utf-8")
+
+    assert "Dependency-qualified, not independent calibration" in figure
+    assert "not independent calibration" in documentation
+
+
 def test_svg_assets_do_not_contain_target_identifiers() -> None:
     allowed_domains = {"w3.org", "www.w3.org"}
     forbidden_fragments = ("tenant_id", "tenant ID")

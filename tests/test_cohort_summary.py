@@ -1,9 +1,8 @@
 """Tests for recon_tool.cohort_summary, the in-core v2.1 cohort summary.
 
-Pins the statistics and the honest behaviors: the missing-not-at-random
-observability split (declarative signals observable when DNS resolved, hideable
-claims observable only when their node fired non-sparse), the three-number
-prevalence, posterior-mass aggregation, compositional concentration, and the
+Pins the statistics and the honest behaviors: declarative public-claim rates
+only after a successful observation opportunity, model support coverage for
+hideable claims, model-score aggregation, compositional concentration, and the
 edge cases that must not crash (empty cohort, no fusion, single domain).
 """
 
@@ -12,6 +11,7 @@ from __future__ import annotations
 import io
 from typing import Any
 
+import pytest
 from rich.console import Console
 
 from recon_tool.cohort_summary import (
@@ -82,6 +82,34 @@ def test_extract_signals_observability_split() -> None:
     assert extract_signals(degraded)["dmarc_reject"] is None  # DNS down
 
 
+@pytest.mark.parametrize(
+    ("marker", "unavailable"),
+    [
+        ("dns", {"dmarc_reject", "dmarc_enforcing", "mta_sts_enforce", "email_gateway_present"}),
+        ("dns_records", {"dmarc_reject", "dmarc_enforcing", "mta_sts_enforce", "email_gateway_present"}),
+        ("dns:dmarc", {"dmarc_reject", "dmarc_enforcing"}),
+        ("dns:mta_sts", {"mta_sts_enforce"}),
+        ("http:mta_sts_policy", {"mta_sts_enforce"}),
+        ("detector:email_security", {"dmarc_reject", "dmarc_enforcing", "mta_sts_enforce"}),
+        ("dns:mx", {"email_gateway_present"}),
+        ("detector:mx", {"email_gateway_present"}),
+    ],
+)
+def test_extract_signals_masks_only_degraded_collection_channels(marker: str, unavailable: set[str]) -> None:
+    signals = extract_signals(
+        _rec(
+            dmarc_policy="reject",
+            mta_sts_mode="enforce",
+            email_gateway="Proofpoint",
+            degraded_sources=[marker],
+        )
+    )
+
+    observed = {"dmarc_reject", "dmarc_enforcing", "mta_sts_enforce", "email_gateway_present"} - unavailable
+    assert all(signals[name] is None for name in unavailable)
+    assert all(signals[name] is True for name in observed)
+
+
 def test_build_summary_document_shape() -> None:
     recs = [
         _rec(
@@ -148,23 +176,57 @@ def test_document_contract() -> None:
     ]
     doc = build_summary_document(recs, attempted=20)
     assert set(doc) >= {
-        "record_type", "schema_version", "disclaimer", "suppression_policy",
-        "label", "n", "small_n_warning", "observability", "prevalence", "posterior_claims", "mix",
+        "record_type",
+        "schema_version",
+        "disclaimer",
+        "suppression_policy",
+        "label",
+        "n",
+        "small_n_warning",
+        "observability",
+        "prevalence",
+        "posterior_claims",
+        "mix",
     }
     assert doc["record_type"] == "cohort_summary"
     assert doc["schema_version"] == "2.1"
     assert set(doc["observability"]) == {
-        "attempted", "resolved", "resolution_rate", "dns_resolved", "degraded_source_rate", "mean_sparse_share",
+        "attempted",
+        "resolved",
+        "resolution_rate",
+        "dns_resolved",
+        "degraded_source_rate",
+        "mean_sparse_share",
     }
-    signals = ("dmarc_reject", "dmarc_enforcing", "mta_sts_enforce",
-               "email_gateway_present", "m365_tenant", "google_workspace")
+    signals = (
+        "dmarc_reject",
+        "dmarc_enforcing",
+        "mta_sts_enforce",
+        "email_gateway_present",
+        "m365_tenant",
+        "google_workspace",
+    )
     for sig in signals:
         assert set(doc["prevalence"][sig]) == {
-            "positives", "observable_n", "observed_rate", "observed_rate_interval_80",
-            "lower_bound_over_cohort", "observability_fraction",
+            "positives",
+            "observable_n",
+            "observed_rate",
+            "observed_rate_interval_80",
+            "lower_bound_over_cohort",
+            "observability_fraction",
+            "metric_kind",
+            "model_evidence_n",
+            "support_coverage",
+            "unresolved_share",
         }
     assert set(doc["posterior_claims"]["m365_tenant"]) == {
-        "expected_prevalence", "high_confidence_share", "mean_interval_width", "sparse_share", "observed_n",
+        "expected_prevalence",
+        "high_confidence_share",
+        "mean_model_score",
+        "high_score_share",
+        "mean_interval_width",
+        "sparse_share",
+        "observed_n",
     }
     assert set(doc["mix"]) == {"provider", "cloud"}
     for dim in ("provider", "cloud"):
@@ -202,32 +264,74 @@ def test_malformed_posteriors_do_not_crash_or_poison_json() -> None:
 
     # None, non-numeric, NaN/inf, and an inverted interval must coerce safely.
     recs = [
-        _rec(posterior_observations=[{
-            "name": "m365_tenant", "posterior": None, "interval_low": 0.5, "interval_high": 0.2,
-            "evidence_used": ["slug:x"], "sparse": False,
-        }]),
-        _rec(posterior_observations=[{
-            "name": "m365_tenant", "posterior": "high", "interval_low": float("nan"),
-            "interval_high": float("inf"), "evidence_used": ["slug:x"], "sparse": False,
-        }]),
+        _rec(
+            posterior_observations=[
+                {
+                    "name": "m365_tenant",
+                    "posterior": None,
+                    "interval_low": 0.5,
+                    "interval_high": 0.2,
+                    "evidence_used": ["slug:x"],
+                    "sparse": False,
+                }
+            ]
+        ),
+        _rec(
+            posterior_observations=[
+                {
+                    "name": "m365_tenant",
+                    "posterior": "high",
+                    "interval_low": float("nan"),
+                    "interval_high": float("inf"),
+                    "evidence_used": ["slug:x"],
+                    "sparse": False,
+                }
+            ]
+        ),
     ]
     doc = build_summary_document(recs)
     claim = doc["posterior_claims"]["m365_tenant"]
     assert 0.0 <= claim["expected_prevalence"] <= 1.0
     assert claim["mean_interval_width"] >= 0.0  # inverted interval never goes negative
     assert _m.isfinite(claim["expected_prevalence"])
+    assert claim["mean_model_score"] == claim["expected_prevalence"]
     assert _m.isfinite(claim["mean_interval_width"])
     assert "NaN" not in json.dumps(doc)  # no bare NaN tokens in the JSON
+
+
+def test_hideable_model_support_is_not_reported_as_prevalence() -> None:
+    recs = [
+        _rec(posterior_observations=[_node("m365_tenant", 0.9, 0.8, 0.95)]),
+        _rec(posterior_observations=[_node("m365_tenant", 0.3, 0.1, 0.6)]),
+        _rec(),
+    ]
+
+    metric = build_summary_document(recs)["prevalence"]["m365_tenant"]
+
+    assert metric["metric_kind"] == "model_support_coverage"
+    assert metric["model_evidence_n"] == 2
+    assert metric["support_coverage"] == 0.3333
+    assert metric["unresolved_share"] == 0.6667
+    assert metric["observed_rate"] is None
+    assert metric["lower_bound_over_cohort"] is None
+    assert metric["observable_n"] == 0
 
 
 def test_malformed_record_fields_do_not_crash() -> None:
     # Non-list posterior_observations / degraded_sources / slugs from arbitrary
     # JSON must coerce to empty rather than raise.
-    recs = [{
-        "provider": "Microsoft 365", "dmarc_policy": "reject", "cloud_instance": None,
-        "mta_sts_mode": None, "email_gateway": None,
-        "posterior_observations": 5, "degraded_sources": "dns", "slugs": "x",
-    }]
+    recs = [
+        {
+            "provider": "Microsoft 365",
+            "dmarc_policy": "reject",
+            "cloud_instance": None,
+            "mta_sts_mode": None,
+            "email_gateway": None,
+            "posterior_observations": 5,
+            "degraded_sources": "dns",
+            "slugs": "x",
+        }
+    ]
     doc = build_summary_document(recs)  # must not raise
     assert doc["n"] == 1
     assert doc["posterior_claims"] == {}
@@ -236,12 +340,28 @@ def test_malformed_record_fields_do_not_crash() -> None:
 def test_unhashable_posterior_name_is_skipped() -> None:
     # A malformed record with a list/dict name must be skipped, not raise
     # TypeError when used as a dict key.
-    recs = [_rec(posterior_observations=[
-        {"name": ["m365_tenant"], "posterior": 0.9, "interval_low": 0.8, "interval_high": 0.95,
-         "evidence_used": ["x"], "sparse": False},
-        {"name": "m365_tenant", "posterior": 0.92, "interval_low": 0.85, "interval_high": 0.97,
-         "evidence_used": ["x"], "sparse": False},
-    ])]
+    recs = [
+        _rec(
+            posterior_observations=[
+                {
+                    "name": ["m365_tenant"],
+                    "posterior": 0.9,
+                    "interval_low": 0.8,
+                    "interval_high": 0.95,
+                    "evidence_used": ["x"],
+                    "sparse": False,
+                },
+                {
+                    "name": "m365_tenant",
+                    "posterior": 0.92,
+                    "interval_low": 0.85,
+                    "interval_high": 0.97,
+                    "evidence_used": ["x"],
+                    "sparse": False,
+                },
+            ]
+        )
+    ]
     doc = build_summary_document(recs)  # must not raise
     assert "m365_tenant" in doc["posterior_claims"]  # the valid string-named entry counts
 

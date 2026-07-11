@@ -1,4 +1,4 @@
-"""Credible interval arithmetic for the Bayesian inference layer."""
+"""Evidence-responsive uncertainty-band arithmetic for Bayesian output."""
 
 from __future__ import annotations
 
@@ -15,12 +15,14 @@ def interval_is_ordered(interval: tuple[float, float]) -> bool:
 
 @deal.post(interval_is_ordered)  # pyright: ignore[reportUntypedFunctionDecorator]
 def credible_interval(posterior: float, n_eff: float, width: float = 0.80) -> tuple[float, float]:
-    """Return the evidence-responsive interval for a posterior.
+    """Return the model-relative uncertainty band for a posterior.
 
     Unimodal moment-matched Betas use the exact central quantile via a
     local incomplete-beta inversion. Boundary-shaped Betas keep the
     mean-centered fallback so the interval continues to contain the
-    reported posterior and the CAL8 coverage contract remains valid.
+    reported posterior. The historical function name is retained for internal
+    compatibility; the result is not a Bayesian credible interval over model
+    parameters or a frequentist confidence interval.
     """
     if n_eff <= 0:
         return (0.0, 1.0)
@@ -77,11 +79,7 @@ def _regularized_incomplete_beta(alpha: float, beta: float, x: float) -> float:
     if x >= 1.0:
         return 1.0
     log_beta_density = (
-        math.lgamma(alpha + beta)
-        - math.lgamma(alpha)
-        - math.lgamma(beta)
-        + alpha * math.log(x)
-        + beta * math.log1p(-x)
+        math.lgamma(alpha + beta) - math.lgamma(alpha) - math.lgamma(beta) + alpha * math.log(x) + beta * math.log1p(-x)
     )
     beta_density = math.exp(log_beta_density)
     threshold = (alpha + 1.0) / (alpha + beta + 2.0)
@@ -114,9 +112,7 @@ def _beta_continued_fraction(alpha: float, beta: float, x: float) -> float:
         d = 1.0 / d
         h *= d * c
 
-        aa = -((alpha + iteration) * (qab + iteration) * x) / (
-            (alpha + double_iteration) * (qap + double_iteration)
-        )
+        aa = -((alpha + iteration) * (qab + iteration) * x) / ((alpha + double_iteration) * (qap + double_iteration))
         d = 1.0 + aa * d
         if abs(d) < min_float:
             d = min_float

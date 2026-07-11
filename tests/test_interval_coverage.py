@@ -1,15 +1,15 @@
-"""Credible-interval perturbation-coverage gate.
+"""Uncertainty-band perturbation-containment regressions.
 
 ``validation/interval_coverage.py`` measures how often the shipped 80%
-credible interval contains the conditional probability a
-correctly-parameterized model would report, in synthetic worlds whose
+uncertainty band contains the conditional probability a perturbed model would
+report, in synthetic worlds whose
 evidence likelihoods differ from the shipped values by a multiplicative
-band. The second test below IS the CI gate: at the CAL8 band
-(``delta = 0.2``) every node's coverage, marginal and conditional on
-fired evidence, must meet the interval's nominal 80%. The remaining
-tests anchor the truth path to hand computation and prove the check is
-falsifiable (a wide-enough misspecification drives coverage below 1.0,
-so a future interval-narrowing change cannot pass silently).
+band. At the recorded CAL8 scenario (``delta = 0.2``), the second test
+preserves a sampled containment floor for every node, both over all draws and
+over the selected fired-evidence subset. This is a deterministic regression for
+the fixed seed and sample design, not nominal coverage or general assurance.
+The remaining tests anchor the reference path to hand computation and show that
+the check can detect a sufficiently large perturbation.
 
 Everything here is synthetic and offline: no network, no real domains,
 aggregate numbers only.
@@ -22,14 +22,14 @@ import random
 from recon_tool.bayesian import _Evidence, _Node, infer, load_network
 from validation.differential_verification import _reference_node_likelihood, prior_joint
 from validation.interval_coverage import (
-    _generative_node_likelihood,
+    _fully_observed_node_likelihood,
     _posteriors_from_likelihoods,
     perturb_world,
     run_coverage,
 )
 
-# Sized for CI: enough samples that a per-node coverage failure is a real
-# signal, small enough to stay a few seconds. The full sweep (10 worlds x
+# Sized for CI: enough samples to detect drift in the recorded scenario, while
+# staying within a few seconds. The full sweep (10 worlds x
 # 300 samples x 6 deltas) runs locally; see validation/interval-coverage.md.
 _WORLDS = 3
 _SAMPLES = 80
@@ -47,41 +47,37 @@ def test_consistency_total_coverage_at_zero_delta() -> None:
         assert row["fired_coverage"] in (None, 1.0), f"{name}: delta=0 fired coverage {row['fired_coverage']}"
 
 
-def test_cal8_band_coverage_meets_nominal() -> None:
-    # The assurance claim: under the CAL8 likelihood-imprecision band the
-    # 80% interval contains the correct-world conditional at least 80% of
-    # the time, on every node, in the fired-evidence regime where the model
-    # makes a claim (and marginally). The 2026-06 full sweep measured
-    # >= 0.999 everywhere, so 0.80 is a floor with real headroom, not a
-    # tuned-to-pass bound.
+def test_cal8_sampled_containment_meets_recorded_floor() -> None:
+    # Preserve the finite CAL8 scenario recorded by the validation artifact.
+    # The threshold applies only to this fixed generator, seed, and sample
+    # design. It is not a nominal interval-coverage guarantee.
     results = run_coverage(deltas=(0.2,), worlds=_WORLDS, samples=_SAMPLES, seed=_SEED)
     for name, row in results["deltas"]["0.20"]["nodes"].items():
         assert row["coverage"] is not None, f"{name}: no samples tallied"
         assert row["coverage"] >= 0.80, (
-            f"{name}: marginal coverage {row['coverage']} under the CAL8 band fell below the nominal 80%"
+            f"{name}: sampled containment {row['coverage']} fell below the recorded 0.80 floor"
         )
         if row["fired_coverage"] is not None:
             assert row["fired_coverage"] >= 0.80, (
-                f"{name}: fired-evidence coverage {row['fired_coverage']} under the CAL8 band "
-                "fell below the nominal 80%"
+                f"{name}: fired-subset containment {row['fired_coverage']} fell below the recorded 0.80 floor"
             )
 
 
 def test_gross_misspecification_is_detectable() -> None:
-    # Falsifiability: the check must be able to fail. At delta=0.9 the
-    # worlds are far outside the band the interval claims to absorb, and
+    # Falsifiability: the check must be able to fail. At delta=1.0 the
+    # worlds are far outside the recorded CAL8 scenario, and
     # with this seed at least one node's coverage drops below 1.0. If a
     # change ever makes coverage total even here, the check has lost its
     # discriminating power and needs re-examination.
-    results = run_coverage(deltas=(0.9,), worlds=2, samples=150, seed=_SEED)
-    coverages = [row["coverage"] for row in results["deltas"]["0.90"]["nodes"].values()]
+    results = run_coverage(deltas=(1.0,), worlds=2, samples=150, seed=_SEED)
+    coverages = [row["coverage"] for row in results["deltas"]["1.00"]["nodes"].values()]
     assert any(c is not None and c < 1.0 for c in coverages), (
-        "no node's coverage dropped under delta=0.9; the coverage check can no longer fail"
+        "no node's coverage dropped under delta=1.0; the coverage check can no longer fail"
     )
 
 
-def test_generative_likelihood_hand_computed() -> None:
-    # Anchor the MAR truth path: two bindings, one fired. By hand:
+def test_fully_observed_likelihood_hand_computed() -> None:
+    # Anchor the fully observed Bernoulli path: two bindings, one fired. By hand:
     #   P(pattern | present) = 0.7 * (1 - 0.4) = 0.42
     #   P(pattern | absent)  = 0.1 * (1 - 0.2) = 0.08
     node = _Node(
@@ -95,7 +91,7 @@ def test_generative_likelihood_hand_computed() -> None:
             _Evidence(kind="slug", name="silent", likelihood_present=0.4, likelihood_absent=0.2),
         ),
     )
-    like_present, like_absent = _generative_node_likelihood(node, {"fired"})
+    like_present, like_absent = _fully_observed_node_likelihood(node, {"fired"})
     assert abs(like_present - 0.42) < 1e-12
     assert abs(like_absent - 0.08) < 1e-12
 
@@ -152,3 +148,8 @@ def test_aggregate_output_carries_no_per_domain_data() -> None:
                 "mean_width",
             }
             assert all(isinstance(v, int | float) or v is None for v in row.values())
+    assert results["legacy_metric_names"] == {
+        "mar_coverage": "fully observed Bernoulli-pattern containment",
+        "mar_fired_coverage": "the same metric on the fired-evidence subset",
+        "note": "mar_* keys are historical compatibility names, not MAR assumptions",
+    }

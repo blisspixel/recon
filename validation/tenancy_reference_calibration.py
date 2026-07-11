@@ -6,9 +6,10 @@ harness covers the *provider-attested* tenancy claims: whether a domain has
 a Microsoft 365 / Entra tenant is answered by Microsoft's own
 unauthenticated identity endpoints, keyed on the domain, which the operator
 does not control and cannot suppress without actually leaving the tenant
-(correlation.md section 4.3, the operator/provider hideability spectrum).
-That makes the endpoint answer a reference label the DNS-driven inference
-can be calibrated against — the open tenancy extension the
+(correlation.md section 5.1, the provenance and manipulation spectrum).
+That makes the endpoint answer a useful related-channel reference for the
+DNS-driven inference. The result is corroboration rather than fully independent
+calibration because both channels share tenant provisioning. This is the open tenancy extension the
 statistical-assurance dossier names.
 
 The channel split, which is the whole design. The provider endpoints also
@@ -161,7 +162,6 @@ def gws_attested_federated(google_auth_type: str | None) -> bool:
 def dns_only_tenancy_posteriors(
     results: list[SourceResult],
     queried_domain: str,
-    priors_override: dict[str, float] | None = None,
 ) -> tuple[float, float] | None:
     """(m365, gws) posteriors from the DNS channel alone.
 
@@ -172,8 +172,8 @@ def dns_only_tenancy_posteriors(
     the correct predictor for a no-footprint domain — those records must
     stay in the calibration or the negative stratum is biased away. Returns
     None when the DNS channel itself failed (counted by the caller).
-    ``priors_override`` is threaded to ``infer_from_tenant_info`` (tests pass
-    ``{}`` for hermeticity; a real run keeps the as-deployed default).
+    Inference is pinned to the committed priors so a maintainer's local
+    ``~/.recon/priors.yaml`` cannot change a recorded validation result.
     """
     from recon_tool.bayesian import infer_from_tenant_info
     from recon_tool.merger import merge_results
@@ -189,7 +189,7 @@ def dns_only_tenancy_posteriors(
         info = merge_results(list(dns), queried_domain)
     except Exception:
         return None
-    result = infer_from_tenant_info(info, priors_override=priors_override)
+    result = infer_from_tenant_info(info, priors_override={})
     posteriors = {p.name: float(p.posterior) for p in result.posteriors}
     m365 = posteriors.get(_M365_NODE)
     gws = posteriors.get(_GWS_NODE)
@@ -217,9 +217,11 @@ def one_sided_recall_summary(posteriors: list[float], threshold: float = 0.5) ->
 
     Among domains the provider channel attested (label 1 by construction —
     there is no negative class), the fraction whose posterior clears the
-    decision threshold, with an 80% Wilson interval, plus posterior
-    quartiles. Deliberately NOT a calibration summary: with one label class,
-    ECE/Brier would only restate the mean posterior.
+    decision threshold, with a naive iid 80% Wilson diagnostic range, plus
+    posterior quartiles. The selected rows are not established to be iid, so
+    the range has no population-coverage interpretation. Deliberately NOT a
+    calibration summary: with one label class, ECE/Brier would only restate the
+    mean posterior.
     """
     n = len(posteriors)
     if n == 0:
@@ -231,6 +233,7 @@ def one_sided_recall_summary(posteriors: list[float], threshold: float = 0.5) ->
         "threshold": threshold,
         "recall": round(hits / n, 4),
         "recall_wilson80": (round(wlo, 4), round(whi, 4)),
+        "interval_interpretation": "naive iid Wilson diagnostic range; no population-coverage claim",
         "posterior_quartiles": (
             round(percentile(posteriors, 0.25), 4),
             round(percentile(posteriors, 0.50), 4),
@@ -298,7 +301,10 @@ async def _collect_one(
     attested = gws_attested_federated(getattr(gid, "google_auth_type", None) if gid is not None else None)
 
     dns_pair = dns_only_tenancy_posteriors(list(results), domain)
-    full = {p.name: float(p.posterior) for p in infer_from_tenant_info(info).posteriors}
+    full = {
+        p.name: float(p.posterior)
+        for p in infer_from_tenant_info(info, priors_override={}).posteriors
+    }
 
     return TenancyRecord(
         m365_disposition=disposition,
@@ -366,8 +372,14 @@ def _print_summary(summary: dict[str, object], header: str) -> None:
     print(f"  log score (proper):    {summary['log_score']}")
     print(f"  Brier:                 {summary['brier']}")
     print(f"  ECE fixed-width:       {summary['ece']}")
-    print(f"  ECE equal-mass:        {summary['ece_equal_mass']}  CI80 {summary['ece_equal_mass_ci80']}")
-    print(f"  agreement rate:        {summary['agreement_rate']}  Wilson80 {summary['agreement_wilson80']}")
+    print(
+        f"  ECE tie-preserving:    {summary['ece_equal_mass']}  "
+        f"naive-iid bootstrap range80 {summary['ece_equal_mass_ci80']}"
+    )
+    print(
+        f"  agreement rate:        {summary['agreement_rate']}  "
+        f"naive-iid Wilson range80 {summary['agreement_wilson80']}"
+    )
     print("  reliability (posterior bin -> empirical tenant rate):")
     for row in summary["reliability"]:  # type: ignore[attr-defined]
         print(f"    [{row['bin_low']:.2f}, {row['bin_high']:.2f})  rate {row['enforcing_rate']:.3f}  n {row['count']}")
@@ -392,7 +404,10 @@ def _print_gws_block(summary: dict[str, object]) -> None:
         print("  no attested-federated domains in this set")
         return
     print(f"  n attested:            {summary['n']}")
-    print(f"  recall @ {summary['threshold']}:          {summary['recall']}  Wilson80 {summary['recall_wilson80']}")
+    print(
+        f"  recall @ {summary['threshold']}:          {summary['recall']}  "
+        f"naive-iid Wilson range80 {summary['recall_wilson80']}"
+    )
     q1, q2, q3 = summary["posterior_quartiles"]  # type: ignore[misc]
     print(f"  DNS-only posterior quartiles: p25 {q1}  p50 {q2}  p75 {q3}")
 
@@ -403,7 +418,9 @@ _TRAILER = (
     "full-pipeline block is a consistency check only (the endpoints feed it), per\n"
     "CAL1. The GWS block is one-sided by the nature of the channel (no managed\n"
     "detection, no authoritative negative) and is never a calibration claim. See\n"
-    "docs/statistical-assurance.md and validation/reference-calibration.md."
+    "docs/statistical-assurance.md and validation/reference-calibration.md.\n"
+    "Bootstrap and Wilson ranges use naive iid rows and have no coverage\n"
+    "interpretation for this selected cohort."
 )
 
 

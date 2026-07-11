@@ -161,14 +161,10 @@ class TestRoundTripAllFields:
         restored = tenant_info_from_dict(tenant_info_to_dict(info))
         assert restored.ct_attempt_outcome == "live_success"
 
-    def test_bimi_identity_roundtrip(self) -> None:
+    def test_unvalidated_legacy_bimi_identity_is_not_cached(self) -> None:
         info = _complete_info()
         restored = tenant_info_from_dict(tenant_info_to_dict(info))
-        assert restored.bimi_identity is not None
-        assert restored.bimi_identity.organization == "Contoso Ltd"
-        assert restored.bimi_identity.country == "US"
-        assert restored.bimi_identity.state == "WA"
-        assert restored.bimi_identity.locality == "Redmond"
+        assert restored.bimi_identity is None
 
     def test_evidence_records_roundtrip(self) -> None:
         info = _complete_info()

@@ -15,7 +15,7 @@ through the renderer. The trigger discipline must hold:
   * Multi-cloud rollup never fires when there are zero distinct
     canonical cloud vendors across the input.
   * Multi-cloud rollup always fires when there are at least two
-    distinct canonical cloud vendors.
+    distinct canonical cloud vendors with endpoint-binding evidence.
   * Ceiling never fires when ``info.services`` is empty.
   * Ceiling never fires under ``--full`` mode.
   * Ceiling never fires when ``info.domain_count < 3``.
@@ -41,7 +41,7 @@ from recon_tool.formatter import (
     canonical_cloud_vendor,
     render_tenant_panel,
 )
-from recon_tool.models import ConfidenceLevel, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
 
 def _render(info: TenantInfo, *, show_domains: bool = False) -> str:
@@ -67,7 +67,14 @@ _cloud_slugs_in_rollup = sorted(_CLOUD_VENDOR_BY_SLUG.keys())
 _non_cloud_slugs = [s for s in _catalog_slugs if s not in _CLOUD_VENDOR_BY_SLUG]
 
 
-def _make_tenant(*, slugs, services, domain_count: int = 5, surface_count: int = 0) -> TenantInfo:
+def _make_tenant(
+    *,
+    slugs,
+    services,
+    domain_count: int = 5,
+    surface_count: int = 0,
+    evidence: tuple[EvidenceRecord, ...] = (),
+) -> TenantInfo:
     domains = tuple(f"contoso-{i}.example" for i in range(domain_count))
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid",
@@ -79,6 +86,7 @@ def _make_tenant(*, slugs, services, domain_count: int = 5, surface_count: int =
         tenant_domains=domains,
         services=tuple(services),
         slugs=tuple(slugs),
+        evidence=evidence,
     )
 
 
@@ -120,12 +128,10 @@ class TestMultiCloudInvariantsOnCatalogInputs:
         deadline=None,
         suppress_health_check=[HealthCheck.too_slow, HealthCheck.function_scoped_fixture],
     )
-    def test_two_or_more_distinct_vendors_always_fires_rollup(self, cloud_slugs):
-        """Property: if the input contains slugs canonicalizing to at
-        least 2 distinct cloud vendors, the rollup MUST fire. We
-        filter inputs to ensure they actually produce ≥ 2 distinct
-        vendors after canonicalization (otherwise multiple AWS-family
-        slugs would still collapse to 1 vendor)."""
+    def test_two_or_more_endpoint_bound_vendors_always_fire_rollup(self, cloud_slugs):
+        """Property: at least two distinct canonical vendors with typed
+        endpoint-binding evidence MUST fire the rollup. Multiple slugs
+        from one vendor still collapse to one vendor."""
         vendors = {canonical_cloud_vendor(s) for s in cloud_slugs}
         vendors.discard(None)
         if len(vendors) < 2:
@@ -133,7 +139,20 @@ class TestMultiCloudInvariantsOnCatalogInputs:
             # vendor (e.g. multiple AWS-family slugs). Skip.
             return
 
-        info = _make_tenant(slugs=cloud_slugs, services=[s.title() for s in cloud_slugs])
+        evidence = tuple(
+            EvidenceRecord(
+                "CNAME",
+                f"{slug}.contoso.example -> synthetic.endpoint.example",
+                slug.title(),
+                slug,
+            )
+            for slug in cloud_slugs
+        )
+        info = _make_tenant(
+            slugs=cloud_slugs,
+            services=[s.title() for s in cloud_slugs],
+            evidence=evidence,
+        )
         out = _render(info)
         assert "Multi-cloud" in out, (
             f"rollup did NOT fire on >= 2 distinct vendors. slugs={cloud_slugs}, vendors={vendors}, render={out[:400]}"

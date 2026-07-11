@@ -1,7 +1,7 @@
 """Pin the layer-ablation harness's pure logic.
 
-`validation/layer_ablation.py` measures what the Bayesian layer adds over
-slug-matching baselines (synthetic worlds, model-grounded truth) and what
+`validation/layer_ablation.py` compares the Bayesian layer with slug-matching
+baselines under an independent-Bernoulli misspecification stress test and what
 the graph layer adds over connected components (planted partitions with
 bridging noise). Everything here is synthetic and deterministic; the
 hand-value cross-checks tie the baselines to independently-pinned engine
@@ -17,6 +17,7 @@ import pytest
 from validation.layer_ablation import (
     any_fired_prediction,
     connected_components_partition,
+    main,
     planted_corpus,
     run_graph_ablation,
     strongest_only_prediction,
@@ -96,3 +97,10 @@ class TestGraphAblation:
         assert noisy.ari_louvain > noisy.ari_components
         assert noisy.ari_louvain > 0.9
         assert noisy.ari_components < 0.5
+
+
+def test_cli_labels_bayesian_ablation_as_misspecification_stress(capsys) -> None:
+    assert main(["--samples", "2", "--skip-graph"]) == 0
+    output = capsys.readouterr().out
+    assert "independent-Bernoulli misspecification stress test" in output
+    assert "not the committed generative model" in output

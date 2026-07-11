@@ -8,8 +8,9 @@
 
 Passive domain intelligence from public sources. recon reads public DNS,
 certificate transparency, and unauthenticated Microsoft and Google identity
-discovery endpoints to report what an organization appears to publish about its
-identity stack, email posture, SaaS footprint, and related domains.
+discovery endpoints to compose typed observations around a domain's public
+technology and identity namespace. A domain is the query coordinate, not proof
+of one organization, owner, account, or deployed product.
 
 It uses no credentials, no API keys, no paid feeds, and no active scanning. It
 is a local Python CLI, importable library, JSON producer, and stdio MCP server.
@@ -63,7 +64,7 @@ Example output shape:
 Contoso Ltd
 contoso.com
 
-Provider     Microsoft 365 via Proofpoint gateway
+Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)
 Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890
 Auth         Federated
 Confidence   High (4 sources)
@@ -74,9 +75,9 @@ Services
   Cloud       Cloudflare, AWS Route 53
 
 Insights
-  Federated identity indicators observed
-  Email security 4/5: DMARC reject, DKIM, SPF strict, BIMI
-  Email gateway: Proofpoint in front of Exchange
+  Federated identity observed; identity-vendor indicators: Okta
+  Email security: observed controls: DMARC reject, DKIM, SPF strict, BIMI
+  MX gateway observed: Proofpoint
 ```
 
 Examples use [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges).
@@ -132,17 +133,23 @@ recon reads:
   related-domain hints.
 - Identity discovery: unauthenticated Microsoft and Google endpoints.
 
-By default, the only request the queried domain's own servers see is the
-standards-based MTA-STS policy fetch at `mta-sts.<domain>`. Google CSE and BIMI
-VMC direct probes are opt-in behind `--direct-probes`.
+Default collection includes bounded DNS queries through the configured
+recursive resolver, so authoritative DNS infrastructure may observe resulting
+resolver traffic. The only default target-owned HTTP or application request is
+the standards-based MTA-STS policy fetch at `mta-sts.<domain>`. Google CSE and
+BIMI VMC direct probes are opt-in behind `--direct-probes`.
 
-The engine then maps observables to fingerprint slugs, derived signals, graph
-motifs, and optional Bayesian posteriors. Sparse public evidence stays sparse:
-the result widens uncertainty or lowers confidence instead of inventing a clean
-answer.
+The engine then maps observables to fingerprint slugs, derived signals, typed
+topology, provenance paths, per-slug evidence strength, and model-relative
+Bayesian diagnostics. Sparse public evidence stays sparse: the result lowers
+confidence or remains unresolved instead of inventing a clean answer. A source
+failure remains unavailable rather than becoming a negative observation. The
+Bayesian uncertainty band is evidence-responsive, not a demonstrated credible
+or confidence interval.
 
 Long-form explanation: [docs/how-it-works.md](docs/how-it-works.md).
-Formal model: [docs/correlation.md](docs/correlation.md).
+Formal model and robustness research program:
+[docs/correlation.md](docs/correlation.md).
 
 ## JSON and Automation
 

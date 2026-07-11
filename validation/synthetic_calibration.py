@@ -1,38 +1,40 @@
-"""Synthetic ground-truth calibration experiment for the v1.9 layer.
+"""Synthetic reliability diagnostic for the v1.9 layer.
 
-The private corpus answers "does the layer behave well on real
-targets?" but it cannot answer "are posteriors *calibrated* — does
-``P(claim | evidence)`` approximately match the long-run frequency of
-claim-true outcomes for that evidence pattern?" Calibration requires
-ground truth, which the passive setting cannot provide for real
-targets.
+This harness compares model-relative posteriors with latent states sampled from
+the committed prior/CPT graph, then samples each evidence binding independently
+as a Bernoulli variable using the committed marginal likelihood parameters. It
+is an independent-Bernoulli misspecification stress test, not the committed
+model's generative process and not evidence of calibration on real domains.
 
 This script generates synthetic ground truth instead. We:
 
-1. Sample a *true* parameter ``X*`` for each node from the network's
+1. Sample a latent state ``X*`` for each node from the network's
    prior / CPT distribution.
-2. Sample evidence-binding outcomes from the corresponding likelihoods
-   given ``X*``. This is the simulated "what recon would observe".
+2. Independently sample every evidence-binding outcome from the corresponding
+   likelihood given ``X*``.
 3. Run inference with ``infer()`` to get the posterior ``p_hat``.
 4. Bin posteriors by predicted probability and compare to the
    empirical frequency of ``X* = present`` in each bin.
 
-We report two reliability views per node:
+This generator neither implements correlation-group observation structure nor
+the shipped missingness semantics. It treats every binding as conditionally
+independent and every non-fire as generated, while shipped inference reduces
+correlated groups and ignores hideable non-fire. The mismatch is intentional:
+the experiment asks how inference behaves under this particular misspecification
+while sharing marginal parameters. We report two reliability diagnostics:
 
-  - **Marginal calibration.** Standard reliability diagram over all
+  - **Marginal reliability.** Standard reliability diagram over all
     samples. Includes the "no binding fired" bucket where the
     posterior equals the network prior.
-  - **Conditional-on-fired-evidence calibration.** Restricted to
-    samples where at least one binding fired for the node. This is
-    the calibration claim recon's asymmetric-likelihood model
-    actually makes (see correlation.md §4.3): we deliberately do
-    not condition on absence, so marginal posteriors are NOT
-    calibrated to long-run frequency in the sparse-evidence regime.
-    Conditional-on-evidence posteriors *are*.
+  - **Conditional-on-fired-evidence diagnostic.** Restricted to samples
+    where at least one binding fired for the node. Selection on firing is
+    itself informative, and the generator conditions on non-fire differently
+    from shipped hideable-node inference. This remains a model-internal
+    diagnostic, not a calibration claim (see correlation.md section 3.3).
 
-Output also includes interval-coverage rates (does the 80% credible
-interval contain the ground-truth indicator?) and the Brier score
-(Murphy 1973; Gneiting et al. 2007).
+Output includes Brier score and binned expected calibration error (Murphy 1973;
+Gneiting et al. 2007). Neither metric becomes external calibration evidence in
+this misspecification stress experiment.
 
 Run:
 
@@ -40,8 +42,8 @@ Run:
     python validation/synthetic_calibration.py --samples 50000 --seed 42
     python validation/synthetic_calibration.py --node m365_tenant
 
-The script does not write any files; it prints to stdout. Output is
-publishable — the synthetic data has no real-world targets in it.
+The script does not write any files; it prints to stdout. Output is publishable
+because the synthetic data has no real-world targets in it.
 """
 
 from __future__ import annotations
@@ -88,8 +90,11 @@ def _sample_topological(net: BayesianNetwork, rng: random.Random) -> dict[str, s
 def _sample_observations(
     net: BayesianNetwork, true_state: dict[str, str], rng: random.Random
 ) -> tuple[list[str], list[str]]:
-    """Given the ground-truth assignment, simulate which evidence
-    bindings fire."""
+    """Independently Bernoulli-sample each binding given the latent state.
+
+    This deliberately ignores evidence groups and shipped missingness semantics;
+    callers must treat it as a misspecification stress generator.
+    """
     obs_slugs: list[str] = []
     obs_signals: list[str] = []
     for node in net.nodes:
@@ -161,16 +166,16 @@ def main() -> int:
     net = load_network()
     rng = random.Random(args.seed)  # noqa: S311 - reproducible synthetic experiment, not security-sensitive.
 
-    # Per-node prediction / outcome / interval / fired-flag lists.
+    # Per-node prediction, outcome, and fired-flag lists.
     # ``fired`` records whether at least one binding fired for this
-    # node on this sample — the asymmetric-likelihood model is
-    # calibrated to long-run frequency only on the fired==True subset.
-    by_node: dict[str, tuple[list[float], list[int], list[tuple[float, float]], list[bool]]] = {
-        n.name: ([], [], [], []) for n in net.nodes
+    # node on this sample. The selected subset remains model-internal and does
+    # not acquire a calibration guarantee through selection.
+    by_node: dict[str, tuple[list[float], list[int], list[bool]]] = {
+        n.name: ([], [], []) for n in net.nodes
     }
     fired_names_per_node: dict[str, set[str]] = {n.name: {ev.name for ev in n.evidence} for n in net.nodes}
 
-    print(f"Simulating {args.samples} synthetic domains under the v1.9 network...")
+    print(f"Simulating {args.samples} independent-Bernoulli misspecification worlds...")
     for i in range(args.samples):
         if (i + 1) % 5000 == 0:
             print(f"  {i + 1}/{args.samples} ...", flush=True)
@@ -179,10 +184,9 @@ def main() -> int:
         result = infer(net, obs_slugs, obs_signals, priors_override={})
         observed_set = set(obs_slugs) | set(obs_signals)
         for p in result.posteriors:
-            preds, outs, ivs, fireds = by_node[p.name]
+            preds, outs, fireds = by_node[p.name]
             preds.append(p.posterior)
             outs.append(1 if true_state[p.name] == "present" else 0)
-            ivs.append((p.interval_low, p.interval_high))
             fireds.append(bool(fired_names_per_node[p.name] & observed_set))
     print()
 
@@ -196,11 +200,11 @@ def main() -> int:
         if node not in by_node:
             print(f"  unknown node: {node!r}", file=sys.stderr)
             continue
-        predicted, outcome, _intervals, fired = by_node[node]
+        predicted, outcome, fired = by_node[node]
         if not predicted:
             continue
 
-        # Marginal calibration — over all samples (includes the
+        # Marginal reliability over all samples (includes the
         # no-binding-fired regime where the asymmetric-likelihood
         # model deliberately reports the prior).
         brier = _brier(predicted, outcome)
@@ -209,9 +213,9 @@ def main() -> int:
         overall_brier.append(brier)
         overall_ece.append((ece, len(predicted)))
 
-        # Conditional calibration — over samples where ≥1 binding
-        # fired for this node. This is the calibration claim the
-        # model actually makes (see correlation.md §4.3).
+        # Conditional diagnostic over samples where at least one binding fired
+        # for this node. Selection does not make the result an external
+        # calibration claim (see correlation.md section 3.3).
         cond_pred = [p for p, f in zip(predicted, fired, strict=True) if f]
         cond_out = [o for o, f in zip(outcome, fired, strict=True) if f]
 
@@ -244,17 +248,15 @@ def main() -> int:
             print(f"  Mean Brier (conditional):        {avg_brier_cond:.4f}")
             print(f"  Sample-weighted ECE (conditional): {avg_ece_cond:.4f}")
         print()
-        print("  Marginal ECE is high by design: under the asymmetric-")
-        print("  likelihood model (correlation.md section 4.3), posteriors in")
+        print("  Marginal ECE can be high in this independent-Bernoulli stress test.")
+        print("  Under shipped hideable-node semantics, posteriors in the")
         print("  no-evidence-fired regime equal the network prior, not the")
-        print("  posterior conditional on absence. We sacrifice marginal")
-        print("  calibration to refuse overconfident verdicts on hardened")
-        print("  targets.")
+        print("  posterior conditional on absence. This records a generator/inference")
+        print("  mismatch; it is not an estimate of an MNAR price.")
         print()
-        print("  Conditional ECE - over samples where >= 1 binding fired -")
-        print("  is the calibration claim the model actually makes. ECE")
-        print("  values < 0.10 indicate good calibration in the regime")
-        print("  where the public channel produced any signal at all.")
+        print("  Conditional ECE, over samples where >= 1 binding fired, is a")
+        print("  model-internal diagnostic. Selection on firing remains informative,")
+        print("  so this is not an external calibration claim.")
 
     return 0
 

@@ -295,6 +295,38 @@ class TestCliPostureAndExplainFlags:
         assert "Source Status" in result.stdout
         assert "oidc_discovery" in result.stdout
 
+    def test_source_panels_project_unavailable_channel_payloads(self) -> None:
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Contoso",
+            default_domain="contoso.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.LOW,
+            degraded_sources=("dns:dmarc",),
+        )
+        sources = [
+            SourceResult(
+                source_name="dns_records",
+                dmarc_policy="reject",
+                detected_services=("DMARC",),
+                detected_slugs=("dmarc",),
+                degraded_sources=("dns:dmarc",),
+            )
+        ]
+
+        async def fake_resolve(*args: object, **kwargs: object):
+            return info, sources
+
+        with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
+            result = runner.invoke(
+                app,
+                ["lookup", "contoso.com", "--no-cache", "--sources", "--explain"],
+            )
+
+        assert result.exit_code == 0
+        assert "dns:dmarc" in result.stdout
+        assert "DMARC: reject" not in result.stdout
+
     def test_explain_on_cache_hit_synthesizes_source_status(self, tmp_path: Path) -> None:
         """Phase 1 regression guard: --explain must render Source Status
         even when the lookup is served from cache (results list is empty

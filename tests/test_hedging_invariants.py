@@ -8,11 +8,9 @@ merge.
 
 Three invariants, tested with Hypothesis-generated inputs:
 
-    1. **Hedged hardening observations never contain confident verdicts.**
-       When ``positive_when_absent`` fires, the emitted description must
-       use two-sided hedged language ("fits deliberate hardening or a
-       dormant / parked target"). No "is", no "definitely", no
-       "confirmed".
+    1. **Configured comparison absences never become target claims.**
+       When ``positive_when_absent`` fires for an operator-defined signal,
+       the emitted description must remain a bounded non-observation.
 
     2. **Sparse-data insights never claim certainty.** When a TenantInfo
        has fewer than 3 successful sources, its generated insights are
@@ -187,15 +185,13 @@ class TestHardeningObservationIsHedged:
 
     @settings(max_examples=200, suppress_health_check=[HealthCheck.too_slow])
     @given(detected=slug_subset_st)
-    def test_hardening_observation_name_has_suffix(self, detected: list[str]):
-        """The emitted SignalMatch name must carry the v0.9.3 suffix so
-        downstream code can filter for hardening observations without
-        having to string-match the description."""
+    def test_configured_absence_observation_name_has_suffix(self, detected: list[str]):
+        """Derived comparison absences carry an explicit suffix."""
         ctx = SignalContext(detected_slugs=frozenset(detected))
         fired = evaluate_signals(ctx)
         observations = evaluate_positive_absence(fired, load_signals(), ctx.detected_slugs)
         for obs in observations:
-            assert "Hardening Pattern Observed" in obs.name
+            assert "Configured Indicators Not Observed" in obs.name
 
 
 # ── Invariant 2: sparse-data insights never claim certainty ───────────
@@ -298,7 +294,7 @@ def _hedged_info() -> TenantInfo:
         queried_domain="test.example",
         confidence=ConfidenceLevel.LOW,
         insights=(
-            "Federated identity indicators observed (likely enterprise SSO)",
+            "Federated identity observed; external IdP not identified",
             "Email security 2/5 basic (DMARC none)",
             "Edge Layering — Hardening Pattern Observed: fits deliberate hardening",
         ),

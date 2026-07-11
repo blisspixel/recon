@@ -19,9 +19,10 @@ the normalized sum. Nothing here calls ``_factor_for_node``,
 ``_factor_for_evidence``, ``_multiply``, ``_sum_out``, or
 ``_query_marginal``; the only shared input is the loaded network data
 (priors, CPTs, evidence bindings), which both implementations are
-entitled to read. If variable elimination and naive enumeration agree
-on every node for every evidence configuration, the elimination plumbing
-and the factor construction are verified, not merely tested.
+entitled to read. Agreement on every node over the explicitly swept
+configurations strongly cross-checks the elimination plumbing and factor
+construction. It is not an exhaustive sweep of the full global evidence power
+set.
 
 The evidence space swept is the ternary "local scenario" cross product
 the roadmap describes (each node contributes none / one / all of its
@@ -30,14 +31,14 @@ That cross product is enumerable in full, and on top of it the tricky
 factor-construction nodes (the two correlation groups and the
 declarative policy node) get an exhaustive per-node subset sweep so
 every group-reduction and absence-conditioning branch is exercised
-under several backgrounds.
+under sparse and dense backgrounds.
 
 The independent reference is anchored to hand computation in
 ``tests/test_bayesian_differential.py`` (the no-evidence root and
 descendant marginals are checked against closed-form values), so the
 cross-check is not circular: the reference is known-correct on the
 cases a human can verify, and variable elimination is then held to the
-reference everywhere.
+reference throughout the declared sweep.
 
 Run:
 
@@ -94,7 +95,7 @@ def _binding_abs_llr(ev: _Evidence) -> float:
 def _reference_contributing(fired: list[_Evidence]) -> list[_Evidence]:
     """One effective binding per correlation group, plus every ungrouped one.
 
-    Re-derived from the documented spec (correlation.md 4.3): bindings that
+    Re-derived from the documented spec (correlation.md section 3.2): bindings that
     share a ``group`` are redundant readings of one fact, so the group
     contributes only its strongest member (largest ``|log LR|``) rather than
     the product of all members. Written from the definition, independently of
@@ -408,7 +409,7 @@ def main() -> int:
         for line in all_failures:
             print(line)
         return 1
-    print("PASS: variable elimination matches naive enumeration on every configuration.")
+    print("PASS: variable elimination matches naive enumeration on every swept configuration.")
     return 0
 
 

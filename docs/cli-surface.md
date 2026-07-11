@@ -315,7 +315,7 @@ Summary: Install the recon MCP server config into a client's config file.
 ## `recon signals list`
 
 Kind: command
-Summary: List every built-in signal, grouped by category.
+Summary: List reportable public signals, grouped by category.
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|
@@ -326,7 +326,7 @@ Summary: List every built-in signal, grouped by category.
 ## `recon signals search`
 
 Kind: command
-Summary: Search signals by name, category, description, or candidate slug.
+Summary: Search reportable signals by label, category, description, or candidate slug.
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|
@@ -337,7 +337,7 @@ Summary: Search signals by name, category, description, or candidate slug.
 ## `recon signals show`
 
 Kind: command
-Summary: Show the full definition of a single signal.
+Summary: Show the public definition of a single reportable signal.
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|

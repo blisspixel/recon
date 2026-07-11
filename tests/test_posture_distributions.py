@@ -9,8 +9,11 @@ synthetic records (no network, no apex).
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
+from validation import posture_distributions as posture
 from validation.posture_distributions import (
     DomainRecord,
     NodeWidthRecord,
@@ -47,8 +50,8 @@ class TestNeffBucket:
     @pytest.mark.parametrize(
         ("n_eff", "label"),
         [
-            (4.0, "ceiling (<=4)"),
-            (3.0, "ceiling (<=4)"),
+            (4.0, "floor (<=4)"),
+            (3.0, "floor (<=4)"),
             (5.0, "5-6"),
             (6.0, "5-6"),
             (7.0, "7-9"),
@@ -102,24 +105,55 @@ class TestWidthByEvidence:
             NodeWidthRecord(node="cdn_fronting", grouped=False, n_eff=4.0, width=0.40),
         ]
         out = width_by_evidence(records)
-        assert out["grouped"]["ceiling (<=4)"]["mean_width"] == 0.30
+        assert out["grouped"]["floor (<=4)"]["mean_width"] == 0.30
         assert out["grouped"]["7-9"]["mean_width"] == 0.10
-        assert out["ungrouped"]["ceiling (<=4)"]["mean_width"] == 0.40
+        assert out["ungrouped"]["floor (<=4)"]["mean_width"] == 0.40
         # No ungrouped observation landed in the 7-9 bucket.
         assert "7-9" not in out["ungrouped"]
 
     def test_width_falls_with_evidence(self) -> None:
-        # The evidence-responsiveness property the diagnostic exists to show.
+        # A concrete descriptive sample, not a general monotonicity proof.
         records = [
             NodeWidthRecord(node="x", grouped=False, n_eff=4.0, width=0.5),
             NodeWidthRecord(node="x", grouped=False, n_eff=4.0, width=0.5),
             NodeWidthRecord(node="x", grouped=False, n_eff=12.0, width=0.1),
         ]
         out = width_by_evidence(records)
-        ceiling = out["ungrouped"]["ceiling (<=4)"]["mean_width"]
+        floor = out["ungrouped"]["floor (<=4)"]["mean_width"]
         rich = out["ungrouped"]["10+"]["mean_width"]
-        assert ceiling > rich
+        assert floor > rich
 
     def test_empty(self) -> None:
         out = width_by_evidence([])
         assert out == {"ungrouped": {}, "grouped": {}}
+
+
+def test_posture_collector_cannot_load_user_local_priors(monkeypatch) -> None:
+    import recon_tool.bayesian as bayesian
+    import recon_tool.resolver as resolver
+    from recon_tool.merger import merge_results
+    from recon_tool.models import SourceResult
+
+    dns = SourceResult(source_name="dns_records")
+    info = merge_results([dns], "example.test")
+
+    def _fail_if_loaded():
+        raise AssertionError("validation attempted to load user-local priors")
+
+    async def _resolve(_domain: str, *, timeout: float, skip_ct: bool):
+        del timeout, skip_ct
+        return info, [dns]
+
+    monkeypatch.setattr(bayesian, "load_priors_override", _fail_if_loaded)
+    monkeypatch.setattr(resolver, "resolve_tenant", _resolve)
+    result = asyncio.run(
+        posture._collect_one(
+            "example.test",
+            timeout=1.0,
+            sem=asyncio.Semaphore(1),
+        )
+    )
+    assert result is not None
+    domain_record, width_records = result
+    assert domain_record.tier == "sparse"
+    assert width_records

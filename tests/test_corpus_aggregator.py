@@ -52,24 +52,54 @@ def _make_dict(**overrides) -> dict:
     return base
 
 
+def _cname_evidence(*slugs: str) -> list[dict[str, str]]:
+    """Build typed endpoint lineage for synthetic positive fixtures."""
+    return [
+        {
+            "source_type": "CNAME",
+            "raw_value": f"{slug}.contoso.com -> synthetic.endpoint.example",
+            "rule_name": slug.title(),
+            "slug": slug,
+        }
+        for slug in slugs
+    ]
+
+
 class TestMultiCloudFired:
     def test_single_cloud_apex_does_not_fire(self):
-        info = tenant_info_from_dict(_make_dict(slugs=["aws-cloudfront", "aws-route53"]))
+        info = tenant_info_from_dict(
+            _make_dict(
+                slugs=["aws-cloudfront", "aws-route53"],
+                evidence=_cname_evidence("aws-cloudfront", "aws-route53"),
+            )
+        )
         fired, count = _multi_cloud_fired(info)
         assert fired is False
         assert count == 1
 
     def test_two_distinct_vendors_fires(self):
-        info = tenant_info_from_dict(_make_dict(slugs=["aws-cloudfront", "cloudflare"]))
+        info = tenant_info_from_dict(
+            _make_dict(
+                slugs=["aws-cloudfront", "cloudflare"],
+                evidence=_cname_evidence("aws-cloudfront", "cloudflare"),
+            )
+        )
         fired, count = _multi_cloud_fired(info)
         assert fired is True
         assert count == 2
 
     def test_three_distinct_vendors_fires(self):
-        info = tenant_info_from_dict(_make_dict(slugs=["aws-cloudfront", "cloudflare", "gcp-compute"]))
+        slugs = ["aws-cloudfront", "cloudflare", "gcp-compute"]
+        info = tenant_info_from_dict(_make_dict(slugs=slugs, evidence=_cname_evidence(*slugs)))
         fired, count = _multi_cloud_fired(info)
         assert fired is True
         assert count == 3
+
+    def test_unlined_cached_slugs_do_not_fire(self):
+        info = tenant_info_from_dict(_make_dict(slugs=["aws-cloudfront", "cloudflare"]))
+        fired, count = _multi_cloud_fired(info)
+        assert fired is False
+        assert count == 0
 
     def test_non_cloud_slugs_do_not_count(self):
         info = tenant_info_from_dict(_make_dict(slugs=["slack", "okta", "auth0"]))
@@ -84,6 +114,7 @@ class TestMultiCloudFired:
         info = tenant_info_from_dict(
             _make_dict(
                 slugs=["aws-cloudfront"],
+                evidence=_cname_evidence("aws-cloudfront"),
                 surface_attributions=[
                     {
                         "subdomain": "api.contoso.com",
@@ -133,7 +164,10 @@ class TestCeilingFired:
 class TestAggregateOverCorpus:
     def test_aggregate_emits_expected_shape(self):
         results = [
-            _make_dict(slugs=["aws-cloudfront", "cloudflare"]),
+            _make_dict(
+                slugs=["aws-cloudfront", "cloudflare"],
+                evidence=_cname_evidence("aws-cloudfront", "cloudflare"),
+            ),
             _make_dict(slugs=["aws-cloudfront"]),
             _make_dict(
                 slugs=["m365"],

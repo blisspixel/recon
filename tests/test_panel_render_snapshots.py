@@ -29,7 +29,7 @@ from __future__ import annotations
 from rich.console import Console
 
 from recon_tool.formatter import render_tenant_panel
-from recon_tool.models import ConfidenceLevel, SurfaceAttribution, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, SurfaceAttribution, TenantInfo
 
 
 def _render(info: TenantInfo, **kwargs: object) -> str:
@@ -59,6 +59,14 @@ def _multi_cloud_fixture() -> TenantInfo:
         tenant_domains=("contoso.com", "contoso.net", "contoso.co.uk", "contoso-corp.com"),
         services=("AWS CloudFront", "AWS Route 53", "Cloudflare", "Fastly", "Okta", "Slack"),
         slugs=("aws-cloudfront", "aws-route53", "cloudflare", "fastly", "okta", "slack"),
+        evidence=(
+            EvidenceRecord("CNAME", "www -> cloudfront.net", "AWS CloudFront", "aws-cloudfront"),
+            EvidenceRecord("NS", "ns-1.awsdns.example", "AWS Route 53", "aws-route53"),
+            EvidenceRecord("CNAME", "edge -> cloudflare.net", "Cloudflare", "cloudflare"),
+            EvidenceRecord("CNAME", "static -> fastly.net", "Fastly", "fastly"),
+            EvidenceRecord("TXT", "_oktaverification=opaque", "Okta", "okta"),
+            EvidenceRecord("TXT", "slack-domain-verification=opaque", "Slack", "slack"),
+        ),
         surface_attributions=tuple(
             SurfaceAttribution(
                 subdomain=f"app{i}.contoso.com",

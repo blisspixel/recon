@@ -255,9 +255,7 @@ class TestSecurityReviewFixes:
 
         from recon_tool.sources.dns import _classify_chain
 
-        rule = SimpleNamespace(
-            pattern="manageengine.com", tier="application", name="ManageEngine", slug="manageengine"
-        )
+        rule = SimpleNamespace(pattern="manageengine.com", tier="application", name="ManageEngine", slug="manageengine")
         assert _classify_chain(["manageengine.com.attacker.tld"], [rule])[0] is None
         assert _classify_chain(["foo.manageengine.com"], [rule])[0] is rule
         assert _classify_chain(["manageengine.com"], [rule])[0] is rule
@@ -365,12 +363,8 @@ class TestBugHuntRound2:
         assert restored.merge_conflicts.tenant_id[0].value == "aaaaaaaa-aaaa"
 
     def test_spf_strict_only_from_strict_service_marker(self):
-        # spf_strict fires only when the merged service set carries the strict
-        # (-all) marker recorded by the DNS producer. A soft-fail (~all) domain,
-        # for which the producer never records SVC_SPF_STRICT, must not yield it.
-        # (The fusion layer no longer re-parses SPF text; it trusts the single
-        # service marker used across the tool, so a substring like "foo-all" in
-        # an include can no longer leak into the enforcement signal here.)
+        # An extensible display label cannot prove a policy claim. The strict
+        # signal requires both the parser-owned slug and typed SPF evidence.
         from types import SimpleNamespace
 
         from recon_tool.bayesian import signals_from_tenant_info
@@ -378,4 +372,10 @@ class TestBugHuntRound2:
 
         assert "spf_strict" not in signals_from_tenant_info(SimpleNamespace(services=("SPF: softfail (~all)",)))
         assert "spf_strict" not in signals_from_tenant_info(SimpleNamespace(services=()))
-        assert "spf_strict" in signals_from_tenant_info(SimpleNamespace(services=(SVC_SPF_STRICT,)))
+        assert "spf_strict" not in signals_from_tenant_info(SimpleNamespace(services=(SVC_SPF_STRICT,)))
+        assert "spf_strict" in signals_from_tenant_info(
+            SimpleNamespace(
+                services=(SVC_SPF_STRICT,),
+                evidence=(SimpleNamespace(source_type="SPF", slug="spf-strict"),),
+            )
+        )

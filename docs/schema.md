@@ -24,10 +24,10 @@ without guessing.
 |---|---|---|
 | `recon <domain> --json` | a single object | the top-level object below (success), or exit code 2/3 with no JSON on validation/no-data failures |
 | `recon batch <file> --json` | a bare JSON array, one element per input domain in file order | each element is either a success object (the top-level object below) or a `BatchErrorRecord` |
-| `recon batch <file> --json --include-ecosystem` | a `BatchResult` wrapper object `{domains, ecosystem_hyperedges}` | `domains` elements are success objects or `BatchErrorRecord`; falls back to the bare array when no domain resolved |
+| `recon batch <file> --json --include-ecosystem` | a `BatchResult` wrapper object `{domains, ecosystem_hyperedges}` | `domains` elements are success objects or `BatchErrorRecord`; the wrapper remains present even when no domain resolves |
 | `recon batch <file> --ndjson` | one JSON object per line (newline-delimited) | each line is a success object or a `BatchErrorRecord` |
-| `recon delta <domain>` / `recon <domain> --compare <file>` | a single `DeltaReport` object | n/a |
-| `recon batch <file> --summary [--json]` | a single `cohort_summary` object (`record_type: "cohort_summary"`, `schema_version: "2.1"`) | n/a (aggregate-only; no per-domain records) |
+| `recon delta <domain> --json` / `recon <domain> --compare <file> --json` | a single `DeltaReport` object | n/a |
+| `recon batch <file> --summary --json` | a single `cohort_summary` object (`record_type: "cohort_summary"`, `schema_version: "2.1"`) | n/a (aggregate-only; no per-domain records) |
 
 The machine-readable form of each shape lives in
 [`recon-schema.json`](recon-schema.json): the document root is the
@@ -102,15 +102,16 @@ Notes for scripters:
 
 ## Top-level object
 
-Every `--json` invocation returns a single JSON object with the following
-fields. Field order in the emitted JSON is not guaranteed; use the key name.
+A successful single-domain `recon <domain> --json` lookup returns one object
+with the following fields. Other JSON modes use the shapes in the output-mode
+table above. Field order in emitted JSON is not guaranteed; use the key name.
 
 ### Core identity
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `tenant_id` | string | yes | UUID | stable | Microsoft 365 tenant UUID. `null` for non-M365 domains. |
-| `display_name` | string | no | n/a | stable | Organization display name. Falls back to the queried domain when no better signal is available. |
+| `tenant_id` | string | yes | UUID | stable | Microsoft 365 tenant UUID when observed. `null` means no UUID was observed; it does not distinguish a non-M365 domain from unavailable, incomplete, or non-disclosing tenant discovery. |
+| `display_name` | string | no | n/a | stable | Best available public display label, which may be an identity-provider federation brand; falls back to the queried domain. It is not a verified legal organization name or ownership claim. |
 | `default_domain` | string | no | n/a | stable | Primary domain within the tenant. Falls back to the queried domain when no tenant was detected. |
 | `queried_domain` | string | no | n/a | stable | The registrable apex (eTLD+1) recon analyzed, after validating and normalizing the input. A pasted URL or sub-host is reduced to its apex (`mail.acme.co.uk` → `acme.co.uk`); `--exact` keeps the literal host. |
 
@@ -118,16 +119,16 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `provider` | string | no | n/a | stable | One-line provider summary (e.g. `"Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)"`). |
-| `confidence` | string | no | `high \| medium \| low` | stable | Overall confidence in the merged result. |
+| `provider` | string | no | n/a | stable | Evidence-role summary of MX delivery paths, gateways, and possible downstream indicators (e.g. `"Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)"`). Joined entries have no primary or secondary ordering semantics and do not prove complete product use. |
+| `confidence` | string | no | `high \| medium \| low` | stable | Deterministic merged-output summary tier derived from source, same-claim corroboration, and degradation heuristics; not confidence in every claim or a calibrated probability. |
 | `evidence_confidence` | string | no | `high \| medium \| low` | stable | Count-based confidence from distinct, error-free sources contributing useful data. |
 | `inference_confidence` | string | no | `high \| medium \| low` | stable | Strength of the strongest error-free, same-claim corroboration chain; unrelated claims do not combine. |
 | `region` | string | yes | e.g. `NA`, `EU`, `WW` | stable | Geographic region when detectable via OIDC. |
 | `auth_type` | string | yes | `Federated \| Managed` | stable | M365 authentication style. |
 | `google_auth_type` | string | yes | `Federated \| Managed` | stable | Google Workspace authentication style. |
 | `google_idp_name` | string | yes | e.g. `Okta`, `Ping Identity` | stable | Third-party IdP name for GWS when detectable. |
-| `primary_email_provider` | string | yes | n/a | stable | MX-confirmed primary email provider. |
-| `likely_primary_email_provider` | string | yes | n/a | stable | Inferred primary (hedged) when MX is a gateway and DKIM/TXT/OIDC points to a specific downstream. |
+| `primary_email_provider` | string | yes | n/a | stable | Schema-compatible field containing provider names observed directly in MX. Joined values are an unordered set and do not assert primacy. |
+| `likely_primary_email_provider` | string | yes | n/a | stable | Possible downstream provider indicator from non-MX role evidence when MX names only a gateway. It is not a primary-provider claim. |
 | `email_gateway` | string | yes | n/a | stable | MX-detected email security gateway (Proofpoint, Mimecast, etc.). |
 
 ### Sources & degradation
@@ -135,32 +136,32 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `sources` | `list[string]` | no | subset of source names | stable | Distinct source names from error-free results that contributed useful data. |
-| `partial` | bool | no | n/a | stable | `true` when a **core** source (DNS / identity / CT-as-core) is in `degraded_sources`. CT-only degradation does not flip this flag, matching `docs/recon-schema.json`. |
-| `degraded_sources` | `list[string]` | no | n/a | stable | Source names that failed or were unavailable. |
+| `partial` | bool | no | n/a | stable | `true` when a **core** source or core collector-channel marker is in `degraded_sources`. CT-only degradation does not flip this flag, matching `docs/recon-schema.json`. |
+| `degraded_sources` | `list[string]` | no | n/a | stable | Stable source, collector-channel, or detector identifiers that failed or were unavailable, such as `dns_records`, `dns:dmarc`, `dns:mx`, or `detector:email_security`. Values can be finer-grained than top-level `sources`; an unavailable channel is unobserved, not a negative result. |
 
 ### Services & detection
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `services` | `list[string]` | no | n/a | stable | Human-readable service names (`"Microsoft 365"`, `"Slack"`, …). |
-| `slugs` | `list[string]` | no | n/a | stable | Stable fingerprint slugs for programmatic matching. |
-| `detection_scores` | object | no | `{slug: score_level}` | stable | Per-slug detection score: `"low" \| "medium" \| "high"` aggregated from evidence. |
-| `insights` | `list[string]` | no | n/a | stable | Derived intelligence lines. Exact wording may evolve; presence and signal types are stable. |
+| `services` | `list[string]` | no | n/a | stable | Human-readable labels derived from public fingerprints and reviewed rules; not proof of active product use. |
+| `slugs` | `list[string]` | no | n/a | stable | Stable identifiers for observed fingerprint patterns; not product-use claims. |
+| `detection_scores` | object | no | `{slug: score_level}` | stable | Per-slug evidence-strength level (`"low" \| "medium" \| "high"`), not a probability or truth confidence. |
+| `insights` | `list[string]` | no | n/a | stable | Derived, hedged observations from public evidence. Exact wording may evolve; they are not verified private-state intelligence or proof of product use. |
 
 ### Domains
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `domain_count` | int | no | `0+` | stable | Number of domains in the tenant. |
-| `tenant_domains` | `list[string]` | no | n/a | stable | All domains found in the tenant (M365 `tenant_domains` or equivalent). |
-| `related_domains` | `list[string]` | no | n/a | stable | Domains inferred from CNAME breadcrumbs, CT logs, or autodiscover delegation. |
+| `domain_count` | int | no | `0+` | stable | Number of domain strings retained from bounded public tenant-discovery responses. It is not organization size or guaranteed tenant cardinality. |
+| `tenant_domains` | `list[string]` | no | n/a | stable | Domain strings retained from bounded public tenant-discovery responses. The list may be incomplete and does not establish ownership or an exhaustive tenant namespace. |
+| `related_domains` | `list[string]` | no | n/a | stable | Domain names linked by bounded CNAME, CT, or autodiscover breadcrumbs. The stable field name does not imply ownership or an organizational relationship. |
 | `surface_attributions` | `list[SurfaceAttribution]` | no | n/a | stable | Per-subdomain attribution of each related domain to a SaaS or infrastructure provider, from CNAME-chain classification. Empty when nothing classified. See the [`SurfaceAttribution`](#surfaceattribution) nested object. |
 
 ### Email security
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `email_security_score` | int | no | `0-5` | stable | Count of the 5 email controls present: effectively enforcing DMARC, DKIM selectors, SPF strict (`-all`), MTA-STS, BIMI. |
+| `email_security_score` | int | no | `0-5` | stable | Compatibility count of five observed-present public controls: effectively enforcing DMARC, DKIM selectors, SPF strict (`-all`), MTA-STS, and BIMI. If a constituent channel is unavailable, the count is incomplete; consult `degraded_sources` rather than treating uncounted controls as completed negatives. |
 | `dmarc_policy` | string | yes | `reject \| quarantine \| none` | stable | DMARC policy when a DMARC record is present. |
 | `dmarc_pct` | int | yes | `0-100` | stable | DMARC `pct=` parameter. |
 | `mta_sts_mode` | string | yes | `enforce \| testing \| none` | stable | MTA-STS policy mode. |
@@ -190,18 +191,18 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 |---|---|---|---|---|---|
 | `lexical_observations` | `list[string]` | no | n/a | stable | Hedged observations from CT subdomain lexical taxonomy. |
 | `bimi_identity` | object | yes | n/a | stable | BIMI VMC identity from a trust-validated source: `{organization, country, state, locality, trademark}`. The current opt-in document probe does not populate this field from an unverified certificate subject. |
-| `evidence_conflicts` | `list[EvidenceConflict]` | no | n/a | stable (v1.7+) | Cross-source disagreements: each entry names a merged field where 2+ sources gave different values, with all candidates preserved. Empty array when sources agreed. |
+| `evidence_conflicts` | `list[EvidenceConflict]` | no | n/a | stable (v1.7+) | Disagreements among the six tracked merged fields: each entry preserves the candidate values from 2+ sources. An empty array means no disagreement was recorded for those fields, not that every claim-bearing field agreed. |
 | `chain_motifs` | `list[ChainMotif]` | no | n/a | stable (v1.7+) | CNAME chain motifs that fired on related subdomains, e.g. Cloudflare → AWS origin, Akamai → Azure origin. Observable proxy/origin shape only; never an ownership claim. Catalog at `recon_tool/data/motifs.yaml`. |
 | `infrastructure_clusters` | `InfrastructureClusterReport` | no | always | stable (v1.8+) | CT co-occurrence community detection report. `algorithm` ∈ {`louvain`, `connected_components`, `skipped`}; `modularity` is 0.0 in fallback / skipped paths. `partition_stability` / `stability_runs` (additive, 2.2.0+) report the Louvain seed-sweep consensus (mean pairwise ARI; null outside the Louvain path). Members sorted; clusters sorted by size desc. |
-| `fingerprint_metadata` | `dict[string, FingerprintMetadata]` | no | always | stable (v1.8+) | Per-slug `{product_family, parent_vendor, bimi_org}` for detected slugs that carry relationship hints in their fingerprint YAML. Slugs without metadata are omitted. Empty object when nothing applies. Drives the v1.8 ecosystem hypergraph; never an ownership assertion. |
+| `fingerprint_metadata` | `dict[string, FingerprintMetadata]` | no | always | stable (v1.8+) | Per-slug `{product_family, parent_vendor, bimi_org}` typed catalog or grouping metadata. Slugs without metadata are omitted. Empty object when nothing applies. It drives exact batch hyperedge labels and never implies ownership, administrative control, or a business relationship. |
 
 ### Bayesian fusion fields (stable v2.0+)
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `slug_confidences` | `object` | no | map `{slug: posterior}`, `posterior` in `[0, 1]` | stable (v2.0+) | Bayesian per-slug posterior means, parallel to `detection_scores`. Populated only when fusion runs (see `fusion_enabled`). Reshaped from a positional pair array to an object map in v2.0 (SH2). See [`fusion.py`](../src/recon_tool/fusion.py). |
-| `posterior_observations` | `list[PosteriorObservation]` | no | always present (empty when fusion off) | stable (v2.0+) | Marginal posteriors over the Bayesian network's high-level claims (M365 tenant, federated identity, email-policy enforcement, CDN fronting, and so on), each with an 80% credible interval. Populated only when fusion runs (see `fusion_enabled`); empty array otherwise. See the [`PosteriorObservation`](#posteriorobservation-v20) nested object. |
-| `fusion_enabled` | bool | no | n/a | stable (v2.0+) | True when the Bayesian fusion layer ran (SH6). Distinguishes an empty `slug_confidences` with fusion off from fusion having run and found no per-slug posteriors. `posterior_observations` always carries the network's fixed nodes when fusion runs, so it is non-empty whenever `fusion_enabled` is true. |
+| `slug_confidences` | `object` | no | map `{slug: score}`, `score` in `[0, 1]` | stable (v2.0+) | Per-slug evidence-strength scores from a Beta-shaped additive heuristic over retained positive evidence occurrences, parallel to `detection_scores`. Occurrences are not asserted independent, and scores are not externally calibrated probabilities. Populated only when fusion runs (see `fusion_enabled`). Reshaped from a positional pair array to an object map in v2.0 (SH2). See [`fusion.py`](../src/recon_tool/fusion.py). |
+| `posterior_observations` | `list[PosteriorObservation]` | no | always present (empty when fusion off) | stable (v2.0+) | Model-relative marginal posteriors over the Bayesian network's high-level claims (M365 tenant, federated identity, email-policy enforcement, CDN fronting, and so on), each with an 80% evidence-responsive uncertainty band. Populated only when fusion runs (see `fusion_enabled`); empty array otherwise. See the [`PosteriorObservation`](#posteriorobservation-v20) nested object. |
+| `fusion_enabled` | bool | no | n/a | stable (v2.0+) | True when the default-on evidence-strength and Bayesian-network post-processing ran (SH6). When false, `slug_confidences` is an empty object and `posterior_observations` is an empty array. When true, `slug_confidences` can still be empty if no retained evidence carries a slug, while `posterior_observations` carries the network's fixed nodes. |
 | `schema_version` | string | no | `"2.0"` | stable (v2.0+) | Contract version of this record (SH7), so a detached payload can be routed across a future 2.x to 3.0 boundary. |
 | `record_type` | string | no | `lookup` | stable (v2.0+) | Output-mode discriminator (SH7); `lookup` on a single-domain success object. Batch wrappers, deltas, error records, and cohort summaries carry `batch_result` / `delta` / `error` / `cohort_summary`. |
 
@@ -267,7 +268,13 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 }
 ```
 
-`field` is one of: `display_name`, `auth_type`, `region`, `tenant_id`, `dmarc_policy`, `google_auth_type`. The conflict-aware merger picks a winner using source-confidence ordering; the array surfaces the alternates so consumers can see what was discarded.
+`field` is one of: `display_name`, `auth_type`, `region`, `tenant_id`,
+`dmarc_policy`, `google_auth_type`. The conflict-aware merger picks a winner
+using the contributing source result's overall completeness tier. Candidate
+`confidence` is that source-result tier, not field-specific reliability or
+calibrated truth confidence. The array surfaces alternates so consumers can see
+what was discarded. Other claim-bearing fields do not yet have complete
+first-class conflict coverage.
 
 ### `ChainMotif` (v1.7+)
 
@@ -308,16 +315,17 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 
 `algorithm` is the detection path that produced the partition:
 
-- `louvain`: graph fits inside the 500-node cap; partition is meaningful.
+- `louvain`: graph fits inside the 500-node cap; the Louvain heuristic returned
+  a partition.
 - `connected_components`: graph above cap; deterministic fallback. `modularity` is 0.0.
 - `skipped`: empty graph or no edges. `clusters` is empty.
 
 `partition_stability` (number or null, additive, 2.2.0+) is the partition
 consensus across a Louvain seed sweep: the mean pairwise adjusted Rand
 index between the partitions produced by `stability_runs` distinct seeds
-(CAL11). 1.0 means every seed landed on the identical partition; lower
-values flag the partition degeneracy a single modularity score cannot see
-(near-equal-modularity partitions that differ structurally). It is `null`
+(CAL11). 1.0 means every seed landed on the identical partition; lower values
+show optimizer seed sensitivity on that one fixed graph. They do not measure CT
+data stability, model stability, significance, or partition correctness. It is `null`
 outside the Louvain path, where the partition is deterministic and the
 measure is not applicable; the *reported* clusters always come from the
 fixed shipped seed, so output stays deterministic.
@@ -356,23 +364,28 @@ object, keyed by detected slug.
 - `top_issuer`: domains share their CT top-issuer name.
 - `bimi_org`: domains share a BIMI VMC organization (light-normalised).
 - `parent_vendor`: domains have ≥1 detected slug carrying the same `parent_vendor` metadata.
-- `shared_slugs`: pairwise overlap of ≥2 detected slugs. `key` is the comma-joined intersection.
+- `shared_slugs`: pairwise overlap of at least 3 detected slugs after the
+  batch-local ubiquitous-slug filter. `key` is the comma-joined intersection.
 
 Surfaced under the top-level `ecosystem_hyperedges` array of the batch
 JSON wrapper when `recon batch --json --include-ecosystem` is run. The
 batch wrapper shape is `{ecosystem_hyperedges: [...], domains: [...]}`
-in that mode; otherwise the batch JSON is just the per-domain array. One
-edge case: if `--include-ecosystem` is set but no domain in the batch
-resolved successfully, there is nothing to build a hypergraph from, so
-the output falls back to the bare per-domain array (which then holds only
-`BatchErrorRecord` entries).
+in that mode; otherwise the batch JSON is just the per-domain array. The
+wrapper is still emitted when every domain fails, with an empty edge array and
+the errors under `domains`.
+
+The current implementation retains at most 200 hyperedges and at most 100
+members per hyperedge. The v2 shape does not yet report omitted counts, so an
+absent edge after either cap is not evidence that no such overlap existed. The
+roadmap requires explicit completeness and omission diagnostics before this
+surface can support exhaustive-correlation claims.
 
 ### Batch-only cross-domain fields (`batch --json`)
 
 In `recon batch --json` output (the non-streaming path), a per-domain
 success object may carry up to three additional keys that the
 single-domain contract never emits. They are populated only when the
-batch surfaced a relationship between two or more domains, and never
+batch surfaced a typed overlap between two or more domains, and never
 appear in single-domain `--json` or in `--ndjson` (which streams each
 record before the batch-wide pass can run):
 
@@ -381,6 +394,13 @@ record before the batch-wide pass can run):
 | `shared_verification_tokens` | `list[{token, peer}]` | two or more batch domains shared a TXT verification token |
 | `shared_tenant` | `list[{tenant_id, peers}]` | two or more batch domains shared an M365 `tenant_id` |
 | `shared_display_name` | `list[{display_name, normalized_name, peers}]` | two or more batch domains normalized to the same display name (hedged: customer-supplied brand text, not cryptographic) |
+
+For resource bounds, a verification token observed on more than 200 batch
+domains is not expanded into its quadratic peer list. The current per-domain
+v2 field has no omission counter, so absence of `shared_verification_tokens` in
+a batch larger than that cap is not a completeness claim. A future additive
+batch diagnostic must report high-cardinality omissions before this surface can
+support exhaustive-correlation claims.
 
 These are additive: they leave the record a superset of the required
 single-domain fields, so the batch-record rule still classifies it as a
@@ -462,15 +482,15 @@ array when fusion runs (empty array otherwise).
 |---|---|---|---|
 | `name` | string | stable (v2.0+) | Stable node identifier matching `bayesian_network.yaml`. |
 | `description` | string | stable (v2.0+) | Plain-English claim the node encodes. |
-| `posterior` | number | stable (v2.0+) | P(node=present \| observed evidence), in `[0, 1]`. |
-| `interval_low` | number | stable (v2.0+) | Lower bound of the 80% credible interval (evidence-responsive, not frequentist coverage; see `correlation.md`). |
-| `interval_high` | number | stable (v2.0+) | Upper bound of the 80% credible interval. |
-| `n_eff` | number | stable (v2.0+) | Effective sample size behind the interval; lower means wider. Floors at 4. |
-| `sparse` | bool | stable (v2.0+) | `true` when `n_eff` is at the floor and absence carried no disconfirming weight, the passive-observation ceiling for this node. |
+| `posterior` | number | stable (v2.0+) | P(node=present \| observed evidence) under the committed manually encoded, partly development-corpus-informed model, in `[0, 1]`. |
+| `interval_low` | number | stable (v2.0+) | Lower bound of the 80% evidence-responsive uncertainty band. This is not a Bayesian credible interval or frequentist confidence interval; see `correlation.md`. |
+| `interval_high` | number | stable (v2.0+) | Upper bound of the 80% evidence-responsive uncertainty band. |
+| `n_eff` | number | stable (v2.0+) | Effective display mass used to construct the band; lower usually means wider for a fixed posterior. Floors at 4. |
+| `sparse` | bool | stable (v2.0+) | `true` when `n_eff` is at the configured floor. It identifies the minimum display-mass case, not a calibrated uncertainty level or a statement about whether informative absence was counted. |
 | `evidence_used` | `list[string]` | stable (v2.0+) | Bound observations that fired, formatted `slug:<name>` or `signal:<name>`. |
 | `conflict_provenance` | `list[string]` | stable (v2.0+) | Cross-source disagreements that contributed to this node's `n_eff` penalty (v1.9.1+). Empty when none. |
 | `evidence_ranked` | `list[NodeEvidence]` | stable (v1.9.3.2+) | Fired bindings ranked by absolute LLR contribution, descending (the contributing set, one per correlation group). Empty when nothing fired; omitted on batch records, whose shape predates it. |
-| `entropy_reduction_nats` | number | stable, additive (2.2.0+) | This node's share of the information recovered: H(prior marginal) − H(posterior) in nats, signed (negative when evidence widens the node). The per-node breakdown of the top-level total (CAL10). |
+| `entropy_reduction_nats` | number | stable, additive (2.2.0+) | Signed marginal entropy change H(prior marginal) - H(posterior) in nats. It can be negative, is not pointwise information gain, and the sum can double count dependent nodes. |
 | `unit_counterfactuals` | `list[NodeUnitCounterfactual]` | stable, additive (2.2.0+) | Exact leave-one-unit-out counterfactuals for every evidence unit informative for this node, sorted by absolute `delta` descending. See the sub-table below. |
 
 #### `NodeUnitCounterfactual` (2.2.0+)
@@ -505,8 +525,8 @@ arrays appear. These fields are conditional: they are absent unless the
 relevant flag is passed, so a consumer should treat their presence as
 optional and never infer "always present". They are intentionally omitted
 from the schema's `required` list for the same reason. The conditional
-fields are `evidence` (`--explain`), `explanation_dag` (`--explain` on the
-`lookup_tenant` MCP tool), and `unclassified_cname_chains`
+fields are `evidence` (`--explain`), `explanation_dag` (`--explain` through
+the CLI or `lookup_tenant` MCP tool), and `unclassified_cname_chains`
 (`--include-unclassified`).
 
 ### `evidence` (present with `--explain`)
@@ -527,10 +547,40 @@ Stability: **stable** within the default/`--json` contract when `--explain`
 is also passed; the fields inside each record (`source_type`, `raw_value`,
 `rule_name`, `slug`) will not change shape.
 
-### `explanation_dag` (present with `--explain` on `lookup_tenant` MCP tool)
+### `explanation_dag` (present with `--explain` through CLI or MCP)
 
-Stability: **stable**. Top-level keys: `evidence`, `slugs`, `rules`,
-`signals`, `insights`, each a list of records with `id` and references.
+Stability: **stable, schema version 1**. The exact top-level keys are:
+
+- `nodes`: occurrence-aware evidence and fired-rule nodes plus shared slug,
+  signal, insight, observation, and confidence nodes. Fired-rule occurrences
+  are terminal-scoped so an identical rule label cannot cross-connect two
+  explanations.
+- `edges`: directed `{source, target, relation}` records. Current relations are
+  `detected-by` (evidence to slug), `matched-rule` (evidence to rule only when
+  the retained `EvidenceRecord.rule_name` exactly equals the fired-rule label),
+  `contributes-to` (slug to explanation terminal), and `fired` (rule to
+  explanation terminal). When that exact rule association was not retained,
+  evidence reaches the terminal through its slug and recon does not invent a
+  rule-specific edge.
+- `schema_version`: integer `1`.
+- `provenance_complete`: `true` exactly when every signal, insight,
+  observation, and confidence terminal is reachable from at least one evidence
+  node.
+- `disconnected_terminals`: sorted terminal node IDs that are not reachable
+  from evidence. An empty list accompanies `provenance_complete=true`.
+
+The completeness fields are additive and optional in schema version 1 so
+previously captured DAG objects remain valid; current recon versions always
+emit both. They diagnose the graph actually emitted. They do not
+manufacture an evidence link for a conclusion whose generator did not retain
+one. The flat `explanations` list remains available alongside this additive
+graph.
+
+Current insight and posture explanations reconstruct some generator lineage
+from human-facing text or rule proxies. `provenance_complete=true` therefore
+means every terminal is reachable in the emitted reconstructed graph; it does
+not prove that every generator association is exact. Exact generation-time
+rule lineage remains future claim-contract work.
 
 ---
 
@@ -555,13 +605,36 @@ Stability: stable.
   "changed_dmarc_policy": null,
   "changed_email_security_score": {"from": 3, "to": 4},
   "changed_confidence": null,
-  "changed_domain_count": null
+  "changed_domain_count": null,
+  "incomplete_comparison": null
 }
 ```
 
-Each `changed_*` field is either `null` (no change) or an object with `from`
-and `to`. Exit codes for `recon delta` match the main CLI; see
-[Exit codes](#exit-codes).
+Each `changed_*` field is either an object with `from` and `to`, or `null`.
+`null` can mean no detected change among comparable values or that the field
+was withheld; consult `incomplete_comparison.suppressed_fields` to distinguish
+those cases. A null `incomplete_comparison` means the current comparator
+recorded no degradation-triggered suppression. It does not prove complete
+observation opportunity or equivalence of collection options, software,
+catalog, model, cache, time, or resolver vantage. A non-null diagnostic names
+the union in `degraded_sources`, the endpoint-specific
+`previous_degraded_sources` and `current_degraded_sources`, and the withheld
+fields. Prior degradation can make an apparent addition unidentifiable; current
+degradation can make an apparent removal unidentifiable; a dependent scalar
+change requires the relevant opportunity at both endpoints. Exit codes for
+`recon delta` match the main CLI; see [Exit codes](#exit-codes).
+
+CT-only degradation leaves `changed_auth_type` and `changed_domain_count`
+comparable. It leaves `changed_confidence` comparable only when every degraded
+endpoint has a non-null `ct_provider_used`, which records successful live
+fallback or cache recovery. Without that recovery marker, recon withholds the
+confidence change because collection failure can itself lower confidence.
+
+`added_signals` and `removed_signals` are best-effort reconstructions from
+rendered insight text so older exported snapshots remain comparable. They are
+not raw signal-registry event logs. Current collection degradation suppresses
+signal removals, and previous collection degradation suppresses signal
+additions, rather than turning unavailable evidence into a temporal change.
 
 ---
 

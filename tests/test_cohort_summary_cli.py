@@ -12,25 +12,37 @@ import json
 
 from rich.console import Console
 
+from recon_tool.bayesian import load_network
 from recon_tool.cli import _batch_emit_summary
 from recon_tool.models import ConfidenceLevel, PosteriorObservation, TenantInfo
+
+_NODES = {node.name: node for node in load_network().nodes}
+_OBSERVATION_SIGNAL = {
+    "m365_tenant": "m365_tenant_observed",
+    "google_workspace_tenant": "google_workspace_tenant_observed",
+}
 
 
 def _po(name: str, p: float, lo: float, hi: float, *, fired: bool = True, sparse: bool = False) -> PosteriorObservation:
     return PosteriorObservation(
         name=name,
-        description="",
+        description=_NODES[name].description,
         posterior=p,
         interval_low=lo,
         interval_high=hi,
-        evidence_used=(("slug:x",) if fired else ()),
+        evidence_used=((f"signal:{_OBSERVATION_SIGNAL[name]}",) if fired else ()),
         n_eff=5.0,
         sparse=sparse,
     )
 
 
-def _info(domain: str, services: tuple[str, ...], slugs: tuple[str, ...], dmarc: str,
-          posteriors: tuple[PosteriorObservation, ...]) -> TenantInfo:
+def _info(
+    domain: str,
+    services: tuple[str, ...],
+    slugs: tuple[str, ...],
+    dmarc: str,
+    posteriors: tuple[PosteriorObservation, ...],
+) -> TenantInfo:
     return TenantInfo(
         tenant_id=None,
         display_name=domain,
@@ -47,15 +59,24 @@ def _info(domain: str, services: tuple[str, ...], slugs: tuple[str, ...], dmarc:
 def _cohort() -> dict[str, TenantInfo]:
     return {
         "contoso.com": _info(
-            "contoso.com", ("Microsoft 365",), ("microsoft365",), "reject",
+            "contoso.com",
+            ("Microsoft 365",),
+            ("microsoft365",),
+            "reject",
             (_po("m365_tenant", 0.93, 0.85, 0.97),),
         ),
         "northwind.com": _info(
-            "northwind.com", ("Microsoft 365",), ("microsoft365",), "quarantine",
+            "northwind.com",
+            ("Microsoft 365",),
+            ("microsoft365",),
+            "quarantine",
             (_po("m365_tenant", 0.9, 0.82, 0.96),),
         ),
         "fabrikam.com": _info(
-            "fabrikam.com", ("Google Workspace",), ("google-workspace",), "none",
+            "fabrikam.com",
+            ("Google Workspace",),
+            ("google-workspace",),
+            "none",
             (_po("google_workspace_tenant", 0.88, 0.8, 0.95),),
         ),
     }
@@ -74,9 +95,13 @@ def test_summary_json_document() -> None:
     assert doc["mix"]["provider"]["categorized_n"] == 3
     assert len(doc["mix"]["provider"]["shares"]) == 2
     assert doc["prevalence"]["dmarc_enforcing"]["observed_rate"] == 0.6667
-    # MNAR: the M365 claim is observable for two of three (the Workspace domain
-    # has no M365 node), so the observability fraction is below one.
-    assert doc["prevalence"]["m365_tenant"]["observability_fraction"] == 0.6667
+    # Hideable model outputs report support coverage, not prevalence or a
+    # two-sided observation fraction.
+    m365 = doc["prevalence"]["m365_tenant"]
+    assert m365["metric_kind"] == "model_support_coverage"
+    assert m365["model_evidence_n"] == 2
+    assert m365["support_coverage"] == 0.6667
+    assert m365["observed_rate"] is None
 
 
 def test_summary_panel_renders() -> None:
@@ -95,8 +120,12 @@ def test_summary_rejects_include_ecosystem() -> None:
 
     with pytest.raises(typer.Exit):
         _batch_validate_flags(
-            json_output=True, markdown=False, csv_output=False,
-            ndjson=False, include_ecosystem=True, summary=True,
+            json_output=True,
+            markdown=False,
+            csv_output=False,
+            ndjson=False,
+            include_ecosystem=True,
+            summary=True,
         )
 
 

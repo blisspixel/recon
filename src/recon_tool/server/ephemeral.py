@@ -19,7 +19,7 @@ from typing_extensions import TypedDict
 
 from recon_tool.formatter import format_tenant_dict
 from recon_tool.server.app import internal_lookup_error, mcp
-from recon_tool.server.runtime import cache, cache_get, cache_refresh_info, remerge_cached_infos
+from recon_tool.server.runtime import cache, cache_get, cache_refresh_info
 from recon_tool.validator import validate_domain
 
 logger = logging.getLogger("recon")
@@ -296,7 +296,7 @@ async def inject_ephemeral_fingerprint(
             confidence=confidence,
             detection_count=len(detections),
         )
-    except EphemeralCapacityError as exc:
+    except (EphemeralCapacityError, ValueError) as exc:
         raise ToolError(str(exc)) from exc
 
     # detections is typed list[dict] but arrives over MCP unenforced; guard at runtime.
@@ -313,8 +313,7 @@ async def inject_ephemeral_fingerprint(
     validated = _validate_fingerprint(fp_dict, "ephemeral")
     if validated is None:
         raise ToolError(
-            f"Validation failed for fingerprint '{name}'. "
-            "Check detection types, patterns, and confidence level."
+            f"Validation failed for fingerprint '{name}'. Check detection types, patterns, and confidence level."
         )
 
     # Ephemeral injection goes through the same specificity gate
@@ -334,7 +333,7 @@ async def inject_ephemeral_fingerprint(
 
     try:
         inject_ephemeral(validated)
-    except EphemeralCapacityError as exc:
+    except (EphemeralCapacityError, ValueError) as exc:
         raise ToolError(str(exc)) from exc
     return {
         "status": "ok",
@@ -385,11 +384,25 @@ async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
 
     Returns confirmation with the count of fingerprints removed.
     """
-    from recon_tool.fingerprints import clear_ephemeral
+    from recon_tool.fingerprints import clear_ephemeral, get_ephemeral
+    from recon_tool.merger import merge_results
+    from recon_tool.sources.dns_replay import remove_fingerprint_projection
 
+    removed = get_ephemeral()
     count = clear_ephemeral()
-    if count > 0 and cache:
-        remerge_cached_infos()
+    if removed and cache:
+        for domain, (_timestamp, _info, results) in list(cache.items()):
+            stripped_results = tuple(remove_fingerprint_projection(result, removed) for result in results)
+            try:
+                refreshed = merge_results(list(stripped_results), domain)
+            except Exception:
+                logger.exception(
+                    "Failed to remove cleared ephemeral projections for %s",
+                    domain,
+                )
+                cache.pop(domain, None)
+                continue
+            cache_refresh_info(domain, refreshed, stripped_results)
     return {"status": "ok", "removed": count}
 
 
@@ -404,7 +417,10 @@ async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
 async def reevaluate_domain(domain: str) -> LookupResult:
     """Re-evaluate a previously looked-up domain against current fingerprints.
 
-    Uses cached raw DNS data from a prior lookup — zero network calls.
+    Uses cached raw DNS data from a prior lookup with zero network calls. Newly
+    loaded apex TXT/SPF, MX, NS, and apex/root CNAME rules are replayable. Rule
+    types whose owner-qualified observations are not retained in the cache must
+    be evaluated by a new lookup instead.
     Useful after injecting ephemeral fingerprints to test detection hypotheses.
 
     Args:
@@ -425,11 +441,33 @@ async def reevaluate_domain(domain: str) -> LookupResult:
 
     _info, results = cached
 
-    # Re-run merge pipeline with current fingerprint set (including ephemeral)
+    from recon_tool.fingerprints import get_ephemeral
+
+    replayable_types = frozenset({"txt", "spf", "mx", "ns", "cname"})
+    unsupported_types = sorted(
+        {
+            detection.type
+            for fingerprint in get_ephemeral()
+            for detection in fingerprint.detections
+            if detection.type not in replayable_types
+        }
+    )
+    if unsupported_types:
+        rendered = ", ".join(unsupported_types)
+        raise ToolError(
+            "Cached re-evaluation cannot replay owner-qualified "
+            f"{rendered} observations. Run a new lookup after injection."
+        )
+
+    # Replay retained DNS observations through the current fingerprint catalog,
+    # then re-run the merge pipeline. The original source results stay in the
+    # cache so clearing session-local fingerprints removes their projection.
     from recon_tool.merger import merge_results
+    from recon_tool.sources.dns_replay import replay_cached_dns_fingerprints
 
     try:
-        new_info = merge_results(list(results), validated)
+        replayed_results = [replay_cached_dns_fingerprints(result) for result in results]
+        new_info = merge_results(replayed_results, validated)
     except Exception as exc:
         request_id = uuid.uuid4().hex[:12]
         logger.exception(
@@ -437,9 +475,7 @@ async def reevaluate_domain(domain: str) -> LookupResult:
             domain,
             request_id,
         )
-        raise ToolError(
-            internal_lookup_error(domain, request_id, exc, action="re-evaluating")
-        ) from exc
+        raise ToolError(internal_lookup_error(domain, request_id, exc, action="re-evaluating")) from exc
 
     cache_refresh_info(validated, new_info, results)
     payload = format_tenant_dict(new_info)

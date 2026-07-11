@@ -26,7 +26,7 @@ from recon_tool.formatter import (
     set_console,
     set_err_console,
 )
-from recon_tool.models import ConfidenceLevel, SourceResult, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, SourceResult, TenantInfo
 
 # --- Strategies ---
 
@@ -173,6 +173,33 @@ class TestPlainOutput:
         assert "\x07" not in out  # BEL control byte stripped
         assert "Evil" in out  # printable text preserved
         assert "Corp" in out
+
+    def test_services_use_role_aware_labels_without_changing_json(self) -> None:
+        from recon_tool.formatter import format_tenant_json, format_tenant_plain
+
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Contoso",
+            default_domain="contoso.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.LOW,
+            services=("Okta",),
+            slugs=("okta",),
+            evidence=(
+                EvidenceRecord(
+                    source_type="TXT",
+                    raw_value="oktaverification=opaque",
+                    rule_name="Okta",
+                    slug="okta",
+                ),
+            ),
+        )
+
+        plain = format_tenant_plain(info)
+        structured = json.loads(format_tenant_json(info))
+
+        assert "  - Okta (public TXT account indicator)" in plain
+        assert structured["services"] == ["Okta"]
 
 
 class TestStdoutStderrDiscipline:

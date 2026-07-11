@@ -56,10 +56,13 @@ class TestLookupText:
     async def test_text_contains_company(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         result = await lookup_tenant("contoso.com")
-        assert "Company: Contoso Ltd" in result
+        assert "Display name: Contoso Ltd" in result
         assert "Provider: Microsoft 365" in result
         assert "Tenant ID: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" in result
         assert "Region: NA" in result
+        assert "Domain: contoso.com" in result
+        assert "Default domain: contoso.onmicrosoft.com" in result
+        assert "Domain: contoso.onmicrosoft.com" not in result
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -141,6 +144,59 @@ class TestLookupText:
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_gws_details_require_typed_evidence_and_use_indicator_copy(self, mock_resolve: AsyncMock) -> None:
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Contoso Ltd",
+            default_domain="contoso.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.MEDIUM,
+            services=("Google Workspace", "Google Workspace: Drive", "Google Workspace CSE"),
+            slugs=("google-workspace", "google-workspace-modules", "google-cse"),
+            evidence=(
+                EvidenceRecord(
+                    source_type="CNAME",
+                    raw_value="drive.contoso.com -> ghs.googlehosted.com",
+                    rule_name="Google Workspace: Drive",
+                    slug="google-workspace",
+                ),
+                EvidenceRecord(
+                    source_type="HTTP",
+                    raw_value="CSE configuration found",
+                    rule_name="Google Workspace CSE",
+                    slug="google-cse",
+                ),
+            ),
+        )
+        mock_resolve.return_value = (info, SAMPLE_RESULTS)
+
+        result = await lookup_tenant("contoso.com")
+
+        assert "GWS module indicators: Drive" in result
+        assert "GWS CSE configuration indicators: Google Workspace CSE" in result
+        assert "GWS Modules:" not in result
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_gws_details_omit_unproved_legacy_service_fields(self, mock_resolve: AsyncMock) -> None:
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Contoso Ltd",
+            default_domain="contoso.com",
+            queried_domain="contoso.com",
+            confidence=ConfidenceLevel.LOW,
+            services=("Google Workspace: Drive", "Google Workspace CSE"),
+            slugs=("google-workspace", "google-cse"),
+        )
+        mock_resolve.return_value = (info, SAMPLE_RESULTS)
+
+        result = await lookup_tenant("contoso.com")
+
+        assert "GWS module indicators:" not in result
+        assert "GWS CSE configuration indicators:" not in result
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_provider_line_omits_txt_only_secondary(self, mock_resolve: AsyncMock) -> None:
         info = TenantInfo(
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
@@ -170,7 +226,7 @@ class TestLookupText:
 
         result = await lookup_tenant("contoso.com")
 
-        assert "Provider: Microsoft 365 (primary)\n" in result
+        assert "Provider: Microsoft 365 (MX delivery path)\n" in result
         assert "Provider: Microsoft 365 (primary) + Google Workspace" not in result
 
 
@@ -182,13 +238,9 @@ class TestLookupJson:
         result = await lookup_tenant("contoso.com", format="json")
         data = json.loads(result)
         assert data["display_name"] == "Contoso Ltd"
-        # v0.9.3 (revised): slug-only fallback uses
-        # "(account detected, no MX)" because the fallback runs
-        # only when no MX evidence exists, so the slug match came
-        # from a non-MX identity source. See
-        # test_backward_compat.TestBackwardCompatDetectProvider
-        # for the full rationale.
-        assert data["provider"] == "Microsoft 365 (account detected, no MX)"
+        # This legacy fixture has no retained evidence, so the formatter cannot
+        # recover which public role produced the slug.
+        assert data["provider"] == "Microsoft 365 (role unavailable)"
         assert data["tenant_id"] == "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
         assert data["confidence"] == "high"
 
@@ -276,7 +328,7 @@ class TestErrors:
             first_result = await first
 
         assert calls == 1
-        assert "Company: Contoso Ltd" in first_result
+        assert "Display name: Contoso Ltd" in first_result
         assert "Rate limited:" in second
 
     @pytest.mark.asyncio

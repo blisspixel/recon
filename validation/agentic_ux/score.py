@@ -1,7 +1,7 @@
 """Binary rubric scoring for agentic UX validation transcripts.
 
 The roadmap (v1.9.2) defines five binary checks. Three are per-session
-(read posterior block, cite credible interval explicitly, mention
+(read posterior block, cite the uncertainty band explicitly, mention
 ``--explain-dag`` / ``explain_dag``); two are cross-session diffs
 (``sparse=true`` changed the conclusion vs the dense run, ``--fusion``
 on vs off changed the conclusion).
@@ -26,12 +26,18 @@ _POSTERIOR_PATTERNS = [
     re.compile(r"\bsparse\s*=\s*true\b", re.IGNORECASE),
 ]
 
-_INTERVAL_PATTERNS = [
-    re.compile(r"\bcredible\s+interval\b", re.IGNORECASE),
+_CURRENT_BAND_PATTERNS = [
+    re.compile(r"\buncertainty\s+band\b", re.IGNORECASE),
     re.compile(r"\binterval[_\s]?(low|high)\b", re.IGNORECASE),
-    # Numeric range like "0.21 to 0.95", "[0.21, 0.95]", "0.21–0.95"
-    re.compile(r"\b0\.\d+\s*(?:to|[-–—,]\s*0\.|\]\s*to\s*\[?\s*0\.|\.\.\s*0\.)\s*\d", re.IGNORECASE),
 ]
+
+# Numeric range like "0.21 to 0.95" or "[0.21, 0.95]".
+_NUMERIC_BAND_PATTERN = re.compile(
+    r"\b0\.\d+\s*(?:to|[-–,]\s*0\.|\]\s*to\s*\[?\s*0\.|\.\.\s*0\.)\s*\d",
+    re.IGNORECASE,
+)
+
+_CREDIBLE_INTERVAL_MISLABEL = re.compile(r"\bcredible\s+interval\b", re.IGNORECASE)
 
 _EXPLAIN_DAG_PATTERNS = [
     re.compile(r"--?explain[-_]dag\b", re.IGNORECASE),
@@ -55,8 +61,8 @@ _HEDGE_PATTERNS = [
     re.compile(r"\bobscur", re.IGNORECASE),
 ]
 
-_PASSIVE_CEILING_PATTERN = re.compile(
-    r"\b(sparse|passive\s+ceiling|hardened|insufficient)\b",
+_SPARSE_CONTEXT_PATTERN = re.compile(
+    r"\b(sparse|display\s+mass|thin|insufficient)\b",
     re.IGNORECASE,
 )
 
@@ -69,6 +75,22 @@ def _hedge_count(text: str) -> int:
     return sum(1 for p in _HEDGE_PATTERNS if p.search(text))
 
 
+def _cites_current_uncertainty_band(text: str) -> bool:
+    """Recognize current band language without rewarding a credible-interval mislabel.
+
+    Explicit ``uncertainty band`` or serialized ``interval_low`` / ``interval_high``
+    references are unambiguous. A bare numeric range also counts unless the
+    transcript labels that range a credible interval. This keeps historical
+    transcript scoring reproducible while making terminology correctness part
+    of the current rubric.
+    """
+    if _matches_any(text, _CURRENT_BAND_PATTERNS):
+        return True
+    if _CREDIBLE_INTERVAL_MISLABEL.search(text):
+        return False
+    return bool(_NUMERIC_BAND_PATTERN.search(text))
+
+
 @dataclass(frozen=True)
 class SessionScore:
     """Per-session binary checks."""
@@ -78,6 +100,7 @@ class SessionScore:
     fusion: bool
     read_posterior_block: bool
     cited_credible_interval: bool
+    """Historical field name: transcript used current uncertainty-band semantics."""
     mentioned_explain_dag: bool
     hedge_count: int
 
@@ -89,7 +112,7 @@ def score_session(persona: str, fixture: str, fusion: bool, transcript_text: str
         fixture=fixture,
         fusion=fusion,
         read_posterior_block=_matches_any(transcript_text, _POSTERIOR_PATTERNS),
-        cited_credible_interval=_matches_any(transcript_text, _INTERVAL_PATTERNS),
+        cited_credible_interval=_cites_current_uncertainty_band(transcript_text),
         mentioned_explain_dag=_matches_any(transcript_text, _EXPLAIN_DAG_PATTERNS),
         hedge_count=_hedge_count(transcript_text),
     )
@@ -119,7 +142,7 @@ def diff_sparse_vs_dense(
 
     Heuristic: TRUE if the sparse transcript uses strictly more hedge
     phrases than the dense transcript, OR if the sparse transcript
-    contains an explicit "sparse" / "passive ceiling" / "hardened"
+    contains an explicit sparse, thin-data, or minimum-display-mass
     acknowledgment that the dense one does not. Both signals together
     strengthen the verdict; either alone is enough to mark the diff
     positive — the rubric only asks whether the conclusion changed,
@@ -128,14 +151,14 @@ def diff_sparse_vs_dense(
     if dense.persona != sparse.persona:
         raise ValueError("diff_sparse_vs_dense expects matching personas")
     hedge_grew = sparse.hedge_count > dense.hedge_count
-    sparse_acknowledged = bool(_PASSIVE_CEILING_PATTERN.search(sparse_text))
-    dense_did_not = not _PASSIVE_CEILING_PATTERN.search(dense_text)
+    sparse_acknowledged = bool(_SPARSE_CONTEXT_PATTERN.search(sparse_text))
+    dense_did_not = not _SPARSE_CONTEXT_PATTERN.search(dense_text)
     differed = hedge_grew or (sparse_acknowledged and dense_did_not)
     if differed:
         reason = (
             f"sparse hedge count {sparse.hedge_count} > dense {dense.hedge_count}"
             if hedge_grew
-            else "sparse acknowledged passive ceiling; dense did not"
+            else "sparse fixture acknowledged limited public evidence; dense did not"
         )
     else:
         reason = "no observable change in hedge language between dense and sparse"
@@ -152,9 +175,9 @@ def diff_fusion_on_vs_off(
     """Did ``--fusion`` on vs off change the agent's conclusion?
 
     Heuristic: TRUE if the fusion-on transcript referenced posterior
-    or credible-interval material the fusion-off transcript did not.
+    or uncertainty-band material the fusion-off transcript did not.
     Reading the posterior block at all (when it exists) is the
-    primary signal; numeric interval citation is a stronger one.
+    primary signal; an uncertainty-band citation is a stronger one.
     """
     if on_score.persona != off_score.persona or on_score.fixture != off_score.fixture:
         raise ValueError("diff_fusion_on_vs_off expects matching persona and fixture")

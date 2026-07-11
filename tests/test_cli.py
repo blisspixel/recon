@@ -57,6 +57,10 @@ class TestHelp:
         assert "--md" in plain
         assert "--full" in plain
         assert "--strict" in plain
+        collapsed = " ".join(plain.replace("│", " ").split())
+        assert "configured recursive resolver" in collapsed
+        assert "authoritative DNS may observe the resulting traffic" in collapsed
+        assert "MTA-STS policy fetch is the only default target-owned HTTP/application request" in collapsed
 
     def test_version_flag(self) -> None:
         from recon_tool.cli import version_callback

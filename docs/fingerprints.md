@@ -51,7 +51,7 @@ Detection rules can include optional metadata:
 detections:
   - type: txt
     pattern: "^service-domain-verification="
-    description: Vendor domain-ownership verification token
+    description: Vendor-issued domain-verification token
     reference: https://vendor.example/docs/domain-verification
     weight: 0.8
     verified: 2026-07-03
@@ -90,8 +90,8 @@ TXT or CNAME alone is ambiguous but the combination is diagnostic.
 ```
 
 **Use it when** a single detection false-positives on dormant accounts
-or common-name TXT tokens, and you want both ownership evidence *and*
-active routing before attributing the service.
+or common-name TXT tokens, and you want both administrative-token evidence
+*and* active routing before attributing the service.
 
 **Skip it when** a unique service-specific TXT prefix already makes the
 match diagnostic on its own. Forcing `all` can reject legitimate
@@ -129,7 +129,7 @@ Before committing a new fingerprint to the built-in set:
 Patterns that have caused bad detections and should not be repeated:
 
 - **Unanchored TXT regexes.** Prefer service-specific prefixes and anchors.
-- **Dormant ownership tokens.** A lone verification TXT can mean an abandoned
+- **Dormant verification tokens.** A lone verification TXT can mean an abandoned
   trial account; use `match_mode: all` when routing evidence is available.
 - **Wildcard A/CNAME zones.** Do not infer a service from a subdomain name
   alone when wildcard DNS can manufacture every prefix.
@@ -150,15 +150,16 @@ The score counts five apex-observable controls (1 point each):
 | Points | Requires |
 |--------|----------|
 | 1 | DMARC policy is `reject` or `quarantine` (not `none`) |
-| 1 | DKIM observed at common selectors, **or** inferred from a commercial email gateway (Proofpoint, Mimecast, Cisco IronPort, Barracuda, Trend Micro, Trellix, Symantec) with enforcing DMARC |
+| 1 | DKIM observed at common selectors |
 | 1 | SPF with `-all` (hard fail, not `~all` softfail) |
 | 1 | MTA-STS record present |
 | 1 | BIMI record present |
 
 Score is an observation, not a verdict: we see apex DNS, not the full
 posture. A domain with custom DKIM selectors we can't enumerate will
-read low here even if DKIM is actually deployed; the gateway-inferred
-DKIM path mitigates this for commercial-gateway deployments.
+read low here even if DKIM is actually deployed. A commercial gateway plus
+enforcing DMARC does not receive DKIM credit because neither observation
+establishes that a DKIM key was published or used.
 
 ## Related-domain enrichment
 

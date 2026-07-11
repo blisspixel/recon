@@ -40,8 +40,18 @@ class TestUnitCounterfactuals:
     def test_counterfactual_equals_masked_run(self, network: BayesianNetwork) -> None:
         # The defining property: each unit's posterior_without is exactly
         # the posterior of the same inference with that unit masked.
-        slugs = {"microsoft365", "entra-id", "okta", "cloudflare", "aws", "proofpoint"}
-        signals = {"dmarc_reject", "spf_strict", "federated_sso_hub"}
+        slugs: set[str] = set()
+        signals = {
+            "m365_tenant_observed",
+            "google_workspace_tenant_observed",
+            "federated_sso_hub",
+            "okta_idp_observed",
+            "email_gateway_mx_observed",
+            "dmarc_reject",
+            "spf_strict",
+            "cdn_cname_observed",
+            "aws_endpoint_cname_observed",
+        }
         result = infer(network, slugs, signals, priors_override={})
         checked = 0
         for p in result.posteriors:
@@ -50,7 +60,7 @@ class TestUnitCounterfactuals:
                 assert cf.posterior_without == _node(masked, p.name).posterior, (p.name, cf.unit)
                 assert cf.delta == pytest.approx(p.posterior - cf.posterior_without, abs=2e-4)
                 checked += 1
-        assert checked >= 7  # every evidenced node contributed at least one
+        assert checked >= 9  # every evidence-bound node contributed at least one
 
     def test_hand_computed_policy_counterfactuals(self, network: BayesianNetwork) -> None:
         # DMARC reject + strict SPF fired. By hand (see
@@ -78,17 +88,25 @@ class TestUnitCounterfactuals:
         assert dmarc.posterior_without == pytest.approx(0.7525, abs=1e-4)
         assert dmarc.delta == pytest.approx(0.1517 - 0.7525, abs=1e-4)
         assert dmarc.delta < 0
-        # MTA-STS absence is uninformative (LR ~ 1) and must NOT appear.
-        assert "mta_sts_enforce" not in cfs
+        # MTA-STS absence is weak but non-neutral, so it must remain visible
+        # whenever its factor is applied.
+        mta_sts = cfs["mta_sts_enforce"]
+        assert mta_sts.observed == "absent"
+        assert mta_sts.delta < 0
 
     def test_dag_flow_survives_the_mask(self, network: BayesianNetwork) -> None:
-        # With a federation signal observed, masking m365_indicators must
+        # With a federation signal observed, masking the M365 observation must
         # NOT drop m365_tenant to its prior: support still flows backward
         # through the federated_identity CPT. The counterfactual exposes
         # exactly that.
-        result = infer(network, {"microsoft365"}, {"federated_sso_hub"}, priors_override={})
+        result = infer(
+            network,
+            set(),
+            {"m365_tenant_observed", "federated_sso_hub"},
+            priors_override={},
+        )
         cf = _node(result, "m365_tenant").unit_counterfactuals[0]
-        assert cf.unit == "m365_indicators"
+        assert cf.unit == "m365_tenant_observed"
         assert cf.posterior_without > 0.31  # strictly above the 0.30 prior
 
     def test_sorted_by_absolute_delta_descending(self, network: BayesianNetwork) -> None:
@@ -100,10 +118,10 @@ class TestUnitCounterfactuals:
         result = infer(network, set(), set(), priors_override={})
         for p in result.posteriors:
             if p.name == _POLICY:
-                # The declarative node's absences are informative even with
-                # nothing fired: dmarc_policy and spf_strict, not mta_sts.
+                # Every applied non-neutral absence is visible, including the
+                # weak MTA-STS non-fire.
                 units = {c.unit for c in p.unit_counterfactuals}
-                assert units == {"dmarc_policy", "spf_strict"}
+                assert units == {"dmarc_policy", "mta_sts_enforce", "spf_strict"}
                 assert all(c.observed == "absent" for c in p.unit_counterfactuals)
             else:
                 assert p.unit_counterfactuals == ()
@@ -124,18 +142,18 @@ class TestPerNodeEntropyReduction:
     def test_sums_to_the_result_total(self, network: BayesianNetwork) -> None:
         result = infer(
             network,
-            {"microsoft365", "cloudflare"},
-            {"dmarc_reject", "federated_sso_hub"},
+            set(),
+            {"m365_tenant_observed", "cdn_cname_observed", "dmarc_reject", "federated_sso_hub"},
             priors_override={},
         )
         total = sum(p.entropy_reduction_nats for p in result.posteriors)
         assert total == pytest.approx(result.entropy_reduction, abs=5e-3)
 
     def test_hand_computed_m365_share(self, network: BayesianNetwork) -> None:
-        # With the microsoft365 slug fired the posterior is
+        # With the role-scoped M365 observation fired the posterior is
         # 0.3*0.95 / (0.3*0.95 + 0.7*0.03) = 0.93137 -> 0.9314.
         # H(0.30) = 0.6109 nats, H(0.9314) = 0.2500; reduction = 0.3608.
-        result = infer(network, {"microsoft365"}, set(), priors_override={})
+        result = infer(network, set(), {"m365_tenant_observed"}, priors_override={})
         node = _node(result, "m365_tenant")
         assert node.posterior == pytest.approx(0.9314, abs=1e-4)
         assert node.entropy_reduction_nats == pytest.approx(0.3608, abs=2e-3)

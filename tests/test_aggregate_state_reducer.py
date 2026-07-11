@@ -41,10 +41,12 @@ def test_fixture_global_shape() -> None:
     assert summary["global"]["small_n_warning"] is True
 
 
-def test_fixture_mnar_observability_below_one_for_hideable() -> None:
+def test_fixture_hideable_claim_reports_model_support_not_prevalence() -> None:
     m365 = _load_fixture()["global"]["prevalence"]["m365_tenant"]
-    assert m365["observability_fraction"] < 1.0
-    assert m365["lower_bound_over_cohort"] < m365["observed_rate"]
+    assert m365["metric_kind"] == "model_support_coverage"
+    assert m365["observed_rate"] is None
+    assert m365["lower_bound_over_cohort"] is None
+    assert 0.0 <= m365["support_coverage"] <= 1.0
 
 
 def test_fixture_declarative_never_sparse_hideable_can_be() -> None:

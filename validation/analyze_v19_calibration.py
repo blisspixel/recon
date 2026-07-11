@@ -319,9 +319,8 @@ def main() -> int:  # noqa: C901  # report-assembly script; sectioned by comment
         f"  {total_sparse}/{total_observations} ({total_sparse / total_observations:.1%}) "
         f"node-domain observations flagged as sparse"
     )
-    print("  (Sparse flag fires when n_eff is at the floor — the")
-    print("  passive-observation ceiling is the load-bearing fact, not")
-    print("  the point estimate.)")
+    print("  (Sparse marks n_eff at its configured display-mass floor;")
+    print("  it is not an absence finding or calibrated uncertainty level.)")
 
     return 0
 

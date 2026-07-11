@@ -23,7 +23,12 @@ from recon_tool.formatter import (
     format_tenant_json,
     format_tenant_markdown,
 )
-from recon_tool.formatter.classify import provider_line
+from recon_tool.formatter.classify import (
+    categorize_services,
+    google_workspace_cse_indicators,
+    google_workspace_module_indicators,
+    provider_line,
+)
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.server import app as server_app
@@ -46,9 +51,9 @@ _SUBDOMAIN_SURFACE_LABEL = "Subdomain surface"
 
 def _lookup_tenant_gws_lines(info: TenantInfo) -> list[str]:
     """Google Workspace auth + module lines for the text format; empty when not GWS."""
-    gws_slugs = set(info.slugs)
-    is_gws = any(s.lower().startswith("google workspace") for s in info.services) or "google-workspace" in gws_slugs
-    if not is_gws:
+    gws_modules = google_workspace_module_indicators(info)
+    cse_indicators = google_workspace_cse_indicators(info)
+    if not any((info.google_auth_type, info.google_idp_name, gws_modules, cse_indicators)):
         return []
     lines: list[str] = []
     if info.google_auth_type:
@@ -56,9 +61,10 @@ def _lookup_tenant_gws_lines(info: TenantInfo) -> list[str]:
         if info.google_idp_name:
             auth_label += f" ({info.google_idp_name})"
         lines.append(f"GWS Auth: {auth_label}")
-    gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
     if gws_modules:
-        lines.append(f"GWS Modules: {', '.join(gws_modules)}")
+        lines.append(f"GWS module indicators: {', '.join(gws_modules)}")
+    if cse_indicators:
+        lines.append(f"GWS CSE configuration indicators: {', '.join(cse_indicators)}")
     return lines
 
 
@@ -81,10 +87,12 @@ def _lookup_tenant_text(info: TenantInfo) -> str:
     """Render the default human-readable text format for ``lookup_tenant``."""
     provider = provider_line(info)
     lines = [
-        f"Company: {info.display_name}",
-        f"Domain: {info.default_domain}",
+        f"Display name: {info.display_name}",
+        f"Domain: {info.queried_domain}",
         f"Provider: {provider}",
     ]
+    if info.default_domain != info.queried_domain:
+        lines.insert(2, f"Default domain: {info.default_domain}")
     if info.tenant_id:
         lines.append(f"Tenant ID: {info.tenant_id}")
     if info.region:
@@ -92,8 +100,10 @@ def _lookup_tenant_text(info: TenantInfo) -> str:
     if info.auth_type:
         lines.append(f"Auth: {info.auth_type}")
     lines.append(f"Confidence: {info.confidence.value} ({len(info.sources)} sources)")
-    if info.services:
-        lines.append(f"Services: {', '.join(info.services)}")
+    categorized = categorize_services(info)
+    service_labels = [service for services in categorized.values() for service in services]
+    if service_labels:
+        lines.append(f"Services: {', '.join(service_labels)}")
     if info.insights:
         lines.append(f"Insights: {' | '.join(info.insights)}")
     if info.domain_count > 0:
@@ -120,20 +130,19 @@ async def lookup_tenant(
     format: str = "text",
     explain: bool = False,
 ) -> str:
-    """Look up domain intelligence — company name, email provider, tenant ID,
-    tech stack, email security score, and signal intelligence.
+    """Look up public domain observations including display label, tenant ID,
+    provider indicators, email-control records, and signal correlations.
 
-    Works for any domain — Microsoft 365, Google Workspace, or any provider.
-    Returns detected SaaS services (800+ fingerprints), email security posture,
-    infrastructure, and derived signals (AI adoption, GTM maturity, security
-    stack, collaboration tools, etc.).
+    Works for any domain. Returns catalogued public SaaS and infrastructure
+    indicators plus claim-safe co-observations. A fingerprint match does not
+    establish active use, organizational intent, deployment scope, or maturity.
 
     Queries only public, unauthenticated endpoints and DNS records.
     No credentials or API keys required.
 
     Args:
         domain: A domain name to look up (e.g., contoso.com, northwindtraders.com).
-        format: Output format — "text" (default), "json" (structured), or "markdown" (full report).
+        format: Output format: "text" (default), "json" (structured), or "markdown" (full report).
         explain: When true, include structured explanations for insights and signals in the response.
 
     Returns:
@@ -226,6 +235,9 @@ def _format_lookup_tenant(
     Split out of ``lookup_tenant`` so the tool body stays under the branch
     budget; the format dispatch lives here where it can grow independently.
     """
+    from recon_tool.collection_view import collection_observable_info
+
+    info = collection_observable_info(info)
     if output_format == "json":
         if explain:
             return _lookup_tenant_json_with_explain(info, list(results))
@@ -241,6 +253,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     Includes explanations for insights, signals, confidence, and conflicts.
     """
     from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
+    from recon_tool.collection_view import collection_observable_evidence, collection_observable_results
     from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
     from recon_tool.explanation import (
         explain_confidence,
@@ -252,6 +265,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     from recon_tool.signals import evaluate_signals, load_signals
 
     base = format_tenant_dict(info)
+    observable_evidence = collection_observable_evidence(info)
 
     context = signal_context_from_tenant_info(info)
     signal_matches = evaluate_signals(context)
@@ -268,18 +282,32 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
 
     # Signal explanations
     signal_recs = explain_signals(
-        all_signal_matches, signals, context.detected_slugs, context_metadata, info.evidence, info.detection_scores
+        all_signal_matches,
+        signals,
+        context.detected_slugs,
+        context_metadata,
+        observable_evidence,
+        info.detection_scores,
     )
     all_explanations.extend(serialize_explanation(r) for r in signal_recs)
 
     # Insight explanations
     insight_recs = explain_insights(
-        list(info.insights), frozenset(info.slugs), frozenset(info.services), info.evidence, info.detection_scores
+        list(info.insights),
+        frozenset(info.slugs),
+        frozenset(info.services),
+        observable_evidence,
+        info.detection_scores,
     )
     all_explanations.extend(serialize_explanation(r) for r in insight_recs)
 
     # Confidence explanation
-    conf_rec = explain_confidence(results, info.evidence_confidence, info.inference_confidence, info.confidence)
+    conf_rec = explain_confidence(
+        collection_observable_results(results),
+        info.evidence_confidence,
+        info.inference_confidence,
+        info.confidence,
+    )
     all_explanations.append(serialize_explanation(conf_rec))
 
     base["explanations"] = all_explanations
@@ -289,7 +317,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
     from recon_tool.explanation import build_explanation_dag
 
     all_records = [*signal_recs, *insight_recs, conf_rec]
-    base["explanation_dag"] = build_explanation_dag(all_records, info.evidence)
+    base["explanation_dag"] = build_explanation_dag(all_records, observable_evidence)
 
     # Include conflicts when present
     if info.merge_conflicts and info.merge_conflicts.has_conflicts:

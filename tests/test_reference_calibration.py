@@ -10,7 +10,9 @@ hand-computed values and synthetic records (no network, no real apex).
 
 from __future__ import annotations
 
+import asyncio
 import json
+from types import SimpleNamespace
 
 import pytest
 
@@ -37,10 +39,27 @@ class TestReferenceLabel:
         assert reference_label_email_policy("none") == 0
         assert reference_label_email_policy("NONE") == 0
 
-    def test_absent_or_unknown_policy_has_no_label(self) -> None:
-        # No DMARC record, or an unrecognized value, carries no reference
-        # truth and is excluded rather than guessed.
-        assert reference_label_email_policy(None) is None
+    def test_successfully_observed_no_record_labels_zero(self) -> None:
+        assert reference_label_email_policy(None) == 0
+
+    @pytest.mark.parametrize(
+        "marker",
+        ["dns", "dns_records", "dns:dmarc", "detector:email_security"],
+    )
+    def test_dmarc_collection_failure_is_unlabeled(self, marker: str) -> None:
+        assert reference_label_email_policy(None, (marker,)) is None
+
+    @pytest.mark.parametrize(
+        "marker",
+        ["dns", "dns_records", "dns:dmarc", "detector:email_security"],
+    )
+    def test_partial_policy_is_unlabeled_after_dmarc_channel_failure(self, marker: str) -> None:
+        assert reference_label_email_policy("reject", (marker,)) is None
+
+    def test_unrelated_degradation_does_not_hide_observed_absence(self) -> None:
+        assert reference_label_email_policy(None, ("certificate_transparency",)) == 0
+
+    def test_unknown_nonempty_policy_has_no_label(self) -> None:
         assert reference_label_email_policy("") is None
         assert reference_label_email_policy("p=reject") is None  # raw token, not the parsed level
 
@@ -87,6 +106,10 @@ class TestCalibrationSummary:
         assert s["agreement_rate"] == 1.0
         assert "ece_equal_mass" in s
         assert "ece_equal_mass_ci80" in s
+        assert s["interval_interpretation"] == {
+            "ece_equal_mass_ci80": "naive iid row-bootstrap diagnostic range; no coverage claim",
+            "agreement_wilson80": "naive iid Wilson diagnostic range; no population-coverage claim",
+        }
 
     def test_disagreement_lowers_agreement_rate(self) -> None:
         # One miscalibrated domain: high posterior but the DMARC Reference says
@@ -148,21 +171,111 @@ class TestHeldOutPolicyPosterior:
     tests/test_bayesian_masked_units.py for the arithmetic."""
 
     def test_invariant_to_the_dmarc_signal(self) -> None:
-        with_dmarc = held_out_policy_posterior(set(), {"dmarc_reject", "spf_strict"}, priors_override={})
-        without_dmarc = held_out_policy_posterior(set(), {"spf_strict"}, priors_override={})
+        with_dmarc = held_out_policy_posterior(set(), {"dmarc_reject", "spf_strict"})
+        without_dmarc = held_out_policy_posterior(set(), {"spf_strict"})
         assert with_dmarc == without_dmarc
 
     def test_hand_computed_spf_only_residual(self) -> None:
         # 0.62*0.53*0.94 / (0.62*0.53*0.94 + 0.38*0.27*0.99) = 0.7525
-        p = held_out_policy_posterior(set(), {"spf_strict"}, priors_override={})
+        p = held_out_policy_posterior(set(), {"spf_strict"})
         assert p == pytest.approx(0.7525, abs=1e-4)
 
     def test_hand_computed_no_signal_residual(self) -> None:
         # Strict SPF genuinely absent (declarative complement [0.47, 0.73]),
         # MTA-STS absent (near-neutral complement [0.94, 0.99]):
         # 0.62*0.47*0.94 / (0.62*0.47*0.94 + 0.38*0.73*0.99) = 0.4994
-        p = held_out_policy_posterior(set(), set(), priors_override={})
+        p = held_out_policy_posterior(set(), set())
         assert p == pytest.approx(0.4994, abs=1e-4)
+
+    def test_unavailable_apex_txt_masks_spf_in_residual(self) -> None:
+        with_spf = held_out_policy_posterior(
+            set(),
+            {"spf_strict"},
+            degraded_sources=("dns:apex_txt",),
+        )
+        without_spf = held_out_policy_posterior(
+            set(),
+            set(),
+            degraded_sources=("dns:apex_txt",),
+        )
+        assert with_spf == without_spf
+        assert with_spf == pytest.approx(0.6077, abs=1e-4)
+
+    def test_user_local_priors_cannot_leak_into_residual(self, monkeypatch) -> None:
+        import recon_tool.bayesian as bayesian
+
+        def _fail_if_loaded():
+            raise AssertionError("validation attempted to load user-local priors")
+
+        monkeypatch.setattr(bayesian, "load_priors_override", _fail_if_loaded)
+        assert held_out_policy_posterior(set(), {"spf_strict"}) == pytest.approx(0.7525, abs=1e-4)
+
+
+def test_reference_collector_pins_both_inference_paths_to_committed_priors(monkeypatch) -> None:
+    import recon_tool.bayesian as bayesian
+    import recon_tool.resolver as resolver
+
+    def _fail_if_loaded():
+        raise AssertionError("validation attempted to load user-local priors")
+
+    async def _resolve(_domain: str, *, timeout: float, skip_ct: bool):
+        del timeout, skip_ct
+        return (
+            SimpleNamespace(
+                dmarc_policy="none",
+                slugs=(),
+                services=(),
+                evidence=(),
+                degraded_sources=(),
+                merge_conflicts=None,
+            ),
+            [],
+        )
+
+    monkeypatch.setattr(bayesian, "load_priors_override", _fail_if_loaded)
+    monkeypatch.setattr(resolver, "resolve_tenant", _resolve)
+    pair = asyncio.run(
+        refcal._collect_one(
+            "example.test",
+            timeout=1.0,
+            skip_ct=True,
+            sem=asyncio.Semaphore(1),
+        )
+    )
+    assert pair is not None
+    assert pair.full.label == 0
+    assert pair.held_out.label == 0
+
+
+def test_reference_collector_threads_non_dmarc_degradation_to_residual(monkeypatch) -> None:
+    import recon_tool.resolver as resolver
+
+    async def _resolve(_domain: str, *, timeout: float, skip_ct: bool):
+        del timeout, skip_ct
+        return (
+            SimpleNamespace(
+                dmarc_policy="none",
+                slugs=(),
+                services=("SPF: strict (-all)",),
+                evidence=(),
+                degraded_sources=("dns:apex_txt",),
+                merge_conflicts=None,
+            ),
+            [],
+        )
+
+    monkeypatch.setattr(resolver, "resolve_tenant", _resolve)
+    pair = asyncio.run(
+        refcal._collect_one(
+            "example.test",
+            timeout=1.0,
+            skip_ct=True,
+            sem=asyncio.Semaphore(1),
+        )
+    )
+
+    assert pair is not None
+    assert pair.held_out.posterior == pytest.approx(0.6077, abs=1e-4)
 
 
 class TestStratifiedSummary:

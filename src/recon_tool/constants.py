@@ -68,9 +68,9 @@ def email_security_score(
 
     Five independent controls each count once: an *effectively enforcing* DMARC
     policy (``reject``/``quarantine`` after RFC 7489 ``pct=`` and RFC 9989
-    ``t=`` downgrades; a ``p=none`` record does not count), any DKIM (Exchange
-    Online or a generic selector, credited once even when both are observed),
-    strict SPF (``-all``), MTA-STS, and BIMI.
+    ``t=`` downgrades; a ``p=none`` record does not count), any observed DKIM
+    label (Exchange Online, Google Workspace, or generic, credited once when
+    multiple labels are observed), strict SPF (``-all``), MTA-STS, and BIMI.
 
     The JSON ``email_security_score`` field, ``--exposure``, posture statements,
     the MCP signal context, and ``delta`` all route through this function so the
@@ -79,7 +79,7 @@ def email_security_score(
     present = set(services)
     return (
         (1 if effective_dmarc_policy(dmarc_policy, dmarc_pct, dmarc_testing) in ("reject", "quarantine") else 0)
-        + (1 if SVC_DKIM in present or SVC_DKIM_EXCHANGE in present else 0)
+        + (1 if present & {SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE} else 0)
         + (1 if SVC_SPF_STRICT in present else 0)
         + (1 if SVC_MTA_STS in present else 0)
         + (1 if SVC_BIMI in present else 0)

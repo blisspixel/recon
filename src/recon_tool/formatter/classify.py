@@ -32,8 +32,8 @@ from recon_tool.formatter.classify_tables import (
     SERVICE_CATEGORIES_ORDER,
     SLUG_DISPLAY_OVERRIDES,
 )
-from recon_tool.merger_tables import EMAIL_PROVIDER_SLUG_NAMES, LIKELY_PROVIDER_SLUG_NAMES
-from recon_tool.models import TenantInfo
+from recon_tool.models import EvidenceRecord, TenantInfo
+from recon_tool.source_status import SourceStatus
 
 __all__ = [
     "CATEGORY_BY_SLUG",
@@ -52,11 +52,23 @@ __all__ = [
     "category_for_slug",
     "count_cloud_vendors",
     "detect_provider",
+    "google_workspace_cse_indicators",
+    "google_workspace_module_indicators",
     "is_gws_service",
     "is_m365_service",
     "provider_line",
+    "role_aware_service_label",
     "slug_to_relationship_metadata",
 ]
+
+_CAA_ISSUER_DISPLAY_OVERRIDES = {"aws-acm": "Amazon"}
+_FALLBACK_ACCOUNT_PROVIDER_NAMES = {
+    "microsoft365": "Microsoft 365",
+    "google-workspace": "Google Workspace",
+    "zoho": "Zoho Mail",
+    "protonmail": "ProtonMail",
+}
+
 
 def _get_slug_provider_groups() -> dict[str, str]:
     """Build a slug → provider_group mapping from loaded fingerprints."""
@@ -121,7 +133,44 @@ def is_m365_service(svc: str) -> bool:
     if pg is not None:
         return pg == "microsoft365"
     svc_lower = svc.lower()
-    return svc_lower in M365_KEYWORDS or svc_lower.startswith("microsoft 365:")
+    if svc_lower in M365_KEYWORDS or svc_lower.startswith("microsoft 365:"):
+        return True
+    for suffix in (" (role unavailable)", " (public txt account indicator)"):
+        if svc_lower.endswith(suffix):
+            return svc_lower.removesuffix(suffix) in M365_KEYWORDS
+    return False
+
+
+def google_workspace_module_indicators(info: TenantInfo) -> tuple[str, ...]:
+    """Return GWS module names supported by retained CNAME evidence."""
+    cname_rules = {
+        record.rule_name.casefold() for record in info.evidence if record.source_type.upper().startswith("CNAME")
+    }
+    modules = {
+        service.removeprefix("Google Workspace: ")
+        for service in info.services
+        if service.startswith("Google Workspace: ") and service.casefold() in cname_rules
+    }
+    return tuple(sorted(modules))
+
+
+def google_workspace_cse_indicators(info: TenantInfo) -> tuple[str, ...]:
+    """Return CSE fields only when retained HTTP evidence supports them."""
+    cse_observed = any(
+        record.source_type.upper() == "HTTP"
+        and record.slug == "google-cse"
+        and record.rule_name == "Google Workspace CSE"
+        for record in info.evidence
+    )
+    if not cse_observed:
+        return ()
+    return tuple(
+        sorted(
+            service
+            for service in info.services
+            if service == "Google Workspace CSE" or service.startswith("CSE Key Manager: ")
+        )
+    )
 
 
 def category_for_slug(slug: str) -> str | None:
@@ -151,6 +200,8 @@ def canonical_cloud_vendor(slug: str) -> str | None:
 def count_cloud_vendors(
     apex_slugs: Iterable[str],
     surface_slugs: Iterable[str] = (),
+    *,
+    apex_evidence: Iterable[EvidenceRecord] | None = None,
 ) -> dict[str, int]:
     """Count distinct cloud-vendor mentions across apex and surface slugs.
 
@@ -162,12 +213,29 @@ def count_cloud_vendors(
     counts twice (one mention per slug), but still as one distinct
     vendor key.
 
-    Used by the panel rollup to decide whether to fire (≥ 2 distinct
+    When ``apex_evidence`` is supplied, only apex slugs with retained CNAME,
+    A, or PTR endpoint-binding evidence contribute. NS, CAA, and TXT records
+    establish DNS hosting, issuer authorization, or account registration, not
+    an edge or workload binding. Missing per-slug evidence is excluded rather
+    than assigned a role. Omitting ``apex_evidence`` preserves the historical
+    pure slug-counter API. Surface slugs already come from CNAME attribution.
+
+    Used by the panel rollup to decide whether to fire (at least 2 distinct
     keys) and what vendor list to render. Sorted-output handling is the
     caller's job because callers differ in tie-break preference.
     """
+    if apex_evidence is None:
+        filtered_apex_slugs = apex_slugs
+    else:
+        evidence_types = _evidence_types_by_slug(apex_evidence)
+        filtered_apex_slugs = (
+            slug
+            for slug in apex_slugs
+            if evidence_types.get(slug) and _has_cloud_workload_evidence(evidence_types[slug])
+        )
+
     counts: dict[str, int] = {}
-    for slug in (*apex_slugs, *surface_slugs):
+    for slug in (*filtered_apex_slugs, *surface_slugs):
         vendor = CLOUD_VENDOR_BY_SLUG.get(slug)
         if vendor is None:
             continue
@@ -175,174 +243,124 @@ def count_cloud_vendors(
     return counts
 
 
-def _pick_single_primary(joined: str) -> tuple[str, list[str]]:
-    """Split a ``" + "``-joined provider string into one primary and
-    one or more secondaries.
+def _evidence_types_by_slug(evidence: Iterable[EvidenceRecord]) -> dict[str, frozenset[str]]:
+    """Return normalized source roles for each detected slug."""
+    mutable: dict[str, set[str]] = {}
+    for record in evidence:
+        mutable.setdefault(record.slug, set()).add(record.source_type.upper())
+    return {slug: frozenset(source_types) for slug, source_types in mutable.items()}
 
-    When ``likely_primary_email_provider`` carries multiple names
-    (e.g. ``"Google Workspace + Microsoft 365"`` because DKIM
-    selectors for both were observed), the panel previously read as
-    ambiguous "dual" email. That was overclaim — the same DNS
-    footprint fits a single primary with legacy selectors just as
-    well. This helper picks one primary and demotes the others to
-    secondary so the panel reads unambiguously.
 
-    Selection rule: prefer Microsoft 365 first (the most common
-    enterprise primary in practice), then Google Workspace, then the
-    original list order. Deterministic and documented so users can
-    re-derive it.
+def _has_cloud_workload_evidence(source_types: frozenset[str]) -> bool:
+    """Whether source roles support an edge, hosting, or workload label.
+
+    NS identifies authoritative DNS, CAA authorizes certificate issuers, and
+    TXT commonly records account verification. None establishes a hosted cloud
+    workload. CNAME and A/PTR-derived observations do identify a public endpoint
+    binding, so they may contribute to the legacy ``Multi-cloud`` summary.
     """
-    if " + " not in joined:
-        return joined, []
-    parts = [p.strip() for p in joined.split(" + ") if p.strip()]
-    if not parts:
-        return joined, []
-    preference = ["Microsoft 365", "Google Workspace", "Zoho Mail", "ProtonMail"]
-    for pref in preference:
-        if pref in parts:
-            secondaries = [p for p in parts if p != pref]
-            return pref, secondaries
-    return parts[0], parts[1:]
+    return any(source_type.startswith("CNAME") or source_type in {"A", "PTR"} for source_type in source_types)
 
 
-def _provider_exchange_onprem(
-    slug_set_early: set[str], primary_email_provider: str | None, email_gateway: str | None
-) -> str | None:
-    """Exchange on-prem / hybrid provider line.
-
-    Fires when the exchange-onprem slug is present and there is no MX-backed
-    primary provider: a strong signal that email goes to a self-hosted Exchange
-    cluster regardless of dormant Google / M365 account registrations the
-    identity endpoints report. When an M365 tenant also exists the platform is
-    Microsoft 365 (cloud or hybrid) and autodiscover is just an endpoint, so we
-    do not lead with "Exchange Server (on-prem)". Returns ``None`` when this
-    path does not apply.
-    """
-    if not ("exchange-onprem" in slug_set_early and not primary_email_provider):
-        return None
-    if "microsoft365" in slug_set_early:
-        primary_segment = "Microsoft 365"
-        if email_gateway:
-            primary_segment = f"{primary_segment} via {email_gateway} gateway"
-        segments = [primary_segment]
-        if "google-workspace" in slug_set_early:
-            segments.append("Google Workspace (account detected)")
-        return " + ".join(segments)
-    # Genuinely on-prem Exchange — no M365 tenant found.
-    other_accounts: list[str] = []
-    if "google-workspace" in slug_set_early:
-        other_accounts.append("Google Workspace")
-    primary_segment = "Exchange Server (on-prem / hybrid)"
-    if email_gateway:
-        primary_segment = f"{primary_segment} behind {email_gateway} gateway"
-    segments = [primary_segment]
-    for acct in other_accounts:
-        segments.append(f"{acct} (account detected)")
-    return " + ".join(segments)
-
-
-def _topology_slug_secondaries(
-    slug_set: set[str],
-    primary_name: str | None,
-    inferred_secondaries: list[str],
-    email_confirmed_slugs: frozenset[str] | None,
-) -> list[str]:
-    """Slug-based secondary providers (detected via TXT/DKIM) not already in the
-    primary line. Account-only detections (OIDC, TXT tokens) are dropped as
-    Provider-line noise unless confirmed via email routing (MX or DKIM)."""
-    slug_secondaries: list[str] = []
-    provider_names = (
-        EMAIL_PROVIDER_SLUG_NAMES
-        if email_confirmed_slugs is not None
-        else LIKELY_PROVIDER_SLUG_NAMES
-    )
-    for slug, name in provider_names.items():
-        if slug not in slug_set:
-            continue
-        if primary_name and name == primary_name:
-            continue
-        if name in inferred_secondaries:
-            continue
-        if email_confirmed_slugs is not None and slug not in email_confirmed_slugs:
-            continue
-        slug_secondaries.append(name)
-    return slug_secondaries
+def _split_topology_names(joined: str | None) -> list[str]:
+    """Split a deterministic ``" + "`` topology field without ranking it."""
+    if not joined:
+        return []
+    return list(dict.fromkeys(part.strip() for part in joined.split(" + ") if part.strip()))
 
 
 def _provider_from_topology(
-    slugs: tuple[str, ...] | set[str],
     primary_email_provider: str | None,
     email_gateway: str | None,
     likely_primary_email_provider: str | None,
-    email_confirmed_slugs: frozenset[str] | None,
 ) -> str:
-    """Provider line from email-topology data: a single promoted primary (see
-    ``_pick_single_primary``), an optional gateway, and deduped secondaries
-    drawn from the inferred list plus email-confirmed slugs."""
-    primary_name: str | None = None
-    primary_label: str = ""
-    inferred_secondaries: list[str] = []
-    if primary_email_provider:
-        primary_name, inferred_secondaries = _pick_single_primary(primary_email_provider)
-        primary_label = "(primary)"
-    elif likely_primary_email_provider:
-        primary_name, inferred_secondaries = _pick_single_primary(likely_primary_email_provider)
-        primary_label = "(likely primary)"
+    """Render observed MX paths and non-MX downstream indicators.
 
-    if email_confirmed_slugs is not None:
-        slug_by_name = {name: slug for slug, name in EMAIL_PROVIDER_SLUG_NAMES.items()}
-        inferred_secondaries = [
-            name for name in inferred_secondaries if slug_by_name.get(name) in email_confirmed_slugs
-        ]
-
-    slug_secondaries = _topology_slug_secondaries(set(slugs), primary_name, inferred_secondaries, email_confirmed_slugs)
-
-    all_secondaries: list[str] = []
-    for n in inferred_secondaries + slug_secondaries:
-        if n not in all_secondaries:
-            all_secondaries.append(n)
-
+    Joined provider fields are sets encoded for schema compatibility. Their
+    order does not establish priority. Every direct provider and gateway is
+    therefore an observed MX delivery path, while every non-MX candidate stays
+    a possible downstream indicator. No candidate is promoted or demoted.
+    """
+    direct_paths = _split_topology_names(primary_email_provider)
+    gateways = _split_topology_names(email_gateway)
+    possible_downstreams = [
+        name for name in _split_topology_names(likely_primary_email_provider) if name not in direct_paths
+    ]
     segments: list[str] = []
-    if primary_name:
-        head = f"{primary_name} {primary_label}".strip()
-        if email_gateway:
-            head = f"{head} via {email_gateway} gateway"
-        segments.append(head)
-    elif email_gateway:
-        segments.append(f"{email_gateway} gateway (no inferable downstream)")
-
-    for sec in all_secondaries:
-        segments.append(f"{sec} (secondary)")
+    segments.extend(f"{name} (MX delivery path)" for name in direct_paths)
+    for gateway in gateways:
+        detail = "MX delivery path"
+        if not direct_paths and not possible_downstreams:
+            detail += "; downstream unobserved"
+        segments.append(f"{gateway} gateway ({detail})")
+    segments.extend(f"{name} (possible downstream indicator)" for name in possible_downstreams)
 
     if segments:
         return " + ".join(segments)
     return "Unknown (no known provider pattern matched)"
 
 
-def _provider_slug_fallback(slugs: tuple[str, ...] | set[str], has_mx_records: bool) -> str:
+def _provider_slug_fallback(
+    slugs: tuple[str, ...] | set[str],
+    has_mx_records: bool | None,
+    evidence_backed_slugs: frozenset[str] | None,
+) -> str:
     """Slug-based provider line when no topology data is available.
 
-    Distinguishes "account detected, no MX" (the slug came from a non-MX source
-    on a domain with zero MX records) from "account detected, custom MX" (MX
-    records exist but point to an unrecognized host). Callers that know whether
-    MX records exist pass ``has_mx_records``; the conservative default is True.
+    Account indicators never become delivery providers. When MX records were
+    observed but no catalogued provider matched, the separate
+    ``Custom or unclassified MX`` path reports exactly that bounded fact.
     """
     slug_set = set(slugs)
-    providers: list[str] = []
-    if "microsoft365" in slug_set:
-        providers.append("Microsoft 365")
-    if "google-workspace" in slug_set:
-        providers.append("Google Workspace")
-    if "zoho" in slug_set:
-        providers.append("Zoho Mail")
-    if "protonmail" in slug_set:
-        providers.append("ProtonMail")
+    providers = [(slug, name) for slug, name in _FALLBACK_ACCOUNT_PROVIDER_NAMES.items() if slug in slug_set]
     if not providers and "aws-ses" in slug_set:
-        providers.append("AWS SES")
-    if providers:
-        qualifier = "account detected, no MX" if not has_mx_records else "account detected, custom MX"
-        return " + ".join(f"{p} ({qualifier})" for p in providers)
+        providers.append(("aws-ses", "AWS SES"))
+    segments = [
+        f"{provider} ({_fallback_account_qualifier(slug, has_mx_records, evidence_backed_slugs)})"
+        for slug, provider in providers
+    ]
+    if "self-hosted-mail" in slug_set or (providers and has_mx_records):
+        mx_role = _fallback_observed_role("self-hosted-mail", "MX delivery path", evidence_backed_slugs)
+        segments.append(f"Custom or unclassified MX ({mx_role})")
+    if "null-mx" in slug_set:
+        null_label = "Null MX (domain does not accept email)"
+        if _fallback_observed_role("null-mx", "observed", evidence_backed_slugs) == "role unavailable":
+            null_label += " (role unavailable)"
+        segments.append(null_label)
+    if "exchange-onprem" in slug_set:
+        endpoint_label = "Exchange-style endpoint indicator"
+        if _fallback_observed_role("exchange-onprem", "observed", evidence_backed_slugs) == "role unavailable":
+            endpoint_label += " (role unavailable)"
+        segments.append(endpoint_label)
+    if segments:
+        return " + ".join(segments)
     return "Unknown (no known provider pattern matched)"
+
+
+def _fallback_account_qualifier(
+    slug: str,
+    has_mx_records: bool | None,
+    evidence_backed_slugs: frozenset[str] | None,
+) -> str:
+    """Describe an account slug without upgrading it into email delivery."""
+    if evidence_backed_slugs is not None and slug not in evidence_backed_slugs:
+        return "role unavailable"
+    if has_mx_records is None:
+        return "account indicator; MX collection unavailable"
+    if has_mx_records:
+        return "account indicator"
+    return "account indicator; no MX observed"
+
+
+def _fallback_observed_role(
+    slug: str,
+    observed_role: str,
+    evidence_backed_slugs: frozenset[str] | None,
+) -> str:
+    """Return a bounded role only when lineage exists or was not requested."""
+    if evidence_backed_slugs is not None and slug not in evidence_backed_slugs:
+        return "role unavailable"
+    return observed_role
 
 
 def detect_provider(
@@ -351,62 +369,52 @@ def detect_provider(
     primary_email_provider: str | None = None,
     email_gateway: str | None = None,
     likely_primary_email_provider: str | None = None,
-    has_mx_records: bool = True,
+    has_mx_records: bool | None = True,
     email_confirmed_slugs: frozenset[str] | None = None,
+    evidence_backed_slugs: frozenset[str] | None = None,
 ) -> str:
     """Detect and format the provider line with email topology awareness.
 
-    Target format:
-      - ``Microsoft 365 (primary) via Proofpoint gateway`` — strict primary + gateway
-      - ``Microsoft 365 (primary) via Trend Micro gateway + Google Workspace (secondary)``
-        — primary + gateway + a separately detected secondary
-      - ``Microsoft 365 (primary)`` — strict primary, no gateway
-      - ``Microsoft 365 (likely primary) via Trend Micro gateway`` — inferred primary
-      - ``Proofpoint gateway (no inferable downstream)`` — gateway only, unknown downstream
-      - ``Microsoft 365; Google Workspace`` — slug-only fallback
-
-    The critical change from the old format: when
-    ``likely_primary_email_provider`` lists multiple providers (e.g.
-    ``"Google Workspace + Microsoft 365"``), one is promoted to the
-    single primary and the rest become ``"(secondary)"`` — never
-    ``"(dual)"``. The old format implied ambiguous active dual-use
-    which is usually wrong on enterprise targets. See
-    ``_pick_single_primary`` for the selection rule.
+    Direct MX providers and gateways render as observed MX delivery paths.
+    Non-MX candidates behind a gateway render as possible downstream
+    indicators. Joined field order never becomes a priority decision.
 
     Falls back to slug-based detection when topology fields are all
     None (backward compatible).
     """
-    slug_set_early = set(slugs)
-    exchange = _provider_exchange_onprem(slug_set_early, primary_email_provider, email_gateway)
-    if exchange is not None:
-        return exchange
-
     if primary_email_provider or email_gateway or likely_primary_email_provider:
         return _provider_from_topology(
-            slugs,
             primary_email_provider,
             email_gateway,
             likely_primary_email_provider,
-            email_confirmed_slugs,
         )
 
-    return _provider_slug_fallback(slugs, has_mx_records)
+    return _provider_slug_fallback(slugs, has_mx_records, evidence_backed_slugs)
 
 
 def provider_line(info: TenantInfo) -> str:
     """Return one evidence-aware provider summary for every output surface."""
-    has_mx_records = any(evidence.source_type == "MX" for evidence in info.evidence)
-    email_confirmed_slugs = frozenset(
-        evidence.slug for evidence in info.evidence if evidence.source_type in {"MX", "DKIM"}
+    from recon_tool.collection_view import collection_observable_evidence, collection_observable_info
+    from recon_tool.merger import compute_email_topology
+
+    info = collection_observable_info(info)
+    status = SourceStatus.from_degraded_sources(info.degraded_sources)
+    observable_evidence = collection_observable_evidence(info)
+    primary_email_provider, email_gateway, likely_primary_email_provider = compute_email_topology(observable_evidence)
+    has_mx_records = (
+        None
+        if status.channel_unavailable("mx")
+        else any(evidence.source_type.upper() == "MX" for evidence in observable_evidence)
     )
+    evidence_backed_slugs = frozenset(evidence.slug for evidence in observable_evidence if evidence.slug)
     return detect_provider(
         info.services,
         info.slugs,
-        primary_email_provider=info.primary_email_provider,
-        email_gateway=info.email_gateway,
-        likely_primary_email_provider=info.likely_primary_email_provider,
+        primary_email_provider=primary_email_provider,
+        email_gateway=email_gateway,
+        likely_primary_email_provider=likely_primary_email_provider,
         has_mx_records=has_mx_records,
-        email_confirmed_slugs=email_confirmed_slugs,
+        evidence_backed_slugs=evidence_backed_slugs,
     )
 
 
@@ -465,6 +473,79 @@ def _is_service_artifact(name: str) -> bool:
     )
 
 
+def _role_aware_slug_display(
+    slug: str,
+    name: str,
+    category: str,
+    source_types: frozenset[str],
+) -> tuple[str, str]:
+    """Return a category and label that state what the evidence proves.
+
+    A fingerprint slug names a vendor, but its source record determines the
+    observable role. In particular, account-verification TXT records do not
+    establish product deployment, NS records identify DNS hosting rather than
+    compute, and CAA records authorize issuers rather than prove certificate
+    issuance or a cloud workload.
+    """
+    if "CAA" in source_types:
+        issuer = _CAA_ISSUER_DISPLAY_OVERRIDES.get(slug, name.removeprefix("CAA: "))
+        return "Security", f"CAA: {issuer} authorized"
+
+    if not source_types:
+        return category, f"{name} (role unavailable)"
+
+    if source_types and source_types <= frozenset({"TXT", "SUBDOMAIN_TXT"}):
+        return category, f"{name} (public TXT account indicator)"
+
+    if category != "Cloud":
+        return category, name
+
+    has_cname = any(source_type.startswith("CNAME") for source_type in source_types)
+    has_ns = "NS" in source_types
+    if slug == "cloudflare" and has_cname:
+        qualifier = "DNS + CDN/edge" if has_ns else "CDN/edge"
+    elif has_ns:
+        qualifier = "DNS"
+    elif source_types == frozenset({"TXT"}):
+        qualifier = "public TXT account indicator"
+    else:
+        qualifier = CLOUD_SLUG_QUALIFIERS.get(slug)
+
+    return category, f"{name} ({qualifier})" if qualifier else name
+
+
+def role_aware_service_label(service: str, evidence: Iterable[EvidenceRecord]) -> str:
+    """Describe one service using the role of its retained evidence.
+
+    Delta output compares stable raw service names first, then calls this
+    helper only for an actual addition or removal. This avoids manufacturing a
+    change when an older snapshot lacks lineage while still preventing a TXT
+    registration or CNAME module alias from reading as generic deployment.
+    """
+    supporting = tuple(record for record in evidence if record.rule_name.casefold() == service.casefold())
+    if not supporting:
+        return service
+    source_types = frozenset(record.source_type.upper() for record in supporting)
+    if service.startswith("Google Workspace: ") and any(
+        source_type.startswith("CNAME") for source_type in source_types
+    ):
+        module = service.removeprefix("Google Workspace: ")
+        return f"Google Workspace module indicator: {module}"
+    if service == "Google Workspace CSE" and "HTTP" in source_types:
+        return "Google Workspace CSE configuration indicator"
+    slugs = {record.slug for record in supporting}
+    if len(slugs) != 1:
+        return service
+    slug = next(iter(slugs))
+    _category, label = _role_aware_slug_display(
+        slug,
+        service,
+        categorize_service(service, slug),
+        source_types,
+    )
+    return label
+
+
 def _categorize_pass1_slugs(
     info: TenantInfo, slug_to_name: dict[str, str], by_cat: dict[str, list[str]]
 ) -> tuple[set[str], set[str]]:
@@ -479,6 +560,7 @@ def _categorize_pass1_slugs(
     ``by_cat`` defensively so the append never raises. Mutates ``by_cat``;
     returns the (seen_services, slugs_filed) sets pass 2 needs.
     """
+    evidence_types = _evidence_types_by_slug(info.evidence)
     seen_services: set[str] = set()
     slugs_filed: set[str] = set()
     for slug in info.slugs:
@@ -488,12 +570,9 @@ def _categorize_pass1_slugs(
         name = SLUG_DISPLAY_OVERRIDES.get(slug) or slug_to_name.get(slug, slug)
         if _is_service_artifact(name):
             continue
+        cat, name = _role_aware_slug_display(slug, name, cat, evidence_types.get(slug, frozenset()))
         if cat != "Security" and name.startswith("CAA: "):
             name = name[len("CAA: ") :]
-        if cat == "Cloud":
-            qualifier = CLOUD_SLUG_QUALIFIERS.get(slug)
-            if qualifier:
-                name = f"{name} ({qualifier})"
         if name in seen_services:
             continue
         if cat not in by_cat:
@@ -516,10 +595,13 @@ def _categorize_pass2_names(
     prefix, or slug) so a detection is not double-counted under two display
     names. Mutates ``by_cat`` and the seen sets."""
     seen_lower_prefixes = {s.lower().split(" (")[0] for s in seen_services}
+    filed_evidence_aliases = {record.rule_name.casefold() for record in info.evidence if record.slug in slugs_filed}
     for svc in info.services:
         if svc in seen_services:
             continue
         if _is_service_artifact(svc):
+            continue
+        if svc.casefold() in filed_evidence_aliases:
             continue
         svc_prefix = svc.lower().split(" (")[0]
         if svc_prefix in seen_lower_prefixes:
@@ -528,9 +610,10 @@ def _categorize_pass2_names(
         if slug and slug in slugs_filed:
             continue
         cat = categorize_service(svc, slug)
-        by_cat.setdefault(cat, []).append(svc)
-        seen_services.add(svc)
-        seen_lower_prefixes.add(svc_prefix)
+        label = role_aware_service_label(svc, info.evidence)
+        by_cat.setdefault(cat, []).append(label)
+        seen_services.add(label)
+        seen_lower_prefixes.add(label.lower().split(" (")[0])
 
 
 def _dedup_identity_echoes(by_cat: dict[str, list[str]]) -> None:
@@ -554,14 +637,14 @@ def _dedup_identity_echoes(by_cat: dict[str, list[str]]) -> None:
 
 def _consolidate_caa_issuers(by_cat: dict[str, list[str]]) -> None:
     """Collapse the per-issuer "CAA: <issuer>" Security entries into one compact
-    "CAA: N issuers restricted" line so CAA records do not overwhelm the row or
+    "CAA: N issuers authorized" line so CAA records do not overwhelm the row or
     read as deployed security tools. The full list stays in --full / --json."""
     security = by_cat.get("Security", [])
     caa_entries = [s for s in security if s.startswith("CAA:")]
-    if len(caa_entries) >= 1:
+    if len(caa_entries) > 1:
         non_caa = [s for s in security if not s.startswith("CAA:")]
         count = len(caa_entries)
-        consolidated = f"CAA: {count} issuer{'s' if count != 1 else ''} restricted"
+        consolidated = f"CAA: {count} issuers authorized"
         by_cat["Security"] = [*non_caa, consolidated]
 
 
@@ -581,6 +664,9 @@ def categorize_services(info: TenantInfo) -> dict[str, list[str]]:
     Preserves input ordering within each category. Categories with
     no services are omitted from the returned dict.
     """
+    from recon_tool.collection_view import collection_observable_info
+
+    info = collection_observable_info(info)
     try:
         fps = load_fingerprints()
         slug_to_name: dict[str, str] = {fp.slug: fp.name for fp in fps}

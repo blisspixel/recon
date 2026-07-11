@@ -37,7 +37,7 @@ Run from the repository root after installing the development environment:
 |---|---|---|
 | Install dependencies | `uv sync` | Development environment resolves from `uv.lock`. |
 | Quick public proof smoke | `uv run python -m validation.reproduce_paper_numbers --profile smoke --stamp artifact-review-smoke` | Writes a manifest and summary under `validation/local/paper-numbers/artifact-review-smoke/`; reports no private corpora and no default network requirement. |
-| Full public proof bundle | `uv run python -m validation.reproduce_paper_numbers --profile paper --stamp artifact-review-paper` | Runs suppression monotonicity, differential verification, interval coverage, likelihood sensitivity, and layer ablation. |
+| Full public proof bundle | `uv run python -m validation.reproduce_paper_numbers --profile paper --stamp artifact-review-paper` | Runs suppression monotonicity, planted-evidence movement, differential verification, interval coverage, likelihood sensitivity, and layer ablation. |
 | Paper figure drift check | `uv run python scripts/generate_paper_figures.py --check` | Verifies the committed SVG figures match the deterministic aggregate-safe generator. |
 | Local CI mirror | `uv run python scripts/check.py` | Ruff, pyright, coverage-gated tests, generated-artifact checks, hygiene checks, and ratchets pass. |
 | Release readiness | `uv run python scripts/release_readiness.py` | Version, citation metadata, lockfile, roadmap, supply-chain recipe freshness, private-data hygiene, and commit hygiene pass for the local checkout. |
@@ -67,10 +67,10 @@ respective checks.
 | Claim family | Public command or gate | Reviewer interpretation |
 |---|---|---|
 | Inference arithmetic | `validation.differential_verification` through the reproduction bundle | Variable elimination matches an independent full-joint reference over enumerable shipped configurations. |
-| Evidence-removal and planting boundary | `validation.adversarial_properties` through the reproduction bundle | Suppression monotonicity holds for evidence removal, and synthetic add/remove perturbation summaries show that planted evidence can raise posteriors across decision boundaries. |
-| Interval perturbation coverage | `validation.interval_coverage --json` through the reproduction bundle | The 80 percent interval absorbs the CAL8 likelihood band inside the model. This is not ground-truth coverage. |
+| Evidence-removal and planting boundary | `validation.adversarial_properties` through the reproduction bundle | Under fixed local positive-factor assumptions, deletion does not raise local presence odds in the tested contexts. In synthetic model contexts, planted evidence can raise posteriors across decision boundaries. Neither result is a real-world error-rate claim. |
+| Band perturbation containment | `validation.interval_coverage --json` through the reproduction bundle | The 80 percent uncertainty band contains selected CAL8 perturbed-model conditionals in the finite experiment. This is not a credible interval, confidence interval, identification region, or general misspecification bound. |
 | Likelihood sensitivity | `validation.likelihood_sensitivity` through the reproduction bundle | Posterior decisions are stable under the configured +/-20 percent likelihood perturbation. |
-| Layer contribution | `validation.layer_ablation` through the reproduction bundle | Synthetic graph and Bayesian layer effects reproduce without target data. |
+| Layer comparison | `validation.layer_ablation` through the reproduction bundle | Mixed Bayesian baseline results and the tailored assortative graph result reproduce without target data. They do not establish real product value. |
 | Public-list sampling boundary | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) plus `scripts/check_paper_claims.py` | Public-list numbers are robustness checks rather than population rates or benchmark prevalence. |
 | Paper figures | `scripts/generate_paper_figures.py --check` | SVG figures are deterministic renderings of committed topology and aggregate memos, not hand-edited screenshots. |
 | Runtime and docs integrity | `scripts/check.py` | Generated schema, surface inventory, CLI surface docs, text hygiene, validation hygiene, and tests agree with source. |

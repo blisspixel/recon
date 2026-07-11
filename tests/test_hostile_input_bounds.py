@@ -232,7 +232,9 @@ class TestDnsParserBounds:
         user-supplied regex runs, so it cannot match (or amplify backtracking)."""
         rule = SimpleNamespace(pattern="_probe:secret-token", name="FakeVendor", slug="fakevendor")
 
-        async def _resolve(_name: str, _rdtype: str, timeout: float = 5.0) -> list[str]:
+        async def _resolve(
+            _name: str, _rdtype: str, timeout: float = 5.0, **_kwargs: object
+        ) -> list[str]:
             return ["secret-token" + "x" * 5000]  # matches the regex, but oversized
 
         ctx = dns_mod._DetectionCtx()
@@ -249,7 +251,9 @@ class TestDnsParserBounds:
         the length cap, not a broken fixture."""
         rule = SimpleNamespace(pattern="_probe:secret-token", name="FakeVendor", slug="fakevendor")
 
-        async def _resolve(_name: str, _rdtype: str, timeout: float = 5.0) -> list[str]:
+        async def _resolve(
+            _name: str, _rdtype: str, timeout: float = 5.0, **_kwargs: object
+        ) -> list[str]:
             return ["secret-token"]
 
         ctx = dns_mod._DetectionCtx()
@@ -266,7 +270,9 @@ class TestDnsParserBounds:
         before the regex runs, so it does not match."""
         rule = SimpleNamespace(pattern="match-me", name="FakeCDN", slug="fakecdn")
 
-        async def _resolve(_name: str, rdtype: str, timeout: float = 5.0) -> list[str]:
+        async def _resolve(
+            _name: str, rdtype: str, timeout: float = 5.0, **_kwargs: object
+        ) -> list[str]:
             if rdtype == "CNAME":
                 return ["a" * 300 + "match-me.example.com"]  # token at offset 300
             return []
@@ -284,7 +290,9 @@ class TestDnsParserBounds:
         """Control: the same token at the start of the CNAME matches."""
         rule = SimpleNamespace(pattern="match-me", name="FakeCDN", slug="fakecdn")
 
-        async def _resolve(_name: str, rdtype: str, timeout: float = 5.0) -> list[str]:
+        async def _resolve(
+            _name: str, rdtype: str, timeout: float = 5.0, **_kwargs: object
+        ) -> list[str]:
             if rdtype == "CNAME":
                 return ["match-me.example.com"]
             return []

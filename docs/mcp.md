@@ -96,9 +96,9 @@ workflows; a first-time user does not need them for a normal lookup.
 
 | Tool | Network calls? | What it does | Parameters |
 |------|----------------|-------------|------------|
-| `lookup_tenant` | Cache first; may resolve | Full domain intelligence: tenant details, email score, SaaS fingerprints, signals. When `explain=true`, the response includes a JSON-serialisable `explanation_dag` with `evidence → slug → rule → signal → insight` provenance alongside the flat explanations list. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
+| `lookup_tenant` | Cache first; may resolve | Full domain intelligence: tenant details, email score, SaaS fingerprints, signals. When `explain=true`, the response includes a JSON-serialisable `explanation_dag`: evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. `provenance_complete` and `disconnected_terminals` report whether every terminal is evidence-reachable. The flat explanations list remains alongside the graph. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
 | `analyze_posture` | Cache first; may resolve | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument: one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
-| `cluster_verification_tokens` | Cache first; may resolve each domain | Cluster a list of domains by shared TXT site-verification tokens. Reveals hedged "possible relationship" signals from operator-scoped credential reuse. Optional peer caps report omitted counts for compact agent output. | `domains`: array of domain strings, `peer_limit_per_domain` (0 means raw) |
+| `cluster_verification_tokens` | Cache first; may resolve each domain | Report exact TXT site-verification token reuse. Shared administration, copied configuration, managed service, and stale residue remain compatible explanations; reuse does not establish ownership or current use. Optional peer caps report omitted counts for compact agent output. | `domains`: array of domain strings, `peer_limit_per_domain` (0 means raw) |
 | `assess_exposure` | Cache first; may resolve | Model-bound public-evidence index (0-100) with email, identity, and infrastructure sections. It summarizes only collected public observables and is not an overall security score (see [correlation.md](correlation.md) for the inference model). | `domain` |
 | `find_hardening_gaps` | Cache first; may resolve | Categorized public-configuration opportunities with "Consider" recommendations and explicit absence semantics. It is not an overall assessment (see [correlation.md](correlation.md)). | `domain` |
 | `compare_postures` | Cache first; may resolve both domains | Side-by-side comparison of two domains' public configuration evidence, not overall security | `domain_a`, `domain_b` |
@@ -116,7 +116,7 @@ workflows; a first-time user does not need them for a normal lookup.
 | `clear_ephemeral_fingerprints` | No | Remove all ephemeral fingerprints from the session | none |
 | `get_infrastructure_clusters` *(v1.8+)* | Cache first; may resolve | Surfaces the CT co-occurrence community-detection report already computed during lookup: algorithm, modularity score, cluster list. Read-only exposure of computed state. Optional member caps report omitted counts for compact agent output. | `domain`, `member_limit_per_cluster` (0 means raw) |
 | `export_graph` *(v1.8+)* | Cache first; may resolve | Companion to `get_infrastructure_clusters`. Returns the underlying graph as nodes + weighted edges + cluster_assignment for downstream Mermaid / GraphViz / CSV rendering. Optional node and edge caps report omitted counts for compact agent output. | `domain`, `node_limit` (0 means raw), `edge_limit` (0 means raw) |
-| `get_posteriors` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Exposes the Bayesian-network posterior credible intervals for the nine high-level claim nodes (m365_tenant, google_workspace_tenant, federated_identity, okta_idp, email_security_modern_provider, email_security_policy_enforcing, email_gateway_present, cdn_fronting, aws_hosting). Read-only exposure of the inference computed during lookup. See [correlation.md](correlation.md) for the inference model. | `domain` |
+| `get_posteriors` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Exposes model-relative Bayesian-network posteriors and evidence-responsive uncertainty bands for the nine high-level claim nodes. Top-level `degraded_sources` and `collection_masked_units` preserve the collection failures that were treated as structurally unobserved rather than negative evidence. Read-only exposure of the inference computed during lookup. See [correlation.md](correlation.md) for the inference model and limits. | `domain` |
 | `explain_dag` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Renders the Bayesian evidence DAG for a domain. `output_format` selects between `text` (Rich-rendered tree) and structured output for downstream tools. Pairs with `get_posteriors` for full audit-trail inspection. | `domain`, `output_format`: str (default `text`) |
 
 The lookup and analysis tools are read-only. The ephemeral fingerprint tools
@@ -220,18 +220,28 @@ its own state, not that the call is fully offline. An operator comfortable with
 passive outbound queries can auto-approve the read-only set; the safe default
 remains an empty `autoApprove` list until you have decided per tool.
 
-### Reading the posteriors (uncertainty, not verdicts)
+### Reading the model-relative posteriors
 
-`get_posteriors` (and the fused claims) return a point `posterior` *and* an 80%
-credible interval, because the point estimate is a summary of the interval, not
-a standalone verdict. A consuming agent should read the interval, not just the
-number. Three signals mean "the passive channel could not resolve this claim":
-report it unresolved rather than collapsing it to the point value: `sparse=true`
-on a node (the top-level `sparse_count` totals these), a 0.5-straddling
-interval, or an empty `evidence_used` list. And absence is not disproof: recon
-treats a signal that did not fire as *no evidence*, never as evidence the
-technology is absent (the adversarial missing-data rule), so a low or sparse
-posterior reads as "we cannot tell from the public channel", not "not present".
+`get_posteriors` returns a point `posterior` under the committed manually encoded
+network and an 80% evidence-responsive uncertainty band. The band uses the
+model mean and hand-set effective display mass to parameterize a Beta shape,
+with a mean-centered fallback at boundaries. It is not a Bayesian credible
+interval, frequentist confidence interval, or calibrated probability. A
+consuming agent must keep both values model-relative and inspect their evidence
+path. Report the claim unresolved rather than collapsing it to the point value
+when `sparse=true`, the band straddles the model threshold, or `evidence_used`
+is empty and no `unit_counterfactuals` entry records `observed="absent"`.
+Absence is not disproof: recon
+treats a hideable signal that did not fire as *no evidence*, never as evidence
+the technology is absent. This is an explicit conservative policy, not a result
+derived from MNAR. A low or sparse model score therefore cannot establish real-
+world absence. A declarative node can have an empty `evidence_used` list while
+its counterfactuals record a successfully observed public absence; report only
+that defined public fact, not private-state absence.
+Read top-level `degraded_sources` before interpreting a non-fire.
+`collection_masked_units` names the Bayesian dependency units removed because
+their collector channel was unavailable. Such a unit contributed neither fired
+evidence nor declarative absence; it is not an observed negative.
 The injected server instructions carry this same guidance for the agent;
 `tests/test_posterior_reading_guidance.py` keeps it from regressing.
 

@@ -160,6 +160,46 @@ class TestEphemeralCoreFunctions:
         assert fp2 in result
         assert len(result) == 2
 
+    @pytest.mark.parametrize(
+        "reserved_slug",
+        ["okta", "proofpoint", "cloudflare", "aws-cloudfront", "google-federated", "null-mx"],
+    )
+    def test_inject_rejects_builtin_slug_collision(self, reserved_slug: str) -> None:
+        """Ephemeral rules cannot impersonate a built-in semantic slug."""
+        with pytest.raises(ValueError, match="already exists"):
+            inject_ephemeral(_make_fingerprint(slug=reserved_slug))
+        assert get_ephemeral() == ()
+
+    def test_inject_rejects_existing_ephemeral_slug_collision(self) -> None:
+        inject_ephemeral(_make_fingerprint(slug="contoso-unique"))
+
+        with pytest.raises(ValueError, match="already exists"):
+            inject_ephemeral(_make_fingerprint(slug="contoso-unique", pattern="^other="))
+
+        assert len(get_ephemeral()) == 1
+
+    @pytest.mark.parametrize(
+        "reserved_name",
+        [
+            "SPF: strict (-all)",
+            "Google Workspace CSE",
+            "CAA: Acme",
+            "CDN: Acme",
+            "CSE Key Manager: Acme",
+            "Google Workspace: Drive",
+        ],
+    )
+    def test_inject_rejects_reserved_semantic_name_or_prefix(self, reserved_name: str) -> None:
+        with pytest.raises(ValueError, match="reserved semantics"):
+            inject_ephemeral(
+                _make_fingerprint(
+                    name=reserved_name,
+                    slug="contoso-semantic-name",
+                )
+            )
+
+        assert get_ephemeral() == ()
+
     def test_inject_rejects_too_many_detections_per_fingerprint(self) -> None:
         """Oversized single ephemeral fingerprint is rejected before storage."""
         detections = tuple(DetectionRule(type="txt", pattern=f"^quota-{idx}=") for idx in range(21))
@@ -503,7 +543,7 @@ class TestReevaluateDomainMCP:
     @pytest.mark.asyncio
     async def test_ephemeral_detections_in_reevaluated_results(self) -> None:
         """Ephemeral fingerprint detections appear in re-evaluated results."""
-        from recon_tool.models import EvidenceRecord, SourceResult
+        from recon_tool.models import SourceResult
         from recon_tool.server import _cache_set, reevaluate_domain  # pyright: ignore[reportPrivateUsage]
 
         # Cache a domain with a TXT record that matches our ephemeral fingerprint
@@ -513,42 +553,159 @@ class TestReevaluateDomainMCP:
             default_domain="northwind.example.com",
             detected_services=("DMARC",),
             detected_slugs=(),
-            evidence=(
-                EvidenceRecord(
-                    source_type="TXT",
-                    raw_value="northwind-verification=abc123",
-                    rule_name="Unknown",
-                    slug="unknown",
-                ),
-            ),
+            evidence=(),
+            raw_dns_records=(("TXT", "northwind-verification=abc123"),),
         )
         from recon_tool.merger import merge_results
 
         info = merge_results([source], "northwind.com")
         _cache_set("northwind.com", info, [source])
 
-        # Inject an ephemeral fingerprint — note: reevaluate_domain re-runs
-        # merge_results on cached SourceResults, so the ephemeral fingerprint
-        # will be picked up if the evidence matches. However, evidence records
-        # are created at detection time (in dns.py), not during merge. So the
-        # ephemeral fingerprint won't create new evidence records during
-        # reevaluation — it would need raw DNS records to be replayed.
-        # The test verifies the tool runs successfully with ephemeral fingerprints loaded.
         fp = _make_fingerprint(slug="northwind-ephemeral", pattern="^northwind-verification=")
         inject_ephemeral(fp)
 
         result = await reevaluate_domain("northwind.com")
-        data = result
-        # The tool should succeed without error
-        assert "error" not in data
-        assert "queried_domain" in data
+        assert "northwind-ephemeral" in result["slugs"]
+        assert "Contoso Platform" in result["services"]
+        assert {(record["source_type"], record["raw_value"], record["slug"]) for record in result["evidence"]} >= {
+            ("TXT", "northwind-verification=abc123", "northwind-ephemeral")
+        }
+
+    @pytest.mark.asyncio
+    async def test_reevaluation_skips_records_from_degraded_channel(self) -> None:
+        """A retained value cannot become evidence when its channel was unavailable."""
+        from recon_tool.models import SourceResult
+        from recon_tool.server import _cache_set, reevaluate_domain  # pyright: ignore[reportPrivateUsage]
+
+        source = SourceResult(
+            source_name="dns_records",
+            display_name="Northwind Traders",
+            default_domain="northwind.com",
+            degraded_sources=("dns:apex_txt",),
+            raw_dns_records=(("TXT", "northwind-verification=abc123"),),
+        )
+        from recon_tool.merger import merge_results
+
+        info = merge_results([source], "northwind.com")
+        _cache_set("northwind.com", info, [source])
+        inject_ephemeral(_make_fingerprint(slug="northwind-ephemeral", pattern="^northwind-verification="))
+
+        result = await reevaluate_domain("northwind.com")
+
+        assert "northwind-ephemeral" not in result["slugs"]
+        assert all(record["slug"] != "northwind-ephemeral" for record in result["evidence"])
+
+    @pytest.mark.asyncio
+    async def test_reevaluation_does_not_duplicate_existing_match(self) -> None:
+        """Replay is idempotent when collection already used the current fingerprint."""
+        from recon_tool.models import EvidenceRecord, SourceResult
+        from recon_tool.server import _cache_set, reevaluate_domain  # pyright: ignore[reportPrivateUsage]
+
+        fingerprint = _make_fingerprint(slug="northwind-ephemeral", pattern="^northwind-verification=")
+        inject_ephemeral(fingerprint)
+        occurrence = EvidenceRecord(
+            source_type="TXT",
+            raw_value="northwind-verification=abc123",
+            rule_name=fingerprint.name,
+            slug=fingerprint.slug,
+        )
+        source = SourceResult(
+            source_name="dns_records",
+            display_name="Northwind Traders",
+            default_domain="northwind.com",
+            detected_services=(fingerprint.name,),
+            detected_slugs=(fingerprint.slug,),
+            evidence=(occurrence,),
+            raw_dns_records=(("TXT", occurrence.raw_value), ("TXT", occurrence.raw_value)),
+        )
+        from recon_tool.merger import merge_results
+
+        info = merge_results([source], "northwind.com")
+        _cache_set("northwind.com", info, [source])
+
+        first = await reevaluate_domain("northwind.com")
+        second = await reevaluate_domain("northwind.com")
+
+        for result in (first, second):
+            matches = [record for record in result["evidence"] if record["slug"] == fingerprint.slug]
+            assert len(matches) == 1
+
+    @pytest.mark.asyncio
+    async def test_reevaluation_rejects_uncached_owner_qualified_rule_type(self) -> None:
+        """Re-evaluation reports rule types that the raw cache cannot represent."""
+        from recon_tool.models import SourceResult
+        from recon_tool.server import _cache_set, reevaluate_domain  # pyright: ignore[reportPrivateUsage]
+
+        source = SourceResult(
+            source_name="dns_records",
+            display_name="Northwind Traders",
+            default_domain="northwind.com",
+            raw_dns_records=(("TXT", "northwind-verification=abc123"),),
+        )
+        from recon_tool.merger import merge_results
+
+        info = merge_results([source], "northwind.com")
+        _cache_set("northwind.com", info, [source])
+        inject_ephemeral(
+            _make_fingerprint(
+                slug="northwind-surface",
+                det_type="cname_target",
+                pattern=r"\.northwind\.example$",
+            )
+        )
+
+        with pytest.raises(ToolError, match="cannot replay owner-qualified cname_target"):
+            await reevaluate_domain("northwind.com")
+
+    @pytest.mark.asyncio
+    async def test_clear_removes_ephemeral_projection_collected_before_cache(self) -> None:
+        """Clearing removes a session fingerprint that participated in lookup."""
+        from recon_tool.models import EvidenceRecord, SourceResult
+        from recon_tool.server import (  # pyright: ignore[reportPrivateUsage]
+            _cache_get,
+            _cache_set,
+            clear_ephemeral_fingerprints,
+        )
+
+        fingerprint = _make_fingerprint(slug="northwind-ephemeral", pattern="^northwind-verification=")
+        inject_ephemeral(fingerprint)
+        occurrence = EvidenceRecord(
+            source_type="TXT",
+            raw_value="northwind-verification=abc123",
+            rule_name=fingerprint.name,
+            slug=fingerprint.slug,
+        )
+        source = SourceResult(
+            source_name="dns_records",
+            display_name="Northwind Traders",
+            default_domain="northwind.com",
+            detected_services=(fingerprint.name,),
+            detected_slugs=(fingerprint.slug,),
+            evidence=(occurrence,),
+            raw_dns_records=(("TXT", occurrence.raw_value),),
+        )
+        from recon_tool.merger import merge_results
+
+        info = merge_results([source], "northwind.com")
+        _cache_set("northwind.com", info, [source])
+
+        cleared = await clear_ephemeral_fingerprints()
+        cached = _cache_get("northwind.com")
+
+        assert cleared["removed"] == 1
+        assert cached is not None
+        cached_info, cached_results = cached
+        assert fingerprint.slug not in cached_info.slugs
+        assert fingerprint.name not in cached_info.services
+        assert all(record.slug != fingerprint.slug for record in cached_info.evidence)
+        assert cached_results[0].raw_dns_records == source.raw_dns_records
 
 
 # ── 18.6: Ephemeral fingerprint integration with pipeline ────────────
 
 
 class TestEphemeralPipelineIntegration:
-    """Verify ephemeral fingerprints participate in detection scoring, signal evaluation, and explanations."""
+    """Verify ephemeral detections extend matching without forging semantic claims."""
 
     def test_ephemeral_detections_in_detection_scoring(self) -> None:
         """Ephemeral detections participate in detection scoring via load_fingerprints."""
@@ -568,46 +725,71 @@ class TestEphemeralPipelineIntegration:
         slugs_after = {p.slug for p in patterns_after}
         assert "contoso-scoring" in slugs_after
 
-    def test_ephemeral_detections_in_signal_evaluation(self) -> None:
-        """Ephemeral detections participate in signal evaluation."""
+    def test_unique_txt_fingerprint_is_role_qualified_in_service_output(self) -> None:
+        from recon_tool.formatter.classify import categorize_services
+        from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
+
+        fingerprint = _make_fingerprint(
+            name="Acme Platform",
+            slug="acme-platform-observation",
+            pattern="^acme-platform=",
+        )
+        inject_ephemeral(fingerprint)
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain="example.com",
+            queried_domain="example.com",
+            confidence=ConfidenceLevel.MEDIUM,
+            services=(fingerprint.name,),
+            slugs=(fingerprint.slug,),
+            evidence=(
+                EvidenceRecord(
+                    "TXT",
+                    "acme-platform=token",
+                    fingerprint.name,
+                    fingerprint.slug,
+                ),
+            ),
+        )
+
+        labels = [label for category in categorize_services(info).values() for label in category]
+
+        assert labels == ["Acme Platform (public TXT account indicator)"]
+
+    def test_unique_ephemeral_slug_does_not_impersonate_signal_candidate(self) -> None:
+        """A custom match cannot silently acquire a reserved signal meaning."""
         from recon_tool.models import SignalContext
         from recon_tool.signals import evaluate_signals
 
-        # Inject an ephemeral fingerprint with a slug that matches a signal candidate
-        # Use a slug that's part of an existing signal (e.g., "openai" for AI Adoption)
         fp = _make_fingerprint(
             name="Contoso AI",
-            slug="openai",
+            slug="contoso-ai-observation",
             pattern="^contoso-openai=",
         )
         inject_ephemeral(fp)
 
-        # The slug "openai" should now be in load_fingerprints
-        all_fps = load_fingerprints()
-        slugs = {f.slug for f in all_fps}
-        assert "openai" in slugs
-
-        # Evaluate signals with openai detected
-        ctx = SignalContext(detected_slugs=frozenset({"openai"}))
+        ctx = SignalContext(detected_slugs=frozenset({fp.slug}))
         signals = evaluate_signals(ctx)
-        ai_signals = [s for s in signals if s.name == "AI Adoption"]
-        assert len(ai_signals) == 1
+        assert all(signal.name != "AI Adoption" for signal in signals)
 
-    def test_ephemeral_detections_in_explanation_generation(self) -> None:
-        """Ephemeral detections participate in explanation generation."""
+    def test_unique_ephemeral_slug_does_not_generate_signal_explanation(self) -> None:
+        """Explanation output remains limited to actual declarative rule matches."""
         from recon_tool.explanation import explain_signals
         from recon_tool.models import SignalContext
         from recon_tool.signals import evaluate_signals, load_signals
 
-        # Inject ephemeral fingerprint with slug matching a signal
-        fp = _make_fingerprint(name="Contoso AI", slug="openai", pattern="^contoso-openai=")
+        fp = _make_fingerprint(
+            name="Contoso AI",
+            slug="contoso-ai-observation",
+            pattern="^contoso-openai=",
+        )
         inject_ephemeral(fp)
 
-        ctx = SignalContext(detected_slugs=frozenset({"openai"}))
+        ctx = SignalContext(detected_slugs=frozenset({fp.slug}))
         signal_matches = evaluate_signals(ctx)
         all_signal_defs = load_signals()
 
-        # Generate explanations — should not error
         records = explain_signals(
             signal_matches=signal_matches,
             signals=all_signal_defs,
@@ -616,9 +798,7 @@ class TestEphemeralPipelineIntegration:
             evidence=(),
             detection_scores=(),
         )
-        # Should have at least one explanation for AI Adoption
-        ai_recs = [r for r in records if "AI Adoption" in r.item_name]
-        assert len(ai_recs) >= 1
+        assert all("AI Adoption" not in record.fired_rules for record in records)
 
 
 # ── 18.7: Property 5 — Ephemeral Fingerprint Injection/Clear Round-Trip (PBT) ──
@@ -645,8 +825,9 @@ _SAFE_PATTERNS = [
 @st.composite
 def valid_fingerprint(draw: st.DrawFn) -> Fingerprint:
     """Generate a random valid Fingerprint instance."""
-    slug = draw(st.from_regex(r"[a-z][a-z0-9-]{1,20}", fullmatch=True))
-    name = draw(st.text(alphabet=st.characters(whitelist_categories=("L", "N", "Zs")), min_size=1, max_size=40))
+    suffix = draw(st.from_regex(r"[a-z0-9]{2,12}", fullmatch=True))
+    slug = f"hypothesis-ephemeral-{suffix}"
+    name = f"Hypothesis Ephemeral {suffix}"
     category = draw(st.sampled_from(["SaaS", "Security", "Email", "AI", "DevOps", "CRM"]))
     confidence = draw(st.sampled_from(_VALID_CONFIDENCES))
 
@@ -682,7 +863,6 @@ class TestProperty5EphemeralRoundTrip:
         """Full round-trip: inject → get contains → load contains → clear → get empty → load excludes."""
         # Clean state
         clear_ephemeral()
-        reload_fingerprints()
 
         # Step 1: inject
         inject_ephemeral(fp)
@@ -707,12 +887,18 @@ class TestProperty5EphemeralRoundTrip:
         all_fps_after = load_fingerprints()
         assert fp not in all_fps_after, f"Expected {fp.slug} NOT in load_fingerprints() after clear"
 
-    @given(fps=st.lists(valid_fingerprint(), min_size=1, max_size=5))
+    @given(
+        fps=st.lists(
+            valid_fingerprint(),
+            min_size=1,
+            max_size=5,
+            unique_by=lambda fingerprint: fingerprint.slug,
+        )
+    )
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow], deadline=None)
     def test_multiple_inject_clear_round_trip(self, fps: list[Fingerprint]) -> None:
         """Multiple injections → clear returns correct count → all removed."""
         clear_ephemeral()
-        reload_fingerprints()
 
         for fp in fps:
             inject_ephemeral(fp)

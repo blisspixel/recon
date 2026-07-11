@@ -1,15 +1,13 @@
-"""Bayesian fusion — per-slug confidence from weighted evidence.
+"""Per-slug evidence strength from weighted positive evidence.
 
-Shipped in v0.11; stable v2.0+. Provides a principled alternative to the
-hardcoded thresholds in ``merger.compute_detection_scores``. Opt-in via the
-``--fusion`` CLI flag; never auto-enabled, never overrides the existing
-confidence fields.
+Shipped in v0.11; stable v2.0+. Runs with the default single-domain fusion path
+and remains optional in batch workflows. It never overrides the existing
+deterministic confidence fields.
 
 ## Model
 
-For each slug, maintain a Beta(α, β) distribution over "this slug is
-genuinely present on the target". Each evidence record for the slug updates
-the posterior:
+For each slug, use a Beta-shaped additive score. Each evidence record for the
+slug updates the positive mass:
 
     α_new = α_prior + success_weight
     β_new = β_prior + (failure_weight)  # currently always 0 for present evidence
@@ -18,10 +16,10 @@ where the success weight is determined by the evidence source type. Sources
 with stronger informational content (OIDC tenant ID, DKIM signing) contribute
 more than weaker ones (TXT tokens, CT subdomain presence).
 
-The posterior mean α / (α + β) lands in [0, 1] and summarises the
-tool's belief about the slug. Multiple corroborating evidence records drive
-the posterior up; no evidence leaves the slug at its prior (not zero —
-"absence of evidence is not evidence of absence" holds).
+The mean α / (α + β) lands in [0, 1] and summarizes evidence strength.
+Multiple records drive the score up. There is no fitted negative likelihood,
+general dependency correction, or external calibration, so this value is not a
+validated posterior probability.
 
 ## Why no numpy
 
@@ -34,8 +32,8 @@ The Beta math here is elementary arithmetic. Adding numpy as a dependency for
 A full Bayesian treatment would compute P(evidence | slug present) via each
 fingerprint's precision/recall on a labelled corpus. We don't have that
 corpus. The current implementation treats each observation as additive weight
-on α — crude but honest, and strictly better than the three-bucket threshold
-output it replaces at the UX layer.
+on α. It is deterministic and inspectable, but its product value relative to the
+three-bucket threshold remains subject to the predeclared ablation.
 """
 
 from __future__ import annotations
@@ -116,14 +114,14 @@ _DEFAULT_WEIGHT: float = 1.0
 def compute_slug_posteriors(
     evidence: tuple[EvidenceRecord, ...],
 ) -> tuple[tuple[str, float], ...]:
-    """Return posterior means over slugs given the evidence chain.
+    """Return per-slug evidence-strength scores for the evidence chain.
 
-    The output is ``((slug, posterior_mean), …)`` sorted by posterior
-    descending, then slug ascending for stable ordering. Posterior means are
+    The output is ``((slug, score), ...)`` sorted by score descending, then slug
+    ascending for stable ordering. Scores are
     in [0, 1]. Slugs that appear only in evidence with a falsy slug field are
     skipped.
 
-    This operates purely on already-collected evidence — no network calls, no
+    This operates purely on already-collected evidence, with no network calls or
     additional lookups. Safe to call from cached pipeline data.
     """
     # For each slug: start from the prior for its strongest evidence source (the
@@ -144,8 +142,8 @@ def compute_slug_posteriors(
 
     for slug, records in by_slug.items():
         # Pick the prior from the highest-alpha source type seen for this slug
-        best_prior: tuple[float, float] = _DEFAULT_PRIOR
-        for ev in records:
+        best_prior = SOURCE_PRIORS.get(records[0].source_type, _DEFAULT_PRIOR)
+        for ev in records[1:]:
             prior = SOURCE_PRIORS.get(ev.source_type, _DEFAULT_PRIOR)
             if prior[0] > best_prior[0]:
                 best_prior = prior

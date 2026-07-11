@@ -14,7 +14,10 @@ def test_full_corpus_refresh_memo_is_aggregate_only_and_current() -> None:
     for required in (
         "No apexes, subdomains, organization names, tenant IDs, or per-domain rows are included.",
         "ECE fixed-bin",
-        "ECE equal-mass",
+        "ECE legacy equal-mass",
+        "historical equal-mass implementation could split tied scores",
+        "current runs use a tie-preserving estimator",
+        "no future-point coverage theorem is claimed",
         "0.0761",
         "0.0651",
         "0.3747",
