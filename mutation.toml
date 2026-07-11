@@ -17,22 +17,17 @@ name = "local"
 
 [cosmic-ray.filters.operators-filter]
 # Applied by ``cr-filter-operators`` after init (the workflow and the
-# memo's local recipe both run it). These operator families are
-# equivalent-by-construction in this module, so they are excluded rather
-# than chased (they would only pad the survivor count). See
-# validation/mutation-gate.md for the full survivor classification.
+# memo's local recipe both run it). Only the identity-comparison families are
+# excluded here. Postponed annotation unions carry ``# pragma: no mutate`` and
+# are filtered separately by ``cr-filter-pragma``; runtime set and frozenset
+# unions remain in the tested mutation surface. See validation/mutation-gate.md
+# for the accepted-residual policy.
 #
-#  - BitOr: mutates the ``X | None`` union syntax in annotations; under
-#    ``from __future__ import annotations`` those never execute. The one
-#    runtime ``|`` (the factor-merge dict union) is covered by every
-#    behavior test.
 #  - Eq_Is / Eq_IsNot: rewrites ``x == "literal"`` to ``x is "literal"``.
 #    Testing object identity for value equality is a Python anti-pattern;
-#    on interned string literals ``is`` matches ``==`` in CPython, so the
-#    mutant is behaviourally equivalent and killing it would mean
-#    asserting an implementation detail.
+#    the exclusion is an explicit policy choice, not a proof for arbitrary
+#    Python string objects.
 exclude-operators = [
-    "core/ReplaceBinaryOperator_BitOr_.*",
     "core/ReplaceComparisonOperator_Eq_Is",
     "core/ReplaceComparisonOperator_Eq_IsNot",
 ]
