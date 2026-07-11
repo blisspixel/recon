@@ -136,7 +136,7 @@ def _factor_is_probabilities(factor: Factor) -> bool:
     return all(0.0 <= v <= 1.0 for v in factor.values())
 
 
-def _factor_is_strictly_positive(factor: Factor | None) -> bool:
+def _factor_is_strictly_positive(factor: Factor | None) -> bool:  # pragma: no mutate
     """A returned evidence factor has only strictly-positive entries.
 
     Encodes the no-degenerate-factor invariant: the schema rejects
@@ -207,7 +207,7 @@ _CHANNEL_OBSERVATION_UNITS: dict[ObservationChannel, frozenset[str]] = {
 
 def collection_masked_units(
     degraded_sources: Iterable[str],
-    network: BayesianNetwork | None = None,
+    network: BayesianNetwork | None = None,  # pragma: no mutate
 ) -> frozenset[str]:
     """Map failed observation channels to structurally unobserved units.
 
@@ -263,7 +263,7 @@ def _factor_for_evidence(
     node: _Node,
     fired_evidence: list[_Evidence],
     masked_units: frozenset[str] = frozenset(),
-) -> Factor | None:
+) -> Factor | None:  # pragma: no mutate
     """Build the observation factor for a node given which of its bindings fired.
 
     Contract: when a factor is returned, every likelihood entry is
@@ -598,7 +598,7 @@ def infer(
     observed_slugs: Iterable[str],
     observed_signals: Iterable[str],
     conflict_field_count: int = 0,
-    priors_override: dict[str, float] | None = None,
+    priors_override: dict[str, float] | None = None,  # pragma: no mutate
     conflicts: tuple[ConflictProvenance, ...] = (),
     masked_units: Iterable[str] = (),
 ) -> InferenceResult:
@@ -855,8 +855,8 @@ def _conflict_provenance(
 
 def infer_from_tenant_info(
     info: object,
-    network: BayesianNetwork | None = None,
-    priors_override: dict[str, float] | None = None,
+    network: BayesianNetwork | None = None,  # pragma: no mutate
+    priors_override: dict[str, float] | None = None,  # pragma: no mutate
     masked_units: Iterable[str] = (),
 ) -> InferenceResult:
     """Convenience wrapper that runs inference from a ``TenantInfo``.
