@@ -35,6 +35,7 @@ from recon_tool.cli.options import (
     LookupOutputOptions,
 )
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
+from recon_tool.cli.shared import raise_lookup_error
 from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
 
@@ -226,7 +227,8 @@ def _print_welcome_banner() -> None:
     console.print()
     console.print("[bold cyan]Usage[/bold cyan]")
     console.print("  recon <domain>                    → clean summary (recommended)")
-    console.print("  recon <domain> --verbose          → + posture analysis")
+    console.print("  recon <domain> --verbose          → expanded evidence and per-source status")
+    console.print("  recon <domain> --posture          → posture observations")
     console.print("  recon <domain> --full             → everything")
     console.print("  recon <domain> --explain          → full reasoning and evidence")
     console.print("  recon batch domains.txt           → process multiple domains")
@@ -250,7 +252,7 @@ def lookup(
     services: bool = typer.Option(False, "--services", "-s", help="M365 vs tech stack breakdown"),
     domains: bool = typer.Option(False, "--domains", "-d", help="All tenant domains"),
     full: bool = typer.Option(False, "--full", "-f", help="Everything (verbose + services + domains + posture)"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Per-source resolution status"),
+    verbose: bool = typer.Option(False, "--verbose", "-v", help="Expanded evidence and per-source status"),
     sources: bool = typer.Option(False, "--sources", help="Detailed source breakdown table"),
     timeout: float = typer.Option(
         120.0,
@@ -669,7 +671,7 @@ def delta(
     """
     from recon_tool.cache import cache_get, cache_put, tenant_info_to_dict
     from recon_tool.delta import compute_delta
-    from recon_tool.formatter import format_delta_json, render_delta_panel, render_error, render_warning
+    from recon_tool.formatter import format_delta_json, render_delta_panel, render_error
     from recon_tool.models import ReconLookupError
     from recon_tool.resolver import resolve_tenant
     from recon_tool.validator import validate_domain
@@ -696,8 +698,7 @@ def delta(
         try:
             info, _results = await resolve_tenant(validated, timeout=timeout)
         except ReconLookupError as exc:
-            render_warning(validated, exc)
-            raise typer.Exit(code=EXIT_NO_DATA) from None
+            raise_lookup_error(exc, domain=validated)
         except Exception as exc:
             render_error(_fmt_exc(exc))
             raise typer.Exit(code=EXIT_INTERNAL) from exc

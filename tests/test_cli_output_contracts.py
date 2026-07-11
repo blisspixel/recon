@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
@@ -43,6 +44,78 @@ class TestLookupExitContract:
         result = runner.invoke(app, ["contoso.com", "--profile", "totally-bogus-xyz"])
         assert result.exit_code == 2
         assert "Exit\n" not in result.output
+
+    @pytest.mark.parametrize("detail_flag", ["--full", "--verbose"])
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_json_stdout_stays_parseable_with_human_detail(
+        self,
+        mock_resolve,
+        detail_flag: str,
+    ) -> None:
+        mock_resolve.return_value = (_INFO, _RESULTS)
+
+        result = runner.invoke(
+            app,
+            ["contoso.com", detail_flag, "--json", "--no-cache"],
+        )
+
+        assert result.exit_code == 0
+        assert json.loads(result.stdout)["queried_domain"] == "contoso.com"
+        assert result.stdout.lstrip().startswith("{")
+        assert "oidc_discovery" in result.stderr
+
+    @pytest.mark.parametrize(
+        ("output_flag", "stdout_prefix"),
+        [("--md", "#"), ("--plain", "tenant_id:")],
+    )
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_document_stdout_stays_clean_with_full_detail(
+        self,
+        mock_resolve,
+        output_flag: str,
+        stdout_prefix: str,
+    ) -> None:
+        mock_resolve.return_value = (_INFO, _RESULTS)
+
+        result = runner.invoke(
+            app,
+            ["contoso.com", "--full", output_flag, "--no-cache"],
+        )
+
+        assert result.exit_code == 0
+        assert result.stdout.lstrip().startswith(stdout_prefix)
+        assert "oidc_discovery" in result.stderr
+
+    @pytest.mark.parametrize(
+        ("error_type", "expected_code", "message"),
+        [
+            ("timeout", 4, "Resolution timed out after 5s for contoso.com"),
+            ("all_sources_failed", 4, "All public sources failed for contoso.com"),
+            ("no_data", 3, "No indicators observed"),
+        ],
+    )
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_structured_resolver_failures_keep_distinct_exit_semantics(
+        self,
+        mock_resolve,
+        error_type: str,
+        expected_code: int,
+        message: str,
+    ) -> None:
+        mock_resolve.side_effect = ReconLookupError(
+            domain="contoso.com",
+            message=message,
+            error_type=error_type,
+        )
+
+        result = runner.invoke(app, ["contoso.com", "--no-cache"])
+
+        assert result.exit_code == expected_code
+        if error_type == "no_data":
+            assert "No information found for contoso.com" in result.stderr
+        else:
+            assert message in result.stderr
+            assert "No information found" not in result.stderr
 
 
 class TestBatchMachineOutputClean:
