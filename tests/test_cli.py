@@ -58,6 +58,8 @@ class TestHelp:
         assert "--full" in plain
         assert "--strict" in plain
         collapsed = " ".join(plain.replace("│", " ").split())
+        assert "Services are shown by default; retained for compatibility" in collapsed
+        assert "Expanded evidence, all domains, and posture" in collapsed
         assert "configured recursive resolver" in collapsed
         assert "authoritative DNS may observe the resulting traffic" in collapsed
         assert "MTA-STS policy fetch is the only default target-owned HTTP/application request" in collapsed
@@ -70,6 +72,8 @@ class TestHelp:
         assert "expanded evidence and per-source status" in result.output
         assert "--posture" in result.output
         assert "posture observations" in result.output
+        assert "expanded evidence, domains, and posture" in result.output
+        assert "→ everything" not in result.output
 
     def test_version_flag(self) -> None:
         from recon_tool.cli import version_callback

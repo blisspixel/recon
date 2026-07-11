@@ -25,3 +25,19 @@ Related domains
 Insights
   Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)
 
+
+Certs
+  42 total, 7 in last 90d, 3 issuers (Let's Encrypt, DigiCert, Sectigo)
+
+Evidence Detail
+  Evidence confidence:  High
+  Inference confidence: High
+  Detection scores:
+    microsoft365: high
+    slack: medium
+  Evidence chain:
+    [SPF] SPF M365 -> microsoft365
+    [MX] Microsoft 365 -> microsoft365
+    [MX] Proofpoint -> proofpoint
+    [TXT] Slack -> slack
+
