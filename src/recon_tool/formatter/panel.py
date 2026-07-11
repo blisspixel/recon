@@ -71,6 +71,7 @@ from recon_tool.formatter.serialize import (
     format_tenant_plain,
     plain_lines,
 )
+from recon_tool.merger_tables import GATEWAY_SLUGS
 from recon_tool.models import (
     CandidateValue,
     ChainReport,
@@ -426,24 +427,30 @@ def _append_unique(summary: list[str], value: str | None) -> None:
 
 
 def _email_summary_providers(info: TenantInfo, service_set: set[str], summary: list[str]) -> None:
-    """Fill ``summary`` with the email provider(s): the strict primary, else the
-    likely primary, else any known provider present in the service set, followed
-    by the gateway."""
+    """Order observed delivery paths before hedged downstream indicators."""
 
-    def _add_list(value: str | None) -> None:
-        if not value:
-            return
-        for part in value.split(" + "):
-            _append_unique(summary, part.strip())
+    ordered_services = sorted(service_set)
 
-    _add_list(info.primary_email_provider)
-    if not summary:
-        _add_list(info.likely_primary_email_provider)
+    def _add_list(value: str | None, *, hedge: bool = False) -> None:
+        for raw_part in (value or "").split(" + "):
+            part = raw_part.strip()
+            if not part:
+                continue
+            label = next((item for item in ordered_services if item == part or item.startswith(f"{part} (")), part)
+            if hedge and label == part and part not in service_set:
+                label = f"{part} (possible downstream indicator)"
+            _append_unique(summary, label)
+
+    if info.primary_email_provider:
+        _add_list(info.primary_email_provider)
+        _add_list(info.email_gateway)
+    else:
+        _add_list(info.email_gateway)
+        _add_list(info.likely_primary_email_provider, hedge=True)
     if not summary:
         for provider in ("Microsoft 365", "Google Workspace", "Zoho Mail", "ProtonMail", "AWS SES"):
             if provider in service_set:
                 _append_unique(summary, provider)
-    _append_unique(summary, info.email_gateway)
 
 
 def _email_summary_controls(
@@ -474,13 +481,7 @@ def _email_summary_controls(
 
 
 def _compact_email_summary(info: TenantInfo, email_services: list[str]) -> list[str]:
-    """Build a short Email row when default deduplication removes everything.
-
-    The default panel intentionally avoids a full protocol laundry list, but an
-    empty Email row makes Microsoft/Google mail targets look sparse even when
-    the lookup found solid email evidence. Keep one compact line with provider,
-    gateway, and the main hardening controls.
-    """
+    """Build the evidence-scoped Email core retained by every panel mode."""
     service_set = set(email_services)
     summary: list[str] = []
     _email_summary_providers(info, service_set, summary)
@@ -739,10 +740,9 @@ def render_tenant_panel(
 
         Note: …                                     (yellow only when degraded)
 
-    --verbose, --explain, --domains add additional sections after the
-    core layout without breaking its structure. The function name is
-    preserved for backward compatibility — callers still pass its
-    return value to ``console.print``.
+    --verbose, --explain, --domains add sections after the core layout. The
+    function name and ``show_services`` remain for compatibility; Services are
+    part of the default panel.
     """
     from rich.console import Group
 
@@ -776,7 +776,7 @@ def render_tenant_panel(
     blocks.append(_render_key_facts(info))
 
     # ── Services section ──────────────────────────────────────────
-    svc_block, ceiling_categorized_count = _render_services(info, verbose, show_domains)
+    svc_block, ceiling_categorized_count = _render_services(info, show_domains)
     if svc_block is not None:
         _spacer()
         blocks.append(svc_block)
@@ -818,11 +818,10 @@ def render_tenant_panel(
     return Group(*blocks)
 
 
-def _strip_email_noise(categorized: dict[str, list[str]], info: TenantInfo) -> None:
-    """Strip Email-row controls and paths already summarized above.
+def _normalize_email_services(categorized: dict[str, list[str]], info: TenantInfo) -> None:
+    """Lead with compact Email facts, then append remaining indicators."""
+    from recon_tool.collection_view import collection_observable_evidence
 
-    If that empties the row, add a compact summary. Mutates ``categorized``.
-    """
     original_email = list(categorized["Email"])
     _email_noise = {
         "DKIM",
@@ -838,20 +837,20 @@ def _strip_email_noise(categorized: dict[str, list[str]], info: TenantInfo) -> N
         "Custom or unclassified MX",
         "Null MX (domain does not accept email)",
     }
-    _gateway_names = {
-        "Proofpoint",
-        "Trend Micro Email Security",
-        "Mimecast",
-        "Barracuda Email Security",
+    gateway_names = {
+        record.rule_name
+        for record in collection_observable_evidence(info)
+        if record.source_type.upper() == "MX" and record.slug in GATEWAY_SLUGS
     }
-    _all_noise = _email_noise | _gateway_names
-    categorized["Email"] = [s for s in categorized["Email"] if s not in _all_noise and not s.startswith("SPF")]
-    if not categorized["Email"]:
-        email_summary = _compact_email_summary(info, original_email)
-        if email_summary:
-            categorized["Email"] = email_summary
-        else:
-            del categorized["Email"]
+    _all_noise = _email_noise | gateway_names
+    remaining = [s for s in categorized["Email"] if s not in _all_noise and not s.startswith("SPF")]
+    email_summary = _compact_email_summary(info, original_email)
+    for service in remaining:
+        _append_unique(email_summary, service)
+    if email_summary:
+        categorized["Email"] = email_summary
+    else:
+        del categorized["Email"]
 
 
 def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: bool, max_width: int) -> None:
@@ -885,7 +884,7 @@ def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: b
         svc_block.append("\n")
 
 
-def _render_services(info: TenantInfo, verbose: bool, show_domains: bool) -> tuple[Text | None, int]:
+def _render_services(info: TenantInfo, show_domains: bool) -> tuple[Text | None, int]:
     """Render the categorized Services section and return it with the count of
     service categories (used by the passive-DNS ceiling trigger).
 
@@ -899,8 +898,8 @@ def _render_services(info: TenantInfo, verbose: bool, show_domains: bool) -> tup
     svc_block.append("Services", style="bold")
     svc_block.append("\n")
     categorized = _categorize_services(info)
-    if not verbose and "Email" in categorized:
-        _strip_email_noise(categorized, info)
+    if "Email" in categorized:
+        _normalize_email_services(categorized, info)
     # Widen the label column only when a label present in this render needs
     # it, so short-label panels keep their value width and a long label
     # (e.g. "Data & Analytics") still gets one space before its value.

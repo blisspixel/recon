@@ -232,7 +232,7 @@ def _print_welcome_banner() -> None:
     console.print("  recon <domain>                    → clean summary (recommended)")
     console.print("  recon <domain> --verbose          → expanded evidence and per-source status")
     console.print("  recon <domain> --posture          → posture observations")
-    console.print("  recon <domain> --full             → everything")
+    console.print("  recon <domain> --full             → expanded evidence, domains, and posture")
     console.print("  recon <domain> --explain          → full reasoning and evidence")
     console.print("  recon batch domains.txt           → process multiple domains")
     console.print("  recon doctor                      → check connectivity")
@@ -252,9 +252,14 @@ def lookup(
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
     markdown: bool = typer.Option(False, "--md", help="Markdown report"),
     plain: bool = typer.Option(False, "--plain", help="Plain linear text (greppable, screen-reader-friendly)"),
-    services: bool = typer.Option(False, "--services", "-s", help="M365 vs tech stack breakdown"),
+    services: bool = typer.Option(
+        False,
+        "--services",
+        "-s",
+        help="Services are shown by default; retained for compatibility",
+    ),
     domains: bool = typer.Option(False, "--domains", "-d", help="All tenant domains"),
-    full: bool = typer.Option(False, "--full", "-f", help="Everything (verbose + services + domains + posture)"),
+    full: bool = typer.Option(False, "--full", "-f", help="Expanded evidence, all domains, and posture"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Expanded evidence and per-source status"),
     sources: bool = typer.Option(False, "--sources", help="Detailed source breakdown table"),
     timeout: float = typer.Option(

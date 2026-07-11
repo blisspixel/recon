@@ -259,7 +259,12 @@ class TestGoldenPanelRenders:
     def test_panel_dense_full(self, fully_populated_tenant_info: TenantInfo) -> None:
         _check_golden(
             "panel_dense_full",
-            _render_panel(fully_populated_tenant_info, show_services=True, show_domains=True),
+            _render_panel(
+                fully_populated_tenant_info,
+                show_services=True,
+                show_domains=True,
+                verbose=True,
+            ),
         )
 
     def test_panel_dense_verbose(self, fully_populated_tenant_info: TenantInfo) -> None:

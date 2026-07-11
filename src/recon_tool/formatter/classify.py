@@ -17,6 +17,7 @@ surface and formatter's own body keep working unchanged.
 from __future__ import annotations
 
 from collections.abc import Iterable
+from dataclasses import replace
 
 from recon_tool.constants import SVC_DKIM_GOOGLE
 from recon_tool.fingerprints import load_fingerprints
@@ -664,9 +665,10 @@ def categorize_services(info: TenantInfo) -> dict[str, list[str]]:
     Preserves input ordering within each category. Categories with
     no services are omitted from the returned dict.
     """
-    from recon_tool.collection_view import collection_observable_info
+    from recon_tool.collection_view import collection_observable_evidence, collection_observable_info
 
     info = collection_observable_info(info)
+    info = replace(info, evidence=collection_observable_evidence(info))
     try:
         fps = load_fingerprints()
         slug_to_name: dict[str, str] = {fp.slug: fp.name for fp in fps}

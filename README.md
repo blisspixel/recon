@@ -107,7 +107,7 @@ recon https://www.contoso.com/path             # normalize URL to apex
 recon mail.contoso.com                         # reduce sub-host to apex
 recon mail.contoso.com --exact                 # keep that literal host
 recon contoso.com --explain                    # reasoning and provenance
-recon contoso.com --full                       # services, domains, posture
+recon contoso.com --full                       # expanded evidence, domains, posture
 recon contoso.com --json                       # structured lookup record
 recon batch domains.txt --json                 # batch JSON array
 recon batch domains.txt --ndjson               # one record per line

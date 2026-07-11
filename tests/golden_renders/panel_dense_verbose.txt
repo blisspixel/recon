@@ -9,7 +9,7 @@ contoso.com
 
 
 Services
-  Email          Microsoft 365
+  Email          Microsoft 365, Proofpoint, DMARC reject, MTA-STS enforce
   Collaboration  Slack (public TXT account indicator)
 
 

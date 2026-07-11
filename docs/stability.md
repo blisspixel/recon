@@ -42,10 +42,11 @@ For the JSON output contract in full field-by-field detail, see
 |---|---|---|
 | `--json` | Stable | JSON output contract in [`schema.md`](schema.md). |
 | `--md` | Stable | Markdown H2 section structure is stable; prose is not. |
-| `--full` / `-f` | Stable | Verbose + all services + all domains + posture. |
+| `--full` / `-f` | Stable | Expanded evidence + all domains + posture; retains the default Services summary. |
 | `--verbose` / `-v` | Stable | Expanded evidence, confidence and detection detail, plus per-source status on stderr. |
 | `--explain` | Stable | Full reasoning + evidence provenance DAG. |
-| `--services` / `-s`, `--domains` / `-d` | Stable | Progressive disclosure toggles. |
+| `--services` / `-s` | Stable | Retained for compatibility; Services are shown by default. |
+| `--domains` / `-d` | Stable | Shows all tenant and related domains. |
 | `--sources` | Stable | Per-source resolution status table. |
 | `--posture` / `-p`, `--exposure`, `--gaps` | Stable | Posture observation modes. |
 | `--profile NAME` | Stable | Built-in profiles: fintech, healthcare, saas-b2b, high-value-target, public-sector, higher-ed. Custom profiles additive. |
