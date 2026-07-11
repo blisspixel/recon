@@ -87,7 +87,7 @@
       ]
     },
     "evidence_confidence": {
-      "description": "Confidence in detected fingerprint slugs.",
+      "description": "Count-based confidence from distinct, error-free sources contributing useful data.",
       "type": "string",
       "enum": [
         "high",
@@ -96,7 +96,7 @@
       ]
     },
     "inference_confidence": {
-      "description": "Confidence in derived insights.",
+      "description": "Strength of the strongest error-free, same-claim corroboration chain; unrelated claims do not combine.",
       "type": "string",
       "enum": [
         "high",
@@ -164,7 +164,7 @@
       ]
     },
     "sources": {
-      "description": "Source names that successfully contributed to the result.",
+      "description": "Distinct source names from error-free results that contributed useful data.",
       "type": "array",
       "items": {
         "type": "string"

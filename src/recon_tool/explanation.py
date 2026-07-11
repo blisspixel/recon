@@ -13,6 +13,11 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from recon_tool.confidence import (
+    confidence_source_names,
+    inference_confidence_basis,
+    is_confidence_contributor,
+)
 from recon_tool.models import (
     ConfidenceLevel,
     EvidenceRecord,
@@ -453,8 +458,8 @@ def explain_confidence(
     Shows evidence_confidence derivation, inference_confidence derivation,
     final combined confidence, and notes about degraded sources.
     """
-    successful = sum(1 for r in results if r.is_success)
-    source_names = [r.source_name for r in results if r.is_success]
+    source_names = confidence_source_names(results)
+    successful = len(source_names)
 
     # Evidence confidence derivation
     evidence_parts: list[str] = [
@@ -463,29 +468,31 @@ def explain_confidence(
         f"Contributing sources: {', '.join(source_names)}" if source_names else "No successful sources",
     ]
 
-    # Inference confidence derivation
-    has_tenant_id = any(r.tenant_id is not None for r in results)
-    has_corroboration = any(
-        r.is_success and r.source_name != "oidc_discovery" and (r.m365_detected or r.display_name or r.auth_type)
-        for r in results
-    )
-
-    all_evidence: list[EvidenceRecord] = []
-    for r in results:
-        all_evidence.extend(r.evidence)
-    source_types = {e.source_type for e in all_evidence}
-
+    basis = inference_confidence_basis(results)
+    inference_rule = {
+        "oidc_corroboration": (
+            "The winning claim met the high corroboration rule through OIDC and an independent source"
+        ),
+        "three_record_types": "The winning claim met the high corroboration rule with at least three record types",
+        "two_record_types": "The winning claim met the medium corroboration rule with at least two record types",
+        "two_sources": "The winning claim met the medium corroboration rule through at least two sources",
+        "repeated_tenant_id": "Independent sources reported the same tenant ID",
+        "insufficient_corroboration": "No canonical claim met a multiple-record-type or multiple-source rule",
+        "no_claim": "No canonical claim met a multiple-record-type or multiple-source rule",
+    }[basis.rule]
     inference_parts: list[str] = [
         f"Inference confidence: {inference_confidence.value}",
+        "Only error-free sources contribute; corroboration is evaluated per canonical claim; "
+        "unrelated claims do not combine",
+        inference_rule,
     ]
-    if has_tenant_id:
-        inference_parts.append("Tenant ID present from at least one source")
-    if has_corroboration:
-        inference_parts.append("Corroborating data from independent source(s)")
-    if len(source_types) >= 3:
-        inference_parts.append(
-            f"{len(source_types)} distinct evidence source types ({', '.join(sorted(source_types))})"
-        )
+    if basis.claim:
+        label = "Winning claim" if basis.level != ConfidenceLevel.LOW else "Strongest observed claim"
+        inference_parts.append(f"{label}: {basis.claim}")
+    if basis.source_types:
+        inference_parts.append(f"Qualifying record types: {', '.join(basis.source_types)}")
+    if basis.sources:
+        inference_parts.append(f"Qualifying sources: {', '.join(basis.sources)}")
 
     # Final confidence
     final_parts = [
@@ -503,8 +510,16 @@ def explain_confidence(
     all_parts = evidence_parts + inference_parts + final_parts + degraded_parts
     derivation = ". ".join(all_parts)
 
-    # Fired rules: list the source names
-    fired_rules = tuple(f"Source: {r.source_name} ({'success' if r.is_success else 'failed'})" for r in results)
+    # Record one confidence-contribution status per source name.
+    source_status: dict[str, bool] = {}
+    for result in results:
+        source_status[result.source_name] = source_status.get(result.source_name, False) or is_confidence_contributor(
+            result
+        )
+    fired_rules = tuple(
+        f"Source: {source_name} ({'success' if success else 'failed'})"
+        for source_name, success in source_status.items()
+    )
 
     # Weakening: note degraded sources
     weakening: list[str] = []
@@ -514,7 +529,7 @@ def explain_confidence(
     return ExplanationRecord(
         item_name="Overall Confidence",
         item_type="confidence",
-        matched_evidence=tuple(all_evidence),
+        matched_evidence=basis.evidence,
         fired_rules=fired_rules,
         confidence_derivation=derivation,
         weakening_conditions=tuple(weakening),

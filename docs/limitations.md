@@ -223,6 +223,10 @@ Best practices:
   investigation leads, not conclusions.
 - `--explain` shows the full evidence chain per signal. Use it when a
   specific claim matters.
+- `inference_confidence` describes the strongest error-free, same-claim
+  corroboration chain. Evidence from failed sources or unrelated provider and
+  service claims is not pooled. `--explain` identifies the winning claim and
+  its qualifying record types, source names, and evidence.
 - `--confidence-mode strict` or `--strict` only drops hedging when ≥3 sources corroborate
   AND confidence is High. Sparse-data output stays hedged by design.
 - If you spot a false positive, open an issue with the domain and the

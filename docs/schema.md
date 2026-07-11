@@ -120,8 +120,8 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 |---|---|---|---|---|---|
 | `provider` | string | no | n/a | stable | One-line provider summary (e.g. `"Microsoft 365 (primary) via Proofpoint gateway + Google Workspace (secondary)"`). |
 | `confidence` | string | no | `high \| medium \| low` | stable | Overall confidence in the merged result. |
-| `evidence_confidence` | string | no | `high \| medium \| low` | stable | Confidence in detected fingerprint slugs. |
-| `inference_confidence` | string | no | `high \| medium \| low` | stable | Confidence in derived insights. |
+| `evidence_confidence` | string | no | `high \| medium \| low` | stable | Count-based confidence from distinct, error-free sources contributing useful data. |
+| `inference_confidence` | string | no | `high \| medium \| low` | stable | Strength of the strongest error-free, same-claim corroboration chain; unrelated claims do not combine. |
 | `region` | string | yes | e.g. `NA`, `EU`, `WW` | stable | Geographic region when detectable via OIDC. |
 | `auth_type` | string | yes | `Federated \| Managed` | stable | M365 authentication style. |
 | `google_auth_type` | string | yes | `Federated \| Managed` | stable | Google Workspace authentication style. |
@@ -134,7 +134,7 @@ fields. Field order in the emitted JSON is not guaranteed; use the key name.
 
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
-| `sources` | `list[string]` | no | subset of source names | stable | Source names that successfully contributed to the result. |
+| `sources` | `list[string]` | no | subset of source names | stable | Distinct source names from error-free results that contributed useful data. |
 | `partial` | bool | no | n/a | stable | `true` when a **core** source (DNS / identity / CT-as-core) is in `degraded_sources`. CT-only degradation does not flip this flag, matching `docs/recon-schema.json`. |
 | `degraded_sources` | `list[string]` | no | n/a | stable | Source names that failed or were unavailable. |
 

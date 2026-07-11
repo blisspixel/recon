@@ -6,6 +6,15 @@ import contextlib
 from typing import Any, NamedTuple
 
 from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
+from recon_tool.confidence import (
+    compute_confidence,
+    compute_evidence_confidence,
+    compute_inference_confidence,
+    confidence_source_names,
+)
+from recon_tool.confidence import (
+    minimum_confidence as _min_confidence,
+)
 from recon_tool.constants import (
     effective_dmarc_policy as _effective_dmarc_policy,
 )
@@ -50,6 +59,7 @@ from recon_tool.merger_tables import (
     PROVIDER_INFERENCE_SOURCES,
     SLUG_ACRONYMS,
     SLUG_HUMAN_NAMES,
+    VARIANT_SLUG_PARENTS,
 )
 
 _GATEWAY_SLUGS = GATEWAY_SLUGS
@@ -59,6 +69,7 @@ _PROVIDER_INFERENCE_SOURCES = PROVIDER_INFERENCE_SOURCES
 _LIKELY_PROVIDER_SLUG_NAMES = LIKELY_PROVIDER_SLUG_NAMES
 _SLUG_HUMAN_NAMES = SLUG_HUMAN_NAMES
 _SLUG_ACRONYMS = SLUG_ACRONYMS
+_VARIANT_SLUG_PARENTS = VARIANT_SLUG_PARENTS
 
 
 def _humanize_slug(slug: str) -> str:
@@ -73,17 +84,6 @@ def _humanize_slug(slug: str) -> str:
         else:
             out.append(part.capitalize())
     return " ".join(out)
-
-
-# Collapse variant slugs into their base product only when the base slug is also
-# present, so signals do not list the same product twice while still preserving
-# identity-mode-only evidence.
-_VARIANT_SLUG_PARENTS: dict[str, str] = {
-    "google-managed": "google-workspace",
-    "google-federated": "google-workspace",
-    "google-site": "google-workspace",
-    "google-workspace-modules": "google-workspace",
-}
 
 
 def _dedup_variant_slugs(slugs: tuple[str, ...]) -> tuple[str, ...]:
@@ -180,68 +180,6 @@ def _downgrade_confidence(level: ConfidenceLevel) -> ConfidenceLevel:
         return ConfidenceLevel.MEDIUM
     if level == ConfidenceLevel.MEDIUM:
         return ConfidenceLevel.LOW
-    return ConfidenceLevel.LOW
-
-
-def _min_confidence(a: ConfidenceLevel, b: ConfidenceLevel) -> ConfidenceLevel:
-    """Return the lower of two confidence levels (HIGH > MEDIUM > LOW)."""
-    order = {ConfidenceLevel.HIGH: 2, ConfidenceLevel.MEDIUM: 1, ConfidenceLevel.LOW: 0}
-    return a if order[a] <= order[b] else b
-
-
-def compute_evidence_confidence(results: list[SourceResult]) -> ConfidenceLevel:
-    """Compute evidence confidence from the number of successful sources.
-
-    3+ successful sources → HIGH, 2 → MEDIUM, 1 or fewer → LOW.
-    """
-    successful = sum(1 for r in results if r.is_success)
-    if successful >= 3:
-        return ConfidenceLevel.HIGH
-    if successful >= 2:
-        return ConfidenceLevel.MEDIUM
-    return ConfidenceLevel.LOW
-
-
-def compute_inference_confidence(results: list[SourceResult]) -> ConfidenceLevel:
-    """Compute inference confidence from the strength of the logical chain.
-
-    HIGH when tenant_id from OIDC + corroborating source, or 3+ independent
-    record types confirm the same provider.
-    LOW when single record type with no corroboration.
-    MEDIUM otherwise.
-
-    Corroboration: now accepts Google Workspace auth type as a
-    valid signal in addition to Microsoft-side fields. A domain with an
-    OIDC tenant_id AND a Google identity endpoint response is fully
-    corroborated from two independent providers — the previous check
-    missed this case and gave such domains MEDIUM inference instead of
-    HIGH.
-    """
-    has_tenant_id = any(r.tenant_id is not None for r in results)
-    has_corroboration = any(
-        r.is_success
-        and r.source_name != "oidc_discovery"
-        and (r.m365_detected or r.display_name or r.auth_type or r.google_auth_type or len(r.tenant_domains) > 0)
-        for r in results
-    )
-
-    if has_tenant_id and has_corroboration:
-        return ConfidenceLevel.HIGH
-
-    # Check for multiple independent record types confirming same provider
-    all_evidence: list[EvidenceRecord] = []
-    for r in results:
-        all_evidence.extend(r.evidence)
-
-    if all_evidence:
-        source_types = {e.source_type for e in all_evidence}
-        if len(source_types) >= 3:
-            return ConfidenceLevel.HIGH
-
-    successful = sum(1 for r in results if r.is_success)
-    if successful >= 2:
-        return ConfidenceLevel.MEDIUM
-
     return ConfidenceLevel.LOW
 
 
@@ -407,61 +345,6 @@ def build_insights_with_signals(
         insights.append(f"{sig.name}: {sig.description}")
 
     return insights
-
-
-def compute_confidence(results: list[SourceResult]) -> tuple[ConfidenceLevel, bool]:
-    """Compute confidence based on cross-validation of results.
-
-    For M365 domains: confidence is based on tenant_id presence plus
-    corroboration from other sources (UserRealm display name, auth type,
-    tenant domains). A single tenant_id with corroborating M365 evidence
-    from another source is HIGH — the sources are independent and agree.
-
-    For non-M365 domains: confidence is based on the richness of DNS data.
-    DNS records are authoritative (you either have the record or you don't),
-    so rich DNS data warrants high confidence in the overall picture.
-
-    Returns:
-        Tuple of (confidence_level, has_conflicting_tenant_ids).
-    """
-    tenant_ids = [r.tenant_id for r in results if r.tenant_id is not None]
-
-    if tenant_ids:
-        unique_ids = set(tenant_ids)
-        if len(unique_ids) > 1:
-            return ConfidenceLevel.LOW, True
-
-        # We have at least one tenant_id. Check for corroboration from
-        # other sources — UserRealm returning m365_detected + real data
-        # (display_name, auth_type, or tenant_domains) counts as independent
-        # confirmation that this is a real M365 tenant.
-        tenant_id_sources = {r.source_name for r in results if r.tenant_id is not None}
-        corroborating = [
-            r
-            for r in results
-            if r.source_name not in tenant_id_sources
-            and r.is_success
-            and (r.m365_detected or r.display_name or r.auth_type or len(r.tenant_domains) > 0)
-        ]
-        if corroborating:
-            return ConfidenceLevel.HIGH, False
-        if len(tenant_ids) >= 2:
-            return ConfidenceLevel.HIGH, False
-        return ConfidenceLevel.MEDIUM, False
-
-    # No tenant_id — check DNS service richness.
-    # DNS records are authoritative, so even a single source with services
-    # is meaningful. More services = higher confidence in the overall picture.
-    total_services = sum(len(r.detected_services) for r in results)
-    successful_sources = sum(1 for r in results if r.is_success)
-
-    if total_services >= 8 and successful_sources >= 2:
-        return ConfidenceLevel.HIGH, False
-    if total_services >= 3 or successful_sources >= 2:
-        return ConfidenceLevel.MEDIUM, False
-    if total_services > 0:
-        return ConfidenceLevel.LOW, False
-    return ConfidenceLevel.LOW, False
 
 
 # Placeholder tenant display names that are meaningless to a user.
@@ -810,10 +693,11 @@ def merge_results(
     queried_domain: str,
 ) -> TenantInfo:
     """Merge multiple SourceResults into a single TenantInfo with insights."""
-    scalars = _merge_scalar_fields(results)
+    usable_results = [result for result in results if result.error is None]
+    scalars = _merge_scalar_fields(usable_results)
     tenant_id = scalars.tenant_id
     all_domains = scalars.all_domains
-    merge_conflicts = _compute_merge_conflicts(results)
+    merge_conflicts = _compute_merge_conflicts(usable_results)
 
     _raise_if_all_sources_failed(results, queried_domain, tenant_id)
 
@@ -827,10 +711,10 @@ def merge_results(
     dmarc_policy = _scrub_optional(scalars.dmarc_policy)
     google_idp_name = _scrub_optional(scalars.google_idp_name)
 
-    base_confidence, has_id_conflict = compute_confidence(results)
-    sources = tuple(r.source_name for r in results if r.is_success)
+    base_confidence, has_id_conflict = compute_confidence(usable_results)
+    sources = confidence_source_names(usable_results)
 
-    all_services, all_slugs, all_related = _aggregate_detections(results)
+    all_services, all_slugs, all_related = _aggregate_detections(usable_results)
     # Round 6 (Track D): a service string can carry attacker-controlled bytes
     # (e.g. a Google CSE discovery_uri host parsed in sources/google.py), so
     # strip control characters before the set reaches the email-security score,
@@ -853,13 +737,13 @@ def merge_results(
     )
     spf_include_count = extract_spf_include_count(all_services)
 
-    cert_summary: CertSummary | None = _first_non_none(results, "cert_summary")
+    cert_summary: CertSummary | None = _first_non_none(usable_results, "cert_summary")
     issuance_velocity = cert_summary.issuance_velocity if cert_summary is not None else None
 
-    ct_provider_used, ct_subdomain_count, ct_cache_age_days, ct_attempt_outcome = _merge_ct_metadata(results)
-    cloud_instance, tenant_region_sub_scope, msgraph_host = _merge_oidc_metadata(results)
+    ct_provider_used, ct_subdomain_count, ct_cache_age_days, ct_attempt_outcome = _merge_ct_metadata(usable_results)
+    cloud_instance, tenant_region_sub_scope, msgraph_host = _merge_oidc_metadata(usable_results)
 
-    evidence_tuple = _collect_evidence(results)
+    evidence_tuple = _collect_evidence(usable_results)
     primary_email_provider, email_gateway, likely_primary_email_provider = _compute_email_topology(evidence_tuple)
     # True if ANY MX evidence exists, regardless of slug match — lets
     # downstream insights distinguish "no email" from "custom / self-hosted".
@@ -891,21 +775,23 @@ def merge_results(
     # Surface conflicting tenant IDs — high-value intel that explains why
     # confidence is LOW and may indicate a misconfigured or transitioning tenant.
     if has_id_conflict:
-        conflicting = sorted({strip_control_chars(r.tenant_id) for r in results if r.tenant_id is not None})
+        conflicting = sorted({strip_control_chars(r.tenant_id) for r in usable_results if r.tenant_id is not None})
         insights.insert(0, f"Conflicting tenant IDs detected: {', '.join(conflicting)}")
 
-    all_degraded = _collect_degraded(results)
+    all_degraded = _collect_degraded(usable_results)
     confidence, evidence_confidence, inference_confidence = _finalize_confidence(
-        base_confidence, results, all_degraded, ct_provider_used
+        base_confidence, usable_results, all_degraded, ct_provider_used
     )
 
     detection_scores = compute_detection_scores(evidence_tuple)
     lexical_observation_statements = _append_lexical_observations(insights, all_related, queried_domain)
 
-    surface_tuple = _dedupe_surface(results)
-    unclassified_tuple = _dedupe_unclassified(results)
-    chain_motifs_tuple = _dedupe_motifs(results)
-    infrastructure_clusters: InfrastructureClusterReport | None = _first_non_none(results, "infrastructure_clusters")
+    surface_tuple = _dedupe_surface(usable_results)
+    unclassified_tuple = _dedupe_unclassified(usable_results)
+    chain_motifs_tuple = _dedupe_motifs(usable_results)
+    infrastructure_clusters: InfrastructureClusterReport | None = _first_non_none(
+        usable_results, "infrastructure_clusters"
+    )
 
     return TenantInfo(
         tenant_id=tenant_id,

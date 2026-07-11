@@ -21,6 +21,7 @@ from recon_tool.formatter import (
     format_tenant_csv_row,
     get_console,
     render_source_status_panel,
+    render_sources_detail,
     render_tenant_panel,
     render_verbose_sources,
     set_console,
@@ -92,14 +93,10 @@ class TestEvidenceSemanticServiceClassification:
         parent_service: str,
         unsupported_child: str,
     ) -> None:
-        categorized = categorize_services(
-            _minimal_info(services=(parent_service,), slugs=(parent_slug,))
-        )
+        categorized = categorize_services(_minimal_info(services=(parent_service,), slugs=(parent_slug,)))
 
         assert parent_service in categorized["Email"]
-        assert unsupported_child not in {
-            service for services in categorized.values() for service in services
-        }
+        assert unsupported_child not in {service for services in categorized.values() for service in services}
 
     def test_direct_ai_fingerprint_remains_visible(self) -> None:
         categorized = categorize_services(
@@ -533,3 +530,30 @@ class TestRenderVerboseSources:
         assert "tenant ID found" in out
         assert "user_realm" in out
         assert "HTTP 403" in out
+
+    def test_error_with_data_is_failed_in_every_source_view(self) -> None:
+        result = SourceResult(
+            source_name="failed_source",
+            detected_services=("Microsoft 365",),
+            error="upstream failed",
+        )
+
+        _, buf = _make_console()
+        render_verbose_sources([result])
+        verbose = _strip(buf.getvalue())
+        assert "upstream failed" in verbose
+        assert "data returned" not in verbose
+
+        _, buf = _make_console()
+        panel = render_source_status_panel([result])
+        assert panel is not None
+        get_console().print(panel)
+        status = _strip(buf.getvalue())
+        assert "upstream failed" in status
+        assert "data returned" not in status
+
+        _, buf = _make_console()
+        get_console().print(render_sources_detail([result]))
+        detail = _strip(buf.getvalue())
+        assert "failed" in detail
+        assert "upstream failed" in detail
