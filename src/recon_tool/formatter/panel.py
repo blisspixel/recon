@@ -18,6 +18,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from recon_tool.confidence import is_confidence_contributor
 from recon_tool.exposure import (
     PostureComparison,
 )
@@ -319,10 +320,6 @@ def _posterior_clause(obs: PosteriorObservation, fill: int) -> str:
     return f"the evidence does not back {claim}"
 
 
-
-
-
-
 # Services filtered from the compact (default) view because they appear
 # in insights instead. Uses exact prefix matching to avoid false positives
 # (e.g. a service named "Advanced DNS Security" won't be hidden).
@@ -347,8 +344,6 @@ _SPARSE_INSIGHT_PREFIXES = (
 )
 
 
-
-
 def _is_sparse_insight(line: str) -> bool:
     """Return True when an insight line is part of sparse-result diagnosis."""
     return line.startswith(_SPARSE_INSIGHT_PREFIXES)
@@ -371,8 +366,6 @@ _LABEL_WIDTH = 13  # columns for Provider/Tenant/Auth/Confidence labels
 # collided "Data & Analytics" (16 cols) onto its value
 # ("Data & AnalyticsMongoDB Atlas"); the +1 guarantees the gap.
 _CATEGORY_WIDTH = 15
-
-
 
 
 def _wrap_service_list(
@@ -436,8 +429,6 @@ def _wrap_text(text: str, max_width: int) -> list[str]:
     if current:
         lines.append(current)
     return lines or [text]
-
-
 
 
 def _append_unique(summary: list[str], value: str | None) -> None:
@@ -906,7 +897,6 @@ def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: b
             svc_block.append(" " * (2 + max_width))
         svc_block.append(line)
         svc_block.append("\n")
-
 
 
 def _render_services(info: TenantInfo, verbose: bool, show_domains: bool) -> tuple[Text | None, int]:
@@ -1587,7 +1577,7 @@ def render_verbose_sources(results: list[SourceResult]) -> None:
     """Print per-source status lines to console."""
     c = get_console()
     for result in results:
-        if result.is_success:
+        if is_confidence_contributor(result):
             description = escape(strip_control_chars(_source_success_description(result)))
             c.print(f"  [green]✓[/green] {result.source_name} — {description}")
         else:
@@ -1625,7 +1615,11 @@ def render_sources_detail(results: list[SourceResult]) -> Table:
     table.add_column("Details")
 
     for result in results:
-        status = Text("✓ success", style="green") if result.is_success else Text("✗ failed", style="red")
+        status = (
+            Text("\u2713 success", style="green")
+            if is_confidence_contributor(result)
+            else Text("\u2717 failed", style="red")
+        )
         tenant_id = result.tenant_id or "—"
         # region and error can carry attacker-influenced text (a federation
         # region value, or a domain / exception interpolated into an error
@@ -1665,10 +1659,6 @@ def render_error(message: str) -> None:
     data stream."""
     safe = escape(strip_control_chars(message))
     get_err_console().print(f"[red]{safe}[/red]")
-
-
-
-
 
 
 # ── Posture observation rendering ────────────────────────────────────────
@@ -2016,7 +2006,7 @@ def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
     for i, result in enumerate(primary):
         if i > 0:
             text.append("\n")
-        if result.is_success:
+        if is_confidence_contributor(result):
             description = _source_success_description(result)
             text.append("  ✓ ", style="#a3d9a5")
             text.append(f"{result.source_name}", style="bold")
@@ -2090,8 +2080,6 @@ def format_explanations_list(explanations: list[ExplanationRecord]) -> list[dict
     from recon_tool.explanation import serialize_explanation
 
     return [serialize_explanation(rec) for rec in explanations]
-
-
 
 
 def render_conflict_annotation(

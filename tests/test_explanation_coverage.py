@@ -206,6 +206,8 @@ class TestExplainConfidence:
         assert rec.item_type == "confidence"
         # Should reference "high" somewhere in the derivation
         assert "high" in rec.confidence_derivation.lower()
+        assert "high corroboration rule" in rec.confidence_derivation
+        assert "Winning claim: microsoft365" in rec.confidence_derivation
 
     def test_low_confidence_no_successful_sources(self) -> None:
         results = [
@@ -220,14 +222,175 @@ class TestExplainConfidence:
         )
         assert rec.item_type == "confidence"
         assert "low" in rec.confidence_derivation.lower()
+        assert "No canonical claim met" in rec.confidence_derivation
+
+    def test_unrelated_evidence_is_not_described_as_corroboration(self) -> None:
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Microsoft 365", "Google Workspace", "Cloudflare"),
+                evidence=(
+                    EvidenceRecord(source_type="TXT", raw_value="ms=123", rule_name="M365", slug="microsoft365"),
+                    EvidenceRecord(
+                        source_type="MX",
+                        raw_value="aspmx.l.google.com",
+                        rule_name="Google MX",
+                        slug="google-workspace",
+                    ),
+                    EvidenceRecord(
+                        source_type="CNAME",
+                        raw_value="edge.cloudflare.net",
+                        rule_name="Cloudflare",
+                        slug="cloudflare",
+                    ),
+                ),
+            ),
+        ]
+
+        rec = explain_confidence(
+            results,
+            evidence_confidence=ConfidenceLevel.LOW,
+            inference_confidence=ConfidenceLevel.LOW,
+            final_confidence=ConfidenceLevel.LOW,
+        )
+
+        assert "unrelated claims do not combine" in rec.confidence_derivation
+        assert "distinct evidence source types" not in rec.confidence_derivation
+
+    def test_errored_data_is_not_described_as_a_confidence_contributor(self) -> None:
+        result = SourceResult(
+            source_name="dns_records",
+            detected_services=("Google Workspace",),
+            evidence=(
+                EvidenceRecord(
+                    source_type="MX",
+                    raw_value="aspmx.l.google.com",
+                    rule_name="Google MX",
+                    slug="google-workspace",
+                ),
+            ),
+            error="DNS collection failed",
+        )
+
+        rec = explain_confidence(
+            [result],
+            evidence_confidence=ConfidenceLevel.LOW,
+            inference_confidence=ConfidenceLevel.LOW,
+            final_confidence=ConfidenceLevel.LOW,
+        )
+
+        assert "0 successful source(s)" in rec.confidence_derivation
+        assert rec.matched_evidence == ()
+        assert rec.fired_rules == ("Source: dns_records (failed)",)
+
+    def test_winning_claim_names_qualifying_evidence_only(self) -> None:
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Google Workspace", "Cloudflare"),
+                evidence=(
+                    EvidenceRecord(
+                        source_type="MX",
+                        raw_value="aspmx.l.google.com",
+                        rule_name="Google MX",
+                        slug="google-workspace",
+                    ),
+                    EvidenceRecord(
+                        source_type="DKIM",
+                        raw_value="google._domainkey",
+                        rule_name="Google DKIM",
+                        slug="google-workspace",
+                    ),
+                    EvidenceRecord(
+                        source_type="CNAME",
+                        raw_value="edge.cloudflare.net",
+                        rule_name="Cloudflare",
+                        slug="cloudflare",
+                    ),
+                ),
+            ),
+        ]
+
+        rec = explain_confidence(
+            results,
+            evidence_confidence=ConfidenceLevel.LOW,
+            inference_confidence=ConfidenceLevel.MEDIUM,
+            final_confidence=ConfidenceLevel.LOW,
+        )
+
+        assert "Winning claim: google-workspace" in rec.confidence_derivation
+        assert "Qualifying record types: DKIM, MX" in rec.confidence_derivation
+        assert "Qualifying sources: dns_records" in rec.confidence_derivation
+        assert {evidence.slug for evidence in rec.matched_evidence} == {"google-workspace"}
+
+    def test_duplicate_source_results_are_reported_once(self) -> None:
+        result = SourceResult(source_name="dns_records", detected_services=("Cloudflare",))
+
+        rec = explain_confidence(
+            [result, result],
+            evidence_confidence=ConfidenceLevel.LOW,
+            inference_confidence=ConfidenceLevel.LOW,
+            final_confidence=ConfidenceLevel.LOW,
+        )
+
+        assert "1 successful source(s)" in rec.confidence_derivation
+        assert "Contributing sources: dns_records" in rec.confidence_derivation
+
+    def test_repeated_tenant_claim_excludes_unrelated_evidence(self) -> None:
+        unrelated = EvidenceRecord(
+            source_type="TXT",
+            raw_value="slack-domain-verification=123",
+            rule_name="Slack verification",
+            slug="slack",
+        )
+        results = [
+            SourceResult(source_name="source_a", tenant_id="tid", evidence=(unrelated,)),
+            SourceResult(source_name="source_b", tenant_id="tid"),
+        ]
+
+        rec = explain_confidence(
+            results,
+            evidence_confidence=ConfidenceLevel.MEDIUM,
+            inference_confidence=ConfidenceLevel.MEDIUM,
+            final_confidence=ConfidenceLevel.MEDIUM,
+        )
+
+        assert "Winning claim: tenant-id" in rec.confidence_derivation
+        assert rec.matched_evidence == ()
+
+    def test_repeated_tenant_claim_keeps_direct_tenant_evidence(self) -> None:
+        direct = EvidenceRecord(
+            source_type="HTTP",
+            raw_value="tenant_id=tid",
+            rule_name="OIDC Discovery",
+            slug="microsoft365",
+        )
+        results = [
+            SourceResult(source_name="source_a", tenant_id="tid", evidence=(direct,)),
+            SourceResult(source_name="source_b", tenant_id="tid"),
+        ]
+
+        rec = explain_confidence(
+            results,
+            evidence_confidence=ConfidenceLevel.MEDIUM,
+            inference_confidence=ConfidenceLevel.MEDIUM,
+            final_confidence=ConfidenceLevel.MEDIUM,
+        )
+
+        assert rec.matched_evidence == (direct,)
 
     def test_medium_confidence_with_partial_corroboration(self) -> None:
         results = [
             SourceResult(
-                source_name="oidc_discovery",
-                tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                source_name="dns_records",
+                detected_services=("Cloudflare",),
+                detected_slugs=("cloudflare",),
             ),
-            SourceResult(source_name="dns_records", detected_services=("Cloudflare",)),
+            SourceResult(
+                source_name="certificate_transparency",
+                detected_services=("Cloudflare",),
+                detected_slugs=("cloudflare",),
+            ),
         ]
         rec = explain_confidence(
             results,
@@ -236,6 +399,7 @@ class TestExplainConfidence:
             final_confidence=ConfidenceLevel.MEDIUM,
         )
         assert rec.item_type == "confidence"
+        assert "Winning claim: cloudflare" in rec.confidence_derivation
 
 
 class TestExplainObservations:
@@ -292,9 +456,9 @@ class TestSerializeExplanation:
         ]
         rec = explain_confidence(
             results,
-            evidence_confidence=ConfidenceLevel.MEDIUM,
-            inference_confidence=ConfidenceLevel.MEDIUM,
-            final_confidence=ConfidenceLevel.MEDIUM,
+            evidence_confidence=ConfidenceLevel.LOW,
+            inference_confidence=ConfidenceLevel.LOW,
+            final_confidence=ConfidenceLevel.LOW,
         )
         d = serialize_explanation(rec)
         import json

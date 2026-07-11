@@ -22,6 +22,7 @@ from recon_tool.merger import (
     compute_detection_scores,
     compute_evidence_confidence,
     compute_inference_confidence,
+    merge_results,
 )
 from recon_tool.models import (
     ChainResult,
@@ -615,6 +616,26 @@ class TestComputeEvidenceConfidence:
     def test_empty_list(self):
         assert compute_evidence_confidence([]) == ConfidenceLevel.LOW
 
+    def test_errored_result_with_data_is_not_a_confidence_contributor(self):
+        results = [
+            SourceResult(
+                source_name=source_name,
+                detected_services=("Google Workspace",),
+                error="source failed",
+            )
+            for source_name in ("dns_records", "google_identity", "google_workspace")
+        ]
+
+        assert compute_evidence_confidence(results) == ConfidenceLevel.LOW
+
+    def test_duplicate_results_from_one_source_count_once(self):
+        results = [
+            SourceResult(source_name="dns_records", detected_services=(service,))
+            for service in ("Service A", "Service B", "Service C")
+        ]
+
+        assert compute_evidence_confidence(results) == ConfidenceLevel.LOW
+
 
 class TestComputeInferenceConfidence:
     def test_tenant_id_with_corroboration(self):
@@ -629,9 +650,83 @@ class TestComputeInferenceConfidence:
             SourceResult(source_name="oidc_discovery", tenant_id="tid"),
             SourceResult(source_name="dns_records", error="no data"),
         ]
-        # Single successful source → MEDIUM or LOW depending on evidence
-        conf = compute_inference_confidence(results)
-        assert conf in (ConfidenceLevel.LOW, ConfidenceLevel.MEDIUM)
+        assert compute_inference_confidence(results) == ConfidenceLevel.LOW
+
+    def test_failed_m365_claim_does_not_corroborate_oidc_tenant(self):
+        results = [
+            SourceResult(source_name="oidc_discovery", tenant_id="tid"),
+            SourceResult(
+                source_name="user_realm",
+                m365_detected=True,
+                detected_services=("Microsoft 365",),
+                detected_slugs=("microsoft365",),
+                error="upstream response was invalid",
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.LOW
+
+        merged = merge_results(results, queried_domain="contoso.example")
+        assert "Microsoft 365" not in merged.services
+        assert merged.sources == ("oidc_discovery",)
+
+    def test_failed_three_type_evidence_does_not_raise_inference(self):
+        result = SourceResult(
+            source_name="dns_records",
+            detected_services=("Google Workspace",),
+            detected_slugs=("google-workspace",),
+            evidence=tuple(
+                EvidenceRecord(
+                    source_type=source_type,
+                    raw_value="value",
+                    rule_name="Google Workspace",
+                    slug="google-workspace",
+                )
+                for source_type in ("MX", "TXT", "CNAME")
+            ),
+            error="DNS collection failed",
+        )
+
+        assert compute_inference_confidence([result]) == ConfidenceLevel.LOW
+
+    def test_failed_same_claim_sources_do_not_raise_inference(self):
+        results = [
+            SourceResult(
+                source_name=source_name,
+                detected_services=("Google Workspace",),
+                detected_slugs=("google-workspace",),
+                error="source failed",
+            )
+            for source_name in ("dns_records", "google_identity")
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.LOW
+
+    def test_google_auth_does_not_corroborate_microsoft_tenant(self):
+        results = [
+            SourceResult(source_name="oidc_discovery", tenant_id="tid"),
+            SourceResult(
+                source_name="google_identity",
+                detected_services=("Google Workspace",),
+                detected_slugs=("google-workspace",),
+                google_auth_type="Federated",
+                evidence=(
+                    EvidenceRecord(
+                        source_type="HTTP",
+                        raw_value="federated Google tenant",
+                        rule_name="Google Identity Routing",
+                        slug="google-workspace",
+                    ),
+                ),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.LOW
+
+        merged = merge_results(results, queried_domain="contoso.example")
+        assert merged.evidence_confidence == ConfidenceLevel.MEDIUM
+        assert merged.inference_confidence == ConfidenceLevel.LOW
+        assert merged.confidence == ConfidenceLevel.LOW
 
     def test_three_independent_source_types(self):
         results = [
@@ -647,12 +742,221 @@ class TestComputeInferenceConfidence:
         ]
         assert compute_inference_confidence(results) == ConfidenceLevel.HIGH
 
+    def test_cross_slug_record_types_do_not_combine(self):
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Microsoft 365", "Google Workspace", "Cloudflare"),
+                evidence=(
+                    EvidenceRecord(source_type="TXT", raw_value="ms=123", rule_name="M365", slug="microsoft365"),
+                    EvidenceRecord(
+                        source_type="MX",
+                        raw_value="aspmx.l.google.com",
+                        rule_name="Google MX",
+                        slug="google-workspace",
+                    ),
+                    EvidenceRecord(
+                        source_type="CNAME",
+                        raw_value="edge.cloudflare.net",
+                        rule_name="Cloudflare",
+                        slug="cloudflare",
+                    ),
+                ),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.LOW
+
+    def test_source_type_case_variants_are_one_record_type(self):
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Google Workspace",),
+                evidence=tuple(
+                    EvidenceRecord(
+                        source_type=source_type,
+                        raw_value=source_type,
+                        rule_name="Google MX",
+                        slug="google-workspace",
+                    )
+                    for source_type in ("MX", " mx ", "Mx", " ")
+                ),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.LOW
+
+    def test_unscoped_evidence_does_not_form_a_claim(self):
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Unscoped evidence",),
+                evidence=tuple(
+                    EvidenceRecord(source_type=source_type, raw_value="value", rule_name="rule", slug=" ")
+                    for source_type in ("TXT", "MX", "CNAME")
+                ),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.LOW
+
+    def test_two_record_types_for_same_slug_are_medium(self):
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Google Workspace",),
+                evidence=(
+                    EvidenceRecord(
+                        source_type="MX",
+                        raw_value="aspmx.l.google.com",
+                        rule_name="Google MX",
+                        slug="google-workspace",
+                    ),
+                    EvidenceRecord(
+                        source_type="DKIM",
+                        raw_value="google._domainkey",
+                        rule_name="Google DKIM",
+                        slug="google-workspace",
+                    ),
+                ),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.MEDIUM
+
+    def test_google_site_verification_is_not_workspace_corroboration(self):
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Google Workspace", "Google (site verified)"),
+                evidence=(
+                    EvidenceRecord(
+                        source_type="MX",
+                        raw_value="aspmx.l.google.com",
+                        rule_name="Google MX",
+                        slug="google-workspace",
+                    ),
+                    EvidenceRecord(
+                        source_type="DKIM",
+                        raw_value="google._domainkey",
+                        rule_name="Google DKIM",
+                        slug="google-workspace",
+                    ),
+                    EvidenceRecord(
+                        source_type="TXT",
+                        raw_value="google-site-verification=123",
+                        rule_name="Google site verification",
+                        slug="google-site",
+                    ),
+                ),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.MEDIUM
+
+    def test_google_cse_corroborates_google_workspace_claim(self):
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Google Workspace",),
+                detected_slugs=("google-workspace",),
+                evidence=(
+                    EvidenceRecord(
+                        source_type="MX",
+                        raw_value="aspmx.l.google.com",
+                        rule_name="Google MX",
+                        slug="google-workspace",
+                    ),
+                ),
+            ),
+            SourceResult(
+                source_name="google_workspace",
+                detected_services=("Google Workspace CSE",),
+                detected_slugs=("google-cse",),
+                evidence=(
+                    EvidenceRecord(
+                        source_type="HTTP",
+                        raw_value="CSE configuration found",
+                        rule_name="Google Workspace CSE",
+                        slug="google-cse",
+                    ),
+                ),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.MEDIUM
+
+    def test_unrelated_successful_sources_do_not_raise_inference(self):
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Cloudflare",),
+                evidence=(
+                    EvidenceRecord(
+                        source_type="CNAME",
+                        raw_value="edge.cloudflare.net",
+                        rule_name="Cloudflare",
+                        slug="cloudflare",
+                    ),
+                ),
+            ),
+            SourceResult(
+                source_name="other",
+                detected_services=("Slack",),
+                evidence=(
+                    EvidenceRecord(
+                        source_type="TXT",
+                        raw_value="slack-verification=123",
+                        rule_name="Slack",
+                        slug="slack",
+                    ),
+                ),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.LOW
+
+    def test_two_sources_supporting_same_slug_are_medium(self):
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Google Workspace",),
+                detected_slugs=("google-workspace",),
+            ),
+            SourceResult(
+                source_name="google_identity",
+                detected_services=("Google Workspace",),
+                detected_slugs=("google-workspace",),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.MEDIUM
+
+    def test_same_tenant_id_from_two_sources_is_medium(self):
+        results = [
+            SourceResult(source_name="source_a", tenant_id="tid"),
+            SourceResult(source_name="source_b", tenant_id="tid"),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.MEDIUM
+
+    def test_government_m365_evidence_corroborates_oidc_tenant(self):
+        results = [
+            SourceResult(source_name="oidc_discovery", tenant_id="tid"),
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Microsoft 365 (US Government cloud)",),
+                detected_slugs=("microsoft365-gov",),
+            ),
+        ]
+
+        assert compute_inference_confidence(results) == ConfidenceLevel.HIGH
+
     def test_single_source_no_tenant_id(self):
         results = [
             SourceResult(source_name="dns_records", detected_services=("svc",)),
         ]
-        conf = compute_inference_confidence(results)
-        assert conf in (ConfidenceLevel.LOW, ConfidenceLevel.MEDIUM)
+        assert compute_inference_confidence(results) == ConfidenceLevel.LOW
 
     def test_empty_results(self):
         assert compute_inference_confidence([]) == ConfidenceLevel.LOW

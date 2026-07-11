@@ -170,8 +170,8 @@ class TestMergeKeepsDmarcTagsSourceBound:
 class TestConfidenceReflectsSourceAgreement:
     """Property 14: Confidence level reflects source agreement.
 
-    - If exactly one result has data, compute_confidence should return MEDIUM
-    - If two or more results have consistent tenant_id values, should return HIGH
+    - If exactly one source has a tenant ID, compute_confidence should return MEDIUM
+    - If two or more independent sources agree on a tenant ID, should return HIGH
     - If results have conflicting tenant_id values, should return LOW
 
     **Validates: Requirements 10.1, 10.2, 10.3, 10.4**
@@ -205,6 +205,14 @@ class TestConfidenceReflectsSourceAgreement:
         ]
         assert compute_confidence(results) == (ConfidenceLevel.HIGH, False)
 
+    def test_duplicate_results_from_one_source_are_not_independent(self):
+        results = [
+            SourceResult(source_name="oidc_discovery", tenant_id="tid"),
+            SourceResult(source_name="oidc_discovery", tenant_id="tid"),
+        ]
+
+        assert compute_confidence(results) == (ConfidenceLevel.MEDIUM, False)
+
     @given(
         uuid1=uuid_str,
         uuid2=uuid_str,
@@ -236,13 +244,72 @@ class TestConfidenceReflectsSourceAgreement:
         assert confidence == ConfidenceLevel.LOW
         assert not conflict
 
+    def test_unrelated_display_name_does_not_corroborate_m365_tenant(self):
+        results = [
+            SourceResult(source_name="oidc_discovery", tenant_id="tid"),
+            SourceResult(
+                source_name="other",
+                display_name="Unrelated service",
+                detected_services=("Cloudflare",),
+                detected_slugs=("cloudflare",),
+            ),
+        ]
+
+        assert compute_confidence(results) == (ConfidenceLevel.MEDIUM, False)
+
+    def test_failed_m365_result_does_not_corroborate_tenant(self):
+        results = [
+            SourceResult(source_name="oidc_discovery", tenant_id="tid"),
+            SourceResult(
+                source_name="user_realm",
+                m365_detected=True,
+                detected_services=("Microsoft 365",),
+                detected_slugs=("microsoft365",),
+                error="upstream response was invalid",
+            ),
+        ]
+
+        assert compute_confidence(results) == (ConfidenceLevel.MEDIUM, False)
+
+    def test_failed_service_results_do_not_raise_non_tenant_confidence(self):
+        results = [
+            SourceResult(
+                source_name=source_name,
+                detected_services=("Service A", "Service B", "Service C", "Service D"),
+                error="source failed",
+            )
+            for source_name in ("dns_records", "certificate_transparency")
+        ]
+
+        assert compute_confidence(results) == (ConfidenceLevel.LOW, False)
+
+    def test_duplicate_service_results_from_one_source_count_once(self):
+        result = SourceResult(source_name="dns_records", detected_services=("Cloudflare",))
+
+        assert compute_confidence([result, result]) == (ConfidenceLevel.LOW, False)
+
+    def test_two_sources_with_eight_distinct_services_are_high_confidence(self):
+        results = [
+            SourceResult(
+                source_name="dns_records",
+                detected_services=("Service A", "Service B", "Service C", "Service D"),
+            ),
+            SourceResult(
+                source_name="certificate_transparency",
+                detected_services=("Service E", "Service F", "Service G", "Service H"),
+            ),
+        ]
+
+        assert compute_confidence(results) == (ConfidenceLevel.HIGH, False)
+
 
 class TestSourcesFieldTracksContributors:
     """Property 15: Sources field tracks contributing sources.
 
     For any list of SourceResult objects passed to merge_results, the
     resulting TenantInfo.sources tuple should contain exactly the
-    source_name values from results where is_success == True.
+    distinct source_name values from error-free results where is_success is
+    true.
 
     **Validates: Requirements 6.5**
     """
@@ -255,8 +322,7 @@ class TestSourcesFieldTracksContributors:
     )
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_sources_contains_only_successful_results(self, uuid1, name1, name2, domain):
-        """sources tuple should contain source_names only from results
-        where is_success is True."""
+        """sources contains names from error-free results with useful data."""
         assume(name1 != name2)
 
         results = [
@@ -294,8 +360,7 @@ class TestSourcesFieldTracksContributors:
     )
     @settings(max_examples=100, suppress_health_check=[HealthCheck.too_slow])
     def test_m365_detected_counts_as_success(self, uuid1, name1, name2, domain):
-        """A result with m365_detected=True but no tenant_id should still
-        appear in sources since is_success is True."""
+        """An error-free M365 detection without a tenant ID still contributes."""
         assume(name1 != name2)
 
         results = [

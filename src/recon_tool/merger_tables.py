@@ -8,6 +8,16 @@ historical ``_NAME`` alias so internal callers and tests are unchanged.
 
 from __future__ import annotations
 
+# Variant-to-product relationships shared by display deduplication and
+# claim-level confidence scoring. The scoring layer deliberately excludes
+# google-site because site verification alone does not establish Workspace.
+VARIANT_SLUG_PARENTS: dict[str, str] = {
+    "google-managed": "google-workspace",
+    "google-federated": "google-workspace",
+    "google-site": "google-workspace",
+    "google-workspace-modules": "google-workspace",
+}
+
 # Gateway slugs — MX-detected slugs that represent email security gateways
 # rather than primary email providers. Shared with insights.py.
 GATEWAY_SLUGS: frozenset[str] = frozenset(
