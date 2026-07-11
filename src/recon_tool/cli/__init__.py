@@ -148,12 +148,15 @@ def _debug_callback(value: bool) -> None:
     if value:
         import logging
 
-        logger = logging.getLogger("recon")
-        if not logger.handlers:
-            handler = logging.StreamHandler()
-            handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
-            logger.addHandler(handler)
-        logger.setLevel(logging.DEBUG)
+        for namespace in ("recon", "recon_tool"):
+            logger = logging.getLogger(namespace)
+            if not any(handler.get_name() == "recon-cli-debug" for handler in logger.handlers):
+                handler = logging.StreamHandler()
+                handler.set_name("recon-cli-debug")
+                handler.setFormatter(logging.Formatter("%(levelname)s %(name)s: %(message)s"))
+                logger.addHandler(handler)
+            logger.setLevel(logging.DEBUG)
+            logger.propagate = False
 
 
 def _confidence_mode_callback(value: str) -> str:
