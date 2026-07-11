@@ -16,9 +16,9 @@ import typer
 from rich.markup import escape
 
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
+from recon_tool.cli.shared import raise_lookup_error
 from recon_tool.exit_codes import (
     EXIT_INTERNAL,
-    EXIT_NO_DATA,
     EXIT_VALIDATION,
 )
 from recon_tool.formatter import get_console, get_err_console
@@ -106,8 +106,7 @@ async def discover(
     try:
         info, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
     except ReconLookupError as exc:
-        render_error(str(exc))
-        raise typer.Exit(code=EXIT_NO_DATA) from None
+        raise_lookup_error(exc, domain=validated)
     except Exception as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_INTERNAL) from None

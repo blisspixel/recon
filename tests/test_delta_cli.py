@@ -16,7 +16,7 @@ from typer.testing import CliRunner
 
 from recon_tool.cache import cache_put
 from recon_tool.cli import app
-from recon_tool.models import ConfidenceLevel, TenantInfo
+from recon_tool.models import ConfidenceLevel, ReconLookupError, TenantInfo
 
 runner = CliRunner()
 
@@ -80,3 +80,18 @@ class TestDeltaCLI:
         # The delta panel should mention the added/removed services
         out = result.output.lower()
         assert "slack" in out or "google workspace" in out
+
+    def test_delta_timeout_preserves_failure_and_exits_4(self, tmp_recon_home: Path) -> None:
+        cache_put("contoso.com", _tenant("contoso.com"))
+        error = ReconLookupError(
+            domain="contoso.com",
+            message="Resolution timed out after 5s for contoso.com",
+            error_type="timeout",
+        )
+
+        with patch("recon_tool.resolver.resolve_tenant", new=AsyncMock(side_effect=error)):
+            result = runner.invoke(app, ["delta", "contoso.com", "--timeout", "5"])
+
+        assert result.exit_code == 4
+        assert "Resolution timed out after 5s for contoso.com" in result.stderr
+        assert "No information found" not in result.stderr

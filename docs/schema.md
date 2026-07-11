@@ -92,8 +92,12 @@ Notes for scripters:
 - Codes `2`, `3`, and `4` are emitted deliberately by the lookup and delta
   paths; `1` is the general fallback; `0` is success. `recon delta` and
   `recon <domain> --compare <file>` follow the same contract.
-- On `2` and `3` the `--json` modes write no JSON to stdout, so a consumer
-  should check the exit code before parsing.
+- For a single-domain lookup, only `error_type="no_data"` maps to `3`.
+  Aggregate timeout, `all_sources_failed`, and unknown structured resolver
+  failures are caught pipeline failures and map to `4`.
+- On `2`, `3`, and `4` the `--json` modes write no JSON to stdout, so a consumer
+  should check the exit code before parsing. On success, `--verbose` diagnostics
+  use stderr and do not prefix the JSON payload.
 - `recon fingerprints check` (the bundled fingerprint validator) returns `0`
   when every entry passes, `1` when any entry fails or a duplicate slug is
   found, and `2` when the path is missing or holds no YAML.

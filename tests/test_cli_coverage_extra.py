@@ -113,8 +113,8 @@ class TestDoctorFix:
 
 
 class TestCliLookupErrorPaths:
-    def test_lookup_with_nonexistent_domain_exits_3(self) -> None:
-        """When the resolver raises ReconLookupError, CLI exits with code 3."""
+    def test_lookup_with_all_sources_failed_exits_4(self) -> None:
+        """A caught all-source pipeline failure exits with code 4."""
 
         async def fake_resolve(*args: object, **kwargs: object):
             raise ReconLookupError(
@@ -129,7 +129,7 @@ class TestCliLookupErrorPaths:
                 app,
                 ["lookup", "does-not-exist.example", "--no-cache"],
             )
-        assert result.exit_code == 3
+        assert result.exit_code == 4
 
     def test_lookup_with_internal_error_exits_4(self) -> None:
         """Generic exceptions during resolve produce exit code 4."""
