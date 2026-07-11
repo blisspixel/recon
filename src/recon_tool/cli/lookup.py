@@ -16,10 +16,9 @@ import typer
 
 from recon_tool.cli.options import LookupOperationMode, LookupOptions
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
-from recon_tool.cli.shared import lookup_validate
+from recon_tool.cli.shared import lookup_validate, raise_lookup_error
 from recon_tool.exit_codes import (
     EXIT_INTERNAL,
-    EXIT_NO_DATA,
     EXIT_VALIDATION,
 )
 from recon_tool.formatter import get_console, get_err_console
@@ -248,7 +247,7 @@ async def _lookup_compare(
     from pathlib import Path as _Path
 
     from recon_tool.delta import compute_delta, load_previous
-    from recon_tool.formatter import format_delta_json, render_delta_panel, render_error, render_warning
+    from recon_tool.formatter import format_delta_json, render_delta_panel, render_error
     from recon_tool.models import ReconLookupError
 
     compare_file = options.compare_file
@@ -272,8 +271,7 @@ async def _lookup_compare(
             active_probes=options.active_probes,
         )
     except ReconLookupError as exc:
-        render_warning(domain, exc)
-        raise typer.Exit(code=EXIT_NO_DATA) from None
+        raise_lookup_error(exc, domain=domain)
     except Exception as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_INTERNAL) from None
@@ -351,7 +349,7 @@ async def _lookup_exposure(
 ) -> None:
     """Resolve (cache-aware) and render the exposure score (`--exposure`)."""
     from recon_tool.exposure import assess_exposure_from_info
-    from recon_tool.formatter import format_exposure_json, render_error, render_exposure_panel, render_warning
+    from recon_tool.formatter import format_exposure_json, render_error, render_exposure_panel
     from recon_tool.models import ReconLookupError
 
     try:
@@ -371,8 +369,7 @@ async def _lookup_exposure(
         else:
             console.print(render_exposure_panel(assessment))
     except ReconLookupError as exc:
-        render_warning(domain, exc)
-        raise typer.Exit(code=EXIT_NO_DATA) from None
+        raise_lookup_error(exc, domain=domain)
     except Exception as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_INTERNAL) from None
@@ -386,7 +383,7 @@ async def _lookup_gaps(
 ) -> None:
     """Resolve (cache-aware) and render the detection-gap report (`--gaps`)."""
     from recon_tool.exposure import find_gaps_from_info
-    from recon_tool.formatter import format_gaps_json, render_error, render_gaps_panel, render_warning
+    from recon_tool.formatter import format_gaps_json, render_error, render_gaps_panel
     from recon_tool.models import ReconLookupError
 
     try:
@@ -406,8 +403,7 @@ async def _lookup_gaps(
         else:
             console.print(render_gaps_panel(report))
     except ReconLookupError as exc:
-        render_warning(domain, exc)
-        raise typer.Exit(code=EXIT_NO_DATA) from None
+        raise_lookup_error(exc, domain=domain)
     except Exception as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_INTERNAL) from None
@@ -759,7 +755,7 @@ async def _lookup_standard(
     options: LookupOptions,
 ) -> None:
     """The default lookup path: resolve, fuse, then emit DAG / JSON / Markdown / panel."""
-    from recon_tool.formatter import render_error, render_verbose_sources, render_warning
+    from recon_tool.formatter import render_error, render_verbose_sources
     from recon_tool.models import ReconLookupError
 
     try:
@@ -772,7 +768,10 @@ async def _lookup_standard(
         if options.verbose:
             from recon_tool.collection_view import collection_observable_results
 
-            render_verbose_sources(collection_observable_results(results))
+            render_verbose_sources(
+                collection_observable_results(results),
+                console=get_err_console(),
+            )
 
         observations = _lookup_compute_observations(info, options.profile_name, options.show_posture)
 
@@ -822,8 +821,7 @@ async def _lookup_standard(
         # caught below, reclassified to EXIT_INTERNAL, and print a bare "Exit".
         raise
     except ReconLookupError as exc:
-        render_warning(domain, exc)
-        raise typer.Exit(code=EXIT_NO_DATA) from None
+        raise_lookup_error(exc, domain=domain)
     except Exception as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_INTERNAL) from None

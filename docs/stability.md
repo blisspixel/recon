@@ -43,7 +43,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--json` | Stable | JSON output contract in [`schema.md`](schema.md). |
 | `--md` | Stable | Markdown H2 section structure is stable; prose is not. |
 | `--full` / `-f` | Stable | Verbose + all services + all domains + posture. |
-| `--verbose` / `-v` | Stable | Dual confidence + detection scores + evidence chain. |
+| `--verbose` / `-v` | Stable | Expanded evidence, confidence and detection detail, plus per-source status on stderr. |
 | `--explain` | Stable | Full reasoning + evidence provenance DAG. |
 | `--services` / `-s`, `--domains` / `-d` | Stable | Progressive disclosure toggles. |
 | `--sources` | Stable | Per-source resolution status table. |
@@ -66,6 +66,12 @@ For the JSON output contract in full field-by-field detail, see
 | 2 | Input validation error (bad domain format, missing file) | Stable |
 | 3 | No data found | Stable |
 | 4 | Internal / network error | Stable |
+
+For single-domain commands, code 3 is reserved for a completed collection with
+`error_type="no_data"`. Aggregate timeout and all-source pipeline failure use
+code 4. Human diagnostics use stderr and never prefix successful JSON,
+Markdown, or plain stdout. Verbose source rows distinguish `match`, `no match`,
+and `error` without relying on color alone.
 
 ### MCP tools
 

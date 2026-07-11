@@ -57,6 +57,16 @@ A script can branch on the outcome without parsing output (full contract in
 | 3 | `EXIT_NO_DATA` | Target resolved but no information available |
 | 4 | `EXIT_INTERNAL` | recon classified its own caught network/pipeline failure |
 
+For single-domain lookup paths, only a structured resolver error with
+`error_type="no_data"` maps to exit 3. Aggregate timeout,
+`all_sources_failed`, and unknown structured resolver failures preserve their
+concrete message and map to exit 4. Successful JSON, Markdown, and plain
+payloads are written alone to stdout. Human progress and `--verbose` source
+diagnostics use stderr, so a successful structured stdout stream can be parsed
+without removing presentation lines. Verbose source diagnostics use explicit
+`match`, `no match`, and `error` states; a clean negative observation is not
+styled or labeled as a transport failure.
+
 The `recon doctor` health check follows the same convention: it exits 0 when
 every check passes or only optional enrichment (for example crt.sh) is degraded,
 and exits 1 when a core check fails, so a CI or monitoring job can gate on
@@ -67,9 +77,11 @@ validated (package missing, server import failure, or no tools registered).
 ## Cache and partial-result semantics
 
 - **Disk caches never raise to the caller.** Any read failure (missing, stale,
-  corrupt, oversized, or deeply-nested-JSON) degrades to a clean miss. TenantInfo
-  cache TTL is 24 h; the CT-subdomain cache TTL is 30 days; both evict lazily by
-  mtime. The TenantInfo write is atomic (`mkstemp` + `os.replace`).
+  corrupt, oversized, or deeply-nested-JSON) degrades to a clean miss. Normal
+  TenantInfo reads use a 24 h TTL; `recon delta` may retain the same entry for up
+  to 30 days as its comparison baseline. The CT-subdomain cache TTL is 30 days.
+  All evict lazily by mtime. The TenantInfo write is atomic (`mkstemp` +
+  `os.replace`).
 - **Partial / degraded results are honored, not dropped.** `all_sources_failed`
   is raised only when *every* source errored and no tenant was found; if any
   source returns a clean result (even with no services), it is kept as a sparse

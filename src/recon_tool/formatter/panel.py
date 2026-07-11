@@ -1567,16 +1567,16 @@ def _curate_insights(insights: tuple[str, ...]) -> list[str]:
     # distinct information — no dedup needed here.
 
 
-def render_verbose_sources(results: list[SourceResult]) -> None:
+def render_verbose_sources(results: list[SourceResult], *, console: Console | None = None) -> None:
     """Print per-source status lines to console."""
-    c = get_console()
+    c = console or get_console()
     for result in results:
-        if is_confidence_contributor(result):
-            description = escape(strip_control_chars(_source_success_description(result)))
-            c.print(f"  [green]✓[/green] {result.source_name} — {description}")
-        else:
-            error_msg = escape(strip_control_chars(result.error or "no data returned"))
-            c.print(f"  [red]✗[/red] {result.source_name} — {error_msg}")
+        success = is_confidence_contributor(result)
+        soft_miss = not success and _is_soft_miss(result.error)
+        marker = "[green]match[/green]" if success else ("[dim]no match[/dim]" if soft_miss else "[red]error[/red]")
+        detail = _source_success_description(result) if success else result.error or "no match"
+        safe_detail = escape(strip_control_chars(detail))
+        c.print(f"  {marker} {result.source_name}: {safe_detail}")
 
 
 def _source_success_description(result: SourceResult) -> str:

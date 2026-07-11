@@ -62,6 +62,15 @@ class TestHelp:
         assert "authoritative DNS may observe the resulting traffic" in collapsed
         assert "MTA-STS policy fetch is the only default target-owned HTTP/application request" in collapsed
 
+    def test_welcome_describes_diagnostic_and_posture_flags_accurately(self) -> None:
+        result = runner.invoke(app, [])
+
+        assert result.exit_code == 0
+        assert "--verbose" in result.output
+        assert "expanded evidence and per-source status" in result.output
+        assert "--posture" in result.output
+        assert "posture observations" in result.output
+
     def test_version_flag(self) -> None:
         from recon_tool.cli import version_callback
 
@@ -184,15 +193,15 @@ class TestErrors:
         assert result.exit_code == 2
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
-    def test_not_found(self, mock_resolve) -> None:
+    def test_all_sources_failed(self, mock_resolve) -> None:
         mock_resolve.side_effect = ReconLookupError(
             domain="unknown.com",
             message="No tenant found",
             error_type="all_sources_failed",
         )
         result = runner.invoke(app, ["lookup", "unknown.com"])
-        assert result.exit_code == 3
-        assert "unknown.com" in result.output
+        assert result.exit_code == 4
+        assert "No tenant found" in result.output
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_unexpected_error(self, mock_resolve) -> None:

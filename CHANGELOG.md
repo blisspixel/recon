@@ -104,6 +104,16 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Kept single-domain output and failure channels machine-safe and truthful.
+  `--full --json` and `--verbose --json` now keep human source diagnostics on
+  stderr instead of prefixing an otherwise successful JSON payload. Structured
+  resolver timeouts and all-source failures preserve their concrete message and
+  exit 4 as caught pipeline failures; exit 3 is reserved for completed
+  collection with no reportable data. Verbose source rows now distinguish
+  `match`, `no match`, and `error`, so a clean negative observation is not
+  painted as a failed source. The welcome banner and stable flag docs describe
+  `--verbose` as expanded evidence and per-source status and show `--posture`
+  separately.
 - Kept apex claims scoped to apex evidence. Related-domain enrichment can add
   inventory observations, but its evidence, failures, and declarative controls
   no longer change the queried apex's posture, confidence, or email-control

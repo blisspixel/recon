@@ -9,10 +9,13 @@ them back to their historical `_name` where convenient.
 
 from __future__ import annotations
 
+from typing import Never
+
 import typer
 
 from recon_tool.cli.options import LookupOptions
-from recon_tool.exit_codes import EXIT_VALIDATION
+from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_NO_DATA, EXIT_VALIDATION
+from recon_tool.models import ReconLookupError
 
 
 def fmt_exc(exc: BaseException) -> str:
@@ -22,6 +25,24 @@ def fmt_exc(exc: BaseException) -> str:
     to render as an empty failure detail.
     """
     return str(exc) or type(exc).__name__
+
+
+def raise_lookup_error(error: ReconLookupError, *, domain: str | None = None) -> Never:
+    """Render one structured resolver failure and raise its CLI exit.
+
+    ``no_data`` means collection completed but produced no reportable data.
+    Timeouts, all-source failures, and unknown structured failures mean the
+    collection pipeline did not complete and use the documented internal-error
+    exit instead of being mislabeled as an empty observation.
+    """
+    from recon_tool.formatter import render_error, render_warning
+
+    if error.error_type == "no_data":
+        render_warning(domain or error.domain, error)
+        raise typer.Exit(code=EXIT_NO_DATA) from None
+
+    render_error(fmt_exc(error))
+    raise typer.Exit(code=EXIT_INTERNAL) from None
 
 
 def lookup_validate(
