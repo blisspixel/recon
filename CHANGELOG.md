@@ -104,6 +104,16 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Made interactive diagnostics quieter and more dependable. `--debug` now
+  enables both owned logger namespaces, installs one identifiable CLI stderr
+  handler per namespace without duplicating it on repeat configuration, and
+  does not leak records into host root handlers. Explicit direct handlers
+  installed by an embedding host remain under that host's control. Lookup
+  progress uses one deterministic, outcome-neutral message instead of rotating
+  through phases that may not be running; chain mode has its own
+  operation-specific label. The default panel now wraps its passive-DNS
+  limitation cue within the 78-column content width with stable continuation
+  indentation.
 - Kept single-domain output and failure channels machine-safe and truthful.
   `--full --json` and `--verbose --json` now keep human source diagnostics on
   stderr instead of prefixing an otherwise successful JSON payload. Structured

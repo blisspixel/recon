@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from recon_tool.cli import _debug_callback, app, version_callback
@@ -51,13 +52,61 @@ class TestVersionAndDebug:
         """_debug_callback(False) should not raise."""
         _debug_callback(False)
 
-    def test_debug_true_enables_logging(self):
-        """_debug_callback(True) should set debug level."""
+    def test_debug_true_enables_both_package_namespaces(
+        self,
+        capsys: pytest.CaptureFixture[str],
+    ) -> None:
+        """--debug must include both logger namespaces without duplicates."""
         import logging
 
-        _debug_callback(True)
-        logger = logging.getLogger("recon")
-        assert logger.level == logging.DEBUG
+        loggers = [logging.getLogger(name) for name in ("recon", "recon_tool")]
+        root = logging.getLogger()
+        snapshots = [(logger.level, list(logger.handlers), logger.propagate) for logger in loggers]
+        host_handlers = [logging.NullHandler() for _logger in loggers]
+        root_records: list[logging.LogRecord] = []
+
+        class _RootCapture(logging.Handler):
+            def emit(self, record: logging.LogRecord) -> None:
+                root_records.append(record)
+
+        root_handler = _RootCapture()
+        try:
+            for logger, host_handler in zip(loggers, host_handlers, strict=True):
+                logger.handlers.clear()
+                logger.addHandler(host_handler)
+                logger.setLevel(logging.NOTSET)
+                logger.propagate = True
+            root.addHandler(root_handler)
+
+            _debug_callback(True)
+            first_counts = [len(logger.handlers) for logger in loggers]
+            _debug_callback(True)
+
+            assert all(logger.level == logging.DEBUG for logger in loggers)
+            assert all(not logger.propagate for logger in loggers)
+            assert first_counts == [2, 2]
+            assert [len(logger.handlers) for logger in loggers] == first_counts
+            assert all(
+                sum(handler.get_name() == "recon-cli-debug" for handler in logger.handlers) == 1
+                for logger in loggers
+            )
+            assert all(
+                host_handler in logger.handlers
+                for logger, host_handler in zip(loggers, host_handlers, strict=True)
+            )
+
+            logging.getLogger("recon").debug("core diagnostic")
+            logging.getLogger("recon_tool.bayesian").debug("package diagnostic")
+            captured = capsys.readouterr().err
+            assert captured.count("core diagnostic") == 1
+            assert captured.count("package diagnostic") == 1
+            assert root_records == []
+        finally:
+            root.removeHandler(root_handler)
+            for logger, (level, handlers, propagate) in zip(loggers, snapshots, strict=True):
+                logger.handlers[:] = handlers
+                logger.setLevel(level)
+                logger.propagate = propagate
 
 
 class TestLookupFlags:

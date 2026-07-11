@@ -65,11 +65,17 @@ class TestDebugCallback:
     def test_debug_true_configures_logger(self) -> None:
         import logging
 
-        _debug_callback(True)
-        logger = logging.getLogger("recon")
-        assert logger.level == logging.DEBUG
-        # Reset to WARNING for test isolation
-        logger.setLevel(logging.WARNING)
+        loggers = [logging.getLogger(name) for name in ("recon", "recon_tool")]
+        snapshots = [(logger.level, list(logger.handlers), logger.propagate) for logger in loggers]
+        try:
+            _debug_callback(True)
+            assert all(logger.level == logging.DEBUG for logger in loggers)
+            assert all(not logger.propagate for logger in loggers)
+        finally:
+            for logger, (level, handlers, propagate) in zip(loggers, snapshots, strict=True):
+                logger.handlers[:] = handlers
+                logger.setLevel(level)
+                logger.propagate = propagate
 
 
 class TestDoctorFix:
