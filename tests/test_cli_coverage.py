@@ -113,8 +113,13 @@ class TestLookupFlags:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_services_flag(self, mock_resolve):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--services"])
-        assert result.exit_code == 0
+        default = runner.invoke(app, ["lookup", "contoso.com", "--no-cache"])
+        compatibility = runner.invoke(app, ["lookup", "contoso.com", "--services", "--no-cache"])
+
+        assert default.exit_code == 0
+        assert compatibility.exit_code == 0
+        assert compatibility.output == default.output
+        assert mock_resolve.await_count == 2
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_domains_flag(self, mock_resolve):

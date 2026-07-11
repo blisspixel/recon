@@ -156,6 +156,12 @@ recon contoso.com --json
 recon contoso.com --md
 ```
 
+Services are already present in the compact default panel. `--verbose` keeps
+that summary and adds certificate and evidence detail plus per-source status on
+stderr. `--full` adds the verbose detail, all known domains, and posture
+observations. `--services` remains accepted for compatibility; new
+workflows do not need it.
+
 Use `--explain` when a claim matters. It shows the evidence chain behind the
 result.
 

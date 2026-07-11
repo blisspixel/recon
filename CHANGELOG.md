@@ -104,6 +104,17 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Made human service disclosure additive and documented its stable behavior.
+  Default, verbose, and full panels now retain one compact Email row containing
+  observed provider, gateway, and principal control facts before any secondary
+  email indicators. Verbose and full add detail without removing those facts.
+  Possible downstream providers retain their evidence-role qualifier, and MX
+  gateway fingerprint aliases collapse into the canonical topology label using
+  only collection-observable evidence. A degraded MX channel therefore cannot
+  hide or overstate a surviving TXT indicator.
+  `--services` remains accepted for compatibility because Services are
+  already shown by default, and help, onboarding, stability guidance, and the
+  full-panel golden now state and test that contract.
 - Made interactive diagnostics quieter and more dependable. `--debug` now
   enables both owned logger namespaces, installs one identifiable CLI stderr
   handler per namespace without duplicating it on repeat configuration, and
