@@ -67,6 +67,16 @@ without removing presentation lines. Verbose source diagnostics use explicit
 `match`, `no match`, and `error` states; a clean negative observation is not
 styled or labeled as a transport failure.
 
+Interactive cache-miss lookups use one deterministic, outcome-neutral progress
+message; chain resolution uses a separate label for that selected operation.
+Progress text does not claim that an individual collector, inference pass, or
+posture analysis is currently running. `--debug` enables diagnostics from both
+owned logger namespaces (`recon` and `recon_tool`), installs one CLI stderr
+handler per namespace without adding another on repeat configuration, and
+prevents propagation to host root handlers. Direct handlers explicitly
+installed on an owned or child logger by an embedding host are preserved and
+remain the host's responsibility.
+
 The `recon doctor` health check follows the same convention: it exits 0 when
 every check passes or only optional enrichment (for example crt.sh) is degraded,
 and exits 1 when a core check fails, so a CI or monitoring job can gate on

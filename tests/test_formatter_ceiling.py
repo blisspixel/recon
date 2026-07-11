@@ -108,7 +108,7 @@ class TestCeilingFires:
             "this is the surprising case the v1.9.9 footer was added for"
         )
         assert "Passive DNS surfaces" in out
-        assert "not appear in public DNS records" in out
+        assert "not appear in public DNS records" in " ".join(out.split())
 
 
 class TestCeilingSuppressed:

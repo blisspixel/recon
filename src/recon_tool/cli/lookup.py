@@ -8,7 +8,6 @@ facade. Imports the shared cli helpers / formatter; never imports cli.py.
 
 from __future__ import annotations
 
-import asyncio
 import json
 from typing import Any
 
@@ -23,68 +22,8 @@ from recon_tool.exit_codes import (
 )
 from recon_tool.formatter import get_console, get_err_console
 
-# Spinner messages. A lookup shuffles these and rotates through them while
-# it waits, so the CLI feels alive without being gimmicky. They are grouped
-# by what recon is actually doing (DNS, CT, identity endpoints, the
-# inference layer, posture) plus a few that wink at the passive-only ethos;
-# all stay honest about the method.
-_STATUS_MESSAGES = (
-    # DNS and records
-    "Querying public DNS records...",
-    "Following CNAME breadcrumbs...",
-    "Letting DNS tell its side of the story...",
-    "Reading the TXT record tea leaves...",
-    "Asking the MX records who handles the mail...",
-    "Checking the mail trail...",
-    "Untangling the SPF include chain...",
-    "Reading DMARC policy, strictly as published...",
-    "Checking identity hints in the open...",
-    # Certificate transparency
-    "Sifting certificate transparency logs...",
-    "Reading certificate history like a lab notebook...",
-    "Clustering SAN sets into communities...",
-    "Watching for certificate issuance bursts...",
-    "Sorting yesterday's certificates from today's clues...",
-    # Identity endpoints
-    "Checking Microsoft's public tenant registry...",
-    "Asking Google Workspace, no credentials required...",
-    "Knocking politely on the OIDC discovery endpoint...",
-    "Comparing tenant hints without crossing any lines...",
-    # Fingerprinting / stack
-    "Fingerprinting the SaaS stack...",
-    "Looking for quiet SaaS fingerprints...",
-    "Matching slugs against the catalog...",
-    "Assembling the tech stack mosaic...",
-    "Tracing domain verification trails...",
-    "Turning public records into a careful sketch...",
-    "Cataloging breadcrumbs without stepping on anything...",
-    # The inference layer (a wink at the Bayesian core)
-    "Updating priors, declining to overclaim...",
-    "Propagating beliefs through the network...",
-    "Widening the interval where evidence is thin...",
-    "Letting absent evidence stay absent...",
-    "Computing model-relative uncertainty bands...",
-    "Counting clues before drawing conclusions...",
-    "Keeping the confidence meter honest...",
-    "Letting uncertainty keep its seat at the table...",
-    # Posture and footprint
-    "Scoring the email security posture...",
-    "Mapping the organizational footprint...",
-    "Extracting signal from the public noise...",
-    "Building a public-footprint map...",
-    "Separating strong signals from hallway echoes...",
-    # Passive-only ethos
-    "No credentials were harmed in this lookup...",
-    "Strictly passive; keeping the footprint light...",
-    "Reading only what was left out in the open...",
-    "Observing from a respectful distance...",
-    "Staying on the sidewalk, reading the signs...",
-    "Taking notes from the public record...",
-)
-
-
-# How long each spinner message lingers before the next one rotates in.
-_STATUS_ROTATE_SECONDS = 2.5
+_STATUS_MESSAGE = "Collecting and correlating public evidence..."
+_CHAIN_STATUS_MESSAGE = "Following related-domain evidence..."
 
 
 def _build_explanations(
@@ -176,35 +115,13 @@ async def _resolve_with_spinner(
 
     coro = resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct, active_probes=active_probes)
     # Spinner goes to stderr so it never contaminates the stdout data stream.
-    return await _run_with_rotating_status(get_err_console(), coro)
+    return await _run_with_status(get_err_console(), coro)
 
 
-async def _run_with_rotating_status(console: Any, coro: Any) -> Any:
-    """Await ``coro`` while rotating spinner messages, so a slow lookup shows
-    a shuffled sequence of status lines rather than one static message.
-
-    The rotation is purely cosmetic: the awaited coroutine runs to completion
-    regardless, and any exception it raises propagates unchanged. Falls back to
-    a single static status if anything about the rotation goes wrong, so the
-    spinner can never break a lookup.
-    """
-    import random
-
-    order = list(_STATUS_MESSAGES)
-    random.shuffle(order)
-    task = asyncio.ensure_future(coro)
-    with console.status(order[0]) as status:
-        idx = 0
-        while True:
-            try:
-                return await asyncio.wait_for(asyncio.shield(task), timeout=_STATUS_ROTATE_SECONDS)
-            except TimeoutError:
-                # The lookup is still running; advance to the next message.
-                idx += 1
-                try:
-                    status.update(order[idx % len(order)])
-                except Exception:  # a status-update failure must not abort the lookup
-                    return await task
+async def _run_with_status(console: Any, coro: Any) -> Any:
+    """Await ``coro`` under one outcome-neutral progress message."""
+    with console.status(_STATUS_MESSAGE):
+        return await coro
 
 
 async def _resolve_cached(
@@ -294,10 +211,7 @@ async def _lookup_chain(
 
     try:
         if not options.quiet:
-            import random
-
-            msg = random.choice(_STATUS_MESSAGES)  # noqa: S311
-            with get_err_console().status(msg):
+            with get_err_console().status(_CHAIN_STATUS_MESSAGE):
                 report = await chain_resolve(
                     validated,
                     depth=options.chain_depth,

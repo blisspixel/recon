@@ -946,16 +946,13 @@ def _render_passive_dns_ceiling(info: TenantInfo, show_domains: bool, categorize
         return None
     ceiling = Text()
     ceiling.append("Passive-DNS ceiling", style="bold")
-    ceiling.append("\n  ")
-    ceiling.append(
-        "Passive DNS surfaces what publishes externally. Server-side API consumption, internal workloads, and",
-        style="dim",
+    ceiling.append("\n")
+    message = (
+        "Passive DNS surfaces what publishes externally. Server-side API consumption, internal workloads, and "
+        "SaaS without DNS verification do not appear in public DNS records."
     )
-    ceiling.append("\n  ")
-    ceiling.append(
-        "SaaS without DNS verification do not appear in public DNS records.",
-        style="dim",
-    )
+    _append_wrapped_lines(ceiling, message, _PANEL_WIDTH - 2, "dim")
+    ceiling.rstrip()
     return ceiling
 
 
