@@ -129,14 +129,15 @@ _log_structured = _server_runtime.log_structured
 def domain_report(domain: str) -> str:
     """Generate a domain intelligence report.
 
-    Use this to get a comprehensive analysis of a company's email provider,
-    tech stack, email security posture, and infrastructure.
+    Use this to summarize public domain-control, email-routing, identity-response,
+    and infrastructure indicators with their observation limits.
     """
     # Strip control bytes so a crafted domain cannot inject newlines or
     # escape sequences into the rendered prompt the agent consumes.
     safe_domain = strip_control_chars(domain)
     return (
-        f"Look up {safe_domain} using the lookup_tenant tool with format='markdown', then summarize the key findings."
+        f"Look up {safe_domain} using lookup_tenant with format='markdown'. "
+        "Summarize only the role-scoped public observations and their limits."
     )
 
 

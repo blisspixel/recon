@@ -43,10 +43,10 @@ class TestLLRMath:
     """The surfaced LLR must equal the YAML's
     ``log(likelihood_present / likelihood_absent)`` for fired bindings."""
 
-    def test_m365_slug_llr_matches_hand_computation(self, network):
-        # microsoft365 binding on m365_tenant: likelihood [0.95, 0.03]
+    def test_m365_role_signal_llr_matches_hand_computation(self, network):
+        # role-scoped M365 binding on m365_tenant: likelihood [0.95, 0.03]
         # → LLR = log(0.95 / 0.03)
-        result = infer(network, ["microsoft365"], [], priors_override={})
+        result = infer(network, [], ["m365_tenant_observed"], priors_override={})
         m365 = next(p for p in result.posteriors if p.name == "m365_tenant")
         assert len(m365.evidence_ranked) == 1
         ec = m365.evidence_ranked[0]
@@ -56,13 +56,11 @@ class TestLLRMath:
             "single fired binding accounts for 100% of evidence influence"
         )
 
-    def test_entra_id_slug_llr_matches_hand_computation(self, network):
-        # entra-id binding on m365_tenant: likelihood [0.88, 0.02]
-        # → LLR = log(0.88 / 0.02) ≈ 3.784
-        result = infer(network, ["entra-id"], [], priors_override={})
-        m365 = next(p for p in result.posteriors if p.name == "m365_tenant")
-        ec = next(e for e in m365.evidence_ranked if e.name == "entra-id")
-        assert ec.llr == pytest.approx(math.log(0.88 / 0.02), abs=1e-3)
+    def test_okta_role_signal_llr_matches_hand_computation(self, network):
+        result = infer(network, [], ["okta_idp_observed"], priors_override={})
+        okta = next(p for p in result.posteriors if p.name == "okta_idp")
+        ec = next(e for e in okta.evidence_ranked if e.name == "okta_idp_observed")
+        assert ec.llr == pytest.approx(math.log(0.92 / 0.02), abs=1e-3)
 
     def test_dmarc_reject_signal_llr_matches_hand_computation(self, network):
         # dmarc_reject on email_security_policy_enforcing: [0.92, 0.04]
@@ -78,28 +76,24 @@ class TestRankingAndNormalization:
     sum to 100% per node."""
 
     def test_two_ungrouped_bindings_sorted_by_absolute_llr(self, network):
-        # cloudflare and fastly are ungrouped bindings on cdn_fronting, so both
-        # contribute and the influence ranking lists both, sorted by absolute LLR.
-        result = infer(network, ["cloudflare", "fastly"], [], priors_override={})
-        cdn = next(p for p in result.posteriors if p.name == "cdn_fronting")
-        assert len(cdn.evidence_ranked) == 2
-        assert abs(cdn.evidence_ranked[0].llr) >= abs(cdn.evidence_ranked[1].llr)
+        result = infer(network, [], ["dmarc_reject", "spf_strict"], priors_override={})
+        policy = next(p for p in result.posteriors if p.name == "email_security_policy_enforcing")
+        assert len(policy.evidence_ranked) == 2
+        assert abs(policy.evidence_ranked[0].llr) >= abs(policy.evidence_ranked[1].llr)
         # Influence percentages sum to 100% within rounding noise.
-        total = sum(e.influence_pct for e in cdn.evidence_ranked)
+        total = sum(e.influence_pct for e in policy.evidence_ranked)
         assert total == pytest.approx(100.0, abs=0.05)
 
-    def test_grouped_bindings_collapse_to_one_influence(self, network):
-        # CAL7: microsoft365 and entra-id share the m365_indicators group, so
-        # they are redundant readings of one fact. Only the strongest (entra-id)
-        # contributes to the posterior, so the influence ranking shows one entry
-        # at 100%, not two over-counted influences. evidence_used still lists both
-        # observed slugs.
-        result = infer(network, ["microsoft365", "entra-id"], [], priors_override={})
-        m365 = next(p for p in result.posteriors if p.name == "m365_tenant")
-        assert len(m365.evidence_ranked) == 1
-        assert m365.evidence_ranked[0].name == "entra-id"
-        assert m365.evidence_ranked[0].influence_pct == pytest.approx(100.0, abs=0.01)
-        assert set(m365.evidence_used) == {"slug:microsoft365", "slug:entra-id"}
+    def test_generic_vendor_slugs_do_not_create_role_influence(self, network):
+        generic = infer(network, ["microsoft365", "entra-id"], [], priors_override={})
+        generic_m365 = next(p for p in generic.posteriors if p.name == "m365_tenant")
+        assert generic_m365.evidence_ranked == ()
+
+        role = infer(network, [], ["m365_tenant_observed"], priors_override={})
+        role_m365 = next(p for p in role.posteriors if p.name == "m365_tenant")
+        assert len(role_m365.evidence_ranked) == 1
+        assert role_m365.evidence_ranked[0].name == "m365_tenant_observed"
+        assert role_m365.evidence_ranked[0].influence_pct == pytest.approx(100.0, abs=0.01)
 
     def test_ties_broken_deterministically_by_kind_then_name(self, network):
         # Two slugs at the same LLR would be hard to engineer from the
@@ -138,8 +132,8 @@ class TestSparseAndUnboundCases:
         # evidence_ranked regardless of what slugs fire elsewhere.
         result = infer(
             network,
-            ["microsoft365", "entra-id"],
-            ["dmarc_reject", "dkim_present", "spf_strict"],
+            [],
+            ["m365_tenant_observed", "dmarc_reject", "dkim_present", "spf_strict"],
             priors_override={},
         )
         node = next(p for p in result.posteriors if p.name == "email_security_modern_provider")
@@ -159,15 +153,14 @@ class TestRenderDagTextTop3:
         assert "Top influence" not in out
 
     def test_single_binding_uses_singular_header(self, network):
-        result = infer(network, ["microsoft365"], [], priors_override={})
+        result = infer(network, [], ["m365_tenant_observed"], priors_override={})
         out = render_dag_text(network, result, domain="contoso.com")
         # Singular header for the one-binding case.
         assert "**Top influence:**" in out
         assert "**Top influences (ranked" not in out
 
     def test_multi_binding_uses_plural_with_count(self, network):
-        # Two ungrouped cdn bindings both contribute → "(ranked, 2 fired)".
-        result = infer(network, ["cloudflare", "fastly"], [], priors_override={})
+        result = infer(network, [], ["dmarc_reject", "spf_strict"], priors_override={})
         out = render_dag_text(network, result, domain="contoso.com")
         assert "**Top influences (ranked, 2 fired):**" in out
 
@@ -197,7 +190,7 @@ class TestRenderDagTextTop3:
         assert sum(1 for line in lines if "% of evidence influence" in line) == 3
 
     def test_llr_appears_with_sign_and_two_decimals(self, network):
-        result = infer(network, ["microsoft365"], [], priors_override={})
+        result = infer(network, [], ["m365_tenant_observed"], priors_override={})
         out = render_dag_text(network, result, domain="contoso.com")
         # Format: "LLR +3.46" — signed, two-decimal.
         import re
@@ -205,7 +198,7 @@ class TestRenderDagTextTop3:
         assert re.search(r"LLR [+-]\d+\.\d{2}", out), "LLR must be signed with two decimal places"
 
     def test_influence_percentage_appears(self, network):
-        result = infer(network, ["microsoft365"], [], priors_override={})
+        result = infer(network, [], ["m365_tenant_observed"], priors_override={})
         out = render_dag_text(network, result, domain="contoso.com")
         assert "% of evidence influence" in out
 
@@ -215,14 +208,15 @@ class TestRenderDagDotTop3:
     non-AI visualisation users see the same data."""
 
     def test_dot_includes_top_influences_phrase_when_evidence_fires(self, network):
-        # Two ungrouped cdn bindings both contribute, so both appear in the label.
-        result = infer(network, ["cloudflare", "fastly"], [], priors_override={})
+        result = infer(network, [], ["dmarc_reject", "spf_strict"], priors_override={})
         out = render_dag_dot(network, result, domain="x")
-        cdn_lines = [line for line in out.splitlines() if '"cdn_fronting" [label=' in line]
-        assert len(cdn_lines) == 1
-        assert "top influences:" in cdn_lines[0]
-        assert "fastly" in cdn_lines[0]
-        assert "cloudflare" in cdn_lines[0]
+        policy_lines = [
+            line for line in out.splitlines() if '"email_security_policy_enforcing" [label=' in line
+        ]
+        assert len(policy_lines) == 1
+        assert "top influences:" in policy_lines[0]
+        assert "dmarc_reject" in policy_lines[0]
+        assert "spf_strict" in policy_lines[0]
 
     def test_dot_omits_top_influences_when_no_evidence_fires(self, network):
         # All-sparse target: no node has fired bindings.
@@ -234,22 +228,17 @@ class TestRenderDagDotTop3:
 # ── Snapshot ────────────────────────────────────────────────────────
 
 
-# microsoft365 and entra-id share the m365_indicators correlation group, so they
-# contribute one effective likelihood ratio (the stronger, entra-id) rather than
-# the over-counted independent product. CAL7: the influence ranking and n_eff now
-# also reflect that single effective binding (one "Top influence", n_eff=5.00),
-# not two; the Evidence line still lists both observed slugs. The posterior is
-# 0.950 with a wider interval than the pre-grouping 0.998 / [0.977, 1.000]. See
-# correlation.md 4.3.
+# A role-scoped signal carries the M365 identity/mail observation. Generic
+# vendor slugs are intentionally absent from this provenance block.
 _SNAPSHOT_FRAGMENT = (
     "## m365_tenant\n"
-    "_Domain has a Microsoft 365 / Entra tenant._\n"
+    "_A Microsoft 365 or Entra tenant-compatible identity response, mail route, or DKIM endpoint was observed._\n"
     "\n"
-    "- **Posterior:** 0.950 _(80% credible interval: [0.824, 1.000], n_eff=5.00)_\n"
-    "- **Confidence label:** high-confidence\n"
-    "- **Evidence:** slug `microsoft365`, slug `entra-id`\n"
+    "- **Posterior:** 0.931 _(80% uncertainty band: [0.786, 1.000], n_eff=5.00)_\n"
+    "- **Model-support label:** high model support\n"
+    "- **Evidence:** signal `m365_tenant_observed`\n"
     "- **Top influence:**\n"
-    "    1. slug `entra-id` — LLR +3.78 (100.0% of evidence influence)"
+    "    1. signal `m365_tenant_observed`, LLR +3.46 (100.0% of evidence influence)"
 )
 
 
@@ -260,7 +249,7 @@ def test_dense_m365_snapshot(network):
     drops LLR or percentages must update this string with intent, not
     by accident.
     """
-    result = infer(network, ["microsoft365", "entra-id"], [], priors_override={})
+    result = infer(network, [], ["m365_tenant_observed"], priors_override={})
     out = render_dag_text(network, result, domain="contoso.com")
     assert _SNAPSHOT_FRAGMENT in out, (
         "m365_tenant section drifted from pinned snapshot — either the "
@@ -277,7 +266,7 @@ def test_declarative_node_explains_absence_as_evidence(network):
     signals fired, the absence disconfirms, so the renderer must not claim the
     posterior follows the prior.
     """
-    result = infer(network, ["microsoft365"], [], priors_override={})
+    result = infer(network, [], ["m365_tenant_observed"], priors_override={})
     node = next(p for p in result.posteriors if p.name == "email_security_policy_enforcing")
     assert node.evidence_used == ()  # nothing fired
     assert node.absence_informative is True

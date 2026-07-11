@@ -12,14 +12,14 @@ read as a legitimate enrichment rather than an alarmist regression?
 
 Findings against the actual fixture contents:
 
-  * ``contoso-dense`` has ``azure-dns`` on the apex and a single
-    ``akamai`` surface attribution. The Multi-cloud rollup correctly
-    fires (Azure + Akamai = 2 distinct vendors). This is a meaningful
-    v1.9.9 enrichment: an agent reading the panel now sees the
-    multi-cloud nature of the Contoso footprint without having to
-    cross-reference the Cloud line with the Subdomain line. The
-    ceiling does not fire because ``domain_count == 1`` keeps the
-    conservative trigger silent on a single-tenant-domain fixture.
+  * ``contoso-dense`` has an unlined ``azure-dns`` catalog indicator on
+    the apex and a single ``akamai`` CNAME surface attribution. DNS
+    operation does not establish a hosted workload, and a cached slug
+    without retained role evidence cannot repair that gap. The
+    Multi-cloud summary therefore stays suppressed while both lower-level
+    observations remain visible. The ceiling does not fire because
+    ``domain_count == 1`` keeps the conservative trigger silent on a
+    single-tenant-domain fixture.
   * ``hardened-sparse`` has ``display_name: null`` and cannot
     round-trip through the cache deserializer (which requires a
     non-null display name). The v1.9.2 harness used a different
@@ -60,19 +60,18 @@ def _render(info) -> str:
 
 class TestContosoDenseCompatibility:
     """contoso-dense.json — a v1.9.2 agentic-UX fixture for dense
-    evidence. The fixture has Azure DNS on the apex plus an Akamai
-    surface attribution, which means v1.9.9 correctly enriches the
-    panel with a Multi-cloud row identifying both vendors."""
+    evidence. The fixture has an unlined Azure DNS catalog indicator on
+    the apex plus an Akamai surface attribution. Only the latter has
+    endpoint-binding lineage, so the panel must not synthesize a
+    Multi-cloud claim from the pair."""
 
-    def test_multi_cloud_correctly_fires_on_real_multi_cloud_data(self):
-        """Two distinct canonicalized cloud vendors (Azure via
-        ``azure-dns``, Akamai via the surface attribution) so the
-        rollup must fire. This is the v1.9.9 enrichment in action on a
-        v1.9.2 fixture — not a regression but a richness gain."""
+    def test_dns_role_plus_one_endpoint_does_not_claim_multi_cloud(self):
+        """A DNS operator and one endpoint vendor are not two observed
+        workload providers, especially when the cached DNS slug has no
+        retained evidence record describing its role."""
         out = _render(_load("contoso-dense.json"))
-        assert "Multi-cloud" in out
-        assert "2 providers observed" in out
-        assert "Azure" in out
+        assert "Multi-cloud" not in out
+        assert "Azure DNS (role unavailable)" in out
         assert "Akamai" in out
 
     def test_ceiling_does_not_fire_single_domain(self):
@@ -91,17 +90,16 @@ class TestContosoDenseCompatibility:
         assert "Services" in out
         assert "Confidence" in out
 
-    def test_multi_cloud_appears_in_key_facts_block(self):
-        """Layout: Multi-cloud is inserted into the key-facts block
-        above Confidence. An agent that reads the key-facts header to
-        decide whether to dive into Services should see the
-        multi-cloud signal at the top."""
+    def test_unresolved_cloud_role_stays_below_key_facts(self):
+        """The key-facts block must not elevate an unresolved catalog
+        indicator. Its role-qualified detail remains in Services after
+        the deterministic Confidence field."""
         out = _render(_load("contoso-dense.json"))
-        mc = out.find("Multi-cloud")
         conf = out.find("Confidence")
-        assert mc != -1
+        azure = out.find("Azure DNS (role unavailable)")
         assert conf != -1
-        assert mc < conf
+        assert azure != -1
+        assert conf < azure
 
 
 class TestHardenedSparseLoaderContract:

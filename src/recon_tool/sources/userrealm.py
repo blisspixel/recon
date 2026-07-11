@@ -117,6 +117,7 @@ class UserRealmSource:
         default_domain: str | None = None
         auth_type: str | None = None
         tenant_domains: list[str] = []
+        degraded_sources: set[str] = set()
 
         async with http_client(kwargs.get("client")) as client:
             # 1. GetUserRealm
@@ -138,12 +139,16 @@ class UserRealmSource:
                         if ns_type and isinstance(ns_type, str):
                             auth_type = ns_type
                     else:
+                        degraded_sources.add("identity:user_realm")
                         logger.debug(
                             "GetUserRealm returned invalid JSON shape for %s: %s",
                             domain,
                             type(data).__name__,
                         )
+                elif resp.status_code == 429 or resp.status_code >= 500:
+                    degraded_sources.add("identity:user_realm")
             except (httpx.HTTPError, ValueError) as exc:
+                degraded_sources.add("identity:user_realm")
                 logger.debug("GetUserRealm failed for %s: %s", domain, exc)
 
             # 2. Autodiscover for domains — proper XML parsing via ElementTree
@@ -160,7 +165,10 @@ class UserRealmSource:
                 )
                 if resp.status_code == 200:
                     tenant_domains, default_domain = _parse_autodiscover_domains(resp.text)
+                elif resp.status_code == 429 or resp.status_code >= 500:
+                    degraded_sources.add("identity:autodiscover")
             except httpx.HTTPError as exc:
+                degraded_sources.add("identity:autodiscover")
                 logger.debug("Autodiscover failed for %s: %s", domain, exc)
 
             has_data = display_name or default_domain or auth_type or tenant_domains
@@ -191,10 +199,13 @@ class UserRealmSource:
                     m365_detected=True,
                     auth_type=auth_type,
                     tenant_domains=tuple(tenant_domains),
+                    degraded_sources=tuple(sorted(degraded_sources)),
                     evidence=tuple(evidence),
                 )
 
             return SourceResult(
                 source_name="user_realm",
                 error="Could not resolve display name or default domain",
+                degraded_sources=tuple(sorted(degraded_sources)),
+                source_unavailable=bool(degraded_sources),
             )

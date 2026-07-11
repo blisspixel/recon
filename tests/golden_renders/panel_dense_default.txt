@@ -1,7 +1,8 @@
 Contoso Ltd
 contoso.com
 ──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 (primary) via Proofpoint gateway
+  Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX
+               delivery path)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
   Auth         Federated
   Confidence   ●●● High (3 sources)
@@ -9,7 +10,7 @@ contoso.com
 
 Services
   Email          Microsoft 365, Proofpoint, DMARC reject, MTA-STS enforce
-  Collaboration  Slack
+  Collaboration  Slack (public TXT account indicator)
 
 
 Passive-DNS ceiling

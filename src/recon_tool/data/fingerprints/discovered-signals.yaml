@@ -1462,17 +1462,18 @@ fingerprints:
       (`service.alibaba.com`).
 
 # ── NS EXTENDs ───────────────────────────────────────────────────────
-- name: Google Workspace
-  slug: google-workspace
-  category: Email & Communication
+- name: Google Domains DNS
+  slug: google-domains-dns
+  category: Infrastructure
   confidence: high
   detections:
   - type: ns
     pattern: googledomains.com
     description: >-
-      Google Domains NS target (`googledomains.com`). Indicates the
-      apex was registered through Google Domains (now operated by
-      Squarespace) and points at Google's authoritative DNS.
+      Google Domains NS target (`googledomains.com`). Indicates authoritative
+      DNS hosting on the legacy Google Domains namespace, now operated by
+      Squarespace. It does not establish Google Workspace or a Google identity
+      tenant.
 - name: Oracle Cloud Infrastructure
   slug: oracle-cloud
   category: Cloud

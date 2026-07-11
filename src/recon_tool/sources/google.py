@@ -112,7 +112,7 @@ class GoogleSource:
         evidence: list[EvidenceRecord] = []
 
         # Probe CSE configuration
-        cse_result = await self._probe_cse(domain, kwargs.get("client"))
+        cse_result, cse_unavailable = await self._probe_cse(domain, kwargs.get("client"))
         if cse_result:
             services.append("Google Workspace CSE")
             slugs.append("google-cse")
@@ -136,6 +136,13 @@ class GoogleSource:
                 evidence=tuple(evidence),
             )
 
+        if cse_unavailable:
+            return SourceResult(
+                source_name="google_workspace",
+                error="Google Workspace CSE observation was unavailable",
+                source_unavailable=True,
+            )
+
         return SourceResult(
             source_name="google_workspace",
             error="No Google Workspace-specific configuration found",
@@ -145,17 +152,18 @@ class GoogleSource:
     async def _probe_cse(
         domain: str,
         provided_client: httpx.AsyncClient | None = None,
-    ) -> dict[str, Any] | None:
+    ) -> tuple[dict[str, Any] | None, bool]:
         """Check for CSE configuration at cse.{domain}."""
         url = CSE_URL_TEMPLATE.format(domain=domain)
         async with http_client(provided_client, timeout=CSE_TIMEOUT) as client:
             try:
                 resp = await client.get(url)
                 if resp.status_code != 200:
-                    return None
+                    return None, resp.status_code == 429 or resp.status_code >= 500
                 data = resp.json()
                 if isinstance(data, dict):
-                    return parse_cse_config(data, domain)
+                    return parse_cse_config(data, domain), False
+                return None, True
             except (
                 httpx.TimeoutException,
                 httpx.ConnectError,
@@ -163,10 +171,11 @@ class GoogleSource:
                 httpx.HTTPError,
                 ValueError,
             ):
-                return None
+                return None, True
             except Exception as exc:
                 logger.debug("CSE probe failed for %s: %s", domain, exc)
-        return None
+                return None, True
+        return None, False
 
 
 def _extract_idp_name(discovery_uri: str) -> str:

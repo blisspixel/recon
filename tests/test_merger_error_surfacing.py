@@ -98,7 +98,7 @@ class TestPartialSuccessStillRenders:
         assert "Cloudflare" in info.services
         assert info.queried_domain == "example.com"
 
-    def test_errored_degradation_payload_does_not_lower_confidence(self) -> None:
+    def test_errored_degradation_payload_lowers_observation_confidence(self) -> None:
         results = [
             SourceResult(source_name="oidc_discovery", tenant_id="tid"),
             SourceResult(source_name="user_realm", m365_detected=True, display_name="Contoso"),
@@ -116,10 +116,10 @@ class TestPartialSuccessStillRenders:
 
         info = merge_results(results, "example.com")
 
-        assert info.confidence == ConfidenceLevel.HIGH
-        assert info.evidence_confidence == ConfidenceLevel.HIGH
+        assert info.confidence == ConfidenceLevel.MEDIUM
+        assert info.evidence_confidence == ConfidenceLevel.MEDIUM
         assert info.inference_confidence == ConfidenceLevel.HIGH
-        assert info.degraded_sources == ()
+        assert info.degraded_sources == ("upstream",)
 
     def test_partial_success_renders_through_cli(self) -> None:
         """Phase 2e end-to-end: the CLI should render a panel for a

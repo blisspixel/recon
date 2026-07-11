@@ -9,11 +9,9 @@ Hyperedge types
 ---------------
 * ``top_issuer``     — domains whose CT top-issuer (most-frequent
                        issuer name) is the same.
-* ``bimi_org``       — domains whose BIMI VMC organization name is
-                       identical (after light normalisation).
 * ``parent_vendor``  — domains that detected at least one fingerprint
                        sharing a ``parent_vendor`` metadata value.
-* ``shared_slugs``   — pairs of domains sharing two or more
+* ``shared_slugs``: pairs of domains sharing three or more
                        fingerprint slugs (Jaccard-style overlap, no
                        transitive grouping).
 
@@ -51,13 +49,10 @@ MAX_MEMBERS_PER_HYPEREDGE = 100
 # has Microsoft365 + DocuSign + Adobe).
 _MIN_SLUG_OVERLAP = 3
 
-# Slugs that appear on more than this fraction of the batch are
-# treated as a baseline and removed from shared_slugs intersection
-# computation. Empirically ~50 % is the right floor for the corpus
-# diversity we see — any tighter and meaningful pairs get masked,
-# any looser and ubiquitous SaaS (google-site, mailchimp, sendgrid)
-# pollute every pair. Adaptive rather than a hardcoded list so the
-# filter scales with whatever corpus the operator runs.
+# Slugs that appear on more than this fraction of the submitted batch are
+# treated as a cohort-local baseline and removed from shared-slug intersections.
+# The threshold is a heuristic, not a population rarity estimate. Empty slug
+# rows remain in the denominator so the outcome cannot select its own baseline.
 _BASELINE_FREQ_THRESHOLD = 0.5
 
 # Don't apply the baseline filter on tiny batches — every slug in a
@@ -73,8 +68,8 @@ class Hyperedge:
     """One observed multi-domain signature.
 
     ``edge_type`` selects the rule that produced the edge; ``key`` is
-    the value the rule fired on (issuer name, BIMI org, parent vendor,
-    or, for ``shared_slugs``, the comma-joined intersection of slug
+    the value the rule fired on (issuer name, parent vendor, or, for
+    ``shared_slugs``, the comma-joined intersection of slug
     names). ``members`` is the sorted list of domains that share the
     signature.
     """
@@ -88,11 +83,6 @@ def _slug_to_parent_vendor() -> dict[str, str]:
     """Return ``{slug: parent_vendor}`` for fingerprints with the
     metadata populated."""
     return {fp.slug: fp.parent_vendor for fp in load_fingerprints() if fp.parent_vendor is not None}
-
-
-def _normalize_org(name: str) -> str:
-    """Light case/whitespace normalisation for BIMI org-name matching."""
-    return " ".join(name.lower().split())
 
 
 def _top_issuer_hyperedges(
@@ -112,29 +102,6 @@ def _top_issuer_hyperedges(
             continue
         members_sorted = tuple(sorted(set(members)))[:MAX_MEMBERS_PER_HYPEREDGE]
         out.append(Hyperedge(edge_type="top_issuer", key=issuer, members=members_sorted))
-    return out
-
-
-def _bimi_org_hyperedges(
-    infos: Mapping[str, TenantInfo],
-) -> list[Hyperedge]:
-    buckets: dict[str, tuple[str, list[str]]] = {}
-    for domain, info in infos.items():
-        if info.bimi_identity is None or not info.bimi_identity.organization:
-            continue
-        normalized = _normalize_org(info.bimi_identity.organization)
-        if not normalized:
-            continue
-        if normalized in buckets:
-            buckets[normalized][1].append(domain)
-        else:
-            buckets[normalized] = (info.bimi_identity.organization, [domain])
-    out: list[Hyperedge] = []
-    for _, (canonical_name, members) in buckets.items():
-        if len(members) < 2:
-            continue
-        members_sorted = tuple(sorted(set(members)))[:MAX_MEMBERS_PER_HYPEREDGE]
-        out.append(Hyperedge(edge_type="bimi_org", key=canonical_name, members=members_sorted))
     return out
 
 
@@ -197,7 +164,7 @@ def _shared_slugs_hyperedges(
     pair on every domain combination.
     """
     out: list[Hyperedge] = []
-    domain_slugs = {d: frozenset(info.slugs) for d, info in infos.items() if info.slugs}
+    domain_slugs = {d: frozenset(info.slugs) for d, info in infos.items()}
     baseline = _baseline_slugs(domain_slugs)
     # Strip baseline once per domain rather than per pair — saves
     # work when the corpus is large.
@@ -227,18 +194,25 @@ def build_ecosystem_hyperedges(
     Returns an empty tuple when fewer than two domains are supplied or
     no rule fires. Output is deterministic — sorted by
     ``(edge_type, key, members)`` — and capped at ``MAX_HYPEREDGES``.
-    Cap order: ``top_issuer`` first (most informative for shared
-    infrastructure), then ``bimi_org``, then ``parent_vendor``, then
-    ``shared_slugs`` (most numerous, pruned last).
+    Cap order favors non-ubiquitous ``shared_slugs``, then broad
+    ``parent_vendor`` and ``top_issuer`` categories. No type establishes shared
+    infrastructure or ownership, and no transitive relationship is inferred.
     """
     if len(infos) < 2:
         return ()
 
+    # Enforce observability at the public builder boundary. The CLI batch path
+    # already supplies these views, but keeping the invariant here prevents a
+    # direct or future caller from correlating raw values retained for an
+    # unavailable collection channel.
+    from recon_tool.collection_view import collection_observable_info
+
+    observable_infos = {domain: collection_observable_info(info) for domain, info in infos.items()}
+
     by_type: list[tuple[str, list[Hyperedge]]] = [
-        ("top_issuer", _top_issuer_hyperedges(infos)),
-        ("bimi_org", _bimi_org_hyperedges(infos)),
-        ("parent_vendor", _parent_vendor_hyperedges(infos)),
-        ("shared_slugs", _shared_slugs_hyperedges(infos)),
+        ("shared_slugs", _shared_slugs_hyperedges(observable_infos)),
+        ("parent_vendor", _parent_vendor_hyperedges(observable_infos)),
+        ("top_issuer", _top_issuer_hyperedges(observable_infos)),
     ]
 
     flat: list[Hyperedge] = []

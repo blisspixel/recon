@@ -1,9 +1,8 @@
 """Negative-space analysis — absence signal evaluation.
 
 Pure functions that consume fired signals and detected slugs, producing
-absence SignalMatch instances when expected counterpart services are not
-observed, and hedged positive observations when a signal fires AND a set
-of adversary-friendly slugs is absent.
+absence SignalMatch instances when expected counterpart services or a
+configured comparison set are not observed.
 
 This is the third evaluation pass, running after the two-pass signal
 evaluation in signals.py. Two distinct modes:
@@ -13,14 +12,11 @@ evaluation in signals.py. Two distinct modes:
    hedged "X detected but Y not observed" absence signal when any of the
    expected slugs are missing. Category: ``"Absence"``.
 
-2. *Positive when absent* (added in v0.9.3) — reads the
-   ``positive_when_absent`` field and emits a hedged two-sided positive
-   observation when the signal fires AND none of the listed
-   consumer-facing / adversary-friendly slugs are detected. Category:
-   ``"Hardening Observation"``. The phrasing is deliberately two-sided
-   ("fits deliberate hardening or a dormant / parked / small-shop
-   target") because the same sparse evidence fits multiple
-   interpretations — the output never commits to one reading.
+2. *Configured comparison absence* (legacy field name
+   ``positive_when_absent``) reports only that a signal fired while none of
+   its configured comparison indicators were observed. Built-in rules do not
+   use this feature because collection opportunity for a generic comparison
+   set is not represented in the signal context.
 
 All generated text uses defensive, hedged language. The absence engine
 never produces a confident verdict — that is the load-bearing invariant
@@ -118,20 +114,13 @@ def evaluate_positive_absence(
     all_signals: tuple[Signal, ...],
     detected_slugs: frozenset[str],
 ) -> list[SignalMatch]:
-    """Emit hedged positive observations when a signal fires AND an
-    adversary-friendly slug set is absent.
+    """Report a configured comparison set that was not observed.
 
     Third-pass sibling of :func:`evaluate_absence_signals`. For each fired
     signal with non-empty ``positive_when_absent`` where none of those
     slugs are in ``detected_slugs``, produce one hedged
-    ``"Hardening Observation"`` SignalMatch.
-
-    The emitted statement is deliberately two-sided: the same evidence
-    (an edge-proxy composite firing without consumer SaaS) fits
-    deliberate hardening, a dormant / parked target, or a small shop
-    with a proxy in front of very little. The output never commits to
-    one reading — it surfaces the observation and enumerates the
-    alternative interpretations in the same breath.
+    derived ``SignalMatch``. The observation does not infer hardening,
+    organizational intent, company size, or target type.
 
     Args:
         fired_signals: Signals that fired in the two-pass evaluation.
@@ -140,8 +129,7 @@ def evaluate_positive_absence(
         detected_slugs: The full set of detected fingerprint slugs.
 
     Returns:
-        List of ``SignalMatch`` instances with
-        ``category="Hardening Observation"``.
+        List of low-confidence absence observations.
     """
     signal_by_name: dict[str, Signal] = {s.name: s for s in all_signals}
 
@@ -152,21 +140,21 @@ def evaluate_positive_absence(
             continue
 
         # Only fire when NONE of the listed slugs are present. Any one
-        # of them is enough to disqualify the hardening reading.
+        # of them is enough to disqualify the absence observation.
         if any(slug in detected_slugs for slug in signal_def.positive_when_absent):
             continue
 
         description = (
-            f"{match.name} fires without consumer SaaS exposure — "
-            "fits a deliberately hardened target, a dormant / parked "
-            "domain, or a small shop behind an edge proxy. Hedged "
-            "observation, not a verdict."
+            f"{match.name} fired while none of its configured comparison "
+            "indicators were observed. This is a bounded non-observation "
+            "under current collection coverage and does not establish "
+            "configuration, intent, company size, or target type."
         )
 
         observations.append(
             SignalMatch(
-                name=f"{match.name} \u2014 Hardening Pattern Observed",
-                category="Hardening Observation",
+                name=f"{match.name}: Configured Indicators Not Observed",
+                category="Absence",
                 confidence="low",
                 matched=(),
                 description=description,

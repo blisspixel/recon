@@ -1,16 +1,17 @@
-"""Layer ablations: what does each inference layer add, measured.
+"""Synthetic behavior of advanced layers against simple baselines.
 
 The paper's evaluation inventory asks the question the architecture begs:
 recon pairs deterministic slug matching with a Bayesian network and a CT
-co-occurrence graph layer — what does each layer *add* over the simpler
-thing? This harness answers it twice, both times on fully synthetic data
+co-occurrence graph layer. This harness compares each with a simpler baseline,
+both times on fully synthetic data
 (publishable, no corpus, no network, fixed seeds).
 
-Experiment A — the Bayesian layer over single-source slug matching.
-Sample worlds from the network's own generative process (the
-synthetic-calibration sampler: true states from the prior/CPTs, evidence
-from the likelihoods), then score three predictors per node against the
-sampled truth:
+Experiment A: the Bayesian layer over single-source slug matching.
+Sample latent states from the committed prior/CPT graph, then sample each
+evidence binding independently as a Bernoulli variable from its marginal
+likelihood. This deliberately differs from the committed grouped/missingness
+observation semantics. It is a misspecification stress test, then scores three
+predictors per node against the sampled state:
 
   - ``full``: the shipped posterior (multi-signal fusion, DAG
     propagation, declarative-absence semantics).
@@ -24,20 +25,20 @@ sampled truth:
     and the DAG. Isolates what *combining* evidence adds over one good
     signal.
 
-Honesty note, per the CAL1 discipline: the worlds are sampled FROM the
-model, so this measures the value of the inference machinery under the
-model's own assumptions — the gap each simplification opens when the
-model is right. It is not a real-world validity claim; those live in the
-reference-calibration harnesses against public records.
+Honesty note, per the CAL1 discipline: the generator shares prior, CPT, and
+marginal evidence parameters with the model, but not its grouped observation or
+missingness semantics. Results measure behavior under that specified mismatch.
+They do not estimate the cost of MNAR assumptions, establish the value of the
+full model, or make a real-world validity claim.
 
-Experiment B — the graph layer over naive grouping. Plant K org clusters
-in synthetic CT entries (each cluster's hosts co-occur on intra-org
+Experiment B: the graph layer over naive grouping. Plant K synthetic clusters
+in synthetic CT entries (each cluster's hosts co-occur on within-cluster
 certs), then add shared-CDN-style noise certs that bridge clusters at
-rate ``noise``. Recover the partition two ways — Louvain (the shipped
+rate ``noise``. Recover the partition two ways: Louvain (the shipped
 graph layer) and connected components (what you would get with no
-community detection) — and score each against the planted truth with the
-adjusted Rand index. Bridging noise collapses connected components into
-one blob; the measured ARI gap is precisely what the graph layer buys.
+community detection), then score each against the planted truth with the
+adjusted Rand index. This is an assortative planted benchmark, not evidence of
+robustness on real CT graphs.
 
 Run (synthetic, deterministic, publishable):
 
@@ -46,7 +47,7 @@ Run (synthetic, deterministic, publishable):
     python -m validation.layer_ablation --skip-graph   # Bayesian half only
 """
 
-# Reuses the synthetic-calibration sampler and scoring internals — the single
+# Reuses the synthetic-calibration sampler and scoring internals, the single
 # source for that logic, the same allowance the other harnesses take.
 # pyright: reportPrivateUsage=false
 from __future__ import annotations
@@ -102,11 +103,10 @@ class NodeAblation:
     The ``*_fired`` fields restrict to worlds where at least one of the
     node's own bindings fired — the regime where the predictors actually
     compete. The pooled Brier difference is dominated by the no-fire regime,
-    where the engine deliberately sits at the prior (the MNAR stance: absence
-    of hideable evidence is not evidence of absence) while the baselines
-    exploit the synthetic world's benign missingness. Splitting the regimes
-    keeps that deliberate price visible instead of letting it read as the
-    fusion machinery losing.
+    where shipped hideable-node inference sits at the prior while the
+    independent-Bernoulli generator makes non-fire part of the sampled pattern.
+    Splitting regimes makes that generator/inference mismatch visible. It is not
+    an estimate of an MNAR price or of real-world model performance.
     """
 
     node: str
@@ -340,9 +340,9 @@ def run_graph_ablation(
 
 
 def _print_bayesian(rows: list[NodeAblation], samples: int) -> None:
-    print(f"\nExperiment A — Bayesian layer vs slug-matching baselines ({samples} synthetic worlds)")
-    print("(model-grounded truth: measures the machinery under the model's own assumptions, per CAL1)")
-    print("\nPooled over all worlds (the no-fire regime carries the deliberate MNAR price):")
+    print(f"\nExperiment A: Bayesian layer vs slug-matching baselines ({samples} synthetic worlds)")
+    print("(independent-Bernoulli misspecification stress test; not the committed generative model)")
+    print("\nPooled over all worlds (no-fire semantics differ between generator and inference):")
     print(f"  {'node':<36}{'Brier full':>11}{'any-fired':>11}{'strongest':>11}{'acc full':>10}{'any':>7}{'str':>7}")
     print("  " + "-" * 93)
     for r in rows:
@@ -350,7 +350,7 @@ def _print_bayesian(rows: list[NodeAblation], samples: int) -> None:
             f"  {r.node:<36}{r.brier_full:>11.4f}{r.brier_any_fired:>11.4f}{r.brier_strongest:>11.4f}"
             f"{r.acc_full:>10.4f}{r.acc_any_fired:>7.4f}{r.acc_strongest:>7.4f}"
         )
-    print("\nFired regime only (at least one of the node's bindings fired — where the predictors compete):")
+    print("\nFired regime only (at least one binding fired, where the predictors compete):")
     print(f"  {'node':<36}{'n fired':>8}{'Brier full':>11}{'any-fired':>11}{'strongest':>11}")
     print("  " + "-" * 77)
     for r in rows:
@@ -362,8 +362,8 @@ def _print_bayesian(rows: list[NodeAblation], samples: int) -> None:
 
 def _print_graph(rows: list[GraphAblation], clusters: int, hosts: int, intra: int) -> None:
     print(
-        f"\nExperiment B — graph layer vs connected components "
-        f"({clusters} planted clusters x {hosts} hosts, {intra} intra-org certs each)"
+        f"\nExperiment B: graph layer vs connected components "
+        f"({clusters} planted clusters x {hosts} hosts, {intra} within-cluster certs each)"
     )
     print(f"  {'bridging noise certs':>21}{'ARI louvain':>13}{'ARI components':>16}")
     print("  " + "-" * 50)
@@ -375,7 +375,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Layer ablations on synthetic data (publishable; no corpus).")
     parser.add_argument("--samples", type=int, default=20000, help="Synthetic worlds for experiment A.")
     parser.add_argument("--seed", type=int, default=7, help="RNG seed for both experiments.")
-    parser.add_argument("--clusters", type=int, default=6, help="Planted org clusters for experiment B.")
+    parser.add_argument("--clusters", type=int, default=6, help="Planted synthetic clusters for experiment B.")
     parser.add_argument("--hosts", type=int, default=8, help="Hosts per planted cluster.")
     parser.add_argument("--intra-certs", type=int, default=12, help="Intra-org certs per cluster.")
     parser.add_argument(
@@ -400,10 +400,10 @@ def main(argv: list[str] | None = None) -> int:
             args.intra_certs,
         )
     print(
-        "\nReading: experiment A's gap is what fusion + absence semantics + the DAG add"
-        "\nwhen the model is right (synthetic worlds; not a real-world validity claim);"
-        "\nexperiment B's gap is what community detection adds over naive grouping when"
-        "\nshared-CDN noise bridges org clusters."
+        "\nReading: experiment A compares inference paths under an independent-Bernoulli"
+        "\nmisspecification that shares marginal parameters, not under the committed"
+        "\ngenerative model and not against real-world truth. Experiment B compares algorithms"
+        "\non an assortative planted graph, not real CT robustness."
     )
     return 0
 

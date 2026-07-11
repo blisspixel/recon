@@ -12,10 +12,11 @@ ranking, partial pooling) lives in the separate reducer under
 this module so the two never drift.
 
 What it reports, and why each is the honest choice, is documented in
-``docs/aggregate-state.md``. In brief: observability-adjusted prevalence as three
-numbers (missing-not-at-random for hideable infrastructure), aggregated posterior
-mass kept separate from the declarative signals, compositional concentration for
-the provider and cloud mixes, and small-cell suppression so a tiny cohort does not
+``docs/aggregate-state.md``. In brief: observed public-claim rates only where a
+successful opportunity supplies both positive and authoritative-negative
+semantics, model support coverage for hideable infrastructure claims, aggregated
+model-score mass kept separate from both, compositional concentration for the
+provider and cloud mixes, and small-cell suppression so a tiny cohort does not
 read as a census.
 """
 
@@ -29,10 +30,11 @@ from typing import Any
 from rich.panel import Panel
 from rich.text import Text
 
+from recon_tool.source_status import SourceStatus
 from recon_tool.validator import strip_control_chars
 
 # 0.9 quantile of the standard normal, for an 80% two-sided interval, matching
-# recon's 80% credible-interval house style. The summary reports an 80% Wilson
+# recon's 80% display convention. The summary reports an 80% Wilson
 # score interval (closed form); a Jeffreys Beta interval is the Bayesian sibling.
 _Z80 = 1.2815515594457
 
@@ -42,14 +44,14 @@ _SUPPRESS_MAX = 10
 _SMALL_N = 30
 
 COHORT_DISCLAIMER = (
-    "Within this caller-supplied cohort, among externally observable signals. "
-    "Not a sample of any industry and not a census; absence can mean hiding, not "
-    "absence; small cohorts carry wide intervals."
+    "Within this caller-supplied cohort only. Declarative rates describe named "
+    "public claims; hideable identity entries are model support coverage, not "
+    "prevalence. This is not an industry sample or census, and small cohorts "
+    "carry wide intervals."
 )
 
-# The deterministic / declarative signals reported with three-number prevalence.
-# Declarative signals (absence is public evidence) are observable whenever DNS
-# resolved; hideable claims are observable only where their node fired non-sparse.
+# Declarative public claims and hideable model-support signals share one stable
+# compatibility block but have different metric semantics.
 _PREVALENCE_SIGNALS = (
     "dmarc_reject",
     "dmarc_enforcing",
@@ -58,6 +60,8 @@ _PREVALENCE_SIGNALS = (
     "m365_tenant",
     "google_workspace",
 )
+
+_MODEL_SUPPORT_SIGNALS = frozenset({"m365_tenant", "google_workspace"})
 
 
 def wilson_interval(positives: int, n: int, z: float = _Z80) -> tuple[float, float]:
@@ -111,7 +115,7 @@ def _as_list(value: Any) -> list[Any]:
 
 
 def _dns_resolved(record: Mapping[str, Any]) -> bool:
-    return "dns" not in _as_list(record.get("degraded_sources"))
+    return not SourceStatus.from_degraded_sources(_as_list(record.get("degraded_sources"))).whole_dns_unavailable
 
 
 def _posterior_map(record: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
@@ -122,21 +126,23 @@ def _posterior_map(record: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
 
 
 def extract_signals(record: Mapping[str, Any]) -> dict[str, bool | None]:
-    """Binary signals with explicit observability. None means not observable.
+    """Declarative observations and model support decisions.
 
-    Declarative signals are observable when DNS resolved; hideable Bayesian claims
-    are observable only when their node fired with enough evidence to be
-    non-sparse, which is exactly where the observability fraction earns its keep.
+    Declarative signals are observable when their collection channel resolved;
+    ``None`` means that public classification was unavailable. Hideable Bayesian
+    entries are model support decisions only when a non-sparse node has fired
+    evidence. Their nonfire is not an authoritative negative observation.
     """
-    dns = _dns_resolved(record)
+    status = SourceStatus.from_degraded_sources(_as_list(record.get("degraded_sources")))
     posteriors = _posterior_map(record)
     out: dict[str, bool | None] = {}
 
     dmarc = record.get("dmarc_policy")
-    out["dmarc_reject"] = (dmarc == "reject") if dns else None
-    out["dmarc_enforcing"] = (dmarc in ("reject", "quarantine")) if dns else None
-    out["mta_sts_enforce"] = (record.get("mta_sts_mode") == "enforce") if dns else None
-    out["email_gateway_present"] = (record.get("email_gateway") is not None) if dns else None
+    dmarc_available = status.channel_available("dmarc")
+    out["dmarc_reject"] = (dmarc == "reject") if dmarc_available else None
+    out["dmarc_enforcing"] = (dmarc in ("reject", "quarantine")) if dmarc_available else None
+    out["mta_sts_enforce"] = (record.get("mta_sts_mode") == "enforce") if status.channel_available("mta_sts") else None
+    out["email_gateway_present"] = (record.get("email_gateway") is not None) if status.channel_available("mx") else None
 
     for signal, node in (("m365_tenant", "m365_tenant"), ("google_workspace", "google_workspace_tenant")):
         o = posteriors.get(node)
@@ -172,6 +178,21 @@ def _prevalence_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         observable = [v for v in vals if v is not None]
         positives = sum(1 for v in observable if v)
         obs_n = len(observable)
+        support_coverage = round(positives / n, 4) if n else None
+        if sig in _MODEL_SUPPORT_SIGNALS:
+            block[sig] = {
+                "positives": _suppressed(positives),
+                "observable_n": 0,
+                "observed_rate": None,
+                "observed_rate_interval_80": None,
+                "lower_bound_over_cohort": None,
+                "observability_fraction": 0.0 if n else None,
+                "metric_kind": "model_support_coverage",
+                "model_evidence_n": obs_n,
+                "support_coverage": support_coverage,
+                "unresolved_share": round((n - positives) / n, 4) if n else None,
+            }
+            continue
         low, high = wilson_interval(positives, obs_n)
         block[sig] = {
             "positives": _suppressed(positives),
@@ -180,6 +201,10 @@ def _prevalence_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "observed_rate_interval_80": [round(low, 4), round(high, 4)] if obs_n else None,
             "lower_bound_over_cohort": round(positives / n, 4) if n else None,
             "observability_fraction": round(obs_n / n, 4) if n else None,
+            "metric_kind": "authoritative_observed_rate",
+            "model_evidence_n": None,
+            "support_coverage": support_coverage,
+            "unresolved_share": round((n - obs_n) / n, 4) if n else None,
         }
     return block
 
@@ -199,6 +224,8 @@ def _posterior_claims_block(records: Sequence[Mapping[str, Any]]) -> dict[str, A
         block[node] = {
             "expected_prevalence": round(sum(posteriors) / len(posteriors), 4),
             "high_confidence_share": round(high_conf / n, 4) if n else None,
+            "mean_model_score": round(sum(posteriors) / len(posteriors), 4),
+            "high_score_share": round(high_conf / n, 4) if n else None,
             "mean_interval_width": round(sum(widths) / len(widths), 4),
             "sparse_share": round(sparse / len(obs), 4),
             "observed_n": len(obs),
@@ -207,9 +234,7 @@ def _posterior_claims_block(records: Sequence[Mapping[str, Any]]) -> dict[str, A
 
 
 def _mix_block(records: Sequence[Mapping[str, Any]], field: str) -> dict[str, Any]:
-    counts = Counter(
-        str(r.get(field)) for r in records if r.get(field) not in (None, "", "unknown")
-    )
+    counts = Counter(str(r.get(field)) for r in records if r.get(field) not in (None, "", "unknown"))
     total = sum(counts.values())
     # Deterministic order: count descending, then key ascending. Counter's
     # most_common breaks ties by insertion order, which for a batch is the
@@ -295,6 +320,11 @@ def _fmt_pct(value: float | None) -> str:
 
 def _fmt_rate(stat: Mapping[str, Any]) -> str:
     """Compact observed-rate with interval and observability for the panel."""
+    if stat.get("metric_kind") == "model_support_coverage":
+        coverage = stat.get("support_coverage")
+        if coverage in (None, 0.0):
+            return "no model-supported claims"
+        return f"{_fmt_pct(coverage)} model support coverage"
     rate = stat.get("observed_rate")
     if rate is None:
         return "not observable"
@@ -336,8 +366,7 @@ def render_cohort_summary(summary: Mapping[str, Any]) -> Panel:
     )
     body.append("Identity     ", style="dim")
     body.append(
-        f"M365 {_fmt_rate(prev.get('m365_tenant', {}))}; "
-        f"Workspace {_fmt_rate(prev.get('google_workspace', {}))}\n"
+        f"M365 {_fmt_rate(prev.get('m365_tenant', {}))}; Workspace {_fmt_rate(prev.get('google_workspace', {}))}\n"
     )
     body.append("Providers    ", style="dim")
     body.append(f"{_fmt_mix(mix.get('provider', {}))}\n")

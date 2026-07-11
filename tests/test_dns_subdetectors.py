@@ -116,6 +116,24 @@ class TestNSDetection:
         result = await DNSSource().lookup("example.com")
         assert "GoDaddy" in result.detected_services
 
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_google_domains_ns_is_dns_not_workspace(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "example.com/NS": ["ns-cloud-a1.googledomains.com"],
+            }
+        )
+
+        result = await DNSSource().lookup("example.com")
+
+        assert "Google Domains DNS" in result.detected_services
+        assert "google-domains-dns" in result.detected_slugs
+        assert "Google Workspace" not in result.detected_services
+        assert "google-workspace" not in result.detected_slugs
+
 
 class TestCNAMEInfraDetection:
     @pytest.mark.asyncio
@@ -586,20 +604,20 @@ class TestMultiPartTxtRecords:
         assert "SPF: softfail (~all)" in result.detected_services
 
 
-class TestExchangeOnpremAutodiscover:
-    """Regression tests for autodiscover handling in _detect_exchange_onprem.
+class TestExchangeStyleEndpointObservation:
+    """Regression tests for bounded Exchange-style endpoint observation.
 
     Querying type A chases CNAMEs through dnspython, so a plain A query
     returns IPs even for M365 cloud endpoints. These tests pin the
     CNAME-first behavior that distinguishes M365 cloud autodiscover
-    (suppressed) from self-operated autodiscover (fires on-prem).
+    (suppressed) from a public endpoint on another namespace.
     """
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_autodiscover_cname_to_m365_cloud_is_not_onprem(self, mock_resolve):
+    async def test_autodiscover_cname_to_m365_cloud_is_suppressed(self, mock_resolve):
         # Classic M365 pattern: autodiscover CNAMEs to autodiscover.outlook.com.
-        # Slug must NOT fire — this is Exchange Online, not on-prem.
+        # The cloud endpoint is classified elsewhere, so this indicator stays absent.
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
                 "example.com/TXT": [],
@@ -608,13 +626,11 @@ class TestExchangeOnpremAutodiscover:
             }
         )
         result = await DNSSource().lookup("example.com")
-        assert "Exchange Server (on-prem / hybrid)" not in (result.detected_services or ())
+        assert "Exchange-style endpoint indicator" not in (result.detected_services or ())
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_autodiscover_cname_to_org_infra_is_onprem(self, mock_resolve):
-        # Genuine hybrid: autodiscover CNAMEs to an org-owned endpoint.
-        # Slug must fire.
+    async def test_autodiscover_cname_to_public_endpoint_is_observed(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
                 "example.com/TXT": [],
@@ -623,12 +639,11 @@ class TestExchangeOnpremAutodiscover:
             }
         )
         result = await DNSSource().lookup("example.com")
-        assert "Exchange Server (on-prem / hybrid)" in (result.detected_services or ())
+        assert "Exchange-style endpoint indicator" in (result.detected_services or ())
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_autodiscover_direct_a_is_onprem(self, mock_resolve):
-        # No CNAME, direct A — self-operated autodiscover responder.
+    async def test_autodiscover_direct_a_is_observed(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
                 "example.com/TXT": [],
@@ -637,11 +652,11 @@ class TestExchangeOnpremAutodiscover:
             }
         )
         result = await DNSSource().lookup("example.com")
-        assert "Exchange Server (on-prem / hybrid)" in (result.detected_services or ())
+        assert "Exchange-style endpoint indicator" in (result.detected_services or ())
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_autodiscover_cname_to_mail_protection_is_not_onprem(self, mock_resolve):
+    async def test_autodiscover_cname_to_mail_protection_is_suppressed(self, mock_resolve):
         # Suffix match: anything under *.mail.protection.outlook.com is M365.
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -651,12 +666,11 @@ class TestExchangeOnpremAutodiscover:
             }
         )
         result = await DNSSource().lookup("example.com")
-        assert "Exchange Server (on-prem / hybrid)" not in (result.detected_services or ())
+        assert "Exchange-style endpoint indicator" not in (result.detected_services or ())
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_owa_direct_a_still_fires(self, mock_resolve):
-        # Non-autodiscover prefix path: owa A-resolves → on-prem.
+    async def test_owa_direct_a_is_observed_without_deployment_claim(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
                 "example.com/TXT": [],
@@ -665,7 +679,8 @@ class TestExchangeOnpremAutodiscover:
             }
         )
         result = await DNSSource().lookup("example.com")
-        assert "Exchange Server (on-prem / hybrid)" in (result.detected_services or ())
+        assert "Exchange-style endpoint indicator" in (result.detected_services or ())
+        assert "on-prem" not in " ".join(result.detected_services or ()).lower()
 
 
 class TestHostingPtrDetection:

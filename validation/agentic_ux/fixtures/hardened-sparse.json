@@ -139,7 +139,7 @@
     },
     {
       "name": "email_security_policy_enforcing",
-      "description": "Observable email-authentication policy is enforcing (DMARC reject/quarantine + DKIM + strict SPF + optional MTA-STS enforce).",
+      "description": "Observable DMARC policy is enforcing (reject or quarantine); strict SPF and MTA-STS are supporting public signals.",
       "posterior": 0.25,
       "interval_low": 0.0,
       "interval_high": 0.5468,

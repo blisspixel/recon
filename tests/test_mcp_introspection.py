@@ -214,6 +214,14 @@ class TestGetSignals:
         for sig in data:
             assert sig["layer"] == 1
 
+    @pytest.mark.asyncio
+    async def test_nonreportable_rule_identifiers_are_not_exposed(self) -> None:
+        data = await get_signals()
+
+        names = {signal["name"] for signal in data}
+        assert "Dual Email Delivery Path" not in names
+        assert "Incomplete Identity Migration" not in names
+
 
 # ── 11.2 explain_signal ─────────────────────────────────────────────────
 
@@ -224,14 +232,12 @@ class TestExplainSignal:
     @pytest.mark.asyncio
     async def test_known_signal_returns_definition(self) -> None:
         """Known signal name returns definition with trigger and weakening conditions."""
-        from recon_tool.signals import load_signals
+        from recon_tool.signals import reportable_signals
 
-        signals = load_signals()
-        assert len(signals) > 0
-        sig_name = signals[0].name
+        _signal, public_label = reportable_signals()[0]
 
-        data = await explain_signal(sig_name)
-        assert data["name"] == sig_name
+        data = await explain_signal(public_label)
+        assert data["name"] == public_label
         assert "trigger_conditions" in data
         assert "weakening_conditions" in data
 
@@ -242,22 +248,53 @@ class TestExplainSignal:
             await explain_signal("Nonexistent Fabrikam Signal")
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("name", ["Dual Email Delivery Path", "Incomplete Identity Migration"])
+    async def test_nonreportable_signal_is_rejected(self, name: str) -> None:
+        with pytest.raises(ToolError, match="not found"):
+            await explain_signal(name)
+
+    @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_with_domain_returns_evaluation(self, mock_resolve: AsyncMock) -> None:
         """explain_signal with domain returns evaluation state."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
 
-        from recon_tool.signals import load_signals
+        from recon_tool.signals import reportable_signals
 
-        signals = load_signals()
-        sig_name = signals[0].name
+        _signal, public_label = reportable_signals()[0]
 
-        data = await explain_signal(sig_name, domain="contoso.com")
+        data = await explain_signal(public_label, domain="contoso.com")
         assert "domain" in data
         assert "fired" in data
         assert isinstance(data["fired"], bool)
         assert "matched_slugs" in data
         assert "matched_evidence" in data
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_unavailable_channel_evidence_cannot_fire_or_leak(self, mock_resolve: AsyncMock) -> None:
+        info = replace(
+            SAMPLE_INFO,
+            services=("OpenAI",),
+            slugs=("openai",),
+            evidence=(
+                EvidenceRecord(
+                    source_type="TXT",
+                    raw_value="openai-domain-verification=opaque",
+                    rule_name="OpenAI",
+                    slug="openai",
+                ),
+            ),
+            insights=(),
+            degraded_sources=("dns:apex_txt",),
+        )
+        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
+
+        data = await explain_signal("AI-platform indicators observed", domain="contoso.com")
+
+        assert data["fired"] is False
+        assert data["matched_slugs"] == []
+        assert data["matched_evidence"] == []
 
 
 # ── 11.3 test_hypothesis ────────────────────────────────────────────────
@@ -273,7 +310,7 @@ class TestTestHypothesis:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
         data = await mcp_test_hypothesis("contoso.com", "mid-migration to cloud identity")
         assert "likelihood" in data
-        assert data["likelihood"] in {"strong", "moderate", "weak", "unsupported"}
+        assert data["likelihood"] == "unresolved"
         assert "supporting_signals" in data
         assert isinstance(data["supporting_signals"], list)
         assert "contradicting_signals" in data

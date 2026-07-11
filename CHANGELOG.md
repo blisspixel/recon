@@ -5,16 +5,154 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+Historical release entries preserve the terminology used when those versions
+shipped and are not the current semantic contract. Older verification-token
+language is superseded by exact administrative-token reuse, and older
+cryptographic or provable tenant language is superseded by provider-attested
+tenant-ID co-tenancy. Neither observation establishes a shared account
+operator, corporate group, ownership, or control.
+
 ## [Unreleased]
 
 ### Changed
 
+- Rebuilt the documented correlation research program around proof-carrying
+  public observation and provenance-constrained claim robustness. The formal
+  proposal now separates construction, collection, claim state, and time and
+  specifies certificate antichains, Boolean must/may envelopes, bounded
+  provenance algebra, claim implication, inverse compatibility, forward
+  sensitivity, typed budgets, conditional verification plans, typed topology,
+  and four temporal-delta classes. These claim contracts, solvers, and
+  observation capsules are not runtime features yet. Graded score bounds remain
+  secondary, and probability or partial-identification language remains gated
+  on a coherent joint evidence law and observation kernel.
+- Formalized the four snapshot claim states as a two-coordinate knowledge
+  lattice. The proposed merge unions canonical provenance ledgers, recomputes
+  rule closure and certificates, and produces a monotone state projection for
+  reviewed monotone rules. The projection is not assumed to preserve joins
+  because premises can be split across views. Expiry and retraction require
+  ledger replay. This is a research contract, not a new public output.
+- Corrected Bayesian terminology across CLI, panel, MCP, schema, source
+  documentation, assurance records, and validation memos. `slug_confidences`
+  are documented as additive evidence-strength scores, network means as exact
+  only for the committed manually encoded, partly corpus-informed model,
+  `interval_low` and
+  `interval_high` as evidence-responsive uncertainty bands rather than credible
+  intervals, and `entropy_reduction_nats` as signed marginal entropy change.
+  Stable field names and shapes are unchanged.
+- Made declarative Bayesian absence collection-aware. Transient apex TXT,
+  DMARC, and MTA-STS DNS failures, MTA-STS policy-fetch failures, and whole DNS
+  source failures now mask only the affected declarative evidence units instead
+  of becoming negative evidence. Successful `NXDOMAIN` and `NoAnswer` responses
+  remain observed empty results. New granular channel markers surface through
+  `degraded_sources`, set `partial` for core DNS channels, and retain the
+  existing one-level confidence downgrade for degraded collection.
+- Aligned declarative inference with its provenance: every applied non-neutral
+  public absence, including weak MTA-STS nonfire, now contributes to effective
+  display mass, appears in unit counterfactuals, and sets
+  `absence_informative`. Transient MTA-STS HTTP 408, 429, and 5xx responses are
+  unobserved degradation; a stable 404 remains an observed invalid policy.
+- Fixed per-slug evidence-strength prior selection so A and CNAME observations
+  use their configured `(2, 2)` prior instead of being shadowed by the unknown-
+  source default. Mixed-source scoring remains deterministic and order-
+  independent.
+- Expanded the product-quality ablation to compare deterministic abstention,
+  per-slug evidence strength, the strongest reviewed evidence unit, and the
+  full Bayesian network. Added dependent follow-on gates for a
+  provenance-constrained robustness prototype and CT graph qualification.
 - Removed the expired PyJWT advisory exception from CI and release dependency
   audits after PyJWT 2.13.0 cleared the unqualified frozen-runtime audit.
 - Corrected source documentation to distinguish the default target-visible
   MTA-STS policy fetch from opt-in CSE and BIMI direct probes.
+- Made validation inference reproducible by pinning benchmark, reference,
+  tenancy, and posture harnesses to committed priors. DMARC reference labels
+  now distinguish successfully observed no-record negatives from collection
+  failures, and reliability bins no longer split tied scores. Naive iid
+  bootstrap and Wilson ranges are labeled as diagnostics without coverage
+  claims.
+- Reframed current conformal results as dependent empirical re-split
+  diagnostics until scorer-development disjointness is established. Synthetic
+  calibration and Bayesian layer ablation are now explicitly independent-
+  Bernoulli misspecification stress tests, and differential verification claims
+  only the configurations it actually sweeps.
+- Added model-relative cohort field aliases `mean_model_score` and
+  `high_score_share`. Hideable M365 and Google entries now report whole-cohort
+  model support coverage and unresolved share, while the legacy prevalence and
+  lower-bound fields remain null because evidence-selected denominators cannot
+  estimate deployment prevalence.
+- Added additive explanation-DAG completeness diagnostics and additive delta
+  incompleteness diagnostics. The DAG reports unreachable terminal claims;
+  delta reports endpoint-specific degraded sources and the additions, removals,
+  or dependent scalar changes withheld as unconfirmable.
 
 ### Fixed
+
+- Kept apex claims scoped to apex evidence. Related-domain enrichment can add
+  inventory observations, but its evidence, failures, and declarative controls
+  no longer change the queried apex's posture, confidence, or email-control
+  claims. Legacy cached catalog slugs without retained role lineage remain
+  visible as role-unavailable details and cannot create multi-cloud rollups.
+- Repaired cached ephemeral-fingerprint reevaluation with deterministic,
+  network-free DNS replay for supported TXT, SPF, MX, NS, and apex or `www`
+  CNAME observations. Replay preserves original evidence, respects unavailable
+  channels, deduplicates results, and rejects unsupported owner-qualified
+  replay types explicitly.
+- Reserved parser-owned semantic names and slugs from custom and ephemeral
+  fingerprint registration, preventing extension labels from impersonating
+  DMARC, DKIM, SPF, CAA, email-topology, or provider-identity facts.
+- Corrected DMARC candidate isolation. A record with an invalid or missing
+  `p=` tag remains explicit `dmarc-invalid` evidence and cannot emit the DMARC
+  service, policy fields, aggregate-reporting vendor fingerprint, or email
+  control credit merely because its `rua=` address is syntactically valid.
+- Completed multi-channel detector failure projection. Microsoft 365 CNAME
+  detection now also masks its partial SRV contributions on failure, while IdP
+  hub and Exchange endpoint detection mask partial A contributions as well as
+  CNAME contributions. A failed detector can no longer leave an earlier
+  channel-specific claim reportable.
+- Removed unsupported organization-size, Microsoft license-tier, and endpoint-
+  fleet conclusions from generated insights. Tenant-domain cardinality and
+  security, device-management, and network-security matches now remain exact
+  public-indicator observations. Gateway prose now requires the MX-backed
+  topology field and no longer invents a downstream delivery path from generic
+  provider slugs. Federated identity output no longer guesses ADFS, Okta, or
+  Ping when the external IdP is unidentified; separate vendor matches remain
+  indicators. Email-security prose no longer credits DKIM from a gateway plus
+  enforcing DMARC, and Google Workspace module matches are labeled as observed
+  indicators rather than active modules. Same-version legacy cache entries keep
+  their raw insight data, while the collection-observable reporting view hides
+  removed claims from current CLI, MCP, JSON, Markdown, and panel output.
+- Prevented unavailable granular DNS channels from becoming absence evidence in
+  structured and panel output. In particular, MX collection failures now
+  withhold no-email and MX-dependent sparse-footprint insights; bounded
+  channel-owned insight prefixes cover DMARC, DKIM, apex TXT, MX, and CAA
+  conclusions without broad substring filtering. Provider and explanation
+  summaries use only evidence from available channels while retaining raw
+  evidence as provenance.
+- Made temporal delta comparison collection-aware at both endpoints. Previous
+  degradation can no longer create confirmed additions, current degradation can
+  no longer create confirmed removals, and dependent DMARC, email-score,
+  identity, domain-count, or confidence changes require the relevant
+  opportunities at both snapshots. CT-only degradation does not suppress
+  unrelated identity scalars. Signal deltas are explicitly best-effort until
+  snapshots carry stable signal IDs and interpretation manifests.
+- Repaired explanation-DAG evidence identity and topology. Record-local indexes
+  no longer collide with global evidence occurrences, fired-rule nodes are
+  terminal-scoped, and evidence links only to an exactly matching retained rule
+  occurrence. Composite or source-status rules without that exact association
+  remain terminal metadata instead of receiving Cartesian evidence links.
+  Incomplete provenance remains explicit instead of becoming reachable through
+  unrelated evidence or a shared rule label.
+- Corrected cross-domain semantics. Shared administrative tokens now report
+  exact reuse without inferring a shared account or operator; shared tenant IDs
+  are provider-attested administrative co-tenancy, not ownership proof; generic
+  issuers and parent vendors are lower-specificity coincidences. The adaptive
+  shared-slug denominator now includes empty batch rows, the runtime and schema
+  agree on the three-slug threshold, and graph and token caps are disclosed.
+  Cross-domain token, slug, and BIMI correlation now consumes the
+  collection-observable view, while normalized BIMI organization keys make
+  ecosystem output invariant to input order.
+- Documented merge-candidate confidence as source-result completeness rather
+  than field reliability and disclosed the six-field conflict-coverage limit.
 
 - Grouped inference confidence by canonical claim. Record types and successful
   sources for unrelated slugs no longer combine into stronger inference, and a

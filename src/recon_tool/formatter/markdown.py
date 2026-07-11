@@ -13,7 +13,13 @@ from __future__ import annotations
 
 import string
 
-from recon_tool.formatter.classify import is_gws_service, is_m365_service
+from recon_tool.formatter.classify import (
+    categorize_services,
+    google_workspace_cse_indicators,
+    google_workspace_module_indicators,
+    is_gws_service,
+    is_m365_service,
+)
 from recon_tool.models import ExplanationRecord, TenantInfo
 from recon_tool.validator import strip_control_chars
 
@@ -62,12 +68,13 @@ def _md_header(info: TenantInfo) -> list[str]:
 
 def _md_services_split(info: TenantInfo) -> list[str]:
     """Services grouped into Microsoft 365 / Google Workspace / Tech Stack."""
-    if not info.services:
+    categorized = categorize_services(info)
+    if not categorized:
         return []
     m365_svcs: list[str] = []
     gws_svcs: list[str] = []
     other_svcs: list[str] = []
-    for service in info.services:
+    for service in (service for services in categorized.values() for service in services):
         if is_gws_service(service):
             gws_svcs.append(service)
         elif is_m365_service(service):
@@ -90,26 +97,25 @@ def _md_services_split(info: TenantInfo) -> list[str]:
 
 
 def _md_gws_details(info: TenantInfo) -> list[str]:
-    """Google Workspace details: auth type, identity provider, active modules,
-    and client-side encryption."""
-    gws_slugs = set(info.slugs)
-    has_gws = any(is_gws_service(s) for s in info.services) or "google-workspace" in gws_slugs
-    if not has_gws:
+    """Google Workspace auth, identity-provider, module-indicator, and CSE details."""
+    gws_modules = google_workspace_module_indicators(info)
+    cse_indicators = google_workspace_cse_indicators(info)
+    if not any((info.google_auth_type, info.google_idp_name, gws_modules, cse_indicators)):
         return []
     lines: list[str] = ["## Google Workspace", ""]
     if info.google_auth_type:
         lines.append(f"**Auth Type:** {markdown_escape(info.google_auth_type)}{MARKDOWN_HARD_BREAK}")
     if info.google_idp_name:
         lines.append(f"**Identity Provider:** {markdown_escape(info.google_idp_name)}{MARKDOWN_HARD_BREAK}")
-    # Active modules from GWS CNAME detections.
-    gws_modules = [s.replace("Google Workspace: ", "") for s in info.services if s.startswith("Google Workspace: ")]
     if gws_modules:
         lines.append(
-            f"**Active Modules:** {', '.join(markdown_escape(s) for s in gws_modules)}{MARKDOWN_HARD_BREAK}"
+            f"**Module Indicators:** {', '.join(markdown_escape(s) for s in gws_modules)}{MARKDOWN_HARD_BREAK}"
         )
-    cse_svcs = [s for s in info.services if "CSE" in s]
-    if cse_svcs:
-        lines.append(f"**CSE:** {', '.join(markdown_escape(s) for s in cse_svcs)}{MARKDOWN_HARD_BREAK}")
+    if cse_indicators:
+        lines.append(
+            "**CSE Configuration Indicators:** "
+            f"{', '.join(markdown_escape(s) for s in cse_indicators)}{MARKDOWN_HARD_BREAK}"
+        )
     if lines[-1].endswith(MARKDOWN_HARD_BREAK):
         lines[-1] = lines[-1].removesuffix(MARKDOWN_HARD_BREAK)
     lines.append("")
@@ -190,6 +196,9 @@ def format_tenant_markdown(info: TenantInfo) -> str:
     Output held byte-identical by ``tests/test_golden_renders.py``
     (``markdown_dense`` / ``markdown_sparse`` / ``markdown_rich``).
     """
+    from recon_tool.collection_view import collection_observable_info
+
+    info = collection_observable_info(info)
     lines: list[str] = []
     lines.extend(_md_header(info))
     lines.extend(_md_services_split(info))

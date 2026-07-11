@@ -4,7 +4,7 @@ Signals are derived observations: "when these slugs show up together, emit this
 line". They're defined in `recon_tool/data/signals.yaml`.
 
 Signals are strictly derived observations, never maturity or risk verdicts.
-See the epistemology section in [correlation.md](correlation.md#5-epistemology-and-reading-the-output)
+See the [output semantics in correlation.md](correlation.md#11-orthogonal-output-semantics)
 for why this distinction matters.
 
 - Use `recon signals list` to inspect the current built-in signal catalog.

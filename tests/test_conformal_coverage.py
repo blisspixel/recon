@@ -1,14 +1,14 @@
 """Pin the conformal-coverage harness's pure logic.
 
-`validation/conformal_coverage.py` adds a distribution-free finite-sample
-coverage check on the labelable email-policy node, complementary to the
-reference calibration. The network orchestration is maintainer-local, but the
+`validation/conformal_coverage.py` adds dependent empirical re-split
+diagnostics on the labelable email-policy node, complementary to the reference
+comparison. The network orchestration is maintainer-local, but the
 nonconformity score, the split-conformal quantile, the prediction set, and the
 coverage aggregation are pure functions whose correctness any reported number
 depends on. These tests pin them with hand-computed values and synthetic data
-(no network, no real apex), including the coverage guarantee on calibrated data
-and a falsifiability case proving the check can fail when exchangeability is
-violated.
+(no network, no real apex). The pure quantile helper retains its correctly
+scoped theorem for an independently fixed scorer and exchangeable future point;
+the current recon experiment does not claim those prerequisites.
 """
 
 from __future__ import annotations
@@ -66,6 +66,11 @@ class TestConformalQuantile:
     def test_empty_is_inf(self) -> None:
         assert math.isinf(conformal_quantile([], alpha=0.1))
 
+    @pytest.mark.parametrize("alpha", [0.0, 1.0, -0.1, 1.1, math.nan, math.inf, -math.inf])
+    def test_invalid_alpha_is_rejected(self, alpha: float) -> None:
+        with pytest.raises(ValueError, match="finite and strictly between 0 and 1"):
+            conformal_quantile([0.1, 0.2], alpha=alpha)
+
 
 class TestPredictionSet:
     def test_decisive_positive(self) -> None:
@@ -97,7 +102,9 @@ class TestEvaluateExplicit:
             alpha=0.5,
         )
         assert out["coverage"] == pytest.approx(1.0)
-        assert out["decisive_rate"] == pytest.approx(1.0)
+        assert out["singleton_rate"] == pytest.approx(1.0)
+        assert out["multi_label_rate"] == pytest.approx(0.0)
+        assert out["empty_set_rate"] == pytest.approx(0.0)
         assert out["mean_set_size"] == pytest.approx(1.0)
 
     def test_empty_test_is_handled(self) -> None:
@@ -105,7 +112,7 @@ class TestEvaluateExplicit:
         assert out["n_test"] == 0.0
 
 
-class TestCoverageGuaranteeOnCalibratedData:
+class TestEmpiricalBehaviorOnExchangeableSyntheticData:
     def _calibrated_bimodal(self, n: int, seed: int) -> tuple[list[float], list[int]]:
         # A calibrated, bimodal generator that mimics the email-policy node:
         # posteriors cluster near 0 or near 1, and the label is Bernoulli(p), so
@@ -119,20 +126,30 @@ class TestCoverageGuaranteeOnCalibratedData:
             labels.append(1 if rng.random() < p else 0)
         return posteriors, labels
 
-    def test_meets_nominal_coverage(self) -> None:
+    def test_repeated_split_diagnostics_are_nontrivial(self) -> None:
         posteriors, labels = self._calibrated_bimodal(600, seed=20260611)
         out = evaluate_cv(posteriors, labels, alpha=0.1, trials=20, seed=1729)
-        # Split conformal guarantees marginal coverage at or above 1 - alpha; on
-        # calibrated exchangeable data the averaged coverage lands at nominal.
+        # This seeded simulation is a regression check, not proof of the marginal
+        # theorem. The dependent re-splits land near the nominal reference here.
         assert out["mean_coverage"] >= 0.88
         assert out["min_coverage"] >= 0.80
-        # The sets are not trivially "always abstain": a calibrated bimodal node
-        # is usually decisive, so the mean set size sits well below 2.
-        assert out["mean_set_size"] < 1.9
+        assert out["mean_singleton_rate"] > 0.5
+        assert out["mean_multi_label_rate"] < 0.5
+        assert out["mean_empty_set_rate"] < 0.5
+        rate_sum = out["mean_singleton_rate"] + out["mean_multi_label_rate"] + out["mean_empty_set_rate"]
+        assert rate_sum == pytest.approx(1.0, abs=2e-4)
 
     def test_insufficient_data_is_flagged(self) -> None:
         out = evaluate_cv([0.9, 0.1], [1, 0], alpha=0.1)
         assert out.get("insufficient") == 1.0
+
+    def test_invalid_alpha_is_rejected_before_small_sample_shortcut(self) -> None:
+        with pytest.raises(ValueError, match="finite and strictly between 0 and 1"):
+            evaluate_cv([0.9, 0.1], [1, 0], alpha=math.nan)
+
+    def test_zero_trials_is_rejected(self) -> None:
+        with pytest.raises(ValueError, match="trials must be at least 1"):
+            evaluate_cv([0.9, 0.1, 0.8, 0.2], [1, 0, 1, 0], alpha=0.1, trials=0)
 
 
 class TestExchangeabilityIsLoadBearing:
@@ -187,6 +204,19 @@ class TestCollectorContract:
         assert rc == 0
         out = capsys.readouterr().out
         assert "coverage" in out.lower()
+        assert "singleton rate" in out.lower()
+        assert "multi-label rate" in out.lower()
+        assert "empty-set rate" in out.lower()
+
+    def test_main_rejects_invalid_alpha_before_collection(self, tmp_path, capsys) -> None:
+        domains_file = tmp_path / "domains.txt"
+        domains_file.write_text("contoso.com\n", encoding="utf-8")
+
+        with pytest.raises(SystemExit) as exc_info:
+            conformal_main([str(domains_file), "--alpha", "nan"])
+
+        assert exc_info.value.code == 2
+        assert "alpha must be finite and strictly between 0 and 1" in capsys.readouterr().err
 
     def test_main_json_is_aggregate_only(self, tmp_path, monkeypatch, capsys) -> None:
         domains_file = tmp_path / "domains.txt"
@@ -212,6 +242,10 @@ class TestCollectorContract:
         assert payload["construction"] == "split_conformal"
         assert payload["disclosure"]["aggregate_only"] is True
         assert payload["summary"]["n"] == 40.0
+        assert payload["interpretation"]["coverage_scope"].startswith("dependent empirical")
+        assert payload["interpretation"]["scorer_disjointness"].startswith("not established")
+        assert "no future-point coverage claim" in payload["interpretation"]["coverage_scope"]
+        assert "mean_set_size" in payload["interpretation"]["legacy_summary_keys"]
         rendered = json.dumps(payload)
         assert "contoso" not in rendered
         assert "fabrikam" not in rendered
@@ -230,6 +264,9 @@ class TestAggregatesOnly:
             "mean_coverage",
             "min_coverage",
             "mean_set_size",
+            "mean_singleton_rate",
+            "mean_multi_label_rate",
+            "mean_empty_set_rate",
         }
         assert set(out) <= allowed
         assert all(isinstance(v, int | float) for v in out.values())

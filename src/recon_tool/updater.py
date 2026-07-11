@@ -85,10 +85,7 @@ def upgrade_command(method: str) -> list[str] | None:
 def manual_hint(method: str) -> str:
     """The command to tell the user to run when we won't self-upgrade."""
     if method == HOMEBREW:
-        return (
-            "Homebrew install is retired; reinstall with "
-            "`uv tool install recon-tool` or `pipx install recon-tool`"
-        )
+        return "Homebrew install is retired; reinstall with `uv tool install recon-tool` or `pipx install recon-tool`"
     if method == EDITABLE:
         return "git pull  (editable install from a source checkout)"
     return "pip install -U recon-tool"

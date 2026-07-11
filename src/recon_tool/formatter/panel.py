@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import json
 import logging
-from datetime import UTC
 from typing import Any
 
 from rich.console import Console
@@ -44,6 +43,11 @@ from recon_tool.formatter.classify import (
     provider_line,
     slug_to_relationship_metadata,
 )
+from recon_tool.formatter.delta import (  # re-exported: stable import path after the split
+    format_delta_dict,
+    format_delta_json,
+    render_delta_panel,
+)
 from recon_tool.formatter.exposure import (  # re-exported: stable import path after the split
     format_exposure_dict,
     format_exposure_json,
@@ -71,7 +75,6 @@ from recon_tool.models import (
     CandidateValue,
     ChainReport,
     ConfidenceLevel,
-    DeltaReport,
     ExplanationRecord,
     MergeConflicts,
     Observation,
@@ -248,13 +251,9 @@ CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
     ConfidenceLevel.LOW: "●○○",
 }
 
-# Posterior-backed confidence. When fusion has run, the panel's
-# confidence dots reflect where a claim's 80% credible interval sits relative
-# to the present/absent decision threshold, rather than the deterministic tier
-# alone. The dots become one defined quantity (posterior support for the claim);
-# the deterministic corroboration stays in the "(N sources)" text. Glyphs and
-# colors reuse the existing tier vocabulary so the panel reads native, and stay
-# limited to filled / hollow dots for terminal-font safety.
+# Model-relative display support for the weakest claimed node. This stays
+# distinct from deterministic confidence because the hand-set uncertainty band
+# is not calibrated and its width is not generally evidence-monotone.
 _POSTERIOR_DECISION_THRESHOLD = 0.5
 
 _DOT_FILL_GLYPH: dict[int, str] = {3: "●●●", 2: "●●○", 1: "●○○"}
@@ -267,18 +266,12 @@ _DOT_FILL_COLOR: dict[int, str] = {
 
 
 def _posterior_dot_fill(obs: PosteriorObservation, threshold: float = _POSTERIOR_DECISION_THRESHOLD) -> int:
-    """Solid-dot count (1 to 3) for a positive claim backed by ``obs``.
+    """Solid-dot count (1 to 3) for a positive claim's model display.
 
-    A single, defined quantity: where the node's 80% credible interval sits
-    relative to the present/absent decision threshold.
-
-    - 3: the whole interval is on the yes-side (``interval_low >= threshold``).
-      The evidence is confident.
+    - 3: the whole interval is above the threshold.
     - 2: the point estimate is on the yes-side but the interval dips below the
-      threshold (thin or sparse evidence; the believable range still touches
-      "no").
-    - 1: the point estimate is on the no-side (the evidence leans against the
-      deterministic claim).
+      threshold, so the display straddles the threshold.
+    - 1: the point estimate is on the no-side of the model threshold.
 
     Pure and monotone in ``interval_low`` then ``posterior``; pinned by a
     property test so the renderer cannot drift or recalibrate through the UI.
@@ -305,19 +298,14 @@ _NODE_CLAIM_NAMES: dict[str, str] = {
 }
 
 
-def _posterior_clause(obs: PosteriorObservation, fill: int) -> str:
-    """The dimmed disagreement clause for a claimed node, or "" when confident.
-
-    fill 2 (the interval dips below the threshold): the evidence is thin.
-    fill 1 (the point estimate is below the threshold): the evidence does not
-    back the deterministic call.
-    """
-    if fill >= 3:
-        return ""
+def _posterior_support_phrase(obs: PosteriorObservation, fill: int) -> str:
+    """Describe a claimed node's model display without confidence language."""
     claim = _NODE_CLAIM_NAMES.get(obs.name, f"the {obs.name} call")
+    if fill >= 3:
+        return f"display above threshold for {claim}"
     if fill == 2:
-        return f"thin on {claim}"
-    return f"the evidence does not back {claim}"
+        return f"threshold-straddling display for {claim}"
+    return f"model mean below threshold for {claim}"
 
 
 # Services filtered from the compact (default) view because they appear
@@ -589,35 +577,31 @@ def _append_field(facts: Text, label: str, value: str, value_style: str = "") ->
 def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     """Render the Confidence row.
 
-    Deterministic fallback (no fusion / --no-fusion): dots from the deterministic
-    tier, green on High, no clause. With fusion: the
-    dots reflect the weakest claimed node's posterior support (the panel is as
-    confident as its shakiest asserted claim), colored by fill, and a dimmed line
-    speaks up when that node is thin or the evidence leans against it. The
-    deterministic corroboration stays in the source count.
+    Confidence is always the deterministic source/corroboration tier. When
+    fusion ran and at least one positive claim fired, a separate ``Model
+    support`` row shows the weakest claimed node's threshold-relative display.
+    Keeping the two rows separate prevents the hand-set uncertainty band from
+    being presented as calibrated confidence.
     """
     facts.append("  ")
     facts.append("Confidence".ljust(_LABEL_WIDTH), style="dim")
     tail = f" {info.confidence.value.capitalize()} ({len(info.sources)} sources)"
+    dots = CONFIDENCE_DOTS[info.confidence]
+    style = "green" if _confidence_is_high(info.confidence) else ""
+    facts.append(dots + tail, style=style)
+    facts.append("\n")
 
     claimed = [o for o in info.posterior_observations if o.evidence_used]
     if not claimed:
-        dots = CONFIDENCE_DOTS[info.confidence]
-        style = "green" if _confidence_is_high(info.confidence) else ""
-        facts.append(dots + tail, style=style)
-        facts.append("\n")
         return
-
     weakest = min(claimed, key=lambda o: (_posterior_dot_fill(o), o.posterior))
     fill = _posterior_dot_fill(weakest)
+    facts.append("  ")
+    facts.append("Model support".ljust(_LABEL_WIDTH), style="dim")
+    facts.append(" ")
     facts.append(_DOT_FILL_GLYPH[fill], style=_DOT_FILL_COLOR[fill])
-    facts.append(tail)
+    facts.append(f" {_posterior_support_phrase(weakest, fill)}", style="dim")
     facts.append("\n")
-    clause = _posterior_clause(weakest, fill)
-    if clause:
-        facts.append(" " * (2 + _LABEL_WIDTH))
-        facts.append(clause, style="dim")
-        facts.append("\n")
 
 
 def _with_idp(base: str, google_idp_name: str | None) -> str:
@@ -673,7 +657,7 @@ def _key_facts_multicloud_line(info: TenantInfo) -> str | None:
             surface_slug_stream.append(sa.primary_slug)
         if sa.infra_slug:
             surface_slug_stream.append(sa.infra_slug)
-    vendor_counts = count_cloud_vendors(info.slugs, surface_slug_stream)
+    vendor_counts = count_cloud_vendors(info.slugs, surface_slug_stream, apex_evidence=info.evidence)
     if len(vendor_counts) < 2:
         return None
     ranked_vendors = sorted(vendor_counts.items(), key=lambda p: (-p[1], p[0]))
@@ -715,8 +699,7 @@ def _render_key_facts(info: TenantInfo) -> Text:
     if multicloud_line is not None:
         _append_field(facts, "Multi-cloud", multicloud_line)
 
-    # Confidence — deterministic dots without fusion; posterior-backed dots plus
-    # a disagreement clause when fusion has run.
+    # Deterministic confidence and, when fusion ran, a separate model display.
     _append_confidence_field(facts, info)
 
     return facts
@@ -762,6 +745,10 @@ def render_tenant_panel(
     return value to ``console.print``.
     """
     from rich.console import Group
+
+    from recon_tool.collection_view import collection_observable_info
+
+    info = collection_observable_info(info)
 
     # Core layout blocks are accumulated into a list and wrapped in a
     # Rich Group at the end. Each block is a Text instance so we can
@@ -832,11 +819,9 @@ def render_tenant_panel(
 
 
 def _strip_email_noise(categorized: dict[str, list[str]], info: TenantInfo) -> None:
-    """In default mode, strip from the Email row the protocol/config entries
-    (DKIM/DMARC/SPF/...) the email-security score already covers and the
-    provider/gateway services already shown in the header. If that empties the
-    row, fall back to a compact summary so dense email evidence does not render
-    as a sparse panel. Mutates ``categorized`` in place.
+    """Strip Email-row controls and paths already summarized above.
+
+    If that empties the row, add a compact summary. Mutates ``categorized``.
     """
     original_email = list(categorized["Email"])
     _email_noise = {
@@ -849,9 +834,10 @@ def _strip_email_noise(categorized: dict[str, list[str]], info: TenantInfo) -> N
         "Exchange Autodiscover",
         "Microsoft 365",
         "Google Workspace",
-        "Exchange Server (on-prem / hybrid)",
+        "Exchange-style endpoint indicator",
+        "Custom or unclassified MX",
+        "Null MX (domain does not accept email)",
     }
-    # Also strip the gateway — already in the Provider line.
     _gateway_names = {
         "Proofpoint",
         "Trend Micro Email Security",
@@ -1367,13 +1353,13 @@ def _render_verbose_detail(info: TenantInfo, verbose: bool) -> Text | None:
         f"  Inference confidence: {info.inference_confidence.value.capitalize()}\n",
         style="dim",
     )
-    # The Bayesian posteriors with their 80% credible intervals, for
+    # Model-relative Bayesian posteriors with 80% uncertainty bands, for
     # operators who want the math visible by default. The label names the
-    # interval so the comma range is not read as a frequentist confidence
+    # band so the comma range is not read as a frequentist confidence
     # interval. Claimed nodes only (the verdict's nodes), strongest first.
     claimed_posteriors = [o for o in info.posterior_observations if o.evidence_used]
     if claimed_posteriors:
-        v.append("  Posteriors (80% credible interval):\n", style="dim")
+        v.append("  Model posteriors (80% uncertainty band):\n", style="dim")
         for o in sorted(claimed_posteriors, key=lambda x: -x.posterior):
             v.append(
                 f"    {o.name}: {o.posterior:.2f} [{o.interval_low:.2f}, {o.interval_high:.2f}]\n",
@@ -1412,8 +1398,9 @@ def _curate_insights(insights: tuple[str, ...]) -> list[str]:
     Two kinds of cleanup:
 
     1. **Drop laundry-list dumps.** Prefixes like ``"Security stack:"``,
-       ``"Infrastructure:"``, ``"PKI:"``, and
-       ``"Google Workspace modules:"`` all duplicate information that
+       ``"Security-vendor indicators observed:"``, ``"Infrastructure:"``,
+       ``"PKI:"``, and ``"Google Workspace module indicators observed:"``
+       all duplicate information that
        the Services block already shows in a categorized, deduped
        form. Low-signal organizational-size hints
        (``"mid-size organization"``, ``"domains in tenant"``) read as
@@ -1441,9 +1428,13 @@ def _curate_insights(insights: tuple[str, ...]) -> list[str]:
     """
     drop_prefixes = (
         "Security stack:",
+        "Security-vendor indicators observed:",
+        "Network-security vendor indicator",
+        "Device-management vendor indicator",
         "Infrastructure:",
         "PKI:",
         "Google Workspace modules:",  # module list also belongs in Services
+        "Google Workspace module indicators observed:",
     )
     # Drop insights that restate what the Services
     # block or header already shows. These follow a "Label: slug1, slug2"
@@ -1462,6 +1453,7 @@ def _curate_insights(insights: tuple[str, ...]) -> list[str]:
         "Google Cloud Investment:",
         "Google-Native Identity:",
         "Dual provider:",
+        "Provider indicators co-observed:",
         "Dual Email Provider:",
         "Dual Email Delivery Path:",
         "Google MTA-STS Enforcing:",
@@ -1470,6 +1462,7 @@ def _curate_insights(insights: tuple[str, ...]) -> list[str]:
         "Enterprise Security Stack:",
         "Digital Transformation:",
         "Email gateway:",  # already in Provider line
+        "MX gateway observed:",
         "Email Gateway Topology:",
         "Email delivery path:",
         "Secondary Email Provider Observed:",
@@ -1543,6 +1536,7 @@ def _curate_insights(insights: tuple[str, ...]) -> list[str]:
             line
             for line in curated
             if not line.startswith("No DMARC record")
+            and not line.startswith("No valid DMARC policy record")
             and not line.startswith("No DKIM at common selectors")
             and not line.startswith("No DKIM selectors observed")
             and not line.startswith("DKIM not observed")
@@ -1710,131 +1704,6 @@ def render_posture_panel(observations: tuple[Observation, ...]) -> Panel | None:
     return Panel(
         text,
         title="Posture Analysis",
-        width=80,
-        padding=(1, 2),
-        border_style="dim",
-    )
-
-
-# ── Delta rendering ─────────────────────────────────────────────────────
-
-
-def format_delta_dict(report: DeltaReport) -> dict[str, Any]:
-    """Format DeltaReport as a dict for JSON output.
-
-    The ``changed_*`` fields are always present in the output. Each is
-    either ``null`` (no change observed) or ``{"from": ..., "to": ...}``
-    (a change observed). Stable shape matches
-    ``docs/recon-schema.json#/$defs/DeltaReport`` so downstream
-    validators do not reject no-change or partial-change reports.
-    """
-    from datetime import datetime
-
-    def _change_pair(value: tuple[Any, Any] | None) -> dict[str, Any] | None:
-        if value is None:
-            return None
-        return {"from": value[0], "to": value[1]}
-
-    return {
-        "record_type": "delta",  # SH7 discriminator
-        "domain": report.domain,
-        "timestamp": datetime.now(UTC).isoformat(),
-        "has_changes": report.has_changes,
-        "added_services": list(report.added_services),
-        "removed_services": list(report.removed_services),
-        "added_slugs": list(report.added_slugs),
-        "removed_slugs": list(report.removed_slugs),
-        "added_signals": list(report.added_signals),
-        "removed_signals": list(report.removed_signals),
-        "changed_auth_type": _change_pair(report.changed_auth_type),
-        "changed_dmarc_policy": _change_pair(report.changed_dmarc_policy),
-        "changed_email_security_score": _change_pair(report.changed_email_security_score),
-        "changed_confidence": _change_pair(report.changed_confidence),
-        "changed_domain_count": _change_pair(report.changed_domain_count),
-    }
-
-
-def format_delta_json(report: DeltaReport) -> str:
-    """Format DeltaReport as a JSON string."""
-    return json.dumps(format_delta_dict(report), indent=2)
-
-
-def render_delta_panel(report: DeltaReport) -> Panel:
-    """Render delta report as a Rich panel with +/- markers."""
-    text = Text()
-
-    text.append("  Domain: ", style="dim")
-    text.append(f"{report.domain}\n")
-
-    if not report.has_changes:
-        text.append("\n  No changes detected.", style="dim italic")
-    else:
-        # Services
-        for svc in report.added_services:
-            text.append("\n  ")
-            text.append("+ ", style="green bold")
-            text.append(f"Service: {svc}", style="green")
-        for svc in report.removed_services:
-            text.append("\n  ")
-            text.append("- ", style="red bold")
-            text.append(f"Service: {svc}", style="red")
-
-        # Slugs
-        for slug in report.added_slugs:
-            text.append("\n  ")
-            text.append("+ ", style="green bold")
-            text.append(f"Slug: {slug}", style="green")
-        for slug in report.removed_slugs:
-            text.append("\n  ")
-            text.append("- ", style="red bold")
-            text.append(f"Slug: {slug}", style="red")
-
-        # Signals
-        for sig in report.added_signals:
-            text.append("\n  ")
-            text.append("+ ", style="green bold")
-            text.append(f"Signal: {sig}", style="green")
-        for sig in report.removed_signals:
-            text.append("\n  ")
-            text.append("- ", style="red bold")
-            text.append(f"Signal: {sig}", style="red")
-
-        # Scalar changes
-        if report.changed_auth_type is not None:
-            text.append("\n  ")
-            text.append("~ ", style="yellow bold")
-            # auth_type is free text from a prior snapshot (operator-supplied
-            # compare file or cache); strip control bytes before rendering.
-            _auth_prev = strip_control_chars(str(report.changed_auth_type[0]))
-            _auth_curr = strip_control_chars(str(report.changed_auth_type[1]))
-            text.append(f"Auth: {_auth_prev} → {_auth_curr}", style="yellow")
-        if report.changed_dmarc_policy is not None:
-            text.append("\n  ")
-            text.append("~ ", style="yellow bold")
-            text.append(f"DMARC: {report.changed_dmarc_policy[0]} → {report.changed_dmarc_policy[1]}", style="yellow")
-        if report.changed_email_security_score is not None:
-            text.append("\n  ")
-            text.append("~ ", style="yellow bold")
-            text.append(
-                f"Email Security Score: {report.changed_email_security_score[0]} → "
-                f"{report.changed_email_security_score[1]}",
-                style="yellow",
-            )
-        if report.changed_confidence is not None:
-            text.append("\n  ")
-            text.append("~ ", style="yellow bold")
-            text.append(f"Confidence: {report.changed_confidence[0]} → {report.changed_confidence[1]}", style="yellow")
-        if report.changed_domain_count is not None:
-            text.append("\n  ")
-            text.append("~ ", style="yellow bold")
-            text.append(
-                f"Domain Count: {report.changed_domain_count[0]} → {report.changed_domain_count[1]}",
-                style="yellow",
-            )
-
-    return Panel(
-        text,
-        title="Delta Report",
         width=80,
         padding=(1, 2),
         border_style="dim",

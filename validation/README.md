@@ -22,7 +22,7 @@ Committed (generic tooling, no company names):
   subdomains, lost slugs, and aggregate slug-frequency changes. Use after
   adding fingerprints to confirm uplift.
 - `run_calibration_bundle.py`: maintainer-local wrapper around the reference,
-  tenancy, and conformal calibration harnesses. Captures aggregate JSON without
+  tenancy, and conformal re-split diagnostic harnesses. Captures aggregate JSON without
   shell redirects and renders the checked memo under `runs-private/`.
 - `audit_fingerprints.py`: no-network catalog audit. Reports metadata
   coverage and match-mode classification (`keep_any`, `review_for_all`,
@@ -237,13 +237,14 @@ Synthetic / no-network (runnable by anyone, deterministic):
 
 - `synthetic_calibration.py`: model-grounded calibration: samples worlds
   from the network's own priors/CPTs and checks reliability, ECE, Brier.
-- `interval_coverage.py`: the v2.1.15 perturbation-coverage gate: the 80%
-  interval against the CAL8 ±20% likelihood band, truth from an
-  independent full-joint reference. Memo: `interval-coverage.md`.
+- `interval_coverage.py`: the v2.1.15 finite perturbation-containment gate for
+  the 80% model-relative uncertainty band against selected likelihood scenarios.
+  This is not empirical or Bayesian interval coverage. Memo:
+  `interval-coverage.md`.
 - `differential_verification.py`: variable elimination cross-checked
   against naive full-joint enumeration over the enumerable evidence sweep.
-- `adversarial_properties.py`: the machine-checked suppression-
-  monotonicity proposition (correlation.md 4.3).
+- `adversarial_properties.py`: the machine-checked local suppression property
+  under fixed positive-factor assumptions (correlation.md section 3.4).
 - `likelihood_sensitivity.py`: CAL8: posteriors/agreement under ±20%
   likelihood perturbation. Memo: `cal8-likelihood-sensitivity.md`.
 - `drift_check.py`: the PV2 inference drift gate against
@@ -252,10 +253,9 @@ Synthetic / no-network (runnable by anyone, deterministic):
   slug-matching baselines (pooled and fired-regime), and Louvain vs
   connected components on planted partitions under bridging noise. Run
   and committed (fully synthetic): `layer-ablation.md`.
-- `posture_distributions.py`: reads the engine's per-domain behaviour as
-  distributions: information recovered (CAL10 entropy reduction) bucketed
-  by observable hardening posture, and interval width vs evidence (the
-  CAL7 over-confidence diagnostic). Pure aggregation unit-tested; the
+- `posture_distributions.py`: reads the engine's per-domain behavior as
+  distributions: signed marginal entropy change bucketed by observable posture,
+  and uncertainty-band width versus evidence. Pure aggregation unit-tested; the
   run is network/maintainer-local (aggregates only).
 
 Reference-anchored / network (maintainer-local, aggregates only):
@@ -268,9 +268,11 @@ Reference-anchored / network (maintainer-local, aggregates only):
 - `tenancy_reference_calibration.py`: the M365 tenancy posterior (DNS
   channel only) compared with Microsoft's endpoint attestation as corroboration;
   GWS reported one-sided (the channel has no authoritative negative).
-- `conformal_coverage.py`: distribution-free split-conformal coverage on
-  the labelable nodes, with a deliberate falsifiability split showing the
-  exchangeability boundary.
+- `conformal_coverage.py`: dependent conformal re-split diagnostics on the
+  labelable email-policy score. Scorer-development disjointness is not
+  established, so the current experiment makes no future-point coverage claim.
+  Re-splits of one selected list report singleton, multi-label, and empty-set
+  rates separately.
 
 Private-run memo sequence:
 
@@ -283,7 +285,7 @@ By default the runner expects:
 
 - `validation/corpus-private/by-vertical/*.txt` for per-stratum reference and
   tenancy calibration.
-- `validation/corpus-private/consolidated.txt` for conformal coverage.
+- `validation/corpus-private/consolidated.txt` for conformal re-split diagnostics.
 - `validation/runs-private/<UTC-stamp>/` for `reference.json`, `tenancy.json`,
   `conformal.json`, `memo.md`, and `meta.json`.
 

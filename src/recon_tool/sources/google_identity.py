@@ -93,6 +93,8 @@ class GoogleIdentitySource:
                 params={"hd": domain},
                 follow_redirects=True,
             )
+            if resp.status_code == 429 or resp.status_code >= 500:
+                resp.raise_for_status()
             return self._classify_response(resp, domain)
 
     async def lookup(self, domain: str, **kwargs: Any) -> SourceResult:
@@ -122,12 +124,14 @@ class GoogleIdentitySource:
             return SourceResult(
                 source_name="google_identity",
                 error=f"Network error querying Google identity after retries: {exc}",
+                source_unavailable=True,
             )
         except Exception as exc:
             logger.debug("Google identity probe failed for %s: %s", domain, exc)
             return SourceResult(
                 source_name="google_identity",
                 error=f"Unexpected error: {exc}",
+                source_unavailable=True,
             )
 
     def _classify_response(self, resp: httpx.Response, domain: str) -> SourceResult:

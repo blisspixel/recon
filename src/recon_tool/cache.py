@@ -19,7 +19,6 @@ from pathlib import Path
 from typing import Any
 
 from recon_tool.models import (
-    BIMIIdentity,
     CandidateValue,
     CertBurst,
     CertSummary,
@@ -52,7 +51,7 @@ logger = logging.getLogger("recon")
 
 DEFAULT_TTL: int = 86400  # 24 hours
 
-_CACHE_VERSION = 2
+_CACHE_VERSION = 3
 
 # A cache entry is a serialized TenantInfo (a few KB, up to ~100 KB with CT
 # data). Skip a file larger than this before read_text/json.loads so a corrupt
@@ -214,7 +213,7 @@ def cache_clear_all() -> int:
 def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
     """Serialize TenantInfo to a JSON-serializable dict with cache metadata.
 
-    Handles: ConfidenceLevel → string, CertSummary/BIMIIdentity → nested dict,
+    Handles: ConfidenceLevel to string, CertSummary to nested dict,
     EvidenceRecord tuple → list of dicts, detection_scores tuple-of-tuples → dict,
     all tuple fields → lists.
     """
@@ -253,6 +252,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "email_gateway": info.email_gateway,
         "dmarc_pct": info.dmarc_pct,
         "dmarc_testing": info.dmarc_testing,
+        "spf_include_count": info.spf_include_count,
         "likely_primary_email_provider": info.likely_primary_email_provider,
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
@@ -341,18 +341,9 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
     else:
         d["cert_summary"] = None
 
-    # BIMIIdentity → nested dict or None
-    if info.bimi_identity is not None:
-        bi = info.bimi_identity
-        d["bimi_identity"] = {
-            "organization": bi.organization,
-            "country": bi.country,
-            "state": bi.state,
-            "locality": bi.locality,
-            "trademark": bi.trademark,
-        }
-    else:
-        d["bimi_identity"] = None
+    # Reserved for a future chain-validated VMC identity implementation. Legacy
+    # subject fields were unvalidated and must not cross a cache boundary.
+    d["bimi_identity"] = None
 
     # EvidenceRecord tuple → list of dicts
     d["evidence"] = [
@@ -800,17 +791,9 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     # CertSummary
     cert_summary = _cert_summary_from_dict(data)
 
-    # BIMIIdentity
-    bimi_identity: BIMIIdentity | None = None
-    bi_data = data.get("bimi_identity")
-    if isinstance(bi_data, dict):
-        bimi_identity = BIMIIdentity(
-            organization=bi_data.get("organization", ""),
-            country=bi_data.get("country"),
-            state=bi_data.get("state"),
-            locality=bi_data.get("locality"),
-            trademark=bi_data.get("trademark"),
-        )
+    # Legacy cache entries carried unvalidated certificate-subject identity.
+    # The stable field remains schema-compatible but is intentionally cleared.
+    bimi_identity = None
 
     # EvidenceRecord list
     evidence_list = data.get("evidence", [])
@@ -875,6 +858,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         email_gateway=data.get("email_gateway"),
         dmarc_pct=data.get("dmarc_pct"),
         dmarc_testing=bool(data.get("dmarc_testing", False)),
+        spf_include_count=int(data.get("spf_include_count", 0) or 0),
         likely_primary_email_provider=data.get("likely_primary_email_provider"),
         ct_provider_used=data.get("ct_provider_used"),
         ct_subdomain_count=int(data.get("ct_subdomain_count", 0) or 0),

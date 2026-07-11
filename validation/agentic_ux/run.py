@@ -253,7 +253,7 @@ def score_records(records: list[SessionRecord]) -> score_mod.RubricSummary:
 
 
 def _markdown_session_table(rows: list[dict[str, object]]) -> str:
-    header = "| Persona | Fixture | Fusion | Read posterior | Cited interval | Used --explain-dag | Hedge count |"
+    header = "| Persona | Fixture | Fusion | Read posterior | Cited band | Used --explain-dag | Hedge count |"
     sep = "|---|---|---|---|---|---|---|"
     lines = [header, sep]
     for row in rows:
@@ -307,7 +307,7 @@ def _summarize_findings(summary: score_mod.RubricSummary) -> str:
     lines: list[str] = []
     lines.append(
         f"**Headline.** Of {total} sessions: posterior block read in {read_post} "
-        f"({read_post * 100 // total}%); credible interval cited in {cited_iv}; "
+        f"({read_post * 100 // total}%); uncertainty band cited in {cited_iv}; "
         f"`--explain-dag` / `explain_dag` mentioned in {used_dag}.",
     )
     lines.append("")
@@ -335,11 +335,11 @@ def _summarize_findings(summary: score_mod.RubricSummary) -> str:
         )
     if sparse_only_intervals and not dense_only_intervals:
         findings.append(
-            "**Numeric interval citation only appears on sparse fixtures.** "
-            f"All {len(sparse_only_intervals)} interval citations occurred on the "
-            "`hardened-sparse` fixture; none on `contoso-dense`. The interval is "
-            "load-bearing exactly where uncertainty is wide. v2.0 disposition: "
-            "the field earns its keep on hardened targets; no rename needed.",
+            "**Numeric band citation only appears on the deliberately thin fixture.** "
+            f"All {len(sparse_only_intervals)} citations occurred on the "
+            "historically named `hardened-sparse` fixture; none occurred on "
+            "`contoso-dense`. This measures agent engagement with the fields, not "
+            "a general relationship between `sparse`, band width, or hardening.",
         )
     for diff in diff_no_change:
         if diff.label == "sparse_vs_dense":
@@ -427,7 +427,7 @@ def render_report(
     )
     parts.append(
         "None of the persona prompts mention `posterior_observations`, "
-        "`sparse=true`, `--explain-dag`, or credible intervals. The "
+        "`sparse=true`, `--explain-dag`, or uncertainty bands. The "
         "rubric measures whether the agent finds and uses those "
         "affordances unprompted.\n",
     )

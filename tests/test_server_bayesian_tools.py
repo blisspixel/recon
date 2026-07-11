@@ -10,6 +10,7 @@ branch coverage (B4).
 
 from __future__ import annotations
 
+from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -75,6 +76,8 @@ class TestGetPosteriors:
         assert data["domain"] == "northwindtraders.com"
         assert "entropy_reduction_nats" in data
         assert "evidence_count" in data
+        assert data["degraded_sources"] == []
+        assert data["collection_masked_units"] == []
         assert isinstance(data["posteriors"], list)
         assert data["posteriors"], "expected at least one posterior node"
         first = data["posteriors"][0]
@@ -82,6 +85,20 @@ class TestGetPosteriors:
         # Tool-level uncertainty summary: how many nodes the passive channel
         # could not resolve, agreeing with the per-node sparse flags.
         assert data["sparse_count"] == sum(1 for p in data["posteriors"] if p["sparse"])
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_returns_collection_provenance_for_masked_units(self, mock_resolve: AsyncMock) -> None:
+        degraded = replace(
+            _info("northwindtraders.com"),
+            degraded_sources=("http:mta_sts_policy", "dns:dmarc"),
+        )
+        mock_resolve.return_value = (degraded, SAMPLE_RESULTS)
+
+        data = await get_posteriors("northwindtraders.com")
+
+        assert data["degraded_sources"] == ["dns:dmarc", "http:mta_sts_policy"]
+        assert data["collection_masked_units"] == ["dmarc_policy", "mta_sts_enforce"]
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -129,6 +146,24 @@ class TestExplainDag:
         assert dot
         assert not dot.startswith("Error")
         assert dot != text  # the two renderers produce different output
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_collection_provenance_prefixes_standalone_dag(self, mock_resolve: AsyncMock) -> None:
+        degraded = replace(
+            _info("northwindtraders.com"),
+            degraded_sources=("http:mta_sts_policy", "dns:dmarc"),
+        )
+        mock_resolve.return_value = (degraded, SAMPLE_RESULTS)
+
+        text = await explain_dag("northwindtraders.com", "text")
+        dot = await explain_dag("northwindtraders.com", "dot")
+
+        assert text.startswith("Collection provenance:")
+        assert "degraded_sources: dns:dmarc, http:mta_sts_policy" in text
+        assert "collection-masked units: dmarc_policy, mta_sts_enforce" in text
+        assert dot.startswith("// degraded_sources: dns:dmarc, http:mta_sts_policy")
+        assert "// collection_masked_units: dmarc_policy, mta_sts_enforce" in dot
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -180,6 +215,25 @@ class TestClusterVerificationTokens:
                 }
             ],
         }
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_unavailable_apex_txt_cannot_form_a_shared_token_cluster(self, mock_resolve: AsyncMock) -> None:
+        shared = ("google-site-verification=sharedtoken123",)
+        mock_resolve.side_effect = [
+            (replace(_info("contoso.com", tokens=shared), degraded_sources=("dns:apex_txt",)), SAMPLE_RESULTS),
+            (
+                replace(
+                    _info("northwindtraders.com", tokens=shared),
+                    degraded_sources=("dns:apex_txt",),
+                ),
+                SAMPLE_RESULTS,
+            ),
+        ]
+
+        data = await cluster_verification_tokens(["contoso.com", "northwindtraders.com"])
+
+        assert data["clusters"] == {}
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

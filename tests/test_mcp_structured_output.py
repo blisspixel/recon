@@ -287,7 +287,7 @@ def test_agentic_posture_output_schemas_are_precise() -> None:
         "disclaimer",
     }
     hypothesis_props = hypothesis_schema["properties"]
-    assert hypothesis_props["likelihood"]["enum"] == ["strong", "moderate", "weak", "unsupported"]
+    assert hypothesis_props["likelihood"]["const"] == "unresolved"
     assert hypothesis_props["confidence"]["enum"] == ["high", "medium", "low"]
     assert hypothesis_props["supporting_signals"]["items"]["type"] == "string"
 
@@ -313,6 +313,8 @@ def test_get_posteriors_output_schema_is_precise() -> None:
     assert schema["title"] == "PosteriorBlockResult"
     assert set(schema["required"]) == {
         "domain",
+        "degraded_sources",
+        "collection_masked_units",
         "entropy_reduction_nats",
         "evidence_count",
         "conflict_count",
@@ -321,6 +323,8 @@ def test_get_posteriors_output_schema_is_precise() -> None:
     }
 
     props = schema["properties"]
+    assert props["degraded_sources"]["items"]["type"] == "string"
+    assert props["collection_masked_units"]["items"]["type"] == "string"
     assert props["posteriors"]["items"]["$ref"] == "#/$defs/PosteriorNodeSummary"
     assert props["sparse_count"]["type"] == "integer"
 
@@ -384,11 +388,21 @@ def test_exposure_report_output_schemas_are_precise() -> None:
     assert assessment_props["evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
     email = assessment_schema["$defs"]["EmailPostureSummary"]
     assert email["properties"]["email_security_score"]["type"] == "integer"
+    observability = assessment_schema["$defs"]["ObservabilitySummary"]
+    assert observability["properties"]["unavailable_controls"]["items"]["type"] == "string"
 
     gaps_schema = _tool_output_schema("find_hardening_gaps")
     assert gaps_schema["title"] == "GapReportResult"
-    assert set(gaps_schema["required"]) == {"domain", "gaps", "disclaimer"}
+    assert set(gaps_schema["required"]) == {
+        "domain",
+        "gaps",
+        "disclaimer",
+        "unavailable_controls",
+        "degraded_sources",
+    }
     assert gaps_schema["properties"]["gaps"]["items"]["$ref"] == "#/$defs/HardeningGapSummary"
+    assert gaps_schema["properties"]["unavailable_controls"]["items"]["type"] == "string"
+    assert gaps_schema["properties"]["degraded_sources"]["items"]["type"] == "string"
     gap = gaps_schema["$defs"]["HardeningGapSummary"]
     assert gap["properties"]["absence_confirmable"]["type"] == "boolean"
     assert gap["properties"]["evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"

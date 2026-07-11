@@ -296,7 +296,7 @@ class TestExplainSignal:
     async def test_known_signal_no_domain(self) -> None:
         """Known signal without domain returns definition and conditions."""
         # Use a signal name that exists in the built-in signals.yaml
-        from recon_tool.signals import load_signals
+        from recon_tool.signals import load_signals, signal_observation_label
 
         signals = load_signals()
         assert len(signals) > 0
@@ -304,7 +304,7 @@ class TestExplainSignal:
 
         data = await explain_signal(sig_name)
         assert "name" in data
-        assert data["name"] == sig_name
+        assert data["name"] == signal_observation_label(sig_name)
         assert "trigger_conditions" in data
         assert "weakening_conditions" in data
 

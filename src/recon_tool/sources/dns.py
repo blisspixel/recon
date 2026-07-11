@@ -123,7 +123,12 @@ async def _detect_common_subdomains(ctx: _DetectionCtx, domain: str) -> None:
 
     async def _probe(prefix: str) -> str | None:
         fqdn = f"{prefix}.{domain}"
-        results = await dns_base.safe_resolve(fqdn, "CNAME")
+        results = await dns_base.safe_resolve(
+            fqdn,
+            "CNAME",
+            degraded_sources=ctx.degraded_sources,
+            degraded_name="dns:cname",
+        )
         if results:
             return fqdn
         return None
@@ -136,27 +141,14 @@ async def _detect_common_subdomains(ctx: _DetectionCtx, domain: str) -> None:
         ctx.related_domains.update(found)
 
 
-async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
-    """Detect on-prem / hybrid Microsoft Exchange deployments via
-    OWA subdomain probing.
+async def _detect_exchange_endpoints(ctx: _DetectionCtx, domain: str) -> None:
+    """Observe public endpoints whose names follow Exchange conventions.
 
-    When ``owa.<domain>``, ``mail.<domain>``, or similar Exchange-
-    specific endpoints resolve, it's a strong signal that the org
-    runs on-prem / hybrid Exchange (not Exchange Online). These
-    orgs often self-host mail while still having an Entra ID /
-    Azure AD tenant for identity - a very common higher-ed and
-    institutional-nonprofit pattern.
-
-    Without this detection, a domain with custom MX records and an
-    OWA endpoint looks sparse to recon even though the actual
-    answer ("runs Exchange on-prem") is observable from DNS alone.
-    This fills that gap.
-
-    Accepts A or CNAME resolution - on-prem Exchange typically
-    resolves via A to an internal-facing IP or via CNAME to a
-    load-balanced frontend. Checks a narrow set of strictly-
-    Exchange subdomain prefixes to avoid false positives on
-    generic `mail.` hostnames that could be anything.
+    Resolving ``owa``, ``outlook``, ``exchange``, ``mail-ex``, or a
+    non-Microsoft ``autodiscover`` endpoint is name-level evidence only. It
+    does not establish the server software, deployment model, or whether the
+    endpoint currently handles mail. Microsoft-hosted autodiscover targets and
+    wildcard DNS are suppressed to keep the indicator bounded.
     """
     # Only these prefixes are specifically Exchange-related. We
     # deliberately exclude generic "mail" since many orgs point
@@ -170,21 +162,20 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
         "webmail",  # Often Exchange but could be Horde / Roundcube
         "autodiscover",  # Exchange autodiscover - standard Exchange
         # protocol, returned as CNAME for M365
-        # (already detected) or as A for on-prem.
+        # (already detected) or as a direct A record.
     )
 
     # Probe strategy:
     # - For `autodiscover`: query CNAME first. If the immediate CNAME
     #   target points to the M365 cloud (autodiscover.outlook.com or an
     #   outlook.com / office.com / cloud.microsoft suffix), suppress -
-    #   that's Exchange Online, not on-prem. Only fall through to A when
-    #   there's no CNAME (self-hosted autodiscover responder). Note that
+    #   that is already classified separately. Only fall through to A when
+    #   there is no CNAME. Note that
     #   a plain A query chases CNAMEs through dnspython, so an A query
     #   alone returns IPs even for M365 cloud endpoints - that's why the
     #   CNAME check has to come first.
     # - For other prefixes (owa / outlook / exchange / mail-ex / webmail):
-    #   A-or-CNAME. Those names are typically on-prem-only when they
-    #   resolve at all.
+    #   record only that the conventionally named endpoint resolves.
     _M365_CLOUD_SUFFIXES = (
         "autodiscover.outlook.com",
         "outlook.com",
@@ -202,33 +193,44 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
         fqdn = f"{prefix}.{domain}"
         if prefix == "autodiscover":
             # autodiscover keeps its CNAME-first M365-cloud suppression.
-            cname_results = await dns_base.safe_resolve(fqdn, "CNAME")
+            cname_results = await dns_base.safe_resolve(
+                fqdn,
+                "CNAME",
+                degraded_sources=ctx.degraded_sources,
+                degraded_name="dns:cname",
+            )
             if cname_results:
                 target = cname_results[0].strip().lower().rstrip(".")
                 if _is_m365_cloud_target(target):
-                    return None  # M365 cloud autodiscover, not on-prem
+                    return None  # Microsoft-hosted autodiscover is classified elsewhere
                 # Non-Microsoft CNAME: count it only when the target is a
                 # public name. An internal-suffix target is a leak, not a
-                # self-operated endpoint.
+                # publicly observable endpoint.
                 return fqdn if _is_public_dns_name(target) else None
-            # No CNAME: direct-A self-operated autodiscover. The A query
+            # No CNAME: record a direct-A autodiscover endpoint. The A query
             # runs through _safe_resolve's canonical-name guard.
-            return fqdn if await dns_base.safe_resolve(fqdn, "A") else None
+            return (
+                fqdn
+                if await dns_base.safe_resolve(
+                    fqdn,
+                    "A",
+                    degraded_sources=ctx.degraded_sources,
+                    degraded_name="dns:a",
+                )
+                else None
+            )
         # owa / outlook / exchange / mail-ex / webmail: CNAME-first safe
         # resolution so an attacker-pointed prefix cannot drive an
         # A-query CNAME chase to an internal name.
-        return fqdn if await _resolves_to_public_endpoint(fqdn) else None
+        return fqdn if await _resolves_to_public_endpoint(fqdn, ctx.degraded_sources) else None
 
     probes = await asyncio.gather(*(_probe(p) for p in exchange_prefixes))
     found = [fqdn for fqdn in probes if fqdn is not None]
     if not found:
         return
 
-    # The strongest signals are owa / outlook / exchange /
-    # autodiscover (A-only) - any of them means on-prem or
-    # hybrid Exchange. `webmail` alone is too weak (could be
-    # Roundcube / Horde / SquirrelMail) - skip when only it
-    # is present.
+    # ``webmail`` alone is generic and does not support even an Exchange-style
+    # naming indicator, so require one of the narrower endpoint conventions.
     found_prefixes = {f.split(".", 1)[0] for f in found}
     strong_signals = {"owa", "outlook", "exchange", "mail-ex", "autodiscover"}
     has_strong_signal = bool(found_prefixes & strong_signals)
@@ -236,17 +238,14 @@ async def _detect_exchange_onprem(ctx: _DetectionCtx, domain: str) -> None:
         return
 
     # Wildcard-DNS guard. Some apexes point ``*.<apex>`` at a single IP,
-    # which causes every Exchange prefix above to resolve to the same
-    # address. That's not Exchange - it's wildcard DNS, and firing on
-    # it mislabels a web-only domain as running Exchange Server. Probe
-    # a nonsense prefix: if it also
-    # resolves, assume wildcard and suppress the detection.
+    # which causes every prefix above to resolve to the same address. Probe a
+    # nonsense prefix and suppress the indicator when wildcard DNS is present.
     nonsense = f"this-is-not-a-real-host-xyz123.{domain}"
-    if await _resolves_to_public_endpoint(nonsense):
+    if await _resolves_to_public_endpoint(nonsense, ctx.degraded_sources):
         return
 
     ctx.add(
-        "Exchange Server (on-prem / hybrid)",
+        "Exchange-style endpoint indicator",
         "exchange-onprem",
         source_type="A",
         raw_value=", ".join(sorted(found)),
@@ -275,7 +274,7 @@ async def _detect_idp_hub(ctx: _DetectionCtx, domain: str) -> None:
         # but a prefix the domain owner has delegated to an internal
         # name is not followed and does not leak. See
         # _resolves_to_public_endpoint.
-        return fqdn if await _resolves_to_public_endpoint(fqdn) else None
+        return fqdn if await _resolves_to_public_endpoint(fqdn, ctx.degraded_sources) else None
 
     probes = await asyncio.gather(*(_probe(p) for p in _IDP_SUBDOMAIN_PREFIXES))
     found = [fqdn for fqdn in probes if fqdn is not None]
@@ -326,12 +325,13 @@ async def lightweight_subdomain_lookup(subdomain: str) -> SourceResult:
             _detect_txt(ctx, subdomain),
         )
     except Exception as exc:
-        return SourceResult(source_name="dns_records", error=str(exc))
+        return SourceResult(source_name="dns_records", error=str(exc), source_unavailable=True)
     return SourceResult(
         source_name="dns_records",
         detected_services=tuple(sorted(ctx.services)),
         detected_slugs=tuple(sorted(ctx.slugs)),
         evidence=tuple(ctx.evidence),
+        degraded_sources=tuple(sorted(ctx.degraded_sources)),
     )
 
 
@@ -356,12 +356,13 @@ async def medium_subdomain_lookup(subdomain: str) -> SourceResult:
             _detect_dkim(ctx, subdomain),
         )
     except Exception as exc:
-        return SourceResult(source_name="dns_records", error=str(exc))
+        return SourceResult(source_name="dns_records", error=str(exc), source_unavailable=True)
     return SourceResult(
         source_name="dns_records",
         detected_services=tuple(sorted(ctx.services)),
         detected_slugs=tuple(sorted(ctx.slugs)),
         evidence=tuple(ctx.evidence),
+        degraded_sources=tuple(sorted(ctx.degraded_sources)),
     )
 
 
@@ -383,12 +384,12 @@ _SURFACE_MAX_HOPS = 5
 _SURFACE_CONCURRENCY = 30
 
 
-async def _resolves_to_public_endpoint(host: str) -> bool:
+async def _resolves_to_public_endpoint(host: str, degraded_sources: set[str] | None = None) -> bool:
     """Return True when *host* resolves to a public endpoint, without
     turning an attacker-controlled subdomain into an internal-DNS oracle.
 
-    Safe replacement for the A-first subdomain probes (IdP hub, on-prem
-    Exchange, the wildcard guard). Those probes only need a yes/no
+    Safe replacement for the A-first subdomain probes (IdP hub, Exchange-style
+    endpoints, the wildcard guard). Those probes only need a yes/no
     "does this name resolve" signal, but an ``A`` / ``AAAA`` query makes
     the recursive resolver chase a CNAME server-side, so probing
     ``owa.<looked-up-domain>`` when the domain owner has pointed it at an
@@ -411,17 +412,31 @@ async def _resolves_to_public_endpoint(host: str) -> bool:
     """
     if not _is_public_dns_name(host):
         return False
-    cname = await dns_base.safe_resolve(host, "CNAME")
+    cname = await dns_base.safe_resolve(
+        host,
+        "CNAME",
+        degraded_sources=degraded_sources,
+        degraded_name="dns:cname",
+    )
     if cname:
         target = cname[0].strip().lower().rstrip(".")
         return _is_public_dns_name(target)
     for rdtype in ("A", "AAAA"):
-        if await dns_base.safe_resolve(host, rdtype):
+        if await dns_base.safe_resolve(
+            host,
+            rdtype,
+            degraded_sources=degraded_sources,
+            degraded_name="dns:a",
+        ):
             return True
     return False
 
 
-async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> list[str]:
+async def _resolve_cname_chain(
+    host: str,
+    max_hops: int = _SURFACE_MAX_HOPS,
+    degraded_sources: set[str] | None = None,
+) -> list[str]:
     """Walk the CNAME chain for *host*, returning the list of targets.
 
     Returns an empty list when the host has no CNAME (typical for hosts
@@ -487,7 +502,12 @@ async def _resolve_cname_chain(host: str, max_hops: int = _SURFACE_MAX_HOPS) -> 
     chain: list[str] = []
     cur = host
     for _ in range(max_hops):
-        results = await dns_base.safe_resolve(cur, "CNAME")
+        results = await dns_base.safe_resolve(
+            cur,
+            "CNAME",
+            degraded_sources=degraded_sources,
+            degraded_name="dns:cname",
+        )
         if not results:
             break
         target = results[0].lower().rstrip(".")
@@ -551,7 +571,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
     # echo, not real evidence.
     wildcard_terminal: str | None = None
     nonsense_host = f"nonsense-classifier-guard-{int(time.time()) % 100000}.{queried_domain.lower()}"
-    wildcard_chain = await _resolve_cname_chain(nonsense_host)
+    wildcard_chain = await _resolve_cname_chain(nonsense_host, degraded_sources=ctx.degraded_sources)
     if wildcard_chain:
         wildcard_terminal = wildcard_chain[-1]
         logger.debug(
@@ -578,7 +598,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
         # A failed host returns None and is skipped, like a no-chain host.
         try:
             async with sem:
-                chain = await _resolve_cname_chain(host)
+                chain = await _resolve_cname_chain(host, degraded_sources=ctx.degraded_sources)
                 if not chain:
                     return None
                 # Filter wildcard echoes: when a host's terminal matches
@@ -698,6 +718,7 @@ class DNSSource:
             return SourceResult(
                 source_name="dns_records",
                 error=f"DNS error for {domain}: {exc}",
+                source_unavailable=True,
             )
 
         surface_tuple = tuple(sorted(ctx.surface_attributions, key=lambda s: s.subdomain))
@@ -728,6 +749,7 @@ class DNSSource:
                 raw_dns_records=tuple(
                     (rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals
                 ),
+                spf_include_count=ctx.spf_include_count,
                 surface_attributions=surface_tuple,
                 unclassified_cname_chains=unclassified_tuple,
                 chain_motifs=chain_motifs_tuple,
@@ -753,6 +775,7 @@ class DNSSource:
             ct_cache_age_days=ctx.ct_cache_age_days,
             ct_attempt_outcome=ctx.ct_attempt_outcome,
             raw_dns_records=tuple((rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals),
+            spf_include_count=ctx.spf_include_count,
             surface_attributions=surface_tuple,
             unclassified_cname_chains=unclassified_tuple,
             chain_motifs=chain_motifs_tuple,
@@ -800,7 +823,7 @@ class DNSSource:
             ("common_subdomains", _detect_common_subdomains(ctx, domain)),
             ("hosting_a_record", _detect_hosting_from_a_record(ctx, domain)),
             ("idp_hub", _detect_idp_hub(ctx, domain)),
-            ("exchange_onprem", _detect_exchange_onprem(ctx, domain)),
+            ("exchange_endpoints", _detect_exchange_endpoints(ctx, domain)),
         ]
         if not skip_ct:
             detectors.append(("cert_intel", _detect_cert_intel(ctx, domain)))

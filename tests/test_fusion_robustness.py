@@ -11,6 +11,7 @@ from __future__ import annotations
 import asyncio
 import json
 import time
+from dataclasses import replace
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -190,6 +191,22 @@ class TestCLIFlagCombinations:
             # Plain English narrative
             assert "Posterior:" in result.output
 
+    def test_explain_dag_text_surfaces_collection_provenance(self) -> None:
+        app, runner = self._imports()
+        from tests.test_cli import RESOLVE_PATH, SAMPLE_INFO, SAMPLE_RESULTS
+
+        degraded = replace(
+            SAMPLE_INFO,
+            degraded_sources=("dns:dmarc", "http:mta_sts_policy"),
+        )
+        with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
+            mock_resolve.return_value = (degraded, SAMPLE_RESULTS)
+            result = runner.invoke(app, ["lookup", "contoso.com", "--explain-dag", "--no-cache"])
+
+        assert result.exit_code == 0
+        assert "degraded_sources: dns:dmarc, http:mta_sts_policy" in result.output
+        assert "collection-masked units: dmarc_policy, mta_sts_enforce" in result.output
+
     def test_explain_dag_dot_format(self) -> None:
         app, runner = self._imports()
         from tests.test_cli import RESOLVE_PATH, SAMPLE_INFO, SAMPLE_RESULTS
@@ -203,6 +220,22 @@ class TestCLIFlagCombinations:
             assert result.exit_code == 0
             assert "digraph" in result.output
             assert '"m365_tenant"' in result.output
+
+    def test_explain_dag_dot_surfaces_collection_provenance_as_comments(self) -> None:
+        app, runner = self._imports()
+        from tests.test_cli import RESOLVE_PATH, SAMPLE_INFO, SAMPLE_RESULTS
+
+        degraded = replace(SAMPLE_INFO, degraded_sources=("dns:dmarc",))
+        with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
+            mock_resolve.return_value = (degraded, SAMPLE_RESULTS)
+            result = runner.invoke(
+                app,
+                ["lookup", "contoso.com", "--explain-dag", "--explain-dag-format", "dot", "--no-cache"],
+            )
+
+        assert result.exit_code == 0
+        assert result.output.startswith("// degraded_sources: dns:dmarc")
+        assert "// collection_masked_units: dmarc_policy" in result.output
 
     def test_explain_dag_invalid_format(self) -> None:
         app, runner = self._imports()

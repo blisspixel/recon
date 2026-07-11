@@ -143,6 +143,8 @@ class PosteriorBlockResult(TypedDict):
     """Top-level posterior block returned by ``get_posteriors``."""
 
     domain: str
+    degraded_sources: list[str]
+    collection_masked_units: list[str]
     entropy_reduction_nats: float
     evidence_count: int
     conflict_count: int
@@ -218,23 +220,23 @@ def _resource_fingerprints() -> str:  # pyright: ignore[reportUnusedFunction]
     mime_type="application/json",
 )
 def _resource_signals() -> str:  # pyright: ignore[reportUnusedFunction]
-    from recon_tool.signals import load_signals
+    from recon_tool.signals import public_signal_names, reportable_signals
 
     payload = [
         {
-            "name": sig.name,
+            "name": public_label,
             "category": sig.category,
             "confidence": sig.confidence,
             "description": sig.description,
             "candidates": list(sig.candidates),
             "min_matches": sig.min_matches,
             "contradicts": list(sig.contradicts),
-            "requires_signals": list(sig.requires_signals),
+            "requires_signals": public_signal_names(sig.requires_signals),
             "expected_counterparts": list(sig.expected_counterparts),
             "positive_when_absent": list(sig.positive_when_absent),
             "explain": sig.explain,
         }
-        for sig in load_signals()
+        for sig, public_label in reportable_signals()
     ]
     return json_mod.dumps(
         {"count": len(payload), "signals": payload},
@@ -308,6 +310,17 @@ def _resource_surface_inventory() -> str:  # pyright: ignore[reportUnusedFunctio
     from recon_tool.surface_inventory import packaged_surface_inventory_text
 
     return packaged_surface_inventory_text()
+
+
+def _dag_collection_prefix(degraded: list[str], masked: list[str], output_format: str) -> str:
+    """Render standalone DAG collection provenance without affecting inference."""
+    if not degraded:
+        return ""
+    degraded_text = ", ".join(degraded)
+    masked_text = ", ".join(masked) if masked else "none"
+    if output_format == "dot":
+        return f"// degraded_sources: {degraded_text}\n// collection_masked_units: {masked_text}\n"
+    return f"Collection provenance:\n- degraded_sources: {degraded_text}\n- collection-masked units: {masked_text}\n\n"
 
 
 @mcp.tool(
@@ -393,10 +406,10 @@ def _classify_signal_layer(sig: object) -> int:
     ),
 )
 async def get_signals(category: str | None = None, layer: int | None = None) -> list[SignalSummary]:
-    """List all loaded signals with rules, layers, and conditions.
+    """List reportable public signals with rules, layers, and conditions.
 
-    Returns a list of signal definitions from both built-in and custom
-    sources. Each entry includes name, category, confidence, description,
+    Returns the public projection of signal definitions from both built-in and
+    custom sources. Each entry includes name, category, confidence, description,
     candidates, min_matches, metadata conditions, contradicts, requires_signals,
     explain, and computed layer. The MCP layer surfaces the list as navigable
     ``structuredContent`` with an ``outputSchema``, alongside the serialized-JSON
@@ -411,11 +424,10 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
     Returns:
         A list of signal definitions.
     """
-    from recon_tool.signals import load_signals
+    from recon_tool.signals import public_signal_names, reportable_signals
 
-    sigs = load_signals()
     result: list[SignalSummary] = []
-    for sig in sigs:
+    for sig, public_label in reportable_signals():
         sig_layer = _classify_signal_layer(sig)
         if category and category.lower() not in sig.category.lower():
             continue
@@ -423,7 +435,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
             continue
         result.append(
             {
-                "name": sig.name,
+                "name": public_label,
                 "category": sig.category,
                 "confidence": sig.confidence,
                 "description": sig.description,
@@ -431,7 +443,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
                 "min_matches": sig.min_matches,
                 "metadata": [_metadata_summary(m) for m in sig.metadata],
                 "contradicts": list(sig.contradicts),
-                "requires_signals": list(sig.requires_signals),
+                "requires_signals": public_signal_names(sig.requires_signals),
                 "explain": sig.explain,
                 "layer": sig_layer,
             }
@@ -467,22 +479,17 @@ async def explain_signal(
     Returns:
         JSON object with signal definition and evaluation state, or an error.
     """
-    from recon_tool.signals import Signal, load_signals
+    from recon_tool.signals import public_signal_names, reportable_signals, resolve_reportable_signal
 
-    all_signals = load_signals()
-    sig: Signal | None = None
-    for s in all_signals:
-        if s.name == signal_name:
-            sig = s
-            break
-
-    if sig is None:
-        available = sorted(s.name for s in all_signals)
+    resolved_signal = resolve_reportable_signal(signal_name)
+    if resolved_signal is None:
+        available = sorted(label for _, label in reportable_signals())
         raise ToolError(f"Signal '{signal_name}' not found. Available signals: {', '.join(available)}")
+    sig, public_label = resolved_signal
 
     # Build base definition
     definition: SignalDefinitionResult = {
-        "name": sig.name,
+        "name": public_label,
         "category": sig.category,
         "confidence": sig.confidence,
         "description": sig.description,
@@ -493,7 +500,7 @@ async def explain_signal(
             "min_matches": sig.min_matches,
             "metadata": [_metadata_summary(m) for m in sig.metadata],
             "contradicts": list(sig.contradicts),
-            "requires_signals": list(sig.requires_signals),
+            "requires_signals": public_signal_names(sig.requires_signals),
         },
         "weakening_conditions": _static_weakening_conditions(sig),
     }
@@ -508,12 +515,15 @@ async def explain_signal(
 
     info, _results = resolved
 
-    from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
+    from recon_tool.collection_view import collection_observable_evidence, collection_observable_info
+    from recon_tool.email_security import signal_context_from_observable_info, signal_context_metadata
     from recon_tool.signals import evaluate_signals
 
-    context = signal_context_from_tenant_info(info)
+    info = collection_observable_info(info)
+    observable_evidence = collection_observable_evidence(info)
+    context = signal_context_from_observable_info(info)
     signal_matches = evaluate_signals(context)
-    fired = any(m.name == signal_name for m in signal_matches)
+    fired = any(m.name == sig.name for m in signal_matches)
     matched_slugs = [slug for slug in sig.candidates if slug in context.detected_slugs]
 
     # Build domain-specific weakening conditions
@@ -525,7 +535,7 @@ async def explain_signal(
     # Collect evidence for matched slugs
     evidence_list: list[SignalEvidenceSummary] = []
     for slug in matched_slugs:
-        for ev in info.evidence:
+        for ev in observable_evidence:
             if ev.slug == slug:
                 evidence_list.append(
                     {
@@ -549,7 +559,7 @@ async def explain_signal(
 
 def _static_weakening_conditions(sig: object) -> list[str]:
     """Generate static weakening conditions for a signal definition (no domain context)."""
-    from recon_tool.signals import Signal
+    from recon_tool.signals import Signal, public_signal_names
 
     if not isinstance(sig, Signal):
         return []
@@ -563,7 +573,9 @@ def _static_weakening_conditions(sig: object) -> list[str]:
     for slug in sig.contradicts:
         conditions.append(f"Detecting slug '{slug}' would suppress this signal")
     if sig.requires_signals:
-        conditions.append(f"Requires all of these signals to fire first: {', '.join(sig.requires_signals)}")
+        required = public_signal_names(sig.requires_signals)
+        if required:
+            conditions.append(f"Requires all of these signals to fire first: {', '.join(required)}")
     return conditions
 
 
@@ -764,34 +776,39 @@ async def get_posteriors(domain: str) -> PosteriorBlockResult:
     set. Returns a JSON object with one entry per node:
 
       ``name`` (str), ``description`` (str),
-      ``posterior`` (float in [0, 1]),
-      ``interval_low`` / ``interval_high`` (float, 80% credible interval),
+      ``posterior`` (float in [0, 1], model-relative),
+      ``interval_low`` / ``interval_high`` (float, 80% evidence-responsive
+      uncertainty band, not a credible or confidence interval),
       ``evidence_used`` (list of slug/signal bindings that fired),
-      ``n_eff`` (effective sample size used to derive the interval),
-      ``sparse`` (bool — True flags the passive-observation ceiling),
-      ``entropy_reduction_nats`` (float, 2.2.0+ — this node's share of the
-      information the channel recovered, signed),
-      ``unit_counterfactuals`` (list, 2.2.0+ — exact leave-one-unit-out
+      ``n_eff`` (effective display mass used to derive the band),
+      ``sparse`` (bool, True at the display-mass floor),
+      ``entropy_reduction_nats`` (float, 2.2.0+, signed marginal entropy
+      change, not pointwise information gain),
+      ``unit_counterfactuals`` (list, 2.2.0+, exact leave-one-unit-out
       re-inference per informative evidence unit: ``unit``, ``kind``,
       ``observed`` ("fired"/"absent"), ``posterior_without``, ``delta``;
       an evidence counterfactual over the model, never a causal claim,
       and deltas are not additive across units).
 
-    The top level also carries ``sparse_count`` (how many nodes are sparse,
-    i.e. resolved only to the passive-observation ceiling) beside
+    The top level includes ``degraded_sources`` and
+    ``collection_masked_units`` so a standalone call preserves collection
+    provenance. A masked unit was structurally unobserved and contributed
+    neither fired evidence nor declarative absence.
+
+    The top level also carries ``sparse_count`` (how many nodes use the minimum
+    display mass) beside
     ``evidence_count`` and ``conflict_count``.
 
-    How to read it: each node's answer is the *interval*, not the point
-    ``posterior``. ``sparse=true``, a 0.5-straddling interval, or an empty
-    ``evidence_used`` means the passive channel could not resolve the claim —
-    report it unresolved, do not collapse it to the point value. Absence of a
-    fired signal is not evidence of absence (the adversarial missing-data rule);
-    a low or sparse posterior reads as "we cannot tell", not "not present".
+    How to read it: both the mean and band are model-relative diagnostics, not
+    facts. ``sparse=true`` means the display mass is at its floor. Absence of a
+    hideable signal is ignored by explicit policy, not treated as evidence of
+    absence. Inspect evidence and report unresolved when the public channel
+    does not support the claim.
 
     Stable v2.0+. The Beta layer (``slug_confidences`` on
     ``lookup_tenant``) operates on raw evidence weights; this network
-    layer propagates through chained claims and adds the per-node
-    posterior + credible interval.
+    layer propagates through chained claims and adds the per-node model
+    posterior plus uncertainty band.
 
     Args:
         domain: Apex domain to evaluate (e.g. ``contoso.com``).
@@ -799,14 +816,17 @@ async def get_posteriors(domain: str) -> PosteriorBlockResult:
     Returns:
         JSON string with the posterior block for the queried domain.
     """
-    from recon_tool.bayesian import infer_from_tenant_info
+    from recon_tool.bayesian import collection_masked_units, infer_from_tenant_info, load_network
 
     request_id = uuid.uuid4().hex[:12]
     info = await server_app.resolve_single_for_tool(domain, request_id)
 
-    inference = infer_from_tenant_info(info)
+    network = load_network()
+    inference = infer_from_tenant_info(info, network=network)
     payload: PosteriorBlockResult = {
         "domain": info.queried_domain,
+        "degraded_sources": sorted(set(info.degraded_sources)),
+        "collection_masked_units": sorted(collection_masked_units(info.degraded_sources, network=network)),
         "entropy_reduction_nats": inference.entropy_reduction,
         "evidence_count": inference.evidence_count,
         "conflict_count": inference.conflict_count,
@@ -874,7 +894,7 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
     Returns:
         Rendered DAG as a string in the requested format.
     """
-    from recon_tool.bayesian import infer_from_tenant_info, load_network
+    from recon_tool.bayesian import collection_masked_units, infer_from_tenant_info, load_network
     from recon_tool.bayesian_dag import render_dag_dot, render_dag_text
 
     request_id = uuid.uuid4().hex[:12]
@@ -922,6 +942,9 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
 
     network = load_network()
     inference = infer_from_tenant_info(info, network=network)
+    degraded = sorted(set(info.degraded_sources))
+    masked = sorted(collection_masked_units(degraded, network=network))
+    provenance_prefix = _dag_collection_prefix(degraded, masked, fmt)
     if fmt == "dot":
-        return render_dag_dot(network, inference, domain=validated)
-    return render_dag_text(network, inference, domain=validated)
+        return provenance_prefix + render_dag_dot(network, inference, domain=validated)
+    return provenance_prefix + render_dag_text(network, inference, domain=validated)

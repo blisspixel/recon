@@ -25,7 +25,7 @@ from recon_tool.formatter import (
     count_cloud_vendors,
     render_tenant_panel,
 )
-from recon_tool.models import ConfidenceLevel, SurfaceAttribution, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, SurfaceAttribution, TenantInfo
 
 
 def _render_to_string(info: TenantInfo) -> str:
@@ -109,12 +109,47 @@ class TestCountCloudVendors:
         counts = count_cloud_vendors(("aws-route53", "slack", "auth0"))
         assert counts == {"AWS": 1}
 
+    def test_ns_and_caa_roles_do_not_count_as_cloud_workloads(self):
+        evidence = (
+            EvidenceRecord("NS", "ns-1.awsdns.example", "AWS Route 53", "aws-route53"),
+            EvidenceRecord("CAA", '0 issue "amazon.com"', "CAA: AWS Certificate Manager", "aws-acm"),
+        )
+
+        counts = count_cloud_vendors(
+            ("aws-route53", "aws-acm"),
+            apex_evidence=evidence,
+        )
+
+        assert counts == {}
+
+    def test_cname_role_counts_as_a_cloud_endpoint_binding(self):
+        evidence = (EvidenceRecord("CNAME", "www.contoso.com -> edge.cloudflare.net", "Cloudflare", "cloudflare"),)
+
+        counts = count_cloud_vendors(("cloudflare",), apex_evidence=evidence)
+
+        assert counts == {"Cloudflare": 1}
+
+    def test_caa_only_slug_never_counts_as_a_cloud_workload(self):
+        counts = count_cloud_vendors(("aws-acm", "cloudflare"))
+
+        assert counts == {"Cloudflare": 1}
+
+    def test_explicitly_empty_evidence_excludes_untyped_apex_slugs(self):
+        counts = count_cloud_vendors(("aws-route53", "cloudflare"), apex_evidence=())
+
+        assert counts == {}
+
 
 class TestRollupRenderingFires:
     def test_multi_cloud_apex_renders_rollup(self):
         info = _tenant(
             services=("AWS CloudFront", "Cloudflare", "GCP Compute Engine"),
             slugs=("aws-cloudfront", "cloudflare", "gcp-compute"),
+            evidence=(
+                EvidenceRecord("CNAME", "www -> cloudfront.net", "AWS CloudFront", "aws-cloudfront"),
+                EvidenceRecord("CNAME", "edge -> cloudflare.net", "Cloudflare", "cloudflare"),
+                EvidenceRecord("A", "192.0.2.1 -> googleusercontent.com", "GCP Compute Engine", "gcp-compute"),
+            ),
         )
         out = _render_to_string(info)
         assert "Multi-cloud" in out
@@ -124,6 +159,10 @@ class TestRollupRenderingFires:
         info = _tenant(
             services=("AWS CloudFront", "Cloudflare"),
             slugs=("aws-cloudfront", "cloudflare"),
+            evidence=(
+                EvidenceRecord("CNAME", "www -> cloudfront.net", "AWS CloudFront", "aws-cloudfront"),
+                EvidenceRecord("CNAME", "edge -> cloudflare.net", "Cloudflare", "cloudflare"),
+            ),
         )
         out = _render_to_string(info)
         assert "AWS" in out
@@ -136,6 +175,7 @@ class TestRollupRenderingFires:
         info = _tenant(
             services=("AWS CloudFront",),
             slugs=("aws-cloudfront",),
+            evidence=(EvidenceRecord("CNAME", "www -> cloudfront.net", "AWS CloudFront", "aws-cloudfront"),),
             surface_attributions=(
                 SurfaceAttribution(
                     subdomain="api.contoso.com",
@@ -150,6 +190,65 @@ class TestRollupRenderingFires:
 
 
 class TestRollupSuppressed:
+    def test_legacy_cloudflare_and_route53_do_not_create_a_role_based_rollup(self):
+        info = _tenant(
+            services=("AWS Route 53", "Cloudflare"),
+            slugs=("aws-route53", "cloudflare"),
+            evidence=(),
+        )
+
+        out = _render_to_string(info)
+
+        assert "Multi-cloud" not in out
+        assert "AWS Route 53 (role unavailable)" in out
+        assert "Cloudflare (role unavailable)" in out
+
+    def test_ns_only_vendors_do_not_create_a_multi_cloud_workload_claim(self):
+        info = _tenant(
+            services=("AWS Route 53", "Cloudflare"),
+            slugs=("aws-route53", "cloudflare"),
+            evidence=(
+                EvidenceRecord("NS", "ns-1.awsdns.example", "AWS Route 53", "aws-route53"),
+                EvidenceRecord("NS", "ns1.cloudflare.example", "Cloudflare", "cloudflare"),
+            ),
+        )
+
+        out = _render_to_string(info)
+
+        assert "Multi-cloud" not in out
+        assert "AWS Route 53 (DNS)" in out
+        assert "Cloudflare (DNS)" in out
+
+    def test_txt_cloudflare_and_ns_route53_do_not_create_multi_cloud_claim(self):
+        info = _tenant(
+            services=("AWS Route 53", "Cloudflare"),
+            slugs=("aws-route53", "cloudflare"),
+            evidence=(
+                EvidenceRecord("NS", "ns-1.awsdns.example", "AWS Route 53", "aws-route53"),
+                EvidenceRecord("TXT", "cloudflare-verify=opaque", "Cloudflare", "cloudflare"),
+            ),
+        )
+
+        out = _render_to_string(info)
+
+        assert "Multi-cloud" not in out
+        assert "Cloudflare (public TXT account indicator)" in out
+
+    def test_caa_authorization_does_not_create_a_multi_cloud_workload_claim(self):
+        info = _tenant(
+            services=("CAA: AWS Certificate Manager", "Cloudflare"),
+            slugs=("aws-acm", "cloudflare"),
+            evidence=(
+                EvidenceRecord("CAA", '0 issue "amazon.com"', "CAA: AWS Certificate Manager", "aws-acm"),
+                EvidenceRecord("CNAME", "www.contoso.com -> edge.cloudflare.net", "Cloudflare", "cloudflare"),
+            ),
+        )
+
+        out = _render_to_string(info)
+
+        assert "Multi-cloud" not in out
+        assert "CAA: Amazon authorized" in out
+
     def test_single_vendor_apex_no_rollup(self):
         """A pure-AWS apex must not gain a Multi-cloud row; the row
         would read as vacuous and waste a panel line."""

@@ -41,6 +41,10 @@ class TestServerInstructions:
         assert "MTA-STS" in instructions
         assert "target-visible" in instructions
         assert "Google CSE and BIMI" in instructions
+        assert "configured recursive resolver" in instructions
+        assert "authoritative DNS" in instructions
+        assert "may observe the resulting traffic" in instructions
+        assert "only default target-owned HTTP/application" in instructions
         assert "never touches a target's own HTTP infrastructure" not in instructions
 
     def test_instructions_describe_score_as_model_bound(self) -> None:

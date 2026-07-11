@@ -1,13 +1,12 @@
-"""Pin the calibration math the assurance claims rest on.
+"""Pin the scoring math the validation diagnostics rest on.
 
-The published calibration numbers (the synthetic conditional ECE, the
-CAL8 sensitivity deviations, the Brier scores in correlation.md and the
-validation memos) are computed by `validation/synthetic_calibration.py`
+The historical synthetic ECE, CAL8 sensitivity deviations, and Brier scores in
+validation memos are computed by `validation/synthetic_calibration.py`
 and `validation/likelihood_sensitivity.py`. Their Brier and ECE helpers
 are pure functions with no test of their own, so a subtle error would
 silently corrupt the numbers the assurance story quotes. These tests
 pin each helper to hand-computed values and cross-check that the two
-harnesses' independent implementations agree, so the calibration claims
+harnesses' independent implementations agree, so the diagnostic calculations
 rest on verified arithmetic.
 """
 

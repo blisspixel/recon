@@ -8,26 +8,26 @@ a domain's slugs and signals.
 
 This module is **separate from** ``recon_tool/fusion.py``:
 
-  * ``fusion.py`` produces per-slug Beta posteriors from raw evidence
-    weights. It answers "how strongly do we believe slug X is present?".
+  * ``fusion.py`` produces per-slug additive evidence-strength scores from raw
+    evidence weights. It does not produce calibrated posterior probabilities.
   * ``bayesian.py`` (this module) operates one level up: nodes are
     high-level claims ("the tenant is M365-federated", "email security
     is strong"), and the network encodes how those claims relate.
     It answers "given everything we observed, how strongly do we
     believe this claim?".
 
-Both layers ship side-by-side. The Beta layer is single-node,
-deterministic, and stable. The Bayesian layer is multi-node, propagates
-through the DAG, and is gated behind ``--fusion`` until validated.
+Both layers ship side by side. The evidence-strength layer is single-slug and
+deterministic. The Bayesian layer is multi-node, propagates through the DAG,
+and runs by default on single-domain CLI lookups unless explicitly disabled.
 
 ## Inference
 
 Exact inference via variable elimination over discrete factors. With
-the seed network at 8 nodes the product space is tiny (~256 entries
+the current network at 9 nodes the product space is tiny (512 entries
 worst case), so variable elimination is overkill but keeps the door
-open for larger networks. Pure Python — no numpy, no scipy.
+open for larger networks. Pure Python, with no numpy or scipy.
 
-## Credible intervals
+## Evidence-responsive uncertainty bands
 
 The exact posterior is a single number :math:`\\mu \\in [0, 1]`. The
 honest "how much do we trust it" report should also reflect:
@@ -35,18 +35,15 @@ honest "how much do we trust it" report should also reflect:
 1. how much evidence the queried domain produced for this node, and
 2. whether evidence sources disagreed (cross-source conflict).
 
-We return an 80% credible interval derived by treating the posterior
-as the mean of a Beta distribution with effective sample size
-``n_eff`` proportional to evidence count and inversely proportional
-to conflict count. With 1 piece of evidence the interval is wide
-(reflecting the passive-observation ceiling); with 5+ corroborating
-pieces of evidence and no conflicts the interval is tight. Conflicts
-inflate the interval but do not change the mean.
+We return an 80% uncertainty band by treating the model posterior as the mean
+of a separate Beta distribution with hand-set effective display mass
+``n_eff``. Counted evidence units increase the mass and conflicts reduce it,
+subject to a floor. Conflicts change the band but not the mean.
 
-This is calibration on top of exact inference, not a different
-inference method. The Bayesian-network math is exact; the interval
-expresses how much we trust the model's exactness given the sparsity
-of the input.
+This is a post-inference display heuristic, not calibration. It is not a
+Bayesian credible interval over parameter uncertainty, a frequentist confidence
+interval, or a partial-identification region. Exact network arithmetic does not
+validate the committed model against reality.
 """
 
 from __future__ import annotations
@@ -72,7 +69,8 @@ from recon_tool.bayesian_models import (  # re-exported: stable import path afte
 )
 from recon_tool.bayesian_models import Evidence as _Evidence
 from recon_tool.bayesian_models import Node as _Node
-from recon_tool.constants import SVC_SPF_STRICT, effective_dmarc_policy
+from recon_tool.bayesian_observations import signals_from_tenant_info
+from recon_tool.source_status import ObservationChannel, SourceStatus
 
 logger = logging.getLogger(__name__)
 
@@ -84,6 +82,7 @@ __all__ = [
     "InferenceResult",
     "NodePosterior",
     "UnitCounterfactual",
+    "collection_masked_units",
     "infer",
     "infer_from_tenant_info",
     "load_network",
@@ -96,9 +95,8 @@ __all__ = [
 # remain for historical internal imports and default BayesianNetwork(...)
 # construction.
 #
-# Minimum effective sample size: the interval never collapses to a point even
-# with abundant evidence. Reflects the passive-observation ceiling: we are
-# inferring from public DNS / CT, not from authoritative tenant inventory.
+# Minimum effective display mass. This floors the display heuristic; it is not a
+# sample size or passive-observation ceiling.
 _MIN_N_EFF = 4.0
 
 # Per-evidence-record contribution to n_eff. With 1 record n_eff ≈ 5,
@@ -195,6 +193,44 @@ def _unit_name(ev: _Evidence) -> str:
     return ev.group if ev.group is not None else ev.name
 
 
+_CHANNEL_OBSERVATION_UNITS: dict[ObservationChannel, frozenset[str]] = {
+    "apex_txt": frozenset({"spf_strict"}),
+    "bimi": frozenset(),
+    "caa": frozenset(),
+    "dmarc": frozenset({"dmarc_policy"}),
+    "dkim": frozenset(),
+    "mta_sts": frozenset({"mta_sts_enforce"}),
+    "mx": frozenset(),
+    "tls_rpt": frozenset(),
+}
+
+
+def collection_masked_units(
+    degraded_sources: Iterable[str],
+    network: BayesianNetwork | None = None,
+) -> frozenset[str]:
+    """Map failed observation channels to structurally unobserved units.
+
+    ``degraded_sources`` is collection provenance, not domain evidence. A
+    failed channel must therefore suppress both a fired binding and the
+    informative-absence factor for the units it owns. A whole ``dns`` or
+    ``dns_records`` failure masks every declarative unit in the current network
+    because all declarative bindings in the shipped model are public DNS
+    declarations. Granular failures mask only their affected unit.
+    """
+    active_network = network if network is not None else load_network()
+    status = SourceStatus.from_degraded_sources(degraded_sources)
+    masked = {unit for channel in status.unavailable_channels for unit in _CHANNEL_OBSERVATION_UNITS.get(channel, ())}
+    if status.whole_dns_unavailable:
+        masked.update(
+            _unit_name(evidence)
+            for node in active_network.nodes
+            if node.missingness == "declarative"
+            for evidence in node.evidence
+        )
+    return frozenset(masked)
+
+
 def _contributing_evidence(fired_evidence: list[_Evidence]) -> list[_Evidence]:
     """Reduce co-firing correlated bindings to one effective binding per group.
 
@@ -203,11 +239,12 @@ def _contributing_evidence(fired_evidence: list[_Evidence]) -> list[_Evidence]:
     M365 indicators), so multiplying their likelihoods over-counts the evidence
     and produces an over-confident posterior with too tight an interval. We keep
     only the strongest fired binding in each group (max ``|LLR|``), which under
-    the conservative perfectly-dependent bound contributes
+    the reviewed dependency-group heuristic contributes
     :math:`\\lambda_g = \\max_{b \\in g} \\lambda_b` rather than the sum.
-    Ungrouped bindings (``group`` None) each contribute independently, so this is
-    a strict refinement that changes only nodes whose YAML declares groups. See
-    correlation.md §4.3.
+    This prevents known double counting but is not a bound on an unspecified
+    joint likelihood. Ungrouped bindings are modeled as conditionally
+    independent; that is an assumption, not an observed property. See
+    correlation.md section 3.2.
     """
     independent: list[_Evidence] = []
     strongest: dict[str, _Evidence] = {}
@@ -245,15 +282,15 @@ def _factor_for_evidence(
     the node, the standard naive-Bayes treatment; co-firing bindings within one
     group are first reduced to their strongest member by
     :func:`_contributing_evidence`, so redundant readings of one fact are not
-    multiplied as if independent (correlation.md §4.3).
+    multiplied as if independent (correlation.md section 3.2).
 
     Missingness (roadmap CAL14):
 
     - **Hideable nodes** (default) do NOT condition on absence: a non-firing
       binding contributes nothing (LR=1). Passive collection cannot distinguish
       "this node truly lacks the binding" from "the binding is there but the
-      operator hid it", so conditioning on absence would over-claim absence on
-      hardened targets (correlation.md §4.3, the MNAR argument).
+      operator hid it". Ignoring non-fire is an explicit conservative policy,
+      not a value derived from MNAR (correlation.md section 3.3).
     - **Declarative nodes** DO condition on absence: a binding that could fire
       but did not is genuine disconfirming evidence, because the signal is a
       public declaration whose absence cannot be hidden from passive DNS
@@ -286,38 +323,62 @@ def _factor_for_evidence(
             frozenset({(node.name, "present")}): like_present,
             frozenset({(node.name, "absent")}): like_absent,
         }
-    # Declarative (MAR): fired bindings contribute their likelihood; non-firing
-    # units contribute their absence likelihood. A factor is always returned
-    # (all-absent is itself informative).
+    # Declarative, with a specified nonfire-informative observation model:
+    # fired bindings contribute their likelihood and non-firing units contribute
+    # their absence likelihood. This is not a missing-at-random conclusion. A
+    # factor is always returned because all-absent is itself informative.
     like_present = 1.0
     like_absent = 1.0
     for ev in _contributing_evidence(fired_evidence):
         like_present *= ev.likelihood_present
         like_absent *= ev.likelihood_absent
-    fired_groups = {ev.group for ev in fired_evidence if ev.group}
-    fired_names = {ev.name for ev in fired_evidence}
-    grp_absence = {g: (lp, la) for g, lp, la in node.group_absence}
-    seen_groups: set[str] = set()
-    for ev in node.evidence:
-        if _unit_name(ev) in masked_units:
-            continue
-        if ev.name in fired_names:
-            continue
-        if ev.group:
-            if ev.group in fired_groups or ev.group in seen_groups:
-                continue
-            seen_groups.add(ev.group)
-            pair = grp_absence.get(ev.group)
-            if pair is not None:
-                like_present *= pair[0]
-                like_absent *= pair[1]
-        else:
-            like_present *= 1.0 - ev.likelihood_present
-            like_absent *= 1.0 - ev.likelihood_absent
+    for _, _, absence_present, absence_absent in _declarative_absent_units(node, fired_evidence, masked_units):
+        like_present *= absence_present
+        like_absent *= absence_absent
     return {
         frozenset({(node.name, "present")}): like_present,
         frozenset({(node.name, "absent")}): like_absent,
     }
+
+
+def _declarative_absent_units(
+    node: _Node,
+    fired_evidence: list[_Evidence],
+    masked_units: frozenset[str] = frozenset(),
+) -> list[tuple[str, str, float, float]]:
+    """Enumerate every declarative absence factor applied by inference.
+
+    Each tuple is ``(unit, kind, P(absence | present), P(absence | absent))``.
+    Keeping factor construction and provenance on this one enumeration prevents
+    a non-fire from affecting the posterior without appearing in diagnostics.
+    Neutral factors remain in the list because inference applies them; the
+    provenance projection below omits them because they cannot change a result.
+    """
+    out: list[tuple[str, str, float, float]] = []
+    fired_groups = {ev.group for ev in fired_evidence if ev.group}
+    fired_names = {ev.name for ev in fired_evidence}
+    group_absence = {group: (present, absent) for group, present, absent in node.group_absence}
+    seen_groups: set[str] = set()
+    for evidence in node.evidence:
+        if _unit_name(evidence) in masked_units or evidence.name in fired_names:
+            continue
+        if evidence.group:
+            if evidence.group in fired_groups or evidence.group in seen_groups:
+                continue
+            seen_groups.add(evidence.group)
+            pair = group_absence.get(evidence.group)
+            if pair is not None:
+                out.append((evidence.group, "group", pair[0], pair[1]))
+        else:
+            out.append(
+                (
+                    evidence.name,
+                    evidence.kind,
+                    1.0 - evidence.likelihood_present,
+                    1.0 - evidence.likelihood_absent,
+                )
+            )
+    return out
 
 
 def _informative_absent_units(
@@ -328,35 +389,18 @@ def _informative_absent_units(
     """The (unit, kind) pairs whose absence is informative on a declarative node.
 
     A unit is a correlation group (kind ``"group"``) or an ungrouped binding
-    (kind = the binding's slug/signal kind). An absence is informative when
-    its likelihood ratio is non-trivial (``|LLR| > eps``); weak absences
-    (LR ~1, e.g. a rarely-published signal that is simply missing) are
-    excluded, so they neither tighten nor widen the interval nor earn a
-    counterfactual entry. Masked units are skipped: structurally unobserved
-    is not absent. Single source of truth for ``n_eff`` counting and the
-    leave-one-unit-out counterfactual enumeration.
+    (kind = the binding's slug/signal kind). Every non-neutral absence factor
+    that inference applies is included, even when its likelihood ratio is weak.
+    This keeps the reported provenance and ``absence_informative`` flag exactly
+    aligned with the factors that changed the posterior. Masked units are
+    skipped: structurally unobserved is not absent. Single source of truth for
+    ``n_eff`` counting and the leave-one-unit-out counterfactual enumeration.
     """
-    eps = 0.2  # |LLR| below which an absence is treated as uninformative
-    out: list[tuple[str, str]] = []
-    fired_groups = {ev.group for ev in fired_evidence if ev.group}
-    fired_names = {ev.name for ev in fired_evidence}
-    grp_absence = {g: (lp, la) for g, lp, la in node.group_absence}
-    seen_groups: set[str] = set()
-    for ev in node.evidence:
-        if _unit_name(ev) in masked_units:
-            continue
-        if ev.name in fired_names:
-            continue
-        if ev.group:
-            if ev.group in fired_groups or ev.group in seen_groups:
-                continue
-            seen_groups.add(ev.group)
-            pair = grp_absence.get(ev.group)
-            if pair is not None and abs(math.log(pair[0] / pair[1])) > eps:
-                out.append((ev.group, "group"))
-        elif abs(math.log((1.0 - ev.likelihood_present) / (1.0 - ev.likelihood_absent))) > eps:
-            out.append((ev.name, ev.kind))
-    return out
+    return [
+        (unit, kind)
+        for unit, kind, absence_present, absence_absent in _declarative_absent_units(node, fired_evidence, masked_units)
+        if absence_present != absence_absent
+    ]
 
 
 def _declarative_evidence_count(
@@ -367,7 +411,7 @@ def _declarative_evidence_count(
     """Effective evidence-unit count for a declarative node's ``n_eff``.
 
     Counts each evidence unit (a correlation group, or an independent binding)
-    that is informative: fired, or absent with a non-trivial absence
+    that is informative: fired, or absent with a non-neutral absence
     likelihood ratio (per :func:`_informative_absent_units`). A
     confidently-disconfirmed declarative node (its strong signals genuinely
     absent) therefore earns evidence toward ``n_eff`` and is not flagged
@@ -634,12 +678,15 @@ def infer(
         # binding per group (_contributing_evidence). Reporting, n_eff, and
         # influence ranking use that same contributing set, not the raw fired
         # list, otherwise they over-count grouped evidence and report it as
-        # separate influence with too tight an interval. See correlation.md 4.3.
+        # separate influence with too tight a band. See correlation.md section 3.2.
         contributing = _contributing_evidence(fired)
+        informative_absences = (
+            _informative_absent_units(node, fired, masked) if node.missingness == "declarative" else []
+        )
         total_evidence += len(contributing)
         # Hideable nodes count contributing bindings; declarative nodes also
         # count informative absences (CAL14), so a confidently-absent policy
-        # node gets a narrow interval around a low posterior rather than a
+        # node gets a narrower band around a low posterior rather than a
         # wide "sparse" one.
         n_eff_count = (
             _declarative_evidence_count(node, fired, masked) if node.missingness == "declarative" else len(contributing)
@@ -658,7 +705,8 @@ def infer(
         prior_marginal = _prior_marginal(network, node.name)
         prior_p = prior_marginal.get("present", 0.5)
         # Signed: negative when evidence widens this node (rare). Kept as a net
-        # information-gain quantity, not clamped, so the total stays honest.
+        # marginal entropy-change diagnostic, not clamped. It is not pointwise
+        # information gain, and summing dependent nodes can double count.
         entropy_reduction = _binary_entropy(prior_p) - _binary_entropy(post)
         total_entropy_reduction += entropy_reduction
 
@@ -681,7 +729,11 @@ def infer(
                 sparse=n_eff <= calibration.min_n_eff,
                 conflict_provenance=conflicts,
                 evidence_ranked=evidence_ranked,
-                absence_informative=node.missingness == "declarative",
+                # True only when at least one unmasked, successfully observed
+                # non-fire contributes a non-neutral absence likelihood. The
+                # node's declarative policy alone is insufficient: structurally
+                # unobserved units must not license an "absent" rendering.
+                absence_informative=bool(informative_absences),
                 entropy_reduction_nats=round(entropy_reduction, 4),
                 unit_counterfactuals=counterfactuals,
             )
@@ -756,79 +808,6 @@ def _rank_evidence(fired: Iterable[_Evidence]) -> tuple[EvidenceContribution, ..
 # ── TenantInfo adapter ────────────────────────────────────────────────
 
 
-def _effective_dmarc_enforcement(policy: str | None, pct: int | None, testing: bool = False) -> str | None:
-    """Effective DMARC enforcement after applying the rollout-coverage tag.
-
-    A policy applied to only part of the mail stream is not full enforcement:
-    an RFC 7489 ``pct=0`` record is monitoring-only (effective ``none``), and a
-    partial rollout (``0 < pct < 100``) steps the policy down one level
-    (``reject`` to ``quarantine`` to ``none``), matching how a receiver treats
-    the un-covered fraction. ``pct`` absent (``None``) means full coverage: the
-    tag was removed in RFC 9989, whose records are full-coverage by default.
-    RFC 9989 ``t=y`` testing mode also steps the policy down one level. Returns
-    the effective policy string, or ``None`` for no recognizable policy.
-    """
-    return effective_dmarc_policy(policy, pct, testing)
-
-
-def signals_from_tenant_info(info: object) -> set[str]:
-    """Derive the set of "signal" names that fired for this domain.
-
-    The Bayesian network binds evidence both to slugs and to a small
-    set of synthetic signal names that are not directly visible as
-    slugs but are observable from already-merged ``TenantInfo`` fields:
-
-      * ``federated_sso_hub`` — ``auth_type == "Federated"`` (or
-        ``google_auth_type == "Federated"`` for GWS-primary tenants).
-      * ``dmarc_reject`` / ``dmarc_quarantine``: the effective DMARC policy
-        (``dmarc_policy`` downgraded when a ``pct`` rollout tag shows partial or
-        zero coverage, or when RFC 9989 ``t=y`` test mode is set), so a
-        monitoring-only record is not scored as enforcing.
-      * ``mta_sts_enforce`` — derived from ``mta_sts_mode``.
-      * ``dkim_present`` — true when any DKIM evidence record exists.
-      * ``spf_strict`` — true when an SPF strict (``-all``) policy is
-        observed in evidence.
-
-    Operates on already-collected data, no network calls. Returns a
-    set of signal names.
-    """
-    out: set[str] = set()
-    auth_type = getattr(info, "auth_type", None)
-    google_auth_type = getattr(info, "google_auth_type", None)
-    if auth_type == "Federated" or google_auth_type == "Federated":
-        out.add("federated_sso_hub")
-
-    effective_dmarc = _effective_dmarc_enforcement(
-        getattr(info, "dmarc_policy", None),
-        getattr(info, "dmarc_pct", None),
-        getattr(info, "dmarc_testing", False),
-    )
-    if effective_dmarc == "reject":
-        out.add("dmarc_reject")
-    elif effective_dmarc == "quarantine":
-        out.add("dmarc_quarantine")
-
-    mta_sts_mode = getattr(info, "mta_sts_mode", None)
-    if mta_sts_mode == "enforce":
-        out.add("mta_sts_enforce")
-
-    evidence = getattr(info, "evidence", ()) or ()
-    for ev in evidence:
-        source_type = getattr(ev, "source_type", "")
-        if source_type == "DKIM":
-            out.add("dkim_present")
-
-    # Strict SPF (-all) is recorded on the merged service set, not as an
-    # SPF-typed evidence record (no DNS producer emits one), so derive the
-    # signal from services. A prior version read a source_type "SPF" evidence
-    # record that the pipeline never creates, so spf_strict never fired.
-    services = getattr(info, "services", ()) or ()
-    if SVC_SPF_STRICT in services:
-        out.add("spf_strict")
-
-    return out
-
-
 _CONFLICT_FIELDS: tuple[str, ...] = (
     "display_name",
     "auth_type",
@@ -889,16 +868,24 @@ def infer_from_tenant_info(
             the bundled YAML is loaded on each call (cheap — small file).
         priors_override: as for ``infer``.
         masked_units: as for ``infer`` — evidence units to treat as
-            structurally unobserved (default empty, behaviour unchanged).
+            structurally unobserved. Collection failures recorded in
+            ``info.degraded_sources`` are unioned with this caller-supplied
+            mask so an unavailable channel cannot become declarative absence.
 
     Returns:
         ``InferenceResult`` ready for serialization or downstream use.
     """
+    from recon_tool.collection_view import collection_claim_info
+    from recon_tool.models import TenantInfo
+
     if network is None:
         network = load_network()
-    slugs = set(getattr(info, "slugs", ()) or ())
-    signals = signals_from_tenant_info(info)
+    observable_info = collection_claim_info(info) if isinstance(info, TenantInfo) else info
+    slugs = set(getattr(observable_info, "slugs", ()) or ())
+    signals = signals_from_tenant_info(observable_info)
     conflict_records = _conflict_provenance(info, _network_calibration(network).conflict_n_eff_penalty)
+    collection_mask = collection_masked_units(getattr(info, "degraded_sources", ()) or (), network)
+    effective_mask = collection_mask | frozenset(masked_units)
     return infer(
         network,
         observed_slugs=slugs,
@@ -906,5 +893,5 @@ def infer_from_tenant_info(
         conflict_field_count=len(conflict_records),
         priors_override=priors_override,
         conflicts=conflict_records,
-        masked_units=masked_units,
+        masked_units=effective_mask,
     )

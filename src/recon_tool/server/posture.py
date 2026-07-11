@@ -10,6 +10,7 @@ registration and re-exports the tool functions for the test surface. Imports
 from __future__ import annotations
 
 import logging
+import re
 import time
 import uuid
 from dataclasses import dataclass
@@ -19,7 +20,7 @@ from mcp.server.fastmcp.exceptions import ToolError
 from mcp.types import ToolAnnotations
 from typing_extensions import TypedDict
 
-from recon_tool.models import TenantInfo
+from recon_tool.models import EvidenceRecord, TenantInfo
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import (
@@ -29,7 +30,7 @@ from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger("recon")
 
-HypothesisLikelihood = Literal["strong", "moderate", "weak", "unsupported"]
+HypothesisLikelihood = Literal["unresolved"]
 HypothesisConfidence = Literal["high", "medium", "low"]
 
 
@@ -72,6 +73,7 @@ class ObservabilitySummary(TypedDict):
     score_is_lower_bound: bool
     unconfirmable_absent_points: int
     score_ceiling: int
+    unavailable_controls: list[str]
     note: str
 
 
@@ -146,6 +148,8 @@ class GapReportResult(TypedDict):
     domain: str
     gaps: list[HardeningGapSummary]
     disclaimer: str
+    unavailable_controls: list[str]
+    degraded_sources: list[str]
 
 
 class PostureMetricSummary(TypedDict):
@@ -230,6 +234,59 @@ _HYPOTHESIS_KEYWORDS: dict[str, list[str]] = {
     "cdn": ["cdn", "edge", "waf", "firewall", "cloudflare", "akamai"],
 }
 
+_HYPOTHESIS_STOPWORDS = frozenset(
+    {
+        "a",
+        "an",
+        "and",
+        "are",
+        "be",
+        "doing",
+        "does",
+        "for",
+        "has",
+        "have",
+        "in",
+        "indicator",
+        "indicators",
+        "is",
+        "it",
+        "not",
+        "observed",
+        "of",
+        "organization",
+        "platform",
+        "public",
+        "service",
+        "services",
+        "that",
+        "the",
+        "their",
+        "they",
+        "this",
+        "to",
+        "tool",
+        "tools",
+        "use",
+        "uses",
+        "using",
+        "vendor",
+        "vendors",
+        "we",
+        "with",
+    }
+)
+
+
+def _hypothesis_terms(text: str) -> frozenset[str]:
+    """Return bounded semantic terms without substring or stopword matches."""
+    return frozenset(term for term in re.findall(r"[a-z0-9]+", text.casefold()) if term not in _HYPOTHESIS_STOPWORDS)
+
+
+def _keyword_group_matches(terms: frozenset[str], keywords: list[str]) -> bool:
+    """Whether all meaningful terms from one configured keyword are present."""
+    return any((keyword_terms := _hypothesis_terms(keyword)) and keyword_terms <= terms for keyword in keywords)
+
 
 @mcp.tool(
     annotations=ToolAnnotations(
@@ -268,10 +325,12 @@ async def analyze_posture(
 
     info = await server_app.resolve_single_for_tool(domain, request_id)
 
+    from recon_tool.collection_view import collection_claim_info
     from recon_tool.formatter import format_posture_observations
     from recon_tool.posture import analyze_posture as _analyze_posture
     from recon_tool.profiles import apply_profile, list_profiles, load_profile
 
+    info = collection_claim_info(info)
     observations = _analyze_posture(info)
 
     # Apply profile lens if requested. ``profile`` is typed
@@ -478,20 +537,20 @@ async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonRes
 async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentResult:
     """Test a theory about a domain against signals and evidence.
 
-    Proposes a theory (e.g., "this organization appears to be mid-migration
-    to Entra ID") and receives a structured assessment of likelihood,
-    supporting evidence, contradicting evidence, and what is missing.
+    Proposes a theory and receives related public observations plus explicit
+    unresolved status. Passive catalog matches cannot validate active use,
+    organizational intent, topology, or causal explanations.
 
     Operates purely on cached pipeline data — zero additional network calls
     beyond the initial domain resolution.
 
     Args:
         domain: A domain name to test against (e.g., "northwindtraders.com").
-        hypothesis: A theory to evaluate (e.g., "mid-migration to cloud identity").
+        hypothesis: A theory whose related public indicators should be listed.
 
     Returns:
-        JSON object with likelihood, supporting_signals, contradicting_signals,
-        missing_evidence, and confidence.
+        JSON object with unresolved likelihood, related and contradicting
+        observations, missing evidence, and collection confidence.
     """
     # Bound the free-text hypothesis so a multi-megabyte argument cannot
     # multiply the per-signal substring scan cost.
@@ -503,18 +562,20 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
     info, _results = resolved
 
     from recon_tool.email_security import signal_context_from_tenant_info
-    from recon_tool.signals import evaluate_signals, load_signals
+    from recon_tool.signals import evaluate_signals, load_signals, signal_observation_label
 
     context = signal_context_from_tenant_info(info)
     signal_matches = evaluate_signals(context)
-    all_signals = load_signals()
+    public_signals = tuple(
+        (signal, label) for signal in load_signals() if (label := signal_observation_label(signal.name)) is not None
+    )
     fired_names = {m.name for m in signal_matches}
 
     # Map hypothesis to relevant categories via keyword matching
-    hyp_lower = hypothesis.lower()
+    hypothesis_terms = _hypothesis_terms(hypothesis)
     relevant_categories: set[str] = set()
     for cat, keywords in _HYPOTHESIS_KEYWORDS.items():
-        if any(kw in hyp_lower for kw in keywords):
+        if _keyword_group_matches(hypothesis_terms, keywords):
             relevant_categories.add(cat)
 
     # Find supporting and contradicting signals
@@ -522,11 +583,11 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
     contradicting: list[str] = []
     missing: list[str] = []
 
-    for sig in all_signals:
+    for sig, public_label in public_signals:
         # Check if signal is relevant to hypothesis via keyword matching
-        sig_text = f"{sig.name} {sig.description} {sig.category} {sig.explain}".lower()
-        is_relevant = any(kw in sig_text for kw in hyp_lower.split()) or any(
-            any(kw in sig_text for kw in keywords)
+        sig_terms = _hypothesis_terms(f"{public_label} {sig.description} {sig.category} {sig.explain}")
+        is_relevant = bool(hypothesis_terms & sig_terms) or any(
+            _keyword_group_matches(sig_terms, keywords)
             for cat, keywords in _HYPOTHESIS_KEYWORDS.items()
             if cat in relevant_categories
         )
@@ -534,37 +595,27 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
             continue
 
         if sig.name in fired_names:
-            supporting.append(sig.name)
+            supporting.append(public_label)
         else:
             # Check if it contradicts or is just missing
             has_contradiction_slugs = sig.contradicts and any(
                 slug in context.detected_slugs for slug in sig.contradicts
             )
             if has_contradiction_slugs:
-                contradicting.append(sig.name)
+                contradicting.append(public_label)
             else:
                 missing.append(
-                    f"Signal '{sig.name}' did not fire — "
+                    f"Observation '{public_label}' did not fire; "
                     f"detecting additional slugs ({', '.join(sig.candidates[:3])}) "
                     f"could strengthen or weaken this hypothesis"
                     if sig.candidates
-                    else f"Signal '{sig.name}' did not fire — metadata conditions not met"
+                    else f"Observation '{public_label}' did not fire; metadata conditions not met"
                 )
 
-    # Determine likelihood
-    if supporting and not contradicting:
-        if len(supporting) >= 3:
-            likelihood: HypothesisLikelihood = "strong"
-        elif len(supporting) >= 1:
-            likelihood = "moderate"
-        else:
-            likelihood = "weak"
-    elif contradicting and not supporting:
-        likelihood = "unsupported"
-    elif supporting and contradicting:
-        likelihood = "moderate" if len(supporting) > len(contradicting) else "weak"
-    else:
-        likelihood = "unsupported"
+    # Passive indicator co-observation cannot identify the truth of an
+    # arbitrary semantic hypothesis. Counts of loosely related catalog rules
+    # must never be converted into strong, moderate, or unsupported verdicts.
+    likelihood: HypothesisLikelihood = "unresolved"
 
     # Determine confidence based on data completeness
     if info.degraded_sources:
@@ -583,9 +634,9 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
         "missing_evidence": missing,
         "confidence": confidence,
         "disclaimer": (
-            "This assessment is based on publicly observable indicators and "
-            "cached pipeline data. Indicators suggest possible patterns but "
-            "do not confirm organizational intent or internal decisions."
+            "Likelihood is unresolved. Related entries are public indicators and "
+            "observations; they do not confirm active use, organizational "
+            "intent, topology, causation, or internal decisions."
         ),
     }
     return result
@@ -601,6 +652,25 @@ class _SimState:
     dmarc_pct: int | None
     dmarc_testing: bool
     mta_sts: str | None
+    evidence: list[EvidenceRecord]
+
+
+def _record_hypothetical_control(
+    state: _SimState,
+    *,
+    source_type: str,
+    rule_name: str,
+    slug: str,
+) -> None:
+    """Add typed simulation evidence without representing a live observation."""
+    marker = EvidenceRecord(
+        source_type=source_type,
+        raw_value="hypothetical simulation only",
+        rule_name=rule_name,
+        slug=slug,
+    )
+    if marker not in state.evidence:
+        state.evidence.append(marker)
 
 
 def _apply_dmarc_fix(fix: str, state: _SimState) -> str | None:
@@ -635,6 +705,12 @@ def _apply_mta_sts_fix(fix: str, state: _SimState) -> str | None:
         state.mta_sts = "enforce"
         state.services.add("MTA-STS")
         state.slugs.add("mta-sts-enforce")
+        _record_hypothetical_control(
+            state,
+            source_type="MTA_STS_POLICY",
+            rule_name="MTA-STS",
+            slug="mta-sts-enforce",
+        )
         return "MTA-STS set to enforce"
     return None
 
@@ -650,21 +726,35 @@ def _apply_one_fix(fix: str, state: _SimState) -> str | None:
     if "dkim" in fix:
         state.services.add("DKIM")
         state.slugs.add("dkim")
+        _record_hypothetical_control(state, source_type="DKIM", rule_name="DKIM", slug="dkim")
         return "DKIM configured"
     if "mta-sts" in fix:
         return _apply_mta_sts_fix(fix, state)
     if "bimi" in fix:
         state.services.add("BIMI")
         state.slugs.add("bimi")
+        _record_hypothetical_control(state, source_type="BIMI", rule_name="BIMI", slug="bimi")
         return "BIMI configured"
     if "spf" in fix and ("strict" in fix or "hardfail" in fix or "-all" in fix):
         state.services.add("SPF: strict (-all)")
+        _record_hypothetical_control(
+            state,
+            source_type="SPF",
+            rule_name="SPF: strict (-all)",
+            slug="spf-strict",
+        )
         return "SPF set to strict (-all)"
     if "tls-rpt" in fix or "tlsrpt" in fix:
         state.slugs.add("tls-rpt")
         return "TLS-RPT configured"
     if "caa" in fix:
         state.slugs.add("letsencrypt")
+        _record_hypothetical_control(
+            state,
+            source_type="CAA",
+            rule_name="CAA: Let's Encrypt",
+            slug="letsencrypt",
+        )
         return "CAA records configured"
     # Note the unrecognized fix, but sanitize and bound the caller-supplied
     # string so it cannot inject control sequences into the response.
@@ -680,6 +770,7 @@ def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str]
         dmarc_pct=info.dmarc_pct,
         dmarc_testing=info.dmarc_testing,
         mta_sts=info.mta_sts_mode,
+        evidence=list(info.evidence),
     )
     applied: list[str] = []
     for fix in fixes_lower:
@@ -747,13 +838,14 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
         dmarc_policy=state.dmarc,
         dmarc_pct=state.dmarc_pct,
         dmarc_testing=state.dmarc_testing,
+        spf_include_count=info.spf_include_count,
         domain_count=info.domain_count,
         tenant_domains=info.tenant_domains,
         related_domains=info.related_domains,
         insights=info.insights,
         degraded_sources=info.degraded_sources,
         cert_summary=info.cert_summary,
-        evidence=info.evidence,
+        evidence=tuple(state.evidence),
         evidence_confidence=info.evidence_confidence,
         inference_confidence=info.inference_confidence,
         detection_scores=info.detection_scores,
