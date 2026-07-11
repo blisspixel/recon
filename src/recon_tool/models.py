@@ -512,6 +512,7 @@ class SourceResult:
     default_domain: str | None = None
     region: str | None = None
     m365_detected: bool = False
+    # A source-level failure. The merger ignores all other payload fields when set.
     error: str | None = None
     detected_services: tuple[str, ...] = ()
     # Extended intel fields
@@ -603,7 +604,7 @@ class SourceResult:
 
     @property
     def is_success(self) -> bool:
-        """True if this result contains any useful data (identity or services)."""
+        """Whether the payload has useful data, independent of source-level error state."""
         return self.tenant_id is not None or self.m365_detected or len(self.detected_services) > 0
 
     @property
