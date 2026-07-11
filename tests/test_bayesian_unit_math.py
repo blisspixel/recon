@@ -10,6 +10,11 @@ helpers to values computed by hand (or to a documented approximation
 band), so a subtle arithmetic change fails a named assertion instead of
 slipping through. This file runs first in the mutation kill-set
 (mutation.toml); keep it fast and dependency-light.
+
+The 2026-07 collection-aware pass adds exact contracts for probability
+boundaries, neutral marginal fallbacks, whole-channel masking, and adapter
+extraction. These distinguish an unavailable observation from informative
+absence without expanding the accepted mathematical input domains.
 """
 
 from __future__ import annotations
@@ -23,6 +28,7 @@ from recon_tool.bayesian import (
     _CONFLICT_N_EFF_PENALTY,
     BayesianNetwork,
     CalibrationSettings,
+    _binding_llr,
     _conflict_provenance,
     _contributing_evidence,
     _declarative_evidence_count,
@@ -31,7 +37,9 @@ from recon_tool.bayesian import (
     _factor_is_strictly_positive,
     _marginal_in_unit_range,
     _Node,
+    _query_marginal,
     _rank_evidence,
+    collection_masked_units,
     infer,
     infer_from_tenant_info,
     load_network,
@@ -345,25 +353,95 @@ class TestContractPredicates:
     # the predicates directly keeps the contracts meaning what they say.
 
     def test_factor_is_probabilities_rejects_out_of_range(self) -> None:
-        assert _factor_is_probabilities({frozenset((("n", "present"),)): 0.5})
-        assert not _factor_is_probabilities({frozenset((("n", "present"),)): -0.5})
-        assert not _factor_is_probabilities({frozenset((("n", "present"),)): 1.5})
+        assignment = frozenset((("n", "present"),))
+        assert _factor_is_probabilities({assignment: 0.0})
+        assert _factor_is_probabilities({assignment: 0.5})
+        assert _factor_is_probabilities({assignment: 1.0})
+        assert not _factor_is_probabilities({assignment: -0.5})
+        assert not _factor_is_probabilities({assignment: 1.5})
 
     def test_factor_is_strictly_positive_rejects_zero(self) -> None:
+        assignment = frozenset((("n", "present"),))
         assert _factor_is_strictly_positive(None)
-        assert _factor_is_strictly_positive({frozenset((("n", "present"),)): 1e-9})
-        assert not _factor_is_strictly_positive({frozenset((("n", "present"),)): 0.0})
+        assert _factor_is_strictly_positive({assignment: 1e-9})
+        assert not _factor_is_strictly_positive({assignment: 0.0})
+        assert not _factor_is_strictly_positive({assignment: -1e-9})
 
     def test_marginal_in_unit_range(self) -> None:
+        assert _marginal_in_unit_range({"present": 0.0, "absent": 1.0})
         assert _marginal_in_unit_range({"present": 0.4, "absent": 0.6})
         assert not _marginal_in_unit_range({"present": -0.1})
         assert not _marginal_in_unit_range({"present": 1.1})
+
+    def test_query_marginal_neutral_fallbacks_are_normalized(self) -> None:
+        uniform = {"present": 0.5, "absent": 0.5}
+        assert _query_marginal([], "q", []) == uniform
+
+        zero_factor = {
+            frozenset((("q", "present"),)): 0.0,
+            frozenset((("q", "absent"),)): 0.0,
+        }
+        assert _query_marginal([zero_factor], "q", ["q"]) == uniform
+
+    def test_binding_llr_uses_real_ratio(self) -> None:
+        evidence = _ev("ratio", 0.6, 0.4)
+        assert math.isclose(_binding_llr(evidence), math.log(1.5), rel_tol=0.0, abs_tol=1e-12)
 
     def test_interval_is_ordered(self) -> None:
         assert _interval_is_ordered((0.2, 0.8))
         assert not _interval_is_ordered((0.8, 0.2))
         assert not _interval_is_ordered((-0.1, 0.5))
         assert not _interval_is_ordered((0.5, 1.1))
+
+
+class TestCollectionMaskingContracts:
+    @staticmethod
+    def _network() -> BayesianNetwork:
+        declarative = _Node(
+            name="declarative",
+            description="Public declaration",
+            parents=(),
+            prior=0.5,
+            cpt={},
+            evidence=(_ev("decl-unit", 0.8, 0.2, kind="signal"),),
+            missingness="declarative",
+            group_absence=(),
+        )
+        hideable = _Node(
+            name="hideable",
+            description="Potentially hidden observation",
+            parents=(),
+            prior=0.5,
+            cpt={},
+            evidence=(_ev("hide-unit", 0.8, 0.2, kind="signal"),),
+            missingness="hideable",
+            group_absence=(),
+        )
+        return BayesianNetwork(version=1, nodes=(declarative, hideable))
+
+    def test_whole_dns_masks_only_declarative_units_from_supplied_network(self) -> None:
+        network = self._network()
+        masked = collection_masked_units(("dns",), network)
+        assert "decl-unit" in masked
+        assert "hide-unit" not in masked
+        assert collection_masked_units((), network) == frozenset()
+
+    def test_adapter_distinguishes_unobserved_from_informative_absence(self) -> None:
+        network = BayesianNetwork(version=1, nodes=(self._network().get("declarative"),))
+
+        absent = infer_from_tenant_info(SimpleNamespace(), network=network, priors_override={}).posteriors[0]
+        unobserved = infer_from_tenant_info(
+            SimpleNamespace(degraded_sources=("dns",)),
+            network=network,
+            priors_override={},
+        ).posteriors[0]
+
+        assert absent.posterior == 0.2
+        assert absent.absence_informative is True
+        assert len(absent.unit_counterfactuals) == 1
+        assert unobserved.posterior == 0.5
+        assert unobserved.absence_informative is False
+        assert unobserved.unit_counterfactuals == ()
 
 
 # ── Output rounding granularity ────────────────────────────────────────
@@ -582,6 +660,29 @@ class TestConflictProvenance:
 
 
 class TestInferFromTenantInfo:
+    def test_slug_observation_survives_adapter_extraction(self) -> None:
+        node = _Node(
+            name="slug_node",
+            description="Slug-backed claim",
+            parents=(),
+            prior=0.5,
+            cpt={},
+            evidence=(_ev("probe", 0.8, 0.2),),
+            missingness="hideable",
+            group_absence=(),
+        )
+        network = BayesianNetwork(version=1, nodes=(node,))
+
+        posterior = infer_from_tenant_info(
+            SimpleNamespace(slugs=("probe",)),
+            network=network,
+            priors_override={},
+        ).posteriors[0]
+
+        assert posterior.posterior == 0.8
+        assert posterior.evidence_used == ("slug:probe",)
+        assert posterior.unit_counterfactuals[0].posterior_without == 0.5
+
     def test_role_observation_raises_posterior_and_counts_conflicts(self) -> None:
         net = load_network()
         empty = infer_from_tenant_info(SimpleNamespace(), network=net, priors_override={})
