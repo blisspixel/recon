@@ -14,8 +14,18 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-07-11
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Changed
 
+- Added `DeltaReport.incomplete_comparison` to distinguish a fully observed
+  empty delta from a comparison masked by degraded collection. Existing MCP
+  result schemas also expose the additive diagnostic fields
+  `degraded_sources`, `unavailable_controls`, and `collection_masked_units`.
 - Bounded NDJSON batch streaming to a rolling concurrency-sized task window
   and stopped retaining completed tenant objects in the batch-wide enrichment
   map. Large streaming runs now honor their constant-result-memory contract

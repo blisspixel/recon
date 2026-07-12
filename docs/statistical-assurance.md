@@ -1,6 +1,6 @@
 # Statistical assurance
 
-Current for recon v2.3.9. Reviewed 2026-07-10.
+Current for recon v2.4.0. Reviewed 2026-07-11.
 
 This document records what recon's numerical outputs establish and where their
 support stops. Faithful computation, model-relative uncertainty, external

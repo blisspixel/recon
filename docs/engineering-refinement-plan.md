@@ -17,7 +17,7 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- v2.3.9 is current on GitHub and PyPI.
+- v2.4.0 is current on GitHub and PyPI.
 - Local and remote release readiness pass on current main.
 - Meaningful branch-aware coverage is approximately 89 percent, above the 82
   percent enforced project gate and the 80 percent user bar.
@@ -50,7 +50,7 @@ or failing guard.
 ## Track 1: Evidence-Semantic Integrity
 
 Status: active; live MCP boundary, score wording, and parent-platform
-child-product inference corrected in Unreleased; provider summaries now share
+child-product inference corrected in v2.4.0; provider summaries now share
 one evidence-aware derivation across output surfaces; Markdown service labels
 now cross one escaped output boundary and use mutually exclusive provider
 groups; confidence scoring now has a dedicated module with distinct-source,
