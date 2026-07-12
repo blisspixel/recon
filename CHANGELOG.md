@@ -16,6 +16,25 @@ operator, corporate group, ownership, or control.
 
 ### Changed
 
+- Bounded NDJSON batch streaming to a rolling concurrency-sized task window
+  and stopped retaining completed tenant objects in the batch-wide enrichment
+  map. Large streaming runs now honor their constant-result-memory contract
+  instead of creating and retaining work for the full input corpus.
+- Aggregated consecutive repeated certificate SAN sets before expanding their
+  CT graph pairs. Renewal-heavy certificate feeds preserve edge weights,
+  issuer ordering, deterministic output, and existing caps while avoiding the
+  same quadratic pair expansion for every identical certificate. On the dated
+  local 1,000-entry, 60-SAN repeated fixture, median graph time fell from 2.31
+  seconds to 0.16 seconds; this characterization is not a general product SLO.
+- Established an evidence-gated performance architecture decision. A dated,
+  reproducible, network-free CPU characterization harness now separates
+  catalog loading, fingerprint
+  matching, Bayesian inference, CT graph construction, and rendering. The
+  default runtime remains pure Python; Python algorithm and cache improvements
+  precede any optional Rust prototype, while Go and Mojo remain outside the
+  current local product boundary. Native promotion now requires material
+  end-to-end value, exact Python-reference parity, compiler-free installation,
+  full quality gates, reproducibility, SBOM coverage, provenance, and rollback.
 - Narrowed the mutation exclusions from the whole BitOr operator family to six
   line-scoped postponed-annotation unions. All five runtime set and frozenset
   union expressions, representing 55 mutants, now remain in the tested
@@ -104,6 +123,8 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Corrected the resolver API documentation to state the enforced 120-second
+  aggregate default timeout rather than the obsolete 60-second value.
 - Made human service disclosure additive and documented its stable behavior.
   Default, verbose, and full panels now retain one compact Email row containing
   observed provider, gateway, and principal control facts before any secondary

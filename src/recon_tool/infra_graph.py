@@ -130,6 +130,35 @@ def _clean_sans(raw: Any) -> list[str]:
     return cleaned
 
 
+def _apply_repeated_san_group(
+    graph: nx.Graph[str],
+    edge_issuers: dict[tuple[str, str], list[str]],
+    sans: tuple[str, ...],
+    issuer: str,
+    occurrences: int,
+) -> None:
+    """Apply one consecutive run of an identical certificate hyperedge.
+
+    Certificate feeds commonly repeat the same SAN set and issuer across many
+    renewals. Expanding every copy into the same pairs repeats quadratic work.
+    Aggregating a consecutive run preserves arrival order, edge weights, and
+    the existing capped issuer-sample semantics while expanding its pairs once.
+    """
+    for a, b in combinations(sans, 2):
+        if graph.has_edge(a, b):
+            data = graph[a][b]
+            shared_certs = int(data.get("shared_certs", 0)) + occurrences
+            data["shared_certs"] = shared_certs
+            data["weight"] = float(shared_certs)
+        else:
+            graph.add_edge(a, b, shared_certs=occurrences, weight=float(occurrences))
+        if issuer:
+            samples = edge_issuers.setdefault((a, b), [])
+            remaining = _MAX_EDGE_ISSUER_SAMPLES - len(samples)
+            if remaining > 0:
+                samples.extend([issuer] * min(occurrences, remaining))
+
+
 def _build_graph(
     entries: list[dict[str, Any]],
 ) -> tuple[nx.Graph[str], dict[tuple[str, str], list[str]], bool]:
@@ -153,6 +182,10 @@ def _build_graph(
     g: nx.Graph[str] = nx.Graph()
     edge_issuers: dict[tuple[str, str], list[str]] = {}
     truncated = False
+    observed_nodes: set[str] = set()
+    pending_sans: tuple[str, ...] = ()
+    pending_issuer = ""
+    pending_occurrences = 0
 
     for idx, entry in enumerate(entries):
         if idx >= _MAX_GRAPH_ENTRIES:
@@ -162,7 +195,7 @@ def _build_graph(
             # Route to the connected-components fallback on the partial graph.
             truncated = True
             break
-        if g.number_of_nodes() >= MAX_GRAPH_NODES:
+        if len(observed_nodes) >= MAX_GRAPH_NODES:
             # Stop adding new certs once the node cap is reached.
             # Existing edges still aggregate their issuer lists for
             # accuracy on the bounded partition; new SAN names are
@@ -176,23 +209,26 @@ def _build_graph(
             continue
         if len(sans) > _MAX_SANS_PER_CERT_FOR_EDGES:
             sans = sorted(sans)[:_MAX_SANS_PER_CERT_FOR_EDGES]
+        canonical_sans = tuple(sorted(sans))
+        observed_nodes.update(canonical_sans)
         issuer_raw = entry.get("issuer_name")
         # Strip control bytes: the issuer becomes a cluster's dominant_issuer,
         # which is emitted in --json and the get_infrastructure_clusters MCP
         # tool. This is the issuer path the build_cert_summary strip misses.
         issuer = strip_control_chars(str(issuer_raw)) if isinstance(issuer_raw, str) else ""
 
-        for a, b in combinations(sorted(sans), 2):
-            if g.has_edge(a, b):
-                data = g[a][b]
-                data["shared_certs"] = int(data.get("shared_certs", 0)) + 1
-                data["weight"] = float(data["shared_certs"])
-            else:
-                g.add_edge(a, b, shared_certs=1, weight=1.0)
-            if issuer:
-                samples = edge_issuers.setdefault((a, b), [])
-                if len(samples) < _MAX_EDGE_ISSUER_SAMPLES:
-                    samples.append(issuer)
+        if canonical_sans == pending_sans and issuer == pending_issuer:
+            pending_occurrences += 1
+            continue
+
+        if pending_occurrences:
+            _apply_repeated_san_group(g, edge_issuers, pending_sans, pending_issuer, pending_occurrences)
+        pending_sans = canonical_sans
+        pending_issuer = issuer
+        pending_occurrences = 1
+
+    if pending_occurrences:
+        _apply_repeated_san_group(g, edge_issuers, pending_sans, pending_issuer, pending_occurrences)
     return g, edge_issuers, truncated
 
 
