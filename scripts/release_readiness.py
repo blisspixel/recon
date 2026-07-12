@@ -44,7 +44,7 @@ _CITATION_RELEASE_DATE_RE = re.compile(
 )
 _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
-_COVERAGE_FLOOR = "--cov-fail-under=82"
+_COVERAGE_FLOOR = "--cov-fail-under=90.2"
 _REQUIRED_REMOTE_WORKFLOWS = ("CI", "Secrets scan", "Scorecard supply-chain security")
 _MIN_SCORECARD_SCORE = 7.5
 _REQUIRED_SCORECARD_TENS = (

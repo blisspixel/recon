@@ -126,7 +126,7 @@ mitigations are mechanical and non-negotiable:
 
 ## 5. Testing and coverage
 
-- **Branch coverage**, gated (`--cov-branch --cov-fail-under=82`). Coverage is a
+- **Branch coverage**, gated (`--cov-branch --cov-fail-under=90.2`). Coverage is a
   floor, not the goal. 100% is explicitly not the target; pair it with quality
   signals.
 - **Diff coverage**, advisory and local-first:

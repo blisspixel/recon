@@ -48,6 +48,7 @@ from recon_tool.server import test_hypothesis as mcp_test_hypothesis
 runner = CliRunner()
 
 RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
+CHAIN_RESOLVE_PATH = "recon_tool.chain.resolve_tenant"
 SERVER_RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
 SERVER_RESOLVE_OR_CACHE = "recon_tool.server_app.resolve_or_cache"
 
@@ -163,7 +164,7 @@ class TestCLIExplainFlag:
         assert result.exit_code == 0
         assert "## Explanations" in result.output
 
-    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    @patch(CHAIN_RESOLVE_PATH, new_callable=AsyncMock)
     def test_explain_chain_output(self, mock_resolve: AsyncMock) -> None:
         """--explain --chain produces per-domain explanations."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)

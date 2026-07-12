@@ -30,6 +30,22 @@ def test_release_quality_gate_typechecks_tests(monkeypatch) -> None:
     pyright_cmd = next(cmd for cmd in commands if cmd[:3] == ["uv", "run", "pyright"])
     assert pyright_cmd == ["uv", "run", "pyright", "src/recon_tool/", "tests/"]
 
+    pytest_cmd = next(cmd for cmd in commands if cmd[:3] == ["uv", "run", "pytest"])
+    assert pytest_cmd == [
+        "uv",
+        "run",
+        "pytest",
+        "tests/",
+        "-n",
+        "auto",
+        "--maxprocesses=4",
+        "--dist=loadfile",
+        "--cov=src/recon_tool",
+        "--cov-branch",
+        "--cov-fail-under=90.2",
+        "-q",
+    ]
+
 
 def test_release_push_command_names_only_the_reviewed_tag() -> None:
     assert release._release_push_command("2.3.7") == [

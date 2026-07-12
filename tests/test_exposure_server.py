@@ -285,9 +285,11 @@ class TestComparePostures:
             await compare_postures("not a domain", "contoso.com")
 
     @pytest.mark.asyncio
-    async def test_validation_failure_domain_b(self) -> None:
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_validation_failure_domain_b(self, mock_resolve: AsyncMock) -> None:
         with pytest.raises(ToolError):
             await compare_postures("contoso.com", "not a domain")
+        mock_resolve.assert_not_awaited()
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

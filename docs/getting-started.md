@@ -5,7 +5,8 @@ The short product overview is in [README.md](../README.md).
 
 ## Requirements
 
-- Python 3.11 or newer.
+- Python 3.11 or newer. The latest Python 3.14 patch is recommended; Python
+  3.11 through 3.14 retain the same supported behavior and output contracts.
 - Windows, macOS, or Linux.
 - No API keys, credentials, paid accounts, or external services owned by recon.
 

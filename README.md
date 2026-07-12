@@ -31,6 +31,11 @@ uv tool install recon-tool
 pipx install recon-tool
 ```
 
+Python 3.11 through 3.14 is supported. The latest Python 3.14 patch is
+recommended for new installations and development; older supported versions
+retain the same product behavior and output contracts. Current measurements
+and version-specific decisions are in [docs/performance.md](docs/performance.md).
+
 If `uv` or `pipx` is already installed, the platform script can install or
 update recon:
 
@@ -270,7 +275,9 @@ uv run python scripts/check.py
 
 `python scripts/check.py` is the local CI mirror. It runs lint, type checks,
 coverage-gated tests, generated-artifact checks, validation hygiene, and
-ratchets. Do not push on `--fast` alone.
+ratchets. Its full-suite stage uses at most four file-grouped test workers while
+preserving combined branch coverage. Focused `pytest` commands stay serial by
+default. Do not push on `--fast` alone.
 
 Project hygiene: keep examples fictional or synthetic, keep validation artifacts
 aggregate-only, run `scripts/check.py`, and avoid dead code or placeholders.

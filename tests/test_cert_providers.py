@@ -673,11 +673,21 @@ class TestCertSpotterPagination:
         assert len(subs) == provider._MAX_PAGES * 3
 
     @pytest.mark.asyncio
-    async def test_429_stops_pagination_returns_partial_data(self):
+    async def test_429_stops_pagination_returns_partial_data(self, monkeypatch: pytest.MonkeyPatch):
         """A 429 response stops pagination and returns what's been collected."""
         provider = CertSpotterProvider()
         page1 = [_issuance(i, f"host{i}.example.com") for i in range(4)]
-        page2_rate_limited = MagicMock(status_code=429)
+        page2_rate_limited = httpx.Response(
+            429,
+            headers={"Retry-After": "1"},
+            request=httpx.Request("GET", "https://api.certspotter.com/v1/issuances"),
+        )
+        retry_delays: list[float] = []
+
+        async def capture_sleep(delay: float) -> None:
+            retry_delays.append(delay)
+
+        monkeypatch.setattr("recon_tool.sources.cert_providers.asyncio.sleep", capture_sleep)
 
         responses = [
             MagicMock(status_code=200, json=MagicMock(return_value=page1)),
@@ -695,6 +705,7 @@ class TestCertSpotterPagination:
         # Pagination stopped at 429, but page 1 data is still returned
         assert client.get.call_count == 2
         assert len(subs) == 4  # from page 1
+        assert retry_delays == [1.0]
 
     @pytest.mark.asyncio
     async def test_non_429_error_still_raises(self):

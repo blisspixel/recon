@@ -73,7 +73,9 @@ uv run python scripts/check.py         # the full CI gate locally (--fast to ski
 
 `scripts/check.py` runs the **exact** CI gate (ruff, pyright over
 `src/recon_tool/ tests/`, the coverage-gated test run, the catalog/label and
-file-size checks), so green locally means green in CI. Run it before every push.
+file-size checks), so green locally means green in CI. The complete test stage
+uses at most four file-grouped workers and combines branch coverage; focused
+tests remain serial by default. Run it before every push.
 The standards this project holds itself (and any AI working in it) to are in
 [docs/engineering-practices.md](docs/engineering-practices.md); load-bearing
 design decisions are in [docs/adr/](docs/adr/).
@@ -485,7 +487,8 @@ removes an observation when an entry appears as a substring of its statement.
 ## Code changes
 
 - Run `pre-commit run --all-files` or `ruff check .` and `pyright src/recon_tool/ tests/` before submitting.
-- Run `pytest tests/ --cov=src/recon_tool --cov-branch`; branch coverage must stay above 82%.
+- Run `uv run python scripts/check.py`; branch-aware project coverage must stay
+  at or above the enforced 90.2 percent baseline.
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.
 - Keep PRs focused: one concern per PR.
 - Keep the branch list clean: `main` is the only long-lived branch. PRs and

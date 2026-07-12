@@ -29,6 +29,7 @@ from recon_tool.fingerprints import (
     load_fingerprints,
     reload_fingerprints,
 )
+from recon_tool.regex_safety import _compile_regex_cached, compile_regex
 
 pytest.importorskip("mcp")
 
@@ -79,6 +80,22 @@ class TestEphemeralCoreFunctions:
         inject_ephemeral(fp)
         result = get_ephemeral()
         assert fp in result
+
+    def test_catalog_generation_changes_invalidate_compiled_regexes(self) -> None:
+        assert compile_regex("^warm-cache$") is not None
+        assert _compile_regex_cached.cache_info().currsize > 0
+
+        fp = _make_fingerprint(slug="cache-invalidation")
+        inject_ephemeral(fp)
+        assert _compile_regex_cached.cache_info().currsize == 0
+
+        assert compile_regex(fp.detections[0].pattern) is not None
+        clear_ephemeral()
+        assert _compile_regex_cached.cache_info().currsize == 0
+
+        assert compile_regex("^warm-cache-again$") is not None
+        reload_fingerprints()
+        assert _compile_regex_cached.cache_info().currsize == 0
 
     def test_inject_then_load_includes_ephemeral(self) -> None:
         """inject → load_fingerprints() includes ephemeral fingerprint."""

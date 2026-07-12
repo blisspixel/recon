@@ -506,8 +506,7 @@ async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonRes
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
 
-    info_a = await server_app.resolve_single_for_tool(domain_a, request_id)
-    info_b = await server_app.resolve_single_for_tool(domain_b, request_id)
+    info_a, info_b = await server_app.resolve_domains_for_tool((domain_a, domain_b), request_id)
 
     from recon_tool.exposure import compare_postures_from_infos
     from recon_tool.formatter import format_comparison_dict
