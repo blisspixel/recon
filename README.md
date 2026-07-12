@@ -155,6 +155,11 @@ Formal model and robustness research program:
 
 `recon <domain> --json` emits a stable single-domain lookup object. Batch and
 delta modes emit different shapes, so route by mode or by `record_type`.
+`recon batch --summary --json` preserves the separate aggregate-only
+`cohort_summary` 2.1 contract. New consumers can select
+`--summary-schema 2.2` for raw-evidence-bound DMARC rates, corrected missingness,
+and explicit metric kinds. The standalone reducer uses
+`--schema-version 2.2` for the corresponding atemporal compatibility view.
 
 ```bash
 recon contoso.com --json

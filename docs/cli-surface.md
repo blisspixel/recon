@@ -67,6 +67,7 @@ Summary: Look up multiple domains from a file.
 | `include_ecosystem` | option | `--include-ecosystem` | no | boolean | false |  |
 | `fusion` | option | `--fusion`, `--no-fusion` | no | boolean | true |  |
 | `summary` | option | `--summary` | no | boolean | false |  |
+| `summary_schema` | option | `--summary-schema` | no | text | 2.1 |  |
 
 <a id="recon-cache"></a>
 ## `recon cache`

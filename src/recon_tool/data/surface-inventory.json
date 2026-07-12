@@ -808,6 +808,18 @@
               "--summary"
             ],
             "type": "boolean"
+          },
+          {
+            "default": "2.1",
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "summary_schema",
+            "required": false,
+            "tokens": [
+              "--summary-schema"
+            ],
+            "type": "text"
           }
         ],
         "path": [

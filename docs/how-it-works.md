@@ -111,11 +111,16 @@ the absence of an expected declared control.
 Signals are deterministic and data-driven. They do not call the network and they
 do not use a model.
 
-The next deterministic architecture step is a machine-enforced claim contract:
-for one narrow claim, enumerate the sufficient positive alternatives, genuine
-authoritative negatives, required successful observation opportunities,
-dependency groups, scope, time semantics, and renderer obligations. Until that
-registry exists, prose and regression tests remain the guardrail.
+The first machine-enforced internal claim contract now covers the exact
+observation that a fresh valid apex DMARC record declares `p=reject`. It keeps
+positive and explicit-disconfirming certificates separate, names collection
+and time state, and drives the opt-in schema 2.2 cohort-summary denominator
+through transient claim-state and effective-policy projections. Schema 2.1
+remains the compatibility default. No per-domain dossier or annotation is
+emitted.
+The broader registry is still future work;
+[claim-contracts.md](claim-contracts.md) records the exact boundary and proving
+tests.
 
 ## Graph Structure
 
@@ -196,8 +201,10 @@ complete.
 
 Some insight and posture generator associations are reconstructed from rendered
 text or proxy rule matches. Completeness is reachability in that emitted graph,
-not proof that every reconstructed generator association is exact. The claim
-contract roadmap keeps generation-time rule lineage as open work.
+not proof that every reconstructed generator association is exact. The first
+DMARC claim contract instead binds its evaluator atom to the collector-retained
+raw record. General generation-time lineage and per-query observation timestamps
+remain open work.
 
 Use `recon contoso.com --explain-dag` for the separate Bayesian
 evidence-to-network renderer in text, DOT, or Mermaid form. That diagnostic does

@@ -1,4 +1,4 @@
-"""Tests for the v2.1 downstream cohort reducer (validation/aggregate/).
+"""Tests for the versioned downstream cohort reducer (validation/aggregate/).
 
 The reducer is a sidecar, not recon core, so it is loaded by path. The per-cohort
 math lives in recon_tool.cohort_summary (tested in test_cohort_summary.py); these
@@ -31,14 +31,27 @@ def test_weighted_log_odds_flags_distinctive_term() -> None:
 def _load_fixture() -> dict[str, Any]:
     records = agg.load_records(str(_AGG_DIR / "synthetic_cohort.ndjson"))
     grouping = agg.load_grouping(str(_AGG_DIR / "synthetic_groups.csv"))
-    return agg.reduce_records(records, grouping)
+    return agg.reduce_records(records, grouping, schema_version="2.2")
 
 
 def test_fixture_global_shape() -> None:
     summary = _load_fixture()
     assert summary["record_type"] == "cohort_summary"
+    assert summary["schema_version"] == "2.2"
     assert summary["global"]["n"] == 24
     assert summary["global"]["small_n_warning"] is True
+    dmarc = summary["global"]["prevalence"]["dmarc_enforcing"]
+    assert dmarc["metric_kind"] == "atemporal_explicit_policy_rate"
+    assert dmarc["observable_n"] == 21
+
+
+def test_reducer_defaults_to_released_v21_contract() -> None:
+    records = agg.load_records(str(_AGG_DIR / "synthetic_cohort.ndjson"))
+    summary = agg.reduce_records(records)
+
+    assert summary["schema_version"] == "2.1"
+    assert summary["global"]["prevalence"]["dmarc_reject"]["metric_kind"] == "authoritative_observed_rate"
+    assert summary["global"]["prevalence"]["dmarc_reject"]["observable_n"] == 24
 
 
 def test_fixture_hideable_claim_reports_model_support_not_prevalence() -> None:
@@ -76,9 +89,16 @@ def test_reducer_tolerates_malformed_records(tmp_path: Any) -> None:
     import json as _json
 
     bad = [
-        42, "contoso.com", None,  # non-dict records, must be filtered
-        {"queried_domain": "a.com", "provider": "Microsoft 365", "slugs": "proofpoint",
-         "posterior_observations": 5, "degraded_sources": "dns"},  # non-list fields
+        42,
+        "contoso.com",
+        None,  # non-dict records, must be filtered
+        {
+            "queried_domain": "a.com",
+            "provider": "Microsoft 365",
+            "slugs": "proofpoint",
+            "posterior_observations": 5,
+            "degraded_sources": "dns",
+        },  # non-list fields
     ]
     p = tmp_path / "bad.json"
     p.write_text(_json.dumps(bad), encoding="utf-8")

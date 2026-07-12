@@ -49,6 +49,7 @@ The docs are organized by reader need:
 | Catalog growth and quality strategy | [catalog-strategy.md](catalog-strategy.md) |
 | Signal schema | [signals.md](signals.md) |
 | Cohort-summary output | [aggregate-state.md](aggregate-state.md) |
+| Internal proof-carrying claim contracts | [claim-contracts.md](claim-contracts.md) |
 
 `cli-surface.md`, `surface-inventory.json`, and
 `recon://surface-inventory` are generated discovery context, not stable runtime
@@ -60,6 +61,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 |---|---|
 | Plain-language model overview | [how-it-works.md](how-it-works.md) |
 | Formal correlation model and robustness research program | [correlation.md](correlation.md) |
+| Executable first claim contract and certificate algebra | [claim-contracts.md](claim-contracts.md) |
 | Known weak areas and conservative wording | [weak-areas.md](weak-areas.md) |
 | Security threat model | [security.md](security.md) |
 | Audit-ready claim to mechanism to test map | [assurance-case.md](assurance-case.md) |

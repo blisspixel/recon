@@ -1,4 +1,4 @@
-"""Tests for recon_tool.cohort_summary, the in-core v2.1 cohort summary.
+"""Tests for recon_tool.cohort_summary's compatible 2.1 and opt-in 2.2 contracts.
 
 Pins the statistics and the honest behaviors: declarative public-claim rates
 only after a successful observation opportunity, model support coverage for
@@ -14,6 +14,11 @@ from typing import Any
 import pytest
 from rich.console import Console
 
+from recon_tool.claim_contract import (
+    DMARC_EFFECTIVE_POLICY_FIELD,
+    DMARC_REJECT_CLAIM_STATE_FIELD,
+    ClaimState,
+)
 from recon_tool.cohort_summary import (
     build_summary_document,
     extract_signals,
@@ -37,6 +42,15 @@ def _rec(**kw: Any) -> dict[str, Any]:
         "posterior_observations": [],
     }
     base.update(kw)
+    if base["dmarc_policy"] in {"none", "quarantine", "reject"} and "evidence" not in base:
+        base["evidence"] = [
+            {
+                "source_type": "DMARC",
+                "raw_value": f"v=DMARC1; p={base['dmarc_policy']}",
+                "rule_name": "DMARC",
+                "slug": "dmarc",
+            }
+        ]
     return base
 
 
@@ -71,15 +85,109 @@ def test_entropy_and_hhi_extremes() -> None:
 
 def test_extract_signals_observability_split() -> None:
     visible = _rec(dmarc_policy="reject", posterior_observations=[_node("m365_tenant", 0.9, 0.8, 0.95)])
-    sig = extract_signals(visible)
+    sig = extract_signals(visible, schema_version="2.2")
     assert sig["dmarc_reject"] is True
     assert sig["m365_tenant"] is True
 
     hidden = _rec(posterior_observations=[_node("m365_tenant", 0.2, 0.05, 0.5, sparse=True, fired=False)])
-    assert extract_signals(hidden)["m365_tenant"] is None  # hideable, not observable
+    assert extract_signals(hidden, schema_version="2.2")["m365_tenant"] is None  # hideable, not observable
 
     degraded = _rec(dmarc_policy="reject", degraded_sources=["dns"])
-    assert extract_signals(degraded)["dmarc_reject"] is None  # DNS down
+    assert extract_signals(degraded, schema_version="2.2")["dmarc_reject"] is None  # DNS down
+
+    scalar_only = _rec(dmarc_policy="reject")
+    assert extract_signals(scalar_only, schema_version="2.2")["dmarc_reject"] is True
+    assert (
+        build_summary_document([scalar_only], schema_version="2.2")["prevalence"]["dmarc_reject"]["metric_kind"]
+        == "atemporal_explicit_policy_rate"
+    )
+    scalar_without_lineage = dict(scalar_only)
+    scalar_without_lineage.pop("evidence")
+    assert extract_signals(scalar_without_lineage, schema_version="2.2")["dmarc_reject"] is None
+
+    defaulted_none = _rec(
+        dmarc_policy="none",
+        evidence=[
+            {
+                "source_type": "DMARC",
+                "raw_value": "v=DMARC1; rua=mailto:dmarc@example.com",
+                "rule_name": "DMARC",
+                "slug": "dmarc",
+            }
+        ],
+    )
+    assert extract_signals(defaulted_none, schema_version="2.2")["dmarc_reject"] is None
+
+    empty = _rec()
+    assert extract_signals(empty, schema_version="2.2")["dmarc_reject"] is None
+    assert extract_signals(empty, schema_version="2.2")["dmarc_enforcing"] is None
+
+    inconsistent = _rec(
+        dmarc_policy="none",
+        **{DMARC_REJECT_CLAIM_STATE_FIELD: ClaimState.SUPPORTED.value},
+    )
+    assert extract_signals(inconsistent, schema_version="2.2")["dmarc_reject"] is False
+    assert extract_signals(inconsistent, schema_version="2.2")["dmarc_enforcing"] is False
+
+
+def test_contract_and_atemporal_dmarc_modes_do_not_fall_back_into_each_other() -> None:
+    raw_only = _rec(dmarc_policy="reject")
+    strict = extract_signals(
+        raw_only,
+        schema_version="2.2",
+        dmarc_contract_scoped=True,
+    )
+    assert strict["dmarc_reject"] is None
+    assert strict["dmarc_enforcing"] is None
+
+    transient_only = _rec(
+        dmarc_policy="reject",
+        evidence=[],
+        **{
+            DMARC_REJECT_CLAIM_STATE_FIELD: ClaimState.SUPPORTED.value,
+            DMARC_EFFECTIVE_POLICY_FIELD: "reject",
+        },
+    )
+    assert extract_signals(transient_only, schema_version="2.2")["dmarc_reject"] is None
+    strict = extract_signals(
+        transient_only,
+        schema_version="2.2",
+        dmarc_contract_scoped=True,
+    )
+    assert strict["dmarc_reject"] is True
+    assert strict["dmarc_enforcing"] is True
+
+
+@pytest.mark.parametrize(
+    ("record", "enforcing"),
+    [
+        ("v=DMARC1; p=quarantine; t=y", False),
+        ("v=DMARC1; p=reject; t=y", True),
+        ("v=DMARC1; p=quarantine; pct=50", False),
+        ("v=DMARC1; p=quarantine; t=y ", True),
+        ("v=DMARC1; p=quarantine; pct=50 ", True),
+        (f"v=DMARC1; p=quarantine; pct={'0' * 5000}", True),
+        ("v=DMARC1; p=quarantine; pct=0000", True),
+    ],
+)
+def test_atemporal_enforcement_uses_raw_bound_effective_policy(record: str, enforcing: bool) -> None:
+    policy = "reject" if "p=reject" in record else "quarantine"
+    result = extract_signals(
+        _rec(
+            dmarc_policy=policy,
+            evidence=[
+                {
+                    "source_type": "DMARC",
+                    "raw_value": record,
+                    "rule_name": "DMARC",
+                    "slug": "dmarc",
+                }
+            ],
+        ),
+        schema_version="2.2",
+    )
+    assert result["dmarc_reject"] is (policy == "reject")
+    assert result["dmarc_enforcing"] is enforcing
 
 
 @pytest.mark.parametrize(
@@ -102,7 +210,8 @@ def test_extract_signals_masks_only_degraded_collection_channels(marker: str, un
             mta_sts_mode="enforce",
             email_gateway="Proofpoint",
             degraded_sources=[marker],
-        )
+        ),
+        schema_version="2.2",
     )
 
     observed = {"dmarc_reject", "dmarc_enforcing", "mta_sts_enforce", "email_gateway_present"} - unavailable
@@ -120,15 +229,49 @@ def test_build_summary_document_shape() -> None:
         )
         for _ in range(5)
     ]
-    doc = build_summary_document(recs, "c", attempted=8)
+    doc = build_summary_document(recs, "c", attempted=8, schema_version="2.2")
     assert doc["record_type"] == "cohort_summary"
-    assert doc["schema_version"] == "2.1"
+    assert doc["schema_version"] == "2.2"
     assert doc["n"] == 5
     assert doc["observability"]["attempted"] == 8
     assert doc["observability"]["resolution_rate"] == 0.625
     assert doc["mix"]["provider"]["shares"] == {"Microsoft 365": 1.0}
     assert doc["mix"]["provider"]["hhi"] == 1.0
     assert doc["prevalence"]["dmarc_reject"]["observed_rate"] == 1.0
+
+
+def test_v21_default_preserves_released_denominators_and_metric_kinds() -> None:
+    records = [
+        _rec(dmarc_policy="reject", mta_sts_mode="enforce", email_gateway="Proofpoint"),
+        _rec(),
+    ]
+
+    doc = build_summary_document(records)
+
+    assert doc["schema_version"] == "2.1"
+    assert doc["prevalence"]["dmarc_reject"]["observable_n"] == 2
+    assert doc["prevalence"]["dmarc_reject"]["observed_rate"] == 0.5
+    assert doc["prevalence"]["dmarc_reject"]["metric_kind"] == "authoritative_observed_rate"
+    assert doc["prevalence"]["mta_sts_enforce"]["observable_n"] == 2
+    assert doc["prevalence"]["email_gateway_present"]["metric_kind"] == "authoritative_observed_rate"
+
+
+def test_v22_scopes_mta_sts_and_rejects_incompatible_contract_mode() -> None:
+    doc = build_summary_document(
+        [_rec(mta_sts_mode="enforce"), _rec()],
+        schema_version="2.2",
+    )
+    metric = doc["prevalence"]["mta_sts_enforce"]
+    assert metric["metric_kind"] == "scoped_observed_rate"
+    assert metric["observable_n"] == 1
+    assert metric["observed_rate"] == 1.0
+
+    with pytest.raises(ValueError, match=r"requires cohort schema 2\.2"):
+        build_summary_document(
+            [],
+            schema_version="2.1",
+            dmarc_contract_scoped=True,
+        )
 
 
 def test_empty_cohort_does_not_crash() -> None:
@@ -164,7 +307,7 @@ def test_summarize_cohort_has_no_envelope() -> None:
 
 
 def test_document_contract() -> None:
-    # Pins the full v2.1 cohort_summary shape (the stable downstream contract).
+    # Pins the full opt-in v2.2 cohort_summary shape.
     recs = [
         _rec(
             provider="Microsoft 365",
@@ -174,7 +317,7 @@ def test_document_contract() -> None:
         )
         for _ in range(12)
     ]
-    doc = build_summary_document(recs, attempted=20)
+    doc = build_summary_document(recs, attempted=20, schema_version="2.2")
     assert set(doc) >= {
         "record_type",
         "schema_version",
@@ -189,7 +332,7 @@ def test_document_contract() -> None:
         "mix",
     }
     assert doc["record_type"] == "cohort_summary"
-    assert doc["schema_version"] == "2.1"
+    assert doc["schema_version"] == "2.2"
     assert set(doc["observability"]) == {
         "attempted",
         "resolved",
@@ -316,6 +459,14 @@ def test_hideable_model_support_is_not_reported_as_prevalence() -> None:
     assert metric["lower_bound_over_cohort"] is None
     assert metric["observable_n"] == 0
 
+    gateway = build_summary_document(
+        [_rec(email_gateway="Proofpoint"), _rec(email_gateway=None)],
+        schema_version="2.2",
+    )["prevalence"]["email_gateway_present"]
+    assert gateway["metric_kind"] == "model_support_coverage"
+    assert gateway["support_coverage"] == 0.5
+    assert gateway["observed_rate"] is None
+
 
 def test_malformed_record_fields_do_not_crash() -> None:
     # Non-list posterior_observations / degraded_sources / slugs from arbitrary
@@ -332,9 +483,11 @@ def test_malformed_record_fields_do_not_crash() -> None:
             "slugs": "x",
         }
     ]
-    doc = build_summary_document(recs)  # must not raise
+    doc = build_summary_document(recs, schema_version="2.2")  # must not raise
     assert doc["n"] == 1
     assert doc["posterior_claims"] == {}
+    assert doc["observability"]["dns_resolved"] == 0
+    assert doc["prevalence"]["dmarc_reject"]["observable_n"] == 0
 
 
 def test_unhashable_posterior_name_is_skipped() -> None:

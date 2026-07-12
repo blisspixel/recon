@@ -138,6 +138,22 @@ class TestDmarcPctParsing:
         assert result.dmarc_pct is None
         assert any("out of range" in r.message for r in caplog.records)
 
+    @pytest.mark.parametrize("raw_pct", ["0000", "0" * 5000])
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_oversized_pct_is_ignored_without_integer_conversion(
+        self,
+        mock_resolve,
+        raw_pct: str,
+    ) -> None:  # type: ignore[no-untyped-def]
+        record = f"v=DMARC1; p=reject; pct={raw_pct}"
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+
+        result = await DNSSource().lookup("contoso.com")
+
+        assert result.dmarc_policy == "reject"
+        assert result.dmarc_pct is None
+
 
 # ── RFC 9989: np= and t= parsing ─────────────────────────────────────
 
@@ -159,17 +175,63 @@ class TestDmarcRfc9989Tags:
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_invalid_np_and_t_are_ignored(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
-        """Invalid RFC 9989 tag values are logged and ignored."""
+    async def test_invalid_np_without_valid_rua_disables_processing(
+        self,
+        mock_resolve,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; np=bogus; t=maybe"]}
+            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; np=bogus"]}
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
             result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
         assert result.dmarc_np is None
         assert result.dmarc_testing is False
         assert any("DMARC np= value" in r.message for r in caplog.records)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_invalid_testing_mode_uses_default_and_retains_policy(
+        self,
+        mock_resolve,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; t=maybe"]}
+        )
+        with caplog.at_level(logging.WARNING, logger="recon"):
+            result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy == "reject"
+        assert result.dmarc_testing is False
         assert any("DMARC t= value" in r.message for r in caplog.records)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_invalid_sp_with_valid_rua_uses_fallback_without_fabricating_p(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; sp=bogus; rua=mailto:dmarc@agari.com"]}
+        )
+        result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
+        assert "DMARC" in result.detected_services
+
+    @pytest.mark.parametrize("invalid_tag", ["sp=bogus", "np=bogus"])
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_none_value_coincidence_does_not_hide_rua_fallback(
+        self,
+        mock_resolve,
+        invalid_tag: str,
+    ) -> None:  # type: ignore[no-untyped-def]
+        record = f"v=DMARC1; p=none; {invalid_tag}; rua=mailto:dmarc@example.com"
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+
+        result = await DNSSource().lookup("contoso.com")
+
+        assert result.dmarc_policy is None
+        assert "DMARC" in result.detected_services
+        assert any(evidence.raw_value == record and evidence.slug == "dmarc" for evidence in result.evidence)
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
@@ -189,7 +251,7 @@ class TestDmarcRfc9989Tags:
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_invalid_policy_with_valid_rua_remains_invalid(
+    async def test_invalid_policy_with_valid_rua_processes_without_fabricating_p(
         self, mock_resolve, caplog: pytest.LogCaptureFixture
     ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
@@ -198,35 +260,51 @@ class TestDmarcRfc9989Tags:
         with caplog.at_level(logging.WARNING, logger="recon"):
             result = await DNSSource().lookup("contoso.com")
         assert result.dmarc_policy is None
-        assert "DMARC" not in result.detected_services
-        assert "valimail" not in result.detected_slugs
-        assert any(evidence.slug == "dmarc-invalid" for evidence in result.evidence)
+        assert "DMARC" in result.detected_services
+        assert "valimail" in result.detected_slugs
+        assert any(evidence.slug == "dmarc" for evidence in result.evidence)
         assert any("not a valid policy" in r.message for r in caplog.records)
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_missing_policy_with_valid_rua_remains_invalid(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
+    async def test_missing_policy_retains_valid_rua_without_fabricating_p(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {"_dmarc.contoso.com/TXT": ["v=DMARC1; rua=mailto:dmarc@agari.com"]}
         )
         result = await DNSSource().lookup("contoso.com")
         assert result.dmarc_policy is None
+        assert "DMARC" in result.detected_services
+        assert "agari" in result.detected_slugs
+        assert any(evidence.slug == "dmarc" for evidence in result.evidence)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_missing_policy_without_valid_rua_is_not_processed(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": ["v=DMARC1; t=y"]})
+        result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
         assert "DMARC" not in result.detected_services
-        assert "agari" not in result.detected_slugs
         assert any(evidence.slug == "dmarc-invalid" for evidence in result.evidence)
 
     @pytest.mark.parametrize(
         "record",
         [
-            "v=DMARC1; p=bogus; rua=mailto:@",
-            "v=DMARC1; rua=mailto:user@",
-            "v=DMARC1; rua=mailto:user@localhost",
-            "v=DMARC1; rua=xmailto:dmarc@agari.com",
+            "v=DMARC1; rua=not a uri",
+            "v=DMARC1; rua=urn:invalid|character",
+            "v=DMARC1; rua=urn:abc[def",
+            "v=DMARC1; rua=https://[not-ipv6]/x",
+            "v=DMARC1; rua=urn:invalid%escape",
+            "v=DMARC1; rua=foo://example.com:١/r",
+            "v=DMARC1; rua=foo://[2001:db8::1]:١/r",
+            "v=DMARC1; rua=mailto:a@example.com!١",
+            "v=DMARC1; rua=foo://[fe80::1%25eth0]/r",
+            "v=DMARC1; rua=foo://[fe80::1%ab]/r",
+            "v=DMARC1; rua=foo://[fe80::1%25é]/r",
         ],
     )
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_malformed_rua_does_not_enable_policy_fallback(
+    async def test_malformed_rua_does_not_enable_default_none_policy(
         self,
         mock_resolve,
         record: str,
@@ -237,14 +315,71 @@ class TestDmarcRfc9989Tags:
         assert "DMARC" not in result.detected_services
         assert result.detected_slugs == ()
 
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    @pytest.mark.parametrize(
+        "rua",
+        [
+            "https://reports.example/dmarc",
+            "urn:example:animal:ferret:nose",
+            "mailto:user@",
+            "mailto:@example.com",
+            "foo://999.999.999.999/r",
+            "foo://host:99999/r",
+            "foo://:80/r",
+            "foo://[V1.a]/r",
+            "mailto://[V1.a]/foo",
+            "urn:invalid[,https://reports.example/dmarc",
+        ],
+    )
+    async def test_missing_policy_accepts_any_syntactically_valid_reporting_uri(
+        self,
+        mock_resolve,
+        rua: str,
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [f"v=DMARC1; rua={rua}"]})
+        result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy is None
+        assert "DMARC" in result.detected_services
+
+    @pytest.mark.parametrize(
+        "invalid_vendor_uri",
+        ["mailto:d@agari.com!bogus", "mailto:d@agari.com|bad"],
+    )
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_invalid_rua_item_cannot_create_vendor_evidence_when_peer_is_valid(
+        self,
+        mock_resolve,
+        invalid_vendor_uri: str,
+    ) -> None:  # type: ignore[no-untyped-def]
+        record = f"v=DMARC1; rua=https://valid.example/r,{invalid_vendor_uri}"
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+
+        result = await DNSSource().lookup("contoso.com")
+
+        assert "DMARC" in result.detected_services
+        assert "agari" not in result.detected_slugs
+        assert not any(evidence.source_type == "DMARC_RUA" for evidence in result.evidence)
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_uri_list_separator_whitespace_preserves_valid_fallback(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
+        record = "v=DMARC1; p=bogus; rua=mailto:a@example.com , bad"
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+
+        result = await DNSSource().lookup("contoso.com")
+
+        assert result.dmarc_policy is None
+        assert "DMARC" in result.detected_services
+        assert any(evidence.raw_value == record and evidence.slug == "dmarc" for evidence in result.evidence)
+
     @pytest.mark.parametrize(
         "record",
         [
             "v=dmarc1; p=reject; rua=mailto:dmarc@agari.com",
             "v=DMARC1foo; p=reject; rua=mailto:dmarc@agari.com",
             " V=DMARC1; p=reject; rua=mailto:dmarc@agari.com",
-            "v =DMARC1; p=reject; rua=mailto:dmarc@agari.com",
-            "v= DMARC1; p=reject; rua=mailto:dmarc@agari.com",
         ],
     )
     @pytest.mark.asyncio
@@ -262,6 +397,78 @@ class TestDmarcRfc9989Tags:
         assert "DMARC" not in result.detected_services
         assert result.detected_slugs == ()
         assert any("DMARC v= value" in r.message for r in caplog.records)
+
+    @pytest.mark.parametrize(
+        "record",
+        [
+            "v =DMARC1; p=reject",
+            "v= DMARC1; p = reject",
+            "v = DMARC1 ; p = reject",
+            "V=DMARC1; p=reject",
+            "V\t=\tDMARC1\t;\tP\t=\tReJeCt",
+            "v=DMARC1; p=reject ;",
+        ],
+    )
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_dmarc_equals_whitespace_and_case_insensitive_tag_name_are_valid(
+        self,
+        mock_resolve,
+        record: str,
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        result = await DNSSource().lookup("contoso.com")
+        assert result.dmarc_policy == "reject"
+        assert "DMARC" in result.detected_services
+
+    @pytest.mark.parametrize(
+        "record",
+        [
+            "v=DMARC1; p=reject ",
+            "v=DMARC1; p=bogus; rua=https://reports.example/r ",
+        ],
+    )
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_unterminated_final_value_rejects_trailing_whitespace(
+        self,
+        mock_resolve,
+        record: str,
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+
+        result = await DNSSource().lookup("contoso.com")
+
+        assert result.dmarc_policy is None
+        assert "DMARC" not in result.detected_services
+        assert any(evidence.slug == "dmarc-invalid" for evidence in result.evidence)
+
+    @pytest.mark.parametrize(
+        ("record", "policy", "testing"),
+        [
+            ("v=DMARC1; p=reject; t=y ", "reject", False),
+            ("v=DMARC1; rua=mailto:a@example.com; p=reject ", None, False),
+            ("v=DMARC1; p=reject; x=foo ", "reject", False),
+            ("v=DMARC1; p=reject; pct=50 ", "reject", False),
+        ],
+    )
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_invalid_final_known_tag_is_recovered_independently(
+        self,
+        mock_resolve,
+        record: str,
+        policy: str | None,
+        testing: bool,
+    ) -> None:  # type: ignore[no-untyped-def]
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+
+        result = await DNSSource().lookup("contoso.com")
+
+        assert result.dmarc_policy == policy
+        assert result.dmarc_testing is testing
+        assert result.dmarc_pct is None
+        assert "DMARC" in result.detected_services
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
@@ -298,9 +505,11 @@ class TestDmarcRfc9989Tags:
         "record",
         [
             "v=DMARC1; p=reject; p=none; pct=100; np=reject; t=y",
+            "v=DMARC1; p=reject; P=none",
             "v=DMARC1; p=reject; pct=100; pct=0; np=reject; t=y",
             "v=DMARC1; p=reject; pct=100; np=reject; np=none; t=y",
             "v=DMARC1; p=reject; pct=100; np=reject; t=n; t=y",
+            "v=DMARC1; p=reject; rua=mailto:a@example.com; rua=mailto:b@example.com",
         ],
     )
     @pytest.mark.asyncio
@@ -378,11 +587,11 @@ class TestDmarcRuaExtraction:
         assert any(e.source_type == "DMARC_RUA" for e in ctx.evidence)
 
     def test_multiple_rua_entries(self) -> None:
-        """Multiple rua=mailto: entries (semicolon-separated tags) → all domains extracted."""
+        """One rua tag with multiple URI-list entries extracts every domain."""
         ctx = _DetectionCtx()
         _extract_dmarc_rua(
             ctx,
-            "v=DMARC1; p=reject; rua=mailto:d@agari.com; rua=mailto:r@dmarcian.com",
+            "v=DMARC1; p=reject; rua=mailto:d@agari.com,mailto:r@dmarcian.com",
         )
         assert "agari" in ctx.slugs
         assert "dmarcian" in ctx.slugs
@@ -443,6 +652,47 @@ class TestDmarcRuaExtraction:
         ctx = _DetectionCtx()
         _extract_dmarc_rua(ctx, "v=DMARC1; p=reject; rua=xmailto:dmarc@agari.com")
         assert len(ctx.slugs) == 0
+
+    def test_unknown_tag_ending_in_rua_is_ignored(self) -> None:
+        ctx = _DetectionCtx()
+
+        _extract_dmarc_rua(ctx, "v=DMARC1; p=reject; xrua=mailto:dmarc@agari.com")
+
+        assert len(ctx.slugs) == 0
+        assert not any(evidence.source_type == "DMARC_RUA" for evidence in ctx.evidence)
+
+    @pytest.mark.parametrize(
+        "rua",
+        [
+            "mailto:d@evil.example?subject=agari.com",
+            "mailto:d@notagari.com",
+            "mailto:d@evil/.agari.com",
+            "mailto:d@.agari.com",
+            "mailto:d@-bad.agari.com",
+            "mailto:d@evil%2F.agari.com",
+        ],
+    )
+    def test_vendor_match_uses_only_the_mailto_domain_at_label_boundaries(self, rua: str) -> None:
+        ctx = _DetectionCtx()
+
+        _extract_dmarc_rua(ctx, f"v=DMARC1; p=reject; rua={rua}")
+
+        assert "agari" not in ctx.slugs
+        assert not any(evidence.source_type == "DMARC_RUA" for evidence in ctx.evidence)
+
+    def test_vendor_match_accepts_a_vendor_subdomain(self) -> None:
+        ctx = _DetectionCtx()
+
+        _extract_dmarc_rua(ctx, "v=DMARC1; p=reject; rua=mailto:d@reports.agari.com")
+
+        assert "agari" in ctx.slugs
+
+    def test_vendor_match_accepts_separator_whitespace_after_rua(self) -> None:
+        ctx = _DetectionCtx()
+
+        _extract_dmarc_rua(ctx, "v=DMARC1; p=reject; rua=mailto:d@agari.com ; t=n")
+
+        assert "agari" in ctx.slugs
 
     def test_matched_vendor_creates_evidence(self) -> None:
         """Matched vendor domain → slug added, EvidenceRecord with DMARC_RUA source_type."""
@@ -764,10 +1014,9 @@ class TestProperty4DmarcRuaExtraction:
     )
     @settings(max_examples=100)
     def test_multi_rua_all_extracted(self, domains: list[str]) -> None:
-        """For multi-rua records (semicolon-separated rua= tags), all domains extracted."""
-        # Each rua= tag is a separate DMARC tag, semicolon-separated per RFC 9989.
-        rua_tags = "; ".join(f"rua=mailto:reports@{d}" for d in domains)
-        dmarc_record = f"v=DMARC1; p=reject; {rua_tags}"
+        """For one comma-separated rua URI list, all vendor domains are extracted."""
+        rua_value = ",".join(f"mailto:reports@{domain}" for domain in domains)
+        dmarc_record = f"v=DMARC1; p=reject; rua={rua_value}"
         ctx = _DetectionCtx()
         _extract_dmarc_rua(ctx, dmarc_record)
         assert len(ctx.evidence) == len(domains), (

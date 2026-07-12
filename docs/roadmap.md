@@ -83,6 +83,13 @@ Work:
   dependency groups, freshness, renderer obligations, generation-time rule
   lineage, and regression fixtures. Heuristic reconstruction from rendered
   insight or posture text cannot satisfy exact provenance.
+  - Completed internally after v2.4.0 for
+    `dns.dmarc.valid_policy_is_reject.v1`; see
+    [claim-contracts.md](claim-contracts.md). Exact evaluator lineage reaches a
+    collector-retained raw record; general generator lineage and per-query time
+    remain open. No tenant field or public dossier was added. The separate
+    cohort-summary contract adds 2.2 as an explicit option while 2.1 remains the
+    default.
 - Model construction, collection, claim state, and time as orthogonal axes.
   Design an internal observation-opportunity ledger with `not attempted`,
   `observed value`, `observed empty`, `unavailable`, `not enabled`, and `not
@@ -93,6 +100,9 @@ Work:
   incomplete provenance, unavailable channels, observation window, conflicts,
   and permitted resolving evidence. Use bounded frozen-set antichains, not a
   new dependency or an unreviewed broad ontology.
+  - Completed for the first DMARC contract with bounded exact antichains,
+    fail-closed limits, explicit provenance limitations, and replay after
+    canonical ledger union.
 - Encode the four states as a two-coordinate knowledge lattice. Merge canonical
   provenance ledgers by associative, commutative, idempotent unit union, then
   recompute rule closure and certificate antichains. The state projection must
@@ -121,9 +131,11 @@ Acceptance evidence:
 - Every material cross-domain statement names the exact typed overlap and keeps
   alternative explanations open; shared administrative tokens, tenant IDs,
   broad providers, and public issuers do not become ownership verdicts.
-- The first claim contract has positive, authoritative-negative, conflict,
-  unavailable, stale, and duplicate-derivation fixtures. Its result is
-  invariant to duplicate renderings of one evidence unit.
+- The first claim contract has positive, explicit-disconfirming, conflict,
+  unavailable, empty, invalid, stale, time-unknown, and duplicate-derivation
+  fixtures in `tests/test_claim_contract.py`. Its result is invariant to
+  duplicate renderings of one evidence unit. Empty DNS results remain
+  unresolved until authority or authenticated-denial provenance is retained.
 - Property tests establish canonical-ledger union laws, duplicate invariance,
   monotone state projection, and a cross-view conjunction whose support appears
   only after merged-ledger closure. Adding evidence cannot erase an already
@@ -708,6 +720,11 @@ Checked 2026-07-11 against primary sources:
 - [MCP draft caching specification](https://modelcontextprotocol.io/specification/draft/server/utilities/caching)
 - [MCP Python SDK release history](https://pypi.org/project/mcp/)
 - [RFC 9989: DMARC](https://www.rfc-editor.org/info/rfc9989/)
+- [RFC 3986: URI generic syntax](https://www.rfc-editor.org/info/rfc3986/)
+- [RFC 2308: DNS negative caching](https://www.rfc-editor.org/rfc/rfc2308)
+- [RFC 4035: authenticated DNSSEC denial](https://www.rfc-editor.org/rfc/rfc4035#section-5.4)
+- [RFC 9824: compact DNSSEC denial](https://www.rfc-editor.org/rfc/rfc9824)
+- [Provenance semirings](https://web.cs.ucdavis.edu/~green/papers/pods07.pdf)
 - [RFC 8461: MTA-STS](https://www.rfc-editor.org/info/rfc8461/)
 - [RFC 8460: TLSRPT](https://www.rfc-editor.org/info/rfc8460/)
 - [RFC 7672: SMTP security via DANE](https://www.rfc-editor.org/info/rfc7672/)

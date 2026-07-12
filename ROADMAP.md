@@ -8,7 +8,9 @@ guards, validation gates, and release path are shipped. The active product work
 is evidence-semantic integrity, an isolated MCP v2 beta compatibility matrix,
 and a reproducible product-quality baseline. Measured latency, catalog quality,
 agent context cost, provenance, and interface-hotspot work follow in dependency
-order.
+order. The first bounded internal claim contract now evaluates the exact apex
+DMARC `p=reject` observation and drives the opt-in cohort schema 2.2 DMARC
+denominator while the released 2.1 contract remains the default.
 
 The canonical dependency order, acceptance evidence, stop rules, current
 high-trust code-graph summary, invariants, and explicit non-goals are in

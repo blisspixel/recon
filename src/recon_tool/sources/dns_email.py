@@ -12,8 +12,10 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
+import ipaddress
 import logging
 import re
+from urllib.parse import SplitResult, urlsplit
 
 from recon_tool.constants import (
     SVC_BIMI,
@@ -46,6 +48,8 @@ from recon_tool.sources.dns_tables import (
 from recon_tool.validator import host_has_suffix, strip_control_chars
 
 logger = logging.getLogger("recon")
+
+_REPORTING_DOMAIN_LABEL_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", re.ASCII)
 
 
 async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -493,26 +497,39 @@ async def _fetch_mta_sts_policy(domain: str, degraded_sources: set[str] | None =
 
 
 # The rua tag value is a comma-separated list of DMARC aggregate report URIs,
-# as specified by RFC 9990,
-# e.g. ``rua=mailto:a@x.com,mailto:b@y.com``. Capture the whole tag value (up to
-# the next tag separator), then pull each mailto address out of it, so the
-# second and later addresses are not dropped. Scoping to the ``rua=`` tag keeps
-# ``ruf=`` (forensic) addresses out.
-_RUA_TAG_RE = re.compile(r"rua\s*=\s*([^;]+)", re.IGNORECASE)
-# Stop the address capture at ``!``: RFC 9990 preserves the optional
-# ``!<size>`` report-size suffix (e.g. ``mailto:a@x.com!10m``), and a literal
-# ``!`` inside the address itself is percent-encoded, so an unescaped ``!``
-# always delimits the size.
-_RUA_MAILTO_RE = re.compile(r"(?:^|,)\s*mailto:([^,;\s!]+)", re.IGNORECASE)
+# as specified by RFC 9990. Each parsed item is URI-validated before a mailto
+# path can contribute vendor evidence.
+_URI_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
+_INVALID_URI_CHAR_RE = re.compile(r"[\x00-\x20\x7f]")
+_INVALID_PERCENT_ESCAPE_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
+_URI_PATH_RE = re.compile(r"^[A-Za-z0-9._~$&'()*+,;=:@%/-]*$")
+_URI_QUERY_FRAGMENT_RE = re.compile(r"^[A-Za-z0-9._~$&'()*+,;=:@%/?-]*$")
+_URI_USERINFO_RE = re.compile(r"^[A-Za-z0-9._~$&'()*+,;=:%-]*$")
+_URI_REG_NAME_RE = re.compile(r"^[A-Za-z0-9._~$&'()*+,;=%-]*$")
+_IPV_FUTURE_RE = re.compile(r"^[vV][0-9A-Fa-f]+\.[A-Za-z0-9._~$&'()*+,;=:-]+$")
+_UPPER_IPV_FUTURE_RE = re.compile(r"(://(?:[^/?#]*@)?\[)V(?=[0-9A-Fa-f]+\.)")
+_ASCII_PORT_RE = re.compile(r"^[0-9]*$")
+_OBSOLETE_REPORT_SIZE_RE = re.compile(r"![0-9]+[kmgt]?$", re.IGNORECASE)
 
 _DMARC_POLICY_VALUES = frozenset({"none", "quarantine", "reject"})
 _DMARC_TESTING_VALUES = frozenset({"n", "y"})
 
 
-def extract_dmarc_rua(ctx: dns_base.DetectionCtx, dmarc_record: str) -> None:
+def extract_dmarc_rua(
+    ctx: dns_base.DetectionCtx,
+    dmarc_record: str,
+    *,
+    tags: dict[str, str] | None = None,
+) -> None:
     """Extract rua=mailto: addresses and match vendor domains against fingerprints."""
 
-    matches = [addr for value in _RUA_TAG_RE.findall(dmarc_record) for addr in _RUA_MAILTO_RE.findall(value)]
+    parsed_tags = tags if tags is not None else parse_dmarc_tags(dmarc_record, "unknown")
+    rua_value = parsed_tags.get("rua") if parsed_tags is not None else None
+    matches = [
+        addr
+        for uri in (_dmarc_uri_items(rua_value) if rua_value is not None else ())
+        if (addr := _reporting_mailto_address(uri)) is not None
+    ]
     # Sort longest-first so the most specific pattern wins per rua address
     # (consistent with MX / NS / CAA / cname_target , see
     # filter_shadowed_matches).
@@ -520,13 +537,21 @@ def extract_dmarc_rua(ctx: dns_base.DetectionCtx, dmarc_record: str) -> None:
 
     for addr in matches:
         # Extract domain portion from email address
-        if "@" not in addr:
+        local, separator, rua_domain = addr.rpartition("@")
+        if not separator or not local or "@" in local or not rua_domain:
             continue
-        rua_domain = addr.split("@", 1)[1].lower().rstrip(".")
+        rua_domain = rua_domain.lower()
+        labels = rua_domain.split(".")
+        if (
+            len(rua_domain) > 253
+            or len(labels) < 2
+            or any(_REPORTING_DOMAIN_LABEL_RE.fullmatch(label) is None for label in labels)
+        ):
+            continue
 
         # Match against dmarc_rua fingerprint patterns
         for det in rua_patterns:
-            if det.pattern.lower() in rua_domain:
+            if host_has_suffix(rua_domain, det.pattern.lower()):
                 ctx.add(
                     det.name,
                     det.slug,
@@ -539,77 +564,195 @@ def extract_dmarc_rua(ctx: dns_base.DetectionCtx, dmarc_record: str) -> None:
 
 def _parse_dmarc_pct(raw_pct: str, domain: str) -> int | None:
     """Validate a DMARC ``pct=`` value (0-100), warning on bad input."""
-    try:
-        pct_val = int(raw_pct)
-    except ValueError:
+    if re.fullmatch(r"-[0-9]{1,3}", raw_pct):
+        logger.warning("DMARC pct= value %d out of range for %s - ignored", int(raw_pct), domain)
+        return None
+    if not re.fullmatch(r"[0-9]{1,3}", raw_pct):
         logger.warning("DMARC pct= value %r is not a valid integer for %s - ignored", raw_pct, domain)
         return None
+    pct_val = int(raw_pct)
     if 0 <= pct_val <= 100:
         return pct_val
     logger.warning("DMARC pct= value %d out of range for %s - ignored", pct_val, domain)
     return None
 
 
-def _parse_dmarc_policy(raw_policy: str, domain: str) -> str | None:
-    """Validate the required DMARC ``p=`` policy."""
-    policy = raw_policy.strip().lower()
+def parse_dmarc_policy(raw_policy: str, domain: str) -> str | None:
+    """Validate a DMARC ``p=`` policy."""
+    return _parse_dmarc_request(raw_policy, domain, tag="p")
+
+
+def _parse_dmarc_request(raw_policy: str, domain: str, *, tag: str) -> str | None:
+    """Validate one DMARC request value and name the source tag in diagnostics."""
+    policy = raw_policy.lower()
     if policy in _DMARC_POLICY_VALUES:
         return policy
-    logger.warning("DMARC p= value %r is not a valid policy for %s - ignored", raw_policy, domain)
+    logger.warning("DMARC %s= value %r is not a valid policy for %s - ignored", tag, raw_policy, domain)
     return None
 
 
 def _parse_dmarc_np(raw_np: str, domain: str) -> str | None:
     """Validate RFC 9989 ``np=`` for non-existent subdomain policy."""
-    policy = raw_np.strip().lower()
-    if policy in _DMARC_POLICY_VALUES:
-        return policy
-    logger.warning("DMARC np= value %r is not a valid policy for %s - ignored", raw_np, domain)
-    return None
+    return _parse_dmarc_request(raw_np, domain, tag="np")
 
 
 def _parse_dmarc_testing(raw_testing: str, domain: str) -> bool | None:
     """Validate RFC 9989 ``t=`` testing mode."""
-    testing = raw_testing.strip().lower()
+    testing = raw_testing.lower()
     if testing not in _DMARC_TESTING_VALUES:
         logger.warning("DMARC t= value %r is not valid for %s - ignored", raw_testing, domain)
         return None
     return testing == "y"
 
 
-def _parse_dmarc_tags(dmarc_record: str, domain: str) -> dict[str, str] | None:
+def parse_dmarc_tags(dmarc_record: str, domain: str) -> dict[str, str] | None:
     """Parse a DMARC tag list, rejecting duplicate tag names."""
     tags: dict[str, str] = {}
-    for part in dmarc_record.split(";"):
+    parts = dmarc_record.split(";")
+    for index, part in enumerate(parts):
         key, sep, value = part.partition("=")
         if not sep:
             continue
-        key = key.strip().lower()
+        key = key.strip(" \t").lower()
         if key in tags:
             logger.warning("DMARC record for %s contains duplicate %s= tag - ignored", domain, key)
             return None
-        tags[key] = value.strip()
+        value = value.lstrip(" \t")
+        tags[key] = value.rstrip(" \t") if index < len(parts) - 1 else value
     return tags
 
 
-def _leading_dmarc_version_value(dmarc_record: str) -> str | None:
-    """Return the leading DMARC version value when the first tag is ``v=``."""
+def leading_dmarc_version_value(dmarc_record: str) -> str | None:
+    """Return the leading DMARC version value using RFC 9989 ASCII WSP."""
     first_tag = dmarc_record.split(";", 1)[0]
-    if not first_tag.startswith("v="):
-        normalized = first_tag.strip().lower()
-        if normalized.startswith("v") and "=" in normalized:
+    if first_tag.startswith((" ", "\t")):
+        if "=" in first_tag and first_tag.lstrip(" \t").lower().startswith("v"):
             return first_tag
         return None
-    return first_tag.removeprefix("v=")
+    key, separator, value = first_tag.partition("=")
+    if not separator:
+        return None
+    if key.rstrip(" \t").lower() != "v":
+        return first_tag if key.strip().lower().startswith("v") else None
+    value = value.lstrip(" \t")
+    return value.rstrip(" \t") if ";" in dmarc_record else value
 
 
-def _valid_dmarc_policy(tags: dict[str, str], domain: str) -> str | None:
-    """Return the required valid DMARC policy without repairing malformed input."""
+def _valid_uri_ip_literal(literal: str) -> bool:
+    if "%" in literal:
+        return False
+    try:
+        ipaddress.IPv6Address(literal)
+        return True
+    except ValueError:
+        return bool(_IPV_FUTURE_RE.fullmatch(literal))
+
+
+def _valid_uri_authority(netloc: str) -> bool:
+    userinfo, separator, host_port = netloc.rpartition("@")
+    if separator and not _URI_USERINFO_RE.fullmatch(userinfo):
+        return False
+    if host_port.startswith("["):
+        close = host_port.find("]")
+        suffix = host_port[close + 1 :] if close >= 0 else "invalid"
+        valid_suffix = not suffix or (suffix.startswith(":") and bool(_ASCII_PORT_RE.fullmatch(suffix[1:])))
+        if close < 0 or not valid_suffix:
+            return False
+        return _valid_uri_ip_literal(host_port[1:close])
+    if "[" in host_port or "]" in host_port:
+        return False
+    host, separator, port = host_port.rpartition(":")
+    if not separator:
+        host = host_port
+    return (
+        ":" not in host
+        and (not separator or bool(_ASCII_PORT_RE.fullmatch(port)))
+        and bool(_URI_REG_NAME_RE.fullmatch(host))
+    )
+
+
+def _parse_reporting_uri(raw_uri: str) -> SplitResult | None:
+    """Return one syntax-checked RFC 3986 URI with legacy size removed."""
+    candidate = _OBSOLETE_REPORT_SIZE_RE.sub("", raw_uri.lstrip(" \t"))
+    if (
+        not candidate
+        or not candidate.isascii()
+        or "!" in candidate
+        or _INVALID_URI_CHAR_RE.search(candidate)
+        or _INVALID_PERCENT_ESCAPE_RE.search(candidate)
+        or not _URI_SCHEME_RE.match(candidate)
+    ):
+        return None
+    try:
+        parsed = urlsplit(_UPPER_IPV_FUTURE_RE.sub(r"\1v", candidate, count=1))
+    except ValueError:
+        return None
+    components_valid = (
+        bool(parsed.scheme)
+        and bool(_URI_PATH_RE.fullmatch(parsed.path))
+        and bool(_URI_QUERY_FRAGMENT_RE.fullmatch(parsed.query))
+        and bool(_URI_QUERY_FRAGMENT_RE.fullmatch(parsed.fragment))
+    )
+    if not components_valid or (parsed.netloc and not _valid_uri_authority(parsed.netloc)):
+        return None
+    return parsed
+
+
+def _valid_reporting_uri(raw_uri: str) -> bool:
+    """Conservatively recognize one syntactically usable RFC 3986 URI."""
+    return _parse_reporting_uri(raw_uri) is not None
+
+
+def _reporting_mailto_address(raw_uri: str) -> str | None:
+    """Return only a validated mailto URI path, excluding query and fragment."""
+    parsed = _parse_reporting_uri(raw_uri)
+    if parsed is None:
+        return None
+    return parsed.path if parsed.scheme.lower() == "mailto" else None
+
+
+def _dmarc_uri_items(raw_value: str) -> tuple[str, ...]:
+    """Normalize only URI-list WSP around commas, preserving final-value WSP."""
+    parts = raw_value.split(",")
+    return tuple(
+        part.lstrip(" \t").rstrip(" \t") if index < len(parts) - 1 else part.lstrip(" \t")
+        for index, part in enumerate(parts)
+    )
+
+
+def _has_valid_dmarc_rua(tags: dict[str, str]) -> bool:
+    raw_rua = tags.get("rua")
+    return bool(raw_rua and any(_valid_reporting_uri(value) for value in _dmarc_uri_items(raw_rua)))
+
+
+def _resolve_dmarc_policy(tags: dict[str, str], domain: str) -> tuple[str | None, bool]:
+    """Return the applicable policy and whether it came from valid explicit ``p``."""
     raw_policy = tags.get("p")
-    if raw_policy is not None:
-        return _parse_dmarc_policy(raw_policy, domain)
-    logger.warning("DMARC p= tag missing for %s - record is not a valid policy record", domain)
-    return None
+    policy = parse_dmarc_policy(raw_policy, domain) if raw_policy is not None else None
+    invalid_subdomain_policy = any(
+        tag in tags and _parse_dmarc_request(tags[tag], domain, tag=tag) is None for tag in ("sp", "np")
+    )
+    if policy is not None and not invalid_subdomain_policy:
+        return policy, True
+    if _has_valid_dmarc_rua(tags):
+        return "none", False
+    logger.warning(
+        "DMARC record for %s has no applicable policy and no valid rua= fallback - ignored",
+        domain,
+    )
+    return None, False
+
+
+def parse_explicit_dmarc_policy_record(dmarc_record: str, domain: str) -> str | None:
+    """Return an explicit policy only when the whole record is applicable."""
+    if leading_dmarc_version_value(dmarc_record) != "DMARC1":
+        return None
+    tags = parse_dmarc_tags(dmarc_record, domain)
+    if tags is None or "p" not in tags:
+        return None
+    explicit = parse_dmarc_policy(tags["p"], domain)
+    effective, explicitly_applicable = _resolve_dmarc_policy(tags, domain)
+    return explicit if explicitly_applicable and explicit == effective else None
 
 
 def _record_non_policy_dmarc_evidence(
@@ -632,9 +775,9 @@ def _apply_dmarc(ctx: dns_base.DetectionCtx, dmarc_results: list[str], domain: s
     """Record DMARC presence, policy tags, and rua mailto fingerprints."""
     records: list[tuple[str, dict[str, str] | None]] = []
     for txt in dmarc_results:
-        version = _leading_dmarc_version_value(txt)
+        version = leading_dmarc_version_value(txt)
         if version == "DMARC1":
-            records.append((txt, _parse_dmarc_tags(txt, domain)))
+            records.append((txt, parse_dmarc_tags(txt, domain)))
         elif version is not None:
             logger.warning("DMARC v= value %r is not valid for %s - ignored", version, domain)
 
@@ -646,20 +789,21 @@ def _apply_dmarc(ctx: dns_base.DetectionCtx, dmarc_results: list[str], domain: s
         if tags is None:
             _record_non_policy_dmarc_evidence(ctx, records)
             continue
-        policy = _valid_dmarc_policy(tags, domain)
-        if policy is None:
+        applicable_policy, explicitly_applicable = _resolve_dmarc_policy(tags, domain)
+        if applicable_policy is None:
             _record_non_policy_dmarc_evidence(ctx, records)
             continue
         ctx.services.add(SVC_DMARC)
         ctx.evidence.append(EvidenceRecord("DMARC", txt, SVC_DMARC, "dmarc"))
-        ctx.dmarc_policy = policy
+        explicit_policy = parse_dmarc_policy(tags["p"], domain) if "p" in tags else None
+        ctx.dmarc_policy = explicit_policy if explicitly_applicable else None
         if (value := tags.get("pct")) is not None and (pct := _parse_dmarc_pct(value, domain)) is not None:
             ctx.dmarc_pct = pct
         if (value := tags.get("np")) is not None and (dmarc_np := _parse_dmarc_np(value, domain)) is not None:
             ctx.dmarc_np = dmarc_np
         if (value := tags.get("t")) is not None and (testing := _parse_dmarc_testing(value, domain)) is not None:
             ctx.dmarc_testing = testing
-        extract_dmarc_rua(ctx, txt)
+        extract_dmarc_rua(ctx, txt, tags=tags)
 
 
 async def _apply_bimi(ctx: dns_base.DetectionCtx, bimi_results: list[str], domain: str) -> None:
