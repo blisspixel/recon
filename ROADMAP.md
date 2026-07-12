@@ -2,7 +2,7 @@
 
 The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
-Current status: recon v2.4.0 has a stable, production-ready baseline. The CLI,
+Current status: recon v2.5.0 has a stable, production-ready baseline. The CLI,
 JSON schema, local stdio MCP server, bounded collectors, generated-artifact
 guards, validation gates, and release path are shipped. The active product work
 is evidence-semantic integrity, an isolated MCP v2 beta compatibility matrix,
@@ -10,7 +10,7 @@ and a reproducible product-quality baseline. Measured latency, catalog quality,
 agent context cost, provenance, and interface-hotspot work follow in dependency
 order. The first bounded internal claim contract now evaluates the exact apex
 DMARC `p=reject` observation and drives the opt-in cohort schema 2.2 DMARC
-denominator while the released 2.1 contract remains the default.
+denominator while schema 2.1 remains the default.
 
 The canonical dependency order, acceptance evidence, stop rules, current
 high-trust code-graph summary, invariants, and explicit non-goals are in
