@@ -430,26 +430,58 @@ def batch_emit_summary(batch_infos: dict[str, Any], attempted: int, console: Any
         console.print(render_cohort_summary(document))
 
 
-async def _batch_emit_ndjson(domain_list: list[str], process_one: Any, error_prefix: str) -> None:
+async def _batch_emit_ndjson(
+    domain_list: list[str],
+    process_one: Any,
+    error_prefix: str,
+    *,
+    max_pending: int,
+) -> None:
     """Stream one JSON object per line, flushed as each domain completes.
 
     Skips the post-batch enrichment (shared tokens, tenant peers, display-name
     clusters) because those need every result before any can be emitted. Trades
-    batch-wide enrichment for constant memory and visible progress on large
-    corpora.
+    batch-wide enrichment for concurrency-bounded in-flight work, constant
+    completed-result memory, and visible progress on large corpora.
     """
     import json as json_mod
     import sys as sys_mod
 
-    tasks = [asyncio.create_task(process_one(d)) for d in domain_list]
-    for fut in asyncio.as_completed(tasks):
-        result = await fut
-        if isinstance(result, dict):
-            typer.echo(json_mod.dumps(result))
-            # Flush stdout so downstream pipelines see each line as it lands.
-            sys_mod.stdout.flush()
-        elif isinstance(result, str) and result.startswith(error_prefix):
-            typer.echo(result.removeprefix(error_prefix), err=True)
+    if max_pending < 1:
+        raise ValueError("max_pending must be at least 1")
+
+    domain_iter = iter(enumerate(domain_list))
+    pending: dict[asyncio.Task[object], int] = {}
+
+    def schedule_next() -> None:
+        try:
+            index, domain = next(domain_iter)
+        except StopIteration:
+            return
+        pending[asyncio.create_task(process_one(domain))] = index
+
+    for _ in range(min(max_pending, len(domain_list))):
+        schedule_next()
+
+    try:
+        while pending:
+            done, _ = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
+            for future in sorted(done, key=pending.__getitem__):
+                pending.pop(future)
+                result = await future
+                if isinstance(result, dict):
+                    typer.echo(json_mod.dumps(result))
+                    # Flush stdout so downstream pipelines see each line as it lands.
+                    sys_mod.stdout.flush()
+                elif isinstance(result, str) and result.startswith(error_prefix):
+                    typer.echo(result.removeprefix(error_prefix), err=True)
+                schedule_next()
+    finally:
+        remaining = tuple(pending)
+        for task in remaining:
+            task.cancel()
+        if remaining:
+            await asyncio.gather(*remaining, return_exceptions=True)
 
 
 def _batch_render_results(
@@ -558,7 +590,7 @@ async def _batch_process_one(
     domain: str,
     *,
     semaphore: asyncio.Semaphore,
-    batch_infos: dict[str, Any],
+    batch_infos: dict[str, Any] | None,
     timeout: float,
     skip_ct: bool,
     fusion: bool,
@@ -571,8 +603,8 @@ async def _batch_process_one(
 ) -> object:
     """Resolve a single domain under the semaphore and shape its result.
 
-    Stashes the TenantInfo in ``batch_infos`` (keyed by queried_domain) so the
-    post-batch token / tenant / display-name clustering can run.
+    Stashes the TenantInfo in ``batch_infos`` when post-batch processing needs
+    it. Streaming NDJSON passes ``None`` so completed records can be released.
     """
     from recon_tool.models import ReconLookupError
     from recon_tool.resolver import resolve_tenant
@@ -601,7 +633,8 @@ async def _batch_process_one(
             info, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
             if fusion:
                 info = _batch_apply_fusion(info)
-            batch_infos[info.queried_domain] = info
+            if batch_infos is not None:
+                batch_infos[info.queried_domain] = info
             return _batch_success_result(
                 info,
                 domain,
@@ -702,7 +735,7 @@ async def batch(
         return await _batch_process_one(
             domain,
             semaphore=semaphore,
-            batch_infos=batch_infos,
+            batch_infos=None if ndjson else batch_infos,
             timeout=timeout,
             skip_ct=skip_ct,
             fusion=fusion,
@@ -730,7 +763,7 @@ async def batch(
 
     # NDJSON streaming path, flushed per-domain (see helper for the trade-off).
     if ndjson:
-        await _batch_emit_ndjson(domain_list, _run_one, _ERROR_PREFIX)
+        await _batch_emit_ndjson(domain_list, _run_one, _ERROR_PREFIX, max_pending=concurrency)
         return
 
     tasks = [_tracked(d) for d in domain_list]

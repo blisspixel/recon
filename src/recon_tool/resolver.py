@@ -394,7 +394,7 @@ async def resolve_tenant(
     automatically runs DNS-only lookups on them and merges the additional
     services into the result.
 
-    The entire pipeline is wrapped in an aggregate timeout (default 60s)
+    The entire pipeline is wrapped in an aggregate timeout (default 120s)
     to prevent runaway lookups from blocking indefinitely.
 
     Args:

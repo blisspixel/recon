@@ -12,6 +12,10 @@ Covers:
 
 from __future__ import annotations
 
+import itertools
+from unittest.mock import Mock
+
+import networkx as nx
 import pytest
 
 from recon_tool.infra_graph import (
@@ -33,6 +37,48 @@ def _entry(names: list[str], issuer: str = "Test CA", not_before: str = "2025-01
         "not_before": not_before,
         "not_after": "2026-01-01T00:00:00",
     }
+
+
+def _unaggregated_graph_snapshot(
+    entries: list[dict],
+) -> tuple[set[str], dict[tuple[str, str], tuple[int, float]], dict[tuple[str, str], tuple[str, ...]], bool]:
+    """Preserve the pre-aggregation builder as a differential test oracle."""
+    from recon_tool import infra_graph
+
+    graph: nx.Graph[str] = nx.Graph()
+    edge_issuers: dict[tuple[str, str], list[str]] = {}
+    truncated = False
+    for index, entry in enumerate(entries):
+        if index >= infra_graph._MAX_GRAPH_ENTRIES:
+            truncated = True
+            break
+        if graph.number_of_nodes() >= MAX_GRAPH_NODES:
+            truncated = True
+            break
+        sans = _clean_sans(entry.get("dns_names"))
+        if len(sans) < 2:
+            continue
+        if len(sans) > infra_graph._MAX_SANS_PER_CERT_FOR_EDGES:
+            sans = sorted(sans)[: infra_graph._MAX_SANS_PER_CERT_FOR_EDGES]
+        issuer_raw = entry.get("issuer_name")
+        issuer = infra_graph.strip_control_chars(str(issuer_raw)) if isinstance(issuer_raw, str) else ""
+        for left, right in itertools.combinations(sorted(sans), 2):
+            if graph.has_edge(left, right):
+                data = graph[left][right]
+                data["shared_certs"] = int(data.get("shared_certs", 0)) + 1
+                data["weight"] = float(data["shared_certs"])
+            else:
+                graph.add_edge(left, right, shared_certs=1, weight=1.0)
+            if issuer:
+                samples = edge_issuers.setdefault((left, right), [])
+                if len(samples) < infra_graph._MAX_EDGE_ISSUER_SAMPLES:
+                    samples.append(issuer)
+    edge_snapshot = {
+        (min(left, right), max(left, right)): (int(data["shared_certs"]), float(data["weight"]))
+        for left, right, data in graph.edges(data=True)
+    }
+    issuer_snapshot = {edge: tuple(issuers) for edge, issuers in edge_issuers.items()}
+    return set(graph.nodes), edge_snapshot, issuer_snapshot, truncated
 
 
 class TestEmptyAndTrivial:
@@ -165,9 +211,9 @@ class TestConnectedComponentsFallback:
             chunk_names = [f"c{chunk_idx}-h{i}.example.com" for i in range(50)]
             chunks.append(_entry(chunk_names))
         report = build_infrastructure_clusters(chunks)
-        if report.node_count > MAX_GRAPH_NODES:
-            assert report.algorithm == "connected_components"
-            assert report.modularity == 0.0
+        assert report.node_count == MAX_GRAPH_NODES
+        assert report.algorithm == "connected_components"
+        assert report.modularity == 0.0
 
 
 class TestCaps:
@@ -271,3 +317,65 @@ class TestSanAndIssuerSanitization:
         assert report.clusters, "a 2-SAN cert should form one cluster"
         for cluster in report.clusters:
             assert cluster.dominant_issuer is None or "\x1b" not in cluster.dominant_issuer
+
+
+class TestRepeatedHyperedgeAggregation:
+    def test_consecutive_identical_certificates_expand_pairs_once(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from recon_tool import infra_graph
+
+        names = [f"host-{index}.example.com" for index in range(60)]
+        entries = [_entry(names)] * 1000
+        combinations_spy = Mock(wraps=itertools.combinations)
+        monkeypatch.setattr(infra_graph, "combinations", combinations_spy)
+
+        report = build_infrastructure_clusters(entries)
+
+        assert combinations_spy.call_count == 1
+        assert report.edge_count == 1770
+        assert report.edges
+        assert all(edge.shared_cert_count == 1000 for edge in report.edges)
+
+    def test_issuer_sample_cap_preserves_arrival_order_across_groups(self) -> None:
+        names = ["a.example.com", "b.example.com"]
+        entries = [_entry(names, issuer="First CA")] * 40 + [_entry(names, issuer="Second CA")] * 40
+
+        report = build_infrastructure_clusters(entries)
+
+        assert report.clusters
+        assert report.clusters[0].dominant_issuer == "First CA"
+        assert report.edges[0].shared_cert_count == 80
+
+    @pytest.mark.parametrize(
+        "entries",
+        [
+            [_entry(["a.example.com", "b.example.com"])] * 1005,
+            [_entry(["a.example.com", "b.example.com"], issuer="First CA")] * 40
+            + [_entry(["a.example.com", "b.example.com"], issuer="Second CA")] * 40,
+            [
+                _entry(["a.example.com", "b.example.com", "c.example.com"], issuer="First CA"),
+                _entry(["b.example.com", "c.example.com", "d.example.com"], issuer="Second CA"),
+                _entry(["a.example.com", "b.example.com", "c.example.com"], issuer="First CA"),
+                _entry(["*.example.com", "not a host"], issuer="Ignored CA"),
+            ],
+            [
+                _entry([f"cluster-{cluster}-host-{index}.example.com" for index in range(50)])
+                for cluster in range(11)
+            ],
+        ],
+    )
+    def test_aggregation_matches_the_unaggregated_graph_contract(self, entries: list[dict]) -> None:
+        from recon_tool.infra_graph import _build_graph
+
+        graph, issuers, truncated = _build_graph(entries)
+        edge_snapshot = {
+            (min(left, right), max(left, right)): (int(data["shared_certs"]), float(data["weight"]))
+            for left, right, data in graph.edges(data=True)
+        }
+        actual = (
+            set(graph.nodes),
+            edge_snapshot,
+            {edge: tuple(samples) for edge, samples in issuers.items()},
+            truncated,
+        )
+
+        assert actual == _unaggregated_graph_snapshot(entries)
