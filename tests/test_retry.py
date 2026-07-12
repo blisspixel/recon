@@ -8,6 +8,18 @@ import pytest
 from recon_tool.retry import retry_on_transient  # type: ignore[reportPrivateImportUsage]
 
 
+@pytest.fixture
+def recorded_retry_delays(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    """Record decorator backoff without introducing wall-clock delay."""
+    delays: list[float] = []
+
+    async def capture_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    monkeypatch.setattr("recon_tool.retry.asyncio.sleep", capture_sleep)
+    return delays
+
+
 @pytest.mark.asyncio
 async def test_success_on_first_attempt_no_retry() -> None:
     """A successful call should not trigger any retries."""
@@ -24,7 +36,7 @@ async def test_success_on_first_attempt_no_retry() -> None:
 
 
 @pytest.mark.asyncio
-async def test_retries_on_transient_then_succeeds() -> None:
+async def test_retries_on_transient_then_succeeds(recorded_retry_delays: list[float]) -> None:
     """A transient failure is retried and the next success is returned."""
     call_count = 0
 
@@ -38,10 +50,11 @@ async def test_retries_on_transient_then_succeeds() -> None:
 
     assert await flaky() == "recovered"
     assert call_count == 2
+    assert recorded_retry_delays == [0.01]
 
 
 @pytest.mark.asyncio
-async def test_retries_exhausted_reraises() -> None:
+async def test_retries_exhausted_reraises(recorded_retry_delays: list[float]) -> None:
     """After exhausting retries, the last transient exception is raised."""
     call_count = 0
 
@@ -54,6 +67,7 @@ async def test_retries_exhausted_reraises() -> None:
     with pytest.raises(httpx.TimeoutException):
         await always_fails()
     assert call_count == 3  # original + 2 retries
+    assert recorded_retry_delays == [0.01, 0.01]
 
 
 @pytest.mark.asyncio
@@ -73,7 +87,7 @@ async def test_non_transient_exception_not_retried() -> None:
 
 
 @pytest.mark.asyncio
-async def test_asyncio_timeout_is_transient() -> None:
+async def test_asyncio_timeout_is_transient(recorded_retry_delays: list[float]) -> None:
     """asyncio.TimeoutError is treated as transient and retried."""
     call_count = 0
 
@@ -87,10 +101,11 @@ async def test_asyncio_timeout_is_transient() -> None:
 
     assert await timing_out() == "ok"
     assert call_count == 3
+    assert recorded_retry_delays == [0.01, 0.01]
 
 
 @pytest.mark.asyncio
-async def test_httpx_read_error_is_transient() -> None:
+async def test_httpx_read_error_is_transient(recorded_retry_delays: list[float]) -> None:
     """httpx.ReadError is treated as transient and retried."""
     call_count = 0
 
@@ -104,6 +119,7 @@ async def test_httpx_read_error_is_transient() -> None:
 
     assert await read_err() == "ok"
     assert call_count == 2
+    assert recorded_retry_delays == [0.01]
 
 
 @pytest.mark.asyncio
@@ -148,7 +164,7 @@ async def test_decorator_preserves_kwargs_and_args() -> None:
 
 
 @pytest.mark.asyncio
-async def test_method_on_class_works() -> None:
+async def test_method_on_class_works(recorded_retry_delays: list[float]) -> None:
     """The decorator works on instance methods (self is correctly bound)."""
 
     class Source:
@@ -166,10 +182,11 @@ async def test_method_on_class_works() -> None:
     result = await s.lookup("example.com")
     assert result == "ok:example.com"
     assert s.calls == 2
+    assert recorded_retry_delays == [0.01]
 
 
 @pytest.mark.asyncio
-async def test_oserror_is_transient() -> None:
+async def test_oserror_is_transient(recorded_retry_delays: list[float]) -> None:
     """OSError (e.g. socket.gaierror subclass) is treated as transient."""
     call_count = 0
 
@@ -183,3 +200,4 @@ async def test_oserror_is_transient() -> None:
 
     assert await oserr() == "ok"
     assert call_count == 2
+    assert recorded_retry_delays == [0.01]

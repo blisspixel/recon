@@ -12,6 +12,53 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.5.1] - 2026-07-12
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, JSON, MCP, cache, or import changes.
+
+### Changed
+
+- Reused bounded compiled standard-library regular expressions across repeated
+  TXT, CNAME, subdomain TXT, PTR-region, and cached-DNS replay matching. The
+  cache is capped at 2,048 entries, rejects oversized or invalid patterns, keys
+  by flags, and is cleared on catalog reload or session-catalog mutation.
+  Exact differential output and existing ReDoS admission controls are
+  preserved. The checked 1,000-value by 298-rule Python 3.14.4 fixture fell
+  from a 348 ms historical median to 111 ms in the post-change run.
+- Loaded the Bayesian network and prior override once per fusion-enabled batch
+  and reused one coherent invocation-local snapshot. A 25-record synthetic
+  fusion fixture fell from a 501 ms median to 307 ms without introducing a
+  process-global model cache or changing output.
+- Reused the primary seed-1729 Louvain partition in the existing eight-seed
+  CT stability calculation. The seed set, pairwise adjusted Rand statistic,
+  deterministic ordering, and graph output remain unchanged while one
+  duplicate partition run is removed.
+- Added file-grouped pytest execution with at most four workers to local, CI,
+  and release coverage gates. The full OS and Python 3.11 through 3.14 matrix
+  remains intact, and pytest-cov combines worker coverage. The blocking project
+  floor is ratcheted from 82 percent to 90.2 percent, just below the 90.22
+  percent minimum observed across the prior complete matrix.
+  The checked local suite completed 4,522 tests in 86.93 seconds with coverage,
+  compared with 4,502 tests in 330.53 seconds in the earlier serial no-coverage
+  reference. This is a local characterization, not a CI timing SLO.
+- Documented the Python compatibility and optimization policy. Python 3.14 is
+  preferred for new development and characterization, while `requires-python`
+  remains `>=3.11`. Rust, free-threading, subinterpreters, eager task execution,
+  and the experimental JIT remain evidence-gated rather than runtime
+  requirements.
+
+### Fixed
+
+- Validated both arguments to posture comparison before resolving either one,
+  so a malformed second domain cannot trigger a lookup for the first domain.
+- Removed accidental live DNS and domain-resolution work from unit tests and
+  replaced real retry waits with captured clocks that assert exact attempt and
+  delay schedules. Production retry behavior is unchanged; roughly 32.5 seconds
+  of confirmed real waits and network calls were removed from the focused test
+  paths.
+
 ## [2.5.0] - 2026-07-12
 
 ### Tool Surface Changes

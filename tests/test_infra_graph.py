@@ -25,6 +25,7 @@ from recon_tool.infra_graph import (
     MAX_MEMBERS_PER_CLUSTER,
     MIN_CLUSTER_SIZE,
     _clean_sans,
+    adjusted_rand_index,
     build_infrastructure_clusters,
 )
 from recon_tool.models import InfrastructureClusterReport
@@ -169,6 +170,39 @@ class TestLouvainPartition:
         assert report.clusters[0].size >= report.clusters[1].size
         assert report.clusters[0].cluster_id == 0
         assert report.clusters[1].cluster_id == 1
+
+    def test_stability_reuses_primary_partition(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """The eight-seed stability sweep must execute each seed exactly once."""
+        from recon_tool import infra_graph
+
+        original = nx.community.louvain_communities
+        seeds: list[int] = []
+        partitions: list[list[set[str]]] = []
+
+        def tracked_louvain(*args, **kwargs):
+            communities = original(*args, **kwargs)
+            seeds.append(kwargs["seed"])
+            partitions.append([set(community) for community in communities])
+            return communities
+
+        monkeypatch.setattr(nx.community, "louvain_communities", tracked_louvain)
+        entries = [
+            _entry(["a.example.com", "b.example.com", "c.example.com"]),
+            _entry(["a.example.com", "b.example.com"]),
+            _entry(["x.example.com", "y.example.com", "z.example.com"]),
+            _entry(["x.example.com", "y.example.com"]),
+        ]
+
+        report = build_infrastructure_clusters(entries)
+
+        assert seeds == list(range(infra_graph._LOUVAIN_SEED, infra_graph._LOUVAIN_SEED + 8))
+        scores = [
+            adjusted_rand_index(partitions[left], partitions[right])
+            for left in range(len(partitions))
+            for right in range(left + 1, len(partitions))
+        ]
+        assert report.partition_stability == round(sum(scores) / len(scores), 4)
+        assert report.stability_runs == 8
 
 
 class TestEdgeSurface:
@@ -357,10 +391,7 @@ class TestRepeatedHyperedgeAggregation:
                 _entry(["a.example.com", "b.example.com", "c.example.com"], issuer="First CA"),
                 _entry(["*.example.com", "not a host"], issuer="Ignored CA"),
             ],
-            [
-                _entry([f"cluster-{cluster}-host-{index}.example.com" for index in range(50)])
-                for cluster in range(11)
-            ],
+            [_entry([f"cluster-{cluster}-host-{index}.example.com" for index in range(50)]) for cluster in range(11)],
         ],
     )
     def test_aggregation_matches_the_unaggregated_graph_contract(self, entries: list[dict]) -> None:

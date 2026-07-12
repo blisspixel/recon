@@ -1,7 +1,7 @@
 # Engineering Refinement Plan
 
 Status: active implementation plan
-Review date: 2026-07-11
+Review date: 2026-07-12
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
 engineering tracks. It does not authorize unrelated runtime expansion. Every
@@ -17,10 +17,11 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- v2.4.0 is current on GitHub and PyPI.
+- v2.5.1 is the release candidate; v2.5.0 remains public until this cycle's
+  release workflow completes.
 - Local and remote release readiness pass on current main.
-- Meaningful branch-aware coverage is approximately 89 percent, above the 82
-  percent enforced project gate and the 80 percent user bar.
+- Meaningful branch-aware coverage is above 90.2 percent, which is now the
+  blocking baseline ratchet and remains above the 80 percent user bar.
 - The ignored local code graph must be refreshed after each tracked milestone.
   Read `.agent/codegraph/manifest.json` for its exact build commit, trust level,
   checks, and counts rather than copying volatile metrics into this plan.
@@ -317,7 +318,8 @@ approved.
 
 ## Track 5: Measured Async and Schema Interoperability
 
-Status: stable-v1 characterization ready; v2 deltas follow Track 2
+Status: first Python optimization checkpoint implemented; product-shaped async
+and v2 deltas remain
 Dependencies: none for resolver and current-schema baselines; Track 2 only for
 candidate-SDK deltas
 Risk: concurrency and brittle-benchmark risk
@@ -340,6 +342,25 @@ Risk: concurrency and brittle-benchmark risk
 - Reject external network resolution for schema references, reliance on
   `format` as semantic validation, and unbounded schema depth or validation
   time.
+
+### July 12, 2026 checkpoint
+
+- Kept the runtime and universal wheel pure Python with support for Python 3.11
+  through 3.14. Python 3.14 is preferred for development and measurement, not
+  required for correct behavior.
+- Replaced repeated module-level catalog regex dispatch with a strictly bounded
+  compiled-pattern cache and exact invalidation on catalog generation changes.
+- Loaded Bayesian model and prior configuration once per fusion-enabled batch,
+  with a coherent batch-local snapshot and no cross-invocation global cache.
+- Removed one duplicate Louvain partition while retaining the exact primary
+  partition, eight-seed stability statistic, and deterministic output.
+- Removed live resolution and real retry delays from unit tests while asserting
+  exact retry schedules and no-I/O invalid-input behavior.
+- Validated four-worker file-grouped full-suite execution with combined branch
+  coverage. The complete OS and Python compatibility matrix remains intact.
+- Deferred connection-pool reuse, generated catalog packaging, non-streaming
+  scheduler changes, and bounded cross-domain correlation until their named
+  product-shaped measurements exist.
 
 ### Acceptance
 

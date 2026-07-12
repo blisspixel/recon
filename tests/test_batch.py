@@ -8,7 +8,9 @@ from unittest.mock import AsyncMock, patch
 
 from typer.testing import CliRunner
 
+from recon_tool import bayesian
 from recon_tool.cli import app
+from recon_tool.cli.batch import _batch_apply_fusion
 from recon_tool.models import (
     CandidateValue,
     ConfidenceLevel,
@@ -170,3 +172,109 @@ class TestBatchCommand:
         assert posterior[0]["conflict_provenance"] == [
             {"field": "auth_type", "sources": ["graph", "openid_config"], "magnitude": 1.5}
         ]
+
+    def test_batch_fusion_uses_supplied_configuration(self):
+        network = object()
+        priors_override = {"m365_tenant": 0.4}
+        inference = bayesian.InferenceResult(
+            posteriors=(),
+            entropy_reduction=0.0,
+            evidence_count=0,
+            conflict_count=0,
+        )
+
+        with patch("recon_tool.bayesian.infer_from_tenant_info", return_value=inference) as infer:
+            result = _batch_apply_fusion(
+                SAMPLE_INFO,
+                network=network,
+                priors_override=priors_override,
+            )
+
+        infer.assert_called_once_with(
+            SAMPLE_INFO,
+            network=network,
+            priors_override=priors_override,
+        )
+        assert result.posterior_observations == ()
+
+    @patch("recon_tool.cli.batch._batch_process_one", new_callable=AsyncMock)
+    def test_batch_loads_fusion_configuration_once(self, process_one, tmp_path):
+        """Every domain in one batch shares one immutable inference snapshot."""
+        process_one.return_value = {"record_type": "lookup"}
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("contoso.com\nexample.com\nexample.net\n")
+        network = bayesian.load_network()
+        priors_override = {"m365_tenant": 0.4}
+
+        with (
+            patch("recon_tool.bayesian.load_network", return_value=network) as network_loader,
+            patch("recon_tool.bayesian.load_priors_override", return_value=priors_override) as override_loader,
+        ):
+            result = runner.invoke(app, ["batch", str(domain_file), "--json", "--fusion"])
+
+        assert result.exit_code == 0
+        assert process_one.await_count == 3
+        network_loader.assert_called_once_with()
+        override_loader.assert_called_once_with()
+        for call in process_one.await_args_list:
+            assert call.kwargs["fusion_network"] is network
+            assert call.kwargs["fusion_priors_override"] is priors_override
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_skips_fusion_loaders_when_disabled(self, mock_resolve, tmp_path):
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("contoso.com\nexample.com\n")
+
+        with (
+            patch("recon_tool.bayesian.load_network") as network_loader,
+            patch("recon_tool.bayesian.load_priors_override") as override_loader,
+        ):
+            result = runner.invoke(app, ["batch", str(domain_file), "--json", "--no-fusion"])
+
+        assert result.exit_code == 0
+        network_loader.assert_not_called()
+        override_loader.assert_not_called()
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_fusion_loader_failure_preserves_json_records(self, mock_resolve, tmp_path):
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("contoso.com\nexample.com\n")
+
+        with patch("recon_tool.bayesian.load_network", side_effect=ValueError("invalid model configuration")):
+            result = runner.invoke(app, ["batch", str(domain_file), "--json", "--fusion"])
+
+        assert result.exit_code == 0
+        assert mock_resolve.await_count == 2
+        assert json.loads(result.output) == [
+            {
+                "domain": "contoso.com",
+                "error": "invalid model configuration",
+                "error_kind": "lookup",
+                "record_type": "error",
+            },
+            {
+                "domain": "example.com",
+                "error": "invalid model configuration",
+                "error_kind": "lookup",
+                "record_type": "error",
+            },
+        ]
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_fusion_loader_failure_preserves_ndjson_records(self, mock_resolve, tmp_path):
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("contoso.com\nexample.com\n")
+
+        with patch("recon_tool.bayesian.load_priors_override", side_effect=ValueError("invalid prior override")):
+            result = runner.invoke(app, ["batch", str(domain_file), "--ndjson", "--fusion"])
+
+        assert result.exit_code == 0
+        assert mock_resolve.await_count == 2
+        records = [json.loads(line) for line in result.output.splitlines()]
+        assert [record["domain"] for record in records] == ["contoso.com", "example.com"]
+        assert all(record["error"] == "invalid prior override" for record in records)
+        assert all(record["error_kind"] == "lookup" for record in records)
+        assert all(record["record_type"] == "error" for record in records)

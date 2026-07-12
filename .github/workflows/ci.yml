@@ -120,7 +120,7 @@ jobs:
         run: uv sync
 
       - name: Test with coverage
-        run: uv run pytest tests/ --cov=src/recon_tool --cov-branch --cov-report=term-missing --cov-fail-under=82
+        run: uv run pytest tests/ -n auto --maxprocesses=4 --dist=loadfile --cov=src/recon_tool --cov-branch --cov-report=term-missing --cov-fail-under=90.2
 
   audit:
     runs-on: ubuntu-latest

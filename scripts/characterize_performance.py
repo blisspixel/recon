@@ -29,7 +29,8 @@ from typing import Any
 
 from rich.console import Console
 
-from recon_tool.bayesian import infer, load_network
+from recon_tool.bayesian import infer, load_network, load_priors_override
+from recon_tool.cli.batch import _batch_apply_fusion  # pyright: ignore[reportPrivateUsage]
 from recon_tool.fingerprints import get_txt_patterns, load_fingerprints, match_txt_all, reload_fingerprints
 from recon_tool.formatter import render_tenant_panel
 from recon_tool.infra_graph import build_infrastructure_clusters
@@ -122,6 +123,17 @@ def _match_txt_records(count: int) -> int:
 
 _NETWORK = load_network()
 
+_FUSION_INFO = TenantInfo(
+    tenant_id="00000000-0000-0000-0000-000000000000",
+    display_name="Fictional Organization",
+    default_domain="fictional.example.test",
+    queried_domain="example.test",
+    confidence=ConfidenceLevel.HIGH,
+    services=("Microsoft 365", "Cloudflare", "Proofpoint"),
+    slugs=("microsoft365", "cloudflare", "proofpoint"),
+    dmarc_policy="reject",
+)
+
 
 def _infer_domains(count: int) -> int:
     posterior_count = 0
@@ -133,6 +145,34 @@ def _infer_domains(count: int) -> int:
             priors_override={},
         )
         posterior_count += len(result.posteriors)
+    return posterior_count
+
+
+def _batch_fusion_repeated_setup(count: int) -> int:
+    """Reproduce the pre-v2.5.1 per-domain configuration-loading reference."""
+    posterior_count = 0
+    for _ in range(count):
+        info = _batch_apply_fusion(
+            _FUSION_INFO,
+            network=load_network(),
+            priors_override=load_priors_override(),
+        )
+        posterior_count += len(info.posterior_observations)
+    return posterior_count
+
+
+def _batch_fusion_snapshot(count: int) -> int:
+    """Measure the current one-configuration-snapshot-per-batch behavior."""
+    network = load_network()
+    priors_override = load_priors_override()
+    posterior_count = 0
+    for _ in range(count):
+        info = _batch_apply_fusion(
+            _FUSION_INFO,
+            network=network,
+            priors_override=priors_override,
+        )
+        posterior_count += len(info.posterior_observations)
     return posterior_count
 
 
@@ -225,6 +265,26 @@ def build_cases(*, include_stress: bool) -> tuple[CharacterizationCase, ...]:
             "bayesian_inference_100_domains",
             {"domain_count": 100, "network_nodes": len(_NETWORK.nodes), "execution": "sequential"},
             lambda: _infer_domains(100),
+        ),
+        CharacterizationCase(
+            "batch_fusion_25_domains_repeated_setup_reference",
+            {
+                "domain_count": 25,
+                "network_nodes": len(_NETWORK.nodes),
+                "configuration_loads": 25,
+                "reference": "pre-v2.5.1",
+            },
+            lambda: _batch_fusion_repeated_setup(25),
+        ),
+        CharacterizationCase(
+            "batch_fusion_25_domains_snapshot",
+            {
+                "domain_count": 25,
+                "network_nodes": len(_NETWORK.nodes),
+                "configuration_loads": 1,
+                "behavior": "v2.5.1",
+            },
+            lambda: _batch_fusion_snapshot(25),
         ),
         CharacterizationCase(
             "ct_graph_50_nodes",

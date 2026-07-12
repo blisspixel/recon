@@ -28,7 +28,7 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
         ".github/workflows/ci.yml",
         ".github/workflows/release.yml",
     ):
-        _write_file(root, relative, "pytest tests/ --cov=src/recon_tool --cov-branch --cov-fail-under=82\n")
+        _write_file(root, relative, "pytest tests/ --cov=src/recon_tool --cov-branch --cov-fail-under=90.2\n")
     _write_file(root, "docs/roadmap.md", f"# Roadmap\n\n> **Status:** v{version} is current.\n")
     _write_file(
         root,
@@ -110,7 +110,7 @@ def test_version_consistency_fails_on_mismatch(tmp_path: Path) -> None:
 
 def test_coverage_gate_rejects_stale_src_layout_target(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path)
-    _write_file(tmp_path, "scripts/check.py", "pytest tests/ --cov=recon_tool --cov-fail-under=82\n")
+    _write_file(tmp_path, "scripts/check.py", "pytest tests/ --cov=recon_tool --cov-fail-under=90.2\n")
 
     check = release_readiness._check_coverage_targets(tmp_path)
 
