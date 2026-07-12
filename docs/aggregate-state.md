@@ -1,8 +1,9 @@
 # Aggregate state: local cohort summaries over recon output
 
-> Status: methodology and reference implementation (v2.1a). This is a downstream
-> sidecar, not part of recon core. recon core stays frozen, stateless, and
-> single-domain; nothing here changes the locked v2.0 schema.
+> Status: versioned methodology and reference implementation. Cohort contract
+> 2.1 remains the compatibility default; 2.2 is explicit opt-in. The grouped
+> reducer is a downstream sidecar. Neither contract changes the locked v2.0
+> single-domain schema.
 
 ## 1. Scope
 
@@ -73,9 +74,11 @@ cohort.
 
 Two different estimands must not share one interpretation.
 
-For a declarative public claim such as DMARC reject, a successful authoritative
-observation opportunity supplies positive or negative semantics. With cohort
-size $N$, $p$ positives, and $m$ completed opportunities, the reducer reports:
+Under schema 2.2, for a declarative public claim such as DMARC reject, only a
+classified explicit policy enters the denominator. Missing, invalid,
+unavailable, stale, conflicted, or lineage-incomplete values remain unresolved.
+This is not a DNSSEC-authenticated absence claim. With cohort size $N$, $p$
+positives, and $m$ classified opportunities, the reducer reports:
 
 $$
 \text{observed public-claim rate} = \frac{p}{m}, \qquad
@@ -94,6 +97,42 @@ This is a descriptive rate for the named public claim in the caller's cohort,
 not an industry estimate or a private-control prevalence. An unavailable source
 contributes neither a positive nor a negative.
 
+Schema 2.2 distinguishes two DMARC paths rather than silently merging their time
+semantics. Select it with `recon batch --summary --summary-schema 2.2` or the
+sidecar's `--schema-version 2.2`:
+
+- `contract_scoped_observed_rate` is emitted by the in-core command. The
+  command freezes one evaluation time, requires a fresh raw-evidence-bound
+  explicit `p=reject`, `p=quarantine`, or `p=none` classification, and leaves
+  every other state out of $m$.
+- `atemporal_explicit_policy_rate` is emitted by the standalone reducer when it
+  consumes stable tenant JSON. Those records intentionally omit `resolved_at`,
+  so this compatibility projection uses the serialized explicit policy but
+  makes no freshness claim.
+
+The RFC 9989 valid-`rua` fallback can produce an effective `none` when `p` is
+missing or invalid. That is not an explicitly declared `p=none` and does not
+sign the exact DMARC reject contract. recon retains the DMARC service and raw
+record but leaves stable `dmarc_policy` null for this case.
+
+`dmarc_enforcing` applies the raw record's effective-policy modifiers. Historic
+`pct` remains a compatibility input, and RFC 9989 `t=y` steps the stated policy
+down one level. The atemporal sidecar reparses both modifiers from the same raw
+record rather than trusting an unbound scalar.
+
+The complete migration is:
+
+| Signal | Contract 2.1 | Contract 2.2 |
+|---|---|---|
+| `dmarc_reject`, `dmarc_enforcing` | `authoritative_observed_rate`; every DMARC-channel-available row enters the legacy denominator | in-core `contract_scoped_observed_rate` over fresh explicit raw-bound policies; sidecar `atemporal_explicit_policy_rate` over the same explicit evidence without a freshness claim |
+| `mta_sts_enforce` | `authoritative_observed_rate`; every MTA-STS-channel-available row enters the legacy denominator | `scoped_observed_rate`; only explicit `enforce`, `testing`, or `none` modes enter the denominator |
+| `email_gateway_present` | `authoritative_observed_rate`; a missing value on an available MX channel is the legacy negative | `model_support_coverage`; observed gateway support is reported, absence remains unresolved |
+| `m365_tenant`, `google_workspace` | `model_support_coverage` | unchanged `model_support_coverage` |
+
+The 2.1 labels and denominator behavior are retained only for compatibility.
+New analysis should select 2.2. The identifiers are exact selectable contracts,
+not package SemVer ranges.
+
 M365 and Google Workspace Bayesian nodes are different. The public channel has
 no authoritative negative for those hideable claims, and a model posterior over
 0.5 is not established truth. Selecting the denominator from evidence-bearing
@@ -101,9 +140,8 @@ or non-sparse positives would make $p/m$ outcome-dependent and positively
 biased. Even $p/N$ is not a prevalence lower bound unless every positive is
 sound, which has not been established.
 
-Those compatibility entries therefore use
-`metric_kind: model_support_coverage`, set `observed_rate` and
-`lower_bound_over_cohort` to null, and report:
+Those compatibility entries use `metric_kind: model_support_coverage`, set
+`observed_rate` and `lower_bound_over_cohort` to null, and report:
 
 $$
 \text{model support coverage}=
@@ -115,6 +153,9 @@ node. `unresolved_share` is one minus support coverage. The legacy
 `observable_n` and `observability_fraction` fields remain zero for these entries
 because no row supplies a two-sided authoritative observation opportunity.
 These are product-emission diagnostics, not adoption or prevalence estimates.
+Schema 2.2 applies the same treatment to detected email gateways. Schema 2.1
+retains its compatibility behavior for `email_gateway_present` and reports
+`metric_kind: authoritative_observed_rate`.
 
 ### 5.2 Aggregate model-score mass
 
@@ -234,10 +275,13 @@ m365_tenant:
 The 0.7917 value is the share of synthetic rows where the model emitted support,
 not M365 prevalence and not a lower bound on it. The exact synthetic count is
 regenerated from the fixture; the example is illustrative. The declarative
-signals have different semantics: `dmarc_enforcing` has a successful
-observation opportunity for every fixture row, so its observed public-claim rate
-is 0.58. The posterior-claims block illustrates the committed missingness policy:
-the declarative
+signals have different semantics: 21 of 24 synthetic rows retain an explicit
+raw-bound DMARC policy, 14 of those are enforcing, and the downstream reducer
+therefore reports `dmarc_enforcing` with
+`metric_kind: atemporal_explicit_policy_rate`, `observed_rate: 0.6667`,
+observability 0.875, and support coverage 0.5833. The three missing policies remain unresolved rather than
+counting as non-enforcing. The posterior-claims block illustrates the committed
+missingness policy: the declarative
 `email_security_policy_enforcing` node has a sparse share of 0.00 (absence is
 informative, never sparse), while the hideable `google_workspace_tenant` node has
   a sparse share of 0.79 (mostly at the display-mass floor). This construction
@@ -256,7 +300,8 @@ To regenerate the fixture and the example output:
 python validation/aggregate/make_synthetic_cohort.py
 python validation/aggregate/aggregate_state.py \
     validation/aggregate/synthetic_cohort.ndjson \
-    --group-by validation/aggregate/synthetic_groups.csv
+    --group-by validation/aggregate/synthetic_groups.csv \
+    --schema-version 2.2
 ```
 
 ## 9. Local-only workflow
@@ -285,14 +330,17 @@ fixture deterministically. The reducer takes a list of recon records and returns
 the aggregate object with no side effects, so it is straightforward to embed in a
 caller's own local pipeline.
 
-## 11. The in-core surface (shipped v2.1)
+## 11. The in-core versioned surface
 
-The thinnest possible surface ships in v2.1 as `recon batch --summary` (add
-`--json` for machine output): one cohort at a time, carrying its own
-`cohort_summary` record type and `schema_version` 2.1, with no grouping logic, no
-baselines, and no persistence. Grouping, comparison, distinctiveness, and pooling
-stay in the downstream reducer. That keeps recon core a single-domain passive
-primitive and the cohort analysis a thing the operator owns.
+The thinnest possible surface is `recon batch --summary` (add `--json` for
+machine output): one cohort at a time, with no grouping logic, baselines, or
+persistence. It defaults to the released `cohort_summary` 2.1 contract.
+`--summary-schema 2.2` adds truthful metric-kind labels, binds DMARC to the fresh
+internal contract, and excludes unresolved empty values from declarative
+denominators. The grouped reducer independently defaults to 2.1 and accepts
+`--schema-version 2.2`. Grouping, comparison, distinctiveness, and pooling stay
+outside core. Changing the default or removing 2.1 requires a deprecation window
+and package-major release.
 
 ## 12. References
 

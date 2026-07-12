@@ -106,6 +106,20 @@ validated (package missing, server import failure, or no tools registered).
   output mask only the affected channel. `NXDOMAIN` and `NoAnswer` remain clean,
   observed empty responses. Legacy `dns` and current `dns_records` markers mask
   every DNS channel.
+- **Observed empty is not authenticated denial.** The resolver adapter does not
+  retain the authority section, recursive-resolver identity, or DNSSEC denial
+  validation, and its private-canonical safety suppression also returns an
+  empty list. Current public surfaces may describe the operational result as no
+  record observed, but the internal claim-contract layer does not promote it to
+  an authoritative or authenticated negative certificate.
+- **DMARC follows RFC 9989 discovery semantics.** ASCII space or tab around
+  `=` and case-insensitive tag names are accepted; the `DMARC1` value remains
+  case-sensitive. A missing or invalid `p`, or an invalid `sp` or `np`, falls
+  back to effective `none` only when `rua` contains a syntactically valid
+  reporting URI. The exact reject claim signs only an explicit valid `p` value,
+  so fallback `none` remains unresolved for that narrower predicate. The DMARC
+  service and raw record remain visible, while stable `dmarc_policy` stays null
+  rather than fabricating an explicit `p=none`.
 - **CT is cache-first and fault-tolerant.** A fresh CT cache entry short-circuits
   the live providers; on live failure the cache is the final fallback, annotated
   with `ct_attempt_outcome` (`cache_hit`, `live_success`, `cache_miss`,

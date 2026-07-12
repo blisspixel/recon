@@ -42,8 +42,9 @@ def effective_dmarc_policy(
 
     RFC 7489 ``pct=`` is historic under RFC 9989, but existing records remain
     observable and backward-compatible. RFC 9989's ``t=y`` testing mode applies
-    the stated policy one level lower. The published ``p=`` value stays visible
-    through ``dmarc_policy``; this helper is only for enforcement semantics.
+    the stated policy one level lower. A parser-valid explicit ``p=`` stays
+    visible through ``dmarc_policy``; RFC 9989 effective-none fallbacks leave
+    that scalar null. This helper covers explicit-policy enforcement semantics.
     """
     if dmarc_policy not in _DMARC_POLICY_LEVELS:
         return None

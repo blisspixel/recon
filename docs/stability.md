@@ -58,6 +58,18 @@ For the JSON output contract in full field-by-field detail, see
 | `--fusion` | Stable (v2.0+) | v0.11. Opt-in Bayesian fusion (still opt-in pre-lock). |
 | `--explain-dag` | Stable (v2.0+) | v1.9.0. Render Bayesian evidence DAG. |
 
+### CLI flags (on `recon batch <file>`)
+
+| Flag | Stability | Notes |
+|---|---|---|
+| `--summary` | Stable (v2.1+) | Aggregate-only cohort output. Contract 2.1 remains the default. |
+| `--summary-schema {2.1,2.2}` | Stable | Exact cohort-contract selector. Version 2.2 is an additive opt-in with corrected missingness and raw-evidence-bound DMARC rates. The nondefault 2.2 value requires `--summary`. |
+
+The cohort schema identifiers are exact contract selectors, not package SemVer
+ranges. Changing the default away from 2.1 or removing either accepted value is
+a breaking stable-surface change and requires a deprecation window plus a
+package-major release.
+
 ### CLI exit codes
 
 | Code | Meaning | Stability |

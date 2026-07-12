@@ -240,7 +240,7 @@
       "maximum": 5
     },
     "dmarc_policy": {
-      "description": "DMARC policy when a DMARC record is present.",
+      "description": "Parser-valid explicit apex DMARC p= value. RFC 9989 effective-none fallback records retain DMARC evidence but leave this field null rather than fabricating p=none.",
       "type": [
         "string",
         "null"

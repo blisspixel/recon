@@ -149,6 +149,7 @@ def batch_validate_flags(
     ndjson: bool,
     include_ecosystem: bool,
     summary: bool = False,
+    summary_schema: str = "2.1",
 ) -> None:
     """Reject mutually-exclusive output flags and the --include-ecosystem constraint."""
     from recon_tool.formatter import render_error
@@ -166,6 +167,12 @@ def batch_validate_flags(
     # them would silently drop the hypergraph. Reject rather than mislead.
     if summary and include_ecosystem:
         render_error("--summary cannot combine with --include-ecosystem")
+        raise typer.Exit(code=EXIT_VALIDATION)
+    if summary_schema not in {"2.1", "2.2"}:
+        render_error("--summary-schema must be 2.1 or 2.2")
+        raise typer.Exit(code=EXIT_VALIDATION)
+    if not summary and summary_schema != "2.1":
+        render_error("--summary-schema requires --summary")
         raise typer.Exit(code=EXIT_VALIDATION)
     # --include-ecosystem requires --json. The hypergraph is a batch-scope
     # envelope sibling to the per-domain entries with no natural place in the
@@ -410,7 +417,14 @@ def batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, inclu
     typer.echo(json_mod.dumps(json_results, indent=2))
 
 
-def batch_emit_summary(batch_infos: dict[str, Any], attempted: int, console: Any, *, as_json: bool) -> None:
+def batch_emit_summary(
+    batch_infos: dict[str, Any],
+    attempted: int,
+    console: Any,
+    *,
+    as_json: bool,
+    schema_version: str = "2.1",
+) -> None:
     """Emit one aggregate-only cohort summary over the resolved batch.
 
     Stateless: computed live from the resolved records, stores nothing, ships no
@@ -418,12 +432,41 @@ def batch_emit_summary(batch_infos: dict[str, Any], attempted: int, console: Any
     downstream reducer under ``validation/aggregate/``.
     """
     import json as json_mod
+    from datetime import UTC, datetime
 
+    from recon_tool.claim_contract import (
+        DMARC_EFFECTIVE_POLICY_FIELD,
+        DMARC_REJECT_CLAIM_STATE_FIELD,
+        ClaimState,
+        dmarc_apex_reject_dossier,
+        dmarc_explicit_policy_projection_from_mapping,
+    )
     from recon_tool.cohort_summary import build_summary_document, render_cohort_summary
     from recon_tool.formatter import format_tenant_dict
 
-    records = [format_tenant_dict(info) for info in batch_infos.values()]
-    document = build_summary_document(records, attempted=attempted)
+    as_of = datetime.now(UTC)
+    records = []
+    for info in batch_infos.values():
+        record = format_tenant_dict(info)
+        if schema_version == "2.2":
+            claim_state = dmarc_apex_reject_dossier(
+                info,
+                as_of=as_of,
+            ).state.value
+            atemporal_state, effective_policy = dmarc_explicit_policy_projection_from_mapping(record)
+            state_is_raw_bound = claim_state == atemporal_state.value and claim_state in {
+                ClaimState.SUPPORTED.value,
+                ClaimState.DISCONFIRMED.value,
+            }
+            record[DMARC_REJECT_CLAIM_STATE_FIELD] = claim_state
+            record[DMARC_EFFECTIVE_POLICY_FIELD] = effective_policy if state_is_raw_bound else None
+        records.append(record)
+    document = build_summary_document(
+        records,
+        attempted=attempted,
+        schema_version=schema_version,
+        dmarc_contract_scoped=schema_version == "2.2",
+    )
     if as_json:
         typer.echo(json_mod.dumps(document, indent=2))
     else:
@@ -682,6 +725,7 @@ async def batch(
     include_ecosystem: bool = False,
     fusion: bool = False,
     summary: bool = False,
+    summary_schema: str = "2.1",
 ) -> None:
     """Process multiple domains from a file with controlled concurrency.
 
@@ -710,6 +754,7 @@ async def batch(
         ndjson=ndjson,
         include_ecosystem=include_ecosystem,
         summary=summary,
+        summary_schema=summary_schema,
     )
 
     domain_list = _batch_load_domains(
@@ -771,7 +816,13 @@ async def batch(
 
     # --summary collapses the batch into one aggregate-only cohort summary.
     if summary:
-        batch_emit_summary(batch_infos, len(domain_list), console, as_json=json_output)
+        batch_emit_summary(
+            batch_infos,
+            len(domain_list),
+            console,
+            as_json=json_output,
+            schema_version=summary_schema,
+        )
         return
 
     _batch_render_results(
