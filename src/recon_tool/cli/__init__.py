@@ -486,6 +486,15 @@ def batch(
             "caller-grouped analysis, see docs/aggregate-state.md."
         ),
     ),
+    summary_schema: str = typer.Option(
+        "2.1",
+        "--summary-schema",
+        help=(
+            "Cohort summary contract: 2.1 preserves the released behavior; "
+            "2.2 opts into raw-evidence-bound public claims and corrected missingness. "
+            "The nondefault 2.2 value requires --summary."
+        ),
+    ),
 ) -> None:
     """
     Look up multiple domains from a file.
@@ -507,6 +516,7 @@ def batch(
             include_ecosystem=include_ecosystem,
             fusion=fusion,
             summary=summary,
+            summary_schema=summary_schema,
         )
     )
 

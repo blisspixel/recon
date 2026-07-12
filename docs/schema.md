@@ -27,7 +27,7 @@ without guessing.
 | `recon batch <file> --json --include-ecosystem` | a `BatchResult` wrapper object `{domains, ecosystem_hyperedges}` | `domains` elements are success objects or `BatchErrorRecord`; the wrapper remains present even when no domain resolves |
 | `recon batch <file> --ndjson` | one JSON object per line (newline-delimited) | each line is a success object or a `BatchErrorRecord` |
 | `recon delta <domain> --json` / `recon <domain> --compare <file> --json` | a single `DeltaReport` object | n/a |
-| `recon batch <file> --summary --json` | a single `cohort_summary` object (`record_type: "cohort_summary"`, `schema_version: "2.1"`) | n/a (aggregate-only; no per-domain records) |
+| `recon batch <file> --summary --json` | a single `cohort_summary` object (`record_type: "cohort_summary"`, `schema_version: "2.1"` by default; select `--summary-schema 2.2` explicitly) | n/a (aggregate-only; no per-domain records) |
 
 The machine-readable form of each shape lives in
 [`recon-schema.json`](recon-schema.json): the document root is the
@@ -35,10 +35,17 @@ single-domain success object; `$defs/BatchArray`, `$defs/BatchResult`,
 `$defs/BatchNdjsonRecord`, `$defs/BatchErrorRecord`, and `$defs/DeltaReport`
 cover the rest.
 
-The `cohort_summary` mode (`recon batch --summary`) is a v2.1 aggregate-only
-document with its own `schema_version` (`"2.1"`, distinct from the `"2.0"` of the
-single-domain record). It reports cohort statistics with no per-domain records;
-its shape and the small-cell suppression policy are documented in
+The `cohort_summary` mode (`recon batch --summary`) is a versioned aggregate-only
+document, distinct from the `"2.0"` single-domain record. The released 2.1
+contract remains the default. `--summary-schema 2.2` opts into fresh
+contract-scoped DMARC rates, corrected missing-value handling, and explicit
+metric kinds. The downstream reducer exposes the same selection through
+`--schema-version`; its 2.2 DMARC projection is atemporal because stable tenant
+JSON omits observation time. These cohort identifiers select exact contracts;
+they are not package SemVer ranges. Changing the default or removing 2.1 would
+require the deprecation window and package-major release in
+[`stability.md`](stability.md). Neither version reports per-domain records, and
+the two transient 2.2 projections are never emitted. Shape and small-cell policy are documented in
 [`aggregate-state.md`](aggregate-state.md). It is not part of the v2.0
 single-domain contract and is not yet mirrored in `recon-schema.json`.
 
@@ -166,8 +173,8 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `email_security_score` | int | no | `0-5` | stable | Compatibility count of five observed-present public controls: effectively enforcing DMARC, DKIM selectors, SPF strict (`-all`), MTA-STS, and BIMI. If a constituent channel is unavailable, the count is incomplete; consult `degraded_sources` rather than treating uncounted controls as completed negatives. |
-| `dmarc_policy` | string | yes | `reject \| quarantine \| none` | stable | DMARC policy when a DMARC record is present. |
-| `dmarc_pct` | int | yes | `0-100` | stable | DMARC `pct=` parameter. |
+| `dmarc_policy` | string | yes | `reject \| quarantine \| none` | stable | Parser-valid explicit apex `p=` value. Under RFC 9989, a missing or invalid `p`, or invalid `sp` or `np`, can invoke an effective-none fallback only when `rua` contains a syntactically valid URI. recon retains the DMARC service and raw evidence for that fallback but leaves this field null rather than fabricating an explicit `p=none`. |
+| `dmarc_pct` | int | yes | `0-100` | stable | Historic RFC 7489 `pct=` parameter retained as a compatibility extension; RFC 9989 removed it from the active grammar. |
 | `mta_sts_mode` | string | yes | `enforce \| testing \| none` | stable | MTA-STS policy mode. |
 | `site_verification_tokens` | `list[string]` | no | n/a | stable | TXT tokens observed on the apex (`google-site-verification=`, `MS=`, etc.). |
 
@@ -583,8 +590,11 @@ graph.
 Current insight and posture explanations reconstruct some generator lineage
 from human-facing text or rule proxies. `provenance_complete=true` therefore
 means every terminal is reachable in the emitted reconstructed graph; it does
-not prove that every generator association is exact. Exact generation-time
-rule lineage remains future claim-contract work.
+not prove that every generator association is exact. The first internal DMARC
+claim contract retains exact evaluator lineage from a collector-retained raw
+record to its signed atom. It operates after resolution and uses whole-resolution
+completion time because a per-query timestamp is not retained. Its dossier is
+not integrated into this stable public explanation schema.
 
 ---
 

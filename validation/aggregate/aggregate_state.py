@@ -1,4 +1,4 @@
-"""Stateless cohort reducer with caller grouping over recon output (v2.1).
+"""Versioned stateless cohort reducer with caller grouping over recon output.
 
 Downstream sidecar, not recon core. The per-cohort statistics (observability,
 public-claim rates, hideable model support, model-score mass, and mix
@@ -13,7 +13,7 @@ score, infers no unobserved services, and names no domain in its output. See
 ``docs/aggregate-state.md``.
 
 Usage:
-    python aggregate_state.py results.ndjson [--group-by groups.csv] [--label NAME]
+    python aggregate_state.py results.ndjson [--group-by groups.csv] [--schema-version 2.2]
     recon batch domains.txt --ndjson | python aggregate_state.py - --group-by g.csv
 
 The optional grouping file is a two-column ``domain,label`` CSV owned by the
@@ -31,7 +31,7 @@ from collections.abc import Mapping, Sequence
 from pathlib import Path
 from typing import Any
 
-from recon_tool.cohort_summary import COHORT_DISCLAIMER, summarize_cohort
+from recon_tool.cohort_summary import cohort_disclaimer, summarize_cohort
 
 # Dirichlet smoothing for the weighted log-odds; a small symmetric prior shrinks
 # rare slug counts toward no-difference.
@@ -93,7 +93,7 @@ def distinctiveness(groups: Mapping[str, Sequence[Mapping[str, Any]]], top_k: in
         c: Counter[str] = Counter()
         for r in recs:
             slugs = r.get("slugs")
-            for slug in (slugs if isinstance(slugs, (list, tuple)) else []):
+            for slug in slugs if isinstance(slugs, (list, tuple)) else []:
                 c[str(slug)] += 1
         slug_counts[label] = c
     out: dict[str, Any] = {}
@@ -123,14 +123,16 @@ def reduce_records(
     records: Sequence[Mapping[str, Any]],
     grouping: Mapping[str, str] | None = None,
     label: str = "cohort",
+    *,
+    schema_version: str = "2.1",
 ) -> dict[str, Any]:
     """Top-level reduction: global summary, per-group summaries, distinctiveness."""
     result: dict[str, Any] = {
         "record_type": "cohort_summary",
-        "schema_version": "2.1",
-        "disclaimer": COHORT_DISCLAIMER,
+        "schema_version": schema_version,
+        "disclaimer": cohort_disclaimer(schema_version),
         "suppression_policy": f"counts 1..{_SUPPRESS_MAX} withheld; small-n warning below {_SMALL_N}",
-        "global": summarize_cohort(records, label),
+        "global": summarize_cohort(records, label, schema_version=schema_version),
     }
     if grouping:
         groups: dict[str, list[Mapping[str, Any]]] = {}
@@ -140,7 +142,9 @@ def reduce_records(
             if grp:
                 groups.setdefault(grp, []).append(r)
         if groups:
-            result["by_group"] = {g: summarize_cohort(recs, g) for g, recs in sorted(groups.items())}
+            result["by_group"] = {
+                g: summarize_cohort(recs, g, schema_version=schema_version) for g, recs in sorted(groups.items())
+            }
             result["distinctiveness"] = distinctiveness(groups)
     return result
 
@@ -194,11 +198,22 @@ def main(argv: Sequence[str] | None = None) -> int:
     parser.add_argument("source", help="recon JSON/NDJSON file, or - for stdin")
     parser.add_argument("--group-by", dest="group_by", help="caller-owned domain,label CSV", default=None)
     parser.add_argument("--label", default="cohort", help="label for the global cohort")
+    parser.add_argument(
+        "--schema-version",
+        choices=("2.1", "2.2"),
+        default="2.1",
+        help="cohort contract version; 2.1 preserves the released behavior",
+    )
     args = parser.parse_args(argv)
 
     records = load_records(args.source)
     grouping = load_grouping(args.group_by) if args.group_by else None
-    summary = reduce_records(records, grouping, label=args.label)
+    summary = reduce_records(
+        records,
+        grouping,
+        label=args.label,
+        schema_version=args.schema_version,
+    )
     json.dump(summary, sys.stdout, indent=2, sort_keys=False)
     sys.stdout.write("\n")
     return 0

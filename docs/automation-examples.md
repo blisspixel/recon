@@ -123,7 +123,11 @@ provided that explanation.
 
 ## Cohort Summary
 
-`recon batch domains.txt --summary --json` emits one aggregate-only object with
-`record_type == "cohort_summary"` and `schema_version == "2.1"`. It is documented
-in [`aggregate-state.md`](aggregate-state.md), not in the v2.0 single-domain
-schema root. Treat suppressed cells as intentionally absent detail, not as zero.
+`recon batch domains.txt --summary --json` emits the compatible aggregate-only
+2.1 contract. Use
+`recon batch domains.txt --summary --summary-schema 2.2 --json` for the opt-in
+contract with raw-evidence-bound DMARC rates and corrected missingness. Both use
+`record_type == "cohort_summary"`; route on the exact `schema_version`. They are
+documented in [`aggregate-state.md`](aggregate-state.md), not in the v2.0
+single-domain schema root. Treat suppressed cells as intentionally absent
+detail, not as zero.

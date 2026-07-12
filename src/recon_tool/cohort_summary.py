@@ -30,6 +30,12 @@ from typing import Any
 from rich.panel import Panel
 from rich.text import Text
 
+from recon_tool.claim_contract import (
+    DMARC_EFFECTIVE_POLICY_FIELD,
+    DMARC_REJECT_CLAIM_STATE_FIELD,
+    ClaimState,
+    dmarc_explicit_policy_projection_from_mapping,
+)
 from recon_tool.source_status import SourceStatus
 from recon_tool.validator import strip_control_chars
 
@@ -43,12 +49,19 @@ _Z80 = 1.2815515594457
 _SUPPRESS_MAX = 10
 _SMALL_N = 30
 
-COHORT_DISCLAIMER = (
+_COHORT_DISCLAIMER_V21 = (
     "Within this caller-supplied cohort only. Declarative rates describe named "
     "public claims; hideable identity entries are model support coverage, not "
     "prevalence. This is not an industry sample or census, and small cohorts "
     "carry wide intervals."
 )
+_COHORT_DISCLAIMER_V22 = (
+    "Within this caller-supplied cohort only. Declarative rates describe named "
+    "public claims; hideable identity and gateway entries are model support "
+    "coverage, not prevalence. This is not an industry sample or census, and "
+    "small cohorts carry wide intervals."
+)
+COHORT_DISCLAIMER = _COHORT_DISCLAIMER_V21
 
 # Declarative public claims and hideable model-support signals share one stable
 # compatibility block but have different metric semantics.
@@ -61,7 +74,18 @@ _PREVALENCE_SIGNALS = (
     "google_workspace",
 )
 
-_MODEL_SUPPORT_SIGNALS = frozenset({"m365_tenant", "google_workspace"})
+_MODEL_SUPPORT_SIGNALS_V21 = frozenset({"m365_tenant", "google_workspace"})
+_MODEL_SUPPORT_SIGNALS_V22 = frozenset({"email_gateway_present", "m365_tenant", "google_workspace"})
+_COHORT_SCHEMA_VERSIONS = frozenset({"2.1", "2.2"})
+
+
+def cohort_disclaimer(schema_version: str) -> str:
+    """Return the disclaimer paired with one supported cohort contract."""
+    if schema_version == "2.1":
+        return _COHORT_DISCLAIMER_V21
+    if schema_version == "2.2":
+        return _COHORT_DISCLAIMER_V22
+    raise ValueError(f"unsupported cohort schema version: {schema_version}")
 
 
 def wilson_interval(positives: int, n: int, z: float = _Z80) -> tuple[float, float]:
@@ -114,8 +138,14 @@ def _as_list(value: Any) -> list[Any]:
     return list(value) if isinstance(value, (list, tuple)) else []
 
 
+def _source_status(record: Mapping[str, Any]) -> SourceStatus:
+    raw = record.get("degraded_sources")
+    markers = raw if isinstance(raw, (str, list, tuple)) else ()
+    return SourceStatus.from_degraded_sources(markers)
+
+
 def _dns_resolved(record: Mapping[str, Any]) -> bool:
-    return not SourceStatus.from_degraded_sources(_as_list(record.get("degraded_sources"))).whole_dns_unavailable
+    return not _source_status(record).whole_dns_unavailable
 
 
 def _posterior_map(record: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
@@ -125,7 +155,12 @@ def _posterior_map(record: Mapping[str, Any]) -> dict[str, Mapping[str, Any]]:
     return {o["name"]: o for o in obs if isinstance(o, Mapping) and isinstance(o.get("name"), str)}
 
 
-def extract_signals(record: Mapping[str, Any]) -> dict[str, bool | None]:
+def extract_signals(
+    record: Mapping[str, Any],
+    *,
+    schema_version: str = "2.1",
+    dmarc_contract_scoped: bool = False,
+) -> dict[str, bool | None]:
     """Declarative observations and model support decisions.
 
     Declarative signals are observable when their collection channel resolved;
@@ -133,16 +168,78 @@ def extract_signals(record: Mapping[str, Any]) -> dict[str, bool | None]:
     entries are model support decisions only when a non-sparse node has fired
     evidence. Their nonfire is not an authoritative negative observation.
     """
-    status = SourceStatus.from_degraded_sources(_as_list(record.get("degraded_sources")))
+    status = _source_status(record)
     posteriors = _posterior_map(record)
     out: dict[str, bool | None] = {}
 
     dmarc = record.get("dmarc_policy")
     dmarc_available = status.channel_available("dmarc")
-    out["dmarc_reject"] = (dmarc == "reject") if dmarc_available else None
-    out["dmarc_enforcing"] = (dmarc in ("reject", "quarantine")) if dmarc_available else None
-    out["mta_sts_enforce"] = (record.get("mta_sts_mode") == "enforce") if status.channel_available("mta_sts") else None
-    out["email_gateway_present"] = (record.get("email_gateway") is not None) if status.channel_available("mx") else None
+    if schema_version not in _COHORT_SCHEMA_VERSIONS:
+        raise ValueError(f"unsupported cohort schema version: {schema_version}")
+    if schema_version == "2.1" and dmarc_contract_scoped:
+        raise ValueError("contract-scoped DMARC requires cohort schema 2.2")
+    if schema_version == "2.1":
+        out["dmarc_reject"] = (dmarc == "reject") if dmarc_available else None
+        out["dmarc_enforcing"] = (dmarc in ("reject", "quarantine")) if dmarc_available else None
+        out["mta_sts_enforce"] = (
+            (record.get("mta_sts_mode") == "enforce") if status.channel_available("mta_sts") else None
+        )
+        out["email_gateway_present"] = (
+            (record.get("email_gateway") is not None) if status.channel_available("mx") else None
+        )
+    elif not dmarc_available:
+        out["dmarc_reject"] = None
+        out["dmarc_enforcing"] = None
+    elif dmarc_contract_scoped:
+        claim_state = record.get(DMARC_REJECT_CLAIM_STATE_FIELD)
+        published_state = (
+            {
+                (ClaimState.SUPPORTED.value, "reject"): True,
+                (ClaimState.DISCONFIRMED.value, "quarantine"): False,
+                (ClaimState.DISCONFIRMED.value, "none"): False,
+            }.get((claim_state, dmarc))
+            if isinstance(claim_state, str) and isinstance(dmarc, str)
+            else None
+        )
+        effective_policy = record.get(DMARC_EFFECTIVE_POLICY_FIELD)
+        effective_state = (
+            effective_policy in {"reject", "quarantine"}
+            if effective_policy in {"none", "quarantine", "reject"}
+            else None
+        )
+        out["dmarc_reject"] = published_state
+        out["dmarc_enforcing"] = effective_state if published_state is not None else None
+    else:
+        # Stable serialized records omit the timestamp required for the strict
+        # contract. Bind their explicitly labeled atemporal view to raw evidence.
+        atemporal_state, effective_policy = dmarc_explicit_policy_projection_from_mapping(record)
+        published_state = (
+            {
+                (ClaimState.SUPPORTED, "reject"): True,
+                (ClaimState.DISCONFIRMED, "quarantine"): False,
+                (ClaimState.DISCONFIRMED, "none"): False,
+            }.get((atemporal_state, dmarc))
+            if isinstance(dmarc, str)
+            else None
+        )
+        out["dmarc_reject"] = published_state
+        out["dmarc_enforcing"] = (
+            effective_policy in {"reject", "quarantine"}
+            if published_state is not None and effective_policy in {"none", "quarantine", "reject"}
+            else None
+        )
+
+    if schema_version == "2.2":
+        mta_sts = record.get("mta_sts_mode")
+        out["mta_sts_enforce"] = (
+            mta_sts == "enforce"
+            if status.channel_available("mta_sts") and mta_sts in ("enforce", "testing", "none")
+            else None
+        )
+        gateway = record.get("email_gateway")
+        out["email_gateway_present"] = (
+            True if status.channel_available("mx") and isinstance(gateway, str) and bool(gateway) else None
+        )
 
     for signal, node in (("m365_tenant", "m365_tenant"), ("google_workspace", "google_workspace_tenant")):
         o = posteriors.get(node)
@@ -169,9 +266,22 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
     return f if math.isfinite(f) else default
 
 
-def _prevalence_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
+def _prevalence_block(
+    records: Sequence[Mapping[str, Any]],
+    *,
+    schema_version: str,
+    dmarc_contract_scoped: bool,
+) -> dict[str, Any]:
     n = len(records)
-    signal_maps = [extract_signals(r) for r in records]
+    signal_maps = [
+        extract_signals(
+            r,
+            schema_version=schema_version,
+            dmarc_contract_scoped=dmarc_contract_scoped,
+        )
+        for r in records
+    ]
+    model_support_signals = _MODEL_SUPPORT_SIGNALS_V21 if schema_version == "2.1" else _MODEL_SUPPORT_SIGNALS_V22
     block: dict[str, Any] = {}
     for sig in _PREVALENCE_SIGNALS:
         vals = [sm[sig] for sm in signal_maps]
@@ -179,7 +289,7 @@ def _prevalence_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
         positives = sum(1 for v in observable if v)
         obs_n = len(observable)
         support_coverage = round(positives / n, 4) if n else None
-        if sig in _MODEL_SUPPORT_SIGNALS:
+        if sig in model_support_signals:
             block[sig] = {
                 "positives": _suppressed(positives),
                 "observable_n": 0,
@@ -194,6 +304,12 @@ def _prevalence_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             }
             continue
         low, high = wilson_interval(positives, obs_n)
+        if schema_version == "2.1":
+            metric_kind = "authoritative_observed_rate"
+        elif sig in {"dmarc_reject", "dmarc_enforcing"}:
+            metric_kind = "contract_scoped_observed_rate" if dmarc_contract_scoped else "atemporal_explicit_policy_rate"
+        else:
+            metric_kind = "scoped_observed_rate"
         block[sig] = {
             "positives": _suppressed(positives),
             "observable_n": obs_n,
@@ -201,7 +317,7 @@ def _prevalence_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
             "observed_rate_interval_80": [round(low, 4), round(high, 4)] if obs_n else None,
             "lower_bound_over_cohort": round(positives / n, 4) if n else None,
             "observability_fraction": round(obs_n / n, 4) if n else None,
-            "metric_kind": "authoritative_observed_rate",
+            "metric_kind": metric_kind,
             "model_evidence_n": None,
             "support_coverage": support_coverage,
             "unresolved_share": round((n - obs_n) / n, 4) if n else None,
@@ -272,6 +388,9 @@ def summarize_cohort(
     records: Sequence[Mapping[str, Any]],
     label: str = "cohort",
     attempted: int | None = None,
+    *,
+    schema_version: str = "2.1",
+    dmarc_contract_scoped: bool = False,
 ) -> dict[str, Any]:
     """The aggregate object for one cohort. Aggregate-only, no domain names.
 
@@ -282,6 +401,10 @@ def summarize_cohort(
     is conservative rather than inflated.
     """
     n = len(records)
+    if schema_version not in _COHORT_SCHEMA_VERSIONS:
+        raise ValueError(f"unsupported cohort schema version: {schema_version}")
+    if schema_version == "2.1" and dmarc_contract_scoped:
+        raise ValueError("contract-scoped DMARC requires cohort schema 2.2")
     # Resolved can never exceed attempted; guard so resolution_rate stays <= 1.
     attempted = n if attempted is None else max(attempted, n)
     return {
@@ -289,7 +412,11 @@ def summarize_cohort(
         "n": n,
         "small_n_warning": n < _SMALL_N,
         "observability": _observability_block(records, attempted),
-        "prevalence": _prevalence_block(records),
+        "prevalence": _prevalence_block(
+            records,
+            schema_version=schema_version,
+            dmarc_contract_scoped=dmarc_contract_scoped,
+        ),
         "posterior_claims": _posterior_claims_block(records),
         "mix": {
             "provider": _mix_block(records, "provider"),
@@ -302,15 +429,24 @@ def build_summary_document(
     records: Sequence[Mapping[str, Any]],
     label: str = "cohort",
     attempted: int | None = None,
+    *,
+    schema_version: str = "2.1",
+    dmarc_contract_scoped: bool = False,
 ) -> dict[str, Any]:
     """The full single-cohort ``--summary`` document: the envelope (record type,
     schema version, disclaimer, suppression policy) plus the cohort's blocks."""
     return {
         "record_type": "cohort_summary",
-        "schema_version": "2.1",
-        "disclaimer": COHORT_DISCLAIMER,
+        "schema_version": schema_version,
+        "disclaimer": cohort_disclaimer(schema_version),
         "suppression_policy": f"counts 1..{_SUPPRESS_MAX} withheld; small-n warning below {_SMALL_N}",
-        **summarize_cohort(records, label, attempted),
+        **summarize_cohort(
+            records,
+            label,
+            attempted,
+            schema_version=schema_version,
+            dmarc_contract_scoped=dmarc_contract_scoped,
+        ),
     }
 
 
@@ -372,6 +508,7 @@ def render_cohort_summary(summary: Mapping[str, Any]) -> Panel:
     body.append(f"{_fmt_mix(mix.get('provider', {}))}\n")
     body.append("Cloud        ", style="dim")
     body.append(f"{_fmt_mix(mix.get('cloud', {}))}\n")
-    body.append(COHORT_DISCLAIMER, style="dim")
+    disclaimer = strip_control_chars(str(summary.get("disclaimer") or COHORT_DISCLAIMER))
+    body.append(disclaimer, style="dim")
 
     return Panel(body, title="Cohort summary", title_align="left", border_style="dim")
