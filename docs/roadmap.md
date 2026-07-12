@@ -527,6 +527,33 @@ validator. Do not rely on `format` as portable semantic validation, do not
 resolve external schema references from the network, and keep schema depth,
 size, and validation time bounded.
 
+### Gate native acceleration on product-shaped evidence
+
+Keep the default runtime and distribution pure Python under
+[ADR-0010](adr/0010-evidence-gated-native-acceleration.md). First complete the
+stable-v1 stage characterization above, then measure Python-side improvements
+to catalog loading, regex dispatch, repeated inference calculations, and any
+other observed local hotspot. Do not infer end-to-end value from a kernel or
+microbenchmark.
+
+An optional Rust extension may enter an isolated prototype only when a stable,
+deterministic, coarse-grained stage remains above 250 ms p95 on a representative
+warm fixture or at least 20 percent of warm end-to-end p95 after a Python
+optimization pass. These are conservative provisional governance floors, not
+product SLOs; the stable-v1 baseline must replace them with operation-specific
+budgets before a prototype. They exclude microhotspots, require Amdahl-relevant
+pressure, and demand enough improvement to repay native release maintenance.
+Promotion requires at least a 3 times stage-p95 improvement
+and also a 20 percent warm end-to-end p95 improvement, 25 percent sustained
+batch-throughput improvement, or 30 percent peak-allocation improvement. It
+also requires exact Python-reference parity, compiler-free installation on
+every advertised platform, native quality gates, a multi-ecosystem SBOM,
+reproducibility, provenance, and a visible Python fallback.
+
+Do not add Go without an independently valuable hosted or worker boundary. Do
+not add Mojo without a measured tensor, GPU, or accelerator kernel and a stable
+cross-platform release contract. Neither exists in the current product.
+
 ### Turn catalog quality into the detection-improvement loop
 
 The current catalog has 847 entries. Establish classified-surface and stale-rule
@@ -674,7 +701,7 @@ Green process gates are necessary but are not proof of product utility.
 
 ## Current External Basis
 
-Checked 2026-07-10 against primary sources:
+Checked 2026-07-11 against primary sources:
 
 - [MCP 2026-07-28 release candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
 - [MCP draft tools specification](https://modelcontextprotocol.io/specification/draft/server/tools)
@@ -685,6 +712,11 @@ Checked 2026-07-10 against primary sources:
 - [RFC 8460: TLSRPT](https://www.rfc-editor.org/info/rfc8460/)
 - [RFC 7672: SMTP security via DANE](https://www.rfc-editor.org/info/rfc7672/)
 - [Python asyncio development guidance](https://docs.python.org/3.14/library/asyncio-dev.html)
+- [Python free-threading guidance](https://docs.python.org/3/howto/free-threading-python.html)
+- [PyO3 free-threading guidance](https://pyo3.rs/main/free-threading)
+- [PyO3 ABI feature guidance](https://pyo3.rs/main/features)
+- [Maturin distribution guidance](https://www.maturin.rs/distribution.html)
+- [Mojo versioning and stability FAQ](https://docs.modular.com/mojo/faq)
 - [JSON Schema 2020-12 validation](https://json-schema.org/draft/2020-12/json-schema-validation)
 - [Manski on partial identification with missing data](https://doi.org/10.1016/j.ijar.2004.10.006)
 - [Zhang and Peixoto on statistically significant community structure](https://arxiv.org/abs/2006.14493)

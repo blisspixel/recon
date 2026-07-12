@@ -320,9 +320,14 @@ Risk: concurrency and brittle-benchmark risk
   asyncio debug mode and an explicit slow-callback threshold.
 - Record wall time, peak allocations, and blocked-loop observations. Treat
   profiler output as characterization, not a brittle CI timing assertion.
+- Record cold CLI startup and separate catalog loading, fingerprint matching,
+  inference, graph construction, serialization, and rendering before proposing
+  a language boundary.
 - Classify each resolver-reachable call as async I/O, bounded CPU, bounded
   local I/O, or justified offload.
 - Move only measured blocking I/O to `asyncio.to_thread` or a bounded executor.
+- Apply Python algorithm, caching, and allocation improvements before any
+  optional native prototype. Use the promotion gates in ADR-0010.
 - Validate canonical schemas with an independent Draft 2020-12 validator.
 - Reject external network resolution for schema references, reliance on
   `format` as semantic validation, and unbounded schema depth or validation
