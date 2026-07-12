@@ -109,7 +109,7 @@ The script enforces the pre-release checklist automatically. It runs:
 5. **CHANGELOG entry check**: requires a `## [X.Y.Z]` section to exist in
    `CHANGELOG.md`. Refuses otherwise.
 6. **Quality gate**: runs `ruff check`, `pyright`, and
-   `pytest --cov-branch --cov-fail-under=82` on the full test suite.
+   `pytest --cov-branch --cov-fail-under=90.2` on the full test suite.
    Refuses on any failure.
 7. **Confirmation prompt**: y/N, defaults to N. Abort here and nothing has
    changed.
@@ -136,7 +136,7 @@ quality gate passes before cutting an actual release.
 
 Triggered by any tag matching `v*` pushed to the repo. The workflow:
 
-1. **test**: installs deps, runs `pytest --cov-branch --cov-fail-under=82`, `ruff check`,
+1. **test**: installs deps, runs `pytest --cov-branch --cov-fail-under=90.2`, `ruff check`,
    exports locked runtime requirements, and audits those with `pip-audit`.
 2. **build**: `uv build` produces the sdist and wheel under `dist/`.
 3. **export-attestations**: exports the GitHub artifact-attestation bundles as

@@ -238,7 +238,12 @@ def _batch_load_domains(file: str, console: Any, *, announce_dupes: bool) -> lis
     return unique_domains
 
 
-def _batch_apply_fusion(info: Any) -> Any:
+def _batch_apply_fusion(
+    info: Any,
+    *,
+    network: Any,
+    priors_override: dict[str, float],
+) -> Any:
     """Bayesian fusion for batch results: ``posterior_observations`` + ``slug_confidences``.
 
     Pure post-processing over the already-resolved TenantInfo, no extra network
@@ -252,7 +257,11 @@ def _batch_apply_fusion(info: Any) -> Any:
     from recon_tool.fusion import compute_slug_posteriors
     from recon_tool.models import NodeConflict, NodeUnitCounterfactual, PosteriorObservation
 
-    result = infer_from_tenant_info(info)
+    result = infer_from_tenant_info(
+        info,
+        network=network,
+        priors_override=priors_override,
+    )
     return replace(
         info,
         slug_confidences=compute_slug_posteriors(collection_observable_evidence(info)),
@@ -643,6 +652,9 @@ async def _batch_process_one(
     markdown: bool,
     include_unclassified: bool,
     error_prefix: str,
+    fusion_network: Any | None = None,
+    fusion_priors_override: dict[str, float] | None = None,
+    fusion_configuration_error: str | None = None,
 ) -> object:
     """Resolve a single domain under the semaphore and shape its result.
 
@@ -675,7 +687,15 @@ async def _batch_process_one(
             await asyncio.sleep(0.1)
             info, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
             if fusion:
-                info = _batch_apply_fusion(info)
+                if fusion_configuration_error is not None:
+                    raise RuntimeError(fusion_configuration_error)
+                if fusion_network is None or fusion_priors_override is None:
+                    raise RuntimeError("Batch fusion configuration was not initialized")
+                info = _batch_apply_fusion(
+                    info,
+                    network=fusion_network,
+                    priors_override=fusion_priors_override,
+                )
             if batch_infos is not None:
                 batch_infos[info.queried_domain] = info
             return _batch_success_result(
@@ -763,6 +783,27 @@ async def batch(
 
     semaphore = asyncio.Semaphore(concurrency)
 
+    # The model and operator override are one coherent batch-scope snapshot.
+    # Loading them per domain repeats YAML and filesystem work, and a prior file
+    # edited during a run could otherwise make one batch internally inconsistent.
+    # Keep the snapshot local to this invocation rather than using a process-global
+    # cache, so separate CLI/MCP calls continue to observe configuration changes.
+    fusion_network: Any | None = None
+    fusion_priors_override: dict[str, float] | None = None
+    fusion_configuration_error: str | None = None
+    if fusion:
+        from recon_tool.bayesian import load_network, load_priors_override
+
+        try:
+            fusion_network = load_network()
+            fusion_priors_override = load_priors_override()
+        except Exception as exc:
+            # Preserve the pre-optimization per-domain error contract. Valid
+            # domains still resolve before fusion, then receive the same loader
+            # failure in their normal output shape; malformed domains remain
+            # validation errors and one configuration read still serves the run.
+            fusion_configuration_error = str(exc)
+
     # Batch-scope token clustering. Each successful resolution
     # stashes its TenantInfo here keyed by the *input* domain string,
     # so the post-processing pass can compute `shared_verification_tokens`
@@ -790,6 +831,9 @@ async def batch(
             markdown=markdown,
             include_unclassified=include_unclassified,
             error_prefix=_ERROR_PREFIX,
+            fusion_network=fusion_network,
+            fusion_priors_override=fusion_priors_override,
+            fusion_configuration_error=fusion_configuration_error,
         )
 
     # Gather all results concurrently, then output in input-file order.

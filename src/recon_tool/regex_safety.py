@@ -4,12 +4,47 @@ from __future__ import annotations
 
 import logging
 import re
+from functools import lru_cache
 
 logger = logging.getLogger("recon")
 
 # Hard cap on pattern length. This is not sufficient by itself; structural
 # checks below reject the backtracking shapes accepted by Python's regex engine.
 _MAX_PATTERN_LENGTH = 500
+
+# Keep compiled catalog expressions outside ``re``'s implementation-private
+# cache. The shipped catalog plus the bounded ephemeral allowance fit within
+# this ceiling, while custom catalogs cannot grow the long-lived MCP process
+# without limit. Each retained key is also bounded by ``_MAX_PATTERN_LENGTH``.
+_MAX_COMPILED_REGEX_CACHE_SIZE = 2048
+
+
+@lru_cache(maxsize=_MAX_COMPILED_REGEX_CACHE_SIZE)
+def _compile_regex_cached(pattern: str, flags: int) -> re.Pattern[str]:
+    """Compile one bounded expression for immutable cross-call reuse."""
+    return re.compile(pattern, flags)
+
+
+def compile_regex(pattern: str, flags: int | re.RegexFlag = 0) -> re.Pattern[str] | None:
+    """Return a cached compiled expression, or ``None`` for invalid input.
+
+    Structural ReDoS admission remains the responsibility of
+    :func:`validate_regex`. Matchers use this helper defensively because their
+    public or test-facing pattern collections can still contain malformed
+    objects. Oversized values are rejected before they can become cache keys.
+    """
+    if not pattern or len(pattern) > _MAX_PATTERN_LENGTH:
+        return None
+    try:
+        return _compile_regex_cached(pattern, int(flags))
+    except (OverflowError, ValueError, re.error):
+        return None
+
+
+def clear_compiled_regex_cache() -> None:
+    """Drop every compiled expression after a catalog generation changes."""
+    _compile_regex_cached.cache_clear()
+
 
 _REDOS_RE = re.compile(
     r"\([^)]*[+*][^)]*\)[+*{]"  # (group-with-quantifier) then +, *, or {n}
@@ -121,7 +156,7 @@ def validate_regex(pattern: str, source: str) -> bool:
         )
         return False
     try:
-        re.compile(pattern)
+        _compile_regex_cached(pattern, 0)
     except (OverflowError, re.error) as exc:
         logger.warning("Invalid regex %r in %s: %s - skipped", pattern, source, exc)
         return False

@@ -160,9 +160,13 @@ def _run_quality_gate() -> None:
                 "run",
                 "pytest",
                 "tests/",
+                "-n",
+                "auto",
+                "--maxprocesses=4",
+                "--dist=loadfile",
                 "--cov=src/recon_tool",
                 "--cov-branch",
-                "--cov-fail-under=82",
+                "--cov-fail-under=90.2",
                 "-q",
             ],
         ),
@@ -242,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
         _check_changelog_has_entry(new_version)
         print(f"  ok  found section ## [{new_version}]")
 
-        print("->Running quality gate (ruff + pyright + pytest --cov-branch --cov-fail-under=82)...")
+        print("->Running quality gate (ruff + pyright + pytest --cov-branch --cov-fail-under=90.2)...")
         _run_quality_gate()
 
         if not _prompt_confirm(f"Proceed with version bump to {new_version}?"):

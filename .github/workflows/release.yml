@@ -84,7 +84,7 @@ jobs:
         run: uv run pyright src/recon_tool/ tests/
 
       - name: Run tests
-        run: uv run pytest tests/ -q --cov=src/recon_tool --cov-branch --cov-fail-under=82
+        run: uv run pytest tests/ -q -n auto --maxprocesses=4 --dist=loadfile --cov=src/recon_tool --cov-branch --cov-fail-under=90.2
 
       - name: Lint
         run: uv run ruff check src/recon_tool/

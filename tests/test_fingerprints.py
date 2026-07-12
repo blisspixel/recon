@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pytest
 
 from recon_tool.fingerprints import (
@@ -16,6 +18,12 @@ from recon_tool.fingerprints import (
     load_fingerprints,
     match_txt,
     match_txt_all,
+)
+from recon_tool.regex_safety import (
+    _MAX_COMPILED_REGEX_CACHE_SIZE,
+    _compile_regex_cached,
+    clear_compiled_regex_cache,
+    compile_regex,
 )
 
 
@@ -34,6 +42,37 @@ class TestRegexValidation:
 
     def test_normal_length_pattern_accepted(self):
         assert _validate_regex("a" * 100, "test") is True
+
+
+class TestCompiledRegexCache:
+    def test_cache_is_case_aware_and_reuses_compiled_objects(self) -> None:
+        clear_compiled_regex_cache()
+        try:
+            plain = compile_regex("^mixed-case$")
+            insensitive = compile_regex("^mixed-case$", re.IGNORECASE)
+
+            assert plain is not None
+            assert insensitive is not None
+            assert plain.search("MIXED-CASE") is None
+            assert insensitive.search("MIXED-CASE") is not None
+            assert compile_regex("^mixed-case$", re.IGNORECASE) is insensitive
+        finally:
+            clear_compiled_regex_cache()
+
+    def test_cache_rejects_invalid_inputs_and_stays_strictly_bounded(self) -> None:
+        clear_compiled_regex_cache()
+        try:
+            assert compile_regex("[invalid") is None
+            assert compile_regex("x" * 501) is None
+            assert compile_regex("valid-pattern", re.LOCALE) is None
+            for index in range(_MAX_COMPILED_REGEX_CACHE_SIZE + 17):
+                assert compile_regex(rf"^cache-{index}$") is not None
+
+            cache_info = _compile_regex_cached.cache_info()
+            assert cache_info.maxsize == _MAX_COMPILED_REGEX_CACHE_SIZE
+            assert cache_info.currsize == _MAX_COMPILED_REGEX_CACHE_SIZE
+        finally:
+            clear_compiled_regex_cache()
 
 
 class TestFingerprintValidation:
@@ -243,6 +282,21 @@ class TestMatchTxt:
         result = match_txt_all("crowdstrike" + ("a" * 5000), patterns)
 
         assert result == ()
+
+    @pytest.mark.parametrize(
+        "value",
+        [
+            "some-random-txt-record",
+            "MS=ms12345678",
+            "crowdstrike-falcon-site-verification=abc123",
+            "OPENAI-DOMAIN-VERIFICATION=ABC123",
+        ],
+    )
+    def test_compiled_matcher_equals_reference_regex_dispatch(self, value: str) -> None:
+        patterns = get_txt_patterns()
+        expected = tuple(det for det in patterns if re.search(det.pattern, value, re.IGNORECASE))
+
+        assert match_txt_all(value, patterns) == expected
 
 
 # ── Relationship metadata ──────────────────────────────────────────────

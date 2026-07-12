@@ -228,22 +228,17 @@ async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]]
     return info, list(results)
 
 
-async def resolve_single_for_tool(domain: str, request_id: str) -> TenantInfo:
-    """Resolve a domain for a structured (dict-returning) posture tool.
-
-    Centralizes the validate / cache / rate-limit / resolve flow the posture
-    tools share, raising ToolError on every failure path (invalid domain, rate
-    limit, no data, internal error). FastMCP turns that into a tool result with
-    isError=true, the spec-correct category for execution and input-validation
-    errors, so a consuming model can self-correct rather than parse an
-    error-shaped success payload.
-    """
+def validate_domain_for_tool(domain: str, request_id: str) -> str:
+    """Validate one structured-tool domain and preserve its error contract."""
     try:
-        validated = validate_domain(domain)
+        return validate_domain(domain)
     except ValueError as exc:
         log_structured(logging.WARNING, "validation_failed", request_id=request_id, domain=domain, error=str(exc))
         raise ToolError(str(exc)) from exc
 
+
+async def _resolve_validated_domain_for_tool(domain: str, validated: str, request_id: str) -> TenantInfo:
+    """Resolve one already validated domain for a structured tool."""
     cached = cache_get(validated)
     if cached is not None:
         log_structured(logging.INFO, "cache_hit", request_id=request_id, domain=validated)
@@ -267,3 +262,31 @@ async def resolve_single_for_tool(domain: str, request_id: str) -> TenantInfo:
 
     cache_set(validated, info, results)
     return info
+
+
+async def resolve_single_for_tool(domain: str, request_id: str) -> TenantInfo:
+    """Resolve a domain for a structured (dict-returning) posture tool.
+
+    Centralizes the validate / cache / rate-limit / resolve flow the posture
+    tools share, raising ToolError on every failure path (invalid domain, rate
+    limit, no data, internal error). FastMCP turns that into a tool result with
+    isError=true, the spec-correct category for execution and input-validation
+    errors, so a consuming model can self-correct rather than parse an
+    error-shaped success payload.
+    """
+    validated = validate_domain_for_tool(domain, request_id)
+    return await _resolve_validated_domain_for_tool(domain, validated, request_id)
+
+
+async def resolve_domains_for_tool(domains: tuple[str, ...], request_id: str) -> tuple[TenantInfo, ...]:
+    """Validate every domain before resolving any member of a tool request.
+
+    Multi-domain tools must reject malformed input without issuing a partial
+    lookup for an earlier valid argument. Resolution remains sequential after
+    validation so cache, rate-limit, and failure ordering stay unchanged.
+    """
+    validated_domains = tuple(validate_domain_for_tool(domain, request_id) for domain in domains)
+    resolved: list[TenantInfo] = []
+    for domain, validated in zip(domains, validated_domains, strict=True):
+        resolved.append(await _resolve_validated_domain_for_tool(domain, validated, request_id))
+    return tuple(resolved)

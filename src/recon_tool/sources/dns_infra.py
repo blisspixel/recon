@@ -29,6 +29,7 @@ from recon_tool.fingerprints import (
     get_subdomain_txt_patterns,
 )
 from recon_tool.models import EvidenceRecord
+from recon_tool.regex_safety import compile_regex
 from recon_tool.sources import dns_base
 from recon_tool.sources.cert_providers import CertIntelProvider, CertSpotterProvider, CrtshProvider
 from recon_tool.sources.dns_tables import (
@@ -268,14 +269,14 @@ async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
     # (consistent with MX / NS / CAA / dmarc_rua / cname_target , see
     # filter_shadowed_matches).
     #
-    # cname patterns are regex-validated at load time (the loader runs
-    # them through re.compile to catch ReDoS-shaped expressions), and
+    # cname patterns are regex-validated at load time (the loader compiles
+    # them to catch ReDoS-shaped expressions), and
     # nine catalog entries today carry real regex syntax (escaped dots,
     # ``$`` anchors, alternation , see slugs langsmith, fastly, flyio,
     # railway, splunk, cyberark, beyond-identity, workspace-one). The
     # original substring matcher (``det.pattern in cl``) silently
     # never-fired on those nine because no real hostname contains
-    # backslashes or ``$``. Switching to ``re.search`` lights them up
+    # backslashes or ``$``. Regex search lights them up
     # while preserving behavior for the 88 plain-string patterns
     # (regex without metacharacters is equivalent to substring search,
     # modulo ``.`` matching any single character, which on hostname
@@ -291,15 +292,11 @@ async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # cname is still used as raw_value below, only the match is bounded.
             cl = cname.lower()[:_MAX_CNAME_MATCH_LEN]
             for det in cname_patterns_sorted:
-                try:
-                    if re.search(det.pattern, cl, re.IGNORECASE):
-                        ctx.add(det.name, det.slug, source_type="CNAME", raw_value=cname)
-                        ctx.record_fp_match(det.slug, "cname", det.pattern)
-                        break
-                except re.error:
-                    # Defensive: patterns were validated on load, but
-                    # guard against edge cases the loader missed.
-                    continue
+                compiled = compile_regex(det.pattern, re.IGNORECASE)
+                if compiled is not None and compiled.search(cl):
+                    ctx.add(det.name, det.slug, source_type="CNAME", raw_value=cname)
+                    ctx.record_fp_match(det.slug, "cname", det.pattern)
+                    break
 
 
 async def detect_domain_connect(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -333,7 +330,6 @@ async def detect_hosting_from_a_record(ctx: dns_base.DetectionCtx, domain: str) 
     without adding a service. Never raises.
     """
     import ipaddress
-    import re
 
     a_records = await dns_base.safe_resolve(
         domain,
@@ -399,7 +395,8 @@ async def detect_hosting_from_a_record(ctx: dns_base.DetectionCtx, domain: str) 
         # every Cloud row grew a free-form region parenthetical.
         region_note = ""
         if region_regex:
-            match = re.search(region_regex, ptr_lower)
+            compiled = compile_regex(region_regex)
+            match = compiled.search(ptr_lower) if compiled is not None else None
             if match:
                 region_note = f" ({match.group(0)})"
         ctx.add(
@@ -458,13 +455,11 @@ async def detect_subdomain_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # user-regex DNS path that previously lacked the length bound.
             if len(txt) > _MAX_SUBDOMAIN_TXT_MATCH_LEN:
                 continue
-            try:
-                if re.search(regex, txt, re.IGNORECASE):
-                    ctx.add(name, slug, source_type="SUBDOMAIN_TXT", raw_value=txt)
-                    ctx.record_fp_match(slug, "subdomain_txt", original_pattern)
-                    break
-            except re.error:
-                continue
+            compiled = compile_regex(regex, re.IGNORECASE)
+            if compiled is not None and compiled.search(txt):
+                ctx.add(name, slug, source_type="SUBDOMAIN_TXT", raw_value=txt)
+                ctx.record_fp_match(slug, "subdomain_txt", original_pattern)
+                break
 
 
 async def detect_caa(ctx: dns_base.DetectionCtx, domain: str) -> None:

@@ -1,13 +1,14 @@
 # Performance
 
-Status: historical characterization, not a current service-level objective
-Review date: 2026-07-10
+Status: measured local-compute characterization, not a service-level objective
+Review date: 2026-07-12
 
-recon is a passive, concurrent DNS + HTTP-endpoint client. Latency is
-dominated by two variables: CT-log query time (crt.sh / CertSpotter,
-chronically flaky) and the slowest of the identity-endpoint queries
-(OIDC discovery, GetUserRealm, Google Identity). Tuning is mostly
-about timeout caps, not algorithmic work.
+recon is a passive, concurrent DNS and HTTP-endpoint client. A default lookup
+is usually dominated by CT provider time and the slowest identity-discovery
+request. Batch work, cold CLI startup, fingerprint sweeps, inference, and CT
+correlation also expose bounded local costs. The optimization rule is therefore
+to separate network wait from local work, improve measured Python paths first,
+and preserve exact evidence and failure semantics.
 
 ## Historical measured numbers
 
@@ -27,9 +28,9 @@ The historical observation was that a warm CT cache was roughly three times
 faster. That multiplier has not been revalidated against the current provider
 rotation and 30-day cache policy.
 
-## Current local-compute characterization
+## Pre-optimization local-compute characterization
 
-The table below is a July 11, 2026 CPU-only characterization from the working
+The table below is a July 11, 2026 CPU-only reference characterization from the working
 tree based on commit `747f359` on Windows 11, Python 3.14.4, an AMD Ryzen 9
 5950X, and 64 GiB RAM.
 Each current median is from nine repetitions after one warm-up, except that the
@@ -102,6 +103,112 @@ reproducible stage benchmark already required by the roadmap, followed by
 small Python algorithm and cache experiments. The binding decision and
 promotion thresholds are in
 [ADR-0010](adr/0010-evidence-gated-native-acceleration.md).
+
+## July 12, 2026 optimization checkpoint
+
+The v2.5.1 work applies four bounded changes without changing the public CLI,
+JSON, MCP, cache, timeout, or evidence contracts:
+
+- Repeated fingerprint regex searches use a 2,048-entry cache of compiled
+  standard-library patterns. Pattern length remains capped at 500 characters,
+  flags are part of the cache key, invalid expressions remain non-matches, and
+  catalog reload or ephemeral-catalog mutation clears the cache.
+- A fusion-enabled batch loads one Bayesian network and one prior-override
+  snapshot, then reuses those immutable batch-local objects for every domain.
+  There is no process-global model cache, so a later invocation still observes
+  configuration changes.
+- CT partition stability reuses the already computed seed-1729 primary
+  partition. The same eight seeds and the same pairwise adjusted Rand index are
+  retained, but seed 1729 is no longer evaluated twice.
+- Full quality-gate tests run in at most four file-grouped worker processes.
+  Test files stay intact within a worker, pytest-cov combines worker coverage,
+  and focused developer tests remain serial unless the developer opts in.
+
+Diagnostic measurements on the same Windows workstation and CPython 3.14.4:
+
+| Checked operation | Before | After | Observed change |
+|---|---:|---:|---:|
+| TXT matching, 1,000 values x 298 rules | 348 ms median | 111 ms median | 3.14 times faster |
+| Complete batch fusion, 25 synthetic sparse records | 501 ms median | 307 ms median | 38.8 percent lower stage time |
+| Full local suite | 4,502 pass in 330.53 s, serial without coverage | 4,522 pass in 86.93 s, four workers with branch coverage | 73.7 percent lower pytest wall time |
+
+The matcher after-value is from five repetitions after one warm-up in the
+checked-in harness. The batch-fusion comparison used five repetitions after a
+warm-up and includes network parsing, prior lookup, inference, slug scoring,
+and result adaptation in both paths. The suite comparison also includes 20 new
+tests and about 32.5 seconds of real retry sleeps and accidental live lookups
+removed from the tests, so it measures the combined quality-gate improvement,
+not xdist in isolation. These are local diagnostics, not portable SLOs.
+
+The compiled matcher preserves exact differential output for representative
+built-in records and catalog lifecycle tests. The batch tests assert one model
+and prior load per invocation. Graph tests assert the exact seed set and
+unchanged stability output. The full branch-aware project result remains above
+the blocking 90.2 percent baseline ratchet.
+
+## Python version policy
+
+The package continues to require Python 3.11 or newer. Python 3.14 is the
+preferred development and characterization runtime because users receive its
+interpreter, import, and asyncio improvements without a compatibility break.
+CI still runs the full functional and coverage contract on Python 3.11 through
+3.14 across Windows, macOS, and Linux, with a non-blocking 3.14t dependency
+probe.
+
+Reviewed July 12, 2026 against current official guidance:
+
+- [Python 3.14.6 release documentation](https://docs.python.org/3.14/whatsnew/3.14.html)
+  documents the current stable 3.14 line, asyncio and import optimizations,
+  subinterpreters, and the experimental JIT. These capabilities must still be
+  measured on recon-shaped work.
+- [Python free-threading guidance](https://docs.python.org/3/howto/free-threading-python.html)
+  requires intentionally parallel code and documents single-thread and memory
+  tradeoffs. recon's one-event-loop detector state does not gain an automatic
+  speedup.
+- [InterpreterPoolExecutor](https://docs.python.org/3.14/library/concurrent.futures.html#interpreterpoolexecutor)
+  isolates interpreter state and serializes call data. A local 100-inference
+  experiment reached 2.18 times stage speedup, below ADR-0010's provisional
+  three-times promotion floor and without material end-to-end evidence.
+- [asyncio eager task execution](https://docs.python.org/3.14/library/asyncio-task.html#eager-task-factory)
+  changes task-order semantics and mainly helps coroutines that complete
+  synchronously. recon's normal source tasks perform real I/O, so a global
+  eager-task factory is not justified.
+- [Python's regular-expression API](https://docs.python.org/3.14/library/re.html#re.compile)
+  provides compiled pattern objects for repeated operations. A bounded cache
+  delivered the measured matcher gain without a new engine or dependency.
+- [pytest-xdist distribution modes](https://pytest-xdist.readthedocs.io/en/stable/distribution.html)
+  and [pytest-cov worker support](https://pytest-cov.readthedocs.io/en/latest/xdist.html)
+  support file-grouped parallel execution with combined coverage.
+
+The project does not enable a global eager task factory, create multiple event
+loops, require free-threading, depend on the experimental JIT, or dispatch
+ordinary batch work through subinterpreters. A Python 3.14 fast path will be
+added only when runtime capability detection, an exact older-version fallback,
+and a product-shaped benchmark all justify it.
+
+## Ranked next optimization work
+
+1. Generate a deterministic built-in catalog artifact. Keep the split YAML as
+   the reviewed source, generate one packaged runtime representation, and make
+   CI fail on drift. Proceed only with semantic differential equality,
+   reproducible wheel bytes, and at least a five-times cold-load improvement on
+   the current Python 3.14 patch.
+2. Reuse one SSRF-safe HTTP connection pool across batch domains. Preserve
+   request-specific timeouts, retry and cancellation behavior, per-request DNS
+   rebinding checks, CT provider policy, and degraded-source reporting. Promote
+   only after a synthetic warm-batch benchmark shows a material connection or
+   throughput gain with no failure-rate regression.
+3. Bound every batch-wide data structure before raising concurrency. Generalize
+   the rolling scheduler beyond NDJSON, avoid constructing discarded per-domain
+   renderings in summary mode, and replace pairwise ecosystem overlap plus
+   unbounded peer materialization with an indexed, capped design that reports
+   omitted counts. Characterize 100, 1,000, and 10,000 synthetic domains for
+   pending tasks, peak allocation, output parity, and dense-correlation tails.
+
+Rust remains a possible future implementation detail only if one stable,
+coarse capability still clears ADR-0010 after these Python changes. Go still
+has no independent service boundary, and Mojo still has no accelerator kernel
+to own.
 
 ## Current runtime and interop constraints
 
