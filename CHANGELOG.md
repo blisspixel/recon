@@ -26,11 +26,11 @@ Tool surface changes: no CLI command, flag, JSON, MCP, cache, or import changes.
   by flags, and is cleared on catalog reload or session-catalog mutation.
   Exact differential output and existing ReDoS admission controls are
   preserved. The checked 1,000-value by 298-rule Python 3.14.4 fixture fell
-  from a 348 ms historical median to 111 ms in the post-change run.
+  from a 348 ms historical median to 115 ms at clean commit `47c5494`.
 - Loaded the Bayesian network and prior override once per fusion-enabled batch
   and reused one coherent invocation-local snapshot. A 25-record synthetic
-  fusion fixture fell from a 501 ms median to 307 ms without introducing a
-  process-global model cache or changing output.
+  fusion fixture fell from an 864 ms repeated-setup reference to 355 ms without
+  introducing a process-global model cache or changing output.
 - Reused the primary seed-1729 Louvain partition in the existing eight-seed
   CT stability calculation. The seed set, pairwise adjusted Rand statistic,
   deterministic ordering, and graph output remain unchanged while one
@@ -40,7 +40,7 @@ Tool surface changes: no CLI command, flag, JSON, MCP, cache, or import changes.
   remains intact, and pytest-cov combines worker coverage. The blocking project
   floor is ratcheted from 82 percent to 90.2 percent, just below the 90.22
   percent minimum observed across the prior complete matrix.
-  The checked local suite completed 4,522 tests in 86.93 seconds with coverage,
+  The checked local suite completed 4,522 tests in 88.83 seconds with coverage,
   compared with 4,502 tests in 330.53 seconds in the earlier serial no-coverage
   reference. This is a local characterization, not a CI timing SLO.
 - Documented the Python compatibility and optimization policy. Python 3.14 is

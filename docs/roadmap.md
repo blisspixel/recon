@@ -550,13 +550,13 @@ microbenchmark.
 
 The first Python optimization pass is complete in v2.5.1. A bounded compiled
 regex cache reduced the checked 1,000-value by 298-rule stage from 348 ms to
-111 ms while preserving exact matches and catalog lifecycle behavior. One
+115 ms while preserving exact matches and catalog lifecycle behavior. One
 batch-local Bayesian configuration snapshot reduced the checked 25-record
-fusion stage from 501 ms to 307 ms without a process-global cache. CT stability
+fusion stage from 864 ms to 355 ms without a process-global cache. CT stability
 reuses its primary partition instead of recomputing one of the same eight
 seeds. Hermetic retry and resolution tests plus file-grouped test workers cut
 the measured full-suite wall time from 330.53 seconds serial without coverage
-to 86.93 seconds with branch coverage. These are dated local diagnostics, not
+to 88.83 seconds with branch coverage. These are dated local diagnostics, not
 product SLOs; [performance.md](performance.md) records the fixtures and limits.
 
 The next optimization order is evidence-gated:

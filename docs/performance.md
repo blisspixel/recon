@@ -124,13 +124,15 @@ JSON, MCP, cache, timeout, or evidence contracts:
   Test files stay intact within a worker, pytest-cov combines worker coverage,
   and focused developer tests remain serial unless the developer opts in.
 
-Diagnostic measurements on the same Windows workstation and CPython 3.14.4:
+Diagnostic measurements on the same Windows workstation and CPython 3.14.4.
+The stage harness and full local gate both ran from clean implementation commit
+`47c5494`:
 
 | Checked operation | Before | After | Observed change |
 |---|---:|---:|---:|
-| TXT matching, 1,000 values x 298 rules | 348 ms median | 111 ms median | 3.14 times faster |
-| Complete batch fusion, 25 synthetic sparse records | 501 ms median | 307 ms median | 38.8 percent lower stage time |
-| Full local suite | 4,502 pass in 330.53 s, serial without coverage | 4,522 pass in 86.93 s, four workers with branch coverage | 73.7 percent lower pytest wall time |
+| TXT matching, 1,000 values x 298 rules | 348 ms median | 115 ms median | 3.02 times faster |
+| Complete batch fusion, 25 synthetic sparse records | 864 ms median | 355 ms median | 58.9 percent lower stage time |
+| Full local suite | 4,502 pass in 330.53 s, serial without coverage | 4,522 pass in 88.83 s, four workers with branch coverage | 73.1 percent lower pytest wall time |
 
 The matcher after-value is from five repetitions after one warm-up in the
 checked-in harness. The batch-fusion comparison used five repetitions after a
