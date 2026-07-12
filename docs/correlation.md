@@ -1,6 +1,6 @@
 # Correlation model
 
-Current for recon v2.3.9. Reviewed 2026-07-11.
+Current for recon v2.4.0. Reviewed 2026-07-11.
 
 This document separates three things that must not be conflated:
 
