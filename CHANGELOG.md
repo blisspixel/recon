@@ -14,6 +14,47 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Tool Surface Changes
+
+Tool surface changes: added flags `--summary-schema` on `recon batch`.
+
+### Added
+
+- Added the first bounded internal claim contract for the exact observation
+  that a fresh valid apex DMARC record declares `p=reject`. The contract keeps
+  construction, collection, time, and four-state claim semantics separate;
+  carries minimal positive and explicit-disconfirming dependency-unit
+  certificates; recomputes monotone closure after canonical ledger union; and
+  fails closed rather than truncating proof antichains. Raw evidence must match
+  the scalar policy before it can sign a certificate. Empty, invalid,
+  unavailable, stale, and lineage-incomplete observations remain unresolved.
+  Opt-in cohort schema 2.2 consumes the contract through two transient internal
+  projections, claim state and raw-bound effective policy, that are never added
+  to tenant JSON, cache, MCP, or package output.
+- Added `--summary-schema 2.2` to `recon batch --summary` and
+  `--schema-version 2.2` to the standalone aggregate reducer. Both retain 2.1 as
+  the default so existing cohort consumers keep the released shape and
+  denominator semantics.
+
+### Changed
+
+- Updated DMARC parsing for RFC 9989: ASCII whitespace around `=` and
+  case-insensitive tag names are accepted while `DMARC1` remains case-sensitive;
+  a missing or invalid `p`, `sp`, or `np` follows the valid-`rua` effective-none
+  fallback; and invalid subdomain-policy tags no longer retain an enforcing
+  policy. Fallback records retain DMARC service and raw evidence while the stable
+  `dmarc_policy` field stays null rather than fabricating an explicit `p=none`.
+  Reporting-URI vendor attribution now parses syntax-checked `mailto` URIs and
+  requires an exact or label-boundary match against a valid DNS domain, closing
+  malformed-tail and substring false positives. Historic `pct` parsing remains
+  a documented compatibility extension.
+- Added opt-in `cohort_summary` schema 2.2. Its in-core DMARC rates use the
+  fresh, raw-evidence-bound contract; the downstream sidecar labels its
+  timestamp-free compatibility view `atemporal_explicit_policy_rate`. Unknown
+  DMARC and MTA-STS values no longer enter denominators as negative observations,
+  and gateway detection is reported as model support coverage. Schema 2.1
+  remains the default and unchanged for compatibility.
+
 ## [2.4.0] - 2026-07-11
 
 ### Tool Surface Changes

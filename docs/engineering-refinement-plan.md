@@ -54,7 +54,8 @@ child-product inference corrected in v2.4.0; provider summaries now share
 one evidence-aware derivation across output surfaces; Markdown service labels
 now cross one escaped output boundary and use mutually exclusive provider
 groups; confidence scoring now has a dedicated module with distinct-source,
-canonical-claim aggregation and winning-claim provenance
+canonical-claim aggregation and winning-claim provenance; the first bounded
+internal claim contract is implemented for exact apex DMARC `p=reject`
 Dependencies: none
 Risk: high product-trust risk, high compatibility sensitivity
 
@@ -75,6 +76,11 @@ Risk: high product-trust risk, high compatibility sensitivity
    robustness solver. Include positive and authoritative-negative alternatives,
    unavailable and observed-empty opportunities, dependency units, four-state
    output, time semantics, and renderer obligations.
+   Completed after v2.4.0 as `dns.dmarc.valid_policy_is_reject.v1`; empty and
+   invalid DNS observations remain unresolved because the current adapter does
+   not retain authority or authenticated-denial provenance. Opt-in in-core
+   schema 2.2 consumes transient claim-state and effective-policy projections;
+   schema 2.1 remains the default and tenant JSON remains unchanged.
 6. Draft a provenance-envelope ADR before changing `EvidenceRecord` or public
    schemas. The ADR must define source family, record owner, observation time,
    scope, and freshness semantics, plus migration and cache behavior.
@@ -98,9 +104,11 @@ Risk: high product-trust risk, high compatibility sensitivity
   presence.
 - Unknown sovereignty metadata remains unknown.
 - Public-evidence values are not described as overall security scores.
-- The first claim contract passes positive, authoritative-negative, conflict,
-  unavailable, stale, and duplicate-derivation fixtures; its certificate
-  antichains map every derivation to canonical dependency units.
+- The first claim contract passes positive, explicit-disconfirming, conflict,
+  unavailable, empty, invalid, stale, time-unknown, duplicate-derivation,
+  cross-view conjunction, exhaustive-oracle, and fail-closed bound fixtures;
+  its certificate antichains map every derivation to canonical dependency
+  units.
 - Stable JSON remains compatible unless an additive change completes the full
   schema-lock process.
 - Full local CI passes with no coverage regression.
@@ -451,8 +459,8 @@ tighter file-size ratchets. Consider `merger.py` only after the interface splits
 1. Treat evidence-semantic corrections and the time-bound MCP v2 matrix as two
    independent Now streams. Keep one atomic implementation item in progress at
    a time, but do not make either stream wait on a false technical dependency.
-   Complete the first machine-enforced claim contract before benchmark
-   enrollment.
+   The first machine-enforced claim contract is complete. Freeze its unit and
+   label boundaries before benchmark enrollment.
 2. Run the stable-v1 resolver, allocation, CT-value, and schema
    characterization from Track 5.
 3. Complete the product-quality scorecard and ablation using that artifact.

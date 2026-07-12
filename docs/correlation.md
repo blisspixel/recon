@@ -23,11 +23,14 @@ one committed model assign?" It is:
 > planting, dependence, and parameter uncertainty are made explicit?
 
 That question fits recon's product boundary. It rewards provenance, supports
-abstention, and turns adversarial ambiguity into an inspectable result. The
-claim contract, certificate algebra, and robustness envelopes described in
-section 5 are not shipped. The claim contract is the prerequisite; Boolean
-robustness comes before graded score bounds. Any operator surface must earn its
-place through the roadmap's measured ablation.
+abstention, and turns adversarial ambiguity into an inspectable result. One
+bounded claim contract and its minimal-certificate algebra are now implemented
+internally for exact apex DMARC `p=reject`; see
+[claim-contracts.md](claim-contracts.md). No public dossier, general registry,
+robustness envelope, or graded bound is shipped. The first contract remains the
+prerequisite for the measured product baseline; Boolean robustness comes before
+graded score bounds. Any operator surface must earn its place through the
+roadmap's measured ablation.
 
 ## 1. Scope and epistemic contract
 
@@ -851,13 +854,24 @@ preconditions, dependency groups, freshness rules, renderer surfaces, and
 regression fixtures. That registry is the deterministic foundation that the
 score envelope and any later probabilistic model must consume.
 
+The first bounded implementation now exists internally as
+`dns.dmarc.valid_policy_is_reject.v1`; its exact contract, proof obligations,
+limits, and primary standards are recorded in
+[claim-contracts.md](claim-contracts.md). It uses fresh valid `p=reject` as
+positive support and fresh valid `p=none` or `p=quarantine` as explicit
+disconfirmation. Empty and invalid observations remain unresolved because the
+current resolver does not retain DNS authority sections or DNSSEC denial
+validation. That choice is stricter than reconstructing a negative certificate
+from an empty list after collection.
+
 The bounded antichain prototype is exact only for monotone derivations over
 explicit atoms, including explicit authoritative-negative atoms maintained in a
 separate family. Negation as failure, winner selection, nonmonotone thresholds,
 thresholds over negative contributions, and stale-time invalidation require
 explicit opportunity, value, validity, and nogood atoms or must remain outside
-the first evaluator. At-least-k rules over monotone positive atoms remain within
-the algebra.
+the first evaluator. The implemented evaluator further requires an acyclic Horn
+program and computes deterministic topological closure. At-least-k rules over
+monotone positive atoms remain within the algebra when encoded without cycles.
 
 The same registry can define a narrow implication order over canonical claim
 classes. Logical implication is first a preorder; mutually entailing claims
@@ -1443,26 +1457,36 @@ threshold, and stop rule. Report them in separate result blocks.
 
 ### 9.1 First: establish machine-enforced claim contracts
 
-Value: foundational. Dependency: none. Risk: building an ontology broader than
-the product needs.
+Status: first bounded internal contract complete after v2.4.0.
 
-Start with one material deterministic claim family and a bounded internal
-claim-dossier model. Define the construction, collection, claim-state, and time
-axes; the observation opportunities; minimal positive and authoritative-negative
-certificate antichains; dependency groups; source roles; freshness; and
-renderer obligations. Keep the first implementation internal or advanced-only.
+Value: foundational. Dependency: none. Residual risk: expanding the first leaf
+contract into an ontology broader than the product needs.
+
+The implemented first family is the exact claim that a fresh valid apex DMARC
+record declares `p=reject`. Its bounded internal dossier separates construction,
+collection, claim-state, and time axes; retains minimal positive and explicit-
+disconfirming certificate antichains; declares source role, 24-hour freshness,
+and renderer obligations; and drives the opt-in schema 2.2 cohort-summary
+denominator through two transient private projections. Schema 2.1 remains the
+compatibility default. Time uses whole-resolution completion, not the exact DNS
+query time, and that limitation remains explicit.
 
 Acceptance:
 
-- one claim contract has executable positive, negative, conflict, unavailable,
-  stale, and duplicate-derivation fixtures;
-- every emitted support certificate reaches canonical raw evidence or an
-  explicit successful-empty observation opportunity;
+- one claim contract has executable positive, explicit-disconfirming, conflict,
+  unavailable, empty, invalid, stale, time-unknown, and duplicate-derivation
+  fixtures;
+- every emitted support certificate reaches canonical raw evidence; successful
+  empty observations issue no sign until sufficient authority provenance is
+  retained;
 - the claim's four-state result is invariant to duplicate derived views;
 - the internal dossier names incomplete provenance and observation windows;
 - a bounded antichain implementation agrees with exhaustive enumeration;
-- no stable schema or broad cross-claim ontology is introduced before the
-  product benchmark demonstrates a consumer need.
+- evaluation fails closed when an exact declared bound would be exceeded;
+- no tenant JSON field, public dossier, or broad cross-claim ontology is
+  introduced before the product benchmark demonstrates a consumer need. The
+  cohort-summary contract is versioned separately, with 2.1 retained as the
+  default and 2.2 available explicitly.
 
 ### 9.2 Second: establish the correlation value benchmark
 
