@@ -18,6 +18,8 @@ The time-bound MCP plan is
 [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.md), with the
 decision in
 [docs/adr/0009-mcp-2026-readiness.md](docs/adr/0009-mcp-2026-readiness.md).
+The performance-language boundary is governed by
+[docs/adr/0010-evidence-gated-native-acceleration.md](docs/adr/0010-evidence-gated-native-acceleration.md).
 The current step-back audit is
 [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md).
 

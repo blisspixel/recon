@@ -71,6 +71,7 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Data-handling policy | [data-handling-policy.md](data-handling-policy.md) |
 | Legal and query-exposure notes | [legal.md](legal.md) |
 | Performance expectations | [performance.md](performance.md) |
+| Native acceleration decision | [adr/0010-evidence-gated-native-acceleration.md](adr/0010-evidence-gated-native-acceleration.md) |
 
 ## Research
 
