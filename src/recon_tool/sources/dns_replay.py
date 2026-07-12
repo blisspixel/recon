@@ -27,6 +27,7 @@ from recon_tool.fingerprints import (
     match_txt_all,
 )
 from recon_tool.models import EvidenceRecord, SourceResult
+from recon_tool.regex_safety import compile_regex
 from recon_tool.source_status import ObservationChannel, SourceStatus
 from recon_tool.sources.dns_base import DetectionCtx
 
@@ -56,14 +57,11 @@ def _record_match(
     """Apply first-match, longest-pattern semantics to one cached record."""
     candidate = value.lower()[:_MAX_CNAME_MATCH_LEN] if regex else value.lower()
     for detection in sorted(detections, key=lambda item: -len(item.pattern)):
-        try:
-            matched = (
-                bool(re.search(detection.pattern, candidate, re.IGNORECASE))
-                if regex
-                else (detection.pattern in candidate)
-            )
-        except re.error:
-            continue
+        if regex:
+            compiled = compile_regex(detection.pattern, re.IGNORECASE)
+            matched = compiled is not None and compiled.search(candidate) is not None
+        else:
+            matched = detection.pattern in candidate
         if not matched:
             continue
         ctx.add(

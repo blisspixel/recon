@@ -26,6 +26,10 @@ from typing import Any, NamedTuple
 import deal
 import yaml
 
+from recon_tool.regex_safety import (
+    clear_compiled_regex_cache,
+    compile_regex,
+)
 from recon_tool.regex_safety import validate_regex as _validate_regex
 
 logger = logging.getLogger("recon")
@@ -507,6 +511,7 @@ def _invalidate_caches_locked() -> None:
     _cache_state.detections.clear()
     _cache_state.m365_names = None
     _cache_state.m365_slugs = None
+    clear_compiled_regex_cache()
 
 
 def _reserved_semantic_slugs() -> frozenset[str]:
@@ -874,12 +879,9 @@ def match_txt_all(txt_value: str, patterns: tuple[Detection, ...] | list[Detecti
 
     matches: list[Detection] = []
     for det in patterns:
-        try:
-            if re.search(det.pattern, txt_value, re.IGNORECASE):
-                matches.append(det)
-        except re.error:
-            # Defensive: pattern was validated on load, but guard against edge cases
-            continue
+        compiled = compile_regex(det.pattern, re.IGNORECASE)
+        if compiled is not None and compiled.search(txt_value):
+            matches.append(det)
     return tuple(matches)
 
 

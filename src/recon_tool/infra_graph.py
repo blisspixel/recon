@@ -315,7 +315,11 @@ def adjusted_rand_index(p1: list[set[str]], p2: list[set[str]]) -> float:
     return (sum_ij - expected) / (maximum - expected)
 
 
-def _partition_stability(g: nx.Graph[str], runs: int = _STABILITY_RUNS) -> float | None:
+def _partition_stability(
+    g: nx.Graph[str],
+    primary_partition: list[set[str]],
+    runs: int = _STABILITY_RUNS,
+) -> float | None:
     """Mean pairwise ARI of Louvain partitions across a seed sweep (CAL11).
 
     Louvain is degenerate on many graphs (Good et al. 2010): near-equal-
@@ -328,8 +332,13 @@ def _partition_stability(g: nx.Graph[str], runs: int = _STABILITY_RUNS) -> float
     ordered: nx.Graph[str] = nx.Graph()
     ordered.add_nodes_from(sorted(g.nodes()))
     ordered.add_edges_from(g.edges(data=True))
-    partitions: list[list[set[str]]] = []
-    for offset in range(runs):
+    if runs < 2:
+        return None
+    # The primary Louvain result already used the first sweep seed. Reuse it
+    # instead of executing seed 1729 twice, while retaining exactly ``runs``
+    # partitions and the same pairwise ARI definition.
+    partitions: list[list[set[str]]] = [[set(community) for community in primary_partition]]
+    for offset in range(1, runs):
         try:
             communities = nx.community.louvain_communities(  # type: ignore[attr-defined]
                 ordered,
@@ -421,7 +430,7 @@ def build_infrastructure_clusters(
             )
             comms, modularity, algorithm = _connected_components_partition(g)
         if algorithm == "louvain":
-            partition_stability = _partition_stability(g)
+            partition_stability = _partition_stability(g, comms)
             if partition_stability is not None:
                 stability_runs = _STABILITY_RUNS
 

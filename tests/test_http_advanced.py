@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import socket
+
 import httpx
 import pytest
 
@@ -12,6 +14,18 @@ from recon_tool.http import (
     _RetryTransport,
     _SSRFSafeTransport,
 )
+
+
+@pytest.fixture
+def retry_delays(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    """Capture retry sleeps without making correctness tests wait on a clock."""
+    delays: list[float] = []
+
+    async def capture_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    monkeypatch.setattr("recon_tool.http.asyncio.sleep", capture_sleep)
+    return delays
 
 
 class TestIsBlockedIp:
@@ -102,13 +116,19 @@ class TestIsPrivateIpAsync:
         assert await _is_private_ip_async(host) is True
 
     @pytest.mark.asyncio
-    async def test_hostname_resolving_to_public(self):
-        # Real hostname that resolves to public IP
+    async def test_hostname_resolving_to_public(self, monkeypatch: pytest.MonkeyPatch):
+        def resolve_public(*_args: object, **_kwargs: object) -> list[tuple[object, ...]]:
+            return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("8.8.8.8", 443))]
+
+        monkeypatch.setattr("recon_tool.http.socket.getaddrinfo", resolve_public)
         assert await _is_private_ip_async("login.microsoftonline.com") is False
 
     @pytest.mark.asyncio
-    async def test_nonexistent_hostname_allowed(self):
-        # DNS failure should allow through (httpx handles the error)
+    async def test_nonexistent_hostname_allowed(self, monkeypatch: pytest.MonkeyPatch):
+        def fail_resolution(*_args: object, **_kwargs: object) -> list[tuple[object, ...]]:
+            raise socket.gaierror("synthetic DNS failure")
+
+        monkeypatch.setattr("recon_tool.http.socket.getaddrinfo", fail_resolution)
         assert await _is_private_ip_async("this-domain-does-not-exist-12345.invalid") is False
 
 
@@ -154,7 +174,7 @@ class TestRetryTransport:
         assert call_count == 1
 
     @pytest.mark.asyncio
-    async def test_retries_on_429(self):
+    async def test_retries_on_429(self, retry_delays: list[float]):
         """Should retry on 429 and eventually return the last response."""
         call_count = 0
 
@@ -169,6 +189,7 @@ class TestRetryTransport:
         response = await transport.handle_async_request(request)
         assert response.status_code == 429
         assert call_count == MAX_RETRIES + 1
+        assert retry_delays == [1.0, 2.0, 4.0]
 
     @pytest.mark.asyncio
     async def test_cumulative_cap_returns_readable_response(self, monkeypatch):
@@ -197,7 +218,7 @@ class TestRetryTransport:
         assert id(result) not in closed
 
     @pytest.mark.asyncio
-    async def test_retries_on_503(self):
+    async def test_retries_on_503(self, retry_delays: list[float]):
         """Should retry on 503."""
         call_count = 0
 
@@ -214,9 +235,10 @@ class TestRetryTransport:
         response = await transport.handle_async_request(request)
         assert response.status_code == 200
         assert call_count == 3
+        assert retry_delays == [1.0, 2.0]
 
     @pytest.mark.asyncio
-    async def test_respects_retry_after_header(self):
+    async def test_respects_retry_after_header(self, retry_delays: list[float]):
         """Should use Retry-After header when present (capped at 30s)."""
         call_count = 0
 
@@ -237,12 +259,11 @@ class TestRetryTransport:
         response = await transport.handle_async_request(request)
         assert response.status_code == 200
         assert call_count == 2
+        assert retry_delays == [0.01]
 
     @pytest.mark.asyncio
-    async def test_caps_retry_after_at_30s(self):
+    async def test_caps_retry_after_at_30s(self, retry_delays: list[float]):
         """Retry-After values above 30s should be capped at 30."""
-        # We verify the transport handles large Retry-After without crashing.
-        # Actual delay verification would require mocking asyncio.sleep.
         call_count = 0
 
         class MockTransport(httpx.AsyncHTTPTransport):
@@ -253,7 +274,7 @@ class TestRetryTransport:
                     return httpx.Response(
                         429,
                         request=request,
-                        headers={"Retry-After": "0.01"},
+                        headers={"Retry-After": "60"},
                     )
                 return httpx.Response(200, request=request)
 
@@ -261,9 +282,11 @@ class TestRetryTransport:
         request = httpx.Request("GET", "http://example.com")
         response = await transport.handle_async_request(request)
         assert response.status_code == 200
+        assert call_count == 2
+        assert retry_delays == [30.0]
 
     @pytest.mark.asyncio
-    async def test_invalid_retry_after_uses_backoff(self):
+    async def test_invalid_retry_after_uses_backoff(self, retry_delays: list[float]):
         """Non-numeric Retry-After should fall back to exponential backoff."""
         call_count = 0
 
@@ -283,6 +306,8 @@ class TestRetryTransport:
         request = httpx.Request("GET", "http://example.com")
         response = await transport.handle_async_request(request)
         assert response.status_code == 200
+        assert call_count == 2
+        assert retry_delays == [1.0]
 
     @pytest.mark.asyncio
     async def test_aclose_propagates(self):

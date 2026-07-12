@@ -6,7 +6,7 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.5.0 is current. The stable baseline is complete: recon ships a
+> **Status:** v2.5.1 is current. The stable baseline is complete: recon ships a
 > local CLI, importable library, versioned JSON contract, local stdio MCP
 > server, bounded passive collectors, generated-artifact guards, and a verified
 > release path. The product is not "finished." The active work is to make every
@@ -334,7 +334,7 @@ Acceptance evidence:
 - The ablation decision rule is written before the run.
 - The result determines whether advanced fusion remains in the primary path or
   becomes an explicitly advanced diagnostic.
-- Coverage remains above the enforced 82 percent branch-aware project gate and
+- Coverage remains above the enforced 90.2 percent branch-aware project gate and
   the 80 percent user bar, with no regression from the current baseline, and
   the full local CI mirror passes.
 
@@ -548,6 +548,31 @@ to catalog loading, regex dispatch, repeated inference calculations, and any
 other observed local hotspot. Do not infer end-to-end value from a kernel or
 microbenchmark.
 
+The first Python optimization pass is complete in v2.5.1. A bounded compiled
+regex cache reduced the checked 1,000-value by 298-rule stage from 348 ms to
+111 ms while preserving exact matches and catalog lifecycle behavior. One
+batch-local Bayesian configuration snapshot reduced the checked 25-record
+fusion stage from 501 ms to 307 ms without a process-global cache. CT stability
+reuses its primary partition instead of recomputing one of the same eight
+seeds. Hermetic retry and resolution tests plus file-grouped test workers cut
+the measured full-suite wall time from 330.53 seconds serial without coverage
+to 86.93 seconds with branch coverage. These are dated local diagnostics, not
+product SLOs; [performance.md](performance.md) records the fixtures and limits.
+
+The next optimization order is evidence-gated:
+
+1. Keep split YAML canonical, generate a deterministic packaged built-in
+   catalog representation, enforce byte-for-byte drift checking, and require
+   semantic equality plus at least a five-times Python 3.14 cold-load gain.
+2. Characterize a batch-scoped SSRF-safe HTTP pool. Preserve request-specific
+   timeouts, retries, cancellation, rebinding checks, CT policy, and degraded
+   results before considering promotion.
+3. Bound non-streaming scheduling, summary-mode discarded work, pairwise
+   ecosystem overlap, and peer-list materialization before increasing
+   concurrency. Test sparse and adversarial dense cohorts through the existing
+   10,000-domain input cap and report omitted counts rather than silently
+   truncating evidence.
+
 An optional Rust extension may enter an isolated prototype only when a stable,
 deterministic, coarse-grained stage remains above 250 ms p95 on a representative
 warm fixture or at least 20 percent of warm end-to-end p95 after a Python
@@ -673,7 +698,7 @@ roadmap tracks at least:
 - marginal CT signal gain relative to latency cost;
 - MCP discovery bytes and representative workflow context cost;
 - deterministic CLI, JSON, and MCP behavior;
-- the enforced 82 percent branch-aware project gate, above the 80 percent user
+- the enforced 90.2 percent branch-aware project gate, above the 80 percent user
   bar, with no coverage regression;
 - green local and remote CI, reproducible artifacts, and release provenance.
 

@@ -20,6 +20,19 @@ from recon_tool.sources.google_identity import (
     _extract_idp_name,
 )
 
+
+@pytest.fixture
+def retry_delays(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    """Capture source-level retry backoff without waiting on a real clock."""
+    delays: list[float] = []
+
+    async def capture_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    monkeypatch.setattr("recon_tool.retry.asyncio.sleep", capture_sleep)
+    return delays
+
+
 # ── _extract_idp_name unit tests ────────────────────────────────────────
 
 
@@ -231,7 +244,7 @@ class TestGoogleIdentityLookup:
         assert result.detected_slugs == ()
 
     @pytest.mark.asyncio
-    async def test_timeout_error(self):
+    async def test_timeout_error(self, retry_delays: list[float]):
         mock_client = AsyncMock(spec=httpx.AsyncClient)
         mock_client.get = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -243,9 +256,11 @@ class TestGoogleIdentityLookup:
             result = await source.lookup("example.com")
 
         assert "Network error" in result.error
+        assert mock_client.get.await_count == 3
+        assert retry_delays == [0.5, 1.5]
 
     @pytest.mark.asyncio
-    async def test_connect_error(self):
+    async def test_connect_error(self, retry_delays: list[float]):
         mock_client = AsyncMock(spec=httpx.AsyncClient)
         mock_client.get = AsyncMock(side_effect=httpx.ConnectError("refused"))
         mock_client.__aenter__ = AsyncMock(return_value=mock_client)
@@ -257,6 +272,8 @@ class TestGoogleIdentityLookup:
             result = await source.lookup("example.com")
 
         assert "Network error" in result.error
+        assert mock_client.get.await_count == 3
+        assert retry_delays == [0.5, 1.5]
 
     @pytest.mark.asyncio
     async def test_unexpected_error(self):

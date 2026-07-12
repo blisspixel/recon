@@ -39,7 +39,20 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (
         _TEST,
         "pytest+cov",
-        [_PY, "-m", "pytest", "tests/", "--cov=src/recon_tool", "--cov-branch", "--cov-fail-under=82", "-q"],
+        [
+            _PY,
+            "-m",
+            "pytest",
+            "tests/",
+            "-n",
+            "auto",
+            "--maxprocesses=4",
+            "--dist=loadfile",
+            "--cov=src/recon_tool",
+            "--cov-branch",
+            "--cov-fail-under=90.2",
+            "-q",
+        ],
     ),
     (
         _CORE,

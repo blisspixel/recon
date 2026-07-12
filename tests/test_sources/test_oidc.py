@@ -10,6 +10,19 @@ from recon_tool.sources.oidc import (
     parse_tenant_info_from_oidc,
 )
 
+
+@pytest.fixture
+def retry_delays(monkeypatch: pytest.MonkeyPatch) -> list[float]:
+    """Capture source-level retry backoff without waiting on a real clock."""
+    delays: list[float] = []
+
+    async def capture_sleep(delay: float) -> None:
+        delays.append(delay)
+
+    monkeypatch.setattr("recon_tool.retry.asyncio.sleep", capture_sleep)
+    return delays
+
+
 # --- parse_tenant_info_from_oidc tests ---
 
 
@@ -108,8 +121,12 @@ class TestOIDCSource:
         assert result.tenant_id is None
 
     @pytest.mark.asyncio
-    async def test_network_error_returns_source_result_with_error(self):
+    async def test_network_error_returns_source_result_with_error(self, retry_delays: list[float]):
+        calls = 0
+
         def raise_timeout(request):
+            nonlocal calls
+            calls += 1
             raise httpx.ConnectTimeout("Connection timed out")
 
         transport = httpx.MockTransport(raise_timeout)
@@ -118,6 +135,8 @@ class TestOIDCSource:
             result = await source.lookup("example.com", client=client)
         assert result.error is not None
         assert result.tenant_id is None
+        assert calls == 3
+        assert retry_delays == [0.5, 1.5]
 
     @pytest.mark.asyncio
     async def test_invalid_json_returns_error(self):
