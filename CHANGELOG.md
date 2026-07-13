@@ -12,6 +12,41 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.5.4] - 2026-07-13
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Changed
+
+- Made the first-run sequence use `recon --version` as the offline install
+  check and label `recon doctor` as an online diagnostic. The README, getting
+  started guide, no-argument banner, and platform installers now disclose DNS
+  visibility, the default MTA-STS request, and opt-in Google CSE and BIMI
+  probes before the first lookup.
+- Clarified that strict mode changes panel wording only for High-confidence
+  results with at least three sources and does not change the underlying
+  evidence, validation, or confidence.
+- Made `recon mcp install --dry-run` emit the client-specific top-level config
+  stanza, including `servers` for VS Code and `mcpServers` elsewhere. Static
+  MCP doctor output now identifies its generic block as a reference, preserves
+  the interpreter-bound launcher literally, and directs operators to the safe
+  merge installer.
+- Preserved complete MCP client repair guidance in terminal diagnostics while
+  retaining control-character filtering and an explicit display bound.
+
+### Fixed
+
+- Made `recon doctor --fix` exit nonzero on directory, publication, or template
+  failures, reject conflicting doctor modes, continue independent repairs, and
+  publish complete templates with an atomic no-replace boundary. Existing or
+  concurrently created user files are never overwritten, and failed staged
+  writes leave no partial target.
+- Replaced timestamp-only crash-log names with exclusive temporary files,
+  added review and redaction guidance before sharing diagnostics, and made the
+  no-log fallback actionable without exposing exception details.
+
 ## [2.5.3] - 2026-07-13
 
 ### Tool Surface Changes

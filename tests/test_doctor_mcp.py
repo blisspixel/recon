@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -11,6 +12,7 @@ pytest.importorskip("mcp")
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
+from recon_tool.mcp_client.install import build_recon_block
 
 runner = CliRunner()
 
@@ -26,7 +28,7 @@ class TestDoctorMcp:
         assert "Server module" in out
         assert "Server Instructions" in out
         assert "Tools enumerated" in out
-        # Copy-paste config block
+        # Parseable reference config block
         assert "mcpServers" in out
         assert "recon" in out
         assert '"autoApprove": []' in out
@@ -35,6 +37,16 @@ class TestDoctorMcp:
         assert "Claude Desktop" in out
         assert "Cursor" in out
         assert "Windsurf" in out
+        collapsed = " ".join(out.split())
+        assert "VS Code uses a different top-level `servers` key" in collapsed
+        assert "recon mcp install --client=vscode" in collapsed
+        assert "Prefer `recon mcp install --client=<name>`" in collapsed
+
+        config_start = out.index("{")
+        config, _ = json.JSONDecoder().raw_decode(out[config_start:])
+        assert config == {"mcpServers": {"recon": build_recon_block()}}
+        launcher = " ".join(config["mcpServers"]["recon"]["args"])
+        assert "sys.path[:] = [" in launcher
 
     def test_doctor_mcp_no_regular_checks(self) -> None:
         """--mcp should only run MCP checks, not the full connectivity suite."""
