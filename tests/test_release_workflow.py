@@ -57,7 +57,14 @@ def test_release_test_job_typechecks_source_and_tests() -> None:
     workflow = _load_release_workflow()
     steps = workflow["jobs"]["test"]["steps"]
     step_text = "\n".join(_step_text(step) for step in steps)
+    checkout = steps[0]
+    history_step = next(step for step in steps if step.get("name") == "Require full Git history")
+    history_command = str(history_step["run"])
 
+    assert checkout["with"]["persist-credentials"] is False
+    assert checkout["with"]["fetch-depth"] == 0
+    assert '"$(git rev-parse --is-shallow-repository)" != "false"' in history_command
+    assert "exit 1" in history_command
     assert "actions/setup-node" in step_text
     assert "uv run pyright src/recon_tool/ tests/" in step_text
     assert "uv run python scripts/generate_fingerprint_catalog.py --check" in step_text

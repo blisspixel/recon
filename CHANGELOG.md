@@ -43,6 +43,9 @@ the packaged surface inventory were synchronized with the existing behavior.
 - Added documentation-integrity tests for indexed canonical documents,
   historical commit receipts, semantic review stamps, installer behavior,
   error contracts, SIEM mappings, and research-proof boundaries.
+- Kept the cross-platform test matrix shallow while making a required
+  repository-policy job fetch history once and enforce every documented commit
+  receipt. Release tests repeat the full-history proof before publication.
 - Corrected stale module paths, invalid historical commit receipts, frozen-draft
   wording, first-run delta behavior, MCP installer paths, and result-error
   semantics across maintained documentation.
