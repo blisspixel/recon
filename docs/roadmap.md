@@ -6,7 +6,7 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.5.1 is current. The stable baseline is complete: recon ships a
+> **Status:** v2.5.2 is current. The stable baseline is complete: recon ships a
 > local CLI, importable library, versioned JSON contract, local stdio MCP
 > server, bounded passive collectors, generated-artifact guards, and a verified
 > release path. The product is not "finished." The active work is to make every
@@ -560,7 +560,7 @@ to 88.83 seconds with branch coverage. These are dated local diagnostics, not
 product SLOs; [performance.md](performance.md) records the fixtures and limits.
 
 The next optimization order is evidence-gated. The first item is complete in
-the post-v2.5.1 working tree:
+v2.5.2:
 
 1. Completed: split YAML remains canonical, one deterministic JSON runtime
    catalog is packaged, byte drift and exact ordered semantic equality are
