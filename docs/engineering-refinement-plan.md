@@ -351,7 +351,7 @@ Risk: concurrency and brittle-benchmark risk
   compiled-pattern cache and exact invalidation on catalog generation changes.
 - Replaced repeated built-in YAML parsing with one deterministic generated JSON
   runtime artifact. Split YAML remains canonical source and sdist content;
-  exact drift, ordered semantic parity, and a 10.92-times Python 3.14.4 median
+  exact drift, ordered semantic parity, and a 12.59-times Python 3.14.4 median
   cold-load gain are checked evidence.
 - Loaded Bayesian model and prior configuration once per fusion-enabled batch,
   with a coherent batch-local snapshot and no cross-invocation global cache.

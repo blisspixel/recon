@@ -565,7 +565,7 @@ the post-v2.5.1 working tree:
 1. Completed: split YAML remains canonical, one deterministic JSON runtime
    catalog is packaged, byte drift and exact ordered semantic equality are
    gated, and the 15-repetition Python 3.14.4 characterization measured a
-   10.92-times median cold-load gain with 72.0 percent less traced peak
+   12.59-times median cold-load gain with 72.0 percent less traced peak
    allocation.
 2. Characterize a batch-scoped SSRF-safe HTTP pool. Preserve request-specific
    timeouts, retries, cancellation, rebinding checks, CT policy, and degraded
