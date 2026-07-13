@@ -59,6 +59,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
         "validate-fingerprints",
         [_PY, "scripts/validate_fingerprint.py", "src/recon_tool/data/fingerprints/", "--quiet"],
     ),
+    (_CORE, "fingerprint-artifact", [_PY, "scripts/generate_fingerprint_catalog.py", "--check"]),
     (_CORE, "metadata-coverage", [_PY, "scripts/check_metadata_coverage.py"]),
     (_CORE, "validation-hygiene", [_PY, "scripts/check_validation_hygiene.py"]),
     (_CORE, "workflow-pins", [_PY, "scripts/check_workflow_pins.py"]),

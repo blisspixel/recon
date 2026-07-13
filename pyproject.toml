@@ -68,6 +68,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/recon_tool"]
+exclude = ["src/recon_tool/data/fingerprints/*.yaml"]
 
 # PEP 735 dependency group. uv treats `dev` as a default group, so
 # `uv sync` installs it and `uv sync --no-dev` / `uv export --no-dev`
