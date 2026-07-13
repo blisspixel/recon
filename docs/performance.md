@@ -162,15 +162,14 @@ The network-free harness compared the full canonical YAML parse and validation
 path with the generated runtime path on Windows 11, CPython 3.14.4, and an AMD
 Ryzen 9 5950X. Each median is from 15 repetitions after three warm-ups. Both
 cases clear the catalog and compiled-regex caches on every repetition. The
-measurement used the complete reviewed working tree based on `ecf99cb` and
-records `working_tree_dirty: true`; it does not imply clean-commit timing.
+measurement ran from clean implementation commit `157bf6c`.
 
 | Checked operation | Median | Nearest-rank p95 | Python peak |
 |---|---:|---:|---:|
-| Canonical split YAML reference, 847 entries and 1,045 rules | 736.839 ms | 806.959 ms | 6,558.0 KiB |
-| Generated JSON runtime, same ordered catalog | 67.467 ms | 89.770 ms | 1,835.7 KiB |
+| Canonical split YAML reference, 847 entries and 1,045 rules | 558.188 ms | 628.801 ms | 6,561.1 KiB |
+| Generated JSON runtime, same ordered catalog | 44.339 ms | 53.379 ms | 1,835.7 KiB |
 
-The observed median stage gain is 10.92 times, above the predeclared five-times
+The observed median stage gain is 12.59 times, above the predeclared five-times
 gate, with 72.0 percent less traced peak Python allocation. Exact dataclass and
 all-accessor differential tests are the correctness authority; timing remains
 a dated local diagnostic, not a CI threshold or portable SLO. The wheel remains
