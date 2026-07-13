@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -18,6 +19,12 @@ from recon_tool.models import (
 )
 
 runner = CliRunner()
+
+
+def _strip_ansi(value: str) -> str:
+    """Return Rich-rendered help text without terminal color sequences."""
+    return re.sub(r"\x1b\[[0-9;]*m", "", value)
+
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
@@ -49,10 +56,7 @@ class TestHelp:
     def test_lookup_help(self) -> None:
         result = runner.invoke(app, ["lookup", "--help"])
         assert result.exit_code == 0
-        # Strip ANSI escape codes — Rich renders markup in help output
-        import re
-
-        plain = re.sub(r"\x1b\[[0-9;]*m", "", result.output)
+        plain = _strip_ansi(result.output)
         assert "--json" in plain
         assert "--md" in plain
         assert "--full" in plain
@@ -70,7 +74,7 @@ class TestHelp:
         result = runner.invoke(app, ["doctor", "--help"])
 
         assert result.exit_code == 0
-        collapsed = " ".join(result.output.replace("│", " ").split())
+        collapsed = " ".join(_strip_ansi(result.output).replace("│", " ").split())
         assert "installation health" in collapsed
         assert "online source connectivity" in collapsed
         assert "emit an mcpServers reference config" in collapsed
