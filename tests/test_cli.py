@@ -63,6 +63,32 @@ class TestHelp:
         assert "configured recursive resolver" in collapsed
         assert "authoritative DNS may observe the resulting traffic" in collapsed
         assert "MTA-STS policy fetch is the only default target-owned HTTP/application request" in collapsed
+        assert "High confidence with at least three sources" in collapsed
+        assert "underlying evidence, validation, and confidence are unchanged" in collapsed
+
+    def test_doctor_help_distinguishes_online_connectivity(self) -> None:
+        result = runner.invoke(app, ["doctor", "--help"])
+
+        assert result.exit_code == 0
+        collapsed = " ".join(result.output.replace("│", " ").split())
+        assert "installation health" in collapsed
+        assert "online source connectivity" in collapsed
+        assert "emit an mcpServers reference config" in collapsed
+        assert "copy-pasteable client config" not in collapsed
+
+    @pytest.mark.parametrize(
+        "args",
+        [
+            ["--fix", "--mcp"],
+            ["--fix", "--client", "cursor"],
+            ["--mcp", "--client", "cursor"],
+        ],
+    )
+    def test_doctor_modes_are_mutually_exclusive(self, args: list[str]) -> None:
+        result = runner.invoke(app, ["doctor", *args])
+
+        assert result.exit_code == 2
+        assert "choose exactly one" in result.output.lower()
 
     def test_welcome_describes_diagnostic_and_posture_flags_accurately(self) -> None:
         result = runner.invoke(app, [])
@@ -74,6 +100,10 @@ class TestHelp:
         assert "posture observations" in result.output
         assert "expanded evidence, domains, and posture" in result.output
         assert "→ everything" not in result.output
+        assert "offline install check" in result.output
+        assert "DNS queries" in result.output
+        assert "MTA-STS" in result.output
+        assert "Google CSE and BIMI direct probes run only with --direct-probes" in result.output
 
     def test_version_flag(self) -> None:
         from recon_tool.cli import version_callback

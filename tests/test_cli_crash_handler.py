@@ -8,6 +8,9 @@ SystemExits (help, version, usage errors) pass through untouched.
 
 from __future__ import annotations
 
+import os
+import stat
+
 import pytest
 
 import recon_tool.cli as cli
@@ -33,9 +36,48 @@ def test_unexpected_exception_writes_crash_file_and_clean_message(monkeypatch, c
     assert "unexpected error" in err
     assert "Traceback" not in err  # no raw stack trace on the terminal
     assert "boom-secret-xyz" not in err  # exception text only in the file
+    assert "Review and redact" in err
+    assert "local paths" in err
     crash_files = list(tmp_path.glob("recon-crash-*.log"))
     assert len(crash_files) == 1
     assert "boom-secret-xyz" in crash_files[0].read_text(encoding="utf-8")
+    if os.name == "posix":
+        assert stat.S_IMODE(crash_files[0].stat().st_mode) == 0o600
+
+
+def test_unexpected_exceptions_use_unique_crash_files(monkeypatch, capsys, tmp_path) -> None:
+    monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+    monkeypatch.setattr(cli, "app", _raise(RuntimeError("repeated failure")))
+
+    for _ in range(2):
+        with pytest.raises(SystemExit) as exc_info:
+            cli.run()
+        assert exc_info.value.code == EXIT_INTERNAL
+        capsys.readouterr()
+
+    crash_files = list(tmp_path.glob("recon-crash-*.log"))
+    assert len(crash_files) == 2
+    assert crash_files[0].name != crash_files[1].name
+
+
+def test_crash_log_write_failure_has_actionable_fallback(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(cli, "app", _raise(RuntimeError("boom-secret-xyz")))
+
+    def fail_crash_file(*args: object, **kwargs: object) -> None:
+        raise OSError("temporary directory unavailable")
+
+    monkeypatch.setattr("tempfile.NamedTemporaryFile", fail_crash_file)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.run()
+
+    assert exc_info.value.code == EXIT_INTERNAL
+    err = capsys.readouterr().err
+    assert "could not create a crash log" in err
+    assert "temporary directory is writable" in err
+    assert "exit code 4" in err
+    assert "Review and redact" not in err
+    assert "boom-secret-xyz" not in err
 
 
 def test_keyboard_interrupt_exits_130(monkeypatch, capsys) -> None:
