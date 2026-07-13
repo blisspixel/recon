@@ -227,6 +227,11 @@ def _print_welcome_banner() -> None:
         "Observe what a domain publishes through public DNS and identity endpoints.\n"
         "Evidence is role-scoped and hedged. Zero credentials. Zero scanning."
     )
+    console.print(
+        "DNS queries may be observed by recursive and authoritative infrastructure.\n"
+        "The only default target-owned HTTP request fetches the MTA-STS policy.\n"
+        "Google CSE and BIMI direct probes run only with --direct-probes."
+    )
     console.print()
     console.print("[bold cyan]Usage[/bold cyan]")
     console.print("  recon <domain>                    → clean summary (recommended)")
@@ -235,7 +240,7 @@ def _print_welcome_banner() -> None:
     console.print("  recon <domain> --full             → expanded evidence, domains, and posture")
     console.print("  recon <domain> --explain          → full reasoning and evidence")
     console.print("  recon batch domains.txt           → process multiple domains")
-    console.print("  recon doctor                      → check connectivity")
+    console.print("  recon doctor                      → check online source connectivity")
     console.print("  recon mcp                         → start the MCP server")
     console.print()
     console.print("[bold cyan]Common examples[/bold cyan]")
@@ -243,7 +248,7 @@ def _print_welcome_banner() -> None:
     console.print("  recon northwindtraders.com --verbose")
     console.print("  recon fabrikam.com --full --json")
     console.print()
-    console.print('[dim]Run "recon doctor" first if you see degraded sources or partial results.[/dim]')
+    console.print('[dim]Use "recon --version" for an offline install check; "recon doctor" tests online sources.[/dim]')
 
 
 @app.command()
@@ -286,9 +291,17 @@ def lookup(
         "hedged",
         "--confidence-mode",
         callback=_confidence_mode_callback,
-        help=("Language style: 'hedged' (default) or 'strict' (drops hedging qualifiers on dense-evidence targets)"),
+        help=(
+            "Wording style: 'hedged' (default) or 'strict'. Strict removes qualifiers from panel "
+            "insights only on results at High confidence with at least three sources; underlying evidence, "
+            "validation, and confidence are unchanged."
+        ),
     ),
-    strict: bool = typer.Option(False, "--strict", help="Shortcut for --confidence-mode strict."),
+    strict: bool = typer.Option(
+        False,
+        "--strict",
+        help="Shortcut for strict wording; underlying evidence and confidence are unchanged.",
+    ),
     fusion: bool = typer.Option(
         True,
         "--fusion/--no-fusion",
@@ -566,7 +579,7 @@ def discover(
 @app.command()
 def doctor(
     fix: bool = typer.Option(False, "--fix", help="Scaffold template config files"),
-    mcp: bool = typer.Option(False, "--mcp", help="Validate MCP server setup and emit copy-pasteable client config"),
+    mcp: bool = typer.Option(False, "--mcp", help="Validate MCP server setup and emit an mcpServers reference config"),
     client: str | None = typer.Option(
         None,
         "--client",
@@ -577,10 +590,15 @@ def doctor(
     ),
 ) -> None:
     """
-    Check connectivity to all data sources.
+    Check installation health and online source connectivity.
     """
+    mode_count = int(fix) + int(mcp) + int(client is not None)
+    if mode_count > 1:
+        get_console().print("[red]Choose exactly one of --fix, --mcp, or --client.[/red]")
+        raise typer.Exit(code=EXIT_VALIDATION)
     if fix:
-        _doctor_fix()
+        if not _doctor_fix():
+            raise typer.Exit(code=EXIT_ERROR)
         return
     if client is not None:
         _doctor_client(client)
@@ -754,21 +772,38 @@ def run() -> None:
     except Exception:  # top-level last-resort crash handler (catch-all is intentional)
         import tempfile
         import traceback
-        from datetime import UTC, datetime
 
         from recon_tool.exit_codes import EXIT_INTERNAL
 
+        crash_path: Path | None = None
         try:
-            stamp = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
-            crash_path = Path(tempfile.gettempdir()) / f"recon-crash-{stamp}.log"
-            crash_path.write_text(traceback.format_exc(), encoding="utf-8")
-            where = f"[link={crash_path.as_uri()}]{escape(str(crash_path))}[/link]"
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                prefix="recon-crash-",
+                suffix=".log",
+                dir=tempfile.gettempdir(),
+                delete=False,
+            ) as crash_file:
+                crash_file.write(traceback.format_exc())
+                crash_path = Path(crash_file.name)
         except Exception:  # never fail inside the crash handler
-            where = "(could not write a crash log)"
-        get_err_console().print(
-            f"[red]recon hit an unexpected error.[/red] Details written to {where}\n"
-            "Please report it at https://github.com/blisspixel/recon/issues and attach that file."
-        )
+            crash_path = None
+        if crash_path is None:
+            get_err_console().print(
+                "[red]recon hit an unexpected error and could not create a crash log.[/red]\n"
+                "Confirm the system temporary directory is writable, then rerun the command. "
+                "If the failure persists, report the command shape and exit code 4 at "
+                "https://github.com/blisspixel/recon/issues without including private inputs."
+            )
+        else:
+            where = f"[link={crash_path.as_uri()}]{escape(str(crash_path))}[/link]"
+            get_err_console().print(
+                f"[red]recon hit an unexpected error.[/red] Details written to {where}\n"
+                "Review and redact the log before sharing it at "
+                "https://github.com/blisspixel/recon/issues; it may contain local paths, "
+                "domain inputs, configuration values, or exception details."
+            )
         raise SystemExit(EXIT_INTERNAL) from None
 
 

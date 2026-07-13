@@ -9,7 +9,9 @@ facade. Imports the shared cli helpers / formatter; never imports cli.py.
 from __future__ import annotations
 
 import json
+import os
 import sys
+import tempfile
 from pathlib import Path
 from typing import Any, Literal, TypeAlias
 
@@ -32,6 +34,61 @@ DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
 
 
 DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
+TemplateCreateStatus: TypeAlias = Literal["created", "exists", "non_file"]
+
+_MAX_DIAGNOSTIC_LEN = 2000
+
+
+def _safe_diagnostic(value: str) -> str:
+    """Sanitize a diagnostic without silently dropping its repair guidance."""
+    cleaned = strip_control_chars(value, max_len=_MAX_DIAGNOSTIC_LEN)
+    if len(value) > _MAX_DIAGNOSTIC_LEN:
+        return f"{cleaned} [truncated]"
+    return cleaned
+
+
+def _classify_template_collision(target: Path) -> TemplateCreateStatus | None:
+    """Classify a publish collision without letting a probe mask the original error."""
+    try:
+        if not target.exists():
+            return None
+        return "exists" if target.is_file() else "non_file"
+    except OSError:
+        return None
+
+
+def _create_template_atomically(target: Path, content: str) -> TemplateCreateStatus:
+    """Publish a complete template without replacing any existing path.
+
+    A same-directory hard link is the portable no-replace publication step.
+    Filesystems without hard-link support fail safely instead of weakening the
+    scaffold's no-overwrite guarantee.
+    """
+    temp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            newline="\n",
+            prefix=f".{target.name}.",
+            suffix=".tmp",
+            dir=target.parent,
+            delete=False,
+        ) as stream:
+            temp_path = Path(stream.name)
+            stream.write(content)
+
+        try:
+            os.link(temp_path, target)
+        except OSError:
+            collision = _classify_template_collision(target)
+            if collision is not None:
+                return collision
+            raise
+        return "created"
+    finally:
+        if temp_path is not None:
+            temp_path.unlink(missing_ok=True)
 
 
 _SIGNALS_TEMPLATE = """\
@@ -166,16 +223,21 @@ def doctor_mcp() -> None:
         "  `autoApprove` if you fully understand the risk."
     )
     console.print()
-    console.print("  [bold]Copy-paste config for your AI client[/bold]")
+    console.print("  [bold]Reference config for clients that use `mcpServers`[/bold]")
     console.print()
     console.print("  [dim]# Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
     console.print("  [dim]# Cursor: ~/.cursor/mcp.json or <project>/.cursor/mcp.json[/dim]")
-    console.print("  [dim]# VS Code + Copilot: <project>/.vscode/mcp.json[/dim]")
     console.print("  [dim]# Windsurf: ~/.codeium/windsurf/mcp_config.json[/dim]")
+    console.print("  [dim]# Kiro: ~/.kiro/settings/mcp.json or <project>/.kiro/settings/mcp.json[/dim]")
+    console.print(
+        "  [dim]# VS Code uses a different top-level `servers` key; run `recon mcp install --client=vscode`.[/dim]"
+    )
+    console.print(
+        "  [dim]# Prefer `recon mcp install --client=<name>` so existing client configuration is merged safely.[/dim]"
+    )
     console.print()
     snippet = json.dumps({"mcpServers": {"recon": recon_block}}, indent=2)
-    for line in snippet.splitlines():
-        console.print(f"  {line}")
+    typer.echo(snippet)
     console.print()
 
     fallback_warning = warn_if_fallback()
@@ -206,7 +268,7 @@ def doctor_client(client: str) -> None:
 
     Complements `--mcp` (which validates the server) by answering the
     other half of "did the install work": does the client's own config
-    file carry an `mcpServers.recon` stanza the client would load.
+    file carry the recon server entry that client would load.
     """
     from recon_tool.mcp_client.client_doctor import ClientCheck, check_client
     from recon_tool.mcp_client.install import SUPPORTED_CLIENTS
@@ -228,12 +290,12 @@ def doctor_client(client: str) -> None:
     for check in report.checks:
         style = _style[check.status]
         mark = _mark[check.status]
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {check.name} — {escape(strip_control_chars(check.detail))}")
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {check.name}: {escape(_safe_diagnostic(check.detail))}")
 
     if report.notes:
         console.print()
         for note in report.notes:
-            console.print(f"  [dim]note:[/dim] {escape(strip_control_chars(note))}")
+            console.print(f"  [dim]note:[/dim] {escape(_safe_diagnostic(note))}")
 
     console.print()
     if report.ok:
@@ -248,8 +310,8 @@ def doctor_client(client: str) -> None:
     raise typer.Exit(EXIT_NO_DATA)
 
 
-def doctor_fix() -> None:
-    """Scaffold template fingerprints.yaml and signals.yaml in config dir."""
+def doctor_fix() -> bool:
+    """Scaffold template config files and report whether every write succeeded."""
 
     from recon_tool.paths import config_dir as _config_dir
 
@@ -260,23 +322,34 @@ def doctor_fix() -> None:
         config_dir.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
         console.print(f"[red]Cannot create config directory {config_dir}: {exc}[/red]")
-        return
+        return False
 
     templates = [
         ("fingerprints.yaml", _FINGERPRINTS_TEMPLATE),
         ("signals.yaml", _SIGNALS_TEMPLATE),
     ]
 
+    failures = 0
     for filename, content in templates:
         target = config_dir / filename
-        if target.exists():
-            console.print(f"  already exists: {target}")
-        else:
-            try:
-                target.write_text(content, encoding="utf-8")
+        try:
+            status = _create_template_atomically(target, content)
+            if status == "created":
                 console.print(f"  [green]created:[/green] {target}")
-            except OSError as exc:
-                console.print(f"  [red]failed to create {target}: {exc}[/red]")
+            elif status == "exists":
+                console.print(f"  already exists: {target}")
+            else:
+                failures += 1
+                console.print(f"  [red]cannot use {target}: path is not a regular file[/red]")
+        except OSError as exc:
+            failures += 1
+            console.print(f"  [red]failed to create {target}: {exc}[/red]")
+
+    if failures:
+        noun = "template" if failures == 1 else "templates"
+        console.print(f"  [red]{failures} {noun} could not be created.[/red]")
+        return False
+    return True
 
 
 def _doctor_print_header(console: Any) -> None:

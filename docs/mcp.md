@@ -43,9 +43,12 @@ pip install recon-tool
    recon mcp install --client=cursor --dry-run
    ```
 
-   The generated launcher avoids PATH ambiguity and strips the workspace from
-   the import path. Do not replace it with a bare `recon` command or hand-write
-   `python -m recon_tool.server` in an untrusted working directory.
+   The preview includes the client-specific top-level key, including `servers`
+   for VS Code and `mcpServers` for other supported clients. Merge that stanza
+   without replacing sibling servers. The generated launcher avoids PATH
+   ambiguity and strips the workspace from the import path. Do not replace it
+   with a bare `recon` command or hand-write `python -m recon_tool.server` in an
+   untrusted working directory.
 
 3. Ask your AI tool something like: "Run a recon lookup on
 northwindtraders.com and summarize the observed public configuration, naming
@@ -412,9 +415,9 @@ The shorter `python -m recon_tool.server` form is acceptable only from a trusted
 
 Three complementary checks. The first two validate the server; the third validates that the client was told about it.
 
-- **`recon doctor --mcp`**: *static* diagnostic. Confirms the MCP dependencies are installed, reports the exact SDK version and generation, loads the server module, enumerates tools through the public server API, and verifies `recon` is on your PATH. Also prints a copy-pasteable JSON snippet for every supported client.
+- **`recon doctor --mcp`**: *static* diagnostic. Confirms the MCP dependencies are installed, reports the exact SDK version and generation, loads the server module, enumerates tools through the public server API, and verifies `recon` is on your PATH. It also prints a copy-pasteable reference config. Prefer `recon mcp install --client=<name>` for an actual client because the installer safely merges the recon block without replacing sibling servers or client-specific fields.
 - **`recon mcp doctor`**: *live* end-to-end check. Spawns the recon MCP server through the running interpreter, opens a real `stdio_client` + `ClientSession`, runs the discovery flow supported by the installed Python MCP SDK, and asserts the anchor tools (`lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `chain_lookup`) are registered. Stable v1 uses `initialize` plus `tools/list`; candidate v2 uses `server/discover` plus `tools/list` and validates complete-result cache metadata. If the spawned server crashes during discovery, the trailing twelve lines of its stderr are spliced into the failure detail so you see the actual import failure or traceback instead of an opaque `BrokenPipeError`. 30-second handshake timeout.
-- **`recon doctor --client=<name>`**: reads the config file the named client actually loads (`claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `kiro`) and reports whether an `mcpServers.recon` stanza is present and well-formed. This is the config-side complement to the two server checks: they confirm the server is healthy, this confirms the client was told where to find it. For Claude Code it also looks under the project-nested `projects[...].mcpServers.recon` shape that `claude mcp add` writes, and notes that a plugin install keeps its config inside the plugin rather than in `~/.claude.json`. Exits non-zero when no stanza is found, so it is usable in a setup script.
+- **`recon doctor --client=<name>`**: reads the config file the named client actually loads (`claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `kiro`) and reports whether its recon server entry is present and well-formed. This is the config-side complement to the two server checks: they confirm the server is healthy, this confirms the client was told where to find it. For Claude Code it also looks under the project-nested `projects[...].mcpServers.recon` shape that `claude mcp add` writes, and notes that a plugin install keeps its config inside the plugin rather than in `~/.claude.json`. Exits non-zero when no stanza is found, so it is usable in a setup script.
 
 The static check (`recon doctor --mcp`) is the right starting point. If it passes but a client still can't talk to the server, run `recon mcp doctor` to confirm the JSON-RPC loop itself is healthy, and `recon doctor --client=<name>` to confirm the client config carries the stanza.
 

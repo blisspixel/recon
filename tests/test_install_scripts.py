@@ -28,6 +28,22 @@ def test_installers_do_not_bootstrap_pipx_with_unpinned_pip() -> None:
     assert "Invoke-Expression (Invoke-RestMethod" not in powershell
 
 
+def test_installers_preserve_the_offline_first_run_trust_sequence() -> None:
+    script = _INSTALL_SH.read_text(encoding="utf-8")
+    powershell = _INSTALL_PS1.read_text(encoding="utf-8")
+
+    for installer in (script, powershell):
+        normalized = installer.lower()
+        assert installer.index("--version") < installer.index("doctor")
+        assert "offline install check" in normalized
+        assert "online source connectivity" in normalized
+        assert "DNS infrastructure" in installer
+        assert "MTA-STS" in installer
+        assert "Google CSE" in installer
+        assert "BIMI" in installer
+        assert "--direct-probes" in installer
+
+
 def test_unix_installer_shell_syntax() -> None:
     if os.name == "nt":
         pytest.skip("checked on Unix runners")

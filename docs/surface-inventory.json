@@ -950,7 +950,7 @@
         "path": [
           "doctor"
         ],
-        "summary": "Check connectivity to all data sources.",
+        "summary": "Check installation health and online source connectivity.",
         "usage": "recon doctor"
       },
       {

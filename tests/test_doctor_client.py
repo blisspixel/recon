@@ -248,6 +248,19 @@ class TestDoctorClientCLI:
         result = runner.invoke(app, ["doctor", "--client", "claude-code"])
         assert result.exit_code == EXIT_NO_DATA
         assert "not found" in result.stdout
+        assert "check whether you installed via a plugin instead." in " ".join(result.stdout.split())
+
+    def test_vscode_repair_note_is_not_silently_truncated(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+    ) -> None:
+        monkeypatch.chdir(tmp_path)
+        _write(tmp_path / ".vscode" / "mcp.json", {"mcpServers": {"recon": {"command": "recon", "args": ["mcp"]}}})
+
+        result = runner.invoke(app, ["doctor", "--client", "vscode"])
+
+        collapsed = " ".join(result.stdout.split())
+        assert "recon mcp install --client=vscode" in collapsed
+        assert "to write the right key." in collapsed
 
 
 class TestVscodeServersKey:

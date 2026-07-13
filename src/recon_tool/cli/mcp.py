@@ -64,12 +64,12 @@ def mcp_install_command(
     force: bool = typer.Option(
         False,
         "--force",
-        help="Overwrite an existing `mcpServers.recon` entry.",
+        help="Overwrite an existing recon server entry.",
     ),
     dry_run: bool = typer.Option(
         False,
         "--dry-run",
-        help="Print the plan without writing.",
+        help="Print the client-specific config stanza and plan without writing.",
     ),
 ) -> None:
     """Install the recon MCP server config into a client's config file.
@@ -86,6 +86,7 @@ def mcp_install_command(
         default_scope,
         install,
         plan_install,
+        servers_key,
         warn_if_fallback,
     )
 
@@ -132,12 +133,9 @@ def mcp_install_command(
     if plan.parent_dirs_to_create:
         console.print(f"  mkdir     {len(plan.parent_dirs_to_create)} new parent dir(s)")
     console.print()
-    console.print("  [dim]new block:[/dim]")
-    for line in json.dumps({"recon": plan.new_block}, indent=2).splitlines():
-        # JSON can contain square brackets in the interpreter-bound launcher.
-        # Render it as data so Rich does not consume Python list expressions as
-        # markup and corrupt a dry-run block copied by the operator.
-        console.print(f"    {line}", markup=False, soft_wrap=True)
+    console.print("  [dim]new client stanza:[/dim]")
+    client_stanza = {servers_key(client): {"recon": plan.new_block}}  # pyright: ignore[reportArgumentType]
+    typer.echo(json.dumps(client_stanza, indent=2))
     console.print()
 
     if dry_run:
