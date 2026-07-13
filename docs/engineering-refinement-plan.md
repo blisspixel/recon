@@ -349,6 +349,10 @@ Risk: concurrency and brittle-benchmark risk
   required for correct behavior.
 - Replaced repeated module-level catalog regex dispatch with a strictly bounded
   compiled-pattern cache and exact invalidation on catalog generation changes.
+- Replaced repeated built-in YAML parsing with one deterministic generated JSON
+  runtime artifact. Split YAML remains canonical source and sdist content;
+  exact drift, ordered semantic parity, and a 10.92-times Python 3.14.4 median
+  cold-load gain are checked evidence.
 - Loaded Bayesian model and prior configuration once per fusion-enabled batch,
   with a coherent batch-local snapshot and no cross-invocation global cache.
 - Removed one duplicate Louvain partition while retaining the exact primary
@@ -357,9 +361,8 @@ Risk: concurrency and brittle-benchmark risk
   exact retry schedules and no-I/O invalid-input behavior.
 - Validated four-worker file-grouped full-suite execution with combined branch
   coverage. The complete OS and Python compatibility matrix remains intact.
-- Deferred connection-pool reuse, generated catalog packaging, non-streaming
-  scheduler changes, and bounded cross-domain correlation until their named
-  product-shaped measurements exist.
+- Deferred connection-pool reuse, non-streaming scheduler changes, and bounded
+  cross-domain correlation until their named product-shaped measurements exist.
 
 ### Acceptance
 
@@ -495,6 +498,6 @@ tighter file-size ratchets. Consider `merger.py` only after the interface splits
 10. Measure and, only if justified, simplify operator and agent discovery.
 11. Decompose critical interface hotspots without changing behavior.
 
-Each step closes only with its named acceptance evidence, full local CI, the 82
+Each step closes only with its named acceptance evidence, full local CI, the 90.2
 percent branch-aware project gate, no regression from the current coverage
 baseline, and no known unaddressed issue in scope.

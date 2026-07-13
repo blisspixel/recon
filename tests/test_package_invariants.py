@@ -11,6 +11,7 @@ from __future__ import annotations
 import re
 import shutil
 import subprocess
+import tarfile
 import zipfile
 from email.parser import Parser
 from pathlib import Path
@@ -19,17 +20,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 _EXPECTED_DATA_FILES = {
     "recon_tool/data/bayesian_network.yaml",
-    "recon_tool/data/fingerprints/ai.yaml",
-    "recon_tool/data/fingerprints/crm-marketing.yaml",
-    "recon_tool/data/fingerprints/data-analytics.yaml",
-    "recon_tool/data/fingerprints/discovered-signals.yaml",
-    "recon_tool/data/fingerprints/email.yaml",
-    "recon_tool/data/fingerprints/infrastructure.yaml",
-    "recon_tool/data/fingerprints/productivity.yaml",
-    "recon_tool/data/fingerprints/security.yaml",
-    "recon_tool/data/fingerprints/surface.yaml",
-    "recon_tool/data/fingerprints/verifications.yaml",
-    "recon_tool/data/fingerprints/verticals.yaml",
+    "recon_tool/data/fingerprints.generated.json",
     "recon_tool/data/motifs.yaml",
     "recon_tool/data/posture.yaml",
     "recon_tool/data/profiles/fintech.yaml",
@@ -41,6 +32,20 @@ _EXPECTED_DATA_FILES = {
     "recon_tool/data/recon-schema.json",
     "recon_tool/data/signals.yaml",
     "recon_tool/data/surface-inventory.json",
+}
+
+_CANONICAL_FINGERPRINT_SOURCES = {
+    "ai.yaml",
+    "crm-marketing.yaml",
+    "data-analytics.yaml",
+    "discovered-signals.yaml",
+    "email.yaml",
+    "infrastructure.yaml",
+    "productivity.yaml",
+    "security.yaml",
+    "surface.yaml",
+    "verifications.yaml",
+    "verticals.yaml",
 }
 
 _EXPECTED_RUNTIME_DEPENDENCIES = {
@@ -105,7 +110,7 @@ def _build_wheel(tmp_path: Path) -> Path:
     uv_exe = shutil.which("uv")
     assert uv_exe is not None, "uv is required to build the wheel"
     result = subprocess.run(  # noqa: S603 - fixed dev-tool argv, no shell.
-        [uv_exe, "build", "--wheel", "--out-dir", str(out_dir)],
+        [uv_exe, "build", "--out-dir", str(out_dir)],
         cwd=_REPO_ROOT,
         text=True,
         capture_output=True,
@@ -115,6 +120,23 @@ def _build_wheel(tmp_path: Path) -> Path:
     wheels = sorted(out_dir.glob("*.whl"))
     assert len(wheels) == 1
     return wheels[0]
+
+
+def _build_sdist(tmp_path: Path) -> Path:
+    out_dir = tmp_path / "dist"
+    uv_exe = shutil.which("uv")
+    assert uv_exe is not None, "uv is required to build the sdist"
+    result = subprocess.run(  # noqa: S603 - fixed dev-tool argv, no shell.
+        [uv_exe, "build", "--sdist", "--out-dir", str(out_dir)],
+        cwd=_REPO_ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    sdists = sorted(out_dir.glob("*.tar.gz"))
+    assert len(sdists) == 1
+    return sdists[0]
 
 
 def _runtime_dependency_names(metadata_text: str) -> set[str]:
@@ -129,6 +151,7 @@ def _runtime_dependency_names(metadata_text: str) -> set[str]:
 
 def test_wheel_ships_only_expected_catalog_data(tmp_path: Path) -> None:
     wheel = _build_wheel(tmp_path)
+    assert wheel.name.endswith("-py3-none-any.whl")
     with zipfile.ZipFile(wheel) as archive:
         names = set(archive.namelist())
 
@@ -146,6 +169,20 @@ def test_wheel_ships_only_expected_catalog_data(tmp_path: Path) -> None:
         if "/" in name and not name.startswith("recon_tool/") and ".dist-info" not in name.split("/", 1)[0]
     }
     assert unexpected_top_levels == set()
+
+
+def test_sdist_retains_canonical_fingerprint_sources_and_generated_artifact(tmp_path: Path) -> None:
+    sdist = _build_sdist(tmp_path)
+    with tarfile.open(sdist, "r:gz") as archive:
+        names = {Path(name).as_posix() for name in archive.getnames()}
+
+    fingerprint_sources = {
+        Path(name).name
+        for name in names
+        if "/src/recon_tool/data/fingerprints/" in name and name.endswith(".yaml")
+    }
+    assert fingerprint_sources == _CANONICAL_FINGERPRINT_SOURCES
+    assert any(name.endswith("/src/recon_tool/data/fingerprints.generated.json") for name in names)
 
 
 def test_wheel_runtime_dependencies_stay_lean(tmp_path: Path) -> None:

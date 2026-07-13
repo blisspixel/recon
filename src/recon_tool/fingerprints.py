@@ -1,17 +1,7 @@
-"""Load SaaS fingerprint patterns from YAML data file.
+"""Load and match built-in, custom, and session fingerprint patterns.
 
-Supports the multi-detection schema:
-  fingerprints:
-    - name: OpenAI
-      slug: openai
-      category: AI & Generative
-      confidence: high
-      detections:
-        - type: txt
-          pattern: "^openai-domain-verification="
-
-Also supports custom fingerprints from ~/.recon/fingerprints.yaml
-(additive only — custom entries cannot override or disable built-in ones).
+Built-ins use deterministic generated package data. Additive custom YAML under
+``~/.recon`` and session entries pass through the canonical validator.
 """
 
 from __future__ import annotations
@@ -26,6 +16,7 @@ from typing import Any, NamedTuple
 import deal
 import yaml
 
+from recon_tool.fingerprint_artifact import FingerprintArtifactError, load_artifact_sources
 from recon_tool.regex_safety import (
     clear_compiled_regex_cache,
     compile_regex,
@@ -112,7 +103,7 @@ class DetectionRule:
 
 @dataclass(frozen=True)
 class Fingerprint:
-    """A validated, immutable fingerprint entry loaded from YAML.
+    """A validated, immutable fingerprint entry loaded from catalog data.
 
     Frozen dataclass ensures cached fingerprints cannot be mutated.
     """
@@ -191,7 +182,7 @@ def _parse_detection_weight(raw_weight: Any, name: str, source: str) -> float:
 def _parse_cname_target_tier(det: dict[str, Any], name: str, source: str) -> str:
     """Return the cname_target tier if valid, else default 'application'."""
     raw_tier = det.get("tier", "application")
-    if raw_tier in _VALID_CNAME_TARGET_TIERS:
+    if isinstance(raw_tier, str) and raw_tier in _VALID_CNAME_TARGET_TIERS:
         return raw_tier
     logger.warning(
         "Fingerprint %r cname_target detection has invalid tier %r in %s — defaulting to application",
@@ -220,7 +211,7 @@ def _parse_detection_rule(det: Any, name: str, source: str) -> DetectionRule | N
     if not isinstance(det, dict):
         return None
     det_type = det.get("type")
-    if det_type not in _VALID_DETECTION_TYPES:
+    if not isinstance(det_type, str) or det_type not in _VALID_DETECTION_TYPES:
         logger.warning(
             "Fingerprint %r has unknown detection type %r in %s — skipped",
             name,
@@ -229,11 +220,12 @@ def _parse_detection_rule(det: Any, name: str, source: str) -> DetectionRule | N
         )
         return None
     pattern = det.get("pattern", "")
-    if not isinstance(pattern, str):
+    description = det.get("description", "")
+    reference = det.get("reference", "")
+    if not all(isinstance(value, str) for value in (pattern, description, reference)):
         logger.warning(
-            "Fingerprint %r has non-string pattern %r in %s — skipped",
+            "Fingerprint %r has a non-string detection field in %s - skipped",
             name,
-            pattern,
             source,
         )
         return None
@@ -248,12 +240,50 @@ def _parse_detection_rule(det: Any, name: str, source: str) -> DetectionRule | N
     return DetectionRule(
         type=det_type,
         pattern=pattern,
-        description=det.get("description", ""),
-        reference=det.get("reference", ""),
+        description=description,
+        reference=reference,
         weight=weight,
         tier=tier,
         verified=_parse_verified(det.get("verified"), name, source),
     )
+
+
+def _parse_fingerprint_fields(fp: dict[str, Any], name: str, source: str) -> tuple[str, str, str, bool, str] | None:
+    """Validate normalized fingerprint-level scalar fields."""
+    confidence = fp.get("confidence", "medium")
+    if not isinstance(confidence, str):
+        logger.warning("Fingerprint %r has invalid confidence %r in %s - skipped", name, confidence, source)
+        return None
+    if confidence not in _VALID_CONFIDENCE_LEVELS:
+        logger.warning(
+            "Fingerprint %r has invalid confidence %r in %s - defaulting to medium",
+            name,
+            confidence,
+            source,
+        )
+        confidence = "medium"
+    slug = fp.get("slug", name.lower().replace(" ", "-"))
+    if not isinstance(slug, str) or not slug:
+        logger.warning("Fingerprint %r has invalid slug %r in %s - skipped", name, slug, source)
+        return None
+    category = fp.get("category", "Misc")
+    if not isinstance(category, str) or not category:
+        logger.warning("Fingerprint %r has invalid category %r in %s - skipped", name, category, source)
+        return None
+    m365 = fp.get("m365", False)
+    if not isinstance(m365, bool):
+        logger.warning("Fingerprint %r has invalid m365 flag %r in %s - skipped", name, m365, source)
+        return None
+    match_mode = fp.get("match_mode", "any")
+    if not isinstance(match_mode, str) or match_mode not in _VALID_MATCH_MODES:
+        logger.warning(
+            "Fingerprint %r has invalid match_mode %r in %s - skipped",
+            name,
+            match_mode,
+            source,
+        )
+        return None
+    return slug, category, confidence, m365, match_mode
 
 
 def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None:
@@ -275,15 +305,10 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
         logger.warning("Fingerprint %r has no detections in %s — skipped", name, source)
         return None
 
-    confidence = fp.get("confidence", "medium")
-    if confidence not in _VALID_CONFIDENCE_LEVELS:
-        logger.warning(
-            "Fingerprint %r has invalid confidence %r in %s — defaulting to medium",
-            name,
-            confidence,
-            source,
-        )
-        confidence = "medium"
+    fields = _parse_fingerprint_fields(fp, name, source)
+    if fields is None:
+        return None
+    slug, category, confidence, m365, match_mode = fields
 
     valid_detections: list[DetectionRule] = []
     for det in detections_raw:
@@ -293,20 +318,6 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
 
     if not valid_detections:
         logger.warning("Fingerprint %r has no valid detections in %s — skipped", name, source)
-        return None
-
-    slug = fp.get("slug", name.lower().replace(" ", "-"))
-    category = fp.get("category", "Misc")
-    m365 = bool(fp.get("m365", False))
-
-    match_mode = fp.get("match_mode", "any")
-    if match_mode not in _VALID_MATCH_MODES:
-        logger.warning(
-            "Fingerprint %r has invalid match_mode %r in %s — skipped",
-            name,
-            match_mode,
-            source,
-        )
         return None
 
     def _opt_str(field_name: str) -> str | None:
@@ -623,8 +634,20 @@ def _load_from_dir(directory: Path) -> list[Fingerprint]:
     return entries
 
 
+def _load_builtin_artifact(path: Path) -> list[Fingerprint]:
+    """Load built-ins from the generated artifact through the canonical validator."""
+    results: list[Fingerprint] = []
+    for source in load_artifact_sources(path):
+        for raw in source.fingerprints:
+            fingerprint = _validate_fingerprint(raw, f"built-in:{source.path}")
+            if fingerprint is None:
+                raise FingerprintArtifactError(f"built-in:{source.path} failed runtime validation")
+            results.append(fingerprint)
+    return results
+
+
 def load_fingerprints() -> tuple[Fingerprint, ...]:
-    """Load fingerprints from YAML data files (built-in + custom).
+    """Load built-in and custom fingerprints.
 
     Returns a tuple of frozen Fingerprint dataclasses. The tuple (immutable)
     and frozen dataclasses ensure the cached result cannot be corrupted by
@@ -634,13 +657,9 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
     (short-lived process). In the MCP server (long-lived), call
     reload_fingerprints() to pick up changes to custom fingerprints.
 
-    Built-in catalog layout: ``data/fingerprints/<category>.yaml``.
-    The pre-split monolith at ``data/fingerprints.yaml`` is still accepted
-    as a fallback so a bisect against an old tree doesn't break. Custom
-    fingerprints (``~/.recon/fingerprints.yaml``) are still a single file
-    — contributors adding in bulk can point ``RECON_CONFIG_DIR`` at a
-    directory containing ``fingerprints.yaml`` OR a ``fingerprints/``
-    subdirectory of split files.
+    Built-ins use the generated package-data artifact. Custom fingerprints
+    remain YAML and may use ``fingerprints.yaml`` plus a ``fingerprints/``
+    directory of split files under ``RECON_CONFIG_DIR``.
     """
     with _ephemeral_lock:
         if _cache_state.fingerprints is not None:
@@ -648,8 +667,7 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
 
         if _cache_state.catalog_fingerprints is None:
             base = Path(__file__).parent / "data"
-            data_dir = base / "fingerprints"
-            data_file = base / "fingerprints.yaml"
+            artifact_file = base / "fingerprints.generated.json"
 
             from recon_tool.paths import config_dir
 
@@ -658,12 +676,7 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
             custom_dir = custom_base / "fingerprints"
 
             catalog: list[Fingerprint] = []
-            # Built-in: prefer the split directory when present; fall back to
-            # the monolith only if the directory doesn't exist.
-            if data_dir.is_dir():
-                catalog.extend(_load_from_dir(data_dir))
-            else:
-                catalog.extend(_load_from_path(data_file))
+            catalog.extend(_load_builtin_artifact(artifact_file))
             # Custom file and directory are both additive catalog sources.
             catalog.extend(_load_from_path(custom_file))
             catalog.extend(_load_from_dir(custom_dir))

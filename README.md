@@ -152,6 +152,12 @@ failure remains unavailable rather than becoming a negative observation. The
 Bayesian uncertainty band is evidence-responsive, not a demonstrated credible
 or confidence interval.
 
+The reviewed built-in fingerprint source remains split YAML. Release wheels
+load one deterministic generated JSON catalog, while custom and session-scoped
+fingerprints still pass through the runtime validator. This keeps contributor
+review readable and removes repeated YAML parsing from cold CLI startup without
+changing catalog order, matching, or public output.
+
 Long-form explanation: [docs/how-it-works.md](docs/how-it-works.md).
 Formal model and robustness research program:
 [docs/correlation.md](docs/correlation.md).

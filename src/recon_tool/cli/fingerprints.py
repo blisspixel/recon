@@ -598,22 +598,21 @@ def fingerprints_check(
     (regex safety, required fields, allowed detection types, weight
     range, match_mode) and doesn't collide with an existing slug.
 
-    Without an argument, validates the built-in catalog at
-    ``recon_tool/data/fingerprints.yaml`` (or ``recon_tool/data/fingerprints/``
-    once the split lands). Pass a path to validate a candidate file
-    before committing it.
+    Without an argument, validates canonical YAML in a source checkout or the
+    packaged generated catalog in an installed wheel. Pass a path to validate a
+    candidate YAML file before committing it.
     """
     from pathlib import Path as _Path
 
     if path is None:
-        # Prefer the directory layout if it exists; fall back to
-        # the monolith while both coexist.
-        base = _Path(__file__).resolve().parents[1] / "data"
-        split_dir = base / "fingerprints"
-        target = split_dir if split_dir.is_dir() else base / "fingerprints.yaml"
-    else:
-        target = _Path(path)
+        from recon_tool.fingerprint_validator import validate_builtin_artifact, validate_path
 
+        split_dir = _Path(__file__).resolve().parents[1] / "data" / "fingerprints"
+        if split_dir.is_dir():
+            raise typer.Exit(code=validate_path(split_dir, quiet=quiet))
+        raise typer.Exit(code=validate_builtin_artifact(quiet=quiet))
+
+    target = _Path(path)
     if not target.exists():
         from recon_tool.formatter import render_error
 

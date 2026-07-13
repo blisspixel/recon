@@ -11,10 +11,14 @@ from typing import Any
 import yaml
 
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_SUCCESS, EXIT_VALIDATION
-from recon_tool.fingerprints import _validate_fingerprint  # pyright: ignore[reportPrivateUsage]
+from recon_tool.fingerprint_artifact import FingerprintArtifactError
+from recon_tool.fingerprints import (
+    _load_builtin_artifact,  # pyright: ignore[reportPrivateUsage]
+    _validate_fingerprint,  # pyright: ignore[reportPrivateUsage]
+)
 from recon_tool.specificity import evaluate_pattern
 
-__all__ = ["main", "validate_path"]
+__all__ = ["main", "validate_builtin_artifact", "validate_path"]
 
 
 def _extract_entries(raw: Any, path: Path) -> list[Any] | None:
@@ -135,6 +139,42 @@ def validate_path(path: Path, *, quiet: bool = False, skip_specificity: bool = F
     finally:
         recon_logger.removeHandler(handler)
         recon_logger.setLevel(previous_level)
+
+
+def validate_builtin_artifact(*, quiet: bool = False) -> int:
+    """Validate the packaged built-in artifact and its specificity contract."""
+    path = Path(__file__).resolve().parent / "data" / "fingerprints.generated.json"
+    try:
+        fingerprints = _load_builtin_artifact(path)
+    except FingerprintArtifactError as exc:
+        print(f"error: generated fingerprint artifact is invalid: {exc}", file=sys.stderr)
+        return EXIT_ERROR
+
+    failed: set[str] = set()
+    slug_names: dict[str, set[str]] = {}
+    for fingerprint in fingerprints:
+        slug_names.setdefault(fingerprint.slug, set()).add(fingerprint.name)
+        for detection in fingerprint.detections:
+            verdict = evaluate_pattern(detection.pattern, detection.type)
+            if verdict.threshold_exceeded:
+                failed.add(fingerprint.name)
+                print(
+                    f"FAIL  {fingerprint.name}: over-broad {detection.type} pattern {detection.pattern!r} "
+                    f"matched {verdict.matches}/{verdict.corpus_size} synthetic records",
+                    file=sys.stderr,
+                )
+        if not quiet and fingerprint.name not in failed:
+            print(f"ok    fingerprints.generated.json: {fingerprint.name}")
+
+    duplicate_slugs = {slug: names for slug, names in slug_names.items() if len(names) > 1}
+    for slug, names in sorted(duplicate_slugs.items()):
+        print(f"FAIL  duplicate slug {slug!r}: {', '.join(sorted(names))}", file=sys.stderr)
+
+    print()
+    print(f"Validated {len(fingerprints)} entries: {len(fingerprints) - len(failed)} passed, {len(failed)} failed")
+    if duplicate_slugs:
+        print(f"Duplicate slugs: {len(duplicate_slugs)}", file=sys.stderr)
+    return EXIT_ERROR if failed or duplicate_slugs else EXIT_SUCCESS
 
 
 def _validate_path_with_capture(

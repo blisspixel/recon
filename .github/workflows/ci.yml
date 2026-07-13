@@ -184,6 +184,11 @@ jobs:
         # argument shape).
         run: uv run python scripts/validate_fingerprint.py src/recon_tool/data/fingerprints/ --quiet
 
+      - name: Enforce generated fingerprint artifact
+        # The split YAML files are canonical contributor source. Runtime uses
+        # one deterministic generated JSON artifact, and drift blocks CI.
+        run: uv run python scripts/generate_fingerprint_catalog.py --check
+
       - name: Enforce fingerprint metadata coverage (v1.9.7+)
         # Per-detection presence gate: every detection in every
         # category must carry a non-empty ``description`` field.

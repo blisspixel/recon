@@ -79,11 +79,11 @@ machine, and does not report statistically stable tail latency. The current
 product baseline still needs the environment, corpus, cache, repetition, p50,
 p95, degradation, and stage controls listed below.
 
-Built-in profiling explains where a Python-first pass should start:
+Built-in profiling explained where the Python-first passes should start:
 
-- Cold catalog loading is dominated by parsing 11 built-in YAML files. A
-  validated generated artifact, more selective loading, or another Python-side
-  representation should be measured before considering native parsing.
+- Cold catalog loading was dominated by parsing 11 built-in YAML files. The
+  generated-artifact checkpoint below removes that cost while keeping the YAML
+  source and canonical runtime validator.
 - Large TXT sweeps spend most local time dispatching string patterns through
   `re.search`. An immutable precompiled-pattern cache can be evaluated without
   changing the public fingerprint model.
@@ -148,6 +148,48 @@ and prior load per invocation. Graph tests assert the exact seed set and
 unchanged stability output. The full branch-aware project result remains above
 the blocking 90.2 percent baseline ratchet.
 
+## July 12, 2026 generated catalog checkpoint
+
+The split YAML files remain canonical contributor source and remain in the
+source distribution. The wheel ships one compact, deterministic JSON runtime
+artifact. The generator validates all 847 entries, preserves source-file,
+entry, detection, and repeated-slug order, and emits canonical UTF-8 JSON with
+sorted object keys and one LF terminator. Local, CI, and release gates reject
+any byte drift. Custom and session-scoped fingerprints still use the existing
+runtime validation and lifecycle paths.
+
+The network-free harness compared the full canonical YAML parse and validation
+path with the generated runtime path on Windows 11, CPython 3.14.4, and an AMD
+Ryzen 9 5950X. Each median is from 15 repetitions after three warm-ups. Both
+cases clear the catalog and compiled-regex caches on every repetition. The
+measurement used the complete reviewed working tree based on `ecf99cb` and
+records `working_tree_dirty: true`; it does not imply clean-commit timing.
+
+| Checked operation | Median | Nearest-rank p95 | Python peak |
+|---|---:|---:|---:|
+| Canonical split YAML reference, 847 entries and 1,045 rules | 736.839 ms | 806.959 ms | 6,558.0 KiB |
+| Generated JSON runtime, same ordered catalog | 67.467 ms | 89.770 ms | 1,835.7 KiB |
+
+The observed median stage gain is 10.92 times, above the predeclared five-times
+gate, with 72.0 percent less traced peak Python allocation. Exact dataclass and
+all-accessor differential tests are the correctness authority; timing remains
+a dated local diagnostic, not a CI threshold or portable SLO. The wheel remains
+pure Python and universal. Excluding canonical YAML from the wheel offsets the
+generated artifact. Two fixed-epoch builds were byte-identical. Relative to
+the v2.5.1 baseline, the wheel decreased from 658,489 to 646,442 bytes, down
+12,047 bytes or 1.83 percent, and installed package files decreased from
+2,285,156 to 2,248,617 bytes, down 36,539 bytes or 1.60 percent. The wheel
+remains `py3-none-any`, contains no canonical YAML copy, and loads all 847
+entries in a clean isolated environment.
+
+This follows the [Python 3.14 JSON documentation](https://docs.python.org/3.14/library/json.html),
+reviewed 2026-07-12, which documents ordered decoding, `sort_keys`, and compact
+separators. It also follows [Hatch reproducible-build guidance](https://hatch.pypa.io/latest/config/build/),
+reviewed 2026-07-12, which documents deterministic timestamps and
+`SOURCE_DATE_EPOCH`. The artifact contains data, not executable serialization;
+bounded JSON decoding and the canonical fingerprint validator remain in the
+runtime path.
+
 ## Python version policy
 
 The package continues to require Python 3.11 or newer. Python 3.14 is the
@@ -190,17 +232,12 @@ and a product-shaped benchmark all justify it.
 
 ## Ranked next optimization work
 
-1. Generate a deterministic built-in catalog artifact. Keep the split YAML as
-   the reviewed source, generate one packaged runtime representation, and make
-   CI fail on drift. Proceed only with semantic differential equality,
-   reproducible wheel bytes, and at least a five-times cold-load improvement on
-   the current Python 3.14 patch.
-2. Reuse one SSRF-safe HTTP connection pool across batch domains. Preserve
+1. Reuse one SSRF-safe HTTP connection pool across batch domains. Preserve
    request-specific timeouts, retry and cancellation behavior, per-request DNS
    rebinding checks, CT provider policy, and degraded-source reporting. Promote
    only after a synthetic warm-batch benchmark shows a material connection or
    throughput gain with no failure-rate regression.
-3. Bound every batch-wide data structure before raising concurrency. Generalize
+2. Bound every batch-wide data structure before raising concurrency. Generalize
    the rolling scheduler beyond NDJSON, avoid constructing discarded per-domain
    renderings in summary mode, and replace pairwise ecosystem overlap plus
    unbounded peer materialization with an indexed, capped design that reports

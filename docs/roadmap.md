@@ -559,11 +559,14 @@ the measured full-suite wall time from 330.53 seconds serial without coverage
 to 88.83 seconds with branch coverage. These are dated local diagnostics, not
 product SLOs; [performance.md](performance.md) records the fixtures and limits.
 
-The next optimization order is evidence-gated:
+The next optimization order is evidence-gated. The first item is complete in
+the post-v2.5.1 working tree:
 
-1. Keep split YAML canonical, generate a deterministic packaged built-in
-   catalog representation, enforce byte-for-byte drift checking, and require
-   semantic equality plus at least a five-times Python 3.14 cold-load gain.
+1. Completed: split YAML remains canonical, one deterministic JSON runtime
+   catalog is packaged, byte drift and exact ordered semantic equality are
+   gated, and the 15-repetition Python 3.14.4 characterization measured a
+   10.92-times median cold-load gain with 72.0 percent less traced peak
+   allocation.
 2. Characterize a batch-scoped SSRF-safe HTTP pool. Preserve request-specific
    timeouts, retries, cancellation, rebinding checks, CT policy, and degraded
    results before considering promotion.
