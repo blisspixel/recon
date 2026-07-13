@@ -17,7 +17,7 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- Release metadata is synchronized on v2.5.5. The remote release-readiness
+- Release metadata is synchronized on v2.5.6. The remote release-readiness
   check is the authority for whether GitHub, PyPI, and CI are aligned.
 - Local release readiness must pass before tagging; remote release readiness
   must pass for the same commit after publication.
@@ -410,22 +410,31 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ## Track 7: Operator and Agent Surface Simplification
 
-Status: measure before design
+Status: CLI help grouped; MCP discovery measurement pending
 Dependencies: Track 3 context-cost baseline
 Risk: compatibility and discoverability risk
 
 Document the three primary workflows separately from specialist graph,
 posterior, hypothesis, simulation, catalog-mutation, and discovery workflows.
-Measure CLI help and MCP discovery cost. Introduce a backward-compatible core
-versus advanced discovery profile only if the measured reduction is material.
-Do not rename or remove stable tools as a documentation cleanup.
+The 2026-07-13 CLI baseline measured 154 lines at 80 columns and 261 lines at
+60 columns. Native task panels reduce those surfaces to 109 and 180 lines,
+respectively, while retaining every option and moving collection disclosure
+into the first half. At 80 columns every canonical option remains untruncated.
+At 56 columns, two long names can still truncate, so complete narrow-terminal
+support remains a separate plain-linear-help design problem.
+
+Measure MCP discovery cost before introducing a backward-compatible core
+versus advanced discovery profile. Do not rename or remove stable tools as a
+documentation cleanup, and do not add a CLI profile because grouping already
+solved the measured CLI hierarchy problem without hiding controls.
 
 ### Acceptance
 
 - Primary workflows fit on one reader screen and do not require graph,
   posterior, or catalog internals.
-- A dated baseline records CLI help size, MCP discovery bytes, and
-  representative workflow result bytes.
+- The dated CLI baseline records width, line count, token visibility, and the
+  remaining narrow-terminal truncation. MCP discovery bytes and representative
+  workflow result bytes remain pending.
 - No discovery profile is implemented unless its threshold is predeclared. If
   implemented, the core profile reduces discovery bytes by at least 30 percent
   on the recorded catalog while the full profile and stable tool names remain

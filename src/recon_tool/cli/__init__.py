@@ -86,6 +86,12 @@ _SUBCOMMANDS = frozenset(
     {"doctor", "update", "batch", "lookup", "mcp", "cache", "delta", "discover", "fingerprints", "signals"}
 )
 
+_OUTPUT_HELP_PANEL = "Output"
+_REPORT_HELP_PANEL = "Report detail and wording"
+_COLLECTION_HELP_PANEL = "Collection, cache, and scope"
+_ANALYSIS_HELP_PANEL = "Analysis modes"
+_EVIDENCE_HELP_PANEL = "Evidence model"
+
 
 class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseClass, reportAttributeAccessIssue]
     """Custom Click group that routes domain-like args to the lookup command.
@@ -254,38 +260,125 @@ def _print_welcome_banner() -> None:
 @app.command()
 def lookup(
     domain: str = typer.Argument(help="Domain to look up"),
-    json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
-    markdown: bool = typer.Option(False, "--md", help="Markdown report"),
-    plain: bool = typer.Option(False, "--plain", help="Plain linear text (greppable, screen-reader-friendly)"),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Structured JSON output",
+        rich_help_panel=_OUTPUT_HELP_PANEL,
+    ),
+    markdown: bool = typer.Option(
+        False,
+        "--md",
+        help="Markdown report",
+        rich_help_panel=_OUTPUT_HELP_PANEL,
+    ),
+    plain: bool = typer.Option(
+        False,
+        "--plain",
+        help="Plain linear text for grep and screen readers",
+        rich_help_panel=_OUTPUT_HELP_PANEL,
+    ),
     services: bool = typer.Option(
         False,
         "--services",
         "-s",
         help="Services are shown by default; retained for compatibility",
+        rich_help_panel=_REPORT_HELP_PANEL,
     ),
-    domains: bool = typer.Option(False, "--domains", "-d", help="All tenant domains"),
-    full: bool = typer.Option(False, "--full", "-f", help="Expanded evidence, all domains, and posture"),
-    verbose: bool = typer.Option(False, "--verbose", "-v", help="Expanded evidence and per-source status"),
-    sources: bool = typer.Option(False, "--sources", help="Detailed source breakdown table"),
+    domains: bool = typer.Option(
+        False,
+        "--domains",
+        "-d",
+        help="All tenant domains",
+        rich_help_panel=_REPORT_HELP_PANEL,
+    ),
+    full: bool = typer.Option(
+        False,
+        "--full",
+        "-f",
+        help="Expanded evidence, all domains, and posture",
+        rich_help_panel=_REPORT_HELP_PANEL,
+    ),
+    verbose: bool = typer.Option(
+        False,
+        "--verbose",
+        "-v",
+        help="Expanded evidence and per-source status",
+        rich_help_panel=_REPORT_HELP_PANEL,
+    ),
+    sources: bool = typer.Option(
+        False,
+        "--sources",
+        help="Detailed source breakdown table",
+        rich_help_panel=_REPORT_HELP_PANEL,
+    ),
     timeout: float = typer.Option(
         120.0,
         "--timeout",
         "-t",
         help="Max seconds for the full resolve pipeline (default: 120)",
+        rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
-    posture: bool = typer.Option(False, "--posture", "-p", help="Show posture observations"),
-    compare: str | None = typer.Option(None, "--compare", help="Compare against previous JSON export"),
-    chain: bool = typer.Option(False, "--chain", help="Recursively follow related domains"),
-    depth: int = typer.Option(1, "--depth", help="Chain depth (1-3, requires --chain)"),
-    no_cache: bool = typer.Option(False, "--no-cache", help="Bypass disk cache entirely"),
-    cache_ttl: int = typer.Option(86400, "--cache-ttl", help="Cache TTL in seconds (default: 86400)"),
-    exposure: bool = typer.Option(False, "--exposure", help="Show exposure assessment"),
-    gaps: bool = typer.Option(False, "--gaps", help="Show hardening gap analysis"),
-    explain: bool = typer.Option(False, "--explain", help="Show why each insight and signal was produced"),
+    posture: bool = typer.Option(
+        False,
+        "--posture",
+        "-p",
+        help="Show posture observations",
+        rich_help_panel=_REPORT_HELP_PANEL,
+    ),
+    compare: str | None = typer.Option(
+        None,
+        "--compare",
+        help="Compare against previous JSON export",
+        rich_help_panel=_ANALYSIS_HELP_PANEL,
+    ),
+    chain: bool = typer.Option(
+        False,
+        "--chain",
+        help="Recursively follow related domains",
+        rich_help_panel=_ANALYSIS_HELP_PANEL,
+    ),
+    depth: int = typer.Option(
+        1,
+        "--depth",
+        help="Chain depth (1-3, requires --chain)",
+        rich_help_panel=_ANALYSIS_HELP_PANEL,
+    ),
+    no_cache: bool = typer.Option(
+        False,
+        "--no-cache",
+        help="Bypass disk cache entirely",
+        rich_help_panel=_COLLECTION_HELP_PANEL,
+    ),
+    cache_ttl: int = typer.Option(
+        86400,
+        "--cache-ttl",
+        help="Cache TTL in seconds (default: 86400)",
+        rich_help_panel=_COLLECTION_HELP_PANEL,
+    ),
+    exposure: bool = typer.Option(
+        False,
+        "--exposure",
+        help="Show exposure assessment",
+        rich_help_panel=_ANALYSIS_HELP_PANEL,
+    ),
+    gaps: bool = typer.Option(
+        False,
+        "--gaps",
+        help="Show hardening gap analysis",
+        rich_help_panel=_ANALYSIS_HELP_PANEL,
+    ),
+    explain: bool = typer.Option(
+        False,
+        "--explain",
+        help="Show why each insight and signal was produced",
+        rich_help_panel=_REPORT_HELP_PANEL,
+    ),
     profile: str | None = typer.Option(
         None,
         "--profile",
         help="Apply a profile lens to posture observations (e.g. fintech, healthcare, high-value-target)",
+        rich_help_panel=_REPORT_HELP_PANEL,
     ),
     confidence_mode: str = typer.Option(
         "hedged",
@@ -296,11 +389,13 @@ def lookup(
             "insights only on results at High confidence with at least three sources; underlying evidence, "
             "validation, and confidence are unchanged."
         ),
+        rich_help_panel=_REPORT_HELP_PANEL,
     ),
     strict: bool = typer.Option(
         False,
         "--strict",
         help="Shortcut for strict wording; underlying evidence and confidence are unchanged.",
+        rich_help_panel=_REPORT_HELP_PANEL,
     ),
     fusion: bool = typer.Option(
         True,
@@ -310,6 +405,7 @@ def lookup(
             "posteriors and uncertainty bands (on by default from v2.0; "
             "--no-fusion to skip)"
         ),
+        rich_help_panel=_EVIDENCE_HELP_PANEL,
     ),
     explain_dag: bool = typer.Option(
         False,
@@ -318,6 +414,7 @@ def lookup(
             "Render the Bayesian evidence DAG as plain English (default) "
             "or DOT (with --explain-dag-format dot). Implies --fusion."
         ),
+        rich_help_panel=_EVIDENCE_HELP_PANEL,
     ),
     explain_dag_format: str = typer.Option(
         "text",
@@ -327,15 +424,13 @@ def lookup(
             "(Graphviz), or 'mermaid' (renders inline in GitHub, "
             "Notion, and most AI chat clients)."
         ),
+        rich_help_panel=_EVIDENCE_HELP_PANEL,
     ),
     include_unclassified: bool = typer.Option(
         False,
         "--include-unclassified",
-        help=(
-            "Include unclassified CNAME chains in --json output. Surfaces "
-            "candidates for new fingerprints. Feeds the discovery loop in "
-            "validation/ and the /recon-fingerprint-triage skill."
-        ),
+        help="Include unclassified CNAME chains in --json output for fingerprint discovery.",
+        rich_help_panel=_OUTPUT_HELP_PANEL,
     ),
     no_ct: bool = typer.Option(
         False,
@@ -346,6 +441,7 @@ def lookup(
             "walks. Use for high-volume validation runs where you want "
             "zero load on public CT services."
         ),
+        rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     direct_probes: bool = typer.Option(
         False,
@@ -359,6 +455,7 @@ def lookup(
             "target-owned HTTP/application request. BIMI presence is detected from "
             "DNS either way."
         ),
+        rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     exact: bool = typer.Option(
         False,
@@ -370,12 +467,15 @@ def lookup(
             "recon's signal lives; --exact keeps the literal host for the "
             "narrow case of wanting DNS facts about that one sub-host."
         ),
+        rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
 ) -> None:
     """
     Look up a domain. This is the default command.
 
-    [dim]recon contoso.com is the same as recon lookup contoso.com[/dim]
+    [dim]Start with recon DOMAIN. Add --full for detail, --explain for evidence,
+    or --json for automation. Google CSE and BIMI probes require --direct-probes;
+    MTA-STS is the only default target-owned HTTP request.[/dim]
     """
     effective_confidence_mode = "strict" if strict else confidence_mode
     options = LookupOptions(
