@@ -1,12 +1,19 @@
 # Fingerprints
 
-Fingerprints are DNS pattern rules in `recon_tool/data/fingerprints/`,
+Fingerprints are DNS pattern rules in `src/recon_tool/data/fingerprints/`,
 one YAML file per category (`ai.yaml`, `email.yaml`, `security.yaml`,
 `infrastructure.yaml`, `productivity.yaml`, `crm-marketing.yaml`,
 `data-analytics.yaml`, `verticals.yaml`). Add new services by editing
 the matching category file; no code changes needed. Use
 `recon fingerprints list` / `search` / `show` to inspect the current
 catalog without opening YAML.
+
+The split YAML files are the canonical reviewed source and remain in the source
+distribution. A deterministic generated JSON artifact is the only built-in
+catalog representation shipped in the wheel. CI proves byte-for-byte currency,
+and differential tests prove exact ordered equality with the YAML source. Run
+`uv run python scripts/generate_fingerprint_catalog.py --write` after changing
+built-ins. Custom YAML remains runtime parsed and validated.
 
 ## Custom fingerprints
 

@@ -60,3 +60,4 @@ def test_release_test_job_typechecks_source_and_tests() -> None:
 
     assert "actions/setup-node" in step_text
     assert "uv run pyright src/recon_tool/ tests/" in step_text
+    assert "uv run python scripts/generate_fingerprint_catalog.py --check" in step_text

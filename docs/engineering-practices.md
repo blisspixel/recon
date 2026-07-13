@@ -32,6 +32,10 @@ fix, encoded once. The pre-commit hooks and the CI validation job mirror the
 same fast guard family. Derived security artifacts that CI consumes, including
 the ClusterFuzzLite hash-pinned runtime requirements export, are checked here
 and remotely so dependency updates cannot leave stale generated inputs behind.
+The same rule applies to product data: split fingerprint YAML is canonical,
+`scripts/generate_fingerprint_catalog.py --check` gates its deterministic JSON
+runtime artifact, and exact differential tests prevent reordered or partial
+catalog generation.
 
 ## 2. Architecture and organization
 
@@ -199,6 +203,7 @@ What we already do well, and the named open items, with no pretending.
 | **God-file decomposition + interface locality** (formatter/cli/exposure/merger/dns/bayesian/server) | In place | Interface implementation lives under local packages; top-level prefix modules are bounded compatibility shims; every module is under the 1000-line cap except formatter's cohesive panel core (~2160, baselined) |
 | **`PLR09xx` function-size rules** (statements/branches/args/returns) | Ratcheted | `scripts/check_plr_ratchet.py` blocks new debt while existing violations are paid down |
 | **Schema generation path** | In place | `scripts/generate_schema.py --check`, `scripts/check_schema_sources.py`, and nested `$defs` tests block untraced schema drift across both published schema copies |
+| **Fingerprint runtime generation** | In place | Canonical split YAML stays reviewable and in the sdist; the universal wheel ships one deterministic JSON artifact guarded by byte drift, exact semantic parity, and package-inventory tests |
 | **Per-PR diff coverage** | Advisory | `scripts/diff_coverage.py` reports changed-line coverage from local Coverage.py JSON without making doc-only changes painful |
 
 The open items are tracked, ratcheted, or explicitly deferred. None is a silent gap.

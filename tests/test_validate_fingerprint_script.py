@@ -9,6 +9,9 @@ from typer.testing import CliRunner
 
 from recon_tool import fingerprint_validator
 from recon_tool.cli import app
+from recon_tool.fingerprint_artifact import FingerprintArtifactError
+from recon_tool.fingerprints import DetectionRule, Fingerprint
+from recon_tool.specificity import SpecificityVerdict
 
 runner = CliRunner()
 
@@ -76,6 +79,71 @@ def test_fingerprints_check_uses_packaged_validator(tmp_path: Path) -> None:
 
     assert result.exit_code == 0
     assert "Validated 1 entries: 1 passed, 0 failed" in result.output
+
+
+def test_fingerprints_check_without_path_validates_source_when_available(monkeypatch: pytest.MonkeyPatch) -> None:
+    def artifact_must_not_run(*, quiet: bool = False) -> int:
+        raise AssertionError(f"unexpected artifact validation with quiet={quiet}")
+
+    monkeypatch.setattr(fingerprint_validator, "validate_builtin_artifact", artifact_must_not_run)
+
+    result = runner.invoke(app, ["fingerprints", "check", "--quiet"])
+
+    assert result.exit_code == 0
+    assert "Validated 847 entries: 847 passed, 0 failed" in result.output
+
+
+def test_builtin_artifact_validator_reports_specificity_and_duplicate_failures(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    fingerprints = [
+        Fingerprint(
+            name=name,
+            slug="shared-slug",
+            category="Misc",
+            confidence="high",
+            m365=False,
+            detections=(DetectionRule(type="txt", pattern=pattern),),
+        )
+        for name, pattern in (("Broad Service", ".*"), ("Specific Service", "^specific="))
+    ]
+    def load_fixture(_path: Path) -> list[Fingerprint]:
+        return fingerprints
+
+    def evaluate_fixture(pattern: str, detection_type: str) -> SpecificityVerdict:
+        return SpecificityVerdict(
+            pattern=pattern,
+            detection_type=detection_type,
+            matches=10 if pattern == ".*" else 0,
+            corpus_size=10,
+            threshold_exceeded=pattern == ".*",
+        )
+
+    monkeypatch.setattr(fingerprint_validator, "_load_builtin_artifact", load_fixture)
+    monkeypatch.setattr(fingerprint_validator, "evaluate_pattern", evaluate_fixture)
+
+    code = fingerprint_validator.validate_builtin_artifact(quiet=False)
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "over-broad txt pattern" in captured.err
+    assert "duplicate slug 'shared-slug'" in captured.err
+    assert "ok    fingerprints.generated.json: Specific Service" in captured.out
+    assert "Validated 2 entries: 1 passed, 1 failed" in captured.out
+
+
+def test_builtin_artifact_validator_reports_artifact_errors(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fail(_path: Path) -> list[Fingerprint]:
+        raise FingerprintArtifactError("corrupt fixture")
+
+    monkeypatch.setattr(fingerprint_validator, "_load_builtin_artifact", fail)
+
+    assert fingerprint_validator.validate_builtin_artifact(quiet=True) == 1
+    assert "generated fingerprint artifact is invalid: corrupt fixture" in capsys.readouterr().err
 
 
 def test_validate_path_missing_path_returns_validation_code(

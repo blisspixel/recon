@@ -25,13 +25,20 @@ import tracemalloc
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from dataclasses import asdict, dataclass
+from pathlib import Path
 from typing import Any
 
 from rich.console import Console
 
 from recon_tool.bayesian import infer, load_network, load_priors_override
 from recon_tool.cli.batch import _batch_apply_fusion  # pyright: ignore[reportPrivateUsage]
-from recon_tool.fingerprints import get_txt_patterns, load_fingerprints, match_txt_all, reload_fingerprints
+from recon_tool.fingerprints import (
+    _load_from_dir,
+    get_txt_patterns,
+    load_fingerprints,
+    match_txt_all,
+    reload_fingerprints,
+)
 from recon_tool.formatter import render_tenant_panel
 from recon_tool.infra_graph import build_infrastructure_clusters
 from recon_tool.models import ConfidenceLevel, TenantInfo
@@ -97,6 +104,12 @@ def _measure(case: CharacterizationCase, repetitions: int, warmups: int) -> Meas
 def _cold_catalog_load() -> int:
     reload_fingerprints()
     return len(load_fingerprints())
+
+
+def _cold_catalog_yaml_reference() -> int:
+    reload_fingerprints()
+    source_dir = Path(__file__).resolve().parents[1] / "src" / "recon_tool" / "data" / "fingerprints"
+    return len(_load_from_dir(source_dir))
 
 
 @contextmanager
@@ -242,8 +255,18 @@ def build_cases(*, include_stress: bool) -> tuple[CharacterizationCase, ...]:
     medium_graph = _cluster_graph_entries(200)
     cases = [
         CharacterizationCase(
+            "fingerprint_catalog_split_yaml_reference",
+            {"catalog_entries": len(load_fingerprints()), "format": "split_yaml", "runtime": False},
+            _cold_catalog_yaml_reference,
+        ),
+        CharacterizationCase(
             "fingerprint_catalog_cold_load",
-            {"catalog_entries": len(load_fingerprints()), "format": "split_yaml", "cache": "cleared_each_repetition"},
+            {
+                "catalog_entries": len(load_fingerprints()),
+                "format": "generated_json",
+                "canonical_source": "split_yaml",
+                "cache": "cleared_each_repetition",
+            },
             _cold_catalog_load,
         ),
         CharacterizationCase(
