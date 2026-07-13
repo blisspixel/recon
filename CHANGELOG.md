@@ -27,8 +27,9 @@ Tool surface changes: no CLI command, flag, JSON, MCP, cache, or import changes.
   repeated slugs, metadata, accessors, and matching behavior.
 - Replaced repeated built-in YAML parsing with bounded JSON decoding followed by
   the canonical fingerprint validator. A 15-repetition CPython 3.14.4 local
-  characterization measured 736.839 ms median for the YAML reference and
-  67.467 ms for the generated runtime, a 10.92-times stage gain with 72.0
+  characterization at clean commit `157bf6c` measured 558.188 ms median for
+  the YAML reference and 44.339 ms for the generated runtime, a 12.59-times
+  stage gain with 72.0
   percent less traced peak Python allocation. This is a dated local diagnostic,
   not a portable SLO.
 
