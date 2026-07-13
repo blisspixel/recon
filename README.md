@@ -51,13 +51,25 @@ powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/bli
 curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
 ```
 
-Open a new terminal and verify the install:
+Open a new terminal and run an offline verification of the installed command:
+
+```bash
+recon --version
+```
+
+Optionally test online connectivity to recon's public data sources:
 
 ```bash
 recon doctor
 ```
 
-Run a lookup:
+Before the first lookup, note that recon makes DNS queries which recursive and
+authoritative DNS infrastructure may observe. Its only default request to a
+target-owned HTTP endpoint is the standards-defined MTA-STS policy fetch at
+`https://mta-sts.<domain>/.well-known/mta-sts.txt`. Google CSE and BIMI direct
+probes run only when `--direct-probes` is explicitly enabled.
+
+Run the first lookup:
 
 ```bash
 recon contoso.com

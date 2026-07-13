@@ -118,9 +118,7 @@ class TestDefaultScope:
 
 
 class TestBuildReconBlock:
-    def test_uses_running_interpreter_even_when_recon_is_on_path(
-        self, monkeypatch: pytest.MonkeyPatch
-    ) -> None:
+    def test_uses_running_interpreter_even_when_recon_is_on_path(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr("recon_tool.mcp_install.sys.executable", "/opt/python/bin/python3")
         block = build_recon_block()
         assert block["command"] == "/opt/python/bin/python3"
@@ -517,14 +515,33 @@ class TestCLI:
         assert "dry-run" in result.output.lower()
         assert "sys.path[:] = [p for p in sys.path" in result.output
         assert "sys.path[:] = ;" not in result.output
-        block_start = result.output.index("    {", result.output.index("new block:"))
-        block_end = result.output.index("\n\n", block_start)
-        rendered_block = result.output[block_start:block_end]
-        parsed_block = json.loads(
-            "\n".join(line[4:] if line.startswith("    ") else line for line in rendered_block.splitlines())
-        )
+        block_start = result.output.index("{", result.output.index("new client stanza:"))
+        parsed_block, _ = json.JSONDecoder().raw_decode(result.output[block_start:])
         expected = plan_install("cursor", "user", config_path_override=target)
-        assert parsed_block == {"recon": expected.new_block}
+        assert parsed_block == {"mcpServers": {"recon": expected.new_block}}
+        assert not target.exists()
+
+    def test_install_vscode_dry_run_uses_servers_key(self, tmp_path: Path) -> None:
+        target = tmp_path / "mcp.json"
+        result = runner.invoke(
+            app,
+            [
+                "mcp",
+                "install",
+                "--client",
+                "vscode",
+                "--config-path",
+                str(target),
+                "--dry-run",
+            ],
+        )
+
+        assert result.exit_code == 0
+        block_start = result.output.index("{", result.output.index("new client stanza:"))
+        parsed_block, _ = json.JSONDecoder().raw_decode(result.output[block_start:])
+        expected = plan_install("vscode", "workspace", config_path_override=target)
+        assert parsed_block == {"servers": {"recon": expected.new_block}}
+        assert "mcpServers" not in parsed_block
         assert not target.exists()
 
     def test_install_writes_file(self, tmp_path: Path) -> None:

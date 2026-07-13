@@ -7,6 +7,7 @@ mocked resolver where network would be required.
 
 from __future__ import annotations
 
+import importlib
 import os
 import tempfile
 from collections.abc import Iterator
@@ -86,7 +87,7 @@ class TestDoctorFix:
             yield
 
     def test_creates_fingerprints_and_signals_templates(self) -> None:
-        _doctor_fix()
+        assert _doctor_fix() is True
         config_dir = Path(os.environ["RECON_CONFIG_DIR"])
         assert (config_dir / "fingerprints.yaml").exists()
         assert (config_dir / "signals.yaml").exists()
@@ -95,14 +96,14 @@ class TestDoctorFix:
         config_dir = Path(os.environ["RECON_CONFIG_DIR"])
         existing = "custom content"
         (config_dir / "fingerprints.yaml").write_text(existing, encoding="utf-8")
-        _doctor_fix()
+        assert _doctor_fix() is True
         # Existing file preserved
         assert (config_dir / "fingerprints.yaml").read_text(encoding="utf-8") == existing
         # Other template still created
         assert (config_dir / "signals.yaml").exists()
 
     def test_handles_unwritable_config_dir(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        """If config dir can't be created, doctor --fix prints and returns."""
+        """A config-directory failure is visible to shell automation."""
         # Force mkdir to raise
         from pathlib import Path as _P
 
@@ -113,9 +114,104 @@ class TestDoctorFix:
 
         monkeypatch.setattr(_P, "mkdir", fail_mkdir)
         try:
-            _doctor_fix()  # should not raise
+            result = runner.invoke(app, ["doctor", "--fix"])
         finally:
             monkeypatch.setattr(_P, "mkdir", original_mkdir)
+
+        assert result.exit_code == 1
+        assert "Cannot create config directory" in result.output
+
+    def test_reports_partial_template_write_failure(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A partial staged write leaves no target and does not block its sibling."""
+        config_dir = Path(os.environ["RECON_CONFIG_DIR"])
+
+        class StagedTemplate:
+            def __init__(self, path: Path, *, fail: bool) -> None:
+                self.name = str(path)
+                self._path = path
+                self._fail = fail
+
+            def __enter__(self) -> StagedTemplate:
+                return self
+
+            def __exit__(self, *args: object) -> None:
+                return None
+
+            def write(self, content: str) -> int:
+                if self._fail:
+                    self._path.write_text(content[:12], encoding="utf-8")
+                    raise OSError("disk full")
+                self._path.write_text(content, encoding="utf-8")
+                return len(content)
+
+        def staged_file(**kwargs: object) -> StagedTemplate:
+            prefix = str(kwargs["prefix"])
+            path = config_dir / f"{prefix}test.tmp"
+            return StagedTemplate(path, fail="fingerprints.yaml" in prefix)
+
+        doctor_module = importlib.import_module("recon_tool.cli.doctor")
+        with monkeypatch.context() as patch_context:
+            patch_context.setattr(doctor_module.tempfile, "NamedTemporaryFile", staged_file)
+            result = runner.invoke(app, ["doctor", "--fix"])
+
+        assert result.exit_code == 1
+        assert "failed to create" in result.output
+        assert "1 template could not be created" in result.output
+        assert not (config_dir / "fingerprints.yaml").exists()
+        assert (config_dir / "signals.yaml").is_file()
+        assert not list(config_dir.glob(".*.tmp"))
+
+    def test_rejects_template_path_that_is_not_a_file(self) -> None:
+        """A directory collision is not reported as an existing template."""
+        config_dir = Path(os.environ["RECON_CONFIG_DIR"])
+        (config_dir / "fingerprints.yaml").mkdir()
+
+        result = runner.invoke(app, ["doctor", "--fix"])
+
+        assert result.exit_code == 1
+        assert "is not a regular file" in result.output
+        assert (config_dir / "signals.yaml").is_file()
+
+    def test_concurrent_template_creation_is_never_overwritten(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """No-replace publication preserves a file that appears at the boundary."""
+        config_dir = Path(os.environ["RECON_CONFIG_DIR"])
+        target = config_dir / "fingerprints.yaml"
+        original_link = os.link
+        injected = False
+
+        def create_before_link(source: Path, destination: Path) -> None:
+            nonlocal injected
+            if destination == target and not injected:
+                injected = True
+                target.write_text("custom concurrent content\n", encoding="utf-8")
+            original_link(source, destination)
+
+        doctor_module = importlib.import_module("recon_tool.cli.doctor")
+        monkeypatch.setattr(doctor_module.os, "link", create_before_link)
+
+        assert _doctor_fix() is True
+        assert target.read_text(encoding="utf-8") == "custom concurrent content\n"
+        assert (config_dir / "signals.yaml").is_file()
+        assert not list(config_dir.glob(".*.tmp"))
+
+    def test_publish_and_collision_probe_errors_are_contained(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """An inaccessible path returns failure instead of escaping the repair command."""
+
+        def deny_link(source: Path, destination: Path) -> None:
+            raise PermissionError("publish denied")
+
+        def deny_exists(self: Path) -> bool:
+            raise PermissionError("probe denied")
+
+        doctor_module = importlib.import_module("recon_tool.cli.doctor")
+        monkeypatch.setattr(doctor_module.os, "link", deny_link)
+        monkeypatch.setattr(Path, "exists", deny_exists)
+
+        result = runner.invoke(app, ["doctor", "--fix"])
+
+        assert result.exit_code == 1
+        assert "failed to create" in result.output
+        assert "publish denied" in result.output
 
 
 class TestCliLookupErrorPaths:

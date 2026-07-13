@@ -109,7 +109,7 @@ Summary: Mine a single domain for fingerprint candidates in one shot.
 ## `recon doctor`
 
 Kind: command
-Summary: Check connectivity to all data sources.
+Summary: Check installation health and online source connectivity.
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|
