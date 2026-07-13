@@ -236,8 +236,21 @@ def test_ci_workflow_runs_fast_local_core_guards() -> None:
     validate_job = workflow["jobs"]["validate-fingerprints"]
     checkout_step = validate_job["steps"][0]
     commands = "\n".join(str(step.get("run", "")) for step in validate_job["steps"])
+    receipt_step = next(
+        step
+        for step in validate_job["steps"]
+        if step.get("name") == "Validate documentation commit receipts"
+    )
+    receipt_command = str(receipt_step["run"])
 
-    assert checkout_step["with"]["fetch-depth"] == 2
+    assert checkout_step["with"]["persist-credentials"] is False
+    assert checkout_step["with"]["fetch-depth"] == 0
+    assert '"$(git rev-parse --is-shallow-repository)" != "false"' in receipt_command
+    assert "exit 1" in receipt_command
+    assert (
+        "uv run pytest "
+        "tests/test_documentation_integrity.py::test_backticked_commit_receipts_exist"
+    ) in receipt_command
     for command in (
         "uv run python scripts/check_workflow_pins.py",
         "uv run python scripts/generate_fingerprint_catalog.py --check",
