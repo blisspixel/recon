@@ -5,6 +5,7 @@ from __future__ import annotations
 import re
 
 import pytest
+import yaml
 
 from recon_tool.fingerprints import (
     _validate_fingerprint,
@@ -180,6 +181,21 @@ class TestFingerprintValidation:
         }
         assert _validate_fingerprint(fp, "test") is None
 
+    def test_non_string_match_mode_skips_fingerprint(self):
+        fp = {
+            "name": "Test",
+            "match_mode": ["all"],
+            "detections": [{"type": "txt", "pattern": "^test="}],
+        }
+        assert _validate_fingerprint(fp, "test") is None
+
+    def test_non_string_detection_type_is_rejected_without_crashing(self):
+        fp = {
+            "name": "Test",
+            "detections": [{"type": ["txt"], "pattern": "^test="}],
+        }
+        assert _validate_fingerprint(fp, "test") is None
+
     def test_valid_subdomain_txt_pattern_accepted(self):
         fp = {
             "name": "MCP DNS Discovery",
@@ -226,6 +242,61 @@ class TestLoadFingerprints:
         for fp in load_fingerprints():
             assert fp.name
             assert len(fp.detections) > 0
+
+    @pytest.mark.parametrize(
+        ("field", "value", "warning"),
+        [
+            ("confidence", ["high"], "invalid confidence"),
+            ("slug", ["bad"], "invalid slug"),
+            ("category", ["Misc"], "invalid category"),
+            ("m365", "false", "invalid m365 flag"),
+            ("match_mode", ["all"], "invalid match_mode"),
+            ("detection.description", ["invalid"], "non-string detection field"),
+            ("detection.reference", ["invalid"], "non-string detection field"),
+        ],
+    )
+    def test_malformed_typed_fields_are_rejected_without_losing_valid_siblings(
+        self, tmp_path, caplog, field: str, value: object, warning: str
+    ) -> None:
+        from recon_tool.fingerprints import _load_from_path
+
+        invalid = {
+            "name": "Invalid Service",
+            "slug": "invalid-service",
+            "category": "Misc",
+            "confidence": "high",
+            "m365": False,
+            "detections": [{"type": "txt", "pattern": "^invalid-service="}],
+        }
+        if field.startswith("detection."):
+            invalid["detections"][0][field.removeprefix("detection.")] = value
+        else:
+            invalid[field] = value
+        path = tmp_path / "fingerprints.yaml"
+        path.write_text(
+            yaml.safe_dump(
+                {
+                    "fingerprints": [
+                        invalid,
+                        {
+                            "name": "Valid Sibling",
+                            "slug": "valid-sibling",
+                            "category": "Misc",
+                            "confidence": "high",
+                            "m365": False,
+                            "detections": [{"type": "txt", "pattern": "^valid-sibling="}],
+                        },
+                    ]
+                },
+                sort_keys=False,
+            ),
+            encoding="utf-8",
+        )
+
+        loaded = _load_from_path(path)
+
+        assert [fingerprint.slug for fingerprint in loaded] == ["valid-sibling"]
+        assert warning in caplog.text
 
 
 class TestPatternGetters:

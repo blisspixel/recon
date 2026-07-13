@@ -51,10 +51,12 @@ def test_case_catalog_separates_default_and_stress_workloads() -> None:
     with _isolated_config_directory():
         default_names = {case.name for case in build_cases(include_stress=False)}
         stress_names = {case.name for case in build_cases(include_stress=True)}
-    assert len(default_names) == 10
+    assert len(default_names) == 11
     assert {
         "batch_fusion_25_domains_repeated_setup_reference",
         "batch_fusion_25_domains_snapshot",
+        "fingerprint_catalog_split_yaml_reference",
+        "fingerprint_catalog_cold_load",
     }.issubset(default_names)
     assert stress_names - default_names == {"ct_graph_dense_1000x20", "ct_graph_repeated_1000x60"}
 

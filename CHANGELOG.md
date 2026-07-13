@@ -12,6 +12,33 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [Unreleased]
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, JSON, MCP, cache, or import changes.
+
+### Changed
+
+- Kept the 11 split fingerprint YAML files as canonical contributor source and
+  sdist content while shipping one deterministic generated JSON runtime catalog
+  in the universal wheel. Local, CI, and release gates reject byte drift;
+  exact differential tests preserve all 847 entries, 1,045 rules, ordering,
+  repeated slugs, metadata, accessors, and matching behavior.
+- Replaced repeated built-in YAML parsing with bounded JSON decoding followed by
+  the canonical fingerprint validator. A 15-repetition CPython 3.14.4 local
+  characterization measured 736.839 ms median for the YAML reference and
+  67.467 ms for the generated runtime, a 10.92-times stage gain with 72.0
+  percent less traced peak Python allocation. This is a dated local diagnostic,
+  not a portable SLO.
+
+### Fixed
+
+- Rejected list-valued confidence, slug, or category fields and non-boolean
+  `m365` values in custom fingerprint YAML without crashing catalog loading or
+  discarding valid sibling entries. Custom regex safety, caps, ordering, and
+  additive behavior remain unchanged.
+
 ## [2.5.1] - 2026-07-12
 
 ### Tool Surface Changes
