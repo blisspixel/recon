@@ -12,6 +12,24 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.5.6] - 2026-07-13
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Changed
+
+- Grouped all 28 `lookup` options into five task-oriented help panels without
+  changing any token, alias, default, validation rule, or runtime behavior.
+  At 80 columns, the measured help surface is 109 lines instead of 154 and
+  every canonical option remains visible without truncation.
+- Added a common-path summary before the lookup options that distinguishes
+  opt-in Google CSE and BIMI probes from the default MTA-STS request. Task
+  panels bring collection, cache, and scope controls substantially earlier.
+- Replaced contributor-internal wording on `--include-unclassified` with a
+  concise description of its public JSON and fingerprint-discovery behavior.
+
 ## [2.5.5] - 2026-07-13
 
 This release includes the v2.5.4 changes, which were tagged but not published
