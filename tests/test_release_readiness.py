@@ -30,6 +30,7 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
     ):
         _write_file(root, relative, "pytest tests/ --cov=src/recon_tool --cov-branch --cov-fail-under=90.2\n")
     _write_file(root, "docs/roadmap.md", f"# Roadmap\n\n> **Status:** v{version} is current.\n")
+    _write_file(root, "ROADMAP.md", f"# Roadmap\n\nCurrent status: v{version} is current.\n")
     _write_file(
         root,
         "README.md",
@@ -106,6 +107,17 @@ def test_version_consistency_fails_on_mismatch(tmp_path: Path) -> None:
 
     assert check.status == "fail"
     assert "pyproject.toml=2.2.8" in check.detail
+
+
+def test_roadmap_version_rejects_stale_root_summary(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.8")
+    _write_file(tmp_path, "ROADMAP.md", "# Roadmap\n\nCurrent status: v2.2.7 is current.\n")
+
+    check = release_readiness._check_roadmap_version(tmp_path)
+
+    assert check.status == "fail"
+    assert "ROADMAP.md" in check.detail
+    assert "v2.2.8" in check.detail
 
 
 def test_coverage_gate_rejects_stale_src_layout_target(tmp_path: Path) -> None:
@@ -326,7 +338,7 @@ def test_remote_workflows_fail_when_pending_or_missing() -> None:
     assert "Scorecard supply-chain security: missing" in problems
 
 
-def _scorecard_payload(sha: str, score: float = 7.5, **check_overrides: int) -> dict[str, object]:
+def _scorecard_payload(sha: str, score: float = 8.3, **check_overrides: int) -> dict[str, object]:
     checks = [
         {"name": name, "score": check_overrides.get(name, 10)}
         for name in release_readiness._REQUIRED_SCORECARD_TENS
@@ -369,10 +381,10 @@ def test_scorecard_api_fails_on_stale_commit() -> None:
 def test_scorecard_api_fails_on_low_score() -> None:
     sha = "a" * 40
 
-    problem = release_readiness._scorecard_problem(_scorecard_payload(sha, score=7.4), sha)
+    problem = release_readiness._scorecard_problem(_scorecard_payload(sha, score=7.9), sha)
 
     assert problem is not None
-    assert "below 7.5" in problem
+    assert "below 8.0" in problem
 
 
 def test_scorecard_api_fails_on_regressed_code_owned_check() -> None:
@@ -384,14 +396,14 @@ def test_scorecard_api_fails_on_regressed_code_owned_check() -> None:
     assert "Pinned-Dependencies=9" in problem
 
 
-def test_scorecard_api_fails_when_sast_drops_below_documented_floor() -> None:
+def test_scorecard_api_fails_when_sast_regresses() -> None:
     sha = "a" * 40
 
     problem = release_readiness._scorecard_problem(_scorecard_payload(sha, SAST=6), sha)
 
     assert problem is not None
     assert "SAST=6" in problem
-    assert "below expected floor" in problem
+    assert "regressed" in problem
 
 
 def test_pypi_release_passes_when_latest_has_wheel_and_sdist(tmp_path: Path) -> None:

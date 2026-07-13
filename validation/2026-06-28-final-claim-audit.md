@@ -1,5 +1,8 @@
 # Final Claim Audit Public Memo (2026-06-28)
 
+Status: historical proof for the repository and paper-package state recorded
+on 2026-06-28. It is not proof for the current unfrozen package.
+
 Harnesses:
 
 `python -m validation.reproduce_paper_numbers --profile smoke --stamp discussion-claim-audit-smoke-20260628`
@@ -48,10 +51,10 @@ External spend: 0 USD.
 
 ## Interpretation
 
-The final claim audit proves that the current paper package has a passing public
-smoke run, a passing full public proof run, a passing claim-map audit, a passing
-figure drift check, a passing full local gate, and passing remote release
-readiness.
+For the package state recorded on 2026-06-28, the final claim audit produced a
+passing public smoke run, a passing full public proof run, a passing claim-map
+audit, a passing figure drift check, a passing full local gate, and passing
+remote release readiness.
 
 The public proof rows cover suppression monotonicity and planted-evidence
 perturbation measurement, differential verification, synthetic interval

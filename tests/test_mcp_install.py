@@ -69,8 +69,8 @@ class TestResolveConfigPath:
         with pytest.raises(ValueError, match="workspace-scoped"):
             resolve_config_path("claude-desktop", "workspace")
 
-    def test_vscode_has_no_user_scope(self) -> None:
-        with pytest.raises(ValueError, match="user-scoped"):
+    def test_vscode_requires_explicit_user_profile_path(self) -> None:
+        with pytest.raises(ValueError, match="no portable default path"):
             resolve_config_path("vscode", "user")
 
     def test_vscode_workspace(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -796,6 +796,39 @@ class TestVscodeServersKey:
         assert "servers" in data
         assert "mcpServers" not in data
         assert data["servers"]["recon"]["args"] == build_recon_block()["args"]
+        assert data["servers"]["recon"]["type"] == "stdio"
+        assert "autoApprove" not in data["servers"]["recon"]
+
+    def test_install_vscode_removes_legacy_unsupported_autoapprove(self, tmp_path: Path) -> None:
+        target = tmp_path / "mcp.json"
+        target.write_text(
+            json.dumps(
+                {
+                    "servers": {
+                        "recon": {
+                            "command": "old",
+                            "args": ["mcp"],
+                            "autoApprove": ["lookup_tenant"],
+                        }
+                    }
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        install("vscode", "workspace", config_path_override=target, force=True)
+
+        recon_block = json.loads(target.read_text(encoding="utf-8"))["servers"]["recon"]
+        assert recon_block["type"] == "stdio"
+        assert "autoApprove" not in recon_block
+
+    def test_install_claude_code_defers_to_client_permissions(self, tmp_path: Path) -> None:
+        target = tmp_path / ".claude.json"
+
+        install("claude-code", "user", config_path_override=target)
+
+        recon_block = json.loads(target.read_text(encoding="utf-8"))["mcpServers"]["recon"]
+        assert "autoApprove" not in recon_block
 
     def test_install_vscode_merges_into_existing_servers(self, tmp_path: Path) -> None:
         target = tmp_path / "mcp.json"

@@ -169,7 +169,7 @@ def test_paper_discussion_and_conclusion_preserve_final_evidence_tiers() -> None
         assert forbidden not in text
 
 
-def test_paper_submission_state_records_final_claim_audit_closure() -> None:
+def test_paper_submission_state_records_that_current_draft_is_unfrozen() -> None:
     draft = PAPER_DRAFT.read_text(encoding="utf-8")
     outline = (ROOT / "docs" / "paper-outline.md").read_text(encoding="utf-8")
     combined = "\n".join((draft, outline))
@@ -179,9 +179,12 @@ def test_paper_submission_state_records_final_claim_audit_closure() -> None:
         "Public-list numbers remain robustness checks",
         "M365 independent-instrument decision is closed",
         "m365-tenancy-decision.md",
-        "Final claim audit is complete",
+        "most recent recorded final claim audit is the historical",
+        "Both apply only to the exact commits they name",
+        "leave this draft unfrozen",
+        "A new claim audit",
         "figure drift check",
-        "full public proof",
+        "public proof",
         "2026-06-29-scorecard-gate-claim-audit.md",
         "2026-06-30-submission-freeze-local-proof.md",
     ):
@@ -197,6 +200,8 @@ def test_paper_submission_state_records_final_claim_audit_closure() -> None:
         "Keep the posture-stratified and per-vertical claim-map rows synchronized",
         "| M365 independent-instrument check |",
         "M365 and Google tenancy calibrations",
+        "Final claim audit is complete",
+        "Current technical artifact blockers: none",
     ):
         assert vague not in combined
 
@@ -206,3 +211,33 @@ def test_paper_submission_state_records_final_claim_audit_closure() -> None:
         "planted-evidence movement",
     ):
         assert closed in combined
+
+
+def test_paper_provenance_and_subject_claims_match_current_contract() -> None:
+    combined = "\n".join(
+        (
+            PAPER_DRAFT.read_text(encoding="utf-8"),
+            CLAIM_MAP.read_text(encoding="utf-8"),
+            (ROOT / "docs" / "paper-outline.md").read_text(encoding="utf-8"),
+        )
+    )
+
+    for required in (
+        "A domain is a query coordinate, not an organization identifier",
+        "reconstructed evidence",
+        "completeness diagnostics",
+        "disconnected terminals",
+        "exact generation-time lineage",
+        "MTA-STS",
+        "opt-in direct probes",
+    ):
+        assert required in combined
+
+    for overclaim in (
+        "preserves full provenance",
+        "Every conclusion is reachable through an evidence DAG",
+        "every conclusion reachable through the evidence DAG",
+        "strictly passive",
+        "passive-only",
+    ):
+        assert overclaim not in combined

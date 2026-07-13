@@ -211,13 +211,31 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
         checks.append(ClientCheck("args", "warn", 'missing or empty; expected something like ["mcp"]'))
 
     if "autoApprove" not in block:
-        checks.append(ClientCheck("autoApprove", "info", "no autoApprove key (manual approval is the default)"))
+        checks.append(
+            ClientCheck(
+                "autoApprove",
+                "info",
+                "not configured in this stanza; the client's permission policy applies",
+            )
+        )
     else:
         auto = block.get("autoApprove")
         if isinstance(auto, list) and auto:
-            checks.append(ClientCheck("autoApprove", "info", f"auto-approves {len(auto)} tool(s): {json.dumps(auto)}"))
+            checks.append(
+                ClientCheck(
+                    "autoApprove",
+                    "info",
+                    f"requests auto-approval for {len(auto)} tool(s) if supported: {json.dumps(auto)}",
+                )
+            )
         else:
-            checks.append(ClientCheck("autoApprove", "info", "empty; every tool call needs manual approval"))
+            checks.append(
+                ClientCheck(
+                    "autoApprove",
+                    "info",
+                    "empty; the client's permission policy remains authoritative",
+                )
+            )
 
     return checks
 

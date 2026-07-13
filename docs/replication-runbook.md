@@ -11,9 +11,11 @@ network behavior.
   <https://www.acm.org/publications/policies/artifact-review-and-badging-current>
 - Artifact review guide for this repository:
   [artifact-review.md](artifact-review.md)
-- Current public proof memo:
+- Most recent recorded public proof memo, historical and not a freeze of the
+  current tree:
   [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md)
-- Current final claim audit refresh:
+- Most recent recorded final claim audit, historical and not a freeze of the
+  current tree:
   [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
 - Archive readiness and DOI stop rules:
   [archive-readiness.md](archive-readiness.md)
@@ -25,6 +27,9 @@ network behavior.
 The replication pass asks an outside reviewer to rerun the public artifact on a
 clean machine and report whether the public commands work as documented. It is
 not a request to validate private-corpus rows or disclose real-domain data.
+The current draft is unfrozen; a reviewer should use the exact commit or release
+named in their outcome note rather than treating the June proof memos as current
+evidence.
 
 This strengthens the "functional" and public-result portions of the artifact
 story while preserving the claim-map boundary:
@@ -43,8 +48,10 @@ Before sending this runbook to a reviewer:
 3. `uv run python scripts/check.py` passes locally.
 4. `uv run python scripts/release_readiness.py --remote` passes on clean
    `main`.
-5. The latest public proof memo pointer is current in
-   `scripts/check_paper_claims.py`.
+5. The target commit has its own completed public proof memo, or the outcome
+   note explicitly records that only the older historical memo exists. The
+   current draft remains unfrozen until the full submission gate produces a new
+   record.
 6. The reviewer receives only a commit, release tag, or repository URL, not a
    private corpus or target list.
 
@@ -76,7 +83,7 @@ Run these from a fresh clone of the target commit:
 | Public proof smoke | `uv run python -m validation.reproduce_paper_numbers --profile smoke --stamp outside-replication-smoke` | Pass or fail; confirm the summary says no private corpora and no default network requirement. |
 | Full public proof | `uv run python -m validation.reproduce_paper_numbers --profile paper --stamp outside-replication-paper` | Pass or fail; record the five public step statuses only. |
 | Paper figure drift | `uv run python scripts/generate_paper_figures.py --check` | Pass or fail. |
-| Local CI mirror | `uv run python scripts/check.py` | Pass or fail, final test count, skipped count, and coverage percentage. |
+| Canonical local gate | `uv run python scripts/check.py` | Pass or fail, final test count, skipped count, and coverage percentage. |
 | Local release readiness | `uv run python scripts/release_readiness.py` | Pass or fail. |
 
 The reviewer may also run `uv run python scripts/release_readiness.py --remote`

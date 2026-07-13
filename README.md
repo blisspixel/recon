@@ -207,8 +207,9 @@ future stable subset.
 ## MCP Server
 
 The default install includes a local stdio MCP server for MCP-compatible tools.
-Start with manual approvals and an empty `autoApprove` list. Treat connected
-agents as untrusted input.
+Start with manual approvals. Approval syntax is client-specific, and some
+current client schemas do not define `autoApprove`. Treat connected agents as
+untrusted input.
 
 ```bash
 recon mcp install --client=claude-desktop
@@ -275,8 +276,12 @@ OpenSSF process, outside replication, and archive work remain separate
 maintainer tracks so they do not displace product truthfulness or measured
 utility.
 
-The latest local public proof for the separate publication track is
+The most recent completed historical local proof for the separate publication
+track is
 [validation/2026-06-30-submission-freeze-local-proof.md](validation/2026-06-30-submission-freeze-local-proof.md).
+The current paper and artifact package is unfrozen after subsequent product,
+documentation, and release changes. Maintainers must rerun the submission gate
+before external submission.
 Its [public-label decision](docs/public-label-snapshot-decision.md) keeps public
 lists as robustness checks rather than population rates, and its
 [M365 tenancy decision](docs/m365-tenancy-decision.md) keeps that evidence as
@@ -286,19 +291,20 @@ corroboration rather than independent calibration.
 
 ```bash
 uv sync
-pre-commit install
+uv run pre-commit install
 uv run python scripts/release_readiness.py --allow-dirty
 uv run python scripts/check.py
 ```
 
-`python scripts/check.py` is the local CI mirror. It runs lint, type checks,
+`uv run python scripts/check.py` is the canonical local gate. It runs lint, type checks,
 coverage-gated tests, generated-artifact checks, validation hygiene, and
 ratchets. Its full-suite stage uses at most four file-grouped test workers while
 preserving combined branch coverage. Focused `pytest` commands stay serial by
 default. Do not push on `--fast` alone.
 
 Project hygiene: keep examples fictional or synthetic, keep validation artifacts
-aggregate-only, run `scripts/check.py`, and avoid dead code or placeholders.
+aggregate-only, run `uv run python scripts/check.py`, and
+avoid dead code or placeholders.
 Contributor details: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License

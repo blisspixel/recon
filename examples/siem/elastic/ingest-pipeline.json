@@ -1,5 +1,5 @@
 {
-  "description": "recon-lookup ingest pipeline. Rewrites recon --json output into ECS-aligned shape for Elasticsearch indexing. Project-specific fields stay under recon.* namespace; ECS-standard fields land under event.*, host.*, organization.*.",
+  "description": "recon-lookup ingest pipeline. Rewrites recon --json output into an ECS-aligned shape for Elasticsearch indexing. Project-specific fields stay under recon.*; ECS-standard fields land under event.* and host.*.",
   "processors": [
     {
       "set": {
@@ -41,7 +41,7 @@
     {
       "rename": {
         "field": "display_name",
-        "target_field": "organization.name",
+        "target_field": "recon.display_name",
         "ignore_missing": true
       }
     },
@@ -125,29 +125,8 @@
     {
       "rename": {
         "field": "evidence_conflicts",
-        "target_field": "recon.fusion.conflicts",
+        "target_field": "recon.evidence_conflicts",
         "ignore_missing": true
-      }
-    },
-    {
-      "set": {
-        "field": "event.severity",
-        "value": 4,
-        "if": "ctx?.recon?.confidence == 'medium'"
-      }
-    },
-    {
-      "set": {
-        "field": "event.severity",
-        "value": 6,
-        "if": "ctx?.recon?.confidence == 'low' || ctx?.recon?.confidence == 'partial'"
-      }
-    },
-    {
-      "set": {
-        "field": "event.severity",
-        "value": 2,
-        "if": "ctx?.recon?.confidence == 'high'"
       }
     }
   ]

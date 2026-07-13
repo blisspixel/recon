@@ -1,5 +1,8 @@
 # Submission Freeze Local Public Proof Memo (2026-06-30)
 
+Status: historical proof for the repository and paper-package state recorded
+on 2026-06-30. It is not proof for the current unfrozen package.
+
 Harnesses:
 
 `python -m validation.reproduce_paper_numbers --profile smoke --stamp submission-freeze-smoke-20260630-cycle42`

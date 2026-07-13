@@ -286,7 +286,8 @@ During the beta compatibility matrix, add or adjust tests for:
 - Do not adopt MCP Apps or Tasks until there is a concrete workflow and client
   support.
 - Do not remove existing stdio support.
-- Do not weaken the passive-only invariant or broaden target interaction.
+- Do not weaken the passive-collection invariant or broaden target interaction
+  beyond the documented DNS, default MTA-STS, and opt-in CSE/BIMI boundaries.
 
 ## Final Readiness Gate
 

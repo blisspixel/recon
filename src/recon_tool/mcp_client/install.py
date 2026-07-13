@@ -18,9 +18,10 @@ Design notes:
 - Refuses to clobber unparseable JSON. If the config file exists but
   isn't valid JSON, we error out and tell the user to fix it by hand.
   Better than corrupting their other client config.
-- Per-OS user paths only where the client has a documented user-level
-  config. Workspace-scoped clients (VS Code) only support
-  `--scope workspace`.
+- Per-OS user paths only where a stable default file location is documented.
+  VS Code supports user-profile MCP configuration, but profiles do not have
+  one portable path, so the installer defaults to workspace scope and accepts
+  an explicit user-profile file through ``--config-path``.
 - The generated block is bound to the running Python interpreter and uses a
   `-c` launcher that strips cwd-equivalent entries from `sys.path` before
   importing `recon_tool`. This keeps GUI clients independent of shell PATH and
@@ -58,8 +59,8 @@ SUPPORTED_CLIENTS: tuple[Client, ...] = (
 def servers_key(client: Client) -> str:
     """Top-level config key under which the client maps server names.
 
-    VS Code's ``.vscode/mcp.json`` uses a top-level ``servers`` key (see
-    code.visualstudio.com/docs/copilot/reference/mcp-configuration); a
+    VS Code's ``mcp.json`` uses a top-level ``servers`` key (see
+    code.visualstudio.com/docs/agents/reference/mcp-configuration); a
     block written under ``mcpServers`` is silently ignored by VS Code.
     Every other supported client (Claude Desktop / Code, Cursor,
     Windsurf, Kiro) uses ``mcpServers``.
@@ -197,8 +198,8 @@ def resolve_config_path(
 ) -> Path:
     """Return the absolute config path for the given (client, scope).
 
-    Raises ``ValueError`` if the client doesn't support the requested
-    scope (e.g. VS Code has no user-scope path).
+    Raises ``ValueError`` when recon has no portable default path for the
+    requested scope. Callers can still provide ``--config-path`` explicitly.
     """
     spec = _client_specs()[client]
     if scope == "workspace":
@@ -207,7 +208,10 @@ def resolve_config_path(
         return Path.cwd() / spec.workspace_path
     # scope == "user"
     if spec.user_paths is None:
-        raise ValueError(f"{client} does not support user-scoped config — use --scope=workspace instead.")
+        raise ValueError(
+            f"recon has no portable default path for {client} user-profile config; "
+            "use --scope=workspace or pass --config-path explicitly."
+        )
     family = _os_family(platform_name)
     return spec.user_paths[family]
 
@@ -215,9 +219,8 @@ def resolve_config_path(
 def default_scope(client: Client) -> Scope:
     """Pick a sensible default scope when the user didn't specify one.
 
-    Workspace-scoped clients (VS Code) default to workspace; everything
-    else defaults to user, since most operators want recon available
-    across all their projects.
+    Clients without a portable default user-profile path (currently VS Code)
+    default to workspace; everything else defaults to user.
     """
     spec = _client_specs()[client]
     if spec.user_paths is None:
@@ -236,17 +239,17 @@ _FALLBACK_LAUNCH_CODE = (
 )
 
 
-def build_recon_block() -> dict[str, object]:
-    """Return the MCP server stanza we register under `mcpServers.recon`.
+def build_recon_block(client: Client | None = None) -> dict[str, object]:
+    """Return the canonical MCP server stanza for ``client``.
 
     Uses the running interpreter with ``python -c "<safe-launcher>"``
     rather than resolving a command through PATH. This binds the persisted
     block to the installation executing this function and prevents an
     untrusted workspace or PATH entry from becoming a persistent launcher.
 
-    Supply-chain hardening: the launcher code runs
-    ``del sys.path[0]`` before importing ``recon_tool``, removing the
-    cwd-equivalent entry Python adds to ``sys.path``. This is the
+    Supply-chain hardening: the launcher filters every empty-string or dot
+    entry from ``sys.path`` before importing ``recon_tool``, removing
+    cwd-equivalent entries Python can add. This is the
     cross-version protection the previous ``-m`` + ``PYTHONSAFEPATH=1``
     fallback could not provide on Python 3.10. The PYTHONSAFEPATH env
     entry stays in place as belt-and-suspenders for Python 3.11+.
@@ -254,9 +257,9 @@ def build_recon_block() -> dict[str, object]:
     ``warn_if_fallback`` remains as a compatibility shim for callers that
     previously displayed an informational PATH warning.
     """
-    return {
+    block: dict[str, object] = {
         "command": sys.executable,
-        # ``-c`` with explicit sys.path[0] removal closes the
+        # ``-c`` with explicit cwd-equivalent path filtering closes the
         # cwd-shadow attack on every supported Python. The previous
         # ``-m`` form left Python 3.10 reliant on the runtime guard,
         # which fires AFTER Python imports the (potentially malicious)
@@ -268,6 +271,13 @@ def build_recon_block() -> dict[str, object]:
         "env": {"PYTHONSAFEPATH": "1"},
         "autoApprove": [],
     }
+    if client == "vscode":
+        block["type"] = "stdio"
+    if client in {"claude-code", "vscode"}:
+        # Neither client defines autoApprove in its current MCP configuration
+        # schema. Their permission systems remain authoritative.
+        block.pop("autoApprove")
+    return block
 
 
 def warn_if_fallback() -> str | None:
@@ -325,30 +335,38 @@ def _read_existing(path: Path) -> dict[str, object]:
 _CANONICAL_KEYS: frozenset[str] = frozenset({"command", "args"})
 
 
+def _canonical_keys(client: Client) -> frozenset[str]:
+    if client == "vscode":
+        return _CANONICAL_KEYS | {"type"}
+    return _CANONICAL_KEYS
+
+
 def _merge_recon_block(
     existing: dict[str, object] | None,
     canonical: dict[str, object],
+    client: Client,
 ) -> dict[str, object]:
     """Compute the recon block we'd actually write.
 
-    Only ``command`` and ``args`` are authoritative on the install side
+    ``command`` and ``args`` are authoritative on the install side
     — those are the things ``--force`` is meant to refresh (e.g. when
     the operator moved their python install and `recon` now lives at a
     new path). Everything else the user added (custom ``env``,
     ``disabled``, non-empty ``autoApprove`` lists, hand-written notes
     on bespoke keys) is preserved.
 
-    ``autoApprove`` is in the second category, not the first — if the
-    user has hand-curated which tools auto-approve, we keep their
-    list. Only when no ``autoApprove`` is present do we seed the
-    empty default.
+    VS Code also requires ``type: stdio``. Clients whose current schema does
+    not define ``autoApprove`` have that legacy field removed; other clients
+    retain a hand-curated value and receive an empty default only when absent.
     """
     if existing is None:
         return dict(canonical)
     merged: dict[str, object] = dict(existing)
-    for key in _CANONICAL_KEYS:
+    for key in _canonical_keys(client):
         merged[key] = canonical[key]
-    if "autoApprove" not in merged:
+    if client in {"claude-code", "vscode"}:
+        merged.pop("autoApprove", None)
+    elif "autoApprove" not in merged:
         merged["autoApprove"] = canonical["autoApprove"]
     return merged
 
@@ -372,7 +390,7 @@ def plan_install(
         else resolve_config_path(client, scope, platform_name=platform_name)
     )
     existing = _read_existing(path)
-    canonical_block = build_recon_block()
+    canonical_block = build_recon_block(client)
     key = servers_key(client)
     mcp_servers = existing.get(key)
     if mcp_servers is not None and not isinstance(mcp_servers, dict):
@@ -396,7 +414,7 @@ def plan_install(
             path=path,
             action="create",
             existing_block=None,
-            new_block=_merge_recon_block(None, canonical_block),
+            new_block=_merge_recon_block(None, canonical_block, client),
             parent_dirs_to_create=parent_dirs,
         )
 
@@ -407,7 +425,7 @@ def plan_install(
             # str keys only — JSON guarantees this but we narrow for type-checkers.
             existing_recon = {str(k): v for k, v in existing_recon_raw.items()}
 
-    target_block = _merge_recon_block(existing_recon, canonical_block)
+    target_block = _merge_recon_block(existing_recon, canonical_block, client)
 
     if existing_recon is not None:
         if existing_recon == target_block:
@@ -425,13 +443,17 @@ def plan_install(
             # Tell the operator exactly which canonical fields would
             # change, so they can decide whether they actually want
             # those refreshed.
-            diffs = sorted(key for key in _CANONICAL_KEYS if existing_recon.get(key) != target_block.get(key))
+            diffs = sorted(
+                field
+                for field in _canonical_keys(client)
+                if existing_recon.get(field) != target_block.get(field)
+            )
             diff_blurb = ", ".join(diffs) if diffs else "fields"
             raise InstallError(
                 f"{path} already has an `{key}.recon` entry whose "
                 f"{diff_blurb} would change. Pass --force to overwrite "
-                f"those canonical fields (your other fields — env, "
-                f"autoApprove, etc. — are preserved), or edit the file "
+                f"those canonical fields (other client-supported fields are "
+                f"preserved), or edit the file "
                 f"by hand."
             )
         return InstallPlan(

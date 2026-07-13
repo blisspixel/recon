@@ -6,27 +6,25 @@ while the Best Practices Badge is an account-backed project questionnaire.
 
 ## Current Snapshot
 
-- Date checked: 2026-06-30.
-- Live API state at check time: public API rechecked after the
-  submission-freeze proof refresh.
+- Date checked: 2026-07-13.
+- Live API state at check time: public API rechecked for the exact `HEAD` commit
+  that published v2.5.7 after CI and publication completed.
 - Scorecard version: `v5.3.0`.
-- Score: `7.5`.
+- Score: `8.3`.
 - Public source: `https://api.securityscorecards.dev/projects/github.com/blisspixel/recon`.
 
 The public API is authoritative for the exact commit behind the badge. Docs-only
 commits can move `main` after a snapshot is written, so this file records the
 reviewed posture and the live API URL rather than treating a commit hash as a
 durable status promise. Remote release readiness queries that API for `HEAD`,
-requires the current score floor, and fails if any code-owned control except the
-scheduled/manual SAST check regresses below `10`. SAST must stay at `7` or
-better while CodeQL remains scheduled and manually dispatched rather than run on
-every push.
+requires an overall score of at least `8.0`, and fails if SAST or any other
+required code-owned control regresses below `10`.
 
-The non-SAST code-owned controls are green: dangerous workflow patterns,
+The measured code-owned controls are green: dangerous workflow patterns,
 dependency update automation, token permissions, pinned dependencies, binary
 artifacts, security policy, known vulnerabilities, packaging, fuzzing, signed
-releases, and license all score `10`. Scorecard reports SAST as detected at
-`7`, which matches the deliberate scheduled/manual CodeQL policy.
+releases, license, and SAST all score `10`. The exact overall score remains a
+dated external snapshot; the enforced `8.0` floor is the regression policy.
 
 The remaining low or unknown checks are process-bound:
 
@@ -35,7 +33,6 @@ The remaining low or unknown checks are process-bound:
 | `Branch-Protection` | `main` is protected, but administrator bypass remains and PRs are not mandatory. | Keep the current required-check ruleset for clean-main work. If the project moves to a multi-maintainer flow, require PRs, remove administrator bypass, and require CODEOWNERS review. |
 | `Code-Review` | No reviewed pull-request history exists for Scorecard to evaluate. | Use normal reviewed PRs for non-urgent work when there is another qualified reviewer. Do not manufacture review history. |
 | `CI-Tests` | Scorecard did not find a pull request to inspect. | It will become meaningful once normal PRs exist. The local gate and `main` CI are already mandatory for direct mainline work. |
-| `Maintained` | The repository is inside Scorecard's young-repository window. | Let age resolve naturally while keeping releases, CI, and security updates current. |
 | `CII-Best-Practices` | No OpenSSF Best Practices Badge project is linked. | Use [openssf-badge-readiness.md](openssf-badge-readiness.md) to answer the questionnaire from committed evidence; link a badge only after the real project page exists and the answers match the repository. |
 | `Contributors` | Scorecard sees no contributor diversity across organizations. | Accept this for a single-maintainer project. Do not add artificial contributors. |
 
@@ -52,8 +49,8 @@ for most passing-level questions:
 | Basics | README, Apache-2.0 license, PyPI package metadata, documented install and update path, public issue tracker, and stable project URLs. |
 | Change control | Git history, SemVer policy, changelog, release process, tagged releases, signed provenance assets, and short-lived branch guidance. |
 | Reporting | `SECURITY.md`, private vulnerability-reporting email, response timeline, issue templates, and no-real-company-data contribution policy. |
-| Quality | `scripts/check.py` as the local CI mirror, branch coverage gate, mutation gate, property tests, fuzzing, golden renders, pyright strict mode, and generated-artifact drift guards. |
-| Security | CodeQL, ruff security rules, `pip-audit`, secret scanning, push protection, least-privilege workflow tokens, pinned workflow actions, SBOM, reproducible builds, Trusted Publishing, PyPI attestations, and GitHub build provenance. |
+| Quality | `scripts/check.py` as the canonical local gate, branch coverage gate, mutation gate, property tests, fuzzing, golden renders, pyright strict mode, and generated-artifact drift guards. |
+| Security | CodeQL, ruff security rules, `pip-audit`, secret scanning, push protection, least-privilege workflow tokens, pinned workflow actions, SBOM, same-job deterministic-build checks, Trusted Publishing, PyPI attestations, and GitHub build provenance. |
 | Analysis | Strict type checking, static analysis, workflow-pin checks, validation hygiene, text hygiene, schema drift checks, and release readiness checks. |
 
 No OpenSSF Best Practices Badge is claimed in this repository until the project

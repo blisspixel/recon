@@ -40,12 +40,12 @@ behavior. The full threat-by-threat version is assurance-case Promise 2.
 
 | Bound | Constant | Proven by |
 |---|---|---|
-| Aggregate resolve wall-clock | `recon_tool/resolver.py::RESOLVE_TIMEOUT` | `test_source_fault_injection::test_hanging_source_trips_the_aggregate_timeout` |
-| Per-query DNS timeout | `recon_tool/sources/dns_base.py::DNS_QUERY_TIMEOUT` | `test_resilience_hardening::TestDnsBounds` |
-| HTTP response body cap + decompression-bomb refusal | `recon_tool/http.py::_MAX_RESPONSE_BYTES` | `test_resilience_hardening::TestDecompressionBombGuard`, `test_resilience_hardening::TestHttpBounds` |
-| Redirect and cumulative retry-sleep caps | `recon_tool/http.py::MAX_REDIRECTS`, `recon_tool/http.py::_MAX_TOTAL_RETRY_SLEEP` | `test_resilience_hardening::TestHttpBounds` |
-| DNS regex-match input caps (TXT / CNAME / subdomain-TXT) | `recon_tool/fingerprints.py::_MAX_TXT_MATCH_LENGTH` and siblings | `test_hostile_input_bounds::TestDnsParserBounds` |
-| CT entry / SAN / page floods | `recon_tool/sources/cert_providers.py::_MAX_CRTSH_ENTRIES` and siblings | `test_hostile_input_bounds::TestCrtshEntryBounds`, `test_hostile_input_bounds::TestCtGroupingBounds` |
+| Aggregate resolve wall-clock | `src/recon_tool/resolver.py::RESOLVE_TIMEOUT` | `test_source_fault_injection::test_hanging_source_trips_the_aggregate_timeout` |
+| Per-query DNS timeout | `src/recon_tool/sources/dns_base.py::DNS_QUERY_TIMEOUT` | `test_resilience_hardening::TestDnsBounds` |
+| HTTP response body cap + decompression-bomb refusal | `src/recon_tool/http.py::_MAX_RESPONSE_BYTES` | `test_resilience_hardening::TestDecompressionBombGuard`, `test_resilience_hardening::TestHttpBounds` |
+| Redirect and cumulative retry-sleep caps | `src/recon_tool/http.py::MAX_REDIRECTS`, `src/recon_tool/http.py::_MAX_TOTAL_RETRY_SLEEP` | `test_resilience_hardening::TestHttpBounds` |
+| DNS regex-match input caps (TXT / CNAME / subdomain-TXT) | `src/recon_tool/fingerprints.py::_MAX_TXT_MATCH_LENGTH` and siblings | `test_hostile_input_bounds::TestDnsParserBounds` |
+| CT entry / SAN / page floods | `src/recon_tool/sources/cert_providers.py::_MAX_CRTSH_ENTRIES` and siblings | `test_hostile_input_bounds::TestCrtshEntryBounds`, `test_hostile_input_bounds::TestCtGroupingBounds` |
 | Every HTTP identity source x failure mode degrades to a clean result | per-source guards; clean `SourceResult` on every failure | `test_hostile_input_bounds::TestSourceFaultMatrix` |
 | PR-scoped coverage-guided parser fuzzing | `.github/workflows/clusterfuzzlite.yml`, `.clusterfuzzlite/project.yaml`, `fuzz/recon_input_fuzzer.py` | `tests/test_clusterfuzzlite_integration.py` |
 | Hash-pinned ClusterFuzzLite runtime requirements stay synced to `uv.lock` | `.clusterfuzzlite/requirements.txt`, `scripts/check_clusterfuzzlite_requirements.py` | `tests/test_clusterfuzzlite_requirements_check.py` |
@@ -56,7 +56,7 @@ behavior. The full threat-by-threat version is assurance-case Promise 2.
 |---|---|---|
 | `--json` output validates against the locked v2.0 schema; schema and emitter cannot drift apart | `docs/recon-schema.json` is the contract; the test regenerates real output and validates it | `tests/test_json_schema_file.py` |
 | Batch / NDJSON records keep the documented shapes (`record_type`, `error_kind`, the always-wrapper) | the SH1-SH9 schema-hardening shapes | `tests/test_batch_ndjson_schema.py` |
-| Stable exit codes (0 / 1 / 2 / 3 / 4) a script can branch on | `recon_tool/exit_codes.py::EXIT_SUCCESS`, `recon_tool/exit_codes.py::EXIT_NO_DATA` and siblings | `tests/test_exit_codes.py` |
+| Stable exit codes (0 / 1 / 2 / 3 / 4) a script can branch on | `src/recon_tool/exit_codes.py::EXIT_SUCCESS`, `src/recon_tool/exit_codes.py::EXIT_NO_DATA` and siblings | `tests/test_exit_codes.py` |
 
 ## The inference trust chain
 
@@ -68,7 +68,7 @@ layer with its own gate:
 | Correctness | Variable elimination matches an independent 512-state latent-joint reference over the structured none/one/all evidence sweep and exhaustive local subsets for three factor-heavy nodes | `validation/differential_verification.py` | `tests/test_bayesian_differential.py` |
 | Change control | A CPT edit that shifts an implied marginal beyond the band must be acknowledged in the diff | `validation/drift_check.py`, `validation/inference_baseline.json` | `tests/test_drift_check.py` |
 | Uncertainty honesty | The 80% band contains selected perturbed-model conditionals in the finite, seeded CAL8 scenario; this is not a general imprecision bound | `validation/interval_coverage.py`, memo `interval-coverage.md` | `tests/test_interval_coverage.py` |
-| Test strength | The current post-decomposition inference-core baseline kills 90.6% of tested mutants (102 survivors of 1,083, residual classified equivalent), with an 88% floor | `mutation.toml`, memo `mutation-gate.md` | `mutation.yml` (blocking when the mutated surface or kill set changes; weekly) |
+| Test strength | Round 6 kills 91.35% of tested mutants (655 killed, 62 survivors of 717), with an 88% floor | `mutation.toml`, memo `mutation-gate.md` | `mutation.yml` (blocking when the mutated surface or kill set changes; weekly) |
 | Evidence semantics | Group reduction and declarative absence behave as implemented | [correlation.md](correlation.md) sections 3.2 and 3.3 | `tests/test_bayesian_evidence_groups.py` |
 | Adversarial property (removal only) | Under the proposition's fixed local positive-factor assumptions, deleting a fired unit cannot raise local presence odds; no claim is made about movement toward 0.5, band width, or evidence planting | [correlation.md](correlation.md) section 3.4; `validation/adversarial_properties.py` | `tests/test_adversarial_properties.py` |
 
@@ -79,7 +79,7 @@ Promise 6; listed here for completeness of the requirement-to-gate map.
 
 | Requirement | Gate |
 |---|---|
-| Same source, byte-identical artifacts | `ci.yml` reproducible-build job |
+| Same source and fixed epoch produce matching artifacts across two builds in one resolved CI job | `ci.yml` reproducible-build job |
 | Signed, attested, traceable releases | `release.yml` (attestations, SBOM, trusted publishing), `tests/test_release_workflow_contract.py` |
 
 ## How this document stays true

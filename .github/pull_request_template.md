@@ -16,7 +16,7 @@ URL; see .github/PULL_REQUEST_TEMPLATE/fingerprint.md.
 
 - [ ] **CPT-change discipline (v1.9.6+).** If this PR changes any
       CPT entry, prior, or likelihood in
-      `recon_tool/data/bayesian_network.yaml`, the YAML carries a
+      `src/recon_tool/data/bayesian_network.yaml`, the YAML carries a
       comment explaining the *concept* this change reflects (not
       just the corpus statistic that motivated it). See
       [`CONTRIBUTING.md`](../CONTRIBUTING.md#cpt-change-discipline-v196)

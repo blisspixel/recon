@@ -1,7 +1,7 @@
 """Keep the MCP tool docs in sync with the live `readOnlyHint` annotations.
 
-`docs/mcp.md` tells a consumer which tools are read-only (safe to auto-approve
-if outbound passive queries are acceptable) and which are stateful. That
+`docs/mcp.md` tells a consumer which tools advertise read-only operation and
+which are stateful. That
 guidance is only trustworthy if it matches the annotations the server actually
 advertises, so this test parses the doc and compares it to the registered
 tools. A new tool, or a tool whose `readOnlyHint` flips, fails CI until the doc
@@ -17,6 +17,7 @@ from pathlib import Path
 from recon_tool.server import mcp
 
 _MCP_DOC = Path(__file__).resolve().parents[1] / "docs" / "mcp.md"
+_CLAUDE_PLUGIN_README = Path(__file__).resolve().parents[1] / "agents" / "claude-code" / "README.md"
 
 
 def _tool_hints() -> dict[str, bool]:
@@ -61,7 +62,7 @@ def _documented_table_names(section: str) -> set[str]:
 
 
 def _documented_stateful_names(section: str) -> set[str]:
-    """Tool names from the stateful bullet list under the autoApprove guidance."""
+    """Tool names from the stateful annotation guidance."""
     names: set[str] = set()
     for line in section.splitlines():
         if line.startswith("- `"):
@@ -80,6 +81,15 @@ def test_documented_stateful_set_matches_annotations() -> None:
     section = _available_tools_section()
     live_stateful = {name for name, read_only in _tool_hints().items() if not read_only}
     assert _documented_stateful_names(section) == live_stateful
+
+
+def test_claude_plugin_approval_guidance_names_every_stateful_tool() -> None:
+    readme = _CLAUDE_PLUGIN_README.read_text(encoding="utf-8")
+    approval = readme.split("## Approval policy", 1)[1].split("## What this plugin does", 1)[0]
+    live_stateful = {name for name, read_only in _tool_hints().items() if not read_only}
+
+    for name in live_stateful:
+        assert f"`{name}`" in approval
 
 
 def test_catalog_resource_examples_cover_resource_consumption_rules() -> None:

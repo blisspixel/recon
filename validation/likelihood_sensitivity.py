@@ -1,26 +1,31 @@
-"""CAL8: likelihood-perturbation sensitivity for the v1.9 Bayesian layer.
+"""CAL8: descriptive likelihood-perturbation sensitivity diagnostic.
 
-The CPT likelihoods in ``bayesian_network.yaml`` are hand-elicited
-(concept-first, not corpus-fitted; see ``CONTRIBUTING.md`` CPT-change
-discipline). A fair question is whether the calibration story depends
-sensitively on those exact numbers. This script answers it.
+The likelihoods in ``bayesian_network.yaml`` are manually encoded and
+human-reviewed; some were informed by development-corpus aggregates. This script
+measures how much model-relative output changes under selected perturbations. It
+does not test real-world calibration and has no pass/fail threshold.
 
 Method (generative truth held fixed, only inference perturbed):
 
-1. Generate one fixed synthetic dataset from the baseline network: for
-   each sample, draw a ground-truth assignment and the evidence pattern
-   recon would observe.
-2. Build perturbed networks by scaling every evidence likelihood by a
+1. Generate one fixed synthetic dataset from the baseline network: for each
+   sample, draw a ground-truth assignment and then sample every binding
+   independently conditional on its node state. This deliberately simple
+   generator does not enforce correlation-group exclusivity or declarative
+   group-absence semantics, so its Brier/ECE values are not validation under the
+   shipped observation model.
+2. Build perturbed networks by scaling every binding likelihood by a
    factor: two systematic corners (all x1.2 and all x0.8) plus a random
    jitter ensemble (each likelihood scaled independently by a factor in
-   [0.8, 1.2]), clipped to the valid open interval.
+   [0.8, 1.2]), clipped to the valid open interval. Explicit
+   ``group_absence`` parameters are not perturbed.
 3. Re-run ``infer()`` on the SAME observations under the baseline and
    under every perturbed network. Score each node's posteriors against
    the fixed ground truth (Brier, ECE) and against the baseline run
    (decision flips: does ``posterior >= 0.5`` still match).
 4. Report, per node, the baseline metric and the maximum deviation any
-   perturbation produced. Small deviation means the calibration is
-   robust to the hand-elicited values, not knife-edge dependent.
+   perturbation produced. Small deviation means the recorded outputs are stable
+   within this finite diagnostic, not that the model is calibrated or generally
+   robust.
 
 Synthetic-only and publishable: there are no real targets. Prints an
 aggregate table to stdout; the per-trial detail is summarized, not
@@ -86,7 +91,7 @@ def _sample_topological(net: BayesianNetwork, rng: random.Random) -> dict[str, s
 def _sample_observations(
     net: BayesianNetwork, true_state: dict[str, str], rng: random.Random
 ) -> tuple[list[str], list[str]]:
-    """Given the ground-truth assignment, simulate which bindings fire."""
+    """Sample bindings independently under the diagnostic observation model."""
     obs_slugs: list[str] = []
     obs_signals: list[str] = []
     for node in net.nodes:
@@ -122,10 +127,11 @@ def _ece(predicted: list[float], outcome: list[int], bins: int) -> float:
 
 
 def _perturb(net: BayesianNetwork, draw: Callable[[], tuple[float, float]]) -> BayesianNetwork:
-    """Return a copy of ``net`` with every evidence likelihood scaled.
+    """Return a copy of ``net`` with every binding likelihood scaled.
 
     ``draw`` yields a ``(present_factor, absent_factor)`` pair per binding;
-    a constant pair is a systematic corner, a random pair is jitter.
+    a constant pair is a systematic corner, a random pair is jitter. Explicit
+    group-absence pairs are outside this diagnostic and remain unchanged.
     """
     nodes = []
     for node in net.nodes:
@@ -235,8 +241,8 @@ def main() -> int:
         print(f"{n.name:<34}{b:>8.3f}{worst_brier_dev[n.name]:>9.3f}{e:>8.3f}{de:>9.3f}{fl:>8.1f}")
     print("-" * len(header))
     print(f"Worst-case across all nodes: dECE <= {max_ece_dev:.3f}, decision flips <= {max_flip:.1f}%.")
-    print("Small deviations indicate the calibration is robust to the hand-elicited likelihoods,")
-    print("not knife-edge dependent on the exact CPT values.")
+    print("Small deviations indicate model-relative output stability within this diagnostic.")
+    print("They do not establish calibration; explicit group-absence parameters are not perturbed.")
     return 0
 
 

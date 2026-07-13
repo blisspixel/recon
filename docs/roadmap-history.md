@@ -68,6 +68,8 @@ vertical-baseline anomaly rules (`expected_categories` /
 Zero new network surface; all derived from already-collected
 observables. v2.0 promotes each to stable per the disposition table.
 
+<a id="v190--probabilistic-fusion-shipped"></a>
+
 ### v1.9.0 - Probabilistic fusion *(shipped, EXPERIMENTAL surfaces - see [CHANGELOG](../CHANGELOG.md), `docs/correlation.md` §4.8, `validation/v1.9-validation-summary.md`)*
 
 Layered Bayesian inference on top of the deterministic engine, gated
@@ -889,6 +891,8 @@ the path-to-v2.0 plan. Any of them may be promoted into a
 post-v2.0 v2.x.y patch when there's a falsifiable defensive case
 and corpus evidence to back it._
 
+<a id="v200--maturity"></a>
+
 ### v2.0.0 - Maturity
 
 Lock in what the previous releases proved. Promote stable experimental
@@ -1167,9 +1171,9 @@ without overclaiming.
   full corpus results, trend table v1.6 → v1.7 → v1.8 → v1.9.0 →
   v1.9.3 → v1.9.4 → v1.9.14 per node, security-closure trail
   through v1.9.14. The trend table is the public evidence the
-  engine got better. Shipped in commit `ec14bdc` (v2.0 prep);
+  engine got better. Shipped in commit `8799840` (v2.0 prep);
   real-corpus numbers in `validation/v2.0-corpus-run.md` from
-  the v1.9.14 scan (commit `cca815c`).
+  the v1.9.14 scan (commit `c116abf`).
 - [x] **All Track A + Track B pre-conditions ticked off** in the
   v2.0 release CHANGELOG entry, each with a link to its shipping
   patch. Staged in `validation/v2.0-release-notes-draft.md` (12

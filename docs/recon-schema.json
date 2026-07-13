@@ -402,14 +402,14 @@
       }
     },
     "posterior_observations": {
-      "description": "Model-relative marginal posteriors over high-level claims from the manually encoded, partly development-corpus-informed Bayesian network at recon_tool/data/bayesian_network.yaml (v1.9; stable v2.0+). Each entry includes P(node=present | E) under that model and an 80% evidence-responsive uncertainty band. Populated only when fusion runs (see fusion_enabled); empty array otherwise. The evidence-strength layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
+      "description": "Model-relative marginal posteriors over high-level claims from the shipped, manually encoded, partly development-corpus-informed Bayesian network (v1.9; stable v2.0+). Each entry includes P(node=present | E) under that model and an 80% evidence-responsive uncertainty band. Populated only when fusion runs (see fusion_enabled); empty array otherwise. The evidence-strength layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
       "type": "array",
       "items": {
         "$ref": "#/$defs/PosteriorObservation"
       }
     },
     "surface_attributions": {
-      "description": "Per-subdomain attribution to a SaaS or infrastructure provider, derived from CNAME-chain classification of related_domains. Each entry maps one subdomain to its primary service. Application-tier matches (Auth0, Shopify, Zendesk, ...) take precedence over infrastructure-tier matches (Cloudflare, Fastly, CloudFront, ...) when a chain produces both \u2014 the infrastructure layer is recorded in infra_slug / infra_name as supplementary context. Empty array when no related domains classified.",
+      "description": "Per-subdomain attribution to a SaaS or infrastructure provider, derived from CNAME-chain classification of related_domains. Each entry maps one subdomain to its primary service. Application-tier matches (Auth0, Shopify, Zendesk, ...) take precedence over infrastructure-tier matches (Cloudflare, Fastly, CloudFront, ...) when a chain produces both; the infrastructure layer is recorded in infra_slug / infra_name as supplementary context. Empty array when no related domains classified.",
       "type": "array",
       "items": {
         "$ref": "#/$defs/SurfaceAttribution"
@@ -423,14 +423,14 @@
       }
     },
     "chain_motifs": {
-      "description": "CNAME chain motifs (v1.7+). Each entry records an ordered proxy/CDN/origin shape (e.g. Cloudflare \u2192 AWS origin, Akamai \u2192 Azure origin) that fired on a related subdomain's CNAME chain. Observable structure only \u2014 never an ownership claim. Empty array when no motif matched any related subdomain. The motif catalog lives in recon_tool/data/motifs.yaml and can be extended via ~/.recon/motifs.yaml (additive only).",
+      "description": "CNAME chain motifs (v1.7+). Each entry records an ordered proxy/CDN/origin shape (for example Cloudflare to AWS origin or Akamai to Azure origin) that fired on a related subdomain's CNAME chain. Observable structure only; never an ownership claim. Empty array when no motif matched any related subdomain. The built-in motif catalog ships with recon and can be extended via ~/.recon/motifs.yaml (additive only).",
       "type": "array",
       "items": {
         "$ref": "#/$defs/ChainMotif"
       }
     },
     "infrastructure_clusters": {
-      "description": "Per-domain CT co-occurrence community detection report (v1.8+). Always emitted. ``algorithm`` records which path produced the partition (``louvain`` for small graphs, ``connected_components`` when the graph exceeds the size cap, ``skipped`` when no graph could be built). Modularity is 0.0 in the fallback / skipped paths. Members within each cluster are sorted; clusters are sorted by size descending. Observable structure only \u2014 clusters describe co-issuance, not ownership.",
+      "description": "Per-domain CT co-occurrence community detection report (v1.8+). Always emitted. ``algorithm`` records which path produced the partition (``louvain`` for small graphs, ``connected_components`` when the graph exceeds the size cap, ``skipped`` when no graph could be built). Modularity is 0.0 in the fallback / skipped paths. Members within each cluster are sorted; clusters are sorted by size descending. Observable structure only; clusters describe co-issuance, not ownership.",
       "$ref": "#/$defs/InfrastructureClusterReport"
     },
     "fingerprint_metadata": {
@@ -623,7 +623,7 @@
           }
         },
         "deployment_bursts": {
-          "description": "Stable v1.7+. Cohorts of cert issuances clustered by `not_before` proximity (default 60s window, min 3 distinct non-wildcard SANs). Output is intentionally relative \u2014 span_seconds + name list \u2014 and never claims ownership. Empty array when no cluster meets the minimum size. Bounded \u2014 at most 8 bursts, 25 names per burst.",
+          "description": "Stable v1.7+. Cohorts of cert issuances clustered by `not_before` proximity (default 60s window, min 3 distinct non-wildcard SANs). Output is intentionally relative, using span_seconds plus a name list, and never claims ownership. Empty array when no cluster meets the minimum size. Bounded to at most 8 bursts and 25 names per burst.",
           "type": "array",
           "items": {
             "$ref": "#/$defs/CertBurst"
@@ -727,7 +727,7 @@
       }
     },
     "SurfaceAttribution": {
-      "description": "Maps one subdomain to its primary service from CNAME chain classification. primary_* fields are the application-tier match when present, else the most specific infrastructure-tier match. infra_* fields are populated only when both an application and an infrastructure tier matched \u2014 they record the CDN or load balancer fronting the application service.",
+      "description": "Maps one subdomain to its primary service from CNAME chain classification. primary_* fields are the application-tier match when present, else the most specific infrastructure-tier match. infra_* fields are populated only when both an application and an infrastructure tier matched; they record the CDN or load balancer fronting the application service.",
       "type": "object",
       "required": [
         "subdomain",
@@ -769,7 +769,7 @@
       }
     },
     "ChainMotif": {
-      "description": "One CNAME chain motif observed against a related subdomain. ``chain`` is the ordered subset of hops that matched the motif's markers \u2014 not the full original chain.",
+      "description": "One CNAME chain motif observed against a related subdomain. ``chain`` is the ordered subset of hops that matched the motif's markers, not the full original chain.",
       "type": "object",
       "required": [
         "motif_name",
@@ -883,7 +883,7 @@
         },
         "key": {
           "type": "string",
-          "description": "Value the rule fired on. Issuer name, BIMI org, parent vendor, or \u2014 for ``shared_slugs`` \u2014 the comma-joined intersection of overlapping slug names."
+          "description": "Value the rule fired on. This is an issuer name, BIMI organization, parent vendor, or, for ``shared_slugs``, the comma-joined intersection of overlapping slug names."
         },
         "members": {
           "type": "array",
@@ -1012,7 +1012,7 @@
       }
     },
     "UnclassifiedCnameChain": {
-      "description": "A CNAME chain captured during surface classification that did not match any cname_target fingerprint. Surfaced only with ``--include-unclassified``. ``chain`` is ordered: each hop is a CNAME target, terminal last. Useful for proposing new fingerprints \u2014 the terminal hostname is usually a third-party SaaS endpoint we don't yet recognize, an intra-org CDN, or noise.",
+      "description": "A CNAME chain captured during surface classification that did not match any cname_target fingerprint. Surfaced only with ``--include-unclassified``. ``chain`` is ordered: each hop is a CNAME target, terminal last. Useful for proposing new fingerprints because the terminal hostname is usually an unrecognized third-party SaaS endpoint, an intra-org CDN, or noise.",
       "type": "object",
       "required": [
         "subdomain",
