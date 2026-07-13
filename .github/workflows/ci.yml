@@ -198,7 +198,9 @@ jobs:
       - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
         with:
           persist-credentials: false
-          fetch-depth: 2
+          # Repository-policy checks need HEAD^ and historical commit objects.
+          # Fetch history once while the broad test matrix stays shallow.
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
@@ -210,6 +212,15 @@ jobs:
 
       - name: Install dependencies
         run: uv sync
+
+      - name: Validate documentation commit receipts
+        shell: bash
+        run: |
+          if [ "$(git rev-parse --is-shallow-repository)" != "false" ]; then
+            echo "::error::Documentation receipt validation requires full Git history."
+            exit 1
+          fi
+          uv run pytest tests/test_documentation_integrity.py::test_backticked_commit_receipts_exist
 
       - name: Validate built-in fingerprints
         # Validates every ``*.yaml`` under ``data/fingerprints/`` and

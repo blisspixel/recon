@@ -6,6 +6,8 @@ import re
 import subprocess
 from pathlib import Path
 
+import pytest
+
 ROOT = Path(__file__).resolve().parents[1]
 
 
@@ -42,6 +44,19 @@ def test_historical_commit_references_resolve_to_corrected_ids() -> None:
 
 
 def test_backticked_commit_receipts_exist() -> None:
+    shallow = subprocess.run(
+        ["git", "rev-parse", "--is-shallow-repository"],  # noqa: S607
+        cwd=ROOT,
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if shallow.returncode == 0 and shallow.stdout.strip() == "true":
+        pytest.skip(
+            "historical receipt validation requires full Git history; "
+            "the CI repository-policy job enforces it"
+        )
+
     paths = [
         ROOT / "CHANGELOG.md",
         *(ROOT / "docs").rglob("*.md"),
