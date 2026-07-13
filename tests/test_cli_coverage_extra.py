@@ -161,15 +161,17 @@ class TestDoctorFix:
         assert (config_dir / "signals.yaml").is_file()
         assert not list(config_dir.glob(".*.tmp"))
 
-    def test_rejects_template_path_that_is_not_a_file(self) -> None:
+    def test_rejects_template_path_that_is_not_a_file(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """A directory collision is not reported as an existing template."""
-        config_dir = Path(os.environ["RECON_CONFIG_DIR"])
+        config_dir = Path(os.environ["RECON_CONFIG_DIR"]) / ("long-config-path-" + "x" * 64)
+        config_dir.mkdir()
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(config_dir))
         (config_dir / "fingerprints.yaml").mkdir()
 
         result = runner.invoke(app, ["doctor", "--fix"])
 
         assert result.exit_code == 1
-        assert "is not a regular file" in result.output
+        assert "is not a regular file" in " ".join(result.output.split())
         assert (config_dir / "signals.yaml").is_file()
 
     def test_concurrent_template_creation_is_never_overwritten(self, monkeypatch: pytest.MonkeyPatch) -> None:
