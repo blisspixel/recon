@@ -16,10 +16,16 @@ last six months unless the repo's automation tells it.
 
 ## 1. The one command before you push
 
-`uv run python scripts/check.py` runs the **exact** CI gate locally: ruff, pyright
-over `src/recon_tool/ tests/` (the same scope CI uses), the coverage-gated test run,
-and the catalog/label/file-size checks. Green here means green in CI. Use
+`uv run python scripts/check.py` runs the blocking local code gate: ruff,
+pyright over `src/recon_tool/ tests/` (the same scope CI uses), the
+coverage-gated test run, and the catalog, label, and file-size checks. Green
+here is the required local baseline for CI. Use
 `--fast` to skip the test run for rapid iteration; never push on `--fast` alone.
+The package-index-dependent MCP SDK matrix is intentionally separate:
+`scripts/check_mcp_compatibility.py` creates isolated exact-pin environments,
+and the `mcp-compatibility` CI job blocks regressions on both supported stable
+v1 and the current v2 candidate without making the ordinary local gate depend
+on network access.
 Before pushing a local stack, `uv run python scripts/release_readiness.py` also
 checks every `origin/main..HEAD` commit message for attribution markers, em
 dashes, and pictographic symbols.

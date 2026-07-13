@@ -30,7 +30,10 @@ dependencies = [
     "dnspython>=2.6",
     "pyyaml>=6.0",
     "defusedxml>=0.7",
-    "mcp>=1.0,<2",
+    # 1.28.1 is the first stable SDK covered by recon's complete compatibility
+    # matrix. Earlier releases do not all expose the FastMCP API recon uses.
+    # Keep production on stable v1 while v2 remains a prerelease.
+    "mcp>=1.28.1,<2",
     "networkx>=3.0",
     # Public Suffix List for registrable-domain (apex) reduction, so a pasted
     # browser URL or sub-host (mail.acme.co.uk) is analyzed at the apex

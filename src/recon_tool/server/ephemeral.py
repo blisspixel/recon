@@ -13,11 +13,10 @@ import logging
 import uuid
 from typing import Literal, cast
 
-from mcp.server.fastmcp.exceptions import ToolError
-from mcp.types import ToolAnnotations
 from typing_extensions import TypedDict
 
 from recon_tool.formatter import format_tenant_dict
+from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
 from recon_tool.server.app import internal_lookup_error, mcp
 from recon_tool.server.runtime import cache, cache_get, cache_refresh_info
 from recon_tool.validator import validate_domain

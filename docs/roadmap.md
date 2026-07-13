@@ -156,25 +156,34 @@ claim lacks adequate evidence.
 
 ### 2. Characterize MCP v2 beta compatibility before 2026-07-28
 
-Status: ready. The previous waiting trigger was met when official Python SDK
-`2.0.0b1` shipped on 2026-06-30.
+Status: candidate checkpoint complete on 2026-07-13. The exact v1.28.1 and
+v2.0.0b1 matrix passes; final specification and stable-v2 adoption remain
+pending.
 
 Why second: the final MCP 2026-07-28 specification and stable Python SDK are
 time-bound external changes. Production remains on the stable v1 SDK line until
 the candidate passes recon's gates.
 
-Work:
+Completed checkpoint:
 
-- Exact-pin `mcp==2.0.0b1` in an isolated compatibility environment. Do not
-  publish or widen the production dependency to a prerelease.
+- Exact-pin `mcp==2.0.0b1` in an isolated compatibility environment without
+  publishing or widening the production dependency to a prerelease.
 - Exercise server import, stdio startup, `recon mcp doctor`, discovery, tool
   calls, resource reads, structured output, errors, and deterministic listing
   under v1.28.1 and the v2 beta.
 - Record a migration result for `FastMCP`, protocol types, `ToolError`,
   annotations, discovery, wire aliases, and synchronous resource handlers.
 - Review shared catalog and cache behavior under the v2 worker-thread model.
-- Either prove the declared `mcp>=1.0` floor in CI or raise it to the first
-  supported version.
+- Reject the unproven `mcp>=1.0` floor and raise it to the fully characterized
+  stable v1.28.1 release.
+
+The same compatibility boundary now passes 22 tools, five resources, zero
+resource templates, one prompt, 44 schema documents, representative structured
+success and error results, concurrent catalog reloads, real stdio calls, and
+the live doctor on both supported exact pins. Candidate v2 additionally proves
+`server/discover`, worker-thread synchronous handlers, and conservative
+complete-result metadata on every cacheable method. Production remains on
+`mcp>=1.28.1,<2` until the final gate.
 
 Acceptance evidence:
 
@@ -622,16 +631,19 @@ external consumer needs a stable subset.
 
 ### Reduce remaining interface hotspots after semantics stabilize
 
-The high-trust graph identifies two critical interface hotspots:
+The high-trust graph identifies two high interface decomposition candidates:
 
-- `src/recon_tool/formatter/panel.py`: critical blast radius, broad outgoing
+- `src/recon_tool/formatter/panel.py`: high blast radius, broad outgoing
   dependency surface, and a special file-size ratchet;
-- `src/recon_tool/server/introspection.py`: critical blast radius, broad
+- `src/recon_tool/server/introspection.py`: high blast radius, broad
   dependency and incoming-reference surface, plus framework registration
   behavior.
 
 Read the current ignored code-graph manifest, impact records, and hotspots for
 exact counts rather than copying volatile graph metrics into this roadmap.
+The current critical MCP orchestration files are `server/app.py` and
+`server/__init__.py`; treat those as high-risk shared boundaries even though
+they are not the decomposition targets named above.
 
 Keep each public module as a compatibility orchestrator and extract only
 cohesive, stateless sections. Preserve byte-equivalent panel output, MCP

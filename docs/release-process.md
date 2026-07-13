@@ -40,6 +40,10 @@ It does not call the network by default and it is not part of the user-facing
 6. No tracked private corpus files or root per-domain JSON dumps.
 7. Latest commit message hygiene: no generated-author markers and no em dash.
 
+The release workflow also reruns the exact stable and candidate MCP SDK matrix
+on the tagged tree before the build job can seal or publish artifacts. This
+keeps a tag from bypassing the compatibility job that already blocks `main`.
+
 During active edits, this is useful as a planning report:
 
 ```bash
@@ -170,6 +174,8 @@ Before running `scripts/release.py`:
 - [ ] `docs/schema.md` has been updated if any top-level JSON field changed.
 - [ ] `CHANGELOG.md` includes the generated `### Tool Surface Changes` line.
 - [ ] README examples and docs references still match the shipped CLI behavior.
+- [ ] Exact stable and candidate MCP SDK compatibility passes on the release
+      tree when MCP compatibility code or dependencies changed.
 - [ ] `docs/supply-chain.md` keeps the consumer verification quick path on the
       current version and release asset names.
 

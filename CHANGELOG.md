@@ -12,6 +12,36 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.5.3] - 2026-07-13
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, JSON field, MCP tool, resource,
+prompt, cache, or public import name changes.
+
+### Changed
+
+- Added one generation-aware MCP SDK boundary so the same local stdio server
+  runs on stable SDK v1.28.1 and candidate SDK v2.0.0b1 without duplicating
+  registration or domain logic. Production remains constrained to stable v1.
+- Raised the MCP dependency floor from 1.0 to the first fully characterized
+  stable release, 1.28.1. Exact isolation proved that 1.0 lacks both server APIs
+  recon requires, while 1.28.1 and 2.0.0b1 pass the complete matrix.
+- Made both MCP doctors report the installed SDK path and use public registry
+  and discovery APIs. The live doctor uses `initialize` on stable v1 and
+  `server/discover` on v2, where it also verifies complete-result cache
+  metadata.
+- Added a blocking CI matrix for exact stable and candidate SDK pins. It checks
+  server import, stdio discovery, 22 tools, five resources, one prompt, JSON
+  Schema 2020-12 conformance, structured success and error results, catalog
+  reload concurrency, prompt rendering, explicit cache policy, cache metadata,
+  and the live doctor.
+
+### Fixed
+
+- Corrected MCP documentation that omitted the registered `domain_report`
+  prompt and overstated support for untested early SDK releases.
+
 ## [2.5.2] - 2026-07-12
 
 ### Tool Surface Changes

@@ -75,6 +75,40 @@ jobs:
       - name: Type check
         run: uv run pyright src/recon_tool/ tests/
 
+  mcp-compatibility:
+    # Exercise the supported stable SDK and the exact v2 release candidate in
+    # isolated environments. Production remains constrained to stable v1; the
+    # candidate pin is a compatibility proof, not a published dependency.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        mcp-version: ["1.28.1", "2.0.0b1"]
+    env:
+      UV_PYTHON: "3.11"
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Install locked development environment
+        run: uv sync --locked
+
+      - name: Probe MCP SDK ${{ matrix.mcp-version }}
+        run: >-
+          uv run python scripts/check_mcp_compatibility.py
+          --sdk-version "${{ matrix.mcp-version }}"
+          --require-compatible "${{ matrix.mcp-version }}"
+
   test:
     runs-on: ${{ matrix.os }}
     timeout-minutes: 45

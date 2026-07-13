@@ -104,8 +104,9 @@ def doctor_mcp() -> None:
 
     try:
         importlib.import_module("mcp")
-        importlib.import_module("mcp.server.fastmcp")
-        checks.append(("MCP package", True, "mcp>=1.0 installed"))
+        from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, SDK_VERSION
+
+        checks.append(("MCP package", True, f"mcp {SDK_VERSION} ({SDK_FAMILY}) installed"))
     except ImportError as exc:
         checks.append(("MCP package", False, f"not installed: {exc}"))
         checks.append(("Install hint", False, "pip install -U recon-tool"))
@@ -122,18 +123,19 @@ def doctor_mcp() -> None:
         _render_mcp_checks(checks)
         raise typer.Exit(code=EXIT_ERROR) from exc
 
-    # 3. FastMCP has instructions
+    # 3. MCP server has instructions
     instructions = getattr(server_mcp, "instructions", None)
     if instructions:
         checks.append(("Server Instructions", True, f"{len(instructions)} chars"))
     else:
         checks.append(("Server Instructions", False, "missing — agents may misuse tools"))
 
-    # 4. Enumerate tools (via the internal tool manager)
+    # 4. Enumerate tools through the public SDK surface.
     tools_ok = True
     try:
-        tool_mgr = server_mcp._tool_manager  # pyright: ignore[reportPrivateUsage]
-        tools = list(tool_mgr.list_tools())
+        import asyncio
+
+        tools = asyncio.run(server_mcp.list_tools())
         if tools:
             checks.append(("Tools enumerated", True, f"{len(tools)} tools registered"))
         else:

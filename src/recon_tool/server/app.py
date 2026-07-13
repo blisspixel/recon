@@ -1,7 +1,7 @@
-"""Shared FastMCP application instance and resolve helpers for the MCP server.
+"""Shared MCP application instance and resolve helpers for the MCP server.
 
 Extracted from server.py (docs/roadmap.md god-file track, app-sharing variant).
-Holds the single FastMCP ``mcp`` instance the tool-group modules register on,
+Holds the single MCP ``mcp`` instance the tool-group modules register on,
 the server instructions, and the validate / cache / rate-limit / resolve helpers
 every tool shares. Tool groups import ``mcp`` and these helpers from here; tests
 monkeypatch this module. Imports ``recon_tool.server.runtime``; never imports
@@ -14,9 +14,7 @@ import asyncio
 import logging
 import uuid
 
-from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.exceptions import ToolError
-
+from recon_tool.mcp_client.sdk_compat import MCPApplication, ToolError, mcp_application_options
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.resolver import resolve_tenant
 from recon_tool.server.runtime import (
@@ -179,7 +177,11 @@ treating the graph as a complete trace.
 """
 
 
-mcp = FastMCP("recon-tool", instructions=SERVER_INSTRUCTIONS)
+mcp = MCPApplication(
+    "recon-tool",
+    instructions=SERVER_INSTRUCTIONS,
+    **mcp_application_options(),
+)
 
 
 def internal_lookup_error(domain: str, request_id: str, exc: BaseException, action: str = "looking up") -> str:

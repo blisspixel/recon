@@ -16,10 +16,9 @@ import uuid
 from dataclasses import dataclass
 from typing import Literal, cast
 
-from mcp.server.fastmcp.exceptions import ToolError
-from mcp.types import ToolAnnotations
 from typing_extensions import TypedDict
 
+from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
 from recon_tool.models import EvidenceRecord, TenantInfo
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp

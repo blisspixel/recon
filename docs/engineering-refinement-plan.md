@@ -120,13 +120,13 @@ Correct the smallest evidence-to-claim path first.
 
 ## Track 2: MCP 2026-07-28 Compatibility Matrix
 
-Status: ready, external trigger met 2026-06-30
+Status: candidate checkpoint complete 2026-07-13; final adoption gate pending
 Dependencies: none; this time-bound stream can proceed independently of Track 1
 Risk: time-bound dependency and protocol compatibility
 
-The official Python MCP SDK `2.0.0b1` now exposes the draft 2026-07-28
-behavior. The production dependency remains on stable v1.28.1 and `<2` while an
-isolated exact-pinned environment characterizes the migration.
+The exact stable v1.28.1 and candidate v2.0.0b1 environments pass the full
+isolated matrix. Production remains on `mcp>=1.28.1,<2`; final adoption waits
+for the final specification, stable v2 SDK, and another full gate.
 
 ### Scope
 
@@ -141,8 +141,7 @@ isolated exact-pinned environment characterizes the migration.
 - Give every complete `server/discover`, `tools/list`, supported resource-list,
   and resource-read response valid `ttlMs` and `cacheScope` hints. Record a
   disposition for every other cacheable operation exposed by the server.
-- Prove the declared `mcp>=1.0` floor in a lowest-supported-dependency job or
-  raise it to the first version the project actually supports.
+- Keep the corrected `mcp>=1.28.1` floor enforced in the compatibility job.
 - Keep stdio as the supported surface. Do not add remote transport or unused
   extensions.
 
@@ -482,8 +481,9 @@ tighter file-size ratchets. Consider `merger.py` only after the interface splits
 1. Treat evidence-semantic corrections and the time-bound MCP v2 matrix as two
    independent Now streams. Keep one atomic implementation item in progress at
    a time, but do not make either stream wait on a false technical dependency.
-   The first machine-enforced claim contract is complete. Freeze its unit and
-   label boundaries before benchmark enrollment.
+   The first machine-enforced claim contract and candidate MCP matrix are
+   complete. Freeze the claim contract's unit and label boundaries before
+   benchmark enrollment, and keep the matrix blocking until final v2 review.
 2. Run the stable-v1 resolver, allocation, CT-value, and schema
    characterization from Track 5.
 3. Complete the product-quality scorecard and ablation using that artifact.

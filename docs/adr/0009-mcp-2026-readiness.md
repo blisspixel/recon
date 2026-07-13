@@ -13,7 +13,7 @@ metadata expectations, moves more capability into extensions, deprecates
 Roots, Sampling, and MCP Logging, and expands tool schemas to full JSON Schema
 2020-12.
 
-recon currently exposes MCP as a local stdio FastMCP server. It does not run a
+recon exposes MCP as a local stdio server. It does not run a
 remote Streamable HTTP MCP deployment, does not implement MCP OAuth, and does
 not use Roots, Sampling, MCP Logging, Apps, Tasks, or HTTP+SSE. The risk is
 therefore not that recon needs a new production transport immediately. The
@@ -23,9 +23,10 @@ output tests currently pin.
 
 ## Decision
 
-recon will keep local stdio FastMCP as its supported MCP surface and will not
-implement a parallel 2026-07-28 protocol stack ahead of official Python SDK
-support.
+recon will keep local stdio as its supported MCP surface and will not implement
+a parallel 2026-07-28 protocol stack. One narrow import and serialization
+boundary may adapt the same registration and domain logic to supported SDK
+generations.
 
 Readiness work will focus on:
 
@@ -45,7 +46,7 @@ The execution plan lives in
 
 Positive consequences:
 
-- recon can move quickly when the official SDK exposes final behavior.
+- recon can retest final SDK behavior without a server rewrite.
 - The current stable stdio MCP integration remains supported.
 - The project avoids speculative transport, auth, UI, or task-scheduler code.
 - Compatibility risk is concentrated in the doctor, discovery, and schema
@@ -55,8 +56,8 @@ Negative consequences:
 
 - recon will not be an early independent implementation of the 2026-07-28 MCP
   protocol.
-- Some readiness work cannot be completed until the Python SDK exposes the new
-  APIs.
+- Production v2 adoption cannot complete until the final specification and a
+  stable v2 SDK are published and pass the full gate.
 - Remote MCP consumers still need a separate design before recon can serve
   them.
 
@@ -86,10 +87,13 @@ The decision is enforced by:
 - `tests/test_mcp_doctor.py`
 - `tests/test_mcp_structured_output.py`
 - `tests/test_mcp_tool_annotations.py`
+- `tests/test_mcp_compatibility.py`
 - `tests/test_server_instructions.py`
+- `scripts/check_mcp_compatibility.py`
 - the readiness gate in [../mcp-2026-07-28-readiness.md](../mcp-2026-07-28-readiness.md)
 
-When the Python SDK supports MCP 2026-07-28, the validation target is:
+The exact v1.28.1 and v2.0.0b1 matrix met the candidate validation target on
+2026-07-13. The final adoption target remains:
 
 - `recon mcp doctor` passes with the updated discovery path.
 - Structured tools still advertise output schemas.
