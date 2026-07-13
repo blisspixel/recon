@@ -1,6 +1,7 @@
 # Bayesian CPT-change discipline
 
-The v1.9 Bayesian layer (`recon_tool/data/bayesian_network.yaml`) is a
+The v1.9 Bayesian layer
+([`bayesian_network.yaml`](../src/recon_tool/data/bayesian_network.yaml)) is a
 **data file with semantic content**, not a free parameter surface to
 tune against the corpus. Every CPT entry encodes a claim about how
 evidence should move the posterior. Changing a number changes a

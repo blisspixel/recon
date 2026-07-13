@@ -7,7 +7,7 @@ on:
 
 # Workflow-level default: read-only. Each job explicitly opts into any
 # elevated scope it actually needs. The prior ``id-token: write`` here
-# granted OIDC-token minting to every job — including ``test`` and
+# granted OIDC-token minting to every job, including ``test`` and
 # ``build`` which install and execute dependency code. A compromised
 # dependency could mint a token and publish to PyPI under our trusted-
 # publisher identity. Scoping to ``publish-pypi`` / ``github-release``
@@ -160,12 +160,11 @@ jobs:
         # from this workspace.
         run: uv sync --no-dev
 
-      - name: Pin reproducible build timestamp
-        # Reproducible builds: pin file mtimes in the wheel/sdist to the tagged
-        # commit's committer timestamp so the same source yields byte-identical
-        # artifacts a consumer can rebuild and verify (the property is gated on
-        # every change by ci.yml's reproducible-build job). hatchling and uv
-        # build honor SOURCE_DATE_EPOCH. checkout is shallow, but the tagged
+      - name: Pin deterministic build timestamp
+        # Pin file mtimes in the wheel and sdist to the tagged commit's
+        # committer timestamp. ci.yml checks matching hashes across two builds
+        # inside one resolved job; it does not claim cross-environment byte
+        # identity. hatchling and uv build honor SOURCE_DATE_EPOCH. checkout is shallow, but the tagged
         # commit is present, so ``git log -1`` reads its timestamp. This is a git
         # read, not project dependency code, so the supply-chain isolation
         # contract (no dependency code between build and seal) is unaffected.
@@ -174,7 +173,7 @@ jobs:
       - name: Build package
         run: uv build
 
-      # IMMEDIATE upload — nothing executes between build and seal.
+      # IMMEDIATE upload: nothing executes between build and seal.
       # The artifact bytes are stored in GitHub-managed artifact
       # storage at this point; downstream jobs read from there, not
       # from this runner's filesystem.
@@ -192,7 +191,7 @@ jobs:
     # minted by a compromised dependency. It signs a provenance
     # attestation (GitHub-native, OIDC) linking the wheel and sdist to
     # this workflow run; verify later with `gh attestation verify`.
-    # Reproducible builds (SOURCE_DATE_EPOCH, gated in ci.yml) and
+    # Same-job deterministic-build evidence (SOURCE_DATE_EPOCH, gated in ci.yml) and
     # sigstore-signed PyPI attestations (PEP 740, in the publish-pypi job)
     # now ship alongside this; only the full SLSA L3 generator workflow
     # stays deferred as disproportionate (see docs/supply-chain.md).
@@ -289,7 +288,7 @@ jobs:
           python-version: "3.11"
 
       - name: Export runtime requirements
-        # Re-export so the SBOM job is self-contained — it does not
+        # Re-export so the SBOM job is self-contained; it does not
         # consume any artifact from build/test. Same lock, same
         # resolved set, derivable independently.
         run: uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
@@ -307,7 +306,7 @@ jobs:
           VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p sbom
           # ``--no-deps`` tells pip-audit not to install the locked
-          # requirements again — it just reads the requirements text
+          # requirements again; it just reads the requirements text
           # to produce the SBOM. The "|| true" catches the audit's
           # vulnerability-finding exit code; the SBOM file is written
           # regardless. The audit *gate* runs in the ``test`` job.

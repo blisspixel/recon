@@ -263,9 +263,11 @@ Best practices:
 - Treat outputs marked **Confidence: Low** or supported by only one qualifying
   source as investigation leads, not conclusions. Under the current merged
   confidence rule, a one-source result cannot receive the overall High tier.
-- `--explain` shows retained evidence paths plus provenance-completeness and
-  disconnected-terminal diagnostics. Use it when a specific claim matters, and
-  do not assume every terminal has a complete canonical path.
+- `--explain` shows flat retained-evidence explanations. `--json --explain`
+  additionally emits the reconstructed `explanation_dag`, including
+  provenance-completeness and disconnected-terminal diagnostics. Use the JSON
+  form when a specific path matters, and do not assume every terminal has a
+  complete canonical path.
 - Some insight and posture generator associations are reconstructed from
   rendered text or proxy rule matches. `provenance_complete=true` establishes
   reachability in the emitted graph, not exact generation-time lineage.

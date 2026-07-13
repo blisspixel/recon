@@ -56,8 +56,9 @@ and Beta-shaped display bands are established components. The contribution is a
 combination uncommon in the passive-recon literature, plus an unusually
 explicit account of what is and is not validated:
 
-- a zero-credential, strictly passive external-surface tool that keeps
-  full provenance (every conclusion reachable through the evidence DAG);
+- a zero-credential external-surface tool with a passive collection scope,
+  documented target-visible MTA-STS and opt-in direct probes, and a reconstructed
+  evidence DAG with explicit completeness diagnostics;
 - deterministic graph correlation over certificate-transparency
   co-occurrence paired with a small auditable Bayesian network;
 - a conservative likelihood-ratio-one rule for non-fired hideable evidence,
@@ -119,12 +120,14 @@ Humble and descriptive:
 
 ## Abstract (draft)
 
-External attack-surface tools infer an organization's technology stack
-from public signals. The honest version of that task faces a problem the
+External attack-surface tools often promote public signals around a domain into
+claims about an organization's technology stack. recon addresses the narrower
+question of what the queried public namespace reveals. The honest version of
+that task faces a problem the
 calibration literature usually sidesteps: the ground truth is not
 observable, and the subject can hide signals, so a confident-looking
-verdict can be confidently wrong. We present a passive, zero-credential
-inference tool that pairs deterministic certificate-transparency
+verdict can be confidently wrong. We present a zero-credential inference tool
+with a passive collection scope that pairs deterministic certificate-transparency
 correlation with a small auditable Bayesian network. A non-fired hideable
 binding contributes no likelihood factor, a conservative product rule under
 unknown missingness. We prove a narrow local deletion result: under fixed prior
@@ -143,31 +146,35 @@ cohort numbers remain maintainer-reproducible aggregates.
 
 ## Introduction (draft)
 
-Security teams increasingly need to know what an organization's external
-footprint reveals before an attacker reads the same channel: which identity
-provider a domain delegates to, whether its mail policy is enforced, what
-fronts its origin. External attack-surface tools answer these questions
+Security teams increasingly need to know what a domain's public namespace
+reveals before an attacker reads the same channel: which identity provider the
+namespace indicates, whether its mail policy is enforced, and what fronts its
+origin. A domain is a query coordinate, not an organization identifier.
+External attack-surface tools answer these questions
 from public signals - DNS records, certificate-transparency logs,
 unauthenticated provider endpoints - and they answer confidently. The
 confidence is the problem. The ground truth behind these claims is not
 observable from outside, and the subject of the measurement controls most
-of the evidence: a hardened organization publishes less, a careless one
-publishes more, and a tool that reads "no signal" as "no technology" is
+of the evidence: one namespace publishes less, another publishes more, and a
+tool that reads "no signal" as "no technology" is
 confidently wrong about exactly the targets that matter most.
 
 The standard remedy - calibrate the classifier against labeled truth - is
-structurally unavailable here. There is no label set for "what this
-organization actually runs"; the operator can delete most of the
-indicators a passive observer relies on; and the deletion is not random,
-it correlates with security maturity, which is often the very thing being
-estimated. This is missingness that is not at random in the adversarial
-sense, and the calibration literature's usual assumptions (exchangeable
-data, missingness independent of the input) exclude it by construction.
+structurally unavailable here. There is no label set for "which products are
+operationally used behind this namespace"; the operator can delete most of the
+indicators a public-metadata observer relies on. The deletion mechanism can
+depend on disclosure policy, deployment choices, and other unobserved state, so
+independent missingness is not justified. We therefore treat adversarial MNAR as
+a plausible design condition, not as an empirically established relationship
+between missingness and security maturity. The calibration literature's usual
+assumptions (exchangeable data, missingness independent of the input) do not
+cover that condition.
 
 We present recon, a deployed, open-source, zero-credential
 external-surface tool built around that predicament rather than despite
-it. Every conclusion is reachable through an evidence DAG of re-queryable
-public observations; high-level claims are computed by a nine-node
+it. Its explanation surface emits a reconstructed evidence DAG with
+completeness diagnostics and named disconnected terminals; high-level claims
+are computed by a nine-node
 Bayesian network small enough to audit by hand. Tested queries are cross-checked
 against exact enumeration of the 512-state latent joint over a structured
 evidence sweep; and absent evidence on hideable claims
@@ -204,8 +211,9 @@ policy.
 
 Concretely, this paper contributes:
 
-- a deployed passive-inference system that preserves full provenance and
-  pairs deterministic certificate-transparency correlation with a small
+- a deployed passive-inference system that emits evidence-linked explanations
+  and completeness diagnostics, and pairs deterministic
+  certificate-transparency correlation with a small
   Bayesian network checked against full latent-joint enumeration over a
   structured evidence sweep (Section 3);
 - a conservative missing-evidence treatment (the likelihood-ratio-one absence
@@ -255,8 +263,9 @@ than its caveat.
    synthetic observation sampler that violates group semantics). Treat the
    ablation as a misspecification stress test, not a measured missingness-policy
    price or product-value result.
-8. Limitations and ethics. Passive-only, defensive-only, no released
-   target list, the data-handling policy as a design constraint.
+8. Limitations and ethics. Passive collection scope, documented target-visible
+   requests, defensive use, no released target list, and the data-handling
+   policy as a design constraint.
 9. Reproducibility. Separate the reproducible build and public-proof/synthetic
    methods from private-cohort aggregate results that outsiders cannot recreate.
    The public no-private-data bundle runs with
@@ -367,18 +376,14 @@ by [m365-tenancy-decision.md](m365-tenancy-decision.md). No passive candidate is
 independent enough to promote the result beyond channel-split corroboration, so
 the paper keeps the result named as corroboration rather than calibration.
 
-Final claim audit is complete and refreshed for the current draft package. The
-public memo
-[2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
-records the passing claim-map audit, figure drift check, public proof smoke,
-full public proof, local gate, and release readiness checks.
-The latest local submission-freeze public proof record is
-[2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md).
-
-Current technical artifact blockers: none for this draft package. Any future
-experiment, paper wording, package, or claim-map change can move a claim between
-support tiers, so it must rerun the final claim audit before submission
-packaging.
+The most recent recorded final claim audit is the historical
+[2026-06-29 claim-audit memo](../validation/2026-06-29-scorecard-gate-claim-audit.md).
+The most recent recorded local public proof is the historical
+[2026-06-30 submission-freeze memo](../validation/2026-06-30-submission-freeze-local-proof.md).
+Both apply only to the exact commits they name. Later experiment, paper wording,
+package, and claim-map changes leave this draft unfrozen. A new claim audit,
+figure drift check, public proof, local gate, release-readiness check, and freeze
+record are required before submission packaging.
 
 ## Decisions still open
 

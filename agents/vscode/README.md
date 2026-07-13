@@ -28,15 +28,23 @@ recon mcp install --client=vscode             # writes .vscode/mcp.json in cwd
 recon mcp install --client=vscode --dry-run   # preview without writing
 ```
 
-VS Code's MCP config is workspace-scoped only - there is no user-level config. Run the install from your project root.
+The installer defaults to workspace scope and writes `.vscode/mcp.json` from
+your project root. VS Code also supports a user-profile `mcp.json`; open it with
+**MCP: Open User Configuration** and use `--config-path` if you want recon's
+merge-safe installer to update that profile file.
 
 **Manual install:** drop [`mcp.json`](mcp.json) at:
 
 | Scope | Path |
 |---|---|
 | Workspace | `.vscode/mcp.json` |
+| User profile | Open with **MCP: Open User Configuration** |
 
-**macOS PATH gotcha.** VS Code is a GUI Electron app and does not inherit your shell's PATH. If `command: "recon"` fails to launch the server, rerun `recon mcp install --client=vscode --force` from the Python environment where recon is installed, or replace it with the absolute `recon` script path from `which recon`. The install command writes a sys.path-stripping Python fallback when `recon` is not on PATH at install time; prefer that over hand-writing `python -m recon_tool.server` in a workspace config.
+VS Code's current stdio schema requires `"type": "stdio"`. It does not define
+an `autoApprove` property; tool confirmations follow VS Code's trust and
+permission settings.
+
+**macOS PATH gotcha.** VS Code is a GUI Electron app and does not inherit your shell's PATH. If the shipped manual config's `command: "recon"` fails, rerun `recon mcp install --client=vscode --force` from the Python environment where recon is installed. The installer always writes that interpreter's absolute path and a sys.path-stripping launcher, so it does not depend on VS Code's PATH. Prefer it over hand-writing `python -m recon_tool.server` in a workspace config.
 
 ## 3. Wire the agent guidance
 

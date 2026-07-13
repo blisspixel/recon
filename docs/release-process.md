@@ -17,8 +17,9 @@ uv run python scripts/release_readiness.py
 # 3. Run the release script.
 uv run python scripts/release.py
 
-# 4. Confirm the push when prompted. Pushing the vX.Y.Z tag triggers:
-#    test → build wheel/sdist → publish to PyPI (OIDC) → GitHub release.
+# 4. Confirm the push when prompted. Pushing the vX.Y.Z tag triggers tests,
+#    one sealed build and attestation path, then sibling PyPI publication and
+#    GitHub Release jobs after their shared prerequisites pass.
 ```
 
 ---
@@ -143,8 +144,9 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
 1. **test**: installs dependencies, runs the exact stable and candidate MCP SDK
    matrix, strict type checking, `pytest --cov-branch --cov-fail-under=90.2`,
    `ruff check`, fingerprint and generated-artifact checks, and `pip-audit`.
-2. **build**: after `test`, `uv build` produces the reproducible sdist and wheel
-   under `dist/`.
+2. **build**: after `test`, `uv build` produces the sdist and wheel under
+   `dist/`; main CI separately requires matching hashes across two builds in
+   one resolved job.
 3. **attest**: after `build`, records GitHub artifact attestations for the wheel
    and sdist.
 4. **export-attestations**: after `build` and `attest`, exports the GitHub
@@ -221,12 +223,9 @@ For a patch-level fix to the last released minor version:
 
 PyPI supports yanking (not deleting) a broken release. This discourages new
 installs but leaves the version available for reproducibility of systems
-that already pinned it.
-
-```bash
-# Using twine:
-twine yank recon-tool --version X.Y.Z
-```
+that already pinned it. Twine does not provide a yank command. An authorized
+project maintainer must open the affected release in the PyPI project management
+UI, choose the yank action, and record a concise reason.
 
 After yanking:
 1. Cut a `X.Y.(Z+1)` release with the fix using the normal process.

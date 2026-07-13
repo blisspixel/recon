@@ -2,7 +2,9 @@
 
 Project docs live here. Repository-root files stay at the root only when
 tooling or reader expectations make the root location useful: `README.md`,
-`ROADMAP.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`, and `LICENSE`.
+`ROADMAP.md`, `CHANGELOG.md`, `CONTRIBUTING.md`, `SECURITY.md`,
+`CODE_OF_CONDUCT.md`, `LICENSE`, `THIRD-PARTY-NOTICES.md`, `CITATION.cff`, and
+`AGENTS.md`.
 
 The docs are organized by reader need:
 
@@ -72,8 +74,19 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | OpenSSF Best Practices Badge readiness | [openssf-badge-readiness.md](openssf-badge-readiness.md) |
 | Data-handling policy | [data-handling-policy.md](data-handling-policy.md) |
 | Legal and query-exposure notes | [legal.md](legal.md) |
+| Public-metadata collection boundary | [adr/0011-public-metadata-collection-boundary.md](adr/0011-public-metadata-collection-boundary.md) |
 | Performance expectations | [performance.md](performance.md) |
 | Native acceleration decision | [adr/0010-evidence-gated-native-acceleration.md](adr/0010-evidence-gated-native-acceleration.md) |
+
+## Historical Records
+
+These records preserve completed decisions and audit receipts. They are not the
+current roadmap or current security posture.
+
+| Record | Read |
+|---|---|
+| Completed roadmap history | [roadmap-history.md](roadmap-history.md) |
+| Resolved security-audit findings | [security-audit-resolutions.md](security-audit-resolutions.md) |
 
 ## Research
 
@@ -88,8 +101,8 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | External write-up readiness plan and gates | [external-writeup-plan.md](external-writeup-plan.md) |
 | Paper claim map | [paper-claim-map.md](paper-claim-map.md) |
 | Paper figure package | [paper-figures.md](paper-figures.md) |
-| Final public claim audit refresh | [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md) |
-| Submission-freeze local public proof | [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md) |
+| Historical public claim audit refresh | [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md) |
+| Historical submission-freeze local proof | [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md) |
 | Public label snapshot and public-list sampling decision | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) |
 | M365 tenancy corroboration decision | [m365-tenancy-decision.md](m365-tenancy-decision.md) |
 | Paper outline | [paper-outline.md](paper-outline.md) |
@@ -105,6 +118,18 @@ contracts. See [ADR-0007](adr/0007-surface-inventory-discovery-context.md).
 | Engineering practices | [engineering-practices.md](engineering-practices.md) |
 | Local validation workspace | [../validation/README.md](../validation/README.md) |
 | Agent integration scaffolds | [../agents/README.md](../agents/README.md) |
+
+## Governance and Release Records
+
+| Record | Read |
+|---|---|
+| Shipped changes | [../CHANGELOG.md](../CHANGELOG.md) |
+| Security policy and reporting | [../SECURITY.md](../SECURITY.md) |
+| Community conduct | [../CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) |
+| Apache 2.0 license | [../LICENSE](../LICENSE) |
+| Third-party notices | [../THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md) |
+| Citation metadata | [../CITATION.cff](../CITATION.cff) |
+| Portable agent guidance | [../AGENTS.md](../AGENTS.md) |
 
 ## What Not To Put Here
 

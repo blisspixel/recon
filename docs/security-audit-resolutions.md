@@ -77,7 +77,7 @@ is recorded here so a re-scan does not re-open them.
 |---|---|
 | **Severity (as audited)** | High |
 | **Introduced** | v1.9.2.1 (`recon mcp doctor` / `recon mcp install` shipped without cwd / `PYTHONSAFEPATH` isolation) |
-| **Initial mitigation** | v1.9.3.4 - commit `f9b3415` (effective on Python 3.11+; Python 3.10 still relied on the runtime guard) |
+| **Initial mitigation** | v1.9.3.4 - commit `3e09a42` (effective on Python 3.11+; Python 3.10 still relied on the runtime guard) |
 | **Fully closed** | **v1.9.9** - `build_recon_block()` rewritten to use `python -c "<sys.path-stripping launcher>"` instead of `python -m recon_tool.server`. The launcher strips empty/`.` entries from `sys.path` BEFORE any `recon_tool` import, blocking the cwd-shadow attack at the language level on every supported Python (including 3.10 where `PYTHONSAFEPATH` is a no-op). |
 | **Pinned by** | `tests/test_mcp_path_isolation.py`, `tests/test_mcp_install.py` |
 
@@ -144,7 +144,7 @@ The `sys.path` strip runs as ordinary Python code BEFORE the
 cannot be selected. This protection works on every supported
 Python version - language-level rather than env-flag-dependent.
 
-`recon_tool/server.py` still carries the runtime guard as
+`recon_tool/server/__init__.py` still carries the runtime guard as
 defense-in-depth (catches misconfigured callers who bypass the
 persisted launcher), but it is no longer the sole protection on
 Python 3.10.
@@ -181,7 +181,7 @@ return {
 |---|---|
 | **Severity (as audited)** | Medium |
 | **Introduced** | v1.9.3.5 (`_hop_resolves_publicly` added to chain walker) |
-| **Closed** | **v1.9.4** - commit `6abbae1` |
+| **Closed** | **v1.9.4** - commit `e3c5965` |
 | **Re-introduced** | v1.9.13 (terminus-only A/AAAA check added on the assumption that a prior CNAME NoAnswer proved no chase was possible on a subsequent A/AAAA query) |
 | **Re-closed** | **v1.9.14** - terminus-only A/AAAA check reverted after 2026-05-17 scanner pass flagged the type-dependent-answer attack path |
 | **Pinned by** | `tests/test_cname_chain_validation.py::TestNoAAAAQueriesFromWalker` (natural exit, max_hops exit, suffix-rejection exit) and `test_walker_does_not_resolve_a_aaaa_during_walk` |
@@ -262,11 +262,11 @@ tag.
 | Field | Value |
 |---|---|
 | **Severity (as audited)** | Medium |
-| **Introduced** | **v1.5.0** (`722220f`, 2026-05-01) - first CNAME surface-attribution commit, no defenses |
-| **Mitigated** | **v1.9.3.5** (`f8b12dd`), **v1.9.4** (`6abbae1`), **v1.9.13** (entry-point validation + redirect_domain filter), **v1.9.14** (terminus-only A/AAAA check reverted after type-dependent-answer attack path demonstrated) |
-| **Current receipt** | `recon_tool/sources/dns.py:1732` (`_is_public_dns_name`), `recon_tool/sources/dns.py:1857` (`_resolve_cname_chain`), `recon_tool/sources/dns.py:547-562` (`_detect_m365_cnames` redirect_domain filter) |
+| **Introduced** | **v1.5.0** (`332534d`, 2026-05-01) - first CNAME surface-attribution commit, no defenses |
+| **Mitigated** | **v1.9.3.5** (`07c2bb4`), **v1.9.4** (`e3c5965`), **v1.9.13** (entry-point validation + redirect_domain filter), **v1.9.14** (terminus-only A/AAAA check reverted after type-dependent-answer attack path demonstrated) |
+| **Current receipt** | `src/recon_tool/sources/dns_tables.py::is_public_dns_name`, `src/recon_tool/sources/dns.py::_resolve_cname_chain`, and `src/recon_tool/sources/dns_infra.py::detect_m365_cnames` (redirect-domain filter) |
 | **Pinned by** | `tests/test_cname_chain_validation.py` (including `test_walker_does_not_resolve_a_aaaa_during_walk`, `TestEntryPointValidation`, `TestNoAAAAQueriesFromWalker`, `TestM365RedirectDomainFilter`) |
-| **Re-flagged** | 2026-05-17 - scanner pinned to introducing commit `722220f`. Re-flag prompted the v1.9.13 hardening pass even though the audit pointed at the v1.5.0 pre-defense commit. A subsequent scanner pass against v1.9.13 itself flagged the new terminus-only A/AAAA check on the type-dependent-answer path, prompting the v1.9.14 reversion documented above. |
+| **Re-flagged** | 2026-05-17 - scanner pinned to introducing commit `332534d`. Re-flag prompted the v1.9.13 hardening pass even though the audit pointed at the v1.5.0 pre-defense commit. A subsequent scanner pass against v1.9.13 itself flagged the new terminus-only A/AAAA check on the type-dependent-answer path, prompting the v1.9.14 reversion documented above. |
 
 **Summary.** The original CNAME walker followed attacker-controlled
 CNAME targets recursively without validating the resulting names.
@@ -622,8 +622,8 @@ accepts the blind, feedback-free query. Regression coverage:
 | Field | Value |
 |---|---|
 | **Severity (as audited)** | Informational |
-| **Introduced** | v1.9.3.8 (`b81a701`) - shadow-IT alert SPL shipped with unsafe regex construction |
-| **Closed** | **v1.9.4** - commit `6abbae1` |
+| **Introduced** | v1.9.3.8 (`8abc036`) - shadow-IT alert SPL shipped with unsafe regex construction |
+| **Closed** | **v1.9.4** - commit `e3c5965` |
 | **Pinned by** | `tests/test_siem_examples.py::TestSplunkSearchSafety` |
 
 **Summary.** The v1.9.3.8 shadow-IT alert example used

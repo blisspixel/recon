@@ -15,7 +15,7 @@ This tool is intended for legitimate purposes such as:
 
 ## What sees your queries
 
-Most of what this tool queries is third-party infrastructure, which will see your IP address in its access logs. A small number of requests go directly to hosts the queried domain controls; by default that is only the MTA-STS policy fetch, and the two direct-probe enrichments below are opt-in (`--direct-probes`) and off unless you ask for them:
+Most of what this tool queries is third-party infrastructure, which will see your IP address in its access logs. A small number of requests go directly to public HTTPS hosts selected by, or named under, the queried domain's published namespace. recon does not infer who operates those hosts. By default that is only the MTA-STS policy fetch; the two direct-probe enrichments below are opt-in (`--direct-probes`) and off unless you ask for them:
 
 | Service queried | What it sees | Who operates it |
 |---|---|---|
@@ -24,11 +24,19 @@ Most of what this tool queries is third-party infrastructure, which will see you
 | `accounts.google.com` | Google Workspace identity routing probe for the queried domain | Google |
 | `crt.sh` | Certificate transparency search for the queried domain | Sectigo (community service) |
 | `api.certspotter.com` (fallback) | Certificate transparency search, only when crt.sh is unavailable | SSLMate |
-| `mta-sts.{domain}` | MTA-STS policy file fetch | Hosted by the domain owner; a direct HTTPS GET to a domain-controlled subdomain, but a public-standard endpoint designed for external consumption |
-| `cse.{domain}` (opt-in) | Google Workspace CSE configuration probe, only with `--direct-probes` | Google (via the domain's subdomain) |
-| BIMI VMC URL (opt-in) | One HTTPS GET for the verified-mark certificate named in the domain's BIMI record, only with `--direct-probes` | Hosted by the domain owner or its VMC issuer |
+| `mta-sts.{domain}` | MTA-STS policy file fetch | Public HTTPS host under the queried namespace; hosting may be delegated, so operator identity is not inferred |
+| `cse.{domain}` (opt-in) | Google Workspace CSE configuration probe, only with `--direct-probes` | Public HTTPS host under the queried namespace; operator identity is not inferred |
+| BIMI VMC URL (opt-in) | One HTTPS GET for the verified-mark certificate named in the domain's BIMI record, only with `--direct-probes` | Public HTTPS URL selected by the published BIMI record; operator identity is not inferred |
 
-The queried domain itself appears only as a parameter in queries to third-party services, with two exceptions. By default, the single direct contact with domain-controlled infrastructure is the MTA-STS policy fetch (`https://mta-sts.{domain}/.well-known/mta-sts.txt`). When `--direct-probes` is set, recon also makes the Google CSE discovery probe (`https://cse.{domain}/.well-known/cse-configuration`) and, if the domain publishes a BIMI record naming one, fetches the verified-mark certificate it points to. Each is a publicly documented, unauthenticated endpoint designed for external consumption.
+Beyond sending the queried domain as a parameter to third-party services,
+recon makes three classes of direct public HTTPS requests. By default, it
+fetches the MTA-STS policy at
+`https://mta-sts.{domain}/.well-known/mta-sts.txt`. When `--direct-probes` is
+set, recon also requests
+`https://cse.{domain}/.well-known/cse-configuration` and, if the domain
+publishes a BIMI record naming one, fetches the verified-mark certificate URL.
+These requests are unauthenticated. Host placement or a DNS-published URL does
+not prove who operates the destination.
 
 You are responsible for ensuring your use complies with all applicable laws, regulations, and terms of service in your jurisdiction. The authors are not responsible for how this tool is used.
 
@@ -42,7 +50,15 @@ DNS records are self-reported metadata. Organizations may leave stale records fr
 
 ## Fictional Examples
 
-All company names, tenant IDs, and domains used in the README, the `examples/` folder, and test fixtures are fictional. They use [Microsoft's standard sample company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges) (Contoso, Northwind Traders, Fabrikam, etc.) or clearly fabricated identifiers. The README example is based on the structure and density of a real Fortune 500 lookup, with all identifying details replaced. No real company is depicted. Any resemblance to real organizations is coincidental.
+All depicted target companies, target domains, tenant IDs, and organization
+identifiers in the README, `examples/`, and test fixtures are fictional. Real
+provider infrastructure hostnames can appear when they are necessary to model
+documented DNS signatures or public endpoint behavior. Target examples use
+[Microsoft's standard sample company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges)
+(Contoso, Northwind Traders, Fabrikam, and others) or clearly fabricated
+identifiers. The README example is based on the structure and density of a real
+Fortune 500 lookup, with all identifying details replaced. No real target
+company is depicted. Any resemblance to real organizations is coincidental.
 
 ## Third-Party Services
 
@@ -50,7 +66,14 @@ This tool queries endpoints operated by Microsoft, Google, and public DNS infras
 
 ## Defensive Security Assessment Tools
 
-The `assess_exposure`, `find_hardening_gaps`, and `compare_postures` tools synthesize existing pipeline data into structured public-configuration views. These tools operate exclusively on data already collected by the standard domain resolution pipeline: they perform zero additional network calls, query no new endpoints, and require no credentials beyond what the base tool uses. Their model-bound values are not overall security scores or certifications.
+The `assess_exposure`, `find_hardening_gaps`, and `compare_postures` tools
+synthesize standard domain-resolution data into structured public-configuration
+views. They are cache-first. On a cache miss they may run the ordinary base
+lookup for the requested domain or domains, using the same documented public
+sources and requiring no credentials. Once base lookup data is available, the
+assessment computation makes no additional network calls and queries no new
+endpoints. Its model-bound values are not overall security scores or
+certifications.
 
 These tools are intended for the following legitimate use cases:
 
@@ -62,4 +85,8 @@ These tools are intended for the following legitimate use cases:
 
 All tool output uses neutral, factual language describing what is publicly observable. Output is not intended to facilitate unauthorized access, offensive security operations, or any activity that would violate applicable law or terms of service.
 
-The Posture Score (0-100) and Hardening Gap outputs are based on publicly observable controls such as DNS records, DMARC policies, and MTA-STS configuration. They do not constitute a comprehensive security audit, security rating, or certification. Organizations may have additional security controls that are not publicly visible and therefore not reflected in these assessments.
+The model-bound public-evidence index (0-100) and Hardening Gap outputs are based
+on publicly observable controls such as DNS records, DMARC policies, and MTA-STS
+configuration. They do not constitute a comprehensive security audit, security
+rating, or certification. Organizations may have additional security controls
+that are not publicly visible and therefore not reflected in these assessments.

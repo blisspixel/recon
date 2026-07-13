@@ -36,7 +36,8 @@ def test_runbook_pins_agentic_boundary_and_gates() -> None:
 def test_runbook_requires_spend_tracking_and_local_state() -> None:
     text = _text()
 
-    assert "validation/local/maintainer-loop-state.json" in text
+    assert ".agent/maintainer-loop-state.json" in text
+    assert "validation/local/maintainer-loop-state.json" not in text
     assert "Default spend is 0 USD" in text
     assert "The loop stops before the cap is exceeded" in text
     assert "not raw model reasoning" in text

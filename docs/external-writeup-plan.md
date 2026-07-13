@@ -40,8 +40,9 @@ requirements:
   ([NIST SP 800-188](https://csrc.nist.gov/pubs/sp/800/188/final)).
 - SLSA, GitHub artifact attestations, PyPI attestations, and PEP 740 point to a
   source-to-artifact provenance story rather than an informal "trust me"
-  release story. recon can document signed provenance and reproducible builds,
-  but should not claim a SLSA level beyond the implemented release controls
+  release story. recon can document signed provenance and bounded same-job
+  deterministic-build evidence, but should not claim cross-environment byte
+  identity or a SLSA level beyond the implemented release controls
   ([SLSA specification](https://slsa.dev/spec/),
   [GitHub artifact attestations](https://docs.github.com/en/actions/how-tos/secure-your-work/use-artifact-attestations/use-artifact-attestations),
   [PyPI attestations](https://docs.pypi.org/attestations/),
@@ -80,8 +81,9 @@ requirements:
   outside reviewer to rerun the public artifact without sending private data or
   claiming private-corpus result validation.
 - [strategic-gap-audit.md](strategic-gap-audit.md) records the current
-  step-back decision: real remaining gaps are process, archive, independent
-  replication, claim freeze, and data-governance gaps, not runtime expansion.
+  step-back decision: evidence semantics, measured utility, catalog quality,
+  latency and degradation evidence, and MCP compatibility lead the product
+  backlog. Publication work remains a separate maintainer track.
 - [paper-figures.md](paper-figures.md) defines the aggregate-safe SVG figure
   package and its regeneration command.
 - [public-label-snapshot-decision.md](public-label-snapshot-decision.md)
@@ -146,10 +148,10 @@ requirements:
   [m365-tenancy-decision.md](m365-tenancy-decision.md) records why no passive
   instrument is independent enough to promote the result beyond channel-split
   corroboration.
-- The final claim audit is complete and refreshed for the current draft package
-  after the Scorecard API release-readiness gate and package-readiness wording
-  update. Any future experiment, paper wording, package, or claim-map change
-  must rerun the final claim audit before submission packaging.
+- The most recent final claim audit is the historical June 29 record. Later
+  experiment, paper wording, package, and claim-map changes leave the current
+  draft unfrozen. A new final claim audit is required before submission
+  packaging.
 - The discussion and conclusion now reflect the June 28 aggregate refresh
   without promoting it beyond the claim map: no clean independent calibration
   result, DMARC residual negative, M365 corroboration only, and Google Workspace
@@ -157,8 +159,10 @@ requirements:
 
 ## What Is Next And Why
 
-The next highest-leverage work is external write-up readiness, not new runtime
-behavior.
+Within this separate maintainer track, the next high-leverage step is a fresh
+submission-ready evidence package when maintainers choose to resume external
+packaging. It is not the active product-roadmap priority. The current draft is
+unfrozen, and the June proof and claim-audit records are historical evidence.
 
 Reasoning:
 
@@ -200,14 +204,16 @@ Reasoning:
    and changelog release date through `scripts/release_readiness.py`.
 2. **Orientation refresh.** Point README, roadmap, docs index, validation docs,
    paper outline, current-state analysis, and the maintainer logs at this plan.
-3. **Public artifact smoke.** Keep the smoke profile current. The current
-   local submission-freeze proof run used
+3. **Public artifact smoke.** Keep the smoke profile current. The most recent
+   completed historical local submission-freeze proof run used
    `python -m validation.reproduce_paper_numbers --profile smoke --stamp submission-freeze-smoke-20260630-cycle42`
-   and kept outputs under ignored `validation/local/`.
-4. **Full public proof.** Keep the paper profile current. The current local
-   submission-freeze proof run used
+   and kept outputs under ignored `validation/local/`. It is not current proof
+   for the unfrozen draft.
+4. **Full public proof.** Keep the paper profile current. The most recent
+   completed historical local submission-freeze proof run used
    `python -m validation.reproduce_paper_numbers --profile paper --stamp submission-freeze-paper-20260630-cycle42`
-   before treating the public proof bundle as current for submission.
+   Maintainers must rerun it from the exact checkout being frozen before
+   treating a public proof bundle as current for submission.
 5. **Artifact guide.** Keep [artifact-review.md](artifact-review.md) current with
    the exact public reviewer commands and their claim boundaries.
 6. **Claim map.** Keep [paper-claim-map.md](paper-claim-map.md) current as each
@@ -252,20 +258,22 @@ Reasoning:
 
 - `CITATION.cff` matches the current project version and changelog release date,
   and release readiness fails if it drifts.
-- README and roadmap identify external write-up readiness as the active next
-  work and link here.
+- README and roadmap identify external write-up readiness as a separate
+  maintainer track, link here when discussing publication work, and do not let
+  it displace the active product roadmap.
 - The docs index exposes this plan under Research.
 - The artifact review guide gives exact public commands and separates public
   result validation from private aggregate evidence.
 - The public reproduction smoke profile completes from the current checkout.
 - The full public proof profile completes from the current checkout before
   submission packaging cites the synthetic and model-internal proof rows.
-- The final claim audit memo links the public smoke run, full public proof run,
+- A final claim audit memo must link the public smoke run, full public proof run,
   claim-map audit, figure drift check, local gate, and release readiness for the
-  current draft package.
+  exact draft package being frozen.
 - The claim audit fails if any current-facing documentation surface drops the
-  latest public proof memo pointer.
-- The submission freeze checklist links the latest public proof memo, names the
+  historical-proof boundary or misrepresents an older memo as current proof.
+- The submission freeze checklist links the most recent historical public proof
+  memo, records that the current draft is unfrozen, names the
   required local and remote gates, and does not claim a submission, DOI archive,
   OpenSSF badge, or outside replication before the real external event exists.
 - The claim map links every Section 6 empirical row to a support tier and source.

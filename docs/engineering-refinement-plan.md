@@ -6,7 +6,7 @@ Review date: 2026-07-13
 This plan translates the canonical [roadmap](roadmap.md) into bounded
 engineering tracks. It does not authorize unrelated runtime expansion. Every
 track preserves the public-metadata-only boundary in
-[ADR-0001](adr/0001-passive-zero-credential.md), adversarial missing-data
+[ADR-0011](adr/0011-public-metadata-collection-boundary.md), adversarial missing-data
 discipline in [ADR-0002](adr/0002-mnar-adversarial-absence.md), and stable v2
 contract discipline in [ADR-0003](adr/0003-v2-schema-lock.md).
 
@@ -17,7 +17,7 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- Release metadata is synchronized on v2.5.7. The remote release-readiness
+- Release metadata is synchronized on v2.5.8. The remote release-readiness
   check is the authority for whether GitHub, PyPI, and CI are aligned.
 - Local release readiness must pass before tagging; remote release readiness
   must pass for the same commit after publication.
@@ -479,8 +479,8 @@ tighter file-size ratchets. Consider `merger.py` only after the interface splits
 - The July 10 hostile-input bounds for MCP config, delta JSON, CT retention,
   regex admission, and formatting controls. Add new fixtures only for a
   concrete uncovered parser or collector boundary.
-- Current release publication, attestations, SBOM, reproducible builds,
-  provider drift, and generated-artifact checks.
+- Current release publication, attestations, SBOM, same-job deterministic-build
+  evidence, provider drift, and generated-artifact checks.
 - Publication, OpenSSF process, independent replication, and archive planning.
   Maintain these separately; they are not product-runtime dependencies.
 

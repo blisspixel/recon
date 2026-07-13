@@ -303,20 +303,20 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
     text = " ".join((_ROOT / "docs" / "openssf-posture.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-06-30",
-        "Score: `7.5`",
-        "public API rechecked after the submission-freeze proof refresh",
-        "submission-freeze proof refresh",
+        "2026-07-13",
+        "Score: `8.3`",
+        "public API rechecked for the exact `HEAD` commit that published v2.5.7",
         "live API URL",
         "Remote release readiness queries that API for `HEAD`",
-        "current score floor",
+        "overall score of at least `8.0`",
+        "SAST or any other required code-owned control regresses below `10`",
+        "license, and SAST all score `10`",
         "OpenSSF Best Practices Badge is claimed",
         "openssf-badge-readiness.md",
         "must not be added as a placeholder",
         "Branch-Protection",
         "Code-Review",
         "CI-Tests",
-        "Maintained",
         "CII-Best-Practices",
         "Contributors",
         "Do not manufacture review history",
@@ -331,8 +331,9 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
     text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-06-30 Scorecard recheck reports score `7.5`",
-        "code-owned controls green",
+        "2026-07-13 Scorecard recheck for the exact v2.5.7 `HEAD` commit reports score `8.3`",
+        "SAST and the other measured code-owned controls at `10`",
+        "overall score of at least `8.0`",
         "June 28 review found one code-owned gap",
         "remaining Scorecard limits are intentional or process-bound",
         "public Scorecard API freshness for `HEAD`",

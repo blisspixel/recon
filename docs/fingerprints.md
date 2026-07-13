@@ -1,10 +1,12 @@
 # Fingerprints
 
-Fingerprints are DNS pattern rules in `src/recon_tool/data/fingerprints/`,
-one YAML file per category (`ai.yaml`, `email.yaml`, `security.yaml`,
-`infrastructure.yaml`, `productivity.yaml`, `crm-marketing.yaml`,
-`data-analytics.yaml`, `verticals.yaml`). Add new services by editing
-the matching category file; no code changes needed. Use
+Fingerprints are public-metadata pattern rules in
+`src/recon_tool/data/fingerprints/`, split by catalog concern across
+`ai.yaml`, `crm-marketing.yaml`, `data-analytics.yaml`,
+`discovered-signals.yaml`, `email.yaml`, `infrastructure.yaml`,
+`productivity.yaml`, `security.yaml`, `surface.yaml`, `verifications.yaml`,
+and `verticals.yaml`. Add new services by editing the matching catalog file;
+no code changes are needed. Use
 `recon fingerprints list` / `search` / `show` to inspect the current
 catalog without opening YAML.
 
@@ -52,6 +54,10 @@ fingerprints:
 
 ## Metadata fields
 
+The required `confidence` value (`low`, `medium`, or `high`) is a reviewed
+rule-level evidence-strength tier. It is not a calibrated probability, a claim
+that the service is active, or a substitute for the record-role description.
+
 Detection rules can include optional metadata:
 
 ```yaml
@@ -98,7 +104,7 @@ TXT or CNAME alone is ambiguous but the combination is diagnostic.
 
 **Use it when** a single detection false-positives on dormant accounts
 or common-name TXT tokens, and you want both administrative-token evidence
-*and* active routing before attributing the service.
+*and* routing-configuration evidence before attributing the observed pattern.
 
 **Skip it when** a unique service-specific TXT prefix already makes the
 match diagnostic on its own. Forcing `all` can reject legitimate
@@ -142,8 +148,8 @@ Patterns that have caused bad detections and should not be repeated:
   alone when wildcard DNS can manufacture every prefix.
 - **Generic product subdomains.** `grafana.example.com` or `n8n.example.com`
   is not enough; recon intentionally avoids generic service-name matching.
-- **Shared CDN hostnames.** A CDN edge proves the edge provider, not the app
-  running behind it.
+- **Shared CDN hostnames.** A matching CDN edge supports attribution of the
+  observed routing chain to that edge provider, not the application behind it.
 - **Patterns that would collapse sparse evidence into confident-looking
   claims.** See the deterministic-correlation section of
   [correlation.md](correlation.md) for the full reasoning: when a target
@@ -152,11 +158,12 @@ Patterns that have caused bad detections and should not be repeated:
 
 ## Email security score
 
-The score counts five apex-observable controls (1 point each):
+The compatibility score counts five publicly observable controls (1 point
+each):
 
 | Points | Requires |
 |--------|----------|
-| 1 | DMARC policy is `reject` or `quarantine` (not `none`) |
+| 1 | Effective DMARC policy remains `reject` or `quarantine` after `pct=` and testing-mode compatibility downgrades |
 | 1 | DKIM observed at common selectors |
 | 1 | SPF with `-all` (hard fail, not `~all` softfail) |
 | 1 | MTA-STS record present |
@@ -170,11 +177,18 @@ establishes that a DKIM key was published or used.
 
 ## Related-domain enrichment
 
-When a primary lookup discovers related domains (from CNAME breadcrumbs
-or certificate transparency), they get lightweight DNS probes and their
-matched services fold back into the primary result. Prioritisation:
-high-signal prefixes (`auth`, `login`, `sso`, `api`, `shop`) first,
-capped at 15 enrichments per lookup to bound DNS fan-out.
+When a primary lookup discovers related names from CNAME, DKIM, autodiscover,
+or certificate-transparency breadcrumbs, it performs at most 15 bounded
+follow-up DNS enrichments, prioritizing high-signal prefixes such as `auth`,
+`login`, `sso`, `api`, and `shop`.
+
+The scope split matters. A `cname_target` match on a related subdomain is kept
+as a per-subdomain `surface_attributions` entry and is not added to the apex
+service or slug set. Other service and slug inventory returned by the legacy
+related-enrichment path can fold into top-level `services` and `slugs`, but its
+raw records do not become apex `evidence`, `detection_scores`, email-provider
+fields, or exposure controls. Neither path establishes active use, ownership,
+or an organizational relationship.
 
 CT providers (crt.sh, CertSpotter) fail open: if both are unreachable,
 the per-domain CT cache serves as a fallback. See `docs/limitations.md`

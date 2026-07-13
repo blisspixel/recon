@@ -21,7 +21,7 @@ a clean "we cannot tell" result. The bounds below are how that holds.
 | `DNS_QUERY_TIMEOUT` | 5 s | Per-DNS-query lifetime (total, including retries across nameservers); on expiry the query returns empty, not an error. |
 | `_CT_TIMEOUT` | 6 s | Per CT-provider HTTP call (crt.sh, CertSpotter). |
 | `DEFAULT_TIMEOUT` | 10 s | Default httpx client timeout for the shared HTTP client. |
-| BIMI VMC / MTA-STS fetch | 5 s | The two opt-in / standard direct fetches. |
+| Google CSE / BIMI VMC / MTA-STS fetch | 5 s | The two opt-in direct-probe classes and the standard default MTA-STS policy fetch. |
 | `_MAX_TOTAL_RETRY_SLEEP` | 30 s | Cumulative cap on retry backoff sleeping for a single HTTP request across all retries, so repeated 429s cannot stack toward the aggregate budget. Per-attempt `Retry-After` is also clamped to 30 s. |
 
 ## Resource caps
@@ -54,11 +54,13 @@ A script can branch on the outcome without parsing output (full contract in
 | 0 | `EXIT_SUCCESS` | Completed and produced output |
 | 1 | `EXIT_ERROR` | General / uncaught error (also the Python default) |
 | 2 | `EXIT_VALIDATION` | Bad input rejected before work (malformed domain, missing file, mutually exclusive flags, refused unsafe invocation) |
-| 3 | `EXIT_NO_DATA` | Target resolved but no information available |
+| 3 | `EXIT_NO_DATA` | Target resolved but no information available, or `recon delta` had no cached baseline |
 | 4 | `EXIT_INTERNAL` | recon classified its own caught network/pipeline failure |
 
 For single-domain lookup paths, only a structured resolver error with
-`error_type="no_data"` maps to exit 3. Aggregate timeout,
+`error_type="no_data"` maps to exit 3. A first `recon delta` call also exits 3
+when no cached snapshot exists; it performs no live resolution and emits no
+delta payload. Aggregate timeout,
 `all_sources_failed`, and unknown structured resolver failures preserve their
 concrete message and map to exit 4. Successful JSON, Markdown, and plain
 payloads are written alone to stdout. Human progress and `--verbose` source
@@ -144,9 +146,11 @@ validated (package missing, server import failure, or no tools registered).
   deterministic connected components. Cluster, member, edge, burst, and
   subdomain orderings are sorted and canonical. Enriched services, slugs, and
   `degraded_sources` are emitted sorted.
-- **Same source, same artifact.** The release build is bit-for-bit reproducible
-  (`SOURCE_DATE_EPOCH` pinned to the tagged commit), gated by the
-  `reproducible-build` CI job and verifiable by a consumer; see
+- **Same-job build repeatability is checked.** With `SOURCE_DATE_EPOCH` fixed,
+  CI builds the same source twice inside one Ubuntu job and requires matching
+  wheel and sdist hashes under that job's resolved toolchain. This does not
+  promise byte identity across independently resolved environments; signed
+  provenance remains the source-to-workflow verification mechanism. See
   [supply-chain.md](supply-chain.md).
 - **Apex normalization is deterministic per installed version.** Input is
   reduced to its registrable apex (eTLD+1) using the Public Suffix List bundled

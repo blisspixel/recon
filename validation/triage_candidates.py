@@ -14,7 +14,8 @@ The fingerprint-discovery loop is split:
 
 Inputs:
   * ``gaps.json`` produced by ``find_gaps.py``
-  * The fingerprint catalogue directory (default ``recon_tool/data/fingerprints/``)
+  * The fingerprint catalogue directory (default
+    ``src/recon_tool/data/fingerprints/``)
 
 Output: ``candidates.json`` has the same shape as ``gaps.json`` but only the entries
 worth surfacing for triage.
@@ -22,7 +23,7 @@ worth surfacing for triage.
 Usage:
     python validation/triage_candidates.py \\
         --gaps runs-private/<latest>/gaps.json \\
-        --fingerprints recon_tool/data/fingerprints/ \\
+        --fingerprints src/recon_tool/data/fingerprints/ \\
         --output runs-private/<latest>/candidates.json \\
         --min-count 2
 """
