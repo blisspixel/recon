@@ -27,7 +27,7 @@ def test_strategic_gap_audit_prioritizes_product_quality_without_runtime_expansi
     for required in (
         "The highest-value work is not runtime expansion",
         "evidence semantics, measured utility, catalog quality",
-        "MCP v2 beta",
+        "completed MCP candidate matrix",
         "aggregate-safe product-quality baseline",
         "does not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior",
         "Runtime expansion, broad catalog growth, stable-surface promotion, "
@@ -69,8 +69,7 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
     text = " ".join(_read(AUDIT).split())
 
     for required in (
-            "No private corpus, real target list, per-domain result rows, or "
-            "tenant IDs are committed or published",
+        "No private corpus, real target list, per-domain result rows, or tenant IDs are committed or published",
         "Remote release readiness passes for the current pushed main branch",
         "public Scorecard API freshness and code-owned control scores",
         "public Scorecard API pass on current main",
@@ -93,7 +92,7 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
 def test_strategic_gap_audit_cites_current_external_standards() -> None:
     text = _read(AUDIT)
 
-    assert "Checked: 2026-07-10." in text
+    assert "Checked: 2026-07-13." in text
 
     for url in (
         "https://www.acm.org/publications/policies/artifact-review-and-badging-current",

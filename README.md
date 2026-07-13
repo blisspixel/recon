@@ -247,12 +247,12 @@ priorities are:
 1. Make every default claim traceable to evidence and remove product-use,
    cloud-type, or security-maturity conclusions that public metadata cannot
    support.
-2. Characterize the official MCP v2 beta in an isolated compatibility matrix
-   before the 2026-07-28 final release, while production stays on stable MCP
-   v1.
-3. Establish an aggregate-safe quality baseline for claim precision,
+2. Establish an aggregate-safe quality baseline for claim precision,
    abstention, provenance, catalog coverage, degradation, latency, CT value,
    and agent context cost before expanding inference or graph machinery.
+3. Keep the exact MCP v1.28.1 and v2.0.0b1 compatibility matrix green, then
+   repeat the full gate against the final 2026-07-28 specification and stable
+   v2 SDK before changing the production dependency.
 
 The dependency order, acceptance evidence, stop rules, and current code-graph
 summary live in [docs/roadmap.md](docs/roadmap.md). The implementation plan is

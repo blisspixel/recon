@@ -16,10 +16,9 @@ import time
 import uuid
 from typing import Any, cast
 
-from mcp.server.fastmcp.exceptions import ToolError
-from mcp.types import ToolAnnotations
 from typing_extensions import TypedDict
 
+from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
 from recon_tool.models import ChainReport, InfrastructureEdge
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp

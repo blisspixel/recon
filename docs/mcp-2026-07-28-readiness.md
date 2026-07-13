@@ -1,14 +1,14 @@
 # MCP 2026-07-28 Readiness Plan
 
-Status: active compatibility characterization
-Review date: 2026-07-10
+Status: candidate compatibility matrix complete; final adoption gate pending
+Review date: 2026-07-13
 
 The Model Context Protocol 2026-07-28 release candidate was published on
 2026-05-21, with the final specification scheduled for 2026-07-28. It is a
 breaking protocol release. The official Python SDK `2.0.0b1` shipped on
 2026-06-30 with draft-2026 support, so the compatibility-spike trigger is now
-met. recon should characterize it in isolation without publishing a prerelease
-dependency or implementing unused surface area.
+met. recon completed the isolated candidate characterization without
+publishing a prerelease dependency or implementing unused surface area.
 
 Sources:
 
@@ -22,7 +22,8 @@ Sources:
 
 ## Current recon Posture
 
-recon currently exposes MCP as a local stdio FastMCP server:
+recon exposes MCP as a local stdio server through one SDK compatibility
+boundary:
 
 - Server instance: `src/recon_tool/server/app.py`
 - Stdio entrypoint and safety guard: `src/recon_tool/server/__init__.py`
@@ -30,17 +31,56 @@ recon currently exposes MCP as a local stdio FastMCP server:
 - Structured-output contract tests: `tests/test_mcp_structured_output.py`
 - Live doctor tests: `tests/test_mcp_doctor.py`
 
-The declared dependency range is `mcp>=1.0,<2`; the current lock resolves to
+The declared dependency range is `mcp>=1.28.1,<2`, and the lock resolves to
 stable v1.28.1. The live doctor uses that SDK's
-`ClientSession.initialize()` and `tools/list` flow. This is correct for the
-production environment, but the draft 2026 protocol changes discovery and the
-v2 SDK changes major server, type, serialization, and synchronous-handler
-APIs. The broad `>=1.0` floor is not currently exercised by a
-lowest-supported-dependency gate and must be proven or raised.
+`ClientSession.initialize()` and `tools/list` flow. Candidate SDK v2.0.0b1
+instead uses `server/discover`, `MCPServer`, `mcp_types`, snake-case Python
+attributes, wire aliases, and worker threads for synchronous handlers. The
+same server registration and domain logic now passes on both generations.
 
 recon does not currently operate a remote Streamable HTTP MCP server, does not
 implement MCP OAuth flows, and does not use Roots, Sampling, or MCP Logging.
 Those facts materially reduce the immediate blast radius.
+
+## Dated Compatibility Result
+
+The isolated working-tree matrix completed on 2026-07-13. It exported the
+locked production runtime constraints, replaced only the exact MCP pin, and
+installed the editable working tree into a separate environment under the
+gitignored `.agent/` workspace. Package installation used the configured
+package index; all recon probes after installation were local and network-free.
+
+| Exact SDK | Result | Discovery | Sync handler execution | Disposition |
+|---|---|---|---|---|
+| 1.0.0 | incompatible | unavailable | unavailable | Unsupported. It exposes neither server API recon requires, so the former dependency floor was not truthful. |
+| 1.28.1 | pass | `initialize` | event-loop thread | Production floor and rollback line. Sixteen required checks passed; three v2-only checks were not applicable. |
+| 2.0.0b1 | pass | `server/discover` | AnyIO worker thread | Candidate-compatible only. Nineteen checks passed; production remains below v2. |
+
+Both passing rows proved the same deterministic inventory of 22 tools, five
+resources, zero resource templates, and one `domain_report` prompt. The matrix
+validated 44 input and output schema documents as JSON Schema 2020-12 with no
+external output references, representative structured success and `ToolError`
+results, all five resource reads, catalog reload concurrency, real stdio
+framing, `domain_report` prompt rendering, and the live doctor. Under v2, 14
+cacheable results carried valid
+`ttlMs`, `cacheScope`, and `resultType` metadata, and both tested tool results
+carried `resultType=complete`.
+
+The production decision is therefore `mcp>=1.28.1,<2`. The v2 compatibility
+boundary explicitly configures all six cacheable methods with the conservative
+`ttlMs=0`, `cacheScope=private` policy. This means immediately stale and scoped
+to one authorization context. It avoids claiming reusable freshness for
+catalogs that can change through session reload or local configuration. A
+longer TTL requires separate freshness evidence.
+
+Reproduce both supported rows with:
+
+```bash
+uv run python scripts/check_mcp_compatibility.py --sdk-version 1.0.0 --sdk-version 1.28.1 --sdk-version 2.0.0b1 --require-compatible 1.28.1 --require-compatible 2.0.0b1
+```
+
+This is a candidate compatibility result, not a claim of compatibility with an
+unpublished final specification or stable v2 SDK.
 
 ## RC Changes That Matter to recon
 
@@ -84,8 +124,8 @@ Those facts materially reduce the immediate blast radius.
 1. Keep the local stdio server as the supported MCP surface.
 2. Do not implement remote Streamable HTTP, OAuth, Apps, or Tasks for this
    readiness track.
-3. Run an exact-pinned `mcp==2.0.0b1` compatibility spike in an isolated
-   environment now that official beta support exists.
+3. Keep the exact-pinned v1.28.1 and v2.0.0b1 compatibility matrix blocking in
+   CI, then repeat it for the final specification and stable v2 SDK.
 4. Keep production on stable v1 and `<2` until the final specification and
    stable v2 SDK pass every compatibility and release gate.
 5. Build compatibility around the doctor, tool/resource discovery, schemas,
@@ -100,8 +140,8 @@ This decision is recorded in [ADR-0009](adr/0009-mcp-2026-readiness.md).
 
 ### Phase 0: Stable-v1 Safety Rails
 
-Status: complete and maintained. No production dependency bump and no runtime
-protocol change.
+Status: complete and maintained. Production remains on stable v1; the
+dependency floor is corrected to the first fully characterized release.
 
 - Keep this readiness plan linked from the roadmap and MCP docs.
 - Keep `recon mcp doctor` truthful about the currently installed SDK behavior.
@@ -118,30 +158,28 @@ Exit criteria:
 
 ### Phase 1: Isolated SDK Compatibility Matrix
 
-Status: ready. Trigger met by Python MCP SDK `2.0.0b1` on 2026-06-30.
+Status: complete for exact SDKs 1.28.1 and 2.0.0b1 on 2026-07-13.
 
 Work:
 
-- Use a clean compatibility environment exact-pinned to `mcp==2.0.0b1`.
-  Production metadata and the lock stay on stable v1 during characterization.
-- Test server import, stdio startup, doctor, representative tool calls,
+- Keep a clean compatibility environment exact-pinned to `mcp==2.0.0b1`.
+  Production metadata and the lock stay on stable v1.
+- Keep server import, stdio startup, doctor, representative tool calls,
   resource reads, errors, schemas, structured output, and deterministic order
-  against stable v1.28.1 and v2 beta.
-- Record a migration result for `FastMCP` to `MCPServer`, `mcp.types` to
-  `mcp_types`, `ToolError`, `ToolAnnotations`, snake-case Python attributes,
-  `discover()`, and wire serialization aliases.
-- Inspect tool, resource, and resource-read metadata objects for `ttlMs`,
-  `cacheScope`, `resultType`, and 2026 schema changes.
-- Review synchronous resource handlers, shared catalogs, and caches under the
-  v2 worker-thread execution model.
-- Update `src/recon_tool/mcp_client/doctor.py` so the live check can use the
-  installed SDK's supported discovery path:
+  green against stable v1.28.1 and v2 beta.
+- Preserve the proven migration boundary for `FastMCP` to `MCPServer`,
+  `mcp.types` to `mcp_types`, `ToolError`, `ToolAnnotations`, snake-case Python
+  attributes, `discover()`, and wire serialization aliases.
+- Verify tool, resource, prompt, and resource-read metadata objects for
+  `ttlMs`, `cacheScope`, `resultType`, and 2026 schema changes.
+- Keep synchronous resource handlers, shared catalogs, and caches covered under
+  the v2 worker-thread execution model.
+- Keep `src/recon_tool/mcp_client/doctor.py` capability-aware:
   - current SDK path: `initialize` followed by `tools/list`
   - 2026 SDK path: `server/discover` or the Python SDK helper that wraps it
 - Keep error messages version-aware so a user sees which protocol path failed.
-- Either add a lowest-supported-MCP gate for the declared `>=1.0` floor or
-  raise the floor to the first version recon actually proves.
-- Update `docs/mcp.md` only after the code path is proven.
+- Enforce the proven `>=1.28.1` floor and reject unsupported older releases.
+- Keep `docs/mcp.md` aligned with matrix evidence.
 
 Exit criteria:
 
@@ -156,6 +194,9 @@ Exit criteria:
 
 ### Phase 2: Schema, Cache, and Compact Output
 
+Status: candidate schema and cache requirements characterized; final stable-v2
+adoption remains pending.
+
 Trigger: Phase 1 records a viable compatibility path. The candidate SDK already
 exposes cache-hint support; lack of an integration point is a compatibility
 failure to resolve, not a reason to omit mandatory wire behavior.
@@ -169,17 +210,13 @@ Work:
 - Validate each declared tool schema and returned structured result with an
   independent JSON Schema 2020-12 validator. Do not rely on `format` as
   application-boundary semantic validation.
-- Set and test explicit non-negative `ttlMs` plus an accurate `cacheScope` for
-  every complete cacheable operation recon exposes, including
+- Keep explicit non-negative `ttlMs` plus an accurate `cacheScope` for every
+  complete cacheable operation recon exposes, including
   `server/discover`, `tools/list`, `resources/list`,
   `resources/templates/list`, and `resources/read`. Record the disposition of
-  `prompts/list` even though recon currently registers no prompts.
-- Use conservative cache values for deterministic no-network surfaces:
-  - fingerprints
-  - signals
-  - profiles
-  - schema
-  - surface inventory
+  `prompts/list`; recon registers the `domain_report` prompt.
+- Retain `ttlMs=0`, `cacheScope=private` until per-surface freshness and session
+  mutation semantics justify a longer duration.
 - Add compact detail modes for high-volume agent tools only where raw output
   remains available.
 
@@ -253,13 +290,15 @@ During the beta compatibility matrix, add or adjust tests for:
 
 ## Final Readiness Gate
 
-Before claiming recon is compatible with MCP 2026-07-28:
+Before claiming recon is compatible with the final MCP 2026-07-28 release:
 
 - Local tests pass.
 - `uv run python scripts/check.py` passes.
-- `recon mcp doctor` passes against an SDK that advertises 2026-07-28 support.
+- `recon mcp doctor` passes against the stable SDK that advertises the final
+  2026-07-28 protocol.
 - The stable-v1 rollback pin and tested dependency floor are documented.
 - Every complete cacheable result recon exposes carries valid `ttlMs` and
   `cacheScope` hints under the 2026 protocol.
 - MCP docs name the supported protocol behavior accurately.
-- The roadmap no longer describes the work as pending.
+- The candidate matrix is rerun against the final specification and stable SDK,
+  with any delta documented before the production dependency changes.
