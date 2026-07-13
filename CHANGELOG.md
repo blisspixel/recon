@@ -12,7 +12,7 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
-## [Unreleased]
+## [2.5.2] - 2026-07-12
 
 ### Tool Surface Changes
 
