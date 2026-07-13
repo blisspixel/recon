@@ -140,24 +140,33 @@ quality gate passes before cutting an actual release.
 
 Triggered by any tag matching `v*` pushed to the repo. The workflow:
 
-1. **test**: installs deps, runs `pytest --cov-branch --cov-fail-under=90.2`, `ruff check`,
-   exports locked runtime requirements, and audits those with `pip-audit`.
-2. **build**: `uv build` produces the sdist and wheel under `dist/`.
-3. **export-attestations**: exports the GitHub artifact-attestation bundles as
+1. **test**: installs dependencies, runs the exact stable and candidate MCP SDK
+   matrix, strict type checking, `pytest --cov-branch --cov-fail-under=90.2`,
+   `ruff check`, fingerprint and generated-artifact checks, and `pip-audit`.
+2. **build**: after `test`, `uv build` produces the reproducible sdist and wheel
+   under `dist/`.
+3. **attest**: after `build`, records GitHub artifact attestations for the wheel
+   and sdist.
+4. **export-attestations**: after `build` and `attest`, exports the GitHub
+   artifact-attestation bundles as
    `recon-tool-<version>.intoto.jsonl` so the GitHub Release carries an offline,
    Scorecard-recognized provenance asset.
-4. **publish-pypi**: uses `pypa/gh-action-pypi-publish@release/v1` with
+5. **sbom**: after `test`, generates the CycloneDX release SBOM independently of
+   the package build path.
+6. **publish-pypi**: after `build` and `attest`, uses
+   `pypa/gh-action-pypi-publish@release/v1` with
    OIDC (Trusted Publisher) to upload to PyPI. No static API tokens.
-5. **github-release**: extracts the matching `## [X.Y.Z]` section from
-   `CHANGELOG.md` as the release body, attaches the built artifacts, creates
-   the GitHub release.
+7. **github-release**: after `build`, `attest`, `export-attestations`, and
+   `sbom`, extracts the matching `## [X.Y.Z]` section from `CHANGELOG.md` as the
+   release body and attaches the package, SBOM, and provenance artifacts.
 
-Each job is gated on the previous. If any of test/lint/audit fails, the
-publish and release jobs never run.
+The dependency graph blocks publication when a required predecessor fails while
+allowing independent work, such as `build` and `sbom`, to run in parallel after
+`test`.
 
-Workflow permissions are least-privilege: `test` and `build` run with
-`contents: read`, `publish-pypi` is the only job with `id-token: write`, and
-`github-release` is the only job with `contents: write`.
+Workflow permissions are least-privilege: read-only jobs use `contents: read`,
+`attest` and `publish-pypi` receive `id-token: write` only where OIDC is needed,
+and `github-release` is the only job with `contents: write`.
 
 ---
 

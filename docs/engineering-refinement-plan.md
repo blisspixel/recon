@@ -1,7 +1,7 @@
 # Engineering Refinement Plan
 
 Status: active implementation plan
-Review date: 2026-07-12
+Review date: 2026-07-13
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
 engineering tracks. It does not authorize unrelated runtime expansion. Every
@@ -17,7 +17,7 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- v2.5.2 is current on GitHub and PyPI.
+- v2.5.3 is current on GitHub and PyPI.
 - Local and remote release readiness pass on current main.
 - Meaningful branch-aware coverage is above 90.2 percent, which is now the
   blocking baseline ratchet and remains above the 80 percent user bar.
