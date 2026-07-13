@@ -8,6 +8,8 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 import typer
+import typer.rich_utils as typer_rich_utils
+from typer.main import get_command
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
@@ -80,6 +82,44 @@ class TestHelp:
         assert "emit an mcpServers reference config" in collapsed
         assert "copy-pasteable client config" not in collapsed
 
+    def test_lookup_help_groups_options_by_user_task(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(typer_rich_utils, "MAX_WIDTH", 80)
+        result = runner.invoke(app, ["lookup", "--help"])
+
+        assert result.exit_code == 0
+        plain = _strip_ansi(result.output)
+        collapsed = " ".join(plain.replace("│", " ").split())
+        assert (
+            "Start with recon DOMAIN. Add --full for detail, --explain for evidence, "
+            "or --json for automation. Google CSE and BIMI probes require --direct-probes; "
+            "MTA-STS is the only default target-owned HTTP request." in collapsed
+        )
+
+        headings = (
+            "Output",
+            "Report detail and wording",
+            "Collection, cache, and scope",
+            "Analysis modes",
+            "Evidence model",
+        )
+        positions = tuple(plain.index(heading) for heading in headings)
+        assert positions == tuple(sorted(positions))
+        output, detail, collection, analysis, evidence = positions
+        assert output < plain.index("--plain") < detail
+        assert detail < plain.index("--services") < collection
+        assert detail < plain.index("--confidence-mode") < collection
+        assert collection < plain.index("--no-cache") < analysis
+        assert analysis < plain.index("--compare") < evidence
+        assert evidence < plain.index("--fusion")
+
+        root_command = get_command(app)
+        assert isinstance(root_command, typer.core.TyperGroup)
+        lookup_command = root_command.commands["lookup"]
+        options = tuple(param for param in lookup_command.params if isinstance(param, typer.core.TyperOption))
+        assert len(options) == 28
+        primary_tokens = tuple(next(token for token in option.opts if token.startswith("--")) for option in options)
+        assert all(token in plain for token in primary_tokens)
+
     @pytest.mark.parametrize(
         "args",
         [
@@ -98,16 +138,17 @@ class TestHelp:
         result = runner.invoke(app, [])
 
         assert result.exit_code == 0
-        assert "--verbose" in result.output
-        assert "expanded evidence and per-source status" in result.output
-        assert "--posture" in result.output
-        assert "posture observations" in result.output
-        assert "expanded evidence, domains, and posture" in result.output
-        assert "→ everything" not in result.output
-        assert "offline install check" in result.output
-        assert "DNS queries" in result.output
-        assert "MTA-STS" in result.output
-        assert "Google CSE and BIMI direct probes run only with --direct-probes" in result.output
+        collapsed = " ".join(_strip_ansi(result.output).split())
+        assert "--verbose" in collapsed
+        assert "expanded evidence and per-source status" in collapsed
+        assert "--posture" in collapsed
+        assert "posture observations" in collapsed
+        assert "expanded evidence, domains, and posture" in collapsed
+        assert "→ everything" not in collapsed
+        assert "offline install check" in collapsed
+        assert "DNS queries" in collapsed
+        assert "MTA-STS" in collapsed
+        assert "Google CSE and BIMI direct probes run only with --direct-probes" in collapsed
 
     def test_version_flag(self) -> None:
         from recon_tool.cli import version_callback

@@ -6,7 +6,7 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.5.5 is current. The stable baseline is complete: recon ships a
+> **Status:** v2.5.6 is current. The stable baseline is complete: recon ships a
 > local CLI, importable library, versioned JSON contract, local stdio MCP
 > server, bounded passive collectors, generated-artifact guards, and a verified
 > release path. The product is not "finished." The active work is to make every
@@ -622,8 +622,21 @@ See [catalog-strategy.md](catalog-strategy.md).
 ### Simplify operator and agent discovery using measurements
 
 Separate primary workflows from specialist workflows in documentation now.
-Measure CLI help and MCP discovery cost before introducing a core-versus-
-advanced toolset. If the measurement shows material context waste, design a
+The dated CLI measurement is complete. Against the published v2.5.5 baseline,
+native task panels reduce `lookup --help` from 154 to 109 lines at 80 columns
+and from 261 to 180 lines at 60 columns. Every canonical option remains visible
+at 80 columns, and the collection boundary moves from near the end into the
+first half. The grouping changes presentation metadata only; all 28 options,
+aliases, defaults, validation rules, and runtime paths remain unchanged.
+
+Do not introduce a core-versus-advanced CLI mode. The measured problem was
+solved by grouping without hiding specialist controls. Rich can still truncate
+two long option names at 56 columns, down from five in the baseline. Treat a
+plain linear narrow-help fallback as bounded accessibility debt, not as a
+reason to replace the current parser or hide options.
+
+MCP discovery cost still requires measurement before introducing a core and
+advanced toolset. If that measurement shows material context waste, design a
 backward-compatible discovery profile while preserving full access and stable
 tool names. Generated discovery artifacts remain non-contractual under
 [ADR-0007](adr/0007-surface-inventory-discovery-context.md) until a concrete
