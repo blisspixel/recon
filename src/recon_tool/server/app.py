@@ -93,10 +93,11 @@ For introspection / hypothesis work:
 ## Invariants (important for agent behavior)
 
 - Passive only. No active scanning, no credentialed access. Network-facing
-  lookup tools are read-only. The ephemeral fingerprint tools only mutate
+  lookup tools have no target-side mutation, but may update internal cache,
+  rate-limit, and diagnostic state. The ephemeral fingerprint tools only mutate
   in-memory session state for the current server process; they do not write to
   disk or trigger new network calls on their own. The server has a 120 s TTL
-  cache and per-domain rate limiting — repeated `lookup_tenant` calls for the
+  cache and per-domain rate limiting; repeated `lookup_tenant` calls for the
   same domain are cheap.
 - Output is hedged. Confidence levels: High (3+ corroborating sources),
   Medium (2 sources, partial), Low (1 source or indirect). Insights marked

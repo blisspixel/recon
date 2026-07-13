@@ -1,5 +1,8 @@
 # Coverage gap audit  -  v1.9.9
 
+Status: historical v1.9.9 coverage record. Module paths and percentages below
+describe that release and are not the current package layout or coverage state.
+
 **Total coverage:** 84% (10624 lines tracked, 1648 uncovered).
 
 a rigorous review correctly notes that "84% coverage" is a number,

@@ -122,3 +122,30 @@ def test_root_package_shadow_is_not_tracked() -> None:
     tracked_root_package_paths = [path for path in _tracked_files() if path.startswith("recon_tool/")]
 
     assert tracked_root_package_paths == []
+
+
+def test_documentation_index_lists_every_top_level_markdown_page() -> None:
+    docs_root = ROOT / "docs"
+    index = (docs_root / "README.md").read_text(encoding="utf-8")
+    missing = sorted(
+        path.name
+        for path in docs_root.glob("*.md")
+        if path.name != "README.md" and f"({path.name})" not in index
+    )
+
+    assert missing == []
+
+
+def test_documentation_index_lists_root_governance_records() -> None:
+    index = (ROOT / "docs" / "README.md").read_text(encoding="utf-8")
+    required = (
+        "../CHANGELOG.md",
+        "../SECURITY.md",
+        "../CODE_OF_CONDUCT.md",
+        "../LICENSE",
+        "../THIRD-PARTY-NOTICES.md",
+        "../CITATION.cff",
+        "../AGENTS.md",
+    )
+
+    assert all(f"({target})" in index for target in required)

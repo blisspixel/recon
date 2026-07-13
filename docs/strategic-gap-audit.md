@@ -61,19 +61,24 @@ not outrank product truthfulness or measured user value.
 
 ## Current Evidence
 
-- At the 2026-07-13 refresh, `v2.5.2` was current on GitHub Releases and PyPI.
-- Local release readiness passes for the current local main branch.
-- Remote release readiness passes for the current pushed main branch and
+- At the 2026-07-13 refresh, `v2.5.7` was current on GitHub Releases and PyPI.
+  This checkout prepares `v2.5.8`; its full release gates must pass before that
+  version is described as published.
+- Local release readiness passed for the published `v2.5.7` source state.
+- Remote release readiness passed for the published `v2.5.7` main branch and
   verifies required GitHub Actions checks, public Scorecard API freshness and
   code-owned control scores, PyPI wheel and sdist publication, and GitHub
   Release wheel, sdist, SBOM, and attestation export assets; it also verifies
   PyPI and GitHub provenance for the release wheel and sdist.
-- CI, secrets scan, Scorecard workflows, and the public Scorecard API pass on
-  current main.
-- Public proof is recorded in
+- CI, secrets scan, Scorecard workflows, and the public Scorecard API passed on
+  the published `v2.5.7` main branch. The in-progress `v2.5.8` checkout requires
+  fresh local and remote evidence before release.
+- Historical public proof is recorded in
   [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md),
-  and the final claim-audit refresh is recorded in
+  and the historical final claim-audit refresh is recorded in
   [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
+  Later product, documentation, paper, and claim-map changes leave the current
+  package unfrozen; those records are not current submission proof.
 - `scripts/check_validation_hygiene.py` and release readiness confirm private
   validation run directories are not tracked.
 - GitHub contributor history and current contributors are maintainer-only.
@@ -108,10 +113,10 @@ These are not active gaps for the current roadmap:
 | Latency and degradation contract | CT and external providers dominate long tails, while current published measurements are historical single runs. | Timeouts and partial results are bounded, but stage measurements and reproducible p50/p95 budgets are not established. | Run stable-v1 resolver and schema characterization before the product scorecard; apply only candidate-SDK deltas after the MCP matrix. | Move only proven blocking I/O and do not create brittle timing CI. |
 | OpenSSF Best Practices Badge | Scorecard marks this as absent until a real badge project exists. | Readiness evidence and the manual answer queue are documented in [openssf-posture.md](openssf-posture.md) and [openssf-badge-readiness.md](openssf-badge-readiness.md), but no badge is claimed. | Complete the questionnaire on `bestpractices.dev`, then link the real badge page. | Do not add a placeholder badge or claim a badge before the project exists. |
 | Reviewed PR signal | Scorecard cannot credit review history on direct-main work. | CODEOWNERS exists and required checks protect main. | Use reviewed PRs for non-urgent work when another qualified reviewer is available. | Do not manufacture review history or contributor diversity. |
-| Artifact archive and DOI | External papers are easier to cite and review when the exact artifact is archived. | GitHub release, PyPI release, citation metadata, SBOM, provenance, reproducible build recipe, and [archive-readiness.md](archive-readiness.md) exist; the archive path decision packet now separates `CITATION.cff` sufficiency from `.zenodo.json` need. | Once the paper package freezes, choose a DOI path such as Zenodo or the venue supplement, then add metadata deliberately. | Do not add `.zenodo.json`, DOI language, or archive-badge language before the archive policy is chosen. |
+| Artifact archive and DOI | External papers are easier to cite and review when the exact artifact is archived. | GitHub release, PyPI release, citation metadata, SBOM, provenance, a bounded same-job deterministic-build recipe, and [archive-readiness.md](archive-readiness.md) exist; the archive path decision packet now separates `CITATION.cff` sufficiency from `.zenodo.json` need. | Once the paper package freezes, choose a DOI path such as Zenodo or the venue supplement, then add metadata deliberately. | Do not add `.zenodo.json`, DOI language, or archive-badge language before the archive policy is chosen. |
 | Independent public replication | ACM-style result validation is stronger when someone outside the maintainer path reruns the artifact. | Public smoke and paper profiles are runnable and recorded by the maintainer, and [replication-runbook.md](replication-runbook.md) now defines the clean-machine request, handoff packet, and safe outcome notes. | Ask an outside reviewer to run the public commands on a clean machine and record only aggregate outcome notes. | Do not represent private-corpus rows as externally reproduced. |
-| Pre-submission claim freeze | The paper is now the highest-risk source of accidental overclaiming. | Draft, outline, claim map, artifact guide, final audit, and [submission-freeze-checklist.md](submission-freeze-checklist.md) are synchronized. | Before submission, run the freeze checklist and freeze wording against the claim map. | No new empirical language without an explicit support tier. |
-| Consumer provenance recipe | Supply-chain controls are strong, but consumers need a short verification path. | [supply-chain.md](supply-chain.md) documents attestations, SBOM, reproducible builds, and a consumer verification quick path; remote release readiness now verifies Scorecard API freshness plus PyPI and GitHub provenance. | Keep the recipe current at each meaningful release. | Do not claim a SLSA level beyond implemented controls. |
+| Pre-submission claim freeze | The paper is now the highest-risk source of accidental overclaiming. | The [submission freeze checklist](submission-freeze-checklist.md) records that the package is unfrozen. The June proof and final audit are historical; later changes require a new package-specific gate. | Before submission, rerun the public proof, final claim audit, release readiness, and freeze checklist against the exact package. | No new empirical language without an explicit support tier, and no historical proof presented as current. |
+| Consumer provenance recipe | Supply-chain controls are strong, but consumers need a short verification path. | [supply-chain.md](supply-chain.md) documents attestations, SBOM, the bounded deterministic-build check, and a consumer verification quick path; remote release readiness now verifies Scorecard API freshness plus PyPI and GitHub provenance. | Keep the recipe current at each meaningful release. | Do not claim cross-environment byte identity or a SLSA level beyond implemented controls. |
 | Future dataset release model | A public real-apex label set would change the disclosure risk model. | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) defers this for the current submission. | Reopen only with a separate data-handling and architecture review. | Do not commit apex lists, organization names, tenant IDs, per-domain rows, or unsuppressed small strata. |
 
 ## Priority Order

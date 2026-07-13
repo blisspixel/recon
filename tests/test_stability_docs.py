@@ -72,6 +72,17 @@ def test_stability_fingerprint_pagination_types_and_defaults_match_registry() ->
     assert properties["offset"]["default"] == 0
 
 
+def test_stability_explain_dag_formats_and_default_match_registry() -> None:
+    section = _mcp_stability_section()
+    row = next(line for line in section.splitlines() if line.startswith("| `explain_dag` |"))
+    assert '`output_format` ("text"\\|"dot", default "text")' in row
+
+    tool = next(tool for tool in asyncio.run(mcp.list_tools()) if tool.name == "explain_dag")
+    output_format = tool.inputSchema["properties"]["output_format"]
+    assert output_format["type"] == "string"
+    assert output_format["default"] == "text"
+
+
 def test_stability_stateful_tool_list_matches_annotations() -> None:
     section = _mcp_stability_section()
     start = section.index("**Stateful tools:**")

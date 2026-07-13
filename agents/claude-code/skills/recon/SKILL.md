@@ -1,13 +1,20 @@
 ---
 name: recon
-description: Passive domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like "what does <company> use", "tenant", "DMARC", "email security posture", "SaaS stack", "fingerprint", "passive recon", or "vendor diligence". Strictly passive - never use for active scanning, port scans, credentialed access, or vulnerability checks.
+description: Public-metadata domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like "what does <company> use", "tenant", "DMARC", "email security posture", "SaaS stack", "fingerprint", "passive recon", or "vendor diligence". Passive in scope - never use for active scanning, port scans, credentialed access, or vulnerability checks.
 argument-hint: <domain> [--full] [--explain] [--json]
 allowed-tools: Bash(recon:*)
 ---
 
 # recon
 
-Passive domain intelligence. Given an apex domain, recon returns hedged observations about an organization's public technology stack and identity posture using public DNS, certificate transparency, and unauthenticated identity-discovery endpoints. No credentials, no API keys, no active probing.
+Public-metadata domain intelligence. Given an apex domain, recon returns hedged
+observations about that queried public namespace and its evidence-linked service
+and identity indicators. It uses public DNS, certificate transparency, and
+unauthenticated identity-discovery endpoints without credentials or API keys.
+Default collection performs no active scanning or port probing: authoritative
+DNS may observe resolver traffic, and MTA-STS is the only default target-owned
+HTTP/application request. Google CSE and BIMI certificate requests are explicit
+opt-in direct probes.
 
 ## When this is the right tool
 
@@ -24,7 +31,7 @@ Do not reach for recon when the user wants:
 - Active scanning, port scans, or credentialed inventory.
 - Vulnerability assessment or exploit checks.
 - Company financials, news, hiring signals, or firmographic data.
-- Anything that would require touching the target's own servers beyond reading their published DNS records and the standards-compliant `mta-sts.{domain}` endpoint.
+- Generic target-owned application crawling. The only direct target interactions are the standards-compliant `mta-sts.{domain}` request on the default path and the documented CSE / BIMI certificate probes when explicitly enabled.
 
 If the user wants a verdict like "is this company secure," recon is not that tool. It surfaces observations; the user supplies the judgment.
 
@@ -85,19 +92,18 @@ contoso.com
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
-  Auth         Federated (Entra ID + Google Workspace)
+  Auth         Federated
   Confidence   ●●● High (4 sources)
 
 Services
-  Email          Microsoft 365, Google Workspace, Proofpoint, DMARC, DKIM,
-                 SPF: strict (-all), BIMI
-  Identity       Okta, Google Workspace (managed identity)
+  Email          Microsoft 365, Proofpoint, DMARC, DKIM, SPF: strict (-all), BIMI
+  Identity       Okta, Entra ID
   Cloud          Cloudflare (CDN), AWS Route 53 (DNS)
   Security       Wiz, CAA: 3 issuers restricted
   Collaboration  Slack, Atlassian (Jira/Confluence)
 
 Insights
-  Federated identity indicators observed (likely Okta - enterprise SSO)
+  Federated identity observed; identity-vendor indicators: Okta
   Email security: observed controls: DMARC reject, DKIM, SPF strict, BIMI
   MX gateway observed: Proofpoint
 ```
@@ -127,7 +133,16 @@ If the user later asks for a structured summary of the JSON, follow the output-v
 
 ### Explain mode - `--explain`
 
-Use when the user asks "why", "how do you know", or "show your reasoning". The CLI emits the panel plus a provenance DAG. Evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. The MCP `lookup_tenant(domain, format="json", explain=true)` returns the graph as a structured `explanation_dag` field with explicit completeness diagnostics.
+Use when the user asks "why", "how do you know", or "show your reasoning".
+Plain `recon <domain> --explain` emits the panel, per-source status, and flat
+evidence and explanation sections. `recon <domain> --json --explain` adds the
+reconstructed provenance graph as `explanation_dag`; the MCP equivalent is
+`lookup_tenant(domain, format="json", explain=true)`. Evidence occurrences link
+to matching slug and rule nodes, which link to signal, insight, observation, or
+confidence terminals. Some insight and posture associations are reconstructed
+from rendered text or proxy rule matches, so reachability does not prove exact
+generation-time lineage. The separate `--explain-dag` flag renders the Bayesian
+inference DAG and is not the same graph.
 
 Surface the *summary* of the chain - which evidence drove which insight - rather than dumping the full DAG. Offer the full DAG on follow-up.
 
@@ -149,7 +164,8 @@ For quick catalog browsing, start with `get_fingerprints(limit=20, offset=0)`. F
 CLI fallbacks when the MCP server is not connected:
 
 - `recon <domain> --json` - structured output.
-- `recon <domain> --explain` - retained evidence paths and a reconstructed provenance DAG.
+- `recon <domain> --explain` - panel, source status, and flat retained-evidence explanations.
+- `recon <domain> --json --explain` - structured lookup plus the reconstructed provenance graph.
 - `recon batch <file> --json` - list of domains with cross-domain token clustering.
 - `recon delta <domain>` - diff against the last cached snapshot. Relay verbatim like the default panel.
 
@@ -157,9 +173,14 @@ Most of the analysis the MCP tools expose is reachable from the CLI too. Reach f
 
 - `recon <domain> --exposure --json` produces the 0-100 model-bound public-evidence index. This is the CLI equivalent of `assess_exposure`; the plain panel does not carry this compatibility value, and it is not an overall security score.
 - `recon <domain> --gaps --json` produces the categorized hardening gaps with neutral "Consider" notes. CLI equivalent of `find_hardening_gaps`.
-- `recon <domain> --fusion` adds per-slug evidence strength and model-relative Bayesian diagnostics. `recon <domain> --explain-dag --explain-dag-format mermaid` renders the evidence DAG inline in chat. CLI equivalent of `get_posteriors` and `explain_dag`.
+- Bayesian fusion is enabled by default; `--no-fusion` skips it. `recon <domain> --explain-dag --explain-dag-format mermaid` renders the separate Bayesian inference DAG inline in chat. These are the CLI equivalents of `get_posteriors` and `explain_dag`.
 
-What stays MCP-only, because it needs cached session state or an iterative loop: `simulate_hardening` what-if loops, the ephemeral-fingerprint reevaluate loop (`inject_ephemeral_fingerprint` then `reevaluate_domain` without re-resolving), live two-domain `compare_postures`, and `test_hypothesis`. When the MCP server is not connected and the user asks for one of these, say so plainly rather than approximating it.
+What stays MCP-only, because it needs cached session state or an iterative loop:
+`simulate_hardening` what-if loops, cache-only ephemeral-fingerprint replay for
+retained apex/root TXT, SPF, MX, NS, and CNAME observations, live two-domain
+`compare_postures`, and `test_hypothesis`. Owner-qualified ephemeral rules need
+the fresh-lookup path described below. When the MCP server is not connected and
+the user asks for one of these, say so plainly rather than approximating it.
 
 ## Workflow patterns
 
@@ -186,14 +207,14 @@ The operator supplies a group of related apexes - parent + subsidiaries, an M&A 
    - Identity stack consistency - same M365 tenant across siblings, or distinct tenants per brand?
    - Email gateway consistency - same Proofpoint / Mimecast / Cisco upstream, mixed, or none?
    - Cloud footprint overlap - which providers appear across the set.
-   - **Posture divergence (highest-signal output)** - flag any sibling whose `email_security_score` is materially below the family median, or whose DMARC policy is weaker (`p=none` while siblings are `p=reject`). The outlier is the actionable finding.
+   - **Configuration divergence (most interpretable output)** - after checking `degraded_sources`, identify a supplied apex whose observed `email_security_score` count differs materially from the set or whose DMARC policy differs (`p=none` while others publish `p=reject`). Report it as a review candidate, not an overall security ranking; collection gaps and non-public controls can explain the difference.
    - Per-brand notable findings - one line each, only when a brand has something its siblings don't.
 5. **Keep the voice hedged.** *"Five domains share a Microsoft 365 tenant"* is observable. *"Acquired in 2024 and still on the same tenant"* is firmographic enrichment - out of scope. Surface per-brand `confidence` honestly; do not average it across the family.
 
 Tracking change over time:
 
 1. `recon delta <domain>` (CLI) compares the current resolution against the cached snapshot at `~/.recon/cache/`. The output is a `DeltaReport` (see `$defs/DeltaReport` in `docs/recon-schema.json`) with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.
-2. **First-run case.** A domain that has never been resolved on this machine has no baseline. `recon delta` returns an empty diff in that case - surface this explicitly ("no prior snapshot - this is the first lookup, so nothing to compare against") rather than reporting "no changes" as if change had been ruled out.
+2. **First-run case.** A domain that has never been resolved on this machine has no baseline. `recon delta` reports "No cached snapshot," asks the operator to run the ordinary lookup first, and exits with code 3 without emitting a delta. Surface that no-baseline state rather than reporting "no changes."
 
 ## Picking a profile
 
@@ -220,7 +241,7 @@ recon's voice is **hedged observation**, not verdict. Mirror that voice when rep
 - Say "DMARC policy is `p=none`" or "no DMARC record observed" - not "this domain is vulnerable."
 - Say "Microsoft 365 tenant observed; identity is federated" - not "they use Okta" unless the IdP is explicitly named in the output (`google_idp_name` or evidence-backed insight).
 - Say "passive observation only - there may be additional controls not visible in DNS" when summarizing posture, especially on sparse results.
-- Surface the `confidence` field. `low` confidence with thin sources means "DNS is sparse for this org," not "this org is suspicious."
+- Surface the `confidence` field. `low` confidence with thin sources means "public evidence is sparse for this queried namespace," not that the domain or any organization behind it is suspicious.
 - Cite the evidence type when stating a fingerprint - MX, TXT, CNAME, NS, SRV, CAA, SPF, certificate SAN. Don't just assert.
 - Never claim a vulnerability is *confirmed*. recon does not test exploitability. A missing DMARC record is a missing record; what it implies is a separate conversation.
 
@@ -254,6 +275,13 @@ If the user wants to test a hypothesis about a custom or internal SaaS - "does C
 2. `reevaluate_domain(domain)` - uses cached data, no new network calls.
 3. `clear_ephemeral_fingerprints()` when done.
 
+Cache-only re-evaluation supports `txt`, `spf`, `mx`, `ns`, and apex/root
+`cname` rules. Owner-qualified `cname_target`, `subdomain_txt`, `caa`, `srv`,
+and `dmarc_rua` rules cannot be reconstructed from retained observations. For
+one of those types, call `reload_data` to clear the lookup-result cache while
+retaining the session's ephemeral catalog, then run `lookup_tenant` again;
+that fresh lookup uses the normal documented network boundary.
+
 Ephemeral fingerprints live only in the current MCP session and are quota-bounded.
 
 ## Gotchas
@@ -261,18 +289,18 @@ Ephemeral fingerprints live only in the current MCP session and are quota-bounde
 The sharp edges that have actually bitten this workflow. Skim before a session;
 the detail for each lives in the section above.
 
-- **`recon delta` on a never-seen domain is an empty diff, not "no changes."** No prior snapshot means nothing to compare; say so rather than implying change was ruled out.
+- **`recon delta` on a never-seen domain exits with code 3.** It reports "No cached snapshot" and asks for an ordinary lookup to establish the baseline; it does not emit a delta.
 - **A sub-host is analyzed as its apex unless you pass `--exact`.** `mail.acme.com` returns facts for `acme.com`; the `queried_domain` field tells you what was actually analyzed. Reporting apex tenancy as the sub-host's is wrong.
 - **`--full --json` is 3-10 KB; never dump it inline.** Save it to a file and reply with the 3-line headline. Inline JSON burns context for no benefit.
 - **Do not test MCP connectivity by calling a tool.** Read your own tool list for `mcp__recon__*`; a speculative call to "check" is a wasted, confusing round-trip.
 - **`--exposure` / `assess_exposure` is cache first and may resolve on a miss.** The index calculation adds no network calls after the ordinary base lookup. Do not imply that the 0-100 value comes from a separate scan or measures overall security.
-- **Low confidence means sparse DNS, not a suspicious org.** Sparse output marks limited public evidence, not a finding or calibrated uncertainty level. Do not manufacture confidence or insinuation.
+- **Low confidence means sparse public evidence, not a suspicious domain or organization.** Sparse output marks limited evidence for the queried namespace, not a finding or calibrated uncertainty level. Do not manufacture confidence or insinuation.
 - **Do not guess a profile from a thin hint.** A wrong posture lens skews emphasis; omit `--profile` when the target type is unclear.
 - **Serve cache honestly.** Check `resolved_at` / `cached_at`; if the user wants current data and the entry is old, offer to re-resolve rather than passing stale data as fresh.
 
 ## Hard rules
 
-- recon is **passive**. Never claim it confirmed an active service, a running version, or an exploitable vulnerability. It infers from public records.
+- recon is **passive in scope**: it does not scan ports, crawl target applications, use credentials, or test exploitability. Default DNS can be visible to authoritative infrastructure, MTA-STS is the one default target-owned HTTP/application request, and the documented CSE / BIMI direct probes require explicit opt-in. Never claim recon confirmed an active service, a running version, or an exploitable vulnerability.
 - Fingerprints are **probabilistic**. Detection scores (`low` / `medium` / `high`) reflect evidence corroboration, not ground truth.
 - recon does **not require authorization** to query - every endpoint it touches is one anyone can hit with `dig` or a browser. Do not ask the user whether they have authorization to query a domain unless the user's stated intent suggests something other than legitimate research, due diligence, or defensive review.
 - Output uses **neutral language**. No takeover hints, maturity verdicts, or offensive guidance. Mirror this in your reply.

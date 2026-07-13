@@ -9,8 +9,10 @@ recon is a local Python CLI, library, JSON producer, and stdio MCP server. Its
 normal lookup path waits on public DNS, certificate-transparency providers, and
 identity endpoints. The current universal wheel installs without a compiler on
 Python 3.11 through 3.14 across Windows, macOS, and Linux. Main CI verifies
-bit-for-bit reproducibility. The release pipeline builds, audits, attests, and
-publishes one pure-Python wheel and one source distribution.
+matching wheel and sdist hashes across two builds within one resolved Ubuntu
+job. The release pipeline builds, audits, attests, and publishes one pure-Python
+wheel and one source distribution. Cross-environment byte identity is not
+claimed.
 
 A July 2026 CPU-only characterization on Python 3.14.4 found several bounded
 local costs. Cold loading the 847-entry YAML catalog took a 476 ms median,

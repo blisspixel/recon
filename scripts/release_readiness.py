@@ -46,7 +46,7 @@ _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
 _COVERAGE_FLOOR = "--cov-fail-under=90.2"
 _REQUIRED_REMOTE_WORKFLOWS = ("CI", "Secrets scan", "Scorecard supply-chain security")
-_MIN_SCORECARD_SCORE = 7.5
+_MIN_SCORECARD_SCORE = 8.0
 _REQUIRED_SCORECARD_TENS = (
     "Binary-Artifacts",
     "Dangerous-Workflow",
@@ -57,15 +57,11 @@ _REQUIRED_SCORECARD_TENS = (
     "Pinned-Dependencies",
     "Security-Policy",
     "Signed-Releases",
+    "SAST",
     "Token-Permissions",
     "Vulnerabilities",
 )
-_REQUIRED_SCORECARD_MINIMUMS = {
-    # CodeQL is intentionally scheduled and manually dispatched instead of
-    # running on every push. Scorecard gives that posture 7 for detecting SAST
-    # without checking every commit; this is a documented tradeoff, not drift.
-    "SAST": 7,
-}
+_REQUIRED_SCORECARD_MINIMUMS: dict[str, int] = {}
 _PYPI_PACKAGE = "recon-tool"
 _PYPI_RELEASE_URL = f"https://pypi.org/pypi/{_PYPI_PACKAGE}/json"
 _PYPI_ATTESTATION_REPOSITORY = "https://github.com/blisspixel/recon"
@@ -245,13 +241,29 @@ def _check_coverage_targets(root: Path) -> CheckResult:
 def _check_roadmap_version(root: Path) -> CheckResult:
     try:
         version = _read_project_version(root)
-        text = _read_text(root, "docs/roadmap.md")
+        roadmaps = {
+            "ROADMAP.md": _read_text(root, "ROADMAP.md"),
+            "docs/roadmap.md": _read_text(root, "docs/roadmap.md"),
+        }
     except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
         return _result("roadmap version", "fail", str(exc))
-    header = "\n".join(text.splitlines()[:80])
-    if f"v{version}" not in header:
-        return _result("roadmap version", "fail", f"v{version} missing from roadmap status block")
-    return _result("roadmap version", "pass", f"docs/roadmap.md status mentions v{version}")
+    stale = [
+        relative
+        for relative, text in roadmaps.items()
+        if f"v{version}" not in "\n".join(text.splitlines()[:80])
+    ]
+    if stale:
+        return _result(
+            "roadmap version",
+            "fail",
+            f"v{version} missing from status block in {', '.join(stale)}",
+            "align both roadmap status blocks with the project version",
+        )
+    return _result(
+        "roadmap version",
+        "pass",
+        f"ROADMAP.md and docs/roadmap.md mention v{version}",
+    )
 
 
 def _check_citation_metadata(root: Path) -> CheckResult:
@@ -505,11 +517,11 @@ def _scorecard_problem(payload: dict[str, object], sha: str) -> str | None:
     weak = [f"{name}={scores[name]!r}" for name in _REQUIRED_SCORECARD_TENS if scores[name] != 10]
     if weak:
         return "code-owned Scorecard check(s) regressed: " + ", ".join(weak)
-    below_floor = [
-        f"{name}={scores[name]!r}"
-        for name, minimum in _REQUIRED_SCORECARD_MINIMUMS.items()
-        if not isinstance(scores[name], int | float) or scores[name] < minimum
-    ]
+    below_floor: list[str] = []
+    for name, minimum in _REQUIRED_SCORECARD_MINIMUMS.items():
+        score_value = scores[name]
+        if not isinstance(score_value, int | float) or score_value < minimum:
+            below_floor.append(f"{name}={score_value!r}")
     if below_floor:
         return "Scorecard check(s) below expected floor: " + ", ".join(below_floor)
     return None

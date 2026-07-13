@@ -125,7 +125,16 @@ If the user later asks for a structured summary of the JSON, follow the output-v
 
 ### Explain mode: `--explain`
 
-Use when the user asks "why", "how do you know", or "show your reasoning". The CLI emits the panel plus a reconstructed provenance DAG. Evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. The MCP `lookup_tenant(domain, format="json", explain=true)` returns the graph as a structured `explanation_dag` field with explicit completeness diagnostics. Some insight and posture associations are reconstructed from rendered text or proxy rule matches, so reachability does not prove exact generation-time lineage.
+Use when the user asks "why", "how do you know", or "show your reasoning".
+Plain `recon <domain> --explain` emits the panel, per-source status, and flat
+evidence and explanation sections. `recon <domain> --json --explain` adds the
+reconstructed provenance graph as `explanation_dag`; the MCP equivalent is
+`lookup_tenant(domain, format="json", explain=true)`. Evidence occurrences link
+to matching slug and rule nodes, which link to signal, insight, observation, or
+confidence terminals. Some insight and posture associations are reconstructed
+from rendered text or proxy rule matches, so reachability does not prove exact
+generation-time lineage. The separate `--explain-dag` flag renders the Bayesian
+inference DAG and is not the same graph.
 
 Surface the *summary* of the chain (which evidence drove which insight) rather than dumping the full DAG. Offer the full DAG on follow-up.
 
@@ -147,7 +156,8 @@ For quick catalog browsing, start with `get_fingerprints(limit=20, offset=0)`. F
 CLI fallbacks when the MCP server is not connected:
 
 - `recon <domain> --json`: structured output.
-- `recon <domain> --explain`: retained evidence paths and a reconstructed provenance DAG.
+- `recon <domain> --explain`: panel, source status, and flat retained-evidence explanations.
+- `recon <domain> --json --explain`: structured lookup plus the reconstructed provenance graph.
 - `recon batch <file> --json`: list of domains with cross-domain token clustering.
 - `recon delta <domain>`: diff against the last cached snapshot. Relay verbatim like the default panel.
 
@@ -176,7 +186,7 @@ The operator supplies a group of related apexes (parent + subsidiaries, an M&A t
    - Identity stack consistency: same M365 tenant across siblings, or distinct tenants per brand?
    - Email gateway consistency: same Proofpoint / Mimecast / Cisco upstream, mixed, or none?
    - Cloud footprint overlap: which providers appear across the set.
-   - **Posture divergence (highest-signal output):** flag any sibling whose `email_security_score` is materially below the family median, or whose DMARC policy is weaker (`p=none` while siblings are `p=reject`). The outlier is the actionable finding.
+   - **Configuration divergence (most interpretable output):** after checking `degraded_sources`, identify a supplied apex whose observed `email_security_score` count differs materially from the set or whose DMARC policy differs (`p=none` while others publish `p=reject`). Report it as a review candidate, not an overall security ranking; collection gaps and non-public controls can explain the difference.
    - Per-brand notable findings: one line each, only when a brand has something its siblings don't.
 5. **Keep the voice hedged.** *"Five domains share a Microsoft 365 tenant"* is observable. *"Acquired in 2024 and still on the same tenant"* is firmographic enrichment, out of scope. Surface per-brand `confidence` honestly; do not average it across the family.
 
@@ -243,6 +253,13 @@ If the user wants to test a hypothesis about a custom or internal SaaS ("does Co
 1. `inject_ephemeral_fingerprint(name, slug, category, confidence, detections=[...])`.
 2. `reevaluate_domain(domain)`: uses cached data, no new network calls.
 3. `clear_ephemeral_fingerprints()` when done.
+
+Cache-only re-evaluation supports `txt`, `spf`, `mx`, `ns`, and apex/root
+`cname` rules. Owner-qualified `cname_target`, `subdomain_txt`, `caa`, `srv`,
+and `dmarc_rua` rules cannot be reconstructed from retained observations. For
+one of those types, call `reload_data` to clear the lookup-result cache while
+retaining the session's ephemeral catalog, then run `lookup_tenant` again;
+that fresh lookup uses the normal documented network boundary.
 
 Ephemeral fingerprints live only in the current MCP session and are quota-bounded.
 

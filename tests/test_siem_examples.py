@@ -23,7 +23,7 @@ What we verify:
 Deliberately *not* verified:
 
   * Live Splunk / Elasticsearch ingestion. These tests do not spin up
-    real SIEM servers — too heavy for CI, and the file-shape contract
+    real SIEM servers. They are too heavy for CI, and the file-shape contract
     is what we want to protect, not the SIEM's own parser behaviour.
   * Semantic correctness of the use-case SPL / DSL. Those are
     operator-tunable and intentionally not pinned.
@@ -34,7 +34,7 @@ Compatibility notes:
     ``encoding="utf-8"`` so the test passes identically on Linux,
     macOS, and Windows runners.
   * No subprocess, no Python-version-specific features. Runs cleanly
-    on every supported Python version (3.10 → 3.13).
+    on every supported Python version (3.11 through 3.14).
 """
 
 from __future__ import annotations
@@ -122,7 +122,7 @@ class TestSplunkSearchSafety:
     when comparing slugs against a baseline. A previous version used
     ``match(current_slugs, mvjoin(baseline_slugs, "|"))`` which
     interprets slug values as a regex alternation; a slug containing
-    ``.*`` would silently suppress the shadow-IT alert.
+    ``.*`` would silently suppress the public-indicator change alert.
 
     Pinned here so a future edit to the SPL can't regress."""
 
@@ -130,7 +130,7 @@ class TestSplunkSearchSafety:
         path = _SPLUNK_DIR / "savedsearches.conf"
         text = path.read_text(encoding="utf-8")
         assert "NOT in(current_slugs, baseline_slugs)" in text, (
-            "Splunk shadow-IT saved search must use NOT in(current_slugs, "
+            "Splunk public-indicator saved search must use NOT in(current_slugs, "
             "baseline_slugs) for literal set-membership; the old "
             "mvjoin/match pattern is regex-unsafe and was the audit finding "
             "this test pins."
@@ -138,7 +138,7 @@ class TestSplunkSearchSafety:
 
     def test_savedsearch_does_not_use_unsafe_regex_join(self):
         path = _SPLUNK_DIR / "savedsearches.conf"
-        # Strip comment lines (starting with #) before checking — the
+        # Strip comment lines (starting with #) before checking. The
         # security commentary in this file deliberately names the
         # previous unsafe pattern in a `# ...` comment to explain why
         # the new pattern exists. Only the executable SPL (the
@@ -149,7 +149,7 @@ class TestSplunkSearchSafety:
         executable_spl = "\n".join(non_comment_lines)
         assert "mvjoin(baseline_slugs" not in executable_spl, (
             "Splunk SPL must not pass baseline_slugs through mvjoin() to "
-            "regex match() — that pattern was the v1.9.3.8 audit finding "
+            "regex match(). That pattern was the v1.9.3.8 audit finding "
             "(slugs interpreted as regex alternation). Use literal "
             "set-membership via in() inside mvfilter() instead."
         )
@@ -165,7 +165,7 @@ class TestSplunkSearchSafety:
         path = _SPLUNK_DIR / "README.md"
         text = path.read_text(encoding="utf-8")
         # The README may still mention the unsafe pattern in a "what
-        # NOT to do" call-out — but only adjacent to a "Why" block
+        # NOT to do" call-out, but only adjacent to a "Why" block
         # that explains the safety issue. Cheap proxy: if the unsafe
         # pattern appears, the safety call-out must appear too.
         if "mvjoin(baseline_slugs" in text:
@@ -202,7 +202,7 @@ class TestSplunkExample:
 
     def test_expected_event_uses_canonical_input(self):
         """The Splunk expected event must surface the same
-        organization name as the canonical sample input. Catches a
+        display label as the canonical sample input. Catches a
         silent drift where someone updates the sample but forgets
         the worked SIEM example.
         """
@@ -216,6 +216,9 @@ class TestSplunkExample:
             f"({sample['display_name']!r}). Regenerate the SIEM example "
             "or update the sample, whichever is the intended source."
         )
+        assert expected["services{}"] == sample["services"]
+        assert expected["slugs{}"] == sample["slugs"]
+        assert expected["insights{}"] == sample["insights"]
 
     def test_readme_mapping_table_references_real_fields(self):
         """Parse the Splunk README's "recon JSON path" column and
@@ -266,6 +269,16 @@ class TestElasticExample:
         assert "index_patterns" in data
         assert "template" in data
 
+        conflict_properties = data["template"]["mappings"]["properties"]["recon"]["properties"][
+            "evidence_conflicts"
+        ]["properties"]
+        assert set(conflict_properties) == {"field", "candidates"}
+        assert set(conflict_properties["candidates"]["properties"]) == {
+            "value",
+            "source",
+            "confidence",
+        }
+
     def test_expected_document_parses(self):
         path = _ELASTIC_DIR / "expected-elastic-document.json"
         assert path.is_file(), f"missing {path}"
@@ -283,13 +296,32 @@ class TestElasticExample:
             (_ELASTIC_DIR / "expected-elastic-document.json").read_text(encoding="utf-8"),
         )
         source = expected["_source"]
-        assert source["organization"]["name"] == sample["display_name"], (
-            "Elastic expected-document organization.name drifted from "
+        assert source["recon"]["display_name"] == sample["display_name"], (
+            "Elastic expected-document recon.display_name drifted from "
             "sample-output.json display_name; regenerate or fix sample."
+        )
+        assert "organization" not in source, (
+            "Public identity display_name must not be promoted to ECS "
+            "organization.name; recon does not verify a legal organization."
         )
         assert source["host"]["domain"] == sample["queried_domain"], (
             "Elastic expected-document host.domain drifted from sample-output.json queried_domain"
         )
+        assert source["recon"]["services"] == sample["services"]
+        assert source["recon"]["slugs"] == sample["slugs"]
+        assert source["recon"]["insights"] == sample["insights"]
+
+    def test_ingest_pipeline_preserves_display_name_semantics(self):
+        pipeline = json.loads(
+            (_ELASTIC_DIR / "ingest-pipeline.json").read_text(encoding="utf-8"),
+        )
+        renames = {
+            processor["rename"]["field"]: processor["rename"]["target_field"]
+            for processor in pipeline["processors"]
+            if "rename" in processor
+        }
+        assert renames["display_name"] == "recon.display_name"
+        assert renames["evidence_conflicts"] == "recon.evidence_conflicts"
 
     def test_readme_mapping_table_references_real_fields(self):
         readme = (_ELASTIC_DIR / "README.md").read_text(encoding="utf-8")
@@ -304,29 +336,40 @@ class TestElasticExample:
             )
 
 
-# ── Severity mapping consistency ────────────────────────────────────
+# Interpretation semantics
 
 
-class TestSeverityMappingConsistency:
-    """Both SIEM examples document a confidence→severity mapping in
-    their README. The worked example must apply the mapping documented
-    for ``confidence: high`` (the value in the sample input)."""
+class TestInterpretationSemantics:
+    """SIEM examples must not turn evidence confidence into severity."""
 
-    def test_splunk_worked_example_applies_high_to_informational(self):
+    def test_splunk_worked_example_does_not_derive_severity(self):
         expected = json.loads(
             (_SPLUNK_DIR / "expected-splunk-event.json").read_text(encoding="utf-8"),
         )
         assert expected["confidence"] == "high"
-        assert expected["_severity_derived"] == "informational"
-        assert expected["_severity_numeric_derived"] == 1
+        assert "_severity_derived" not in expected
+        assert "_severity_numeric_derived" not in expected
 
-    def test_elastic_worked_example_applies_high_to_2(self):
+    def test_elastic_worked_example_does_not_derive_severity(self):
         expected = json.loads(
             (_ELASTIC_DIR / "expected-elastic-document.json").read_text(encoding="utf-8"),
         )
         source = expected["_source"]
         assert source["recon"]["confidence"] == "high"
-        assert source["event"]["severity"] == 2
+        assert "severity" not in source["event"]
+
+    def test_elastic_pipeline_does_not_derive_severity(self):
+        pipeline = json.loads(
+            (_ELASTIC_DIR / "ingest-pipeline.json").read_text(encoding="utf-8"),
+        )
+        set_fields = {
+            processor["set"]["field"] for processor in pipeline["processors"] if "set" in processor
+        }
+        assert "event.severity" not in set_fields
+
+    def test_splunk_config_does_not_reference_unknown_timestamp_flag(self):
+        props = (_SPLUNK_DIR / "props.conf").read_text(encoding="utf-8")
+        assert "--emit-timestamp" not in props
 
 
 # ── Top-level index README ──────────────────────────────────────────
@@ -358,15 +401,14 @@ _MAPPING_ROW_RE = re.compile(r"^\|\s*`([^`]+)`\s*\|", re.MULTILINE)
 
 # Header that introduces the "always-present" mapping table in each
 # SIEM README. Paths in this section MUST be reachable in the canonical
-# sample input — they represent the unconditional contract recon's JSON
+# sample input. They represent the unconditional contract recon's JSON
 # emits on every successful lookup.
 _ALWAYS_PRESENT_HEADER = "Detection-pipeline fields (always present)"
 
-# Header that introduces the "fusion-only" mapping table. These paths
-# are valid recon JSON paths under the schema but only fire when the
-# operator passes ``--fusion``. We do not require them to be in the
-# canonical sample (which represents a vanilla lookup), so the test
-# scopes the strict reachability check to the always-present subset.
+# Header that introduces fusion array-element mappings. The arrays are always
+# present, but are empty when the operator uses ``--no-fusion``. Element paths
+# are therefore not reachable in the canonical sample, so the strict check
+# stays scoped to the preceding scalar and whole-array mappings.
 _FUSION_ONLY_HEADER = "Fusion-layer fields"
 
 
@@ -377,11 +419,8 @@ def _extract_mapped_paths(readme_text: str) -> list[str]:
     Returns the de-duplicated list, preserving first-seen order so
     parametrize output is stable across runs.
 
-    Scoped to the always-present section because the fusion-only
-    section's paths are conditional on ``--fusion`` and are
-    deliberately absent from the vanilla-lookup sample. A separate
-    test (``test_readme_fusion_fields_look_like_recon_paths``) does
-    a lighter shape check on the fusion section.
+    Scoped to the leading always-present section because the fusion section's
+    element paths are not reachable when the always-present arrays are empty.
     """
     section = _isolate_section(
         readme_text,
@@ -393,7 +432,7 @@ def _extract_mapped_paths(readme_text: str) -> list[str]:
         path = match.group(1).strip()
         if path and path not in seen:
             seen[path] = None
-    # Filter out non-recon paths the column may also carry — SIEM-side
+    # Filter out non-recon paths the column may also carry. SIEM-side
     # field references start with the SIEM's own namespace (``event.``,
     # ``recon.``, ``host.``, ``organization.``) and are not recon JSON
     # paths.
@@ -406,7 +445,7 @@ def _isolate_section(text: str, start_header: str, end_header: str) -> str:
     ``start_header`` matches a substring of the heading line; the
     returned text begins after that line. ``end_header`` similarly
     truncates the substring before the next section. Returns an empty
-    string if ``start_header`` doesn't appear — callers handle that
+    string if ``start_header`` doesn't appear. Callers handle that
     via the "no paths found" assertion in the test.
     """
     start_idx = text.find(start_header)
@@ -448,7 +487,7 @@ def _path_reachable(data: Any, path: str) -> bool:
                 return False
             # Continue into the first element. The README contract
             # is "reachable on at least one element", which we
-            # approximate with the first element — heterogeneous-shape
+            # approximate with the first element. Heterogeneous-shape
             # arrays are not a recon pattern.
             cur = arr[0]
         else:

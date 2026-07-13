@@ -17,7 +17,7 @@
 
 ## Test domain
 
-`example.com` — expected to match after this PR.
+`example.com`: expected to match after this PR.
 
 Run:
 
@@ -29,4 +29,4 @@ Expected to include `"<slug>"`.
 
 ## Notes
 
-Anything reviewers should know — edge cases, related services, false-positive scenarios you considered.
+Anything reviewers should know, including edge cases, related services, or false-positive scenarios you considered.

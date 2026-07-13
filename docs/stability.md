@@ -44,7 +44,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--md` | Stable | Markdown H2 section structure is stable; prose is not. |
 | `--full` / `-f` | Stable | Expanded evidence + all domains + posture; retains the default Services summary. |
 | `--verbose` / `-v` | Stable | Expanded evidence, confidence and detection detail, plus per-source status on stderr. |
-| `--explain` | Stable | Full reasoning + evidence provenance DAG. |
+| `--explain` | Stable | Panel, source status, and flat evidence explanations; `--json --explain` additionally emits the reconstructed `explanation_dag`. |
 | `--services` / `-s` | Stable | Retained for compatibility; Services are shown by default. |
 | `--domains` / `-d` | Stable | Shows all tenant and related domains. |
 | `--sources` | Stable | Per-source resolution status table. |
@@ -55,7 +55,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--chain`, `--depth <1-3>` | Stable | Recursive related-domain resolution. |
 | `--no-cache`, `--cache-ttl <sec>` | Stable | Cache control. |
 | `--timeout <sec>` / `-t` | Stable | Pipeline timeout (default 120s). |
-| `--fusion` | Stable (v2.0+) | v0.11. Opt-in Bayesian fusion (still opt-in pre-lock). |
+| `--fusion` / `--no-fusion` | Stable (v2.0+) | Bayesian fusion is enabled by default; `--no-fusion` opts out. |
 | `--explain-dag` | Stable (v2.0+) | v1.9.0. Render Bayesian evidence DAG. |
 
 ### CLI flags (on `recon batch <file>`)
@@ -98,8 +98,8 @@ labels and graduate to stable in v2.0 per the disposition table in
 
 | Tool | Parameters |
 |---|---|
-| `lookup_tenant` | `domain`, `format` ("text"\|"json"\|"markdown"), `explain` (bool) |
-| `analyze_posture` | `domain`, `explain` (bool), `profile` (str, optional) |
+| `lookup_tenant` | `domain`, `format` ("text"\|"json"\|"markdown", default "text"), `explain` (bool, default false) |
+| `analyze_posture` | `domain`, `explain` (bool, default false), `profile` (str, optional) |
 | `chain_lookup` | `domain`, `depth` (1-3, default 1), `result_limit` (int, default 0) |
 | `discover_fingerprint_candidates` | `domain`, `skip_ct` (bool, default False), `keep_intra_org` (bool, default False), `min_count` (int, default 1) |
 | `reload_data` | (none) |
@@ -119,7 +119,7 @@ labels and graduate to stable in v2.0 per the disposition table in
 | `get_infrastructure_clusters` | `domain`, `member_limit_per_cluster` (int, default 0) |
 | `export_graph` | `domain`, `node_limit` (int, default 0), `edge_limit` (int, default 0) |
 | `get_posteriors` | `domain` |
-| `explain_dag` | `domain`, `output_format` (str, default "text") |
+| `explain_dag` | `domain`, `output_format` ("text"\|"dot", default "text") |
 
 All MCP tools are stability-covered, but not all are read-only.
 

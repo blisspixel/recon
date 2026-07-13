@@ -6,9 +6,9 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.5.7 is current. The stable baseline is complete: recon ships a
+> **Status:** v2.5.8 is current. The stable baseline is complete: recon ships a
 > local CLI, importable library, versioned JSON contract, local stdio MCP
-> server, bounded passive collectors, generated-artifact guards, and a verified
+> server, bounded public-metadata collectors, generated-artifact guards, and a verified
 > release path. The product is not "finished." The active work is to make every
 > default claim evidence-tight, prove that advanced inference adds user value,
 > characterize MCP v2 compatibility, and make latency, degradation, catalog
@@ -345,7 +345,7 @@ Acceptance evidence:
   becomes an explicitly advanced diagnostic.
 - Coverage remains above the enforced 90.2 percent branch-aware project gate and
   the 80 percent user bar, with no regression from the current baseline, and
-  the full local CI mirror passes.
+  the canonical local gate passes.
 
 Stop rule: do not expand graph or probabilistic machinery without measured
 benefit to a named user outcome.

@@ -1,6 +1,6 @@
 # ADR-0001: Strictly passive, zero-credential collection
 
-- **Status:** Accepted
+- **Status:** Superseded by ADR-0011
 - **Date:** 2025 (backfilled 2026-06-13)
 
 ## Context

@@ -1,7 +1,8 @@
 # recon → Splunk
 
 Ingest recon `--json` output into Splunk, extract structured fields,
-and surface defensive findings as alerts. The example uses the shared
+review public-namespace observations, and optionally drive operator-defined
+alerts. The example uses the shared
 input at `examples/sample-output.json` (Northwind Traders, a
 Microsoft fictional brand  -  see `examples/README.md`).
 
@@ -9,22 +10,24 @@ Microsoft fictional brand  -  see `examples/README.md`).
 
 Recommended flow:
 
-1. Pipe `recon batch domains.txt --ndjson` into a file under your
+1. Pipe `recon batch domains.txt --ndjson --no-fusion` into a file under your
    Splunk universal forwarder's monitored path.
-2. Splunk applies `props.conf` (below) to auto-extract JSON fields
-   into Splunk-native event fields.
+2. The forwarder sends each line to the Splunk parsing tier. Deploy
+   `props.conf` on the component that performs parsing in your topology so
+   Splunk indexes the JSON fields.
 3. Saved searches in `savedsearches.conf` (below) drive scheduled
    alerts.
 
-No custom Python or modular input is required. recon's `--ndjson`
-emits one JSON document per line  -  a shape Splunk's `INDEXED_EXTRACTIONS=json`
-ingests natively.
+No custom Python or modular input is required. recon's `--ndjson` emits one
+JSON document per line, a shape Splunk's `INDEXED_EXTRACTIONS=json` can ingest
+natively. This worked fixture explicitly uses `--no-fusion`; fusion fields
+remain in the stable JSON shape but their arrays are empty.
 
 ## Field mapping
 
 Splunk's default JSON ingestion auto-extracts every top-level
 recon field into a Splunk event field of the same name. The
-following are the mappings most defenders need to know  -  the
+following are the mappings most defenders need to know: the
 columns name a recon JSON path, the Splunk field it lands in,
 and the use case that field supports.
 
@@ -32,58 +35,56 @@ and the use case that field supports.
 
 | recon JSON path | Splunk field | Use case |
 |---|---|---|
-| `queried_domain` | `queried_domain` | Primary key for joins / alerts on a specific tenant |
-| `display_name` | `display_name` | Human-readable tenant label in dashboards |
+| `queried_domain` | `queried_domain` | Primary key for joins and alerts on a queried public namespace |
+| `display_name` | `display_name` | Display label returned by public identity metadata; not a verified legal organization name |
 | `provider` | `provider` | Filter to M365 vs Google Workspace vs other |
-| `confidence` | `confidence` | Drives severity mapping (see below) |
-| `auth_type` | `auth_type` | `Federated` vs `Managed`  -  federation discovery |
+| `confidence` | `confidence` | Overall evidential support; not alert severity |
+| `auth_type` | `auth_type` | Observed `Federated` vs `Managed` identity metadata |
 | `dmarc_policy` | `dmarc_policy` | Track DMARC enforcement drift (`reject` → `quarantine` regressions) |
-| `email_security_score` | `email_security_score` | 0-5 composite score for trend dashboards |
-| `services` | `services{}` (mv field) | Shadow-IT alerting  -  fire on new entries |
+| `email_security_score` | `email_security_score` | Count of five apex-observable email controls; not an overall security score |
+| `services` | `services{}` (mv field) | Review changes in public service indicators |
 | `slugs` | `slugs{}` (mv field) | Machine-readable counterpart of `services` |
 | `cloud_instance` | `cloud_instance` | Sovereignty drift (`microsoftonline.com` vs `.us`) |
-| `insights` | `insights{}` (mv field) | Pre-computed defensive narrative |
+| `insights` | `insights{}` (mv field) | Hedged observation text derived from retained evidence |
 
-### Fusion-layer fields (present unless fusion is disabled)
+### Fusion-layer fields (always present; populated only when fusion is enabled)
 
 | recon JSON path | Splunk field | Use case |
 |---|---|---|
 | `posterior_observations{}.name` | `posterior_observations{}.name` | Per-claim Bayesian posterior label |
 | `posterior_observations{}.posterior` | `posterior_observations{}.posterior` | Model-relative support for the claim under the committed network |
 | `posterior_observations{}.sparse` | `posterior_observations{}.sparse` | True when effective display mass is at its configured floor |
+
+`posterior_observations` is part of every successful lookup object. It is an
+empty array when fusion is disabled, including in the shared sample.
+
+### Cross-source diagnostics (always present; independent of fusion)
+
+| recon JSON path | Splunk field | Use case |
+|---|---|---|
 | `evidence_conflicts{}.field` | `evidence_conflicts{}.field` | Which TenantInfo field had cross-source disagreement |
 
-## Severity mapping
+`evidence_conflicts` is also part of every successful lookup object. It can be
+populated whether fusion is enabled or disabled.
 
-recon's `confidence` and `inference_confidence` fields drive Splunk's
-`severity` alert priority:
+## Confidence and alert priority
 
-| recon `confidence` | Splunk `severity` | Splunk numeric |
-|---|---|---|
-| `high` | `informational` (or `notice` for new tenants) | 1 |
-| `medium` | `low` | 2 |
-| `low` | `medium` | 3 |
-| `partial` (incomplete) | `medium` | 3 |
-
-This mapping is deliberately **inverted from intuition**: a *high*
-recon confidence means we observed strong public-signal evidence,
-which is a *low*-severity alert because the operator's defensive
-posture is well-characterized. A *low* confidence on a hardened
-target is the higher-severity signal  -  it tells the operator their
-hardening is working, and unusual new shadow-IT entries appearing
-under low confidence deserve more scrutiny.
-
-The mapping is intentionally documented as policy, not derived
-from a Splunk-only convention: SIEM operators tune this for their
-context.
+Do not derive Splunk severity from `confidence`, `evidence_confidence`, or
+`inference_confidence`. Those fields describe evidential support inside
+recon's public-observation model. `partial` is a separate boolean that reports
+collection completeness. Alert priority should instead come from explicit
+operator policy, such as an unexpected change on a monitored domain, the
+criticality of that domain, and the persistence of the observation.
 
 ## Use cases
 
-### Shadow-IT alerting
+### Public fingerprint indicator review
 
 Search: any new `services[]` entry that wasn't present in the prior
 lookup of the same `queried_domain`. The `slugs[]` array is the
-machine-readable join key.
+machine-readable join key. A newly observed slug means the public fingerprint
+set changed. It does not establish active use, ownership, approval status, or
+an unsanctioned deployment.
 
 ```spl
 index=recon sourcetype=recon:lookup
@@ -101,13 +102,13 @@ index=recon sourcetype=recon:lookup
 > baseline slug containing regex metacharacters such as `.*`
 > would match any `current_slug` and silently suppress the alert.
 > `in()` inside `mvfilter()` compares literal values element by
-> element  -  no regex semantics  -  and is the right primitive for
+> element, with no regex semantics, and is the right primitive for
 > set-membership tests against arbitrary identifier strings.
 
 ### DMARC drift
 
 Search: a `dmarc_policy` weakening (`reject` → `quarantine` →
-`none`) on the same tenant across lookups.
+`none`) on the same queried domain across lookups.
 
 ```spl
 index=recon sourcetype=recon:lookup queried_domain="northwindtraders.com"
@@ -119,9 +120,9 @@ index=recon sourcetype=recon:lookup queried_domain="northwindtraders.com"
 
 ### Federation discovery
 
-Search: a `Managed` tenant flips to `Federated`, or a federated
-tenant changes IdP. Both indicate an identity-stack change worth
-operator awareness.
+Search: a queried domain's observed authentication type changes from
+`Managed` to `Federated` or the reverse. This is a change in public identity
+metadata worth operator review; recon does not establish the cause.
 
 ```spl
 index=recon sourcetype=recon:lookup
@@ -141,9 +142,9 @@ index=recon sourcetype=recon:lookup
   `examples/sample-output.json` input. This is the contract the CI
   test verifies.
 
-## Author of record
+## Verification status
 
-Maintainer-authored. **Vendor-unverified**: no Splunk employee has
-QA'd this against a current Splunk Cloud / Splunk Enterprise build.
+**Vendor-unverified**: no Splunk employee has QA'd this against a current
+Splunk Cloud / Splunk Enterprise build.
 A PR from a Splunk customer / employee that fixes any conf-file
 syntax drift is welcome.

@@ -37,3 +37,13 @@ def test_live_markdown_relative_links_resolve() -> None:
                     broken.append(f"{rel}:{line_no}: {match.group(1)}")
 
     assert not broken, "Broken relative markdown links:\n" + "\n".join(broken)
+
+
+def test_roadmap_history_keeps_declared_compatibility_anchors() -> None:
+    text = (_ROOT / "docs" / "roadmap-history.md").read_text(encoding="utf-8")
+
+    for anchor in (
+        '<a id="v190--probabilistic-fusion-shipped"></a>',
+        '<a id="v200--maturity"></a>',
+    ):
+        assert anchor in text

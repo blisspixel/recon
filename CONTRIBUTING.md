@@ -66,16 +66,19 @@ This doc answers:
 git clone https://github.com/blisspixel/recon.git
 cd recon
 uv sync                    # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
-pre-commit install                     # activate pre-commit hooks
+uv run pre-commit install              # activate pre-commit hooks
 uv run python scripts/release_readiness.py --allow-dirty
-uv run python scripts/check.py         # the full CI gate locally (--fast to skip tests)
+uv run python scripts/check.py         # canonical local gate (--fast skips tests)
 ```
 
-`scripts/check.py` runs the **exact** CI gate (ruff, pyright over
-`src/recon_tool/ tests/`, the coverage-gated test run, the catalog/label and
-file-size checks), so green locally means green in CI. The complete test stage
-uses at most four file-grouped workers and combines branch coverage; focused
-tests remain serial by default. Run it before every push.
+`scripts/check.py` runs the canonical local gate: Ruff, Pyright over
+`src/recon_tool/ tests/`, the coverage-gated test run, catalog and label checks,
+and file-size checks. A local pass is required before every push, but it does
+not replace remote CI. GitHub Actions also exercises the supported OS and
+Python matrix, the package-index MCP matrix, actionlint, `pip-audit`, hostile
+fuzzing, and reproducible-build checks. The complete local test stage uses at
+most four file-grouped workers and combines branch coverage; focused tests
+remain serial by default.
 The standards this project holds itself (and any AI working in it) to are in
 [docs/engineering-practices.md](docs/engineering-practices.md); load-bearing
 design decisions are in [docs/adr/](docs/adr/).
@@ -90,12 +93,12 @@ are welcome:
 
 | Contribution type | Bar | Examples |
 |---|---|---|
-| **New fingerprints** | Must use public DNS/CT only. Specific pattern, not generic substring. Tested against a real customer domain. | "Add Statsig TXT verification", "Add Workspace ONE CNAME" |
+| **New fingerprints** | Must use documented public metadata only. Specific pattern, not generic substring. Tested against a public record shape expected to match. | "Add Statsig TXT verification", "Add Workspace ONE CNAME" |
 | **Refined fingerprints** | `match_mode: all` to eliminate false positives, improved regex, broader selector coverage. | Converting ambiguous slug to a chained pattern |
 | **New signals** | Must derive from existing evidence. Hedged language. | "AI tooling indicators observed alongside identity-provider signals" |
 | **New profiles** | Must reweight existing observations; cannot invent new ones. | "Retail / e-commerce" profile |
 | **Bug reports** | Reproducible + output of `recon <domain> --json --explain`. | Wrong provider classification, insight wording, display glitch |
-| **Accuracy reports** | Domain you know ground truth for, plus what recon got wrong. | "Our org uses M365 primary; recon says Exchange on-prem" (omit real names in public reports) |
+| **Accuracy reports** | A controlled or otherwise well-understood public record shape, plus the exact observation recon got wrong. | "Our test domain publishes the documented M365 MX route, but recon reports custom or unclassified MX" (omit real names in public reports) |
 | **Documentation fixes** | Typos, clarifications, better examples. | README, CONTRIBUTING, docs/* |
 | **Performance improvements** | With before/after measurement. Hot paths: `detect_provider`, `_curate_insights`, DNS query batching. | Reducing average lookup time, eliminating redundant DNS queries |
 | **Test additions** | Sparse-data fixtures, adversarial inputs, corner cases. | Domain with zero MX + no tenant, IDN / punycode, wildcard DNS |
@@ -115,8 +118,12 @@ spend effort on PRs that will be closed:
 
 ### Violates invariants (hard no)
 
-- **Active scanning of any kind.** No HTTP probes against target domains
-  (even "light"), no port scans, no TLS handshakes, no brute-forcing.
+- **Collection beyond the documented public-metadata boundary.** The allowed
+  surface is public DNS, certificate transparency, unauthenticated identity
+  discovery, the default MTA-STS policy fetch, and opt-in Google CSE and BIMI
+  document fetches. No arbitrary target HTTP requests, port scans, service
+  probes, or brute-forcing. See
+  [ADR-0011](docs/adr/0011-public-metadata-collection-boundary.md).
 - **Anything requiring credentials or API keys.** No OAuth, no PAT, no
   paid APIs (SecurityTrails, Censys, Shodan, etc.).
 - **Aggregated local database.** Per-domain JSON files only. No SQLite/DuckDB
@@ -158,8 +165,9 @@ internal naming should stay local.
 
 **Upstream contribution** (shared with everyone via a PR):
 - Detections that apply to at least one publicly-known service
-- At least one real customer domain you can point to as evidence
-  (kept locally and described in the PR body, not committed)
+- At least one vendor-published example, documented public record shape, or
+  maintainer-local observation supporting the pattern. Real apexes stay local;
+  use a fictionalized or aggregate description in the PR.
 - General-purpose (not a specific org's internal pattern)
 
 ---
@@ -203,15 +211,18 @@ recon fingerprints show openai              # what does the existing pattern loo
 Current layout:
 
 ```
-recon_tool/data/fingerprints/
-├── ai.yaml             AI / LLM providers, agent frameworks
-├── email.yaml          Email providers, gateways, DMARC / DKIM tooling
-├── security.yaml       EDR, SIEM, IdP, zero-trust access
-├── infrastructure.yaml Cloud, CDN, DNS, CAs, CI/CD
-├── productivity.yaml   Suite tools, helpdesk, HR
-├── crm-marketing.yaml  CRM, sales intel, ad platforms
-├── data-analytics.yaml Warehouses, BI, observability
-└── verticals.yaml      Education, nonprofit, payments
+src/recon_tool/data/fingerprints/
+├── ai.yaml                 AI / LLM providers and agent frameworks
+├── crm-marketing.yaml      CRM, sales intelligence, and ad platforms
+├── data-analytics.yaml     Warehouses, BI, and observability
+├── discovered-signals.yaml Catalog discoveries promoted through review
+├── email.yaml              Email providers, gateways, and policy tooling
+├── infrastructure.yaml     Cloud, CDN, DNS, CAs, and CI/CD
+├── productivity.yaml       Suite tools, helpdesk, and HR
+├── security.yaml           EDR, SIEM, IdP, and zero-trust access
+├── surface.yaml            Public custom-domain and hosting surfaces
+├── verifications.yaml      Public ownership and service verification tokens
+└── verticals.yaml          Education, nonprofit, and payments
 ```
 
 Pick the file that matches your service's primary category. If nothing
@@ -232,9 +243,9 @@ It walks through the stable schema and specificity checks before emitting YAML.
 - name: Service Name
   slug: service-slug          # lowercase, unique across ALL files
   category: Category Name     # use an existing category if possible
-  confidence: high             # high, medium, or low
+  confidence: high             # rule-level evidence strength, not a probability
   detections:
-    - type: txt                # txt, spf, mx, ns, cname, subdomain_txt, caa, srv, dmarc_rua
+    - type: txt                # txt, spf, mx, ns, cname, cname_target, subdomain_txt, caa, srv, dmarc_rua
       pattern: "^service-domain-verification="
       description: What this record means
       reference: https://vendor.example/docs/domain-verification
@@ -277,9 +288,12 @@ detection order, and repeated slugs. Do not edit
 
 ### Chained patterns (`match_mode: all`)
 
-For high-confidence attribution where a single record could be a false
-positive, use `match_mode: all`: the fingerprint only fires when every
-listed detection matches. See [docs/fingerprints.md](docs/fingerprints.md#chained-patterns-match_mode-all) for details.
+For stronger observed-pattern discrimination where a single record could be a
+false positive, use `match_mode: all`: the fingerprint only fires when every
+listed detection matches. This does not turn the rule's confidence tier into a
+calibrated probability or establish active service use. See
+[docs/fingerprints.md](docs/fingerprints.md#chained-patterns-match_mode-all) for
+details.
 
 For multi-detection changes, run:
 
@@ -298,7 +312,7 @@ The audit is advisory. Use it to document whether the entry should remain
 - [ ] Slug does not collide with an existing one (`recon fingerprints list | grep <slug>`)
 - [ ] At least one detection pattern uses a service-specific token (not a generic substring)
 - [ ] Detection metadata includes `description`, plus `reference` when public vendor docs exist
-- [ ] Tested against a real public domain you know uses the service
+- [ ] Tested against a documented public record shape expected to match, without treating the match as proof of active service use
 - [ ] The service's DNS footprint is documented or publicly-observable (not leaked from a customer engagement)
 - [ ] Multi-detection entries include a `match_mode` rationale from the audit output or PR notes
 - [ ] Common legitimate false-negative cases are captured in the PR body, or in `docs/weak-areas.md` when broadly useful
@@ -307,7 +321,7 @@ The audit is advisory. Use it to document whether the entry should remain
 
 ### Detection description rubric (v1.9.7+)
 
-Every detection rule in `recon_tool/data/fingerprints/*.yaml` must
+Every detection rule in `src/recon_tool/data/fingerprints/*.yaml` must
 carry a non-empty `description` field. The metadata-coverage gate
 (`scripts/check_metadata_coverage.py`) enforces presence at commit
 time via pre-commit and at release time via CI. There is no
@@ -391,7 +405,7 @@ floor; the rubric is the bar.
 
 ### Vendor-doc-sourced `cname_target` rules
 
-`cname_target` rules in `recon_tool/data/fingerprints/surface.yaml`
+`cname_target` rules in `src/recon_tool/data/fingerprints/surface.yaml`
 can be added two ways:
 
 1. **Corpus-observed.** The default historical path: a private-corpus
@@ -435,8 +449,9 @@ Use the fingerprint PR template; GitHub surfaces it automatically.
 > are data; contributors can iterate on them freely. The signal,
 > fusion, and absence engines are inference code; bad changes there
 > affect every domain recon analyses, not just the one you tested.
-> Before PRing a change to `recon_tool/signals.py`, `merger.py`,
-> `absence.py`, `fusion.py`, or the two-pass evaluator, please open
+> Before PRing a change to `src/recon_tool/signals.py`,
+> `src/recon_tool/merger.py`, `src/recon_tool/absence.py`,
+> `src/recon_tool/fusion.py`, or the two-pass evaluator, please open
 > an issue with:
 >
 > 1. What inference pattern you want to add or change.
@@ -450,7 +465,7 @@ Use the fingerprint PR template; GitHub surfaces it automatically.
 ### Signals
 
 Custom signal rules derive insights from fingerprint matches. Go in
-`~/.recon/signals.yaml` (local) or `recon_tool/data/signals.yaml`
+`~/.recon/signals.yaml` (local) or `src/recon_tool/data/signals.yaml`
 (upstream):
 
 ```yaml
@@ -476,7 +491,7 @@ See [docs/signals.md](docs/signals.md) for the full schema, including
 
 Profiles reweight existing observations for a specific audience (fintech,
 healthcare, higher-ed, etc.). Go in `~/.recon/profiles/{name}.yaml` (local)
-or `recon_tool/data/profiles/{name}.yaml` (upstream):
+or `src/recon_tool/data/profiles/{name}.yaml` (upstream):
 
 ```yaml
 name: retail
@@ -493,7 +508,7 @@ Profiles are **additive only**: they cannot introduce new observations,
 only reweight existing ones, and they cannot create false confidence (caps
 at "high" salience). `category_boost` keys are observation categories;
 `signal_boost` and `exclude_signals` keys are posture observation rule names
-(the `name` field of an entry in `recon_tool/data/posture.yaml`), matched
+(the `name` field of an entry in `src/recon_tool/data/posture.yaml`), matched
 against the rule that produced each observation. `exclude_signals` also
 removes an observation when an entry appears as a substring of its statement.
 
@@ -544,7 +559,7 @@ solved with a new fingerprint, signal, or profile rather than new code.
 
 ## CPT-change discipline (v1.9.6+)
 
-The v1.9 Bayesian layer (`recon_tool/data/bayesian_network.yaml`) is a
+The v1.9 Bayesian layer (`src/recon_tool/data/bayesian_network.yaml`) is a
 **data file with semantic content**, not a free parameter surface to
 tune against the corpus. Every CPT entry encodes a claim about how
 evidence should move the posterior. Changing a number changes a

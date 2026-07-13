@@ -134,10 +134,11 @@ Beyond listing vendors:
 
 ## 5. Boundaries
 
-The invariants are the moat and constrain this plan: passive only, zero
-credentials, zero paid feeds, no active scanning. Specifically out of scope for
-catalog work: ASN / GeoIP / IP-based fingerprinting, HTTP-header probing (active;
-only ever behind `--direct-probes`), and ingesting a third-party technology
+The invariants are the moat and constrain this plan: passive in collection
+scope, zero credentials, zero paid feeds, and no active scanning. Specifically
+out of scope for catalog work: ASN / GeoIP / IP-based fingerprinting, generic
+target-owned HTTP-header probing or crawling, and ingesting a third-party
+technology
 database. The frontier stays in DNS-name, certificate-transparency, and
 declarative-token space.
 

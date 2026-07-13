@@ -23,10 +23,10 @@ machine-checked in CI (`scripts/check_traceability.py`, gated by
 `tests/test_traceability.py`): a renamed test or constant fails the build rather
 than orphaning a row here.
 
-## Promise 1: Passive by default
+## Promise 1: Bounded public-metadata collection
 
-**Claim.** Collection is passive. recon sends no credentials, runs no inbound
-listener, and performs no active scan. DNS reads use the configured recursive
+**Claim.** Collection is passive in scope. recon sends no credentials, runs no
+inbound listener, and performs no active scan. DNS reads use the configured recursive
 resolver, so authoritative DNS infrastructure may observe resulting resolver
 traffic. The standard MTA-STS policy fetch is the only default target-owned HTTP
 or application request. The Google CSE discovery probe and BIMI VMC certificate
@@ -102,16 +102,19 @@ provenance, model-relative diagnostics, and explicit limits.
 ## Promise 6: The artifact is verifiable
 
 **Claim.** A published release traces back to the exact source and workflow that
-produced it, and you can rebuild it to confirm. Full details and a verification
-recipe are in [supply-chain.md](supply-chain.md).
+produced it. Consumers can verify the signed provenance and compare a local
+rebuild under a matched environment. Full details and the bounded recipe are in
+[supply-chain.md](supply-chain.md).
 
 | Mechanism | Proven by |
 |---|---|
-| Reproducible builds (`SOURCE_DATE_EPOCH`), byte-identical wheel + sdist | `ci.yml` `reproducible-build` job (builds twice, compares hashes) |
+| Same-job deterministic-build check (`SOURCE_DATE_EPOCH`), matching wheel and sdist hashes under one resolved toolchain | `ci.yml` `reproducible-build` job (builds twice, compares hashes) |
 | Sigstore-signed PyPI attestations (PEP 740) + GitHub build provenance + CycloneDX SBOM + OIDC trusted publishing | `release.yml` (`attest`, `publish-pypi`, `sbom` jobs) |
 
-Residual: full SLSA Level 3 provenance via the reusable generator workflow stays
-deferred as disproportionate for a passive single-maintainer tool.
+Residual: the build backend and runner environment are not fully frozen for
+cross-environment byte identity. Full SLSA Level 3 provenance via the reusable
+generator workflow stays deferred as disproportionate for a passive
+single-maintainer tool.
 
 ## Standing gaps
 

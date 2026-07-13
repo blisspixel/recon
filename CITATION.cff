@@ -7,8 +7,9 @@ abstract: >-
   unauthenticated provider identity-discovery endpoints, and the standard
   target-visible MTA-STS policy endpoint, then reports each high-level claim
   through a small, auditable Bayesian network as a model-relative posterior and
-  evidence-responsive uncertainty band rather than a yes/no verdict, with full
-  provenance and no active scanning or credentialed access.
+  evidence-responsive uncertainty band rather than a yes/no verdict, with
+  field-level provenance for supported claims and no active scanning or
+  credentialed access.
 type: software
 authors:
   - family-names: Seal
@@ -17,7 +18,7 @@ authors:
 repository-code: "https://github.com/blisspixel/recon"
 url: "https://github.com/blisspixel/recon"
 license: Apache-2.0
-version: 2.5.7
+version: 2.5.8
 date-released: "2026-07-13"
 keywords:
   - passive reconnaissance

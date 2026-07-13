@@ -39,7 +39,7 @@ Run from the repository root after installing the development environment:
 | Quick public proof smoke | `uv run python -m validation.reproduce_paper_numbers --profile smoke --stamp artifact-review-smoke` | Writes a manifest and summary under `validation/local/paper-numbers/artifact-review-smoke/`; reports no private corpora and no default network requirement. |
 | Full public proof bundle | `uv run python -m validation.reproduce_paper_numbers --profile paper --stamp artifact-review-paper` | Runs suppression monotonicity, planted-evidence movement, differential verification, interval coverage, likelihood sensitivity, and layer ablation. |
 | Paper figure drift check | `uv run python scripts/generate_paper_figures.py --check` | Verifies the committed SVG figures match the deterministic aggregate-safe generator. |
-| Local CI mirror | `uv run python scripts/check.py` | Ruff, pyright, coverage-gated tests, generated-artifact checks, hygiene checks, and ratchets pass. |
+| Canonical local gate | `uv run python scripts/check.py` | Ruff, pyright, coverage-gated tests, generated-artifact checks, hygiene checks, and ratchets pass. |
 | Release readiness | `uv run python scripts/release_readiness.py` | Version, citation metadata, lockfile, roadmap, supply-chain recipe freshness, private-data hygiene, and commit hygiene pass for the local checkout. |
 | Published release verification | `uv run python scripts/release_readiness.py --remote` | After `main` and the current version are published, required GitHub Actions checks pass, public Scorecard API state matches `HEAD`, PyPI wheel and sdist, GitHub Release wheel, sdist, SBOM, and attestation export match the current version, and PyPI plus GitHub provenance verify for the release wheel and sdist. |
 
@@ -54,11 +54,15 @@ That changes only terminal handling. It does not skip any gate.
 
 ## What The Public Bundle Validates
 
-The latest maintainer full proof check is recorded in
+The most recent completed historical maintainer proof check is recorded in
 [../validation/2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md).
-The current final public claim audit refresh for the draft package remains
+The most recent completed historical public claim-audit refresh is
 [../validation/2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
-That claim-audit memo records the last paper-package claim audit refresh.
+The current paper and artifact package is unfrozen after subsequent product,
+documentation, and release changes. These dated records apply only to the
+commits and package state they name; rerun the submission gate before external
+submission. The claim-audit memo records the last completed paper-package
+claim-audit refresh.
 It supersedes the June 29 metric-lineage refresh, the June 28 final claim audit,
 and the earlier adversarial-perturbation proof memo only as the latest
 claim-audit gate; those earlier memos remain focused historical records for their
@@ -66,10 +70,10 @@ respective checks.
 
 | Claim family | Public command or gate | Reviewer interpretation |
 |---|---|---|
-| Inference arithmetic | `validation.differential_verification` through the reproduction bundle | Variable elimination matches an independent full-joint reference over enumerable shipped configurations. |
+| Inference arithmetic | `validation.differential_verification` through the reproduction bundle | Variable elimination matches an independent full-joint reference over the bounded none/one/all cross-product sweep and exhaustive local subsets for three factor-heavy nodes under two background contexts. It does not enumerate the global evidence power set. |
 | Evidence-removal and planting boundary | `validation.adversarial_properties` through the reproduction bundle | Under fixed local positive-factor assumptions, deletion does not raise local presence odds in the tested contexts. In synthetic model contexts, planted evidence can raise posteriors across decision boundaries. Neither result is a real-world error-rate claim. |
 | Band perturbation containment | `validation.interval_coverage --json` through the reproduction bundle | The 80 percent uncertainty band contains selected CAL8 perturbed-model conditionals in the finite experiment. This is not a credible interval, confidence interval, identification region, or general misspecification bound. |
-| Likelihood sensitivity | `validation.likelihood_sensitivity` through the reproduction bundle | Posterior decisions are stable under the configured +/-20 percent likelihood perturbation. |
+| Likelihood sensitivity | `validation.likelihood_sensitivity` through the reproduction bundle | The harness reports model-relative changes under the configured +/-20 percent binding-likelihood perturbation. It does not perturb grouped-absence parameters, encode a pass threshold, or establish real-world calibration. |
 | Layer comparison | `validation.layer_ablation` through the reproduction bundle | Mixed Bayesian baseline results and the tailored assortative graph result reproduce without target data. They do not establish real product value. |
 | Public-list sampling boundary | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) plus `scripts/check_paper_claims.py` | Public-list numbers are robustness checks rather than population rates or benchmark prevalence. |
 | Paper figures | `scripts/generate_paper_figures.py --check` | SVG figures are deterministic renderings of committed topology and aggregate memos, not hand-edited screenshots. |
@@ -125,7 +129,7 @@ Use these labels when writing the artifact appendix:
 
 - Available: repository, release assets, license, docs, and citation metadata are
   present.
-- Functional: the public proof bundle and local CI mirror run successfully.
+- Functional: the public proof bundle and canonical local gate run successfully.
 - Reusable: the README, docs index, schema, operational contract, and data policy
   are sufficient to rerun the public artifact and understand limits.
 - Results validated: only the public proof and synthetic rows qualify for an

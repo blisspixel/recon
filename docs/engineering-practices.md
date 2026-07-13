@@ -156,9 +156,9 @@ mitigations are mechanical and non-negotiable:
 ## 6. Security and supply chain
 
 Already at a high bar, kept there: ruff `S` rules, `pip-audit`, secret scanning,
-SBOM (CycloneDX), SLSA build provenance, reproducible builds
-(`SOURCE_DATE_EPOCH`), PyPI Trusted Publishing (OIDC, no long-lived token) with
-PEP 740 attestations. Returned external content is treated as untrusted data,
+SBOM (CycloneDX), signed build provenance, a same-job deterministic-build check
+with `SOURCE_DATE_EPOCH`, and PyPI Trusted Publishing (OIDC, no long-lived
+token) with PEP 740 attestations. Returned external content is treated as untrusted data,
 not instructions (the MCP data-not-instructions boundary), and control bytes are
 stripped at every source-derived sink.
 
@@ -186,7 +186,7 @@ assistant's lack of time-sense:
 - **Derived requirements exports are checked.** The ClusterFuzzLite runtime
   requirements file must match `uv export --frozen --no-dev --no-emit-project`
   from the committed lockfile; `scripts/check_clusterfuzzlite_requirements.py`
-  gates that in the local CI mirror.
+  gates that in the canonical local gate.
 - **Added-line text hygiene is mechanical.** New diff lines are checked for
   attribution markers, em dashes, and pictographic symbols locally and in CI.
 - **The parity gate and pinned tool versions** keep the local and CI toolchains

@@ -4,7 +4,8 @@ Status: pre-submission gate. This checklist makes the paper and artifact freeze
 repeatable. It is not a claim that an external submission, DOI archive, OpenSSF
 Best Practices Badge project, or outside replication pass already exists.
 
-Checked: 2026-06-30.
+External guidance checked: 2026-06-30. Current draft status reviewed:
+2026-07-13, unfrozen.
 
 ## External Boundaries
 
@@ -65,13 +66,13 @@ Run from the repository root:
 
 | Gate | Command | Freeze interpretation |
 |---|---|---|
-| Claim audit | `uv run python scripts/check_paper_claims.py` | Draft, outline, claim map, current docs, and the latest public proof memo pointer agree. |
+| Claim audit | `uv run python scripts/check_paper_claims.py` | Draft, outline, claim map, and current docs agree on the historical proof boundary and current unfrozen status. |
 | Figure drift | `uv run python scripts/generate_paper_figures.py --check` | Committed figures are deterministic aggregate-safe outputs. |
 | Public smoke proof | `uv run python -m validation.reproduce_paper_numbers --profile smoke --stamp submission-freeze-smoke-YYYYMMDD` | The public orchestrator runs without private corpora. |
 | Full public proof | `uv run python -m validation.reproduce_paper_numbers --profile paper --stamp submission-freeze-paper-YYYYMMDD` | Public synthetic and model-internal proof rows reproduce. |
 | Validation hygiene | `uv run python scripts/check_validation_hygiene.py` | Committed validation artifacts exclude private identifiers and raw rows. |
 | Text hygiene | `uv run python scripts/check_text_hygiene.py` | Public prose follows repository text rules. |
-| Local CI mirror | `uv run python scripts/check.py` | Lint, type checks, coverage, generated artifacts, hygiene checks, and ratchets pass. |
+| Canonical local gate | `uv run python scripts/check.py` | Lint, type checks, coverage, generated artifacts, hygiene checks, and ratchets pass. |
 | Local release readiness | `uv run python scripts/release_readiness.py --allow-dirty` | Version, citation metadata, lockfile, roadmap, private-data hygiene, and release inputs agree locally. |
 
 After pushing the exact freeze commit, run:
@@ -107,10 +108,13 @@ mark the claim-map row as `Requires further evidence`.
 
 ## Freeze Record
 
-The latest local public proof record for this checklist is
-[../validation/2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md).
-It is local proof evidence only; it is not an external submission, DOI archive,
-OpenSSF badge, reviewed-PR, or outside-replication claim.
+The most recent recorded local public proof for this checklist is the historical
+[2026-06-30 submission-freeze memo](../validation/2026-06-30-submission-freeze-local-proof.md).
+It applies only to the exact commit it names. Later paper and package changes
+leave the current draft unfrozen, so a new record is required before submission.
+The historical memo is local proof evidence only; it is not an external
+submission, DOI archive, OpenSSF badge, reviewed-PR, or outside-replication
+claim.
 
 The freeze record should name:
 

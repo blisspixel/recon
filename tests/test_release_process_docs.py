@@ -28,3 +28,11 @@ def test_reviewer_and_loop_docs_name_supply_chain_recipe_freshness() -> None:
         ROOT / "docs" / "agentic-balance.md",
     ):
         assert "supply-chain recipe freshness" in _normalized(path), path
+
+
+def test_release_yank_guidance_uses_supported_pypi_flow() -> None:
+    text = _normalized(ROOT / "docs" / "release-process.md")
+
+    assert "Twine does not provide a yank command" in text
+    assert "PyPI project management UI" in text
+    assert "twine yank" not in text

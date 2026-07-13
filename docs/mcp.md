@@ -11,8 +11,8 @@ Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, or any other
 > `recon mcp` runs with the privileges of the calling user or editor process.
 > Treat connected AI agents as untrusted input: prompt injection, tool
 > poisoning, and parameter tampering are possible. Start with manual approvals,
-> keep `autoApprove` empty by default, and prefer an isolated workspace or
-> container for production agent use.
+> configure permissions through the client's documented controls, and prefer
+> an isolated workspace or container for production agent use.
 
 ## Setup
 
@@ -21,6 +21,22 @@ Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, or any other
 ```bash
 pip install recon-tool
 ```
+
+### CLI install options
+
+Choose one installation form, then use `recon mcp install` to generate the
+client-specific server stanza:
+
+| Form | Command | Tradeoff |
+|---|---|---|
+| pip | `pip install recon-tool` | Direct installation with the lowest repeat-startup overhead. |
+| uv tool | `uv tool install recon-tool` | Isolated persistent tool environment. |
+| uvx | `uvx --from recon-tool recon mcp` | No persistent recon installation; the first run may download and cache the package. |
+
+For persisted client configuration, prefer the installer-generated,
+interpreter-bound launcher over copying the `uvx` command. It binds the client
+to the recon installation you just verified and removes the working directory
+from Python's import path before loading recon.
 
 2. Wire the MCP server into your client. Two ways:
 
@@ -33,7 +49,12 @@ pip install recon-tool
    recon mcp install --client=cursor --scope=workspace  # project-local instead of user-global
    ```
 
-   The command merges the recon stanza into your existing config without touching sibling MCP servers. Existing `autoApprove` lists, custom `env` vars, `disabled` flags, and any other fields you've added to your recon block survive a `--force` rerun; only `command` and `args` are authoritative on the install side. Writes are atomic (sibling tempfile + `os.replace`), so a partial-write failure leaves the original config intact.
+   The command merges the recon stanza into your existing config without
+   touching sibling MCP servers. Client-supported custom fields survive a
+   `--force` rerun; canonical launcher fields are refreshed, and unsupported
+   legacy approval fields are removed for Claude Code and VS Code. Writes are
+   atomic (sibling tempfile plus `os.replace`), so a partial-write failure leaves
+   the original config intact.
 
    **b. Reviewed manual install.** Generate the exact interpreter-bound block
    for the client, inspect it, and copy that preview only if automated writing
@@ -80,7 +101,7 @@ deliberately trust.
 
 recon intentionally does not add a separate "safe mode" or "full auto" CLI
 flag here. Approval policy belongs in the MCP client config, and the safest
-default is an empty `autoApprove` list.
+default is to require confirmation through the client's permission system.
 
 ### Running `recon mcp` directly in a terminal
 
@@ -107,21 +128,21 @@ workflows; a first-time user does not need them for a normal lookup.
 | `find_hardening_gaps` | Cache first; may resolve | Categorized public-configuration opportunities with "Consider" recommendations and explicit absence semantics. It is not an overall assessment (see [correlation.md](correlation.md)). | `domain` |
 | `compare_postures` | Cache first; may resolve both domains | Side-by-side comparison of two domains' public configuration evidence, not overall security | `domain_a`, `domain_b` |
 | `chain_lookup` | Yes | Recursive domain discovery via CNAME/CT breadcrumbs. Optional result caps report omitted counts for compact agent output while preserving raw JSON as the default. | `domain`, `depth` (1-3), `result_limit` (0 means raw) |
-| `discover_fingerprint_candidates` | Yes | Mine a domain for new-fingerprint candidates. Resolves with unclassified-CNAME-chain capture, applies intra-org and already-covered filters, returns a ranked candidate list. Pair with the `/recon-fingerprint-triage` skill to turn candidates into YAML stanzas. | `domain`, `skip_ct`: bool, `keep_intra_org`: bool, `min_count`: int |
-| `reload_data` | No | Reload fingerprints, signals, and posture rules from disk | none |
+| `discover_fingerprint_candidates` | Yes | Mine a domain for new-fingerprint candidates. Resolves with unclassified-CNAME-chain capture, applies already-covered and same-zone/brand-similarity heuristic filters, and returns a ranked candidate list. The heuristic does not establish ownership. Pair with the `/recon-fingerprint-triage` skill to review candidates before proposing YAML. | `domain`, `skip_ct`: bool, `keep_intra_org`: bool, `min_count`: int |
+| `reload_data` | No | Reload fingerprints, signals, and posture rules from disk, then clear the session lookup-result cache | none |
 | `get_fingerprints` | No | List loaded fingerprints with slugs, categories, and detection types. Use `limit` and `offset` for bounded pages. | `category` (str, optional filter), `limit` (int, optional page size), `offset` (int, default 0; used with `limit`) |
 | `get_signals` | No | List all loaded signals with rules, layers, conditions | `category`, `layer` (optional filters) |
 | `explain_signal` | No unless `domain` is provided | Query a signal's trigger conditions and current state for a domain | `signal_name`, `domain` (optional) |
 | `test_hypothesis` | Cache first; may resolve | Test a theory against signals and evidence; returns likelihood + evidence | `domain`, `hypothesis` |
 | `simulate_hardening` | Cache first; may resolve | What-if: re-compute the model-bound public-evidence index with hypothetical fixes. This is not a prediction of overall security change (see [correlation.md](correlation.md)). | `domain`, `fixes` (array) |
 | `inject_ephemeral_fingerprint` | No | Inject a temporary fingerprint for the current session | `name`, `slug`, `category`, `confidence`, `detections` (array) |
-| `reevaluate_domain` | No | Re-evaluate cached domain data against current fingerprints (including ephemeral) | `domain` |
+| `reevaluate_domain` | No | Re-evaluate retained apex/root TXT, SPF, MX, NS, and CNAME observations against current fingerprints (including ephemeral). Owner-qualified detection types require a fresh lookup. | `domain` |
 | `list_ephemeral_fingerprints` | No | List all currently loaded ephemeral fingerprints | none |
 | `clear_ephemeral_fingerprints` | No | Remove all ephemeral fingerprints from the session | none |
 | `get_infrastructure_clusters` *(v1.8+)* | Cache first; may resolve | Surfaces the CT co-occurrence community-detection report already computed during lookup: algorithm, modularity score, cluster list. Read-only exposure of computed state. Optional member caps report omitted counts for compact agent output. | `domain`, `member_limit_per_cluster` (0 means raw) |
 | `export_graph` *(v1.8+)* | Cache first; may resolve | Companion to `get_infrastructure_clusters`. Returns the underlying graph as nodes + weighted edges + cluster_assignment for downstream Mermaid / GraphViz / CSV rendering. Optional node and edge caps report omitted counts for compact agent output. | `domain`, `node_limit` (0 means raw), `edge_limit` (0 means raw) |
 | `get_posteriors` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Exposes model-relative Bayesian-network posteriors and evidence-responsive uncertainty bands for the nine high-level claim nodes. Top-level `degraded_sources` and `collection_masked_units` preserve the collection failures that were treated as structurally unobserved rather than negative evidence. Read-only exposure of the inference computed during lookup. See [correlation.md](correlation.md) for the inference model and limits. | `domain` |
-| `explain_dag` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Renders the Bayesian evidence DAG for a domain. `output_format` selects between `text` (Rich-rendered tree) and structured output for downstream tools. Pairs with `get_posteriors` for full audit-trail inspection. | `domain`, `output_format`: str (default `text`) |
+| `explain_dag` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Renders the Bayesian evidence DAG for a domain as plain text or Graphviz DOT text. Pairs with `get_posteriors` for full audit-trail inspection. | `domain`, `output_format`: `text` / `dot` (default `text`) |
 
 The lookup and analysis tools are read-only. The ephemeral fingerprint tools
 mutate only in-memory session state for the current server process; they do not
@@ -195,12 +216,18 @@ attributions exist. `format="json"` is the detailed machine path: it carries the
 full `surface_attributions` array, while `reevaluate_domain` exposes the same
 cache-only lookup record with a typed `LookupResult` output schema.
 
-Errors are reported the spec-correct way: an invalid argument, an unresolvable or
-uncached domain, a rate-limit, or an internal failure comes back as a tool result
-flagged `isError: true` (a raised `ToolError`), not as a success-shaped
-`{"error": ...}` payload, so the model can recognize the failure and self-correct.
+Error signaling follows the tool's stable return family. Typed data tools raise
+`ToolError` for request-level validation and lookup failures, which the MCP
+transport reports with `isError: true`; multi-domain tools may instead include
+typed per-domain errors inside an otherwise successful aggregate result.
+Narrative tools preserve text results for handled failures where documented:
+`lookup_tenant` and `explain_dag` return validation, rate-limit, no-data, and
+internal-error text; `chain_lookup` does the same except that a negative
+`result_limit` raises `ToolError`; unexpected `reload_data` exceptions propagate
+as protocol tool errors. Consumers must handle both ordinary narrative failure
+text, including `No information found for ...`, and `isError: true` results.
 
-### Read-only vs stateful (autoApprove guidance)
+### Read-only vs stateful annotations
 
 Each tool carries a `readOnlyHint` annotation so a consuming agent can reason
 about what is safe to auto-approve. The split is enforced in code and kept in
@@ -214,19 +241,23 @@ the ones to keep manual (or approve only when you understand the effect):
 - `clear_ephemeral_fingerprints`: removes all ephemeral fingerprints from the
   session.
 - `reload_data`: re-reads the fingerprint, signal, and posture catalogs from
-  disk into the running server.
+  disk into the running server and clears the session lookup-result cache. It
+  preserves the rate limiter and current ephemeral catalog.
 - `reevaluate_domain`: replaces the cached merged result for one domain after
   applying the session's current fingerprint catalog. It makes no network
   request, but later tools observe the refreshed cached result.
 
-Every other tool is **read-only** (`readOnlyHint=true`): it does not mutate
-server state. Note that read-only does not mean "no network": the
-domain-analysis tools are cache-first and may make passive outbound DNS / CT /
-identity-endpoint queries when no fresh cache entry exists (the "Network
-calls?" column above says which). Read-only here means recon does not change
-its own state, not that the call is fully offline. An operator comfortable with
-passive outbound queries can auto-approve the read-only set; the safe default
-remains an empty `autoApprove` list until you have decided per tool.
+Every other tool is **read-only** (`readOnlyHint=true`): it has no externally
+visible side effect beyond returning observations. The server can still update
+internal cache, rate-limit, and diagnostic bookkeeping. Read-only also does not
+mean "no network": the
+domain-analysis tools are cache-first and may make public-metadata DNS, CT,
+identity-endpoint, and MTA-STS requests when no fresh cache entry exists (the
+"Network calls?" column above says which). DNS can be visible to authoritative
+infrastructure, MTA-STS is the one default target-owned HTTP request, and CSE or
+BIMI certificate probes require explicit opt-in. Treat annotations as hints and
+keep client permission policy explicit after reviewing each tool's network
+boundary.
 
 ### Reading the model-relative posteriors
 
@@ -337,8 +368,8 @@ To keep long-running MCP sessions available under prompt injection or abusive
 tool calls, ephemeral storage is quota-bounded: at most 100 ephemeral
 fingerprints, at most 20 detections on a single injected fingerprint, and at
 most 500 total ephemeral detections per process. Oversized injections return a
-JSON error; use `clear_ephemeral_fingerprints` or restart the server to reset
-the session quota.
+MCP tool error (`isError: true`); use `clear_ephemeral_fingerprints` or restart
+the server to reset the session quota.
 
 ### Workflow
 
@@ -347,6 +378,15 @@ the session quota.
 3. Re-evaluate the domain with `reevaluate_domain` (zero network calls, uses cached data).
 4. List active ephemeral fingerprints with `list_ephemeral_fingerprints`.
 5. Clear all ephemeral fingerprints with `clear_ephemeral_fingerprints` when done.
+
+Cached re-evaluation is intentionally narrower than fresh collection. It can
+replay `txt`, `spf`, `mx`, `ns`, and apex/root `cname` rules from retained DNS
+observations. It cannot replay owner-qualified `cname_target`, `subdomain_txt`,
+`caa`, `srv`, or `dmarc_rua` rules; `reevaluate_domain` returns a tool error when
+any active ephemeral fingerprint uses one of those types. To test such a rule,
+call `reload_data` to clear the session's lookup-result cache while retaining
+the ephemeral catalog, then run `lookup_tenant` again. That fresh lookup uses
+the normal documented network boundary and is not a zero-network operation.
 
 ### Example: Detecting a custom SaaS service
 
@@ -392,14 +432,22 @@ to disk or sharing data and disappear when the server exits.
 | Claude Code | Use the bundled plugin at [`agents/claude-code/`](../agents/claude-code/); wires up MCP and ships a skill in one install |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | Cursor | `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally |
-| VS Code + Copilot | `.vscode/mcp.json` in your project |
+| VS Code + Copilot | `.vscode/mcp.json` in a workspace, or `mcp.json` in the active user profile |
 | Windsurf | `~/.codeium/windsurf/mcp_config.json` |
 | Kiro (workspace) | `.kiro/settings/mcp.json` |
 | Kiro (global) | `~/.kiro/settings/mcp.json` |
 
 Per-agent install scaffolds (config snippets + guidance templates) live under [`agents/`](../agents/), one folder per client.
 
-One format note: VS Code's `.vscode/mcp.json` maps server names under a top-level `servers` key, not `mcpServers` (see the [VS Code MCP configuration reference](https://code.visualstudio.com/docs/copilot/reference/mcp-configuration)). `recon mcp install --client=vscode` writes the correct key; use `--dry-run` to preview the client-specific shape.
+One format note: VS Code maps server names under a top-level `servers` key, not
+`mcpServers`, and its current stdio schema requires `"type": "stdio"` (see the
+[VS Code MCP configuration reference](https://code.visualstudio.com/docs/agents/reference/mcp-configuration),
+reviewed 2026-07-13). `recon mcp install --client=vscode` writes the workspace
+form by default. VS Code also supports a user-profile file; open it with **MCP:
+Open User Configuration** and pass that path with `--config-path` when desired.
+VS Code does not define `autoApprove` in this file format.
+
+## Troubleshooting
 
 ### PATH gotcha for GUI clients
 
@@ -416,7 +464,7 @@ GUI MCP clients (Claude Desktop, Windsurf, Cursor, VS Code) typically don't inhe
 }
 ```
 
-The shorter `python -m recon_tool.server` form is acceptable only from a trusted working directory. Python imports through cwd before recon can run its server-side guard, which is why the installer uses the `-c` launcher instead.
+The shorter `python -m recon_tool.server` form is acceptable only from a trusted working directory. Python imports through cwd before recon can run its server-side guard, which is why the installer uses the `-c` launcher instead. Approval and trust fields are client-specific; do not copy an `autoApprove` property into a client schema that does not define it.
 
 ### Verify your setup
 
@@ -437,9 +485,16 @@ This is a common failure mode, and it usually is not a broken config. A healthy 
 - **Restart means a full application quit.** Closing a chat window and opening a new one in the same process does not re-spawn MCP servers. Quit the application entirely (Alt+F4 on Windows, Cmd+Q on macOS) and relaunch.
 - **Check which path you installed by.** `recon mcp install --client=claude-code` writes a user-scoped stanza into `~/.claude.json`. The Claude Code plugin instead keeps its config inside the plugin, and the plugin has to be *enabled*, not just present. The two paths are independent; `recon doctor --client` reads the former, not the latter.
 
-### Approval semantics differ by install path
+### Client approval policy
 
-The two ways recon's tools get registered default to different approval behavior, which is worth knowing if you install by both:
-
-- **`recon mcp install` (or a hand-edited config).** The stanza carries `"autoApprove": []`, so every tool call waits for manual approval. This is the safe default and is what the manual-install JSON above shows.
-- **The Claude Code plugin.** Plugin-bundled MCP servers are auto-approved when the plugin is enabled, and the plugin `.mcp.json` schema has no `autoApprove` field. Most recon MCP tools are read-only, but the four session-state tools listed under [Available Tools](#available-tools) are not. If you have installed both ways you will have two registrations with different approval semantics. Picking one path avoids the ambiguity, and stateful tools should stay manual unless you deliberately trust that session-local effect.
+Server registration and tool approval are separate. Claude Code plugin servers
+start automatically when the plugin is enabled, but their tool calls follow the
+same permission system as user-configured servers. The plugin `.mcp.json`,
+Claude Code config, and VS Code `mcp.json` do not define a generic
+`autoApprove` field. Use the client's documented permission rules when you want
+an allowlist, and keep the four session-state tools listed under
+[Available Tools](#available-tools) subject to deliberate review. Installing
+both the plugin and a user-level server creates two registrations; choose one
+path unless that duplication is intentional. See the
+[Claude Code MCP reference](https://code.claude.com/docs/en/mcp), reviewed
+2026-07-13.

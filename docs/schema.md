@@ -82,16 +82,16 @@ it as a success object.
 ## Exit codes
 
 The CLI returns a small, stable set of process exit codes so a script can
-branch on the outcome without parsing output. They are defined in one place,
-`recon_tool/exit_codes.py`, and shared by the CLI and the MCP server entry
-point.
+branch on the outcome without parsing output. They are defined in
+[`src/recon_tool/exit_codes.py`](../src/recon_tool/exit_codes.py) and shared by
+the CLI and the MCP server entry point.
 
 | Code | Name | Meaning |
 |---|---|---|
 | `0` | success | The command completed and produced its output. |
 | `1` | general error | An unexpected or uncaught failure, plus a few handled fallbacks that are neither a clean validation nor a no-data case (an optional MCP dependency missing, an unexpected MCP server fault). This is also the Python default for an uncaught exception, so it covers paths recon does not explicitly classify. |
 | `2` | validation error | Input recon rejected before doing work: a malformed domain, a missing file, mutually exclusive flags, or a refused unsafe invocation. No JSON is emitted on this path. |
-| `3` | no data | The target resolved but no information was available. No JSON is emitted on this path. |
+| `3` | no data | The target resolved but no information was available, or `recon delta` had no cached baseline. No JSON is emitted on this path. |
 | `4` | internal error | A network or pipeline failure recon caught and classified itself, rather than letting it surface as an uncaught `1`. |
 
 Notes for scripters:
@@ -102,6 +102,9 @@ Notes for scripters:
 - For a single-domain lookup, only `error_type="no_data"` maps to `3`.
   Aggregate timeout, `all_sources_failed`, and unknown structured resolver
   failures are caught pipeline failures and map to `4`.
+- A first `recon delta` call with no cached snapshot maps to `3`, performs no
+  live resolution, and emits no delta payload. Run the ordinary lookup once to
+  establish the baseline.
 - On `2`, `3`, and `4` the `--json` modes write no JSON to stdout, so a consumer
   should check the exit code before parsing. On success, `--verbose` diagnostics
   use stderr and do not prefix the JSON payload.
@@ -203,7 +206,7 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 | `lexical_observations` | `list[string]` | no | n/a | stable | Hedged observations from CT subdomain lexical taxonomy. |
 | `bimi_identity` | object | yes | n/a | stable | BIMI VMC identity from a trust-validated source: `{organization, country, state, locality, trademark}`. The current opt-in document probe does not populate this field from an unverified certificate subject. |
 | `evidence_conflicts` | `list[EvidenceConflict]` | no | n/a | stable (v1.7+) | Disagreements among the six tracked merged fields: each entry preserves the candidate values from 2+ sources. An empty array means no disagreement was recorded for those fields, not that every claim-bearing field agreed. |
-| `chain_motifs` | `list[ChainMotif]` | no | n/a | stable (v1.7+) | CNAME chain motifs that fired on related subdomains, e.g. Cloudflare → AWS origin, Akamai → Azure origin. Observable proxy/origin shape only; never an ownership claim. Catalog at `recon_tool/data/motifs.yaml`. |
+| `chain_motifs` | `list[ChainMotif]` | no | n/a | stable (v1.7+) | CNAME chain motifs that fired on related subdomains, for example Cloudflare to AWS origin or Akamai to Azure origin. Observable proxy/origin shape only; never an ownership claim. Catalog at [`src/recon_tool/data/motifs.yaml`](../src/recon_tool/data/motifs.yaml). |
 | `infrastructure_clusters` | `InfrastructureClusterReport` | no | always | stable (v1.8+) | CT co-occurrence community detection report. `algorithm` ∈ {`louvain`, `connected_components`, `skipped`}; `modularity` is 0.0 in fallback / skipped paths. `partition_stability` / `stability_runs` (additive, 2.2.0+) report the Louvain seed-sweep consensus (mean pairwise ARI; null outside the Louvain path). Members sorted; clusters sorted by size desc. |
 | `fingerprint_metadata` | `dict[string, FingerprintMetadata]` | no | always | stable (v1.8+) | Per-slug `{product_family, parent_vendor, bimi_org}` typed catalog or grouping metadata. Slugs without metadata are omitted. Empty object when nothing applies. It drives exact batch hyperedge labels and never implies ownership, administrative control, or a business relationship. |
 
@@ -299,7 +302,7 @@ first-class conflict coverage.
 }
 ```
 
-`chain` is the matched subsequence of hops, not the full original CNAME chain. Each motif fires on observable structure only, never an ownership claim. The motif catalog is shipped in `recon_tool/data/motifs.yaml` and can be extended via `~/.recon/motifs.yaml` (additive only).
+`chain` is the matched subsequence of hops, not the full original CNAME chain. Each motif fires on observable structure only, never an ownership claim. The built-in motif catalog is [`src/recon_tool/data/motifs.yaml`](../src/recon_tool/data/motifs.yaml) in the source tree and can be extended via `~/.recon/motifs.yaml` (additive only).
 
 ### `InfrastructureClusterReport` (v1.8+)
 
@@ -529,18 +532,21 @@ does not claim live in [`correlation.md`](correlation.md).
 
 ---
 
-## Arrays of structured records (verbose modes)
+## Structured records in expanded JSON modes
 
-When invoked with `--verbose` / `--full` / `--explain`, additional structured
-arrays appear. These fields are conditional: they are absent unless the
-relevant flag is passed, so a consumer should treat their presence as
-optional and never infer "always present". They are intentionally omitted
-from the schema's `required` list for the same reason. The conditional
-fields are `evidence` (`--explain`), `explanation_dag` (`--explain` through
-the CLI or `lookup_tenant` MCP tool), and `unclassified_cname_chains`
-(`--include-unclassified`).
+When a structured lookup uses `--json` together with `--verbose`, `--full`, or
+`--explain`, additional structured arrays can appear. These fields are
+conditional, so a consumer should treat their presence as optional and never
+infer "always present". They are intentionally omitted from the schema's
+`required` list for the same reason. The conditional fields are `evidence`
+(`--json --explain`), `explanation_dag` (`--json --explain`, or
+`lookup_tenant(format="json", explain=true)` through MCP), and
+`unclassified_cname_chains` (`--include-unclassified` in structured output).
 
-### `evidence` (present with `--explain`)
+Plain panel `--explain` output renders source status and flat explanations. It
+does not emit the structured `explanation_dag` object.
+
+### `evidence` (present with `--json --explain`)
 
 ```json
 [
@@ -554,11 +560,11 @@ the CLI or `lookup_tenant` MCP tool), and `unclassified_cname_chains`
 ]
 ```
 
-Stability: **stable** within the default/`--json` contract when `--explain`
-is also passed; the fields inside each record (`source_type`, `raw_value`,
-`rule_name`, `slug`) will not change shape.
+Stability: **stable** within the `--json --explain` contract; the fields inside
+each record (`source_type`, `raw_value`, `rule_name`, `slug`) will not change
+shape.
 
-### `explanation_dag` (present with `--explain` through CLI or MCP)
+### `explanation_dag` (present with explained JSON through CLI or MCP)
 
 Stability: **stable, schema version 1**. The exact top-level keys are:
 

@@ -1,7 +1,7 @@
 # Signals
 
 Signals are derived observations: "when these slugs show up together, emit this
-line". They're defined in `recon_tool/data/signals.yaml`.
+line". They're defined in `src/recon_tool/data/signals.yaml`.
 
 Signals are strictly derived observations, never maturity or risk verdicts.
 See the [output semantics in correlation.md](correlation.md#11-orthogonal-output-semantics)
@@ -17,9 +17,12 @@ for why this distinction matters.
 
 ## Design rules
 
-A signal must describe *something observable from DNS*. The tool retires
-signals that drift into narrative judgment. Cut examples from recent
-versions:
+A signal must describe something observable from retained public metadata.
+Built-ins may combine DNS-derived slugs, unauthenticated identity-discovery
+metadata, and certificate-transparency issuance metadata already collected by
+the lookup. They must not turn those indicators into claims about deployment,
+adoption, compliance, governance, maturity, or risk. The tool retires signals
+that drift into narrative judgment. Cut examples from recent versions:
 
 - `Shadow IT Risk`: framed sanctioned enterprise SaaS as "risk".
 - `Complex Migration Window`: inferred a timeline the tool can't observe.
@@ -39,10 +42,10 @@ warning. Example:
 
 ```yaml
 signals:
-  - name: Healthcare Compliance Stack
+  - name: Healthcare-Adjacent Vendor Indicators
     category: Vertical
     confidence: medium
-    description: HIPAA-adjacent tooling detected
+    description: Multiple public security and identity vendor indicators co-observed
     requires:
       any: [okta, crowdstrike, proofpoint, knowbe4, 1password]
     min_matches: 3
@@ -53,15 +56,15 @@ and what evidence backed it.
 
 ### Worked example
 
-Goal: emit a local observation when at least three healthcare-adjacent
-controls appear together.
+Goal: emit a local observation when at least three healthcare-adjacent public
+vendor indicators appear together.
 
 ```yaml
 signals:
-  - name: Healthcare Compliance Stack
+  - name: Healthcare-Adjacent Vendor Indicators
     category: Vertical
     confidence: medium
-    description: Healthcare-adjacent security and identity controls observed
+    description: Multiple public security and identity vendor indicators co-observed
     requires:
       any: [okta, crowdstrike, proofpoint, knowbe4, 1password]
     min_matches: 3
@@ -95,5 +98,5 @@ signals:
 
 ## Full signal list
 
-See `recon_tool/data/signals.yaml` directly. It's the source of truth
+See `src/recon_tool/data/signals.yaml` directly. It's the source of truth
 and shorter than any derived table.

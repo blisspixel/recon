@@ -20,7 +20,7 @@ deeper rationale for several lives in [correlation.md](../correlation.md),
 
 | ADR | Decision |
 |---|---|
-| [0001](0001-passive-zero-credential.md) | Strictly passive, zero-credential collection |
+| [0001](0001-passive-zero-credential.md) | Strictly passive, zero-credential collection, superseded by ADR-0011 |
 | [0002](0002-mnar-adversarial-absence.md) | Ignore non-fired hideable bindings (`LR=1` policy) |
 | [0003](0003-v2-schema-lock.md) | Lock the v2.0 JSON/MCP output contract |
 | [0004](0004-small-handspecified-bayes-no-numpy.md) | A small manually encoded Bayesian network; no runtime ML |
@@ -30,3 +30,4 @@ deeper rationale for several lives in [correlation.md](../correlation.md),
 | [0008](0008-interface-package-locality.md) | Move interface layers to local packages |
 | [0009](0009-mcp-2026-readiness.md) | Prepare for MCP 2026-07-28 without premature protocol forking |
 | [0010](0010-evidence-gated-native-acceleration.md) | Keep the default runtime pure Python and evidence-gate any optional native accelerator |
+| [0011](0011-public-metadata-collection-boundary.md) | Define the public-metadata collection boundary and target-visible interactions |
