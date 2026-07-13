@@ -25,6 +25,26 @@ class TestServerInstructions:
         assert "find_hardening_gaps" in instructions
         assert "simulate_hardening" in instructions
 
+    def test_defensive_review_requests_json_before_explanations(self) -> None:
+        """The composition example must select the format that carries provenance."""
+        from recon_tool.server import mcp
+
+        instructions = mcp.instructions or ""
+        assert instructions.count('lookup_tenant(domain, format="json", explain=True)') >= 2
+        assert "lookup_tenant(domain, explain=True)" not in instructions
+        assert "Prefer `explain=True` on `lookup_tenant`" not in instructions
+        assert "returns flat explanations for its observations, not an `explanation_dag`" in instructions
+
+    def test_introspection_starts_with_a_bounded_fingerprint_page(self) -> None:
+        """The injected routing guidance must not recommend the full catalog first."""
+        from recon_tool.server import mcp
+
+        instructions = mcp.instructions or ""
+        assert "get_fingerprints(limit=20, offset=0)" in instructions
+        assert "get_fingerprints()" not in instructions
+        assert "Before reporting no catalog match" in instructions
+        assert "until one returns fewer than 20 entries" in instructions
+
     def test_instructions_state_invariants(self) -> None:
         """Agents must know the tool is passive and hedged."""
         from recon_tool.server import mcp

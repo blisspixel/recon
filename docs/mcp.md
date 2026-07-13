@@ -56,7 +56,7 @@ anything unresolved."
 
 Example multi-step prompt for deeper analysis:
 
-> "Look up contoso.com with explain=true. Then run assess_exposure and
+> "Look up contoso.com with format=json and explain=true. Then run assess_exposure and
 > find_hardening_gaps. Finally, simulate_hardening with DMARC reject and
 > MTA-STS enforce applied, and explain the model-bound public-evidence index
 > change without treating it as an overall security verdict."
@@ -90,7 +90,8 @@ If you genuinely need to drive the JSON-RPC loop by hand (e.g. piping crafted re
 
 ## Available Tools
 
-Start with `lookup_tenant` for a single-domain summary and provenance,
+Start with `lookup_tenant` for a single-domain summary. Use `format="json"`
+with `explain=true` when provenance fields are required. Use
 `analyze_posture` for categorized public observations, and
 `compare_postures` or `cluster_verification_tokens` only for an
 operator-supplied domain set. Graph export, posterior inspection, hypothesis
@@ -99,7 +100,7 @@ workflows; a first-time user does not need them for a normal lookup.
 
 | Tool | Network calls? | What it does | Parameters |
 |------|----------------|-------------|------------|
-| `lookup_tenant` | Cache first; may resolve | Full domain intelligence: tenant details, email score, SaaS fingerprints, signals. When `explain=true`, the response includes a JSON-serialisable `explanation_dag`: evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. `provenance_complete` and `disconnected_terminals` report whether every terminal is evidence-reachable. The flat explanations list remains alongside the graph. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
+| `lookup_tenant` | Cache first; may resolve | Full domain intelligence: tenant details, email score, SaaS fingerprints, signals. When `format="json"` and `explain=true`, the response includes a JSON-serialisable `explanation_dag`: evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. `provenance_complete` and `disconnected_terminals` report whether every terminal is evidence-reachable. The flat explanations list remains alongside the graph. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
 | `analyze_posture` | Cache first; may resolve | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument: one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
 | `cluster_verification_tokens` | Cache first; may resolve each domain | Report exact TXT site-verification token reuse. Shared administration, copied configuration, managed service, and stale residue remain compatible explanations; reuse does not establish ownership or current use. Optional peer caps report omitted counts for compact agent output. | `domains`: array of domain strings, `peer_limit_per_domain` (0 means raw) |
 | `assess_exposure` | Cache first; may resolve | Model-bound public-evidence index (0-100) with email, identity, and infrastructure sections. It summarizes only collected public observables and is not an overall security score (see [correlation.md](correlation.md) for the inference model). | `domain` |
@@ -108,7 +109,7 @@ workflows; a first-time user does not need them for a normal lookup.
 | `chain_lookup` | Yes | Recursive domain discovery via CNAME/CT breadcrumbs. Optional result caps report omitted counts for compact agent output while preserving raw JSON as the default. | `domain`, `depth` (1-3), `result_limit` (0 means raw) |
 | `discover_fingerprint_candidates` | Yes | Mine a domain for new-fingerprint candidates. Resolves with unclassified-CNAME-chain capture, applies intra-org and already-covered filters, returns a ranked candidate list. Pair with the `/recon-fingerprint-triage` skill to turn candidates into YAML stanzas. | `domain`, `skip_ct`: bool, `keep_intra_org`: bool, `min_count`: int |
 | `reload_data` | No | Reload fingerprints, signals, and posture rules from disk | none |
-| `get_fingerprints` | No | List all loaded fingerprints with slugs, categories, detection types | `category` (optional filter) |
+| `get_fingerprints` | No | List loaded fingerprints with slugs, categories, and detection types. Use `limit` and `offset` for bounded pages. | `category` (str, optional filter), `limit` (int, optional page size), `offset` (int, default 0; used with `limit`) |
 | `get_signals` | No | List all loaded signals with rules, layers, conditions | `category`, `layer` (optional filters) |
 | `explain_signal` | No unless `domain` is provided | Query a signal's trigger conditions and current state for a domain | `signal_name`, `domain` (optional) |
 | `test_hypothesis` | Cache first; may resolve | Test a theory against signals and evidence; returns likelihood + evidence | `domain`, `hypothesis` |
@@ -124,9 +125,11 @@ workflows; a first-time user does not need them for a normal lookup.
 
 The lookup and analysis tools are read-only. The ephemeral fingerprint tools
 mutate only in-memory session state for the current server process; they do not
-write to disk and do not trigger new network calls on their own. Tools marked
-with `explain` support structured provenance output. Catalog tools
-(`get_fingerprints`, `get_signals`, and MCP resources) do not call the network.
+write to disk and do not trigger new network calls on their own. For
+`lookup_tenant`, structured provenance requires `format="json"` with
+`explain=true`; `analyze_posture(explain=true)` returns flat observation
+explanations rather than an `explanation_dag`. Catalog tools (`get_fingerprints`,
+`get_signals`, and MCP resources) do not call the network.
 Domain-analysis tools are cache-first and may resolve the domain when no fresh
 cache entry exists. The server includes a bounded TTL cache (120s) and
 per-domain rate limiting.
@@ -280,11 +283,15 @@ context.
 
 **Check whether recon has a published fingerprint for a service.**
 
-1. Read `recon://fingerprints`.
-2. Filter `fingerprints[]` by `slug`, `name`, `category`, or
-   `detection_types`.
-3. If no entry matches, say that no published fingerprint was found. Do not
-   infer that the service is absent from a target domain.
+1. For quick browsing, start with `get_fingerprints(limit=20, offset=0)`. Add a
+   `category` filter when the relevant category is known.
+2. A first page cannot establish that the catalog has no match. For an
+   exhaustive check, either read the full `recon://fingerprints` resource or
+   continue with offsets 20, 40, and so on until a page has fewer than 20
+   entries. Omit `category` unless the requested absence is category-scoped.
+3. Filter entries by `slug`, `name`, `category`, or `detection_types`.
+4. Only after the exhaustive check may you say that no published fingerprint
+   was found. Do not infer that the service is absent from a target domain.
 
 **Explain a derived signal before or after a lookup.**
 
@@ -435,4 +442,4 @@ This is a common failure mode, and it usually is not a broken config. A healthy 
 The two ways recon's tools get registered default to different approval behavior, which is worth knowing if you install by both:
 
 - **`recon mcp install` (or a hand-edited config).** The stanza carries `"autoApprove": []`, so every tool call waits for manual approval. This is the safe default and is what the manual-install JSON above shows.
-- **The Claude Code plugin.** Plugin-bundled MCP servers are auto-approved when the plugin is enabled, and the plugin `.mcp.json` schema has no `autoApprove` field. Most recon MCP tools are read-only, but `inject_ephemeral_fingerprint`, `clear_ephemeral_fingerprints`, and `reload_data` are stateful for the running session. If you have installed both ways you will have two registrations with different approval semantics. Picking one path avoids the ambiguity, and stateful tools should stay manual unless you deliberately trust that session-local effect.
+- **The Claude Code plugin.** Plugin-bundled MCP servers are auto-approved when the plugin is enabled, and the plugin `.mcp.json` schema has no `autoApprove` field. Most recon MCP tools are read-only, but the four session-state tools listed under [Available Tools](#available-tools) are not. If you have installed both ways you will have two registrations with different approval semantics. Picking one path avoids the ambiguity, and stateful tools should stay manual unless you deliberately trust that session-local effect.

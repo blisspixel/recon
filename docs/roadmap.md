@@ -6,7 +6,7 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.5.6 is current. The stable baseline is complete: recon ships a
+> **Status:** v2.5.7 is current. The stable baseline is complete: recon ships a
 > local CLI, importable library, versioned JSON contract, local stdio MCP
 > server, bounded passive collectors, generated-artifact guards, and a verified
 > release path. The product is not "finished." The active work is to make every
@@ -635,10 +635,22 @@ two long option names at 56 columns, down from five in the baseline. Treat a
 plain linear narrow-help fallback as bounded accessibility debt, not as a
 reason to replace the current parser or hide options.
 
-MCP discovery cost still requires measurement before introducing a core and
-advanced toolset. If that measurement shows material context waste, design a
-backward-compatible discovery profile while preserving full access and stable
-tool names. Generated discovery artifacts remain non-contractual under
+The dated MCP measurement is also complete. A real local stdio session on the
+production SDK yields 81,562 compact serialized result-body bytes across
+initialization, tools, resources, resource templates, and prompts. Counts
+exclude JSON-RPC envelopes and transport framing. The 22-tool listing
+contributes 70,538 bytes, including 41,997 bytes of distinct output schemas. A
+hypothetical seven-tool primary listing is 69.2 percent smaller, above the
+predeclared 30 percent threshold, but that result-body reduction is not yet
+evidence of model-context reduction in a representative client. The base MCP
+protocol supports list pagination but no interoperable client-selected tool
+filter.
+
+Keep the complete stable tool surface as the default. Do not introduce a custom
+core profile until a representative client proves material context benefit and
+the design preserves direct specialist access. Use existing bounded catalog
+parameters before reading the full catalog resource. Generated discovery
+artifacts remain non-contractual under
 [ADR-0007](adr/0007-surface-inventory-discovery-context.md) until a concrete
 external consumer needs a stable subset.
 

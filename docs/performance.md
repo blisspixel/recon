@@ -1,7 +1,7 @@
 # Performance
 
 Status: measured local-compute characterization, not a service-level objective
-Review date: 2026-07-12
+Review date: 2026-07-13
 
 recon is a passive, concurrent DNS and HTTP-endpoint client. A default lookup
 is usually dominated by CT provider time and the slowest identity-discovery
@@ -188,6 +188,86 @@ reviewed 2026-07-12, which documents deterministic timestamps and
 `SOURCE_DATE_EPOCH`. The artifact contains data, not executable serialization;
 bounded JSON decoding and the canonical fingerprint validator remain in the
 runtime path.
+
+## July 13, 2026 MCP discovery checkpoint
+
+This network-free checkpoint measures the recon v2.5.7 local stdio protocol
+surface on Python 3.14.4 and production MCP SDK 1.28.1 using protocol
+2025-11-25. A real `ClientSession` initialized the packaged server and requested
+tools, resources, resource templates, and prompts. Result models were serialized
+as compact UTF-8 JSON with protocol aliases, null fields omitted, and no pretty
+printing. Counts exclude JSON-RPC envelopes and transport framing, so they
+characterize result bodies rather than bytes placed on the wire.
+
+| Discovery result | Entries | Compact result-body bytes |
+|---|---:|---:|
+| `initialize` | 1 | 8,754 |
+| `tools/list` | 22 | 70,538 |
+| `resources/list` | 5 | 1,959 |
+| `resources/templates/list` | 0 | 24 |
+| `prompts/list` | 1 | 287 |
+| Total | 29 | 81,562 |
+
+Summing the compact JSON encodings of each output-schema object yields 41,997
+bytes; input-schema objects yield 4,696 and annotation objects yield 1,947.
+Raw UTF-8 description text contributes 19,351 bytes before JSON quoting and
+escaping. These component measurements exclude the surrounding tool-record
+keys and array structure, so they are not intended to sum to the 70,538-byte
+listing. Output schemas alone dominate the `tools/list` result body. They are
+not decorative: the official
+[MCP 2025-11-25 tools specification](https://modelcontextprotocol.io/specification/2025-11-25/server/tools)
+defines them as the validation contract for structured results and recommends
+including serialized text alongside structured content for backward
+compatibility. The same specification supports paginated tool listings, but a
+client that accumulates every page still receives the complete definitions.
+Initialization can also carry server instructions under the official
+[MCP lifecycle](https://modelcontextprotocol.io/specification/2025-11-25/basic/lifecycle).
+
+Optional resource contents are not automatic discovery context.
+
+| Resource | Raw UTF-8 text bytes | Compact `resources/read` result-body bytes |
+|---|---:|---:|
+| `recon://fingerprints` | 274,639 | 313,863 |
+| `recon://signals` | 23,810 | 26,452 |
+| `recon://profiles` | 5,141 | 5,640 |
+| `recon://schema` | 60,292 | 64,987 |
+| `recon://surface-inventory` | 76,197 | 84,755 |
+
+A full `get_fingerprints` result was 402,285 result-body bytes because the
+stable protocol path carries both text and structured content. Existing
+`get_fingerprints(category, limit, offset)` pagination reduced a 20-item result
+to 9,676 bytes, 97.6 percent below the full result. Agents should use bounded
+pages for browsing, while an exhaustive no-match check must consume every page
+or read the complete resource.
+
+A hypothetical primary listing containing `lookup_tenant`, `analyze_posture`,
+`assess_exposure`, `find_hardening_gaps`, `compare_postures`,
+`cluster_verification_tokens`, and `chain_lookup` measured 21,759 result-body
+bytes, 69.2 percent below the complete tool listing and above the engineering
+plan's 30 percent threshold. This does not justify a runtime profile yet.
+Model-context treatment is client-dependent, the base protocol has no
+interoperable client-selected tool filter, and all 22 names are stable. The
+full registry remains the default until at least one representative client
+proves that an opt-in profile produces an end-to-end context benefit while
+retaining direct specialist access.
+
+Representative results used the fictional `SAMPLE_INFO` and `SAMPLE_RESULTS`
+objects in `tests/test_exposure_cli.py`, patched into the ordinary resolver and
+dispatched through the real in-process `mcp.call_tool` path.
+
+| Tool result | Compact result-body bytes |
+|---|---:|
+| Text lookup | 783 |
+| JSON lookup | 4,835 |
+| Explained JSON lookup | 10,475 |
+| Posture analysis | 463 |
+| Explained posture analysis | 1,504 |
+| Exposure assessment | 5,573 |
+| Hardening gaps | 2,511 |
+| Hardening simulation | 2,433 |
+
+These are exact payload characterizations, not token counts or latency SLOs.
+Repeated discovery calls were byte-identical in the measured process.
 
 ## Python version policy
 
