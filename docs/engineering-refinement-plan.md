@@ -17,8 +17,10 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- v2.5.4 is current on GitHub and PyPI.
-- Local and remote release readiness pass on current main.
+- Release metadata is synchronized on v2.5.5. The remote release-readiness
+  check is the authority for whether GitHub, PyPI, and CI are aligned.
+- Local release readiness must pass before tagging; remote release readiness
+  must pass for the same commit after publication.
 - Meaningful branch-aware coverage is above 90.2 percent, which is now the
   blocking baseline ratchet and remains above the 80 percent user bar.
 - The ignored local code graph must be refreshed after each tracked milestone.
