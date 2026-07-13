@@ -127,13 +127,13 @@ If the user later asks for a structured summary of the JSON, follow the output-v
 
 ### Explain mode - `--explain`
 
-Use when the user asks "why", "how do you know", or "show your reasoning". The CLI emits the panel plus a provenance DAG. Evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. The MCP `lookup_tenant(domain, explain=true)` returns the graph as a structured `explanation_dag` field with explicit completeness diagnostics.
+Use when the user asks "why", "how do you know", or "show your reasoning". The CLI emits the panel plus a provenance DAG. Evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. The MCP `lookup_tenant(domain, format="json", explain=true)` returns the graph as a structured `explanation_dag` field with explicit completeness diagnostics.
 
 Surface the *summary* of the chain - which evidence drove which insight - rather than dumping the full DAG. Offer the full DAG on follow-up.
 
 ## Preferring MCP over CLI
 
-When the `recon` MCP server is connected, use it instead of shelling out - it returns parsed objects directly. Common starting points:
+When the `recon` MCP server is connected, use it instead of shelling out - typed arguments avoid command interpolation. `lookup_tenant` and the narrative tools return text, while many analysis and catalog tools expose structured results. Common starting points:
 
 - `lookup_tenant(domain, format="json", explain=true)` - full domain intelligence with provenance.
 - `analyze_posture(domain, profile=...)` - posture observations, optionally biased by a profile lens.
@@ -144,12 +144,12 @@ When the `recon` MCP server is connected, use it instead of shelling out - it re
 - `cluster_verification_tokens(domains=[...])` - report exact administrative TXT token reuse while leaving shared administration, copied configuration, managed service, and stale residue as compatible explanations.
 - `chain_lookup(domain, depth)` - recursive related-domain discovery via CNAME and CT breadcrumbs.
 
-Browse `recon://fingerprints`, `recon://signals`, and `recon://profiles` resources before guessing what recon can detect - they're free (no network) and return the live catalog.
+For quick catalog browsing, start with `get_fingerprints(limit=20, offset=0)`. For an exhaustive no-match check, either read the full `recon://fingerprints` resource or continue 20-item pages until a page has fewer than 20 entries; a first page cannot establish absence. Browse `recon://signals` and `recon://profiles` before guessing what recon can detect. These local calls are free, make no network requests, and return the live catalogs.
 
 CLI fallbacks when the MCP server is not connected:
 
 - `recon <domain> --json` - structured output.
-- `recon <domain> --explain` - full reasoning and provenance DAG.
+- `recon <domain> --explain` - retained evidence paths and a reconstructed provenance DAG.
 - `recon batch <file> --json` - list of domains with cross-domain token clustering.
 - `recon delta <domain>` - diff against the last cached snapshot. Relay verbatim like the default panel.
 
@@ -165,7 +165,7 @@ What stays MCP-only, because it needs cached session state or an iterative loop:
 
 Single-domain assessment (the common case):
 
-1. `lookup_tenant` with `explain=true` to get identity, services, and provenance.
+1. `lookup_tenant` with `format="json", explain=true` to get identity, services, and provenance.
 2. `assess_exposure` for the model-bound public-evidence index.
 3. `find_hardening_gaps` only if the user wants to discuss specific gaps.
 4. `simulate_hardening` only if the user explicitly asks "what if we did X."
@@ -180,7 +180,7 @@ Family-of-companies / portfolio rollup:
 The operator supplies a group of related apexes - parent + subsidiaries, an M&A target's brand portfolio, a holding-company structure - and wants a unified report. recon does **not** infer ownership. The operator owns the relationship; recon describes observable structure across the set.
 
 1. **Confirm the input list explicitly.** Ask for the apexes one per line; do not derive them from a company name or external research. The operator's list is authoritative.
-2. **Fan out.** For ~5 or fewer apexes, call `lookup_tenant(domain, explain=true)` per apex. For larger sets, `recon batch <file> --json --include-ecosystem` returns the per-domain lookups plus the v1.8 ecosystem hypergraph and cross-domain token clustering in one payload.
+2. **Fan out.** For ~5 or fewer apexes, call `lookup_tenant(domain, format="json", explain=true)` per apex. For larger sets, `recon batch <file> --json --include-ecosystem` returns the per-domain lookups plus the v1.8 ecosystem hypergraph and cross-domain token clustering in one payload.
 3. **Report administrative token overlap without validating the relationship.** `cluster_verification_tokens(domains=[...])` surfaces exact shared TXT token strings. Reuse is compatible with shared administration, copied configuration, managed service, or stale residue. Absence is non-informative because publication is optional; do not call the domains administratively separate.
 4. **Synthesize the rollup along these axes:**
    - Identity stack consistency - same M365 tenant across siblings, or distinct tenants per brand?

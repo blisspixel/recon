@@ -12,6 +12,33 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.5.7] - 2026-07-13
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes, and no MCP tool names,
+parameters, schemas, annotations, or defaults changed. MCP server routing
+instructions were corrected and made more context-efficient.
+
+### Changed
+
+- Made every agent-facing workflow request `format="json"` together with
+  `explain=true` when it needs the lookup provenance DAG. Posture guidance now
+  distinguishes flat observation explanations from the lookup DAG.
+- Prefer bounded fingerprint pages for browsing while requiring an exhaustive
+  page walk or full resource read before reporting that the catalog has no
+  match. The MCP guide now documents all pagination parameters and all four
+  session-state tools.
+- Recorded a reproducible MCP discovery and result-body characterization. The
+  complete stable tool surface remains the default because serialized byte
+  reduction alone does not prove an end-to-end client context benefit.
+
+### Fixed
+
+- Made documentation drift tests reject missing `readOnlyHint` annotations,
+  synchronize live parameter names and stateful tools, and protect the exact
+  explained-lookup and catalog-completion contracts.
+
 ## [2.5.6] - 2026-07-13
 
 ### Tool Surface Changes

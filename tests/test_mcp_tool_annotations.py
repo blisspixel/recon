@@ -20,14 +20,16 @@ _MCP_DOC = Path(__file__).resolve().parents[1] / "docs" / "mcp.md"
 
 
 def _tool_hints() -> dict[str, bool]:
-    """Map every registered tool name to its readOnlyHint (default True)."""
+    """Map every registered tool name to its explicit readOnlyHint."""
 
     async def _list() -> dict[str, bool]:
         hints: dict[str, bool] = {}
         for tool in await mcp.list_tools():
             ann = tool.annotations
-            read_only = True if ann is None or ann.readOnlyHint is None else ann.readOnlyHint
-            hints[tool.name] = read_only
+            if ann is None or ann.readOnlyHint is None:
+                msg = f"{tool.name} must declare readOnlyHint explicitly"
+                raise AssertionError(msg)
+            hints[tool.name] = ann.readOnlyHint
         return hints
 
     return asyncio.run(_list())
@@ -92,8 +94,11 @@ def test_catalog_resource_examples_cover_resource_consumption_rules() -> None:
         "recon://surface-inventory",
     ):
         assert section.count(resource) >= 2
-    assert "If no entry matches, say that no published fingerprint was found." in compact
     assert "Do not infer that the service is absent from a target domain." in compact
+    assert "For quick browsing, start with `get_fingerprints(limit=20, offset=0)`" in compact
+    assert "A first page cannot establish that the catalog has no match." in compact
+    assert "until a page has fewer than 20 entries" in compact
+    assert "Only after the exhaustive check may you say that no published fingerprint was found." in compact
     assert "Pass `profile` to `analyze_posture` only when the target type clearly" in compact
     assert "Use `$defs` for batch, summary, and delta shapes." in compact
     assert "Read `recon://surface-inventory` when a client needs a local map" in compact

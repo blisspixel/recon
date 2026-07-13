@@ -106,7 +106,7 @@ labels and graduate to stable in v2.0 per the disposition table in
 | `assess_exposure` | `domain` |
 | `find_hardening_gaps` | `domain` |
 | `compare_postures` | `domain_a`, `domain_b` |
-| `get_fingerprints` | `category` (optional) |
+| `get_fingerprints` | `category` (str, optional), `limit` (int, optional), `offset` (int, default 0; used with `limit`) |
 | `get_signals` | `category` (optional), `layer` (1-4, optional) |
 | `explain_signal` | `signal_name`, `domain` (optional) |
 | `test_hypothesis` | `domain`, `hypothesis` |
@@ -121,11 +121,19 @@ labels and graduate to stable in v2.0 per the disposition table in
 | `get_posteriors` | `domain` |
 | `explain_dag` | `domain`, `output_format` (str, default "text") |
 
-All MCP tools are stability-covered, but not all are read-only. The
-lookup/analysis tools are read-only; `reload_data`,
-`inject_ephemeral_fingerprint`, and `clear_ephemeral_fingerprints`
-modify only local session state for the running process. The FastMCP
-Server Instructions document those boundaries for agents each session.
+All MCP tools are stability-covered, but not all are read-only.
+
+**Stateful tools:**
+
+- `reload_data` re-reads local catalogs and clears the lookup cache.
+- `inject_ephemeral_fingerprint` adds a session-only fingerprint.
+- `clear_ephemeral_fingerprints` removes session-only fingerprints.
+- `reevaluate_domain` replaces one cached merged result after applying the
+  current session catalog. It does not make a network request.
+
+All other tools are read-only. Read-only domain tools can still make passive
+outbound requests on a cache miss. The FastMCP Server Instructions document
+those boundaries for agents each session.
 
 ### JSON output fields
 

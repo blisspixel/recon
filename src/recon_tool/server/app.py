@@ -49,7 +49,7 @@ probes.
   the full TenantInfo: public display label, provider indicators, tenant ID,
   namespace auth response, public email-control count, service indicators,
   related-domain observations, and claim-safe insights. Use `format="json"`
-  for structured output and `explain=True` for the provenance DAG.
+  with `explain=True` for the provenance DAG.
 - `analyze_posture(domain)` — neutral configuration observations. Accepts a
   `profile` argument (fintech, healthcare, saas-b2b, high-value-target,
   public-sector, higher-ed) to apply a posture lens.
@@ -74,15 +74,17 @@ probes.
 ## Composition patterns
 
 Typical agentic flow for a defensive review:
-1. `lookup_tenant(domain, explain=True)` — establish the baseline.
+1. `lookup_tenant(domain, format="json", explain=True)` - establish the baseline.
 2. `analyze_posture(domain)` with the relevant `profile` — posture lens.
 3. `find_hardening_gaps(domain)` — categorized gaps with severity.
 4. `simulate_hardening(domain, fixes=[...])` - report the model-bound index
    delta and remaining public-configuration observations.
 
 For introspection / hypothesis work:
-- `get_fingerprints()` / `get_signals()` — inspect what the tool knows how to
-  detect.
+- `get_fingerprints(limit=20, offset=0)` / `get_signals()` - inspect what the
+  tool knows how to detect. Page fingerprints only as far as the task needs.
+  Before reporting no catalog match, read the full fingerprint resource or
+  continue 20-item pages until one returns fewer than 20 entries.
 - `explain_signal(signal_name, domain)` — understand why a signal did or did
   not fire for this domain.
 - `inject_ephemeral_fingerprint(...)` + `reevaluate_domain(domain)` — test new
@@ -169,11 +171,12 @@ absence-is-not-disproof rule above.
 
 ## Explaining results
 
-Prefer `explain=True` on `lookup_tenant` and `analyze_posture` when the user
-asks "why" or "how do you know". In the returned `explanation_dag`, evidence
+Use `lookup_tenant(domain, format="json", explain=True)` when the user asks
+"why" or "how do you know". In that JSON object's `explanation_dag`, evidence
 occurrences link to matching slug and rule nodes, which link to explanation
 terminals. Read `provenance_complete` and `disconnected_terminals` before
-treating the graph as a complete trace.
+treating the graph as a complete trace. `analyze_posture(domain, explain=True)`
+returns flat explanations for its observations, not an `explanation_dag`.
 """
 
 

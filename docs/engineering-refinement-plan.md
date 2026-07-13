@@ -17,7 +17,7 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- Release metadata is synchronized on v2.5.6. The remote release-readiness
+- Release metadata is synchronized on v2.5.7. The remote release-readiness
   check is the authority for whether GitHub, PyPI, and CI are aligned.
 - Local release readiness must pass before tagging; remote release readiness
   must pass for the same commit after publication.
@@ -410,7 +410,7 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ## Track 7: Operator and Agent Surface Simplification
 
-Status: CLI help grouped; MCP discovery measurement pending
+Status: CLI help grouped; MCP discovery measured, profile deferred
 Dependencies: Track 3 context-cost baseline
 Risk: compatibility and discoverability risk
 
@@ -423,22 +423,32 @@ into the first half. At 80 columns every canonical option remains untruncated.
 At 56 columns, two long names can still truncate, so complete narrow-terminal
 support remains a separate plain-linear-help design problem.
 
-Measure MCP discovery cost before introducing a backward-compatible core
-versus advanced discovery profile. Do not rename or remove stable tools as a
-documentation cleanup, and do not add a CLI profile because grouping already
-solved the measured CLI hierarchy problem without hiding controls.
+The 2026-07-13 production-SDK stdio baseline measures 81,562 compact serialized
+result-body bytes across initialization and the four discovery listings. The
+22-tool list accounts for 70,538 bytes; output schemas account for 41,997 of
+those bytes. Counts exclude JSON-RPC envelopes and transport framing.
+A hypothetical seven-tool primary subset reduces the tool listing by 69.2
+percent, but actual model-context treatment is client-dependent and the base
+protocol has no client-selectable tool filter. Keep the complete stable surface
+as the default and defer a profile until at least one representative client
+proves an end-to-end context benefit without losing specialist access.
+
+Do not rename or remove stable tools as a documentation cleanup, and do not
+add a CLI profile because grouping already solved the measured CLI hierarchy
+problem without hiding controls. Prefer bounded existing catalog calls before
+reading whole catalog resources.
 
 ### Acceptance
 
 - Primary workflows fit on one reader screen and do not require graph,
   posterior, or catalog internals.
 - The dated CLI baseline records width, line count, token visibility, and the
-  remaining narrow-terminal truncation. MCP discovery bytes and representative
-  workflow result bytes remain pending.
+  remaining narrow-terminal truncation. The MCP baseline records initialization,
+  listing composition, optional resource size, and representative result bytes.
 - No discovery profile is implemented unless its threshold is predeclared. If
   implemented, the core profile reduces discovery bytes by at least 30 percent
-  on the recorded catalog while the full profile and stable tool names remain
-  unchanged.
+  on the recorded catalog, retains the complete default surface and stable tool
+  names, and demonstrates a material context reduction in a representative client.
 
 ## Track 8: Interface Hotspot Decomposition
 

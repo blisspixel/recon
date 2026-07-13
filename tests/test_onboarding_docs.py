@@ -43,3 +43,30 @@ def test_getting_started_uses_the_same_first_run_trust_sequence() -> None:
     assert "Google CSE" in first_lookup
     assert "BIMI" in first_lookup
     assert "--direct-probes" in first_lookup
+
+
+def test_agent_guides_use_explained_json_and_bounded_catalog_pages() -> None:
+    paths = (
+        ROOT / "AGENTS.md",
+        ROOT / "agents" / "claude-code" / "skills" / "recon" / "SKILL.md",
+    )
+
+    for path in paths:
+        guidance = path.read_text(encoding="utf-8")
+        assert 'lookup_tenant(domain, format="json", explain=true)' in guidance
+        assert "lookup_tenant(domain, explain=true)" not in guidance
+        assert "`lookup_tenant` with `explain=true`" not in guidance
+        assert "get_fingerprints(limit=20, offset=0)" in guidance
+        assert "a first page cannot establish absence" in guidance
+        assert "returns parsed objects directly" not in guidance
+        assert "the other data tools expose structured results" not in guidance
+        assert "many analysis and catalog tools expose structured results" in guidance
+
+
+def test_mcp_onboarding_requests_json_for_explanation_dag() -> None:
+    guide = (ROOT / "docs" / "mcp.md").read_text(encoding="utf-8")
+
+    assert "with format=json and explain=true" in guide
+    assert 'When `format="json"` and `explain=true`' in guide
+    assert 'requires `format="json"` with\n`explain=true`' in guide
+    assert '"Look up contoso.com with explain=true.' not in guide
