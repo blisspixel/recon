@@ -8,7 +8,8 @@ into:
   * a markdown triage report (verdict per candidate, kept local because
     the report includes the original sample subdomains, which may name
     real companies);
-  * a proposed YAML diff for ``recon_tool/data/fingerprints/surface.yaml``
+  * a proposed YAML diff for
+    ``src/recon_tool/data/fingerprints/surface.yaml``
     containing only generic patterns + slug + display name (safe to
     commit per the no-real-company-data invariant).
 

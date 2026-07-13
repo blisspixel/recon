@@ -33,7 +33,7 @@ The file is keyed by *topic* rather than vendor-specific ID so the record
 stays portable across audit tools, and it includes file:line receipts
 plus closure commit SHAs for verification. If a scanner reports a
 finding listed there as open, the closure status documented in that file
-is authoritative  -  the scanner is likely lagging the repo.
+is authoritative; the scanner is likely lagging the repository.
 
 ## Scope
 
@@ -47,10 +47,14 @@ data files. It does not cover:
 
 ## Security Design Overview
 
-recon is a passive, defensive tool. It performs zero active scanning, requires
-zero credentials, and makes zero authenticated requests. The main security
-boundaries are local execution, untrusted remote data, and MCP client behavior.
-For the deeper engineering threat model, see `docs/security.md`.
+recon is a defensive tool with a passive collection scope. It performs zero
+active scanning, requires zero credentials, and makes zero authenticated
+requests. DNS traffic may be visible to authoritative infrastructure; MTA-STS is
+the one default target-owned HTTP request, and Google CSE or BIMI certificate
+probes require explicit opt-in. The main security boundaries are local
+execution, untrusted remote data, and MCP client behavior. For the deeper
+engineering threat model, see `docs/security.md` and
+`docs/adr/0011-public-metadata-collection-boundary.md`.
 
 ## MCP Threat Model (core feature)
 

@@ -3,9 +3,12 @@
 This is the engineering-level threat model. For **how to report a
 vulnerability**, see [`SECURITY.md`](../SECURITY.md) in the repository root.
 
-recon is a passive, read-only CLI tool plus local MCP server. Its threat
-surface is small by design - no active scanning, no credential handling,
-no inbound network listeners, no user-code execution.
+recon is a target-read-only CLI tool plus local MCP server with a passive
+collection scope. It performs no port scanning, credential handling, inbound
+listening, or user-code execution. It can write its own local cache and MCP
+client configuration. DNS resolver traffic can be externally visible, MTA-STS
+is the only default target-owned HTTP request, and Google CSE and BIMI
+certificate requests are explicit opt-in direct probes.
 
 ---
 
@@ -15,17 +18,18 @@ no inbound network listeners, no user-code execution.
 |---|---|
 | The user's configured DNS resolver | recon inherits the OS resolver. A compromised resolver is a compromise of the whole machine. |
 | Public OIDC / UserRealm / Google identity / CT endpoints | These are Microsoft, Google, and Sectigo-operated services. recon validates response shapes but cannot out-verify the underlying TLS-authenticated origin. |
-| `recon_tool/data/*.yaml` (built-in fingerprints, signals, profiles) | Ships with the package, loaded via `yaml.safe_load`. Same trust level as Python source. |
+| `src/recon_tool/data/fingerprints.generated.json` (built-in fingerprints) | Installed wheels load the checked-in generated JSON. Canonical split YAML is contributor source and ships in the source distribution, not as a second wheel runtime catalog. Both have the same trust level as Python source. |
+| `src/recon_tool/data/*.yaml` and `src/recon_tool/data/profiles/*.yaml` (signals, posture rules, profiles) | These ship with the package and are loaded via `yaml.safe_load`. Same trust level as Python source. |
 | Python stdlib + pinned dependencies in `uv.lock` | Standard supply-chain trust. CI and release jobs audit locked runtime dependencies on every build. |
 
 | What recon does NOT trust | Mitigation location |
 |---|---|
-| User-supplied domain strings | `recon_tool/validator.py` - regex + length cap + scheme stripping |
-| Raw DNS responses (TXT values, MX hostnames, CNAME targets) | Length caps + structured parsing in `recon_tool/sources/dns.py` |
+| User-supplied domain strings | `src/recon_tool/validator.py` - regex + length cap + scheme stripping |
+| Raw DNS responses (TXT values, MX hostnames, CNAME targets) | Length caps + structured parsing in `src/recon_tool/sources/dns.py` |
 | Environment variables (`RECON_CONFIG_DIR`) | Treated as arbitrary user input - CT and result cache path helpers validate resolved paths stay inside their cache dirs |
 | Custom YAML at `~/.recon/fingerprints.yaml` and friends | Validated by `_validate_fingerprint`, `_validate_signal`, `_validate_profile` - regex compilation + ReDoS heuristic + required-field checks. Additive-only (cannot override built-ins). |
 | CT provider response bodies | Size-capped, filtered for wildcards and malformed entries in `sources/cert_providers.py` |
-| Malicious HTTP redirect targets / private-IP redirects | `recon_tool/http.py` `_SSRFSafeTransport` validates every hop |
+| Malicious HTTP redirect targets / private-IP redirects | `src/recon_tool/http.py` `_SSRFSafeTransport` validates every hop |
 
 ---
 
@@ -35,7 +39,7 @@ no inbound network listeners, no user-code execution.
 
 **Surface:** A user (or an agent) passes an arbitrary string to `recon <domain>` or a MCP tool.
 
-**Mitigation:** [`recon_tool/validator.py`](../src/recon_tool/validator.py) line 18-85:
+**Mitigation:** [`src/recon_tool/validator.py`](../src/recon_tool/validator.py) line 18-85:
 - Domain regex: labels must be 1-63 chars, alphanumeric + hyphens, TLD ≥ 2 alpha chars
 - Max input length: 500 chars
 - Schemes (`http://`, `https://`, `ftp://`) stripped
@@ -90,7 +94,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 **Surface:** Custom fingerprint/signal YAML files under `~/.recon/` can contain arbitrary regex patterns.
 
-**Mitigation:** [`recon_tool/fingerprints.py`](../src/recon_tool/fingerprints.py):
+**Mitigation:** [`src/recon_tool/fingerprints.py`](../src/recon_tool/fingerprints.py):
 - `yaml.safe_load` (not `yaml.load`) - no arbitrary constructor execution
 - Pattern length capped at 500 chars
 - ReDoS heuristic (`_validate_regex` in `fingerprints.py`) rejects nested
@@ -108,7 +112,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 **Surface:** An adversarial upstream (or a DNS-rebound attacker) could redirect an HTTP request to a private, internal, or special-use IP, potentially exposing cloud-metadata services (169.254.169.254) or internal infrastructure.
 
-**Mitigation:** [`recon_tool/http.py`](../src/recon_tool/http.py) `_SSRFSafeTransport`:
+**Mitigation:** [`src/recon_tool/http.py`](../src/recon_tool/http.py) `_SSRFSafeTransport`:
 - Every hop - initial request AND every redirect - validated
 - Blocks anything that is not globally routable unicast, including loopback,
   private, link-local, shared-address, unspecified, reserved, documentation,
@@ -123,7 +127,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 **Surface:** `recon cache show ../../etc/passwd`, `recon cache clear ../../settings`, or a crafted `RECON_CONFIG_DIR` could cause a cache layer to read, write, or delete outside its intended directory.
 
-**Mitigation:** [`recon_tool/ct_cache.py`](../src/recon_tool/ct_cache.py) `_safe_path` and [`recon_tool/cache.py`](../src/recon_tool/cache.py) `_safe_cache_path`:
+**Mitigation:** [`src/recon_tool/ct_cache.py`](../src/recon_tool/ct_cache.py) `_safe_path` and [`src/recon_tool/cache.py`](../src/recon_tool/cache.py) `_safe_cache_path`:
 - Resolves the target path
 - Asserts the resolved path starts with the resolved cache directory
 - Rejects traversal separators and malformed domains before filesystem access
@@ -133,7 +137,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 **Surface:** A compromised crt.sh / CertSpotter could return extremely large subdomain sets or adversarially crafted names attempting to amplify downstream work.
 
-**Mitigation:** `recon_tool/sources/cert_providers.py`:
+**Mitigation:** `src/recon_tool/sources/cert_providers.py`:
 - Bounded crt.sh extraction before filtering/sorting: at most
   `MAX_SUBDOMAINS * 20` JSON entries inspected, `MAX_SUBDOMAINS * 10`
   raw names collected, and `MAX_SUBDOMAINS * 10` cert-summary entries retained
@@ -150,7 +154,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 **Mitigation:**
 - The lookup and analysis tools are read-only; `reload_data` and the
   ephemeral fingerprint tools only modify in-memory or local process
-  state (verified in `recon_tool/server.py` ToolAnnotations and Server
+  state (verified in `src/recon_tool/server/app.py` ToolAnnotations and Server
   Instructions)
 - Tools accept domain strings that go through the same `validator.py` pipeline
 - `inject_ephemeral_fingerprint` only persists in current process memory; it
@@ -162,7 +166,7 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 - 120-second TTL cache and per-domain rate limiter prevent repeated-lookup abuse
 - No HTTP / OAuth transport, no network listener
 
-All posture and hardening tools operate exclusively on the same passive
+All posture and hardening tools operate exclusively on the same public-metadata
 observables used by the core correlation engine (see
 [correlation.md](correlation.md)). The MCP surface adds no new data
 sources; it only exposes the existing inference pipeline through a
@@ -174,10 +178,15 @@ different transport.
 
 recon does **not** defend against:
 
-- **Active scanning attacks.** recon is passive. An attacker with a shell on your machine can do more than recon can see.
+- **Active scanning attacks.** recon does not scan ports, crawl arbitrary target
+  applications, or test exploitability. An attacker with a shell on your machine
+  can do more than recon can see.
 - **Credential theft.** recon handles zero credentials. There is nothing to steal.
 - **DNS cache poisoning at the OS level.** If the user's resolver is compromised, the entire threat model is compromised regardless of what recon does.
-- **Supply-chain compromise of transitive dependencies.** Detected by `pip-audit` in CI (advisory-only) but not in-process.
+- **Supply-chain compromise of transitive dependencies.** Locked runtime
+  dependencies are checked by blocking `pip-audit` gates in CI and release
+  workflows. This detects known advisories; it does not prevent a compromise or
+  inspect dependencies in-process.
 - **Side-channel timing attacks against the user's identity.** Every query recon makes is visible to the intermediary services (OIDC endpoints, CT providers, the user's DNS resolver). See [`legal.md`](legal.md#what-sees-your-queries) for the exposure inventory.
 - **Logging / telemetry exfiltration.** recon emits no telemetry. All output goes to the user's terminal or files they own.
 - **Malicious plugin systems.** recon has no plugin system and executes no user code.

@@ -1,29 +1,48 @@
-# CAL8 - likelihood-perturbation sensitivity
+# CAL8 historical likelihood-perturbation sensitivity record
 
-The CPT likelihoods in `recon_tool/data/bayesian_network.yaml` are
-hand-elicited (concept-first, not corpus-fitted; see `CONTRIBUTING.md`
-CPT-change discipline). A fair challenge to the calibration story is: do the
-numbers depend sensitively on those exact hand-picked values? CAL8 answers it
-with a sensitivity analysis. Reproducible and synthetic-only (no real targets):
+Status: historical result. The table below was produced on 2026-06-04 at commit
+[`76b31c72`](https://github.com/blisspixel/recon/commit/76b31c7207f826ac75eb15db30e05fb3d5361bb9),
+before CAL14 declarative missingness shipped at commit
+[`957e1f6d`](https://github.com/blisspixel/recon/commit/957e1f6d109faf04ceb80c7eabe90105c5c4ddca).
+It does not describe the current network's numerical output.
 
-    python validation/likelihood_sensitivity.py --samples 4000 --trials 10 --seed 1729
+The likelihoods in `src/recon_tool/data/bayesian_network.yaml` are manually
+encoded and human-reviewed. Some current parameters were informed by aggregate
+development-corpus observations, so they are not independent validation data.
+CAL8 asks a narrower question: within this synthetic diagnostic, how much do the
+recorded posteriors and threshold decisions change when binding likelihoods are
+perturbed? The current script remains synthetic-only and uses no real targets:
+
+    uv run python validation/likelihood_sensitivity.py --samples 4000 --trials 10 --seed 1729
 
 ## Method
 
-Generative truth is held fixed; only inference is perturbed.
+For the recorded run, generative truth was held fixed and only inference was
+perturbed.
 
 1. Draw one fixed synthetic dataset from the baseline network (4,000 domains:
-   a ground-truth assignment plus the evidence pattern recon would observe).
-2. Build 12 perturbed networks: two systematic corners (every likelihood x1.2
-   and every likelihood x0.8) plus a 10-network random jitter ensemble (each
-   likelihood scaled independently by a factor in [0.8, 1.2]), clipped to the
-   valid open interval.
+   a ground-truth assignment plus the pattern produced by the diagnostic's
+   independent-binding generator).
+2. Build 12 perturbed networks: two systematic corners (every binding likelihood
+   x1.2 and every binding likelihood x0.8) plus a 10-network random jitter
+   ensemble (each binding likelihood scaled independently by a factor in
+   [0.8, 1.2]), clipped to the valid open interval.
 3. Re-run inference on the same observations under the baseline and every
    perturbed network. Score each node's posteriors against the fixed ground
    truth (Brier, ECE) and against the baseline run (decision flips: does
    `posterior >= 0.5` still match).
 
-## Result (n = 4,000, 12 perturbed networks, seed 1729)
+The generator samples each binding independently conditional on its node state.
+It does not enforce correlation-group exclusivity or generate declarative
+group-absence units according to the shipped observation semantics. The
+perturbation also excludes `group_absence` parameters. Brier and ECE therefore
+describe this synthetic generator, not calibration under the shipped observation
+model. The script reports measurements and always exits successfully after a
+valid run; it has no acceptance threshold.
+
+## Historical result (2026-06-04, commit `76b31c72`)
+
+Configuration: n = 4,000, 12 perturbed networks, seed 1729.
 
 Each row is the baseline metric, then the worst deviation any perturbation
 produced.
@@ -45,21 +64,23 @@ shift <= 0.016.**
 
 ## Reading
 
-- The metrics barely move under a +/-20% perturbation of every likelihood. The
-  calibration is robust to the hand-elicited values, not knife-edge dependent on
-  the exact CPT numbers. That is the defensibility claim CAL8 exists to support.
-- The most perturbation-sensitive node is `email_security_policy_enforcing`
-  (dECE 0.032). This is consistent with its status as the least-settled node:
-  it carries the known conditional-overconfidence that the CAL14 node-dependent
-  missingness change is meant to address. The most sensitive node is the one we
-  already flag as needing the most work.
+- In this recorded pre-CAL14 run, the selected +/-20% binding-likelihood
+  perturbations changed the reported metrics and decisions by the amounts above.
+  That is evidence of model-relative output stability only within this finite
+  diagnostic. It is not evidence that the model is calibrated.
+- The most perturbation-sensitive node was
+  `email_security_policy_enforcing` (dECE 0.032). CAL14 subsequently changed that
+  node's missingness semantics, and later parameter regrounding changed its
+  MTA-STS and SPF likelihoods. The historical row must not be projected onto the
+  current model.
 
 ## Scope (what this is not)
 
-This is a **stability** result, not a calibration-quality claim. The baseline
-ECE values are marginal ECE, which is high by design for the asymmetric absence
-model (it includes the sparse / no-binding-fired cohort; see CAL9 and the
-evidence-responsive framing in CAL13). CAL8 says only that whatever the
-calibration is, it does not swing on small changes to the elicited likelihoods.
-It complements, and does not replace, the calibration-quality work (the
-reference-backed calibration and the CAL14 missingness fix).
+This is a historical **sensitivity measurement**, not a calibration-quality
+claim, a robustness certificate, or a current proof gate. The baseline ECE
+values are relative to the harness's misspecified independent-binding generator.
+The experiment does not cover structural model changes, dependency-group
+assumptions, grouped-absence parameters, real-world distribution shift, or the
+development-corpus and validation-corpus overlap documented elsewhere. A current
+run can measure sensitivity of the current model, but its output requires review
+because the harness intentionally has no pass threshold.

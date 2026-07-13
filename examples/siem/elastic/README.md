@@ -14,15 +14,15 @@ fictional brand  -  see `examples/README.md`).
 
 Recommended flow:
 
-1. Run `recon batch domains.txt --ndjson > /var/log/recon/lookups.ndjson`.
+1. Run `recon batch domains.txt --ndjson --no-fusion > /var/log/recon/lookups.ndjson`.
 2. Filebeat (or Elastic Agent) tails the file and forwards each line
    as a JSON document.
-3. Filebeat's pipeline configuration points at the ingest pipeline
-   in `ingest-pipeline.json` below. The pipeline rewrites field names
-   to the ECS-aligned shape and computes derived fields (severity,
-   `event.category`).
+3. Filebeat selects the `recon-lookup` ingest pipeline and a
+   `recon-lookup-*` index. The pipeline rewrites field names to the
+   ECS-aligned shape and adds event classification fields. It does not derive
+   severity from recon confidence.
 4. The documents land in an index governed by `index-template.json`,
-   which pins field types so Kibana visualizations and alert
+   which pins the documented field types so Kibana visualizations and alert
    thresholds don't drift on first-write surprises.
 
 A Filebeat input stanza for completeness:
@@ -30,80 +30,87 @@ A Filebeat input stanza for completeness:
 ```yaml
 filebeat.inputs:
   - type: filestream
+    id: recon-lookups
     paths: [/var/log/recon/*.ndjson]
     parsers:
       - ndjson:
           target: ""           # parse the whole line as the event
           add_error_key: true
-    fields:
-      pipeline: recon-lookup   # name matches the ingest-pipeline.json id
-      data_stream:
-        type: logs
-        dataset: recon
+    index: "recon-lookup-%{+yyyy.MM}"
+    pipeline: recon-lookup
 ```
+
+The custom index name matches `index-template.json`; the explicit pipeline
+selection matches the pipeline installed from `ingest-pipeline.json`. The
+template also declares `recon-lookup` as its default pipeline, so events sent
+directly to a matching index receive the same transformation. Install both
+artifacts before starting the input.
 
 ## Field mapping
 
 ECS-aligned fields land under standard ECS namespaces (`event.*`,
-`host.*`, `organization.*`). recon's project-specific fields stay
-under `recon.*` to avoid colliding with future ECS additions.
+`host.*`). recon's project-specific fields stay under `recon.*` to avoid
+colliding with future ECS additions. In particular, `display_name` remains a
+recon field because public identity metadata is not a verified legal
+organization name.
 
 ### Detection-pipeline fields (always present)
 
 | recon JSON path | Elastic field | Use case |
 |---|---|---|
 | `queried_domain` | `host.domain` | Primary join key; standard ECS field |
-| `display_name` | `organization.name` | Standard ECS organization namespace |
+| `display_name` | `recon.display_name` | Public identity display label; not a verified legal organization name |
 | `provider` | `recon.provider` | Filter to M365 vs Google Workspace |
-| `confidence` | `recon.confidence` | Source field for `event.severity` derivation |
+| `confidence` | `recon.confidence` | Overall evidential support; not alert severity |
 | `auth_type` | `recon.auth_type` | `Federated` vs `Managed` |
 | `dmarc_policy` | `recon.email.dmarc_policy` | DMARC drift tracking |
-| `email_security_score` | `recon.email.security_score` | 0-5 composite |
-| `services` | `recon.services` | Shadow-IT alerting |
+| `email_security_score` | `recon.email.security_score` | Count of five apex-observable controls; not an overall security score |
+| `services` | `recon.services` | Review changes in public service indicators |
 | `slugs` | `recon.slugs` | Keyword field for aggregations |
 | `cloud_instance` | `recon.cloud_instance` | Sovereignty drift |
-| `insights` | `recon.insights` | Pre-computed defensive narrative |
+| `insights` | `recon.insights` | Hedged observation text derived from retained evidence |
 
-### Fusion-layer fields (present when `recon --fusion`)
+### Fusion-layer fields (always present; populated only when fusion is enabled)
 
 | recon JSON path | Elastic field | Use case |
 |---|---|---|
-| `posterior_observations` | `recon.fusion.posteriors` | Object array  -  Bayesian per-claim |
-| `posterior_observations[].sparse` | `recon.fusion.posteriors[].sparse` | Boolean keyword for "passive ceiling hit" |
-| `evidence_conflicts` | `recon.fusion.conflicts` | Object array  -  cross-source disagreements |
+| `posterior_observations` | `recon.fusion.posteriors` | Object array containing Bayesian per-claim output |
+| `posterior_observations[].sparse` | `recon.fusion.posteriors[].sparse` | Marks that the evidence-responsive display mass is at its configured floor |
 
-## Severity mapping
+`posterior_observations` remains present as an empty array when fusion is
+disabled, including in the shared `--no-fusion` sample.
 
-The ingest pipeline derives `event.severity` (ECS-standard integer
-0-7) from recon's `confidence`:
+### Cross-source diagnostics (always present; independent of fusion)
 
-| recon `confidence` | `event.severity` | ECS label |
+| recon JSON path | Elastic field | Use case |
 |---|---|---|
-| `high` | 2 | informational |
-| `medium` | 4 | low |
-| `low` | 6 | medium |
-| `partial` | 6 | medium |
+| `evidence_conflicts` | `recon.evidence_conflicts` | Object array containing a field name and its disagreeing `{value, source, confidence}` candidates |
 
-This mapping is **deliberately inverted from intuition** for the
-same reason documented in the Splunk README: high recon confidence
-means strong public-signal evidence, which is *low*-severity from a
-defender's view (the posture is well-characterized). Low recon
-confidence on a hardened target is the higher-severity signal worth
-operator review.
+`evidence_conflicts` can be populated whether fusion is enabled or disabled.
+
+## Confidence and alert priority
+
+Do not derive `event.severity` from `confidence`, `evidence_confidence`, or
+`inference_confidence`. Those fields describe evidential support inside
+recon's public-observation model. `partial` is a separate boolean that reports
+collection completeness. Elastic rule severity should come from explicit
+operator policy, such as an unexpected persistent change on a critical domain.
 
 ## Use cases
 
-### Shadow-IT alerting
+### Public fingerprint indicator review
 
 Kibana saved search (or Elastic alert rule):
 
 ```
-recon.queried_domain : "northwindtraders.com"
+host.domain : "northwindtraders.com"
 AND NOT recon.slugs : "intune"
 ```
 
 Replace with terms aggregation over a baseline set; Elastic
-alerting can compare an aggregation against a baseline document.
+alerting can compare an aggregation against a baseline document. A newly
+observed slug means the public fingerprint set changed. It does not establish
+active use, ownership, approval status, or an unsanctioned deployment.
 
 ### DMARC drift
 
@@ -114,8 +121,9 @@ by `host.domain` and order by `@timestamp` descending.
 
 ### Federation discovery
 
-Tracking changes to `recon.auth_type` per `host.domain`  -  same
-shape as the DMARC drift alert.
+Tracking changes to `recon.auth_type` per `host.domain` uses the same
+shape as the DMARC drift alert. The result is an observed metadata change, not
+an explanation of its cause.
 
 ## Files in this directory
 
@@ -123,13 +131,13 @@ shape as the DMARC drift alert.
   PUT this to `_ingest/pipeline/recon-lookup` to activate.
 - `index-template.json`  -  index template pinning field types for the
   `recon-lookup-*` indices.
-- `expected-elastic-document.json`  -  the document Elasticsearch
-  indexes after the pipeline runs against the shared
-  `examples/sample-output.json` input. The CI test verifies this
-  shape.
+- `expected-elastic-document.json`  -  representative mapped fields and
+  selected pass-through fields after the pipeline runs against the shared
+  `examples/sample-output.json` input. Actual Filebeat events also carry
+  agent metadata and all unmapped recon fields. CI verifies the documented
+  contract subset.
 
-## Author of record
+## Verification status
 
-Maintainer-authored. **Vendor-unverified**: no Elastic employee
-has QA'd this against a current Elastic Cloud / self-hosted ES
-build. PRs welcome.
+**Vendor-unverified**: no Elastic employee has QA'd this against a current
+Elastic Cloud / self-hosted Elasticsearch build. PRs welcome.

@@ -9,7 +9,7 @@ labels: fingerprint
 
 **Name:** (e.g., Acme Email Security)
 **Category:** (Email & Communication / Security & Compliance / Identity & Access / Cloud / etc.)
-**Website:** (product page URL — just for reference, not queried)
+**Website:** (product page URL, just for reference and not queried)
 
 ## Detection
 
@@ -19,7 +19,7 @@ What public DNS record pattern identifies this service? Fill in what applies:
 - [ ] **CNAME pattern** (e.g., `*.acme.com` on a specific subdomain prefix)
 - [ ] **MX hostname** (e.g., `mx.acme-mail.com`)
 - [ ] **SPF include** (e.g., `include:spf.acmemail.com`)
-- [ ] **Other DNS record** — describe below
+- [ ] **Other DNS record**, described below
 
 **Example record:**
 

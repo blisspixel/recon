@@ -39,12 +39,15 @@ therefore uses these boundaries for the write-up package:
   and GitHub provenance for the release wheel and sdist. This is release-state
   evidence, not empirical result validation.
 
-The latest public proof gate for the current draft package is
-[2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md).
-The current final claim audit refresh remains
-[2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
-Together they record the passing smoke run, full public proof run, claim-map
-audit, figure drift check, local gate, and release-readiness check.
+The most recent recorded public proof gate is the historical
+[2026-06-30 submission-freeze local proof](../validation/2026-06-30-submission-freeze-local-proof.md).
+The most recent recorded final claim audit is the historical
+[2026-06-29 Scorecard-gate claim audit](../validation/2026-06-29-scorecard-gate-claim-audit.md).
+They record a passing smoke run, full public proof run, claim-map audit, figure
+drift check, local gate, and release-readiness check for the commits named in
+those memos. The paper and package changed afterward, so the current draft is
+unfrozen and neither memo proves the current tree. Rerun the complete submission
+gate before external packaging.
 
 This follows the artifact-review split in ACM badging guidance, arXiv's
 supplementary-file model, NIST SP 800-188 disclosure-risk framing, CFF/GitHub
@@ -68,7 +71,7 @@ security guidance:
 | Draft claim | Current support | Source and gate | Allowed wording |
 |---|---|---|---|
 | recon is passive by default and zero credential | Invariant | [traceability-matrix.md](traceability-matrix.md), [legal.md](legal.md), `tests/test_passive_default.py`, `tests/test_server_instructions.py` | State as default behavior, naming the standard MTA-STS fetch and opt-in direct probes. |
-| recon preserves provenance for conclusions | Invariant | [how-it-works.md](how-it-works.md), [schema.md](schema.md), `tests/test_explanation_engine.py`, `tests/test_explain_dag_top3.py` | State that conclusions are traceable through evidence and explanation surfaces, not that evidence proves operational truth. |
+| recon preserves provenance for conclusions | Invariant | [how-it-works.md](how-it-works.md), [schema.md](schema.md), `tests/test_explanation_engine.py`, `tests/test_explain_dag_top3.py` | State that the emitted reconstructed graph reports evidence reachability, disconnected terminals, and completeness diagnostics. Do not call this full or exact generation-time lineage for insight or posture associations reconstructed from rendered text or proxy rules, and do not claim that evidence proves operational truth. |
 | Exact inference matches a full-latent-joint reference on the committed sweep | Public proof harness plus public validation memo | `validation/differential_verification.py`, `tests/test_bayesian_differential.py`, `python -m validation.reproduce_paper_numbers`, [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md) | State as agreement over the none/one/all cross-product plus exhaustive local subsets for three factor-heavy nodes under two backgrounds. Do not claim the global evidence power set was enumerated. |
 | Suppression monotonicity is local to evidence removal under fixed positive-factor assumptions | Public proof harness | `validation/adversarial_properties.py`, `tests/test_adversarial_properties.py`, [correlation.md](correlation.md) section 3.4 | State only that deleting a fired unit cannot raise that node's local presence odds while the prior, parent context, dependence reduction, and all other evidence stay fixed. Do not claim movement toward 0.5, wider bands, global DAG robustness, or protection from planted indicators. |
 | Planted evidence can move posteriors across the decision boundary | Public proof harness plus public validation memo | `validation/adversarial_properties.py`, `tests/test_adversarial_properties.py`, [2026-06-28-adversarial-perturbation-paper.md](../validation/2026-06-28-adversarial-perturbation-paper.md), [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md) | State as a synthetic model-internal perturbation measurement of the threat-model boundary. Do not state attacker prevalence, exploitability, or real-world false-positive rate. |
@@ -85,7 +88,7 @@ security guidance:
 | Entropy reduction field is a signed marginal entropy change; model-derived posture buckets are descriptive diagnostics | Public validation memo | `validation/posture_distributions.py`, `tests/test_posture_distributions.py`, [public-list-calibration.md](../validation/public-list-calibration.md), [public-label-snapshot-decision.md](public-label-snapshot-decision.md) | State as a selected public-list cross-check. The sum can double count dependent nodes and the posture buckets are construction-linked. Do not call it information leakage, hardening effect, or population behavior. |
 | Per-vertical residual weakness appears across the curated publisher strata | Aggregate-only private memo | [2026-06-28-full-corpus-calibration-refresh.md](../validation/2026-06-28-full-corpus-calibration-refresh.md), [statistical-assurance.md](statistical-assurance.md) | State across the 22 disclosed, DMARC-publisher-conditional development strata only. Do not generalize beyond them. |
 | The discussion and conclusion do not claim broad calibration | Aggregate-only private memo plus public claim audit | [2026-06-28-full-corpus-calibration-refresh.md](../validation/2026-06-28-full-corpus-calibration-refresh.md), [m365-tenancy-decision.md](m365-tenancy-decision.md), [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md) | State that recon has no training-disjoint, predictor-input-disjoint passing calibration result today; DMARC rows are in-sample agreement/negative diagnostics, M365 is corroboration, and Google Workspace is one-sided recall. |
-| The public artifact is signed, provenance-linked, and reproducible as a build | Invariant | [supply-chain.md](supply-chain.md), `scripts/release_readiness.py --remote`, `tests/test_release_workflow_contract.py`, `tests/test_scorecard_posture.py` | State build reproducibility and release provenance. Do not claim independently reproduced empirical results. |
+| The public artifact is signed and provenance-linked; same-job build repeatability is checked under one resolved toolchain | Invariant | [supply-chain.md](supply-chain.md), `scripts/release_readiness.py --remote`, `tests/test_release_workflow_contract.py`, `tests/test_scorecard_posture.py` | State the bounded deterministic-build check and release provenance. Do not claim cross-environment byte identity or independently reproduced empirical results. |
 | Public artifacts exclude target identifiers and private rows | Invariant | [data-handling-policy.md](data-handling-policy.md), `scripts/check_validation_hygiene.py`, `tests/test_validation_hygiene.py`, `tests/test_public_validation_memo.py` | State the disclosure control and its mechanical gates. Keep semantic review as a separate requirement. |
 
 ## Submission Gate
@@ -114,6 +117,8 @@ Before the external write-up can leave draft status:
 9. The public-list sampling boundary must stay linked to
    [public-label-snapshot-decision.md](public-label-snapshot-decision.md):
    public-list numbers are robustness checks rather than population rates.
-10. The current final claim audit refresh is recorded in
-   [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
-   Rerun it after any experiment, wording, package, or claim-map change.
+10. The most recent recorded final claim audit is the historical
+    [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md).
+    The current draft is unfrozen because later experiment, wording, package,
+    and claim-map changes have not completed a new freeze audit. Rerun the audit
+    after every such change and before submission.

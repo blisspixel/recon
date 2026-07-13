@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import tomllib
 from pathlib import Path
 from typing import Any, cast
 
@@ -119,9 +120,12 @@ def test_surface_inventory_has_agent_surfaces() -> None:
 
     assert client_configs["claude-code"]["server_key"] == "mcpServers"
     assert client_configs["vscode"]["server_key"] == "servers"
-    assert client_configs["kiro"]["auto_approve_declared"] is True
-    assert client_configs["kiro"]["auto_approve"] == []
-    assert client_configs["cursor"]["auto_approve_declared"] is False
+    assert client_configs["vscode"]["type"] == "stdio"
+    assert client_configs["claude-code"]["auto_approve_declared"] is False
+    assert client_configs["vscode"]["auto_approve_declared"] is False
+    for client in ("cursor", "kiro", "windsurf"):
+        assert client_configs[client]["auto_approve_declared"] is True
+        assert client_configs[client]["auto_approve"] == []
 
     approval = agent_surfaces["mcp_approval"]
     assert approval["stateful_tools"] == [
@@ -138,6 +142,9 @@ def test_surface_inventory_has_agent_surfaces() -> None:
     plugin = agent_surfaces["claude_code_plugin"]
     assert plugin["path"] == "agents/claude-code/.claude-plugin/plugin.json"
     assert plugin["name"] == "recon"
+    with (ROOT / "pyproject.toml").open("rb") as handle:
+        package_version = tomllib.load(handle)["project"]["version"]
+    assert plugin["version"] == package_version
 
     context_packet = agent_surfaces["maintainer_context_packet"]
     assert context_packet["source"] == "docs/maintainer-loop-runbook.md shared loop contract"

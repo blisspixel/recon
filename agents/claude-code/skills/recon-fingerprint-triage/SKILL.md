@@ -1,23 +1,23 @@
 ---
 name: recon-fingerprint-triage
-description: Triage fingerprint-discovery candidates from recon's CNAME-chain classifier. Reads either a single `recon <domain> --json --include-unclassified` payload or a `candidates.json` produced by `validation/triage_candidates.py`, then proposes new `cname_target` fingerprint stanzas for `surface.yaml`. Use when the user asks to "find new fingerprints", "what SaaS are we missing", "discover unclassified CNAME targets", or wants to extend recon's catalog from a fresh scan or validation corpus run.
+description: Triage fingerprint-discovery candidates from recon's CNAME-chain classifier. Reads either a single `recon <domain> --json --include-unclassified` payload or a `candidates.json` produced by `validation/triage_candidates.py`, then proposes new `cname_target` fingerprint stanzas for `surface.yaml`. Use when the user asks to "find new fingerprints", "what SaaS are we missing", "discover unclassified CNAME targets", or wants to extend recon's catalog from a fresh lookup or validation corpus run.
 argument-hint: <domain | path/to/candidates.json>
 allowed-tools: Bash(recon:*), Read, Edit, Write
 ---
 
 # recon-fingerprint-triage
 
-The companion skill to `recon`. The base `recon` skill gives you what an apex
-*has*; this skill gives you the long tail of what an apex's *subdomains* point
-at - and proposes catalog additions when those CNAME chains hit something
-recon doesn't yet recognize.
+The companion skill to `recon`. The base `recon` skill describes observations
+around an apex; this skill examines the long tail of where visible subdomains'
+CNAME chains point and proposes catalog additions when recon does not yet
+recognize those targets.
 
 ## When to use this
 
 The user wants to grow the fingerprint catalog by mining real DNS data:
 
 - "Find new fingerprints from contoso.com"
-- "What SaaS does this company use that we don't fingerprint?"
+- "What service patterns are visible here that we don't fingerprint?"
 - "Triage gaps from my latest validation run"
 - "Is there a fingerprint candidate in this CNAME chain?"
 - "Help me add the missing fingerprint for example.com"
@@ -48,28 +48,33 @@ contains pre-bucketed `{suffix, count, samples}` entries.
 Triage candidates.json
 ```
 Same shape as (B), but pre-filtered: already-fingerprinted patterns dropped,
-intra-org chains dropped, low-count noise dropped. This is the cleanest input:
-every entry is worth your judgment.
+same-zone or brand-similar heuristic matches dropped, and low-count noise
+dropped. This is the cleanest input, but every entry still requires judgment.
 
 ## Triage rubric
 
 For each candidate (single chain or suffix bucket), classify into one of
 five outcomes:
 
-1. **Real third-party SaaS** - a recognizable product (Auth0, HubSpot, Sentry,
-   etc.). The terminal hostname or its zone identifies the vendor. **Action:**
-   propose a `cname_target` fingerprint stanza (see schema below).
+1. **Recognized third-party service pattern** - a target associated with a
+   recognizable product (Auth0, HubSpot, Sentry, etc.) and supported by public
+   vendor documentation or repeated validation evidence. **Action:** propose a
+   `cname_target` fingerprint stanza (see schema below). The result attributes
+   the observed routing chain; it does not establish active product use.
 
 2. **Generic infrastructure / CDN / cloud** - Akamai, Fastly, CloudFront, or
    similar. **Action:** if the pattern isn't already in `surface.yaml`,
    propose an entry with `tier: infrastructure`. Otherwise note "already
    covered" and skip.
 
-3. **Intra-org self-reference** - the chain stays inside the organization's
-   own brand zone (different TLD or sibling brand). Common for big enterprises
-   (e.g. ``contoso.com → gslb-contoso.com``, ``contoso.co.uk → eglb.contoso.co.uk``).
-   **Action:** drop. Don't fingerprint internal CDN patterns. Note this in
-   your triage summary so the user knows it was intentionally skipped.
+3. **Same-zone or brand-similar heuristic match** - the chain stays under the
+   queried namespace or its target resembles the query's brand label (for
+   example, ``contoso.com -> gslb-contoso.com`` or
+   ``contoso.co.uk -> eglb.contoso.co.uk``). This heuristic is a noise filter;
+   it does not establish common ownership, an internal network, or an
+   organizational relationship. **Action:** skip automatic fingerprint
+   proposal unless independent evidence identifies a reusable provider pattern.
+   Note the heuristic skip in the triage summary.
 
 4. **Niche or one-off** - count is 1 across the corpus, hostname looks
    bespoke (e.g., a single customer's vanity vendor relationship).
@@ -83,8 +88,8 @@ five outcomes:
 
 ## YAML schema for new entries
 
-A candidate that survives triage as "real SaaS" or "infrastructure" produces
-a stanza like:
+A candidate that survives triage as a recognized third-party service pattern or
+generic infrastructure produces a stanza like:
 
 ```yaml
 - name: <Display Name>
@@ -106,10 +111,11 @@ Critical rules for the pattern:
   `awsglobalaccelerator.com`, `awsapprunner.com` are right. The pattern is a
   case-insensitive substring match against every CNAME hop, so an
   over-broad pattern will fire on anything in that zone.
-- **Prefer the service-specific subzone.** `customer.io` and `bnc.lt` (Branch)
-  are good - the whole domain is owned by the SaaS. For multi-tenant SaaS
-  zones, drop the customer prefix: `myshopify.com` is correct (every Shopify
-  store is `<store>.myshopify.com`); `gymshark.myshopify.com` would be wrong.
+- **Prefer the service-specific subzone.** Use the stable provider zone that
+  public vendor documentation or repeated evidence identifies, not an
+  individual customer's hostname. For a documented multi-tenant zone,
+  `myshopify.com` is the reusable pattern; a tenant-specific hostname such as
+  `gymshark.myshopify.com` would be too narrow.
 - **Tier classification.** Application = the SaaS or product (Auth0, Shopify,
   Zendesk). Infrastructure = the CDN, load balancer, or edge layer (Fastly,
   CloudFront, Cloudflare). When a chain matches both, application wins as the
@@ -124,14 +130,15 @@ validator's same-slug-same-name check allows extending an apex fingerprint
 with new `cname_target` rules in `surface.yaml`. The validator complains
 when same-slug entries have different display names, so:
 
-- Look up the canonical name in `recon_tool/data/fingerprints/*.yaml` first
+- Look up the canonical name in `src/recon_tool/data/fingerprints/*.yaml` first
   (grep for `slug: <slug>`).
 - Use that exact name in your new stanza.
 
 ## Category bucketing
 
 The category determines which `Services` sub-line the slug appears under in
-the panel. Mappings live in `recon_tool/formatter.py:_CATEGORY_BY_SLUG`. If
+the panel. Mappings live in
+`src/recon_tool/formatter/classify_tables.py:CATEGORY_BY_SLUG`. If
 you add a new slug, also propose the entry there in your output:
 
 ```python
@@ -149,8 +156,8 @@ Produce a single response in this shape:
 1. **Summary** - one line per candidate with its triage verdict.
 2. **Proposed surface.yaml additions** - full YAML stanzas, one per fingerprint.
 3. **Proposed formatter category mappings** - Python dict entries.
-4. **Skipped** - list of candidates dropped with the reason (intra-org,
-   niche one-off, already covered, unclear).
+4. **Skipped** - list of candidates dropped with the reason (same-zone or
+   brand-similar heuristic, niche one-off, already covered, unclear).
 5. **Verification command** - the exact `recon <domain>` invocation the user
    should run to confirm the new fingerprint fires correctly.
 
@@ -176,9 +183,9 @@ You read the file. Suppose it contains:
 Your response:
 
 > **Summary**
-> - `stspg-customer.com` (16x): real SaaS - Atlassian Statuspage hosted endpoint. Propose extending the existing `statuspage` slug.
-> - `rootly.com` (1x): real SaaS but one-off in this corpus - flag for revisit, do not fingerprint yet.
-> - `gslb.example.com` (8x): intra-org self-reference (same brand) - skip.
+> - `stspg-customer.com` (16x): recognized Atlassian Statuspage target pattern. Propose extending the existing `statuspage` slug.
+> - `rootly.com` (1x): recognizable provider target but seen once in this corpus. Flag for revisit; do not fingerprint yet.
+> - `gslb.example.com` (8x): brand-similar heuristic match - skip automatic proposal; ownership and operation remain unresolved.
 >
 > **Proposed surface.yaml additions:**
 > ```yaml
@@ -197,14 +204,16 @@ Your response:
 >
 > **Skipped:**
 > - `rootly.com` - niche, count 1
-> - `gslb.example.com` - intra-org
+> - `gslb.example.com` - brand-similar heuristic match
 >
 > **Verification:** `recon cache clear --all && recon <one-of-the-status-page-domains> --full` should now show the subdomain in the External surface section attributed to "Statuspage (Atlassian)".
 
 ## What this skill does NOT do
 
-- Active probing of any kind. The skill consumes recon's existing JSON
-  output; it never makes its own DNS queries.
+- Direct probing beyond recon's documented collection boundary. For a single-
+  domain input, the skill invokes recon, whose normal lookup performs its
+  documented public-source requests. For a file input, it reads the supplied
+  artifact without collecting new domain data.
 - Speculative fingerprinting on hostnames you can't recognize. Better to flag
   as "unclear" and ask the user than to ship a guess.
 - Pattern broadening. Always prefer the most specific pattern that captures
@@ -220,10 +229,10 @@ theoretical one.
 
 - **Over-broad `cname_target` patterns fire on the whole zone.** `amazonaws.com` matches everything in AWS; use `elb.amazonaws.com`, `awsapprunner.com`. The pattern is a case-insensitive substring against every CNAME hop.
 - **Multi-tenant SaaS: drop the customer prefix.** `myshopify.com`, not `<store>.myshopify.com`, or the rule only ever matches that one customer.
-- **A same slug must reuse the canonical display name.** The validator rejects same-slug-different-name; grep `recon_tool/data/fingerprints/*.yaml` for the existing name before extending a slug.
+- **A same slug must reuse the canonical display name.** The validator rejects same-slug-different-name; grep `src/recon_tool/data/fingerprints/*.yaml` for the existing name before extending a slug.
 - **A new slug with no `_CATEGORY_BY_SLUG` mapping defaults to "Business Apps."** Often wrong for CDN or cloud slugs; propose the formatter mapping alongside the YAML.
 - **Never ship a guess on an "unclear" candidate.** Flag it with the chain and ask. Tightening a pattern after release is harder than getting it right once.
-- **Intra-org GSLB / load-balancer chains are not fingerprints.** A chain that stays inside the org's own brand zone is infrastructure noise; skip it and say so.
+- **Same-zone or brand-similar GSLB targets are heuristic skips, not ownership facts.** Exclude them from automatic proposals unless independent evidence identifies a reusable provider pattern, and state that ownership and operation remain unresolved.
 - **count=1 is a see-once, not a fingerprint.** The bar is "would another user ever hit this pattern?" Niche one-offs fail it.
 
 ## Relationship to the base `recon` skill

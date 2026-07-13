@@ -1,17 +1,18 @@
 # Weak areas: where recon looks thin, and why
 
-recon is a passive, zero-credential tool. Its coverage ceiling is set by
-what organizations publish in DNS and in unauthenticated identity /
-certificate-transparency endpoints. Several common deployment shapes
-publish very little of that, which means recon's output on those
-domains will look sparse, and you should read it accordingly.
+recon is a public-metadata-only, zero-credential tool. Its coverage ceiling is
+set by what is visible in DNS, certificate transparency, unauthenticated
+identity-discovery responses, and the documented MTA-STS and opt-in direct
+probe boundaries. Several public-namespace shapes expose very little through
+those channels, which means recon's output on those domains will look sparse,
+and you should read it accordingly.
 
 This page names the patterns and explains what to do instead of
 over-interpreting the result.
 
-See [correlation.md](correlation.md) for the correlation extensions
-(shipped v1.7-v1.9) that recover usable signal even on these weak-area
-shapes.
+See [correlation.md](correlation.md) for the correlation diagnostics shipped
+across v1.7-v1.9, their evidence limits, and the product benchmark that must
+establish whether they add operator value beyond simpler observations.
 
 ## Heavy CDN / edge-proxied domains
 
@@ -19,16 +20,19 @@ Symptoms: `recon <domain>` shows CDN/WAF services (Cloudflare, Akamai,
 Fastly, Imperva) but few others; the apex `CNAME` points at the CDN
 edge; the insights section may say `Sparse public signal`.
 
-Why: organizations that terminate everything at a CDN edge publish
-minimal apex-level DNS. TXT verification tokens may be absent because
-the org uses subdomain-scoped SaaS rather than apex-rooted integrations.
+Why: an observed CDN edge can hide the application or origin behind it. Sparse
+apex TXT data is compatible with subdomain-scoped integrations, an intentionally
+small public namespace, stale or incomplete collection, or services that publish
+no detectable record. Public metadata does not identify which explanation is
+correct.
 
-What to do: try the zone-apex of the subsidiary or product-specific
-subdomains. CNAME breadcrumbs for M365 / Workspace are often visible
-on `mail.` or `login.` prefixes. `recon <apex> --chain --depth 2` walks
-CNAME targets and surfaces related infrastructure, as described in the
-wildcard SAN sibling and chain motif sections of
-[correlation.md](correlation.md).
+What to do: keep intentional scope operator-supplied. Query another supplied
+apex separately, or pass `--exact` when the operator specifically wants one
+literal subhost. To inspect bounded public breadcrumbs from the current query
+coordinate, `recon <apex> --chain --depth 2` follows CNAME and certificate-
+transparency relationships. Those results describe observed namespace
+structure, not subsidiaries or ownership; see the wildcard SAN sibling and
+chain motif sections of [correlation.md](correlation.md).
 
 ## Unclassified CNAME chain termini
 
@@ -41,8 +45,8 @@ Why: recon reached a public CNAME chain terminus, but no built-in
 `cname_target` fingerprint matched it. That terminus is evidence that a public
 DNS relationship exists; it is not enough by itself to claim a specific vendor
 when the catalog does not recognize the suffix. Shared CDN hostnames,
-customer-specific vanity hosts, intra-org routing names, and newly observed
-SaaS edges can all look similar at this layer.
+customer-specific vanity hosts, same-zone or brand-similar routing names, and
+newly observed SaaS edges can all look similar at this layer.
 
 What to do: use `recon discover <domain>` or inspect
 `unclassified_cname_chains` from `--include-unclassified` as a fingerprint
@@ -77,30 +81,31 @@ Symptoms: large domestic-Chinese and some APAC apexes commonly show
 `Self-hosted mail` as primary with little else matching the built-in
 fingerprint catalog.
 
-Why: these stacks use in-house mail infrastructure (provider-hosted
-domestic MX patterns) and domestic SaaS (DingTalk, WeCom, Aliyun
-services) that don't publish verifiable public DNS tokens the same
-way Western SaaS does.
+Why: the built-in catalog has less coverage for some regional providers and
+localized verification schemes. An MX host inside the queried namespace or an
+unmatched domestic-provider pattern can therefore reach the compatibility label
+`Self-hosted mail`. That label does not establish who operates the mail system
+or where it runs.
 
-What to do: take the `Self-hosted mail` + MX records as a signal
-ceiling. These orgs are observably running their own stack, and the
-absence of Western-SaaS fingerprints is an accurate reading, not a
-gap in recon's coverage.
+What to do: report the observed MX route and the unmatched-provider ceiling.
+Treat absent Western-SaaS fingerprints as unresolved, not as evidence that the
+namespace uses an in-house stack. Repeated unmatched public patterns are catalog
+quality candidates, subject to the contribution and data-handling rules.
 
 ## Regulated verticals behind web proxies
 
 Symptoms: healthcare, financial services, or public-sector domains
 show Cloudflare/Akamai + little else at the apex.
 
-Why: compliance-driven architectures tend to terminate all external
-traffic at a proxy layer and keep application infrastructure behind
-it. Email is often routed through a gateway (Proofpoint, Mimecast,
-Cisco IronPort), and the gateway's MX is the only mail-layer signal.
+Why: a proxy or gateway can be the only public routing layer visible from DNS.
+The same shape is compatible with many operational and organizational causes;
+public configuration does not establish that compliance, governance, or any
+other cause produced it.
 
-What to do: the gateway *is* the signal. recon's gateway inference
-path (`likely primary provider via <Gateway>`) is doing the right
-work. Don't read "few services" as "unsophisticated stack"; this
-shape is common for enterprises that care about governance.
+What to do: report the observed edge or gateway and its evidence role. An MX
+gateway is a delivery-path observation, not proof of the downstream mailbox
+provider. Do not turn a thin service list into either a maturity criticism or a
+governance claim.
 
 ## Custom DKIM selectors and branded email senders
 
@@ -122,34 +127,37 @@ If you contribute a DKIM fingerprint, keep it provider-specific and
 anchored to a stable public selector pattern; do not add broad
 selector guesses.
 
-## Fully self-hosted / air-gapped shops
+## Same-namespace or unattributed mail routing
 
-Symptoms: MX lands on the org's own apex (`mail.<domain>`), tenant ID
+Symptoms: MX lands under the queried namespace (`mail.<domain>`), tenant ID
 is absent, almost no SaaS fingerprints, `Unknown (no known provider
 pattern matched)` on the provider line.
 
-Why: orgs running their own mail servers and minimal cloud SaaS
-deliberately leave a small passive footprint. recon is seeing the
-ground truth: the footprint is thin because the infrastructure is
-on-prem.
+Why: `Self-hosted mail` is a compatibility label for an MX route under the
+queried namespace when no known provider pattern establishes a stronger
+attribution. It does not prove that the host is live, operated by the domain
+owner, physically on premises, or part of an air-gapped environment.
 
-What to do: nothing. A sparse result on a genuinely self-hosted
-domain is accurate, not a failure. The `Self-hosted mail` synthetic
-slug is how recon names this shape now.
+What to do: report the MX hostname and the unmatched-provider observation. A
+sparse result is valid as a statement about collected public evidence, while
+the underlying deployment remains unresolved.
 
-## Parked / dormant / portfolio apexes
+## Sparse or apparently dormant apexes
 
 Symptoms: no MX, no identity endpoints resolve, no tenant ID, no
 SaaS services detected. Provider is `Unknown`.
 
-Why: some apexes exist purely as a redirect or for legal / branding
-reasons. There's no organization running against them; the domain
-is parked.
+Why: this shape is compatible with a parked or dormant name, a redirect-only
+namespace, an intentionally sparse configuration, or a collection gap. recon
+does not observe enough to choose among those explanations or to decide whether
+an organization operates behind the apex.
 
-What to do: check `related_domains` in the `--json` output; the
-portfolio sibling apexes may be where the organization actually
-lives. `recon batch portfolio.txt --json` correlates siblings via
-shared verification tokens (see `clustering.py`).
+What to do: check `related_domains` in `--json` as bounded CNAME, CT, or
+autodiscover breadcrumbs, not as portfolio or ownership facts. When an operator
+already supplies a related set, `recon batch portfolio.txt --json` can report
+exact shared verification-token strings. Token reuse does not establish that
+the domains are siblings, share an owner, or are currently administered
+together.
 
 ## What "sparse" does NOT mean
 
@@ -158,8 +166,10 @@ shared verification tokens (see `clustering.py`).
 - Not "you should try harder / more aggressive scanning";
   *aggressive scanning* is explicitly not this tool's job.
 
-recon is bounded by what's passively observable in public DNS.
-Sparse results are a real reading of a thin passive footprint.
+recon is bounded by its documented public-metadata sources and collection
+opportunities. Sparse results are a real reading of the evidence that those
+bounded channels returned, not a conclusion about the organization or systems
+behind a domain.
 They should inform, not frustrate.
 
 ## If you consistently get empty results on a domain class
@@ -169,7 +179,8 @@ issue with:
 
 - The domain category (e.g. "European fintech", "Chinese CDN
   customers", "US higher-ed community colleges").
-- A few representative apex domains.
+- A fictionalized or aggregate description of the affected namespace shape;
+  do not put real target apexes in a public issue.
 - What records you can observe that *should* be diagnostic but recon
   ignores (e.g. specific `_dmarc` TXT receivers, specific MX gateway
   hosts).

@@ -338,13 +338,12 @@ jobs:
         run: uv run pytest tests/ -m "hostile_input and not integration"
 
   reproducible-build:
-    # Bit-for-bit reproducible builds. With a fixed SOURCE_DATE_EPOCH, the same
-    # source must produce byte-identical wheel and sdist, so a consumer can
-    # rebuild the release and verify the published artifacts. release.yml pins
-    # SOURCE_DATE_EPOCH to the tagged commit timestamp at build time; this gate
-    # proves the property holds on every change. Builds go to RUNNER_TEMP
-    # (outside the checkout) so the build output never lands in the packaged
-    # source tree and falsely breaks the comparison.
+    # Same-job deterministic-build check. With a fixed SOURCE_DATE_EPOCH, two
+    # builds of the same source in this Ubuntu job must produce matching wheel
+    # and sdist hashes under the same resolved toolchain. This does not claim
+    # byte identity across independently resolved environments. Builds go to
+    # RUNNER_TEMP (outside the checkout) so build output never lands in the
+    # packaged source tree and falsely breaks the comparison.
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:

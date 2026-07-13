@@ -17,7 +17,7 @@ agents/claude-code/
 The two pieces do different jobs, which is worth spelling out if your setup already ships a `/recon` skill and you are wondering what the MCP server buys you:
 
 - **The skill** teaches Claude when to reach for recon and how to read its hedged output. Driving the CLI, it covers the one-shot analyses: the lookup, the model-bound public-evidence index (`recon <domain> --exposure --json`), the hardening observations (`recon <domain> --gaps --json`), and model-relative Bayesian diagnostics (`--fusion`, `--explain-dag`). For most presales and vendor-diligence work, that is the whole job, with zero setup.
-- **The MCP server** adds what a one-shot CLI call does not do well: stateful and iterative agentic workflows. `simulate_hardening` what-if loops where Claude proposes a fix, recomputes the model-bound index, and proposes another; the ephemeral-fingerprint loop (`inject_ephemeral_fingerprint` then `reevaluate_domain`) that re-evaluates matching without re-resolving DNS; live two-domain `compare_postures`; and `test_hypothesis`. If you have a working skill and the MCP install succeeds but you are not sure what changed, this is the difference.
+- **The MCP server** adds what a one-shot CLI call does not do well: stateful and iterative agentic workflows. `simulate_hardening` what-if loops where Claude proposes a fix, recomputes the model-bound index, and proposes another; cache-only ephemeral-fingerprint replay over retained apex/root TXT, SPF, MX, NS, and CNAME observations; live two-domain `compare_postures`; and `test_hypothesis`. Owner-qualified ephemeral rules require a fresh lookup through recon's normal documented network boundary. If you have a working skill and the MCP install succeeds but you are not sure what changed, this is the difference.
 
 The earlier framing of "the MCP server adds `assess_exposure` / `find_hardening_gaps` / the posterior tools" was too strong: those one-shot analyses are reachable from the CLI too (`--exposure`, `--gaps`, `--fusion`), so a skill can drive them. The honest distinction is one-shot (either path) versus stateful/iterative (MCP).
 
@@ -51,7 +51,11 @@ recon mcp install --client=claude-code --scope=workspace  # project-local: .mcp.
 recon mcp install --client=claude-code --dry-run     # preview without writing
 ```
 
-The install merges into existing `mcpServers` without touching siblings; `--force` refreshes the recon block while preserving any custom `env`, `autoApprove`, or other fields you've added.
+The install merges into existing `mcpServers` without touching siblings;
+`--force` refreshes the canonical launcher while preserving client-supported
+custom fields. Claude Code does not define `autoApprove` in this configuration,
+so the installer removes that legacy field and leaves permissions to Claude
+Code's permission rules.
 
 The plugin path below (2b) is still the recommended setup because it bundles the recon **skill** alongside the MCP server.
 
@@ -94,7 +98,7 @@ The shipped file uses the wrapped `{ "mcpServers": { "recon": { ... } } }` form.
 
 The shipped `.mcp.json` uses `command: "recon"`, which works for anyone who pip-installed `recon-tool` globally. If `recon` is not on the launcher's PATH (rare for Claude Code, more common for sandboxed environments), prefer one of these paths:
 
-1. Rerun `recon mcp install --client=claude-code --force` from the Python environment where recon is installed. If `recon` is still not on PATH, the installer writes a sys.path-stripping Python fallback.
+1. Rerun `recon mcp install --client=claude-code --force` from the Python environment where recon is installed. The installer always writes that interpreter's absolute path and a sys.path-stripping launcher, so the generated registration does not depend on PATH.
 2. Edit your local copy of `.mcp.json` to use the absolute path to the installed `recon` script.
 
 ```jsonc
@@ -123,9 +127,21 @@ Use the absolute path to your `recon` or `uvx` binary if neither is on PATH for 
 
 ## Approval policy
 
-Plugin-bundled MCP servers are auto-approved by Claude Code when the plugin is enabled; there is no `autoApprove` field in the plugin `.mcp.json` schema. recon marks local session and catalog mutations (`inject_ephemeral_fingerprint`, `clear_ephemeral_fingerprints`, `reload_data`) with `readOnlyHint: false`; all other MCP tools are annotated read-only. Users who want stricter manual approval should add recon as a user-level MCP server in their own Claude Code config rather than relying on the plugin form.
-
-Concretely, the two paths default differently. The `recon mcp install --client=claude-code` path seeds `"autoApprove": []` into `~/.claude.json`, so every tool waits for manual approval. The plugin path auto-approves. Installing by both leaves two registrations with different approval semantics, so it is cleaner to pick one path.
+Enabling the plugin starts its bundled MCP server automatically; it does not
+auto-approve every tool call. Plugin and user-configured MCP tools follow Claude
+Code's permission rules, and the plugin `.mcp.json` schema has no `autoApprove`
+field. recon marks four local session and catalog mutations with
+`readOnlyHint: false`:
+`inject_ephemeral_fingerprint`, `clear_ephemeral_fingerprints`, `reload_data`,
+and `reevaluate_domain`. The last replaces one cached merged result after
+applying the current session catalog without making a network request. It can
+replay only retained apex/root TXT, SPF, MX, NS, and CNAME observations;
+owner-qualified rule types return a tool error and need the documented fresh-
+lookup workflow. All other MCP tools are annotated read-only. These annotations
+are hints, not permission grants. Configure allow or deny rules with Claude
+Code's documented permission system. Installing both the plugin and a user-
+level server leaves two registrations, so it is cleaner to pick one path unless
+duplication is intentional.
 
 ## What this plugin does *not* do
 

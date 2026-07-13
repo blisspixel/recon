@@ -14,9 +14,12 @@ MCP) and in maintainer loops. recon's job toward agents is to be a trustworthy
 data primitive, not to be agentic itself.
 
 This is not a bias toward rules for their own sake. It follows from what recon
-promises: full provenance, reproducible output, and honest uncertainty. A
-learned or LLM-driven component anywhere in the core would break byte-identical
-output, sever the evidence DAG, and violate the no-opaque-runtime-model invariant.
+promises: evidence-linked traceability with explicit completeness diagnostics,
+reproducible local processing over captured inputs, and honest uncertainty. A
+learned or LLM-driven component anywhere in the core would make that processing
+opaque, sever the evidence DAG, and violate the no-opaque-runtime-model
+invariant. Live observations can still change with time, cache, provider state,
+and resolver vantage.
 
 ## The decision guide
 
@@ -29,8 +32,9 @@ Three questions, in order. Stop at the first that fits.
    No runtime training, opaque bundled estimator, LLM call, or network-dependent
    nondeterminism. Manually encoded parameters, including values informed by a
    dated development corpus, remain reviewable committed data. The
-   invariants in [the concept that orders the plan](roadmap.md) and the
-   reproducible-build gate enforce this.
+   invariants in [the concept that orders the plan](roadmap.md), runtime tests,
+   committed-data review, and the reproducible-build gate enforce these separate
+   boundaries.
 
 2. **If it is a rule, is it a brittle rule or a principled one?** Most
    foot-guns are not "should have been agentic." They are brittle rules that
@@ -61,7 +65,7 @@ matches one, generalize it before merging.
 | Treating absence of a signal as proof of absence | Non-fired hideable bindings use the explicit conservative `LR = 1` policy; only reviewed, successfully observed public declarations can disconfirm on absence | The missingness policy in [correlation.md](correlation.md); MNAR itself does not derive `LR = 1` |
 | A confident yes/no verdict from a model score | Keep facts separate from model-relative posteriors and evidence-responsive uncertainty bands; set `sparse=true` at the display-mass floor and remain unresolved when evidence does not identify the claim | The band is not a credible interval or calibrated probability; the benchmark decides whether Bayesian fusion remains primary |
 | Co-firing observations multiplied as if independent | Group correlated bindings (one evidence cluster contributes once) | Evidence groups / CAL7 over-confidence treatment |
-| A rule tuned to make the local corpus look right | Validate against the corpus as a distribution, keep priors at observed base rates, never over-fit | The calibration track (CAL6/CAL12) and the no-over-fit discipline |
+| A rule tuned to make the local corpus look right | Treat the corpus as one development sample, do not equate its detection rate with a population prior, justify parameters independently, and never over-fit | The calibration track (CAL6/CAL12) and the no-over-fit discipline |
 
 The through-line: when a rule feels brittle, the answer is usually a more
 general rule plus honest uncertainty, kept deterministic. The Bayesian layer is
@@ -88,9 +92,11 @@ these rules:
   approves any semantic change. Agent output never feeds back into the core
   weights or catalog without passing the gate
   ([maintainer-validation.md](maintainer-validation.md)).
-- **Manual approval by default at the MCP surface.** Read-only tools and stateful
-  tools are split; do not auto-approve stateful ones. See the autoApprove
-  guidance in [mcp.md](mcp.md).
+- **Client-controlled permissions at the MCP surface.** recon declares the
+  read-only versus stateful split through tool annotations and documents the
+  bounded side effects, while each MCP client's permission rules remain
+  authoritative. Default scaffolds never request blanket approval for stateful
+  tools. See the approval guidance in [mcp.md](mcp.md).
 - **Side effects are named and bounded before they run.** A maintainer loop must
   separate planning from execution, record the command or run stamp that makes a
   step idempotent on resume, and stop for maintainer approval before release,
@@ -136,12 +142,15 @@ system, with an idempotency key or run stamp for any step that may be retried.
 
 ## A checklist before you add a rule or an agentic behavior
 
-- Does it keep collection passive and credential-free?
-- Does it keep output reproducible (byte-identical) and provenance intact?
+- Does it preserve the documented credential-free collection boundary and keep
+  every permitted direct probe explicit and bounded?
+- Does it keep local processing and rendering deterministic for the same
+  captured inputs and version, with evidence linkage intact?
 - If it is a rule: is it general, or over-fit to one string/case? Could the
   specifics be a catalog entry instead?
-- Does it assert more than the public channel supports? If sparse, does the
-  interval widen rather than the verdict harden?
+- Does it assert more than the public channel supports? If sparse, does it report
+  the display-mass floor without claiming that the interval must widen, the
+  posterior must move toward 0.5, or the result must remain unresolved?
 - If it involves an agent: is the agent outside the core, fed data-not-
   instructions, and unable to mutate the core without a gate and a human?
 - What new failure mode does it add, and is that failure visible (flagged,
@@ -192,7 +201,7 @@ meant to drift forward as recon does. Update it when:
 
 - a new brittle-rule foot-gun is found and fixed (add a row with its precedent);
 - the agentic surface changes (a new MCP tool class, a new maintainer loop, a
-  change to the autoApprove split);
+  change to the permission or tool-annotation boundary);
 - an invariant is added or sharpened.
 
 The roadmap points here from its top so the question gets re-asked at the right

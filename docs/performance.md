@@ -278,9 +278,9 @@ CI still runs the full functional and coverage contract on Python 3.11 through
 3.14 across Windows, macOS, and Linux, with a non-blocking 3.14t dependency
 probe.
 
-Reviewed July 12, 2026 against current official guidance:
+Reviewed July 13, 2026 against current official guidance:
 
-- [Python 3.14.6 release documentation](https://docs.python.org/3.14/whatsnew/3.14.html)
+- [Python 3.14.6 release documentation](https://www.python.org/downloads/release/python-3146/)
   documents the current stable 3.14 line, asyncio and import optimizations,
   subinterpreters, and the experimental JIT. These capabilities must still be
   measured on recon-shaped work.
@@ -371,7 +371,7 @@ recon cache clear --all                                # start cold
 time recon batch path/to/your-corpus.txt --json > /dev/null
 ```
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md#fictional-example-policy) for
+See [CONTRIBUTING.md](../CONTRIBUTING.md#no-real-company-data-ever) for
 why the project does not commit a real-company corpus. Local corpora
 conventionally live at `~/.recon/corpus.txt`; they are never
 transmitted anywhere recon does not already query.

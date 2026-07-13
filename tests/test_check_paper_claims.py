@@ -92,8 +92,11 @@ def test_paper_claim_audit_rejects_reopened_m365_blocker(tmp_path: Path) -> None
     _copy_paper_docs(tmp_path)
     outline = tmp_path / "docs" / "paper-outline.md"
     text = outline.read_text(encoding="utf-8").replace(
-        "Final claim audit is complete",
-        "Blocking open item: M365 independent-instrument check.\n\nFinal claim audit is complete",
+        "The most recent recorded final claim audit is the historical",
+        (
+            "Blocking open item: M365 independent-instrument check.\n\n"
+            "The most recent recorded final claim audit is the historical"
+        ),
     )
     outline.write_text(text, encoding="utf-8")
 

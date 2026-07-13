@@ -2,9 +2,8 @@
   "index_patterns": ["recon-lookup-*"],
   "priority": 200,
   "_meta": {
-    "description": "Field mappings for recon-lookup-* indices. Pins ECS-standard fields to their ECS types and recon-specific fields (under recon.*) to types that match the JSON shape so Kibana visualizations don't drift on first-write surprises.",
-    "managed_by": "recon",
-    "ecs_version": "8.11.0"
+    "description": "Field mappings for recon-lookup-* indices. Pins documented ECS-standard and recon-specific fields to types that match the JSON shape so Kibana visualizations do not drift on first-write surprises.",
+    "managed_by": "recon"
   },
   "template": {
     "settings": {
@@ -23,8 +22,7 @@
             "category": { "type": "keyword" },
             "type": { "type": "keyword" },
             "dataset": { "type": "keyword" },
-            "module": { "type": "keyword" },
-            "severity": { "type": "long" }
+            "module": { "type": "keyword" }
           }
         },
         "host": {
@@ -32,13 +30,9 @@
             "domain": { "type": "keyword" }
           }
         },
-        "organization": {
-          "properties": {
-            "name": { "type": "keyword" }
-          }
-        },
         "recon": {
           "properties": {
+            "display_name": { "type": "keyword" },
             "provider": { "type": "keyword" },
             "confidence": { "type": "keyword" },
             "auth_type": { "type": "keyword" },
@@ -64,13 +58,19 @@
                     "interval_high": { "type": "float" },
                     "sparse": { "type": "boolean" }
                   }
-                },
-                "conflicts": {
+                }
+              }
+            },
+            "evidence_conflicts": {
+              "type": "nested",
+              "properties": {
+                "field": { "type": "keyword" },
+                "candidates": {
                   "type": "nested",
                   "properties": {
-                    "field": { "type": "keyword" },
-                    "sources": { "type": "keyword" },
-                    "magnitude": { "type": "float" }
+                    "value": { "type": "keyword", "ignore_above": 1024 },
+                    "source": { "type": "keyword" },
+                    "confidence": { "type": "keyword" }
                   }
                 }
               }

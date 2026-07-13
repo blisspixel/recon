@@ -2,7 +2,7 @@
 
 The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
-Current status: recon v2.5.6 has a stable, production-ready baseline. The CLI,
+Current status: recon v2.5.8 has a stable, production-ready baseline. The CLI,
 JSON schema, local stdio MCP server, bounded collectors, generated-artifact
 guards, validation gates, and release path are shipped. The active product work
 is evidence-semantic integrity and a reproducible product-quality baseline. The
@@ -32,10 +32,10 @@ separate maintainer tracks. Their final submission gate is
 [docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md); they
 do not outrank output truthfulness, measured utility, or compatibility work.
 
-The final public claim audit refresh for the current paper package is recorded
-in
+The most recent completed historical public claim audit is recorded in
 [validation/2026-06-29-scorecard-gate-claim-audit.md](validation/2026-06-29-scorecard-gate-claim-audit.md).
-Future wording, package, or validation changes rerun that gate before
-submission or release packaging. The latest local submission-freeze public proof
-record is
+The current paper and artifact package is unfrozen after subsequent wording,
+package, validation, and release changes. Maintainers must rerun that gate
+before external submission or submission packaging. The most recent completed
+historical local submission-freeze proof is
 [validation/2026-06-30-submission-freeze-local-proof.md](validation/2026-06-30-submission-freeze-local-proof.md).

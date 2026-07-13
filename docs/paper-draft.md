@@ -17,11 +17,14 @@ Primary category cs.CR; secondary stat.ML (inference framing) or cs.SE
 
 ## Abstract
 
-External attack-surface tools infer an organization's technology stack from
-public signals. The honest version of that task faces a problem the calibration
+External attack-surface tools often promote public signals around a domain into
+claims about an organization's technology stack. recon addresses the narrower
+question of what the queried public namespace reveals. The honest version of
+that task faces a problem the calibration
 literature usually sidesteps: the ground truth is not observable, and the
 subject can hide signals, so a confident-looking verdict can be confidently
-wrong. We present recon, a passive, zero-credential inference tool that pairs
+wrong. We present recon, a zero-credential tool with a passive collection scope
+that pairs
 deterministic certificate-transparency correlation with a small auditable
 Bayesian network. For hideable evidence, a non-fired binding contributes no
 likelihood factor. This is a conservative product rule, not a derivation from
@@ -60,31 +63,35 @@ and parameter-development overlap we state.
 
 ## 1. Introduction
 
-Security teams increasingly need to know what an organization's external
-footprint reveals before an attacker reads the same channel: which identity
-provider a domain delegates to, whether its mail policy is enforced, what fronts
-its origin. External attack-surface management (EASM) tools answer these
+Security teams increasingly need to know what a domain's public namespace
+reveals before an attacker reads the same channel: which identity provider the
+namespace indicates, whether its mail policy is enforced, and what fronts its
+origin. A domain is a query coordinate, not an organization identifier.
+External attack-surface management (EASM) tools answer these
 questions from public signals (DNS records, certificate-transparency logs,
 unauthenticated provider endpoints), and they answer confidently. The confidence
 is the problem. The ground truth behind these claims is not observable from
-outside, and the subject of the measurement controls most of the evidence: a
-hardened organization publishes less, a careless one publishes more, and a tool
-that reads "no signal" as "no technology" is confidently wrong about exactly the
-targets that matter most.
+outside, and the domain operator can control much of the evidence: one namespace
+publishes less, another publishes more, and a tool that reads "no signal" as
+"no technology" can be confidently wrong about exactly the targets that matter
+most.
 
 The standard remedy, calibrating the classifier against labeled truth, is
-structurally unavailable here. There is no label set for "what this organization
-actually runs"; the operator can delete most of the indicators a passive
-observer relies on; and the deletion is not random, it correlates with security
-maturity, which is often the very thing being estimated. This is missingness
-that is not at random (MNAR) in the adversarial sense, and the calibration
-literature's usual assumptions (exchangeable data, missingness independent of
-the input) exclude it by construction.
+structurally unavailable here. There is no label set for "which products are
+operationally used behind this namespace"; the operator can delete most of the
+indicators a public-metadata observer relies on. The deletion mechanism can
+depend on disclosure policy, deployment choices, and other unobserved state, so
+independent missingness is not justified. We therefore treat adversarial MNAR as
+a plausible design condition, not as an empirically established relationship
+between missingness and security maturity. The calibration literature's usual
+assumptions (exchangeable data, missingness independent of the input) do not
+cover that condition.
 
 We present recon, a deployed, open-source, zero-credential external-surface tool
-built around that predicament rather than despite it. Every conclusion is
-reachable through an evidence directed acyclic graph (DAG) of re-queryable public
-observations; high-level claims are computed by a nine-node Bayesian network
+built around that predicament rather than despite it. Its explanation surface
+emits a reconstructed evidence directed acyclic graph (DAG) with completeness
+diagnostics and named disconnected terminals; high-level claims are computed by
+a nine-node Bayesian network
 small enough to audit by hand. Each tested query is cross-checked against exact
 enumeration of its 512-state latent joint over a structured evidence sweep;
 and absent evidence on hideable claims contributes a likelihood ratio of one
@@ -126,8 +133,9 @@ missingness policy.
 
 **Contributions.**
 
-- A deployed passive-inference system that preserves full provenance and pairs
-  deterministic certificate-transparency correlation with a small Bayesian
+- A deployed passive-inference system that emits evidence-linked explanations
+  and explicit completeness diagnostics, and pairs deterministic
+  certificate-transparency correlation with a small Bayesian
   network whose inference is checked against full latent-joint enumeration over
   a structured evidence sweep (Section 3).
 - A conservative missing-evidence treatment (the likelihood-ratio-one absence
@@ -252,9 +260,12 @@ nodes under sparse and dense backgrounds. Agreement verifies the tested factor
 construction paths; it does not enumerate the global power set of evidence
 bindings.
 
-Every claim is reachable through an evidence DAG: the binding, the record it came
-from, and the inference path are all re-queryable, which is what lets an operator
-verify a conclusion before acting on it. Nodes sit on a hideability spectrum that
+The emitted explanation DAG reconstructs evidence reachability and names any
+terminal claim it cannot connect. For directly retained evidence and exact claim
+contracts, an operator can re-query the public record before acting. Reachability
+does not establish exact generation-time lineage for insight or posture
+associations reconstructed from rendered text or proxy rule matches. Nodes sit
+on a hideability spectrum that
 turns out to govern everything in Section 5: provider-attested (the provider's
 own endpoint answers authoritatively), public-declaration (a record that is its
 own definition, such as DMARC), and hideable (no external reference; absence may
@@ -509,50 +520,59 @@ surfaces the per-node band, sparse-count summary, and explicit reading guidance.
 
 ## 8. Limitations and ethics
 
-recon is passive-only and defensive-only by invariant: no credentials, no active
-scanning, no paid APIs, no runtime-trained model, and no persistent cross-domain
-store. Some manually encoded parameters were informed by a development corpus.
+recon is defensive and passive in collection scope by invariant: no credentials,
+port scans, login attempts, paid APIs, runtime-trained model, or persistent
+cross-domain store. DNS resolver traffic can be externally visible. The
+standards-compliant MTA-STS fetch is the only default target-owned HTTP request;
+Google CSE and BIMI certificate requests are explicit opt-in direct probes. Some
+manually encoded parameters were informed by a development corpus.
 The local deletion result does not cover evidence addition; selected synthetic
 additions move model-relative posteriors across 0.5, but do not establish a
 forced, confident, real-world false positive. Coverage depends on public
-DNS, so organizations behind heavy proxies or with minimal records can return
+DNS, so namespaces behind heavy proxies or with minimal records can return
 sparse results. The `sparse` flag reports only that effective display mass is at
 its configured floor; band width need not increase and the posterior need not
 move toward 0.5.
 The fingerprint catalog is rule-based and solo-maintained, so confident-looking
 output can still be wrong, which is why every detection carries a vendor-doc
-pointer for independent re-verification. Ethically, recon reads only what an
-organization already publishes, reports it with provenance and hedged
-uncertainty, and leaves business interpretation to the operator; it does not
-score, rank, or enrich organizations.
+pointer for independent re-verification. Ethically, recon reads public metadata
+that a domain operator or public provider exposes, reports it with provenance
+and hedged uncertainty, and leaves business interpretation to the operator; it
+does not score, rank, or enrich organizations.
 
 ---
 
 ## 9. Reproducibility
 
 The repository invariants keep real target rows and private identifier lists out
-of version control. Public-proof methods, synthetic harnesses, and the software
-build are reproducible from a clean checkout. Private-cohort metrics are not
-independently result-reproducible because the selected domain list is gitignored,
-public DNS changes over time, and the recorded aggregate artifacts do not retain
-enough lineage to reconstruct every cohort. Only aggregate statistics are
-published; the per-domain corpus never appears. This is the discipline recorded
-in [data-handling-policy.md](data-handling-policy.md).
-The artifact is a bit-for-bit reproducible build with sigstore-signed PyPI
-attestations and a locked JSON schema, so the tool a reader runs is the tool the
-paper describes. The public no-private-data evidence bundle is reproducible from
-a clean checkout with `python -m validation.reproduce_paper_numbers`; it records
-the exact commands and artifacts in a local manifest under `validation/local/`.
-The reviewer-facing command sequence and result boundaries are in
+of version control. Public-proof methods and synthetic harnesses can be rerun
+from a clean checkout. The software build has the bounded deterministic-build
+evidence described below. Private-cohort metrics are not independently
+result-reproducible because the selected domain list is gitignored, public DNS
+changes over time, and the recorded aggregate artifacts do not retain enough
+lineage to reconstruct every cohort. Only aggregate statistics are published;
+the per-domain corpus never appears. This is the discipline recorded in
+[data-handling-policy.md](data-handling-policy.md).
+CI verifies byte-identical wheel and sdist hashes across two builds of the same
+source with a fixed `SOURCE_DATE_EPOCH` inside one Ubuntu job and one resolved
+build-tool window. PyPI attestations bind published artifacts to the release
+workflow, and the JSON schema is locked. This evidence supports deterministic
+rebuilding under the tested recipe; it does not establish byte identity across
+every operating system and toolchain. The public no-private-data evidence bundle
+is reproducible from a clean checkout with
+`python -m validation.reproduce_paper_numbers`; it records the exact commands
+and artifacts in a local manifest under `validation/local/`. The reviewer-facing
+command sequence and result boundaries are in
 [artifact-review.md](artifact-review.md).
 
-We separate two reproducibility claims that are easy to conflate. Build
-reproducibility (the signed, bit-identical artifact) is real and complete. Result
-reproducibility is not: the corpus aggregates above (for example the M365
-fixed-bin ECE of 0.0471) cannot be regenerated by an outsider, because the
-domain list is gitignored by invariant and DNS/CT state drifts daily. The
-synthetic harnesses reproduce the method and the relative-layer results; they do
-not reproduce the private-cohort or public-list aggregate numbers.
+We separate two reproducibility claims that are easy to conflate. Deterministic
+build evidence is bounded to the tested same-job CI comparison
+described above. Result reproducibility is more limited: the corpus aggregates
+above (for example the M365 fixed-bin ECE of 0.0471) cannot be regenerated by an
+outsider, because the domain list is gitignored by invariant and DNS/CT state
+drifts daily. The synthetic harnesses reproduce the method and the
+relative-layer results; they do not reproduce the private-cohort or public-list
+aggregate numbers.
 [public-label-snapshot-decision.md](public-label-snapshot-decision.md) defers a
 frozen real-apex label snapshot under the current data-handling policy: a
 hash-pinned identifier list would improve benchmark reproducibility, but it
@@ -608,15 +628,11 @@ The M365 independent-instrument decision is closed for this submission:
 [m365-tenancy-decision.md](m365-tenancy-decision.md) records why no passive
 candidate is independent enough to promote the result beyond corroboration.
 
-Final claim audit is complete and refreshed for the current draft package. The
-public memo
-[2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md)
-records the passing claim-map audit, figure drift check, public proof smoke,
-full public proof, local gate, and release readiness checks.
-The latest local submission-freeze public proof record is
-[2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md).
-
-Current technical artifact blockers: none for this draft package. Any future
-experiment, paper wording, package, or claim-map change can move a claim between
-support tiers, so it must rerun the final claim audit before submission
-packaging.
+The most recent recorded final claim audit is the historical
+[2026-06-29 claim-audit memo](../validation/2026-06-29-scorecard-gate-claim-audit.md).
+The most recent recorded local public proof is the historical
+[2026-06-30 submission-freeze memo](../validation/2026-06-30-submission-freeze-local-proof.md).
+Both apply only to the exact commits they name. Later experiment, paper wording,
+package, and claim-map changes leave this draft unfrozen. A new claim audit,
+figure drift check, public proof, local gate, release-readiness check, and freeze
+record are required before submission packaging.

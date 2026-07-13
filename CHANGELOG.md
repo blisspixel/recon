@@ -12,6 +12,46 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.5.8] - 2026-07-13
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes, and no MCP tool names,
+parameters, schemas, annotations, or defaults changed. Schema descriptions and
+the packaged surface inventory were synchronized with the existing behavior.
+
+### Changed
+
+- Aligned the README, roadmap, contributor guidance, MCP integrations, security
+  model, schema reference, research package, release guidance, and historical
+  validation records with the shipped v2 behavior and current repository
+  layout.
+- Corrected Elastic and Splunk examples to preserve observation confidence,
+  use their documented field and configuration semantics, and avoid implying
+  vulnerability severity or organizational ownership.
+- Replaced the superseded "strictly passive" shorthand with an explicit
+  public-metadata collection boundary that distinguishes DNS visibility,
+  provider identity discovery, the default MTA-STS request, and opt-in direct
+  probes.
+- Raised the remote OpenSSF Scorecard floor to 8.0 and made SAST a required
+  score-10 code-owned control.
+
+### Fixed
+
+- Made generated-surface checks verify both the documentation copy and the
+  packaged inventory so release artifacts cannot silently drift.
+- Added documentation-integrity tests for indexed canonical documents,
+  historical commit receipts, semantic review stamps, installer behavior,
+  error contracts, SIEM mappings, and research-proof boundaries.
+- Corrected stale module paths, invalid historical commit receipts, frozen-draft
+  wording, first-run delta behavior, MCP installer paths, and result-error
+  semantics across maintained documentation.
+- Updated `recon mcp install` to emit VS Code's required `type: "stdio"` and to
+  remove the unsupported legacy `autoApprove` field from VS Code and Claude
+  Code recon blocks while preserving documented client-specific fields.
+- Made degraded-MX collection views mask the current neutral sparse-result
+  message as well as superseded cached self-hosting wording.
+
 ## [2.5.7] - 2026-07-13
 
 ### Tool Surface Changes
@@ -5518,7 +5558,7 @@ This is the v1.9.14 step of the v1.9.4 → v2.0 linear sequence in
 **v1.9.13 security bridge: CNAME chain walker hardening (third
 layer).** Tightens the surface-attribution pipeline after a fresh
 scanner pass against the v1.5.0 introducing commit
-(`722220f`) re-flagged the previously-mitigated chain-walker
+(`332534d`) re-flagged the previously-mitigated chain-walker
 finding. The v1.9.3.5 + v1.9.4 closure (suffix denylist +
 CNAME-only-during-walk) was already authoritative; v1.9.13 adds
 two further layers and one defense-in-depth tightening to reduce

@@ -1,6 +1,7 @@
 {
   "servers": {
     "recon": {
+      "type": "stdio",
       "command": "recon",
       "args": ["mcp"]
     }

@@ -84,12 +84,16 @@ The archive candidate is a frozen GitHub release that already has:
 - `CITATION.cff` synchronized with version and release date;
 - Apache-2.0 license;
 - public reviewer commands in [artifact-review.md](artifact-review.md);
-- public proof memo in
+- most recent historical public proof memo in
   [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md);
-- current final claim audit refresh in
+- most recent historical final claim audit in
   [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md);
 - aggregate-safe paper figures in [paper-figures.md](paper-figures.md);
 - data-handling policy in [data-handling-policy.md](data-handling-policy.md).
+
+Those June memos apply only to the commits they name. The current paper and
+artifact package is unfrozen and requires a new submission gate before an
+archive or external submission.
 
 ## Freeze Checklist
 

@@ -1,8 +1,9 @@
 # Supply-chain and release integrity
 
 How recon's releases are built, signed, and made verifiable. The goal is that a
-consumer can trace a published artifact back to the exact source and workflow run
-that produced it, and can rebuild it themselves to confirm nothing was altered.
+consumer can trace a published artifact back to the exact source and workflow
+run that produced it, and can compare a local rebuild under a matched build
+environment.
 
 This is kept proportionate to what recon is: a passive, zero-credential Python
 tool. The measures below are the ones that return more than they cost; the
@@ -19,7 +20,7 @@ which produces and publishes:
 | **Trusted publishing** | PyPI publishes via GitHub OIDC, no long-lived API token (`pypa/gh-action-pypi-publish`) | The PyPI project page shows the publishing workflow as a trusted publisher |
 | **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection | `gh attestation verify <file> --repo blisspixel/recon`; offline consumers can download the `.intoto.jsonl` release asset |
 | **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Fetch the file's PyPI provenance and verify it with `pypi-attestations verify pypi --repository https://github.com/blisspixel/recon <wheel-url>` |
-| **Reproducible builds** | `SOURCE_DATE_EPOCH` pinned to the tagged commit's timestamp, so the wheel and sdist are byte-identical to a rebuild from the same source | See the recipe below |
+| **Same-job deterministic-build check** | `SOURCE_DATE_EPOCH` is fixed and CI builds twice in one Ubuntu job, then compares wheel and sdist hashes under the same resolved toolchain | See the bounded recipe and limitations below |
 | **CycloneDX SBOM** | Generated from the hash-pinned runtime lock (`pip-audit --format=cyclonedx-json`) and attached to the GitHub Release | Download `recon-tool-<version>.cdx.json` from the release assets |
 
 ## Consumer verification quick path
@@ -28,7 +29,7 @@ For a published version, consumers can check the release from both distribution
 channels without trusting this repository's local state:
 
 ```bash
-VERSION=2.5.7
+VERSION=2.5.8
 VERIFY_DIR="$(mktemp -d)"
 
 gh release download "v${VERSION}" \
@@ -59,7 +60,7 @@ python - <<'PY' | while IFS= read -r file_url; do
 import json
 import urllib.request
 
-version = "2.5.7"
+version = "2.5.8"
 with urllib.request.urlopen("https://pypi.org/pypi/recon-tool/json", timeout=30) as response:
     payload = json.load(response)
 for file_record in payload["releases"][version]:
@@ -75,14 +76,19 @@ This path checks source-to-artifact provenance and integrity. It is not a claim
 that installers enforce PyPI attestations automatically, and it is not a claim
 that recon has reached a named SLSA level beyond the controls listed here.
 
-## Reproducible builds
+## Deterministic-build evidence
 
-The build is bit-for-bit reproducible: the same source plus the same
-`SOURCE_DATE_EPOCH` yields byte-identical artifacts. The release workflow pins
-`SOURCE_DATE_EPOCH` to the tagged commit's committer timestamp, and
-[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) gates the property on
-every change (the `reproducible-build` job builds twice and compares the wheel
-and sdist sha256 hashes).
+The release workflow pins `SOURCE_DATE_EPOCH` to the tagged commit's committer
+timestamp. [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) then tests
+same-job repeatability on every change: its `reproducible-build` job builds the
+same source twice in one Ubuntu job under the same Python, runner, and resolved
+build-tool window, and compares the wheel and sdist SHA-256 hashes.
+
+That check is evidence of deterministic behavior under the tested environment.
+It is not proof that source plus `SOURCE_DATE_EPOCH` alone produces identical
+bytes across operating systems, Python versions, `uv` versions, or independently
+resolved build-backend versions. The build backend is declared in
+`pyproject.toml`, but it is not part of the runtime `uv.lock` graph.
 
 To verify a published release yourself:
 
@@ -91,7 +97,7 @@ To verify a published release yourself:
 git clone https://github.com/blisspixel/recon && cd recon
 git checkout v<version>
 
-# 2. Rebuild with the release's build-time stamp (the tagged commit timestamp).
+# 2. Rebuild with the release's build-time stamp.
 SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct) uv build --out-dir /tmp/verify
 
 # 3. Compare against the published artifacts (from PyPI or the GitHub Release).
@@ -99,8 +105,12 @@ sha256sum /tmp/verify/recon_tool-<version>-py3-none-any.whl
 sha256sum /tmp/verify/recon_tool-<version>.tar.gz
 ```
 
-The hashes match the published wheel and sdist. (Build into a directory outside
-the checkout, as above, so the build output is not itself swept into the sdist.)
+An exact hash match is strong confirmation under the consumer's resolved build
+environment. A mismatch is not, by itself, evidence of tampering because the
+published build toolchain is not fully frozen for cross-environment replay.
+Use the signed provenance and PyPI attestations above to verify source and
+workflow identity. Build into a directory outside the checkout, as above, so
+the build output is not itself swept into the sdist.
 
 ## PyPI attestation verification
 
@@ -122,12 +132,13 @@ documents that behavior.
 
 ## Supply-chain isolation contract
 
-The release jobs are scoped to least privilege, and the build is isolated from
-dependency code that could tamper with it. In short: the `build` job is pure
-(`uv build` then immediate artifact upload, no other dependency code runs), the
-`test`, `sbom`, and `attest` jobs run on separate runners that never see
-`dist/`, and only dependency-free publish / attestation jobs hold elevated
-scopes minted from OIDC at publish time. The provenance export job downloads the
+The release jobs are scoped to least privilege. The `build` job runs `uv` and
+the declared Hatchling build backend, which is part of the trusted build-tool
+boundary, then immediately uploads the artifacts. No project runtime
+dependency or unrelated tool runs after artifact creation and before sealing.
+The `test`, `sbom`, and `attest` jobs run on separate runners that never see
+`dist/`, and publish or attestation jobs with elevated OIDC-minted scopes do not
+execute project runtime dependencies. The provenance export job downloads the
 signed GitHub attestation bundles and uploads a `.intoto.jsonl` artifact for the
 GitHub Release without running project dependency code. The PyPI and GitHub
 release jobs wait for the provenance attestation path, so a release fails closed
@@ -182,10 +193,12 @@ The repository also runs supply-chain posture checks outside the release flow:
 - `.github/CODEOWNERS` routes all repository paths to the maintainer account so
   external pull requests have a clear review owner.
 
-The 2026-06-30 Scorecard recheck reports score `7.5` with the non-SAST
-code-owned controls green. SAST reports `7` because CodeQL is scheduled and
-manually dispatched rather than run on every push. The June 28 review found one
-code-owned gap and several repository-process gaps. The code-owned gap was an
+The 2026-07-13 Scorecard recheck for the exact v2.5.7 `HEAD` commit reports
+score `8.3`, with SAST and the other measured code-owned controls at `10`. Remote
+release readiness requires an overall score of at least `8.0` and requires SAST
+to remain at `10`; the dated `8.3` value is a snapshot, not a permanent promise.
+The June 28 review found one code-owned gap and several repository-process gaps.
+The code-owned gap was an
 unpinned installer download-and-run path; the installer now refuses to execute
 remote tool installers. The Scorecard SARIF upload step also uses CodeQL Action
 v4 to avoid the scheduled v3 deprecation. Live repository settings now enforce
@@ -202,7 +215,6 @@ The remaining Scorecard limits are intentional or process-bound:
   remove the bypass and require PRs.
 - Code-Review is low until normal work flows through reviewed pull requests.
   Creating fake review history would be worse than the score.
-- Maintained is low while the repository is younger than Scorecard's age window.
 - CII-Best-Practices is low until the OpenSSF Best Practices Badge questionnaire
   is completed and linked. The questionnaire evidence worksheet lives in
   [openssf-badge-readiness.md](openssf-badge-readiness.md), and the current

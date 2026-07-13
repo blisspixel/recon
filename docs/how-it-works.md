@@ -66,9 +66,16 @@ pages, scan ports, authenticate, or enumerate target services.
 Subdomain evidence answers a different question from apex evidence. Apex MX,
 TXT, SPF, DMARC, and tenant discovery describe the domain-level posture.
 Subdomain CNAME chains describe where visible public hostnames appear to point.
-For that reason, recon keeps the per-subdomain result in
-`surface_attributions` instead of folding every subdomain provider into the
-apex service list.
+`cname_target` classifications therefore stay in `surface_attributions` and do
+not become apex service or slug claims.
+
+A separate compatibility path performs bounded lightweight DNS enrichment for
+names already present in `related_domains`. Non-`cname_target` services and
+slugs found by those follow-up results can fold into the top-level inventory,
+but their raw records are not promoted into apex `evidence`, `detection_scores`,
+email-provider fields, or exposure controls. Top-level `services` and `slugs`
+must therefore still be read as scoped public-pattern inventory, never as proof
+that the apex uses a product.
 
 Output detail depends on the surface:
 
@@ -186,11 +193,17 @@ DNS TXT or MX or CNAME
 -> panel insight or JSON field
 ```
 
-Use `--explain` for the deterministic explanation records and structured
-terminal-provenance DAG:
+Plain `--explain` renders the panel, per-source status, and flat deterministic
+explanation records:
 
 ```bash
 recon contoso.com --explain
+```
+
+Use `--json --explain` when automation needs the reconstructed structured
+terminal-provenance DAG:
+
+```bash
 recon contoso.com --json --explain
 ```
 

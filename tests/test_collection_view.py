@@ -282,6 +282,10 @@ def test_detector_failure_masks_partial_contributions_from_every_owned_channel(
         ("dns:mx", "Email delivery path: Example gateway to Microsoft 365"),
         (
             "dns:mx",
+            "Sparse public signal: custom or unclassified MX. MX records exist, but no provider pattern matched.",
+        ),
+        (
+            "dns:mx",
             "Sparse public signal \N{EM DASH} custom or self-hosted mail infrastructure.",
         ),
         (

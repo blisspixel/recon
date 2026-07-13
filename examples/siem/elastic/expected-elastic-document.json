@@ -1,21 +1,17 @@
 {
-  "_index": "recon-lookup-2026.05",
+  "_index": "recon-lookup-2026.07",
   "_id": "(auto-generated)",
   "_source": {
-    "@timestamp": "(set by Filebeat at read time, or by ingest pipeline timestamp processor)",
+    "@timestamp": "(set by Filebeat at read time)",
     "event": {
       "kind": "event",
       "category": ["configuration", "iam"],
       "type": ["info"],
       "dataset": "recon.lookup",
-      "module": "recon",
-      "severity": 2
+      "module": "recon"
     },
     "host": {
       "domain": "northwindtraders.com"
-    },
-    "organization": {
-      "name": "Northwind Traders"
     },
     "tenant_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
     "default_domain": "northwindtraders.onmicrosoft.com",
@@ -23,6 +19,7 @@
     "domain_count": 3,
     "msgraph_host": "graph.microsoft.com",
     "recon": {
+      "display_name": "Northwind Traders",
       "provider": "Microsoft 365",
       "confidence": "high",
       "auth_type": "Federated",
@@ -47,20 +44,41 @@
         "SPF: strict (-all)",
         "Zendesk"
       ],
+      "slugs": [
+        "microsoft365",
+        "exchange-online",
+        "intune",
+        "okta",
+        "anthropic",
+        "atlassian",
+        "docusign",
+        "figma",
+        "knowbe4",
+        "miro",
+        "salesforce",
+        "slack",
+        "zendesk"
+      ],
       "insights": [
-        "Federated identity via Okta",
-        "Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",
-        "Likely M365 E3/E5 (Intune + federated auth)",
-        "Security stack: KnowBe4 (security training), Okta (identity)",
-        "AI Adoption: anthropic",
-        "Modern Collaboration: slack, miro, atlassian, figma",
-        "Enterprise Security Stack: knowbe4, okta"
+        "Federated identity observed; identity-vendor indicators: Okta",
+        "Email security: observed controls: DMARC reject, DKIM, SPF strict, MTA-STS",
+        "Microsoft tenant discovery returned 3 domains",
+        "Security-vendor indicators observed: KnowBe4 (security training), Okta (identity)",
+        "Device-management vendor indicator observed: Intune",
+        "AI-platform indicators observed: Anthropic",
+        "Multiple security-vendor indicators observed: KnowBe4, Okta",
+        "Collaboration-platform indicators observed: Slack, Miro, Atlassian, Figma",
+        "AI, collaboration, and cloud-platform indicators co-observed: Anthropic, Slack, Miro, Figma, Atlassian"
       ],
       "email": {
         "dmarc_policy": "reject",
         "security_score": 4,
         "primary_provider": "Microsoft 365"
-      }
+      },
+      "fusion": {
+        "posteriors": []
+      },
+      "evidence_conflicts": []
     },
     "tenant_domains": [
       "northwindtraders.com",
@@ -71,5 +89,5 @@
       "northwind-internal.com"
     ]
   },
-  "_notes": "Fields that the ingest-pipeline.json does NOT rename (tenant_id, default_domain, region, domain_count, msgraph_host, tenant_domains, related_domains) land at the top level of _source unchanged. The pipeline's rename processors are scoped to the recon-specific and ECS-aligned fields; extending the rename set is a forward-compatible change. _index uses a monthly suffix; tune to your retention via ILM. _id and @timestamp are populated by Elasticsearch / Filebeat at ingest time."
+  "_notes": "Representative contract subset. Fields that ingest-pipeline.json does not rename remain at the top level of _source, and Filebeat adds its own agent metadata. No event severity is derived from recon confidence. _index uses a monthly suffix; tune retention with ILM. _id and @timestamp are populated at ingest time."
 }

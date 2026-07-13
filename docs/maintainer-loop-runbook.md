@@ -25,8 +25,8 @@ Every loop uses the same six records:
 1. **Context packet:** `README.md`, `AGENTS.md`, `docs/agentic-balance.md`,
    `docs/roadmap.md`, `docs/maintainer-validation.md`, `validation/README.md`,
    `.agent/PROGRESS-LOG.md`, and `.agent/SKILLS.md`.
-2. **State file:** an ignored JSON file under `validation/local/`, such as
-   `validation/local/maintainer-loop-state.json`, recording the latest command,
+2. **State file:** an ignored JSON file under `.agent/`, such as
+   `.agent/maintainer-loop-state.json`, recording the latest command,
    outcome, commit, elapsed time, spend, touched files, and any unresolved
    assumptions. It records traces and outcomes, not raw model reasoning.
 3. **Action boundary:** a short statement of which steps are read-only, which

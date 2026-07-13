@@ -1,6 +1,9 @@
 # Agent integrations
 
-Per-agent install scaffolds for AI clients. Each subfolder is self-contained - pick the one that matches your agent and follow that folder's README.
+Per-agent install scaffolds for AI clients. Pick the folder that matches your
+agent and follow its README; the client folders reuse the canonical guidance in
+the repository-root [`AGENTS.md`](../AGENTS.md) rather than carrying stale
+copies.
 
 ## Quickest path: `recon mcp install`
 
@@ -13,7 +16,11 @@ recon mcp install --client=cursor --dry-run            # preview the plan
 recon mcp install --client=kiro --scope=workspace      # project-local instead of user-global
 ```
 
-The install is idempotent and merge-safe - sibling MCP servers and any extra fields you've added to the recon block (custom `env`, `autoApprove` entries, `disabled` flags) all survive a `--force` rerun. Writes are atomic, so a failure mid-write never leaves you with a truncated config.
+The install is idempotent and merge-safe: sibling MCP servers and
+client-supported extra fields survive a `--force` rerun. Unsupported legacy
+approval fields are removed for Claude Code and VS Code, whose current schemas
+delegate approval to client permission settings. Writes are atomic, so a
+failure mid-write never leaves a truncated config.
 
 That handles **piece 1** of the setup (the MCP server). Per-client folders below still cover **piece 2** (the agent guidance - when and how the client should reach for recon) and per-client gotchas.
 
@@ -23,9 +30,9 @@ That handles **piece 1** of the setup (the MCP server). Per-client folders below
 |---|---|---|
 | **Claude Code** | [`claude-code/`](claude-code/) | Full plugin: MCP registration + skill + plugin manifest. One install wires everything up. |
 | **Kiro** | [`kiro/`](kiro/) | MCP config + instructions for using the canonical SKILL.md as a Kiro skill. |
-| **Cursor** | [`cursor/`](cursor/) | MCP config + `.cursor/rules/recon.md` template based on `AGENTS.md`. |
-| **Windsurf** | [`windsurf/`](windsurf/) | MCP config + `.windsurfrules` reference template. |
-| **VS Code + Copilot** | [`vscode/`](vscode/) | MCP config + `.github/copilot-instructions.md` template. |
+| **Cursor** | [`cursor/`](cursor/) | MCP config + instructions for creating `.cursor/rules/recon.md` from `AGENTS.md`. |
+| **Windsurf** | [`windsurf/`](windsurf/) | MCP config + instructions for creating a `.windsurfrules` reference. |
+| **VS Code + Copilot** | [`vscode/`](vscode/) | MCP config + instructions for creating `.github/copilot-instructions.md`. |
 
 For Claude Desktop and other clients without a folder here, `recon mcp install --client=claude-desktop` covers the MCP wiring; see [`docs/mcp.md`](../docs/mcp.md) for full reference.
 
@@ -44,12 +51,15 @@ Every supported agent has the same two things to wire:
 | Windsurf | `.windsurfrules` (plain markdown) | Always |
 | VS Code + Copilot | `.github/copilot-instructions.md` | Always |
 
-The guidance content itself is the same in every case. We maintain it in two mirrored files:
+The behavioral contract is shared across clients. It is maintained in two
+format-specific files:
 
-- [`agents/claude-code/skills/recon/SKILL.md`](claude-code/skills/recon/SKILL.md) - the body, with skill-format frontmatter for Claude Code and Kiro auto-loading.
-- [`AGENTS.md`](../AGENTS.md) at the repo root - the same body, no frontmatter, for tools that don't have a skill format. Auto-detected by Kiro and other agents.md-aware clients.
+- [`agents/claude-code/skills/recon/SKILL.md`](claude-code/skills/recon/SKILL.md) - skill-format guidance for Claude Code and Kiro auto-loading, with CLI-specific gotchas.
+- [`AGENTS.md`](../AGENTS.md) at the repo root - portable guidance for tools that do not use the skill format. Auto-detected by Kiro and other agents.md-aware clients.
 
-If you contribute changes to one, mirror them into the other.
+The prose need not be byte-for-byte identical, but collection boundaries,
+failure behavior, MCP invocation contracts, and output interpretation must stay
+semantically aligned.
 
 ## macOS PATH gotcha (most GUI clients)
 
@@ -61,10 +71,10 @@ Two fixes - both apply equally to every shipped `mcp.json`:
    ```json
    { "command": "/Users/you/.local/bin/recon", "args": ["mcp"] }
    ```
-2. **Rerun the installer from the right Python.** If `recon` is not on PATH,
-   `recon mcp install --client=<name> --force` writes a sys.path-stripping
-   Python fallback. Prefer that over hand-writing `python -m recon_tool.server`
-   in workspace configs.
+2. **Rerun the installer from the right Python.** `recon mcp install
+   --client=<name> --force` always writes that interpreter's absolute path and
+   a sys.path-stripping launcher. Prefer it over hand-writing
+   `python -m recon_tool.server` in workspace configs.
 
 Run `recon doctor --mcp` in your shell to confirm recon is reachable; it prints copy-pasteable JSON snippets for several supported clients. For a live JSON-RPC handshake check (does the server actually respond?), run `recon mcp doctor`.
 

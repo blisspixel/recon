@@ -18,6 +18,7 @@ import typer
 
 _ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_OUTPUT = _ROOT / "docs" / "surface-inventory.json"
+_DEFAULT_PACKAGED_OUTPUT = _ROOT / "src" / "recon_tool" / "data" / "surface-inventory.json"
 _DEFAULT_CLI_SURFACE_OUTPUT = _ROOT / "docs" / "cli-surface.md"
 _SCHEMA_PATH = _ROOT / "docs" / "recon-schema.json"
 _AGENT_GUIDANCE_FILES: tuple[tuple[str, str], ...] = (
@@ -350,6 +351,8 @@ def _client_config_inventory() -> list[dict[str, object]]:
             "has_recon_server": recon_config is not None,
         }
         if recon_config is not None:
+            if "type" in recon_config:
+                entry["type"] = _safe_json_value(recon_config.get("type"))
             entry["command"] = _safe_json_value(recon_config.get("command"))
             entry["args"] = _safe_json_value(recon_config.get("args", []))
             entry["auto_approve_declared"] = "autoApprove" in recon_config
@@ -445,8 +448,8 @@ def build_inventory() -> dict[str, object]:
             "and JSON-schema surfaces. This is a drift guard, not a runtime API contract."
         ),
         "sources": [
-            "src/recon_tool/cli.py",
-            "src/recon_tool/server*.py",
+            "src/recon_tool/cli/**",
+            "src/recon_tool/server/**",
             "docs/recon-schema.json",
             "AGENTS.md",
             "agents/**",
@@ -602,6 +605,12 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Generate the derived recon surface inventory.")
     parser.add_argument("--output", type=Path, default=_DEFAULT_OUTPUT, help="Inventory path.")
     parser.add_argument(
+        "--packaged-output",
+        type=Path,
+        default=_DEFAULT_PACKAGED_OUTPUT,
+        help="Packaged inventory copy.",
+    )
+    parser.add_argument(
         "--cli-surface-output", type=Path, default=_DEFAULT_CLI_SURFACE_OUTPUT, help="CLI surface path."
     )
     parser.add_argument("--write", action="store_true", help="Write the inventory file.")
@@ -615,6 +624,9 @@ def main(argv: list[str] | None = None) -> int:
     output = args.output
     if not output.is_absolute():
         output = _ROOT / output
+    packaged_output = args.packaged_output
+    if not packaged_output.is_absolute():
+        packaged_output = _ROOT / packaged_output
     cli_surface_output = args.cli_surface_output
     if not cli_surface_output.is_absolute():
         cli_surface_output = _ROOT / cli_surface_output
@@ -622,6 +634,12 @@ def main(argv: list[str] | None = None) -> int:
     status = 0
     if args.check:
         status |= _check_rendered(output, rendered, "surface inventory", "--write")
+        status |= _check_rendered(
+            packaged_output,
+            rendered,
+            "packaged surface inventory",
+            "--write",
+        )
     if args.check_cli_surface:
         status |= _check_rendered(
             cli_surface_output,
@@ -630,8 +648,9 @@ def main(argv: list[str] | None = None) -> int:
             "--write-cli-surface",
         )
     if args.write:
-        output.parent.mkdir(parents=True, exist_ok=True)
-        output.write_text(rendered, encoding="utf-8")
+        for target in (output, packaged_output):
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(rendered, encoding="utf-8")
     if args.write_cli_surface:
         cli_surface_output.parent.mkdir(parents=True, exist_ok=True)
         cli_surface_output.write_text(rendered_cli_surface, encoding="utf-8")

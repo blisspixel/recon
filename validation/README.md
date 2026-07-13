@@ -68,7 +68,7 @@ Two entry points feed the same triage logic:
 recon contoso.com --json --include-unclassified > result.json
 python validation/find_gaps.py --input result.json --output gaps.json
 python validation/triage_candidates.py \
-    --gaps gaps.json --fingerprints recon_tool/data/fingerprints/ \
+    --gaps gaps.json --fingerprints src/recon_tool/data/fingerprints/ \
     --output candidates.json
 ```
 
@@ -97,7 +97,7 @@ python validation/find_gaps.py \
 # Filter to triage candidates
 python validation/triage_candidates.py \
     --gaps validation/runs-private/<run>/gaps.json \
-    --fingerprints recon_tool/data/fingerprints/ \
+    --fingerprints src/recon_tool/data/fingerprints/ \
     --output validation/runs-private/<run>/candidates.json
 
 # After adding fingerprints, verify uplift
@@ -324,17 +324,16 @@ ablations. It writes `summary.md`, `manifest.json`, and per-harness outputs unde
 paper-sized sweeps. If you pass `--stamp`, it follows the same single safe
 path-segment rule as the calibration bundle runner.
 
-The current final public claim audit refresh for the paper package is committed
-as `2026-06-29-scorecard-gate-claim-audit.md`. It records the passing smoke
-profile, full paper profile, claim-map audit, release-readiness Scorecard API
-gate, figure drift check, local gate, and release readiness checks without
-committing private corpora or local run artifacts.
-The latest local submission-freeze public proof record is committed as
-`2026-06-30-submission-freeze-local-proof.md`.
+The most recent recorded final public claim audit is the historical
+`2026-06-29-scorecard-gate-claim-audit.md`. The most recent recorded local
+submission-freeze proof is the historical
+`2026-06-30-submission-freeze-local-proof.md`. They record passing checks for
+the exact commits named in those memos, not the current tree. Later paper and
+package changes leave the current draft unfrozen.
 Before external submission packaging, follow
 [docs/submission-freeze-checklist.md](../docs/submission-freeze-checklist.md)
-to rerun the public proof commands and release gates while preserving the same
-private-data and claim-boundary rules.
+to rerun the public proof commands, claim audit, and release gates while
+preserving the same private-data and claim-boundary rules.
 
 ## The fingerprint catalog audit
 
@@ -361,5 +360,5 @@ and target-domain fields in committed validation artifacts.
 
 When you discover a generally-useful pattern (a real third-party SaaS
 that any user would benefit from), open a PR adding the
-`cname_target` rule to `recon_tool/data/fingerprints/surface.yaml`.
+`cname_target` rule to `src/recon_tool/data/fingerprints/surface.yaml`.
 The pattern itself is generic; your corpus stays private.

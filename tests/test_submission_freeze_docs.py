@@ -65,7 +65,9 @@ def test_submission_freeze_checklist_preserves_claim_boundaries() -> None:
 def test_submission_freeze_checklist_cites_current_external_guidance() -> None:
     text = _read(FREEZE)
 
-    assert "Checked: 2026-06-30." in text
+    assert "External guidance checked: 2026-06-30." in text
+    assert "Current draft status reviewed:" in text
+    assert "2026-07-13, unfrozen." in text
 
     for url in (
         "https://www.acm.org/publications/policies/artifact-review-and-badging-current",
@@ -94,3 +96,16 @@ def test_submission_freeze_checklist_does_not_claim_external_events() -> None:
         "externally reproduced private-corpus",
     ):
         assert forbidden not in normalized
+
+
+def test_submission_freeze_record_is_not_misrepresented_as_current() -> None:
+    normalized = " ".join(_read(FREEZE).split())
+
+    for required in (
+        "most recent recorded local public proof",
+        "historical",
+        "applies only to the exact commit it names",
+        "current draft unfrozen",
+        "a new record is required before submission",
+    ):
+        assert required in normalized
