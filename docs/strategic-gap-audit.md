@@ -3,7 +3,7 @@
 Status: source-backed step-back audit for the current roadmap. This file does
 not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior.
 
-Checked: 2026-07-10.
+Checked: 2026-07-13.
 
 ## Bottom Line
 
@@ -15,9 +15,10 @@ semantics, measured utility, catalog quality, latency and degradation evidence,
 and MCP context and compatibility cost.
 
 The highest-value work is not runtime expansion. It is correcting any default
-claim that is stronger than its public evidence, characterizing the MCP v2 beta,
-and establishing an aggregate-safe product-quality baseline before adding more
-inference or graph surface. Artifact review, OpenSSF process, independent
+claim that is stronger than its public evidence and establishing an
+aggregate-safe product-quality baseline before adding more inference or graph
+surface. The completed MCP candidate matrix now remains a blocking regression
+and final-adoption gate. Artifact review, OpenSSF process, independent
 replication, and archive work remain worthwhile maintainer tracks, but they do
 not outrank product truthfulness or measured user value.
 
@@ -60,7 +61,7 @@ not outrank product truthfulness or measured user value.
 
 ## Current Evidence
 
-- At the 2026-07-10 audit, `v2.3.9` was current on GitHub Releases and PyPI.
+- At the 2026-07-13 refresh, `v2.5.2` was current on GitHub Releases and PyPI.
 - Local release readiness passes for the current local main branch.
 - Remote release readiness passes for the current pushed main branch and
   verifies required GitHub Actions checks, public Scorecard API freshness and
@@ -76,10 +77,10 @@ not outrank product truthfulness or measured user value.
 - `scripts/check_validation_hygiene.py` and release readiness confirm private
   validation run directories are not tracked.
 - GitHub contributor history and current contributors are maintainer-only.
-- Top-level dependencies are current under the locked resolver state, with MCP
-  intentionally bounded to the stable v1 line until a reviewed v2 migration.
-  Official Python SDK `2.0.0b1` shipped on 2026-06-30, so the isolated
-  compatibility-spike trigger is now met.
+- Top-level dependencies are current under the locked resolver state. MCP is
+  intentionally bounded to `>=1.28.1,<2`; the exact isolated matrix passes on
+  stable v1.28.1 and candidate v2.0.0b1, while final v2 adoption remains
+  contingent on the final specification, stable SDK, and full release gate.
 - Public DMARC references in comments, tests, and validation notes use the
   current RFC 9989 protocol specification and RFC 9990 aggregate-reporting
   split rather than the prior obsolete citation.
@@ -101,7 +102,7 @@ These are not active gaps for the current roadmap:
 | Gap | Why it matters | Current state | Next action | Stop rule |
 |---|---|---|---|---|
 | Evidence-semantic integrity | Derived observations and model-bound public-evidence values can be presented more strongly than their evidence supports. | Parent-platform child-product inference, MCP score wording, and cross-renderer provider drift are corrected; remaining default claims still need a complete provenance audit. | Audit every default claim and correct the smallest evidence-to-claim paths while preserving stable JSON. | Do not add new inference semantics while a known default claim lacks direct provenance. |
-| MCP v2 compatibility | The final 2026-07-28 protocol and stable SDK are imminent and contain breaking changes. | Stable v1.28.1 is locked; official v2 beta `2.0.0b1` is available for an isolated matrix. | Run the exact-pinned compatibility matrix and document migration actions, dependency floor, and rollback pin. | Do not publish a prerelease dependency or add remote MCP scope. |
+| MCP v2 compatibility | The final 2026-07-28 protocol and stable SDK are imminent and contain breaking changes. | The exact v1.28.1 and v2.0.0b1 matrix passes; one compatibility boundary, the truthful dependency floor, doctor discovery selection, and conservative cache hints are implemented. | Keep the matrix blocking, then rerun it against the final specification and stable v2 SDK before changing production. | Do not publish a prerelease dependency or add remote MCP scope. |
 | Measured product utility | Green gates and sophisticated models do not establish that the output improves an operator decision. | No unified scorecard covers unsupported claims, abstention, provenance, catalog surface, CT marginal value, latency, degradation, or MCP context cost. | Establish an aggregate-safe baseline and predeclared deterministic-versus-fusion ablation. | Do not expand graph or probabilistic machinery without measured benefit. |
 | Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | The catalog has 847 entries and optional `verified` metadata, but no active classified-surface or stale-rule regression budget. | Baseline by record type and stratum, then ratchet references, dates, and negative fixtures. | No new undated, unreferenced, or untested rule. |
 | Latency and degradation contract | CT and external providers dominate long tails, while current published measurements are historical single runs. | Timeouts and partial results are bounded, but stage measurements and reproducible p50/p95 budgets are not established. | Run stable-v1 resolver and schema characterization before the product scorecard; apply only candidate-SDK deltas after the MCP matrix. | Move only proven blocking I/O and do not create brittle timing CI. |
@@ -116,14 +117,15 @@ These are not active gaps for the current roadmap:
 ## Priority Order
 
 1. Correct bounded default-claim semantics and define the provenance ADR scope.
-2. Run the isolated MCP v2 beta compatibility matrix.
-3. Run the stable-v1 resolver, allocation, CT-value, and schema
+2. Run the stable-v1 resolver, allocation, CT-value, and schema
    characterization that feeds product measurement.
-4. Complete the product-quality scorecard and freeze the ablation decision rule
+3. Complete the product-quality scorecard and freeze the ablation decision rule
    before running it.
-5. Use the baseline to decide dimensioned email observations, catalog
+4. Use the baseline to decide dimensioned email observations, catalog
    priorities, and agent-surface simplification; apply candidate-SDK
    characterization deltas after the MCP matrix.
+5. Keep the MCP beta matrix blocking and repeat it against the final protocol
+   and stable v2 SDK before changing the production dependency.
 6. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
    release state and provenance aligned.
 7. Run the paper claim freeze, OpenSSF questionnaire, outside replication, and

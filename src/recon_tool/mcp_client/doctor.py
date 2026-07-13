@@ -1,14 +1,13 @@
 """End-to-end MCP self-check.
 
 `recon doctor --mcp` (existing) confirms the *static* shape of an MCP
-install: the package imports, the server module loads, FastMCP has
-instructions, the tool manager enumerates tools. It never actually
+install: the package imports, the server module loads, the application has
+instructions, and the public registry API enumerates tools. It never actually
 exercises the JSON-RPC loop.
 
 This module adds the dynamic complement: spawn the server as a
-subprocess the way a real MCP client would, perform the standard
-``initialize`` + ``notifications/initialized`` + ``tools/list``
-handshake, and report what came back.
+subprocess the way a real MCP client would, perform the SDK-supported
+discovery flow followed by ``tools/list``, and report what came back.
 
 If this passes, an MCP client *will* be able to talk to recon. If it
 fails, the failure points at exactly which step broke — server crash
@@ -24,8 +23,11 @@ import os
 import sys
 import tempfile
 import time
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from typing import Literal, TextIO
+from typing import Any, Literal, TextIO, cast
+
+from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, SDK_VERSION, model_wire_dict
 
 # Tools we expect any healthy build to surface. These are the public-facing
 # primary tools, not internal debug helpers. If any of these go missing,
@@ -142,18 +144,42 @@ async def _run_handshake(errlog: TextIO) -> tuple[list[str], list[DoctorCheck]]:
             checks.append(DoctorCheck("server spawn", "ok", "stdio transport opened"))
 
             async with ClientSession(read_stream, write_stream) as session:
-                init_result = await session.initialize()
-                server_name = getattr(init_result.serverInfo, "name", "?")
-                checks.append(
-                    DoctorCheck(
-                        "initialize handshake",
-                        "ok",
-                        f"server={server_name} protocol={init_result.protocolVersion}",
+                discover = getattr(session, "discover", None)
+                if callable(discover):
+                    discovery_result = await cast(Callable[[], Awaitable[Any]], discover)()
+                    discovery_wire = model_wire_dict(discovery_result)
+                    server_info = discovery_wire.get("serverInfo", {})
+                    server_name = server_info.get("name", "?") if isinstance(server_info, dict) else "?"
+                    supported = discovery_wire.get("supportedVersions", [])
+                    protocol = ",".join(str(item) for item in supported) if isinstance(supported, list) else "?"
+                    checks.append(
+                        DoctorCheck(
+                            "server/discover",
+                            "ok",
+                            f"server={server_name} protocol={protocol} sdk={SDK_VERSION}",
+                        )
                     )
-                )
+                    _append_cache_metadata_check(checks, "server/discover metadata", discovery_wire)
+                else:
+                    init_result = await session.initialize()
+                    init_wire = model_wire_dict(init_result)
+                    server_info = init_wire.get("serverInfo", {})
+                    server_name = server_info.get("name", "?") if isinstance(server_info, dict) else "?"
+                    protocol = init_wire.get("protocolVersion", "?")
+                    checks.append(
+                        DoctorCheck(
+                            "initialize handshake",
+                            "ok",
+                            f"server={server_name} protocol={protocol} sdk={SDK_VERSION}",
+                        )
+                    )
 
                 tools_result = await session.list_tools()
-                tool_names = [t.name for t in tools_result.tools]
+                tools_wire = model_wire_dict(tools_result)
+                raw_tools = tools_wire.get("tools", [])
+                if not isinstance(raw_tools, list):
+                    raise TypeError("tools/list did not return a tool list")
+                tool_names = [str(tool.get("name", "")) for tool in raw_tools if isinstance(tool, dict)]
                 checks.append(
                     DoctorCheck(
                         "tools/list",
@@ -161,8 +187,35 @@ async def _run_handshake(errlog: TextIO) -> tuple[list[str], list[DoctorCheck]]:
                         f"{len(tool_names)} tools registered",
                     )
                 )
+                if SDK_FAMILY == "v2":
+                    _append_cache_metadata_check(checks, "tools/list metadata", tools_wire)
 
     return tool_names, checks
+
+
+def _append_cache_metadata_check(checks: list[DoctorCheck], name: str, wire: dict[str, object]) -> None:
+    """Require complete-result cache metadata on the 2026 protocol path."""
+    ttl_ms = wire.get("ttlMs")
+    cache_scope = wire.get("cacheScope")
+    result_type = wire.get("resultType")
+    if (
+        isinstance(ttl_ms, int)
+        and not isinstance(ttl_ms, bool)
+        and ttl_ms >= 0
+        and cache_scope in {"public", "private"}
+        and result_type == "complete"
+    ):
+        checks.append(
+            DoctorCheck(
+                name,
+                "ok",
+                f"ttlMs={ttl_ms} cacheScope={cache_scope} resultType={result_type}",
+            )
+        )
+        return
+    raise ValueError(
+        f"invalid complete-result metadata: ttlMs={ttl_ms!r} cacheScope={cache_scope!r} resultType={result_type!r}"
+    )
 
 
 def _stderr_tail(buffer: TextIO, max_lines: int = 12) -> str:

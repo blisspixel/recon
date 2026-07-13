@@ -2,11 +2,11 @@
 
 from __future__ import annotations
 
+from unittest.mock import AsyncMock, patch
+
 import pytest
 
 pytest.importorskip("mcp")
-
-from unittest.mock import patch
 
 from typer.testing import CliRunner
 
@@ -68,7 +68,7 @@ class TestDoctorMcp:
         while still printing the checks."""
         from recon_tool.server import mcp as server_mcp
 
-        with patch.object(server_mcp._tool_manager, "list_tools", return_value=[]):
+        with patch.object(server_mcp, "list_tools", new=AsyncMock(return_value=[])):
             result = runner.invoke(app, ["doctor", "--mcp"])
 
         assert result.exit_code == 1

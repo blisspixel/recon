@@ -16,8 +16,6 @@ import time
 import uuid
 from collections.abc import Sequence
 
-from mcp.types import ToolAnnotations
-
 from recon_tool.formatter import (
     format_tenant_dict,
     format_tenant_json,
@@ -30,6 +28,7 @@ from recon_tool.formatter.classify import (
     provider_line,
 )
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
+from recon_tool.mcp_client.sdk_compat import ToolAnnotations
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp

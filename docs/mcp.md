@@ -149,11 +149,13 @@ omitted counts, a deterministic `selection_rule`, and a `raw_request` pointer
 so an agent can decide whether to request the raw result.
 
 Compatibility with the MCP 2026-07-28 release candidate is tracked in
-[mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md). recon remains a
-local stdio FastMCP server on stable SDK v1 today. Official Python SDK
-`2.0.0b1` is now available for an isolated compatibility matrix; production
-stays on `<2` until the final specification and stable v2 SDK pass recon's
-doctor, discovery, schema, resource, ordering, and full CI gates.
+[mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md). The dated isolated
+matrix passes on both stable SDK v1.28.1 and candidate SDK v2.0.0b1 using the
+same local stdio server. Production stays on `mcp>=1.28.1,<2` until the final
+specification and stable v2 SDK pass recon's doctor, discovery, schema,
+resource, ordering, and full CI gates. Under the candidate, recon explicitly
+uses conservative `ttlMs=0`, `cacheScope=private` hints for all six cacheable
+methods rather than promising freshness it cannot establish.
 
 The no-network catalog list tools started the precise-schema Phase 2:
 `get_fingerprints` advertises a `FingerprintSummary` item schema and
@@ -410,8 +412,8 @@ The shorter `python -m recon_tool.server` form is acceptable only from a trusted
 
 Three complementary checks. The first two validate the server; the third validates that the client was told about it.
 
-- **`recon doctor --mcp`**: *static* diagnostic. Confirms the MCP dependencies are installed, the server module loads, FastMCP introspection finds all tools, and `recon` is on your PATH. Also prints a copy-pasteable JSON snippet for every supported client.
-- **`recon mcp doctor`**: *live* end-to-end check. Spawns the recon MCP server through the running interpreter, opens a real `stdio_client` + `ClientSession`, runs the discovery flow supported by the installed Python MCP SDK, and asserts the anchor tools (`lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `chain_lookup`) are registered. With the production v1 SDK this is an `initialize` + `tools/list` handshake. The MCP 2026-07-28 readiness plan now tracks an isolated v2 beta compatibility matrix, including `discover()` behavior. If the spawned server crashes during discovery, the trailing twelve lines of its stderr are spliced into the failure detail so you see the actual ImportError / traceback instead of an opaque `BrokenPipeError`. 30-second handshake timeout.
+- **`recon doctor --mcp`**: *static* diagnostic. Confirms the MCP dependencies are installed, reports the exact SDK version and generation, loads the server module, enumerates tools through the public server API, and verifies `recon` is on your PATH. Also prints a copy-pasteable JSON snippet for every supported client.
+- **`recon mcp doctor`**: *live* end-to-end check. Spawns the recon MCP server through the running interpreter, opens a real `stdio_client` + `ClientSession`, runs the discovery flow supported by the installed Python MCP SDK, and asserts the anchor tools (`lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `chain_lookup`) are registered. Stable v1 uses `initialize` plus `tools/list`; candidate v2 uses `server/discover` plus `tools/list` and validates complete-result cache metadata. If the spawned server crashes during discovery, the trailing twelve lines of its stderr are spliced into the failure detail so you see the actual import failure or traceback instead of an opaque `BrokenPipeError`. 30-second handshake timeout.
 - **`recon doctor --client=<name>`**: reads the config file the named client actually loads (`claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `kiro`) and reports whether an `mcpServers.recon` stanza is present and well-formed. This is the config-side complement to the two server checks: they confirm the server is healthy, this confirms the client was told where to find it. For Claude Code it also looks under the project-nested `projects[...].mcpServers.recon` shape that `claude mcp add` writes, and notes that a plugin install keeps its config inside the plugin rather than in `~/.claude.json`. Exits non-zero when no stanza is found, so it is usable in a setup script.
 
 The static check (`recon doctor --mcp`) is the right starting point. If it passes but a client still can't talk to the server, run `recon mcp doctor` to confirm the JSON-RPC loop itself is healthy, and `recon doctor --client=<name>` to confirm the client config carries the stanza.

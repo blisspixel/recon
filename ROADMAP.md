@@ -2,11 +2,13 @@
 
 The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
-Current status: recon v2.5.0 has a stable, production-ready baseline. The CLI,
+Current status: recon v2.5.2 has a stable, production-ready baseline. The CLI,
 JSON schema, local stdio MCP server, bounded collectors, generated-artifact
 guards, validation gates, and release path are shipped. The active product work
-is evidence-semantic integrity, an isolated MCP v2 beta compatibility matrix,
-and a reproducible product-quality baseline. Measured latency, catalog quality,
+is evidence-semantic integrity and a reproducible product-quality baseline. The
+isolated MCP v1.28.1 and v2.0.0b1 matrix passed on 2026-07-13, with production
+remaining on stable v1 and the final v2 adoption gate still pending. Measured
+latency, catalog quality,
 agent context cost, provenance, and interface-hotspot work follow in dependency
 order. The first bounded internal claim contract now evaluates the exact apex
 DMARC `p=reject` observation and drives the opt-in cohort schema 2.2 DMARC
