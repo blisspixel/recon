@@ -28,6 +28,17 @@ from recon_tool.validator import validate_domain
 logger = logging.getLogger("recon")
 
 
+def lookup_failure_message(domain: str, error: ReconLookupError) -> str:
+    """Map resolver outcomes to truthful, non-sensitive MCP text."""
+    if error.error_type == "no_data":
+        return f"No information found for {domain}"
+    if error.error_type == "timeout":
+        return f"Lookup timed out for {domain}. Try again."
+    if error.error_type == "all_sources_failed":
+        return f"Lookup failed for {domain}: all passive sources returned errors. Try again."
+    return f"Lookup failed for {domain} ({error.error_type}). Try again."
+
+
 # Server Instructions — injected into the model's context each session so the
 # agent knows how to compose recon's tools without requiring the user to
 # explain. Keep this focused: what the server is, the passive-only invariant,
@@ -217,18 +228,18 @@ async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]]
         if cached is not None:
             info, results = cached
             return info, list(results)
-        return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+        return f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
 
     try:
         info, results = await resolve_tenant(validated)
-    except ReconLookupError:
-        return f"No information found for {domain}"
+    except ReconLookupError as exc:
+        return lookup_failure_message(validated, exc)
     except asyncio.CancelledError:
         raise
     except Exception as exc:
         request_id = uuid.uuid4().hex[:12]
-        logger.exception("Unexpected error looking up %s (request_id=%s)", domain, request_id)
-        return internal_lookup_error(domain, request_id, exc)
+        logger.exception("Unexpected error looking up %s (request_id=%s)", validated, request_id)
+        return internal_lookup_error(validated, request_id, exc)
 
     cache_set(validated, info, results)
     return info, list(results)
@@ -243,7 +254,7 @@ def validate_domain_for_tool(domain: str, request_id: str) -> str:
         raise ToolError(str(exc)) from exc
 
 
-async def _resolve_validated_domain_for_tool(domain: str, validated: str, request_id: str) -> TenantInfo:
+async def _resolve_validated_domain_for_tool(validated: str, request_id: str) -> TenantInfo:
     """Resolve one already validated domain for a structured tool."""
     cached = cache_get(validated)
     if cached is not None:
@@ -253,18 +264,18 @@ async def _resolve_validated_domain_for_tool(domain: str, validated: str, reques
     if not rate_limit_try_acquire(validated):
         cached = cache_get(validated)
         if cached is None:
-            raise ToolError(f"Rate limited: {domain} was looked up recently. Try again in a few seconds.")
+            raise ToolError(f"Rate limited: {validated} was looked up recently. Try again in a few seconds.")
         return cached[0]
 
     try:
         info, results = await resolve_tenant(validated)
     except ReconLookupError as exc:
-        raise ToolError(f"No information found for {domain}") from exc
+        raise ToolError(lookup_failure_message(validated, exc)) from exc
     except asyncio.CancelledError:
         raise
     except Exception as exc:
-        logger.exception("Unexpected error looking up %s (request_id=%s)", domain, request_id)
-        raise ToolError(internal_lookup_error(domain, request_id, exc)) from exc
+        logger.exception("Unexpected error looking up %s (request_id=%s)", validated, request_id)
+        raise ToolError(internal_lookup_error(validated, request_id, exc)) from exc
 
     cache_set(validated, info, results)
     return info
@@ -281,7 +292,7 @@ async def resolve_single_for_tool(domain: str, request_id: str) -> TenantInfo:
     error-shaped success payload.
     """
     validated = validate_domain_for_tool(domain, request_id)
-    return await _resolve_validated_domain_for_tool(domain, validated, request_id)
+    return await _resolve_validated_domain_for_tool(validated, request_id)
 
 
 async def resolve_domains_for_tool(domains: tuple[str, ...], request_id: str) -> tuple[TenantInfo, ...]:
@@ -293,6 +304,6 @@ async def resolve_domains_for_tool(domains: tuple[str, ...], request_id: str) ->
     """
     validated_domains = tuple(validate_domain_for_tool(domain, request_id) for domain in domains)
     resolved: list[TenantInfo] = []
-    for domain, validated in zip(domains, validated_domains, strict=True):
-        resolved.append(await _resolve_validated_domain_for_tool(domain, validated, request_id))
+    for validated in validated_domains:
+        resolved.append(await _resolve_validated_domain_for_tool(validated, request_id))
     return tuple(resolved)

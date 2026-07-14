@@ -214,14 +214,10 @@ def _check_uv_lock(runner: Runner) -> CheckResult:
 
 
 def _check_coverage_targets(root: Path) -> CheckResult:
-    files = (
-        "scripts/check.py",
-        "scripts/release.py",
-        ".github/workflows/ci.yml",
-        ".github/workflows/release.yml",
-    )
+    direct_files = ("scripts/check.py", ".github/workflows/ci.yml")
+    delegate_files = ("scripts/release.py", ".github/workflows/release.yml")
     problems: list[str] = []
-    for relative in files:
+    for relative in direct_files:
         try:
             text = _read_text(root, relative)
         except OSError as exc:
@@ -233,6 +229,14 @@ def _check_coverage_targets(root: Path) -> CheckResult:
             problems.append(f"{relative}: missing {_EXPECTED_COVERAGE_TARGET}")
         if _COVERAGE_FLOOR not in text:
             problems.append(f"{relative}: missing {_COVERAGE_FLOOR}")
+    for relative in delegate_files:
+        try:
+            text = _read_text(root, relative)
+        except OSError as exc:
+            problems.append(f"{relative}: {exc}")
+            continue
+        if "scripts/check.py" not in text:
+            problems.append(f"{relative}: does not delegate to scripts/check.py")
     if problems:
         return _result("coverage gates", "fail", "; ".join(problems), "align local, release, and CI coverage args")
     return _result("coverage gates", "pass", f"{_EXPECTED_COVERAGE_TARGET} with {_COVERAGE_FLOOR}")

@@ -7,6 +7,7 @@ import argparse
 from collections.abc import Mapping
 from itertools import pairwise
 from pathlib import Path
+from typing import TypedDict, Unpack
 from xml.sax.saxutils import escape
 
 import yaml
@@ -53,6 +54,15 @@ BoxSize = tuple[float, float]
 ChartFrame = tuple[float, float, float, float]
 
 
+class _TextStyle(TypedDict, total=False):
+    """Supported SVG text attributes."""
+
+    size: int
+    weight: int
+    fill: str
+    anchor: str
+
+
 def _tag(name: str, attrs: Mapping[str, object], content: str | None = None) -> str:
     rendered = " ".join(f'{key}="{escape(str(value))}"' for key, value in attrs.items())
     if content is None:
@@ -60,7 +70,7 @@ def _tag(name: str, attrs: Mapping[str, object], content: str | None = None) -> 
     return f"<{name} {rendered}>{content}</{name}>"
 
 
-def _text(pos: Point, value: str, **style: object) -> str:
+def _text(pos: Point, value: str, **style: Unpack[_TextStyle]) -> str:
     x, y = pos
     attrs = {
         "x": round(x, 2),
@@ -247,7 +257,10 @@ def render_bayesian_dag() -> str:
     }
     body = [_text((40, 45), "Figure 2. Nine-node Bayesian network", size=24, weight=700)]
     for child, node in nodes.items():
-        for parent in node.get("parents", []):
+        parents = node.get("parents", [])
+        if not isinstance(parents, list):
+            raise RuntimeError(f"Bayesian network node {child!r} has a non-list parents field")
+        for parent in parents:
             px, py = positions[str(parent)]
             cx, cy = positions[child]
             body.append(

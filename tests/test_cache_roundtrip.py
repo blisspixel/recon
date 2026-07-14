@@ -108,6 +108,18 @@ def _complete_info() -> TenantInfo:
     )
 
 
+def _posterior_payload() -> dict[str, object]:
+    """Return one complete cached posterior observation for corruption tests."""
+    return {
+        "name": "m365_tenant",
+        "posterior": 0.5,
+        "interval_low": 0.4,
+        "interval_high": 0.6,
+        "n_eff": 1.0,
+        "sparse": False,
+    }
+
+
 class TestRoundTripAllFields:
     """Every field survives a round-trip through tenant_info_to_dict and
     tenant_info_from_dict without loss."""
@@ -281,6 +293,127 @@ class TestCacheDiskOperations:
         (cache_dir() / "bad.com.json").write_text("not valid json{{{", encoding="utf-8")
         assert cache_get("bad.com") is None
 
+    def test_get_non_object_json_returns_none(self) -> None:
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        (cache_dir() / "bad.com.json").write_text("[]", encoding="utf-8")
+        assert cache_get("bad.com") is None
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("services", "Mail"),
+            ("domain_count", 1e999),
+            ("auth_type", 123),
+            ("confidence", "garbage"),
+            ("evidence_confidence", "garbage"),
+            ("inference_confidence", "garbage"),
+            ("dmarc_testing", "false"),
+            ("slug_confidences", {"poison": float("inf")}),
+            ("slug_confidences", {"poison": 1.01}),
+            ("dmarc_pct", 101),
+            ("posterior_observations", "corrupt"),
+            ("posterior_observations", [None]),
+        ],
+    )
+    def test_get_valid_object_with_invalid_field_shape_returns_none(self, field: str, value: object) -> None:
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        payload = tenant_info_to_dict(_complete_info())
+        payload[field] = value
+        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert cache_get("bad.com") is None
+
+    def test_get_rejects_non_boolean_legacy_degradation_flag(self) -> None:
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        payload = tenant_info_to_dict(_complete_info())
+        payload.pop("degraded_sources")
+        payload["crtsh_degraded"] = "false"
+        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert cache_get("bad.com") is None
+
+    def test_get_rejects_non_boolean_posterior_sparse_flag(self) -> None:
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        payload = tenant_info_to_dict(_complete_info())
+        payload["posterior_observations"] = [
+            {
+                "name": "m365_tenant",
+                "posterior": 0.5,
+                "interval_low": 0.4,
+                "interval_high": 0.6,
+                "sparse": 1,
+            }
+        ]
+        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert cache_get("bad.com") is None
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("conflict_provenance", "corrupt"),
+            ("conflict_provenance", [None]),
+            ("conflict_provenance", [{"field": 7, "sources": ["dns"], "magnitude": 0.1}]),
+            ("conflict_provenance", [{"field": "provider", "sources": [7], "magnitude": 0.1}]),
+            ("evidence_ranked", [{"kind": 7, "name": "dns", "llr": 1.0}]),
+            ("evidence_ranked", [{"kind": "dns", "name": "MX", "llr": None}]),
+            (
+                "unit_counterfactuals",
+                [{"unit": 7, "kind": "MX", "observed": "mail", "posterior_without": 0.4, "delta": 0.1}],
+            ),
+            (
+                "unit_counterfactuals",
+                [{"unit": "mx", "kind": "MX", "observed": "mail", "posterior_without": 0.4}],
+            ),
+        ],
+    )
+    def test_get_rejects_malformed_nested_posterior_diagnostics(self, field: str, value: object) -> None:
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        payload = tenant_info_to_dict(_complete_info())
+        observation = _posterior_payload()
+        observation[field] = value
+        payload["posterior_observations"] = [observation]
+        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+
+        assert cache_get("bad.com") is None
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("posterior", 1.01),
+            ("posterior", None),
+            ("interval_low", -0.01),
+            ("interval_low", None),
+            ("interval_high", 1.01),
+            ("interval_high", None),
+            ("n_eff", -1.0),
+        ],
+    )
+    def test_get_rejects_out_of_range_posterior_values(self, field: str, value: object) -> None:
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        payload = tenant_info_to_dict(_complete_info())
+        observation = _posterior_payload()
+        observation[field] = value
+        payload["posterior_observations"] = [observation]
+        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+
+        assert cache_get("bad.com") is None
+
+    @pytest.mark.parametrize(
+        ("interval_low", "posterior", "interval_high"),
+        [(0.6, 0.5, 0.8), (0.2, 0.9, 0.8), (0.8, 0.5, 0.2)],
+    )
+    def test_get_rejects_impossible_posterior_intervals(
+        self, interval_low: float, posterior: float, interval_high: float
+    ) -> None:
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        payload = tenant_info_to_dict(_complete_info())
+        observation = _posterior_payload()
+        observation.update(
+            {"interval_low": interval_low, "posterior": posterior, "interval_high": interval_high}
+        )
+        payload["posterior_observations"] = [observation]
+        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+
+        assert cache_get("bad.com") is None
+
     def test_get_old_cache_version_returns_none(self) -> None:
         cache_dir().mkdir(parents=True, exist_ok=True)
         data = tenant_info_to_dict(_complete_info())
@@ -410,6 +543,11 @@ class TestDictShape:
         restored = tenant_info_from_dict(d)
         assert restored.ct_provider_used is None
         assert restored.ct_subdomain_count == 0
+
+    def test_from_dict_preserves_tuple_input_compatibility(self) -> None:
+        data = tenant_info_to_dict(_complete_info())
+        data["sources"] = tuple(data["sources"])
+        assert tenant_info_from_dict(data).sources == _complete_info().sources
 
     def test_from_dict_handles_missing_v091_fields(self) -> None:
         """Even older cache dicts (pre-v0.9.1) without topology fields

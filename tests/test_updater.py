@@ -7,6 +7,8 @@ PyPI lookup monkeypatched so no network is touched.
 
 from __future__ import annotations
 
+import io
+
 import pytest
 from typer.testing import CliRunner
 
@@ -27,9 +29,32 @@ class TestCompareVersions:
     def test_current_newer(self) -> None:
         assert updater.compare_versions("2.3.0", "2.2.9") == 1
 
-    def test_prerelease_suffix_tolerated(self) -> None:
-        # Non-numeric trailers are truncated per component; no crash.
-        assert updater.compare_versions("2.2.0", "2.2.0rc1") == 0
+    def test_prerelease_precedes_final_release(self) -> None:
+        assert updater.compare_versions("2.2.0rc1", "2.2.0") == -1
+        assert updater.compare_versions("2.2.0", "2.2.0rc1") == 1
+        assert updater.compare_versions("2.2.0b2", "2.2.0rc1") == -1
+
+    def test_release_tuple_ignores_insignificant_trailing_zeroes(self) -> None:
+        assert updater.compare_versions("2.2", "2.2.0") == 0
+
+    @pytest.mark.parametrize("current", ["2.5.10.dev1", "2.5.10+local"])
+    def test_newer_local_release_does_not_offer_downgrade(self, current: str) -> None:
+        assert updater.compare_versions(current, "2.5.9") == 1
+
+    def test_same_release_development_build_precedes_final(self) -> None:
+        assert updater.compare_versions("2.5.10.dev1", "2.5.10") == -1
+        assert updater.compare_versions("2.5.10", "2.5.10.dev1") == 1
+
+    def test_local_build_follows_same_public_release(self) -> None:
+        assert updater.compare_versions("2.5.10+local", "2.5.10") == 1
+
+    def test_distinct_local_build_labels_have_deterministic_order(self) -> None:
+        assert updater.compare_versions("2.5.10+abc", "2.5.10+xyz") == -1
+        assert updater.compare_versions("2.5.10+xyz", "2.5.10+abc") == 1
+        assert updater.compare_versions("2.5.10+1", "2.5.10+abc") == 1
+
+    def test_equivalent_local_build_labels_compare_equal(self) -> None:
+        assert updater.compare_versions("2.5.10+ABC.01", "2.5.10+abc-1") == 0
 
 
 class TestUpgradeCommand:
@@ -83,6 +108,36 @@ class TestFetchLatestVersion:
 
         monkeypatch.setattr("urllib.request.urlopen", _boom)
         assert updater.fetch_latest_version(timeout=0.1) is None
+
+    @pytest.mark.parametrize(
+        "body",
+        [
+            b"[]",
+            b'{}',
+            b'{"info": null}',
+            b'{"info": {"version": null}}',
+            b'{"info": {"version": []}}',
+            b'{"info": {"version": "  "}}',
+            b'{"info": {"version": "not-a-version"}}',
+        ],
+    )
+    def test_malformed_response_shape_returns_none(self, monkeypatch: pytest.MonkeyPatch, body: bytes) -> None:
+        def _response(*args: object, **kwargs: object) -> io.BytesIO:
+            return io.BytesIO(body)
+
+        monkeypatch.setattr("urllib.request.urlopen", _response)
+
+        assert updater.fetch_latest_version(timeout=0.1) is None
+
+    def test_valid_response_returns_trimmed_version(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        body = io.BytesIO(b'{"info": {"version": " 2.5.8 "}}')
+
+        def _response(*args: object, **kwargs: object) -> io.BytesIO:
+            return body
+
+        monkeypatch.setattr("urllib.request.urlopen", _response)
+
+        assert updater.fetch_latest_version(timeout=0.1) == "2.5.8"
 
 
 class TestUpdateCommand:

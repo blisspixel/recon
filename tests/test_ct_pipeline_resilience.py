@@ -415,3 +415,36 @@ class TestCertIntelCacheFirst:
         # operator can tell this record was served from cache and the
         # absence of live CT data was intentional, not a degradation.
         assert ctx.ct_attempt_outcome == "cache_hit"
+
+    @pytest.mark.asyncio
+    async def test_summary_only_cache_short_circuits_providers(self) -> None:
+        from datetime import datetime
+
+        from recon_tool.ct_cache import CTCacheEntry
+        from recon_tool.models import CertSummary
+        from recon_tool.sources.dns import _detect_cert_intel, _DetectionCtx
+
+        ctx = _DetectionCtx()
+        summary = CertSummary(1, 1, 0, 1, 1, ("Issuer",))
+        cached = CTCacheEntry(
+            subdomains=(),
+            cert_summary=summary,
+            infrastructure_clusters=None,
+            provider_used="crt.sh",
+            cached_at=datetime.now(UTC).isoformat(),
+            age_days=1,
+        )
+        crtsh_query = AsyncMock()
+        certspotter_query = AsyncMock()
+
+        with (
+            patch("recon_tool.ct_cache.ct_cache_get", return_value=cached),
+            patch("recon_tool.sources.cert_providers.CrtshProvider.query", crtsh_query),
+            patch("recon_tool.sources.cert_providers.CertSpotterProvider.query", certspotter_query),
+        ):
+            await _detect_cert_intel(ctx, "example.com")
+
+        crtsh_query.assert_not_called()
+        certspotter_query.assert_not_called()
+        assert ctx.cert_summary == summary
+        assert ctx.ct_attempt_outcome == "cache_hit"

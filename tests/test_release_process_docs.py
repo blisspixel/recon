@@ -13,8 +13,8 @@ def test_release_process_docs_include_supply_chain_recipe_guard() -> None:
     text = _normalized(ROOT / "docs" / "release-process.md")
 
     for required in (
-        "supply-chain consumer verification recipe",
-        "README usage anchors, supply-chain recipe anchors, and project hygiene",
+        "supply-chain consumer-verification recipe",
+        "README usage anchors, supply-chain recipe anchors, and repository hygiene",
         "docs/supply-chain.md",
         "consumer verification quick path",
         "current version and release asset names",

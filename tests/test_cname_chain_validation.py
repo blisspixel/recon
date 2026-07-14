@@ -489,6 +489,43 @@ class TestM365RedirectDomainFilter:
         await dns_mod._detect_m365_cnames(ctx, "legit.example")
         assert "partner.com" in ctx.related_domains
 
+    @pytest.mark.asyncio
+    async def test_lookalike_suffix_is_not_treated_as_intra_domain(self, monkeypatch):
+        plan: dict[tuple[str, str], list[str]] = {
+            ("autodiscover.example.com", "CNAME"): ["mail.attackerexample.com"],
+        }
+
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
+        ctx = dns_mod._DetectionCtx()
+        await dns_mod._detect_m365_cnames(ctx, "example.com")
+
+        assert "attackerexample.com" in ctx.related_domains
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("query", "target", "expected"),
+        [
+            ("two.example", "partner.com", "partner.com"),
+            ("multi.example", "mail.eu.partner.co.uk", "partner.co.uk"),
+        ],
+    )
+    async def test_redirect_is_reduced_to_registrable_apex(
+        self,
+        monkeypatch,
+        query: str,
+        target: str,
+        expected: str,
+    ) -> None:
+        plan: dict[tuple[str, str], list[str]] = {
+            (f"autodiscover.{query}", "CNAME"): [target],
+        }
+
+        monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
+        ctx = dns_mod._DetectionCtx()
+        await dns_mod._detect_m365_cnames(ctx, query)
+
+        assert expected in ctx.related_domains
+
 
 # ── _safe_resolve canonical-name guard + safe endpoint probe ───────────
 #

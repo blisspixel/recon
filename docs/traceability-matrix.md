@@ -44,6 +44,8 @@ behavior. The full threat-by-threat version is assurance-case Promise 2.
 | Per-query DNS timeout | `src/recon_tool/sources/dns_base.py::DNS_QUERY_TIMEOUT` | `test_resilience_hardening::TestDnsBounds` |
 | HTTP response body cap + decompression-bomb refusal | `src/recon_tool/http.py::_MAX_RESPONSE_BYTES` | `test_resilience_hardening::TestDecompressionBombGuard`, `test_resilience_hardening::TestHttpBounds` |
 | Redirect and cumulative retry-sleep caps | `src/recon_tool/http.py::MAX_REDIRECTS`, `src/recon_tool/http.py::_MAX_TOTAL_RETRY_SLEEP` | `test_resilience_hardening::TestHttpBounds` |
+| `Retry-After` accepts only finite non-negative numeric delays, clamps each delay, and otherwise falls back to exponential backoff | `src/recon_tool/http.py::_MAX_TOTAL_RETRY_SLEEP` | `test_http_advanced::TestRetryTransport` |
+| TenantInfo and CT cache readers reject wrong-shaped or numerically invalid data while current round trips preserve certificate and infrastructure extensions | `src/recon_tool/cache.py::tenant_info_from_dict`, `src/recon_tool/ct_cache.py::ct_cache_get` | `test_cache_roundtrip::TestCacheDiskOperations`, `test_ct_cache::TestCTCachePutGet` |
 | DNS regex-match input caps (TXT / CNAME / subdomain-TXT) | `src/recon_tool/fingerprints.py::_MAX_TXT_MATCH_LENGTH` and siblings | `test_hostile_input_bounds::TestDnsParserBounds` |
 | CT entry / SAN / page floods | `src/recon_tool/sources/cert_providers.py::_MAX_CRTSH_ENTRIES` and siblings | `test_hostile_input_bounds::TestCrtshEntryBounds`, `test_hostile_input_bounds::TestCtGroupingBounds` |
 | Every HTTP identity source x failure mode degrades to a clean result | per-source guards; clean `SourceResult` on every failure | `test_hostile_input_bounds::TestSourceFaultMatrix` |
@@ -79,8 +81,11 @@ Promise 6; listed here for completeness of the requirement-to-gate map.
 
 | Requirement | Gate |
 |---|---|
+| Local release starts from clean current `main`, updates only owned surfaces, rolls back a failed mutation transaction, and pushes `main` plus the reviewed tag atomically | `scripts/release.py`; `test_release_script::test_release_push_command_names_only_the_reviewed_tag`, `test_release_script::test_release_rollback_restores_files_index_commit_and_owned_tag` |
+| Tag, project version, dated nonempty changelog section, tagged SHA, and current `main` ancestry agree before release tests run | `scripts/validate_release_tag.py`; `test_validate_release_tag::test_matching_tag_with_notes_and_main_ancestry_passes`, `test_validate_release_tag::test_non_main_tag_fails`, `test_release_workflow::test_release_preflight_blocks_mismatched_or_non_main_tags` |
 | Same source and fixed epoch produce matching artifacts across two builds in one resolved CI job | `ci.yml` reproducible-build job |
-| Signed, attested, traceable releases | `release.yml` (attestations, SBOM, trusted publishing), `tests/test_release_workflow_contract.py` |
+| CycloneDX output has the project root and dependency edge, and SBOM failure blocks PyPI and GitHub publication | `scripts/finalize_sbom.py`; `test_finalize_sbom::test_finalize_sbom_adds_project_root_and_dependency_edge`, `test_finalize_sbom::test_finalize_sbom_rejects_incomplete_payloads`, `test_release_workflow::test_pypi_publication_waits_for_valid_sbom`, `test_release_workflow_contract::TestGithubReleaseAttachesBothArtifacts` |
+| Signed, attested, traceable releases use GitHub provenance and PyPI Trusted Publishing | `release.yml` (attestations and trusted publishing), `tests/test_release_workflow_contract.py` |
 
 ## How this document stays true
 

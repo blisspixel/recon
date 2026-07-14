@@ -4,15 +4,26 @@ from __future__ import annotations
 
 import re
 import subprocess
+import tomllib
 from pathlib import Path
 
 import pytest
+
+from recon_tool.formatter.serialize import CSV_COLUMNS
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def _read(relative: str) -> str:
     return (ROOT / relative).read_text(encoding="utf-8")
+
+
+def _project_release() -> tuple[str, str]:
+    with (ROOT / "pyproject.toml").open("rb") as handle:
+        version = tomllib.load(handle)["project"]["version"]
+    match = re.search(rf"^## \[{re.escape(version)}] - (\d{{4}}-\d{{2}}-\d{{2}})$", _read("CHANGELOG.md"), re.MULTILINE)
+    assert match is not None
+    return version, match.group(1)
 
 
 def test_historical_commit_references_resolve_to_corrected_ids() -> None:
@@ -162,7 +173,23 @@ def test_historical_v18_summary_does_not_link_unpublished_raw_results() -> None:
 
 
 def test_math_docs_distinguish_semantic_baseline_from_current_review() -> None:
+    version, release_date = _project_release()
     for path in ("docs/correlation.md", "docs/statistical-assurance.md"):
         text = _read(path)
         assert "Semantic baseline established for recon v2.4.0" in text
-        assert "Reviewed against v2.5.8 on\n2026-07-13" in text
+        assert f"Reviewed against v{version} on\n{release_date}" in text
+
+
+def test_batch_csv_documentation_matches_runtime_contract() -> None:
+    operational_contract = _read("docs/operational-contract.md")
+    normalized = " ".join(operational_contract.split())
+
+    assert f"`{','.join(CSV_COLUMNS)}`" in operational_contract
+    for required in (
+        "A successful lookup leaves `error` empty.",
+        "A failed lookup populates `domain` and `error`",
+        "first character after leading ASCII spaces",
+        "recon prefixes the cell with a single quote",
+        "successful observation fields and to failure domains and messages",
+    ):
+        assert required in normalized

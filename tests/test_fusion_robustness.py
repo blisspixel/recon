@@ -93,8 +93,7 @@ class TestCacheRoundTrip:
         assert round_trip.posterior_observations == ()
 
     def test_cache_entry_with_malformed_posterior_recovers(self) -> None:
-        """Cache poisoning: malformed entries should be skipped, not
-        crash the loader."""
+        """A malformed posterior collection invalidates the cache entry."""
         info = _bare_tenant_info()
         d = tenant_info_to_dict(info)
         d["posterior_observations"] = [
@@ -103,10 +102,11 @@ class TestCacheRoundTrip:
             42,
             None,
         ]
-        round_trip = tenant_info_from_dict(d)
-        assert round_trip.posterior_observations == ()
+        with pytest.raises(ValueError, match="posterior_observations"):
+            tenant_info_from_dict(d)
 
     def test_cache_entry_with_mixed_valid_and_invalid(self) -> None:
+        """One malformed posterior must not be hidden inside a partial hit."""
         info = _bare_tenant_info()
         d = tenant_info_to_dict(info)
         d["posterior_observations"] = [
@@ -122,9 +122,8 @@ class TestCacheRoundTrip:
             },
             {"only_partial": "fields"},  # skipped
         ]
-        round_trip = tenant_info_from_dict(d)
-        assert len(round_trip.posterior_observations) == 1
-        assert round_trip.posterior_observations[0].name == "good"
+        with pytest.raises(ValueError, match="posterior_observations"):
+            tenant_info_from_dict(d)
 
     def test_full_inference_into_tenantinfo_round_trips(self) -> None:
         """Run real inference, stuff it into TenantInfo, round-trip

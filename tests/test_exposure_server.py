@@ -139,7 +139,7 @@ class TestAssessExposure:
             message="No data",
             error_type="all_sources_failed",
         )
-        with pytest.raises(ToolError, match=r"No information found for unknown\.com"):
+        with pytest.raises(ToolError, match=r"Lookup failed for unknown\.com"):
             await assess_exposure("unknown.com")
 
     @pytest.mark.asyncio
@@ -206,7 +206,7 @@ class TestFindHardeningGaps:
             message="No data",
             error_type="all_sources_failed",
         )
-        with pytest.raises(ToolError, match=r"No information found for unknown\.com"):
+        with pytest.raises(ToolError, match=r"Lookup failed for unknown\.com"):
             await find_hardening_gaps("unknown.com")
 
     @pytest.mark.asyncio
@@ -253,7 +253,7 @@ class TestComparePostures:
             message="No data",
             error_type="all_sources_failed",
         )
-        with pytest.raises(ToolError, match=r"No information found for bad\.com"):
+        with pytest.raises(ToolError, match=r"Lookup failed for bad\.com"):
             await compare_postures("bad.com", "contoso.com")
 
     @pytest.mark.asyncio
@@ -264,7 +264,7 @@ class TestComparePostures:
             (SAMPLE_INFO, SAMPLE_RESULTS),
             ReconLookupError(domain="bad.com", message="No data", error_type="all_sources_failed"),
         ]
-        with pytest.raises(ToolError, match=r"No information found for bad\.com"):
+        with pytest.raises(ToolError, match=r"Lookup failed for bad\.com"):
             await compare_postures("northwindtraders.com", "bad.com")
 
     @pytest.mark.asyncio
@@ -276,7 +276,7 @@ class TestComparePostures:
             error_type="all_sources_failed",
         )
         # domain_a fails first (fail-fast)
-        with pytest.raises(ToolError, match=r"No information found for bad\.com"):
+        with pytest.raises(ToolError, match=r"Lookup failed for bad\.com"):
             await compare_postures("bad.com", "worse.com")
 
     @pytest.mark.asyncio
@@ -300,6 +300,37 @@ class TestComparePostures:
         _cache_clear()
         with pytest.raises(ToolError, match="Rate limited"):
             await compare_postures("northwindtraders.com", "contoso.com")
+
+
+class TestNormalizedOperatorLogs:
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_success_logs_use_only_resolved_domains(
+        self,
+        mock_resolve: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        mock_resolve.side_effect = [
+            (SAMPLE_INFO, SAMPLE_RESULTS),
+            (SAMPLE_INFO_B, SAMPLE_RESULTS_B),
+        ]
+        raw_a = "https://www.northwindtraders.com/private/a?token=secret"
+        raw_b = "https://www.contoso.com/private/b?token=secret"
+
+        with caplog.at_level("INFO", logger="recon"):
+            await assess_exposure(raw_a)
+            await find_hardening_gaps(raw_a)
+            await compare_postures(raw_a, raw_b)
+
+        assert [call.args[0] for call in mock_resolve.await_args_list] == ["northwindtraders.com", "contoso.com"]
+        assert "exposure_assessed" in caplog.text
+        assert "gaps_analyzed" in caplog.text
+        assert "postures_compared" in caplog.text
+        assert "northwindtraders.com" in caplog.text
+        assert "contoso.com" in caplog.text
+        assert raw_a not in caplog.text
+        assert raw_b not in caplog.text
+        assert "/private/" not in caplog.text
 
 
 # ── ToolAnnotations tests ──────────────────────────────────────────────

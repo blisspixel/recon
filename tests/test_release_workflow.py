@@ -53,7 +53,20 @@ def test_release_test_and_build_jobs_are_read_only() -> None:
     assert jobs["build"]["permissions"] == {"contents": "read"}
 
 
-def test_release_test_job_typechecks_source_and_tests() -> None:
+def test_release_preflight_blocks_mismatched_or_non_main_tags() -> None:
+    workflow = _load_release_workflow()
+    jobs = workflow["jobs"]
+    preflight = jobs["preflight"]
+    text = "\n".join(_step_text(step) for step in preflight["steps"])
+
+    assert jobs["test"]["needs"] == "preflight"
+    assert preflight["permissions"] == {"contents": "read"}
+    assert preflight["steps"][0]["with"]["fetch-depth"] == 0
+    assert "refs/remotes/origin/main" in text
+    assert "scripts/validate_release_tag.py" in text
+
+
+def test_release_test_job_runs_complete_quality_gate() -> None:
     workflow = _load_release_workflow()
     steps = workflow["jobs"]["test"]["steps"]
     step_text = "\n".join(_step_text(step) for step in steps)
@@ -66,5 +79,13 @@ def test_release_test_job_typechecks_source_and_tests() -> None:
     assert '"$(git rev-parse --is-shallow-repository)" != "false"' in history_command
     assert "exit 1" in history_command
     assert "actions/setup-node" in step_text
-    assert "uv run pyright src/recon_tool/ tests/" in step_text
-    assert "uv run python scripts/generate_fingerprint_catalog.py --check" in step_text
+    assert "uv run python scripts/check.py" in step_text
+    assert "--text-range" in step_text
+    assert "git describe --tags" in step_text
+    assert "scripts/check_mcp_compatibility.py" in step_text
+    assert "pip-audit" in step_text
+
+
+def test_pypi_publication_waits_for_valid_sbom() -> None:
+    workflow = _load_release_workflow()
+    assert "sbom" in workflow["jobs"]["publish-pypi"]["needs"]

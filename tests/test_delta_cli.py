@@ -48,10 +48,27 @@ class TestDeltaCLI:
         assert "No cached snapshot" in result.output
         assert "Run `recon contoso.com` first" in result.output
 
+    def test_delta_no_cache_keeps_json_stdout_clean(self, tmp_recon_home: Path) -> None:
+        result = runner.invoke(app, ["delta", "contoso.com", "--json"])
+        assert result.exit_code == 3
+        assert result.stdout == ""
+        assert "No cached snapshot" in result.stderr
+
     def test_delta_invalid_domain(self, tmp_recon_home: Path) -> None:
         """Invalid domain input returns validation error."""
         result = runner.invoke(app, ["delta", "not a domain!!!"])
         assert result.exit_code != 0
+
+    def test_delta_rejects_mismatched_cached_domain_before_resolution(self, tmp_recon_home: Path) -> None:
+        cache_put("contoso.com", _tenant("fabrikam.com"))
+        resolver = AsyncMock()
+
+        with patch("recon_tool.resolver.resolve_tenant", new=resolver):
+            result = runner.invoke(app, ["delta", "contoso.com"])
+
+        assert result.exit_code == 2
+        assert "does not match current domain" in result.stderr
+        resolver.assert_not_awaited()
 
     def test_delta_compares_against_cache(self, tmp_recon_home: Path) -> None:
         """When cache exists, delta runs fresh lookup and diffs against it."""
@@ -95,3 +112,13 @@ class TestDeltaCLI:
         assert result.exit_code == 4
         assert "Resolution timed out after 5s for contoso.com" in result.stderr
         assert "No information found" not in result.stderr
+
+    @pytest.mark.parametrize("timeout", ["nan", "inf", "-1", "0"])
+    def test_delta_rejects_nonpositive_or_nonfinite_timeout(self, tmp_recon_home: Path, timeout: str) -> None:
+        cache_put("contoso.com", _tenant("contoso.com"))
+        resolver = AsyncMock()
+        with patch("recon_tool.resolver.resolve_tenant", new=resolver):
+            result = runner.invoke(app, ["delta", "contoso.com", "--timeout", timeout, "--json"])
+        assert result.exit_code == 2
+        assert "finite positive number" in result.stderr
+        resolver.assert_not_awaited()

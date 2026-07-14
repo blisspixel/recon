@@ -310,6 +310,49 @@ class TestRetryTransport:
         assert retry_delays == [1.0]
 
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("retry_after", ["nan", "inf", "-1"])
+    async def test_non_finite_or_negative_retry_after_uses_backoff(
+        self,
+        retry_delays: list[float],
+        retry_after: str,
+    ) -> None:
+        call_count = 0
+
+        class MockTransport(httpx.AsyncHTTPTransport):
+            async def handle_async_request(self, request):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    return httpx.Response(429, request=request, headers={"Retry-After": retry_after})
+                return httpx.Response(200, request=request)
+
+        response = await _RetryTransport(wrapped=MockTransport()).handle_async_request(
+            httpx.Request("GET", "http://example.com")
+        )
+        assert response.status_code == 200
+        assert call_count == 2
+        assert retry_delays == [1.0]
+
+    @pytest.mark.asyncio
+    async def test_zero_retry_after_retries_without_sleep(self, retry_delays: list[float]) -> None:
+        call_count = 0
+
+        class MockTransport(httpx.AsyncHTTPTransport):
+            async def handle_async_request(self, request):
+                nonlocal call_count
+                call_count += 1
+                if call_count == 1:
+                    return httpx.Response(429, request=request, headers={"Retry-After": "0"})
+                return httpx.Response(200, request=request)
+
+        response = await _RetryTransport(wrapped=MockTransport()).handle_async_request(
+            httpx.Request("GET", "http://example.com")
+        )
+        assert response.status_code == 200
+        assert call_count == 2
+        assert retry_delays == []
+
+    @pytest.mark.asyncio
     async def test_aclose_propagates(self):
         """aclose should propagate to the wrapped transport."""
         closed = False

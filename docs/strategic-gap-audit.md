@@ -61,18 +61,18 @@ not outrank product truthfulness or measured user value.
 
 ## Current Evidence
 
-- At the 2026-07-13 refresh, `v2.5.7` was current on GitHub Releases and PyPI.
-  This checkout prepares `v2.5.8`; its full release gates must pass before that
-  version is described as published.
-- Local release readiness passed for the published `v2.5.7` source state.
-- Remote release readiness passed for the published `v2.5.7` main branch and
+- At the 2026-07-13 refresh, v2.5.8 was current on GitHub Releases and PyPI.
+  A later checkout must not describe a version as published until its local and
+  remote release gates pass.
+- Local release readiness passed for the published source state.
+- Remote release readiness passed for the published main branch and
   verifies required GitHub Actions checks, public Scorecard API freshness and
   code-owned control scores, PyPI wheel and sdist publication, and GitHub
   Release wheel, sdist, SBOM, and attestation export assets; it also verifies
   PyPI and GitHub provenance for the release wheel and sdist.
 - CI, secrets scan, Scorecard workflows, and the public Scorecard API passed on
-  the published `v2.5.7` main branch. The in-progress `v2.5.8` checkout requires
-  fresh local and remote evidence before release.
+  the published main branch. Any in-progress release checkout requires fresh
+  local and remote evidence before publication.
 - Historical public proof is recorded in
   [2026-06-30-submission-freeze-local-proof.md](../validation/2026-06-30-submission-freeze-local-proof.md),
   and the historical final claim-audit refresh is recorded in

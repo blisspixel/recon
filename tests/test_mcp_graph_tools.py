@@ -159,6 +159,65 @@ class TestChainLookupCompact:
         with pytest.raises(ToolError, match="result_limit"):
             asyncio.run(server.chain_lookup("example.com", result_limit=-1))
 
+    def test_success_log_uses_only_normalized_domain(self, stub_chain, caplog: pytest.LogCaptureFixture):
+        raw = "https://www.example.com/private/path?token=secret"
+
+        with caplog.at_level("INFO", logger="recon"):
+            asyncio.run(server.chain_lookup(raw))
+
+        assert "example.com" in caplog.text
+        assert raw not in caplog.text
+        assert "/private/path" not in caplog.text
+
+    def test_rate_limit_message_uses_only_normalized_domain(self, monkeypatch: pytest.MonkeyPatch):
+        import recon_tool.server.graph as server_graph
+
+        acquired: list[str] = []
+
+        def deny(domain: str) -> bool:
+            acquired.append(domain)
+            return False
+
+        monkeypatch.setattr(server_graph, "rate_limit_try_acquire", deny)
+        raw = "https://www.example.com/private/path?token=secret"
+
+        result = asyncio.run(server.chain_lookup(raw))
+
+        assert acquired == ["example.com"]
+        assert "Rate limited: example.com" in result
+        assert raw not in result
+        assert "/private/path" not in result
+
+    def test_internal_error_and_log_use_only_normalized_domain(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ):
+        import recon_tool.chain as chain_module
+        import recon_tool.server.graph as server_graph
+
+        async def fail(domain: str, depth: int = 1) -> ChainReport:
+            assert domain == "example.com"
+            assert depth == 1
+            raise RuntimeError("boom")
+
+        def allow(_domain: str) -> bool:
+            return True
+
+        monkeypatch.setattr(chain_module, "chain_resolve", fail)
+        monkeypatch.setattr(server_graph, "rate_limit_try_acquire", allow)
+        raw = "https://www.example.com/private/path?token=secret"
+
+        with caplog.at_level("ERROR", logger="recon"):
+            result = asyncio.run(server.chain_lookup(raw))
+
+        assert "Error looking up example.com" in result
+        assert raw not in result
+        assert "/private/path" not in result
+        assert "chain lookup for example.com" in caplog.text
+        assert raw not in caplog.text
+        assert "/private/path" not in caplog.text
+
 
 class TestGetInfrastructureClusters:
     def test_returns_cluster_envelope(self, stub_resolve):

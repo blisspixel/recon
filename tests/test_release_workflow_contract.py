@@ -71,8 +71,7 @@ def _step_text(step: dict[str, Any]) -> str:
 
 
 class TestBuildJobIsPure:
-    """The build job must not install dev deps or execute dependency code
-    after ``uv build`` and before artifact upload."""
+    """The build job creates no project environment and seals immediately."""
 
     def test_build_job_exists(self, workflow):
         jobs = workflow.get("jobs", {})
@@ -90,6 +89,33 @@ class TestBuildJobIsPure:
                 "this regresses the v1.9.3.3 supply-chain isolation contract. "
                 "Dev tooling must run in the test or sbom jobs, never in build."
             )
+
+    def test_build_job_has_only_required_executable_steps(self, workflow):
+        """Keep the artifact workspace free of a synced project environment.
+
+        The setup actions install Git, uv, and Python. The only shell commands
+        set the deterministic timestamp and invoke the isolated build backend.
+        Artifact upload must be the next executable step after the build.
+        """
+        steps = _steps(workflow["jobs"]["build"])
+        run_steps = [step["run"] for step in steps if isinstance(step.get("run"), str)]
+        assert len(run_steps) == 2
+        assert "SOURCE_DATE_EPOCH=" in run_steps[0]
+        assert run_steps[1].strip() == "uv build"
+
+        action_steps = [step["uses"] for step in steps if isinstance(step.get("uses"), str)]
+        assert len(action_steps) == 4
+        for action, expected in zip(
+            action_steps,
+            (
+                "actions/checkout@",
+                "astral-sh/setup-uv@",
+                "actions/setup-python@",
+                "actions/upload-artifact@",
+            ),
+            strict=True,
+        ):
+            assert action.startswith(expected)
 
     def test_build_job_does_not_run_pip_audit(self, workflow):
         """pip-audit is dev tooling. Running it in the build job —
@@ -215,6 +241,13 @@ class TestSbomJobIsIsolated:
         assert any(isinstance(s.get("with"), dict) and s["with"].get("name") == "sbom" for s in uploads), (
             "sbom job must upload an artifact named 'sbom'"
         )
+
+    def test_sbom_job_validates_complete_project_bom(self, workflow):
+        text = "\n".join(_step_text(step) for step in _steps(workflow["jobs"]["sbom"]))
+        assert "scripts/finalize_sbom.py" in text
+        assert "test -s" in text
+        assert "audit_status" in text
+        assert "|| true" not in text
 
 
 class TestProvenanceExportJob:

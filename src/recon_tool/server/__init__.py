@@ -21,7 +21,7 @@ from recon_tool.server import lookup as server_lookup
 from recon_tool.server import posture as server_posture
 from recon_tool.server import runtime as _server_runtime
 from recon_tool.server.app import mcp
-from recon_tool.validator import strip_control_chars
+from recon_tool.validator import validate_domain
 
 logger = logging.getLogger("recon")
 
@@ -132,9 +132,7 @@ def domain_report(domain: str) -> str:
     Use this to summarize public domain-control, email-routing, identity-response,
     and infrastructure indicators with their observation limits.
     """
-    # Strip control bytes so a crafted domain cannot inject newlines or
-    # escape sequences into the rendered prompt the agent consumes.
-    safe_domain = strip_control_chars(domain)
+    safe_domain = validate_domain(domain)
     return (
         f"Look up {safe_domain} using lookup_tenant with format='markdown'. "
         "Summarize only the role-scoped public observations and their limits."

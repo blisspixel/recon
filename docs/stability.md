@@ -173,8 +173,8 @@ patch and minor releases without modification.
 | `~/.recon/signals.yaml` schema | Same. Additive only. |
 | `data/profiles/*.yaml` schema | Stable. Fields: name, description, category_boost, signal_boost, focus_categories, exclude_signals, prepend_note, expected_categories, expected_motifs. |
 | `~/.recon/profiles/*.yaml` schema | Same. Additive only. |
-| `~/.recon/cache/*.json` (TenantInfo cache) | Stable. Backward-compatible reads, forward-compatible writes. |
-| `~/.recon/ct-cache/*.json` (per-domain CT cache) | Stable. |
+| `~/.recon/cache/*.json` (TenantInfo cache) | Stable. Within the current cache version, entries lacking later additive fields remain readable and current writes include current fields. An explicit cache-version mismatch, wrong-shaped, corrupt, oversized, or numerically invalid file degrades to a clean miss. |
+| `~/.recon/ct-cache/*.json` (per-domain CT cache) | Stable. Older entries without certificate-summary or infrastructure-cluster extensions remain readable; current writes preserve those extensions. Wrong-shaped, corrupt, oversized, or numerically invalid files degrade to a clean miss. |
 | `RECON_CONFIG_DIR` environment variable | Stable. |
 
 ---

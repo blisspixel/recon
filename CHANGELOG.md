@@ -12,6 +12,66 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.6.0] - 2026-07-13
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes, and no MCP tool names,
+parameters, schemas, annotations, or defaults changed. Batch CSV adds an
+`error` column so failed rows are machine-visible instead of blank.
+
+### Changed
+
+- Batch lookup now applies its line and total limits to UTF-8 bytes and resolves
+  equivalent URL, sub-host, and apex inputs only once at their canonical apex.
+- Release preparation now starts from the exact current `origin/main`, validates
+  the fully synchronized prospective release tree, rolls back failed mutations,
+  and pushes `main` plus the reviewed tag atomically.
+- Release tags now pass a version, changelog, commit, and main-ancestry preflight
+  before the complete local quality gate can build or publish artifacts.
+
+### Fixed
+
+- Rejected domain labels over 63 ASCII octets and normalized DNS presentation
+  names over 253 ASCII octets before collection; Unicode and ASCII `www`
+  inputs now follow the same exact-host normalization contract.
+- Made result and CT cache readers treat non-object, wrong-shaped, non-finite,
+  overflowing, or corrupt JSON as a cache miss instead of crashing or silently
+  coercing strings into character sequences, including malformed nested
+  posterior diagnostics, impossible posterior intervals, and invalid
+  infrastructure algorithms or edges.
+- Preserved full certificate summaries and infrastructure cluster reports in
+  the CT cache, including wildcard sibling clusters and deployment bursts, and
+  made summary-only cache entries reusable.
+- Kept MCP timeout and total-source-failure messages distinct from true no-data
+  results, routed `domain_report` through the shared domain validator, and
+  removed raw URL/path text from every post-validation MCP result and log.
+- Prevented MCP installation from replacing a config symlink or silently
+  overwriting a non-object `mcpServers.recon` stanza without `--force`; client
+  doctor now fails diagnostics for non-string, blank, or control-bearing
+  process commands and arguments.
+- Made HTTP retry handling reject negative and non-finite `Retry-After` values,
+  use bounded backoff for malformed values, and honor zero without sleeping.
+- Made release SBOM generation fail closed on tool or JSON errors and include a
+  complete `recon-tool` root component and dependency edge.
+- Expanded CI text hygiene to the full pushed or pull-request commit range and
+  added a repository-wide gate for tracked Markdown links and heading anchors.
+- Rejected cross-domain delta comparisons, impossible prior scalar values, and
+  schema-invalid prior enum values before resolution, plus nonpositive or
+  non-finite timeouts; JSON first-run delta errors now stay on stderr so stdout
+  remains parseable.
+- Preserved batch lookup failures in the new CSV `error` column and rejected
+  explicit unknown batch-record discriminators instead of treating them as
+  legacy success records.
+- Made profile boost parsing ignore boolean and non-finite multipliers while
+  normalizing key whitespace, and made update checks reject malformed PyPI
+  response shapes while correctly ordering prereleases, development and local
+  builds, distinct local build labels, final releases, and trailing release
+  zeroes.
+- Reduced autodiscover redirect observations to boundary-safe registrable
+  apexes, including multi-label public suffixes, instead of dropping two-label
+  targets or retaining arbitrary sub-hosts.
+
 ## [2.5.8] - 2026-07-13
 
 ### Tool Surface Changes

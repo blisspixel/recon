@@ -48,7 +48,7 @@ def _info(*, degraded_sources: tuple[str, ...]) -> TenantInfo:
             ),
         ),
         degraded_sources=degraded_sources,
-        slug_confidences=(("dmarc", 3.0), ("proofpoint", 2.0)),
+        slug_confidences=(("dmarc", 0.75), ("proofpoint", 0.67)),
         detection_scores=(("dmarc", "high"), ("proofpoint", "medium")),
     )
 

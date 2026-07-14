@@ -1,49 +1,49 @@
-"""Markdown link regressions for live project docs."""
+"""Repository-wide Markdown link and anchor gate."""
 
 from __future__ import annotations
 
-import re
 from pathlib import Path
 
-_ROOT = Path(__file__).resolve().parents[1]
-_LINK_RE = re.compile(r"(?<!!)\[[^\]]+\]\(([^)]+)\)")
-_LIVE_DOCS = [
-    _ROOT / "README.md",
-    _ROOT / "CONTRIBUTING.md",
-    _ROOT / "SECURITY.md",
-    *_ROOT.glob("docs/**/*.md"),
-]
+from scripts.check_markdown_links import dangling_links
 
 
-def _target_path(raw_target: str, source: Path) -> Path | None:
-    target = raw_target.split()[0].strip("<>")
-    if not target or target.startswith(("#", "mailto:")) or "://" in target:
-        return None
-    file_part = target.split("#", 1)[0]
-    if not file_part:
-        return None
-    return (source.parent / file_part).resolve()
+def test_all_tracked_markdown_links_resolve() -> None:
+    assert dangling_links() == []
 
 
-def test_live_markdown_relative_links_resolve() -> None:
-    broken: list[str] = []
-    for path in sorted(_LIVE_DOCS):
-        text = path.read_text(encoding="utf-8")
-        for line_no, line in enumerate(text.splitlines(), 1):
-            for match in _LINK_RE.finditer(line):
-                target = _target_path(match.group(1), path)
-                if target is not None and not target.exists():
-                    rel = path.relative_to(_ROOT).as_posix()
-                    broken.append(f"{rel}:{line_no}: {match.group(1)}")
+def test_checker_reports_missing_file_and_anchor(tmp_path: Path) -> None:
+    target = tmp_path / "target.md"
+    target.write_text("# Real Heading\n", encoding="utf-8")
+    source = tmp_path / "source.md"
+    source.write_text(
+        "[missing](absent.md)\n[bad anchor](target.md#missing)\n",
+        encoding="utf-8",
+    )
+    problems = dangling_links([source], root=tmp_path)
+    assert any("missing link target" in problem for problem in problems)
+    assert any("missing heading anchor" in problem for problem in problems)
 
-    assert not broken, "Broken relative markdown links:\n" + "\n".join(broken)
+
+def test_checker_ignores_links_inside_code(tmp_path: Path) -> None:
+    source = tmp_path / "source.md"
+    source.write_text(
+        "`[inline](missing.md)`\n```md\n[fenced](missing.md)\n```\n",
+        encoding="utf-8",
+    )
+    assert dangling_links([source], root=tmp_path) == []
 
 
-def test_roadmap_history_keeps_declared_compatibility_anchors() -> None:
-    text = (_ROOT / "docs" / "roadmap-history.md").read_text(encoding="utf-8")
+def test_duplicate_heading_anchors_follow_github_suffixes(tmp_path: Path) -> None:
+    target = tmp_path / "target.md"
+    target.write_text("# Same\n\n# Same\n", encoding="utf-8")
+    source = tmp_path / "source.md"
+    source.write_text("[second](target.md#same-1)\n", encoding="utf-8")
+    assert dangling_links([source], root=tmp_path) == []
 
-    for anchor in (
-        '<a id="v190--probabilistic-fusion-shipped"></a>',
-        '<a id="v200--maturity"></a>',
-    ):
-        assert anchor in text
+
+def test_explicit_html_compatibility_anchor_resolves(tmp_path: Path) -> None:
+    target = tmp_path / "target.md"
+    target.write_text('<a id="stable-anchor"></a>\n\n# Changed Heading\n', encoding="utf-8")
+    source = tmp_path / "source.md"
+    source.write_text("[stable](target.md#stable-anchor)\n", encoding="utf-8")
+    assert dangling_links([source], root=tmp_path) == []

@@ -87,7 +87,7 @@ def test_every_ndjson_record_classifies_as_success_or_error(synthetic_ndjson: st
 
 
 def test_success_records_carry_the_full_single_domain_shape(synthetic_ndjson: str) -> None:
-    """Success records pass the full shape: every required single-domain field present."""
+    """Success envelopes carry every required single-domain field."""
     required = set(REQUIRED_TOP_LEVEL_FIELDS)
     for line in synthetic_ndjson.splitlines():
         record = json.loads(line)
@@ -127,11 +127,11 @@ def test_classifier_rejects_malformed_records() -> None:
 
 
 def test_record_type_does_not_bypass_shape_validation() -> None:
-    """record_type selects the shape to validate, it does not skip validation.
+    """record_type selects the key envelope; it cannot bypass key checks.
 
     A malformed payload that only sets record_type must not be accepted: the
-    full required-field set (success) and the closed four-key set (error) are
-    still enforced.
+    required-field set (success) and the closed four-key set (error) are still
+    enforced. Property value validation belongs to the JSON Schema.
     """
     # record_type=lookup but missing every required success field.
     assert classify_batch_record({"record_type": "lookup"}) == "unknown"
@@ -150,6 +150,8 @@ def test_record_type_does_not_bypass_shape_validation() -> None:
     full_success = dict.fromkeys(REQUIRED_TOP_LEVEL_FIELDS, "x")
     full_success["record_type"] = "lookup"
     assert classify_batch_record(full_success) == "success"
+    assert classify_batch_record({**full_success, "record_type": "bogus"}) == "unknown"
+    assert classify_batch_record({**full_success, "record_type": 7}) == "unknown"
 
 
 def test_include_ecosystem_always_emits_wrapper_on_all_failed_batch(capsys) -> None:

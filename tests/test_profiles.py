@@ -148,6 +148,27 @@ class TestCustomProfiles:
         assert p is not None
         assert p.boost_for_category("email") == 0.0
 
+    def test_multiplier_keys_are_stripped_and_non_finite_values_are_skipped(self, tmp_path: Path) -> None:
+        (tmp_path / "profiles").mkdir(parents=True, exist_ok=True)
+        (tmp_path / "profiles" / "finite.yaml").write_text(
+            """name: finite
+category_boost:
+  " cloud ": 2.0
+  email: .nan
+  identity: .inf
+  security: true
+""",
+            encoding="utf-8",
+        )
+
+        reload_profiles()
+        profile = load_profile("finite")
+
+        assert profile is not None
+        assert profile.category_boost == (("cloud", 2.0),)
+        assert profile.boost_for_category("cloud") == 2.0
+        assert profile.boost_for_category("email") == 1.0
+
 
 # ── apply_profile ───────────────────────────────────────────────────────
 

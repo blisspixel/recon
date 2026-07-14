@@ -88,6 +88,9 @@ class TestValidateDomain:
     def test_idn_with_scheme_and_www_stripped(self):
         assert validate_domain("https://www.münchen.de") == "xn--mnchen-3ya.de"
 
+    def test_exact_idn_with_www_stripped(self):
+        assert validate_domain("www.münchen.de", apex=False) == "xn--mnchen-3ya.de"
+
     def test_idn_uppercase_normalized(self):
         assert validate_domain("MÜNCHEN.DE") == "xn--mnchen-3ya.de"
 
@@ -193,13 +196,24 @@ class TestValidateDomain:
         with pytest.raises(ValueError, match="Input too long"):
             validate_domain("a" * 501 + ".com")
 
-    def test_max_length_input_accepted(self):
-        # 499 chars + ".com" = 503 total, but after stripping it's just the domain
-        # A domain at exactly 500 chars should be accepted
-        domain = "a" * 490 + ".com"
-        assert len(domain) < 500
-        result = validate_domain(domain)
-        assert result == domain
+    def test_63_octet_label_is_accepted(self):
+        domain = "a" * 63 + ".com"
+        assert validate_domain(domain) == domain
+
+    def test_64_octet_label_is_rejected(self):
+        with pytest.raises(ValueError, match="Invalid domain format"):
+            validate_domain("a" * 64 + ".com")
+
+    def test_253_octet_domain_is_accepted(self):
+        domain = ".".join(("a" * 63, "b" * 63, "c" * 63, "d" * 57, "com"))
+        assert len(domain.encode("ascii")) == 253
+        assert validate_domain(domain) == "d" * 57 + ".com"
+
+    def test_254_octet_domain_is_rejected(self):
+        domain = ".".join(("a" * 63, "b" * 63, "c" * 63, "d" * 58, "com"))
+        assert len(domain.encode("ascii")) == 254
+        with pytest.raises(ValueError, match="Invalid domain format"):
+            validate_domain(domain)
 
 
 # --- Property-Based Tests (Hypothesis) ---

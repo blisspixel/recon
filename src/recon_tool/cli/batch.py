@@ -56,10 +56,14 @@ def read_batch_domains(stream: TextIO) -> list[str]:
         line = stream.readline(_MAX_BATCH_LINE_BYTES + 1)
         if not line:
             break
-        if len(line) > _MAX_BATCH_LINE_BYTES:
+        try:
+            line_bytes = len(line.encode("utf-8"))
+        except UnicodeEncodeError as exc:
+            raise _BatchInputError("Batch input is not valid UTF-8") from exc
+        if line_bytes > _MAX_BATCH_LINE_BYTES:
             msg = f"Batch input line exceeds maximum length of {_MAX_BATCH_LINE_BYTES} bytes"
             raise _BatchInputError(msg)
-        total_bytes += len(line)
+        total_bytes += line_bytes
         if total_bytes > _MAX_BATCH_FILE_BYTES:
             msg = f"Batch input exceeds maximum size of {_MAX_BATCH_FILE_BYTES // (1024 * 1024)} MB"
             raise _BatchInputError(msg)
@@ -224,13 +228,23 @@ def _batch_load_domains(file: str, console: Any, *, announce_dupes: bool) -> lis
         render_error(f"No domains found in {source}")
         raise typer.Exit(code=EXIT_VALIDATION)
 
-    # Deduplicate while preserving input order
-    seen: set[str] = set()
+    # Deduplicate while preserving the first spelling supplied by the operator.
+    # Valid inputs use the same registrable-apex key as the lookup itself, so a
+    # URL, sub-host, and apex cannot schedule duplicate concurrent work. Invalid
+    # inputs retain their normalized raw spelling so each distinct malformed
+    # value still produces its normal per-domain validation error.
+    from recon_tool.validator import validate_domain
+
+    seen: set[tuple[str, str]] = set()
     unique_domains: list[str] = []
     for d in domain_list:
-        d_lower = d.lower().strip()
-        if d_lower not in seen:
-            seen.add(d_lower)
+        normalized_raw = d.lower().strip()
+        try:
+            dedupe_key = ("valid", validate_domain(d))
+        except ValueError:
+            dedupe_key = ("invalid", normalized_raw)
+        if dedupe_key not in seen:
+            seen.add(dedupe_key)
             unique_domains.append(d)
     if len(unique_domains) < len(domain_list) and announce_dupes:
         skipped = len(domain_list) - len(unique_domains)

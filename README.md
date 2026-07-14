@@ -296,11 +296,16 @@ uv run python scripts/release_readiness.py --allow-dirty
 uv run python scripts/check.py
 ```
 
-`uv run python scripts/check.py` is the canonical local gate. It runs lint, type checks,
-coverage-gated tests, generated-artifact checks, validation hygiene, and
-ratchets. Its full-suite stage uses at most four file-grouped test workers while
-preserving combined branch coverage. Focused `pytest` commands stay serial by
-default. Do not push on `--fast` alone.
+`uv run python scripts/check.py` is the canonical local gate. It runs lint,
+type checks, coverage-gated tests, fingerprint and generated-artifact checks,
+validation and added-line text hygiene, tracked Markdown link and heading-anchor
+validation, workflow and dependency-export guards, interface checks, paper
+claim and figure checks, and size/complexity ratchets. Its full-suite stage uses
+at most four file-grouped test workers while preserving combined branch
+coverage. Focused `pytest` commands stay serial by default. Do not push on
+`--fast` alone. CI and the release workflow pass an explicit Git revision range
+so text hygiene covers every added line in the pushed or release commit range,
+not only the final diff.
 
 Project hygiene: keep examples fictional or synthetic, keep validation artifacts
 aggregate-only, run `uv run python scripts/check.py`, and
