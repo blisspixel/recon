@@ -478,6 +478,32 @@ sections. Require byte-equivalent panel golden output, unchanged MCP
 registration order, unchanged generated inventories, no import cycle, and
 tighter file-size ratchets. Consider `merger.py` only after the interface splits.
 
+The 2026-07-14 structural audit rejects a bulk decomposition or consolidation.
+Of 133 runtime Python modules, 24 are 18-line compatibility shims. After shims
+and package entry files are excluded, the 102 ordinary implementations have a
+286-line median, only four are at or below 50 lines, and 38 exceed 400 lines.
+The source tree is wide but only one package level deep. The real navigation
+debt is compatibility and facade indirection plus broad catch-all test suites,
+not general micro-file sprawl. Fifteen runtime modules are between 800 and 999
+lines, one is above the cap, and 67 production `PLR09xx` findings remain under
+ratchet, so large-module pressure also remains real. The complete measured
+plan is in
+[structural-maintainability.md](structural-maintainability.md).
+
+Execute this track in four bounded phases:
+
+1. Publish a source-to-focused-test ownership map and separate direct import
+   owners from heuristic test candidates in local graph output.
+2. Redistribute five catch-all test suites into existing behavior owners one
+   suite at a time without reducing collected tests or coverage.
+3. Audit compatibility exports and runtime modules with no production importer.
+   Keep v2 import shims until a breaking release and require an explicit
+   supported contract for dormant runtime code.
+4. Extract at most one cohesive auxiliary-rendering owner from
+   `formatter/panel.py`, then assess a response-contract and pure-conversion
+   extraction from `server/introspection.py`. Do not split decorated tools one
+   by one or move broad stable facades only to reduce line counts.
+
 ### Acceptance
 
 - Panel golden output is byte-equivalent and MCP registration order and
@@ -485,6 +511,12 @@ tighter file-size ratchets. Consider `merger.py` only after the interface splits
 - No import cycle or public-import change is introduced.
 - At least one special file-size allowance is removed or lowered by at least 20
   percent without moving complexity into another oversized module.
+- No compatibility shim points to another shim, no new shim is added, and no
+  ordinary implementation below 100 lines is introduced without a named
+  contract or safety boundary.
+- The five catch-all test filenames are removed through behavior-owner moves;
+  collected tests and the dated 90.52 percent branch-coverage result do not
+  regress.
 - Focused likely-test sets from `impact.jsonl` plus the full local gate pass.
 
 ## Completed or Maintenance-Only Work
