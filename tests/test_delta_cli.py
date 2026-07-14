@@ -60,10 +60,12 @@ class TestDeltaCLI:
         assert result.exit_code != 0
 
     def test_delta_rejects_mismatched_cached_domain_before_resolution(self, tmp_recon_home: Path) -> None:
-        cache_put("contoso.com", _tenant("fabrikam.com"))
         resolver = AsyncMock()
 
-        with patch("recon_tool.resolver.resolve_tenant", new=resolver):
+        with (
+            patch("recon_tool.cache.cache_get", return_value=_tenant("fabrikam.com")),
+            patch("recon_tool.resolver.resolve_tenant", new=resolver),
+        ):
             result = runner.invoke(app, ["delta", "contoso.com"])
 
         assert result.exit_code == 2

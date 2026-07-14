@@ -1,8 +1,6 @@
-"""Lightweight JSON disk cache for TenantInfo.
+"""Lightweight JSON disk cache for serialized ``TenantInfo`` values.
 
-Stores serialized TenantInfo as JSON files in {Config_Dir}/cache/.
-Lazy eviction via mtime check — no background process, no directory scanning.
-All I/O wrapped in try/except with debug logging, never raises to caller.
+Entries expire lazily and cache I/O degrades to misses instead of escaping errors.
 """
 
 from __future__ import annotations
@@ -13,7 +11,6 @@ import json
 import logging
 import os
 import tempfile
-import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -25,6 +22,7 @@ from recon_tool.cache_values import cache_object_tuple, cache_string, cache_stri
 from recon_tool.cache_values import optional_cache_count as _optional_cache_count
 from recon_tool.cache_values import optional_cache_string as _optional_cache_string
 from recon_tool.cache_values import parse_confidence as _parse_confidence
+from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.models import (
     CandidateValue,
     CertBurst,
@@ -64,8 +62,8 @@ DEFAULT_TTL: int = 86400  # 24 hours
 _CACHE_VERSION = 3
 
 # A cache entry is a serialized TenantInfo (a few KB, up to ~100 KB with CT
-# data). Skip a file larger than this before read_text/json.loads so a corrupt
-# or hostile oversized file cannot be read whole into memory. Pairs with the
+# data). Reject a file larger than this before descriptor-bound decoding so a
+# corrupt or hostile oversized file cannot be read whole into memory. Pairs with the
 # RecursionError catch below: a deeply-nested JSON file raises RecursionError
 # (a RuntimeError, not a ValueError), so without the catch a poisoned cache file
 # would crash the next lookup instead of degrading to a clean cache miss.
@@ -88,29 +86,24 @@ def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
     is preserved from the time the result was first produced.
     """
     try:
+        expected_domain = validate_domain(domain, apex=False)
         path = _safe_cache_path(domain)
         if path is None:
             logger.debug("Cache read rejected invalid domain: %r", domain)
             return None
-        if not path.exists():
-            return None
-        st = path.stat()
-        # Bound the read: an oversized (corrupt/hostile) file is not a valid
-        # cache entry, so skip it rather than read it whole into memory.
-        if st.st_size > _MAX_CACHE_FILE_BYTES:
-            logger.debug("Cache file for %s exceeds %d bytes; treating as a miss", domain, _MAX_CACHE_FILE_BYTES)
-            return None
-        # Lazy eviction: check mtime against TTL
-        if time.time() - st.st_mtime > ttl:
-            logger.debug("Cache stale for %s (age > %d s)", domain, ttl)
-            return None
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data, _file_stat, _age_seconds = load_bounded_json_file(
+            path,
+            maximum_bytes=_MAX_CACHE_FILE_BYTES,
+            maximum_age_seconds=ttl,
+        )
         if not isinstance(data, dict):
             raise ValueError("Cache payload must be a JSON object")
         if data.get("_cache_version") != _CACHE_VERSION:
             logger.debug("Cache version mismatch for %s; treating as a miss", domain)
             return None
         info = tenant_info_from_dict(data)
+        if info.queried_domain != expected_domain:
+            raise ValueError("Cache payload domain does not match its cache key")
         cached_at = data.get("_cached_at")
         if isinstance(cached_at, str) and cached_at:
             info = dataclasses.replace(info, cached_at=cached_at)
@@ -126,14 +119,15 @@ def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
 def cache_put(domain: str, info: TenantInfo) -> None:
     """Write TenantInfo to cache as JSON. Creates dir if needed. Logs on failure."""
     try:
+        expected_domain = validate_domain(domain, apex=False)
+        if info.queried_domain != expected_domain:
+            raise ValueError("Cache payload domain does not match its cache key")
         d = cache_dir()
         d.mkdir(parents=True, exist_ok=True)
-        # Resolve after mkdir so the temp dir matches the resolved path that
-        # _safe_cache_path validates against; otherwise a symlinked
-        # RECON_CONFIG_DIR could leave the temp off-volume and make os.replace
-        # non-atomic.
+        # Resolve once after mkdir so the temporary and final paths stay bound
+        # to the same directory even if configuration changes concurrently.
         d = d.resolve()
-        path = _safe_cache_path(domain)
+        path = _cache_path_in(d, domain)
         if path is None:
             logger.debug("Cache write rejected invalid domain: %r", domain)
             return
@@ -161,18 +155,27 @@ def _safe_cache_path(domain: str) -> Path | None:
 
     Returns None (rather than raising) when the domain is malformed or
     would escape the cache directory. Callers treat None as "no entry
-    to operate on" — this keeps ``cache_clear("../../etc/passwd")``
+    to operate on"; this keeps ``cache_clear("../../etc/passwd")``
     from deleting files outside ``~/.recon/cache/``. Domain validation
-    normalizes the cache key; the path-aware containment check is
+    preserves the literal-host cache key; the path-aware containment check is
     retained as defense in depth so sibling directories sharing the
     cache-dir prefix cannot be reached via a crafted traversal string.
     """
     try:
-        normalized = validate_domain(domain)
+        d = cache_dir().resolve()
+    except OSError:
+        return None
+    return _cache_path_in(d, domain)
+
+
+def _cache_path_in(directory: Path, domain: str) -> Path | None:
+    """Return a validated cache path within one already-resolved directory."""
+    try:
+        normalized = validate_domain(domain, apex=False)
     except ValueError:
         return None
-    d = cache_dir().resolve()
-    path = (d / f"{normalized}.json").resolve()
+    d = directory
+    path = d / f"{normalized}.json"
     try:
         if not path.is_relative_to(d):
             return None

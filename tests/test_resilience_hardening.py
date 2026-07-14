@@ -19,8 +19,13 @@ hanging, or consuming unbounded resources:
 from __future__ import annotations
 
 import json
+import os
+import time
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
+from datetime import UTC, datetime
+from pathlib import Path
+from types import SimpleNamespace
 from typing import Any
 
 import httpx
@@ -170,6 +175,17 @@ class TestPoisonedCacheDegrades:
         _write_cache(monkeypatch, tmp_path, oversized)
         assert cache_mod.cache_get("contoso.com") is None
 
+    def test_cache_get_bounds_the_open_file_when_path_metadata_is_stale(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
+    ) -> None:
+        oversized = '{"display_name": "' + "a" * (6 * 1024 * 1024) + '"}'
+        _write_cache(monkeypatch, tmp_path, oversized)
+        path = cache_mod._safe_cache_path("contoso.com")
+        assert path is not None
+        _make_path_metadata_stale(monkeypatch, path)
+
+        assert cache_mod.cache_get("contoso.com") is None
+
     def test_ct_cache_get_deeply_nested_returns_none(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
         _write_ct_cache(monkeypatch, tmp_path, _DEEPLY_NESTED_JSON)
         assert ct_cache_mod.ct_cache_get("contoso.com") is None
@@ -177,6 +193,39 @@ class TestPoisonedCacheDegrades:
     def test_ct_cache_show_deeply_nested_returns_none(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
         _write_ct_cache(monkeypatch, tmp_path, _DEEPLY_NESTED_JSON)
         assert ct_cache_mod.ct_cache_show("contoso.com") is None
+
+    @pytest.mark.parametrize("operation", [ct_cache_mod.ct_cache_get, ct_cache_mod.ct_cache_show])
+    def test_ct_cache_reads_bound_the_open_file_when_path_metadata_is_stale(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any, operation: Any
+    ) -> None:
+        oversized = '{"subdomains": ["' + "a" * (6 * 1024 * 1024) + '"]}'
+        _write_ct_cache(monkeypatch, tmp_path, oversized)
+        path = ct_cache_mod._safe_path("contoso.com")
+        _make_path_metadata_stale(monkeypatch, path)
+
+        assert operation("contoso.com") is None
+
+    @pytest.mark.parametrize("kind", ["tenant", "ct"])
+    def test_stale_cache_is_rejected_before_json_decode(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any, kind: str
+    ) -> None:
+        if kind == "tenant":
+            _write_cache(monkeypatch, tmp_path, "{}")
+            path = cache_mod._safe_cache_path("contoso.com")
+            operation = cache_mod.cache_get
+        else:
+            _write_ct_cache(monkeypatch, tmp_path, "{}")
+            path = ct_cache_mod._safe_path("contoso.com")
+            operation = ct_cache_mod.ct_cache_get
+        assert path is not None
+        old = time.time() - 10 * 86400
+        os.utime(path, (old, old))
+        def _unexpected_decode(_text: str) -> object:
+            raise AssertionError("stale cache body was decoded")
+
+        monkeypatch.setattr("recon_tool.json_limits.json.loads", _unexpected_decode)
+
+        assert operation("contoso.com", ttl=1) is None
 
     def test_rate_limit_load_persisted_degrades_on_poison(self) -> None:
         # A deeply-nested persisted limiter-state file must not crash limiter
@@ -187,6 +236,109 @@ class TestPoisonedCacheDegrades:
         (sd / "poison.json").write_text(_DEEPLY_NESTED_JSON, encoding="utf-8")
         lim = AdaptiveRateLimiter("poison", 0.1, 1.0, persist=True)
         assert lim.name == "poison"
+
+    def test_rate_limit_load_bounds_the_open_file_when_path_metadata_is_stale(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        state_path = rate_limit_state_dir() / "oversized.json"
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text("{" + (" " * (6 * 1024 * 1024)) + "}", encoding="utf-8")
+        _make_path_metadata_stale(monkeypatch, state_path)
+
+        limiter = AdaptiveRateLimiter("oversized", 0.1, 1.0, persist=True)
+
+        assert limiter.snapshot()["interval_s"] == 0.1
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("consecutive_failures", 1e999),
+            ("breaker_remaining_s", 1e999),
+            ("interval_s", "NaN"),
+            ("interval_s", 10**400),
+        ],
+    )
+    def test_rate_limit_load_rejects_non_finite_or_overflowing_state(self, field: str, value: object) -> None:
+        state_path = rate_limit_state_dir() / "poison.json"
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        payload: dict[str, object] = {
+            "_state_version": 1,
+            "name": "poison",
+            "saved_at": datetime.now(UTC).isoformat(),
+            "interval_s": 0.5,
+            "current_cooldown_s": 1.0,
+            "consecutive_failures": 1,
+            "breaker_remaining_s": 0.0,
+            field: value,
+        }
+        state_path.write_text(json.dumps(payload), encoding="utf-8")
+
+        limiter = AdaptiveRateLimiter("poison", 0.1, 1.0, cooldown_s=1.0, persist=True)
+        snapshot = limiter.snapshot()
+
+        assert snapshot["interval_s"] == 0.1
+        assert snapshot["consecutive_failures"] == 0
+        assert snapshot["breaker_open"] is False
+
+    def test_rate_limit_load_rejects_state_bound_to_another_provider(self) -> None:
+        state_path = rate_limit_state_dir() / "certspotter.json"
+        state_path.parent.mkdir(parents=True, exist_ok=True)
+        state_path.write_text(
+            json.dumps(
+                {
+                    "_state_version": 1,
+                    "name": "crt.sh",
+                    "saved_at": datetime.now(UTC).isoformat(),
+                    "interval_s": 0.9,
+                    "current_cooldown_s": 1.0,
+                    "consecutive_failures": 1,
+                    "breaker_remaining_s": 0.0,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        limiter = AdaptiveRateLimiter("certspotter", 0.1, 1.0, cooldown_s=1.0, persist=True)
+
+        assert limiter.snapshot()["interval_s"] == 0.1
+
+    def test_rate_limit_rejects_traversal_shaped_provider_name(self) -> None:
+        with pytest.raises(ValueError, match="name"):
+            AdaptiveRateLimiter("../outside", 0.1, 1.0, persist=True)
+
+    def test_rate_limit_persistence_avoids_predictable_temporary_path(self) -> None:
+        state_directory = rate_limit_state_dir()
+        state_directory.mkdir(parents=True, exist_ok=True)
+        predictable = state_directory / "safe.json.tmp"
+        predictable.write_text("SENTINEL", encoding="utf-8")
+
+        limiter = AdaptiveRateLimiter("safe", 0.1, 1.0, persist=True)
+        limiter._persist_state(force=True)
+
+        assert predictable.read_text(encoding="utf-8") == "SENTINEL"
+        payload = json.loads((state_directory / "safe.json").read_text(encoding="utf-8"))
+        assert payload["_state_version"] == 1
+        assert payload["name"] == "safe"
+
+
+def _make_path_metadata_stale(monkeypatch: pytest.MonkeyPatch, target: Path) -> None:
+    """Make path-level metadata and unbounded reads unsafe for the target."""
+    original_stat = Path.stat
+    original_read_text = Path.read_text
+
+    def stale_stat(path: Path, *args: Any, **kwargs: Any) -> Any:
+        result = original_stat(path, *args, **kwargs)
+        if path == target:
+            return SimpleNamespace(st_size=1, st_mtime=result.st_mtime)
+        return result
+
+    def reject_unbounded_read(path: Path, *args: Any, **kwargs: Any) -> str:
+        if path == target:
+            raise AssertionError("cache reader used an unbounded path read after stale metadata")
+        return original_read_text(path, *args, **kwargs)
+
+    monkeypatch.setattr(Path, "stat", stale_stat)
+    monkeypatch.setattr(Path, "read_text", reject_unbounded_read)
 
 
 # ── 3. CT graph is bounded by entry count, not just node count ────────────

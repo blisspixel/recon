@@ -18,6 +18,41 @@ notes, see [`docs/security.md`](security.md).
 
 ---
 
+## Closed: local persistence and update-boundary hardening (v2.6.1)
+
+| Field | Value |
+|---|---|
+| **Severity (as audited)** | Low and defense in depth; local-state integrity and availability |
+| **Source** | Internal persistence-boundary and independent checker review (2026-07) |
+| **Fully closed** | **v2.6.1** |
+| **Pinned by** | `tests/test_json_limits.py`, `tests/test_resilience_hardening.py`, `tests/test_cache_roundtrip.py`, `tests/test_ct_cache.py`, `tests/test_cache_cli.py`, `tests/test_updater.py` |
+
+The review treated cache files, limiter snapshots, and remote update metadata
+as untrusted structured input. It confirmed and closed these boundaries:
+
+- **Cross-key cache substitution.** Result and CT payloads now carry or retain
+  an exact validated domain binding, and readers require it to match the cache
+  key. Apex and literal-host entries are independent. Cache management exposes
+  the same choice through `--exact`.
+- **Path and metadata races.** Cache and limiter readers now open a bounded
+  regular-file descriptor, reject symbolic links, compare descriptor and path
+  identity, detect metadata changes during the read, and apply freshness before
+  decoding. Materially future mtimes no longer extend a cache lifetime.
+- **Limiter-state corruption.** Provider names are filesystem-safe, snapshots
+  are schema-versioned and provider-bound, and every state number is finite and
+  range-checked. Huge JSON integers, invalid cooldown or AIMD configuration,
+  and cross-provider state degrade to fresh defaults. State writes use random
+  exclusive temporary files and atomic replacement.
+- **Update metadata availability.** The PyPI JSON response has a 5 MiB body cap
+  and nesting cap. Truncated HTTP responses, malformed shapes, invalid UTF-8,
+  and invalid versions return `None` under the existing best-effort contract.
+
+The frozen runtime dependency audit reported no known vulnerabilities on
+2026-07-13. That result is point-in-time evidence; CI and release workflows
+continue to rerun the audit for every change and release.
+
+---
+
 ## Closed: ingestion-boundary resilience round (v2.1.9)
 
 | Field | Value |

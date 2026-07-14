@@ -1139,6 +1139,18 @@
               "domain"
             ],
             "type": "text"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "exact",
+            "required": false,
+            "tokens": [
+              "--exact"
+            ],
+            "type": "boolean"
           }
         ],
         "path": [
@@ -1182,6 +1194,18 @@
             "tokens": [
               "--force",
               "-f"
+            ],
+            "type": "boolean"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "exact",
+            "required": false,
+            "tokens": [
+              "--exact"
             ],
             "type": "boolean"
           }

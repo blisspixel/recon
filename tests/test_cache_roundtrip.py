@@ -273,6 +273,18 @@ class TestCacheDiskOperations:
         assert restored.tenant_id == info.tenant_id
         assert restored.display_name == info.display_name
 
+    def test_get_rejects_entry_bound_to_another_domain(self) -> None:
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        payload = tenant_info_to_dict(_complete_info())
+        (cache_dir() / "fabrikam.com.json").write_text(json.dumps(payload), encoding="utf-8")
+
+        assert cache_get("fabrikam.com") is None
+
+    def test_put_rejects_entry_bound_to_another_domain(self) -> None:
+        cache_put("fabrikam.com", _complete_info())
+
+        assert not (cache_dir() / "fabrikam.com.json").exists()
+
     def test_put_normalizes_url_input_to_apex_cache_key(self) -> None:
         info = _complete_info()
 
@@ -281,6 +293,39 @@ class TestCacheDiskOperations:
         assert (cache_dir() / "contoso.com.json").exists()
         assert cache_get("contoso.com") is not None
         assert cache_get("https://www.contoso.com/path") is not None
+
+    def test_exact_subhost_does_not_reuse_apex_cache_entry(self) -> None:
+        cache_put("contoso.com", _complete_info())
+
+        assert cache_get("mail.contoso.com") is None
+
+    def test_exact_subhost_has_an_independent_cache_key(self) -> None:
+        from dataclasses import replace
+
+        exact_info = replace(_complete_info(), queried_domain="mail.contoso.com")
+        cache_put("mail.contoso.com", exact_info)
+
+        assert cache_get("mail.contoso.com") is not None
+        assert cache_get("contoso.com") is None
+
+    def test_future_mtime_is_rejected(self) -> None:
+        cache_put("contoso.com", _complete_info())
+        path = cache_dir() / "contoso.com.json"
+        future = time.time() + 365 * 86400
+        os.utime(path, (future, future))
+
+        assert cache_get("contoso.com") is None
+
+    def test_write_binds_one_resolved_cache_directory(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        first = tmp_path / "first"
+        second = tmp_path / "second"
+        directories = iter((first, second))
+        monkeypatch.setattr("recon_tool.cache.cache_dir", lambda: next(directories))
+
+        cache_put("contoso.com", _complete_info())
+
+        assert (first / "contoso.com.json").exists()
+        assert not (second / "contoso.com.json").exists()
 
     def test_get_missing_returns_none(self) -> None:
         assert cache_get("does-not-exist.com") is None

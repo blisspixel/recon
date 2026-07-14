@@ -66,6 +66,15 @@ class TestCacheShow:
         assert "example.com" in result.output
         assert "crt.sh" in result.output
 
+    def test_show_exact_inspects_literal_subhost_cache_key(self, tmp_cache: Path) -> None:
+        ct_cache_put("mail.example.com", ["a.mail.example.com"], None, "crt.sh")
+
+        result = runner.invoke(app, ["cache", "show", "mail.example.com", "--exact"])
+
+        assert result.exit_code == 0
+        assert "mail.example.com" in result.output
+        assert "crt.sh" in result.output
+
     def test_show_list_all(self, tmp_cache: Path) -> None:
         ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
         ct_cache_put("b.com", ["x.b.com"], None, "certspotter")
@@ -140,3 +149,31 @@ class TestCacheClear:
         assert result.exit_code == 0
         assert "Cleared result cache" in result.output
         assert not (cache_dir() / "clear.com.json").exists()
+
+    def test_clear_exact_removes_literal_subhost_from_both_caches(self, tmp_cache: Path) -> None:
+        exact_domain = "mail.clear.com"
+        ct_cache_put(exact_domain, ["a.mail.clear.com"], None, "crt.sh")
+        cache_put(
+            exact_domain,
+            TenantInfo(
+                tenant_id=None,
+                display_name="Mail Clear Example",
+                default_domain="clear.com",
+                queried_domain=exact_domain,
+                confidence=ConfidenceLevel.HIGH,
+                region=None,
+                sources=("dns_records",),
+                services=(),
+                slugs=(),
+                auth_type=None,
+                dmarc_policy=None,
+                domain_count=1,
+            ),
+        )
+
+        result = runner.invoke(app, ["cache", "clear", exact_domain, "--exact"])
+
+        assert result.exit_code == 0
+        assert "Cleared CT cache and result cache" in result.output
+        assert not (tmp_cache / f"{exact_domain}.json").exists()
+        assert not (cache_dir() / f"{exact_domain}.json").exists()

@@ -27,6 +27,7 @@ from __future__ import annotations
 import os
 import shutil
 import tempfile
+from dataclasses import replace
 
 from hypothesis import settings
 from hypothesis import strategies as st
@@ -110,9 +111,12 @@ class CacheLifecycleMachine(RuleBasedStateMachine):
 
     @rule(domain=_any_domain, info=_tenant_infos())
     def put_good(self, domain: str, info: TenantInfo) -> None:
-        cache_put(domain, info)
         if _is_valid(domain):
-            self.model[domain] = info
+            bound_info = replace(info, queried_domain=domain)
+            cache_put(domain, bound_info)
+            self.model[domain] = bound_info
+        else:
+            cache_put(domain, info)
         # Invalid keys are a no-op write; the model (and disk) stay unchanged.
 
     @rule(domain=_valid_domain, info=_tenant_infos())
@@ -121,11 +125,20 @@ class CacheLifecycleMachine(RuleBasedStateMachine):
         # fields this version does not know. They must be ignored on read.
         import json as _json
 
-        payload = tenant_info_to_dict(info)
+        bound_info = replace(info, queried_domain=domain)
+        payload = tenant_info_to_dict(bound_info)
         payload["_future_scalar"] = 42
         payload["_future_block"] = {"nested": ["a", "b"], "flag": True}
         self._path_for(domain).write_text(_json.dumps(payload), encoding="utf-8")
-        self.model[domain] = info
+        self.model[domain] = bound_info
+
+    @rule(domain=_valid_domain, info=_tenant_infos())
+    def reject_mismatched_domain_payload(self, domain: str, info: TenantInfo) -> None:
+        mismatched_domain = next(candidate for candidate in _VALID_DOMAINS if candidate != domain)
+
+        cache_put(domain, replace(info, queried_domain=mismatched_domain))
+
+        # Rejected writes leave any existing model and disk entry unchanged.
 
     @rule(domain=_valid_domain)
     def corrupt(self, domain: str) -> None:
