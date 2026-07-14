@@ -231,10 +231,12 @@ observed public absence.
 
 ## Caching and Partial Results
 
-recon caches TenantInfo results and CT subdomain lookups locally. Cache failures
-degrade to a miss. CT providers are best-effort and can be stale,
-rate-limited, or unavailable. A degraded source is named in output rather than
-hidden.
+recon caches TenantInfo results and CT subdomain lookups locally. Payloads are
+bound to their validated domain keys, and malformed or changed files degrade to
+a miss. Normal lookups and cache commands reduce a host to its registrable apex;
+`--exact` keeps, inspects, or clears an independent literal-host key. CT
+providers are best-effort and can be stale, rate-limited, or unavailable. A
+degraded source is named in output rather than hidden.
 
 For maintainer corpus work, certificate-transparency validation is deliberately
 multi-session and aggregate-only. The closed plan is

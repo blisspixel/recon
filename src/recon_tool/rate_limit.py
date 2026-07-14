@@ -43,11 +43,18 @@ behavior with no configuration.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import logging
+import math
+import os
+import re
+import tempfile
 import time
 from datetime import UTC, datetime
 from pathlib import Path
+
+from recon_tool.json_limits import load_bounded_json_file
 
 logger = logging.getLogger("recon")
 
@@ -81,6 +88,34 @@ _PERSIST_MAX_AGE_SECONDS = 24 * 3600
 # interactive single-domain lookup; this floor keeps writes bounded
 # while still capturing breaker trips and material interval shifts.
 _PERSIST_WRITE_INTERVAL_S = 5.0
+_MAX_PERSISTED_STATE_BYTES = 64 * 1024
+_PERSISTED_STATE_VERSION = 1
+_MAX_PERSISTED_FAILURES = 1_000_000
+_LIMITER_NAME_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{0,63}")
+
+
+def _finite_state_number(data: dict[object, object], field: str) -> float:
+    raw = data.get(field)
+    if isinstance(raw, bool) or not isinstance(raw, (int, float)):
+        raise ValueError(f"{field} must be numeric")
+    try:
+        value = float(raw)
+    except OverflowError as exc:
+        raise ValueError(f"{field} exceeds the supported numeric range") from exc
+    if not math.isfinite(value):
+        raise ValueError(f"{field} must be finite")
+    return value
+
+
+def _bounded_state_count(data: dict[object, object], field: str) -> int:
+    raw = data.get(field)
+    if isinstance(raw, bool) or not isinstance(raw, int) or not 0 <= raw <= _MAX_PERSISTED_FAILURES:
+        raise ValueError(f"{field} must be a bounded non-negative integer")
+    return raw
+
+
+def _is_positive_integer(value: object) -> bool:
+    return not isinstance(value, bool) and isinstance(value, int) and value >= 1
 
 
 class RateLimited(Exception):
@@ -109,9 +144,32 @@ class AdaptiveRateLimiter:
         max_cooldown_s: float = 600.0,
         persist: bool = True,
     ) -> None:
-        if not (0.0 < min_interval_s <= max_interval_s):
+        if _LIMITER_NAME_RE.fullmatch(name) is None:
+            raise ValueError("rate limiter name must be a bounded filesystem-safe identifier")
+        if not (
+            math.isfinite(min_interval_s) and math.isfinite(max_interval_s) and 0.0 < min_interval_s <= max_interval_s
+        ):
             msg = f"invalid interval bounds for {name}"
             raise ValueError(msg)
+        if start_interval_s is not None and (
+            not math.isfinite(start_interval_s) or not min_interval_s <= start_interval_s <= max_interval_s
+        ):
+            raise ValueError(f"invalid starting interval for {name}")
+        if not math.isfinite(max_wait_s) or max_wait_s < 0.0:
+            raise ValueError(f"invalid maximum wait for {name}")
+        if not math.isfinite(success_decrease) or not 0.0 < success_decrease <= 1.0:
+            raise ValueError(f"invalid success decrease factor for {name}")
+        if not math.isfinite(failure_increase_factor) or failure_increase_factor < 1.0:
+            raise ValueError(f"invalid failure increase factor for {name}")
+        if not _is_positive_integer(failure_threshold):
+            raise ValueError(f"invalid failure threshold for {name}")
+        if (
+            not math.isfinite(cooldown_s)
+            or not math.isfinite(max_cooldown_s)
+            or cooldown_s <= 0.0
+            or max_cooldown_s < cooldown_s
+        ):
+            raise ValueError(f"invalid cooldown bounds for {name}")
         self.name = name
         self.min_interval_s = min_interval_s
         self.max_interval_s = max_interval_s
@@ -168,17 +226,14 @@ class AdaptiveRateLimiter:
         """
         path = self._state_path()
         try:
-            text = path.read_text(encoding="utf-8")
-        except (OSError, FileNotFoundError):
-            return
-        try:
-            data = json.loads(text)
+            data, _file_stat, _age_seconds = load_bounded_json_file(path, maximum_bytes=_MAX_PERSISTED_STATE_BYTES)
         except (ValueError, TypeError, RecursionError):
-            # RecursionError (a deeply-nested state file) is a RuntimeError, not
-            # a ValueError, so it escaped the original tuple; fall back to fresh
-            # defaults rather than propagate it out of the warm-start path.
+            return
+        except OSError:
             return
         if not isinstance(data, dict):
+            return
+        if data.get("_state_version") != _PERSISTED_STATE_VERSION or data.get("name") != self.name:
             return
         saved_at_iso = data.get("saved_at")
         if not isinstance(saved_at_iso, str):
@@ -187,21 +242,27 @@ class AdaptiveRateLimiter:
             saved_at = datetime.fromisoformat(saved_at_iso.replace("Z", "+00:00"))
         except ValueError:
             return
+        if saved_at.tzinfo is None or saved_at.utcoffset() is None:
+            return
         age_s = (datetime.now(UTC) - saved_at).total_seconds()
-        if age_s < 0 or age_s > _PERSIST_MAX_AGE_SECONDS:
+        if not math.isfinite(age_s) or age_s < 0 or age_s > _PERSIST_MAX_AGE_SECONDS:
             return
-        # Floats; clamp to documented bounds in case the on-disk file
-        # was hand-edited or written by a future schema.
         try:
-            interval = float(data.get("interval_s", self._interval_s))
-            cooldown = float(data.get("current_cooldown_s", self._cooldown_s))
-            cons_fail = int(data.get("consecutive_failures", 0))
-            breaker_remaining_s = float(data.get("breaker_remaining_s", 0.0))
-        except (TypeError, ValueError):
+            interval = _finite_state_number(data, "interval_s")
+            cooldown = _finite_state_number(data, "current_cooldown_s")
+            breaker_remaining_s = _finite_state_number(data, "breaker_remaining_s")
+            cons_fail = _bounded_state_count(data, "consecutive_failures")
+        except ValueError:
             return
-        self._interval_s = max(self.min_interval_s, min(self.max_interval_s, interval))
-        self._current_cooldown_s = max(self._cooldown_s, min(self._max_cooldown_s, cooldown))
-        self._consecutive_failures = max(0, cons_fail)
+        if not (
+            self.min_interval_s <= interval <= self.max_interval_s
+            and self._cooldown_s <= cooldown <= self._max_cooldown_s
+            and 0.0 <= breaker_remaining_s <= self._max_cooldown_s
+        ):
+            return
+        self._interval_s = interval
+        self._current_cooldown_s = cooldown
+        self._consecutive_failures = cons_fail
         # Convert the persisted remaining-cooldown into a monotonic deadline.
         # Subtract the wall-clock age so an operator restarting after the
         # persisted breaker would have closed sees a closed breaker.
@@ -233,6 +294,7 @@ class AdaptiveRateLimiter:
         self._last_persist_at = now
         is_open, remaining = self._breaker_state()
         payload = {
+            "_state_version": _PERSISTED_STATE_VERSION,
             "name": self.name,
             "saved_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "interval_s": round(self._interval_s, 3),
@@ -249,10 +311,18 @@ class AdaptiveRateLimiter:
         try:
             path = self._state_path()
             path.parent.mkdir(parents=True, exist_ok=True)
-            tmp = path.with_suffix(".json.tmp")
-            tmp.write_text(json.dumps(payload, indent=2), encoding="utf-8")
-            tmp.replace(path)
-        except OSError as exc:
+            directory = path.parent.resolve()
+            path = directory / path.name
+            descriptor, temporary_name = tempfile.mkstemp(dir=str(directory), prefix=f"{path.stem}.", suffix=".tmp")
+            try:
+                with os.fdopen(descriptor, "w", encoding="utf-8") as handle:
+                    handle.write(json.dumps(payload, indent=2))
+                os.replace(temporary_name, path)
+            except BaseException:
+                with contextlib.suppress(OSError):
+                    os.unlink(temporary_name)
+                raise
+        except (OSError, TypeError, ValueError) as exc:
             logger.debug("%s: failed to persist state: %s", self.name, exc)
 
     async def acquire(self) -> None:

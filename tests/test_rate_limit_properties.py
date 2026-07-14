@@ -21,7 +21,10 @@ These tests catch regressions where someone "simplifies" the math.
 from __future__ import annotations
 
 import json
+from collections.abc import Callable
+from typing import Any, cast
 
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 
@@ -45,6 +48,53 @@ def _fresh(failure_threshold: int = 3, max_interval: float = 1000.0) -> Adaptive
         max_cooldown_s=600.0,
         persist=False,
     )
+
+
+@pytest.mark.parametrize(
+    "factory",
+    [
+        lambda: AdaptiveRateLimiter("invalid", 1.0, 2.0, success_decrease=2.0, persist=False),
+        lambda: AdaptiveRateLimiter("invalid", 1.0, 2.0, failure_increase_factor=0.0, persist=False),
+        lambda: AdaptiveRateLimiter("invalid", 1.0, 2.0, cooldown_s=-1.0, persist=False),
+        lambda: AdaptiveRateLimiter("invalid", 1.0, 2.0, max_cooldown_s=30.0, cooldown_s=60.0, persist=False),
+        lambda: AdaptiveRateLimiter("invalid", 1.0, 2.0, max_wait_s=float("nan"), persist=False),
+        lambda: AdaptiveRateLimiter("invalid", 1.0, 2.0, failure_threshold=0, persist=False),
+    ],
+)
+def test_constructor_rejects_parameters_that_break_limiter_invariants(
+    factory: Callable[[], AdaptiveRateLimiter],
+) -> None:
+    with pytest.raises(ValueError, match="invalid"):
+        factory()
+
+
+@pytest.mark.parametrize("threshold", [float("nan"), 1.5, "3", True])
+def test_constructor_rejects_non_integer_failure_threshold(threshold: object) -> None:
+    with pytest.raises(ValueError, match="failure threshold"):
+        AdaptiveRateLimiter(
+            "invalid",
+            1.0,
+            2.0,
+            failure_threshold=cast(Any, threshold),
+            persist=False,
+        )
+
+
+def test_constructor_accepts_closed_no_change_configuration_edges() -> None:
+    limiter = AdaptiveRateLimiter(
+        "valid",
+        1.0,
+        2.0,
+        max_wait_s=0.0,
+        success_decrease=1.0,
+        failure_increase_factor=1.0,
+        failure_threshold=1,
+        cooldown_s=1.0,
+        max_cooldown_s=1.0,
+        persist=False,
+    )
+
+    assert limiter.snapshot()["interval_s"] == 1.0
 
 
 # Strategy: arbitrary sequences of three operations.

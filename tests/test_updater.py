@@ -7,6 +7,7 @@ PyPI lookup monkeypatched so no network is touched.
 
 from __future__ import annotations
 
+import http.client
 import io
 
 import pytest
@@ -109,6 +110,24 @@ class TestFetchLatestVersion:
         monkeypatch.setattr("urllib.request.urlopen", _boom)
         assert updater.fetch_latest_version(timeout=0.1) is None
 
+    def test_truncated_response_returns_none(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        class TruncatedResponse:
+            def __enter__(self) -> TruncatedResponse:
+                return self
+
+            def __exit__(self, *args: object) -> None:
+                return None
+
+            def read(self, _size: int = -1, /) -> bytes:
+                raise http.client.IncompleteRead(b'{}', 10)
+
+        def _response(*args: object, **kwargs: object) -> TruncatedResponse:
+            return TruncatedResponse()
+
+        monkeypatch.setattr("urllib.request.urlopen", _response)
+
+        assert updater.fetch_latest_version(timeout=0.1) is None
+
     @pytest.mark.parametrize(
         "body",
         [
@@ -119,6 +138,7 @@ class TestFetchLatestVersion:
             b'{"info": {"version": []}}',
             b'{"info": {"version": "  "}}',
             b'{"info": {"version": "not-a-version"}}',
+            b"\xff",
         ],
     )
     def test_malformed_response_shape_returns_none(self, monkeypatch: pytest.MonkeyPatch, body: bytes) -> None:
@@ -138,6 +158,38 @@ class TestFetchLatestVersion:
         monkeypatch.setattr("urllib.request.urlopen", _response)
 
         assert updater.fetch_latest_version(timeout=0.1) == "2.5.8"
+
+    def test_oversized_response_is_rejected_after_bounded_read(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        class RecordingResponse(io.BytesIO):
+            requested_sizes: list[int | None]
+
+            def __init__(self) -> None:
+                super().__init__(b"x" * (updater._MAX_PYPI_RESPONSE_BYTES + 1))
+                self.requested_sizes = []
+
+            def read(self, size: int | None = -1, /) -> bytes:
+                self.requested_sizes.append(size)
+                return super().read(size)
+
+        body = RecordingResponse()
+
+        def _response(*args: object, **kwargs: object) -> RecordingResponse:
+            return body
+
+        monkeypatch.setattr("urllib.request.urlopen", _response)
+
+        assert updater.fetch_latest_version(timeout=0.1) is None
+        assert body.requested_sizes == [updater._MAX_PYPI_RESPONSE_BYTES + 1]
+
+    def test_excessively_nested_response_is_rejected(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        body = io.BytesIO((b"[" * 101) + b"0" + (b"]" * 101))
+
+        def _response(*args: object, **kwargs: object) -> io.BytesIO:
+            return body
+
+        monkeypatch.setattr("urllib.request.urlopen", _response)
+
+        assert updater.fetch_latest_version(timeout=0.1) is None
 
 
 class TestUpdateCommand:

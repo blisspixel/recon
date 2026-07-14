@@ -130,6 +130,8 @@ recon batch domains.txt --json                 # batch JSON array
 recon batch domains.txt --ndjson               # one record per line
 recon batch domains.txt --summary              # aggregate-only cohort summary
 recon delta contoso.com                        # diff against cached snapshot
+recon cache show mail.contoso.com --exact      # inspect one literal-host CT cache key
+recon cache clear mail.contoso.com --exact     # clear literal-host CT and result cache keys
 recon mcp install --client=cursor              # wire MCP into a client
 recon mcp doctor                               # live MCP handshake check
 ```
