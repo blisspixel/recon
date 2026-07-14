@@ -81,6 +81,9 @@ exclude = ["src/recon_tool/data/fingerprints/*.yaml"]
 [dependency-groups]
 dev = [
     "hypothesis>=6.0",
+    # The Markdown gate wraps v4 inline rules to retain exact source offsets.
+    # Verify that integration before allowing a new parser major version.
+    "markdown-it-py>=4.0,<5",
     "pytest>=8.0",
     "pytest-cov>=5.0",
     "pytest-asyncio>=0.24",
