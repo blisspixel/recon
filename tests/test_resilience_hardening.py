@@ -329,7 +329,13 @@ def _make_path_metadata_stale(monkeypatch: pytest.MonkeyPatch, target: Path) -> 
     def stale_stat(path: Path, *args: Any, **kwargs: Any) -> Any:
         result = original_stat(path, *args, **kwargs)
         if path == target:
-            return SimpleNamespace(st_size=1, st_mtime=result.st_mtime)
+            return SimpleNamespace(
+                st_size=1,
+                st_mtime=result.st_mtime,
+                st_mode=result.st_mode,
+                st_dev=result.st_dev,
+                st_ino=result.st_ino,
+            )
         return result
 
     def reject_unbounded_read(path: Path, *args: Any, **kwargs: Any) -> str:
