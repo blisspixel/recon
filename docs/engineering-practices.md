@@ -68,6 +68,15 @@ catalog generation.
   that may only *shrink*. See the decomposition track in
   [roadmap.md](roadmap.md). Goal state: every baseline entry gone, every module
   under the cap.
+- **Cohesion counterweight.** A small change is not a requirement to create a
+  small permanent module. Split code only when the new owner has a nameable
+  responsibility plus an independent invariant, safety boundary, test seam,
+  consumer, or change cadence. A new ordinary module below 100 lines requires
+  a boundary rationale in review, but no blanket minimum-size rule is enforced.
+  Merge or delete only when the direct-import contract, consumer set, size cap,
+  and dependency direction make the removed navigation hop a real improvement.
+  The measured policy and current candidates are in
+  [structural-maintainability.md](structural-maintainability.md).
 - **`src/` layout is the package layout.** Source files live under
   `src/recon_tool/`; the public import name remains `recon_tool`. This keeps
   tests honest about installed-package behavior and avoids repo-root import
@@ -77,7 +86,10 @@ catalog generation.
   `recon_tool.server`, and `recon_tool.mcp_client`. Historical top-level
   `cli_*`, `formatter_*`, `server_*`, `mcp_*`, and `client_doctor` imports are
   compatibility shims only, bounded by `scripts/check_interface_layout.py`.
-  ADR-0008 records the decision and compatibility policy.
+  Runtime code and ordinary tests use the defining package-local modules;
+  compatibility tests alone exercise old paths. A shim must point directly to
+  one implementation, never to another shim. ADR-0008 records the decision and
+  compatibility policy.
 - **Local working artifacts stay out of tracked surfaces.** Agent state lives
   under the gitignored root `.agent/` directory, logs live under gitignored
   root `logs/`, and validation run outputs live under gitignored
@@ -124,8 +136,10 @@ mitigations are mechanical and non-negotiable:
 - **The gates catch convention drift and hallucinated APIs:** ruff + strict
   pyright + the parity gate. An AI change that invents an API or breaks a pattern
   fails before merge.
-- **Small, reviewable units.** One story per commit; the file/function-size caps
-  keep changes legible.
+- **Small, reviewable units.** One self-contained behavior change per commit,
+  with its tests. Smallness describes the change, not a target number of files.
+  The file/function-size caps and cohesion counterweight keep changes legible
+  without rewarding arbitrary fragments.
 - **Don't merge what you can't explain.** "A computer can never be held
   accountable." No change lands because a tool said LGTM; a human (or the author)
   must be able to explain why it's correct and what failure modes it handles,
@@ -219,7 +233,7 @@ What we already do well, and the named open items, with no pretending.
 | CI/local parity (`scripts/check.py`), release readiness, file-size ratchet | In place | Closes the CI-red and docs-drift root causes |
 | ADRs for load-bearing decisions | In place initially | Extend as decisions are made |
 | Noun-verb CLI consistency, `--plain`/`--json`, stdout/stderr discipline | In place | |
-| **God-file decomposition + interface locality** (formatter/cli/exposure/merger/dns/bayesian/server) | In place | Interface implementation lives under local packages; top-level prefix modules are bounded compatibility shims; every module is under the 1000-line cap except formatter's cohesive panel core (~2160, baselined) |
+| **God-file decomposition + interface locality** (formatter/cli/exposure/merger/dns/bayesian/server) | Measured and ratcheted | Interface implementation lives under local packages; 24 top-level prefix modules are bounded compatibility shims; `formatter/panel.py` is 1,977 lines and remains the sole over-cap baseline. The structural plan balances further decomposition against facade and micro-module navigation debt. |
 | **`PLR09xx` function-size rules** (statements/branches/args/returns) | Ratcheted | `scripts/check_plr_ratchet.py` blocks new debt while existing violations are paid down |
 | **Schema generation path** | In place | `scripts/generate_schema.py --check`, `scripts/check_schema_sources.py`, and nested `$defs` tests block untraced schema drift across both published schema copies |
 | **Fingerprint runtime generation** | In place | Canonical split YAML stays reviewable and in the sdist; the universal wheel ships one deterministic JSON artifact guarded by byte drift, exact semantic parity, and package-inventory tests |

@@ -660,6 +660,16 @@ external consumer needs a stable subset.
 
 ### Reduce remaining interface hotspots after semantics stabilize
 
+The 2026-07-14 measured audit found compatibility and facade navigation debt,
+not general micro-file sprawl. Twenty-four 18-line compatibility shims account
+for 18.0 percent of runtime Python files but 1.0 percent of runtime Python
+lines. The 102 ordinary implementations have a 286-line median, only four are
+at or below 50 lines, and 38 exceed 400 lines. The source tree is one package
+level deep and has no import cycle. Do not perform a bulk merge, package move,
+or minimum-file-size cleanup. Follow the boundary rules and staged ownership,
+test, compatibility, runtime-package, and hotspot plan in
+[structural-maintainability.md](structural-maintainability.md).
+
 The high-trust graph identifies two high interface decomposition candidates:
 
 - `src/recon_tool/formatter/panel.py`: high blast radius, broad outgoing
@@ -677,7 +687,10 @@ they are not the decomposition targets named above.
 Keep each public module as a compatibility orchestrator and extract only
 cohesive, stateless sections. Preserve byte-equivalent panel output, MCP
 registration order, generated inventory, public imports, and schema behavior.
-`merger.py` follows only after the lower-risk interface splits.
+Do not split decorated MCP tools one by one. `merger.py` follows only after the
+lower-risk interface splits. Before source movement, publish a durable
+source-to-focused-test ownership map and redistribute the five measured
+catch-all test suites into existing behavior owners.
 
 ## Shipped Foundation
 
@@ -782,7 +795,7 @@ Green process gates are necessary but are not proof of product utility.
 
 ## Current External Basis
 
-Checked 2026-07-11 against primary sources:
+Checked through 2026-07-14 against primary sources and recent research:
 
 - [MCP 2026-07-28 release candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
 - [MCP draft tools specification](https://modelcontextprotocol.io/specification/draft/server/tools)
@@ -807,6 +820,12 @@ Checked 2026-07-11 against primary sources:
 - [Manski on partial identification with missing data](https://doi.org/10.1016/j.ijar.2004.10.006)
 - [Zhang and Peixoto on statistically significant community structure](https://arxiv.org/abs/2006.14493)
 - [Conformal Risk Control, revision 2025-06-13](https://arxiv.org/abs/2208.02814)
+- [DORA State of AI-assisted Software Development 2025](https://dora.dev/research/2025/dora-report/)
+- [Google small change guidance](https://google.github.io/eng-practices/review/developer/small-cls.html)
+- [Google code review guidance](https://google.github.io/eng-practices/review/reviewer/looking-for.html)
+- [ISO/IEC 25010:2023 product quality model](https://www.iso.org/standard/78176.html)
+- [ISSRE 2025 study of human and AI-generated code](https://arxiv.org/abs/2508.21634)
+- [Post-hoc software models for AI-driven engineering, revised 2025-11-11](https://arxiv.org/abs/2511.02475)
 
 When an external standard changes, update the dated readiness or design plan
 before changing production behavior.

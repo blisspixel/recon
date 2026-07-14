@@ -255,6 +255,8 @@ before committing any validation artifact.
 - [docs/README.md](https://github.com/blisspixel/recon/blob/main/docs/README.md): complete docs index.
 - [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md): current plan, invariants, and scope
   boundaries.
+- [docs/structural-maintainability.md](https://github.com/blisspixel/recon/blob/main/docs/structural-maintainability.md): measured
+  source, test, compatibility, and facade cleanup plan.
 - [docs/external-writeup-plan.md](https://github.com/blisspixel/recon/blob/main/docs/external-writeup-plan.md): active
   maintainer plan for external write-up readiness.
 - [docs/submission-freeze-checklist.md](https://github.com/blisspixel/recon/blob/main/docs/submission-freeze-checklist.md):
