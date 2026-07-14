@@ -13,6 +13,7 @@ unknown install method degrades to a printed manual command, never a crash.
 
 from __future__ import annotations
 
+import http.client
 import json
 import re
 import sys
@@ -22,8 +23,10 @@ from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 
 from recon_tool import __version__
+from recon_tool.json_limits import exceeds_json_nesting_limit
 
 _PACKAGE = "recon-tool"
+_MAX_PYPI_RESPONSE_BYTES = 5 * 1024 * 1024
 
 # Install methods, in detection order of specificity.
 PIPX = "pipx"
@@ -96,7 +99,13 @@ def fetch_latest_version(timeout: float = 10.0) -> str | None:
     """Return the latest recon-tool version on PyPI, or None on any failure."""
     try:
         with urllib.request.urlopen(f"https://pypi.org/pypi/{_PACKAGE}/json", timeout=timeout) as resp:
-            payload = json.load(resp)
+            raw = resp.read(_MAX_PYPI_RESPONSE_BYTES + 1)
+        if len(raw) > _MAX_PYPI_RESPONSE_BYTES:
+            return None
+        text = raw.decode("utf-8")
+        if exceeds_json_nesting_limit(text):
+            return None
+        payload = json.loads(text)
         if not isinstance(payload, dict):
             return None
         info = payload.get("info")
@@ -107,7 +116,7 @@ def fetch_latest_version(timeout: float = 10.0) -> str | None:
             return None
         normalized = version.strip()
         return normalized if _version_key(normalized) is not None else None
-    except (urllib.error.URLError, TimeoutError, TypeError, ValueError, OSError):
+    except (http.client.HTTPException, urllib.error.URLError, TimeoutError, TypeError, ValueError, OSError):
         return None
 
 

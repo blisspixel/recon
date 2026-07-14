@@ -110,6 +110,7 @@ class TestCTCachePutGet:
         path = tmp_cache / "example.com.json"
         assert path.exists()
         data = json.loads(path.read_text(encoding="utf-8"))
+        assert data["domain"] == "example.com"
         assert data["provider_used"] == "crt.sh"
         assert data["subdomains"] == SAMPLE_SUBDOMAINS
         assert data["cert_summary"]["cert_count"] == 42
@@ -135,6 +136,21 @@ class TestCTCachePutGet:
         assert entry.provider_used == "certspotter"
         assert entry.age_days == 0
 
+    def test_get_rejects_entry_bound_to_another_domain(self, tmp_cache: Path) -> None:
+        ct_cache_put("example.com", SAMPLE_SUBDOMAINS, SAMPLE_CERT_SUMMARY, "crt.sh")
+        source = tmp_cache / "example.com.json"
+        target = tmp_cache / "fabrikam.com.json"
+        target.write_bytes(source.read_bytes())
+
+        assert ct_cache_get("fabrikam.com") is None
+
+    def test_exact_subhost_has_an_independent_cache_key(self, tmp_cache: Path) -> None:
+        ct_cache_put("mail.example.com", ["only.mail.example.com"], None, "crt.sh")
+
+        assert (tmp_cache / "mail.example.com.json").exists()
+        assert ct_cache_get("mail.example.com") is not None
+        assert ct_cache_get("example.com") is None
+
     def test_round_trip_no_cert_summary(self, tmp_cache: Path) -> None:
         ct_cache_put("bare.com", ["sub.bare.com"], None, "crt.sh")
         entry = ct_cache_get("bare.com")
@@ -153,6 +169,15 @@ class TestCTCachePutGet:
         os.utime(path, (old_time, old_time))
         assert ct_cache_get("stale.com") is None
 
+    def test_future_mtime_is_rejected_without_negative_age(self, tmp_cache: Path) -> None:
+        ct_cache_put("future.com", [], None, "crt.sh")
+        path = tmp_cache / "future.com.json"
+        future = time.time() + 365 * 86400
+        os.utime(path, (future, future))
+
+        assert ct_cache_get("future.com", ttl=0) is None
+        assert ct_cache_show("future.com") is None
+
     def test_get_corrupt_returns_none(self, tmp_cache: Path) -> None:
         d = tmp_cache
         d.mkdir(parents=True, exist_ok=True)
@@ -168,16 +193,39 @@ class TestCTCachePutGet:
         ],
     )
     def test_get_rejects_valid_json_with_invalid_shape(self, tmp_cache: Path, field: str, value: object) -> None:
-        tmp_cache.mkdir(parents=True, exist_ok=True)
-        payload: dict[str, object] = {
-            "cached_at": "2026-07-01T00:00:00Z",
-            "provider_used": "crt.sh",
-            "subdomains": [],
-            "cert_summary": None,
-            field: value,
-        }
-        (tmp_cache / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+        ct_cache_put("bad.com", [], None, "crt.sh")
+        path = tmp_cache / "bad.com.json"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload[field] = value
+        path.write_text(json.dumps(payload), encoding="utf-8")
         assert ct_cache_get("bad.com") is None
+
+    def test_get_rejects_legacy_unbound_entry(self, tmp_cache: Path) -> None:
+        tmp_cache.mkdir(parents=True, exist_ok=True)
+        (tmp_cache / "legacy.com.json").write_text(
+            json.dumps(
+                {
+                    "cached_at": "2026-07-01T00:00:00Z",
+                    "provider_used": "crt.sh",
+                    "subdomains": [],
+                    "cert_summary": None,
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        assert ct_cache_get("legacy.com") is None
+
+    def test_write_binds_one_resolved_cache_directory(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        first = tmp_path / "first"
+        second = tmp_path / "second"
+        directories = iter((first, second))
+        monkeypatch.setattr("recon_tool.ct_cache.ct_cache_dir", lambda: next(directories))
+
+        ct_cache_put("example.com", [], None, "crt.sh")
+
+        assert (first / "example.com.json").exists()
+        assert not (second / "example.com.json").exists()
 
     @pytest.mark.parametrize(
         ("field", "value"),

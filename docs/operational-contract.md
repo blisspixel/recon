@@ -48,6 +48,8 @@ A representative set; the full list lives in the source constants the
 | Identity | `_MAX_AUTODISCOVER_DOMAINS` = 1000 federated domains |
 | Fingerprint catalog | pattern length 500; `_MAX_CATALOG_ENTRIES_PER_FILE` = 2000; ephemeral (MCP) fingerprints 100 / 20 detections each / 500 total / 200-char fields |
 | Cache files | `_MAX_CACHE_FILE_BYTES` = 5 MB; `_MAX_CT_CACHE_FILE_BYTES` = 5 MB (oversized = miss) |
+| Persisted rate-limiter state | 64 KiB per provider; versioned, provider-bound, finite numeric fields only |
+| PyPI update metadata | 5 MiB response body and 100 JSON nesting levels |
 | Batch input | 10,000 non-comment input records before deduplication; 1 KiB UTF-8 per logical line; 10 MiB UTF-8 total |
 
 ## Exit codes
@@ -122,8 +124,20 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   deeply-nested JSON) degrades to a clean miss. Normal
   TenantInfo reads use a 24 h TTL; `recon delta` may retain the same entry for up
   to 30 days as its comparison baseline. The per-domain CT cache TTL is 30 days.
-  Both caches evict lazily by mtime and write atomically with a sibling
+  Both caches admit data through a bounded regular-file descriptor, reject
+  symbolic links, mutation during the read, materially future mtimes, and
+  expired data before JSON decoding, then write atomically with a sibling
   `mkstemp` file followed by `os.replace`.
+- **Cache identity follows lookup identity.** Result and CT payloads are bound
+  to the validated domain in their filename. Registrable-apex and literal-host
+  entries are independent. `recon cache show <host> --exact` inspects a literal
+  CT key; `recon cache clear <host> --exact` removes that host from both caches.
+  Without `--exact`, cache commands retain normal apex reduction. CT entries
+  written before v2.6.1 lack the binding metadata and repopulate on demand.
+- **Rate-limiter warm starts fail closed.** Persisted state is versioned and
+  provider-bound. Oversized, nested, stale, cross-provider, non-finite,
+  overflowing, or out-of-range fields are ignored as one invalid snapshot.
+  Writes use a random exclusive temporary path and atomic replacement.
 - **Partial / degraded results are honored, not dropped.** `all_sources_failed`
   is raised only when *every* source errored and no tenant was found; if any
   source returns a clean result (even with no services), it is kept as a sparse
