@@ -20,6 +20,8 @@ The canonical dependency order, acceptance evidence, stop rules, current
 high-trust code-graph summary, invariants, and explicit non-goals are in
 [docs/roadmap.md](docs/roadmap.md). The implementation plan is
 [docs/engineering-refinement-plan.md](docs/engineering-refinement-plan.md).
+The measured source, test, compatibility, and facade cleanup plan is
+[docs/structural-maintainability.md](docs/structural-maintainability.md).
 The time-bound MCP plan is
 [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.md), with the
 decision in

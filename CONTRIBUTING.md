@@ -524,6 +524,8 @@ removes an observation when an entry appears as a substring of its statement.
 - Run `pre-commit run --all-files` or `ruff check .` and `uv run pyright` before submitting.
 - Run `uv run python scripts/check.py`; branch-aware project coverage must stay
   at or above the enforced 90.2 percent baseline.
+- Use [tests/README.md](tests/README.md) to find behavior-owned focused suites;
+  do not add new cases to the listed transitional catch-all files.
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.
 - Keep PRs focused: one concern per PR.
 - Keep the branch list clean: `main` is the only long-lived branch. PRs and
