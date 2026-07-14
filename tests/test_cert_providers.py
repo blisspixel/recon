@@ -146,8 +146,14 @@ class TestCertSpotterHttpErrors:
     def _enable_crtsh(self):
         """Override conftest auto-mock for these tests."""
 
+    @pytest.fixture
+    def limiter(self) -> MagicMock:
+        limiter = MagicMock()
+        limiter.acquire = AsyncMock()
+        return limiter
+
     @pytest.mark.asyncio
-    async def test_raises_on_400(self):
+    async def test_raises_on_400(self, limiter: MagicMock):
         provider = CertSpotterProvider()
         resp = MagicMock(status_code=400, request=MagicMock())
         client = AsyncMock()
@@ -155,12 +161,15 @@ class TestCertSpotterHttpErrors:
 
         with (
             patch("recon_tool.sources.cert_providers.http_client", return_value=_mock_http_context(client)),
+            patch("recon_tool.sources.cert_providers.ct_rate_limiter_certspotter", return_value=limiter),
             pytest.raises(httpx.HTTPStatusError),
         ):
             await provider.query("example.com")
+        limiter.on_other_failure.assert_called_once_with()
+        limiter.on_rate_limited.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_raises_on_503(self):
+    async def test_raises_on_503(self, limiter: MagicMock):
         provider = CertSpotterProvider()
         resp = MagicMock(status_code=503, request=MagicMock())
         client = AsyncMock()
@@ -168,36 +177,45 @@ class TestCertSpotterHttpErrors:
 
         with (
             patch("recon_tool.sources.cert_providers.http_client", return_value=_mock_http_context(client)),
+            patch("recon_tool.sources.cert_providers.ct_rate_limiter_certspotter", return_value=limiter),
             pytest.raises(httpx.HTTPStatusError),
         ):
             await provider.query("example.com")
+        limiter.on_other_failure.assert_called_once_with()
+        limiter.on_rate_limited.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_raises_on_timeout(self):
+    async def test_raises_on_timeout(self, limiter: MagicMock):
         provider = CertSpotterProvider()
         client = AsyncMock()
         client.get = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
 
         with (
             patch("recon_tool.sources.cert_providers.http_client", return_value=_mock_http_context(client)),
+            patch("recon_tool.sources.cert_providers.ct_rate_limiter_certspotter", return_value=limiter),
             pytest.raises(httpx.TimeoutException),
         ):
             await provider.query("example.com")
+        limiter.on_other_failure.assert_called_once_with()
+        limiter.on_rate_limited.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_raises_on_connect_error(self):
+    async def test_raises_on_connect_error(self, limiter: MagicMock):
         provider = CertSpotterProvider()
         client = AsyncMock()
         client.get = AsyncMock(side_effect=httpx.ConnectError("connection refused"))
 
         with (
             patch("recon_tool.sources.cert_providers.http_client", return_value=_mock_http_context(client)),
+            patch("recon_tool.sources.cert_providers.ct_rate_limiter_certspotter", return_value=limiter),
             pytest.raises(httpx.ConnectError),
         ):
             await provider.query("example.com")
+        limiter.on_other_failure.assert_called_once_with()
+        limiter.on_rate_limited.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_raises_on_invalid_json(self):
+    async def test_raises_on_invalid_json(self, limiter: MagicMock):
         provider = CertSpotterProvider()
         resp = MagicMock(status_code=200, request=MagicMock())
         resp.json.side_effect = ValueError("malformed json")
@@ -206,9 +224,32 @@ class TestCertSpotterHttpErrors:
 
         with (
             patch("recon_tool.sources.cert_providers.http_client", return_value=_mock_http_context(client)),
+            patch("recon_tool.sources.cert_providers.ct_rate_limiter_certspotter", return_value=limiter),
             pytest.raises(httpx.HTTPError, match="invalid JSON"),
         ):
             await provider.query("example.com")
+        limiter.on_other_failure.assert_called_once_with()
+        limiter.on_rate_limited.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_429_uses_only_rate_limit_accounting(self, limiter: MagicMock):
+        provider = CertSpotterProvider()
+        response = httpx.Response(
+            429,
+            request=httpx.Request("GET", "https://api.certspotter.com/v1/issuances"),
+        )
+        client = AsyncMock()
+        client.get = AsyncMock(return_value=response)
+
+        with (
+            patch("recon_tool.sources.cert_providers.http_client", return_value=_mock_http_context(client)),
+            patch("recon_tool.sources.cert_providers.ct_rate_limiter_certspotter", return_value=limiter),
+            pytest.raises(httpx.HTTPError, match="rate-limited"),
+        ):
+            await provider.query("example.com")
+
+        limiter.on_rate_limited.assert_called_once_with(retry_after_s=None)
+        limiter.on_other_failure.assert_not_called()
 
 
 # ── Shared filtering helpers ────────────────────────────────────────────

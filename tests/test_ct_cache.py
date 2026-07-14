@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import time
 from collections.abc import Iterator
 from pathlib import Path
@@ -18,6 +19,7 @@ import pytest
 from recon_tool.ct_cache import (
     CT_CACHE_TTL,
     CTCacheEntry,
+    _safe_path,
     ct_cache_clear,
     ct_cache_clear_all,
     ct_cache_dir,
@@ -33,6 +35,7 @@ from recon_tool.models import (
     InfrastructureClusterReport,
     InfrastructureEdge,
 )
+from tests.cache_path_helpers import self_referencing_directory
 
 
 @pytest.fixture
@@ -220,12 +223,12 @@ class TestCTCachePutGet:
         first = tmp_path / "first"
         second = tmp_path / "second"
         directories = iter((first, second))
-        monkeypatch.setattr("recon_tool.ct_cache.ct_cache_dir", lambda: next(directories))
+        monkeypatch.setattr("recon_tool.paths.cache_root", lambda: next(directories))
 
         ct_cache_put("example.com", [], None, "crt.sh")
 
-        assert (first / "example.com.json").exists()
-        assert not (second / "example.com.json").exists()
+        assert (first / "ct-cache" / "example.com.json").exists()
+        assert not (second / "ct-cache" / "example.com.json").exists()
 
     @pytest.mark.parametrize(
         ("field", "value"),
@@ -312,6 +315,63 @@ class TestCTCacheClear:
 
     def test_clear_all_empty(self, tmp_cache: Path) -> None:
         assert ct_cache_clear_all() == 0
+
+    def test_redirected_cache_directory_cannot_escape_configured_root(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        configured_root = tmp_path / "configured"
+        external = tmp_path / "external"
+        configured_root.mkdir()
+        external.mkdir()
+        redirected = configured_root / "ct-cache"
+        if os.name == "nt":
+            command_processor = os.environ.get("COMSPEC", r"C:\Windows\System32\cmd.exe")
+            subprocess.run(  # noqa: S603 - controlled test-only paths create a local junction
+                [command_processor, "/d", "/c", "mklink", "/J", str(redirected), str(external)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        else:
+            redirected.symlink_to(external, target_is_directory=True)
+
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(configured_root))
+        sentinel = external / "example.com.json"
+        original = b'{"outside": true}'
+        sentinel.write_bytes(original)
+
+        with pytest.raises(ValueError, match="cache directory"):
+            _safe_path("example.com")
+        assert ct_cache_get("example.com") is None
+        assert ct_cache_show("example.com") is None
+        assert ct_cache_list() == []
+        ct_cache_put("example.com", SAMPLE_SUBDOMAINS, None, "crt.sh")
+        assert sentinel.read_bytes() == original
+        assert ct_cache_clear("example.com") is False
+        assert ct_cache_clear_all() == 0
+        assert sentinel.read_bytes() == original
+
+    def test_self_referencing_cache_directory_degrades_without_raising(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        configured_root = tmp_path / "configured-loop"
+        configured_root.mkdir()
+        redirected = configured_root / "ct-cache"
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(configured_root))
+
+        with self_referencing_directory(redirected):
+            with pytest.raises(ValueError, match="cache directory"):
+                _safe_path("example.com")
+            assert ct_cache_get("example.com") is None
+            assert ct_cache_show("example.com") is None
+            assert ct_cache_list() == []
+            ct_cache_put("example.com", SAMPLE_SUBDOMAINS, None, "crt.sh")
+            assert ct_cache_clear("example.com") is False
+            assert ct_cache_clear_all() == 0
 
 
 class TestCTCacheShow:

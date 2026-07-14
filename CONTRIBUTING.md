@@ -71,8 +71,9 @@ uv run python scripts/release_readiness.py --allow-dirty
 uv run python scripts/check.py         # canonical local gate (--fast skips tests)
 ```
 
-`scripts/check.py` runs the canonical local gate: Ruff, Pyright over
-`src/recon_tool/ tests/`, the coverage-gated test run, catalog and generated
+`scripts/check.py` runs the canonical local gate: Ruff, Pyright using the
+complete `pyproject.toml` include and exclude contract, the coverage-gated test
+run, catalog and generated
 artifact checks, validation and text hygiene, tracked Markdown link and local
 heading-anchor validation, workflow and dependency-export guards, interface and
 paper checks, and file-size/complexity ratchets. A local pass is required before
@@ -520,7 +521,7 @@ removes an observation when an entry appears as a substring of its statement.
 
 ## Code changes
 
-- Run `pre-commit run --all-files` or `ruff check .` and `pyright src/recon_tool/ tests/` before submitting.
+- Run `pre-commit run --all-files` or `ruff check .` and `uv run pyright` before submitting.
 - Run `uv run python scripts/check.py`; branch-aware project coverage must stay
   at or above the enforced 90.2 percent baseline.
 - Integration tests (`pytest -m integration`) require network access and are skipped by default.

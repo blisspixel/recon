@@ -184,16 +184,10 @@ def _isolated_rate_limit_state(tmp_path_factory, monkeypatch):
     ``~/.recon/rate-limit-state`` (v1.9.25). Without isolation, a real
     Phase F corpus run that tripped a breaker leaves a persisted state
     file that bleeds into unit tests: subsequent acquire() calls raise
-    RateLimited instead of hitting the mocked HTTP code path. Two
-    things are needed: (1) clear the per-loop singleton table so each
-    test gets fresh limiters, and (2) point RECON_CONFIG_DIR at a tmp
-    dir so any persisted state goes to a throwaway location.
+    RateLimited instead of hitting the mocked HTTP code path. Point
+    ``RECON_CONFIG_DIR`` at a temporary directory so any persisted state
+    goes to a throwaway location. In-memory limiters are owned by the active
+    event loop, and pytest-asyncio creates a fresh function-scoped loop.
     """
-    import recon_tool.rate_limit as _rl
-
     isolated_dir = tmp_path_factory.mktemp("rate_limit_state")
     monkeypatch.setenv("RECON_CONFIG_DIR", str(isolated_dir))
-    # Forget any limiters cached from a prior test or production run.
-    _rl._limiters_by_loop.clear()
-    yield
-    _rl._limiters_by_loop.clear()

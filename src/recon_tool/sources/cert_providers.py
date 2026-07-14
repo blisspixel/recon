@@ -20,6 +20,7 @@ from recon_tool.http import http_client
 from recon_tool.infra_graph import build_infrastructure_clusters
 from recon_tool.models import CertBurst, CertSummary, InfrastructureClusterReport
 from recon_tool.rate_limit import (
+    AdaptiveRateLimiter,
     RateLimited,
     ct_rate_limiter_certspotter,
     ct_rate_limiter_crtsh,
@@ -774,6 +775,20 @@ class CertSpotterProvider:
             params["after"] = after_cursor
         return await client.get(self._BASE_URL, params=params)
 
+    async def _fetch_page_with_feedback(
+        self,
+        client: httpx.AsyncClient,
+        domain: str,
+        after_cursor: str | None,
+        limiter: AdaptiveRateLimiter,
+    ) -> httpx.Response:
+        """Fetch one page and report terminal transport failure once."""
+        try:
+            return await self._fetch_page(client, domain, after_cursor)
+        except httpx.HTTPError:
+            limiter.on_other_failure()
+            raise
+
     @staticmethod
     def _accumulate_issuances(
         data: list[Any],
@@ -815,12 +830,12 @@ class CertSpotterProvider:
         Stops early when a page is empty, when a 429 is returned, or when
         the filtered subdomain count already exceeds ``MAX_SUBDOMAINS``.
 
-        Each page fetch is wrapped in ``retry_on_transient`` so a single
-        transient connection error doesn't break the entire pagination —
-        the retry decorator gives each page two retries before giving up.
+        Each page uses one bounded request. Transport, parse, and non-429 HTTP
+        failures are reported to the adaptive limiter and raised so the
+        provider fallback chain can proceed without multiplying quota pressure.
 
-        Raises on unrecoverable failures (e.g. an HTTP 5xx that survives
-        retry, or a 4xx other than 429) so the fallback chain can proceed.
+        Raises on failures (for example HTTP 5xx or a 4xx other than 429) so
+        the fallback chain can proceed.
         A 429 response is NOT raised — the provider returns the data
         collected so far (which may be partial) and the caller can decide
         whether that's enough.
@@ -850,7 +865,7 @@ class CertSpotterProvider:
 
         async with _get_ct_semaphore(), http_client(timeout=_CT_TIMEOUT, retry_transient=False) as client:
             for _ in range(self._MAX_PAGES):
-                resp = await self._fetch_page(client, domain, after_cursor)
+                resp = await self._fetch_page_with_feedback(client, domain, after_cursor, limiter)
                 if resp.status_code == 429:
                     # Rate-limited. Feed Retry-After (if any) to the
                     # adaptive limiter so its next acquire honors the
@@ -865,6 +880,7 @@ class CertSpotterProvider:
                     rate_limited = True
                     break
                 if resp.status_code != 200:
+                    limiter.on_other_failure()
                     msg = f"CertSpotter returned HTTP {resp.status_code} for {domain}"
                     raise httpx.HTTPStatusError(msg, request=resp.request, response=resp)
                 try:
