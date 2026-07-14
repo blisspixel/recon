@@ -5,9 +5,9 @@ One file per domain, 30-day default TTL, lazy eviction via mtime.
 All I/O wrapped in try/except — never raises to caller.
 
 Separate from the main TenantInfo cache (cache.py): the CT cache stores
-only the raw provider output (subdomains + cert summary) so it can serve
-as a fallback when all live CT providers are degraded without needing a
-full TenantInfo round-trip.
+the reusable provider output, certificate summary, and infrastructure
+cluster report so it can serve as a fallback when live CT providers are
+degraded without needing a full TenantInfo round-trip.
 """
 
 from __future__ import annotations
@@ -23,7 +23,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from recon_tool.models import CertSummary
+from recon_tool.cache import (
+    cache_string_tuple,
+    cert_summary_from_cache_dict,
+    cert_summary_to_cache_dict,
+    infrastructure_clusters_from_cache_dict,
+    infrastructure_clusters_to_cache_dict,
+)
+from recon_tool.models import CertSummary, InfrastructureClusterReport
 from recon_tool.validator import validate_domain
 
 __all__ = [
@@ -64,6 +71,7 @@ class CTCacheEntry:
     provider_used: str
     cached_at: str  # ISO timestamp
     age_days: int
+    infrastructure_clusters: InfrastructureClusterReport | None = None
 
 
 @dataclass(frozen=True)
@@ -133,7 +141,7 @@ def ct_cache_get(domain: str, ttl: int = CT_CACHE_TTL) -> CTCacheEntry | None:
         if not isinstance(data, dict):
             raise ValueError("CT cache payload must be a JSON object")
         return _entry_from_dict(data, age_seconds)
-    except (OSError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
+    except (OSError, OverflowError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
         # RecursionError (a deeply-nested poisoned file) escapes the other
         # entries; degrade to a clean miss rather than crash the caller.
         logger.debug("CT cache read failed for %s", domain, exc_info=True)
@@ -145,6 +153,8 @@ def ct_cache_put(
     subdomains: list[str],
     cert_summary: CertSummary | None,
     provider_used: str,
+    *,
+    infrastructure_clusters: InfrastructureClusterReport | None = None,
 ) -> None:
     """Write CT results to cache. Creates dir if needed. Logs on failure."""
     try:
@@ -152,7 +162,7 @@ def ct_cache_put(
         d.mkdir(parents=True, exist_ok=True)
         d = d.resolve()
         path = _safe_path(domain)
-        data = _entry_to_dict(subdomains, cert_summary, provider_used)
+        data = _entry_to_dict(subdomains, cert_summary, provider_used, infrastructure_clusters)
         # Atomic write, matching cache.py: a concurrent ct_cache_get must never
         # read a half-written file, and a predictable "<domain>.json" target must
         # not be followed if it is a pre-planted symlink. mkstemp gives a random
@@ -216,15 +226,16 @@ def ct_cache_show(domain: str) -> CTCacheInfo | None:
         data = json.loads(path.read_text(encoding="utf-8"))
         if not isinstance(data, dict):
             raise ValueError("CT cache payload must be a JSON object")
+        entry = _entry_from_dict(data, age_seconds)
         return CTCacheInfo(
             domain=domain,
-            provider_used=data.get("provider_used", "unknown"),
-            subdomain_count=len(data.get("subdomains", [])),
-            cached_at=data.get("cached_at", "unknown"),
+            provider_used=entry.provider_used,
+            subdomain_count=len(entry.subdomains),
+            cached_at=entry.cached_at,
             age_days=int(age_seconds / 86400),
             file_size_bytes=stat.st_size,
         )
-    except (OSError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
+    except (OSError, OverflowError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
         logger.debug("CT cache show failed for %s", domain, exc_info=True)
         return None
 
@@ -253,42 +264,28 @@ def _entry_to_dict(
     subdomains: list[str],
     cert_summary: CertSummary | None,
     provider_used: str,
+    infrastructure_clusters: InfrastructureClusterReport | None,
 ) -> dict[str, Any]:
     d: dict[str, Any] = {
         "cached_at": datetime.now(UTC).isoformat(),
         "provider_used": provider_used,
         "subdomains": subdomains,
     }
-    if cert_summary is not None:
-        d["cert_summary"] = {
-            "cert_count": cert_summary.cert_count,
-            "issuer_diversity": cert_summary.issuer_diversity,
-            "issuance_velocity": cert_summary.issuance_velocity,
-            "newest_cert_age_days": cert_summary.newest_cert_age_days,
-            "oldest_cert_age_days": cert_summary.oldest_cert_age_days,
-            "top_issuers": list(cert_summary.top_issuers),
-        }
-    else:
-        d["cert_summary"] = None
+    d["cert_summary"] = cert_summary_to_cache_dict(cert_summary)
+    d["infrastructure_clusters"] = infrastructure_clusters_to_cache_dict(infrastructure_clusters)
     return d
 
 
 def _entry_from_dict(data: dict[str, Any], age_seconds: float) -> CTCacheEntry:
-    cs_data = data.get("cert_summary")
-    cert_summary: CertSummary | None = None
-    if isinstance(cs_data, dict):
-        cert_summary = CertSummary(
-            cert_count=int(cs_data.get("cert_count", 0)),
-            issuer_diversity=int(cs_data.get("issuer_diversity", 0)),
-            issuance_velocity=int(cs_data.get("issuance_velocity", 0)),
-            newest_cert_age_days=int(cs_data.get("newest_cert_age_days", 0)),
-            oldest_cert_age_days=int(cs_data.get("oldest_cert_age_days", 0)),
-            top_issuers=tuple(cs_data.get("top_issuers", [])),
-        )
+    provider_used = data.get("provider_used", "unknown")
+    cached_at = data.get("cached_at", "unknown")
+    if not isinstance(provider_used, str) or not isinstance(cached_at, str):
+        raise ValueError("CT cache provider_used and cached_at must be strings")
     return CTCacheEntry(
-        subdomains=tuple(data.get("subdomains", [])),
-        cert_summary=cert_summary,
-        provider_used=data.get("provider_used", "unknown"),
-        cached_at=data.get("cached_at", "unknown"),
+        subdomains=cache_string_tuple(data.get("subdomains", []), "subdomains"),
+        cert_summary=cert_summary_from_cache_dict(data),
+        provider_used=provider_used,
+        cached_at=cached_at,
         age_days=int(age_seconds / 86400),
+        infrastructure_clusters=infrastructure_clusters_from_cache_dict(data),
     )

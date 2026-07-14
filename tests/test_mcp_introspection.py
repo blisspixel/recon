@@ -272,6 +272,21 @@ class TestExplainSignal:
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_domain_output_uses_resolved_normalized_domain(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
+        from recon_tool.signals import reportable_signals
+
+        _signal, public_label = reportable_signals()[0]
+        raw = "https://www.contoso.com/private/path?token=secret"
+
+        data = await explain_signal(public_label, domain=raw)
+
+        assert data["domain"] == "contoso.com"
+        assert raw not in str(data)
+        assert "/private/path" not in str(data)
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_unavailable_channel_evidence_cannot_fire_or_leak(self, mock_resolve: AsyncMock) -> None:
         info = replace(
             SAMPLE_INFO,
@@ -322,6 +337,18 @@ class TestTestHypothesis:
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_domain_output_uses_resolved_normalized_domain(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
+        raw = "https://www.contoso.com/private/path?token=secret"
+
+        data = await mcp_test_hypothesis(raw, "email configuration")
+
+        assert data["domain"] == "contoso.com"
+        assert raw not in str(data)
+        assert "/private/path" not in str(data)
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_keyword_matching_maps_hypothesis(self, mock_resolve: AsyncMock) -> None:
         """Hypothesis keywords map to relevant signals via keyword matching."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
@@ -365,6 +392,18 @@ class TestSimulateHardening:
         assert isinstance(data["applied_fixes"], list)
         assert "remaining_gaps" in data
         assert isinstance(data["remaining_gaps"], list)
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_domain_output_uses_resolved_normalized_domain(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
+        raw = "https://www.contoso.com/private/path?token=secret"
+
+        data = await simulate_hardening(raw, ["DMARC reject"])
+
+        assert data["domain"] == "contoso.com"
+        assert raw not in str(data)
+        assert "/private/path" not in str(data)
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
@@ -483,6 +522,24 @@ class TestAnalyzePostureExplain:
         data = await analyze_posture("contoso.com")
         assert isinstance(data, list)
 
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_success_log_uses_only_normalized_domain(
+        self,
+        mock_resolve: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        raw = "https://www.contoso.com/private/path?token=secret"
+
+        with caplog.at_level("INFO", logger="recon"):
+            await analyze_posture(raw)
+
+        mock_resolve.assert_awaited_once_with("contoso.com")
+        assert "contoso.com" in caplog.text
+        assert raw not in caplog.text
+        assert "/private/path" not in caplog.text
+
 
 # ── discover_fingerprint_candidates cache safety ─────────────────────────
 
@@ -510,3 +567,64 @@ class TestDiscoverCacheSafety:
         cached = _cache_get("contoso.com")
         assert cached is not None
         assert cached[0].queried_domain == "contoso.com"
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_success_log_uses_only_normalized_domain(
+        self,
+        mock_resolve: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        raw = "https://www.contoso.com/private/path?token=secret"
+
+        with caplog.at_level("INFO", logger="recon"):
+            await discover_fingerprint_candidates(raw)
+
+        mock_resolve.assert_awaited_once_with("contoso.com", skip_ct=False)
+        assert "contoso.com" in caplog.text
+        assert raw not in caplog.text
+        assert "/private/path" not in caplog.text
+
+    @pytest.mark.asyncio
+    async def test_rate_limit_message_uses_only_normalized_domain(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import recon_tool.server.introspection as server_introspection
+
+        acquired: list[str] = []
+
+        def deny(domain: str) -> bool:
+            acquired.append(domain)
+            return False
+
+        monkeypatch.setattr(server_introspection, "rate_limit_try_acquire", deny)
+        raw = "https://www.contoso.com/private/path?token=secret"
+
+        with pytest.raises(ToolError) as exc_info:
+            await discover_fingerprint_candidates(raw)
+
+        message = str(exc_info.value)
+        assert acquired == ["contoso.com"]
+        assert "Rate limited: contoso.com" in message
+        assert raw not in message
+        assert "/private/path" not in message
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_internal_error_and_log_use_only_normalized_domain(
+        self,
+        mock_resolve: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        mock_resolve.side_effect = RuntimeError("boom")
+        raw = "https://www.contoso.com/private/path?token=secret"
+
+        with caplog.at_level("ERROR", logger="recon"), pytest.raises(ToolError) as exc_info:
+            await discover_fingerprint_candidates(raw)
+
+        message = str(exc_info.value)
+        assert "Error mining contoso.com" in message
+        assert raw not in message
+        assert "/private/path" not in message
+        assert "discover for contoso.com" in caplog.text
+        assert raw not in caplog.text
+        assert "/private/path" not in caplog.text

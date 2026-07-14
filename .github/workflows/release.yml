@@ -15,15 +15,15 @@ on:
 #
 # Supply-chain isolation contract (v1.9.3.3+):
 #
-#   * ``test`` job installs dev deps and runs the full gate
-#     (pytest, pyright, ruff, pip-audit). Dev deps execute here. No dist/
+#   * ``test`` job installs dev deps and runs the complete local gate plus
+#     dependency audit. Dev deps execute here. No dist/
 #     exists, so a compromised dev dep cannot tamper with release
 #     artifacts from this job.
-#   * ``build`` job is PURE: ``uv build`` runs against the locked
-#     runtime dependency set (``--no-dev``, no dev group); ``dist/`` is
-#     created and immediately uploaded as an artifact. No additional
-#     code executes between build and upload. ``actions/upload-artifact``
-#     seals the bytes into GitHub-managed storage at upload time.
+#   * ``build`` job is PURE: it does not create or sync a project
+#     environment. ``uv build`` creates its isolated build environment from
+#     the backend declared in ``pyproject.toml``; ``dist/`` is then uploaded
+#     immediately. No additional code executes between build and upload.
+#     ``actions/upload-artifact`` seals the bytes into GitHub-managed storage.
 #   * ``sbom`` job runs on a separate runner. It installs pip-audit
 #     in its own workspace and generates the CycloneDX SBOM from the
 #     locked-requirements text. dist/ does not exist in this runner,
@@ -54,7 +54,29 @@ env:
   UV_PYTHON: "3.11"
 
 jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Fetch current main ref
+        run: git fetch --no-tags origin "+refs/heads/main:refs/remotes/origin/main"
+
+      - name: Validate release tag, notes, and ancestry
+        run: >-
+          python3 scripts/validate_release_tag.py
+          --tag "$GITHUB_REF_NAME"
+          --sha "$GITHUB_SHA"
+          --main-ref refs/remotes/origin/main
+
   test:
+    needs: preflight
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
@@ -100,32 +122,21 @@ jobs:
           --require-compatible 1.28.1
           --require-compatible 2.0.0b1
 
-      - name: Type check
-        run: uv run pyright src/recon_tool/ tests/
-
-      - name: Run tests
-        run: uv run pytest tests/ -q -n auto --maxprocesses=4 --dist=loadfile --cov=src/recon_tool --cov-branch --cov-fail-under=90.2
-
-      - name: Lint
-        run: uv run ruff check src/recon_tool/
-
-      - name: Validate built-in fingerprints
-        # Mirrors ci.yml so a YAML schema or duplicate-slug regression
-        # cannot reach PyPI just because release.yml's test job missed it.
-        # This check pools slugs across files and rejects same-slug entries
-        # whose display names disagree.
-        run: uv run python scripts/validate_fingerprint.py src/recon_tool/data/fingerprints/ --quiet
-
-      - name: Enforce generated fingerprint artifact
-        # Mirrors ci.yml so stale package data cannot reach the sealed build.
-        run: uv run python scripts/generate_fingerprint_catalog.py --check
-
-      - name: Enforce fingerprint metadata coverage (v1.9.7+)
-        # Mirrors ci.yml. Presence gate: every detection in every
-        # category must carry a non-empty ``description``. Prevents
-        # a catalog regression from reaching PyPI just because the
-        # tests passed.
-        run: uv run python scripts/check_metadata_coverage.py
+      - name: Run complete local quality gate
+        # A manually pushed tag cannot bypass the deterministic gate that
+        # maintainers run before release. This includes lint, types, branch
+        # coverage, generated artifacts, Markdown links, and repository
+        # hygiene checks.
+        shell: bash
+        run: |
+          previous_tag="$(git describe --tags --abbrev=0 "${GITHUB_SHA}^" 2>/dev/null || true)"
+          if [ -n "$previous_tag" ]; then
+            text_range="${previous_tag}..${GITHUB_SHA}"
+          else
+            empty_tree="$(git hash-object -t tree /dev/null)"
+            text_range="${empty_tree}..${GITHUB_SHA}"
+          fi
+          uv run python scripts/check.py --text-range "$text_range"
 
       - name: Export runtime requirements
         # Hash-pinned (no --no-hashes): the exported requirements carry
@@ -138,12 +149,12 @@ jobs:
 
   build:
     # Pure build job. The supply-chain isolation contract requires
-    # that NO additional dependency code executes in this workspace
-    # between ``uv build`` and ``actions/upload-artifact``. Do not
-    # add ``uv sync`` here. Do not run pip-audit, SBOM
-    # generation, ruff, pyright, pytest, or any other tool that
-    # imports project dependencies in this job. Those belong in
-    # other jobs that do not touch dist/.
+    # that no project environment is installed and no additional dependency
+    # code executes in this workspace. ``uv build`` resolves only its isolated
+    # build backend, then ``actions/upload-artifact`` immediately seals the
+    # result. Do not add ``uv sync``, pip-audit, SBOM generation, ruff,
+    # pyright, pytest, or any other project-dependency execution here. Those
+    # belong in jobs that do not touch dist/.
     needs: test
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -161,14 +172,6 @@ jobs:
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
         with:
           python-version: "3.11"
-
-      - name: Sync runtime deps (no dev group)
-        # ``uv build`` resolves the build backend (hatchling) from
-        # pyproject; this sync ensures we have a clean uv cache state
-        # without installing the optional dev set. Dev tooling
-        # (pip-audit, pytest, ruff, pyright) is deliberately absent
-        # from this workspace.
-        run: uv sync --no-dev
 
       - name: Pin deterministic build timestamp
         # Pin file mtimes in the wheel and sdist to the tagged commit's
@@ -317,14 +320,23 @@ jobs:
           mkdir -p sbom
           # ``--no-deps`` tells pip-audit not to install the locked
           # requirements again; it just reads the requirements text
-          # to produce the SBOM. The "|| true" catches the audit's
-          # vulnerability-finding exit code; the SBOM file is written
-          # regardless. The audit *gate* runs in the ``test`` job.
+          # to produce the SBOM. Exit 1 means findings and is accepted here
+          # because the enforcing audit runs in ``test``. Any higher status,
+          # missing/corrupt JSON, or missing project root fails publication.
+          set +e
           uv tool run pip-audit -r .ci-audit-requirements.txt \
             --format=cyclonedx-json \
             --output "sbom/recon-tool-${VERSION}.cdx.json" \
-            --no-deps || true
-          test -f "sbom/recon-tool-${VERSION}.cdx.json"
+            --no-deps
+          audit_status=$?
+          set -e
+          if [ "$audit_status" -gt 1 ]; then
+            exit "$audit_status"
+          fi
+          test -s "sbom/recon-tool-${VERSION}.cdx.json"
+          python3 scripts/finalize_sbom.py \
+            "sbom/recon-tool-${VERSION}.cdx.json" \
+            --version "$VERSION"
           ls -la sbom/
 
       - name: Upload SBOM artifact
@@ -334,7 +346,7 @@ jobs:
           path: sbom/
 
   publish-pypi:
-    needs: [build, attest]
+    needs: [build, attest, sbom]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: pypi

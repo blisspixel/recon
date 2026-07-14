@@ -35,7 +35,7 @@ from recon_tool.cli.options import (
     LookupOutputOptions,
 )
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
-from recon_tool.cli.shared import raise_lookup_error
+from recon_tool.cli.shared import positive_finite_float, raise_lookup_error
 from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
 
@@ -317,6 +317,7 @@ def lookup(
         "--timeout",
         "-t",
         help="Max seconds for the full resolve pipeline (default: 120)",
+        callback=positive_finite_float,
         rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     posture: bool = typer.Option(
@@ -542,6 +543,7 @@ def batch(
         "--timeout",
         "-t",
         help="Max seconds for each domain's full resolve pipeline.",
+        callback=positive_finite_float,
     ),
     include_unclassified: bool = typer.Option(
         False,
@@ -644,7 +646,13 @@ def discover(
         help="Write candidates JSON here. Default: stdout.",
     ),
     no_ct: bool = typer.Option(False, "--no-ct", help="Skip cert-transparency providers."),
-    timeout: float = typer.Option(120.0, "--timeout", "-t", help="Resolve timeout in seconds."),
+    timeout: float = typer.Option(
+        120.0,
+        "--timeout",
+        "-t",
+        help="Resolve timeout in seconds.",
+        callback=positive_finite_float,
+    ),
     keep_intra_org: bool = typer.Option(
         False,
         "--keep-intra-org",
@@ -797,7 +805,12 @@ app.add_typer(signals_app, name="signals")
 def delta(
     domain: str = typer.Argument(..., help="Domain to diff against cached snapshot"),
     json_output: bool = typer.Option(False, "--json", help="Output structured JSON"),
-    timeout: float = typer.Option(120.0, "--timeout", help="Resolution timeout (seconds)"),
+    timeout: float = typer.Option(
+        120.0,
+        "--timeout",
+        help="Resolution timeout (seconds)",
+        callback=positive_finite_float,
+    ),
 ) -> None:
     """Compare the current lookup against the last cached TenantInfo.
 
@@ -806,7 +819,7 @@ def delta(
     (~/.recon/cache/) automatically; no manual export file required.
     """
     from recon_tool.cache import cache_get, cache_put, tenant_info_to_dict
-    from recon_tool.delta import compute_delta
+    from recon_tool.delta import compute_delta, validate_snapshot_domain
     from recon_tool.formatter import format_delta_json, render_delta_panel, render_error
     from recon_tool.models import ReconLookupError
     from recon_tool.resolver import resolve_tenant
@@ -821,14 +834,20 @@ def delta(
 
     cached = cache_get(validated, ttl=30 * 86400)
     if cached is None:
-        console.print(
+        output_console = get_err_console() if json_output else console
+        output_console.print(
             f"  No cached snapshot for [bold]{validated}[/bold].\n"
-            f"  Run `recon {validated}` first — the next `recon delta` "
+            f"  Run `recon {validated}` first; the next `recon delta` "
             f"call will compare against that baseline."
         )
         raise typer.Exit(code=EXIT_NO_DATA)
 
     previous_dict = tenant_info_to_dict(cached)
+    try:
+        validate_snapshot_domain(previous_dict, validated)
+    except ValueError as exc:
+        render_error(_fmt_exc(exc))
+        raise typer.Exit(code=EXIT_VALIDATION) from exc
 
     async def _run() -> None:
         try:

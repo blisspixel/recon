@@ -490,8 +490,46 @@ class TestReevaluateDomainMCP:
         """Uncached domain → error JSON 'No cached data...'."""
         from recon_tool.server import reevaluate_domain
 
-        with pytest.raises(ToolError, match="No cached data"):
-            await reevaluate_domain("contoso.example.com")
+        raw = "https://www.contoso.com/private/path?token=secret"
+        with pytest.raises(ToolError) as exc_info:
+            await reevaluate_domain(raw)
+
+        message = str(exc_info.value)
+        assert "No cached data for contoso.com" in message
+        assert raw not in message
+        assert "/private/path" not in message
+
+    @pytest.mark.asyncio
+    async def test_internal_error_and_log_use_only_normalized_domain(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        from recon_tool.merger import merge_results
+        from recon_tool.models import SourceResult
+        from recon_tool.server import _cache_set, reevaluate_domain  # pyright: ignore[reportPrivateUsage]
+
+        source = SourceResult(source_name="DNS", display_name="Contoso Ltd")
+        info = merge_results([source], "contoso.com")
+        _cache_set("contoso.com", info, [source])
+
+        def fail(_results: object, domain: str) -> None:
+            assert domain == "contoso.com"
+            raise RuntimeError("boom")
+
+        monkeypatch.setattr("recon_tool.merger.merge_results", fail)
+        raw = "https://www.contoso.com/private/path?token=secret"
+
+        with caplog.at_level("ERROR", logger="recon"), pytest.raises(ToolError) as exc_info:
+            await reevaluate_domain(raw)
+
+        message = str(exc_info.value)
+        assert "Error re-evaluating contoso.com" in message
+        assert raw not in message
+        assert "/private/path" not in message
+        assert "merge failed for contoso.com" in caplog.text
+        assert raw not in caplog.text
+        assert "/private/path" not in caplog.text
 
     @pytest.mark.asyncio
     async def test_cached_domain_returns_updated_info(self) -> None:

@@ -254,7 +254,8 @@ def test_ci_workflow_runs_fast_local_core_guards() -> None:
     for command in (
         "uv run python scripts/check_workflow_pins.py",
         "uv run python scripts/generate_fingerprint_catalog.py --check",
-        "uv run python scripts/check_text_hygiene.py --range HEAD^..HEAD",
+        "uv run python scripts/check_text_hygiene.py --range \"$range\"",
+        "uv run python scripts/check_markdown_links.py",
         "uv run python scripts/check_clusterfuzzlite_requirements.py",
         "uv run python scripts/check_schema_sources.py",
         "uv run python scripts/generate_surface_inventory.py --check",
@@ -264,6 +265,9 @@ def test_ci_workflow_runs_fast_local_core_guards() -> None:
         "uv run python scripts/check_plr_ratchet.py",
     ):
         assert command in commands
+    assert "github.event.before" in commands
+    assert "github.event.pull_request.base.sha" in commands
+    assert "HEAD^..HEAD" not in commands
 
 
 def test_dependency_update_automation_is_configured_low_noise_for_scorecard_checks() -> None:

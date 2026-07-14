@@ -352,7 +352,7 @@ async def analyze_posture(
         logging.INFO,
         "posture_analyzed",
         request_id=request_id,
-        domain=domain,
+        domain=info.queried_domain,
         observations=len(observations),
         elapsed_s=round(elapsed, 2),
     )
@@ -420,7 +420,7 @@ async def assess_exposure(domain: str) -> ExposureAssessmentResult:
         logging.INFO,
         "exposure_assessed",
         request_id=request_id,
-        domain=domain,
+        domain=info.queried_domain,
         posture_score=assessment.posture_score,
         elapsed_s=round(time.monotonic() - start_time, 2),
     )
@@ -469,7 +469,7 @@ async def find_hardening_gaps(domain: str) -> GapReportResult:
         logging.INFO,
         "gaps_analyzed",
         request_id=request_id,
-        domain=domain,
+        domain=info.queried_domain,
         gaps=len(report.gaps),
         elapsed_s=round(time.monotonic() - start_time, 2),
     )
@@ -516,8 +516,8 @@ async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonRes
         logging.INFO,
         "postures_compared",
         request_id=request_id,
-        domain_a=domain_a,
-        domain_b=domain_b,
+        domain_a=info_a.queried_domain,
+        domain_b=info_b.queried_domain,
         elapsed_s=round(time.monotonic() - start_time, 2),
     )
 
@@ -624,7 +624,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
         confidence = "medium"
 
     result: HypothesisAssessmentResult = {
-        "domain": domain,
+        "domain": info.queried_domain,
         "hypothesis": hypothesis,
         "likelihood": likelihood,
         "supporting_signals": supporting,
@@ -871,7 +871,7 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
     ]
 
     result: HardeningSimulationResult = {
-        "domain": domain,
+        "domain": info.queried_domain,
         "current_score": current_score,
         "simulated_score": simulated_score,
         "score_delta": simulated_score - current_score,

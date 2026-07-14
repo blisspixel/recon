@@ -375,6 +375,8 @@ class TestCsvFormulaNeutralization:
         assert rows[0]["mta_sts_mode"] == " enforce"
         assert rows[0]["google_auth_type"] == "'\tmanaged"
         assert rows[1]["domain"] == "'=error.example"
+        assert rows[0]["error"] == ""
+        assert rows[1]["error"] == "lookup failed"
 
 
 class TestDetectProviderEdgeCases:

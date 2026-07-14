@@ -22,13 +22,10 @@ def _write_file(root: Path, relative: str, text: str) -> None:
 def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
     _write_file(root, "pyproject.toml", f'[project]\nname = "recon-tool"\nversion = "{version}"\n')
     _write_file(root, "src/recon_tool/__init__.py", f'_FALLBACK_VERSION = "{version}"\n')
-    for relative in (
-        "scripts/check.py",
-        "scripts/release.py",
-        ".github/workflows/ci.yml",
-        ".github/workflows/release.yml",
-    ):
+    for relative in ("scripts/check.py", ".github/workflows/ci.yml"):
         _write_file(root, relative, "pytest tests/ --cov=src/recon_tool --cov-branch --cov-fail-under=90.2\n")
+    for relative in ("scripts/release.py", ".github/workflows/release.yml"):
+        _write_file(root, relative, "uv run python scripts/check.py\n")
     _write_file(root, "docs/roadmap.md", f"# Roadmap\n\n> **Status:** v{version} is current.\n")
     _write_file(root, "ROADMAP.md", f"# Roadmap\n\nCurrent status: v{version} is current.\n")
     _write_file(
@@ -128,6 +125,16 @@ def test_coverage_gate_rejects_stale_src_layout_target(tmp_path: Path) -> None:
 
     assert check.status == "fail"
     assert "stale --cov=recon_tool" in check.detail
+
+
+def test_coverage_gate_rejects_release_delegate_drift(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path)
+    _write_file(tmp_path, "scripts/release.py", "uv run pytest tests/\n")
+
+    check = release_readiness._check_coverage_targets(tmp_path)
+
+    assert check.status == "fail"
+    assert "does not delegate to scripts/check.py" in check.detail
 
 
 def test_readme_usage_rejects_enterprise_contact_line(tmp_path: Path) -> None:

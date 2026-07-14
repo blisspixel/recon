@@ -139,13 +139,22 @@ def _candidate_paths(client: Client, platform_name: str | None) -> list[tuple[Sc
     return paths
 
 
-def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
-    """Sanity-check the launch command/args/autoApprove of a found stanza."""
-    checks: list[ClientCheck] = []
+def _is_safe_launcher_text(value: str) -> bool:
+    """Return whether launcher text contains no terminal or bidi controls."""
+    return strip_control_chars(value, max_len=len(value)) == value
 
-    command = block.get("command")
-    if not isinstance(command, str) or not command:
-        checks.append(ClientCheck("command", "fail", "missing or empty: the client cannot launch the server"))
+
+def _launcher_command_checks(command: object) -> list[ClientCheck]:
+    """Assess the configured executable without probing untrusted paths."""
+    checks: list[ClientCheck] = []
+    if not isinstance(command, str) or not command.strip() or not _is_safe_launcher_text(command):
+        checks.append(
+            ClientCheck(
+                "command",
+                "fail",
+                "missing, blank, or contains control characters: the client cannot safely launch the server",
+            )
+        )
     elif command == "recon":
         if shutil.which("recon"):
             checks.append(ClientCheck("command", "ok", "recon (on PATH)"))
@@ -195,8 +204,17 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
                 ClientCheck("command", "warn", f"unrecognized command '{safe_command}'; verify it launches recon mcp")
             )
 
-    args = block.get("args")
-    if isinstance(args, list) and args:
+    return checks
+
+
+def _launcher_args_checks(command: object, args: object) -> list[ClientCheck]:
+    """Validate launcher arguments and flag the cwd-sensitive module form."""
+    checks: list[ClientCheck] = []
+    if (
+        isinstance(args, list)
+        and args
+        and all(isinstance(arg, str) and bool(arg.strip()) and _is_safe_launcher_text(arg) for arg in args)
+    ):
         checks.append(ClientCheck("args", "ok", json.dumps(args)))
         if _uses_unisolated_python_module_launcher(command, args):
             checks.append(
@@ -208,36 +226,52 @@ def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
                 )
             )
     else:
-        checks.append(ClientCheck("args", "warn", 'missing or empty; expected something like ["mcp"]'))
-
-    if "autoApprove" not in block:
         checks.append(
+            ClientCheck(
+                "args",
+                "fail",
+                'missing, blank, non-string, or contains control characters; expected something like ["mcp"]',
+            )
+        )
+    return checks
+
+
+def _auto_approve_checks(block: dict[str, object]) -> list[ClientCheck]:
+    """Describe optional client-side auto-approval without treating it as server policy."""
+    if "autoApprove" not in block:
+        return [
             ClientCheck(
                 "autoApprove",
                 "info",
                 "not configured in this stanza; the client's permission policy applies",
             )
+        ]
+    auto = block.get("autoApprove")
+    if isinstance(auto, list) and auto:
+        return [
+            ClientCheck(
+                "autoApprove",
+                "info",
+                f"requests auto-approval for {len(auto)} tool(s) if supported: {json.dumps(auto)}",
+            )
+        ]
+    return [
+        ClientCheck(
+            "autoApprove",
+            "info",
+            "empty; the client's permission policy remains authoritative",
         )
-    else:
-        auto = block.get("autoApprove")
-        if isinstance(auto, list) and auto:
-            checks.append(
-                ClientCheck(
-                    "autoApprove",
-                    "info",
-                    f"requests auto-approval for {len(auto)} tool(s) if supported: {json.dumps(auto)}",
-                )
-            )
-        else:
-            checks.append(
-                ClientCheck(
-                    "autoApprove",
-                    "info",
-                    "empty; the client's permission policy remains authoritative",
-                )
-            )
+    ]
 
-    return checks
+
+def _command_checks(block: dict[str, object]) -> list[ClientCheck]:
+    """Sanity-check the launch command, arguments, and auto-approval fields."""
+    command = block.get("command")
+    return [
+        *_launcher_command_checks(command),
+        *_launcher_args_checks(command, block.get("args")),
+        *_auto_approve_checks(block),
+    ]
 
 
 def _uses_unisolated_python_module_launcher(command: object, args: list[object]) -> bool:

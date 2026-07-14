@@ -181,31 +181,32 @@ async def lookup_tenant(
         if not rate_limit_try_acquire(validated):
             cached = cache_get(validated)
             if cached is None:
-                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+                return f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
             info, results = cached
         else:
             try:
                 info, results = await server_app.resolve_tenant(validated)
             except ReconLookupError as exc:
                 elapsed = time.monotonic() - start_time
+                event = "no_data" if exc.error_type == "no_data" else "lookup_failed"
                 log_structured(
                     logging.INFO,
-                    "no_data",
+                    event,
                     request_id=request_id,
-                    domain=domain,
+                    domain=validated,
                     elapsed_s=round(elapsed, 2),
                     error=exc.message,
                 )
-                return f"No information found for {domain}"
+                return server_app.lookup_failure_message(validated, exc)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
                 logger.exception(
                     "Unexpected error looking up %s (request_id=%s)",
-                    domain,
+                    validated,
                     request_id,
                 )
-                return server_app.internal_lookup_error(domain, request_id, exc)
+                return server_app.internal_lookup_error(validated, request_id, exc)
 
             cache_set(validated, info, results)
 
@@ -214,7 +215,7 @@ async def lookup_tenant(
         logging.INFO,
         "resolved",
         request_id=request_id,
-        domain=domain,
+        domain=validated,
         display_name=info.display_name,
         services=len(info.services),
         elapsed_s=round(elapsed, 2),

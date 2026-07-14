@@ -244,8 +244,8 @@ of this milestone.
 choice is to fix the one we know is broken, ship, and let the
 next corpus run tell us which node is broken next. Sequential
 model improvement. The rigorous-but-open-ended alternative - audit
-every node for definitional clarity in one pass - is in
-[Backlog (after v2.0)](#backlog-after-v20) below.
+every node for definitional clarity in one pass - was deferred beyond this
+historical plan.
 
 </details>
 
@@ -883,8 +883,8 @@ _Additive feature candidates (BIMI VMC clustering, MCP delta helper,
 self-audit batch mode, non-MCP graph exports, per-node
 `n_eff_multiplier`, corpus-driven Hypothesis tests, Hawkes-kernel
 CT burst classification, LPA fallback for `infra_graph`, explicit
-ignorance mass, noisy-OR / noisy-AND CPT gates) are now in the
-[Backlog (after v2.0)](#backlog-after-v20) section. They were
+ignorance mass, noisy-OR / noisy-AND CPT gates) were deferred beyond this
+historical plan. They were
 previously framed as "optional v1.9.x feature additions"; under
 the v1.9.4 → v2.0 linear sequence, they no longer claim slots in
 the path-to-v2.0 plan. Any of them may be promoted into a

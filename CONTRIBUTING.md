@@ -72,13 +72,17 @@ uv run python scripts/check.py         # canonical local gate (--fast skips test
 ```
 
 `scripts/check.py` runs the canonical local gate: Ruff, Pyright over
-`src/recon_tool/ tests/`, the coverage-gated test run, catalog and label checks,
-and file-size checks. A local pass is required before every push, but it does
-not replace remote CI. GitHub Actions also exercises the supported OS and
-Python matrix, the package-index MCP matrix, actionlint, `pip-audit`, hostile
-fuzzing, and reproducible-build checks. The complete local test stage uses at
-most four file-grouped workers and combines branch coverage; focused tests
-remain serial by default.
+`src/recon_tool/ tests/`, the coverage-gated test run, catalog and generated
+artifact checks, validation and text hygiene, tracked Markdown link and local
+heading-anchor validation, workflow and dependency-export guards, interface and
+paper checks, and file-size/complexity ratchets. A local pass is required before
+every push, but it does not replace remote CI. GitHub Actions also exercises the
+supported OS and Python matrix, the package-index MCP matrix, actionlint,
+`pip-audit`, hostile fuzzing, and reproducible-build checks. CI supplies the
+complete pushed or pull-request revision range to the text-hygiene stage so an
+earlier prohibited line cannot be hidden by a later cleanup commit. The complete
+local test stage uses at most four file-grouped workers and combines branch
+coverage; focused tests remain serial by default.
 The standards this project holds itself (and any AI working in it) to are in
 [docs/engineering-practices.md](docs/engineering-practices.md); load-bearing
 design decisions are in [docs/adr/](docs/adr/).

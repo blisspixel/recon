@@ -174,6 +174,28 @@ class TestCheckClient:
         assert not report.ok
         assert _statuses(report)["command"] == "fail"
 
+    def test_blank_command_fails(self, home: Path) -> None:
+        _write(home / ".claude.json", {"mcpServers": {"recon": {"command": "   ", "args": ["mcp"]}}})
+        report = check_client("claude-code", platform_name="linux")
+        assert not report.ok
+        assert _statuses(report)["command"] == "fail"
+
+    def test_nul_command_fails(self, home: Path) -> None:
+        _write(home / ".claude.json", {"mcpServers": {"recon": {"command": "recon\x00", "args": ["mcp"]}}})
+        report = check_client("claude-code", platform_name="linux")
+        assert not report.ok
+        assert _statuses(report)["command"] == "fail"
+
+    @pytest.mark.parametrize(
+        "args",
+        [[], [""], ["   "], ["mcp", ""], ["mcp\x00"], [1], [None], [{"not": "argv"}], ["mcp", 1]],
+    )
+    def test_non_string_args_fail(self, home: Path, recon_on_path: None, args: list[object]) -> None:
+        _write(home / ".claude.json", {"mcpServers": {"recon": {"command": "recon", "args": args}}})
+        report = check_client("claude-code", platform_name="linux")
+        assert not report.ok
+        assert _statuses(report)["args"] == "fail"
+
     def test_python_module_command_warns_about_launcher_isolation(self, home: Path, recon_off_path: None) -> None:
         _write(
             home / ".claude.json",
@@ -347,19 +369,14 @@ class TestRegressionFixes:
         assert any("also has recon" in c.detail and "first wins" in c.detail for c in config_lines)
 
 
-def test_command_check_strips_terminal_control_bytes() -> None:
-    """A workspace config command with ANSI/OSC bytes is sanitized before display.
-
-    rich.markup.escape does not remove terminal control bytes, so an untrusted
-    workspace MCP config could otherwise inject ANSI / OSC sequences into the
-    operator's terminal through `recon doctor --client=<name>`. The command value
-    is stripped of control characters before it becomes a ClientCheck detail.
-    """
+def test_command_check_rejects_terminal_control_bytes() -> None:
+    """A workspace command with ANSI or OSC bytes is rejected without echoing it."""
     malicious = "\x1b[31mEVIL\x1b]52;c;cGF3bnVk\x07tail"
     checks = client_doctor._command_checks({"command": malicious})  # pyright: ignore[reportPrivateUsage]
     command_checks = [c for c in checks if c.name == "command"]
     assert command_checks, "expected a command check"
     for check in command_checks:
+        assert check.status == "fail"
         assert "\x1b" not in check.detail
         assert "\x07" not in check.detail
-        assert "EVIL" in check.detail  # printable content preserved
+        assert "control characters" in check.detail

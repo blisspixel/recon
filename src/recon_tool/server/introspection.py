@@ -547,7 +547,7 @@ async def explain_signal(
 
     evaluation: SignalEvaluationResult = {
         **definition,
-        "domain": domain,
+        "domain": info.queried_domain,
         "fired": fired,
         "matched_slugs": matched_slugs,
         "matched_evidence": evidence_list,
@@ -709,7 +709,7 @@ async def discover_fingerprint_candidates(
         if not rate_limit_try_acquire(validated):
             cached = cache_get(validated)
             if cached is None:
-                raise ToolError(f"Rate limited: {domain} was looked up recently. Try again in a few seconds.")
+                raise ToolError(f"Rate limited: {validated} was looked up recently. Try again in a few seconds.")
             info, _results = cached
         else:
             try:
@@ -721,10 +721,10 @@ async def discover_fingerprint_candidates(
             except Exception as exc:
                 logger.exception(
                     "Unexpected error in discover for %s (request_id=%s)",
-                    domain,
+                    validated,
                     request_id,
                 )
-                raise ToolError(server_app.internal_lookup_error(domain, request_id, exc, action="mining")) from exc
+                raise ToolError(server_app.internal_lookup_error(validated, request_id, exc, action="mining")) from exc
 
             # Only populate the shared cache with a full (skip_ct=False)
             # resolution. A skip_ct result is CT-degraded (no cert_summary,
@@ -749,7 +749,7 @@ async def discover_fingerprint_candidates(
         logging.INFO,
         "discover_completed",
         request_id=request_id,
-        domain=domain,
+        domain=validated,
         unclassified_total=len(unclassified),
         candidate_count=len(candidates),
         elapsed_s=round(elapsed, 2),
@@ -921,7 +921,7 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
         if not rate_limit_try_acquire(validated):
             cached = cache_get(validated)
             if cached is None:
-                return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+                return f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
             info, _results = cached
         else:
             try:
@@ -933,10 +933,10 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
             except Exception as exc:
                 logger.exception(
                     "Unexpected error in explain_dag for %s (request_id=%s)",
-                    domain,
+                    validated,
                     request_id,
                 )
-                return server_app.internal_lookup_error(domain, request_id, exc, action="rendering DAG for")
+                return server_app.internal_lookup_error(validated, request_id, exc, action="rendering DAG for")
             cache_set(validated, info, list(results))
 
     network = load_network()

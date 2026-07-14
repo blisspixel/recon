@@ -117,7 +117,7 @@ class TestGetPosteriors:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_recon_lookup_error(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(domain="x.com", message="No data", error_type="all_sources_failed")
-        with pytest.raises(ToolError, match="No information found"):
+        with pytest.raises(ToolError, match="Lookup failed"):
             await get_posteriors("x.com")
 
     @pytest.mark.asyncio
@@ -176,12 +176,78 @@ class TestExplainDag:
     async def test_validation_failure(self) -> None:
         assert (await explain_dag("not a domain")).startswith("Error:")
 
+    @pytest.mark.asyncio
+    async def test_rate_limit_message_uses_only_normalized_domain(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        import recon_tool.server.introspection as server_introspection
+
+        acquired: list[str] = []
+
+        def deny(domain: str) -> bool:
+            acquired.append(domain)
+            return False
+
+        monkeypatch.setattr(server_introspection, "rate_limit_try_acquire", deny)
+        raw = "https://www.northwindtraders.com/private/path?token=secret"
+
+        result = await explain_dag(raw)
+
+        assert acquired == ["northwindtraders.com"]
+        assert "Rate limited: northwindtraders.com" in result
+        assert raw not in result
+        assert "/private/path" not in result
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_internal_error_and_log_use_only_normalized_domain(
+        self,
+        mock_resolve: AsyncMock,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        mock_resolve.side_effect = RuntimeError("boom")
+        raw = "https://www.northwindtraders.com/private/path?token=secret"
+
+        with caplog.at_level("ERROR", logger="recon"):
+            result = await explain_dag(raw)
+
+        assert "Error rendering DAG for northwindtraders.com" in result
+        assert raw not in result
+        assert "/private/path" not in result
+        assert "explain_dag for northwindtraders.com" in caplog.text
+        assert raw not in caplog.text
+        assert "/private/path" not in caplog.text
+
 
 class TestClusterVerificationTokens:
     @pytest.mark.asyncio
     async def test_empty_input_errors(self) -> None:
         with pytest.raises(ToolError, match="At least one domain"):
             await cluster_verification_tokens([])
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_error_entry_uses_only_normalized_domain(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.side_effect = ReconLookupError(
+            domain="contoso.com",
+            message="No data",
+            error_type="all_sources_failed",
+        )
+        raw = "https://www.contoso.com/private/path?token=secret"
+
+        data = await cluster_verification_tokens([raw])
+
+        assert data["errors"][0]["domain"] == "contoso.com"
+        assert "contoso.com" in data["errors"][0]["error"]
+        assert raw not in str(data["errors"])
+        assert "/private/path" not in str(data["errors"])
+
+    @pytest.mark.asyncio
+    async def test_invalid_domain_error_contract_is_preserved(self) -> None:
+        raw = "not a valid domain"
+
+        data = await cluster_verification_tokens([raw])
+
+        assert data["errors"][0]["domain"] == raw
+        assert data["errors"][0]["error"].startswith("Error:")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

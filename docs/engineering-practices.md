@@ -16,11 +16,14 @@ last six months unless the repo's automation tells it.
 
 ## 1. The one command before you push
 
-`uv run python scripts/check.py` runs the blocking local code gate: ruff,
-pyright over `src/recon_tool/ tests/` (the same scope CI uses), the
-coverage-gated test run, and the catalog, label, and file-size checks. Green
-here is the required local baseline for CI. Use
-`--fast` to skip the test run for rapid iteration; never push on `--fast` alone.
+`uv run python scripts/check.py` runs the blocking local code gate: Ruff,
+Pyright over `src/recon_tool/ tests/` (the same scope CI uses), the
+coverage-gated test run, fingerprint and generated-artifact checks, validation
+and added-line text hygiene, tracked Markdown link and local heading-anchor
+validation, workflow and dependency-export guards, interface and paper checks,
+and size/complexity ratchets. Green here is the required local baseline for CI.
+Use `--fast` to skip the test run for rapid iteration; never push on `--fast`
+alone.
 The package-index-dependent MCP SDK matrix is intentionally separate:
 `scripts/check_mcp_compatibility.py` creates isolated exact-pin environments,
 and the `mcp-compatibility` CI job blocks regressions on both supported stable
@@ -31,6 +34,9 @@ checks every `origin/main..HEAD` commit message for attribution markers, em
 dashes, and pictographic symbols.
 `scripts/check_text_hygiene.py` checks added diff lines for the same text
 family, so the rule is enforced on content changes as well as commit messages.
+CI and the release workflow pass the complete relevant Git revision range into
+that stage, preventing a later commit from concealing a prohibited line added
+earlier in the same push or release range.
 
 This exists because local checks that were *narrower* than CI (pyright on
 `recon_tool/` only) let test-file type errors reach a red CI twice. Parity is the
@@ -164,9 +170,15 @@ stripped at every source-derived sink.
 
 ## 7. Releases
 
-`scripts/release.py` enforces the pre-release checklist; the tagged build
-publishes via Trusted Publishing. The `pipx`/`uv`/`pip` paths and
-`recon update` need no per-release action because they resolve PyPI's latest.
+`scripts/release.py` requires a clean `main` exactly matching freshly fetched
+`origin/main`, synchronizes all code-owned version surfaces, runs the complete
+gate and release readiness on the prospective tree, and creates a local commit
+and tag inside a rollback boundary. Its final push sends `main` and the exact
+tag atomically. The tagged workflow independently validates tag/source/main
+agreement, reruns the complete gate, and requires provenance plus a valid SBOM
+before either publication channel. PyPI publishing uses Trusted Publishing.
+The `pipx`/`uv`/`pip` paths and `recon update` need no per-release action because
+they resolve PyPI's latest.
 
 ## 8. Keeping deps and standards current
 

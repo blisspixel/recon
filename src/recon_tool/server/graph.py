@@ -214,7 +214,7 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
     # same per-domain limiter the single-domain tools use. Retain the cooldown
     # after every started attempt, including failures and cancellation.
     if not rate_limit_try_acquire(validated):
-        return f"Rate limited: {domain} was looked up recently. Try again in a few seconds."
+        return f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
 
     try:
         from recon_tool.chain import chain_resolve
@@ -226,17 +226,17 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
     except Exception as exc:
         logger.exception(
             "Unexpected error in chain lookup for %s (request_id=%s)",
-            domain,
+            validated,
             request_id,
         )
-        return server_app.internal_lookup_error(domain, request_id, exc)
+        return server_app.internal_lookup_error(validated, request_id, exc)
 
     elapsed = time.monotonic() - start_time
     log_structured(
         logging.INFO,
         "chain_resolved",
         request_id=request_id,
-        domain=domain,
+        domain=validated,
         total_domains=len(report.results),
         max_depth=report.max_depth_reached,
         truncated=report.truncated,
@@ -322,9 +322,13 @@ async def cluster_verification_tokens(
     errors: list[DomainToolError] = []
 
     for raw in domains:
-        resolved = await server_app.resolve_or_cache(raw)
+        try:
+            normalized = validate_domain(raw)
+        except ValueError:
+            normalized = raw
+        resolved = await server_app.resolve_or_cache(normalized)
         if isinstance(resolved, str):
-            errors.append({"domain": raw, "error": resolved})
+            errors.append({"domain": normalized, "error": resolved})
             continue
         info, _results = resolved
         from recon_tool.collection_view import collection_observable_info
