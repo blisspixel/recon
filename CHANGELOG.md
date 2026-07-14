@@ -12,6 +12,20 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.6.2] - 2026-07-13
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, JSON, MCP, cache, or public import
+changes.
+
+### Fixed
+
+- Made repository documentation links in the package description resolve from
+  PyPI instead of becoming project-relative 404 responses.
+- Synchronized the current release and remaining MCP v2 adoption gate across
+  the roadmap and readiness documents.
+
 ## [2.6.1] - 2026-07-13
 
 ### Tool Surface Changes
