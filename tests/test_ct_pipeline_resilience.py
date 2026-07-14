@@ -321,6 +321,7 @@ class TestAdaptiveRateLimiterPersistence:
         (state_dir / "stale.json").write_text(
             _json.dumps(
                 {
+                    "_state_version": 1,
                     "name": "stale",
                     "saved_at": old.isoformat().replace("+00:00", "Z"),
                     "interval_s": 300.0,

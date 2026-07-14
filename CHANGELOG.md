@@ -12,6 +12,40 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.6.1] - 2026-07-13
+
+### Tool Surface Changes
+
+Tool surface changes: added `--exact` to `recon cache show` and
+`recon cache clear` so operators can inspect or remove the literal-host cache
+entries created by `recon <host> --exact`. No MCP tools, annotations, defaults,
+or public JSON schemas changed.
+
+### Changed
+
+- Bound result-cache payloads and versioned CT-cache payloads to their exact
+  validated cache keys. Existing unbound CT entries are intentionally treated
+  as misses and repopulate on demand.
+- Versioned persisted adaptive-rate-limiter state and bound it to the provider
+  name, with strict finite numeric ranges and complete constructor invariant
+  validation.
+
+### Fixed
+
+- Isolated literal-host cache entries from registrable-apex entries so an
+  exact lookup cannot reuse or overwrite observations collected for another
+  host.
+- Replaced path-level cache reads with descriptor-bound, size-limited JSON
+  admission that rejects symbolic links, path replacement, concurrent file
+  mutation, expired entries before decoding, excessive nesting, and materially
+  future modification times.
+- Replaced the rate limiter's predictable temporary state filename with a
+  random exclusive file and atomic replacement, and made corrupt, non-finite,
+  cross-provider, or arbitrarily large numeric state degrade to fresh defaults.
+- Bounded and depth-checked PyPI update metadata, and made truncated HTTP
+  responses return an unavailable update result instead of escaping the
+  command's failure boundary.
+
 ## [2.6.0] - 2026-07-13
 
 ### Tool Surface Changes

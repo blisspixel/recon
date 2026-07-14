@@ -17,7 +17,6 @@ import json
 import logging
 import os
 import tempfile
-import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -30,6 +29,7 @@ from recon_tool.cache import (
     infrastructure_clusters_from_cache_dict,
     infrastructure_clusters_to_cache_dict,
 )
+from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.models import CertSummary, InfrastructureClusterReport
 from recon_tool.validator import validate_domain
 
@@ -56,10 +56,10 @@ CT_CACHE_TTL: int = 2592000  # 30 days in seconds.
 # across the build-up runs without forcing re-fetch when nothing
 # meaningful about a domain's cert posture is likely to have changed.
 
-# A CT cache entry is small (up to ~100 subdomains plus a cert summary). Skip a
-# file larger than this before read_text/json.loads so a corrupt or hostile
-# oversized file is not read whole into memory.
+# A CT cache entry is small (up to ~100 subdomains plus a cert summary). The
+# descriptor loader rejects files above this bound before reading their body.
 _MAX_CT_CACHE_FILE_BYTES = 5 * 1024 * 1024
+_CT_CACHE_VERSION = 1
 
 
 @dataclass(frozen=True)
@@ -96,23 +96,25 @@ def ct_cache_dir() -> Path:
 def _safe_path(domain: str) -> Path:
     """Resolve a cache file path, rejecting path traversal attempts.
 
-    The prior ``str(path).startswith(str(d.resolve()))`` check was
-    path-prefix rather than path-aware: a crafted domain like
-    ``../ct-cache-malice/evil`` could resolve to a sibling directory
-    whose path string still started with the ``ct-cache`` prefix and
-    slip through. ``Path.is_relative_to`` is the correct containment
-    check — it compares path components, so siblings don't pass.
-    Domain validation rejects malformed and traversal-shaped input
-    before resolution; the path-aware containment check stays in place
-    as defense in depth.
+    Domain validation rejects malformed and traversal-shaped input before path
+    construction. ``Path.is_relative_to`` compares path components, so sibling
+    directories cannot pass a string-prefix check. The final component remains
+    unresolved so the descriptor loader can reject a symbolic link rather than
+    silently following it.
     """
+    d = ct_cache_dir().resolve()
+    return _path_in(d, domain)
+
+
+def _path_in(directory: Path, domain: str) -> Path:
+    """Return a validated CT cache path in one already-resolved directory."""
     try:
-        normalized = validate_domain(domain)
+        normalized = validate_domain(domain, apex=False)
     except ValueError as exc:
         msg = f"Invalid domain for cache path: {domain}"
         raise ValueError(msg) from exc
-    d = ct_cache_dir().resolve()
-    path = (d / f"{normalized}.json").resolve()
+    d = directory
+    path = d / f"{normalized}.json"
     try:
         if not path.is_relative_to(d):
             msg = f"Invalid domain for cache path: {domain}"
@@ -126,21 +128,16 @@ def _safe_path(domain: str) -> Path:
 def ct_cache_get(domain: str, ttl: int = CT_CACHE_TTL) -> CTCacheEntry | None:
     """Read cached CT data for domain. Returns None if missing/stale/corrupt."""
     try:
+        expected_domain = validate_domain(domain, apex=False)
         path = _safe_path(domain)
-        if not path.exists():
-            return None
-        stat = path.stat()
-        if stat.st_size > _MAX_CT_CACHE_FILE_BYTES:
-            logger.debug("CT cache file for %s exceeds %d bytes; treating as a miss", domain, _MAX_CT_CACHE_FILE_BYTES)
-            return None
-        age_seconds = time.time() - stat.st_mtime
-        if age_seconds > ttl:
-            logger.debug("CT cache stale for %s (age %.0f s > %d s)", domain, age_seconds, ttl)
-            return None
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data, _file_stat, age_seconds = load_bounded_json_file(
+            path,
+            maximum_bytes=_MAX_CT_CACHE_FILE_BYTES,
+            maximum_age_seconds=ttl,
+        )
         if not isinstance(data, dict):
             raise ValueError("CT cache payload must be a JSON object")
-        return _entry_from_dict(data, age_seconds)
+        return _entry_from_dict(data, age_seconds, expected_domain)
     except (OSError, OverflowError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
         # RecursionError (a deeply-nested poisoned file) escapes the other
         # entries; degrade to a clean miss rather than crash the caller.
@@ -158,11 +155,18 @@ def ct_cache_put(
 ) -> None:
     """Write CT results to cache. Creates dir if needed. Logs on failure."""
     try:
+        normalized_domain = validate_domain(domain, apex=False)
         d = ct_cache_dir()
         d.mkdir(parents=True, exist_ok=True)
         d = d.resolve()
-        path = _safe_path(domain)
-        data = _entry_to_dict(subdomains, cert_summary, provider_used, infrastructure_clusters)
+        path = _path_in(d, domain)
+        data = _entry_to_dict(
+            normalized_domain,
+            subdomains,
+            cert_summary,
+            provider_used,
+            infrastructure_clusters,
+        )
         # Atomic write, matching cache.py: a concurrent ct_cache_get must never
         # read a half-written file, and a predictable "<domain>.json" target must
         # not be followed if it is a pre-planted symlink. mkstemp gives a random
@@ -215,25 +219,19 @@ def ct_cache_clear_all() -> int:
 def ct_cache_show(domain: str) -> CTCacheInfo | None:
     """Return metadata about a cached CT entry, or None if not cached."""
     try:
+        expected_domain = validate_domain(domain, apex=False)
         path = _safe_path(domain)
-        if not path.exists():
-            return None
-        stat = path.stat()
-        if stat.st_size > _MAX_CT_CACHE_FILE_BYTES:
-            logger.debug("CT cache file for %s exceeds %d bytes; treating as a miss", domain, _MAX_CT_CACHE_FILE_BYTES)
-            return None
-        age_seconds = time.time() - stat.st_mtime
-        data = json.loads(path.read_text(encoding="utf-8"))
+        data, file_stat, age_seconds = load_bounded_json_file(path, maximum_bytes=_MAX_CT_CACHE_FILE_BYTES)
         if not isinstance(data, dict):
             raise ValueError("CT cache payload must be a JSON object")
-        entry = _entry_from_dict(data, age_seconds)
+        entry = _entry_from_dict(data, age_seconds, expected_domain)
         return CTCacheInfo(
-            domain=domain,
+            domain=expected_domain,
             provider_used=entry.provider_used,
             subdomain_count=len(entry.subdomains),
             cached_at=entry.cached_at,
             age_days=int(age_seconds / 86400),
-            file_size_bytes=stat.st_size,
+            file_size_bytes=file_stat.st_size,
         )
     except (OSError, OverflowError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
         logger.debug("CT cache show failed for %s", domain, exc_info=True)
@@ -261,13 +259,16 @@ def ct_cache_list() -> list[CTCacheInfo]:
 
 
 def _entry_to_dict(
+    domain: str,
     subdomains: list[str],
     cert_summary: CertSummary | None,
     provider_used: str,
     infrastructure_clusters: InfrastructureClusterReport | None,
 ) -> dict[str, Any]:
     d: dict[str, Any] = {
+        "_cache_version": _CT_CACHE_VERSION,
         "cached_at": datetime.now(UTC).isoformat(),
+        "domain": domain,
         "provider_used": provider_used,
         "subdomains": subdomains,
     }
@@ -276,7 +277,9 @@ def _entry_to_dict(
     return d
 
 
-def _entry_from_dict(data: dict[str, Any], age_seconds: float) -> CTCacheEntry:
+def _entry_from_dict(data: dict[str, Any], age_seconds: float, expected_domain: str) -> CTCacheEntry:
+    if data.get("_cache_version") != _CT_CACHE_VERSION or data.get("domain") != expected_domain:
+        raise ValueError("CT cache payload domain or version does not match its cache key")
     provider_used = data.get("provider_used", "unknown")
     cached_at = data.get("cached_at", "unknown")
     if not isinstance(provider_used, str) or not isinstance(cached_at, str):

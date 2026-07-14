@@ -26,7 +26,7 @@ certificate requests are explicit opt-in direct probes.
 |---|---|
 | User-supplied domain strings | `src/recon_tool/validator.py` - regex + length cap + scheme stripping |
 | Raw DNS responses (TXT values, MX hostnames, CNAME targets) | Length caps + structured parsing in `src/recon_tool/sources/dns.py` |
-| Environment variables (`RECON_CONFIG_DIR`) | Treated as arbitrary user input - CT and result cache path helpers validate resolved paths stay inside their cache dirs |
+| Environment variables (`RECON_CONFIG_DIR`) | Treated as arbitrary user input. Cache operations bind one resolved parent directory, validate lexical child paths, and use descriptor identity checks for reads. |
 | Custom YAML at `~/.recon/fingerprints.yaml` and friends | Validated by `_validate_fingerprint`, `_validate_signal`, `_validate_profile` - regex compilation + ReDoS heuristic + required-field checks. Additive-only (cannot override built-ins). |
 | CT provider response bodies | Size-capped, filtered for wildcards and malformed entries in `sources/cert_providers.py` |
 | Malicious HTTP redirect targets / private-IP redirects | `src/recon_tool/http.py` `_SSRFSafeTransport` validates every hop |
@@ -137,11 +137,22 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 **Surface:** `recon cache show ../../etc/passwd`, `recon cache clear ../../settings`, or a crafted `RECON_CONFIG_DIR` could cause a cache layer to read, write, or delete outside its intended directory.
 
-**Mitigation:** [`src/recon_tool/ct_cache.py`](../src/recon_tool/ct_cache.py) `_safe_path` and [`src/recon_tool/cache.py`](../src/recon_tool/cache.py) `_safe_cache_path`:
-- Resolves the target path
-- Asserts the resolved path starts with the resolved cache directory
-- Rejects traversal separators and malformed domains before filesystem access
-- Rejects or ignores invalid paths on violation (tests: `tests/test_ct_cache.py`, `tests/test_cache_roundtrip.py`, `tests/test_cache_cli.py`)
+**Mitigation:** [`src/recon_tool/ct_cache.py`](../src/recon_tool/ct_cache.py),
+[`src/recon_tool/cache.py`](../src/recon_tool/cache.py), and the shared bounded
+JSON loader:
+
+- Resolve and bind one cache parent directory for each write operation.
+- Validate the domain without reducing literal-host keys and require the
+  lexical child path to remain inside that parent.
+- Reject stable symbolic links on every supported platform, use no-follow open
+  semantics where the operating system provides them, and verify the opened
+  regular file still has the path's identity.
+- Recheck size and metadata after the read, then reject mutation before JSON
+  admission.
+- Bind decoded payload identity to the expected domain and schema version.
+- Reject or ignore invalid paths and entries without raising to the caller
+  (tests: `tests/test_ct_cache.py`, `tests/test_cache_roundtrip.py`,
+  `tests/test_cache_cli.py`, `tests/test_json_limits.py`).
 
 ### Malicious CT provider responses
 

@@ -20,6 +20,7 @@ cache_app = typer.Typer(help="Manage the CT subdomain cache and TenantInfo resul
 @cache_app.command("show")
 def cache_show(
     domain: str = typer.Argument(None, help="Domain to inspect (omit to list all)"),
+    exact: bool = typer.Option(False, "--exact", help="Inspect the literal host cache key instead of its apex."),
 ) -> None:
     """Show CT cache state for a domain, or list all cached domains.
 
@@ -34,7 +35,7 @@ def cache_show(
 
     if domain:
         try:
-            validated = validate_domain(domain)
+            validated = validate_domain(domain, apex=not exact)
         except ValueError as exc:
             render_error(str(exc))
             raise typer.Exit(code=EXIT_VALIDATION) from None
@@ -77,6 +78,7 @@ def cache_clear(
     domain: str = typer.Argument(None, help="Domain to clear (omit with --all for everything)"),
     all_domains: bool = typer.Option(False, "--all", help="Clear all cached data"),
     force: bool = typer.Option(False, "--force", "-f", help="Skip the confirmation prompt for --all."),
+    exact: bool = typer.Option(False, "--exact", help="Clear the literal host cache key instead of its apex."),
 ) -> None:
     """Clear both CT subdomain cache and TenantInfo result cache.
 
@@ -116,7 +118,7 @@ def cache_clear(
         console.print(f"  Cleared {result_count} result cache entr{'ies' if result_count != 1 else 'y'}.")
     elif domain:
         try:
-            validated = validate_domain(domain)
+            validated = validate_domain(domain, apex=not exact)
         except ValueError as exc:
             render_error(str(exc))
             raise typer.Exit(code=EXIT_VALIDATION) from None

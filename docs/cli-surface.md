@@ -203,6 +203,7 @@ Summary: Clear both CT subdomain cache and TenantInfo result cache.
 | `domain` | argument | `domain` | no | text |  |  |
 | `all_domains` | option | `--all` | no | boolean | false |  |
 | `force` | option | `--force`, `-f` | no | boolean | false |  |
+| `exact` | option | `--exact` | no | boolean | false |  |
 
 <a id="recon-cache-show"></a>
 ## `recon cache show`
@@ -213,6 +214,7 @@ Summary: Show CT cache state for a domain, or list all cached domains.
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|
 | `domain` | argument | `domain` | no | text |  |  |
+| `exact` | option | `--exact` | no | boolean | false |  |
 
 <a id="recon-fingerprints-check"></a>
 ## `recon fingerprints check`
