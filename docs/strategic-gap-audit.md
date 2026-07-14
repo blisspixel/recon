@@ -61,7 +61,8 @@ not outrank product truthfulness or measured user value.
 
 ## Current Evidence
 
-- At the 2026-07-13 refresh, v2.5.8 was current on GitHub Releases and PyPI.
+- At the 2026-07-13 refresh, GitHub Releases and PyPI matched the repository's
+  synchronized release version.
   A later checkout must not describe a version as published until its local and
   remote release gates pass.
 - Local release readiness passed for the published source state.

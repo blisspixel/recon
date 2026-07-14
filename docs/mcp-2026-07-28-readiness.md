@@ -274,8 +274,8 @@ During the beta compatibility matrix, add or adjust tests for:
 - `docs/roadmap.md`: keep this readiness track listed under near-term
   hardening.
 - `docs/adr/0009-mcp-2026-readiness.md`: record why recon keeps stable v1 in
-  production until the candidate passes and preserves stdio as the supported
-  MCP surface.
+  production until the final specification and stable v2 SDK pass the full
+  gate, while preserving stdio as the supported MCP surface.
 - `CHANGELOG.md`: mention the compatibility result when code, dependency
   metadata, or user-facing behavior changes.
 

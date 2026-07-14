@@ -1860,6 +1860,7 @@ dependencies = [
 [package.dev-dependencies]
 dev = [
     { name = "hypothesis" },
+    { name = "markdown-it-py" },
     { name = "pip-audit" },
     { name = "pre-commit" },
     { name = "pyright" },
@@ -1891,6 +1892,7 @@ requires-dist = [
 [package.metadata.requires-dev]
 dev = [
     { name = "hypothesis", specifier = ">=6.0" },
+    { name = "markdown-it-py", specifier = ">=4.0,<5" },
     { name = "pip-audit", specifier = ">=2.7" },
     { name = "pre-commit", specifier = ">=3.0" },
     { name = "pyright", specifier = ">=1.1" },
