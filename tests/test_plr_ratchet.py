@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from scripts.check_plr_ratchet import MAX_COUNTS, find_regressions, parse_statistics
+from scripts.check_plr_ratchet import MAX_COUNTS, find_improvements, find_regressions, parse_statistics
 
 
 def test_parse_statistics_extracts_selected_plr_counts() -> None:
@@ -35,3 +35,10 @@ def test_find_regressions_reports_only_counts_above_ceiling() -> None:
     counts["PLR0913"] = MAX_COUNTS["PLR0913"] + 1
 
     assert find_regressions(counts) == {"PLR0913": (MAX_COUNTS["PLR0913"] + 1, MAX_COUNTS["PLR0913"])}
+
+
+def test_find_improvements_reports_stale_ceiling() -> None:
+    counts = dict(MAX_COUNTS)
+    counts["PLR0912"] = MAX_COUNTS["PLR0912"] - 1
+
+    assert find_improvements(counts) == {"PLR0912": (MAX_COUNTS["PLR0912"] - 1, MAX_COUNTS["PLR0912"])}

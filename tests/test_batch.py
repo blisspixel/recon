@@ -10,7 +10,7 @@ from typer.testing import CliRunner
 
 from recon_tool import bayesian
 from recon_tool.cli import app
-from recon_tool.cli.batch import _batch_apply_fusion
+from recon_tool.cli.batch import _batch_apply_fusion, _batch_map_ordered
 from recon_tool.models import (
     CandidateValue,
     ConfidenceLevel,
@@ -138,6 +138,19 @@ class TestBatchCommand:
         assert result.exit_code == 0
         result = runner.invoke(app, ["batch", str(domain_file), "--json", "-c", "100"])
         assert result.exit_code == 0
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_non_streaming_batch_routes_through_ordered_map(self, mock_resolve, tmp_path):
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("contoso.com\ncontoso.com\nexample.com\n")
+
+        with patch("recon_tool.cli.batch._batch_map_ordered", wraps=_batch_map_ordered) as ordered_map:
+            result = runner.invoke(app, ["batch", str(domain_file), "--json", "-c", "3"])
+
+        assert result.exit_code == 0
+        assert ordered_map.await_args.args[0] == ["contoso.com", "example.com"]
+        assert ordered_map.await_args.kwargs["max_pending"] == 3
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_timeout_passed_to_resolver(self, mock_resolve, tmp_path):

@@ -15,6 +15,15 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from recon_tool.cache_paths import (
+    resolve_cache_directory,
+)
+from recon_tool.cache_paths import (
+    resolve_result_cache_path as _safe_cache_path,
+)
+from recon_tool.cache_paths import (
+    validated_cache_path as _cache_path_in,
+)
 from recon_tool.cache_values import cache_bool as _cache_bool
 from recon_tool.cache_values import cache_count as _cache_count
 from recon_tool.cache_values import cache_float as _cache_float
@@ -122,11 +131,10 @@ def cache_put(domain: str, info: TenantInfo) -> None:
         expected_domain = validate_domain(domain, apex=False)
         if info.queried_domain != expected_domain:
             raise ValueError("Cache payload domain does not match its cache key")
-        d = cache_dir()
-        d.mkdir(parents=True, exist_ok=True)
-        # Resolve once after mkdir so the temporary and final paths stay bound
-        # to the same directory even if configuration changes concurrently.
-        d = d.resolve()
+        d = resolve_cache_directory(create=True)
+        if d is None:
+            logger.debug("Cache write rejected redirected cache directory")
+            return
         path = _cache_path_in(d, domain)
         if path is None:
             logger.debug("Cache write rejected invalid domain: %r", domain)
@@ -148,40 +156,6 @@ def cache_put(domain: str, info: TenantInfo) -> None:
             raise
     except (OSError, TypeError, ValueError, json.JSONDecodeError):
         logger.debug("Cache write failed for %s", domain, exc_info=True)
-
-
-def _safe_cache_path(domain: str) -> Path | None:
-    """Resolve a cache file path for ``domain``, rejecting traversal.
-
-    Returns None (rather than raising) when the domain is malformed or
-    would escape the cache directory. Callers treat None as "no entry
-    to operate on"; this keeps ``cache_clear("../../etc/passwd")``
-    from deleting files outside ``~/.recon/cache/``. Domain validation
-    preserves the literal-host cache key; the path-aware containment check is
-    retained as defense in depth so sibling directories sharing the
-    cache-dir prefix cannot be reached via a crafted traversal string.
-    """
-    try:
-        d = cache_dir().resolve()
-    except OSError:
-        return None
-    return _cache_path_in(d, domain)
-
-
-def _cache_path_in(directory: Path, domain: str) -> Path | None:
-    """Return a validated cache path within one already-resolved directory."""
-    try:
-        normalized = validate_domain(domain, apex=False)
-    except ValueError:
-        return None
-    d = directory
-    path = d / f"{normalized}.json"
-    try:
-        if not path.is_relative_to(d):
-            return None
-    except (ValueError, OSError):
-        return None
-    return path
 
 
 def cache_clear(domain: str) -> bool:
@@ -209,8 +183,8 @@ def cache_clear(domain: str) -> bool:
 def cache_clear_all() -> int:
     """Remove all cached TenantInfo files. Returns the count deleted."""
     try:
-        d = cache_dir()
-        if not d.exists():
+        d = resolve_cache_directory()
+        if d is None or not d.is_dir():
             return 0
         count = 0
         for path in d.glob("*.json"):

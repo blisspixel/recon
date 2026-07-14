@@ -144,15 +144,22 @@ JSON loader:
 - Resolve and bind one cache parent directory for each write operation.
 - Validate the domain without reducing literal-host keys and require the
   lexical child path to remain inside that parent.
-- Reject stable symbolic links on every supported platform, use no-follow open
-  semantics where the operating system provides them, and verify the opened
-  regular file still has the path's identity.
+- Reject stable symbolic links and Windows reparse-point cache directories,
+  use no-follow open semantics where the operating system provides them, and
+  verify the opened regular file still has the path's identity.
 - Recheck size and metadata after the read, then reject mutation before JSON
   admission.
 - Bind decoded payload identity to the expected domain and schema version.
 - Reject or ignore invalid paths and entries without raising to the caller
   (tests: `tests/test_ct_cache.py`, `tests/test_cache_roundtrip.py`,
   `tests/test_cache_cli.py`, `tests/test_json_limits.py`).
+
+**Boundary:** The cache is not a privilege boundary against another local actor
+who can replace directories inside the invoking user's configuration tree while
+an operation is in progress. Such an actor already controls that user's cache
+contents. Stable symlinks, junctions, reparse points, and self-referencing
+redirects are rejected; races by an actor with write access remain inside the
+documented local-user trust boundary.
 
 ### Malicious CT provider responses
 

@@ -256,15 +256,18 @@ class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
             raise httpx.ConnectError(f"SSRF blocked: request to non-public/internal IP {host}")
         response = await super().handle_async_request(request)
         if isinstance(response.stream, httpx.AsyncByteStream):
+            stream = response.stream
             encodings = {e.strip() for e in response.headers.get("content-encoding", "").lower().split(",")}
             compressing = encodings & _COMPRESSING_ENCODINGS
             if compressing:
                 # Server compressed despite our identity request. Decoding could
                 # be a decompression bomb (the byte cap counts compressed bytes),
-                # so refuse the body instead of buffering the decode.
+                # so release the original transport stream immediately and
+                # refuse the body instead of buffering the decode.
+                await stream.aclose()
                 response.stream = _RefusingStream(", ".join(sorted(compressing)))
             else:
-                response.stream = _MaxBytesStream(response.stream, _MAX_RESPONSE_BYTES)
+                response.stream = _MaxBytesStream(stream, _MAX_RESPONSE_BYTES)
         return response
 
 

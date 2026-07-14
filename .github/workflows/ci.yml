@@ -73,7 +73,8 @@ jobs:
         run: uv sync
 
       - name: Type check
-        run: uv run pyright src/recon_tool/ tests/
+        # pyproject.toml is the single source of truth for the checked scope.
+        run: uv run pyright
 
   mcp-compatibility:
     # Exercise the supported stable SDK and the exact v2 release candidate in
@@ -316,6 +317,11 @@ jobs:
         # allows past-tense prose discussion in roadmap and
         # migration docs.
         run: uv run python scripts/check_no_experimental_labels.py
+
+      - name: Enforce package interface layout
+        # Public CLI, formatter, MCP, and import boundaries must stay in their
+        # maintained modules rather than drifting back into facade god files.
+        run: uv run python scripts/check_interface_layout.py
 
       - name: Enforce the file-size ratchet (no god files)
         # New modules cap at 1000 lines; the oversized modules predating the

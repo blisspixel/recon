@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import tempfile
 from collections.abc import Iterator
 from datetime import datetime
@@ -23,6 +24,7 @@ import pytest
 from recon_tool.cache import (
     _CACHE_VERSION,
     DEFAULT_TTL,
+    _safe_cache_path,
     cache_clear,
     cache_clear_all,
     cache_dir,
@@ -39,6 +41,7 @@ from recon_tool.models import (
     MergeConflicts,
     TenantInfo,
 )
+from tests.cache_path_helpers import self_referencing_directory
 
 
 def _complete_info() -> TenantInfo:
@@ -320,12 +323,12 @@ class TestCacheDiskOperations:
         first = tmp_path / "first"
         second = tmp_path / "second"
         directories = iter((first, second))
-        monkeypatch.setattr("recon_tool.cache.cache_dir", lambda: next(directories))
+        monkeypatch.setattr("recon_tool.paths.cache_root", lambda: next(directories))
 
         cache_put("contoso.com", _complete_info())
 
-        assert (first / "contoso.com.json").exists()
-        assert not (second / "contoso.com.json").exists()
+        assert (first / "cache" / "contoso.com.json").exists()
+        assert not (second / "cache" / "contoso.com.json").exists()
 
     def test_get_missing_returns_none(self) -> None:
         assert cache_get("does-not-exist.com") is None
@@ -537,6 +540,57 @@ class TestCacheDiskOperations:
         assert not (d / "contoso.com.json").exists()
         assert keep_nested.exists()
         assert keep_text.exists()
+
+    def test_redirected_cache_directory_cannot_escape_configured_root(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        configured_root = tmp_path / "configured"
+        external = tmp_path / "external"
+        configured_root.mkdir()
+        external.mkdir()
+        redirected = configured_root / "cache"
+        if os.name == "nt":
+            command_processor = os.environ.get("COMSPEC", r"C:\Windows\System32\cmd.exe")
+            subprocess.run(  # noqa: S603 - controlled test-only paths create a local junction
+                [command_processor, "/d", "/c", "mklink", "/J", str(redirected), str(external)],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        else:
+            redirected.symlink_to(external, target_is_directory=True)
+
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(configured_root))
+        sentinel = external / "contoso.com.json"
+        original = b'{"outside": true}'
+        sentinel.write_bytes(original)
+
+        assert _safe_cache_path("contoso.com") is None
+        assert cache_get("contoso.com") is None
+        cache_put("contoso.com", _complete_info())
+        assert sentinel.read_bytes() == original
+        assert cache_clear("contoso.com") is False
+        assert cache_clear_all() == 0
+        assert sentinel.read_bytes() == original
+
+    def test_self_referencing_cache_directory_degrades_without_raising(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+        tmp_path: Path,
+    ) -> None:
+        configured_root = tmp_path / "configured-loop"
+        configured_root.mkdir()
+        redirected = configured_root / "cache"
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(configured_root))
+
+        with self_referencing_directory(redirected):
+            assert _safe_cache_path("contoso.com") is None
+            assert cache_get("contoso.com") is None
+            cache_put("contoso.com", _complete_info())
+            assert cache_clear("contoso.com") is False
+            assert cache_clear_all() == 0
 
 
 class TestCacheDirRespectsEnvVar:

@@ -17,7 +17,8 @@ last six months unless the repo's automation tells it.
 ## 1. The one command before you push
 
 `uv run python scripts/check.py` runs the blocking local code gate: Ruff,
-Pyright over `src/recon_tool/ tests/` (the same scope CI uses), the
+Pyright using the complete `pyproject.toml` include and exclude contract (the
+same configuration CI uses), the
 coverage-gated test run, fingerprint and generated-artifact checks, validation
 and added-line text hygiene, tracked Markdown link and local heading-anchor
 validation, workflow and dependency-export guards, interface and paper checks,

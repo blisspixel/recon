@@ -9,8 +9,9 @@ facade. Imports the shared cli helpers / formatter; never imports cli.py.
 from __future__ import annotations
 
 import asyncio
+from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
-from typing import Any, TextIO
+from typing import Any, TextIO, TypeVar, cast
 
 import typer
 from rich.markup import escape
@@ -40,6 +41,9 @@ _MAX_BATCH_LINE_BYTES = 1024
 
 
 _MAX_BATCH_FILE_BYTES = 10 * 1024 * 1024
+
+_T = TypeVar("_T")
+_R = TypeVar("_R")
 
 
 def read_batch_domains(stream: TextIO) -> list[str]:
@@ -496,6 +500,41 @@ def batch_emit_summary(
         console.print(render_cohort_summary(document))
 
 
+async def _batch_map_ordered(
+    items: Sequence[_T],
+    process_one: Callable[[_T], Awaitable[_R]],
+    *,
+    max_pending: int,
+) -> list[_R]:
+    """Process items with a bounded worker pool and restore input order."""
+    if max_pending < 1:
+        raise ValueError("max_pending must be at least 1")
+
+    results: list[_R | None] = [None] * len(items)
+    next_index = 0
+
+    async def worker() -> None:
+        nonlocal next_index
+        while next_index < len(items):
+            index = next_index
+            next_index += 1
+            results[index] = await process_one(items[index])
+
+    workers: list[asyncio.Task[None]] = []
+    try:
+        for _ in range(min(max_pending, len(items))):
+            workers.append(asyncio.create_task(worker()))
+        await asyncio.gather(*workers)
+    finally:
+        for worker_task in workers:
+            if not worker_task.done():
+                worker_task.cancel()
+        if workers:
+            await asyncio.gather(*workers, return_exceptions=True)
+
+    return cast(list[_R], results)
+
+
 async def _batch_emit_ndjson(
     domain_list: list[str],
     process_one: Any,
@@ -850,8 +889,8 @@ async def batch(
             fusion_configuration_error=fusion_configuration_error,
         )
 
-    # Gather all results concurrently, then output in input-file order.
-    # This prevents interleaved output from concurrent coroutines.
+    # Retained output needs every result, but scheduling remains bounded to the
+    # requested concurrency and the helper restores input-file order.
     total = len(domain_list)
     completed = 0
 
@@ -869,8 +908,7 @@ async def batch(
         await _batch_emit_ndjson(domain_list, _run_one, _ERROR_PREFIX, max_pending=concurrency)
         return
 
-    tasks = [_tracked(d) for d in domain_list]
-    results = await asyncio.gather(*tasks)
+    results = await _batch_map_ordered(domain_list, _tracked, max_pending=concurrency)
 
     # --summary collapses the batch into one aggregate-only cohort summary.
     if summary:

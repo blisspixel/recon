@@ -12,6 +12,35 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [2.6.3] - 2026-07-14
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, JSON, MCP, cache, or public import
+changes.
+
+### Changed
+
+- Replaced eager retained-batch coroutine fan-out with a fixed outer worker
+  pool. Ordered output is preserved, while later inputs are admitted only when
+  a worker becomes available. NDJSON keeps its completion-order streaming path.
+- Made the local and CI Pyright stages use the complete configuration-owned
+  project scope, added the interface-layout check to CI, made all four tracked
+  complexity rules reject stale ceilings, and lowered the two improved ceilings.
+
+### Fixed
+
+- Made adaptive CT rate limiting recheck breaker and pacing state without
+  holding its reservation lock during sleeps, enforce one deterministic total
+  wait budget, and bind limiter instances to their event-loop lifecycle.
+- Counted CertSpotter transport and HTTP failures exactly once in limiter
+  feedback while keeping HTTP 429 accounting distinct.
+- Closed compressed HTTP response streams before refusing unsupported content
+  encodings, preventing connection-resource leaks on the rejection path.
+- Rejected stable cache-directory symlinks, Windows junctions and reparse
+  points, and self-referencing redirects without violating the caches' no-throw
+  contract across supported Python versions.
+
 ## [2.6.2] - 2026-07-13
 
 ### Tool Surface Changes

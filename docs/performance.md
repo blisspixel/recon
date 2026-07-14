@@ -1,7 +1,7 @@
 # Performance
 
 Status: measured local-compute characterization, not a service-level objective
-Review date: 2026-07-13
+Review date: 2026-07-14
 
 recon is a passive, concurrent DNS and HTTP-endpoint client. A default lookup
 is usually dominated by CT provider time and the slowest identity-discovery
@@ -269,6 +269,47 @@ dispatched through the real in-process `mcp.call_tool` path.
 These are exact payload characterizations, not token counts or latency SLOs.
 Repeated discovery calls were byte-identical in the measured process.
 
+## July 14, 2026 bounded batch-scheduling checkpoint
+
+Retained-output batch modes previously passed one coroutine per input to
+`asyncio.gather`. The semaphore bounded active lookups, but the official
+[asyncio task documentation](https://docs.python.org/3.14/library/asyncio-task.html#asyncio.gather)
+specifies that supplied coroutines are automatically scheduled as tasks. At the
+10,000-domain admission cap, scheduling therefore created 10,000 tasks before
+the required ordered result list was considered.
+
+The retained-output path now uses a fixed input-ordered outer worker pool. It
+creates at most the requested concurrency in batch worker tasks, cancels and
+awaits every worker on failure or caller cancellation, and writes each result
+back to its input index. An admitted lookup can still create its bounded
+internal source tasks. Per-domain lookup behavior, error shaping, post-batch
+enrichment, and output order remain unchanged. Progress reports the same
+per-domain outcomes, but later inputs are now admitted when a worker becomes
+available, so their progress timing can differ. NDJSON keeps its separate
+rolling completion-order scheduler and still releases completed results
+immediately.
+
+This local one-off `tracemalloc` characterization used the uv-managed Python
+3.14.4 runtime on Windows 11 Pro build 26200, an AMD Ryzen 9 5950X, and 64 GB of
+RAM. The working tree was based on commit
+`cce7e50558a26d4dcb1d1cab9eed6931ca27ac2c` and contained the worker-pool change.
+The fixture was an await-once synthetic processor at seven-way concurrency. The
+exact allocation bytes are a diagnostic receipt, not a reproducible benchmark
+or gate; the deterministic task bound is enforced separately by
+`tests/test_batch_streaming.py`. This measures scheduling allocations, not DNS,
+HTTP, result payloads, throughput, or a product SLO.
+
+| Inputs | Previous outer tasks | Batch worker tasks | Previous traced peak | Worker-pool traced peak |
+|---:|---:|---:|---:|---:|
+| 1,000 | 1,000 | 7 | 1,173,378 bytes | 57,433 bytes |
+| 5,000 | 5,000 | 7 | 5,808,794 bytes | 241,072 bytes |
+| 10,000 | 10,000 | 7 | 11,638,234 bytes | 480,232 bytes |
+
+At the input cap, the scheduling peak fell 95.9 percent. Retained JSON, CSV,
+Markdown, panel, ecosystem, and summary modes still require O(input count)
+result storage by contract. Operators who need completion-order streaming and
+constant completed-result memory should continue to use NDJSON.
+
 ## Python version policy
 
 The package continues to require Python 3.11 or newer. Python 3.14 is the
@@ -316,12 +357,12 @@ and a product-shaped benchmark all justify it.
    rebinding checks, CT provider policy, and degraded-source reporting. Promote
    only after a synthetic warm-batch benchmark shows a material connection or
    throughput gain with no failure-rate regression.
-2. Bound every batch-wide data structure before raising concurrency. Generalize
-   the rolling scheduler beyond NDJSON, avoid constructing discarded per-domain
-   renderings in summary mode, and replace pairwise ecosystem overlap plus
-   unbounded peer materialization with an indexed, capped design that reports
-   omitted counts. Characterize 100, 1,000, and 10,000 synthetic domains for
-   pending tasks, peak allocation, output parity, and dense-correlation tails.
+2. Complete the remaining batch-wide bounds before raising concurrency. The
+   retained-output scheduler is now fixed-size and input-ordered. Next avoid
+   constructing discarded per-domain renderings in summary mode, then replace
+   pairwise ecosystem overlap and unbounded peer materialization with an
+   indexed, capped design that reports omitted counts. Characterize sparse and
+   dense-correlation tails at 100, 1,000, and 10,000 synthetic domains.
 
 Rust remains a possible future implementation detail only if one stable,
 coarse capability still clears ADR-0010 after these Python changes. Go still

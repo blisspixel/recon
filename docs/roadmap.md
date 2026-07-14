@@ -579,11 +579,15 @@ v2.5.2:
 2. Characterize a batch-scoped SSRF-safe HTTP pool. Preserve request-specific
    timeouts, retries, cancellation, rebinding checks, CT policy, and degraded
    results before considering promotion.
-3. Bound non-streaming scheduling, summary-mode discarded work, pairwise
-   ecosystem overlap, and peer-list materialization before increasing
-   concurrency. Test sparse and adversarial dense cohorts through the existing
-   10,000-domain input cap and report omitted counts rather than silently
-   truncating evidence.
+3. Partially completed July 14, 2026: retained-output batch scheduling now uses
+   a fixed input-ordered worker pool. At seven-way concurrency and the
+   10,000-domain cap, a local one-off synthetic characterization created seven
+   outer batch worker tasks instead of 10,000 eager outer tasks and reduced
+   traced scheduling peak from 11,638,234 to
+   480,232 bytes. Next remove summary-mode discarded rendering, then bound
+   pairwise ecosystem overlap and peer-list materialization before increasing
+   concurrency. Test adversarial dense cohorts through the same cap and report
+   omitted counts rather than silently truncating evidence.
 
 An optional Rust extension may enter an isolated prototype only when a stable,
 deterministic, coarse-grained stage remains above 250 ms p95 on a representative
