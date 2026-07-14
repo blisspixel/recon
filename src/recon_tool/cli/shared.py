@@ -9,6 +9,7 @@ them back to their historical `_name` where convenient.
 
 from __future__ import annotations
 
+import math
 from typing import Never
 
 import typer
@@ -16,6 +17,13 @@ import typer
 from recon_tool.cli.options import LookupOptions
 from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_NO_DATA, EXIT_VALIDATION
 from recon_tool.models import ReconLookupError
+
+
+def positive_finite_float(value: float) -> float:
+    """Validate a positive, finite timeout-style option for Typer."""
+    if not math.isfinite(value) or value <= 0.0:
+        raise typer.BadParameter("must be a finite positive number")
+    return value
 
 
 def fmt_exc(exc: BaseException) -> str:

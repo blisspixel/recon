@@ -188,8 +188,14 @@ cat domains.txt | recon batch - --json
 recon delta contoso.com
 ```
 
-Batch files contain one domain per line. The batch input cap is documented in
-[operational-contract.md](operational-contract.md).
+Batch files contain one domain per line. Blank lines and lines beginning with
+`#` are ignored. Valid URL, sub-host, and apex spellings that normalize to the
+same registrable apex are resolved once, with the first occurrence preserved.
+Malformed values deduplicate only when their trimmed, lowercased spellings
+match, so distinct malformed inputs retain separate diagnostics. The reader
+accepts at most 10,000 non-comment records before deduplication, 1 KiB of UTF-8
+per logical line, and 10 MiB of UTF-8 in total. The full behavior is documented
+in [operational-contract.md](operational-contract.md).
 
 ## MCP Setup
 

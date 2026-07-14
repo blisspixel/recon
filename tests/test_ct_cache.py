@@ -26,7 +26,13 @@ from recon_tool.ct_cache import (
     ct_cache_put,
     ct_cache_show,
 )
-from recon_tool.models import CertSummary
+from recon_tool.models import (
+    CertBurst,
+    CertSummary,
+    InfrastructureCluster,
+    InfrastructureClusterReport,
+    InfrastructureEdge,
+)
 
 
 @pytest.fixture
@@ -46,6 +52,34 @@ SAMPLE_CERT_SUMMARY = CertSummary(
     newest_cert_age_days=2,
     oldest_cert_age_days=365,
     top_issuers=("Let's Encrypt", "DigiCert", "Sectigo"),
+    wildcard_sibling_clusters=(("api.example.com", "id.example.com"),),
+    deployment_bursts=(
+        CertBurst(
+            window_start="2026-07-01T00:00:00Z",
+            window_end="2026-07-01T00:00:10Z",
+            span_seconds=10,
+            names=("api.example.com", "id.example.com"),
+        ),
+    ),
+)
+
+SAMPLE_INFRASTRUCTURE = InfrastructureClusterReport(
+    clusters=(
+        InfrastructureCluster(
+            cluster_id=0,
+            members=("api.example.com", "id.example.com"),
+            size=2,
+            shared_cert_count=1,
+            dominant_issuer="Let's Encrypt",
+        ),
+    ),
+    modularity=0.5,
+    algorithm="louvain",
+    node_count=2,
+    edge_count=1,
+    edges=(InfrastructureEdge("api.example.com", "id.example.com", 1),),
+    partition_stability=1.0,
+    stability_runs=5,
 )
 
 
@@ -81,7 +115,13 @@ class TestCTCachePutGet:
         assert data["cert_summary"]["cert_count"] == 42
 
     def test_round_trip(self, tmp_cache: Path) -> None:
-        ct_cache_put("example.com", SAMPLE_SUBDOMAINS, SAMPLE_CERT_SUMMARY, "certspotter")
+        ct_cache_put(
+            "example.com",
+            SAMPLE_SUBDOMAINS,
+            SAMPLE_CERT_SUMMARY,
+            "certspotter",
+            infrastructure_clusters=SAMPLE_INFRASTRUCTURE,
+        )
         entry = ct_cache_get("example.com")
         assert entry is not None
         assert isinstance(entry, CTCacheEntry)
@@ -89,6 +129,9 @@ class TestCTCachePutGet:
         assert entry.cert_summary is not None
         assert entry.cert_summary.cert_count == 42
         assert entry.cert_summary.top_issuers == ("Let's Encrypt", "DigiCert", "Sectigo")
+        assert entry.cert_summary.wildcard_sibling_clusters == (("api.example.com", "id.example.com"),)
+        assert entry.cert_summary.deployment_bursts == SAMPLE_CERT_SUMMARY.deployment_bursts
+        assert entry.infrastructure_clusters == SAMPLE_INFRASTRUCTURE
         assert entry.provider_used == "certspotter"
         assert entry.age_days == 0
 
@@ -115,6 +158,52 @@ class TestCTCachePutGet:
         d.mkdir(parents=True, exist_ok=True)
         (d / "corrupt.com.json").write_text("NOT JSON", encoding="utf-8")
         assert ct_cache_get("corrupt.com") is None
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("subdomains", "api.example.com"),
+            ("provider_used", ["crt.sh"]),
+            ("cert_summary", {"cert_count": 1e999}),
+        ],
+    )
+    def test_get_rejects_valid_json_with_invalid_shape(self, tmp_cache: Path, field: str, value: object) -> None:
+        tmp_cache.mkdir(parents=True, exist_ok=True)
+        payload: dict[str, object] = {
+            "cached_at": "2026-07-01T00:00:00Z",
+            "provider_used": "crt.sh",
+            "subdomains": [],
+            "cert_summary": None,
+            field: value,
+        }
+        (tmp_cache / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert ct_cache_get("bad.com") is None
+
+    @pytest.mark.parametrize(
+        ("field", "value"),
+        [
+            ("algorithm", "unknown"),
+            ("algorithm", 1),
+            ("edges", [{"source": 1, "target": "id.example.com", "shared_cert_count": 1}]),
+            ("edges", [{"source": "", "target": "id.example.com", "shared_cert_count": 1}]),
+        ],
+    )
+    def test_get_rejects_malformed_infrastructure_cluster_data(
+        self, tmp_cache: Path, field: str, value: object
+    ) -> None:
+        ct_cache_put(
+            "bad.com",
+            SAMPLE_SUBDOMAINS,
+            SAMPLE_CERT_SUMMARY,
+            "crt.sh",
+            infrastructure_clusters=SAMPLE_INFRASTRUCTURE,
+        )
+        path = tmp_cache / "bad.com.json"
+        payload = json.loads(path.read_text(encoding="utf-8"))
+        payload["infrastructure_clusters"][field] = value
+        path.write_text(json.dumps(payload), encoding="utf-8")
+
+        assert ct_cache_get("bad.com") is None
 
     def test_get_rejects_sibling_prefix_traversal(self, tmp_cache: Path) -> None:
         sibling = tmp_cache.parent / "ct-cache-malice"

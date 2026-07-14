@@ -39,13 +39,23 @@ certificate requests are explicit opt-in direct probes.
 
 **Surface:** A user (or an agent) passes an arbitrary string to `recon <domain>` or a MCP tool.
 
-**Mitigation:** [`src/recon_tool/validator.py`](../src/recon_tool/validator.py) line 18-85:
-- Domain regex: labels must be 1-63 chars, alphanumeric + hyphens, TLD ≥ 2 alpha chars
-- Max input length: 500 chars
-- Schemes (`http://`, `https://`, `ftp://`) stripped
-- `www.` prefix stripped
-- Normalized to lowercase
-- Typed `ValueError` on invalid input → CLI exit code 2 (`EXIT_VALIDATION`); see the full [exit-code contract](schema.md#exit-codes)
+**Mitigation:** [`src/recon_tool/validator.py`](../src/recon_tool/validator.py):
+
+- Raw input is capped at 500 characters before parsing.
+- Only `http://` and `https://` URL schemes are recognized and stripped.
+  Bare inputs may include a copied path, query, fragment, or numeric port.
+- Unicode hostnames are accepted only when the standard-library IDNA conversion
+  round-trips without changing the normalized hostname.
+- DNS labels use the letter, digit, and hyphen alphabet with no leading or
+  trailing hyphen. The final label is at least two characters and begins with
+  an ASCII letter, which admits validated Punycode TLDs while rejecting numeric
+  TLDs.
+- The normalized ASCII presentation form is capped at 253 octets total and 63
+  octets per label before optional Public Suffix List apex reduction.
+- A conventional `www.` prefix is removed only when the remainder is still a
+  valid domain. A trailing root-label dot is removed, and output is lowercase.
+- Invalid input raises `ValueError`; the CLI maps it to exit code 2
+  (`EXIT_VALIDATION`). See the full [exit-code contract](schema.md#exit-codes).
 
 ### Malicious DNS responses
 

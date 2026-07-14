@@ -21,6 +21,7 @@ from __future__ import annotations
 import asyncio
 import ipaddress
 import logging
+import math
 import socket
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
@@ -298,7 +299,10 @@ class _RetryTransport(httpx.AsyncHTTPTransport):
                 retry_after = response.headers.get("Retry-After")
                 if retry_after:
                     try:
-                        delay = min(float(retry_after), 30.0)
+                        parsed_delay = float(retry_after)
+                        if not math.isfinite(parsed_delay) or parsed_delay < 0.0:
+                            raise ValueError("Retry-After must be finite and non-negative")
+                        delay = min(parsed_delay, 30.0)
                     except ValueError:
                         delay = RETRY_BACKOFF_BASE * (2**attempt)
                 else:
@@ -308,9 +312,10 @@ class _RetryTransport(httpx.AsyncHTTPTransport):
                 # aggregate resolve budget. Once the total cap is reached,
                 # stop retrying and return this response with its body still
                 # readable: do not close the response we are about to return.
-                delay = min(delay, max(0.0, _MAX_TOTAL_RETRY_SLEEP - total_slept))
-                if delay <= 0.0:
+                remaining_sleep = max(0.0, _MAX_TOTAL_RETRY_SLEEP - total_slept)
+                if remaining_sleep <= 0.0:
                     break
+                delay = min(delay, remaining_sleep)
                 # A retry will follow, so close this intermediate response's
                 # stream to avoid a resource leak before fetching the next one.
                 await response.aclose()
@@ -323,7 +328,8 @@ class _RetryTransport(httpx.AsyncHTTPTransport):
                     attempt + 1,
                     MAX_RETRIES,
                 )
-                await asyncio.sleep(delay)
+                if delay > 0.0:
+                    await asyncio.sleep(delay)
         # Exhausted retries — return the last response so caller sees the status code.
         # last_response is guaranteed non-None here because MAX_RETRIES >= 1 means
         # the loop body executes at least twice, and last_response is set on every

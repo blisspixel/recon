@@ -266,7 +266,20 @@ jobs:
       - name: Enforce added-line text hygiene
         # New diff lines must not add attribution markers, em dashes, or
         # pictographic symbols. Historical prose is not part of this check.
-        run: uv run python scripts/check_text_hygiene.py --range HEAD^..HEAD
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            range="${{ github.event.pull_request.base.sha }}..${{ github.sha }}"
+          elif [[ "${{ github.event.before }}" =~ ^0+$ ]]; then
+            range="${{ github.sha }}^!"
+          else
+            range="${{ github.event.before }}..${{ github.sha }}"
+          fi
+          uv run python scripts/check_text_hygiene.py --range "$range"
+
+      - name: Enforce Markdown links and heading anchors
+        run: uv run python scripts/check_markdown_links.py
 
       - name: Enforce ClusterFuzzLite requirements export
         # The PR fuzzing build installs only hash-pinned runtime requirements.

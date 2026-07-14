@@ -28,6 +28,7 @@ _CT_DEGRADATION_MARKERS = frozenset({"crt.sh", "certspotter"})
 __all__ = [
     "compute_delta",
     "load_previous",
+    "validate_snapshot_domain",
 ]
 
 
@@ -94,22 +95,52 @@ def _optional_str_field(previous_json: dict[str, Any], field: str) -> str | None
     return value
 
 
-def _optional_int_field(previous_json: dict[str, Any], field: str) -> int | None:
+def _optional_int_field(
+    previous_json: dict[str, Any],
+    field: str,
+    *,
+    minimum: int | None = None,
+    maximum: int | None = None,
+) -> int | None:
     value = previous_json.get(field)
     if value is None:
         return None
     if isinstance(value, bool) or not isinstance(value, int):
         raise ValueError(f"Previous snapshot field '{field}' must be an integer or null")
+    if minimum is not None and value < minimum:
+        raise ValueError(f"Previous snapshot field '{field}' must be at least {minimum}")
+    if maximum is not None and value > maximum:
+        raise ValueError(f"Previous snapshot field '{field}' must be at most {maximum}")
+    return value
+
+
+def _optional_enum_field(previous_json: dict[str, Any], field: str, allowed: frozenset[str]) -> str | None:
+    value = _optional_str_field(previous_json, field)
+    if value is not None and value not in allowed:
+        choices = ", ".join(sorted(allowed))
+        raise ValueError(f"Previous snapshot field '{field}' must be one of {choices}, or null")
     return value
 
 
 def _validate_previous_snapshot(previous_json: dict[str, Any]) -> None:
     for field in ("services", "slugs", "insights", "degraded_sources"):
         _string_list_field(previous_json, field)
-    for field in ("auth_type", "dmarc_policy", "confidence", "ct_provider_used"):
+    for field in ("queried_domain", "ct_provider_used"):
         _optional_str_field(previous_json, field)
-    for field in ("domain_count", "email_security_score"):
-        _optional_int_field(previous_json, field)
+    _optional_int_field(previous_json, "domain_count", minimum=0)
+    _optional_int_field(previous_json, "email_security_score", minimum=0, maximum=5)
+    _optional_enum_field(previous_json, "auth_type", frozenset({"Federated", "Managed"}))
+    _optional_enum_field(previous_json, "dmarc_policy", frozenset({"none", "quarantine", "reject"}))
+    _optional_enum_field(previous_json, "confidence", frozenset({"high", "low", "medium"}))
+
+
+def validate_snapshot_domain(previous_json: dict[str, Any], current_domain: str) -> None:
+    """Reject a snapshot that explicitly names a different queried domain."""
+    previous_domain = _optional_str_field(previous_json, "queried_domain")
+    if previous_domain is not None and previous_domain != current_domain:
+        raise ValueError(
+            f"Previous snapshot domain {previous_domain!r} does not match current domain {current_domain!r}"
+        )
 
 
 def _extract_signal_labels(insights: list[str] | tuple[str, ...]) -> set[str]:
@@ -285,6 +316,7 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
     Missing fields in older JSON exports are treated as absent.
     """
     _validate_previous_snapshot(previous_json)
+    validate_snapshot_domain(previous_json, current.queried_domain)
     previous_source_status = SourceStatus.from_degraded_sources(_string_list_field(previous_json, "degraded_sources"))
     current_source_status = SourceStatus.from_degraded_sources(current.degraded_sources)
     previous_degraded_sources = tuple(sorted(previous_source_status.degraded_sources))
@@ -348,14 +380,14 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
         changed_confidence = (prev_confidence, curr_confidence)
 
     changed_domain_count: tuple[int, int] | None = None
-    prev_domain_count = _optional_int_field(previous_json, "domain_count")
+    prev_domain_count = _optional_int_field(previous_json, "domain_count", minimum=0)
     curr_domain_count = observable_current.domain_count
     if domain_count_comparison_available and prev_domain_count is not None and prev_domain_count != curr_domain_count:
         changed_domain_count = (prev_domain_count, curr_domain_count)
 
     # Email security score comparison
     changed_email_security_score: tuple[int | None, int | None] | None = None
-    prev_score = _optional_int_field(previous_json, "email_security_score")
+    prev_score = _optional_int_field(previous_json, "email_security_score", minimum=0, maximum=5)
     curr_score = compute_email_security_score(observable_current)
     if any(
         previous_source_status.channel_unavailable(channel) or current_source_status.channel_unavailable(channel)

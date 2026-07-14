@@ -65,6 +65,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "workflow-pins", [_PY, "scripts/check_workflow_pins.py"]),
     (_CORE, "cost-surface", [_PY, "scripts/check_cost_surface.py"]),
     (_CORE, "text-hygiene", [_PY, "scripts/check_text_hygiene.py"]),
+    (_CORE, "markdown-links", [_PY, "scripts/check_markdown_links.py"]),
     (_CORE, "clusterfuzzlite-requirements", [_PY, "scripts/check_clusterfuzzlite_requirements.py"]),
     (_CORE, "schema-sources", [_PY, "scripts/check_schema_sources.py"]),
     (_CORE, "schema-generator", [_PY, "scripts/generate_schema.py", "--check"]),
@@ -82,9 +83,18 @@ _STAGES: list[tuple[str, str, list[str]]] = [
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the CI gate locally (parity with ci.yml).")
     parser.add_argument("--fast", action="store_true", help="Skip the test run; lint + types + quick checks only.")
+    parser.add_argument(
+        "--text-range",
+        help="Git revision range passed to the text-hygiene stage, for clean CI or release checkouts.",
+    )
     args = parser.parse_args(argv)
 
     stages = [s for s in _STAGES if not (args.fast and s[0] == _TEST)]
+    if args.text_range:
+        stages = [
+            (group, name, [*cmd, "--range", args.text_range] if name == "text-hygiene" else cmd)
+            for group, name, cmd in stages
+        ]
     results: list[tuple[str, bool, float]] = []
     for _group, name, cmd in stages:
         print(f"\n\033[1m==> {name}\033[0m  ({' '.join(cmd[1:])})", flush=True)

@@ -107,17 +107,18 @@ def classify_batch_record(record: Mapping[str, object]) -> str:
         ``"error"`` for a BatchErrorRecord, ``"success"`` for a single-domain
         success object, ``"unknown"`` for anything else.
 
-    ``record_type`` (v2.0, SH7) selects which shape to check, but it is
-    necessary, not sufficient: the full shape is still validated. A
+    ``record_type`` (v2.0, SH7) selects which envelope to check, but it is
+    necessary, not sufficient: the required key shape is still checked. A
     ``record_type == "lookup"`` record must carry every field in
     REQUIRED_TOP_LEVEL_FIELDS (batch-only extras are allowed); a
     ``record_type == "error"`` record must be exactly the closed four-key shape
     ``{domain, error, error_kind, record_type}``. A malformed mapping that only
     sets ``record_type`` therefore classifies as ``"unknown"``, not accepted.
     Records without ``record_type`` fall back to the pre-v2.0 key-set rules.
-    This mirrors the ``oneOf`` branch in docs/recon-schema.json $defs/BatchArray
-    and $defs/BatchNdjsonRecord, so a pure-Python consumer can validate batch
-    output without a JSON Schema library.
+    This helper classifies record envelopes only. It does not validate property
+    value types, enums, or nested objects; consumers that need full validation
+    must apply ``docs/recon-schema.json`` (or the packaged schema) after
+    classification.
     """
     keys = set(record.keys())
     rt = record.get("record_type")
@@ -128,6 +129,8 @@ def classify_batch_record(record: Mapping[str, object]) -> str:
     if rt == "lookup":
         # Must carry every required success field; batch-only extras allowed.
         return "success" if keys.issuperset(REQUIRED_TOP_LEVEL_FIELDS) else "unknown"
+    if "record_type" in record:
+        return "unknown"
     # Pre-v2.0 records predate the discriminator: classify by key set, using the
     # required set without the v2.0-added fields so old success records match.
     if keys == set(BATCH_ERROR_RECORD_KEYS):

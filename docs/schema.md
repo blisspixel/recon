@@ -23,7 +23,7 @@ without guessing.
 | Invocation | Top-level shape | Per-record shape |
 |---|---|---|
 | `recon <domain> --json` | a single object | the top-level object below (success), or exit code 2/3 with no JSON on validation/no-data failures |
-| `recon batch <file> --json` | a bare JSON array, one element per input domain in file order | each element is either a success object (the top-level object below) or a `BatchErrorRecord` |
+| `recon batch <file> --json` | a bare JSON array, one element per order-preserved deduplicated key | each element is either a success object (the top-level object below) or a `BatchErrorRecord`; valid URL, sub-host, and apex variants that normalize to one canonical apex share one key |
 | `recon batch <file> --json --include-ecosystem` | a `BatchResult` wrapper object `{domains, ecosystem_hyperedges}` | `domains` elements are success objects or `BatchErrorRecord`; the wrapper remains present even when no domain resolves |
 | `recon batch <file> --ndjson` | one JSON object per line (newline-delimited) | each line is a success object or a `BatchErrorRecord` |
 | `recon delta <domain> --json` / `recon <domain> --compare <file> --json` | a single `DeltaReport` object | n/a |
@@ -63,10 +63,13 @@ Four keys: `domain` and `error` (both strings), `error_kind` (enum:
 `validation`, `lookup`, `timeout`), and `record_type` (const `"error"`).
 The shape is disjoint from the single-domain success object (which carries
 dozens of required fields), so a consumer can branch on the key set alone.
-The deterministic rule a consumer should apply to any batch / NDJSON record:
+The deterministic envelope-classification rule a consumer should apply to any
+batch / NDJSON record:
 
-- `record_type` is `"error"` (or the key set is `{domain, error, error_kind, record_type}`) -> error record;
-- key set is a superset of the required single-domain fields -> success object;
+- `record_type` is `"error"` and the key set is exactly `{domain, error, error_kind, record_type}` -> error record;
+- `record_type` is `"lookup"` and the key set is a superset of the required single-domain fields -> success object;
+- an explicit, unknown `record_type` -> malformed, reject;
+- records without `record_type` use the documented pre-v2.0 key-set fallback;
 - anything else -> malformed, reject.
 
 That rule is implemented for in-process consumers as
@@ -75,7 +78,10 @@ synthetic batch sample in `tests/test_batch_ndjson_schema.py`. A success
 object in batch `--json` may carry the extra batch-only cross-domain fields
 described under [Batch-only cross-domain fields](#batch-only-cross-domain-fields-batch---json);
 those keep it a superset of the required set, so the rule still classifies
-it as a success object.
+it as a success object. The helper classifies envelopes; it does not validate
+property types, enum values, or nested objects. Consumers that require full
+record validation must apply `docs/recon-schema.json` or the byte-identical
+packaged schema after classification.
 
 ---
 

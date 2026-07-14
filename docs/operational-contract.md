@@ -24,6 +24,12 @@ a clean "we cannot tell" result. The bounds below are how that holds.
 | Google CSE / BIMI VMC / MTA-STS fetch | 5 s | The two opt-in direct-probe classes and the standard default MTA-STS policy fetch. |
 | `_MAX_TOTAL_RETRY_SLEEP` | 30 s | Cumulative cap on retry backoff sleeping for a single HTTP request across all retries, so repeated 429s cannot stack toward the aggregate budget. Per-attempt `Retry-After` is also clamped to 30 s. |
 
+For 429 and 503 responses, a numeric `Retry-After` value is accepted only when
+it is finite and non-negative, then clamped to 30 seconds. Date-form,
+malformed, negative, and non-finite values use exponential backoff instead.
+`Retry-After: 0` retries without sleeping. The cumulative sleep cap still
+applies across all attempts.
+
 ## Resource caps
 
 A representative set; the full list lives in the source constants the
@@ -33,7 +39,7 @@ A representative set; the full list lives in the source constants the
 |---|---|
 | HTTP response body | `_MAX_RESPONSE_BYTES` = 10 MB, aborted mid-read; compressing `Content-Encoding` is refused (decompression-bomb guard) since recon requests identity encoding |
 | HTTP redirects / retries | `MAX_REDIRECTS` = 5; `MAX_RETRIES` = 3 (429/503 only) |
-| Domain input | `_MAX_INPUT_LENGTH` = 500 chars; source-derived display strings `_MAX_DISPLAY_LEN` = 200 |
+| Domain input | `_MAX_INPUT_LENGTH` = 500 chars before normalization; normalized DNS presentation form = 253 ASCII octets total and 63 per label; source-derived display strings `_MAX_DISPLAY_LEN` = 200 |
 | DNS regex-match inputs | `_MAX_TXT_MATCH_LENGTH` = 4096; `_MAX_SUBDOMAIN_TXT_MATCH_LEN` = 4096; `_MAX_CNAME_MATCH_LEN` = 255; SPF redirect depth = 3 |
 | Related-domain enrichment | `MAX_RELATED_ENRICHMENTS` = 15 (6 deeper-tier) |
 | CT extraction | `MAX_SUBDOMAINS` = 100; `_MAX_CRTSH_ENTRIES` = 2000; `_MAX_SANS_PER_CERT` = 2000; `_MAX_CRTSH_CERT_SUMMARY_ENTRIES` = 1000 (bounds CertSpotter too); `_MAX_PAGES` = 2; `_CT_GLOBAL_CONCURRENCY` = 2 |
@@ -42,7 +48,7 @@ A representative set; the full list lives in the source constants the
 | Identity | `_MAX_AUTODISCOVER_DOMAINS` = 1000 federated domains |
 | Fingerprint catalog | pattern length 500; `_MAX_CATALOG_ENTRIES_PER_FILE` = 2000; ephemeral (MCP) fingerprints 100 / 20 detections each / 500 total / 200-char fields |
 | Cache files | `_MAX_CACHE_FILE_BYTES` = 5 MB; `_MAX_CT_CACHE_FILE_BYTES` = 5 MB (oversized = miss) |
-| Batch input | 10000 domains; 1 KB / line; 10 MB / file |
+| Batch input | 10,000 non-comment input records before deduplication; 1 KiB UTF-8 per logical line; 10 MiB UTF-8 total |
 
 ## Exit codes
 
@@ -79,6 +85,10 @@ prevents propagation to host root handlers. Direct handlers explicitly
 installed on an owned or child logger by an embedding host are preserved and
 remain the host's responsibility.
 
+MCP lookup tools preserve the same distinction. Only `error_type="no_data"`
+uses `No information found for ...`; timeouts and total source failure retain
+truthful failure text instead of being presented as an empty observation.
+
 The `recon doctor` health check follows the same convention: it exits 0 when
 every check passes or only optional enrichment (for example crt.sh) is degraded,
 and exits 1 when a core check fails, so a CI or monitoring job can gate on
@@ -86,14 +96,34 @@ environment health instead of always reading success. `recon doctor --mcp`
 follows the same rule for MCP setup: it exits 1 when the server cannot be
 validated (package missing, server import failure, or no tools registered).
 
+## Batch CSV contract
+
+`recon batch <file> --csv` emits RFC 4180 CSV with this canonical column order:
+
+`domain,provider,display_name,tenant_id,auth_type,confidence,email_security_score,service_count,dmarc_policy,mta_sts_mode,google_auth_type,error`
+
+Every input retained after batch deduplication produces one data row. A
+successful lookup leaves `error` empty. A failed lookup populates `domain` and
+`error` while leaving the observation columns empty, so spreadsheet users and
+machine consumers can distinguish an observed sparse result from a lookup
+failure without parsing human text.
+
+Before RFC 4180 quoting, recon neutralizes spreadsheet formulas in every
+textual cell. If the first character after leading ASCII spaces is `=`, `+`,
+`-`, `@`, a tab, a carriage return, or a newline, recon prefixes the cell with
+a single quote. This applies to successful observation fields and to failure
+domains and messages. Consumers that require the unmodified structured values
+should use JSON rather than the spreadsheet-oriented CSV surface.
+
 ## Cache and partial-result semantics
 
 - **Disk caches never raise to the caller.** Any read failure (missing, stale,
-  corrupt, oversized, or deeply-nested-JSON) degrades to a clean miss. Normal
+  corrupt, non-object, wrong-shaped, numerically invalid, oversized, or
+  deeply-nested JSON) degrades to a clean miss. Normal
   TenantInfo reads use a 24 h TTL; `recon delta` may retain the same entry for up
-  to 30 days as its comparison baseline. The CT-subdomain cache TTL is 30 days.
-  All evict lazily by mtime. The TenantInfo write is atomic (`mkstemp` +
-  `os.replace`).
+  to 30 days as its comparison baseline. The per-domain CT cache TTL is 30 days.
+  Both caches evict lazily by mtime and write atomically with a sibling
+  `mkstemp` file followed by `os.replace`.
 - **Partial / degraded results are honored, not dropped.** `all_sources_failed`
   is raised only when *every* source errored and no tenant was found; if any
   source returns a clean result (even with no services), it is kept as a sparse
@@ -129,6 +159,16 @@ validated (package missing, server import failure, or no tools registered).
   429 returns partial CT data rather than an error. When providers fail in
   different ways, live attempted failures are labeled ahead of a separate open
   breaker so `breaker_open` means every failed provider was stopped locally.
+  Cache reuse preserves the full certificate summary and infrastructure
+  cluster report, including wildcard sibling clusters and deployment bursts;
+  a summary-only entry is still a usable hit.
+- **Batch identity is canonical.** Valid URL, sub-host, and apex spellings that
+  reduce to the same registrable apex are resolved once, preserving the first
+  occurrence. Malformed inputs deduplicate by their trimmed, lowercased raw
+  spelling, so each distinct normalized malformed spelling produces one
+  diagnostic record. The 10,000-record limit is enforced before this
+  deduplication. Line and stream limits are applied to UTF-8 bytes, not Unicode
+  code-point counts.
 - **Sparse is flagged, not hidden.** `sparse=true` means the uncertainty band's
   effective display mass is at its floor. The model score and band remain
   model-relative and do not replace explicit unresolved output (see

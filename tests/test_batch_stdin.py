@@ -62,6 +62,25 @@ def test_read_batch_domains_rejects_overlong_line(monkeypatch: pytest.MonkeyPatc
         _read_batch_domains(stream)
 
 
+def test_read_batch_domains_enforces_utf8_line_bytes(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_batch, "_MAX_BATCH_LINE_BYTES", 8)
+    stream = io.StringIO("ééé.com\n")
+    with pytest.raises(_BatchInputError, match="line exceeds maximum length"):
+        _read_batch_domains(stream)
+
+
+def test_read_batch_domains_enforces_utf8_file_bytes(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(cli_batch, "_MAX_BATCH_FILE_BYTES", 16)
+    stream = io.StringIO("éé.com\néé.com\n")
+    with pytest.raises(_BatchInputError, match="maximum size"):
+        _read_batch_domains(stream)
+
+
+def test_read_batch_domains_rejects_surrogateescaped_input() -> None:
+    with pytest.raises(_BatchInputError, match="not valid UTF-8"):
+        _read_batch_domains(io.StringIO("\udcff.example\n"))
+
+
 @patch(RESOLVE_PATH, new_callable=AsyncMock)
 def test_batch_reads_domains_from_stdin(mock_resolve: AsyncMock) -> None:
     mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
@@ -70,6 +89,19 @@ def test_batch_reads_domains_from_stdin(mock_resolve: AsyncMock) -> None:
     data = json.loads(result.output)
     assert isinstance(data, list)
     assert len(data) == 2
+
+
+@patch(RESOLVE_PATH, new_callable=AsyncMock)
+def test_batch_deduplicates_inputs_by_canonical_apex(mock_resolve: AsyncMock) -> None:
+    mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+    result = runner.invoke(
+        app,
+        ["batch", "-", "--json"],
+        input="contoso.com\nwww.contoso.com\nhttps://mail.contoso.com/path\n",
+    )
+    assert result.exit_code == 0, result.output
+    assert len(json.loads(result.output)) == 1
+    assert mock_resolve.await_count == 1
 
 
 def test_batch_empty_stdin_is_validation_error() -> None:

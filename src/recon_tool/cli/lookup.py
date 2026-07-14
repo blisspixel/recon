@@ -163,7 +163,7 @@ async def _lookup_compare(
     """Resolve and diff against a saved snapshot (`--compare`)."""
     from pathlib import Path as _Path
 
-    from recon_tool.delta import compute_delta, load_previous
+    from recon_tool.delta import compute_delta, load_previous, validate_snapshot_domain
     from recon_tool.formatter import format_delta_json, render_delta_panel, render_error
     from recon_tool.models import ReconLookupError
 
@@ -174,6 +174,7 @@ async def _lookup_compare(
 
     try:
         previous = load_previous(_Path(compare_file))
+        validate_snapshot_domain(previous, validated)
     except (FileNotFoundError, ValueError) as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from None

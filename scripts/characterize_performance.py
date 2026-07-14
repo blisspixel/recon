@@ -33,7 +33,7 @@ from rich.console import Console
 from recon_tool.bayesian import infer, load_network, load_priors_override
 from recon_tool.cli.batch import _batch_apply_fusion  # pyright: ignore[reportPrivateUsage]
 from recon_tool.fingerprints import (
-    _load_from_dir,
+    _load_from_dir,  # pyright: ignore[reportPrivateUsage]
     get_txt_patterns,
     load_fingerprints,
     match_txt_all,

@@ -39,7 +39,7 @@ Run from the repository root after installing the development environment:
 | Quick public proof smoke | `uv run python -m validation.reproduce_paper_numbers --profile smoke --stamp artifact-review-smoke` | Writes a manifest and summary under `validation/local/paper-numbers/artifact-review-smoke/`; reports no private corpora and no default network requirement. |
 | Full public proof bundle | `uv run python -m validation.reproduce_paper_numbers --profile paper --stamp artifact-review-paper` | Runs suppression monotonicity, planted-evidence movement, differential verification, interval coverage, likelihood sensitivity, and layer ablation. |
 | Paper figure drift check | `uv run python scripts/generate_paper_figures.py --check` | Verifies the committed SVG figures match the deterministic aggregate-safe generator. |
-| Canonical local gate | `uv run python scripts/check.py` | Ruff, pyright, coverage-gated tests, generated-artifact checks, hygiene checks, and ratchets pass. |
+| Canonical local gate | `uv run python scripts/check.py` | Ruff, Pyright, coverage-gated tests, generated-artifact checks, validation and text hygiene, tracked Markdown links and heading anchors, interface and paper checks, and ratchets pass. |
 | Release readiness | `uv run python scripts/release_readiness.py` | Version, citation metadata, lockfile, roadmap, supply-chain recipe freshness, private-data hygiene, and commit hygiene pass for the local checkout. |
 | Published release verification | `uv run python scripts/release_readiness.py --remote` | After `main` and the current version are published, required GitHub Actions checks pass, public Scorecard API state matches `HEAD`, PyPI wheel and sdist, GitHub Release wheel, sdist, SBOM, and attestation export match the current version, and PyPI plus GitHub provenance verify for the release wheel and sdist. |
 
@@ -77,7 +77,7 @@ respective checks.
 | Layer comparison | `validation.layer_ablation` through the reproduction bundle | Mixed Bayesian baseline results and the tailored assortative graph result reproduce without target data. They do not establish real product value. |
 | Public-list sampling boundary | [public-label-snapshot-decision.md](public-label-snapshot-decision.md) plus `scripts/check_paper_claims.py` | Public-list numbers are robustness checks rather than population rates or benchmark prevalence. |
 | Paper figures | `scripts/generate_paper_figures.py --check` | SVG figures are deterministic renderings of committed topology and aggregate memos, not hand-edited screenshots. |
-| Runtime and docs integrity | `scripts/check.py` | Generated schema, surface inventory, CLI surface docs, text hygiene, validation hygiene, and tests agree with source. |
+| Runtime and docs integrity | `scripts/check.py` | Generated schema, fingerprint catalog, surface inventory, CLI surface docs, text hygiene, validation hygiene, tracked Markdown links and local heading anchors, interface layout, paper artifacts, and tests agree with source. CI and release invocations provide a full revision range to text hygiene. |
 | Published artifact integrity | `scripts/release_readiness.py --remote` | The public package, public Scorecard API state, PyPI provenance, GitHub Release, and GitHub build provenance are aligned with the current version after publication. This validates release state, not empirical paper results. |
 
 ## What Is Not Publicly Reproducible

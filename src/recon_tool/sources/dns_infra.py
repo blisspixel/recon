@@ -14,6 +14,8 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from collections.abc import Iterable
+from itertools import chain
 from typing import TYPE_CHECKING
 
 from recon_tool.constants import (
@@ -29,6 +31,7 @@ from recon_tool.fingerprints import (
     get_subdomain_txt_patterns,
 )
 from recon_tool.models import EvidenceRecord
+from recon_tool.psl import to_apex
 from recon_tool.regex_safety import compile_regex
 from recon_tool.sources import dns_base
 from recon_tool.sources.cert_providers import CertIntelProvider, CertSpotterProvider, CrtshProvider
@@ -65,6 +68,42 @@ def _dns_target_host(record: str) -> str:
     port, and target; the target is the final field.
     """
     return record.strip().split()[-1].lower().rstrip(".") if record.strip() else ""
+
+
+def _add_m365_matches(
+    ctx: dns_base.DetectionCtx,
+    records: Iterable[str],
+    *,
+    suffixes: tuple[str, ...],
+    service: str,
+    source_type: str,
+) -> None:
+    """Record M365 evidence whose normalized DNS target matches a known suffix."""
+    for record in records:
+        host = _dns_target_host(record)
+        if any(host_has_suffix(host, suffix) for suffix in suffixes):
+            ctx.add(service, "microsoft365", source_type=source_type, raw_value=record)
+            ctx.m365 = True
+
+
+def _add_autodiscover_matches(ctx: dns_base.DetectionCtx, domain: str, records: Iterable[str]) -> None:
+    """Record Exchange autodiscover evidence and validated redirect domains."""
+    domain_lower = domain.lower()
+    domain_apex = to_apex(domain_lower)
+    for record in records:
+        host = _dns_target_host(record)
+        if host_has_suffix(host, "outlook.com"):
+            ctx.add(SVC_EXCHANGE_AUTODISCOVER, "microsoft365", source_type="CNAME", raw_value=record)
+            ctx.m365 = True
+            continue
+        if not host or not is_public_dns_name(host):
+            continue
+        redirect_domain = to_apex(host)
+        # A redirect must identify a public registrable domain distinct from
+        # the query apex, so attacker-controlled CNAME data cannot plant
+        # internal names or arbitrary sub-hosts into correlation output.
+        if "." in redirect_domain and redirect_domain != domain_apex:
+            ctx.related_domains.add(redirect_domain)
 
 
 async def detect_m365_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -130,52 +169,36 @@ async def detect_m365_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
         msoid_task,
     )
 
-    for cname in autodiscover_results:
-        cl = cname.lower()
-        host = _dns_target_host(cname)
-        if host_has_suffix(host, "outlook.com"):
-            ctx.add(SVC_EXCHANGE_AUTODISCOVER, "microsoft365", source_type="CNAME", raw_value=cname)
-            ctx.m365 = True
-        elif cl and not cl.endswith(domain.lower()):
-            redirect_domain = cl.split(".", 1)[1] if "." in cl else None
-            # Validate: must have at least one dot (real domain, not
-            # single-label) and must pass the public-suffix check.
-            # The latter prevents an attacker-controlled
-            # autodiscover CNAME (e.g. autodiscover.attacker.example
-            # → something.internal.corp) from planting an
-            # internal-looking apex in related_domains.
-            if (
-                redirect_domain
-                and "." in redirect_domain
-                and redirect_domain != domain.lower()
-                and is_public_dns_name(redirect_domain)
-            ):
-                ctx.related_domains.add(redirect_domain)
-
-    for cname_list in (lyncdiscover_results, sip_results):
-        for cname in cname_list:
-            host = _dns_target_host(cname)
-            if host_has_suffix(host, "lync.com") or host_has_suffix(host, "teams.microsoft.com"):
-                ctx.add(SVC_MICROSOFT_TEAMS, "microsoft365", source_type="CNAME", raw_value=cname)
-                ctx.m365 = True
-
-    for srv in srv_results:
-        host = _dns_target_host(srv)
-        if host_has_suffix(host, "lync.com") or host_has_suffix(host, "teams.microsoft.com"):
-            ctx.add(SVC_MICROSOFT_TEAMS, "microsoft365", source_type="SRV", raw_value=srv)
-            ctx.m365 = True
-
-    for cname in enterprise_results:
-        host = _dns_target_host(cname)
-        if host_has_suffix(host, "manage.microsoft.com") or host_has_suffix(host, "enterpriseregistration.windows.net"):
-            ctx.add(SVC_INTUNE_MDM, "microsoft365", source_type="CNAME", raw_value=cname)
-            ctx.m365 = True
-
-    for cname in msoid_results:
-        host = _dns_target_host(cname)
-        if host_has_suffix(host, "microsoftonline.com"):
-            ctx.add(SVC_OFFICE_PROPLUS, "microsoft365", source_type="CNAME", raw_value=cname)
-            ctx.m365 = True
+    teams_suffixes = ("lync.com", "teams.microsoft.com")
+    _add_autodiscover_matches(ctx, domain, autodiscover_results)
+    _add_m365_matches(
+        ctx,
+        chain(lyncdiscover_results, sip_results),
+        suffixes=teams_suffixes,
+        service=SVC_MICROSOFT_TEAMS,
+        source_type="CNAME",
+    )
+    _add_m365_matches(
+        ctx,
+        srv_results,
+        suffixes=teams_suffixes,
+        service=SVC_MICROSOFT_TEAMS,
+        source_type="SRV",
+    )
+    _add_m365_matches(
+        ctx,
+        enterprise_results,
+        suffixes=("manage.microsoft.com", "enterpriseregistration.windows.net"),
+        service=SVC_INTUNE_MDM,
+        source_type="CNAME",
+    )
+    _add_m365_matches(
+        ctx,
+        msoid_results,
+        suffixes=("microsoftonline.com",),
+        service=SVC_OFFICE_PROPLUS,
+        source_type="CNAME",
+    )
 
 
 _GWS_MODULE_PREFIXES = ("mail", "calendar", "docs", "drive", "sites", "groups")
@@ -542,6 +565,8 @@ def _apply_cached_cert_intel(ctx: dns_base.DetectionCtx, cached: CTCacheEntry, a
     ctx.related_domains.update(cached.subdomains)
     if cached.cert_summary is not None:
         ctx.cert_summary = cached.cert_summary
+    if cached.infrastructure_clusters is not None:
+        ctx.infrastructure_clusters = cached.infrastructure_clusters
     ctx.ct_provider_used = attribution
     ctx.ct_subdomain_count = len(cached.subdomains)
     ctx.ct_cache_age_days = cached.age_days
@@ -589,7 +614,13 @@ async def _query_cert_providers(ctx: dns_base.DetectionCtx, domain: str) -> tupl
         ctx.ct_subdomain_count = len(subdomains)
         ctx.ct_attempt_outcome = "live_success"
         logger.debug("cert intel from %s for %s: %d subdomains", provider.name, domain, len(subdomains))
-        ct_cache_put(domain, subdomains, cert_summary, provider.name)
+        ct_cache_put(
+            domain,
+            subdomains,
+            cert_summary,
+            provider.name,
+            infrastructure_clusters=infrastructure_clusters,
+        )
         return True, None, failures
 
     return False, soft_provider, failures
@@ -612,7 +643,11 @@ async def detect_cert_intel(ctx: dns_base.DetectionCtx, domain: str) -> None:
     from recon_tool.ct_cache import ct_cache_get
 
     cached_first = ct_cache_get(domain)
-    if cached_first is not None and cached_first.subdomains:
+    if cached_first is not None and (
+        cached_first.subdomains
+        or cached_first.cert_summary is not None
+        or cached_first.infrastructure_clusters is not None
+    ):
         _apply_cached_cert_intel(ctx, cached_first, f"{cached_first.provider_used} (cached)")
         logger.debug(
             "cert intel cache-first hit for %s: %d subdomains, %d days old",
@@ -627,7 +662,9 @@ async def detect_cert_intel(ctx: dns_base.DetectionCtx, domain: str) -> None:
         return
 
     cached = ct_cache_get(domain)
-    if cached is not None and cached.subdomains:
+    if cached is not None and (
+        cached.subdomains or cached.cert_summary is not None or cached.infrastructure_clusters is not None
+    ):
         # Attribution: if a live provider returned empty (soft failure), name
         # it explicitly so the panel reflects what actually ran.
         _apply_cached_cert_intel(ctx, cached, f"{soft_provider or cached.provider_used} (cached)")
