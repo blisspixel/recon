@@ -3,7 +3,7 @@
 [![CI](https://github.com/blisspixel/recon/actions/workflows/ci.yml/badge.svg)](https://github.com/blisspixel/recon/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
 [![Python](https://img.shields.io/pypi/pyversions/recon-tool.svg?cacheSeconds=300)](https://pypi.org/project/recon-tool/)
-[![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](LICENSE)
+[![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](https://github.com/blisspixel/recon/blob/main/LICENSE)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/blisspixel/recon/badge)](https://scorecard.dev/viewer/?uri=github.com/blisspixel/recon)
 
 Passive domain intelligence from public sources. recon reads public DNS,
@@ -19,7 +19,7 @@ tool, or firmographic database.
 
 > **Defensive use only.** Use recon for legitimate posture review, IT
 > architecture review, vendor diligence, and defensive hardening. See
-> [docs/legal.md](docs/legal.md) for the intended-use policy.
+> [docs/legal.md](https://github.com/blisspixel/recon/blob/main/docs/legal.md) for the intended-use policy.
 
 ## Quick Start
 
@@ -34,7 +34,8 @@ pipx install recon-tool
 Python 3.11 through 3.14 is supported. The latest Python 3.14 patch is
 recommended for new installations and development; older supported versions
 retain the same product behavior and output contracts. Current measurements
-and version-specific decisions are in [docs/performance.md](docs/performance.md).
+and version-specific decisions are in
+[docs/performance.md](https://github.com/blisspixel/recon/blob/main/docs/performance.md).
 
 If `uv` or `pipx` is already installed, the platform script can install or
 update recon:
@@ -102,7 +103,7 @@ Tenant IDs, services, and domains in examples are fabricated. No real company is
 depicted.
 
 For detailed install, update, uninstall, and first-run workflows, read
-[docs/getting-started.md](docs/getting-started.md).
+[docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
 
 ## What recon Is Good For
 
@@ -141,7 +142,7 @@ Built-in posture profiles: `fintech`, `healthcare`, `saas-b2b`,
 `~/.recon/profiles/*.yaml`.
 
 Generated command and flag reference:
-[docs/cli-surface.md](docs/cli-surface.md).
+[docs/cli-surface.md](https://github.com/blisspixel/recon/blob/main/docs/cli-surface.md).
 
 ## How recon Works
 
@@ -172,9 +173,10 @@ fingerprints still pass through the runtime validator. This keeps contributor
 review readable and removes repeated YAML parsing from cold CLI startup without
 changing catalog order, matching, or public output.
 
-Long-form explanation: [docs/how-it-works.md](docs/how-it-works.md).
+Long-form explanation:
+[docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md).
 Formal model and robustness research program:
-[docs/correlation.md](docs/correlation.md).
+[docs/correlation.md](https://github.com/blisspixel/recon/blob/main/docs/correlation.md).
 
 ## JSON and Automation
 
@@ -195,10 +197,10 @@ recon delta contoso.com --json
 
 Read these before building an integration:
 
-- [docs/schema.md](docs/schema.md): stable JSON contract.
-- [docs/recon-schema.json](docs/recon-schema.json): machine-readable schema.
-- [docs/automation-examples.md](docs/automation-examples.md): parser examples.
-- [docs/operational-contract.md](docs/operational-contract.md): timeouts,
+- [docs/schema.md](https://github.com/blisspixel/recon/blob/main/docs/schema.md): stable JSON contract.
+- [docs/recon-schema.json](https://github.com/blisspixel/recon/blob/main/docs/recon-schema.json): machine-readable schema.
+- [docs/automation-examples.md](https://github.com/blisspixel/recon/blob/main/docs/automation-examples.md): parser examples.
+- [docs/operational-contract.md](https://github.com/blisspixel/recon/blob/main/docs/operational-contract.md): timeouts,
   bounds, exit codes, cache, and partial-result semantics.
 
 `docs/surface-inventory.json`, `docs/cli-surface.md`, and
@@ -221,8 +223,10 @@ recon mcp doctor
 
 The installer writes the right per-client config shape and preserves sibling
 MCP servers. Full setup, tool list, read-only versus stateful guidance, and
-troubleshooting live in [docs/mcp.md](docs/mcp.md). Per-client scaffolds live in
-[agents/](agents/).
+troubleshooting live in
+[docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md).
+Per-client scaffolds live in
+[agents/](https://github.com/blisspixel/recon/tree/main/agents).
 
 ## Limitations
 
@@ -234,25 +238,26 @@ The public channel has a ceiling:
 - CT logs can be stale, partial, rate-limited, or absent.
 - Fingerprints are rule-based indicators, not proof of active use.
 
-Read [docs/limitations.md](docs/limitations.md) before using recon output for a
-high-stakes decision. Read [docs/data-handling-policy.md](docs/data-handling-policy.md)
+Read [docs/limitations.md](https://github.com/blisspixel/recon/blob/main/docs/limitations.md)
+before using recon output for a high-stakes decision. Read
+[docs/data-handling-policy.md](https://github.com/blisspixel/recon/blob/main/docs/data-handling-policy.md)
 before committing any validation artifact.
 
 ## Documentation
 
-- [docs/getting-started.md](docs/getting-started.md): install, update,
+- [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md): install, update,
   uninstall, and first commands.
-- [docs/how-it-works.md](docs/how-it-works.md): readable model overview.
-- [docs/README.md](docs/README.md): complete docs index.
-- [docs/roadmap.md](docs/roadmap.md): current plan, invariants, and scope
+- [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md): readable model overview.
+- [docs/README.md](https://github.com/blisspixel/recon/blob/main/docs/README.md): complete docs index.
+- [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md): current plan, invariants, and scope
   boundaries.
-- [docs/external-writeup-plan.md](docs/external-writeup-plan.md): active
+- [docs/external-writeup-plan.md](https://github.com/blisspixel/recon/blob/main/docs/external-writeup-plan.md): active
   maintainer plan for external write-up readiness.
-- [docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md):
+- [docs/submission-freeze-checklist.md](https://github.com/blisspixel/recon/blob/main/docs/submission-freeze-checklist.md):
   final paper and artifact freeze gate before any external submission package.
-- [docs/c3-ct-validation-plan.md](docs/c3-ct-validation-plan.md): closed
+- [docs/c3-ct-validation-plan.md](https://github.com/blisspixel/recon/blob/main/docs/c3-ct-validation-plan.md): closed
   certificate-transparency validation plan.
-- [CHANGELOG.md](CHANGELOG.md): shipped changes.
+- [CHANGELOG.md](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md): shipped changes.
 
 ## Roadmap Focus
 
@@ -270,23 +275,29 @@ priorities are:
    v2 SDK before changing the production dependency.
 
 The dependency order, acceptance evidence, stop rules, and current code-graph
-summary live in [docs/roadmap.md](docs/roadmap.md). The implementation plan is
-[docs/engineering-refinement-plan.md](docs/engineering-refinement-plan.md), and
+summary live in
+[docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md).
+The implementation plan is
+[docs/engineering-refinement-plan.md](https://github.com/blisspixel/recon/blob/main/docs/engineering-refinement-plan.md), and
 the current step-back review is
-[docs/strategic-gap-audit.md](docs/strategic-gap-audit.md). Research publication,
+[docs/strategic-gap-audit.md](https://github.com/blisspixel/recon/blob/main/docs/strategic-gap-audit.md).
+Research publication,
 OpenSSF process, outside replication, and archive work remain separate
 maintainer tracks so they do not displace product truthfulness or measured
 utility.
 
 The most recent completed historical local proof for the separate publication
 track is
-[validation/2026-06-30-submission-freeze-local-proof.md](validation/2026-06-30-submission-freeze-local-proof.md).
+[validation/2026-06-30-submission-freeze-local-proof.md](https://github.com/blisspixel/recon/blob/main/validation/2026-06-30-submission-freeze-local-proof.md).
 The current paper and artifact package is unfrozen after subsequent product,
 documentation, and release changes. Maintainers must rerun the submission gate
 before external submission.
-Its [public-label decision](docs/public-label-snapshot-decision.md) keeps public
+Its
+[public-label decision](https://github.com/blisspixel/recon/blob/main/docs/public-label-snapshot-decision.md)
+keeps public
 lists as robustness checks rather than population rates, and its
-[M365 tenancy decision](docs/m365-tenancy-decision.md) keeps that evidence as
+[M365 tenancy decision](https://github.com/blisspixel/recon/blob/main/docs/m365-tenancy-decision.md)
+keeps that evidence as
 corroboration rather than independent calibration.
 
 ## Development
@@ -312,9 +323,11 @@ not only the final diff.
 Project hygiene: keep examples fictional or synthetic, keep validation artifacts
 aggregate-only, run `uv run python scripts/check.py`, and
 avoid dead code or placeholders.
-Contributor details: [CONTRIBUTING.md](CONTRIBUTING.md).
+Contributor details:
+[CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md).
 
 ## License
 
-Apache 2.0. Free to use, build on, fork, and share. See [LICENSE](LICENSE) for
+Apache 2.0. Free to use, build on, fork, and share. See
+[LICENSE](https://github.com/blisspixel/recon/blob/main/LICENSE) for
 the full terms.

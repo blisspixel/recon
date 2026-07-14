@@ -162,7 +162,7 @@ pending.
 
 Why second: the final MCP 2026-07-28 specification and stable Python SDK are
 time-bound external changes. Production remains on the stable v1 SDK line until
-the candidate passes recon's gates.
+the final specification and stable v2 SDK pass recon's full gate.
 
 Completed checkpoint:
 
