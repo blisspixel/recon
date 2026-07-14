@@ -436,7 +436,7 @@ async def reevaluate_domain(domain: str) -> LookupResult:
 
     cached = cache_get(validated)
     if cached is None:
-        raise ToolError(f"No cached data for {domain}. Run lookup_tenant first.")
+        raise ToolError(f"No cached data for {validated}. Run lookup_tenant first.")
 
     _info, results = cached
 
@@ -471,10 +471,10 @@ async def reevaluate_domain(domain: str) -> LookupResult:
         request_id = uuid.uuid4().hex[:12]
         logger.exception(
             "Re-evaluation merge failed for %s (request_id=%s)",
-            domain,
+            validated,
             request_id,
         )
-        raise ToolError(internal_lookup_error(domain, request_id, exc, action="re-evaluating")) from exc
+        raise ToolError(internal_lookup_error(validated, request_id, exc, action="re-evaluating")) from exc
 
     cache_refresh_info(validated, new_info, results)
     payload = format_tenant_dict(new_info)

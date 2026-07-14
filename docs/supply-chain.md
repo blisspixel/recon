@@ -21,7 +21,7 @@ which produces and publishes:
 | **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection | `gh attestation verify <file> --repo blisspixel/recon`; offline consumers can download the `.intoto.jsonl` release asset |
 | **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Fetch the file's PyPI provenance and verify it with `pypi-attestations verify pypi --repository https://github.com/blisspixel/recon <wheel-url>` |
 | **Same-job deterministic-build check** | `SOURCE_DATE_EPOCH` is fixed and CI builds twice in one Ubuntu job, then compares wheel and sdist hashes under the same resolved toolchain | See the bounded recipe and limitations below |
-| **CycloneDX SBOM** | Generated from the hash-pinned runtime lock (`pip-audit --format=cyclonedx-json`) and attached to the GitHub Release | Download `recon-tool-<version>.cdx.json` from the release assets |
+| **CycloneDX SBOM** | Generated from a runtime-requirements export of `uv.lock` (`pip-audit --format=cyclonedx-json`), completed with the `recon-tool` root component and dependency edge, validated as nonempty JSON, and attached to the GitHub Release. The isolated SBOM job may emit an artifact when findings exist because the separate enforcing audit already blocks the release test job. Any SBOM tool, output, or validation failure blocks both PyPI and GitHub publication | Download `recon-tool-<version>.cdx.json` from the release assets and inspect `metadata.component` and the root dependency entry |
 
 ## Consumer verification quick path
 
@@ -141,9 +141,10 @@ The `test`, `sbom`, and `attest` jobs run on separate runners that never see
 execute project runtime dependencies. The provenance export job downloads the
 signed GitHub attestation bundles and uploads a `.intoto.jsonl` artifact for the
 GitHub Release without running project dependency code. The PyPI and GitHub
-release jobs wait for the provenance attestation path, so a release fails closed
-if artifact attestation fails. The full rationale and threat model are
-documented inline in [`release.yml`](../.github/workflows/release.yml).
+release jobs wait for both provenance attestation and the validated SBOM, so a
+release fails closed if either integrity path fails. The full rationale and
+threat model are documented inline in
+[`release.yml`](../.github/workflows/release.yml).
 
 ## Repository posture checks
 
@@ -170,11 +171,18 @@ The repository also runs supply-chain posture checks outside the release flow:
   the CI validation job, including ClusterFuzzLite requirements, schema source
   tracing, surface inventory, CLI surface docs, file-size ratchets, and PLR
   ratchets.
+- Release tags pass a dependency-free preflight that requires the tag version,
+  project version, dated nonempty changelog section, tagged commit, and current
+  `main` ancestry to agree. The release test job then reruns the complete local
+  gate, so a manually pushed tag cannot bypass it.
 - The cost-surface guard checks the packaged runtime, wheel package scope,
   project dependencies, and GitHub workflows for paid-provider SDKs, model API
   keys, image API calls, and validation-only paid harness invocations.
-- Added-line text hygiene is checked locally and in CI so generated or manual
-  changes cannot add attribution markers, em dashes, or pictographic symbols.
+- Added-line text hygiene is checked locally and across the complete pushed or
+  pull-request commit range in CI so an earlier commit cannot hide a prohibited
+  line behind a later cleanup commit.
+- Tracked Markdown relative links and local heading anchors are checked locally,
+  in main CI, and again by the release gate.
 - Remote release readiness checks PyPI's latest `recon-tool` version and the
   GitHub Release asset set for the current version, so wheel, sdist, SBOM, and
   attestation drift is caught after publication rather than verified by hand.

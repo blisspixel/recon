@@ -419,9 +419,17 @@ def plan_install(
         )
 
     existing_recon: dict[str, object] | None = None
-    if isinstance(mcp_servers, dict):
-        existing_recon_raw = mcp_servers.get("recon")
-        if isinstance(existing_recon_raw, dict):
+    malformed_existing_recon = False
+    if isinstance(mcp_servers, dict) and "recon" in mcp_servers:
+        existing_recon_raw = mcp_servers["recon"]
+        if not isinstance(existing_recon_raw, dict):
+            if not force:
+                raise InstallError(
+                    f"{path} has an `{key}.recon` field that is "
+                    f"{type(existing_recon_raw).__name__}, not an object. Refusing to rewrite."
+                )
+            malformed_existing_recon = True
+        else:
             # str keys only — JSON guarantees this but we narrow for type-checkers.
             existing_recon = {str(k): v for k, v in existing_recon_raw.items()}
 
@@ -466,7 +474,7 @@ def plan_install(
 
     return InstallPlan(
         path=path,
-        action="merge",
+        action="replace" if malformed_existing_recon else "merge",
         existing_block=None,
         new_block=target_block,
         parent_dirs_to_create=[],
@@ -552,9 +560,14 @@ def _atomic_write_text(path: Path, content: str) -> None:
     ``newline="\\n"`` forces LF line endings even on Windows, matching
     JSON's on-the-wire format and keeping the file diff-stable in Git.
     """
-    parent = path.parent
+    # Replacing a symlink path replaces the link itself, not its target. Client
+    # configs are commonly symlinked between dotfile repositories and their
+    # platform-specific locations, so resolve only the final write target and
+    # keep the operator's topology intact.
+    write_path = path.resolve(strict=False) if path.is_symlink() else path
+    parent = write_path.parent
     parent.mkdir(parents=True, exist_ok=True)
-    fd, tmp_path = tempfile.mkstemp(prefix=path.name + ".", suffix=".tmp", dir=str(parent))
+    fd, tmp_path = tempfile.mkstemp(prefix=write_path.name + ".", suffix=".tmp", dir=str(parent))
     try:
         with os.fdopen(fd, "w", encoding="utf-8", newline="\n") as fh:
             fh.write(content)
@@ -566,7 +579,7 @@ def _atomic_write_text(path: Path, content: str) -> None:
             # to write at all on unusual filesystems.
             with contextlib.suppress(OSError):
                 os.fsync(fh.fileno())
-        os.replace(tmp_path, path)
+        os.replace(tmp_path, write_path)
     except Exception:
         # On any failure between mkstemp and replace, sweep the
         # partial tempfile so we don't leave debris next to the real

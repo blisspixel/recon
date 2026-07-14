@@ -285,6 +285,14 @@ class TestInstallRefusals:
         data = json.loads(target.read_text(encoding="utf-8"))
         assert data["mcpServers"]["recon"]["command"] != "old-binary"
 
+    @pytest.mark.parametrize("malformed", [None, "managed-externally", [], 7, False])
+    def test_refuse_non_object_existing_recon_block(self, tmp_path: Path, malformed: object) -> None:
+        target = tmp_path / "mcp.json"
+        target.write_text(json.dumps({"mcpServers": {"recon": malformed}}), encoding="utf-8")
+
+        with pytest.raises(InstallError, match="not an object"):
+            plan_install("cursor", "user", config_path_override=target)
+
     def test_refuse_unparseable_json(self, tmp_path: Path) -> None:
         target = tmp_path / "mcp.json"
         target.write_text("{not: valid json", encoding="utf-8")
@@ -648,6 +656,21 @@ class TestAtomicWrite:
         # Only the real config should be present — no `*.tmp` siblings.
         siblings = sorted(p.name for p in tmp_path.iterdir())
         assert siblings == ["mcp.json"], f"unexpected debris: {siblings}"
+
+    def test_install_preserves_config_symlink(self, tmp_path: Path) -> None:
+        real_target = tmp_path / "real" / "mcp.json"
+        real_target.parent.mkdir()
+        real_target.write_text(json.dumps({"mcpServers": {}}), encoding="utf-8")
+        link = tmp_path / "mcp.json"
+        try:
+            link.symlink_to(real_target)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        install("cursor", "user", config_path_override=link)
+
+        assert link.is_symlink()
+        assert "recon" in json.loads(real_target.read_text(encoding="utf-8"))["mcpServers"]
 
     def test_partial_write_failure_preserves_original_file(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch

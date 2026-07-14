@@ -364,6 +364,7 @@ CSV_COLUMNS: tuple[str, ...] = (
     "dmarc_policy",
     "mta_sts_mode",
     "google_auth_type",
+    "error",
 )
 
 
@@ -419,6 +420,7 @@ def format_tenant_csv_row(info: TenantInfo) -> dict[str, str]:
         "dmarc_policy": _csv_safe(info.dmarc_policy or ""),
         "mta_sts_mode": _csv_safe(info.mta_sts_mode or ""),
         "google_auth_type": _csv_safe(info.google_auth_type or ""),
+        "error": "",
     }
 
 
@@ -434,13 +436,14 @@ def format_batch_csv(infos: list[tuple[str, TenantInfo | None, str | None]]) -> 
     writer = csv.writer(buf, quoting=csv.QUOTE_MINIMAL)
     writer.writerow(CSV_COLUMNS)
 
-    for domain, info, _error in infos:
+    for domain, info, error in infos:
         if info is not None:
             row_dict = format_tenant_csv_row(info)
             writer.writerow([_csv_safe(row_dict[col]) for col in CSV_COLUMNS])
         else:
-            # Error row: domain + empty fields
-            row = [_csv_safe(domain)] + [""] * (len(CSV_COLUMNS) - 1)
-            writer.writerow(row)
+            row = dict.fromkeys(CSV_COLUMNS, "")
+            row["domain"] = _csv_safe(domain)
+            row["error"] = _csv_safe(error or "Unknown lookup failure")
+            writer.writerow([row[column] for column in CSV_COLUMNS])
 
     return buf.getvalue()

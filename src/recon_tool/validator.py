@@ -118,6 +118,8 @@ _SCHEME_RE = re.compile(r"^https?://", re.IGNORECASE)
 # Max raw input length — reject absurdly long strings before any processing.
 # Longest realistic domain input is ~260 chars (253 domain + scheme + path).
 _MAX_INPUT_LENGTH = 500
+_MAX_DOMAIN_OCTETS = 253
+_MAX_LABEL_OCTETS = 63
 
 
 def _is_normalized_domain(domain: str) -> bool:
@@ -127,7 +129,12 @@ def _is_normalized_domain(domain: str) -> bool:
     scheme-stripped, punycode-encoded value, so this postcondition holds on every
     successful return (it does not constrain the ValueError-raising paths).
     """
-    return domain == domain.lower() and bool(_DOMAIN_RE.match(domain))
+    return (
+        domain == domain.lower()
+        and bool(_DOMAIN_RE.match(domain))
+        and len(domain) <= _MAX_DOMAIN_OCTETS
+        and all(len(label) <= _MAX_LABEL_OCTETS for label in domain.split("."))
+    )
 
 
 @deal.post(_is_normalized_domain)  # pyright: ignore[reportUntypedFunctionDecorator]
@@ -189,17 +196,6 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     # check on the stray dot. An all-dots string reduces to "" and still fails.
     domain = domain.rstrip(".")
 
-    # Strip www. prefix — people paste URLs from browsers, and www.example.com
-    # is never the domain you want for tenant/DNS lookups. The zone apex
-    # (example.com) is where TXT verification records and MX records live. This
-    # is independent of apex reduction: even --exact (apex=False) drops www.,
-    # because a literal www host is never a meaningful analysis target. Only
-    # strip when the remainder is still a valid domain, so a registrable label
-    # of ``www`` (e.g. the real domain ``www.com``) is not clobbered to a bare
-    # TLD that then fails the format check.
-    if domain.startswith("www.") and _DOMAIN_RE.match(domain[4:]):
-        domain = domain[4:]
-
     # Internationalized domain names: convert a raw-Unicode IDN (for
     # example ``münchen.de``) to its ASCII punycode form
     # (``xn--mnchen-3ya.de``) before the format check, so an operator can
@@ -221,8 +217,23 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
             if encoded.encode("ascii").decode("idna") == domain.lower():
                 domain = encoded
 
+    # Strip www. after IDNA normalization so Unicode and ASCII inputs follow
+    # the same exact-host contract. Only strip when the remainder is still a
+    # valid domain, preserving registrable names such as ``www.com``.
+    if domain.startswith("www.") and _DOMAIN_RE.fullmatch(domain[4:]):
+        domain = domain[4:]
+
     # Validate format
     if not _DOMAIN_RE.match(domain):
+        raise ValueError(f"Invalid domain format: {raw_input}")
+
+    # RFC 1035 limits each DNS label to 63 octets. RFC 1034's 255-octet
+    # wire-format ceiling leaves 253 octets for the ordinary presentation form
+    # without the terminating root dot. ``domain`` is ASCII at this point, so
+    # character and octet counts are identical. Check before apex reduction so
+    # an invalid sub-host cannot be silently accepted by discarding its bad
+    # leading label.
+    if len(domain) > _MAX_DOMAIN_OCTETS or any(len(label) > _MAX_LABEL_OCTETS for label in domain.split(".")):
         raise ValueError(f"Invalid domain format: {raw_input}")
 
     # Reduce to the registrable apex (eTLD+1) so a pasted URL or sub-host is

@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/recon-schema.json",
   "title": "recon JSON output",
-  "description": "Stable v2.0 contract for the single-domain success output of `recon <domain> --json`. This root object describes exactly one output mode: a successful single-domain lookup. The other output modes have their own shapes, documented in $defs and in docs/schema.md. `recon batch <file> --json` (default) emits a bare array of records, one per input domain (see $defs/BatchArray); each element is either a single-domain success object (this root) or a $defs/BatchErrorRecord. `recon batch <file> --json --include-ecosystem` always wraps that array in a $defs/BatchResult object; on an all-failed batch the wrapper is still emitted, with the error records under `domains` and an empty `ecosystem_hyperedges`. `recon batch <file> --ndjson` emits one $defs/BatchNdjsonRecord per line. `recon delta <domain> --json` and `recon <domain> --compare <file> --json` emit a $defs/DeltaReport. The dataclass in recon_tool.models.TenantInfo and the formatter in recon_tool.formatter.format_tenant_dict are the implementation source of truth. Consumers should ignore unknown properties; additive changes are non-breaking within 2.x. A few top-level fields are emitted only in specific modes or behind specific flags and are intentionally absent from `required`; each such property states its condition in its own description. See tests/test_json_schema_contract.py for the executable single-domain contract and tests/test_batch_ndjson_schema.py for the batch-record rule set.",
+  "description": "Stable v2.0 contract for the single-domain success output of `recon <domain> --json`. This root object describes exactly one output mode: a successful single-domain lookup. The other output modes have their own shapes, documented in $defs and in docs/schema.md. `recon batch <file> --json` (default) emits a bare array of records, one per order-preserved deduplicated batch key (see $defs/BatchArray); valid URL, sub-host, and apex variants that normalize to the same canonical apex share one key. Each element is either a single-domain success object (this root) or a $defs/BatchErrorRecord. `recon batch <file> --json --include-ecosystem` always wraps that array in a $defs/BatchResult object; on an all-failed batch the wrapper is still emitted, with the error records under `domains` and an empty `ecosystem_hyperedges`. `recon batch <file> --ndjson` emits one $defs/BatchNdjsonRecord per line. `recon delta <domain> --json` and `recon <domain> --compare <file> --json` emit a $defs/DeltaReport. The dataclass in recon_tool.models.TenantInfo and the formatter in recon_tool.formatter.format_tenant_dict are the implementation source of truth. Consumers should ignore unknown properties; additive changes are non-breaking within 2.x. A few top-level fields are emitted only in specific modes or behind specific flags and are intentionally absent from `required`; each such property states its condition in its own description. See tests/test_json_schema_contract.py for the executable single-domain contract and tests/test_batch_ndjson_schema.py for the batch-record rule set.",
   "type": "object",
   "required": [
     "tenant_id",
@@ -1499,7 +1499,7 @@
       }
     },
     "BatchArray": {
-      "description": "Default shape of ``recon batch <file> --json`` (without --include-ecosystem): a bare JSON array, one element per input domain, in input-file order. Each element is either a single-domain success object (the root schema of this file) or a BatchErrorRecord. Success elements may additionally carry batch-only typed overlap fields (shared_verification_tokens, shared_tenant, shared_display_name); none establishes ownership or a business relationship.",
+      "description": "Default shape of ``recon batch <file> --json`` (without --include-ecosystem): a bare JSON array, one element per order-preserved deduplicated key. Valid URL, sub-host, and apex variants that normalize to the same canonical apex share one key. Each element is either a single-domain success object (the root schema of this file) or a BatchErrorRecord. Success elements may additionally carry batch-only typed overlap fields (shared_verification_tokens, shared_tenant, shared_display_name); none establishes ownership or a business relationship.",
       "type": "array",
       "items": {
         "oneOf": [
@@ -1539,7 +1539,7 @@
         },
         "domains": {
           "type": "array",
-          "description": "Per-domain results, one entry per input apex in input-file order. Each entry is either a single-domain success object (the root schema of this file) or a BatchErrorRecord.",
+          "description": "Per-domain results, one entry per order-preserved deduplicated key. Valid input variants that normalize to the same canonical apex share one key. Each entry is either a single-domain success object (the root schema of this file) or a BatchErrorRecord.",
           "items": {
             "oneOf": [
               {

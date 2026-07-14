@@ -53,6 +53,7 @@ Invariants
 from __future__ import annotations
 
 import logging
+import math
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
@@ -142,7 +143,7 @@ def _parse_mapping(raw: Any, profile_name: str, field_name: str) -> tuple[tuple[
             field_name,
         )
         return ()
-    pairs: list[tuple[str, float]] = []
+    pairs: dict[str, float] = {}
     for key, value in raw.items():  # pyright: ignore[reportUnknownVariableType]
         if not isinstance(key, str) or not key.strip():
             logger.warning(
@@ -150,6 +151,16 @@ def _parse_mapping(raw: Any, profile_name: str, field_name: str) -> tuple[tuple[
                 profile_name,
                 field_name,
                 key,
+            )
+            continue
+        normalized_key = key.strip()
+        if isinstance(value, bool):
+            logger.warning(
+                "Profile %r has boolean %s value %r for key %r, skipped",
+                profile_name,
+                field_name,
+                value,
+                normalized_key,
             )
             continue
         try:
@@ -160,7 +171,16 @@ def _parse_mapping(raw: Any, profile_name: str, field_name: str) -> tuple[tuple[
                 profile_name,
                 field_name,
                 value,
-                key,
+                normalized_key,
+            )
+            continue
+        if not math.isfinite(mult):
+            logger.warning(
+                "Profile %r has non-finite %s value %r for key %r, skipped",
+                profile_name,
+                field_name,
+                value,
+                normalized_key,
             )
             continue
         if mult < 0:
@@ -169,11 +189,14 @@ def _parse_mapping(raw: Any, profile_name: str, field_name: str) -> tuple[tuple[
                 profile_name,
                 field_name,
                 mult,
-                key,
+                normalized_key,
             )
             mult = 0.0
-        pairs.append((key, mult))
-    return tuple(pairs)
+        # Whitespace around a YAML key is never semantically meaningful here.
+        # Assignment also makes the last spelling win when stripping exposes a
+        # duplicate, matching ordinary YAML mapping behavior.
+        pairs[normalized_key] = mult
+    return tuple(pairs.items())
 
 
 def _parse_string_list(raw: Any, profile_name: str, field_name: str) -> tuple[str, ...]:

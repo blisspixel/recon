@@ -105,6 +105,14 @@ class TestLoadPrevious:
         with pytest.raises(ValueError, match="supported limits"):
             load_previous(snapshot)
 
+    @pytest.mark.parametrize("field", ["auth_type", "dmarc_policy", "confidence"])
+    def test_schema_invalid_enum_is_rejected(self, tmp_path: Path, field: str) -> None:
+        snapshot = tmp_path / "invalid-enum.json"
+        snapshot.write_text(json.dumps({field: "banana"}), encoding="utf-8")
+
+        with pytest.raises(ValueError, match=field):
+            load_previous(snapshot)
+
 
 class TestComputeDelta:
     @pytest.mark.parametrize(
@@ -566,6 +574,28 @@ class TestComputeDelta:
         delta = compute_delta(prev, info)
         # Should not raise, missing fields treated as absent
         assert isinstance(delta, DeltaReport)
+
+    def test_rejects_snapshot_for_a_different_domain(self):
+        previous = _make_previous(services=["ServiceA"])
+        previous["queried_domain"] = "other.example"
+        with pytest.raises(ValueError, match="does not match current domain"):
+            compute_delta(previous, _make_info())
+
+    @pytest.mark.parametrize(
+        ("field", "value", "message"),
+        [
+            ("domain_count", -1, "at least 0"),
+            ("email_security_score", 6, "at most 5"),
+            ("auth_type", "banana", "Federated, Managed"),
+            ("dmarc_policy", "banana", "none, quarantine, reject"),
+            ("confidence", "banana", "high, low, medium"),
+        ],
+    )
+    def test_rejects_impossible_snapshot_scalars(self, field: str, value: object, message: str):
+        previous = _make_previous()
+        previous[field] = value
+        with pytest.raises(ValueError, match=message):
+            compute_delta(previous, _make_info())
 
     def test_signal_extraction(self):
         info = _make_info(
