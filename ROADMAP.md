@@ -10,7 +10,9 @@ isolated MCP v1.28.1 and v2.0.0b1 matrix passed on 2026-07-13, with production
 remaining on stable v1 and the final v2 adoption gate still pending. Measured
 latency, catalog quality,
 agent context cost, provenance, and interface-hotspot work follow in dependency
-order. The first bounded internal claim contract now evaluates the exact apex
+order. Retained batch output now uses a fixed worker pool instead of one task
+per input; summary shaping and cross-domain correlation remain measured
+follow-up work. The first bounded internal claim contract now evaluates the exact apex
 DMARC `p=reject` observation and drives the opt-in cohort schema 2.2 DMARC
 denominator while schema 2.1 remains the default.
 

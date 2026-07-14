@@ -61,13 +61,14 @@ _DEEPLY_NESTED_JSON = "[" * 100_000 + "]" * 100_000
 class _FakeStream(httpx.AsyncByteStream):
     def __init__(self, chunks: list[bytes]) -> None:
         self._chunks = chunks
+        self.close_calls = 0
 
     async def __aiter__(self) -> AsyncGenerator[bytes]:
         for chunk in self._chunks:
             yield chunk
 
     async def aclose(self) -> None:
-        return None
+        self.close_calls += 1
 
 
 async def _consume_stream(stream: httpx.AsyncByteStream) -> None:
@@ -93,10 +94,11 @@ class TestDecompressionBombGuard:
         async def _not_private(_host: str) -> bool:
             return False
 
+        raw_stream = _FakeStream([b"\x1f\x8b" + b"\x00" * 64])
         crafted = httpx.Response(
             200,
             headers={"content-encoding": "gzip"},
-            stream=_FakeStream([b"\x1f\x8b" + b"\x00" * 64]),
+            stream=raw_stream,
             request=httpx.Request("GET", "https://cse.contoso.com/x"),
         )
 
@@ -108,8 +110,11 @@ class TestDecompressionBombGuard:
 
         resp = await _SSRFSafeTransport().handle_async_request(httpx.Request("GET", "https://cse.contoso.com/x"))
         assert isinstance(resp.stream, _RefusingStream)
+        assert raw_stream.close_calls == 1
         with pytest.raises(httpx.ReadError):
             await _consume_stream(resp.stream)  # type: ignore[arg-type]
+        await resp.aclose()
+        assert raw_stream.close_calls == 1
 
     @pytest.mark.asyncio
     async def test_transport_caps_identity_response(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -119,10 +124,11 @@ class TestDecompressionBombGuard:
         async def _not_private(_host: str) -> bool:
             return False
 
+        raw_stream = _FakeStream([b'{"ok": true}'])
         crafted = httpx.Response(
             200,
             headers={"content-type": "application/json"},
-            stream=_FakeStream([b'{"ok": true}']),
+            stream=raw_stream,
             request=httpx.Request("GET", "https://crt.sh/x"),
         )
 
@@ -134,6 +140,9 @@ class TestDecompressionBombGuard:
 
         resp = await _SSRFSafeTransport().handle_async_request(httpx.Request("GET", "https://crt.sh/x"))
         assert isinstance(resp.stream, _MaxBytesStream)
+        assert raw_stream.close_calls == 0
+        await resp.aclose()
+        assert raw_stream.close_calls == 1
 
     @pytest.mark.asyncio
     async def test_client_requests_identity_encoding(self) -> None:

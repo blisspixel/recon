@@ -102,6 +102,7 @@ mutation = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
+asyncio_default_test_loop_scope = "function"
 markers = [
     "integration: tests that hit real network endpoints (deselect with '-m not integration')",
     "hostile_input: adversarial / oversized / malformed parser inputs and fuzz suites; run as a dedicated CI gate with '-m hostile_input'",

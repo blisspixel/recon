@@ -125,9 +125,9 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   TenantInfo reads use a 24 h TTL; `recon delta` may retain the same entry for up
   to 30 days as its comparison baseline. The per-domain CT cache TTL is 30 days.
   Both caches admit data through a bounded regular-file descriptor, reject
-  symbolic links, mutation during the read, materially future mtimes, and
-  expired data before JSON decoding, then write atomically with a sibling
-  `mkstemp` file followed by `os.replace`.
+  symbolic links, stable redirected cache directories, mutation during the
+  read, materially future mtimes, and expired data before JSON decoding, then
+  write atomically with a sibling `mkstemp` file followed by `os.replace`.
 - **Cache identity follows lookup identity.** Result and CT payloads are bound
   to the validated domain in their filename. Registrable-apex and literal-host
   entries are independent. `recon cache show <host> --exact` inspects a literal

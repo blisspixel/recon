@@ -29,6 +29,7 @@ from recon_tool.cache import (
     infrastructure_clusters_from_cache_dict,
     infrastructure_clusters_to_cache_dict,
 )
+from recon_tool.cache_paths import resolve_cache_directory
 from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.models import CertSummary, InfrastructureClusterReport
 from recon_tool.validator import validate_domain
@@ -102,7 +103,9 @@ def _safe_path(domain: str) -> Path:
     unresolved so the descriptor loader can reject a symbolic link rather than
     silently following it.
     """
-    d = ct_cache_dir().resolve()
+    d = resolve_cache_directory("ct-cache")
+    if d is None:
+        raise ValueError("CT cache directory resolves outside its configured root")
     return _path_in(d, domain)
 
 
@@ -156,9 +159,10 @@ def ct_cache_put(
     """Write CT results to cache. Creates dir if needed. Logs on failure."""
     try:
         normalized_domain = validate_domain(domain, apex=False)
-        d = ct_cache_dir()
-        d.mkdir(parents=True, exist_ok=True)
-        d = d.resolve()
+        d = resolve_cache_directory("ct-cache", create=True)
+        if d is None:
+            logger.debug("CT cache write rejected redirected cache directory")
+            return
         path = _path_in(d, domain)
         data = _entry_to_dict(
             normalized_domain,
@@ -202,8 +206,8 @@ def ct_cache_clear_all() -> int:
     """Remove all cached CT data. Returns count of files removed."""
     count = 0
     try:
-        d = ct_cache_dir()
-        if not d.exists():
+        d = resolve_cache_directory("ct-cache")
+        if d is None or not d.is_dir():
             return 0
         for f in d.glob("*.json"):
             try:
@@ -242,8 +246,8 @@ def ct_cache_list() -> list[CTCacheInfo]:
     """List all cached CT entries with metadata."""
     entries: list[CTCacheInfo] = []
     try:
-        d = ct_cache_dir()
-        if not d.exists():
+        d = resolve_cache_directory("ct-cache")
+        if d is None or not d.is_dir():
             return entries
         for f in sorted(d.glob("*.json")):
             domain = f.stem

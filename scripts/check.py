@@ -2,9 +2,9 @@
 """Run the CI gate locally, one command with exact parity to CI.
 
 The point is "green here means green in CI." The stages mirror the workflow's
-deterministic, no-network jobs (lint, typecheck over the SAME scope CI uses,
-the coverage-gated test run, and the catalog/label checks). Run it before every
-push:
+deterministic, no-network jobs (lint, typecheck using the authoritative
+``pyproject.toml`` scope, the coverage-gated test run, and the catalog/label
+checks). Run it before every push:
 
     python scripts/check.py          # full gate (what CI gates on)
     python scripts/check.py --fast   # skip the test run (lint + types + quick checks)
@@ -14,9 +14,9 @@ failure follow. Network-only jobs (pip-audit) and binary-dependent ones
 (actionlint) are intentionally out of scope here. They have their own CI jobs
 and don't gate code correctness.
 
-History: this exists because a local `pyright recon_tool/` (narrower than CI's
-`pyright recon_tool/ tests/`) let a test-file type error reach CI red. The fix
-is parity, encoded here once.
+History: this exists because a locally narrowed Pyright command once let a
+test-file type error reach CI red. Neither local nor CI commands pass positional
+paths now, so one configured include list owns the complete scope.
 """
 
 from __future__ import annotations
@@ -35,7 +35,7 @@ _CORE = "core"
 _TEST = "test"
 _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "ruff", [_PY, "-m", "ruff", "check", "."]),
-    (_CORE, "pyright", [_PY, "-m", "pyright", "src/recon_tool/", "tests/"]),
+    (_CORE, "pyright", [_PY, "-m", "pyright"]),
     (
         _TEST,
         "pytest+cov",

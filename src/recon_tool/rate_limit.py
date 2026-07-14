@@ -327,32 +327,52 @@ class AdaptiveRateLimiter:
 
     async def acquire(self) -> None:
         """Wait for a slot. Raise ``RateLimited`` on timeout or open breaker."""
-        async with self._lock:
-            # Breaker check first. An open breaker fails fast so the
-            # orchestrator can fall through to the next provider /
-            # cache without burning wall-clock on a known-dead path.
-            is_open, remaining = self._breaker_state()
-            if is_open:
-                self._local_decline_count += 1
-                msg = (
-                    f"{self.name}: circuit breaker open for {remaining:.0f}s more "
-                    f"(consecutive_failures={self._consecutive_failures})"
-                )
-                raise RateLimited(msg)
+        deadline = time.monotonic() + self._max_wait_s
+        first_attempt = True
+        while True:
+            async with self._lock:
+                wait = self._reserve_or_delay(deadline, first_attempt=first_attempt)
+            if wait is None:
+                return
+            first_attempt = False
+            # Never hold the reservation lock while sleeping. A later caller
+            # must be able to observe newly opened breaker state immediately.
+            await asyncio.sleep(wait)
 
-            now = time.monotonic()
-            wait = max(0.0, self._next_slot_at - now)
-            if wait > self._max_wait_s:
-                self._local_decline_count += 1
-                msg = (
-                    f"{self.name}: next slot in {wait:.0f}s exceeds max wait "
-                    f"{self._max_wait_s:.0f}s (current interval {self._interval_s:.1f}s)"
-                )
-                raise RateLimited(msg)
-            if wait > 0.0:
-                await asyncio.sleep(wait)
-            # Issue the slot by stamping the next-available time.
-            self._next_slot_at = max(self._next_slot_at, time.monotonic()) + self._interval_s
+    def _reserve_or_delay(self, deadline: float, *, first_attempt: bool) -> float | None:
+        """Reserve an available slot or return the bounded delay before retry."""
+        # Feedback callbacks are synchronous and can move the slot or open the
+        # breaker while another acquire sleeps. Every lock acquisition rechecks
+        # both invariants before issuing work.
+        is_open, remaining = self._breaker_state()
+        if is_open:
+            msg = (
+                f"{self.name}: circuit breaker open for {remaining:.0f}s more "
+                f"(consecutive_failures={self._consecutive_failures})"
+            )
+            raise self._decline(msg)
+
+        now = time.monotonic()
+        wait = max(0.0, self._next_slot_at - now)
+        remaining_budget = max(0.0, deadline - now)
+        if wait <= 0.0 and (first_attempt or remaining_budget > 0.0):
+            self._next_slot_at = now + self._interval_s
+            return None
+
+        # Equality cannot complete within the stated maximum: the coroutine
+        # must still resume and reacquire the lock. Reject it deterministically
+        # instead of racing an equal-deadline timeout.
+        if wait >= remaining_budget:
+            msg = (
+                f"{self.name}: next slot in {wait:.0f}s does not fit remaining wait budget "
+                f"{remaining_budget:.0f}s (maximum {self._max_wait_s:.0f}s)"
+            )
+            raise self._decline(msg)
+        return wait
+
+    def _decline(self, message: str) -> RateLimited:
+        self._local_decline_count += 1
+        return RateLimited(message)
 
     def on_success(self) -> None:
         """Caller observed a successful provider response. Speed up gently."""
@@ -430,19 +450,15 @@ class AdaptiveRateLimiter:
         }
 
 
-# Process-wide singletons, lazily allocated per running loop. Two
-# distinct loops (e.g. a test that spawns its own loop) get their own
-# limiter so state is not leaked across loop teardowns.
-_limiters_by_loop: dict[int, dict[str, AdaptiveRateLimiter]] = {}
+_LOOP_LIMITERS_ATTRIBUTE = "_recon_tool_adaptive_rate_limiters"
 
 
 def _get_limiter(name: str, **kwargs: object) -> AdaptiveRateLimiter:
     loop = asyncio.get_running_loop()
-    key = id(loop)
-    table = _limiters_by_loop.get(key)
+    table: dict[str, AdaptiveRateLimiter] | None = getattr(loop, _LOOP_LIMITERS_ATTRIBUTE, None)
     if table is None:
         table = {}
-        _limiters_by_loop[key] = table
+        setattr(loop, _LOOP_LIMITERS_ATTRIBUTE, table)
     limiter = table.get(name)
     if limiter is None:
         limiter = AdaptiveRateLimiter(name, **kwargs)  # type: ignore[arg-type]

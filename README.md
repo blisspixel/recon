@@ -182,6 +182,10 @@ Formal model and robustness research program:
 
 `recon <domain> --json` emits a stable single-domain lookup object. Batch and
 delta modes emit different shapes, so route by mode or by `record_type`.
+Retained batch modes create at most the requested number of outer batch worker
+tasks while restoring input order. Each admitted lookup may still create its
+own bounded source tasks. `--ndjson` also releases completed records and remains
+the lowest-memory choice for large inputs.
 `recon batch --summary --json` preserves the separate aggregate-only
 `cohort_summary` 2.1 contract. New consumers can select
 `--summary-schema 2.2` for raw-evidence-bound DMARC rates, corrected missingness,
@@ -267,12 +271,12 @@ priorities are:
 1. Make every default claim traceable to evidence and remove product-use,
    cloud-type, or security-maturity conclusions that public metadata cannot
    support.
-2. Establish an aggregate-safe quality baseline for claim precision,
-   abstention, provenance, catalog coverage, degradation, latency, CT value,
-   and agent context cost before expanding inference or graph machinery.
-3. Keep the exact MCP v1.28.1 and v2.0.0b1 compatibility matrix green, then
+2. Keep the exact MCP v1.28.1 and v2.0.0b1 compatibility matrix green, then
    repeat the full gate against the final 2026-07-28 specification and stable
    v2 SDK before changing the production dependency.
+3. Establish an aggregate-safe quality baseline for claim precision,
+   abstention, provenance, catalog coverage, degradation, latency, CT value,
+   and agent context cost before expanding inference or graph machinery.
 
 The dependency order, acceptance evidence, stop rules, and current code-graph
 summary live in

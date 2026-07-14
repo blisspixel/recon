@@ -11,12 +11,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SELECTED_RULES = ("PLR0911", "PLR0912", "PLR0913", "PLR0915")
 
-# Current debt baseline as of 2026-06-19. New code must not increase these
-# counts; follow-up refactors can lower the ceilings in this file.
+# Current debt baseline as of 2026-07-14. New code must not increase these
+# counts. A lower live count also fails with a stale-baseline message so every
+# earned reduction is locked into this maintained ceiling.
 MAX_COUNTS = {
     "PLR0911": 22,  # too many return statements
-    "PLR0912": 14,  # too many branches
-    "PLR0913": 51,  # too many arguments
+    "PLR0912": 12,  # too many branches
+    "PLR0913": 50,  # too many arguments
     "PLR0915": 9,  # too many statements
 }
 
@@ -36,6 +37,14 @@ def find_regressions(counts: dict[str, int]) -> dict[str, tuple[int, int]]:
         rule: (count, MAX_COUNTS[rule])
         for rule, count in counts.items()
         if count > MAX_COUNTS[rule]
+    }
+
+
+def find_improvements(counts: dict[str, int]) -> dict[str, tuple[int, int]]:
+    return {
+        rule: (count, MAX_COUNTS[rule])
+        for rule, count in counts.items()
+        if count < MAX_COUNTS[rule]
     }
 
 
@@ -67,15 +76,20 @@ def main() -> int:
 
     counts = parse_statistics(output)
     regressions = find_regressions(counts)
+    improvements = find_improvements(counts)
     for rule in SELECTED_RULES:
         count = counts[rule]
         ceiling = MAX_COUNTS[rule]
-        status = "OK" if count <= ceiling else "FAIL"
+        status = "OK" if count == ceiling else ("LOWER" if count < ceiling else "FAIL")
         print(f"{status} {rule}: {count}/{ceiling}")
 
     if regressions:
         details = ", ".join(f"{rule} {count}>{ceiling}" for rule, (count, ceiling) in regressions.items())
         print(f"PLR ratchet regression: {details}", file=sys.stderr)
+        return 1
+    if improvements:
+        details = ", ".join(f"{rule} {count}<{ceiling}" for rule, (count, ceiling) in improvements.items())
+        print(f"PLR ratchet baseline is stale; lower MAX_COUNTS: {details}", file=sys.stderr)
         return 1
     print("PLR ratchet passed.")
     return 0

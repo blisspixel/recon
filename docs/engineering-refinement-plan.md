@@ -1,7 +1,7 @@
 # Engineering Refinement Plan
 
 Status: active implementation plan
-Review date: 2026-07-13
+Review date: 2026-07-14
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
 engineering tracks. It does not authorize unrelated runtime expansion. Every
@@ -318,8 +318,8 @@ approved.
 
 ## Track 5: Measured Async and Schema Interoperability
 
-Status: first Python optimization checkpoint implemented; product-shaped async
-and v2 deltas remain
+Status: Python optimization checkpoints implemented; product-shaped async and
+v2 deltas remain
 Dependencies: none for resolver and current-schema baselines; Track 2 only for
 candidate-SDK deltas
 Risk: concurrency and brittle-benchmark risk
@@ -362,8 +362,23 @@ Risk: concurrency and brittle-benchmark risk
   exact retry schedules and no-I/O invalid-input behavior.
 - Validated four-worker file-grouped full-suite execution with combined branch
   coverage. The complete OS and Python compatibility matrix remains intact.
-- Deferred connection-pool reuse, non-streaming scheduler changes, and bounded
-  cross-domain correlation until their named product-shaped measurements exist.
+- Deferred connection-pool reuse and bounded cross-domain correlation until
+  their named product-shaped measurements exist.
+
+### July 14, 2026 bounded scheduling checkpoint
+
+- Replaced retained-output `gather` fan-out with a fixed outer worker pool that
+  creates at most the requested concurrency in batch worker tasks and restores
+  input order. Each admitted lookup retains its own bounded internal tasks.
+- Preserved the separate NDJSON completion-order scheduler, all public output
+  shapes, per-domain progress outcomes, error, enrichment, and cancellation
+  behavior. Later inputs are admitted as workers become available, so progress
+  timing can differ from the eager fan-out implementation.
+- At seven-way concurrency and 10,000 synthetic inputs, task creation fell from
+  10,000 to seven and traced scheduling peak fell from 11,638,234 to 480,232
+  bytes. These are local allocation diagnostics, not throughput or latency SLOs.
+- Kept summary-mode shaping and dense cross-domain correlation as the next
+  bounded batch work rather than combining unrelated changes into this pass.
 
 ### Acceptance
 

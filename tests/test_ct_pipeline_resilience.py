@@ -16,13 +16,22 @@ layers blind despite ``--ct`` being passed.
 
 from __future__ import annotations
 
+import asyncio
+import gc
+import weakref
 from datetime import UTC
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 
-from recon_tool.rate_limit import AdaptiveRateLimiter, RateLimited
+import recon_tool.rate_limit as rate_limit_module
+from recon_tool.rate_limit import (
+    AdaptiveRateLimiter,
+    RateLimited,
+    ct_rate_limiter_crtsh,
+)
 from recon_tool.sources.cert_providers import (
     _CT_GLOBAL_CONCURRENCY,
     CertSpotterProvider,
@@ -137,6 +146,253 @@ class TestAdaptiveRateLimiter:
             await lim.acquire()
 
     @pytest.mark.asyncio
+    async def test_queued_acquire_rechecks_later_retry_after(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A waiter must honor a Retry-After received while it is asleep."""
+
+        class Clock:
+            now = 0.0
+
+            def monotonic(self) -> float:
+                return self.now
+
+        clock = Clock()
+        monkeypatch.setattr(
+            rate_limit_module,
+            "time",
+            SimpleNamespace(monotonic=clock.monotonic),
+        )
+        lim = AdaptiveRateLimiter(
+            "t",
+            min_interval_s=1.0,
+            max_interval_s=10.0,
+            start_interval_s=1.0,
+            max_wait_s=10.0,
+            failure_threshold=99,
+            persist=False,
+        )
+        first_sleep_started = asyncio.Event()
+        resume_first_sleep = asyncio.Event()
+        observed_sleeps: list[float] = []
+
+        async def controlled_sleep(delay: float) -> None:
+            observed_sleeps.append(delay)
+            if len(observed_sleeps) == 1:
+                first_sleep_started.set()
+                await resume_first_sleep.wait()
+            clock.now += delay
+
+        monkeypatch.setattr(
+            rate_limit_module,
+            "asyncio",
+            SimpleNamespace(sleep=controlled_sleep, timeout=asyncio.timeout),
+        )
+
+        await lim.acquire()
+        waiter = asyncio.create_task(lim.acquire())
+        await first_sleep_started.wait()
+        lim.on_rate_limited(retry_after_s=5.0)
+        resume_first_sleep.set()
+        await waiter
+
+        assert observed_sleeps == [1.0, 4.0]
+        assert clock.now == 5.0
+
+    @pytest.mark.asyncio
+    async def test_queued_acquire_rechecks_breaker_after_sleep(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A breaker opened during a wait must prevent the queued request."""
+
+        class Clock:
+            now = 0.0
+
+            def monotonic(self) -> float:
+                return self.now
+
+        clock = Clock()
+        monkeypatch.setattr(
+            rate_limit_module,
+            "time",
+            SimpleNamespace(monotonic=clock.monotonic),
+        )
+        lim = AdaptiveRateLimiter(
+            "t",
+            min_interval_s=1.0,
+            max_interval_s=10.0,
+            start_interval_s=1.0,
+            max_wait_s=10.0,
+            failure_threshold=1,
+            persist=False,
+        )
+        sleep_started = asyncio.Event()
+        resume_sleep = asyncio.Event()
+
+        async def controlled_sleep(delay: float) -> None:
+            sleep_started.set()
+            await resume_sleep.wait()
+            clock.now += delay
+
+        monkeypatch.setattr(
+            rate_limit_module,
+            "asyncio",
+            SimpleNamespace(sleep=controlled_sleep, timeout=asyncio.timeout),
+        )
+
+        await lim.acquire()
+        waiter = asyncio.create_task(lim.acquire())
+        await sleep_started.wait()
+        lim.on_other_failure()
+        resume_sleep.set()
+
+        with pytest.raises(RateLimited, match="circuit breaker open"):
+            await waiter
+        assert lim.snapshot()["local_decline_count"] == 1
+
+    @pytest.mark.asyncio
+    async def test_new_acquire_observes_breaker_while_existing_waiter_sleeps(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A sleeping waiter must not hide an open breaker from new callers."""
+        lim = AdaptiveRateLimiter(
+            "t",
+            min_interval_s=1.0,
+            max_interval_s=10.0,
+            start_interval_s=1.0,
+            max_wait_s=10.0,
+            failure_threshold=1,
+            persist=False,
+        )
+        sleep_started = asyncio.Event()
+        resume_sleep = asyncio.Event()
+
+        async def controlled_sleep(_delay: float) -> None:
+            sleep_started.set()
+            await resume_sleep.wait()
+
+        monkeypatch.setattr(rate_limit_module.asyncio, "sleep", controlled_sleep)
+
+        await lim.acquire()
+        existing_waiter = asyncio.create_task(lim.acquire())
+        await sleep_started.wait()
+        lim.on_other_failure()
+
+        with pytest.raises(RateLimited, match="circuit breaker open"):
+            await asyncio.wait_for(lim.acquire(), timeout=0.1)
+
+        resume_sleep.set()
+        with pytest.raises(RateLimited, match="circuit breaker open"):
+            await existing_waiter
+        assert lim.snapshot()["local_decline_count"] == 2
+
+    @pytest.mark.asyncio
+    async def test_exact_wait_budget_boundary_declines_without_sleep(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A slot at the deadline cannot complete within the wait budget."""
+
+        class Clock:
+            now = 0.0
+
+            def monotonic(self) -> float:
+                return self.now
+
+        clock = Clock()
+        sleep = AsyncMock()
+        monkeypatch.setattr(rate_limit_module.time, "monotonic", clock.monotonic)
+        monkeypatch.setattr(rate_limit_module.asyncio, "sleep", sleep)
+        lim = AdaptiveRateLimiter(
+            "t",
+            min_interval_s=1.0,
+            max_interval_s=1.0,
+            start_interval_s=1.0,
+            max_wait_s=1.0,
+            failure_threshold=99,
+            persist=False,
+        )
+
+        await lim.acquire()
+        with pytest.raises(RateLimited, match="does not fit remaining wait budget"):
+            await lim.acquire()
+        sleep.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_zero_wait_budget_allows_only_an_immediately_available_slot(self) -> None:
+        lim = AdaptiveRateLimiter(
+            "t",
+            min_interval_s=1.0,
+            max_interval_s=1.0,
+            start_interval_s=1.0,
+            max_wait_s=0.0,
+            failure_threshold=99,
+            persist=False,
+        )
+
+        await lim.acquire()
+        with pytest.raises(RateLimited, match="does not fit remaining wait budget"):
+            await lim.acquire()
+
+    @pytest.mark.asyncio
+    async def test_later_backoff_cannot_extend_total_wait_budget(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """Repeated state changes share the acquire call's original budget."""
+
+        class Clock:
+            now = 0.0
+
+            def monotonic(self) -> float:
+                return self.now
+
+        clock = Clock()
+        monkeypatch.setattr(
+            rate_limit_module,
+            "time",
+            SimpleNamespace(monotonic=clock.monotonic),
+        )
+        lim = AdaptiveRateLimiter(
+            "t",
+            min_interval_s=1.0,
+            max_interval_s=10.0,
+            start_interval_s=1.0,
+            max_wait_s=2.0,
+            failure_threshold=99,
+            persist=False,
+        )
+        first_sleep_started = asyncio.Event()
+        resume_first_sleep = asyncio.Event()
+        observed_sleeps: list[float] = []
+
+        async def controlled_sleep(delay: float) -> None:
+            observed_sleeps.append(delay)
+            first_sleep_started.set()
+            await resume_first_sleep.wait()
+            clock.now += delay
+
+        monkeypatch.setattr(
+            rate_limit_module,
+            "asyncio",
+            SimpleNamespace(sleep=controlled_sleep, timeout=asyncio.timeout),
+        )
+
+        await lim.acquire()
+        waiter = asyncio.create_task(lim.acquire())
+        await first_sleep_started.wait()
+        lim.on_rate_limited(retry_after_s=5.0)
+        resume_first_sleep.set()
+
+        with pytest.raises(RateLimited, match="does not fit remaining wait budget"):
+            await waiter
+        assert observed_sleeps == [1.0]
+        assert lim.snapshot()["local_decline_count"] == 1
+
+    @pytest.mark.asyncio
     async def test_on_rate_limited_increases_interval(self) -> None:
         """A 429 doubles the interval. Several in a row reach the cap."""
         lim = AdaptiveRateLimiter(
@@ -233,6 +489,43 @@ class TestAdaptiveRateLimiter:
             assert now <= prev + 1e-9, f"interval went up after on_success: {prev} -> {now}"
             prev = now
         assert lim.snapshot()["interval_s"] == 1.0
+
+
+class TestLimiterLoopOwnership:
+    @pytest.mark.asyncio
+    async def test_factory_is_singleton_within_one_loop(self) -> None:
+        assert ct_rate_limiter_crtsh() is ct_rate_limiter_crtsh()
+
+    def test_closed_loop_and_limiter_are_collectible(self) -> None:
+        loop_refs: list[weakref.ReferenceType[asyncio.AbstractEventLoop]] = []
+        limiter_refs: list[weakref.ReferenceType[AdaptiveRateLimiter]] = []
+
+        async def build_limiter() -> AdaptiveRateLimiter:
+            limiter = ct_rate_limiter_crtsh()
+            await limiter.acquire()
+            sleeping = asyncio.create_task(limiter.acquire())
+            await asyncio.sleep(0)
+            contending = asyncio.create_task(limiter.acquire())
+            await asyncio.sleep(0)
+            sleeping.cancel()
+            contending.cancel()
+            await asyncio.gather(sleeping, contending, return_exceptions=True)
+            return limiter
+
+        for _ in range(3):
+            loop = asyncio.new_event_loop()
+            try:
+                limiter = loop.run_until_complete(build_limiter())
+                loop_refs.append(weakref.ref(loop))
+                limiter_refs.append(weakref.ref(limiter))
+            finally:
+                loop.close()
+            del limiter
+            del loop
+
+        gc.collect()
+        assert all(ref() is None for ref in loop_refs)
+        assert all(ref() is None for ref in limiter_refs)
 
 
 class TestRetryAfterParsing:
