@@ -146,6 +146,8 @@ class TestHelp:
         assert "expanded evidence, domains, and posture" in collapsed
         assert "→ everything" not in collapsed
         assert "offline install check" in collapsed
+        assert "python -m recon_tool --version" in collapsed
+        assert "public-suffix domain" in collapsed
         assert "DNS queries" in collapsed
         assert "MTA-STS" in collapsed
         assert "Google CSE and BIMI direct probes run only with --direct-probes" in collapsed

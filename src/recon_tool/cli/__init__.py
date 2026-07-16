@@ -255,7 +255,14 @@ def _print_welcome_banner() -> None:
     console.print("  recon northwindtraders.com --verbose")
     console.print("  recon fabrikam.com --full --json")
     console.print()
-    console.print('[dim]Use "recon --version" for an offline install check; "recon doctor" tests online sources.[/dim]')
+    console.print(
+        "[dim]Pass a public-suffix domain (contoso.com). Bare hostnames without a "
+        "dot are rejected as invalid domain format.[/dim]"
+    )
+    console.print(
+        '[dim]Use "recon --version" or "python -m recon_tool --version" for an offline '
+        'install check; "recon doctor" tests online sources.[/dim]'
+    )
 
 
 @app.command()

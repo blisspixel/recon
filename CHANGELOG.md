@@ -40,6 +40,8 @@ is now a supported entry path.
   "No such command" path.
 - Added `python -m recon_tool` package entry so local and scripted installs can
   invoke the CLI without relying only on the console script.
+- Welcome banner now states that inputs need a public-suffix domain and shows
+  `python -m recon_tool --version` as an offline install check path.
 
 ## [2.6.3] - 2026-07-14
 
