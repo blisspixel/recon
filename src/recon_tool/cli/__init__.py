@@ -815,8 +815,10 @@ def delta(
 ) -> None:
     """Compare the current lookup against the last cached TenantInfo.
 
-    Surfaces what changed since the previous run — new services, removed
-    services, auth/DMARC/confidence changes. Uses the main TenantInfo cache
+    Surfaces confirmed changes since the previous run: services, slugs,
+    signals, auth, DMARC, email control count (0-5), and confidence.
+    Incomplete collections suppress unconfirmable additions, removals, and
+    dependent scalar changes. Uses the main TenantInfo cache
     (~/.recon/cache/) automatically; no manual export file required.
     """
     from recon_tool.cache import cache_get, cache_put, tenant_info_to_dict

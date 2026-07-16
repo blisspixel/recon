@@ -28,6 +28,10 @@ is now a supported entry path.
 - Delta panel human label for the 0-5 email control inventory is now
   "Email control count (0-5)" instead of "Email Security Score." The stable
   JSON field `changed_email_security_score` is unchanged.
+- Delta command help now states confirmed change fields, including email
+  control count, and incomplete-collection suppression.
+- Explain-path confidence derivation for email-control insights now says
+  "Email control count" instead of "Email security score."
 
 ### Fixed
 
