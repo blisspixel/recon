@@ -175,6 +175,26 @@ class TestDirectDomainLookup:
         assert "No such command" not in result.output
         assert "Contoso Ltd" in result.output
 
+    def test_undotted_domain_attempt_uses_domain_validation(self) -> None:
+        # Hostnames without a dot (or other invalid tokens) must not fall through
+        # as Click "No such command". Route them to lookup so the user gets a
+        # domain-format rejection.
+        result = runner.invoke(app, ["contoso"])
+        assert result.exit_code == 2
+        assert "No such command" not in result.output
+        assert "Invalid domain format" in result.output
+
+    def test_malformed_undotted_token_is_not_unknown_command(self) -> None:
+        result = runner.invoke(app, ["not-a-valid-domain!!!"])
+        assert result.exit_code == 2
+        assert "No such command" not in result.output
+        assert "Invalid domain format" in result.output
+
+    def test_root_help_uses_passive_public_sources_summary(self) -> None:
+        result = runner.invoke(app, ["--help"])
+        assert result.exit_code == 0
+        assert "Passive domain intelligence from public sources" in result.output
+
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_default(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)

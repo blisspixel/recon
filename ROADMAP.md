@@ -4,11 +4,13 @@ The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
 Current status: recon v2.6.3 has a stable, production-ready baseline. The CLI,
 JSON schema, local stdio MCP server, bounded collectors, generated-artifact
-guards, validation gates, and release path are shipped. The active product work
-is evidence-semantic integrity and a reproducible product-quality baseline. The
-isolated MCP v1.28.1 and v2.0.0b1 matrix passed on 2026-07-13, with production
-remaining on stable v1 and the final v2 adoption gate still pending. Measured
-latency, catalog quality,
+guards, validation gates, and release path are shipped. Unreleased polish on
+main improves first-run domain errors, aligns root help with the passive
+public-sources voice, clarifies the delta panel email control-count label, and
+adds `python -m recon_tool`. The active product work is evidence-semantic
+integrity and a reproducible product-quality baseline. The isolated MCP v1.28.1
+and v2.0.0b1 matrix passed on 2026-07-13, with production remaining on stable v1
+and the final v2 adoption gate still pending. Measured latency, catalog quality,
 agent context cost, provenance, and interface-hotspot work follow in dependency
 order. Retained batch output now uses a fixed worker pool instead of one task
 per input; summary shaping and cross-domain correlation remain measured

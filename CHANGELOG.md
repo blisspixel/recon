@@ -12,6 +12,31 @@ cryptographic or provable tenant language is superseded by provider-attested
 tenant-ID co-tenancy. Neither observation establishes a shared account
 operator, corporate group, ownership, or control.
 
+## [Unreleased]
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, JSON, MCP, cache, or public import
+contract changes. The root CLI help summary text and the human-facing delta
+panel label for the email control count are clearer. `python -m recon_tool`
+is now a supported entry path.
+
+### Changed
+
+- Root help and callback copy now say "Passive domain intelligence from public
+  sources," matching the welcome banner and README framing.
+- Delta panel human label for the 0-5 email control inventory is now
+  "Email control count (0-5)" instead of "Email Security Score." The stable
+  JSON field `changed_email_security_score` is unchanged.
+
+### Fixed
+
+- Bare undotted or otherwise invalid first arguments (for example
+  `recon contoso`) route to domain validation instead of Click's
+  "No such command" path.
+- Added `python -m recon_tool` package entry so local and scripted installs can
+  invoke the CLI without relying only on the console script.
+
 ## [2.6.3] - 2026-07-14
 
 ### Tool Surface Changes
