@@ -548,6 +548,14 @@ infer "always present". They are intentionally omitted from the schema's
 (`--json --explain`), `explanation_dag` (`--json --explain`, or
 `lookup_tenant(format="json", explain=true)` through MCP), and
 `unclassified_cname_chains` (`--include-unclassified` in structured output).
+The same private catalog-maintenance option also adds
+`dns_catalog_summary` and `unclassified_dns_observations`. The summary has one
+row for each bounded catalog path with availability, opportunity, observed,
+classified, unclassified, and truncation counts. The observation array carries
+the unmatched owner and value needed for private triage. Both are diagnostic,
+off by default, excluded from the stable schema and disk cache, and may contain
+target-owned public DNS values. Keep their output in an ignored private
+validation workspace.
 
 Plain panel `--explain` output renders source status and flat explanations. It
 does not emit the structured `explanation_dag` object.

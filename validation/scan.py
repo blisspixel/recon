@@ -11,6 +11,9 @@ A run directory is created at ``validation/runs-private/<UTC-stamp>/`` with:
   * ``results.ndjson`` - default raw batch stream (``results.json`` with ``--json-array``)
   * ``gaps.json``    - bucketed unclassified terminals
   * ``candidates.json`` - pre-filtered triage list (intra-org / covered dropped)
+  * ``catalog-aggregate.json`` - disclosure-safe typed coverage counts
+  * ``catalog-gaps.json`` - private typed candidate queues
+  * ``catalog-manifest.json`` - private revision and input manifest
   * ``meta.json``    - scan metadata (timestamp, private corpus path, normalized counts, ...)
   * ``diff.json``    - only when --compare-to is provided; per-domain deltas
 
@@ -67,6 +70,7 @@ class FinalizeContext(NamedTuple):
     compare_to: Path | None
     no_compare: bool
     ct: bool
+    round_kind: str
     label: str
     corpus: Path
     corpus_input_rows: int
@@ -312,6 +316,12 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Optional human-readable label written into meta.json (e.g. 'monthly-2026-05').",
     )
     parser.add_argument(
+        "--round-kind",
+        choices=("baseline", "rank", "region", "vertical", "vendor-seed", "drift"),
+        default="baseline",
+        help="Predeclared sampling purpose recorded by the typed catalog baseline.",
+    )
+    parser.add_argument(
         "--concurrency",
         type=int,
         default=4,
@@ -477,7 +487,7 @@ def _run_batch(
     batch_cmd = [
         sys.executable,
         "-m",
-        "recon_tool.cli",
+        "recon_tool",
         "batch",
         str(corpus),
         output_mode,
@@ -649,12 +659,30 @@ def _finalize_scan(ctx: FinalizeContext) -> None:
         "batch_max_runtime_seconds": ctx.max_runtime,
         "concurrency": ctx.concurrency,
         "ct_enabled": bool(ctx.ct),
+        "round_kind": ctx.round_kind,
         "gaps_total": gaps_count,
         "candidates_after_triage": candidates_count,
         "compared_to": str(compare_target) if compare_target else None,
         "diff_path": str(diff_path) if diff_path else None,
     }
     (ctx.run_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
+
+    _run_step(
+        [
+            sys.executable,
+            "-m",
+            "validation.catalog_baseline",
+            "--input",
+            str(ctx.results_path),
+            "--output-dir",
+            str(ctx.run_dir),
+            "--round-kind",
+            ctx.round_kind,
+            "--min-count",
+            str(ctx.min_count),
+        ],
+        "typed catalog baseline",
+    )
 
     completion = "complete" if ctx.batch_completed else "partial"
     print()
@@ -665,6 +693,7 @@ def _finalize_scan(ctx: FinalizeContext) -> None:
     print(f"  results:    {ctx.results_path}")
     print(f"  gaps:       {ctx.run_dir / 'gaps.json'}")
     print(f"  candidates: {ctx.run_dir / 'candidates.json'}")
+    print(f"  catalog:    {ctx.run_dir / 'catalog-aggregate.json'}")
     if diff_path:
         print(f"  diff:       {diff_path}")
     print(f"  meta:       {ctx.run_dir / 'meta.json'}")
@@ -727,6 +756,7 @@ def main() -> None:
                 compare_to=args.compare_to,
                 no_compare=args.no_compare,
                 ct=args.ct,
+                round_kind=args.round_kind,
                 label=args.label,
                 corpus=corpus,
                 corpus_input_rows=corpus_stats.input_rows,
@@ -769,6 +799,7 @@ def main() -> None:
             compare_to=args.compare_to,
             no_compare=args.no_compare,
             ct=args.ct,
+            round_kind=args.round_kind,
             label=args.label,
             corpus=corpus,
             corpus_input_rows=corpus_stats.input_rows,

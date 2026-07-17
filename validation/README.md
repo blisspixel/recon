@@ -15,6 +15,13 @@ Committed (generic tooling, no company names):
 - `find_gaps.py`: reads a run (single file or directory of per-domain JSON)
   and surfaces unclassified CNAME terminal suffixes ranked by frequency. The
   first half of the fingerprint-discovery loop.
+- `catalog_baseline.py`: reduces nested JSON or NDJSON opt-in typed DNS
+  diagnostics into a
+  private evidence queue, a private revision manifest, and a separate
+  aggregate-only coverage report. It covers every bounded catalog record path
+  and never writes a queried namespace into the aggregate report. Schema 1.1
+  reports measured inputs separately from validation, timeout, and lookup
+  errors.
 - `triage_candidates.py`: programmatic filter on `gaps.json`: drops
   already-fingerprinted patterns, intra-org chains, and one-off noise. The
   output is the LLM-triage-ready candidate list.
@@ -49,9 +56,11 @@ Gitignored (your private workspace):
 ```
 USER runs recon on a target (single domain or corpus)
     ↓
-RECON emits JSON including unclassified_cname_chains for unmatched chains
+RECON emits opt-in JSON with count-only typed coverage and unmatched values
     ↓
-PROGRAMMATIC FILTER drops noise: intra-org, already-fingerprinted, low-confidence
+PRIVATE REDUCER separates aggregate counts from evidence-bearing candidate rows
+    ↓
+PROGRAMMATIC FILTER drops same-zone, already-classified, and one-off noise
     ↓
 LLM SKILL judges each survivor: real SaaS? tier? slug? category? YAML stanza?
     ↓
@@ -135,19 +144,25 @@ single timestamped invocation:
 python validation/scan.py \
     --corpus validation/corpus-private/consolidated.txt \
     --label monthly-2026-05 \
+    --round-kind baseline \
     --concurrency 4
 
 # Next month: auto-diffs against the most recent prior scan
 python validation/scan.py \
     --corpus validation/corpus-private/consolidated.txt \
-    --label monthly-2026-06
+    --label monthly-2026-06 \
+    --round-kind drift
 ```
 
 Each run directory ends up with `results.ndjson` by default (`results.json`
-with `--json-array`), `gaps.json`,
-`candidates.json`, `diff.json` (when comparing to a prior run), and
-`meta.json` capturing the scan timestamp, label, raw input rows, normalized
-scheduled count, duplicate and malformed-row counts, and candidate counts.
+with `--json-array`), `gaps.json`, `candidates.json`, `catalog-gaps.json`,
+`catalog-aggregate.json`, `catalog-manifest.json`, `diff.json` (when comparing
+to a prior run), and `meta.json`. The manifest and gap files remain private.
+The aggregate file contains only counts, digests, revision metadata, and
+environment details and must still be reviewed before any number is copied
+into a committed memo. `meta.json` captures the scan timestamp, round kind,
+label, raw input rows, normalized scheduled count, duplicate and malformed-row
+counts, and candidate counts.
 Reading `meta.json` from any run answers "when was this scanned, what was
 found?" without re-running.
 
@@ -175,10 +190,11 @@ python validation/scan.py \
     --no-compare
 ```
 
-`--exclude-results` may be repeated. It canonicalizes and removes namespaces
-already present in prior result files, then stores the filtered input manifest
-inside the ignored output directory. Use it when private strata overlap so a
-pooled round does not count the same queried namespace twice.
+`--exclude-results` may be repeated. It reads JSON arrays and streamed NDJSON,
+including nested scan directories, canonicalizes and removes namespaces already
+present in prior result files, then stores the filtered input manifest inside
+the ignored output directory. Use it when private strata overlap so a pooled
+round does not count the same queried namespace twice.
 `--limit` applies after normalization, exclusion, and deduplication, making
 fixed-size sequential rounds from a larger frozen private stratum reproducible.
 
