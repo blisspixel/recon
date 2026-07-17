@@ -7,6 +7,7 @@ commands; the shared exception formatter comes from ``recon_tool.cli.shared``.
 from __future__ import annotations
 
 import json
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -410,6 +411,7 @@ def fingerprints_new(
                 "pattern": pattern,
                 **({"description": description} if description else {}),
                 **({"reference": reference} if reference else {}),
+                "verified": date.today().isoformat(),
             }
         ],
     }

@@ -1,0 +1,101 @@
+name: Bug report
+description: Report a crash, incorrect result, or unexpected behavior using sanitized or fictional data
+title: "[Bug] "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a public issue. Do not include a real target name, apex or subdomain, organization name, tenant ID, DNS value, IP address, screenshot, stack trace containing target data, or per-domain recon output.
+
+        Reproduce with an IETF-reserved domain such as `example.com`, a Microsoft fictional brand listed in `CONTRIBUTING.md`, or a minimal synthetic fixture. If the real identity is essential, do not file a public issue. Follow the private non-security report path in the data-handling policy.
+
+  - type: checkboxes
+    id: public_data_acknowledgement
+    attributes:
+      label: Public-data acknowledgement
+      options:
+        - label: I removed all real target identities, records, identifiers, screenshots, and per-domain output from this report.
+          required: true
+
+  - type: textarea
+    id: observed_behavior
+    attributes:
+      label: What happened?
+      description: Describe the behavior without naming or quoting a real target.
+      placeholder: A synthetic fixture with an enforcing DMARC policy was rendered as unresolved.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: What should have happened?
+      description: State the expected observable or renderer behavior.
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Sanitized reproduction
+      description: Use reserved or fictional domains and the minimum command sequence or test fixture needed to reproduce.
+      render: shell
+      placeholder: |
+        recon example.com
+        recon example.com --json --explain
+    validations:
+      required: true
+
+  - type: input
+    id: recon_version
+    attributes:
+      label: recon version
+      description: Output of `recon --version`. This command performs no domain lookup.
+      placeholder: recon, version X.Y.Z
+    validations:
+      required: true
+
+  - type: input
+    id: python_version
+    attributes:
+      label: Python version
+      description: Output of `python --version`.
+      placeholder: Python 3.14.0
+    validations:
+      required: true
+
+  - type: input
+    id: operating_system
+    attributes:
+      label: Operating system
+      placeholder: Windows 11, macOS 15, Ubuntu 24.04, or similar
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install_method
+    attributes:
+      label: Install method
+      options:
+        - pip install recon-tool
+        - uv tool install recon-tool
+        - pipx install recon-tool
+        - Editable source checkout
+        - Other
+    validations:
+      required: true
+
+  - type: textarea
+    id: sanitized_diagnostics
+    attributes:
+      label: Sanitized diagnostics
+      description: Optional. Include only a synthetic fixture, a redacted exception type, or `recon doctor` source status. Do not paste real recon output or a trace that contains target data.
+      render: text
+
+  - type: textarea
+    id: additional_context
+    attributes:
+      label: Additional context
+      description: Optional context that contains no real target data.

@@ -443,6 +443,7 @@ fingerprints:
   - type: cname_target
     pattern: worker.clerkprod-cloudflare.net
     reference: https://clerk.com/docs/guides/development/deployment/production
+    verified: 2026-07-16
     tier: application
     description: >-
       Branded authentication subdomain terminating at Clerk's production
@@ -745,6 +746,7 @@ fingerprints:
   - type: cname_target
     pattern: siteforce.com
     reference: https://help.salesforce.com/s/articleView?id=platform.siteforce_domains.htm
+    verified: 2026-07-16
     tier: application
     description: >-
       Subdomain CNAMEs into Salesforce's `siteforce.com` namespace,
@@ -1245,6 +1247,7 @@ fingerprints:
   - type: cname_target
     pattern: ngrok.io
     reference: https://ngrok.com/docs/errors/reference
+    verified: 2026-07-16
     tier: infrastructure
     description: >-
       Subdomain CNAME terminating in ngrok's legacy or regional
@@ -2647,6 +2650,7 @@ fingerprints:
   - type: cname_target
     pattern: rsc.cdn77.org
     reference: https://client.cdn77.com/support/knowledgebase/introduction-to-cdn/getting-started
+    verified: 2026-07-16
     tier: infrastructure
     description: >-
       Subdomain CNAME terminating at CDN77's documented resource endpoint
@@ -5101,6 +5105,7 @@ fingerprints:
   - type: cname_target
     pattern: aaf.edu.au
     reference: https://support.aaf.edu.au/support/solutions/articles/19000133800-on-premise-idp-migration-to-rapid-idp
+    verified: 2026-07-16
     tier: application
     description: >-
       Subdomain CNAME terminating in the Australian Access Federation's

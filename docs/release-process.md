@@ -23,6 +23,33 @@ uv run python scripts/release.py
 #    attestation path, SBOM validation, PyPI publication, and GitHub Release.
 ```
 
+## Release Decision and Cadence
+
+Release quality includes the signal a version sends to users. The default is a
+coherent release batch, not one package version per merged pull request. Group
+compatible fixes, catalog updates, and documentation needed to explain them
+under one short release narrative, then run the existing atomic release path.
+
+Cut an immediate patch release when a shipped correctness bug, security issue,
+dependency failure, broken package, or release-artifact defect makes waiting
+materially worse for users. A documentation-only change, planning change, issue
+template change, repository metadata update, or internal proof refresh does not
+by itself trigger a package release. Those changes can remain in `Unreleased`
+until the next meaningful package batch.
+
+Before choosing a version, answer three questions:
+
+1. What user-visible problem or coherent capability does this release deliver?
+2. Which stable surface changes, if any, require a minor rather than patch
+   version under [stability.md](stability.md)?
+3. Can a user understand the release from one concise summary plus the tool
+   surface line?
+
+If the first or third answer is unclear and no urgent exception applies, keep
+the work on `main` and batch it. This policy changes cadence, not rigor: every
+published version still uses the complete readiness, build, provenance, SBOM,
+publication, and post-release verification path below.
+
 ---
 
 ## Local readiness gate: `scripts/release_readiness.py`
