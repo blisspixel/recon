@@ -123,6 +123,29 @@ def test_committed_artifact_is_byte_deterministic_and_current() -> None:
     assert _ARTIFACT.read_bytes() == first.encode("utf-8")
 
 
+def test_generator_normalizes_native_yaml_verification_dates(tmp_path: Path) -> None:
+    source_dir = tmp_path / "fingerprints"
+    source_dir.mkdir()
+    (source_dir / "example.yaml").write_text(
+        "fingerprints:\n"
+        "  - name: Fictional Date Example\n"
+        "    slug: fictional-date-example\n"
+        "    category: Misc\n"
+        "    confidence: high\n"
+        "    detections:\n"
+        "      - type: txt\n"
+        "        pattern: '^fictional-date-example='\n"
+        "        description: Synthetic verification-date fixture.\n"
+        "        verified: 2026-07-17\n",
+        encoding="utf-8",
+    )
+
+    document = json.loads(build_artifact(source_dir))
+
+    detection = document["sources"][0]["fingerprints"][0]["detections"][0]
+    assert detection["verified"] == "2026-07-17"
+
+
 def test_generator_check_detects_semantic_source_drift(tmp_path: Path) -> None:
     source_dir = tmp_path / "fingerprints"
     shutil.copytree(_SOURCE_DIR, source_dir)

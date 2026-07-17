@@ -19,7 +19,8 @@ operator, corporate group, ownership, or control.
 Tool surface changes: no CLI command, flag, JSON, MCP, cache, or public import
 contract changes. The root CLI help summary text and the human-facing delta
 panel label for the email control count are clearer. `python -m recon_tool`
-is now a supported entry path.
+is now a supported entry path. `recon fingerprints new` now includes the
+current verification date in its candidate YAML.
 
 ### Changed
 
@@ -32,6 +33,15 @@ is now a supported entry path.
   control count, and incomplete-collection suppression.
 - Explain-path confidence derivation for email-control insights now says
   "Email control count" instead of "Email security score."
+- Public bug and fingerprint issue forms now require a target-data
+  acknowledgement and request only fictional fixtures, sanitized diagnostics,
+  generic provider patterns, and provider-controlled references.
+- New fingerprint detections must include a valid, non-future `verified` date;
+  the diff-aware local and CI gate leaves the legacy undated backlog available
+  for reviewed backfill.
+- Project documentation now describes the shipped package, CLI, JSON, and local
+  MCP surfaces without implying a separate top-level library facade, and the
+  release process now batches ordinary work into coherent package releases.
 
 ### Fixed
 
@@ -42,6 +52,9 @@ is now a supported entry path.
   invoke the CLI without relying only on the console script.
 - Welcome banner now states that inputs need a public-suffix domain and shows
   `python -m recon_tool --version` as an offline install check path.
+- Fingerprint loading now accepts native YAML dates in `verified` metadata and
+  rejects impossible ISO-looking calendar dates instead of silently treating
+  both forms as undated.
 
 ## [2.6.3] - 2026-07-14
 

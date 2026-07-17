@@ -1,7 +1,7 @@
 # Catalog Growth and Quality Strategy
 
 Status: measurement-first maintenance plan
-Review date: 2026-07-16
+Review date: 2026-07-17
 
 This document is the plan for growing and maintaining the fingerprint catalog
 (`src/recon_tool/data/fingerprints/*.yaml`) so coverage, precision, and
@@ -172,12 +172,13 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. Backfill plan: require `verified` for new rules, then, as
-rules are promoted, backfill the recently confirmed vendor families in batches, and
-once coverage is high enough, promote the auditor from a report to a ratchet
-(no new undated rules, no rule left stale past the threshold). A dead-reference
-URL check is deliberately kept as an opt-in local tool, not a CI gate, because
-the committed gates run at zero network and zero paid-API cost.
+staleness threshold. The diff-aware `scripts/check_fingerprint_freshness.py`
+gate permits the legacy undated backlog but requires every new detection to
+carry a valid, non-future `verified` date. As rules are promoted, backfill the
+recently confirmed vendor families in batches. Once coverage is high enough,
+raise the gate to reject dates older than the chosen threshold. A dead-reference
+URL check remains an opt-in local tool, not a CI gate, because the committed
+gates run at zero network and zero paid-API cost.
 
 ## 4. Higher-order signals
 

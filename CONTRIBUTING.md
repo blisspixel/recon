@@ -38,11 +38,12 @@ may be committed; per-domain results never.
 readiness to catch forced-added private paths and target-domain fields in
 validation artifacts. It is a backstop, not a substitute for reviewing prose.
 
-If you're writing a bug report that needs a real domain to reproduce,
-file it privately or describe the behaviour using the fictional
-examples whenever the real name isn't load-bearing. The rationale: no
-upside, and accumulating reputational and legal downside over the
-lifetime of the repository.
+If a bug report needs a real domain to reproduce, do not open a public issue.
+Use the private non-security report path in
+[`docs/data-handling-policy.md`](docs/data-handling-policy.md#private-non-security-reports),
+or describe the behavior with a fictional fixture when the real identity is not
+load-bearing. Public issue forms require an acknowledgement that target names,
+records, identifiers, screenshots, and per-domain output were removed.
 
 Reviewers actively check incoming PRs for real-apex strings before
 merge. A PR found to contain real-company data will be rejected and
@@ -102,7 +103,7 @@ are welcome:
 | **Refined fingerprints** | `match_mode: all` to eliminate false positives, improved regex, broader selector coverage. | Converting ambiguous slug to a chained pattern |
 | **New signals** | Must derive from existing evidence. Hedged language. | "AI tooling indicators observed alongside identity-provider signals" |
 | **New profiles** | Must reweight existing observations; cannot invent new ones. | "Retail / e-commerce" profile |
-| **Bug reports** | Reproducible + output of `recon <domain> --json --explain`. | Wrong provider classification, insight wording, display glitch |
+| **Bug reports** | Reproducible with a fictional or reserved domain, a minimal synthetic fixture, and sanitized diagnostics. Real target output uses the private non-security report path. | Wrong provider classification, insight wording, display glitch |
 | **Accuracy reports** | A controlled or otherwise well-understood public record shape, plus the exact observation recon got wrong. | "Our test domain publishes the documented M365 MX route, but recon reports custom or unclassified MX" (omit real names in public reports) |
 | **Documentation fixes** | Typos, clarifications, better examples. | README, CONTRIBUTING, docs/* |
 | **Performance improvements** | With before/after measurement. Hot paths: `detect_provider`, `_curate_insights`, DNS query batching. | Reducing average lookup time, eliminating redundant DNS queries |
@@ -254,12 +255,16 @@ It walks through the stable schema and specificity checks before emitting YAML.
       pattern: "^service-domain-verification="
       description: What this record means
       reference: https://vendor.example/docs/domain-verification
+      verified: 2026-07-17
 ```
 
 `description` should explain the observable record. `reference` is optional,
-but preferred when public vendor documentation exists. Do not add fields that
-are not in the stable data-file schema unless a separate schema change has
-already been accepted.
+but preferred when public vendor documentation exists. Every new detection
+needs a valid, non-future `verified` date recording when its provider reference
+or disclosure-safe aggregate basis was checked. The diff-aware catalog gate
+allows the legacy undated backlog but rejects new undated rules. Do not add
+fields that are not in the stable data-file schema unless a separate schema
+change has already been accepted.
 
 ### 3. Validate locally before opening a PR
 
@@ -316,7 +321,7 @@ The audit is advisory. Use it to document whether the entry should remain
 - [ ] `recon fingerprints show <slug>` displays your new entry after load
 - [ ] Slug does not collide with an existing one (`recon fingerprints list | grep <slug>`)
 - [ ] At least one detection pattern uses a service-specific token (not a generic substring)
-- [ ] Detection metadata includes `description`, plus `reference` when public vendor docs exist
+- [ ] Detection metadata includes `description`, `verified`, and `reference` when public vendor docs exist
 - [ ] Tested against a documented public record shape expected to match, without treating the match as proof of active service use
 - [ ] The service's DNS footprint is documented or publicly-observable (not leaked from a customer engagement)
 - [ ] Multi-detection entries include a `match_mode` rationale from the audit output or PR notes
@@ -598,6 +603,13 @@ Three issue templates:
   unexpectedly.
 - **Idea**: you want to propose something larger (new flag, new MCP
   tool, new CLI command, etc.).
+
+Bug and fingerprint requests are structured public forms. Both require a
+privacy acknowledgement. Fingerprint requests may name the provider or product
+being classified and link its public documentation, but may not name customers
+or evaluated targets, quote their records, or include per-domain output. If a
+real target identity is essential to a non-security bug, use the private path in
+the data-handling policy instead of GitHub issues.
 
 For ideas, the template asks you to confirm the proposal fits the
 project invariants (passive, zero-creds, no aggregated DB, no active

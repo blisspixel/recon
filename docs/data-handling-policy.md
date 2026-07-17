@@ -84,6 +84,25 @@ is the practical analogue for reviewing statistical outputs before release.
   belong here.
 - The private validation corpus and its run outputs.
 
+## Private non-security reports
+
+Public GitHub issues, issue attachments, pull requests, and discussion comments
+are inside the repository disclosure boundary. The public issue forms require a
+privacy acknowledgement and ask only for fictional fixtures, sanitized
+diagnostics, generic provider patterns, and provider-controlled references.
+
+If a non-security bug cannot be reproduced without a real target identity, do
+not open a public issue and do not attach the output to a draft issue. Email the
+address in [SECURITY.md](../SECURITY.md) with the subject `Private recon data
+report`. Put no target identity in the subject. Share the minimum description
+needed first and wait before sending full output. Security vulnerabilities use
+GitHub private vulnerability reporting or the security-reporting instructions
+instead.
+
+Private correspondence does not become a public reproduction. Any resulting
+fix must use a fictional regression fixture, a generic provider-controlled
+pattern, or a disclosure-safe aggregate result before it enters GitHub.
+
 ## Where real data lives instead
 
 Real apexes are necessary for accuracy and calibration work, so they

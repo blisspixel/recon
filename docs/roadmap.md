@@ -7,7 +7,7 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 tracked separately from product work.
 
 > **Status:** v2.6.3 is current. The stable baseline is complete: recon ships a
-> local CLI, importable library, versioned JSON contract, local stdio MCP
+> local Python package and CLI, versioned JSON contract, local stdio MCP
 > server, bounded public-metadata collectors, generated-artifact guards, and a verified
 > release path. The product is not "finished." The active work is to make every
 > default claim evidence-tight, prove that advanced inference adds user value,
@@ -207,6 +207,9 @@ Detailed work and rollback criteria live in
 ### 3. Establish a reproducible product-quality baseline
 
 Status: specified, depends on the claim taxonomy from priority 1.
+
+The phase order, promotion evidence, and stop rules are summarized in the
+[Quality Proof execution plan](strategic-gap-audit.md#quality-proof-execution-plan).
 
 Why third: the project has extensive implementation and assurance checks, but
 it does not yet measure whether probabilistic fusion, CT enrichment, a large

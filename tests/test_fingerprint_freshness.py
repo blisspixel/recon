@@ -6,17 +6,22 @@ drives a no-network freshness summary so the catalog's staleness is visible.
 
 from __future__ import annotations
 
+from datetime import date, datetime
+
 from recon_tool.fingerprint_audit import _verified_age_days, summarize_fingerprint_freshness
 from recon_tool.fingerprints import DetectionRule, Fingerprint, _parse_verified, load_fingerprints
 
 
 def test_parse_verified_accepts_iso_date_and_drops_junk() -> None:
     assert _parse_verified("2026-07-03", "x", "src") == "2026-07-03"
+    assert _parse_verified(date(2026, 7, 3), "x", "src") == "2026-07-03"
     assert _parse_verified("", "x", "src") == ""
     assert _parse_verified(None, "x", "src") == ""
     # A present-but-malformed value is dropped, never raised.
     assert _parse_verified("not-a-date", "x", "src") == ""
     assert _parse_verified("07/03/2026", "x", "src") == ""
+    assert _parse_verified("2026-13-45", "x", "src") == ""
+    assert _parse_verified(datetime(2026, 7, 3, 12, 30), "x", "src") == ""
 
 
 def test_verified_age_days() -> None:
