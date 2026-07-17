@@ -245,6 +245,11 @@ jobs:
         # "fix these N entries" rather than a percentage.
         run: uv run python scripts/check_metadata_coverage.py
 
+      - name: Enforce verification dates on new fingerprint detections
+        env:
+          FINGERPRINT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: uv run python scripts/check_fingerprint_freshness.py --base-ref "$FINGERPRINT_BASE_SHA"
+
       - name: Enforce validation artifact hygiene
         # Release and calibration artifacts may publish aggregate statistics
         # only. This catches forced-added private run paths, root per-domain

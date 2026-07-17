@@ -74,10 +74,11 @@ Use `description` for the observable meaning of the record, not a maturity or
 risk judgment. Add `reference` when the vendor has public verification docs.
 Use non-default `weight` sparingly, when a detection is useful but weaker than
 the rest of the fingerprint. Set `verified` (`YYYY-MM-DD`) to the date the
-pattern was last confirmed against a public source or corpus observation. It is
-advisory, does not affect matching, and drives the freshness auditor
-(`python -m validation.audit_fingerprints --freshness`). See
-[catalog-strategy.md](catalog-strategy.md).
+pattern was last confirmed against a public source or disclosure-safe corpus
+observation. It does not affect matching and drives the freshness auditor
+(`python -m validation.audit_fingerprints --freshness`). New detections require
+a valid, non-future date; legacy undated detections remain a reviewed backfill
+queue. See [catalog-strategy.md](catalog-strategy.md).
 
 Metadata feeds `recon fingerprints show`, MCP catalog resources, explanation
 output, and validation reports. Improving descriptions and references is a

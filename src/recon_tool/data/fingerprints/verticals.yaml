@@ -236,6 +236,7 @@ fingerprints:
   - type: cname_target
     pattern: vanity.classy.org
     reference: https://prosupport.gofundme.com/hc/en-us/articles/37288768004891-Set-up-domain-masking-and-favicon
+    verified: 2026-07-16
     tier: application
     description: >-
       Branded fundraising subdomain pointing to the documented
