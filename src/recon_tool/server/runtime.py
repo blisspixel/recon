@@ -196,3 +196,13 @@ def log_structured(level: int, msg: str, **fields: object) -> None:
         logger.log(level, json_mod.dumps(entry))
     except (TypeError, ValueError):
         logger.log(level, msg, extra=fields)
+
+
+def log_validation_failed(request_id: str) -> None:
+    """Record one rejected domain without retaining the untrusted value."""
+    log_structured(
+        logging.WARNING,
+        "validation_failed",
+        request_id=request_id,
+        error_type="invalid_domain",
+    )

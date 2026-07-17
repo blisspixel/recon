@@ -302,7 +302,7 @@
           }
         ],
         "path": [],
-        "summary": "Passive domain intelligence from public sources.",
+        "summary": "Passive domain intelligence from public sources. Start with recon DOMAIN; run recon with no arguments for examples.",
         "usage": "recon"
       },
       {
