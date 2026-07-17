@@ -123,7 +123,10 @@ class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseC
 
 app = typer.Typer(
     name="recon",
-    help="Passive domain intelligence from public sources.",
+    help=(
+        "Passive domain intelligence from public sources. "
+        "Start with recon DOMAIN; run recon with no arguments for examples."
+    ),
     rich_markup_mode="rich",
     cls=_DomainGroup,
     # `-h` as a help alias everywhere (Click propagates help_option_names to
@@ -242,13 +245,12 @@ def _print_welcome_banner() -> None:
     console.print()
     console.print("[bold cyan]Usage[/bold cyan]")
     console.print("  recon <domain>                    → clean summary (recommended)")
-    console.print("  recon <domain> --verbose          → expanded evidence and per-source status")
-    console.print("  recon <domain> --posture          → posture observations")
-    console.print("  recon <domain> --full             → expanded evidence, domains, and posture")
+    console.print("  recon <domain> --plain            → linear output for screen readers and grep")
+    console.print("  recon <domain> --json             → structured automation")
     console.print("  recon <domain> --explain          → full reasoning and evidence")
     console.print("  recon batch domains.txt           → process multiple domains")
     console.print("  recon doctor                      → check online source connectivity")
-    console.print("  recon mcp                         → start the MCP server")
+    console.print("  recon mcp install --help          → connect an MCP client")
     console.print()
     console.print("[bold cyan]Common examples[/bold cyan]")
     console.print("  recon contoso.com")

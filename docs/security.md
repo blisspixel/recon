@@ -185,6 +185,9 @@ documented local-user trust boundary.
   state (verified in `src/recon_tool/server/app.py` ToolAnnotations and Server
   Instructions)
 - Tools accept domain strings that go through the same `validator.py` pipeline
+- Invalid domain arguments produce a target-free structured warning with a
+  request ID and stable reason code. Raw rejected values and repeated exception
+  text are not written to MCP operator logs.
 - `inject_ephemeral_fingerprint` only persists in current process memory; it
   never writes to built-in files, custom config files, or the cache.
 - Ephemeral fingerprint injection is quota-bounded in-process: 100 fingerprints,

@@ -2,7 +2,7 @@
 
 **Domain:** northwindtraders\.com\
 **Default Domain:** northwindtraders\.com\
-**Confidence:** low (1 sources)\
+**Confidence:** low (1 source)\
 **Evidence Confidence:** medium\
 **Inference Confidence:** medium
 

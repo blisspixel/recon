@@ -11,3 +11,6 @@ Insights
 
 Note
   Some sources unavailable (oidc_discovery).
+
+Next
+  Use --explain to inspect evidence or --verbose to review source status.

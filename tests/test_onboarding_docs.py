@@ -47,6 +47,16 @@ def test_getting_started_uses_the_same_first_run_trust_sequence() -> None:
     assert "--direct-probes" in first_lookup
 
 
+def test_canonical_onboarding_exposes_plain_accessible_output() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    guide = (ROOT / "docs" / "getting-started.md").read_text(encoding="utf-8")
+
+    for content in (readme, guide):
+        assert "recon contoso.com --plain" in content
+        assert "screen reader" in content.lower()
+        assert "grep" in content.lower()
+
+
 def test_agent_guides_use_explained_json_and_bounded_catalog_pages() -> None:
     paths = (
         ROOT / "AGENTS.md",

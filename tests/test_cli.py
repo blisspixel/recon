@@ -53,7 +53,10 @@ class TestHelp:
     def test_help_shows_usage(self) -> None:
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
-        assert "recon" in result.output.lower()
+        collapsed = " ".join(_strip_ansi(result.output).replace("│", " ").split())
+        assert "recon" in collapsed.lower()
+        assert "Start with recon DOMAIN" in collapsed
+        assert "run recon with no arguments for examples" in collapsed
 
     def test_lookup_help(self) -> None:
         result = runner.invoke(app, ["lookup", "--help"])
@@ -134,16 +137,18 @@ class TestHelp:
         assert result.exit_code == 2
         assert "choose exactly one" in result.output.lower()
 
-    def test_welcome_describes_diagnostic_and_posture_flags_accurately(self) -> None:
+    def test_welcome_prioritizes_primary_accessible_and_automation_paths(self) -> None:
         result = runner.invoke(app, [])
 
         assert result.exit_code == 0
         collapsed = " ".join(_strip_ansi(result.output).split())
-        assert "--verbose" in collapsed
-        assert "expanded evidence and per-source status" in collapsed
-        assert "--posture" in collapsed
-        assert "posture observations" in collapsed
-        assert "expanded evidence, domains, and posture" in collapsed
+        assert "--plain" in collapsed
+        assert "screen readers and grep" in collapsed
+        assert "--json" in collapsed
+        assert "structured automation" in collapsed
+        assert "mcp install --help" in collapsed
+        assert "connect an MCP client" in collapsed
+        assert "recon mcp → start" not in collapsed
         assert "→ everything" not in collapsed
         assert "offline install check" in collapsed
         assert "python -m recon_tool --version" in collapsed
@@ -185,17 +190,23 @@ class TestDirectDomainLookup:
         assert result.exit_code == 2
         assert "No such command" not in result.output
         assert "Invalid domain format" in result.output
+        collapsed = " ".join(result.output.split())
+        assert "Expected a domain with a public suffix, such as contoso.com." in collapsed
+        assert "Run recon with no arguments for examples." in collapsed
 
     def test_malformed_undotted_token_is_not_unknown_command(self) -> None:
         result = runner.invoke(app, ["not-a-valid-domain!!!"])
         assert result.exit_code == 2
         assert "No such command" not in result.output
         assert "Invalid domain format" in result.output
+        collapsed = " ".join(result.output.split())
+        assert collapsed.count("Run recon with no arguments for examples.") == 1
 
     def test_root_help_uses_passive_public_sources_summary(self) -> None:
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
         assert "Passive domain intelligence from public sources" in result.output
+        assert "Start with recon DOMAIN" in result.output
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_default(self, mock_resolve) -> None:

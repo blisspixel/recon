@@ -77,6 +77,12 @@ without removing presentation lines. Verbose source diagnostics use explicit
 `match`, `no match`, and `error` states; a clean negative observation is not
 styled or labeled as a transport failure.
 
+MCP validation rejections emit one structured warning containing a request ID
+and the stable reason `invalid_domain`. The rejected argument and exception
+text are returned only through the caller's private tool response and are not
+copied into operator logs. Successful validation is required before a domain
+value can appear in ordinary cache, resolution, or failure diagnostics.
+
 Interactive cache-miss lookups use one deterministic, outcome-neutral progress
 message; chain resolution uses a separate label for that selected operation.
 Progress text does not claim that an individual collector, inference pass, or
