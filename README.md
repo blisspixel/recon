@@ -285,9 +285,11 @@ Catalog coverage work uses deduplicated private rounds across rank, region, and
 domain-class strata. Real target names and per-domain records stay in ignored
 local validation workspaces. GitHub receives only generic provider patterns,
 provider-owned references, fictional fixtures, and disclosure-safe aggregates.
-The current automated gap queue is strongest for CNAME chains; other bounded
-record paths must be measured explicitly before the project claims broad
-catalog coverage.
+The opt-in maintenance path now accounts separately for CNAME chains, apex
+CNAME, non-SPF TXT, SPF targets, MX, NS, CAA, DMARC RUA, bounded owner-qualified
+TXT, and bounded SRV observations. A frozen aggregate baseline and distinct
+sampling rounds are still required before the project claims broad catalog
+coverage.
 
 The dependency order, acceptance evidence, stop rules, and current code-graph
 summary live in

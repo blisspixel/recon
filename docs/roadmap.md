@@ -622,12 +622,14 @@ add higher-order motifs until direct fingerprint quality is measured.
 Use deduplicated, private rounds with distinct rank, regional, vertical,
 vendor-seed, or drift questions. Before calling a round complete, account for
 every bounded catalog record path as measured, unavailable, or not yet
-instrumented. The current automated corpus queue is CNAME-chain-heavy, so an
-empty non-CNAME queue is not evidence of catalog completeness. Evaluated apexes,
-organization names, tenant identifiers, target-owned record values, and
-per-domain rows remain off GitHub. Generic provider patterns, provider-owned
-references, fictional fixtures, and disclosure-safe aggregates are the public
-review surface.
+instrumented. The opt-in maintenance envelope and private reducer now cover
+CNAME chains, apex CNAME, non-SPF TXT, SPF targets, MX, NS, CAA, DMARC RUA,
+bounded owner-qualified TXT, and bounded SRV observations. An empty queue is
+not evidence of completeness, and the frozen full-corpus baseline remains the
+next gate. Evaluated apexes, organization names, tenant identifiers,
+target-owned record values, and per-domain rows remain off GitHub. Generic
+provider patterns, provider-owned references, fictional fixtures, and
+disclosure-safe aggregates are the public review surface.
 
 Do not keep vendor-name-only proposals. A catalog candidate enters the backlog
 only with an exact record type and pattern, a source or disclosure-safe

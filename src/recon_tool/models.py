@@ -17,6 +17,7 @@ __all__ = [
     "ConfidenceLevel",
     "DeltaComparisonIncomplete",
     "DeltaReport",
+    "DnsCatalogSummary",
     "EvidenceRecord",
     "ExplanationRecord",
     "InfrastructureCluster",
@@ -32,6 +33,7 @@ __all__ = [
     "SurfaceAttribution",
     "TenantInfo",
     "UnclassifiedCnameChain",
+    "UnclassifiedDnsObservation",
     "serialize_conflicts",
     "serialize_conflicts_array",
 ]
@@ -65,6 +67,31 @@ class EvidenceRecord:
     raw_value: str  # The actual record value or HTTP response excerpt
     rule_name: str  # Fingerprint/detection rule name that matched
     slug: str  # The fingerprint slug that was detected
+
+
+@dataclass(frozen=True)
+class DnsCatalogSummary:
+    """Bounded per-type accounting for the opt-in catalog discovery path."""
+
+    record_type: str
+    opportunity_count: int
+    observed_count: int
+    classified_count: int
+    truncated: bool = False
+
+    @property
+    def unclassified_count(self) -> int:
+        """Return the observed values that did not match a catalog rule."""
+        return max(0, self.observed_count - self.classified_count)
+
+
+@dataclass(frozen=True)
+class UnclassifiedDnsObservation:
+    """One unmatched value from a bounded DNS catalog observation path."""
+
+    record_type: str
+    owner: str
+    value: str
 
 
 @dataclass(frozen=True)
@@ -598,6 +625,10 @@ class SourceResult:
     # ``--include-unclassified`` is passed. Feeds the fingerprint-discovery
     # loop (validation/find_gaps.py and the triage skill).
     unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
+    # Count-only summaries and unmatched values for bounded direct DNS paths.
+    # These diagnostics are excluded from default JSON and the disk cache.
+    dns_catalog_summaries: tuple[DnsCatalogSummary, ...] = ()
+    unclassified_dns_observations: tuple[UnclassifiedDnsObservation, ...] = ()
 
     # --- CNAME chain motif observations ---
     # Each entry records a motif from data/motifs.yaml that fired on the
@@ -797,6 +828,10 @@ class TenantInfo:
     # ``--include-unclassified`` is passed. Feeds the fingerprint-discovery
     # loop (validation/find_gaps.py and the triage skill).
     unclassified_cname_chains: tuple[UnclassifiedCnameChain, ...] = ()
+    # Opt-in catalog-maintenance diagnostics. They are intentionally excluded
+    # from the stable JSON schema and disk cache unless explicitly requested.
+    dns_catalog_summaries: tuple[DnsCatalogSummary, ...] = ()
+    unclassified_dns_observations: tuple[UnclassifiedDnsObservation, ...] = ()
 
     # --- CNAME chain motif observations ---
     # Each entry records a motif from data/motifs.yaml that fired on the
