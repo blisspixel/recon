@@ -94,10 +94,12 @@ _EVIDENCE_HELP_PANEL = "Evidence model"
 
 
 class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseClass, reportAttributeAccessIssue]
-    """Custom Click group that routes domain-like args to the lookup command.
+    """Custom Click group that routes bare domain args to the lookup command.
 
-    When the first positional arg contains a dot and isn't a known subcommand
-    or flag, it's treated as a domain and routed to `lookup`.
+    When the first positional arg is not a known subcommand or flag, treat it
+    as a domain and route to ``lookup`` so validation can speak in domain
+    language. Requiring a dot used to force undotted attempts such as
+    ``recon contoso`` into Click's "No such command" path.
     """
 
     def resolve_command(
@@ -105,24 +107,23 @@ class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseC
         ctx: click.Context,
         args: list[str],
     ) -> tuple[str | None, click.Command | None, list[str]]:
-        # Route a domain-like first arg to ``lookup`` *before* normal
-        # resolution, rather than catching a "no such command" error and
-        # retrying. The catch-and-retry form depended on which Click raised
-        # the error: Typer >=0.25 vendors its own Click, so the UsageError is
+        # Route a bare first arg to ``lookup`` *before* normal resolution,
+        # rather than catching a "no such command" error and retrying. The
+        # catch-and-retry form depended on which Click raised the error:
+        # Typer >=0.25 vendors its own Click, so the UsageError is
         # ``typer._click``'s, not the top-level ``click``'s, and an
         # ``except click.UsageError`` silently misses it (the regression that
         # broke ``recon <domain>`` on fresh installs). Rewriting up front has
-        # no such dependency. A domain always contains a dot and no subcommand
-        # does, so a dotted, non-flag arg that is not a known subcommand is a
-        # domain.
-        if args and "." in args[0] and args[0] not in _SUBCOMMANDS and not args[0].startswith("-"):
+        # no such dependency. Known subcommands and flags are left alone;
+        # every other non-empty first token is domain input for lookup.
+        if args and args[0] not in _SUBCOMMANDS and not args[0].startswith("-"):
             args = ["lookup", *args]
         return super().resolve_command(ctx, args)
 
 
 app = typer.Typer(
     name="recon",
-    help="Domain intelligence from the command line.",
+    help="Passive domain intelligence from public sources.",
     rich_markup_mode="rich",
     cls=_DomainGroup,
     # `-h` as a help alias everywhere (Click propagates help_option_names to
@@ -200,7 +201,7 @@ def main(
     ),
 ) -> None:
     """
-    [bold]recon[/bold] - domain intelligence from the command line.
+    [bold]recon[/bold] - passive domain intelligence from public sources.
 
     Give it any domain. Get back public identity responses, email-routing
     observations, domain-control indicators, and their provenance.
@@ -254,7 +255,14 @@ def _print_welcome_banner() -> None:
     console.print("  recon northwindtraders.com --verbose")
     console.print("  recon fabrikam.com --full --json")
     console.print()
-    console.print('[dim]Use "recon --version" for an offline install check; "recon doctor" tests online sources.[/dim]')
+    console.print(
+        "[dim]Pass a public-suffix domain (contoso.com). Bare hostnames without a "
+        "dot are rejected as invalid domain format.[/dim]"
+    )
+    console.print(
+        '[dim]Use "recon --version" or "python -m recon_tool --version" for an offline '
+        'install check; "recon doctor" tests online sources.[/dim]'
+    )
 
 
 @app.command()
@@ -814,8 +822,10 @@ def delta(
 ) -> None:
     """Compare the current lookup against the last cached TenantInfo.
 
-    Surfaces what changed since the previous run — new services, removed
-    services, auth/DMARC/confidence changes. Uses the main TenantInfo cache
+    Surfaces confirmed changes since the previous run: services, slugs,
+    signals, auth, DMARC, email control count (0-5), and confidence.
+    Incomplete collections suppress unconfirmable additions, removals, and
+    dependent scalar changes. Uses the main TenantInfo cache
     (~/.recon/cache/) automatically; no manual export file required.
     """
     from recon_tool.cache import cache_get, cache_put, tenant_info_to_dict

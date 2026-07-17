@@ -302,7 +302,7 @@
           }
         ],
         "path": [],
-        "summary": "Domain intelligence from the command line.",
+        "summary": "Passive domain intelligence from public sources.",
         "usage": "recon"
       },
       {

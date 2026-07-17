@@ -5,7 +5,8 @@ The fingerprint-discovery loop is split:
   1. Programmatic: this script. Drops noise that doesn't need human or LLM
      judgment: chains already covered by an existing pattern, intra-org
      hostnames the apex obviously owns, low-count one-offs that aren't
-     worth a fingerprint, and a tunable ``--min-count`` floor.
+     worth a fingerprint, and tunable occurrence and distinct-namespace
+     floors.
 
   2. Human or LLM: the survivors. Each is a real candidate for a new
      ``cname_target`` fingerprint or an extension of an existing one. The
@@ -25,7 +26,8 @@ Usage:
         --gaps runs-private/<latest>/gaps.json \\
         --fingerprints src/recon_tool/data/fingerprints/ \\
         --output runs-private/<latest>/candidates.json \\
-        --min-count 2
+        --min-count 2 \\
+        --min-distinct-namespaces 2
 """
 
 from __future__ import annotations
@@ -138,6 +140,7 @@ def triage(
     *,
     existing_patterns: set[str],
     min_count: int,
+    min_distinct_namespaces: int,
     drop_intra_org: bool,
 ) -> list[dict[str, Any]]:
     """Return only the gap entries worth human or LLM triage."""
@@ -146,9 +149,13 @@ def triage(
         suffix = str(entry.get("suffix", ""))
         count_raw = entry.get("count", 0)
         count = int(count_raw) if isinstance(count_raw, int) else 0
+        namespace_count_raw = entry.get("distinct_namespace_count", 0)
+        namespace_count = int(namespace_count_raw) if isinstance(namespace_count_raw, int) else 0
         samples_raw = entry.get("samples") or []
         samples = samples_raw if isinstance(samples_raw, list) else []
         if count < min_count:
+            continue
+        if namespace_count < min_distinct_namespaces:
             continue
         if entry_is_already_covered(suffix, samples, existing_patterns):
             continue
@@ -180,6 +187,15 @@ def main() -> None:
         help="Drop suffixes seen fewer than N times across the corpus (default: 2).",
     )
     parser.add_argument(
+        "--min-distinct-namespaces",
+        type=int,
+        default=2,
+        help=(
+            "Drop suffixes observed in fewer than N distinct queried namespaces "
+            "(default: 2). Legacy gaps without this field require an explicit value of 0."
+        ),
+    )
+    parser.add_argument(
         "--keep-intra-org",
         action="store_true",
         help="Don't drop chains that look intra-organizational (false-positive prone but more inclusive).",
@@ -196,6 +212,7 @@ def main() -> None:
         gaps_data,
         existing_patterns=existing,
         min_count=args.min_count,
+        min_distinct_namespaces=args.min_distinct_namespaces,
         drop_intra_org=not args.keep_intra_org,
     )
     payload = json.dumps(survivors, indent=2)

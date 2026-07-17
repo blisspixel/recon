@@ -36,7 +36,7 @@ This is a derived maintainer and agent-author reference, not a stable runtime AP
 ## `recon`
 
 Kind: group
-Summary: Domain intelligence from the command line.
+Summary: Passive domain intelligence from public sources.
 Children: `batch`, `cache`, `delta`, `discover`, `doctor`, `fingerprints`, `lookup`, `mcp`, `signals`, `update`
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |

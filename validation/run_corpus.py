@@ -1,13 +1,14 @@
 """Run a live validation corpus and emit JSON + summary artifacts.
 
 Example:
-    python validation\\run_corpus.py --corpus validation\\corpus-50-diverse.txt
+    python validation\\run_corpus.py --corpus validation\\corpus-private\\consolidated.txt
 """
 
 from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -19,10 +20,111 @@ from recon_tool.validation_runner import (
     summarize_batch_results,
 )
 
+REPO_ROOT = Path(__file__).resolve().parent.parent
+_PRIVATE_OUTPUT_ROOTS = (
+    REPO_ROOT / "validation" / "runs-private",
+    REPO_ROOT / "validation" / "live_runs",
+    REPO_ROOT / "validation" / "local",
+)
+
+
+def _result_files(path: Path) -> list[Path]:
+    """Return private batch-result files from one file or run directory."""
+    return sorted(path.glob("results*.json")) if path.is_dir() else [path]
+
+
+def _load_excluded_domains(paths: list[Path]) -> set[str]:
+    """Load canonical queried namespaces without retaining result details."""
+    from recon_tool.validator import validate_domain
+
+    excluded: set[str] = set()
+    for path in paths:
+        files = _result_files(path)
+        if not files:
+            msg = f"No results JSON files found under exclusion path: {path}"
+            raise ValueError(msg)
+        for result_file in files:
+            try:
+                payload = json.loads(result_file.read_text(encoding="utf-8"))
+            except (OSError, json.JSONDecodeError) as exc:
+                msg = f"Cannot read exclusion results file: {result_file}"
+                raise ValueError(msg) from exc
+            if not isinstance(payload, list) or not all(isinstance(entry, dict) for entry in payload):
+                msg = f"Exclusion results must be a JSON array of objects: {result_file}"
+                raise ValueError(msg)
+            for entry in payload:
+                value = entry.get("queried_domain") or entry.get("domain")
+                if not isinstance(value, str) or not value:
+                    continue
+                try:
+                    excluded.add(validate_domain(value))
+                except ValueError:
+                    continue
+    return excluded
+
+
+def _write_filtered_manifest(
+    corpus: Path,
+    output_dir: Path,
+    excluded: set[str],
+    *,
+    limit: int | None = None,
+) -> tuple[Path, int, int]:
+    """Write a normalized, deduplicated private manifest excluding prior work."""
+    from recon_tool.cli.batch import read_batch_domains
+    from recon_tool.validator import validate_domain
+
+    try:
+        with corpus.open(encoding="utf-8") as stream:
+            raw_domains = read_batch_domains(stream)
+    except (OSError, UnicodeError, ValueError) as exc:
+        msg = f"Cannot prepare corpus manifest: {corpus}"
+        raise ValueError(msg) from exc
+
+    scheduled: list[str] = []
+    seen: set[str] = set()
+    excluded_rows = 0
+    for row_number, raw_domain in enumerate(raw_domains, start=1):
+        try:
+            domain = validate_domain(raw_domain)
+        except ValueError as exc:
+            msg = f"Malformed domain in corpus row {row_number}"
+            raise ValueError(msg) from exc
+        if domain in excluded:
+            excluded_rows += 1
+            continue
+        if domain in seen:
+            continue
+        seen.add(domain)
+        scheduled.append(domain)
+
+    if not scheduled:
+        msg = "Corpus has no unobserved domains after exclusions"
+        raise ValueError(msg)
+    if limit is not None:
+        scheduled = scheduled[:limit]
+
+    manifest = output_dir / "input-manifest.txt"
+    manifest.write_text("\n".join(scheduled) + "\n", encoding="utf-8")
+    return manifest, len(scheduled), excluded_rows
+
 
 def _default_output_dir(base: Path) -> Path:
     stamp = datetime.now(UTC).strftime("%Y%m%d-%H%M%SZ")
     return base / "live_runs" / stamp
+
+
+def _validate_output_dir(output_dir: Path) -> Path:
+    """Keep in-repository live results under an ignored private workspace."""
+    if str(REPO_ROOT) not in sys.path:
+        sys.path.insert(0, str(REPO_ROOT))
+    from validation.run_path_safety import validate_private_output_root
+
+    return validate_private_output_root(
+        output_dir,
+        repo_root=REPO_ROOT,
+        allowed_roots=_PRIVATE_OUTPUT_ROOTS,
+    )
 
 
 def main() -> None:
@@ -38,7 +140,10 @@ def main() -> None:
         "--output-dir",
         type=Path,
         default=None,
-        help="Directory to write results.json, summary.json, and summary.md.",
+        help=(
+            "Directory to write results.json, summary.json, and summary.md. "
+            "Paths inside this checkout must be under a private validation workspace."
+        ),
     )
     parser.add_argument(
         "--concurrency",
@@ -57,6 +162,22 @@ def main() -> None:
         type=Path,
         default=None,
         help="Optional prior results.json file to compare headline counts against.",
+    )
+    parser.add_argument(
+        "--exclude-results",
+        type=Path,
+        action="append",
+        default=[],
+        help=(
+            "Prior results.json file or run directory whose queried domains "
+            "must be excluded. Repeat for multiple prior runs."
+        ),
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Run only the first N normalized, unobserved domains after exclusions.",
     )
     parser.add_argument(
         "--include-unclassified",
@@ -78,11 +199,25 @@ def main() -> None:
     )
     args = parser.parse_args()
 
-    output_dir = args.output_dir or _default_output_dir(base)
+    if args.limit is not None and args.limit < 1:
+        parser.error("--limit must be at least 1")
+
+    try:
+        output_dir = _validate_output_dir(args.output_dir or _default_output_dir(base))
+    except ValueError as exc:
+        parser.error(str(exc))
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    corpus = args.corpus
+    if args.exclude_results or args.limit is not None:
+        try:
+            excluded = _load_excluded_domains(args.exclude_results)
+            corpus, _, _ = _write_filtered_manifest(args.corpus, output_dir, excluded, limit=args.limit)
+        except ValueError as exc:
+            parser.error(str(exc))
+
     results = run_batch_validation_sync(
-        args.corpus,
+        corpus,
         concurrency=max(1, min(20, args.concurrency)),
         include_unclassified=args.include_unclassified,
         skip_ct=args.no_ct,
