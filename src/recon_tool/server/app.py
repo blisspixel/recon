@@ -21,6 +21,7 @@ from recon_tool.server.runtime import (
     cache_get,
     cache_set,
     log_structured,
+    log_validation_failed,
     rate_limit_try_acquire,
 )
 from recon_tool.validator import validate_domain
@@ -250,7 +251,7 @@ def validate_domain_for_tool(domain: str, request_id: str) -> str:
     try:
         return validate_domain(domain)
     except ValueError as exc:
-        log_structured(logging.WARNING, "validation_failed", request_id=request_id, domain=domain, error=str(exc))
+        log_validation_failed(request_id)
         raise ToolError(str(exc)) from exc
 
 

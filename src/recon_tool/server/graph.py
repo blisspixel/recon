@@ -24,6 +24,7 @@ from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import (
     log_structured,
+    log_validation_failed,
     rate_limit_try_acquire,
 )
 from recon_tool.validator import validate_domain
@@ -199,13 +200,7 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
-        log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain,
-            error=str(exc),
-        )
+        log_validation_failed(request_id)
         return f"Error: {exc}"
 
     # Rate limit: chain_lookup is the most expensive tool (up to

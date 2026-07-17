@@ -43,6 +43,22 @@ fingerprint-discovery surfaces remain available for specialist workflows. They
 must earn their complexity through measured value and must not obscure the
 three primary workflows.
 
+## Current Product-Surface Debt
+
+This ledger keeps polish work inside the shipped product boundary. It names
+current debt without turning every refinement into feature work.
+
+| Debt class | Current state | Next boundary |
+|---|---|---|
+| Feature work | Governed by the dependency order below, not by the polish loop | Do not add commands, schemas, hosted surfaces, or inference modes without their existing evidence gate |
+| UX flow | Root help, no-argument onboarding, malformed-input recovery, and low-confidence next steps are aligned in Unreleased | Specify batch all-error exit semantics before considering an opt-in strict mode |
+| Visual polish | Lookup help has task panels and the terminal result hierarchy is stable | Measure batch-help grouping and narrow-width behavior before changing presentation metadata |
+| Observability | MCP validation rejection logs are target-free and retain a request ID plus stable reason | Define metadata-only result-cache inspection and a versioned doctor record before adding operator surfaces |
+| Reliability | Typed batch error records, bounded workers, partial results, and explicit exit codes are shipped | Do not change the current batch exit contract without a compatibility decision covering mixed and all-error streams |
+| Security | Rejected MCP arguments no longer enter logs; output, cache, HTTP, subprocess, and filesystem boundaries remain gated | Any exact configured-launcher doctor must require a safe explicit execution boundary |
+| Accessibility | `--plain` is shipped and now appears in canonical onboarding | A linear narrow-help fallback remains bounded debt; do not replace the parser or hide specialist controls |
+| Documentation accuracy | README, generated CLI reference, operational contract, and security model track current first-run and logging behavior | Consolidate cache-freshness and batch-error semantics when their deferred designs are selected |
+
 ## Priority Order
 
 ### 1. Restore evidence-semantic integrity

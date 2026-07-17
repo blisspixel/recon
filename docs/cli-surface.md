@@ -36,7 +36,7 @@ This is a derived maintainer and agent-author reference, not a stable runtime AP
 ## `recon`
 
 Kind: group
-Summary: Passive domain intelligence from public sources.
+Summary: Passive domain intelligence from public sources. Start with recon DOMAIN; run recon with no arguments for examples.
 Children: `batch`, `cache`, `delta`, `discover`, `doctor`, `fingerprints`, `lookup`, `mcp`, `signals`, `update`
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
