@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import sys
+from datetime import date
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,17 @@ def _display_path(path: Path) -> str:
         return str(path)
 
 
+def _normalize_yaml_scalars(value: Any) -> Any:
+    """Convert native YAML date scalars to the JSON string contract recursively."""
+    if isinstance(value, date):
+        return value.isoformat()
+    if isinstance(value, dict):
+        return {key: _normalize_yaml_scalars(item) for key, item in value.items()}
+    if isinstance(value, list):
+        return [_normalize_yaml_scalars(item) for item in value]
+    return value
+
+
 def _raw_fingerprints(path: Path) -> tuple[dict[str, Any], ...]:
     try:
         loaded = yaml.safe_load(path.read_text(encoding="utf-8"))
@@ -39,7 +51,7 @@ def _raw_fingerprints(path: Path) -> tuple[dict[str, Any], ...]:
         raw = None
     if not isinstance(raw, list) or not all(isinstance(entry, dict) for entry in raw):
         raise ValueError(f"{path} must contain an array of fingerprint objects")
-    return tuple(raw)
+    return tuple(_normalize_yaml_scalars(entry) for entry in raw)
 
 
 def build_artifact(source_dir: Path) -> str:

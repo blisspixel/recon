@@ -8,6 +8,7 @@ import tomllib
 from pathlib import Path
 
 import pytest
+import yaml
 
 from recon_tool.formatter.serialize import CSV_COLUMNS
 
@@ -193,3 +194,31 @@ def test_batch_csv_documentation_matches_runtime_contract() -> None:
         "successful observation fields and to failure domains and messages",
     ):
         assert required in normalized
+
+
+def test_public_issue_forms_enforce_target_data_boundary() -> None:
+    template_root = ROOT / ".github" / "ISSUE_TEMPLATE"
+    assert not (template_root / "bug_report.md").exists()
+    assert not (template_root / "fingerprint_request.md").exists()
+
+    for filename in ("bug_report.yml", "fingerprint_request.yml"):
+        raw = yaml.safe_load((template_root / filename).read_text(encoding="utf-8"))
+        assert isinstance(raw, dict)
+        body = raw.get("body")
+        assert isinstance(body, list)
+        acknowledgement = next(
+            item
+            for item in body
+            if isinstance(item, dict) and item.get("id") == "public_data_acknowledgement"
+        )
+        options = acknowledgement["attributes"]["options"]
+        assert options
+        assert all(option.get("required") is True for option in options)
+
+    bug_form = _read(".github/ISSUE_TEMPLATE/bug_report.yml")
+    fingerprint_form = _read(".github/ISSUE_TEMPLATE/fingerprint_request.yml")
+    assert "paste the full `--json --explain`" not in bug_form
+    assert "Known customers" not in fingerprint_form
+    assert "real customer or evaluated-target" in fingerprint_form
+    assert "private non-security report" in _read("docs/data-handling-policy.md").lower()
+    assert "Private Non-Security Target-Data Reports" in _read("SECURITY.md")

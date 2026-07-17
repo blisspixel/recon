@@ -315,6 +315,7 @@ def test_new_valid_fingerprint_writes_candidate_yaml(tmp_path: Path) -> None:
     text = output.read_text(encoding="utf-8")
     assert "cycle31-example-service" in text
     assert "^cycle31-example-verification=" in text
+    assert re.search(r"verified: ['\"]?\d{4}-\d{2}-\d{2}", text)
 
 
 def test_new_valid_fingerprint_prints_candidate_yaml() -> None:
