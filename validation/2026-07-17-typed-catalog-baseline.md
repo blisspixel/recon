@@ -1,6 +1,6 @@
 # Typed DNS Catalog Baseline and Promotion Gate
 
-Status: baseline complete; unseen vertical holdout pending
+Status: baseline and unseen vertical holdout complete
 
 Date: 2026-07-17
 
@@ -19,6 +19,7 @@ and fictional regression fixtures.
 | Collection revision | `1c130ee7c6c6687491e4423e3987587a4f39b571` |
 | Catalog at collection | 850 entries, 1,051 detections |
 | Catalog digest | `f755f5c4626e9d525510c471b84a6f5633e19a81e5792b8a50cb547b0919cc1f` |
+| Result digest | `39655fc31713302803d37a17345f30f3b2a8253da082e3c47509db25e16db7ed` |
 | Output records | 5,202 |
 | Successfully measured inputs | 5,199 |
 | Validation errors | 3 |
@@ -114,6 +115,75 @@ retract 144, for a net projected increase of 1,683 across the affected paths.
 A retraction means the retained value no longer satisfies the exact matcher
 contract. It is not an independently labeled false positive.
 
+## Unseen vertical holdout
+
+After revision `9ab8a79282df228b2b836b59c69fae329cb296be` was committed and
+the full repository gate passed, 30 private `industry-*` strata were normalized
+and cumulatively deduplicated against the development baseline and each earlier
+holdout stratum. This left 366 previously unseen namespaces. No rule or
+threshold was changed after observing them.
+
+| Field | Value |
+|---|---|
+| Catalog | 855 entries, 1,062 detections |
+| Catalog digest | `2a9fa2fc1961d6ce81bcae1caa3f198f446d8f50e43ebfac6b5ad12f818a9d71` |
+| Result digest | `5d61ce6f841b3d1d981928330984bc5e1298b9f4ee5fd84d93f7159b218aa4fe` |
+| Measured inputs / batch errors | 366 / 0 |
+| Partial result records | 53 |
+| Unavailable / unmeasured typed rows | 0 / 0 |
+| Truncated typed paths | 0 |
+| CT collection / opt-in direct probes | Disabled / disabled |
+| Concurrency / elapsed collection time | 5 / 436.5 seconds |
+
+The complete aggregate by bounded path was:
+
+| Record path | Available / partial | Opportunities | Observed | Classified | Unclassified | Share | Recurrent private buckets |
+|---|---:|---:|---:|---:|---:|---:|---:|
+| `cname_target` | 325 / 41 | 1,200 | 1,200 | 997 | 203 | 0.831 | 0 |
+| `cname` | 325 / 41 | 732 | 244 | 161 | 83 | 0.660 | 4 |
+| `txt` | 365 / 1 | 366 | 6,402 | 4,291 | 2,111 | 0.670 | 42 |
+| `spf` | 365 / 1 | 383 | 1,056 | 707 | 349 | 0.670 | 19 |
+| `mx` | 365 / 1 | 366 | 770 | 643 | 127 | 0.835 | 1 |
+| `ns` | 365 / 1 | 366 | 1,357 | 989 | 368 | 0.729 | 33 |
+| `caa` | 365 / 1 | 366 | 400 | 340 | 60 | 0.850 | 3 |
+| `dmarc_rua` | 365 / 1 | 366 | 396 | 224 | 172 | 0.566 | 5 |
+| `subdomain_txt` | 365 / 1 | 2,196 | 116 | 64 | 52 | 0.552 | 3 |
+| `srv` | 363 / 3 | 1,830 | 407 | 290 | 117 | 0.713 | 4 |
+
+Recurrent bucket counts use the frozen minimum of two observations across two
+distinct namespaces. Candidate keys and examples remain private. The degraded
+source counts were: `dns:a` 15, `dns:apex_txt` 1, `dns:bimi` 1, `dns:caa` 1,
+`dns:cname` 41, `dns:dkim` 4, `dns:dmarc` 1, `dns:mta_sts` 1, `dns:mx` 1,
+`dns:ns` 1, `dns:srv` 3, `dns:subdomain_txt` 1, `dns:tls_rpt` 1,
+`http:mta_sts_policy` 2, and `identity:autodiscover` 1.
+
+Every admitted pattern appeared at least once in the unseen holdout:
+
+| Pattern | Observations / distinct namespaces |
+|---|---:|
+| CAA `awstrust.com` | 12 / 11 |
+| CAA `amazonaws.com` | 17 / 14 |
+| CAA `ssl.com` | 21 / 11 |
+| CAA `globalsign.com` | 23 / 17 |
+| CAA `godaddy.com` | 8 / 6 |
+| CAA `entrust.net` | 7 / 7 |
+| CNAME exact `cdn.webflow.com` | 1 / 1 |
+| SPF suffix `_d.easydmarc.pro` | 4 / 4 |
+| SPF suffix `_nspf.vali.email` | 3 / 3 |
+| TXT prefix `cloudflare_dashboard_sso=` | 18 / 15 |
+| Owner-qualified `_webflow` TXT | 2 / 2 |
+
+The 10 baseline-backed rules accounted for 114 holdout observations. The
+owner-qualified Webflow seed accounted for two more. At least one new rule
+fired on 59 distinct holdout namespaces. This is evidence that the documented
+record shapes recur outside the development sample, not an independent label
+for precision, recall, current product use, or population prevalence.
+
+The old broad substring semantics would also have classified 11 values that
+the patched runtime left unclassified: one CAA value, four MX values, and six
+NS values. SPF had no such holdout near-miss. These are matcher-contract
+retractions, not independently adjudicated false positives.
+
 ## Interpretation limits and next gate
 
 - The input is a convenience sample with overlapping source lists. These
@@ -123,6 +193,6 @@ contract. It is not an independently labeled false positive.
   collector attempted, with availability and truncation reported.
 - A matched fingerprint is probabilistic public metadata. It does not prove
   current product use, ownership, account control, or exploitability.
-- The development sample cannot serve as an independent precision or recall
-  label set. The next gate is a predeclared set of previously unseen vertical
-  namespaces, run after the catalog patch without further tuning.
+- Neither the development sample nor the unseen vertical round is an
+  independently labeled precision or recall set. The next catalog rounds
+  should add rank and regional sampling before any broad coverage claim.

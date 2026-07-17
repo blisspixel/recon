@@ -54,6 +54,9 @@ date in its candidate YAML.
 - A dated, aggregate-only typed catalog baseline now accounts for every bounded
   DNS fingerprint path while keeping all target names, target-owned values,
   tenant identifiers, and per-domain rows out of the repository.
+- A frozen 366-namespace unseen vertical holdout observed every newly admitted
+  pattern at least once. Only aggregate counts are published, and no additional
+  rule was tuned from the holdout.
 - Project documentation now describes the shipped package, CLI, JSON, and local
   MCP surfaces without implying a separate top-level library facade, and the
   release process now batches ordinary work into coherent package releases.

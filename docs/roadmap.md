@@ -628,9 +628,9 @@ every bounded catalog record path as measured, unavailable, or not yet
 instrumented. The opt-in maintenance envelope and private reducer now cover
 CNAME chains, apex CNAME, non-SPF TXT, SPF targets, MX, NS, CAA, DMARC RUA,
 bounded owner-qualified TXT, and bounded SRV observations. An empty queue is
-not evidence of completeness. Independent rank, regional, vendor-seed, and
-drift rounds remain open after the convenience-sample baseline. Evaluated
-apexes, organization names, tenant identifiers,
+not evidence of completeness. The unseen vertical holdout is complete without
+post-holdout tuning. Independent rank, regional, vendor-seed, and drift rounds
+remain open. Evaluated apexes, organization names, tenant identifiers,
 target-owned record values, and per-domain rows remain off GitHub. Generic
 provider patterns, provider-owned references, fictional fixtures, and
 disclosure-safe aggregates are the public review surface.

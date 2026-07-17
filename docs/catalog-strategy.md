@@ -43,6 +43,17 @@ recorded in
 independent rank, regional, vendor-seed, and drift rounds remain open, and most
 legacy detections still lack a freshness date.
 
+Current round status:
+
+| Round | Status |
+|---|---|
+| Convenience-sample baseline | Complete, aggregate-only memo published |
+| Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
+| Rank bands | Pending |
+| Regional / ccTLD | Pending |
+| Vendor seed | One documented Webflow owner seed exercised; broader round pending |
+| Drift | Pending |
+
 ## 1. A stratified, reproducible sampling frame
 
 The catalog can only recognize vendors the corpus exposes, so one list biases
