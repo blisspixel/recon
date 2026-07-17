@@ -357,6 +357,14 @@ fingerprints:
       SPF include matching EasyDMARC, an email-authentication-
       management vendor. Indicates the domain uses EasyDMARC's
       tooling.
+  - type: spf
+    pattern: _d.easydmarc.pro
+    reference: https://support.easydmarc.com/knowledge-base/faq
+    verified: 2026-07-17
+    description: >-
+      EasyDMARC EasySPF managed include suffix. The include
+      delegates SPF evaluation to an EasyDMARC-controlled host;
+      stale DNS configuration remains a compatible explanation.
   - type: dmarc_rua
     pattern: easydmarc.com
     reference: https://easydmarc.com/blog/
@@ -410,6 +418,23 @@ fingerprints:
     description: >-
       Valimail Gov DMARC rua destination (`valigov.email`).
       Government tenants. Same vendor as the vali.email pattern.
+- name: Valimail Instant SPF (legacy)
+  slug: valimail-legacy-spf
+  category: Email & Communication
+  confidence: medium
+  parent_vendor: Valimail
+  product_family: Instant SPF
+  display_group: Email Deliverability
+  detections:
+  - type: spf
+    pattern: _nspf.vali.email
+    reference: https://support.valimail.com/en/articles/9143142-valimail-spf-macro-syntax
+    verified: 2026-07-17
+    description: >-
+      Legacy Valimail Instant SPF include suffix. Valimail
+      documents that this form is no longer needed, so the
+      record may be harmless configuration residue rather than
+      evidence of a current service relationship.
 - name: Agari (DMARC)
   slug: agari
   category: Email Governance

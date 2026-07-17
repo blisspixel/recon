@@ -53,6 +53,25 @@ def test_run_corpus_filters_prior_results_into_private_manifest(tmp_path: Path) 
     assert manifest.read_text(encoding="utf-8") == "beta.net\n"
 
 
+def test_run_corpus_loads_nested_ndjson_exclusions(tmp_path: Path) -> None:
+    prior = tmp_path / "prior" / "nested"
+    prior.mkdir(parents=True)
+    (prior / "results.ndjson").write_text(
+        "\n".join(
+            [
+                json.dumps({"queried_domain": "alpha.com"}),
+                json.dumps({"domain": "sub.beta.net", "error_kind": "timeout", "record_type": "error"}),
+            ]
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    excluded = _load_excluded_domains([tmp_path / "prior"])
+
+    assert excluded == {"alpha.com", "beta.net"}
+
+
 def test_run_corpus_filtered_manifest_rejects_malformed_domain(tmp_path: Path) -> None:
     corpus = tmp_path / "corpus.txt"
     corpus.write_text("valid.example\ninvalid.example;command\n", encoding="utf-8")
