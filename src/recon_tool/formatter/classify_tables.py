@@ -98,6 +98,8 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "entra-app-proxy": "Identity",
     "auth0": "Identity",
     "descope": "Identity",
+    "clerk": "Identity",
+    "aaf": "Identity",
     "onelogin": "Identity",
     # Additional identity providers
     "jumpcloud": "Identity",

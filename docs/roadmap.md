@@ -609,12 +609,22 @@ cross-platform release contract. Neither exists in the current product.
 
 ### Turn catalog quality into the detection-improvement loop
 
-The current catalog has 847 entries. Establish classified-surface and stale-rule
+The current catalog has 850 entries. Establish classified-surface and stale-rule
 baselines before adding broad new families. Every promoted rule needs a current
 public reference or disclosure-safe aggregate basis, a `verified` date,
 positive and lookalike-negative fixtures, sparse-result wording, and provenance
 tests. Prioritize regional and record-type gaps by aggregate frequency. Do not
 add higher-order motifs until direct fingerprint quality is measured.
+
+Use deduplicated, private rounds with distinct rank, regional, vertical,
+vendor-seed, or drift questions. Before calling a round complete, account for
+every bounded catalog record path as measured, unavailable, or not yet
+instrumented. The current automated corpus queue is CNAME-chain-heavy, so an
+empty non-CNAME queue is not evidence of catalog completeness. Evaluated apexes,
+organization names, tenant identifiers, target-owned record values, and
+per-domain rows remain off GitHub. Generic provider patterns, provider-owned
+references, fictional fixtures, and disclosure-safe aggregates are the public
+review surface.
 
 Do not keep vendor-name-only proposals. A catalog candidate enters the backlog
 only with an exact record type and pattern, a source or disclosure-safe

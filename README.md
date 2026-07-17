@@ -280,6 +280,14 @@ priorities are:
    abstention, provenance, catalog coverage, degradation, latency, CT value,
    and agent context cost before expanding inference or graph machinery.
 
+Catalog coverage work uses deduplicated private rounds across rank, region, and
+domain-class strata. Real target names and per-domain records stay in ignored
+local validation workspaces. GitHub receives only generic provider patterns,
+provider-owned references, fictional fixtures, and disclosure-safe aggregates.
+The current automated gap queue is strongest for CNAME chains; other bounded
+record paths must be measured explicitly before the project claims broad
+catalog coverage.
+
 The dependency order, acceptance evidence, stop rules, and current code-graph
 summary live in
 [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md).

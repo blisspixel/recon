@@ -28,6 +28,7 @@ from recon_tool.fingerprints import (
     get_caa_patterns,
     get_cname_patterns,
     get_ns_patterns,
+    get_srv_patterns,
     get_subdomain_txt_patterns,
 )
 from recon_tool.models import EvidenceRecord
@@ -533,6 +534,7 @@ async def detect_srv(ctx: dns_base.DetectionCtx, domain: str) -> None:
         ("_carddavs._tcp", None, "CardDAV", ""),
     ]
 
+    srv_patterns_sorted = sorted(get_srv_patterns(), key=lambda det: -len(det.pattern))
     tasks = [
         dns_base.safe_resolve(
             f"{srv}.{domain}",
@@ -550,6 +552,16 @@ async def detect_srv(ctx: dns_base.DetectionCtx, domain: str) -> None:
             target = _dns_target_host(record)
             if not target:
                 continue
+            target_lower = target.lower().rstrip(".")
+            for det in srv_patterns_sorted:
+                pattern = det.pattern.lower().strip().lstrip(".").rstrip(".")
+                if not pattern:
+                    continue
+                matched = host_has_suffix(target_lower, pattern) if "." in pattern else pattern in target_lower
+                if matched:
+                    ctx.add(det.name, det.slug, source_type="SRV", raw_value=record)
+                    ctx.record_fp_match(det.slug, "srv", det.pattern)
+                    break
             if hint is None or host_has_suffix(target, hint):
                 ctx.add(
                     svc_name,

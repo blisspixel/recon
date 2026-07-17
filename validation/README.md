@@ -2,9 +2,9 @@
 
 Live-validation workspace. The directory hosts the runners, the gap-analysis
 tooling, and the fingerprint-discovery loop, plus a small fictional-example
-corpus. **Real company names are gitignored.** Curate your own private corpus
-locally and the .gitignore keeps it out of commits; see [Policy](#policy)
-below.
+corpus. Real-target corpora and per-domain outputs belong only in the ignored
+private workspaces described below. Git ignore rules protect those paths, not a
+real name copied into an arbitrary tracked file; see [Policy](#policy) below.
 
 ## What's in here
 
@@ -65,14 +65,15 @@ Two entry points feed the same triage logic:
 ### Single-domain (incidental discovery during normal use)
 
 ```bash
-recon contoso.com --json --include-unclassified > result.json
-python validation/find_gaps.py --input result.json --output gaps.json
-python validation/triage_candidates.py \
-    --gaps gaps.json --fingerprints src/recon_tool/data/fingerprints/ \
-    --output candidates.json
+recon discover contoso.com \
+    --output validation/local/contoso-candidates.json
 ```
 
-Then hand `candidates.json` to the
+`recon discover` performs the same lookup, bucketing, and existing-pattern and
+same-zone filtering without leaving a raw result in the repository root. For a
+real target, keep both the output path and any follow-up notes under
+`validation/local/` or another ignored private workspace. Then hand the private
+candidate file to the
 [`/recon-fingerprint-triage`](../agents/claude-code/skills/recon-fingerprint-triage/SKILL.md)
 skill, or to any agent reading the same input shape.
 
@@ -87,7 +88,9 @@ echo "contoso.com" > validation/corpus-private/saas-b2b.txt
 # Run respectfully: concurrency 2 stays well under crt.sh's tolerance
 python validation/run_corpus.py \
     --corpus validation/corpus-private/saas-b2b.txt \
-    --concurrency 2
+    --concurrency 2 \
+    --exclude-results validation/runs-private/<prior-run>/ \
+    --limit 200
 
 # Aggregate gaps across the run
 python validation/find_gaps.py \
@@ -98,7 +101,9 @@ python validation/find_gaps.py \
 python validation/triage_candidates.py \
     --gaps validation/runs-private/<run>/gaps.json \
     --fingerprints src/recon_tool/data/fingerprints/ \
-    --output validation/runs-private/<run>/candidates.json
+    --output validation/runs-private/<run>/candidates.json \
+    --min-count 2 \
+    --min-distinct-namespaces 2
 
 # After adding fingerprints, verify uplift
 python validation/diff_runs.py \
@@ -138,11 +143,13 @@ python validation/scan.py \
     --label monthly-2026-06
 ```
 
-Each run directory ends up with `results.json`, `gaps.json`,
+Each run directory ends up with `results.ndjson` by default (`results.json`
+with `--json-array`), `gaps.json`,
 `candidates.json`, `diff.json` (when comparing to a prior run), and
-`meta.json` capturing the scan timestamp, label, corpus size, and
-candidate counts. Reading `meta.json` from any run answers "when was
-this scanned, what was found?" without re-running.
+`meta.json` capturing the scan timestamp, label, raw input rows, normalized
+scheduled count, duplicate and malformed-row counts, and candidate counts.
+Reading `meta.json` from any run answers "when was this scanned, what was
+found?" without re-running.
 
 For large monthly cadence, keep `--no-ct` on unless CT coverage is the point and
 use modest concurrency. Real-company corpora live entirely under
@@ -167,6 +174,13 @@ python validation/scan.py \
     --max-runtime 7200 \
     --no-compare
 ```
+
+`--exclude-results` may be repeated. It canonicalizes and removes namespaces
+already present in prior result files, then stores the filtered input manifest
+inside the ignored output directory. Use it when private strata overlap so a
+pooled round does not count the same queried namespace twice.
+`--limit` applies after normalization, exclusion, and deduplication, making
+fixed-size sequential rounds from a larger frozen private stratum reproducible.
 
 If a process was interrupted after `results.ndjson` already streamed records,
 recover the aggregate artifacts without touching the network:
@@ -351,8 +365,10 @@ multi-detection fingerprints as `keep_any`, `review_for_all`, or
 ## Policy
 
 Real apex domains never get committed here, not as corpus files and
-not as artifacts. `CONTRIBUTING.md` codifies the same rule for the
-rest of the repo. The .gitignore carves out `corpus-private/`,
+not as artifacts. Real organization names, tenant identifiers, target-owned
+record values, and per-domain notes follow the same rule. `CONTRIBUTING.md`
+codifies the same rule for the rest of the repo. The .gitignore carves out
+`corpus-private/`,
 `runs-private/`, `live_runs/`, and `local/` so users can curate without worrying
 about accidentally leaking their list. `scripts/check_validation_hygiene.py`
 runs in the local gate and release readiness to catch forced-added private paths
@@ -361,4 +377,6 @@ and target-domain fields in committed validation artifacts.
 When you discover a generally-useful pattern (a real third-party SaaS
 that any user would benefit from), open a PR adding the
 `cname_target` rule to `src/recon_tool/data/fingerprints/surface.yaml`.
-The pattern itself is generic; your corpus stays private.
+Provider names, provider-controlled pattern domains, and public provider
+documentation are allowed because they define the generic catalog. The target
+that exposed the pattern, its records, and its company details stay private.

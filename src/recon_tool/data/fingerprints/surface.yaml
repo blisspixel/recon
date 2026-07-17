@@ -434,6 +434,23 @@ fingerprints:
       pages on EU projects. Same identity-flow binding semantics as
       the US target, with regional Descope hosting.
 
+- name: Clerk
+  slug: clerk
+  category: Identity
+  confidence: medium
+  parent_vendor: Clerk
+  detections:
+  - type: cname_target
+    pattern: worker.clerkprod-cloudflare.net
+    reference: https://clerk.com/docs/guides/development/deployment/production
+    tier: application
+    description: >-
+      Branded authentication subdomain terminating at Clerk's production
+      Cloudflare worker namespace. Clerk documents a required Frontend API
+      CNAME for production domains; this provider-specific target recurred
+      across independent public namespaces. It indicates a Clerk-managed
+      authentication surface, not which sign-in methods or policies are active.
+
 - name: Okta
   slug: okta
   category: Identity
@@ -725,6 +742,16 @@ fingerprints:
       developer-platform domain). Indicates the domain hosts
       Salesforce-built apps (Force.com / Lightning Platform)
       under a branded subdomain.
+  - type: cname_target
+    pattern: siteforce.com
+    reference: https://help.salesforce.com/s/articleView?id=platform.siteforce_domains.htm
+    tier: application
+    description: >-
+      Subdomain CNAMEs into Salesforce's `siteforce.com` namespace,
+      including the documented `live.siteforce.com` custom-domain
+      targets. Indicates Salesforce Sites or Experience Cloud hosting
+      under a branded subdomain; it does not identify the site's audience
+      or whether authentication is required.
 
 - name: Pardot Landing Pages
   slug: pardot
@@ -1215,6 +1242,15 @@ fingerprints:
       (`*.ngrok-cname.com`). Indicates the org fronts a service through
       an ngrok ingress endpoint. Does not by itself reveal the upstream
       service or whether the tunnel is currently active.
+  - type: cname_target
+    pattern: ngrok.io
+    reference: https://ngrok.com/docs/errors/reference
+    tier: infrastructure
+    description: >-
+      Subdomain CNAME terminating in ngrok's legacy or regional
+      `ngrok.io` endpoint namespace. Indicates routing through an ngrok
+      ingress endpoint. It does not reveal the upstream service or prove
+      that a tunnel is currently active.
 
 - name: bl.ink
   slug: blink
@@ -2601,6 +2637,21 @@ fingerprints:
       Subdomain CNAMEs into fastlylb.net (Fastly's load-
       balancer endpoint domain). Indicates the domain uses
       Fastly for load balancing in addition to CDN.
+
+- name: CDN77
+  slug: cdn77
+  category: Infrastructure
+  confidence: high
+  parent_vendor: CDN77
+  detections:
+  - type: cname_target
+    pattern: rsc.cdn77.org
+    reference: https://client.cdn77.com/support/knowledgebase/introduction-to-cdn/getting-started
+    tier: infrastructure
+    description: >-
+      Subdomain CNAME terminating at CDN77's documented resource endpoint
+      (`<resource-id>.rsc.cdn77.org`). Indicates delivery through CDN77's
+      edge. It does not identify the origin, cache policy, or traffic volume.
 
 - name: AWS CloudFront
   slug: aws-cloudfront
@@ -5042,6 +5093,20 @@ fingerprints:
       Cirrus Identity (higher-education federation bridge) CNAME
       target (`cirrusidentity.com`). Common on .edu apexes for
       Shibboleth / Duo / Google bridge.
+- name: Australian Access Federation (AAF)
+  slug: aaf
+  category: Identity
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: aaf.edu.au
+    reference: https://support.aaf.edu.au/support/solutions/articles/19000133800-on-premise-idp-migration-to-rapid-idp
+    tier: application
+    description: >-
+      Subdomain CNAME terminating in the Australian Access Federation's
+      `aaf.edu.au` namespace. AAF documents customer hostname CNAMEs for
+      its hosted Rapid IdP service. This indicates an AAF-operated public
+      identity surface, not the namespace owner's complete identity stack.
 - name: Pressable
   slug: pressable
   category: Cloud

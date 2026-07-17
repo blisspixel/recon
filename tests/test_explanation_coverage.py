@@ -55,6 +55,9 @@ class TestExplainInsightsReachableBranches:
         records = _call("Email security 3/5 good (DMARC reject, DKIM)", slugs=("dmarc",))
         assert records[0].fired_rules
         assert "email_security" in records[0].fired_rules[0]
+        # Human explain path describes a control inventory, not a maturity grade.
+        assert "control count" in records[0].confidence_derivation.lower()
+        assert "security score" not in records[0].confidence_derivation.lower()
 
     def test_auth_federated(self) -> None:
         records = _call("Federated identity observed; external IdP not identified")

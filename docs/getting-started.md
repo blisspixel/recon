@@ -127,6 +127,14 @@ uv sync
 uv run python scripts/check.py
 ```
 
+After an editable or environment install, either the `recon` console script or
+the package module entry works:
+
+```bash
+recon --version
+python -m recon_tool --version
+```
+
 ## First Lookup
 
 Lookups make DNS queries which recursive and authoritative DNS infrastructure
@@ -143,6 +151,10 @@ Use fictional or reserved domains in examples and docs. Public validation work
 with real apexes stays in gitignored local workspaces.
 
 ## Input Normalization
+
+Pass a public-suffix domain (for example `contoso.com`). A bare hostname without
+a dot is rejected with `Invalid domain format` rather than treated as an unknown
+CLI command.
 
 recon accepts common paste shapes:
 
@@ -222,7 +234,11 @@ Restart the shell after installing completion.
 If `recon` is not found after `pip install`, the script likely went into your
 user Scripts directory, which may not be on PATH. Prefer the installer, `uv`, or
 `pipx`. If you must use bare `pip`, add the matching user Scripts directory to
-PATH and restart the terminal.
+PATH and restart the terminal. As a temporary fallback while PATH is fixed:
+
+```bash
+python -m recon_tool --version
+```
 
 ## Next Reads
 

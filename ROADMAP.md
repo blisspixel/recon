@@ -4,17 +4,26 @@ The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
 Current status: recon v2.6.3 has a stable, production-ready baseline. The CLI,
 JSON schema, local stdio MCP server, bounded collectors, generated-artifact
-guards, validation gates, and release path are shipped. The active product work
-is evidence-semantic integrity and a reproducible product-quality baseline. The
-isolated MCP v1.28.1 and v2.0.0b1 matrix passed on 2026-07-13, with production
-remaining on stable v1 and the final v2 adoption gate still pending. Measured
-latency, catalog quality,
+guards, validation gates, and release path are shipped. Unreleased polish on
+main improves first-run domain errors, aligns root help with the passive
+public-sources voice, clarifies the delta panel email control-count label, and
+adds `python -m recon_tool`. The active product work is evidence-semantic
+integrity and a reproducible product-quality baseline. The isolated MCP v1.28.1
+and v2.0.0b1 matrix passed on 2026-07-13, with production remaining on stable v1
+and the final v2 adoption gate still pending. Measured latency, catalog quality,
 agent context cost, provenance, and interface-hotspot work follow in dependency
 order. Retained batch output now uses a fixed worker pool instead of one task
 per input; summary shaping and cross-domain correlation remain measured
 follow-up work. The first bounded internal claim contract now evaluates the exact apex
 DMARC `p=reject` observation and drives the opt-in cohort schema 2.2 DMARC
 denominator while schema 2.1 remains the default.
+
+The catalog-quality track uses deduplicated private rounds with distinct rank,
+regional, vertical, vendor-seed, or drift questions. It must account for every
+bounded record path as measured, unavailable, or not yet instrumented before
+claiming broad coverage. Target identities, target-owned records, and per-domain
+rows stay off GitHub; only generic provider patterns, fictional fixtures, and
+disclosure-safe aggregates are public.
 
 The canonical dependency order, acceptance evidence, stop rules, current
 high-trust code-graph summary, invariants, and explicit non-goals are in

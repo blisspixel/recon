@@ -91,7 +91,7 @@ def _append_scalar_changes(text: Text, report: DeltaReport) -> None:
     changes = (
         ("Auth", report.changed_auth_type),
         ("DMARC", report.changed_dmarc_policy),
-        ("Email Security Score", report.changed_email_security_score),
+        ("Email control count (0-5)", report.changed_email_security_score),
         ("Confidence", report.changed_confidence),
         ("Domain Count", report.changed_domain_count),
     )

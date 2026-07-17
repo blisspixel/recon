@@ -577,14 +577,16 @@ def _classify_insight(
     if structured is not None:
         return structured
 
-    # Email security score insight scans all slugs for parenthetical references.
+    # Email-control inventory insight scans slugs for parenthetical references.
     if lower.startswith("email security"):
         fired_rules.append("_email_security_insights")
         for slug in slugs:
             if slug in lower:
                 relevant_slugs.append(slug)
                 relevant_evidence.extend(_evidence_for_slug(slug, evidence))
-        confidence_parts.append("Email security score derived from DMARC, DKIM, SPF, MTA-STS, BIMI presence")
+        confidence_parts.append(
+            "Email control count derived from observed DMARC, DKIM, SPF, MTA-STS, BIMI presence"
+        )
         return relevant_slugs, relevant_evidence, fired_rules, confidence_parts
 
     for predicate, rule, candidate_slugs, note in _INSIGHT_RULES:

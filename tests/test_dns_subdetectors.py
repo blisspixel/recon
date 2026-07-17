@@ -11,6 +11,7 @@ from unittest.mock import patch
 
 import pytest
 
+from recon_tool.fingerprints import Detection
 from recon_tool.sources import dns as dns_source
 from recon_tool.sources import dns_email
 from recon_tool.sources.dns import DNSSource
@@ -416,6 +417,48 @@ class TestSRVDetection:
         )
         result = await DNSSource().lookup("example.com")
         assert "XMPP (Jabber)" not in result.detected_services
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_catalog_srv_target_detected(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_xmpp-server._tcp.example.com/SRV": ["10 5 5222 tenant.messaging.vendor.test"],
+            }
+        )
+        patterns = (Detection("vendor.test", "Vendor Messaging", "vendor-messaging", "Collaboration", "high"),)
+
+        with patch("recon_tool.sources.dns_infra.get_srv_patterns", return_value=patterns):
+            result = await DNSSource().lookup("example.com")
+
+        assert "Vendor Messaging" in result.detected_services
+        assert "vendor-messaging" in result.detected_slugs
+        assert any(
+            evidence.source_type == "SRV"
+            and evidence.slug == "vendor-messaging"
+            and evidence.raw_value == "10 5 5222 tenant.messaging.vendor.test"
+            for evidence in result.evidence
+        )
+
+    @pytest.mark.asyncio
+    @patch("recon_tool.sources.dns_base.safe_resolve")
+    async def test_catalog_srv_target_lookalike_ignored(self, mock_resolve):
+        mock_resolve.side_effect = _mock_safe_resolve_factory(
+            {
+                "example.com/TXT": [],
+                "example.com/MX": [],
+                "_xmpp-server._tcp.example.com/SRV": ["10 5 5222 vendor.test.example.net"],
+            }
+        )
+        patterns = (Detection("vendor.test", "Vendor Messaging", "vendor-messaging", "Collaboration", "high"),)
+
+        with patch("recon_tool.sources.dns_infra.get_srv_patterns", return_value=patterns):
+            result = await DNSSource().lookup("example.com")
+
+        assert "Vendor Messaging" not in result.detected_services
+        assert "vendor-messaging" not in result.detected_slugs
 
 
 class TestSubdomainTxtDetection:
