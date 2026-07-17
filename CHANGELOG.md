@@ -16,11 +16,13 @@ operator, corporate group, ownership, or control.
 
 ### Tool Surface Changes
 
-Tool surface changes: no CLI command, flag, JSON, MCP, cache, or public import
-contract changes. The root CLI help summary text and the human-facing delta
-panel label for the email control count are clearer. `python -m recon_tool`
-is now a supported entry path. `recon fingerprints new` now includes the
-current verification date in its candidate YAML.
+Tool surface changes: no stable CLI command, flag, default JSON, MCP, cache, or
+public import contract changes. The opt-in, non-schema
+`--include-unclassified` maintenance output adds typed catalog diagnostics.
+The root CLI help summary text and the human-facing delta panel label for the
+email control count are clearer. `python -m recon_tool` is now a supported
+entry path. `recon fingerprints new` now includes the current verification
+date in its candidate YAML.
 
 ### Changed
 
@@ -39,6 +41,22 @@ current verification date in its candidate YAML.
 - New fingerprint detections must include a valid, non-future `verified` date;
   the diff-aware local and CI gate leaves the legacy undated backlog available
   for reviewed backfill.
+- `--include-unclassified` now adds bounded, typed catalog accounting and
+  unmatched-value diagnostics across every current DNS fingerprint path. The
+  default JSON and stable schema remain unchanged. Private scan runs now split
+  detailed gap evidence from a target-free aggregate report and revision
+  manifest.
+- The built-in catalog now has 855 entries and 1,062 detections. Eleven
+  provider-documented CAA, CNAME, SPF, TXT, and owner-qualified TXT rules were
+  added from a frozen private recurrence pass and a documented vendor seed.
+  CAA authorization and legacy-SPF slugs remain distinct from stronger service
+  indicators.
+- A dated, aggregate-only typed catalog baseline now accounts for every bounded
+  DNS fingerprint path while keeping all target names, target-owned values,
+  tenant identifiers, and per-domain rows out of the repository.
+- A frozen 366-namespace unseen vertical holdout observed every newly admitted
+  pattern at least once. Only aggregate counts are published, and no additional
+  rule was tuned from the holdout.
 - Project documentation now describes the shipped package, CLI, JSON, and local
   MCP surfaces without implying a separate top-level library facade, and the
   release process now batches ordinary work into coherent package releases.
@@ -55,6 +73,17 @@ current verification date in its candidate YAML.
 - Fingerprint loading now accepts native YAML dates in `verified` metadata and
   rejects impossible ISO-looking calendar dates instead of silently treating
   both forms as undated.
+- The maintained corpus scanner invokes the supported `python -m recon_tool`
+  entry path, restoring end-to-end scan execution after the CLI became a
+  package.
+- SPF, MX, NS, and CAA catalog matching now respects DNS-label and CAA issuer
+  boundaries. CAA `iodef` values and deceptive hostname lookalikes no longer
+  create provider attributions, while legacy dotless NS provider labels remain
+  supported on exact or hyphen-suffixed labels.
+- Private catalog reduction now reports measured inputs separately from batch
+  errors, distinguishes owner-qualified TXT value shapes, reads nested JSON or
+  NDJSON runs, and supports direct script execution. Corpus exclusions now read
+  streamed NDJSON scan output as well as JSON arrays.
 
 ## [2.6.3] - 2026-07-14
 

@@ -35,7 +35,7 @@ SOFT_CAP = 1000
 BASELINE: dict[str, int] = {
     "formatter/panel.py": 1977,
     "exposure.py": 859,
-    "merger.py": 836,
+    "merger.py": 805,
 }
 
 

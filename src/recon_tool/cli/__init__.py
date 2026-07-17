@@ -438,7 +438,10 @@ def lookup(
     include_unclassified: bool = typer.Option(
         False,
         "--include-unclassified",
-        help="Include unclassified CNAME chains in --json output for fingerprint discovery.",
+        help=(
+            "Include bounded typed catalog coverage and unmatched DNS values "
+            "in --json output for private fingerprint discovery."
+        ),
         rich_help_panel=_OUTPUT_HELP_PANEL,
     ),
     no_ct: bool = typer.Option(
@@ -556,7 +559,10 @@ def batch(
     include_unclassified: bool = typer.Option(
         False,
         "--include-unclassified",
-        help=("Include unclassified CNAME chains in JSON output for the fingerprint-discovery loop. Off by default."),
+        help=(
+            "Include bounded typed catalog coverage and unmatched DNS values "
+            "in JSON output for the private fingerprint-discovery loop. Off by default."
+        ),
     ),
     no_ct: bool = typer.Option(
         False,

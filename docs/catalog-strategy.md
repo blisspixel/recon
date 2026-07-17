@@ -18,7 +18,7 @@ surface and independently supported precision are.
 
 ## How the catalog grows today
 
-The catalog carries 850 entries and 1,051 detection rules across nine populated
+The catalog carries 855 entries and 1,062 detection rules across nine populated
 types: `cname_target`, `cname`, `txt`, `spf`, `dmarc_rua`, `mx`, `ns`, `caa`,
 and `subdomain_txt`. The grammar and runtime also support `srv`, but the built-in
 catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
@@ -26,9 +26,9 @@ catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
 1. A private domain corpus is run through `recon batch --include-unclassified`
    (`validation/scan.py` or `validation/run_corpus.py`), with output written to
    gitignored private directories (`validation/runs-private/`, `live_runs/`).
-2. `validation/find_gaps.py` aggregates the unclassified CNAME-chain terminals
-   across the whole run, ranks them by frequency, and records distinct queried-
-   namespace support without emitting the namespace list.
+2. `validation/find_gaps.py` retains the established CNAME-chain queue, while
+   `validation/catalog_baseline.py` separately aggregates every bounded catalog
+   path, ranks private recurrence buckets, and emits a target-free count report.
 3. `validation/triage_candidates.py` drops already-covered and
    intra-organizational suffixes and applies both occurrence and distinct-
    namespace floors.
@@ -36,10 +36,23 @@ catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
    promoted with a scoped pattern, a `reference`, a category mapping, a
    regression test, and hedged wording.
 
-The loop is disciplined and effective, but it has three structural limits that
-this plan addresses: the corpus is a single convenience sample (selection bias),
-only CNAME gaps are ranked corpus-wide, and until now there was no freshness
-signal.
+The loop is disciplined and effective, but the available corpus remains a
+convenience sample with selection bias. The first frozen typed baseline is
+recorded in
+[the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
+independent rank, regional, vendor-seed, and drift rounds remain open, and most
+legacy detections still lack a freshness date.
+
+Current round status:
+
+| Round | Status |
+|---|---|
+| Convenience-sample baseline | Complete, aggregate-only memo published |
+| Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
+| Rank bands | Pending |
+| Regional / ccTLD | Pending |
+| Vendor seed | One documented Webflow owner seed exercised; broader round pending |
+| Drift | Pending |
 
 ## 1. A stratified, reproducible sampling frame
 
@@ -108,15 +121,13 @@ budget. Two scans of the same list are a drift check, not two coverage rounds.
 Growth without measurement cannot tell 40% coverage from 90%. Three metrics
 close the loop:
 
-- **Coverage / unclassified rate.** `find_gaps.py` already produces a
-  frequency-ranked list of unclassified CNAME terminals; that ranking is the
-  prioritized backlog (add the most common unclassified pattern first for the
-  largest coverage gain per rule). Track "share of observed DNS surface
-  classified" as a north-star number. Extend the opt-in discovery envelope and
-  private gap tooling to emit typed, bounded unmatched observations for every
-  direct catalog path that had a collection opportunity. Rank each record type
-  separately rather than forcing TXT tokens, mail routes, and hostnames into one
-  suffix metric.
+- **Coverage / unclassified rate.** `find_gaps.py` retains the historical
+  frequency-ranked CNAME-terminal list. The opt-in discovery envelope now also
+  emits typed, bounded accounting for every direct catalog path, and
+  `catalog_baseline.py` writes separate private recurrence queues plus one
+  aggregate-only report. Track "share of observed DNS surface classified" by
+  type. TXT tokens, mail routes, issuers, and hostnames are never forced into
+  one suffix metric.
 - **Recall, via vendor-seed lists.** On a vendor's known customers, do we detect
   it? Directly measurable per vendor.
 - **Precision, only with independent labels.** Measure false attribution only
@@ -131,10 +142,11 @@ close the loop:
 All measurement outputs are aggregate and disclosure-controlled; no apexes,
 organization names, or per-domain rows leave the maintainer machine.
 
-Before the next broad promotion pass, record a dated baseline by record type
-and corpus stratum. The baseline must also report unresolved share, stale-rule
-count, low-corroboration attribution count, and the exact catalog revision.
-Every promotion should name the aggregate gap it is intended to reduce and a
+The first dated record-type baseline reports availability, observed and
+unclassified values, partial collection, truncation, and the exact catalog
+revision. Later strata must retain that accounting and add the unresolved,
+freshness, and corroboration measures relevant to their question. Every
+promotion should name the aggregate gap it is intended to reduce and a
 precision regression budget.
 
 The record-type accounting target is:
@@ -142,18 +154,19 @@ The record-type accounting target is:
 | Catalog type | Bounded observation surface | Current corpus-wide gap queue |
 |---|---|---|
 | `cname_target` | Related-subdomain CNAME chains found by bounded probes or CT | Implemented and frequency-ranked |
-| `cname` | Apex and `www` CNAME targets | Collected for matching, not yet ranked when unmatched |
-| `txt` | Apex TXT values | Collected for matching, not yet ranked when unmatched |
-| `spf` | Apex SPF include and redirect targets | Collected for matching, not yet ranked when unmatched |
-| `mx` | Apex MX routing hosts | Unmatched routing is retained generically, but no typed corpus ranking exists |
-| `ns` | Apex NS hosts | Collected for matching, not yet ranked when unmatched |
-| `caa` | Apex CAA issuer values | Generic evidence is retained, but no typed corpus ranking exists |
-| `dmarc_rua` | Valid aggregate-report destination domains | Collected for matching, not yet ranked when unmatched |
-| `subdomain_txt` | TXT owners explicitly named by catalog rules | Matching exists; unknown owner names are not enumerable and are outside the denominator |
-| `srv` | The bounded common SRV owner list queried by recon | Runtime catalog matching exists; no built-in rules or typed gap ranking exist |
+| `cname` | Apex and `www` CNAME targets | Typed accounting and private recurrence queue implemented |
+| `txt` | Non-SPF apex TXT values | Typed accounting and private prefix or exact-repeat queue implemented |
+| `spf` | Apex SPF include and redirect targets | Typed accounting and private hostname queue implemented |
+| `mx` | Apex MX routing hosts | Typed accounting and private hostname queue implemented |
+| `ns` | Apex NS hosts | Typed accounting and private hostname queue implemented |
+| `caa` | Apex CAA issuer values | Typed accounting and private issuer queue implemented |
+| `dmarc_rua` | Valid aggregate-report destination domains | Typed accounting and private hostname queue implemented |
+| `subdomain_txt` | TXT owners explicitly named by catalog rules | Typed accounting implemented; unknown owner names remain non-enumerable and outside the denominator |
+| `srv` | The bounded common SRV owner list queried by recon | Typed accounting implemented; the built-in catalog still has no `srv` rules |
 
-An empty queue for an unimplemented row means unmeasured, not complete. "All
-records" means all bounded observation opportunities recon actually attempted.
+An empty queue means no recurrent candidate crossed the frozen thresholds, not
+that the catalog is complete. "All records" means all bounded observation
+opportunities recon actually attempted.
 It cannot mean every record in a DNS zone: unknown TXT owners, DKIM selectors,
 and SRV owner names are not generally enumerable through passive DNS queries.
 
@@ -208,15 +221,15 @@ declarative-token space.
 ## 6. Prioritized backlog
 
 1. Freeze the round manifest and record the current classified-surface,
-   observation-opportunity, unresolved, and stale-rule baseline. Mark
-   non-CNAME gap families unmeasured until their extractor exists.
+   observation-opportunity, unresolved, and stale-rule baseline across the
+   implemented typed extractors.
 2. Admit a candidate to the proposal queue only when it has an identifier,
    exact record type and pattern, source or disclosure-safe aggregate basis,
    and explicit pending, promoted, rejected, or deferred disposition. A vendor
    name alone is not an actionable candidate.
-3. Extend the opt-in unmatched-observation envelope and private ranking tool
-   across the direct record paths in the table above, with per-type bounds and
-   fictional fixtures.
+3. Keep the opt-in unmatched-observation envelope and private ranking tool
+   covered by per-type bounds, fictional fixtures, and default-output absence
+   tests.
 4. Stand up a rank-stratified private corpus and run it once to produce the
    first comparable multi-record baseline and prioritized growth queues.
 5. Add regional strata (the largest expected coverage gap) and promote the

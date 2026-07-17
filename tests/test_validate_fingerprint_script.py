@@ -90,7 +90,7 @@ def test_fingerprints_check_without_path_validates_source_when_available(monkeyp
     result = runner.invoke(app, ["fingerprints", "check", "--quiet"])
 
     assert result.exit_code == 0
-    assert "Validated 850 entries: 850 passed, 0 failed" in result.output
+    assert "Validated 855 entries: 855 passed, 0 failed" in result.output
 
 
 def test_builtin_artifact_validator_reports_specificity_and_duplicate_failures(
@@ -108,6 +108,7 @@ def test_builtin_artifact_validator_reports_specificity_and_duplicate_failures(
         )
         for name, pattern in (("Broad Service", ".*"), ("Specific Service", "^specific="))
     ]
+
     def load_fixture(_path: Path) -> list[Fingerprint]:
         return fingerprints
 

@@ -87,6 +87,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "dmarcian": "Email",
     "easydmarc": "Email",
     "valimail": "Email",
+    "valimail-legacy-spf": "Email",
     "agari": "Email",
     "proofpoint-efd": "Email",
     "uriports": "Email",
@@ -207,6 +208,10 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "digicert": "Security",
     "sectigo": "Security",
     "globalsign": "Security",
+    "ssl-com-caa": "Security",
+    "globalsign-caa": "Security",
+    "godaddy-caa": "Security",
+    "entrust-caa": "Security",
     "google-trust": "Security",
     # AI
     "openai": "AI",

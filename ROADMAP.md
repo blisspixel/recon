@@ -21,10 +21,14 @@ denominator while schema 2.1 remains the default.
 
 The catalog-quality track uses deduplicated private rounds with distinct rank,
 regional, vertical, vendor-seed, or drift questions. It must account for every
-bounded record path as measured, unavailable, or not yet instrumented before
-claiming broad coverage. Target identities, target-owned records, and per-domain
-rows stay off GitHub; only generic provider patterns, fictional fixtures, and
-disclosure-safe aggregates are public.
+bounded record path as measured, partial, unavailable, or unmeasured before
+claiming broad coverage. The opt-in typed reducer now covers all current catalog
+paths; its detailed queues and manifests remain private. Target identities,
+target-owned records, and per-domain rows stay off GitHub; only generic provider
+patterns, fictional fixtures, and disclosure-safe aggregates are public.
+The first frozen convenience-sample baseline, provider-supported promotion
+gate, and unseen vertical holdout are complete. Independent rank, regional,
+vendor-seed, and drift rounds remain before any broad catalog-coverage claim.
 
 The canonical dependency order, acceptance evidence, stop rules, current
 high-trust code-graph summary, invariants, and explicit non-goals are in

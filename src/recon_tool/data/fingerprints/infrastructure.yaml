@@ -141,6 +141,22 @@ fingerprints:
       website-builder and CMS platform). Indicates the
       domain is registered with a Webflow account, typically
       for hosting a Webflow site under the custom domain.
+  - type: cname
+    pattern: ^cdn\.webflow\.com\.?$
+    reference: https://help.webflow.com/hc/en-us/articles/33961239562387-Manually-connect-a-custom-domain
+    verified: 2026-07-17
+    description: >-
+      Exact Webflow custom-domain CNAME target. Webflow instructs
+      operators to point the relevant host to `cdn.webflow.com`;
+      the record is a hosting binding, not evidence about plan tier.
+  - type: subdomain_txt
+    pattern: _webflow:^one-time-verification=
+    reference: https://help.webflow.com/hc/en-us/articles/33961239562387-Manually-connect-a-custom-domain
+    verified: 2026-07-17
+    description: >-
+      Webflow custom-domain ownership token at `_webflow`. The
+      published token shows a Webflow verification step occurred;
+      it does not establish that a site remains published.
 - name: Netlify
   slug: netlify
   category: DevTools & Infrastructure
@@ -287,6 +303,14 @@ fingerprints:
       Cloudflare account, used for some Cloudflare products
       (Cloudflare for Teams, Cloudflare Pages custom domains,
       and so on).
+  - type: txt
+    pattern: ^cloudflare_dashboard_sso=
+    reference: https://developers.cloudflare.com/fundamentals/manage-members/dashboard-sso/
+    verified: 2026-07-17
+    description: >-
+      Cloudflare Dashboard SSO email-domain verification token.
+      The record shows that an SSO connector verification was
+      requested; it does not prove the connector remains enabled.
   - type: ns
     pattern: cloudflare.com
     reference: https://developers.cloudflare.com/dns/zone-setups/full-setup/
@@ -869,10 +893,8 @@ fingerprints:
     reference: https://letsencrypt.org/docs/caa/
     description: >-
       CAA record authorizing Let's Encrypt to issue
-      certificates for the domain. Indicates the domain
-      owner has explicitly allow-listed Let's Encrypt as a
-      certificate-issuing CA. Common with cost-conscious or
-      automation-friendly TLS setups.
+      certificates for the domain. It does not establish that
+      a certificate was issued or is currently deployed.
 - name: 'CAA: DigiCert'
   slug: digicert
   category: Infrastructure
@@ -883,10 +905,8 @@ fingerprints:
     reference: https://www.digicert.com/faq/dns/what-is-a-caa-record
     description: >-
       CAA record authorizing DigiCert to issue certificates
-      for the domain. Indicates the domain owner has
-      allow-listed DigiCert, an enterprise certificate
-      authority used for OV and EV certificates and
-      regulated industries.
+      for the domain. It does not establish that a certificate
+      was issued or is currently deployed.
 - name: 'CAA: Sectigo'
   slug: sectigo
   category: Infrastructure
@@ -897,9 +917,8 @@ fingerprints:
     reference: https://sectigo.com/resource-library/what-is-caa-record
     description: >-
       CAA record authorizing Sectigo to issue certificates
-      for the domain. Sectigo is a CA spun out from the
-      Comodo CA business in 2018. Common in enterprise and
-      mid-market TLS setups.
+      for the domain. It does not establish that a certificate
+      was issued or is currently deployed.
   - type: caa
     pattern: comodoca.com
     reference: https://sectigo.com/resource-library/what-is-caa-record
@@ -918,22 +937,86 @@ fingerprints:
   detections:
   - type: caa
     pattern: amazon.com
-    reference: https://docs.aws.amazon.com/acm/latest/userguide/setup-caa.html
+    reference: https://docs.aws.amazon.com/acm/latest/userguide/setup.html
     description: >-
-      CAA record authorizing Amazon (typically AWS
-      Certificate Manager) to issue certificates for the
-      domain. Indicates the domain owner uses AWS-managed
-      TLS, common with CloudFront, ELB, and API Gateway
-      certificates.
+      CAA record authorizing an Amazon CA accepted by AWS
+      Certificate Manager. It does not establish that ACM
+      issued a certificate or which AWS service might use it.
   - type: caa
     pattern: amazontrust.com
-    reference: https://docs.aws.amazon.com/acm/latest/userguide/setup-caa.html
+    reference: https://docs.aws.amazon.com/acm/latest/userguide/setup.html
     description: >-
-      CAA record authorizing Amazon Trust Services
-      (Amazon's CA brand for the publicly-trusted
-      certificates ACM issues). Functionally equivalent to
-      the amazon.com authorization; some CAA records use
-      the more-specific amazontrust.com identifier.
+      CAA record authorizing an Amazon Trust Services issuer
+      accepted by AWS Certificate Manager. It does not
+      establish that a certificate was issued.
+  - type: caa
+    pattern: awstrust.com
+    reference: https://docs.aws.amazon.com/acm/latest/userguide/setup.html
+    verified: 2026-07-17
+    description: >-
+      CAA record authorizing the `awstrust.com` Amazon CA
+      identifier accepted by AWS Certificate Manager. It does
+      not establish that a certificate was issued.
+  - type: caa
+    pattern: amazonaws.com
+    reference: https://docs.aws.amazon.com/acm/latest/userguide/setup.html
+    verified: 2026-07-17
+    description: >-
+      CAA record authorizing the `amazonaws.com` Amazon CA
+      identifier accepted by AWS Certificate Manager. It does
+      not establish that a certificate was issued.
+- name: 'CAA: SSL.com'
+  slug: ssl-com-caa
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: caa
+    pattern: ssl.com
+    reference: https://www.ssl.com/how-to/configure-caa-records-to-authorize-ssl-com/
+    verified: 2026-07-17
+    description: >-
+      CAA record authorizing SSL.com to issue certificates.
+      It does not establish that a certificate was issued or
+      is currently deployed.
+- name: 'CAA: GlobalSign'
+  slug: globalsign-caa
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: caa
+    pattern: globalsign.com
+    reference: https://support.globalsign.com/customer/portal/articles/2851274-how-to-add-dns-caa-record-to-a-dns-zone-file
+    verified: 2026-07-17
+    description: >-
+      CAA record authorizing GlobalSign to issue certificates.
+      It does not establish that a certificate was issued or
+      is currently deployed.
+- name: 'CAA: GoDaddy'
+  slug: godaddy-caa
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: caa
+    pattern: godaddy.com
+    reference: https://www.godaddy.com/help/edit-a-caa-record-27289
+    verified: 2026-07-17
+    description: >-
+      CAA record authorizing GoDaddy to issue certificates.
+      It does not establish that a certificate was issued or
+      is currently deployed.
+- name: 'CAA: Entrust'
+  slug: entrust-caa
+  category: Infrastructure
+  confidence: high
+  detections:
+  - type: caa
+    pattern: entrust.net
+    reference: https://www.entrust.com/sites/default/files/documentation/licensingandagreements/entrust-certificate-services-cps-3-29.pdf
+    verified: 2026-07-17
+    description: >-
+      CAA record authorizing Entrust to issue certificates.
+      It does not establish that a certificate was issued or
+      is currently deployed.
 - name: 'CAA: Google Trust Services'
   slug: google-trust
   category: Infrastructure
@@ -944,10 +1027,9 @@ fingerprints:
     reference: https://pki.goog/
     description: >-
       CAA record authorizing Google Trust Services to issue
-      certificates for the domain. Indicates the domain
-      owner uses Google-managed TLS, common with Google
-      Cloud Load Balancing and managed-certificate setups
-      on GCP.
+      certificates for the domain. It does not establish that
+      a certificate was issued or which Google service might
+      use it.
 - name: Fly.io
   slug: flyio
   category: Infrastructure

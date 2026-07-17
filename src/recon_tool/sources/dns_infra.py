@@ -42,7 +42,7 @@ from recon_tool.sources.dns_tables import (
     ct_failure_outcome,
     is_public_dns_name,
 )
-from recon_tool.validator import host_has_suffix
+from recon_tool.validator import caa_issuer_host, host_has_suffix
 
 if TYPE_CHECKING:
     from recon_tool.ct_cache import CTCacheEntry
@@ -60,6 +60,17 @@ _MAX_SUBDOMAIN_TXT_MATCH_LEN = 4096
 # Bounds backtracking amplification when a custom / injected cname pattern is
 # matched against an attacker-controlled CNAME target. 255 leaves a small margin.
 _MAX_CNAME_MATCH_LEN = 255
+
+
+def _ns_pattern_matches(host: str, pattern: str) -> bool:
+    """Match NS suffixes and legacy provider-label fragments safely."""
+    normalized_pattern = pattern.lower().rstrip(".")
+    if "." in normalized_pattern:
+        return host_has_suffix(host, normalized_pattern)
+    return any(
+        label == normalized_pattern or label.startswith(f"{normalized_pattern}-")
+        for label in host.lower().rstrip(".").split(".")
+    )
 
 
 def _dns_target_host(record: str) -> str:
@@ -247,6 +258,7 @@ async def detect_gws_cnames(ctx: dns_base.DetectionCtx, domain: str) -> None:
 
 async def detect_ns(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Scan NS records for DNS provider / infrastructure detection."""
+    ctx.record_catalog_query("ns")
     ns_records = await dns_base.safe_resolve(
         domain,
         "NS",
@@ -260,16 +272,20 @@ async def detect_ns(ctx: dns_base.DetectionCtx, domain: str) -> None:
     ns_patterns_sorted = sorted(get_ns_patterns(), key=lambda d: -len(d.pattern))
 
     for ns in ns_records:
-        ns_lower = ns.lower()
+        ns_lower = ns.lower().rstrip(".")
+        matched = False
         for det in ns_patterns_sorted:
-            if det.pattern in ns_lower:
+            if _ns_pattern_matches(ns_lower, det.pattern):
                 ctx.add(det.name, det.slug, source_type="NS", raw_value=ns)
                 ctx.record_fp_match(det.slug, "ns", det.pattern)
+                matched = True
                 break
+        ctx.record_catalog_observation("ns", "@", ns_lower, classified=matched)
 
 
 async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Check www/root CNAME for CDN, hosting, and SaaS infrastructure."""
+    ctx.record_catalog_query("cname", 2)
     www_task = dns_base.safe_resolve(
         f"www.{domain}",
         "CNAME",
@@ -306,7 +322,7 @@ async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
     # modulo ``.`` matching any single character, which on hostname
     # patterns like ``hubspot.net`` is the intended forgiving match).
     cname_patterns_sorted = sorted(get_cname_patterns(), key=lambda d: -len(d.pattern))
-    for cname_list in (www_results, root_results):
+    for owner, cname_list in (("www", www_results), ("@", root_results)):
         for cname in cname_list:
             # Bound adversarial input before the regex match. A DNS name is at
             # most 253 characters, so anything longer is malformed and only
@@ -315,12 +331,15 @@ async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # known ReDoS shapes; this length cap is the second layer. The full
             # cname is still used as raw_value below, only the match is bounded.
             cl = cname.lower()[:_MAX_CNAME_MATCH_LEN]
+            matched = False
             for det in cname_patterns_sorted:
                 compiled = compile_regex(det.pattern, re.IGNORECASE)
                 if compiled is not None and compiled.search(cl):
                     ctx.add(det.name, det.slug, source_type="CNAME", raw_value=cname)
                     ctx.record_fp_match(det.slug, "cname", det.pattern)
+                    matched = True
                     break
+            ctx.record_catalog_observation("cname", owner, cname.lower().rstrip("."), classified=matched)
 
 
 async def detect_domain_connect(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -468,9 +487,12 @@ async def detect_subdomain_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
         )
         for subdomain, _, _, _, _ in parsed
     ]
+    ctx.record_catalog_query("subdomain_txt", len(tasks))
     results = await asyncio.gather(*tasks)
 
     for (_, regex, name, slug, original_pattern), txt_records in zip(parsed, results, strict=True):
+        owner = original_pattern.split(":", 1)[0]
+        detected = False
         for txt in txt_records:
             # Bound the attacker-controlled TXT value before running a
             # user-supplied regex against it, mirroring match_txt. Without
@@ -478,12 +500,15 @@ async def detect_subdomain_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # operator regex would amplify backtracking. This is the only
             # user-regex DNS path that previously lacked the length bound.
             if len(txt) > _MAX_SUBDOMAIN_TXT_MATCH_LEN:
+                ctx.record_catalog_observation("subdomain_txt", owner, txt, classified=False)
                 continue
             compiled = compile_regex(regex, re.IGNORECASE)
-            if compiled is not None and compiled.search(txt):
+            matched = compiled is not None and compiled.search(txt) is not None
+            ctx.record_catalog_observation("subdomain_txt", owner, txt, classified=matched)
+            if matched and not detected:
                 ctx.add(name, slug, source_type="SUBDOMAIN_TXT", raw_value=txt)
                 ctx.record_fp_match(slug, "subdomain_txt", original_pattern)
-                break
+                detected = True
 
 
 async def detect_caa(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -491,12 +516,14 @@ async def detect_caa(ctx: dns_base.DetectionCtx, domain: str) -> None:
     # Sort longest-first so the most specific pattern wins (consistent
     # with MX / NS / cname_target , see filter_shadowed_matches).
     caa_patterns_sorted = sorted(get_caa_patterns(), key=lambda d: -len(d.pattern))
-    for caa in await dns_base.safe_resolve(
+    ctx.record_catalog_query("caa")
+    caa_records = await dns_base.safe_resolve(
         domain,
         "CAA",
         degraded_sources=ctx.degraded_sources,
         degraded_name="dns:caa",
-    ):
+    )
+    for caa in caa_records:
         ctx.evidence.append(
             EvidenceRecord(
                 source_type="CAA",
@@ -506,11 +533,15 @@ async def detect_caa(ctx: dns_base.DetectionCtx, domain: str) -> None:
             )
         )
         caa_lower = caa.lower()
+        issuer = caa_issuer_host(caa_lower)
+        matched = False
         for det in caa_patterns_sorted:
-            if det.pattern in caa_lower:
+            if issuer is not None and host_has_suffix(issuer, det.pattern.lower()):
                 ctx.add(det.name, det.slug, source_type="CAA", raw_value=caa)
                 ctx.record_fp_match(det.slug, "caa", det.pattern)
+                matched = True
                 break
+        ctx.record_catalog_observation("caa", "@", caa_lower, classified=matched)
 
 
 async def detect_srv(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -544,15 +575,19 @@ async def detect_srv(ctx: dns_base.DetectionCtx, domain: str) -> None:
         )
         for srv, _, _, _ in _SRV_CHECKS
     ]
+    ctx.record_catalog_query("srv", len(tasks))
     results = await asyncio.gather(*tasks)
 
-    for (_, hint, svc_name, slug), srv_records in zip(_SRV_CHECKS, results, strict=True):
+    for (srv_owner, hint, svc_name, slug), srv_records in zip(_SRV_CHECKS, results, strict=True):
         for record in srv_records:
             # SRV records with target "." mean "service not available" - skip
             target = _dns_target_host(record)
             if not target:
                 continue
             target_lower = target.lower().rstrip(".")
+            if not target_lower:
+                continue
+            catalog_matched = False
             for det in srv_patterns_sorted:
                 pattern = det.pattern.lower().strip().lstrip(".").rstrip(".")
                 if not pattern:
@@ -561,8 +596,16 @@ async def detect_srv(ctx: dns_base.DetectionCtx, domain: str) -> None:
                 if matched:
                     ctx.add(det.name, det.slug, source_type="SRV", raw_value=record)
                     ctx.record_fp_match(det.slug, "srv", det.pattern)
+                    catalog_matched = True
                     break
-            if hint is None or host_has_suffix(target, hint):
+            hint_matched = hint is not None and host_has_suffix(target, hint)
+            ctx.record_catalog_observation(
+                "srv",
+                srv_owner,
+                target_lower,
+                classified=catalog_matched or hint_matched,
+            )
+            if hint is None or hint_matched:
                 ctx.add(
                     svc_name,
                     slug if slug else None,

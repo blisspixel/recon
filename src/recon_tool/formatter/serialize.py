@@ -18,15 +18,73 @@ from recon_tool.formatter.classify import provider_line, slug_to_relationship_me
 from recon_tool.models import TenantInfo, serialize_conflicts_array
 from recon_tool.validator import strip_control_chars
 
+_CATALOG_RECORD_TYPES = (
+    "cname_target",
+    "cname",
+    "txt",
+    "spf",
+    "mx",
+    "ns",
+    "caa",
+    "dmarc_rua",
+    "subdomain_txt",
+    "srv",
+)
+_CATALOG_DEGRADED_MARKERS = {
+    "cname_target": "dns:cname",
+    "cname": "dns:cname",
+    "txt": "dns:apex_txt",
+    "spf": "dns:apex_txt",
+    "mx": "dns:mx",
+    "ns": "dns:ns",
+    "caa": "dns:caa",
+    "dmarc_rua": "dns:dmarc",
+    "subdomain_txt": "dns:subdomain_txt",
+    "srv": "dns:srv",
+}
+
+
+def _catalog_summary_rows(info: TenantInfo) -> list[dict[str, Any]]:
+    """Render complete, count-only status rows for each bounded catalog path."""
+    by_type = {summary.record_type: summary for summary in info.dns_catalog_summaries}
+    degraded = set(info.degraded_sources)
+    whole_dns_unavailable = "dns_records" in degraded or "dns" in degraded
+    rows: list[dict[str, Any]] = []
+    for record_type in _CATALOG_RECORD_TYPES:
+        summary = by_type.get(record_type)
+        path_degraded = whole_dns_unavailable or _CATALOG_DEGRADED_MARKERS[record_type] in degraded
+        if summary is None:
+            availability = "unavailable" if path_degraded else "unmeasured"
+            opportunities = observed = classified = unclassified = 0
+            truncated = False
+        else:
+            availability = "partial" if path_degraded else "available"
+            opportunities = summary.opportunity_count
+            observed = summary.observed_count
+            classified = summary.classified_count
+            unclassified = summary.unclassified_count
+            truncated = summary.truncated
+        rows.append(
+            {
+                "record_type": record_type,
+                "availability": availability,
+                "opportunity_count": opportunities,
+                "observed_count": observed,
+                "classified_count": classified,
+                "unclassified_count": unclassified,
+                "truncated": truncated,
+            }
+        )
+    return rows
+
 
 def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) -> dict[str, Any]:
     """Build a dict representation of TenantInfo (shared by JSON and batch).
 
     When ``include_unclassified`` is True, the resulting dict adds an
-    ``unclassified_cname_chains`` array of ``{subdomain, chain}`` records
-    for CNAME chains the surface classifier resolved but couldn't attribute.
-    Off by default to keep the v2.0 schema contract narrow; opt-in for the
-    fingerprint-discovery loop.
+    ``unclassified_cname_chains``, ``dns_catalog_summary``, and
+    ``unclassified_dns_observations`` diagnostics for the private catalog
+    discovery loop. Off by default to keep the v2.0 schema contract narrow.
     """
     from recon_tool.collection_view import collection_observable_evidence, collection_observable_info
     from recon_tool.merger import compute_email_topology
@@ -282,6 +340,15 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     if include_unclassified:
         d["unclassified_cname_chains"] = [
             {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
+        ]
+        d["dns_catalog_summary"] = _catalog_summary_rows(info)
+        d["unclassified_dns_observations"] = [
+            {
+                "record_type": observation.record_type,
+                "owner": observation.owner,
+                "value": observation.value,
+            }
+            for observation in info.unclassified_dns_observations
         ]
     # SH6: disambiguate "fusion off" from "fusion ran, found none". The Bayesian
     # layer always emits its nine node posteriors when it runs, so a non-empty

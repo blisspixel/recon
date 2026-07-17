@@ -23,11 +23,16 @@ from recon_tool.constants import (
 from recon_tool.email_security import claim_safe_email_services, observed_email_control_services
 from recon_tool.insights import generate_insights
 from recon_tool.lexical import lexical_observations
+from recon_tool.merger_catalog import (
+    dedupe_motifs,
+    dedupe_surface,
+    dedupe_unclassified,
+    merge_dns_catalog_diagnostics,
+)
 from recon_tool.models import (
     BIMIIdentity,
     CandidateValue,
     CertSummary,
-    ChainMotifObservation,
     ConfidenceLevel,
     EvidenceRecord,
     InfrastructureClusterReport,
@@ -35,9 +40,7 @@ from recon_tool.models import (
     ReconLookupError,
     SignalContext,
     SourceResult,
-    SurfaceAttribution,
     TenantInfo,
-    UnclassifiedCnameChain,
 )
 from recon_tool.signals import SignalMatch, evaluate_signals, load_signals, signal_observation_label
 from recon_tool.validator import strip_control_chars
@@ -630,43 +633,6 @@ def _append_lexical_observations(insights: list[str], related: set[str], queried
     return tuple(o.statement for o in lex_obs)
 
 
-def _dedupe_surface(results: list[SourceResult]) -> tuple[SurfaceAttribution, ...]:
-    """First-wins, subdomain-keyed dedupe of surface attributions, sorted by subdomain."""
-    seen: set[str] = set()
-    merged: list[SurfaceAttribution] = []
-    for result in results:
-        for sa in result.surface_attributions:
-            if sa.subdomain not in seen:
-                seen.add(sa.subdomain)
-                merged.append(sa)
-    return tuple(sorted(merged, key=lambda s: s.subdomain))
-
-
-def _dedupe_unclassified(results: list[SourceResult]) -> tuple[UnclassifiedCnameChain, ...]:
-    """First-wins, subdomain-keyed dedupe of unclassified CNAME chains, sorted by subdomain."""
-    seen: set[str] = set()
-    merged: list[UnclassifiedCnameChain] = []
-    for result in results:
-        for uc in result.unclassified_cname_chains:
-            if uc.subdomain not in seen:
-                seen.add(uc.subdomain)
-                merged.append(uc)
-    return tuple(sorted(merged, key=lambda u: u.subdomain))
-
-
-def _dedupe_motifs(results: list[SourceResult]) -> tuple[ChainMotifObservation, ...]:
-    """First-wins dedupe of chain-motif observations keyed by (subdomain, motif_name)."""
-    seen: set[tuple[str, str]] = set()
-    merged: list[ChainMotifObservation] = []
-    for result in results:
-        for cm in result.chain_motifs:
-            key = (cm.subdomain, cm.motif_name)
-            if key not in seen:
-                seen.add(key)
-                merged.append(cm)
-    return tuple(sorted(merged, key=lambda m: (m.subdomain, m.motif_name)))
-
-
 def merge_results(
     results: list[SourceResult],
     queried_domain: str,
@@ -780,9 +746,10 @@ def merge_results(
     detection_scores = compute_detection_scores(evidence_tuple)
     lexical_observation_statements = _append_lexical_observations(insights, all_related, queried_domain)
 
-    surface_tuple = _dedupe_surface(usable_results)
-    unclassified_tuple = _dedupe_unclassified(usable_results)
-    chain_motifs_tuple = _dedupe_motifs(usable_results)
+    surface_tuple = dedupe_surface(usable_results)
+    unclassified_tuple = dedupe_unclassified(usable_results)
+    dns_catalog_summaries, unclassified_dns_observations = merge_dns_catalog_diagnostics(usable_results)
+    chain_motifs_tuple = dedupe_motifs(usable_results)
     infrastructure_clusters: InfrastructureClusterReport | None = _first_non_none(
         usable_results, "infrastructure_clusters"
     )
@@ -831,6 +798,8 @@ def merge_results(
         lexical_observations=lexical_observation_statements,
         surface_attributions=surface_tuple,
         unclassified_cname_chains=unclassified_tuple,
+        dns_catalog_summaries=dns_catalog_summaries,
+        unclassified_dns_observations=unclassified_dns_observations,
         chain_motifs=chain_motifs_tuple,
         infrastructure_clusters=infrastructure_clusters,
     )

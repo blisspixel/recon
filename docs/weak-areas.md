@@ -60,6 +60,24 @@ Maintainer-local corpus candidates follow the stricter active plan in
 public docs or aggregate-safe evidence justify any promoted rule, and every new
 suffix rule gets a lookalike negative test.
 
+## Unclassified direct DNS values
+
+Symptoms: private structured output produced with `--include-unclassified`
+reports an unclassified count for apex CNAME, TXT, SPF, MX, NS, CAA, DMARC RUA,
+bounded owner-qualified TXT, or bounded SRV observations.
+
+Why: the corresponding public record was observed, but no catalog rule on that
+specific detection path classified it. The value may identify an uncatalogued
+provider, a target-managed route, a generic standards value, copied residue, or
+a token that is intentionally unique. An unmatched value is a maintenance
+candidate, not a vendor conclusion.
+
+What to do: keep the raw diagnostic in an ignored private validation workspace.
+Use `validation/catalog_baseline.py` to rank recurrence separately by record
+type and publish only its reviewed aggregate counts. Promote a rule only with a
+provider-controlled reference or disclosure-safe basis, a verification date,
+a fictional positive, and a lookalike negative.
+
 ## Wildcard-heavy DNS zones
 
 Symptoms: many guessed prefixes resolve, but the services list stays thin or
