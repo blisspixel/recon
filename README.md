@@ -13,7 +13,8 @@ technology and identity namespace. A domain is the query coordinate, not proof
 of one organization, owner, account, or deployed product.
 
 It uses no credentials, no API keys, no paid feeds, and no active scanning. It
-is a local Python CLI, importable library, JSON producer, and stdio MCP server.
+ships as a local Python package with a CLI, versioned JSON output, and a stdio
+MCP server.
 It is not a hosted service, scheduler, vulnerability scanner, company research
 tool, or firmographic database.
 
@@ -291,6 +292,8 @@ catalog coverage.
 The dependency order, acceptance evidence, stop rules, and current code-graph
 summary live in
 [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md).
+The concise execution sequence is the
+[Quality Proof plan](https://github.com/blisspixel/recon/blob/main/docs/strategic-gap-audit.md#quality-proof-execution-plan).
 The implementation plan is
 [docs/engineering-refinement-plan.md](https://github.com/blisspixel/recon/blob/main/docs/engineering-refinement-plan.md), and
 the current step-back review is

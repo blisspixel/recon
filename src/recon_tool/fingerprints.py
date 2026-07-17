@@ -10,6 +10,7 @@ import logging
 import re
 import threading
 from dataclasses import dataclass, field
+from datetime import date, datetime
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -200,7 +201,14 @@ def _parse_verified(value: Any, name: str, source: str) -> str:
     """Validate the optional ``verified`` date (YYYY-MM-DD); drop a typo with a warning."""
     if value in (None, ""):
         return ""
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value.isoformat()
     if isinstance(value, str) and _ISO_DATE_RE.match(value):
+        try:
+            date.fromisoformat(value)
+        except ValueError:
+            logger.warning("Ignoring invalid 'verified' date %r for fingerprint %r in %s", value, name, source)
+            return ""
         return value
     logger.warning("Ignoring invalid 'verified' date %r for fingerprint %r in %s", value, name, source)
     return ""

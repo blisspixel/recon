@@ -18,6 +18,16 @@ If you discover a security vulnerability in recon, please report it responsibly.
 - Open a public GitHub issue for security vulnerabilities
 - Disclose the vulnerability publicly before it has been addressed
 
+## Private Non-Security Target-Data Reports
+
+If a non-security bug cannot be reproduced without a real target identity, do
+not open a public issue and do not use GitHub private vulnerability reporting.
+Email `nick@pueo.io` with the subject `Private recon data report`, put no target
+identity in the subject, and share the minimum description first. Wait before
+sending full output. Any public fix or regression test will use fictional data
+or disclosure-safe aggregates under the
+[data-handling policy](docs/data-handling-policy.md#private-non-security-reports).
+
 ## Response Timeline
 
 - **Acknowledgment:** Within 48 hours of receipt

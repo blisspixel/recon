@@ -1,0 +1,104 @@
+name: Fingerprint request
+description: Propose a provider pattern using public provider evidence and fictional fixtures
+title: "[Fingerprint] "
+labels:
+  - fingerprint
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a public issue. Provider and product names, provider-controlled service domains, and provider-owned documentation are allowed. Real customer or evaluated-target names, domains, records, screenshots, and per-domain recon output are not.
+
+        Describe the generic record shape with placeholders and fictional fixtures. Maintainer validation against real targets happens only in ignored local workspaces and is reported back as disclosure-safe aggregates.
+
+  - type: checkboxes
+    id: public_data_acknowledgement
+    attributes:
+      label: Public-data acknowledgement
+      options:
+        - label: I included no real customer or evaluated-target identity, record, identifier, screenshot, or per-domain output.
+          required: true
+
+  - type: input
+    id: service_name
+    attributes:
+      label: Provider or product
+      description: The public provider or product name recon should classify.
+      placeholder: Acme Email Security
+    validations:
+      required: true
+  - type: input
+    id: provider_reference
+    attributes:
+      label: Provider-controlled reference
+      description: Link to public provider documentation for the DNS setup or service namespace. If none exists, explain the disclosure-safe aggregate basis below.
+      placeholder: https://vendor.example/docs/domain-verification
+
+  - type: dropdown
+    id: detection_type
+    attributes:
+      label: Detection record type
+      options:
+        - TXT verification token
+        - SPF include or redirect
+        - MX hostname
+        - NS hostname
+        - Apex or www CNAME
+        - Related-subdomain CNAME target
+        - Owner-qualified TXT
+        - CAA issuer
+        - DMARC aggregate-report destination
+        - SRV target
+        - Other bounded public metadata
+    validations:
+      required: true
+
+  - type: textarea
+    id: generic_pattern
+    attributes:
+      label: Generic pattern
+      description: Give the provider-controlled suffix, token prefix, or regex. Replace tenant-specific values with placeholders. Do not paste an observed target-owned record.
+      render: text
+      placeholder: |
+        Type: cname_target
+        Pattern: service.vendor.example
+        Meaning: A branded subdomain delegates to the provider's documented endpoint.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence_basis
+    attributes:
+      label: Evidence basis
+      description: Explain how the provider reference supports the pattern. If the basis is a private aggregate round, give only suppressed aggregate counts and the catalog revision, never target rows or names.
+    validations:
+      required: true
+
+  - type: input
+    id: verification_date
+    attributes:
+      label: Verification date
+      description: Date the provider reference or disclosure-safe aggregate basis was checked, in YYYY-MM-DD format.
+      placeholder: "2026-07-17"
+    validations:
+      required: true
+
+  - type: textarea
+    id: fictional_fixtures
+    attributes:
+      label: Fictional positive and negative fixtures
+      description: Show the smallest reserved or fictional record expected to match and a lookalike expected not to match.
+      render: text
+      placeholder: |
+        Match: portal.example.com CNAME tenant.service.vendor.example
+        No match: portal.example.com CNAME tenant.unrelated.example
+    validations:
+      required: true
+
+  - type: textarea
+    id: false_positive_boundary
+    attributes:
+      label: False-positive and claim boundary
+      description: State what the record does not establish, and whether multiple detections or a lower evidence strength are needed.
+    validations:
+      required: true
