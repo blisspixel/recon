@@ -42,6 +42,7 @@ def test_clusterfuzzlite_python_dependencies_are_hash_pinned() -> None:
     assert build_script.count("pip install") == 1
     assert "export PYTHONPATH=\"$SRC/recon/src${PYTHONPATH:+:$PYTHONPATH}\"" in build_script
     assert "--hidden-import recon_tool.formatter.serialize" in build_script
+    assert "--collect-data recon_tool" in build_script
     assert "--hash=sha256:" in requirements
 
 
