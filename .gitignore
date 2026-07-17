@@ -132,6 +132,9 @@ docs/accuracy.md
 # Exchange Online DKIM suffix-match validation (2026-06-26): aggregate counts
 # only, no apexes/org names/tenant IDs/per-domain rows.
 !/validation/2026-06-26-onmicrosoft-suffix-match.md
+# Typed DNS catalog baseline (2026-07-17): aggregate counts and generic
+# provider patterns only. No target names, target records, tenant IDs, or rows.
+!/validation/2026-07-17-typed-catalog-baseline.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (fictional
 # brands, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a

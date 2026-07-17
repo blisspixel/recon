@@ -15,10 +15,13 @@ Committed (generic tooling, no company names):
 - `find_gaps.py`: reads a run (single file or directory of per-domain JSON)
   and surfaces unclassified CNAME terminal suffixes ranked by frequency. The
   first half of the fingerprint-discovery loop.
-- `catalog_baseline.py`: reduces the opt-in typed DNS diagnostics into a
+- `catalog_baseline.py`: reduces nested JSON or NDJSON opt-in typed DNS
+  diagnostics into a
   private evidence queue, a private revision manifest, and a separate
   aggregate-only coverage report. It covers every bounded catalog record path
-  and never writes a queried namespace into the aggregate report.
+  and never writes a queried namespace into the aggregate report. Schema 1.1
+  reports measured inputs separately from validation, timeout, and lookup
+  errors.
 - `triage_candidates.py`: programmatic filter on `gaps.json`: drops
   already-fingerprinted patterns, intra-org chains, and one-off noise. The
   output is the LLM-triage-ready candidate list.
@@ -187,10 +190,11 @@ python validation/scan.py \
     --no-compare
 ```
 
-`--exclude-results` may be repeated. It canonicalizes and removes namespaces
-already present in prior result files, then stores the filtered input manifest
-inside the ignored output directory. Use it when private strata overlap so a
-pooled round does not count the same queried namespace twice.
+`--exclude-results` may be repeated. It reads JSON arrays and streamed NDJSON,
+including nested scan directories, canonicalizes and removes namespaces already
+present in prior result files, then stores the filtered input manifest inside
+the ignored output directory. Use it when private strata overlap so a pooled
+round does not count the same queried namespace twice.
 `--limit` applies after normalization, exclusion, and deduplication, making
 fixed-size sequential rounds from a larger frozen private stratum reproducible.
 

@@ -612,8 +612,11 @@ cross-platform release contract. Neither exists in the current product.
 
 ### Turn catalog quality into the detection-improvement loop
 
-The current catalog has 850 entries. Establish classified-surface and stale-rule
-baselines before adding broad new families. Every promoted rule needs a current
+The current catalog has 855 entries and 1,062 detections. The first frozen
+classified-surface baseline and provider-supported promotion gate are recorded
+in [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md).
+Establish stale-rule and independent-stratum baselines before adding broad new
+families. Every promoted rule needs a current
 public reference or disclosure-safe aggregate basis, a `verified` date,
 positive and lookalike-negative fixtures, sparse-result wording, and provenance
 tests. Prioritize regional and record-type gaps by aggregate frequency. Do not
@@ -625,8 +628,9 @@ every bounded catalog record path as measured, unavailable, or not yet
 instrumented. The opt-in maintenance envelope and private reducer now cover
 CNAME chains, apex CNAME, non-SPF TXT, SPF targets, MX, NS, CAA, DMARC RUA,
 bounded owner-qualified TXT, and bounded SRV observations. An empty queue is
-not evidence of completeness, and the frozen full-corpus baseline remains the
-next gate. Evaluated apexes, organization names, tenant identifiers,
+not evidence of completeness. Independent rank, regional, vendor-seed, and
+drift rounds remain open after the convenience-sample baseline. Evaluated
+apexes, organization names, tenant identifiers,
 target-owned record values, and per-domain rows remain off GitHub. Generic
 provider patterns, provider-owned references, fictional fixtures, and
 disclosure-safe aggregates are the public review surface.

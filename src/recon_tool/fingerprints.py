@@ -928,12 +928,12 @@ def _no_shadowed_pairs_survive(result: list[Detection]) -> bool:
 def filter_shadowed_matches(
     matches: list[Detection] | tuple[Detection, ...],
 ) -> list[Detection]:
-    """Specificity-suppression for substring matchers that accumulate.
+    """Specificity suppression for catalog matchers that accumulate.
 
     SPF accumulates matches because multiple distinct vendor includes
     can legitimately appear on one record (M365 + Salesforce, etc.).
-    The other substring matchers (MX, NS, CAA, dmarc_rua, cname,
-    cname_target) take a different approach , they sort patterns
+    The other catalog matchers (MX, NS, CAA, dmarc_rua, cname,
+    cname_target) take a different approach: they sort patterns
     longest-first and ``break`` on the first match, so a narrower
     pattern always wins. SPF cannot ``break`` without losing the
     multi-vendor case, so it instead collects every match and asks
@@ -948,12 +948,11 @@ def filter_shadowed_matches(
        double-count in ctx.slugs. The broader is dropped.
 
     Pre-condition: every Detection in *matches* has already been
-    verified to match the same record (its pattern was found via
-    substring containment). The function does not re-match; it only
+    verified to match the same record. The function does not re-match; it only
     enforces specificity between the matches the caller already
     collected.
 
-    Returns the matches to keep , those whose pattern is NOT a strict
+    Returns the matches to keep: those whose pattern is NOT a strict
     substring of another match's pattern under a different slug.
     Non-overlapping matches (e.g. spf.protection.outlook.com plus
     _spf.salesforce.com on the same SPF record) both survive, which is

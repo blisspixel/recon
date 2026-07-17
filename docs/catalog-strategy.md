@@ -18,7 +18,7 @@ surface and independently supported precision are.
 
 ## How the catalog grows today
 
-The catalog carries 850 entries and 1,051 detection rules across nine populated
+The catalog carries 855 entries and 1,062 detection rules across nine populated
 types: `cname_target`, `cname`, `txt`, `spf`, `dmarc_rua`, `mx`, `ns`, `caa`,
 and `subdomain_txt`. The grammar and runtime also support `srv`, but the built-in
 catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
@@ -37,9 +37,11 @@ catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
    regression test, and hedged wording.
 
 The loop is disciplined and effective, but the available corpus remains a
-single convenience sample (selection bias), the new typed queues still need a
-frozen full-corpus baseline, and most legacy detections still lack a freshness
-date.
+convenience sample with selection bias. The first frozen typed baseline is
+recorded in
+[the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
+independent rank, regional, vendor-seed, and drift rounds remain open, and most
+legacy detections still lack a freshness date.
 
 ## 1. A stratified, reproducible sampling frame
 
@@ -129,10 +131,11 @@ close the loop:
 All measurement outputs are aggregate and disclosure-controlled; no apexes,
 organization names, or per-domain rows leave the maintainer machine.
 
-Before the next broad promotion pass, record a dated baseline by record type
-and corpus stratum. The baseline must also report unresolved share, stale-rule
-count, low-corroboration attribution count, and the exact catalog revision.
-Every promotion should name the aggregate gap it is intended to reduce and a
+The first dated record-type baseline reports availability, observed and
+unclassified values, partial collection, truncation, and the exact catalog
+revision. Later strata must retain that accounting and add the unresolved,
+freshness, and corroboration measures relevant to their question. Every
+promotion should name the aggregate gap it is intended to reduce and a
 precision regression budget.
 
 The record-type accounting target is:

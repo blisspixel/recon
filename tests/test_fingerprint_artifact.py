@@ -61,8 +61,8 @@ def test_generated_builtins_equal_canonical_yaml_exactly() -> None:
     canonical = tuple(_load_from_dir(_SOURCE_DIR))
     generated = tuple(_load_builtin_artifact(_ARTIFACT))
 
-    assert len(canonical) == 850
-    assert sum(len(fingerprint.detections) for fingerprint in canonical) == 1051
+    assert len(canonical) == 855
+    assert sum(len(fingerprint.detections) for fingerprint in canonical) == 1062
     assert generated == canonical
     repeated_slugs = [fingerprint.slug for fingerprint in generated]
     assert len(repeated_slugs) > len(set(repeated_slugs))
@@ -287,9 +287,7 @@ def test_artifact_rejects_invalid_container_shapes(tmp_path: Path, document: obj
         ("detection_count", 0, "detection_count does not match"),
     ],
 )
-def test_artifact_rejects_inconsistent_envelope(
-    tmp_path: Path, field: str, value: object, message: str
-) -> None:
+def test_artifact_rejects_inconsistent_envelope(tmp_path: Path, field: str, value: object, message: str) -> None:
     document = json.loads(_ARTIFACT.read_text(encoding="utf-8"))
     document[field] = value
     path = tmp_path / "artifact.json"

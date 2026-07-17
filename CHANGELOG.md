@@ -46,6 +46,14 @@ date in its candidate YAML.
   default JSON and stable schema remain unchanged. Private scan runs now split
   detailed gap evidence from a target-free aggregate report and revision
   manifest.
+- The built-in catalog now has 855 entries and 1,062 detections. Eleven
+  provider-documented CAA, CNAME, SPF, TXT, and owner-qualified TXT rules were
+  added from a frozen private recurrence pass and a documented vendor seed.
+  CAA authorization and legacy-SPF slugs remain distinct from stronger service
+  indicators.
+- A dated, aggregate-only typed catalog baseline now accounts for every bounded
+  DNS fingerprint path while keeping all target names, target-owned values,
+  tenant identifiers, and per-domain rows out of the repository.
 - Project documentation now describes the shipped package, CLI, JSON, and local
   MCP surfaces without implying a separate top-level library facade, and the
   release process now batches ordinary work into coherent package releases.
@@ -65,6 +73,14 @@ date in its candidate YAML.
 - The maintained corpus scanner invokes the supported `python -m recon_tool`
   entry path, restoring end-to-end scan execution after the CLI became a
   package.
+- SPF, MX, NS, and CAA catalog matching now respects DNS-label and CAA issuer
+  boundaries. CAA `iodef` values and deceptive hostname lookalikes no longer
+  create provider attributions, while legacy dotless NS provider labels remain
+  supported on exact or hyphen-suffixed labels.
+- Private catalog reduction now reports measured inputs separately from batch
+  errors, distinguishes owner-qualified TXT value shapes, reads nested JSON or
+  NDJSON runs, and supports direct script execution. Corpus exclusions now read
+  streamed NDJSON scan output as well as JSON arrays.
 
 ## [2.6.3] - 2026-07-14
 

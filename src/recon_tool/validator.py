@@ -8,6 +8,7 @@ import deal
 
 __all__ = [
     "UUID_RE",
+    "caa_issuer_host",
     "host_has_suffix",
     "is_safe_dns_name",
     "strip_control_chars",
@@ -20,6 +21,10 @@ __all__ = [
 # and other DNS-derived names that carry control bytes or other non-DNS
 # characters before they reach output or further processing.
 _SAFE_DNS_CHARS = frozenset("abcdefghijklmnopqrstuvwxyz0123456789-._*")
+_CAA_ISSUER_RE = re.compile(
+    r'^\s*\d+\s+(?:issue|issuewild)\s+"?\s*([^";\s]+)',
+    re.IGNORECASE,
+)
 
 
 def is_safe_dns_name(name: str) -> bool:
@@ -38,6 +43,15 @@ def host_has_suffix(host: str, suffix: str) -> bool:
     normalized_host = host.lower().rstrip(".")
     normalized_suffix = suffix.lower().rstrip(".")
     return normalized_host == normalized_suffix or normalized_host.endswith(f".{normalized_suffix}")
+
+
+def caa_issuer_host(record: str) -> str | None:
+    """Extract the issuer-domain value from a CAA issue or issuewild record."""
+    match = _CAA_ISSUER_RE.match(record)
+    if match is None:
+        return None
+    issuer = match.group(1).strip().lower().rstrip(".")
+    return issuer or None
 
 
 # Max length for a sanitized free-text display field (certificate issuer

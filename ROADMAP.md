@@ -26,6 +26,9 @@ claiming broad coverage. The opt-in typed reducer now covers all current catalog
 paths; its detailed queues and manifests remain private. Target identities,
 target-owned records, and per-domain rows stay off GitHub; only generic provider
 patterns, fictional fixtures, and disclosure-safe aggregates are public.
+The first frozen convenience-sample baseline and provider-supported promotion
+gate are complete. Independent rank, regional, vendor-seed, and drift rounds
+remain before any broad catalog-coverage claim.
 
 The canonical dependency order, acceptance evidence, stop rules, current
 high-trust code-graph summary, invariants, and explicit non-goals are in

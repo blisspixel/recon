@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -65,12 +67,8 @@ def test_detection_context_deduplicates_and_upgrades_classification() -> None:
 
 def test_catalog_diagnostics_are_opt_in_and_complete() -> None:
     info = _tenant(
-        dns_catalog_summaries=(
-            DnsCatalogSummary("txt", opportunity_count=1, observed_count=2, classified_count=1),
-        ),
-        unclassified_dns_observations=(
-            UnclassifiedDnsObservation("txt", "@", "fixture-token=unknown"),
-        ),
+        dns_catalog_summaries=(DnsCatalogSummary("txt", opportunity_count=1, observed_count=2, classified_count=1),),
+        unclassified_dns_observations=(UnclassifiedDnsObservation("txt", "@", "fixture-token=unknown"),),
         degraded_sources=("dns:mx",),
     )
 
@@ -103,9 +101,7 @@ def test_merger_preserves_catalog_diagnostics() -> None:
     )
 
     assert info.dns_catalog_summaries == (DnsCatalogSummary("mx", 1, 2, 1),)
-    assert info.unclassified_dns_observations == (
-        UnclassifiedDnsObservation("mx", "@", "mail.example.net"),
-    )
+    assert info.unclassified_dns_observations == (UnclassifiedDnsObservation("mx", "@", "mail.example.net"),)
 
 
 @pytest.mark.asyncio
@@ -157,9 +153,7 @@ def test_aggregate_is_target_free_and_private_queue_retains_evidence() -> None:
             "partial": False,
             "degraded_sources": [],
             "dns_catalog_summary": [_summary("mx")],
-            "unclassified_dns_observations": [
-                {"record_type": "mx", "owner": "@", "value": "mx.provider.example.net"}
-            ],
+            "unclassified_dns_observations": [{"record_type": "mx", "owner": "@", "value": "mx.provider.example.net"}],
         },
     ]
 
@@ -177,6 +171,97 @@ def test_aggregate_is_target_free_and_private_queue_retains_evidence() -> None:
     assert aggregate["record_types"]["mx"]["recurrent_candidate_buckets"] == 1
     assert candidates["mx"][0]["key"] == "provider.example.net"
     assert candidates["mx"][0]["distinct_namespace_count"] == 2
+
+
+def test_subdomain_txt_recurrence_keeps_owner_and_value_shape_separate() -> None:
+    records = [
+        {
+            "queried_domain": "example.com",
+            "dns_catalog_summary": [_summary("subdomain_txt")],
+            "unclassified_dns_observations": [
+                {"record_type": "subdomain_txt", "owner": "_agent", "value": "alpha=one"}
+            ],
+        },
+        {
+            "queried_domain": "example.org",
+            "dns_catalog_summary": [_summary("subdomain_txt")],
+            "unclassified_dns_observations": [{"record_type": "subdomain_txt", "owner": "_agent", "value": "beta=two"}],
+        },
+    ]
+
+    aggregate, candidates = catalog_baseline.aggregate_records(
+        records,
+        min_count=2,
+        min_distinct_namespaces=2,
+        max_samples=2,
+    )
+
+    assert aggregate["record_types"]["subdomain_txt"]["recurrent_candidate_buckets"] == 0
+    assert candidates["subdomain_txt"] == []
+
+
+def test_aggregate_separates_measured_and_error_records() -> None:
+    records = [
+        {
+            "queried_domain": "example.com",
+            "partial": False,
+            "dns_catalog_summary": [_summary("txt")],
+        },
+        {"domain": "invalid", "error": "invalid", "error_kind": "validation", "record_type": "error"},
+        {"domain": "timeout.example", "error": "timeout", "error_kind": "timeout", "record_type": "error"},
+    ]
+
+    aggregate, _ = catalog_baseline.aggregate_records(
+        records,
+        min_count=2,
+        min_distinct_namespaces=2,
+        max_samples=0,
+    )
+
+    assert aggregate["records_total"] == 3
+    assert aggregate["measured_input_records"] == 1
+    assert aggregate["error_records"] == 2
+    assert aggregate["error_kind_counts"] == {"timeout": 1, "validation": 1}
+    assert aggregate["record_types"]["txt"]["availability"] == {
+        "available": 1,
+        "partial": 0,
+        "unavailable": 0,
+        "unmeasured": 2,
+    }
+
+
+def test_iter_records_reads_nested_json_and_ndjson(tmp_path: Path) -> None:
+    json_dir = tmp_path / "one"
+    ndjson_dir = tmp_path / "two"
+    json_dir.mkdir()
+    ndjson_dir.mkdir()
+    (json_dir / "results.json").write_text(
+        json.dumps({"queried_domain": "example.com"}),
+        encoding="utf-8",
+    )
+    (ndjson_dir / "results.ndjson").write_text(
+        json.dumps({"queried_domain": "example.org"}) + "\n",
+        encoding="utf-8",
+    )
+
+    records = list(catalog_baseline._iter_records(tmp_path))
+
+    assert {record["queried_domain"] for record in records} == {"example.com", "example.org"}
+
+
+def test_catalog_baseline_direct_script_help_works_outside_repository(tmp_path: Path) -> None:
+    script = catalog_baseline.REPO_ROOT / "validation" / "catalog_baseline.py"
+
+    result = subprocess.run(  # noqa: S603 - fixed interpreter and repository-local script
+        [sys.executable, str(script), "--help"],
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "Aggregate typed catalog coverage" in result.stdout
 
 
 def test_main_writes_separate_private_and_aggregate_artifacts(
@@ -237,4 +322,7 @@ def test_main_writes_separate_private_and_aggregate_artifacts(
     assert "example.com" not in aggregate_text
     assert "fixture-token=secret" not in aggregate_text
     assert "fixture-token=secret" in gaps_text
-    assert (tmp_path / "catalog-manifest.json").exists()
+    manifest = json.loads((tmp_path / "catalog-manifest.json").read_text(encoding="utf-8"))
+    assert manifest["measured_input_records"] == 1
+    assert manifest["error_records"] == 0
+    assert manifest["error_kind_counts"] == {}

@@ -288,8 +288,10 @@ provider-owned references, fictional fixtures, and disclosure-safe aggregates.
 The opt-in maintenance path now accounts separately for CNAME chains, apex
 CNAME, non-SPF TXT, SPF targets, MX, NS, CAA, DMARC RUA, bounded owner-qualified
 TXT, and bounded SRV observations. A frozen aggregate baseline and distinct
-sampling rounds are still required before the project claims broad catalog
-coverage.
+sampling rounds are required before the project claims broad catalog coverage.
+The frozen convenience-sample baseline is complete and public as aggregate
+counts only; independent rank, regional, vendor-seed, and drift rounds remain
+open.
 
 The dependency order, acceptance evidence, stop rules, and current code-graph
 summary live in
