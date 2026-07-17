@@ -551,6 +551,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
     a chain produces both - the primary attribution is the meaningful
     layer, and CDNs / load balancers fall to the supplementary slot.
     """
+    ctx.record_catalog_query("cname_target", 0)
     rules = get_cname_target_rules()
     motifs_catalog = load_motifs()
     if not rules and not motifs_catalog:
@@ -637,6 +638,13 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
                     break
 
         application, infrastructure = _classify_chain(chain, sorted_rules)
+        ctx.record_catalog_query("cname_target")
+        ctx.record_catalog_observation(
+            "cname_target",
+            host,
+            chain[-1],
+            classified=application is not None or infrastructure is not None,
+        )
         if application is None and infrastructure is None:
             # Genuinely unclassified - preserve for the fingerprint-discovery
             # loop. The chain is real (wildcard echoes were filtered upstream)
@@ -723,6 +731,8 @@ class DNSSource:
 
         surface_tuple = tuple(sorted(ctx.surface_attributions, key=lambda s: s.subdomain))
         unclassified_tuple = tuple(sorted(ctx.unclassified_cname_chains, key=lambda u: u.subdomain))
+        catalog_summaries = ctx.catalog_summaries()
+        unclassified_dns = ctx.unclassified_dns_observations()
         chain_motifs_tuple = tuple(sorted(ctx.chain_motifs, key=lambda m: (m.subdomain, m.motif_name)))
 
         if ctx.services:
@@ -752,6 +762,8 @@ class DNSSource:
                 spf_include_count=ctx.spf_include_count,
                 surface_attributions=surface_tuple,
                 unclassified_cname_chains=unclassified_tuple,
+                dns_catalog_summaries=catalog_summaries,
+                unclassified_dns_observations=unclassified_dns,
                 chain_motifs=chain_motifs_tuple,
                 infrastructure_clusters=ctx.infrastructure_clusters,
             )
@@ -778,6 +790,8 @@ class DNSSource:
             spf_include_count=ctx.spf_include_count,
             surface_attributions=surface_tuple,
             unclassified_cname_chains=unclassified_tuple,
+            dns_catalog_summaries=catalog_summaries,
+            unclassified_dns_observations=unclassified_dns,
             chain_motifs=chain_motifs_tuple,
             infrastructure_clusters=ctx.infrastructure_clusters,
         )

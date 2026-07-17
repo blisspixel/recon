@@ -22,12 +22,15 @@ from recon_tool.fingerprints import load_fingerprints
 from recon_tool.models import (
     CertSummary,
     ChainMotifObservation,
+    DnsCatalogSummary,
     EvidenceRecord,
     InfrastructureClusterReport,
     SurfaceAttribution,
     UnclassifiedCnameChain,
+    UnclassifiedDnsObservation,
 )
 from recon_tool.sources.dns_tables import is_public_dns_name, parse_rdata
+from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger("recon")
 
@@ -37,6 +40,10 @@ logger = logging.getLogger("recon")
 # this as the `lifetime` parameter - total wall-clock time for the query
 # including retries across all configured nameservers.
 DNS_QUERY_TIMEOUT = 5.0
+
+# Opt-in diagnostics remain bounded even with a hostile custom resolver.
+_MAX_CATALOG_OBSERVATIONS_PER_TYPE = 512
+_MAX_CATALOG_VALUE_LENGTH = 4096
 
 
 def get_resolver() -> dns.asyncresolver.Resolver:
@@ -157,6 +164,9 @@ class DetectionCtx:
     """
 
     __slots__ = (
+        "_catalog_observations",
+        "_catalog_opportunities",
+        "_catalog_truncated",
         "_m365_slugs",
         "_matched_fp_detections",
         "active_probes",
@@ -210,6 +220,12 @@ class DetectionCtx:
         # detection rule. Used by enforce_match_mode_all() to verify that
         # fingerprints with match_mode: all had ALL their detections match.
         self._matched_fp_detections: set[tuple[str, str, str]] = set()
+        # Unique (type, owner, value) observations with an OR-ed classified
+        # state. Several rules may query the same owner, so a later match must
+        # remove an earlier false gap for the same value.
+        self._catalog_observations: dict[tuple[str, str, str], bool] = {}
+        self._catalog_opportunities: dict[str, int] = {}
+        self._catalog_truncated: set[str] = set()
         self.dmarc_pct: int | None = None
         self.raw_dns_records: dict[str, list[str]] = {}
         # R4: which CT provider actually contributed subdomains,
@@ -243,6 +259,66 @@ class DetectionCtx:
         # the top-level ``infrastructure_clusters`` JSON field. None
         # until a CT provider returns data.
         self.infrastructure_clusters: InfrastructureClusterReport | None = None
+
+    def record_catalog_query(self, record_type: str, count: int = 1) -> None:
+        """Record bounded query opportunities for one catalog path."""
+        self._catalog_opportunities.setdefault(record_type, 0)
+        if count > 0:
+            self._catalog_opportunities[record_type] = self._catalog_opportunities.get(record_type, 0) + count
+
+    def record_catalog_observation(
+        self,
+        record_type: str,
+        owner: str,
+        value: str,
+        *,
+        classified: bool,
+    ) -> None:
+        """Record one unique observed value without affecting detection output."""
+        normalized_owner = strip_control_chars(owner).strip()[:253] or "@"
+        normalized_value = strip_control_chars(value).strip()[:_MAX_CATALOG_VALUE_LENGTH]
+        if not normalized_value:
+            return
+        key = (record_type, normalized_owner, normalized_value)
+        existing = self._catalog_observations.get(key)
+        if existing is not None:
+            self._catalog_observations[key] = existing or classified
+            return
+        type_count = sum(1 for observed_type, _, _ in self._catalog_observations if observed_type == record_type)
+        if type_count >= _MAX_CATALOG_OBSERVATIONS_PER_TYPE:
+            self._catalog_truncated.add(record_type)
+            return
+        self._catalog_observations[key] = classified
+
+    def catalog_summaries(self) -> tuple[DnsCatalogSummary, ...]:
+        """Materialize deterministic count-only summaries for serialization."""
+        record_types = set(self._catalog_opportunities)
+        record_types.update(record_type for record_type, _, _ in self._catalog_observations)
+        summaries: list[DnsCatalogSummary] = []
+        for record_type in sorted(record_types):
+            states = [
+                classified
+                for (observed_type, _, _), classified in self._catalog_observations.items()
+                if observed_type == record_type
+            ]
+            summaries.append(
+                DnsCatalogSummary(
+                    record_type=record_type,
+                    opportunity_count=self._catalog_opportunities.get(record_type, 0),
+                    observed_count=len(states),
+                    classified_count=sum(states),
+                    truncated=record_type in self._catalog_truncated,
+                )
+            )
+        return tuple(summaries)
+
+    def unclassified_dns_observations(self) -> tuple[UnclassifiedDnsObservation, ...]:
+        """Materialize deterministic unmatched values for the private gap loop."""
+        return tuple(
+            UnclassifiedDnsObservation(record_type=record_type, owner=owner, value=value)
+            for (record_type, owner, value), classified in sorted(self._catalog_observations.items())
+            if not classified
+        )
 
     def add(self, svc_name: str, slug: str | None = None, source_type: str = "", raw_value: str = "") -> None:
         """Register a detected service, optionally with its slug and evidence.
