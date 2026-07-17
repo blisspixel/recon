@@ -27,6 +27,7 @@ from recon_tool.server.runtime import (
     cache_get,
     cache_set,
     log_structured,
+    log_validation_failed,
     rate_limit_try_acquire,
 )
 from recon_tool.validator import validate_domain
@@ -681,13 +682,7 @@ async def discover_fingerprint_candidates(
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
-        log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain,
-            error=str(exc),
-        )
+        log_validation_failed(request_id)
         raise ToolError(str(exc)) from exc
 
     # Mirror the lookup_tenant cache + per-domain rate-limit pattern so a
@@ -901,13 +896,7 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
-        log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain,
-            error=str(exc),
-        )
+        log_validation_failed(request_id)
         return f"Error: {exc}"
 
     fmt = (output_format or "text").lower()

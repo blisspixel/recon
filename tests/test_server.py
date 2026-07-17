@@ -87,6 +87,8 @@ class TestLookupText:
         mock_resolve.return_value = (info, SAMPLE_RESULTS[:1])
         result = await lookup_tenant("contoso.com")
         assert "Region:" not in result
+        assert "Confidence: medium (1 source)" in result
+        assert "1 sources" not in result
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

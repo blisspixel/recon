@@ -5,9 +5,10 @@ The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 Current status: recon v2.6.3 has a stable, production-ready baseline. The CLI,
 JSON schema, local stdio MCP server, bounded collectors, generated-artifact
 guards, validation gates, and release path are shipped. Unreleased work improves
-first-run domain errors, aligns public issue intake with the no-target-data
-policy, corrects the package surface description, and requires verification
-dates on new fingerprint detections. The active product work is
+first-run help and error recovery, removes rejected MCP values from logs,
+aligns public issue intake with the no-target-data policy, corrects the package
+surface description, and requires verification dates on new fingerprint
+detections. The active product work is
 evidence-semantic integrity and a reproducible product-quality baseline. The
 isolated MCP v1.28.1
 and v2.0.0b1 matrix passed on 2026-07-13, with production remaining on stable v1

@@ -276,6 +276,15 @@ class TestGoldenPanelRenders:
     def test_panel_sparse_default(self) -> None:
         _check_golden("panel_sparse_default", _render_panel(_sparse_info()))
 
+    def test_low_confidence_guidance_is_default_only(self) -> None:
+        default = _render_panel(_sparse_info())
+        verbose = _render_panel(_sparse_info(), verbose=True)
+        explained = _render_panel(_sparse_info(), explain=True)
+
+        assert "Use --explain to inspect evidence or --verbose to review source status." in default
+        assert "Use --explain to inspect evidence or --verbose to review source status." not in verbose
+        assert "Use --explain to inspect evidence or --verbose to review source status." not in explained
+
     def test_panel_hardened_default(self) -> None:
         _check_golden("panel_hardened_default", _render_panel(_hardened_info()))
 
