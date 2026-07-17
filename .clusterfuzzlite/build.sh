@@ -12,6 +12,7 @@ for fuzzer in $(find "$SRC/recon/fuzz" -name '*_fuzzer.py' -print); do
     --distpath "$OUT" \
     --workpath "$WORK/pyinstaller" \
     --specpath "$WORK" \
+    --hidden-import recon_tool.formatter.serialize \
     --onefile \
     --name "$fuzzer_package" \
     "$fuzzer"
