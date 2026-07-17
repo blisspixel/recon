@@ -22,12 +22,21 @@ public import contract changes. The opt-in, non-schema
 The root CLI help summary text and the human-facing delta panel label for the
 email control count are clearer. `python -m recon_tool` is now a supported
 entry path. `recon fingerprints new` now includes the current verification
-date in its candidate YAML.
+date in its candidate YAML. The no-argument welcome banner now prioritizes
+plain, JSON, and evidence-review workflows over specialist modes.
 
 ### Changed
 
 - Root help and callback copy now say "Passive domain intelligence from public
-  sources," matching the welcome banner and README framing.
+  sources," name the primary `recon DOMAIN` shorthand, and point to the
+  no-argument examples.
+- The no-argument welcome banner now surfaces plain linear output, structured
+  JSON, evidence review, batch use, online diagnostics, and MCP client setup in
+  that order. README and getting-started documentation now expose `--plain` for
+  screen readers and grep.
+- Default low-confidence panels now point to `--explain` for evidence and
+  `--verbose` for per-source status. Verbose and explain output suppress the
+  repeated cue.
 - Delta panel human label for the 0-5 email control inventory is now
   "Email control count (0-5)" instead of "Email Security Score." The stable
   JSON field `changed_email_security_score` is unchanged.
@@ -63,6 +72,14 @@ date in its candidate YAML.
 
 ### Fixed
 
+- MCP validation-failure logs now retain only a request ID and stable
+  `invalid_domain` reason. Rejected argument values and exception text remain
+  out of operator logs while existing tool-facing correction messages stay
+  unchanged.
+- Human confidence output now uses singular `source` when exactly one source
+  supports a result across terminal panels, Markdown, and MCP text. Invalid
+  lookup input now includes one accepted example and a path to the existing
+  no-argument guidance while preserving exit code 2.
 - Bare undotted or otherwise invalid first arguments (for example
   `recon contoso`) route to domain validation instead of Click's
   "No such command" path.

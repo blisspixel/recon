@@ -178,6 +178,7 @@ recon mail.contoso.com --exact
 recon contoso.com
 recon contoso.com --full
 recon contoso.com --explain
+recon contoso.com --plain
 recon contoso.com --json
 recon contoso.com --md
 ```
@@ -190,6 +191,9 @@ workflows do not need it.
 
 Use `--explain` when a claim matters. It shows the evidence chain behind the
 result.
+
+Use `--plain` for screen readers, grep, and other linear-text workflows. It
+removes color and layout while preserving the observation content.
 
 ## Batch and Delta
 

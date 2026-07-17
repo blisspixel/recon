@@ -62,6 +62,7 @@ from recon_tool.formatter.markdown import (
     format_tenant_markdown,
     markdown_escape,
 )
+from recon_tool.formatter.panel_status import confidence_is_high, render_low_confidence_guidance
 from recon_tool.formatter.serialize import (
     CSV_COLUMNS,
     format_batch_csv,
@@ -554,12 +555,6 @@ def _pick_high_signal_related(
     return high, total
 
 
-def _confidence_is_high(level: ConfidenceLevel) -> bool:
-    """True only for HIGH — used by the disciplined color palette so
-    Medium / Low never trigger alarmist coloring."""
-    return level == ConfidenceLevel.HIGH
-
-
 def _append_field(facts: Text, label: str, value: str, value_style: str = "") -> None:
     """Emit one "  Label    value" row into ``facts``, wrapping the value at the
     panel width with a continuation indent matching the label column."""
@@ -586,12 +581,13 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     """
     facts.append("  ")
     facts.append("Confidence".ljust(_LABEL_WIDTH), style="dim")
-    tail = f" {info.confidence.value.capitalize()} ({len(info.sources)} sources)"
+    source_count = len(info.sources)
+    source_noun = "source" if source_count == 1 else "sources"
+    tail = f" {info.confidence.value.capitalize()} ({source_count} {source_noun})"
     dots = CONFIDENCE_DOTS[info.confidence]
-    style = "green" if _confidence_is_high(info.confidence) else ""
+    style = "green" if confidence_is_high(info.confidence) else ""
     facts.append(dots + tail, style=style)
     facts.append("\n")
-
     claimed = [o for o in info.posterior_observations if o.evidence_used]
     if not claimed:
         return
@@ -808,6 +804,7 @@ def render_tenant_panel(
         _render_insights(info, verbose, confidence_mode),
         _render_certs(info, verbose),
         _render_degraded_note(info),
+        render_low_confidence_guidance(info, verbose, explain),
         _render_verbose_detail(info, verbose),
         _render_explain_conflicts(info, explain, verbose),
     ):

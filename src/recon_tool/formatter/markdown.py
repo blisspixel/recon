@@ -47,6 +47,8 @@ def _markdown_identifier(value: str) -> str:
 def _md_header(info: TenantInfo) -> list[str]:
     """Title and key-facts block of the markdown report."""
     lines: list[str] = []
+    source_count = len(info.sources)
+    source_noun = "source" if source_count == 1 else "sources"
     lines.append(f"# Tenant Report: {markdown_escape(info.display_name)}")
     lines.append("")
     lines.append(f"**Domain:** {markdown_escape(info.queried_domain)}{MARKDOWN_HARD_BREAK}")
@@ -57,7 +59,7 @@ def _md_header(info: TenantInfo) -> list[str]:
         lines.append(f"**Region:** {markdown_escape(info.region)}{MARKDOWN_HARD_BREAK}")
     if info.auth_type:
         lines.append(f"**Auth Type:** {markdown_escape(info.auth_type)}{MARKDOWN_HARD_BREAK}")
-    lines.append(f"**Confidence:** {info.confidence.value} ({len(info.sources)} sources){MARKDOWN_HARD_BREAK}")
+    lines.append(f"**Confidence:** {info.confidence.value} ({source_count} {source_noun}){MARKDOWN_HARD_BREAK}")
     lines.append(
         f"**Evidence Confidence:** {info.evidence_confidence.value}{MARKDOWN_HARD_BREAK}\n"
         f"**Inference Confidence:** {info.inference_confidence.value}"

@@ -36,6 +36,7 @@ from recon_tool.server.runtime import (
     cache_get,
     cache_set,
     log_structured,
+    log_validation_failed,
     rate_limit_try_acquire,
 )
 from recon_tool.validator import validate_domain
@@ -85,6 +86,8 @@ def _lookup_tenant_surface_lines(info: TenantInfo) -> list[str]:
 def _lookup_tenant_text(info: TenantInfo) -> str:
     """Render the default human-readable text format for ``lookup_tenant``."""
     provider = provider_line(info)
+    source_count = len(info.sources)
+    source_noun = "source" if source_count == 1 else "sources"
     lines = [
         f"Display name: {info.display_name}",
         f"Domain: {info.queried_domain}",
@@ -98,7 +101,7 @@ def _lookup_tenant_text(info: TenantInfo) -> str:
         lines.append(f"Region: {info.region}")
     if info.auth_type:
         lines.append(f"Auth: {info.auth_type}")
-    lines.append(f"Confidence: {info.confidence.value} ({len(info.sources)} sources)")
+    lines.append(f"Confidence: {info.confidence.value} ({source_count} {source_noun})")
     categorized = categorize_services(info)
     service_labels = [service for services in categorized.values() for service in services]
     if service_labels:
@@ -157,13 +160,7 @@ async def lookup_tenant(
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
-        log_structured(
-            logging.WARNING,
-            "validation_failed",
-            request_id=request_id,
-            domain=domain,
-            error=str(exc),
-        )
+        log_validation_failed(request_id)
         return f"Error: {exc}"
 
     # Check cache first — avoids hitting upstream endpoints for repeated lookups

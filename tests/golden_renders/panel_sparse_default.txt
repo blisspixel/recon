@@ -2,7 +2,7 @@ Northwind Traders
 northwindtraders.com
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (role unavailable)
-  Confidence   ●○○ Low (1 sources)
+  Confidence   ●○○ Low (1 source)
 
 
 Services
@@ -12,3 +12,6 @@ Services
 Insights
   Passive DNS surfaces little for this apex.
 
+
+Next
+  Use --explain to inspect evidence or --verbose to review source status.

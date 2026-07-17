@@ -83,6 +83,10 @@ def lookup_validate(
         literal = validate_domain(domain, apex=False)
     except ValueError as exc:
         render_error(fmt_exc(exc))
+        get_err_console().print(
+            "Expected a domain with a public suffix, such as contoso.com. "
+            "Run recon with no arguments for examples."
+        )
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     if options.exact:
