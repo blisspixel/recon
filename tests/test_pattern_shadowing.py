@@ -71,6 +71,16 @@ _ALLOWED_SHADOWS: frozenset[tuple[str, str, str, str, str]] = frozenset(
         # marker; oracle-fusion's fa.oraclecloud.com is the SaaS app
         # endpoint. Same suppression: most-specific match per tier.
         ("cname_target", "oraclecloud.com", "oracle-cloud", "fa.oraclecloud.com", "oracle-fusion"),
+        # cloudflare.net occurs only mid-label in Clerk's provider-specific
+        # target. DNS-label boundary matching prevents the Cloudflare rule
+        # from firing on worker.clerkprod-cloudflare.net.
+        (
+            "cname_target",
+            "cloudflare.net",
+            "cloudflare",
+            "worker.clerkprod-cloudflare.net",
+            "clerk",
+        ),
     }
 )
 

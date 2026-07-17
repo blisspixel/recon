@@ -131,6 +131,44 @@ def test_ngrok_cname_target_classifies_as_infrastructure() -> None:
     assert infrastructure.slug == "ngrok"
 
 
+@pytest.mark.parametrize(
+    ("terminal", "pattern", "slug", "expected_tier"),
+    [
+        ("customer.00d000000000000aaa.live.siteforce.com", "siteforce.com", "salesforce", "application"),
+        ("rapid.aaf.edu.au", "aaf.edu.au", "aaf", "application"),
+        (
+            "tenant.worker.clerkprod-cloudflare.net",
+            "worker.clerkprod-cloudflare.net",
+            "clerk",
+            "application",
+        ),
+        ("tenant.us.ngrok.io", "ngrok.io", "ngrok", "infrastructure"),
+        ("1234567890.rsc.cdn77.org", "rsc.cdn77.org", "cdn77", "infrastructure"),
+        ("vanity.classy.org", "vanity.classy.org", "classy", "application"),
+    ],
+)
+def test_private_corpus_promotions_classify_with_label_boundaries(
+    terminal: str,
+    pattern: str,
+    slug: str,
+    expected_tier: str,
+) -> None:
+    """Cross-namespace candidates classify while suffix lookalikes do not."""
+    rules = get_cname_target_rules()
+    assert any(rule.slug == slug and rule.pattern == pattern for rule in rules)
+
+    application, infrastructure = _classify_chain(["service.example", terminal], rules)
+    attribution = application if expected_tier == "application" else infrastructure
+    other_tier = infrastructure if expected_tier == "application" else application
+    lookalike_app, lookalike_infra = _classify_chain([f"{terminal}.example.net"], rules)
+
+    assert attribution is not None
+    assert attribution.slug == slug
+    assert other_tier is None
+    assert lookalike_app is None
+    assert lookalike_infra is None
+
+
 def test_edgecast_zetacdn_cname_target_loads_and_classifies() -> None:
     """Edgecast/Edgio second CDN domain (zetacdn.net) attributes to Edgecast."""
     rules = get_cname_target_rules()

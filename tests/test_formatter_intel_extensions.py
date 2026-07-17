@@ -279,8 +279,12 @@ class TestDeltaRenderingBranches:
             changed_confidence=("low", "high"),
             changed_domain_count=(3, 10),
         )
-        panel = render_delta_panel(delta)
-        assert panel is not None
+        console = Console(no_color=True, record=True, width=120)
+        console.print(render_delta_panel(delta))
+        rendered = console.export_text()
+        # Human label is a control count, not a security maturity grade.
+        assert "Email control count (0-5): 1 → 4" in rendered
+        assert "Email Security Score" not in rendered
 
     def test_format_delta_all_scalar_changes(self):
         delta = DeltaReport(
@@ -300,6 +304,7 @@ class TestDeltaRenderingBranches:
         d = format_delta_dict(delta)
         assert d["changed_auth_type"]["from"] == "Federated"
         assert d["changed_auth_type"]["to"] == "Managed"
+        # Stable machine field name is unchanged for consumers.
         assert d["changed_email_security_score"]["from"] == 2
         assert d["changed_confidence"]["from"] == "low"
         assert d["changed_domain_count"]["to"] == 20

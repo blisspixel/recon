@@ -226,10 +226,19 @@ fingerprints:
   detections:
   - type: cname
     pattern: classy.org
-    reference: https://support.classy.org/
+    reference: https://prosupport.gofundme.com/hc/en-us/articles/37288768004891-Set-up-domain-masking-and-favicon
     description: >-
       CNAME terminating at `classy.org`, Classy's nonprofit
-      fundraising platform (acquired by GoFundMe in 2022).
+      fundraising platform, now GoFundMe Pro.
       Indicates the org's donation pages are hosted on Classy.
       Does not indicate fundraising volume; a single campaign
       produces the same chain as a continuous program.
+  - type: cname_target
+    pattern: vanity.classy.org
+    reference: https://prosupport.gofundme.com/hc/en-us/articles/37288768004891-Set-up-domain-masking-and-favicon
+    tier: application
+    description: >-
+      Branded fundraising subdomain pointing to the documented
+      `vanity.classy.org` domain-masking target for GoFundMe Pro,
+      previously Classy. It indicates hosted campaign pages, not campaign
+      activity or fundraising volume.

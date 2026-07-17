@@ -12,9 +12,10 @@ Usage:
     # Single file (e.g. one ``recon <domain> --json --include-unclassified`` invocation):
     python validation/find_gaps.py --input my-domain.json --output gaps.json
 
-The output schema matches the ``/recon-fingerprint-triage`` skill's input
-contract: ``[{suffix, count, samples: [{subdomain, terminal, chain}]}]``,
-sorted by count desc.
+The output schema extends the ``/recon-fingerprint-triage`` input with a
+privacy-safe support count:
+``[{suffix, count, distinct_namespace_count, samples: [...]}]``. The report
+never emits the queried-namespace list. Results are sorted by count desc.
 
 Self-referential chains (target ends with the queried apex) are filtered
 out because they are intra-org infrastructure, not third-party SaaS.
@@ -128,13 +129,17 @@ def _load_inputs(path: Path) -> list[tuple[str, list[Any]]]:
 def find_gaps(input_path: Path, *, max_samples_per_suffix: int = 5) -> list[dict[str, Any]]:
     """Build the suffix-frequency report.
 
-    Each returned entry: ``{suffix, count, samples: [{subdomain, terminal, chain}]}``.
-    Results are ranked by count desc.
+    Each returned entry contains total chain occurrences plus the number of
+    distinct queried namespaces that produced them. The latter prevents
+    several chains from one namespace being mistaken for cross-corpus
+    recurrence, without retaining or publishing a namespace list.
     """
     suffix_count: dict[str, int] = defaultdict(int)
+    suffix_namespaces: dict[str, set[str]] = defaultdict(set)
     suffix_samples: dict[str, list[dict[str, Any]]] = defaultdict(list)
 
     for apex, unclassified in _load_inputs(input_path):
+        normalized_apex = apex.lower().lstrip(".")
         for entry in unclassified:
             if not isinstance(entry, dict):
                 continue
@@ -147,6 +152,8 @@ def find_gaps(input_path: Path, *, max_samples_per_suffix: int = 5) -> list[dict
                 continue
             suffix = _suffix_for(terminal)
             suffix_count[suffix] += 1
+            if normalized_apex:
+                suffix_namespaces[suffix].add(normalized_apex)
             if len(suffix_samples[suffix]) < max_samples_per_suffix:
                 suffix_samples[suffix].append(
                     {
@@ -160,7 +167,13 @@ def find_gaps(input_path: Path, *, max_samples_per_suffix: int = 5) -> list[dict
     # ranked order. Avoids running a sort key over heterogeneous dict values.
     ranked = sorted(suffix_count.items(), key=lambda pair: (-pair[1], pair[0]))
     rows: list[dict[str, Any]] = [
-        {"suffix": suffix, "count": count, "samples": suffix_samples[suffix]} for suffix, count in ranked
+        {
+            "suffix": suffix,
+            "count": count,
+            "distinct_namespace_count": len(suffix_namespaces[suffix]),
+            "samples": suffix_samples[suffix],
+        }
+        for suffix, count in ranked
     ]
     return rows
 

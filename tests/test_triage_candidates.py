@@ -57,6 +57,7 @@ def test_triage_drops_candidates_covered_only_by_specific_sample_hostname() -> N
         {
             "suffix": "us-gov-east-1.amazonaws.com",
             "count": 5,
+            "distinct_namespace_count": 2,
             "samples": [
                 {
                     "terminal": "tenant.elb.us-gov-east-1.amazonaws.com",
@@ -67,6 +68,7 @@ def test_triage_drops_candidates_covered_only_by_specific_sample_hostname() -> N
         {
             "suffix": "unclassified.example.net",
             "count": 5,
+            "distinct_namespace_count": 2,
             "samples": [{"terminal": "edge.unclassified.example.net", "chain": []}],
         },
     ]
@@ -75,10 +77,31 @@ def test_triage_drops_candidates_covered_only_by_specific_sample_hostname() -> N
         gaps,
         existing_patterns={"elb.us-gov-east-1.amazonaws.com"},
         min_count=3,
+        min_distinct_namespaces=2,
         drop_intra_org=False,
     )
 
     assert survivors == [gaps[1]]
+
+
+def test_triage_drops_repeated_chains_from_only_one_namespace() -> None:
+    gap = {
+        "suffix": "edge.vendor.example",
+        "count": 8,
+        "distinct_namespace_count": 1,
+        "samples": [{"terminal": "tenant.edge.vendor.example", "chain": []}],
+    }
+
+    assert (
+        triage(
+            [gap],
+            existing_patterns=set(),
+            min_count=2,
+            min_distinct_namespaces=2,
+            drop_intra_org=False,
+        )
+        == []
+    )
 
 
 def test_find_candidates_keeps_suffix_when_existing_pattern_is_only_substring() -> None:
