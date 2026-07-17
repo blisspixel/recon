@@ -23,15 +23,19 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from recon_tool.fingerprint_artifact import load_artifact_sources
-from recon_tool.validator import host_has_suffix
-
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from recon_tool.fingerprint_artifact import load_artifact_sources  # noqa: E402
+from recon_tool.validator import caa_issuer_host, host_has_suffix  # noqa: E402
+
 PRIVATE_ROOTS = (
     REPO_ROOT / "validation" / "runs-private",
     REPO_ROOT / "validation" / "live_runs",
     REPO_ROOT / "validation" / "local",
 )
+SCHEMA_VERSION = "1.1"
 RECORD_TYPES = (
     "cname_target",
     "cname",
@@ -46,7 +50,6 @@ RECORD_TYPES = (
 )
 HOST_RECORD_TYPES = frozenset({"cname_target", "cname", "spf", "mx", "ns", "dmarc_rua", "srv"})
 _SAFE_PREFIX_RE = re.compile(r"^[a-z][a-z0-9_.:-]{1,63}$", re.IGNORECASE)
-_CAA_ISSUER_RE = re.compile(r"\bissue(?:wild)?\s+\"?([^\";\s]+)", re.IGNORECASE)
 _FORBIDDEN_AGGREGATE_KEYS = frozenset(
     {
         "apex",
@@ -80,9 +83,9 @@ def _validate_private_path(path: Path) -> Path:
 def _result_files(path: Path) -> list[Path]:
     if path.is_file():
         return [path]
-    files = sorted(path.glob("results*.ndjson")) + sorted(path.glob("results*.json"))
+    files = sorted(path.rglob("results*.ndjson")) + sorted(path.rglob("results*.json"))
     if not files:
-        files = sorted(path.glob("*.ndjson"))
+        files = sorted(path.rglob("*.ndjson"))
     return files
 
 
@@ -96,13 +99,15 @@ def _iter_records(path: Path) -> Iterator[dict[str, Any]]:
         stripped = text.lstrip()
         if not stripped:
             continue
-        if stripped.startswith("["):
-            with contextlib.suppress(json.JSONDecodeError):
-                payload = json.loads(text)
-                if isinstance(payload, list):
-                    for item in payload:
-                        if isinstance(item, dict):
-                            yield item
+        with contextlib.suppress(json.JSONDecodeError):
+            payload = json.loads(text)
+            if isinstance(payload, list):
+                for item in payload:
+                    if isinstance(item, dict):
+                        yield item
+                continue
+            if isinstance(payload, dict):
+                yield payload
                 continue
         for line_number, raw_line in enumerate(text.splitlines(), start=1):
             line = raw_line.strip()
@@ -184,6 +189,20 @@ def _host_bucket(value: str) -> str | None:
     return ".".join(labels[-3:]) if len(labels) >= 3 else ".".join(labels)
 
 
+def _txt_bucket(value: str) -> str:
+    """Return a private recurrence key without retaining an opaque token."""
+    normalized_value = value.strip().lower()
+    prefix = normalized_value.split("=", 1)[0].strip()
+    if prefix == "v" and "=" in normalized_value:
+        version = re.split(r"[;\s]", normalized_value.split("=", 1)[1], maxsplit=1)[0]
+        if version:
+            return f"v={version[:32]}"
+    elif _SAFE_PREFIX_RE.fullmatch(prefix) is not None:
+        return prefix
+    value_digest = hashlib.sha256(normalized_value.encode("utf-8")).hexdigest()[:16]
+    return f"opaque:{value_digest}"
+
+
 def _candidate_key(record_type: str, owner: str, value: str, apex: str) -> str | None:
     normalized_value = value.strip().lower()
     key: str | None = None
@@ -192,20 +211,13 @@ def _candidate_key(record_type: str, owner: str, value: str, apex: str) -> str |
         if host and host != "." and not (apex and host_has_suffix(host, apex)):
             key = _host_bucket(host)
     elif record_type == "caa":
-        match = _CAA_ISSUER_RE.search(normalized_value)
-        key = _host_bucket(match.group(1)) if match is not None else None
+        issuer = caa_issuer_host(normalized_value)
+        key = _host_bucket(issuer) if issuer is not None else None
     elif record_type == "subdomain_txt":
-        key = owner.strip().lower() or None
+        normalized_owner = owner.strip().lower()
+        key = f"{normalized_owner}:{_txt_bucket(normalized_value)}" if normalized_owner else None
     elif record_type == "txt":
-        prefix = normalized_value.split("=", 1)[0].strip()
-        if prefix == "v" and "=" in normalized_value:
-            version = re.split(r"[;\s]", normalized_value.split("=", 1)[1], maxsplit=1)[0]
-            key = f"v={version[:32]}" if version else None
-        elif _SAFE_PREFIX_RE.fullmatch(prefix) is not None:
-            key = prefix
-        else:
-            value_digest = hashlib.sha256(normalized_value.encode("utf-8")).hexdigest()[:16]
-            key = f"opaque:{value_digest}"
+        key = _txt_bucket(normalized_value)
     return key
 
 
@@ -328,9 +340,13 @@ def aggregate_records(
         record_type: defaultdict(CandidateBucket) for record_type in RECORD_TYPES
     }
     degraded_counts: Counter[str] = Counter()
+    error_kind_counts: Counter[str] = Counter()
     partial_records = 0
 
     for record in records:
+        if record.get("record_type") == "error":
+            error_kind = record.get("error_kind")
+            error_kind_counts[str(error_kind) if isinstance(error_kind, str) else "unknown"] += 1
         if bool(record.get("partial")):
             partial_records += 1
         degraded = record.get("degraded_sources")
@@ -347,9 +363,12 @@ def aggregate_records(
     )
 
     aggregate = {
-        "schema_version": "1.0",
+        "schema_version": SCHEMA_VERSION,
         "aggregate_only": True,
         "records_total": len(records),
+        "measured_input_records": len(records) - sum(error_kind_counts.values()),
+        "error_records": sum(error_kind_counts.values()),
+        "error_kind_counts": dict(sorted(error_kind_counts.items())),
         "partial_records": partial_records,
         "record_types": type_totals,
         "degraded_source_counts": dict(sorted(degraded_counts.items())),
@@ -435,7 +454,7 @@ def main(argv: list[str] | None = None) -> int:
     _assert_aggregate_safe(aggregate)
 
     manifest = {
-        "schema_version": "1.0",
+        "schema_version": SCHEMA_VERSION,
         "private": True,
         "generated_at": generated_at,
         "round_kind": args.round_kind,
@@ -446,10 +465,13 @@ def main(argv: list[str] | None = None) -> int:
         "working_tree_dirty": dirty,
         "catalog": catalog,
         "records_total": len(records),
+        "measured_input_records": aggregate["measured_input_records"],
+        "error_records": aggregate["error_records"],
+        "error_kind_counts": aggregate["error_kind_counts"],
         "thresholds": aggregate["candidate_thresholds"],
     }
     private_payload = {
-        "schema_version": "1.0",
+        "schema_version": SCHEMA_VERSION,
         "private": True,
         "aggregate": aggregate,
         "candidates": candidates,

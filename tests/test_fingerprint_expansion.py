@@ -88,7 +88,7 @@ class TestNewFingerprintsLoad:
         for fp in fps:
             if fp.slug in new_slugs:
                 for det in fp.detections:
-                    # txt, cname, subdomain_txt use regex; spf uses substring
+                    # txt, cname, subdomain_txt use regex; SPF uses DNS suffixes
                     if det.type != "spf":
                         re.compile(det.pattern)  # should not raise
 

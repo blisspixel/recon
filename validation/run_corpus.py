@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from collections.abc import Iterator
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -30,7 +31,43 @@ _PRIVATE_OUTPUT_ROOTS = (
 
 def _result_files(path: Path) -> list[Path]:
     """Return private batch-result files from one file or run directory."""
-    return sorted(path.glob("results*.json")) if path.is_dir() else [path]
+    if path.is_file():
+        return [path]
+    return sorted(path.rglob("results*.ndjson")) + sorted(path.rglob("results*.json"))
+
+
+def _result_entries(result_file: Path) -> Iterator[dict[str, object]]:
+    """Read a JSON array or streamed NDJSON result file."""
+    try:
+        text = result_file.read_text(encoding="utf-8")
+    except OSError as exc:
+        msg = f"Cannot read exclusion results file: {result_file}"
+        raise ValueError(msg) from exc
+    if result_file.suffix == ".ndjson":
+        for line_number, raw_line in enumerate(text.splitlines(), start=1):
+            if not raw_line.strip():
+                continue
+            try:
+                entry = json.loads(raw_line)
+            except json.JSONDecodeError as exc:
+                msg = f"Cannot read exclusion NDJSON line {line_number}: {result_file}"
+                raise ValueError(msg) from exc
+            if not isinstance(entry, dict):
+                msg = f"Exclusion NDJSON entries must be objects: {result_file}"
+                raise ValueError(msg)
+            yield entry
+        return
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError as exc:
+        msg = f"Cannot read exclusion results file: {result_file}"
+        raise ValueError(msg) from exc
+    if not isinstance(payload, list) or not all(isinstance(entry, dict) for entry in payload):
+        msg = f"Exclusion results must be a JSON array of objects: {result_file}"
+        raise ValueError(msg)
+    for entry in payload:
+        if isinstance(entry, dict):
+            yield entry
 
 
 def _load_excluded_domains(paths: list[Path]) -> set[str]:
@@ -41,18 +78,10 @@ def _load_excluded_domains(paths: list[Path]) -> set[str]:
     for path in paths:
         files = _result_files(path)
         if not files:
-            msg = f"No results JSON files found under exclusion path: {path}"
+            msg = f"No JSON or NDJSON result files found under exclusion path: {path}"
             raise ValueError(msg)
         for result_file in files:
-            try:
-                payload = json.loads(result_file.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError) as exc:
-                msg = f"Cannot read exclusion results file: {result_file}"
-                raise ValueError(msg) from exc
-            if not isinstance(payload, list) or not all(isinstance(entry, dict) for entry in payload):
-                msg = f"Exclusion results must be a JSON array of objects: {result_file}"
-                raise ValueError(msg)
-            for entry in payload:
+            for entry in _result_entries(result_file):
                 value = entry.get("queried_domain") or entry.get("domain")
                 if not isinstance(value, str) or not value:
                     continue
@@ -169,7 +198,7 @@ def main() -> None:
         action="append",
         default=[],
         help=(
-            "Prior results.json file or run directory whose queried domains "
+            "Prior JSON or NDJSON result file, or run directory, whose queried domains "
             "must be excluded. Repeat for multiple prior runs."
         ),
     )
@@ -182,10 +211,7 @@ def main() -> None:
     parser.add_argument(
         "--include-unclassified",
         action="store_true",
-        help=(
-            "Include bounded typed catalog coverage and unmatched DNS values "
-            "in each domain's private JSON output."
-        ),
+        help=("Include bounded typed catalog coverage and unmatched DNS values in each domain's private JSON output."),
     )
     parser.add_argument(
         "--no-ct",

@@ -51,21 +51,35 @@ from recon_tool.validator import host_has_suffix, strip_control_chars
 logger = logging.getLogger("recon")
 
 _REPORTING_DOMAIN_LABEL_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", re.ASCII)
-_SPF_TARGET_RE = re.compile(r"(?:[+?~-]?include:|redirect=)([^\s]+)", re.IGNORECASE)
+_SPF_TARGET_RE = re.compile(
+    r"(?:^|\s)(?:[+?~-]?include:|redirect=)([^\s]+)",
+    re.IGNORECASE,
+)
 
 
 def _record_spf_targets(
     ctx: dns_base.DetectionCtx,
     spf_text: str,
     patterns: tuple[Detection, ...],
-) -> None:
-    """Record include and redirect targets for typed catalog accounting."""
+) -> tuple[str, ...]:
+    """Record and return normalized include and redirect targets."""
+    targets: list[str] = []
     for match in _SPF_TARGET_RE.finditer(spf_text):
         target = match.group(1).strip().lower().rstrip(".")
         if not target:
             continue
-        classified = any(det.pattern.lower() in target for det in patterns)
+        targets.append(target)
+        classified = any(host_has_suffix(target, det.pattern.lower()) for det in patterns)
         ctx.record_catalog_observation("spf", "@", target, classified=classified)
+    return tuple(targets)
+
+
+def _matching_spf_patterns(
+    targets: tuple[str, ...],
+    patterns: tuple[Detection, ...],
+) -> list[Detection]:
+    """Return provider patterns that match a parsed SPF target by DNS labels."""
+    return [det for det in patterns if any(host_has_suffix(target, det.pattern.lower()) for target in targets)]
 
 
 async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -108,13 +122,11 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
                 ctx.site_verification_tokens.add(token)
 
         if txt_lower.startswith("v=spf1"):
-            _record_spf_targets(ctx, txt_lower, spf_patterns)
+            spf_targets = _record_spf_targets(ctx, txt_lower, spf_patterns)
             ctx.spf_include_count = max(ctx.spf_include_count, txt_lower.count("include:"))
-            # SPF patterns use substring matching on the include: values.
-            # This is intentional - SPF includes are domain names, and we
-            # match on the authoritative portion (e.g. "spf.protection.outlook.com").
-            # Unlike TXT patterns (which use regex), SPF patterns are plain
-            # substrings because the YAML values are literal domain fragments.
+            # SPF patterns match parsed include: and redirect= domains on DNS
+            # label boundaries. A raw substring match would misattribute a
+            # lookalike such as ``vendor.example.evil.test``.
             #
             # Multiple distinct vendors can legitimately fire on one SPF
             # record (e.g. M365 + Salesforce includes), so we accumulate
@@ -123,7 +135,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # (e.g. ``cisco.com``) and a narrow one
             # (e.g. ``ess.cisco.com``) both match, only the narrow one's
             # slug fires , preventing double-counting of the same vendor.
-            spf_matches = [det for det in spf_patterns if det.pattern.lower() in txt_lower]
+            spf_matches = _matching_spf_patterns(spf_targets, spf_patterns)
             for det in filter_shadowed_matches(spf_matches):
                 ctx.add(det.name, det.slug, source_type="SPF", raw_value=txt)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
@@ -211,11 +223,11 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
             rec_lower = record.strip().lower()
             if not rec_lower.startswith("v=spf1"):
                 continue
-            _record_spf_targets(ctx, rec_lower, patterns)
+            spf_targets = _record_spf_targets(ctx, rec_lower, patterns)
             # Run the same fingerprint pass on the target's SPF, with
             # specificity suppression for shadow patterns (see the
             # comment in detect_txt above).
-            spf_matches = [det for det in patterns if det.pattern.lower() in rec_lower]
+            spf_matches = _matching_spf_patterns(spf_targets, patterns)
             for det in filter_shadowed_matches(spf_matches):
                 ctx.add(det.name, det.slug, source_type="SPF", raw_value=record)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
@@ -289,10 +301,10 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
             )
             null_mx_observed = True
             continue
-        mx_lower = mx.lower()
+        host = parts[-1].rstrip(".").lower() if parts else mx.lower().strip().rstrip(".")
         matched = False
         for det in mx_patterns_sorted:
-            if det.pattern in mx_lower:
+            if host_has_suffix(host, det.pattern.lower()):
                 ctx.add(det.name, det.slug, source_type="MX", raw_value=mx)
                 ctx.record_fp_match(det.slug, "mx", det.pattern)
                 matched = True
@@ -316,7 +328,6 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # MX record format is ``<priority> <host>`` - extract host.
             if len(parts) >= 2:
                 unmatched_hosts.append(parts[-1].rstrip(".").lower())
-        host = parts[-1].rstrip(".").lower() if parts else mx_lower.strip().rstrip(".")
         ctx.record_catalog_observation("mx", "@", host, classified=matched)
 
     # The compatibility slug is retained for serialized-cache stability, but

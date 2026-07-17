@@ -42,7 +42,7 @@ from recon_tool.sources.dns_tables import (
     ct_failure_outcome,
     is_public_dns_name,
 )
-from recon_tool.validator import host_has_suffix
+from recon_tool.validator import caa_issuer_host, host_has_suffix
 
 if TYPE_CHECKING:
     from recon_tool.ct_cache import CTCacheEntry
@@ -60,6 +60,17 @@ _MAX_SUBDOMAIN_TXT_MATCH_LEN = 4096
 # Bounds backtracking amplification when a custom / injected cname pattern is
 # matched against an attacker-controlled CNAME target. 255 leaves a small margin.
 _MAX_CNAME_MATCH_LEN = 255
+
+
+def _ns_pattern_matches(host: str, pattern: str) -> bool:
+    """Match NS suffixes and legacy provider-label fragments safely."""
+    normalized_pattern = pattern.lower().rstrip(".")
+    if "." in normalized_pattern:
+        return host_has_suffix(host, normalized_pattern)
+    return any(
+        label == normalized_pattern or label.startswith(f"{normalized_pattern}-")
+        for label in host.lower().rstrip(".").split(".")
+    )
 
 
 def _dns_target_host(record: str) -> str:
@@ -261,15 +272,15 @@ async def detect_ns(ctx: dns_base.DetectionCtx, domain: str) -> None:
     ns_patterns_sorted = sorted(get_ns_patterns(), key=lambda d: -len(d.pattern))
 
     for ns in ns_records:
-        ns_lower = ns.lower()
+        ns_lower = ns.lower().rstrip(".")
         matched = False
         for det in ns_patterns_sorted:
-            if det.pattern in ns_lower:
+            if _ns_pattern_matches(ns_lower, det.pattern):
                 ctx.add(det.name, det.slug, source_type="NS", raw_value=ns)
                 ctx.record_fp_match(det.slug, "ns", det.pattern)
                 matched = True
                 break
-        ctx.record_catalog_observation("ns", "@", ns_lower.rstrip("."), classified=matched)
+        ctx.record_catalog_observation("ns", "@", ns_lower, classified=matched)
 
 
 async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -522,9 +533,10 @@ async def detect_caa(ctx: dns_base.DetectionCtx, domain: str) -> None:
             )
         )
         caa_lower = caa.lower()
+        issuer = caa_issuer_host(caa_lower)
         matched = False
         for det in caa_patterns_sorted:
-            if det.pattern in caa_lower:
+            if issuer is not None and host_has_suffix(issuer, det.pattern.lower()):
                 ctx.add(det.name, det.slug, source_type="CAA", raw_value=caa)
                 ctx.record_fp_match(det.slug, "caa", det.pattern)
                 matched = True
