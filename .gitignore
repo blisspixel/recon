@@ -48,6 +48,7 @@ docs/accuracy.md
 !/validation/diff_runs.py
 !/validation/triage_candidates.py
 !/validation/scan.py
+!/validation/catalog_baseline.py
 !/validation/summarize_ct_sessions.py
 !/validation/corpus-example.txt
 !/validation/README.md

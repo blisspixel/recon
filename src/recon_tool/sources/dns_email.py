@@ -28,6 +28,7 @@ from recon_tool.constants import (
     SVC_SPF_STRICT,
 )
 from recon_tool.fingerprints import (
+    Detection,
     filter_shadowed_matches,
     get_dmarc_rua_patterns,
     get_mx_patterns,
@@ -50,6 +51,21 @@ from recon_tool.validator import host_has_suffix, strip_control_chars
 logger = logging.getLogger("recon")
 
 _REPORTING_DOMAIN_LABEL_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", re.ASCII)
+_SPF_TARGET_RE = re.compile(r"(?:[+?~-]?include:|redirect=)([^\s]+)", re.IGNORECASE)
+
+
+def _record_spf_targets(
+    ctx: dns_base.DetectionCtx,
+    spf_text: str,
+    patterns: tuple[Detection, ...],
+) -> None:
+    """Record include and redirect targets for typed catalog accounting."""
+    for match in _SPF_TARGET_RE.finditer(spf_text):
+        target = match.group(1).strip().lower().rstrip(".")
+        if not target:
+            continue
+        classified = any(det.pattern.lower() in target for det in patterns)
+        ctx.record_catalog_observation("spf", "@", target, classified=classified)
 
 
 async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -57,6 +73,8 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
     txt_patterns = get_txt_patterns()
     spf_patterns = get_spf_patterns()
 
+    ctx.record_catalog_query("txt")
+    ctx.record_catalog_query("spf")
     txt_records = await dns_base.safe_resolve(
         domain,
         "TXT",
@@ -69,6 +87,8 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
         txt_lower = txt.lower()
 
         txt_matches = match_txt_all(txt, txt_patterns)
+        if not txt_lower.startswith("v=spf1"):
+            ctx.record_catalog_observation("txt", "@", txt, classified=bool(txt_matches))
         if txt_matches:
             result = txt_matches[0]
             ctx.add(result.name, result.slug, source_type="TXT", raw_value=txt)
@@ -88,6 +108,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
                 ctx.site_verification_tokens.add(token)
 
         if txt_lower.startswith("v=spf1"):
+            _record_spf_targets(ctx, txt_lower, spf_patterns)
             ctx.spf_include_count = max(ctx.spf_include_count, txt_lower.count("include:"))
             # SPF patterns use substring matching on the include: values.
             # This is intentional - SPF includes are domain names, and we
@@ -178,6 +199,7 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
                 target,
             )
             return
+        ctx.record_catalog_query("spf")
         target_records = await dns_base.safe_resolve(
             target,
             "TXT",
@@ -189,6 +211,7 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
             rec_lower = record.strip().lower()
             if not rec_lower.startswith("v=spf1"):
                 continue
+            _record_spf_targets(ctx, rec_lower, patterns)
             # Run the same fingerprint pass on the target's SPF, with
             # specificity suppression for shadow patterns (see the
             # comment in detect_txt above).
@@ -236,6 +259,7 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
     MX hosts. The "generic MX evidence" carries an empty slug so it
     doesn't pollute the detected_slugs set.
     """
+    ctx.record_catalog_query("mx")
     mx_records = await dns_base.safe_resolve(
         domain,
         "MX",
@@ -256,6 +280,7 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
     for mx in mx_records:
         parts = mx.strip().split()
         if len(parts) >= 2 and parts[0] == "0" and parts[-1].rstrip(".") == "":
+            ctx.record_catalog_observation("mx", "@", ".", classified=True)
             ctx.add(
                 "Null MX (domain does not accept email)",
                 "null-mx",
@@ -291,6 +316,8 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # MX record format is ``<priority> <host>`` - extract host.
             if len(parts) >= 2:
                 unmatched_hosts.append(parts[-1].rstrip(".").lower())
+        host = parts[-1].rstrip(".").lower() if parts else mx_lower.strip().rstrip(".")
+        ctx.record_catalog_observation("mx", "@", host, classified=matched)
 
     # The compatibility slug is retained for serialized-cache stability, but
     # the observation does not infer who operates an unmatched MX host. It may
@@ -550,6 +577,7 @@ def extract_dmarc_rua(
             continue
 
         # Match against dmarc_rua fingerprint patterns
+        classified = False
         for det in rua_patterns:
             if host_has_suffix(rua_domain, det.pattern.lower()):
                 ctx.add(
@@ -559,7 +587,9 @@ def extract_dmarc_rua(
                     raw_value=f"rua=mailto:{addr}",
                 )
                 ctx.record_fp_match(det.slug, "dmarc_rua", det.pattern)
+                classified = True
                 break  # first match wins per RUA address
+        ctx.record_catalog_observation("dmarc_rua", "_dmarc", rua_domain, classified=classified)
 
 
 def _parse_dmarc_pct(raw_pct: str, domain: str) -> int | None:
@@ -856,6 +886,7 @@ def _apply_tls_rpt(ctx: dns_base.DetectionCtx, tls_rpt_results: list[str]) -> No
 
 async def detect_email_security(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Check DMARC, BIMI, MTA-STS, and TLS-RPT records concurrently."""
+    ctx.record_catalog_query("dmarc_rua")
     dmarc_results, bimi_results, mta_sts_results, tls_rpt_results = await asyncio.gather(
         dns_base.safe_resolve(
             f"_dmarc.{domain}",

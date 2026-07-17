@@ -237,6 +237,7 @@ def test_run_batch_passes_timeout_to_recon_batch(scan, tmp_path: Path, monkeypat
     assert result.completed is True
     assert result.timed_out is False
     assert seen["timeout"] is None
+    assert cmd[1:3] == ["-m", "recon_tool"]
     assert cmd[cmd.index("--timeout") + 1] == "9.0"
     assert scan._count_result_records(result.results_path) == 1
 
@@ -294,8 +295,11 @@ def test_finalize_scan_writes_partial_meta(scan, tmp_path: Path, monkeypatch: py
     results.write_text('{"queried_domain":"contoso.com","ct_attempt_outcome":"cache_hit"}\n', encoding="utf-8")
 
     def fake_run_step(cmd, description: str) -> None:
-        output = Path(cmd[cmd.index("--output") + 1])
-        output.write_text("[]", encoding="utf-8")
+        if "--output" in cmd:
+            output = Path(cmd[cmd.index("--output") + 1])
+            output.write_text("[]", encoding="utf-8")
+        else:
+            assert description == "typed catalog baseline"
 
     monkeypatch.setattr(scan, "_run_step", fake_run_step)
 
@@ -308,6 +312,7 @@ def test_finalize_scan_writes_partial_meta(scan, tmp_path: Path, monkeypatch: py
             compare_to=None,
             no_compare=False,
             ct=True,
+            round_kind="baseline",
             label="partial",
             corpus=corpus,
             corpus_input_rows=2,
@@ -334,5 +339,6 @@ def test_finalize_scan_writes_partial_meta(scan, tmp_path: Path, monkeypatch: py
     assert meta["batch_timed_out"] is True
     assert meta["batch_timeout_seconds"] == 15.0
     assert meta["batch_max_runtime_seconds"] == 1.0
+    assert meta["round_kind"] == "baseline"
     assert meta["compared_to"] is None
     assert _counts(run_dir) == {"cache_hit": 1}

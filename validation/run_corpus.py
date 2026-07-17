@@ -183,9 +183,8 @@ def main() -> None:
         "--include-unclassified",
         action="store_true",
         help=(
-            "Include unclassified CNAME chains in each domain's JSON output. "
-            "Feeds the fingerprint-discovery loop (validation/find_gaps.py + "
-            "the /recon-fingerprint-triage skill)."
+            "Include bounded typed catalog coverage and unmatched DNS values "
+            "in each domain's private JSON output."
         ),
     )
     parser.add_argument(
