@@ -8,10 +8,10 @@ you want to track catalog drift over time:
     python validation/scan.py --corpus validation/corpus-private/consolidated.txt
 
 A run directory is created at ``validation/runs-private/<UTC-stamp>/`` with:
-  * ``results.json`` - raw recon batch output (one entry per domain)
+  * ``results.ndjson`` - default raw batch stream (``results.json`` with ``--json-array``)
   * ``gaps.json``    - bucketed unclassified terminals
   * ``candidates.json`` - pre-filtered triage list (intra-org / covered dropped)
-  * ``meta.json``    - scan metadata (timestamp, corpus path, counts, ...)
+  * ``meta.json``    - scan metadata (timestamp, private corpus path, normalized counts, ...)
   * ``diff.json``    - only when --compare-to is provided; per-domain deltas
 
 The ``meta.json`` shape lets ``recon`` (or any tool) answer "when was this
@@ -52,6 +52,13 @@ class BatchRunResult(NamedTuple):
     timed_out: bool
 
 
+class CorpusStats(NamedTuple):
+    input_rows: int
+    scheduled_domains: int
+    duplicate_rows_removed: int
+    invalid_rows: int
+
+
 class FinalizeContext(NamedTuple):
     results_path: Path
     run_dir: Path
@@ -62,7 +69,10 @@ class FinalizeContext(NamedTuple):
     ct: bool
     label: str
     corpus: Path
+    corpus_input_rows: int
     domain_count: int
+    duplicate_rows_removed: int
+    invalid_rows: int
     concurrency: int
     timeout: float
     max_runtime: float | None
@@ -114,13 +124,33 @@ def _validate_private_scan_input_path(path: Path) -> Path:
     raise ValueError(f"private validation input inside this checkout must be under one of: {allowed_text}")
 
 
-def _count_corpus(corpus: Path) -> int:
+def _corpus_stats(corpus: Path) -> CorpusStats:
+    """Mirror batch normalization and deduplication without exposing inputs."""
     if not corpus.exists():
-        return 0
-    return sum(
-        1
+        return CorpusStats(0, 0, 0, 0)
+
+    from recon_tool.validator import validate_domain
+
+    rows = [
+        line.strip()
         for line in corpus.read_text(encoding="utf-8").splitlines()
         if line.strip() and not line.strip().startswith("#")
+    ]
+    seen: set[tuple[str, str]] = set()
+    invalid_rows = 0
+    for row in rows:
+        normalized_raw = row.lower().strip()
+        try:
+            dedupe_key = ("valid", validate_domain(row))
+        except ValueError:
+            invalid_rows += 1
+            dedupe_key = ("invalid", normalized_raw)
+        seen.add(dedupe_key)
+    return CorpusStats(
+        input_rows=len(rows),
+        scheduled_domains=len(seen),
+        duplicate_rows_removed=len(rows) - len(seen),
+        invalid_rows=invalid_rows,
     )
 
 
@@ -608,7 +638,10 @@ def _finalize_scan(ctx: FinalizeContext) -> None:
         "scan_finalized_utc": datetime.now(UTC).isoformat(),
         "label": ctx.label,
         "corpus_path": str(ctx.corpus),
+        "corpus_input_rows": ctx.corpus_input_rows,
         "domain_count": ctx.domain_count,
+        "duplicate_rows_removed": ctx.duplicate_rows_removed,
+        "invalid_rows": ctx.invalid_rows,
         "results_records": completed_records,
         "batch_completed": ctx.batch_completed,
         "batch_timed_out": ctx.batch_timed_out,
@@ -667,7 +700,15 @@ def main() -> None:
         raise SystemExit(2)
 
     started_utc = datetime.now(UTC).isoformat()
-    domain_count = _count_corpus(corpus)
+    corpus_stats = _corpus_stats(corpus)
+    domain_count = corpus_stats.scheduled_domains
+    if corpus_stats.duplicate_rows_removed:
+        print(
+            f"Input preflight: {corpus_stats.duplicate_rows_removed} duplicate row(s) "
+            "removed by batch normalization"
+        )
+    if corpus_stats.invalid_rows:
+        print(f"Input preflight: {corpus_stats.invalid_rows} malformed row(s) will produce validation errors")
     if args.finalize_existing is not None:
         run_dir = args.finalize_existing
         results_path = _find_results_path(run_dir)
@@ -688,7 +729,10 @@ def main() -> None:
                 ct=args.ct,
                 label=args.label,
                 corpus=corpus,
+                corpus_input_rows=corpus_stats.input_rows,
                 domain_count=domain_count,
+                duplicate_rows_removed=corpus_stats.duplicate_rows_removed,
+                invalid_rows=corpus_stats.invalid_rows,
                 concurrency=args.concurrency,
                 timeout=args.timeout,
                 max_runtime=args.max_runtime,
@@ -727,7 +771,10 @@ def main() -> None:
             ct=args.ct,
             label=args.label,
             corpus=corpus,
+            corpus_input_rows=corpus_stats.input_rows,
             domain_count=domain_count,
+            duplicate_rows_removed=corpus_stats.duplicate_rows_removed,
+            invalid_rows=corpus_stats.invalid_rows,
             concurrency=args.concurrency,
             timeout=args.timeout,
             max_runtime=args.max_runtime,

@@ -71,6 +71,31 @@ def test_count_result_records_skips_malformed_partial_tail(scan, tmp_path: Path)
     assert scan._count_result_records(results) == 1
 
 
+def test_corpus_stats_match_batch_apex_deduplication(scan, tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus.txt"
+    corpus.write_text(
+        "\n".join(
+            [
+                "contoso.com",
+                "www.contoso.com",
+                "https://contoso.com/path",
+                "bad domain",
+                "BAD DOMAIN",
+                "# ignored",
+                "",
+            ]
+        ),
+        encoding="utf-8",
+    )
+
+    assert scan._corpus_stats(corpus) == scan.CorpusStats(
+        input_rows=5,
+        scheduled_domains=2,
+        duplicate_rows_removed=3,
+        invalid_rows=2,
+    )
+
+
 def test_scan_output_root_allows_outside_repo(scan, tmp_path: Path) -> None:
     assert scan._validate_scan_output_root(tmp_path) == tmp_path.resolve(strict=False)
 
@@ -220,7 +245,7 @@ def test_run_batch_finalizes_streamed_partial_on_max_runtime(
     scan, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     corpus = tmp_path / "domains.txt"
-    corpus.write_text("contoso.com\nnorthwind.com\n", encoding="utf-8")
+    corpus.write_text("contoso.com\nfabrikam.com\n", encoding="utf-8")
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
@@ -285,7 +310,10 @@ def test_finalize_scan_writes_partial_meta(scan, tmp_path: Path, monkeypatch: py
             ct=True,
             label="partial",
             corpus=corpus,
+            corpus_input_rows=2,
             domain_count=2,
+            duplicate_rows_removed=0,
+            invalid_rows=0,
             concurrency=1,
             timeout=15.0,
             max_runtime=1.0,
@@ -298,7 +326,10 @@ def test_finalize_scan_writes_partial_meta(scan, tmp_path: Path, monkeypatch: py
 
     meta = json.loads((run_dir / "meta.json").read_text(encoding="utf-8"))
     assert meta["results_records"] == 1
+    assert meta["corpus_input_rows"] == 2
     assert meta["domain_count"] == 2
+    assert meta["duplicate_rows_removed"] == 0
+    assert meta["invalid_rows"] == 0
     assert meta["batch_completed"] is False
     assert meta["batch_timed_out"] is True
     assert meta["batch_timeout_seconds"] == 15.0

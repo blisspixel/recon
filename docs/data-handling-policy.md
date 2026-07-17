@@ -25,6 +25,12 @@ validation memos, or commit messages. "Ever" includes history: a value
 committed and later removed still lives in the git history and is
 treated as a leak.
 
+This boundary applies to evaluated targets, not to the public provider catalog.
+Real vendor and product names, provider-controlled service domains used as
+generic detection patterns, and their public documentation are expected in the
+repository. A provider case study may justify a rule privately, but the named
+customer and its observed records do not become a public example.
+
 ## What may enter the repository
 
 | Allowed | Why it is not target data |

@@ -1,11 +1,35 @@
 from __future__ import annotations
 
+from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
+
 from recon_tool.validation_runner import (
     compare_batch_results,
     compare_batch_summaries,
     render_summary_markdown,
+    run_batch_validation_sync,
     summarize_batch_results,
 )
+
+
+def test_run_batch_validation_parses_stdout_separately_from_warnings(tmp_path: Path) -> None:
+    result = SimpleNamespace(
+        exit_code=0,
+        stdout='[{"queried_domain":"contoso.com"}]\n',
+        stderr="warning: ignored malformed public record\n",
+        output='warning: ignored malformed public record\n[{"queried_domain":"contoso.com"}]\n',
+    )
+
+    def invoke(*_args: object, **_kwargs: object) -> SimpleNamespace:
+        return result
+
+    runner = SimpleNamespace(invoke=invoke)
+
+    with patch("typer.testing.CliRunner", return_value=runner):
+        records = run_batch_validation_sync(tmp_path / "private-corpus.txt")
+
+    assert records == [{"queried_domain": "contoso.com"}]
 
 
 def _sample_results() -> list[dict[str, object]]:

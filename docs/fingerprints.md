@@ -49,7 +49,7 @@ fingerprints:
 | `cname_target` | CNAME chain target | Regex (+ `tier`) | SaaS / infrastructure attribution via CNAME chains; carries a `tier` (`application` or `infrastructure`) that surface attribution uses to rank a chain. The most common detection type in the catalog. |
 | `subdomain_txt` | TXT at a specific subdomain | `subdomain:regex` | Challenge records (`_vendor-challenge:.+`) |
 | `caa` | CAA values | Substring | CA restrictions |
-| `srv` | SRV targets | Substring | Service discovery (Teams, XMPP) |
+| `srv` | Bounded common SRV targets | DNS-label suffix; dotless patterns use substring matching | Service discovery (Teams, XMPP) |
 | `dmarc_rua` | DMARC `rua=` report URI | Substring | DMARC aggregate-report processor / vendor (the report mailbox host) |
 
 ## Metadata fields

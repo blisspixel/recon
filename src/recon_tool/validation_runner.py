@@ -477,10 +477,13 @@ def run_batch_validation_sync(
         args.append("--no-ct")
     result = runner.invoke(app, args)
     if result.exit_code != 0:
-        msg = result.output.strip() or f"Batch validation failed for {corpus_path}"
+        msg = result.stderr.strip() or result.stdout.strip() or f"Batch validation failed for {corpus_path}"
         raise RuntimeError(msg)
 
-    raw = result.output.strip()
+    # Click exposes stdout and stderr separately even though ``result.output``
+    # interleaves both streams. DNS parser warnings belong on stderr and must
+    # not prefix an otherwise valid JSON document produced on stdout.
+    raw = result.stdout.strip()
     if not raw:
         msg = f"Batch run produced no JSON output for {corpus_path}"
         raise ValueError(msg)

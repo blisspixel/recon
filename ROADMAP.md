@@ -18,6 +18,13 @@ follow-up work. The first bounded internal claim contract now evaluates the exac
 DMARC `p=reject` observation and drives the opt-in cohort schema 2.2 DMARC
 denominator while schema 2.1 remains the default.
 
+The catalog-quality track uses deduplicated private rounds with distinct rank,
+regional, vertical, vendor-seed, or drift questions. It must account for every
+bounded record path as measured, unavailable, or not yet instrumented before
+claiming broad coverage. Target identities, target-owned records, and per-domain
+rows stay off GitHub; only generic provider patterns, fictional fixtures, and
+disclosure-safe aggregates are public.
+
 The canonical dependency order, acceptance evidence, stop rules, current
 high-trust code-graph summary, invariants, and explicit non-goals are in
 [docs/roadmap.md](docs/roadmap.md). The implementation plan is
