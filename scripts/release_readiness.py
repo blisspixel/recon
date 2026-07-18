@@ -70,11 +70,14 @@ _REQUIRED_SCORECARD_TENS = (
     "Pinned-Dependencies",
     "Security-Policy",
     "Signed-Releases",
-    "SAST",
     "Token-Permissions",
     "Vulnerabilities",
 )
-_REQUIRED_SCORECARD_MINIMUMS: dict[str, int] = {}
+_REQUIRED_SCORECARD_MINIMUMS = {
+    # The current Scorecard window includes merged PRs from before PR-scoped
+    # CodeQL. Require the configured-tool floor while retaining that history.
+    "SAST": 7,
+}
 _PYPI_PACKAGE = "recon-tool"
 _PYPI_ATTESTATION_REPOSITORY = "https://github.com/blisspixel/recon"
 _PYPI_ATTESTATIONS_SPEC = "pypi-attestations==0.0.29"

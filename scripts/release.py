@@ -263,9 +263,13 @@ def _bump_lockfile(dry_run: bool) -> None:
 
 def _replace_required(path: Path, old: str, new: str) -> None:
     content = path.read_text(encoding="utf-8")
-    if old not in content:
-        raise ReleaseError(f"Expected {old!r} in {path.relative_to(ROOT)}")
-    path.write_text(content.replace(old, new), encoding="utf-8")
+    observed = content.count(old)
+    if observed != 1:
+        raise ReleaseError(
+            f"Expected exactly one occurrence of {old!r} in "
+            f"{path.relative_to(ROOT)}, found {observed}"
+        )
+    path.write_text(content.replace(old, new, 1), encoding="utf-8")
 
 
 def _bump_supply_chain_recipe(current: str, new: str) -> None:
