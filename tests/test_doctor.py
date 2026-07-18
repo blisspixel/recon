@@ -6,6 +6,7 @@ checks run without touching the real network. Pushes cli.py coverage.
 
 from __future__ import annotations
 
+import importlib
 from io import StringIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -159,7 +160,7 @@ class TestDoctorCommandFailures:
             result = runner.invoke(app, ["doctor"])
 
         assert result.exit_code == 0
-        assert "WARN  crt.sh (cert transparency) — HTTP 502" in result.output
+        assert "WARN  crt.sh (cert transparency): HTTP 502" in result.output
         assert "FAIL  crt.sh" not in result.output
         assert "Core checks passed. Optional enrichment sources are degraded." in result.output
         assert "Some checks failed" not in result.output
@@ -237,6 +238,33 @@ class TestDoctorFixSubcommand:
         # we don't assert a specific code since it depends on the mocked
         # network state.
         assert result.exit_code in (0, 1)
+
+    def test_doctor_fix_renders_markup_like_config_path_as_literal(self, tmp_path, monkeypatch) -> None:
+        config_dir = tmp_path / "[bold]config"
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(config_dir))
+
+        result = runner.invoke(app, ["doctor", "--fix"])
+
+        assert result.exit_code == 0
+        assert "[bold]config" in result.output
+        assert (config_dir / "fingerprints.yaml").exists()
+
+    def test_doctor_fix_renders_hostile_write_error_as_bounded_literal(self, tmp_path, monkeypatch) -> None:
+        hostile = "[red]forged[/red]\n  ok  forged-row\x1b]52;c;cGF5bG9hZA==\x07" + "x" * 2500
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+
+        def _fail(*_args: object, **_kwargs: object) -> object:
+            raise OSError(hostile)
+
+        doctor_module = importlib.import_module("recon_tool.cli.doctor")
+        monkeypatch.setattr(doctor_module, "_create_template_atomically", _fail)
+        result = runner.invoke(app, ["doctor", "--fix"])
+
+        assert result.exit_code == 1
+        assert "[red]forged[/red]" in result.output
+        assert "\n  ok  forged-row" not in result.output
+        assert "\x1b]52" not in result.output
+        assert "[truncated]" in result.output
 
     def test_doctor_fix_documents_every_supported_fingerprint_type(self, tmp_path, monkeypatch) -> None:
         from recon_tool.fingerprints import _VALID_DETECTION_TYPES  # pyright: ignore[reportPrivateUsage]

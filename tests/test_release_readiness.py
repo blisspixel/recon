@@ -673,4 +673,22 @@ def test_json_renderer_reports_overall_failure(tmp_path: Path) -> None:
     payload = json.loads(release_readiness._render_json(checks))
 
     assert payload["ok"] is False
+    assert payload["scope"] == "local"
+    assert payload["remote_checks_assessed"] is False
     assert payload["checks"][1]["name"] == "two"
+
+
+def test_renderers_name_local_and_remote_validation_scope() -> None:
+    checks = [release_readiness.CheckResult("one", "pass", "ok")]
+
+    local_text = release_readiness._render_text(checks)
+    local_payload = json.loads(release_readiness._render_json(checks))
+    remote_text = release_readiness._render_text(checks, remote=True)
+    remote_payload = json.loads(release_readiness._render_json(checks, remote=True))
+
+    assert local_text.endswith("Local release readiness passed. Remote publication checks were not assessed.")
+    assert local_payload["scope"] == "local"
+    assert local_payload["remote_checks_assessed"] is False
+    assert remote_text.endswith("Release readiness passed, including remote publication checks.")
+    assert remote_payload["scope"] == "local-and-remote"
+    assert remote_payload["remote_checks_assessed"] is True

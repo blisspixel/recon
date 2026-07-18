@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# One-line installer / updater for recon (macOS / Linux).
+# Installer / updater for recon (macOS / Linux).
 #
-# Install or update (same command - re-run any time to upgrade to the latest):
-#   curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
+# Review this file from a release-tag checkout, then install or update with:
+#   bash scripts/install.sh
 #
 # Uninstall:
 #   uv tool uninstall recon-tool   # or: pipx uninstall recon-tool

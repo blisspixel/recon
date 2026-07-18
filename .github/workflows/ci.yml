@@ -417,3 +417,15 @@ jobs:
             fi
           done
           exit "$fail"
+
+      - name: Smoke-test built wheel entry points
+        run: |
+          set -euo pipefail
+          wheels=("$RUNNER_TEMP"/r1/*.whl)
+          if [ "${#wheels[@]}" -ne 1 ] || [ ! -f "${wheels[0]}" ]; then
+            echo "Expected exactly one built wheel in $RUNNER_TEMP/r1" >&2
+            exit 1
+          fi
+          wheel="${wheels[0]}"
+          uv tool run --isolated --from "$wheel" recon --version
+          uv run --no-project --isolated --with "$wheel" python -m recon_tool --version

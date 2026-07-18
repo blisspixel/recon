@@ -54,6 +54,7 @@ class TestHelp:
         result = runner.invoke(app, ["--help"])
         assert result.exit_code == 0
         collapsed = " ".join(_strip_ansi(result.output).replace("│", " ").split())
+        assert "Usage: recon [OPTIONS] [DOMAIN | COMMAND [ARGS]...]" in collapsed
         assert "recon" in collapsed.lower()
         assert "Start with recon DOMAIN" in collapsed
         assert "run recon with no arguments for examples" in collapsed
@@ -146,6 +147,8 @@ class TestHelp:
         assert "screen readers and grep" in collapsed
         assert "--json" in collapsed
         assert "structured automation" in collapsed
+        assert "--explain → evidence and explanation" in collapsed
+        assert "full reasoning" not in collapsed
         assert "mcp install --help" in collapsed
         assert "connect an MCP client" in collapsed
         assert "recon mcp → start" not in collapsed

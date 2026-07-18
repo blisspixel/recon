@@ -70,8 +70,10 @@ is logged only at debug level. Root help warns operators to review diagnostics
 before sharing. The top-level crash handler keeps its existing redaction notice,
 and normal downstream pipe closure does not create a crash artifact. Structured
 MCP validation-failure logs retain only a request ID and stable reason, never
-the rejected domain or validation exception. Default and MCP doctor rows strip
-control bytes, escape Rich markup, and bound dynamic fields before rendering.
+the rejected domain or validation exception. Dynamic fields rendered by the
+default doctor, `doctor --mcp`, `doctor --client`, `doctor --fix`,
+`recon mcp install`, and live `recon mcp doctor` paths strip control bytes,
+escape Rich markup, and bound displayed detail before rendering.
 
 ### Malicious DNS responses
 

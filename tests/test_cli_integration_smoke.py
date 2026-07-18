@@ -21,6 +21,7 @@ output". Anything that requires DNS or HTTP is exercised elsewhere
 
 from __future__ import annotations
 
+import os
 import subprocess
 import sys
 
@@ -138,6 +139,30 @@ class TestSubprocessEntryPoint:
         assert result.stdout.startswith("0"), (
             f"Typer help invocation must return exit code 0 in the subprocess; got: {result.stdout!r}"
         )
+
+    def test_narrow_help_preserves_complete_option_tokens(self) -> None:
+        env = {
+            **os.environ,
+            "COLUMNS": "60",
+            "NO_COLOR": "1",
+            "PYTHONUTF8": "1",
+            "TERM": "dumb",
+        }
+        result = subprocess.run(
+            [sys.executable, "-m", "recon_tool", "lookup", "--help"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+            check=False,
+            env=env,
+        )
+
+        assert result.returncode == 0, result.stderr
+        for token in ("--include-unclassified", "--confidence-mode", "--explain-dag-format", "--direct-probes"):
+            assert token in result.stdout
+        assert "…" not in result.stdout
+        assert max(len(line) for line in result.stdout.splitlines()) <= 60
 
 
 class TestCliExportsAreImportable:
