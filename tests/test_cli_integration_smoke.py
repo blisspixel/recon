@@ -227,7 +227,7 @@ class TestSubprocessEntryPoint:
                     "show Show one public signal.",
                 ),
             ),
-            ("mcp", ("install Install client config.", "doctor Check the MCP handshake.")),
+            ("mcp", ("install Install client config.", "doctor Check MCP tools and resources.")),
             ("cache", ("show Show cache metadata.", "clear Clear both cache layers.")),
         ],
     )

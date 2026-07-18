@@ -307,12 +307,16 @@ in [operational-contract.md](operational-contract.md).
 
 ```bash
 recon mcp install --client=claude-desktop
-recon mcp install --client=cursor --dry-run
+recon doctor --mcp
 recon mcp doctor
+recon doctor --client=claude-desktop
 ```
 
-Use [mcp.md](mcp.md) for client-specific config, tool lists, approval guidance,
-and troubleshooting.
+Run the checks in that order. They validate the static server registry, the
+live local stdio tools and JSON resources, and the saved configuration for the
+same client. The live doctor does not inspect client configuration. Use
+[mcp.md](mcp.md) for client-specific config, tool lists, approval guidance, and
+troubleshooting.
 
 ## Shell Completion
 
