@@ -35,6 +35,41 @@ def test_text_range_is_forwarded_only_to_text_hygiene(monkeypatch: pytest.Monkey
     ]
 
 
+@pytest.mark.parametrize("return_code", [0, 1])
+def test_captured_gate_output_is_plain(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    return_code: int,
+) -> None:
+    monkeypatch.setattr(check, "_STAGES", [(check._CORE, "sample", ["python", "sample.py"])])
+
+    def fake_run(_cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(["python", "sample.py"], return_code, "", "")
+
+    monkeypatch.setattr(check.subprocess, "run", fake_run)
+
+    assert check.main(["--fast"]) == return_code
+    output = capsys.readouterr().out
+    assert "\x1b[" not in output
+    assert ("All gate stages passed" if return_code == 0 else "1 stage(s) failed") in output
+
+
+def test_color_capable_gate_output_retains_status_style(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(check, "_STAGES", [(check._CORE, "sample", ["python", "sample.py"])])
+    monkeypatch.setattr(check, "_supports_color", lambda: True)
+
+    def fake_run(_cmd: list[str], **_kwargs: object) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(["python", "sample.py"], 0, "", "")
+
+    monkeypatch.setattr(check.subprocess, "run", fake_run)
+
+    assert check.main(["--fast"]) == 0
+    assert "\x1b[" in capsys.readouterr().out
+
+
 def test_pyright_scope_comes_only_from_pyproject() -> None:
     local_stage = next(command for _group, name, command in check._STAGES if name == "pyright")
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
@@ -42,6 +77,14 @@ def test_pyright_scope_comes_only_from_pyproject() -> None:
     assert local_stage == [check._PY, "-m", "pyright"]
     assert "run: uv run pyright\n" in workflow
     assert "pyright src/recon_tool/ tests/" not in workflow
+
+
+def test_ruff_scope_and_cache_policy_match_ci() -> None:
+    local_stage = next(command for _group, name, command in check._STAGES if name == "ruff")
+    workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert local_stage == [check._PY, "-m", "ruff", "check", "--no-cache", "."]
+    assert "run: uv run ruff check --no-cache .\n" in workflow
 
 
 def test_ci_runs_the_interface_layout_guard() -> None:

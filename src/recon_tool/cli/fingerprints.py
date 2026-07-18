@@ -14,12 +14,15 @@ from typing import Any
 import typer
 from rich.markup import escape
 
+from recon_tool.catalog_discovery import category_matches
+from recon_tool.cli.catalog_rendering import print_field, print_indented
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.exit_codes import EXIT_VALIDATION
 from recon_tool.formatter import get_console, get_err_console
 from recon_tool.validator import strip_control_chars
 
 fingerprints_app = typer.Typer(help="Inspect the built-in fingerprint catalog.")
+HUMAN_SEARCH_PREVIEW_LIMIT = 10
 
 _PUBLIC_DETECTION_CONTRACTS: dict[str, str] = {
     "txt": "a public TXT domain-control or account-registration indicator",
@@ -41,6 +44,182 @@ def _public_detection_description(detection_type: str) -> str:
     return f"If matched, this rule records {meaning}; active product use is not established beyond that role."
 
 
+def _fingerprint_summary(fp: Any) -> dict[str, Any]:
+    """Return the stable list and search projection for one catalog record."""
+    return {
+        "slug": fp.slug,
+        "name": fp.name,
+        "category": fp.category,
+        "confidence": fp.confidence,
+        "detection_types": sorted({d.type for d in fp.detections}),
+        "detection_count": len(fp.detections),
+    }
+
+
+def _legacy_detection_payload(detection: Any) -> dict[str, Any]:
+    """Return the backward-compatible top-level detection projection."""
+    return {
+        "type": detection.type,
+        "pattern": detection.pattern,
+        "description": _public_detection_description(detection.type),
+        "reference": detection.reference,
+        "weight": detection.weight,
+    }
+
+
+def _legacy_fingerprint_payload(fp: Any) -> dict[str, Any]:
+    """Return the original top-level show projection without new fields."""
+    return {
+        "slug": fp.slug,
+        "name": fp.name,
+        "category": fp.category,
+        "confidence": fp.confidence,
+        "m365": fp.m365,
+        "provider_group": fp.provider_group,
+        "display_group": fp.display_group,
+        "match_mode": fp.match_mode,
+        "detections": [_legacy_detection_payload(detection) for detection in fp.detections],
+    }
+
+
+def _fingerprint_record_payload(fp: Any) -> dict[str, Any]:
+    """Return one complete catalog record without collapsing semantic fields."""
+    return {
+        "slug": fp.slug,
+        "name": fp.name,
+        "category": fp.category,
+        "confidence": fp.confidence,
+        "m365": fp.m365,
+        "provider_group": fp.provider_group,
+        "display_group": fp.display_group,
+        "match_mode": fp.match_mode,
+        "product_family": fp.product_family,
+        "parent_vendor": fp.parent_vendor,
+        "bimi_org": fp.bimi_org,
+        "detections": [
+            {
+                "type": detection.type,
+                "pattern": detection.pattern,
+                "description": detection.description,
+                "public_meaning": _public_detection_description(detection.type),
+                "reference": detection.reference,
+                "weight": detection.weight,
+                "tier": detection.tier,
+                "verified": detection.verified,
+            }
+            for detection in fp.detections
+        ],
+    }
+
+
+def _render_catalog_rows(console: Any, records: list[Any] | tuple[Any, ...]) -> None:
+    """Render catalog records with labels that remain associated when wrapped."""
+    current_category: str | None = None
+    for fp in records:
+        if fp.category != current_category:
+            if current_category is not None:
+                console.print()
+            current_category = fp.category
+            print_indented(console, fp.category, indent=2, style="bold")
+        types = ", ".join(sorted({d.type for d in fp.detections}))
+        print_field(console, "Slug", fp.slug, indent=4)
+        print_field(console, "Name", fp.name, indent=6)
+        print_field(console, "Detection types", types, indent=6)
+        print_field(console, "Confidence", fp.confidence, indent=6)
+
+
+def _render_fingerprint_metadata(console: Any, fp: Any, *, indent: int) -> None:
+    """Render metadata for one catalog record."""
+    print_field(console, "Category", fp.category, indent=indent)
+    print_field(console, "Confidence", fp.confidence, indent=indent)
+    if fp.m365:
+        print_field(console, "M365 tenant", "yes", indent=indent)
+    if fp.provider_group:
+        print_field(console, "Provider group", fp.provider_group, indent=indent)
+    if fp.display_group:
+        print_field(console, "Display group", fp.display_group, indent=indent)
+    if fp.product_family:
+        print_field(console, "Product family", fp.product_family, indent=indent)
+    if fp.parent_vendor:
+        print_field(console, "Parent vendor", fp.parent_vendor, indent=indent)
+    if fp.bimi_org:
+        print_field(console, "BIMI certificate org", fp.bimi_org, indent=indent)
+    if fp.match_mode != "any":
+        print_field(console, "Match mode", f"{fp.match_mode} (all rules must match)", indent=indent)
+
+
+def _render_detection_rules(console: Any, fp: Any, *, indent: int) -> None:
+    """Render every public rule for one catalog record."""
+    print_indented(console, f"Detection rules ({len(fp.detections)})", indent=indent, style="bold")
+    for index, detection in enumerate(fp.detections, 1):
+        print_indented(console, f"{index}. [{detection.type}] {detection.pattern}", indent=indent + 2)
+        if detection.description:
+            print_field(console, "Catalog description", detection.description, indent=indent + 5)
+        print_indented(console, _public_detection_description(detection.type), indent=indent + 5)
+        if detection.type == "cname_target":
+            print_field(console, "Tier", detection.tier, indent=indent + 5)
+        if detection.weight != 1.0:
+            print_field(console, "Weight", str(detection.weight), indent=indent + 5)
+        if detection.verified:
+            print_field(console, "Verified", detection.verified, indent=indent + 5)
+        if detection.reference:
+            print_field(console, "Reference", detection.reference, indent=indent + 5)
+
+
+def _fingerprint_search_rank(fp: Any, needle: str) -> int | None:
+    """Return the search rank for one record, or None when it does not match."""
+    if fp.slug.lower().startswith(needle):
+        return 0
+    if needle in fp.slug.lower():
+        return 1
+    if needle in fp.name.lower():
+        return 2
+    if needle in fp.category.lower():
+        return 3
+    if any(needle in d.pattern.lower() or needle in d.description.lower() for d in fp.detections):
+        return 4
+    return None
+
+
+def _render_fingerprint_search(console: Any, matches: list[Any], query: str) -> None:
+    """Render a bounded human preview while preserving full JSON discovery."""
+    grouped: dict[str, list[Any]] = {}
+    for fp in matches:
+        grouped.setdefault(fp.slug, []).append(fp)
+    preview = list(grouped.items())[:HUMAN_SEARCH_PREVIEW_LIMIT]
+
+    console.print()
+    print_indented(
+        console,
+        f"{len(matches)} catalog records across {len(grouped)} unique slugs for {query!r}",
+        indent=2,
+        style="bold",
+    )
+    console.print()
+    for index, (slug, records) in enumerate(preview):
+        first = records[0]
+        categories = ", ".join(dict.fromkeys(record.category for record in records))
+        types = ", ".join(sorted({d.type for record in records for d in record.detections}))
+        print_field(console, "Slug", slug, indent=4)
+        print_field(console, "Name", first.name, indent=6)
+        print_field(console, "Categories", categories, indent=6)
+        print_field(console, "Detection types", types, indent=6)
+        if len(records) > 1:
+            print_field(console, "Catalog records", str(len(records)), indent=6)
+        if index < len(preview) - 1:
+            console.print()
+    if len(grouped) > HUMAN_SEARCH_PREVIEW_LIMIT:
+        console.print()
+        print_indented(
+            console,
+            f"Showing {HUMAN_SEARCH_PREVIEW_LIMIT} of {len(grouped)} unique slugs.",
+            indent=2,
+        )
+        print_indented(console, f"Use --json for all {len(matches)} catalog records.", indent=2)
+    print_indented(console, "Next: recon fingerprints show <slug>", indent=2)
+    console.print()
+
+
 def _find_example_corpus_path() -> Path | None:
     for root in (Path.cwd(), *Path(__file__).resolve().parents):
         candidate = root / "tests" / "fixtures" / "corpus-example.txt"
@@ -49,10 +228,10 @@ def _find_example_corpus_path() -> Path | None:
     return None
 
 
-@fingerprints_app.command("list")
+@fingerprints_app.command("list", short_help="Summarize fingerprints.")
 def fingerprints_list(
     category: str | None = typer.Option(
-        None, "--category", "-c", help="Filter by category (substring, case-insensitive)"
+        None, "--category", "-c", help="Filter by category word prefix or phrase"
     ),
     detection_type: str | None = typer.Option(
         None,
@@ -65,49 +244,22 @@ def fingerprints_list(
 ) -> None:
     """List built-in fingerprints.
 
-    With no filters, shows a per-category summary — the full catalog is
-    too much to dump at a prompt. Use ``--category`` to scope to one
-    file (e.g. ``-c ai``, ``-c security``) or ``--all`` to force the
-    full table. For free-text lookups (slug / name / pattern), prefer
-    ``recon fingerprints search <query>``.
+    With no filters, shows a per-category summary because the full catalog is
+    too large for a useful prompt. Use --category to scope the result, --all
+    for every record, or the search command for free-text discovery.
     """
     from recon_tool.fingerprints import load_fingerprints
 
     fps = load_fingerprints()
     had_filter = category is not None or detection_type is not None
     if category:
-        needle = category.lower()
-
-        # Word-prefix matching instead of raw substring — ``-c ai`` should
-        # match "AI & Generative" but not "Email" (which contains the
-        # substring ``ai``). Split the category into alpha-word tokens
-        # and match against the start of each token. Falls back to a
-        # full substring match for multi-word queries (``-c "data &"``).
-        def _match(cat: str) -> bool:
-            cat_lower = cat.lower()
-            if " " in needle:
-                return needle in cat_lower
-            import re
-
-            return any(word.startswith(needle) for word in re.findall(r"[a-z0-9]+", cat_lower))
-
-        fps = tuple(fp for fp in fps if _match(fp.category))
+        fps = tuple(fp for fp in fps if category_matches(fp.category, category))
     if detection_type:
         dtype = detection_type.lower()
         fps = tuple(fp for fp in fps if any(d.type.lower() == dtype for d in fp.detections))
 
     if json_output:
-        payload = [
-            {
-                "slug": fp.slug,
-                "name": fp.name,
-                "category": fp.category,
-                "confidence": fp.confidence,
-                "detection_types": sorted({d.type for d in fp.detections}),
-                "detection_count": len(fp.detections),
-            }
-            for fp in fps
-        ]
+        payload = [_fingerprint_summary(fp) for fp in fps]
         typer.echo(json.dumps(payload, indent=2))
         return
 
@@ -124,48 +276,32 @@ def fingerprints_list(
 
         by_cat = Counter(fp.category for fp in fps)
         console.print()
-        console.print(f"  [bold]{len(fps)} fingerprints across {len(by_cat)} categories[/bold]")
+        console.print(f"  [bold]{len(fps)} catalog records across {len(by_cat)} categories[/bold]")
         console.print()
         width = max(len(cat) for cat in by_cat)
         for cat, n in sorted(by_cat.items(), key=lambda x: (-x[1], x[0])):
             console.print(f"    {cat:<{width}s}  {n:>4d}")
         console.print()
-        console.print(
-            "  [dim]Next:[/dim]  recon fingerprints list --category <name>     "
-            "recon fingerprints search <query>     recon fingerprints show <slug>"
-        )
+        console.print("  [dim]Next:[/dim]")
+        console.print("    recon fingerprints list --category <name>")
+        console.print("    recon fingerprints search <query>")
+        console.print("    recon fingerprints show <slug>")
         console.print()
         return
 
     console.print()
-    console.print(f"  [bold]{len(fps)} fingerprint{'s' if len(fps) != 1 else ''}[/bold]")
+    console.print(f"  [bold]{len(fps)} catalog record{'s' if len(fps) != 1 else ''}[/bold]")
     console.print()
-    slug_w = max(len(fp.slug) for fp in fps)
-    cat_w = max(len(fp.category) for fp in fps)
-    for fp in sorted(fps, key=lambda f: (f.category, f.slug)):
-        types = ",".join(sorted({d.type for d in fp.detections}))
-        console.print(f"    {fp.slug:<{slug_w}s}  {fp.category:<{cat_w}s}  {types:<18s}  {fp.name}")
+    _render_catalog_rows(console, sorted(fps, key=lambda fp: (fp.category, fp.slug)))
     console.print()
 
 
-@fingerprints_app.command("search")
+@fingerprints_app.command("search", short_help="Search fingerprints.")
 def fingerprints_search(
-    query: str = typer.Argument(..., help="Search term — matched against slug, name, category, and detection patterns"),
+    query: str = typer.Argument(..., help="Search term matched against slug, name, category, and detection patterns"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
-    """Search fingerprints by slug, name, category, or detection pattern.
-
-    Case-insensitive substring across four fields simultaneously —
-    the primary discovery command for "does this exist" / "what does
-    recon know about X". Results are ranked: slug-prefix matches
-    first, then slug/name substring matches, then pattern matches.
-
-    Examples::
-
-        recon fingerprints search okta          # slug + name hits
-        recon fingerprints search "verification" # matches all *-verification= TXT tokens
-        recon fingerprints search pardot         # what slug does Pardot live under
-    """
+    """Search fingerprints by slug, name, category, or detection pattern."""
     from recon_tool.fingerprints import load_fingerprints
 
     fps = load_fingerprints()
@@ -183,20 +319,7 @@ def fingerprints_search(
     # and doesn't pull in a dependency.
     ranked: list[tuple[int, Any]] = []
     for fp in fps:
-        rank: int | None = None
-        if fp.slug.lower().startswith(needle):
-            rank = 0
-        elif needle in fp.slug.lower():
-            rank = 1
-        elif needle in fp.name.lower():
-            rank = 2
-        elif needle in fp.category.lower():
-            rank = 3
-        else:
-            for d in fp.detections:
-                if needle in d.pattern.lower() or needle in d.description.lower():
-                    rank = 4
-                    break
+        rank = _fingerprint_search_rank(fp, needle)
         if rank is not None:
             ranked.append((rank, fp))
 
@@ -204,52 +327,29 @@ def fingerprints_search(
     matches = [fp for _, fp in ranked]
 
     if json_output:
-        payload = [
-            {
-                "slug": fp.slug,
-                "name": fp.name,
-                "category": fp.category,
-                "confidence": fp.confidence,
-                "detection_types": sorted({d.type for d in fp.detections}),
-                "detection_count": len(fp.detections),
-            }
-            for fp in matches
-        ]
+        payload = [_fingerprint_summary(fp) for fp in matches]
         typer.echo(json.dumps(payload, indent=2))
         return
 
     console = get_console()
     if not matches:
-        console.print(f"  No fingerprints match {query!r}.")
+        console.print(f"  No fingerprints match {escape(repr(query))}.")
         console.print("  [dim]Try a shorter or differently-spelled query, or browse by category:[/dim]")
         console.print("  [dim]  recon fingerprints list[/dim]")
         return
 
-    console.print()
-    console.print(f"  [bold]{len(matches)} match{'es' if len(matches) != 1 else ''} for {query!r}[/bold]")
-    console.print()
-    slug_w = max(len(fp.slug) for fp in matches)
-    cat_w = max(len(fp.category) for fp in matches)
-    for fp in matches:
-        types = ",".join(sorted({d.type for d in fp.detections}))
-        console.print(f"    {fp.slug:<{slug_w}s}  {fp.category:<{cat_w}s}  {types:<18s}  {fp.name}")
-    console.print()
-    console.print("  [dim]Next:[/dim]  recon fingerprints show <slug>")
-    console.print()
+    _render_fingerprint_search(console, matches, query)
 
 
-@fingerprints_app.command("show")
+@fingerprints_app.command("show", short_help="Show one fingerprint.")
 def fingerprints_show(
-    slug: str = typer.Argument(..., help="Slug to inspect (e.g. `cloudflare`, `exchange-onprem`)"),
+    slug: str = typer.Argument(..., help="Slug to inspect, such as cloudflare or exchange-onprem"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
     """Show the full definition of a single fingerprint.
 
-    Some slugs in recon output are *synthetic* — they're emitted by the
-    source layer rather than loaded from YAML (e.g. ``exchange-onprem``
-    from the OWA/autodiscover probe, ``self-hosted-mail`` from the MX
-    fallback). Those are documented here too so users who see a slug
-    in their output can always find its provenance.
+    Synthetic slugs emitted by a source probe are documented here too, so a
+    slug observed in output always has a discoverable provenance note.
     """
     # Synthetic slugs aren't in fingerprints.yaml — they're emitted
     # by source-layer probes. Document provenance so users aren't left
@@ -280,7 +380,8 @@ def fingerprints_show(
     from recon_tool.fingerprints import load_fingerprints
 
     fps = load_fingerprints()
-    match = next((fp for fp in fps if fp.slug == slug), None)
+    matches = tuple(fp for fp in fps if fp.slug == slug)
+    match = matches[0] if matches else None
     if match is None and slug in _SYNTHETIC_SLUGS:
         name, note = _SYNTHETIC_SLUGS[slug]
         if json_output:
@@ -289,7 +390,7 @@ def fingerprints_show(
         console = get_console()
         console.print()
         console.print(f"  [bold]{name}[/bold]  ({slug})")
-        console.print("    [dim]synthetic slug — emitted by source probe, not in fingerprints.yaml[/dim]")
+        console.print("    [dim]synthetic slug emitted by a source probe, not loaded from fingerprints.yaml[/dim]")
         console.print()
         console.print(f"  {note}")
         console.print()
@@ -297,58 +398,41 @@ def fingerprints_show(
     if match is None:
         from recon_tool.formatter import render_error
 
-        candidates = [fp.slug for fp in fps if slug.lower() in fp.slug.lower()][:5]
+        candidates = list(dict.fromkeys(fp.slug for fp in fps if slug.lower() in fp.slug.lower()))[:5]
         render_error(f"No fingerprint with slug {slug!r}.")
         if candidates:
             get_console().print(f"  Did you mean: {', '.join(candidates)}?")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     if json_output:
-        payload = {
-            "slug": match.slug,
-            "name": match.name,
-            "category": match.category,
-            "confidence": match.confidence,
-            "m365": match.m365,
-            "provider_group": match.provider_group,
-            "display_group": match.display_group,
-            "match_mode": match.match_mode,
-            "detections": [
-                {
-                    "type": d.type,
-                    "pattern": d.pattern,
-                    "description": _public_detection_description(d.type),
-                    "reference": d.reference,
-                    "weight": d.weight,
-                }
-                for d in match.detections
-            ],
-        }
+        payload = _legacy_fingerprint_payload(match)
+        payload["record_count"] = len(matches)
+        payload["records"] = [_fingerprint_record_payload(record) for record in matches]
         typer.echo(json.dumps(payload, indent=2))
         return
 
     console = get_console()
     console.print()
-    console.print(f"  [bold]{match.name}[/bold]  ({match.slug})")
-    console.print(f"    Category:    {match.category}")
-    console.print(f"    Confidence:  {match.confidence}")
-    if match.m365:
-        console.print("    M365 tenant: yes")
-    if match.provider_group:
-        console.print(f"    Provider group: {match.provider_group}")
-    if match.match_mode != "any":
-        console.print(f"    Match mode:  {match.match_mode} (all rules must match)")
+    print_indented(console, f"{match.name} ({match.slug})", indent=2, style="bold")
+    if len(matches) == 1:
+        _render_fingerprint_metadata(console, match, indent=4)
+        console.print()
+        _render_detection_rules(console, match, indent=2)
+        console.print()
+        return
+
     console.print()
-    console.print(f"  [bold]Detection rules ({len(match.detections)})[/bold]")
-    for i, d in enumerate(match.detections, 1):
-        console.print(f"    {i}. [{d.type}] {d.pattern}")
-        console.print(f"         {_public_detection_description(d.type)}")
-        if d.reference:
-            console.print(f"         ref: [link={d.reference}]{escape(d.reference)}[/link]")
+    console.print(f"  [bold]Catalog records ({len(matches)})[/bold]")
+    for index, record in enumerate(matches, 1):
+        console.print()
+        console.print(f"    [bold]Record {index}[/bold]")
+        _render_fingerprint_metadata(console, record, indent=6)
+        console.print()
+        _render_detection_rules(console, record, indent=6)
     console.print()
 
 
-@fingerprints_app.command("new")
+@fingerprints_app.command("new", short_help="Scaffold a fingerprint.")
 def fingerprints_new(
     slug: str = typer.Argument(..., help="Unique slug for the new fingerprint (lowercase, hyphen-separated)"),
     name: str = typer.Option(..., "--name", "-n", help="Human-readable service name (e.g. 'Acme Security')"),
@@ -356,7 +440,7 @@ def fingerprints_new(
         "Misc",
         "--category",
         "-c",
-        help="Category — must match an existing one (use `fingerprints list` to see options)",
+        help="Existing category name; use fingerprints list to see options",
     ),
     detection_type: str = typer.Option(
         "txt",
@@ -372,18 +456,7 @@ def fingerprints_new(
         None, "--output", "-o", help="Write YAML to this file (default: print to stdout)"
     ),
 ) -> None:
-    """Scaffold a new fingerprint entry, run checks, print YAML.
-
-    Contributor onramp. Runs three guards before emitting:
-    1. Slug uniqueness against the built-in catalog.
-    2. Schema validation (same one the loader uses at runtime).
-    3. Specificity gate — rejects regexes matching >1% of the
-       synthetic adversarial corpus.
-
-    If all three pass, prints the entry as YAML you can paste into the
-    appropriate ``data/fingerprints/<category>.yaml``. Use ``--output``
-    to write it to a file for review.
-    """
+    """Scaffold a fingerprint and enforce slug, schema, and specificity checks."""
     from recon_tool.fingerprints import _validate_fingerprint, load_fingerprints  # pyright: ignore[reportPrivateUsage]
     from recon_tool.formatter import render_error
     from recon_tool.specificity import evaluate_pattern
@@ -463,7 +536,7 @@ def fingerprints_new(
         console.print()
 
 
-@fingerprints_app.command("test")
+@fingerprints_app.command("test", short_help="Test against a corpus.")
 def fingerprints_test(
     slug: str = typer.Argument(..., help="Slug to test against the public validation corpus"),
     corpus: str | None = typer.Option(
@@ -473,23 +546,16 @@ def fingerprints_test(
             "Path to a newline-delimited file of apex domains. If omitted, "
             "recon looks for ~/.recon/corpus.txt; otherwise falls back to the "
             "fictional-company example at tests/fixtures/corpus-example.txt "
-            "(format demo only — no real matches)."
+            "(format demo only; no real matches)."
         ),
     ),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
-    """Run one fingerprint against a domain corpus and report which match.
+    """Resolve a local corpus through live lookups and report fingerprint matches.
 
-    Contributor utility: after editing a fingerprint (or before PRing a
-    new one), run ``recon fingerprints test <slug>`` to see which
-    domains in the corpus it matches. Helps answer "is my regex too
-    loose (matches noise) or too tight (misses known customers)"
-    without hand-resolving DNS.
-
-    The project ships a fictional example corpus only. To get real
-    matches, either point at your own list with ``--corpus path/to/file``
-    or drop a newline-delimited apex list at ``~/.recon/corpus.txt``.
-    See CONTRIBUTING.md for why real-company corpora stay local.
+    Each corpus row uses ordinary collection. DNS infrastructure may observe
+    queries, public CT and identity sources can receive requests, and MTA-STS
+    remains the one default target-owned HTTP request.
     """
     import asyncio
     from pathlib import Path as _Path
@@ -585,7 +651,7 @@ def fingerprints_test(
     console.print()
 
 
-@fingerprints_app.command("check")
+@fingerprints_app.command("check", short_help="Validate fingerprint files.")
 def fingerprints_check(
     path: str | None = typer.Argument(
         None,
