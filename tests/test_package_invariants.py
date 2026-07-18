@@ -17,6 +17,7 @@ from email.parser import Parser
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
+_BUILD_CONSTRAINTS = _REPO_ROOT / "build-constraints.txt"
 
 _EXPECTED_DATA_FILES = {
     "recon_tool/data/bayesian_network.yaml",
@@ -105,18 +106,32 @@ _FORBIDDEN_RUNTIME_DEPENDENCIES = {
 }
 
 
-def _build_wheel(tmp_path: Path) -> Path:
-    out_dir = tmp_path / "dist"
+def _run_build(out_dir: Path, *build_args: str) -> None:
     uv_exe = shutil.which("uv")
-    assert uv_exe is not None, "uv is required to build the wheel"
+    assert uv_exe is not None, "uv is required to build package artifacts"
     result = subprocess.run(  # noqa: S603 - fixed dev-tool argv, no shell.
-        [uv_exe, "build", "--out-dir", str(out_dir)],
+        [
+            uv_exe,
+            "build",
+            *build_args,
+            "--out-dir",
+            str(out_dir),
+            "--build-constraints",
+            str(_BUILD_CONSTRAINTS),
+            "--require-hashes",
+        ],
         cwd=_REPO_ROOT,
         text=True,
         capture_output=True,
         check=False,
     )
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def _build_wheel(tmp_path: Path) -> Path:
+    out_dir = tmp_path / "dist"
+    sdist = _build_sdist(tmp_path)
+    _run_build(out_dir, "--wheel", str(sdist))
     wheels = sorted(out_dir.glob("*.whl"))
     assert len(wheels) == 1
     return wheels[0]
@@ -124,16 +139,7 @@ def _build_wheel(tmp_path: Path) -> Path:
 
 def _build_sdist(tmp_path: Path) -> Path:
     out_dir = tmp_path / "dist"
-    uv_exe = shutil.which("uv")
-    assert uv_exe is not None, "uv is required to build the sdist"
-    result = subprocess.run(  # noqa: S603 - fixed dev-tool argv, no shell.
-        [uv_exe, "build", "--sdist", "--out-dir", str(out_dir)],
-        cwd=_REPO_ROOT,
-        text=True,
-        capture_output=True,
-        check=False,
-    )
-    assert result.returncode == 0, result.stdout + result.stderr
+    _run_build(out_dir, "--sdist")
     sdists = sorted(out_dir.glob("*.tar.gz"))
     assert len(sdists) == 1
     return sdists[0]
@@ -183,6 +189,7 @@ def test_sdist_retains_canonical_fingerprint_sources_and_generated_artifact(tmp_
     }
     assert fingerprint_sources == _CANONICAL_FINGERPRINT_SOURCES
     assert any(name.endswith("/src/recon_tool/data/fingerprints.generated.json") for name in names)
+    assert any(name.endswith("/build-constraints.txt") for name in names)
 
 
 def test_wheel_runtime_dependencies_stay_lean(tmp_path: Path) -> None:
