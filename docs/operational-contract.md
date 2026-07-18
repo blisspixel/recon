@@ -129,8 +129,16 @@ The `recon doctor` health check follows the same convention: it exits 0 when
 every check passes or only optional enrichment (for example crt.sh) is degraded,
 and exits 1 when a core check fails, so a CI or monitoring job can gate on
 environment health instead of always reading success. `recon doctor --mcp`
-follows the same rule for MCP setup: it exits 1 when the server cannot be
-validated (package missing, server import failure, or no tools registered).
+follows the same rule for MCP setup: it exits 1 when the package or server
+cannot load, instructions are absent, or any canonical tool or local resource
+registration is missing. `recon mcp doctor` separately spawns the local stdio
+server, checks discovery and canonical tool registrations, and reads all five
+canonical JSON resources. It exits non-zero on an invalid resource envelope,
+URI, media type, JSON object, catalog count/list/identifier relationship,
+schema or surface-inventory envelope, cache metadata, missing registration,
+timeout, or protocol failure. Completed protocol phases remain visible when a
+later phase fails. This live server check does not inspect a client's saved
+configuration; `recon doctor --client=<name>` covers that boundary.
 Default mode contacts Microsoft identity endpoints, DNS for `example.com`, and
 crt.sh using synthetic inputs; it does not accept or query a target namespace.
 The `--fix`, `--mcp`, and `--client` modes are local-only. Every dynamic doctor

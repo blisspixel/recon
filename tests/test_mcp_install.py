@@ -7,14 +7,17 @@ JSON merge, refusal cases) and the typer command surface in
 
 from __future__ import annotations
 
+import io
 import json
 import os
 from pathlib import Path
 
 import pytest
+from rich.console import Console
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
+from recon_tool.cli.mcp import _render_install_verification
 from recon_tool.mcp_install import (
     SUPPORTED_CLIENTS,
     InstallError,
@@ -503,6 +506,22 @@ class TestCLI:
         assert result.exit_code == 0
         assert "client" in result.output.lower()
 
+    def test_install_verification_keeps_commands_copyable_at_narrow_width(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        output = io.StringIO()
+        console = Console(file=output, width=40, color_system=None)
+        monkeypatch.setattr("recon_tool.cli.mcp.get_console", lambda: console)
+
+        _render_install_verification("claude-desktop")
+
+        lines = output.getvalue().splitlines()
+        assert any(line.strip() == "recon doctor --mcp" for line in lines)
+        assert any(line.strip() == "recon mcp doctor" for line in lines)
+        assert any(line.strip() == "recon doctor --client=claude-desktop" for line in lines)
+        assert not any(line.startswith("--client=") for line in lines)
+
     def test_install_dry_run_emits_plan_without_writing(self, tmp_path: Path) -> None:
         target = tmp_path / "mcp.json"
         result = runner.invoke(
@@ -606,6 +625,9 @@ class TestCLI:
         assert target.exists()
         data = json.loads(target.read_text(encoding="utf-8"))
         assert "recon" in data["mcpServers"]
+        assert "recon doctor --mcp" in result.output
+        assert "recon mcp doctor" in result.output
+        assert "recon doctor --client=cursor" in result.output
 
     def test_install_unknown_client_validation_error(self) -> None:
         result = runner.invoke(app, ["mcp", "install", "--client", "atom"])

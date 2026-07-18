@@ -483,13 +483,49 @@ The shorter `python -m recon_tool.server` form is acceptable only from a trusted
 
 ### Verify your setup
 
-Three complementary checks. The first two validate the server; the third validates that the client was told about it.
+Three complementary checks. Run them in this order. The first two validate the
+installed server; the third validates that the named client was told about it.
 
-- **`recon doctor --mcp`**: *static* diagnostic. Confirms the MCP dependencies are installed, reports the exact SDK version and generation, loads the server module, enumerates tools through the public server API, and verifies `recon` is on your PATH. It also prints a copy-pasteable reference config. Prefer `recon mcp install --client=<name>` for an actual client because the installer safely merges the recon block without replacing sibling servers or client-specific fields.
-- **`recon mcp doctor`**: *live* end-to-end check. Spawns the recon MCP server through the running interpreter, opens a real `stdio_client` + `ClientSession`, runs the discovery flow supported by the installed Python MCP SDK, and asserts the anchor tools (`lookup_tenant`, `analyze_posture`, `assess_exposure`, `find_hardening_gaps`, `chain_lookup`) are registered. Stable v1 uses `initialize` plus `tools/list`; candidate v2 uses `server/discover` plus `tools/list` and validates complete-result cache metadata. If the spawned server crashes during discovery, the trailing twelve lines of its stderr are spliced into the failure detail so you see the actual import failure or traceback instead of an opaque `BrokenPipeError`. 30-second handshake timeout.
-- **`recon doctor --client=<name>`**: reads the config file the named client actually loads (`claude-code`, `claude-desktop`, `cursor`, `vscode`, `windsurf`, `kiro`) and reports whether its recon server entry is present and well-formed. This is the config-side complement to the two server checks: they confirm the server is healthy, this confirms the client was told where to find it. For Claude Code it also looks under the project-nested `projects[...].mcpServers.recon` shape that `claude mcp add` writes, and notes that a plugin install keeps its config inside the plugin rather than in `~/.claude.json`. A missing `args` field, an empty list, or a list containing any non-string value is a failing diagnostic because the client cannot reliably launch the expected MCP command. The check exits non-zero when no usable stanza is found, so it is suitable for setup automation.
+1. **`recon doctor --mcp`**: static diagnostic. Confirms the MCP dependencies
+   are installed, reports the exact SDK version and generation, loads the
+   server module, requires server instructions, and enumerates the canonical
+   tool and resource registrations through the public server API. It exits
+   non-zero if any required registration is absent. It also reports PATH state
+   and prints a reference config. Prefer
+   `recon mcp install --client=<name>` for an actual client because the
+   installer safely merges the recon block without replacing sibling servers
+   or client-specific fields.
+2. **`recon mcp doctor`**: live local stdio diagnostic. Spawns the recon MCP
+   server through the running interpreter, opens a real `stdio_client` plus
+   `ClientSession`, and runs the discovery flow supported by the installed
+   Python MCP SDK. It requires the anchor tools (`lookup_tenant`,
+   `analyze_posture`, `assess_exposure`, `find_hardening_gaps`,
+   `chain_lookup`), lists all five canonical local resources, and reads each
+   one. Every read must return one matching `application/json` text item whose
+   payload is a JSON object. Catalog counts, lists, and identifiers must agree;
+   fingerprint detection summaries must be populated; and the schema and
+   surface inventory must retain their identifying contract structure. These
+   resource reads are local and make no target network request. Stable v1 uses
+   `initialize`; candidate v2 uses
+   `server/discover` and validates complete-result cache metadata for discovery,
+   listing, and reads. A failure retains completed check rows and names the
+   failed protocol phase. Spawned-server stderr is limited to its trailing
+   twelve lines, and resource payload text is never copied into failure detail.
+   The whole run has a 30-second timeout. This command does not inspect any
+   client configuration.
+3. **`recon doctor --client=<name>`**: reads the config file the named client
+   actually loads (`claude-code`, `claude-desktop`, `cursor`, `vscode`,
+   `windsurf`, `kiro`) and reports whether its recon server entry is present
+   and well-formed. For Claude Code it also looks under the project-nested
+   `projects[...].mcpServers.recon` shape that `claude mcp add` writes, and
+   notes that a plugin install keeps its config inside the plugin rather than
+   in `~/.claude.json`. A missing `args` field, an empty list, or a list
+   containing any non-string value is a failing diagnostic. The check exits
+   non-zero when no usable stanza is found, so it is suitable for setup
+   automation.
 
-The static check (`recon doctor --mcp`) is the right starting point. If it passes but a client still can't talk to the server, run `recon mcp doctor` to confirm the JSON-RPC loop itself is healthy, and `recon doctor --client=<name>` to confirm the client config carries the stanza.
+If all three pass but tools still do not appear, continue with the client-side
+checks below.
 
 ### When doctor passes but the tools don't load
 
