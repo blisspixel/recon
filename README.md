@@ -188,6 +188,9 @@ Retained batch modes create at most the requested number of outer batch worker
 tasks while restoring input order. Each admitted lookup may still create its
 own bounded source tasks. `--ndjson` also releases completed records and remains
 the lowest-memory choice for large inputs.
+Batch processing is record-oriented: a valid run keeps exit code 0 when one or
+more domains fail. JSON and NDJSON consumers must inspect `record_type` and
+`error_kind` on every record; CSV consumers must inspect the `error` column.
 `recon batch --summary --json` preserves the separate aggregate-only
 `cohort_summary` 2.1 contract. New consumers can select
 `--summary-schema 2.2` for raw-evidence-bound DMARC rates, corrected missingness,

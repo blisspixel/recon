@@ -516,3 +516,34 @@ class TestHelpOutput:
     def test_batch_help(self) -> None:
         result = runner.invoke(app, ["batch", "--help"])
         assert result.exit_code == 0
+        for option in (
+            "--json",
+            "--md",
+            "--csv",
+            "--ndjson",
+            "--include-unclassified",
+            "--concurrency",
+            "--timeout",
+            "--no-ct",
+            "--include-ecosystem",
+            "--summary",
+            "--summary-schema",
+            "--fusion",
+            "--no-fusion",
+        ):
+            assert option in result.output
+        assert "Output" in result.output
+        assert "Collection, cache, and scope" in result.output
+        assert "Analysis modes" in result.output
+        assert "Evidence model" in result.output
+        assert "clamped to 1-20" in result.output
+        assert "Per-domain failures are output records" in result.output
+        assert "record_type" in result.output
+
+    def test_root_help_warns_before_sharing_debug_diagnostics(self) -> None:
+        result = runner.invoke(app, ["--help"])
+        normalized = " ".join(result.output.replace("│", " ").split())
+
+        assert result.exit_code == 0
+        assert "Review before sharing" in normalized
+        assert "domain inputs and local details" in normalized
