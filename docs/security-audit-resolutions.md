@@ -18,6 +18,30 @@ notes, see [`docs/security.md`](security.md).
 
 ---
 
+## Closed: unresolved HTTP destinations and MCP diagnostic side effects (Unreleased)
+
+| Field | Value |
+|---|---|
+| **Severity (as audited)** | High for destination validation; medium for process and terminal diagnostic integrity |
+| **Source** | Cycle 5 bounded maintenance review (2026-07) |
+| **Fully closed** | **Unreleased** |
+| **Pinned by** | `tests/test_http.py`, `tests/test_http_advanced.py`, `tests/test_doctor_mcp.py`, `tests/test_server.py` |
+
+The shared HTTP preflight previously returned "not private" when hostname
+resolution failed, allowing the underlying transport to resolve again without a
+validated result. Missing hosts, resolution errors, empty answers, and invalid
+addresses now refuse the request before transport. Public addresses remain
+allowed and the documented address-pinning TOCTOU residual remains.
+
+Importing the MCP server previously installed a process-wide handler on the
+shared `recon` logger. That made later embedded CLI output order-dependent and
+could surface debug-only exception details. Logging setup now exists only for
+the running stdio loop and is removed on exit. The fatal server path also strips
+controls, removes forged line breaks, bounds detail, and names the exception
+type before writing one stderr line.
+
+---
+
 ## Closed: local persistence and update-boundary hardening (v2.6.1)
 
 | Field | Value |

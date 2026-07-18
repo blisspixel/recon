@@ -35,6 +35,7 @@ DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
 DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
 TemplateCreateStatus: TypeAlias = Literal["created", "exists", "non_file"]
 
+
 def _classify_template_collision(target: Path) -> TemplateCreateStatus | None:
     """Classify a publish collision without letting a probe mask the original error."""
     try:
@@ -268,8 +269,7 @@ def doctor_client(client: str) -> None:
 
     if client not in SUPPORTED_CLIENTS:
         console.print(
-            f"  [red]unknown client '{_safe_markup(client)}'[/red]\n"
-            f"  Supported: {', '.join(SUPPORTED_CLIENTS)}"
+            f"  [red]unknown client '{_safe_markup(client)}'[/red]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}"
         )
         raise typer.Exit(EXIT_VALIDATION)
 
@@ -371,7 +371,7 @@ async def _doctor_identity_checks() -> list[DoctorCheck]:
         try:
             resp = await client.get("https://login.microsoftonline.com/common/.well-known/openid-configuration")
             checks.append(("OIDC discovery", "ok" if resp.status_code == 200 else "fail", f"HTTP {resp.status_code}"))
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
+        except (httpx.RequestError, OSError) as exc:
             checks.append(("OIDC discovery", "fail", _fmt_exc(exc)))
 
         # Synthetic non-existent address avoids probing a real account.
@@ -381,7 +381,7 @@ async def _doctor_identity_checks() -> list[DoctorCheck]:
                 params={"login": "recon-connectivity-check@example.com", "json": "1"},
             )
             checks.append(("GetUserRealm", "ok" if resp.status_code == 200 else "fail", f"HTTP {resp.status_code}"))
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
+        except (httpx.RequestError, OSError) as exc:
             checks.append(("GetUserRealm", "fail", _fmt_exc(exc)))
 
         try:
@@ -391,7 +391,7 @@ async def _doctor_identity_checks() -> list[DoctorCheck]:
                 headers={"Content-Type": "text/xml"},
             )
             checks.append(("Autodiscover", "ok", f"HTTP {resp.status_code} (reachable)"))
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
+        except (httpx.RequestError, OSError) as exc:
             checks.append(("Autodiscover", "fail", _fmt_exc(exc)))
     return checks
 
@@ -428,7 +428,7 @@ async def _doctor_ct_check() -> DoctorCheck:
                 "warn",
                 f"HTTP {resp.status_code} (optional enrichment degraded)",
             )
-        except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
+        except (httpx.RequestError, OSError) as exc:
             return ("crt.sh (cert transparency)", "warn", f"{_fmt_exc(exc)} (optional enrichment degraded)")
 
 
