@@ -1,17 +1,15 @@
 {
   "cache_version": 1,
-  "tenant_id": "adatum-az-pp",
-  "display_name": "Adatum Azure with Proofpoint",
-  "default_domain": "adatum-az.com",
-  "queried_domain": "adatum-az.com",
+  "default_domain": "synthetic-delta-az-com.invalid",
+  "queried_domain": "synthetic-delta-az-com.invalid",
   "confidence": "high",
   "domain_count": 5,
   "tenant_domains": [
-    "adatum-az.com",
-    "adatum-azure.com",
-    "adatum-cloud.com",
-    "adatum-corp.com",
-    "adatum-eu.com"
+    "synthetic-delta-az-com.invalid",
+    "synthetic-delta-azure-com.invalid",
+    "synthetic-delta-cloud-com.invalid",
+    "synthetic-delta-corp-com.invalid",
+    "synthetic-delta-eu-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -29,5 +27,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 044833667981",
+  "tenant_id": "synthetic-scenario-044833667981",
   "_stratum": "azure"
 }

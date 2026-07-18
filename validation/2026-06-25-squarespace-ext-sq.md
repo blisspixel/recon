@@ -53,10 +53,10 @@ Interpretation boundary:
   custom-domain rule.
 - It does not infer plan tier, account relationship, or ownership control.
 
-## Fictional Regression Shape
+## Reserved Synthetic Regression Shape
 
 ```text
-blog.contoso.com -> ext-sq.squarespace.com
+blog.scenario.example.invalid -> ext-sq.squarespace.com
 ```
 
 Expected result: application-tier surface attribution for `squarespace`; no

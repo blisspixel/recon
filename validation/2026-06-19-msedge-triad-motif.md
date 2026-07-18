@@ -23,10 +23,10 @@ unchanged.
 Public fictional candidate chain:
 
 ```text
-api.contoso.com:
-  contoso.trafficmanager.net
-  contoso.azurefd.net
-  contoso.t-msedge.net
+api.example.invalid:
+  scenario.trafficmanager.net
+  scenario.azurefd.net
+  scenario.t-msedge.net
 ```
 
 Before this change, the built-in catalog matched:

@@ -21,7 +21,10 @@ def test_readme_separates_offline_install_check_from_online_diagnostics() -> Non
 def test_network_visibility_is_disclosed_before_readme_first_lookup() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     quick_start = readme.split("## Quick Start", 1)[1].split("## What recon Is Good For", 1)[0]
-    before_lookup = quick_start.split("recon contoso.com", 1)[0]
+    lookup_anchor = "recon example.com"
+
+    assert lookup_anchor in quick_start
+    before_lookup = quick_start.split(lookup_anchor, 1)[0]
 
     assert "DNS queries" in before_lookup
     assert "authoritative" in before_lookup
@@ -52,7 +55,7 @@ def test_canonical_onboarding_exposes_plain_accessible_output() -> None:
     guide = (ROOT / "docs" / "getting-started.md").read_text(encoding="utf-8")
 
     for content in (readme, guide):
-        assert "recon contoso.com --plain" in content
+        assert "recon example.com --plain" in content
         assert "screen reader" in content.lower()
         assert "grep" in content.lower()
 

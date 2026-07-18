@@ -1,16 +1,14 @@
 {
   "cache_version": 1,
-  "tenant_id": "fabrikam-sse-cf1",
-  "display_name": "Fabrikam Cloudflare One",
-  "default_domain": "fabrikam-cf1.com",
-  "queried_domain": "fabrikam-cf1.com",
+  "default_domain": "synthetic-gamma-cf1-com.invalid",
+  "queried_domain": "synthetic-gamma-cf1-com.invalid",
   "confidence": "high",
   "domain_count": 4,
   "tenant_domains": [
-    "fabrikam-cf1.com",
-    "fabrikam-zt.com",
-    "fabrikam-portal.com",
-    "fabrikam-corp.com"
+    "synthetic-gamma-cf1-com.invalid",
+    "synthetic-gamma-zt-com.invalid",
+    "synthetic-gamma-portal-com.invalid",
+    "synthetic-gamma-corp-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -24,5 +22,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 665315543788",
+  "tenant_id": "synthetic-scenario-665315543788",
   "_stratum": "sse"
 }

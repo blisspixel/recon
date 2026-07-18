@@ -2,10 +2,10 @@
 
 The harness drives three persona prompts (security analyst, due-diligence
 researcher, ops engineer) across two recon-output fixtures (a dense lookup
-of Microsoft's fictional ``contoso.com``, and a hand-stripped
-``hardened-sparse`` variant). For each persona / fixture pair the harness
-runs twice — once with the v1.9 ``--fusion`` posterior block included,
-once with the fusion fields stripped — so a binary scoring rubric can
+of ``dense.example.invalid``, and a hand-stripped ``synthetic-sparse``
+variant). For each persona / fixture pair the harness runs twice: once
+with the v1.9 ``--fusion`` posterior block included, once with the fusion
+fields stripped, so a binary scoring rubric can
 diff the agent's reasoning between the two runs.
 
 Why agentic, not interview-based: recon's MCP server is a primary user-

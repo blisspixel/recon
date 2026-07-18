@@ -27,8 +27,8 @@ URL; see .github/PULL_REQUEST_TEMPLATE/fingerprint.md.
 - [ ] **Fingerprint discipline.** New or modified fingerprints carry
       `description` text; the `validate_fingerprint.py` script
       passes locally. (Skip if no fingerprint YAML touched.)
-- [ ] **No real-company data.** Committed examples and tests use
-      Microsoft fictional brands (Contoso, Northwind, Fabrikam) or
-      anonymized aggregates. Private corpus stays under
+- [ ] **No evaluated-target data.** New committed examples and tests use
+      explicit synthetic identities under reserved namespaces or disclosure-safe
+      aggregates. Private corpus stays under
       `validation/runs-private/` and `validation/corpus-private/`.
 - [ ] **No generated-author trailers** in commit messages.

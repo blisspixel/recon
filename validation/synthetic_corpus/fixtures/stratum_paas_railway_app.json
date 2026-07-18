@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "adatum-paas-rw",
-  "display_name": "Adatum Railway",
-  "default_domain": "adatum-rw.com",
-  "queried_domain": "adatum-rw.com",
+  "default_domain": "synthetic-delta-rw-com.invalid",
+  "queried_domain": "synthetic-delta-rw-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "adatum-rw.com",
-    "adatum-app.com",
-    "adatum-api.com"
+    "synthetic-delta-rw-com.invalid",
+    "synthetic-delta-app-com.invalid",
+    "synthetic-delta-api-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -24,11 +22,13 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "api.adatum-rw.com",
+      "subdomain": "api.synthetic-delta-rw-com.invalid",
       "primary_slug": "railway",
       "primary_name": "Railway",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 330297896306",
+  "tenant_id": "synthetic-scenario-330297896306",
   "_stratum": "paas"
 }

@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "contoso-ali-cdn-only",
-  "display_name": "Contoso Alibaba CDN Only",
-  "default_domain": "contoso-acdn.com",
-  "queried_domain": "contoso-acdn.com",
+  "default_domain": "synthetic-alpha-acdn-com.invalid",
+  "queried_domain": "synthetic-alpha-acdn-com.invalid",
   "confidence": "low",
   "domain_count": 3,
   "tenant_domains": [
-    "contoso-acdn.com",
-    "contoso-static.com",
-    "contoso-svc.com"
+    "synthetic-alpha-acdn-com.invalid",
+    "synthetic-alpha-static-com.invalid",
+    "synthetic-alpha-svc-com.invalid"
   ],
   "services": [
     "Alibaba CDN"
@@ -19,5 +17,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 988721357660",
+  "tenant_id": "synthetic-scenario-988721357660",
   "_stratum": "alibaba"
 }

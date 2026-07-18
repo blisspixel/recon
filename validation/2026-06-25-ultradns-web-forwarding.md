@@ -66,10 +66,10 @@ Interpretation boundary:
 - It is not evidence of broader DNS authority unless NS evidence independently
   supports that.
 
-## Fictional Regression Shape
+## Reserved Synthetic Regression Shape
 
 ```text
-go.contoso.com -> crs.ultradns.net
+go.scenario.example.invalid -> crs.ultradns.net
 ```
 
 Expected result: infrastructure-tier surface attribution for `ultradns`; no

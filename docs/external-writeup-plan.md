@@ -187,7 +187,7 @@ Reasoning:
 
 - Do not add a command, MCP tool, schema field, fingerprint, motif, CPT change,
   dependency, paid API, or new network source for the write-up package.
-- Keep public examples fictional or synthetic.
+- Keep public examples reserved and synthetic.
 - Keep private corpus identifiers out of committed docs and artifacts: no real
   apexes, organization names, tenant IDs, per-domain rows, or unsuppressed small
   strata.
