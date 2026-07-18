@@ -4,8 +4,8 @@ name: Scorecard supply-chain security
 # posture (pinned deps, branch protection, signed/attested releases, SAST,
 # token permissions). Runs weekly, on push to main, and on manual dispatch, and
 # publishes the result so the README badge and https://scorecard.dev/ stay current.
-# Manual dispatch lets the score refresh right after a release-time CodeQL run,
-# instead of waiting for the weekly schedule.
+# Manual dispatch lets maintainers refresh the public result after repository
+# controls or release evidence change instead of waiting for the weekly run.
 on:
   workflow_dispatch:
   branch_protection_rule:

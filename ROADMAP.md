@@ -56,9 +56,17 @@ reuses one bounded exact PyPI metadata validator, includes the completed SBOM in
 GitHub provenance, and rejects unsafe existing-release state before recovery
 can replace assets. The operator recovery block itself now uses strict Bash
 mode, named failures, and a visible pre-mutation success checkpoint. One
-digest-bound v2.6.4 historical exception preserves the
+digest-bound v2.6.3 historical exception preserves the
 published distribution-only bundle while still requiring SBOM validation;
 future releases fail if SBOM provenance is absent.
+
+Pull requests targeting `main` now run CodeQL before merge while scheduled and
+manual default-branch scans remain available. Remote readiness keeps the other
+required code-owned Scorecard controls at `10` and uses the observed SAST floor
+of `7` while the public sample still contains pre-policy pull requests. The
+SAST requirement returns to `10` only after the public API reports supported
+SAST checks for every sampled merged pull request; historical checks are not
+backfilled to improve the metric.
 
 The catalog-quality track uses deduplicated private rounds with distinct rank,
 regional, vertical, vendor-seed, or drift questions. It must account for every
