@@ -105,8 +105,41 @@ whether each entry is reusable or expired.
   tag-mismatched distribution artifacts before either publication channel can
   run. A valid release contains exactly one canonical wheel and one canonical
   sdist.
+- GitHub Release publication now waits for PyPI to expose the exact wheel and
+  sdist and for both SHA-256 digests to match the sealed build pair. Recovery
+  runs cannot replace GitHub assets with different bytes from a skipped PyPI
+  upload. If parity fails after PyPI accepts immutable files, the workflow now
+  documents the resulting partial-publication state and evidence-preserving
+  recovery boundary.
+- Remote release readiness now validates the completed CycloneDX SBOM and
+  verifies the wheel and sdist against the downloaded provenance bundle, exact
+  release workflow, exact version tag and commit digest, and hosted-runner
+  boundary. It pins the PEP 740 verifier, bounds external commands and
+  downloaded evidence, and reports the cross-channel digest parity result.
+- Release-tag installer helpers now install exactly the reviewed version,
+  preserve a sole existing `uv` or `pipx` owner, refuse dual or unmanaged
+  ownership, and surface manager inspection and installation failures.
+- The consumer verification guide now provides complete fail-closed POSIX and
+  PowerShell paths with prerequisites, exact release inventory, SBOM and
+  bundle validation, PyPI provenance, channel parity, both wheel entry-point
+  smokes, optional verified-wheel installation, and one final success state.
+  Both require a clean exact-tag checkout, bind provenance to its commit
+  digest, pin the PEP 740 verifier, and reject empty or oversized assets.
 
 ### Fixed
+
+- The PyPI consumer-verification path can no longer report shell success after
+  a failed metadata producer or zero matched artifacts. It consumes a newly
+  created file containing exactly two validated URLs and requires both
+  attestation checks.
+- The release transaction now updates, snapshots, stages, and rolls back both
+  installer version pins with the other release-owned surfaces, preventing a
+  newly tagged helper from retaining the prior package version.
+- The parity gate now reads version-scoped PyPI metadata and retries only
+  transport or not-yet-visible states; permanent metadata, digest, and safety
+  violations fail immediately.
+- Completed SBOM validation now converts non-UTF-8 input into a named failed
+  readiness result instead of allowing a decoding traceback to escape.
 
 - Outbound HTTP destination validation now fails closed when the hostname is
   absent or DNS fails, returns no address, or returns an invalid address. The

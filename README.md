@@ -41,8 +41,15 @@ and version-specific decisions are in
 Optional helpers at `scripts/install.ps1` and `scripts/install.sh` use an
 existing `uv` or `pipx` installation. Download a
 [release-tag source archive](https://github.com/blisspixel/recon/releases/latest),
-review the local helper, and then run it. Do not pipe mutable branch content
-directly into a shell.
+review the local helper, and then run it. Each helper installs the exact version
+represented by that tag, preserves a sole existing `uv` or `pipx` owner, and
+refuses ambiguous or unmanaged installations. Review the helper from a newer
+tag before using it to update. Do not pipe mutable branch content directly into
+a shell.
+
+For a provenance-first path that verifies the exact GitHub and PyPI artifacts,
+their signed evidence, and their byte parity before optional installation, use
+the [cross-platform consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
 
 Open a new terminal and run an offline verification of the installed command:
 
