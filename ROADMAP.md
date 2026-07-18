@@ -2,7 +2,7 @@
 
 The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
-Current status: recon v2.6.3 has a stable, production-ready baseline. The CLI,
+Current status: recon v2.6.4 has a stable, production-ready baseline. The CLI,
 JSON schema, local stdio MCP server, bounded collectors, generated-artifact
 guards, validation gates, and release path are shipped. Unreleased work improves
 first-run help and error recovery, removes rejected MCP values from logs,
@@ -56,7 +56,7 @@ reuses one bounded exact PyPI metadata validator, includes the completed SBOM in
 GitHub provenance, and rejects unsafe existing-release state before recovery
 can replace assets. The operator recovery block itself now uses strict Bash
 mode, named failures, and a visible pre-mutation success checkpoint. One
-digest-bound v2.6.3 historical exception preserves the
+digest-bound v2.6.4 historical exception preserves the
 published distribution-only bundle while still requiring SBOM validation;
 future releases fail if SBOM provenance is absent.
 
