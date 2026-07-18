@@ -141,17 +141,17 @@ The rule is enforced by layered mechanisms, not by vigilance alone:
 |---|---|---|
 | `.gitignore` blocks the private paths by default (`/validation/*` is denied, then specific safe tooling is re-allowed by name) | A real corpus or run output cannot be added without overriding the ignore on purpose | An explicit `git add -f` can still force an ignored file in; the reviewer check is the backstop |
 | `gitleaks` secrets-scan (`.github/workflows/secrets-scan.yml`) on every PR, every push to main, and weekly over full history | Credentials and key material, including values already in history | Tuned to secret patterns, not to real-apex strings; it catches keys, not company names |
-| `scripts/check_validation_hygiene.py`, run by the local gate and release readiness | Forced-added private paths, tracked and nonignored untracked candidates, unsafe filenames, structured identity fields, Python literals, detailed rejection rows, and non-synthetic identifiers in public validation artifacts | Provider references are explicitly separated from evaluated targets; organization-shaped free prose still requires review |
+| `scripts/check_validation_hygiene.py`, run by the local gate and release readiness | Forced-added private paths, tracked and nonignored untracked candidates, unsafe filenames, structured identity fields, Python literals, detailed rejection rows, non-synthetic identifiers in public validation artifacts, and the retired target-example vocabulary across every public text candidate | Provider references and ACME protocol terms are explicitly separated from evaluated targets; previously unseen organization-shaped free prose still requires review |
+| The explicit Hatchling sdist denylist plus `tests/test_package_invariants.py` | Ignored agent work and private validation paths remain outside release source archives even when nested VCS ignore rules are interpreted differently by the build backend; the test plants an ignored sentinel and scans the built archive for private paths and retired target examples | The wheel remains limited separately to `src/recon_tool`; semantic review still owns new organization-shaped prose |
 | Private validation output-root guards in `validation/run_path_safety.py` and the agentic UX harness | Maintainer-local runners reject in-repository output roots outside ignored validation workspaces before collection or provider initialization | Outside-repository operator paths are allowed; review still owns anything copied back into the repo |
 | `validation/render_calibration_memo.py`, run after private calibration harnesses emit aggregate JSON | Target-identifying JSON keys, target-looking domain string values, and unsuppressed strata below 10 domains before a memo is rendered | It validates the aggregate payload shape, not the semantic interpretation; a human still reviews the memo before committing |
-| The reserved-synthetic convention (this doc, CONTRIBUTING.md) and reviewer inspection of incoming diffs for evaluated-target identities, records, and output | Real target names and values in examples, fixtures, comments, and prose | Manual; a determined contributor could slip a value past review, which is why the convention is documented loudly |
+| The reserved-synthetic convention (this doc, CONTRIBUTING.md) and reviewer inspection of incoming diffs for evaluated-target identities, records, and output | Real target names and values in examples, fixtures, comments, and prose that are not part of the retired mechanically blocked vocabulary | Manual semantic review remains necessary because arbitrary organization names cannot be inferred safely from spelling alone |
 | The aggregate-only discipline for validation memos and the cohort summary (PV1) | Per-domain identity in committed statistics: only counts, public-claim rates, model support coverage, intervals, and quantiles reach the repo | Small-cell suppression and review remain semantic controls, not fully mechanical gates |
 
-The honest position: the deterministic mechanisms (`.gitignore`,
-gitleaks) are strong for what they cover, and the rest rests on a
-documented convention plus review. The convention is written down
-prominently precisely because it is the part a mechanism does not fully
-catch.
+The honest position: the deterministic mechanisms are strong for the explicit
+paths, structures, values, and retired vocabulary they cover. Arbitrary
+organization-shaped prose still requires documented reviewer judgment because
+a spelling-based classifier would also reject legitimate provider definitions.
 
 ## Why this also shapes how results get published
 

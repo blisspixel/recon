@@ -29,8 +29,8 @@ def _make_tenant_info(**overrides) -> TenantInfo:
     defaults = {
         "tenant_id": "test-id",
         "display_name": "Test Corp",
-        "default_domain": "test.com",
-        "queried_domain": "test.com",
+        "default_domain": "test.invalid",
+        "queried_domain": "test.invalid",
         "confidence": ConfidenceLevel.MEDIUM,
         "sources": ("dns_records",),
         "services": ("DMARC",),

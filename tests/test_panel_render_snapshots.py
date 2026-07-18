@@ -9,12 +9,12 @@ the existing key-facts block, Services block, and trailing sections.
 
 Two reference fixtures:
 
-  * ``MULTI_CLOUD_FIXTURE`` — a contoso-style apex with AWS apex
+  * ``MULTI_CLOUD_FIXTURE``: an Alpha-style apex with AWS apex
     infrastructure and Fastly + Cloudflare on surface attributions.
     Should render the Multi-cloud rollup and full Services block; the
     ceiling footer should NOT fire because surface attributions are
     above the sparse threshold.
-  * ``SPARSE_HARDENED_FIXTURE`` — a hardened-target style apex: many
+  * ``SPARSE_HARDENED_FIXTURE``: a hardened-target style apex with many
     tenant domains, one apex service, no surface attributions. Should
     render the Passive-DNS ceiling footer; Multi-cloud rollup should
     NOT fire because there is only one cloud-categorized slug.
@@ -51,12 +51,12 @@ def _multi_cloud_fixture() -> TenantInfo:
     threshold so the ceiling footer does not fire."""
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid-mc",
-        display_name="Contoso, Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha, Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=8,
-        tenant_domains=("contoso.com", "contoso.net", "contoso.co.uk", "contoso-corp.com"),
+        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid", "alpha-corp.invalid"),
         services=("AWS CloudFront", "AWS Route 53", "Cloudflare", "Fastly", "Okta", "Slack"),
         slugs=("aws-cloudfront", "aws-route53", "cloudflare", "fastly", "okta", "slack"),
         evidence=(
@@ -69,7 +69,7 @@ def _multi_cloud_fixture() -> TenantInfo:
         ),
         surface_attributions=tuple(
             SurfaceAttribution(
-                subdomain=f"app{i}.contoso.com",
+                subdomain=f"app{i}.alpha.invalid",
                 primary_slug="fastly",
                 primary_name="Fastly",
                 primary_tier="infrastructure",
@@ -91,12 +91,18 @@ def _sparse_hardened_fixture() -> TenantInfo:
     fire; the Multi-cloud rollup must not (one vendor only)."""
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid-sh",
-        display_name="Northwind Traders",
-        default_domain="northwind.com",
-        queried_domain="northwind.com",
+        display_name="Synthetic Gamma",
+        default_domain="gamma.invalid",
+        queried_domain="gamma.invalid",
         confidence=ConfidenceLevel.LOW,
         domain_count=5,
-        tenant_domains=("northwind.com", "northwind.net", "northwind.co.uk", "nw-internal.com", "nw-corp.com"),
+        tenant_domains=(
+            "gamma.invalid",
+            "gamma.test",
+            "gamma.example",
+            "gamma-internal.invalid",
+            "gamma-corp.invalid",
+        ),
         services=("Cloudflare",),
         slugs=("cloudflare",),
     )

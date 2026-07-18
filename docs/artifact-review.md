@@ -110,8 +110,6 @@ Reviewers should expect committed artifacts to contain:
 
 - counts, rates, intervals, quantiles, and aggregate deltas;
 - explicit synthetic examples under reserved namespaces;
-- bounded legacy fictional examples outside validation that the roadmap tracks
-  as migration debt;
 - vendor names when they are detection classes.
 
 Reviewers should not find:

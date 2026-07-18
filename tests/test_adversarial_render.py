@@ -43,9 +43,9 @@ def _render(info: TenantInfo, **kwargs: object) -> str:
 def _make_tenant(**overrides: object) -> TenantInfo:
     base: dict[str, object] = {
         "tenant_id": "tid",
-        "display_name": "Contoso, Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha, Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.HIGH,
     }
     base.update(overrides)
@@ -65,26 +65,23 @@ class TestUnicodeRendering:
         """RTL (Arabic) display name must round-trip; Rich should
         preserve the codepoints even if the terminal does not
         bidirectionally render them."""
-        info = _make_tenant(display_name="شركة كونتوسو المحدودة")
+        info = _make_tenant(display_name="شركة ألفا الاصطناعية")
         out = _render(info)
         # The codepoints must be present in the output even if the
         # terminal renders them visually different. Render is a
         # text-emission contract, not a glyph contract.
-        assert "كونتوسو" in out
+        assert "ألفا" in out
 
     def test_accented_display_name(self):
-        info = _make_tenant(display_name="Contôso Lìmited")
+        info = _make_tenant(display_name="Sÿnthetic Álpha")
         out = _render(info)
-        assert "Contôso" in out
+        assert "Sÿnthetic" in out
 
-    def test_emoji_in_display_name(self):
-        """Emoji are valid Unicode; the renderer must not crash. The
-        emoji may or may not display in a given terminal, but the
-        emit-text path must not raise."""
-        info = _make_tenant(display_name="Contoso 🏢")
+    def test_astral_unicode_in_display_name(self):
+        """Astral-plane letters are valid Unicode and must not crash rendering."""
+        info = _make_tenant(display_name="Synthetic Alpha 𐐀")
         out = _render(info)
-        # Either the emoji or its surrogate is present.
-        assert "Contoso" in out
+        assert "Synthetic Alpha" in out
 
 
 class TestControlCharacterSafety:
@@ -102,7 +99,7 @@ class TestControlCharacterSafety:
         out = _render(info)
         # Render completes; no exception. The malicious slug appears
         # somewhere or is filtered, but no crash.
-        assert "Contoso" in out
+        assert "Synthetic Alpha" in out
 
     def test_ansi_escape_in_service_name_is_neutralized(self):
         """An ANSI escape in a service name (e.g. injected from a
@@ -114,7 +111,7 @@ class TestControlCharacterSafety:
         # absence (Rich may pass through styled text), but we assert
         # the render does not raise and the panel structure remains
         # intact.
-        assert "Contoso" in out
+        assert "Synthetic Alpha" in out
         assert "Services" in out
 
     def test_newline_in_subdomain_does_not_break_panel(self):
@@ -126,7 +123,7 @@ class TestControlCharacterSafety:
             services=("Fastly",),
             surface_attributions=(
                 SurfaceAttribution(
-                    subdomain="sub.contoso.com\nmalicious.com",
+                    subdomain="sub.alpha.invalid\nmalicious.invalid",
                     primary_slug="fastly",
                     primary_name="Fastly",
                     primary_tier="infrastructure",
@@ -142,7 +139,7 @@ class TestControlCharacterSafety:
         info = _make_tenant(slugs=("aws-cloudfront", "okta\tinjected"))
         out = _render(info)
         # No crash; render completes.
-        assert "Contoso" in out
+        assert "Synthetic Alpha" in out
 
 
 class TestLargeInputs:
@@ -166,7 +163,7 @@ class TestLargeInputs:
         info = _make_tenant(slugs=many_slugs, services=many_services)
         out = _render(info)
         # Some prefix of the slugs / services appears in the output.
-        assert "Contoso" in out
+        assert "Synthetic Alpha" in out
 
     def test_two_hundred_surface_attributions_render(self):
         """A pathological apex with 200 surface attributions must
@@ -175,7 +172,7 @@ class TestLargeInputs:
         and would only appear under ``--full``."""
         many_attribs = tuple(
             SurfaceAttribution(
-                subdomain=f"sub{i}.contoso.com",
+                subdomain=f"sub{i}.alpha.invalid",
                 primary_slug="fastly",
                 primary_name="Fastly",
                 primary_tier="infrastructure",
@@ -188,7 +185,7 @@ class TestLargeInputs:
             evidence=(
                 EvidenceRecord(
                     "CNAME",
-                    "www.contoso.com -> d111111abcdef8.cloudfront.net",
+                    "www.alpha.invalid -> d111111abcdef8.cloudfront.net",
                     "AWS CloudFront",
                     "aws-cloudfront",
                 ),
@@ -208,7 +205,7 @@ class TestMinimalInputs:
         always render."""
         info = _make_tenant(services=(), slugs=())
         out = _render(info)
-        assert "Contoso" in out
+        assert "Synthetic Alpha" in out
         # No Multi-cloud row (no cloud slugs)
         assert "Multi-cloud" not in out
 
@@ -225,7 +222,7 @@ class TestUnicodeInSurfaceAttributions:
             services=("Fastly",),
             surface_attributions=(
                 SurfaceAttribution(
-                    subdomain="xn--80akhbyknj4f.contoso.com",  # punycode "испытание" (Cyrillic)
+                    subdomain="xn--80akhbyknj4f.alpha.invalid",  # punycode "испытание" (Cyrillic)
                     primary_slug="fastly",
                     primary_name="Fastly",
                     primary_tier="infrastructure",

@@ -11,15 +11,15 @@
       "module": "recon"
     },
     "host": {
-      "domain": "northwindtraders.com"
+      "domain": "gamma.invalid"
     },
     "tenant_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-    "default_domain": "northwindtraders.onmicrosoft.com",
+    "default_domain": "gamma.onmicrosoft.com",
     "region": "NA",
     "domain_count": 3,
     "msgraph_host": "graph.microsoft.com",
     "recon": {
-      "display_name": "Northwind Traders",
+      "display_name": "Synthetic Gamma",
       "provider": "Microsoft 365",
       "confidence": "high",
       "auth_type": "Federated",
@@ -81,12 +81,12 @@
       "evidence_conflicts": []
     },
     "tenant_domains": [
-      "northwindtraders.com",
-      "northwindtraders.onmicrosoft.com",
-      "northwind-internal.com"
+      "gamma.invalid",
+      "gamma.onmicrosoft.com",
+      "gamma-internal.invalid"
     ],
     "related_domains": [
-      "northwind-internal.com"
+      "gamma-internal.invalid"
     ]
   },
   "_notes": "Representative contract subset. Fields that ingest-pipeline.json does not rename remain at the top level of _source, and Filebeat adds its own agent metadata. No event severity is derived from recon confidence. _index uses a monthly suffix; tune retention with ILM. _id and @timestamp are populated at ingest time."

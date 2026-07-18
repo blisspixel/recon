@@ -74,12 +74,12 @@ from Python's import path before loading recon.
    untrusted working directory.
 
 3. Ask your AI tool something like: "Run a recon lookup on
-northwindtraders.com and summarize the observed public configuration, naming
+gamma.invalid and summarize the observed public configuration, naming
 anything unresolved."
 
 Example multi-step prompt for deeper analysis:
 
-> "Look up contoso.com with format=json and explain=true. Then run assess_exposure and
+> "Look up alpha.invalid with format=json and explain=true. Then run assess_exposure and
 > find_hardening_gaps. Finally, simulate_hardening with DMARC reject and
 > MTA-STS enforce applied, and explain the model-bound public-evidence index
 > change without treating it as an overall security verdict."
@@ -406,30 +406,30 @@ the normal documented network boundary and is not a zero-network operation.
 ### Example: Detecting a custom SaaS service
 
 ```
-Agent: "Inject an ephemeral fingerprint for Fabrikam's internal platform."
+Agent: "Inject an ephemeral fingerprint for Synthetic Beta's internal platform."
 
 → inject_ephemeral_fingerprint(
-    name="Fabrikam Platform",
-    slug="fabrikam-platform",
+    name="Synthetic Beta Platform",
+    slug="beta-platform",
     category="Internal",
     confidence="medium",
-    detections=[{"type": "txt", "pattern": "fabrikam-platform-verify="}]
+    detections=[{"type": "txt", "pattern": "beta-platform-verify="}]
   )
 
-← {"status": "ok", "name": "Fabrikam Platform", "slug": "fabrikam-platform", "detections_accepted": 1}
+← {"status": "ok", "name": "Synthetic Beta Platform", "slug": "beta-platform", "detections_accepted": 1}
 
-Agent: "Now re-evaluate contoso.com to see if they use Fabrikam Platform."
+Agent: "Now re-evaluate alpha.invalid to see if they use Synthetic Beta Platform."
 
-→ reevaluate_domain(domain="contoso.com")
+→ reevaluate_domain(domain="alpha.invalid")
 
-← Updated TenantInfo JSON (includes Fabrikam Platform if TXT record matches)
+← Updated TenantInfo JSON (includes Synthetic Beta Platform if TXT record matches)
 ```
 
 ### Example: Listing and clearing
 
 ```
 → list_ephemeral_fingerprints()
-← [{"name": "Fabrikam Platform", "slug": "fabrikam-platform", "category": "Internal", "confidence": "medium", "detection_count": 1}]
+← [{"name": "Synthetic Beta Platform", "slug": "beta-platform", "category": "Internal", "confidence": "medium", "detection_count": 1}]
 
 → clear_ephemeral_fingerprints()
 ← {"status": "ok", "removed": 1}

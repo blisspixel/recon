@@ -48,9 +48,9 @@ def _complete_info() -> TenantInfo:
     """Build a TenantInfo with every field populated."""
     return TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Contoso Ltd",
-        default_domain="contoso.onmicrosoft.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha Ltd",
+        default_domain="alpha.onmicrosoft.com",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
         sources=("oidc_discovery", "user_realm", "dns_records", "google_identity"),
@@ -59,8 +59,8 @@ def _complete_info() -> TenantInfo:
         auth_type="Federated",
         dmarc_policy="reject",
         domain_count=5,
-        tenant_domains=("contoso.com", "contoso.onmicrosoft.com"),
-        related_domains=("api.contoso.com", "dev.contoso.com"),
+        tenant_domains=("alpha.invalid", "alpha.onmicrosoft.com"),
+        related_domains=("api.alpha.invalid", "dev.alpha.invalid"),
         insights=("Federated auth", "Dual provider"),
         degraded_sources=("crt.sh",),
         cert_summary=CertSummary(
@@ -89,7 +89,7 @@ def _complete_info() -> TenantInfo:
         inference_confidence=ConfidenceLevel.MEDIUM,
         detection_scores=(("microsoft365", "high"), ("cloudflare", "medium")),
         bimi_identity=BIMIIdentity(
-            organization="Contoso Ltd",
+            organization="Synthetic Alpha Ltd",
             country="US",
             state="WA",
             locality="Redmond",
@@ -249,7 +249,7 @@ class TestRoundTripAllFields:
 
         info = replace(
             _complete_info(),
-            shared_verification_tokens=(("MS=ms12345", "northwind.com"),),
+            shared_verification_tokens=(("MS=ms12345", "gamma.invalid"),),
         )
 
         data = tenant_info_to_dict(info)
@@ -270,8 +270,8 @@ class TestCacheDiskOperations:
 
     def test_put_then_get_roundtrip(self) -> None:
         info = _complete_info()
-        cache_put("contoso.com", info)
-        restored = cache_get("contoso.com")
+        cache_put("alpha.invalid", info)
+        restored = cache_get("alpha.invalid")
         assert restored is not None
         assert restored.tenant_id == info.tenant_id
         assert restored.display_name == info.display_name
@@ -279,45 +279,45 @@ class TestCacheDiskOperations:
     def test_get_rejects_entry_bound_to_another_domain(self) -> None:
         cache_dir().mkdir(parents=True, exist_ok=True)
         payload = tenant_info_to_dict(_complete_info())
-        (cache_dir() / "fabrikam.com.json").write_text(json.dumps(payload), encoding="utf-8")
+        (cache_dir() / "beta.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
 
-        assert cache_get("fabrikam.com") is None
+        assert cache_get("beta.invalid") is None
 
     def test_put_rejects_entry_bound_to_another_domain(self) -> None:
-        cache_put("fabrikam.com", _complete_info())
+        cache_put("beta.invalid", _complete_info())
 
-        assert not (cache_dir() / "fabrikam.com.json").exists()
+        assert not (cache_dir() / "beta.invalid.json").exists()
 
     def test_put_normalizes_url_input_to_apex_cache_key(self) -> None:
         info = _complete_info()
 
-        cache_put("https://www.contoso.com/path?utm=1", info)
+        cache_put("https://www.alpha.invalid/path?utm=1", info)
 
-        assert (cache_dir() / "contoso.com.json").exists()
-        assert cache_get("contoso.com") is not None
-        assert cache_get("https://www.contoso.com/path") is not None
+        assert (cache_dir() / "alpha.invalid.json").exists()
+        assert cache_get("alpha.invalid") is not None
+        assert cache_get("https://www.alpha.invalid/path") is not None
 
     def test_exact_subhost_does_not_reuse_apex_cache_entry(self) -> None:
-        cache_put("contoso.com", _complete_info())
+        cache_put("alpha.invalid", _complete_info())
 
-        assert cache_get("mail.contoso.com") is None
+        assert cache_get("mail.alpha.invalid") is None
 
     def test_exact_subhost_has_an_independent_cache_key(self) -> None:
         from dataclasses import replace
 
-        exact_info = replace(_complete_info(), queried_domain="mail.contoso.com")
-        cache_put("mail.contoso.com", exact_info)
+        exact_info = replace(_complete_info(), queried_domain="mail.alpha.invalid")
+        cache_put("mail.alpha.invalid", exact_info)
 
-        assert cache_get("mail.contoso.com") is not None
-        assert cache_get("contoso.com") is None
+        assert cache_get("mail.alpha.invalid") is not None
+        assert cache_get("alpha.invalid") is None
 
     def test_future_mtime_is_rejected(self) -> None:
-        cache_put("contoso.com", _complete_info())
-        path = cache_dir() / "contoso.com.json"
+        cache_put("alpha.invalid", _complete_info())
+        path = cache_dir() / "alpha.invalid.json"
         future = time.time() + 365 * 86400
         os.utime(path, (future, future))
 
-        assert cache_get("contoso.com") is None
+        assert cache_get("alpha.invalid") is None
 
     def test_write_binds_one_resolved_cache_directory(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         first = tmp_path / "first"
@@ -325,26 +325,26 @@ class TestCacheDiskOperations:
         directories = iter((first, second))
         monkeypatch.setattr("recon_tool.paths.cache_root", lambda: next(directories))
 
-        cache_put("contoso.com", _complete_info())
+        cache_put("alpha.invalid", _complete_info())
 
-        assert (first / "cache" / "contoso.com.json").exists()
-        assert not (second / "cache" / "contoso.com.json").exists()
+        assert (first / "cache" / "alpha.invalid.json").exists()
+        assert not (second / "cache" / "alpha.invalid.json").exists()
 
     def test_get_missing_returns_none(self) -> None:
-        assert cache_get("does-not-exist.com") is None
+        assert cache_get("does-not-exist.invalid") is None
 
     def test_get_rejects_traversal_domain(self) -> None:
         assert cache_get("..\\secrets") is None
 
     def test_get_corrupt_json_returns_none(self) -> None:
         cache_dir().mkdir(parents=True, exist_ok=True)
-        (cache_dir() / "bad.com.json").write_text("not valid json{{{", encoding="utf-8")
-        assert cache_get("bad.com") is None
+        (cache_dir() / "bad.invalid.json").write_text("not valid json{{{", encoding="utf-8")
+        assert cache_get("bad.invalid") is None
 
     def test_get_non_object_json_returns_none(self) -> None:
         cache_dir().mkdir(parents=True, exist_ok=True)
-        (cache_dir() / "bad.com.json").write_text("[]", encoding="utf-8")
-        assert cache_get("bad.com") is None
+        (cache_dir() / "bad.invalid.json").write_text("[]", encoding="utf-8")
+        assert cache_get("bad.invalid") is None
 
     @pytest.mark.parametrize(
         ("field", "value"),
@@ -367,16 +367,16 @@ class TestCacheDiskOperations:
         cache_dir().mkdir(parents=True, exist_ok=True)
         payload = tenant_info_to_dict(_complete_info())
         payload[field] = value
-        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
-        assert cache_get("bad.com") is None
+        (cache_dir() / "bad.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert cache_get("bad.invalid") is None
 
     def test_get_rejects_non_boolean_legacy_degradation_flag(self) -> None:
         cache_dir().mkdir(parents=True, exist_ok=True)
         payload = tenant_info_to_dict(_complete_info())
         payload.pop("degraded_sources")
         payload["crtsh_degraded"] = "false"
-        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
-        assert cache_get("bad.com") is None
+        (cache_dir() / "bad.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert cache_get("bad.invalid") is None
 
     def test_get_rejects_non_boolean_posterior_sparse_flag(self) -> None:
         cache_dir().mkdir(parents=True, exist_ok=True)
@@ -390,8 +390,8 @@ class TestCacheDiskOperations:
                 "sparse": 1,
             }
         ]
-        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
-        assert cache_get("bad.com") is None
+        (cache_dir() / "bad.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert cache_get("bad.invalid") is None
 
     @pytest.mark.parametrize(
         ("field", "value"),
@@ -418,9 +418,9 @@ class TestCacheDiskOperations:
         observation = _posterior_payload()
         observation[field] = value
         payload["posterior_observations"] = [observation]
-        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+        (cache_dir() / "bad.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
 
-        assert cache_get("bad.com") is None
+        assert cache_get("bad.invalid") is None
 
     @pytest.mark.parametrize(
         ("field", "value"),
@@ -440,9 +440,9 @@ class TestCacheDiskOperations:
         observation = _posterior_payload()
         observation[field] = value
         payload["posterior_observations"] = [observation]
-        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+        (cache_dir() / "bad.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
 
-        assert cache_get("bad.com") is None
+        assert cache_get("bad.invalid") is None
 
     @pytest.mark.parametrize(
         ("interval_low", "posterior", "interval_high"),
@@ -458,33 +458,33 @@ class TestCacheDiskOperations:
             {"interval_low": interval_low, "posterior": posterior, "interval_high": interval_high}
         )
         payload["posterior_observations"] = [observation]
-        (cache_dir() / "bad.com.json").write_text(json.dumps(payload), encoding="utf-8")
+        (cache_dir() / "bad.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
 
-        assert cache_get("bad.com") is None
+        assert cache_get("bad.invalid") is None
 
     def test_get_old_cache_version_returns_none(self) -> None:
         cache_dir().mkdir(parents=True, exist_ok=True)
         data = tenant_info_to_dict(_complete_info())
         data["_cache_version"] = _CACHE_VERSION - 1
-        (cache_dir() / "contoso.com.json").write_text(json.dumps(data), encoding="utf-8")
-        assert cache_get("contoso.com") is None
+        (cache_dir() / "alpha.invalid.json").write_text(json.dumps(data), encoding="utf-8")
+        assert cache_get("alpha.invalid") is None
 
     def test_get_stale_returns_none(self) -> None:
         """Files older than TTL are evicted lazily by cache_get."""
         info = _complete_info()
-        cache_put("contoso.com", info)
+        cache_put("alpha.invalid", info)
         # Age the file past the TTL
-        path = cache_dir() / "contoso.com.json"
+        path = cache_dir() / "alpha.invalid.json"
         old = time.time() - (DEFAULT_TTL + 10)
         os.utime(path, (old, old))
-        assert cache_get("contoso.com", ttl=DEFAULT_TTL) is None
+        assert cache_get("alpha.invalid", ttl=DEFAULT_TTL) is None
 
     def test_get_fresh_survives_zero_ttl_query_with_larger_ttl(self) -> None:
         """A fresh file is returned as long as the caller's TTL covers it."""
         info = _complete_info()
-        cache_put("contoso.com", info)
+        cache_put("alpha.invalid", info)
         # Fresh file, caller uses default TTL → hit
-        assert cache_get("contoso.com") is not None
+        assert cache_get("alpha.invalid") is not None
 
     def test_put_creates_cache_directory_if_missing(self) -> None:
         """cache_put should create the cache directory on first write."""
@@ -494,9 +494,9 @@ class TestCacheDiskOperations:
         if cache_dir().exists():
             shutil.rmtree(cache_dir())
         assert not cache_dir().exists()
-        cache_put("contoso.com", _complete_info())
+        cache_put("alpha.invalid", _complete_info())
         assert cache_dir().exists()
-        assert (cache_dir() / "contoso.com.json").exists()
+        assert (cache_dir() / "alpha.invalid.json").exists()
 
     def test_put_rejects_traversal_domain(self) -> None:
         cache_put("..\\escape", _complete_info())
@@ -504,10 +504,10 @@ class TestCacheDiskOperations:
             assert list(cache_dir().glob("*.json")) == []
 
     def test_clear_deletes_valid_cache_entry(self) -> None:
-        cache_put("contoso.com", _complete_info())
+        cache_put("alpha.invalid", _complete_info())
 
-        assert cache_clear("contoso.com") is True
-        assert not (cache_dir() / "contoso.com.json").exists()
+        assert cache_clear("alpha.invalid") is True
+        assert not (cache_dir() / "alpha.invalid.json").exists()
 
     def test_clear_rejects_traversal_and_preserves_sibling_json(self) -> None:
         outside = cache_dir().parent / "outside.json"
@@ -527,17 +527,17 @@ class TestCacheDiskOperations:
         assert outside.exists()
 
     def test_clear_all_deletes_only_top_level_json_cache_entries(self) -> None:
-        cache_put("contoso.com", _complete_info())
+        cache_put("alpha.invalid", _complete_info())
         d = cache_dir()
         nested = d / "nested"
         nested.mkdir()
-        keep_nested = nested / "nested.com.json"
+        keep_nested = nested / "nested.invalid.json"
         keep_nested.write_text('{"keep": true}', encoding="utf-8")
         keep_text = d / "notes.txt"
         keep_text.write_text("keep", encoding="utf-8")
 
         assert cache_clear_all() == 1
-        assert not (d / "contoso.com.json").exists()
+        assert not (d / "alpha.invalid.json").exists()
         assert keep_nested.exists()
         assert keep_text.exists()
 
@@ -563,15 +563,15 @@ class TestCacheDiskOperations:
             redirected.symlink_to(external, target_is_directory=True)
 
         monkeypatch.setenv("RECON_CONFIG_DIR", str(configured_root))
-        sentinel = external / "contoso.com.json"
+        sentinel = external / "alpha.invalid.json"
         original = b'{"outside": true}'
         sentinel.write_bytes(original)
 
-        assert _safe_cache_path("contoso.com") is None
-        assert cache_get("contoso.com") is None
-        cache_put("contoso.com", _complete_info())
+        assert _safe_cache_path("alpha.invalid") is None
+        assert cache_get("alpha.invalid") is None
+        cache_put("alpha.invalid", _complete_info())
         assert sentinel.read_bytes() == original
-        assert cache_clear("contoso.com") is False
+        assert cache_clear("alpha.invalid") is False
         assert cache_clear_all() == 0
         assert sentinel.read_bytes() == original
 
@@ -586,10 +586,10 @@ class TestCacheDiskOperations:
         monkeypatch.setenv("RECON_CONFIG_DIR", str(configured_root))
 
         with self_referencing_directory(redirected):
-            assert _safe_cache_path("contoso.com") is None
-            assert cache_get("contoso.com") is None
-            cache_put("contoso.com", _complete_info())
-            assert cache_clear("contoso.com") is False
+            assert _safe_cache_path("alpha.invalid") is None
+            assert cache_get("alpha.invalid") is None
+            cache_put("alpha.invalid", _complete_info())
+            assert cache_clear("alpha.invalid") is False
             assert cache_clear_all() == 0
 
 

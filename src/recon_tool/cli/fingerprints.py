@@ -530,7 +530,7 @@ def fingerprints_show(
 @fingerprints_app.command("new", short_help="Scaffold a fingerprint.")
 def fingerprints_new(
     slug: str = typer.Argument(..., help="Unique slug for the new fingerprint (lowercase, hyphen-separated)"),
-    name: str = typer.Option(..., "--name", "-n", help="Human-readable service name (e.g. 'Acme Security')"),
+    name: str = typer.Option(..., "--name", "-n", help="Human-readable service name (e.g. 'Synthetic Delta Security')"),
     category: str = typer.Option(
         "Misc",
         "--category",
@@ -640,7 +640,7 @@ def fingerprints_test(
         help=(
             "Path to a newline-delimited file of apex domains. If omitted, "
             "recon looks for ~/.recon/corpus.txt; otherwise falls back to the "
-            "fictional-company example at tests/fixtures/corpus-example.txt "
+            "reserved synthetic example at tests/fixtures/corpus-example.txt "
             "(format demo only; no real matches)."
         ),
     ),

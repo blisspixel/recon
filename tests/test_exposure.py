@@ -152,7 +152,7 @@ def tenant_info_strategy(draw: st.DrawFn) -> TenantInfo:
         tenant_id=draw(st.sampled_from([None, "tid-12345"])),
         display_name="Test Corp",
         default_domain="test.onmicrosoft.com",
-        queried_domain="test.com",
+        queried_domain="test.invalid",
         confidence=draw(_CONFIDENCE_LEVELS),
         sources=("test_source",),
         services=tuple(services),
@@ -397,8 +397,8 @@ class TestProperty6GapDetectionCorrectness:
         info = TenantInfo(
             tenant_id=None,
             display_name="Test Corp",
-            default_domain="test.com",
-            queried_domain="test.com",
+            default_domain="test.invalid",
+            queried_domain="test.invalid",
             confidence=ConfidenceLevel.HIGH,
             sources=("test_source",),
             services=(SVC_DMARC,),
@@ -418,8 +418,8 @@ class TestProperty6GapDetectionCorrectness:
         info = TenantInfo(
             tenant_id=None,
             display_name="Test Corp",
-            default_domain="test.com",
-            queried_domain="test.com",
+            default_domain="test.invalid",
+            queried_domain="test.invalid",
             confidence=ConfidenceLevel.HIGH,
             sources=("test_source",),
             services=(SVC_DMARC,),
@@ -699,7 +699,7 @@ class TestNeutralCopyIntegration:
             "tenant_id": "tid-test",
             "display_name": "Test Corp",
             "default_domain": "test.onmicrosoft.com",
-            "queried_domain": "test.com",
+            "queried_domain": "test.invalid",
             "confidence": ConfidenceLevel.HIGH,
             "sources": ("test_source",),
             "services": (),
@@ -774,13 +774,13 @@ class TestNeutralCopyIntegration:
     def test_no_discouraged_terms_in_comparison_output(self) -> None:
         """Run compare_postures and scan generated comparison copy."""
         info_a = self._make_info(
-            queried_domain="a.com",
+            queried_domain="a.invalid",
             dmarc_policy="reject",
             auth_type="Federated",
             slugs=("okta", "crowdstrike", "zscaler"),
         )
         info_b = self._make_info(
-            queried_domain="b.com",
+            queried_domain="b.invalid",
             dmarc_policy="none",
         )
         result = compare_postures_from_infos(info_a, info_b)
@@ -841,7 +841,7 @@ class TestScoreObservability:
             tenant_id=None,
             display_name="Test Corp",
             default_domain="test.onmicrosoft.com",
-            queried_domain="test.com",
+            queried_domain="test.invalid",
             confidence=ConfidenceLevel.LOW,
             sources=("test_source",),
             services=services,
@@ -999,7 +999,7 @@ class TestScoreObservability:
             tenant_id="tid-test",
             display_name="Test Corp",
             default_domain="test.onmicrosoft.com",
-            queried_domain="test.com",
+            queried_domain="test.invalid",
             confidence=ConfidenceLevel.HIGH,
             sources=("dns_records",),
             services=(SVC_DMARC, SVC_DKIM, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI),

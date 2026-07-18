@@ -56,9 +56,9 @@ def fully_populated_tenant_info() -> TenantInfo:
     """
     return TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Contoso Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
         sources=("oidc_discovery", "userrealm", "dns_records"),
@@ -67,8 +67,8 @@ def fully_populated_tenant_info() -> TenantInfo:
         auth_type="Federated",
         dmarc_policy="reject",
         domain_count=3,
-        tenant_domains=("contoso.com", "contoso.onmicrosoft.com", "contoso.co.uk"),
-        related_domains=("api.contoso.com", "login.contoso.com"),
+        tenant_domains=("alpha.invalid", "alpha.onmicrosoft.com", "alpha.invalid"),
+        related_domains=("api.alpha.invalid", "login.alpha.invalid"),
         insights=("Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",),
         degraded_sources=(),
         cert_summary=CertSummary(
@@ -88,7 +88,7 @@ def fully_populated_tenant_info() -> TenantInfo:
             ),
             EvidenceRecord(
                 source_type="MX",
-                raw_value="10 contoso-com.mail.protection.outlook.com",
+                raw_value="10 alpha-com.mail.protection.outlook.com",
                 rule_name="Microsoft 365",
                 slug="microsoft365",
             ),
@@ -109,11 +109,11 @@ def fully_populated_tenant_info() -> TenantInfo:
         inference_confidence=ConfidenceLevel.HIGH,
         detection_scores=(("microsoft365", "high"), ("slack", "medium")),
         bimi_identity=BIMIIdentity(
-            organization="Contoso Ltd",
+            organization="Synthetic Alpha Ltd",
             country="US",
             state="WA",
             locality="Redmond",
-            trademark="CONTOSO",
+            trademark="SYNTHETIC ALPHA",
         ),
         site_verification_tokens=("MS=ms12345", "google-site-verification=abc"),
         mta_sts_mode="enforce",
@@ -133,8 +133,8 @@ def fully_populated_tenant_info() -> TenantInfo:
         lexical_observations=(),
         merge_conflicts=MergeConflicts(
             display_name=(
-                CandidateValue(value="Contoso Ltd", source="oidc", confidence="high"),
-                CandidateValue(value="Contoso Limited", source="userrealm", confidence="medium"),
+                CandidateValue(value="Synthetic Alpha Ltd", source="oidc", confidence="high"),
+                CandidateValue(value="Synthetic Alpha Limited", source="userrealm", confidence="medium"),
             ),
         ),
     )

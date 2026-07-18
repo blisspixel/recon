@@ -12,8 +12,8 @@ committing.
 Determinism: rendered through a ``no_color``, fixed-width Rich console, so the
 snapshot is stable across machines.
 
-Data: every fixture uses Microsoft fictional brands (Contoso, Northwind,
-Fabrikam). No real company data appears here or in the golden files.
+Data: every fixture uses explicit synthetic labels and reserved domains. No
+real company data appears here or in the golden files.
 """
 
 from __future__ import annotations
@@ -62,12 +62,12 @@ def _check_golden(name: str, actual: str) -> None:
 
 
 def _sparse_info() -> TenantInfo:
-    """A thin result: a domain that publishes little. Northwind, fictional."""
+    """A thin result: a domain that publishes little. Synthetic Gamma, fictional."""
     return TenantInfo(
         tenant_id=None,
-        display_name="Northwind Traders",
-        default_domain="northwindtraders.com",
-        queried_domain="northwindtraders.com",
+        display_name="Synthetic Gamma",
+        default_domain="gamma.invalid",
+        queried_domain="gamma.invalid",
         confidence=ConfidenceLevel.LOW,
         sources=("dns_records",),
         services=("Microsoft 365",),
@@ -78,12 +78,12 @@ def _sparse_info() -> TenantInfo:
 
 
 def _hardened_info() -> TenantInfo:
-    """A hardened-looking target: wildcard certs, no identity. Fabrikam."""
+    """A hardened-looking target: wildcard certs, no identity. Synthetic Beta."""
     return TenantInfo(
         tenant_id=None,
-        display_name="Fabrikam, Inc.",
-        default_domain="fabrikam.com",
-        queried_domain="fabrikam.com",
+        display_name="Synthetic Beta, Inc.",
+        default_domain="beta.invalid",
+        queried_domain="beta.invalid",
         confidence=ConfidenceLevel.LOW,
         sources=("dns_records", "cert_transparency"),
         services=(),
@@ -97,7 +97,7 @@ def _hardened_info() -> TenantInfo:
             newest_cert_age_days=3,
             oldest_cert_age_days=20,
             top_issuers=("Let's Encrypt",),
-            wildcard_sibling_clusters=(("*.fabrikam.com", "app.fabrikam.com"),),
+            wildcard_sibling_clusters=(("*.beta.invalid", "app.beta.invalid"),),
         ),
         insights=("Wildcard-only certificate posture limits passive visibility.",),
     )
@@ -106,7 +106,7 @@ def _hardened_info() -> TenantInfo:
 def _surface_rich_info() -> TenantInfo:
     """A tenant with a populated external surface: CNAME-chain attributions
     (a collapsed CDN group, layered app+infra rows, a standalone app) plus
-    unclassified chains. Contoso, fictional.
+    unclassified chains. Synthetic Alpha, fictional.
 
     Pins the render branches the ``fully_populated_tenant_info`` fixture leaves
     dark: the Services subdomain summary, the Unclassified surface block, and
@@ -116,7 +116,7 @@ def _surface_rich_info() -> TenantInfo:
     """
     fastly = tuple(
         SurfaceAttribution(
-            subdomain=f"cdn{i}.contoso.com",
+            subdomain=f"cdn{i}.alpha.invalid",
             primary_slug="fastly",
             primary_name="Fastly",
             primary_tier="infrastructure",
@@ -125,7 +125,7 @@ def _surface_rich_info() -> TenantInfo:
     )
     auth0 = (
         SurfaceAttribution(
-            subdomain="login.contoso.com",
+            subdomain="login.alpha.invalid",
             primary_slug="auth0",
             primary_name="Auth0",
             primary_tier="application",
@@ -133,7 +133,7 @@ def _surface_rich_info() -> TenantInfo:
             infra_name="Cloudflare",  # layered: "Auth0, Cloudflare"
         ),
         SurfaceAttribution(
-            subdomain="sso.contoso.com",
+            subdomain="sso.alpha.invalid",
             primary_slug="auth0",
             primary_name="Auth0",
             primary_tier="application",
@@ -141,7 +141,7 @@ def _surface_rich_info() -> TenantInfo:
     )
     zendesk = (
         SurfaceAttribution(
-            subdomain="support.contoso.com",
+            subdomain="support.alpha.invalid",
             primary_slug="zendesk",
             primary_name="Zendesk",
             primary_tier="application",
@@ -149,9 +149,9 @@ def _surface_rich_info() -> TenantInfo:
     )
     return TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Contoso Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
         sources=("oidc_discovery", "dns_records", "cert_transparency"),
@@ -159,21 +159,21 @@ def _surface_rich_info() -> TenantInfo:
         slugs=("microsoft365", "slack"),
         auth_type="Federated",
         domain_count=4,
-        related_domains=("api.contoso.com", "login.contoso.com"),
+        related_domains=("api.alpha.invalid", "login.alpha.invalid"),
         insights=("Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",),
         surface_attributions=fastly + auth0 + zendesk,
         unclassified_cname_chains=(
             UnclassifiedCnameChain(
-                subdomain="weird.contoso.com",
-                chain=("weird.contoso.com", "edge.example.net", "origin.unknown.net"),
+                subdomain="weird.alpha.invalid",
+                chain=("weird.alpha.invalid", "edge.example.net", "origin.unknown.example"),
             ),
             UnclassifiedCnameChain(
-                subdomain="legacy.contoso.com",
-                chain=("legacy.contoso.com", "old.vendor.net"),
+                subdomain="legacy.alpha.invalid",
+                chain=("legacy.alpha.invalid", "old.vendor.example"),
             ),
             UnclassifiedCnameChain(
-                subdomain="app.contoso.com",
-                chain=("app.contoso.com",),
+                subdomain="app.alpha.invalid",
+                chain=("app.alpha.invalid",),
             ),
         ),
     )
@@ -182,7 +182,7 @@ def _surface_rich_info() -> TenantInfo:
 def _markdown_rich_info() -> TenantInfo:
     """A tenant exercising the markdown branches the dense/sparse fixtures leave
     dark: a Google Workspace services split, the GWS details block (auth type,
-    IdP, module indicators, CSE), and the degraded-sources footer note. Contoso,
+    IdP, module indicators, CSE), and the degraded-sources footer note. Synthetic Alpha,
     fictional.
 
     Pins ``format_tenant_markdown`` paths that ``fully_populated_tenant_info``
@@ -191,9 +191,9 @@ def _markdown_rich_info() -> TenantInfo:
     """
     return TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Contoso Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
         sources=("oidc_discovery", "dns_records", "cert_transparency"),
@@ -207,8 +207,8 @@ def _markdown_rich_info() -> TenantInfo:
         slugs=("microsoft365", "google-workspace", "google-workspace-modules", "google-cse", "slack"),
         auth_type="Federated",
         domain_count=2,
-        tenant_domains=("contoso.com", "contoso.onmicrosoft.com"),
-        related_domains=("api.contoso.com",),
+        tenant_domains=("alpha.invalid", "alpha.onmicrosoft.com"),
+        related_domains=("api.alpha.invalid",),
         insights=("Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",),
         degraded_sources=("crt.sh",),
         google_auth_type="SSO (SAML)",
@@ -216,13 +216,13 @@ def _markdown_rich_info() -> TenantInfo:
         evidence=(
             EvidenceRecord(
                 source_type="MX",
-                raw_value="contoso-com.mail.protection.outlook.com",
+                raw_value="alpha-com.mail.protection.outlook.com",
                 rule_name="Microsoft 365",
                 slug="microsoft365",
             ),
             EvidenceRecord(
                 source_type="CNAME",
-                raw_value="drive.contoso.com -> ghs.googlehosted.com",
+                raw_value="drive.alpha.invalid -> ghs.googlehosted.com",
                 rule_name="Google Workspace: Drive",
                 slug="google-workspace",
             ),

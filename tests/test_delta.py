@@ -17,8 +17,8 @@ def _make_info(**overrides) -> TenantInfo:
     defaults = {
         "tenant_id": "test-id",
         "display_name": "Test Corp",
-        "default_domain": "test.com",
-        "queried_domain": "test.com",
+        "default_domain": "test.invalid",
+        "queried_domain": "test.invalid",
         "confidence": ConfidenceLevel.HIGH,
         "services": ("ServiceA", "ServiceB"),
         "slugs": ("slug-a", "slug-b"),
@@ -36,8 +36,8 @@ def _make_previous(**overrides) -> dict:
     defaults = {
         "tenant_id": "test-id",
         "display_name": "Test Corp",
-        "default_domain": "test.com",
-        "queried_domain": "test.com",
+        "default_domain": "test.invalid",
+        "queried_domain": "test.invalid",
         "confidence": "high",
         "services": ["ServiceA", "ServiceB"],
         "slugs": ["slug-a", "slug-b"],

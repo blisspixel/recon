@@ -264,11 +264,10 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
     found, whether or not a fingerprint pattern matched. This lets
     downstream code distinguish "no MX records at all" (domain has no
     email) from "MX records exist but the host isn't in our fingerprint
-    set" (domain has custom / self-hosted email like Apache's own mail
-    servers). Previously, apache.org looked identical to
-    balcaninnovations.com from the evidence perspective - both had
-    zero MX evidence records even though apache.org has three real
-    MX hosts. The "generic MX evidence" carries an empty slug so it
+    set" (the domain has custom or self-hosted email). Previously, a
+    namespace with unclassified MX records looked identical to one with
+    no MX records from the evidence perspective. The "generic MX evidence"
+    carries an empty slug so it
     doesn't pollute the detected_slugs set.
     """
     ctx.record_catalog_query("mx")

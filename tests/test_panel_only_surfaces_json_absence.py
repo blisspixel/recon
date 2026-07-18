@@ -26,17 +26,17 @@ from recon_tool.models import ConfidenceLevel, SurfaceAttribution, TenantInfo
 def _multi_cloud_tenant() -> TenantInfo:
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid",
-        display_name="Contoso, Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha, Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=8,
-        tenant_domains=("contoso.com", "contoso.net", "contoso.co.uk"),
+        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid"),
         services=("AWS CloudFront", "Cloudflare", "Fastly"),
         slugs=("aws-cloudfront", "cloudflare", "fastly"),
         surface_attributions=tuple(
             SurfaceAttribution(
-                subdomain=f"sub{i}.contoso.com",
+                subdomain=f"sub{i}.alpha.invalid",
                 primary_slug="fastly",
                 primary_name="Fastly",
                 primary_tier="infrastructure",
@@ -49,12 +49,12 @@ def _multi_cloud_tenant() -> TenantInfo:
 def _sparse_hardened_tenant() -> TenantInfo:
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid",
-        display_name="Northwind Traders",
-        default_domain="northwind.com",
-        queried_domain="northwind.com",
+        display_name="Synthetic Gamma",
+        default_domain="gamma.invalid",
+        queried_domain="gamma.invalid",
         confidence=ConfidenceLevel.LOW,
         domain_count=5,
-        tenant_domains=("northwind.com", "nw.net", "nw.co.uk", "nw-corp.com", "nw-internal.com"),
+        tenant_domains=("gamma.invalid", "gamma.test", "gamma.example", "gamma-corp.invalid", "gamma-internal.invalid"),
         services=("Cloudflare",),
         slugs=("cloudflare",),
     )

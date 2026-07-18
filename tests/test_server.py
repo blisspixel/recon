@@ -24,9 +24,9 @@ RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
     region="NA",
     sources=("oidc_discovery", "azure_ad_metadata"),
@@ -55,20 +55,20 @@ class TestLookupText:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_text_contains_company(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com")
-        assert "Display name: Contoso Ltd" in result
+        result = await lookup_tenant("alpha.invalid")
+        assert "Display name: Synthetic Alpha Ltd" in result
         assert "Provider: Microsoft 365" in result
         assert "Tenant ID: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee" in result
         assert "Region: NA" in result
-        assert "Domain: contoso.com" in result
-        assert "Default domain: contoso.onmicrosoft.com" in result
-        assert "Domain: contoso.onmicrosoft.com" not in result
+        assert "Domain: alpha.invalid" in result
+        assert "Default domain: alpha.onmicrosoft.com" in result
+        assert "Domain: alpha.onmicrosoft.com" not in result
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_text_not_json(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com")
+        result = await lookup_tenant("alpha.invalid")
         with pytest.raises(json.JSONDecodeError):
             json.loads(result)
 
@@ -77,15 +77,15 @@ class TestLookupText:
     async def test_omits_region_when_none(self, mock_resolve: AsyncMock) -> None:
         info = TenantInfo(
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-            display_name="Contoso Ltd",
-            default_domain="contoso.onmicrosoft.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.MEDIUM,
             region=None,
             sources=("oidc_discovery",),
         )
         mock_resolve.return_value = (info, SAMPLE_RESULTS[:1])
-        result = await lookup_tenant("contoso.com")
+        result = await lookup_tenant("alpha.invalid")
         assert "Region:" not in result
         assert "Confidence: medium (1 source)" in result
         assert "1 sources" not in result
@@ -96,7 +96,7 @@ class TestLookupText:
         attributions = (
             *(
                 SurfaceAttribution(
-                    subdomain=f"app{i}.contoso.com",
+                    subdomain=f"app{i}.alpha.invalid",
                     primary_slug="azure-app-service",
                     primary_name="Azure App Service",
                     primary_tier="infrastructure",
@@ -105,7 +105,7 @@ class TestLookupText:
             ),
             *(
                 SurfaceAttribution(
-                    subdomain=f"proxy{i}.contoso.com",
+                    subdomain=f"proxy{i}.alpha.invalid",
                     primary_slug="microsoft-entra-application-proxy",
                     primary_name="Microsoft Entra Application Proxy",
                     primary_tier="application",
@@ -113,7 +113,7 @@ class TestLookupText:
                 for i in range(12)
             ),
             SurfaceAttribution(
-                subdomain="shop.contoso.com",
+                subdomain="shop.alpha.invalid",
                 primary_slug="shopify",
                 primary_name="Shopify",
                 primary_tier="application",
@@ -121,9 +121,9 @@ class TestLookupText:
         )
         info = TenantInfo(
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-            display_name="Contoso Ltd",
-            default_domain="contoso.onmicrosoft.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.HIGH,
             sources=("dns_records",),
             services=("Exchange Online",),
@@ -131,7 +131,7 @@ class TestLookupText:
         )
         mock_resolve.return_value = (info, SAMPLE_RESULTS[:1])
 
-        result = await lookup_tenant("contoso.com")
+        result = await lookup_tenant("alpha.invalid")
 
         assert "Subdomain surface: Azure App Service (33)" in result
         assert "Microsoft Entra Application Proxy (12)" in result
@@ -141,7 +141,7 @@ class TestLookupText:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_text_omits_empty_subdomain_surface_summary(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com")
+        result = await lookup_tenant("alpha.invalid")
         assert "Subdomain surface:" not in result
 
     @pytest.mark.asyncio
@@ -149,16 +149,16 @@ class TestLookupText:
     async def test_gws_details_require_typed_evidence_and_use_indicator_copy(self, mock_resolve: AsyncMock) -> None:
         info = TenantInfo(
             tenant_id=None,
-            display_name="Contoso Ltd",
-            default_domain="contoso.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.invalid",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.MEDIUM,
             services=("Google Workspace", "Google Workspace: Drive", "Google Workspace CSE"),
             slugs=("google-workspace", "google-workspace-modules", "google-cse"),
             evidence=(
                 EvidenceRecord(
                     source_type="CNAME",
-                    raw_value="drive.contoso.com -> ghs.googlehosted.com",
+                    raw_value="drive.alpha.invalid -> ghs.googlehosted.com",
                     rule_name="Google Workspace: Drive",
                     slug="google-workspace",
                 ),
@@ -172,7 +172,7 @@ class TestLookupText:
         )
         mock_resolve.return_value = (info, SAMPLE_RESULTS)
 
-        result = await lookup_tenant("contoso.com")
+        result = await lookup_tenant("alpha.invalid")
 
         assert "GWS module indicators: Drive" in result
         assert "GWS CSE configuration indicators: Google Workspace CSE" in result
@@ -183,16 +183,16 @@ class TestLookupText:
     async def test_gws_details_omit_unproved_legacy_service_fields(self, mock_resolve: AsyncMock) -> None:
         info = TenantInfo(
             tenant_id=None,
-            display_name="Contoso Ltd",
-            default_domain="contoso.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.invalid",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.LOW,
             services=("Google Workspace: Drive", "Google Workspace CSE"),
             slugs=("google-workspace", "google-cse"),
         )
         mock_resolve.return_value = (info, SAMPLE_RESULTS)
 
-        result = await lookup_tenant("contoso.com")
+        result = await lookup_tenant("alpha.invalid")
 
         assert "GWS module indicators:" not in result
         assert "GWS CSE configuration indicators:" not in result
@@ -202,9 +202,9 @@ class TestLookupText:
     async def test_provider_line_omits_txt_only_secondary(self, mock_resolve: AsyncMock) -> None:
         info = TenantInfo(
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-            display_name="Contoso Ltd",
-            default_domain="contoso.onmicrosoft.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.HIGH,
             services=("Microsoft 365", "Google Workspace"),
             slugs=("microsoft365", "google-workspace"),
@@ -226,7 +226,7 @@ class TestLookupText:
         )
         mock_resolve.return_value = (info, SAMPLE_RESULTS)
 
-        result = await lookup_tenant("contoso.com")
+        result = await lookup_tenant("alpha.invalid")
 
         assert "Provider: Microsoft 365 (MX delivery path)\n" in result
         assert "Provider: Microsoft 365 (primary) + Google Workspace" not in result
@@ -237,9 +237,9 @@ class TestLookupJson:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_json_format(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="json")
+        result = await lookup_tenant("alpha.invalid", format="json")
         data = json.loads(result)
-        assert data["display_name"] == "Contoso Ltd"
+        assert data["display_name"] == "Synthetic Alpha Ltd"
         # This legacy fixture has no retained evidence, so the formatter cannot
         # recover which public role produced the slug.
         assert data["provider"] == "Microsoft 365 (role unavailable)"
@@ -252,9 +252,9 @@ class TestLookupMarkdown:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_markdown_format(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="markdown")
+        result = await lookup_tenant("alpha.invalid", format="markdown")
         assert "# " in result
-        assert "Contoso Ltd" in result
+        assert "Synthetic Alpha Ltd" in result
 
 
 class TestErrors:
@@ -262,19 +262,19 @@ class TestErrors:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_not_found(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com",
+            domain="unknown.invalid",
             message="No data",
             error_type="no_data",
         )
-        result = await lookup_tenant("unknown.com")
-        assert "No information found for unknown.com" in result
+        result = await lookup_tenant("unknown.invalid")
+        assert "No information found for unknown.invalid" in result
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         ("error_type", "expected"),
         [
-            ("timeout", "Lookup timed out for unknown.com"),
-            ("all_sources_failed", "Lookup failed for unknown.com: all passive sources returned errors"),
+            ("timeout", "Lookup timed out for unknown.invalid"),
+            ("all_sources_failed", "Lookup failed for unknown.invalid: all passive sources returned errors"),
         ],
     )
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -285,11 +285,11 @@ class TestErrors:
         expected: str,
     ) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com",
+            domain="unknown.invalid",
             message="collection failed",
             error_type=error_type,
         )
-        result = await lookup_tenant("unknown.com")
+        result = await lookup_tenant("unknown.invalid")
         assert expected in result
         assert "No information found" not in result
 
@@ -360,29 +360,29 @@ class TestErrors:
             return SAMPLE_INFO, SAMPLE_RESULTS
 
         with patch(RESOLVE_PATH, side_effect=fake_resolve):
-            first = asyncio.create_task(lookup_tenant("contoso.com"))
+            first = asyncio.create_task(lookup_tenant("alpha.invalid"))
             await started.wait()
-            second = await lookup_tenant("contoso.com")
+            second = await lookup_tenant("alpha.invalid")
             release.set()
             first_result = await first
 
         assert calls == 1
-        assert "Display name: Contoso Ltd" in first_result
+        assert "Display name: Synthetic Alpha Ltd" in first_result
         assert "Rate limited:" in second
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_failed_lookup_retains_rate_limit_cooldown(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com",
+            domain="unknown.invalid",
             message="No data",
             error_type="all_sources_failed",
         )
 
-        first = await lookup_tenant("unknown.com")
-        second = await lookup_tenant("unknown.com")
+        first = await lookup_tenant("unknown.invalid")
+        second = await lookup_tenant("unknown.invalid")
 
-        assert "Lookup failed for unknown.com" in first
+        assert "Lookup failed for unknown.invalid" in first
         assert "Rate limited" in second
         assert mock_resolve.await_count == 1
 
@@ -401,8 +401,8 @@ class TestMCPMetadata:
     def test_prompt_exists(self) -> None:
         from recon_tool.server import domain_report
 
-        result = domain_report("contoso.com")
-        assert "contoso.com" in result
+        result = domain_report("alpha.invalid")
+        assert "alpha.invalid" in result
         assert "lookup_tenant" in result
 
     def test_prompt_normalizes_and_validates_domain(self) -> None:

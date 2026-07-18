@@ -49,18 +49,18 @@ def _v198_shape_multi_cloud_cache() -> dict:
     return {
         "cache_version": _CACHE_VERSION,
         "tenant_id": "tid-198-multi",
-        "display_name": "Contoso, Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha, Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": "high",
         "domain_count": 8,
-        "tenant_domains": ["contoso.com", "contoso.net", "contoso.co.uk"],
+        "tenant_domains": ["alpha.invalid", "alpha.invalid", "alpha.invalid"],
         "services": ["AWS CloudFront", "Cloudflare", "GCP Compute Engine"],
         "slugs": ["aws-cloudfront", "cloudflare", "gcp-compute"],
         "sources": [],
         "surface_attributions": [
             {
-                "subdomain": "api.contoso.com",
+                "subdomain": "api.alpha.invalid",
                 "primary_slug": "fastly",
                 "primary_name": "Fastly",
                 "primary_tier": "infrastructure",
@@ -76,12 +76,18 @@ def _v198_shape_sparse_cache() -> dict:
     return {
         "cache_version": _CACHE_VERSION,
         "tenant_id": "tid-198-sparse",
-        "display_name": "Northwind Traders",
-        "default_domain": "northwind.com",
-        "queried_domain": "northwind.com",
+        "display_name": "Synthetic Gamma",
+        "default_domain": "gamma.invalid",
+        "queried_domain": "gamma.invalid",
         "confidence": "low",
         "domain_count": 5,
-        "tenant_domains": ["northwind.com", "nw.net", "nw.co.uk", "nw-corp.com", "nw-internal.com"],
+        "tenant_domains": [
+            "gamma.invalid",
+            "gamma.test",
+            "gamma.example",
+            "gamma-corp.invalid",
+            "gamma-internal.invalid",
+        ],
         "services": ["Cloudflare"],
         "slugs": ["cloudflare"],
         "sources": [],
@@ -96,12 +102,12 @@ class TestCacheLoadsAcrossVersions:
 
     def test_multi_cloud_cache_loads(self):
         info = tenant_info_from_dict(_v198_shape_multi_cloud_cache())
-        assert info.display_name == "Contoso, Ltd"
+        assert info.display_name == "Synthetic Alpha, Ltd"
         assert "aws-cloudfront" in info.slugs
 
     def test_sparse_cache_loads(self):
         info = tenant_info_from_dict(_v198_shape_sparse_cache())
-        assert info.display_name == "Northwind Traders"
+        assert info.display_name == "Synthetic Gamma"
         assert info.domain_count == 5
 
     def test_json_round_trip_stable_to_load(self):
@@ -111,7 +117,7 @@ class TestCacheLoadsAcrossVersions:
         json_text = json.dumps(cache_dict)
         round_tripped_dict = json.loads(json_text)
         info = tenant_info_from_dict(round_tripped_dict)
-        assert info.display_name == "Contoso, Ltd"
+        assert info.display_name == "Synthetic Alpha, Ltd"
 
 
 class TestV199SurfacesDeriveFromOlderCache:

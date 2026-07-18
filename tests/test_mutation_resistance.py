@@ -59,9 +59,9 @@ def _render(info: TenantInfo, **kwargs: object) -> str:
 def _make_tenant(**overrides: object) -> TenantInfo:
     base: dict[str, object] = {
         "tenant_id": "tid",
-        "display_name": "Contoso, Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha, Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.HIGH,
     }
     base.update(overrides)
@@ -227,7 +227,7 @@ class TestCeilingTriggerMutations:
         produce a different output."""
         info = _make_tenant(
             domain_count=3,
-            tenant_domains=("a.com", "b.com", "c.com"),
+            tenant_domains=("a.invalid", "b.invalid", "c.invalid"),
             services=("Microsoft 365",),
             slugs=("m365",),
         )
@@ -252,7 +252,7 @@ class TestCeilingTriggerMutations:
         # trigger.
         info = _make_tenant(
             domain_count=4,
-            tenant_domains=("a.com", "b.com", "c.com", "d.com"),
+            tenant_domains=("a.invalid", "b.invalid", "c.invalid", "d.invalid"),
             services=("Microsoft 365", "Okta", "Cloudflare", "Slack", "OpenAI"),
             slugs=("m365", "okta", "cloudflare", "slack", "openai"),
         )

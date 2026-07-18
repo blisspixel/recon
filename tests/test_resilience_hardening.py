@@ -99,7 +99,7 @@ class TestDecompressionBombGuard:
             200,
             headers={"content-encoding": "gzip"},
             stream=raw_stream,
-            request=httpx.Request("GET", "https://cse.contoso.com/x"),
+            request=httpx.Request("GET", "https://cse.alpha.invalid/x"),
         )
 
         async def _fake_super(_self: Any, _request: httpx.Request) -> httpx.Response:
@@ -108,7 +108,7 @@ class TestDecompressionBombGuard:
         monkeypatch.setattr(http_mod, "_is_private_ip_async", _not_private)
         monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", _fake_super)
 
-        resp = await _SSRFSafeTransport().handle_async_request(httpx.Request("GET", "https://cse.contoso.com/x"))
+        resp = await _SSRFSafeTransport().handle_async_request(httpx.Request("GET", "https://cse.alpha.invalid/x"))
         assert isinstance(resp.stream, _RefusingStream)
         assert raw_stream.close_calls == 1
         with pytest.raises(httpx.ReadError):
@@ -158,7 +158,7 @@ class TestDecompressionBombGuard:
 
 def _write_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Any, content: str) -> None:
     monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
-    path = cache_mod._safe_cache_path("contoso.com")
+    path = cache_mod._safe_cache_path("alpha.invalid")
     assert path is not None
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
@@ -166,7 +166,7 @@ def _write_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Any, content: str) -
 
 def _write_ct_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Any, content: str) -> None:
     monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
-    path = ct_cache_mod._safe_path("contoso.com")
+    path = ct_cache_mod._safe_path("alpha.invalid")
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(content, encoding="utf-8")
 
@@ -177,31 +177,31 @@ class TestPoisonedCacheDegrades:
         with pytest.raises(RecursionError):
             json.loads(_DEEPLY_NESTED_JSON)
         _write_cache(monkeypatch, tmp_path, _DEEPLY_NESTED_JSON)
-        assert cache_mod.cache_get("contoso.com") is None
+        assert cache_mod.cache_get("alpha.invalid") is None
 
     def test_cache_get_oversized_returns_none(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
         oversized = '{"display_name": "' + "a" * (6 * 1024 * 1024) + '"}'
         _write_cache(monkeypatch, tmp_path, oversized)
-        assert cache_mod.cache_get("contoso.com") is None
+        assert cache_mod.cache_get("alpha.invalid") is None
 
     def test_cache_get_bounds_the_open_file_when_path_metadata_is_stale(
         self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any
     ) -> None:
         oversized = '{"display_name": "' + "a" * (6 * 1024 * 1024) + '"}'
         _write_cache(monkeypatch, tmp_path, oversized)
-        path = cache_mod._safe_cache_path("contoso.com")
+        path = cache_mod._safe_cache_path("alpha.invalid")
         assert path is not None
         _make_path_metadata_stale(monkeypatch, path)
 
-        assert cache_mod.cache_get("contoso.com") is None
+        assert cache_mod.cache_get("alpha.invalid") is None
 
     def test_ct_cache_get_deeply_nested_returns_none(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
         _write_ct_cache(monkeypatch, tmp_path, _DEEPLY_NESTED_JSON)
-        assert ct_cache_mod.ct_cache_get("contoso.com") is None
+        assert ct_cache_mod.ct_cache_get("alpha.invalid") is None
 
     def test_ct_cache_show_deeply_nested_returns_none(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
         _write_ct_cache(monkeypatch, tmp_path, _DEEPLY_NESTED_JSON)
-        assert ct_cache_mod.ct_cache_show("contoso.com") is None
+        assert ct_cache_mod.ct_cache_show("alpha.invalid") is None
 
     @pytest.mark.parametrize("operation", [ct_cache_mod.ct_cache_get, ct_cache_mod.ct_cache_show])
     def test_ct_cache_reads_bound_the_open_file_when_path_metadata_is_stale(
@@ -209,10 +209,10 @@ class TestPoisonedCacheDegrades:
     ) -> None:
         oversized = '{"subdomains": ["' + "a" * (6 * 1024 * 1024) + '"]}'
         _write_ct_cache(monkeypatch, tmp_path, oversized)
-        path = ct_cache_mod._safe_path("contoso.com")
+        path = ct_cache_mod._safe_path("alpha.invalid")
         _make_path_metadata_stale(monkeypatch, path)
 
-        assert operation("contoso.com") is None
+        assert operation("alpha.invalid") is None
 
     @pytest.mark.parametrize("kind", ["tenant", "ct"])
     def test_stale_cache_is_rejected_before_json_decode(
@@ -220,11 +220,11 @@ class TestPoisonedCacheDegrades:
     ) -> None:
         if kind == "tenant":
             _write_cache(monkeypatch, tmp_path, "{}")
-            path = cache_mod._safe_cache_path("contoso.com")
+            path = cache_mod._safe_cache_path("alpha.invalid")
             operation = cache_mod.cache_get
         else:
             _write_ct_cache(monkeypatch, tmp_path, "{}")
-            path = ct_cache_mod._safe_path("contoso.com")
+            path = ct_cache_mod._safe_path("alpha.invalid")
             operation = ct_cache_mod.ct_cache_get
         assert path is not None
         old = time.time() - 10 * 86400
@@ -234,7 +234,7 @@ class TestPoisonedCacheDegrades:
 
         monkeypatch.setattr("recon_tool.json_limits.json.loads", _unexpected_decode)
 
-        assert operation("contoso.com", ttl=1) is None
+        assert operation("alpha.invalid", ttl=1) is None
 
     def test_rate_limit_load_persisted_degrades_on_poison(self) -> None:
         # A deeply-nested persisted limiter-state file must not crash limiter
@@ -364,9 +364,9 @@ class TestInfraGraphEntryBound:
     def _reused_san_entries(n: int) -> list[dict[str, Any]]:
         # The same 60-name SAN set on every cert: node count freezes at 60, so
         # MAX_GRAPH_NODES never trips and the entry count is the only dimension.
-        sans = [f"h{i}.fabrikam.com" for i in range(60)]
+        sans = [f"h{i}.beta.invalid" for i in range(60)]
         return [
-            {"dns_names": list(sans), "issuer_name": "Fabrikam CA", "not_before": "2026-01-01T00:00:00Z"}
+            {"dns_names": list(sans), "issuer_name": "Synthetic Beta CA", "not_before": "2026-01-01T00:00:00Z"}
             for _ in range(n)
         ]
 
@@ -411,7 +411,7 @@ class TestCtProviderRecursionError:
 
         monkeypatch.setattr(cp, "http_client", _fake_ct_client(_DEEPLY_NESTED_JSON.encode()))
         with pytest.raises(httpx.HTTPError):
-            await CrtshProvider().query("contoso.com")
+            await CrtshProvider().query("alpha.invalid")
 
     @pytest.mark.asyncio
     async def test_certspotter_degrades_on_deeply_nested_json(self, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -419,7 +419,7 @@ class TestCtProviderRecursionError:
 
         monkeypatch.setattr(cp, "http_client", _fake_ct_client(_DEEPLY_NESTED_JSON.encode()))
         with pytest.raises(httpx.HTTPError):
-            await CertSpotterProvider().query("contoso.com")
+            await CertSpotterProvider().query("alpha.invalid")
 
 
 # ── HTTP retry / redirect bounds ──────────────────────────────────────────
@@ -481,5 +481,5 @@ class TestDnsBounds:
         resolver = _TimeoutResolver()
         monkeypatch.setattr(dns_base, "get_resolver", lambda: resolver)
 
-        assert await dns_base.safe_resolve("contoso.com", "TXT") == []
-        assert resolver.calls == [("contoso.com", "TXT", dns_base.DNS_QUERY_TIMEOUT)]
+        assert await dns_base.safe_resolve("alpha.invalid", "TXT") == []
+        assert resolver.calls == [("alpha.invalid", "TXT", dns_base.DNS_QUERY_TIMEOUT)]

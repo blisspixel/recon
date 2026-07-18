@@ -64,6 +64,6 @@ Copilot loads instructions for every chat turn - keep the file focused.
 
 In VS Code Copilot Chat, ask:
 
-> Run a recon lookup on contoso.com and summarize what's observable.
+> Run a recon lookup on alpha.invalid and summarize what's observable.
 
 Copilot should report the `recon` MCP server connected and tools enumerated. If not, check [`docs/mcp.md`](../../docs/mcp.md#troubleshooting).

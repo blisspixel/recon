@@ -64,6 +64,6 @@ Skills load on-demand when the description matches the user's intent - lower con
 
 In Kiro, ask:
 
-> Run a recon lookup on contoso.com and summarize what's observable.
+> Run a recon lookup on alpha.invalid and summarize what's observable.
 
 Kiro should report the `recon` MCP server connected and tools enumerated. If not, check [`docs/mcp.md`](../../docs/mcp.md#troubleshooting).

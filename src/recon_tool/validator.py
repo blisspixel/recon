@@ -167,8 +167,8 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
         raw_input: Raw domain string from user input.
         apex: When True (default), reduce the validated host to its
             registrable domain via the Public Suffix List, so a pasted URL or
-            sub-host (``https://mail.acme.co.uk/x``) is analyzed at the apex
-            (``acme.co.uk``) where recon's signal lives. This subsumes the old
+            sub-host (``https://mail.example.co.uk/x``) is analyzed at the apex
+            (``example.co.uk``) where recon's signal lives. This subsumes the old
             special-case ``www.`` strip. Pass False (``recon --exact``) to keep
             the literal host for the narrow "DNS facts about this one host"
             case.
@@ -211,8 +211,8 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     domain = domain.rstrip(".")
 
     # Internationalized domain names: convert a raw-Unicode IDN (for
-    # example ``münchen.de``) to its ASCII punycode form
-    # (``xn--mnchen-3ya.de``) before the format check, so an operator can
+    # example ``café.invalid``) to its ASCII punycode form
+    # (``xn--caf-dma.invalid``) before the format check, so an operator can
     # paste an IDN directly instead of pre-encoding it. Uses the stdlib
     # IDNA codec, so no new dependency. A string the codec cannot encode
     # (empty or oversized labels) raises and falls through to the format
@@ -223,8 +223,9 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
         with contextlib.suppress(UnicodeError, ValueError):
             encoded = domain.encode("idna").decode("ascii")
             # The stdlib idna codec is IDNA2003/nameprep, which is lossy: it maps
-            # faß.de to fass.de, straße.de to strasse.de, and folds fullwidth /
-            # zero-width characters away, silently changing the registrable domain.
+            # faß.invalid to fass.invalid, straße.invalid to strasse.invalid,
+            # and folds fullwidth / zero-width characters away, silently changing
+            # the registrable domain.
             # Only accept the conversion when it round-trips, so a lossy mapping to
             # a different domain is rejected (it falls through to the format check
             # below) rather than queried as the wrong domain.

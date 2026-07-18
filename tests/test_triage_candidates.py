@@ -107,10 +107,10 @@ def test_triage_drops_repeated_chains_from_only_one_namespace() -> None:
 def test_find_candidates_keeps_suffix_when_existing_pattern_is_only_substring() -> None:
     runs = [
         (
-            "contoso.com",
+            "alpha.invalid",
             [
                 {
-                    "subdomain": "sync.contoso.com",
+                    "subdomain": "sync.alpha.invalid",
                     "chain": ["sync-transcend-cdn.com"],
                 }
             ],
@@ -123,7 +123,7 @@ def test_find_candidates_keeps_suffix_when_existing_pattern_is_only_substring() 
             "count": 1,
             "samples": [
                 {
-                    "subdomain": "sync.contoso.com",
+                    "subdomain": "sync.alpha.invalid",
                     "terminal": "sync-transcend-cdn.com",
                     "chain": ["sync-transcend-cdn.com"],
                 }

@@ -66,7 +66,7 @@ def _load_sample_input() -> dict[str, Any]:
         pytest.fail(
             f"missing shared SIEM-example input: {_SAMPLE_INPUT}. "
             "The SIEM consumption examples assume this fictional "
-            "Northwind Traders sample is at examples/sample-output.json."
+            "Synthetic Gamma sample is at examples/sample-output.json."
         )
     return json.loads(_SAMPLE_INPUT.read_text(encoding="utf-8"))
 
