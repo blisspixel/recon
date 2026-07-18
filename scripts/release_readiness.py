@@ -7,9 +7,9 @@ private-corpus hygiene, supply-chain verification recipe freshness, and local
 commit-message hygiene.
 
 Use ``--remote`` after pushing when you want the same report to include GitHub
-Actions status for the current commit, PyPI publication state, PyPI provenance
-verification, GitHub Release asset completeness, GitHub build-provenance
-verification for the current version, and public Scorecard API freshness.
+Actions status for the current commit, PyPI publication state, PyPI provenance,
+GitHub Release asset completeness, exact release evidence, cross-channel byte
+parity for the current version, and public Scorecard API freshness.
 """
 
 from __future__ import annotations
@@ -28,8 +28,10 @@ from typing import Literal
 
 try:
     from scripts import check_validation_hygiene
+    from scripts.finalize_sbom import SbomError, validate_completed_sbom
 except ImportError:
     import check_validation_hygiene  # type: ignore[no-redef]
+    from finalize_sbom import SbomError, validate_completed_sbom  # type: ignore[no-redef]
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -42,6 +44,7 @@ _CITATION_RELEASE_DATE_RE = re.compile(
     r"^date-released:\s*\"?([0-9]{4}-[0-9]{2}-[0-9]{2})\"?\s*$",
     re.MULTILINE,
 )
+_COMMIT_SHA_RE = re.compile(r"^(?:[0-9a-f]{40}|[0-9a-f]{64})$")
 _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
 _COVERAGE_FLOOR = "--cov-fail-under=90.2"
@@ -63,8 +66,11 @@ _REQUIRED_SCORECARD_TENS = (
 )
 _REQUIRED_SCORECARD_MINIMUMS: dict[str, int] = {}
 _PYPI_PACKAGE = "recon-tool"
-_PYPI_RELEASE_URL = f"https://pypi.org/pypi/{_PYPI_PACKAGE}/json"
+_PYPI_RELEASE_URL = f"https://pypi.org/pypi/{_PYPI_PACKAGE}/{{version}}/json"
 _PYPI_ATTESTATION_REPOSITORY = "https://github.com/blisspixel/recon"
+_PYPI_ATTESTATIONS_SPEC = "pypi-attestations==0.0.29"
+_COMMAND_TIMEOUT_SECONDS = 120
+_MAX_RELEASE_ASSET_BYTES = 64 * 1024 * 1024
 _README_FORBIDDEN_FRAGMENTS = (
     "enterprise use, contact",
     "commercial or\nenterprise use",
@@ -96,6 +102,108 @@ class CheckResult:
     action: str = ""
 
 
+class _ReleaseEvidenceError(RuntimeError):
+    """A required published release artifact or verifier result is unavailable."""
+
+
+@dataclass(frozen=True)
+class _ReleaseAssetClient:
+    runner: Runner
+    repo: str
+    version: str
+    directory: Path
+
+    def require_safe_inventory(self, subjects: tuple[str, ...]) -> None:
+        result = self.runner(
+            [
+                "gh",
+                "release",
+                "view",
+                f"v{self.version}",
+                "--repo",
+                self.repo,
+                "--json",
+                "assets",
+            ]
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip() or "could not inspect release asset sizes"
+            raise _ReleaseEvidenceError(detail)
+        try:
+            payload = json.loads(result.stdout)
+        except json.JSONDecodeError as exc:
+            raise _ReleaseEvidenceError(f"could not parse release asset sizes: {exc}") from exc
+        assets = payload.get("assets") if isinstance(payload, dict) else None
+        if not isinstance(assets, list):
+            raise _ReleaseEvidenceError("release asset size inventory was not a list")
+        requested = set(subjects)
+        sizes: dict[str, int] = {}
+        for asset in assets:
+            if not isinstance(asset, dict) or not isinstance(asset.get("name"), str):
+                raise _ReleaseEvidenceError("release asset size inventory contains a malformed entry")
+            name = asset["name"]
+            if name not in requested:
+                continue
+            size = asset.get("size")
+            if not isinstance(size, int) or isinstance(size, bool):
+                raise _ReleaseEvidenceError(f"release asset has no valid declared size: {name}")
+            if name in sizes:
+                raise _ReleaseEvidenceError(f"release asset size inventory repeats {name}")
+            sizes[name] = size
+        missing = sorted(requested - sizes.keys())
+        if missing:
+            raise _ReleaseEvidenceError("release asset size inventory is missing: " + ", ".join(missing))
+        unsafe = sorted(name for name, size in sizes.items() if size <= 0 or size > _MAX_RELEASE_ASSET_BYTES)
+        if unsafe:
+            raise _ReleaseEvidenceError(
+                f"release asset declares an empty or oversized file: {', '.join(unsafe)}"
+            )
+
+    def download(self, subject: str) -> Path:
+        result = self.runner(
+            [
+                "gh",
+                "release",
+                "download",
+                f"v{self.version}",
+                "--repo",
+                self.repo,
+                "--pattern",
+                subject,
+                "--dir",
+                str(self.directory),
+            ]
+        )
+        if result.returncode != 0:
+            detail = (result.stderr or result.stdout).strip() or f"could not download {subject}"
+            raise _ReleaseEvidenceError(detail)
+        artifact = self.directory / subject
+        if not artifact.is_file() or artifact.is_symlink():
+            raise _ReleaseEvidenceError(f"release download did not produce a regular file for {subject}")
+        try:
+            size = artifact.stat().st_size
+        except OSError as exc:
+            raise _ReleaseEvidenceError(f"could not inspect downloaded release asset {subject}: {exc}") from exc
+        if size == 0:
+            raise _ReleaseEvidenceError(f"downloaded release asset is empty: {subject}")
+        if size > _MAX_RELEASE_ASSET_BYTES:
+            raise _ReleaseEvidenceError(
+                f"downloaded release asset exceeds the {_MAX_RELEASE_ASSET_BYTES}-byte safety limit: {subject}"
+            )
+        return artifact
+
+
+def _release_tag_sha(runner: Runner, version: str) -> str:
+    result = runner(["git", "rev-list", "-n", "1", f"refs/tags/v{version}"])
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or f"could not resolve local v{version} tag"
+        raise _ReleaseEvidenceError(detail)
+    sha = result.stdout.strip().lower()
+    if _COMMIT_SHA_RE.fullmatch(sha) is None:
+        raise _ReleaseEvidenceError(f"local v{version} tag did not resolve to a full commit SHA")
+    return sha
+
+
 def _result(name: str, status: Status, detail: str, action: str = "") -> CheckResult:
     return CheckResult(name=name, status=status, detail=detail, action=action)
 
@@ -109,9 +217,17 @@ def _make_runner(root: Path) -> Runner:
                 text=True,
                 capture_output=True,
                 check=False,
+                timeout=_COMMAND_TIMEOUT_SECONDS,
             )
         except FileNotFoundError as exc:
             return subprocess.CompletedProcess(cmd, 127, "", str(exc))
+        except subprocess.TimeoutExpired:
+            return subprocess.CompletedProcess(
+                cmd,
+                124,
+                "",
+                f"command timed out after {_COMMAND_TIMEOUT_SECONDS} seconds",
+            )
 
     return _run
 
@@ -339,15 +455,30 @@ def _check_supply_chain_recipe_version(root: Path) -> CheckResult:
 
     required = (
         f"VERSION={version}",
-        f'version = "{version}"',
+        f'$Version = "{version}"',
         "Consumer verification quick path",
+        "set -euo pipefail",
+        "Set-StrictMode -Version Latest",
+        "git status --porcelain",
+        "gh auth status",
+        "MAX_RELEASE_ASSET_BYTES",
         '--pattern "recon_tool-${VERSION}-py3-none-any.whl"',
         '--pattern "recon_tool-${VERSION}.tar.gz"',
         '--pattern "recon-tool-${VERSION}.cdx.json"',
         '--pattern "recon-tool-${VERSION}.intoto.jsonl"',
+        "scripts/check_release_channel_parity.py",
+        "--url-file",
+        "validate_completed_sbom",
         "gh attestation verify",
-        "https://pypi.org/pypi/recon-tool/json",
+        "--bundle",
+        "--signer-workflow",
+        "--source-ref",
+        "--source-digest",
+        _PYPI_ATTESTATIONS_SPEC,
         "pypi-attestations verify pypi",
+        "URL_COUNT",
+        "RECON_INSTALL_MANAGER",
+        "both working wheel entry points",
     )
     missing = [anchor for anchor in required if anchor not in text]
     if missing:
@@ -607,12 +738,12 @@ def _check_pypi_release(root: Path, runner: Runner) -> CheckResult:
     except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
         return _result("PyPI release", "fail", str(exc))
 
-    payload = _load_pypi_release_payload(runner)
+    payload = _load_pypi_release_payload(runner, version)
     if isinstance(payload, CheckResult):
         return payload
     latest = payload.get("version")
     if latest != version:
-        return _result("PyPI release", "fail", f"PyPI latest is {latest!r}, project is {version}")
+        return _result("PyPI release", "fail", f"PyPI record is {latest!r}, project is {version}")
     expected = _expected_distribution_names(version)
     missing = sorted(set(expected) - _pypi_file_names(payload))
     if missing:
@@ -620,13 +751,14 @@ def _check_pypi_release(root: Path, runner: Runner) -> CheckResult:
     return _result("PyPI release", "pass", f"PyPI reports {_PYPI_PACKAGE} {version} with wheel and sdist")
 
 
-def _load_pypi_release_payload(runner: Runner) -> dict[str, object] | CheckResult:
+def _load_pypi_release_payload(runner: Runner, version: str) -> dict[str, object] | CheckResult:
+    release_url = _PYPI_RELEASE_URL.format(version=version)
     script = (
         "import json, urllib.request; "
-        f"data=json.load(urllib.request.urlopen({_PYPI_RELEASE_URL!r}, timeout=30)); "
+        f"data=json.load(urllib.request.urlopen({release_url!r}, timeout=30)); "
         "print(json.dumps({'version': data['info']['version'], "
         "'files': [{'filename': f.get('filename'), 'url': f.get('url')} "
-        "for f in data.get('releases', {}).get(data['info']['version'], [])]}))"
+        "for f in data.get('urls', [])]}))"
     )
     result = runner([sys.executable, "-c", script])
     if result.returncode != 0:
@@ -677,12 +809,12 @@ def _check_pypi_attestations(root: Path, runner: Runner) -> CheckResult:
         version = _read_project_version(root)
     except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
         return _result("PyPI attestations", "fail", str(exc))
-    payload = _load_pypi_release_payload(runner)
+    payload = _load_pypi_release_payload(runner, version)
     if isinstance(payload, CheckResult):
         return _result("PyPI attestations", payload.status, payload.detail, payload.action)
     latest = payload.get("version")
     if latest != version:
-        return _result("PyPI attestations", "fail", f"PyPI latest is {latest!r}, project is {version}")
+        return _result("PyPI attestations", "fail", f"PyPI record is {latest!r}, project is {version}")
     urls = _pypi_file_urls(payload)
     expected = _expected_distribution_names(version)
     for subject in expected:
@@ -693,7 +825,7 @@ def _check_pypi_attestations(root: Path, runner: Runner) -> CheckResult:
             [
                 "uvx",
                 "--from",
-                "pypi-attestations",
+                _PYPI_ATTESTATIONS_SPEC,
                 "pypi-attestations",
                 "verify",
                 "pypi",
@@ -735,35 +867,94 @@ def _check_github_attestations(root: Path, runner: Runner) -> CheckResult:
     if isinstance(repo_result, CheckResult):
         return repo_result
     repo = repo_result
-    subjects = (f"recon_tool-{version}-py3-none-any.whl", f"recon_tool-{version}.tar.gz")
+    subjects = _expected_distribution_names(version)
+    bundle_name = f"recon-tool-{version}.intoto.jsonl"
+    sbom_name = f"recon-tool-{version}.cdx.json"
     with tempfile.TemporaryDirectory(prefix="recon-attestation-") as temp_dir:
         directory = Path(temp_dir)
+        assets = _ReleaseAssetClient(runner, repo, version, directory)
+        try:
+            source_digest = _release_tag_sha(runner, version)
+            required_assets = (*subjects, bundle_name, sbom_name)
+            assets.require_safe_inventory(required_assets)
+            downloaded = {subject: assets.download(subject) for subject in required_assets}
+            validate_completed_sbom(downloaded[sbom_name], version)
+        except SbomError as exc:
+            return _result("GitHub attestations", "fail", f"release SBOM validation failed: {exc}")
+        except _ReleaseEvidenceError as exc:
+            return _result("GitHub attestations", "fail", str(exc))
+        bundle = downloaded[bundle_name]
+        signer_workflow = f"{repo}/.github/workflows/release.yml"
+        source_ref = f"refs/tags/v{version}"
         for subject in subjects:
-            download = runner(
+            artifact = downloaded[subject]
+            verify = runner(
                 [
                     "gh",
-                    "release",
-                    "download",
-                    f"v{version}",
+                    "attestation",
+                    "verify",
+                    str(artifact),
+                    "--bundle",
+                    str(bundle),
                     "--repo",
                     repo,
-                    "--pattern",
-                    subject,
-                    "--dir",
-                    str(directory),
+                    "--signer-workflow",
+                    signer_workflow,
+                    "--source-ref",
+                    source_ref,
+                    "--source-digest",
+                    source_digest,
+                    "--deny-self-hosted-runners",
                 ]
             )
-            if download.returncode != 0:
-                detail = (download.stderr or download.stdout).strip() or f"could not download {subject}"
-                return _result("GitHub attestations", "fail", detail)
-            artifact = directory / subject
-            if not artifact.is_file():
-                return _result("GitHub attestations", "fail", f"release download did not produce {subject}")
-            verify = runner(["gh", "attestation", "verify", str(artifact), "--repo", repo])
             if verify.returncode != 0:
                 detail = (verify.stderr or verify.stdout).strip() or f"attestation verification failed for {subject}"
                 return _result("GitHub attestations", "fail", detail)
-    return _result("GitHub attestations", "pass", f"GitHub provenance verifies wheel and sdist for v{version}")
+    return _result(
+        "GitHub attestations",
+        "pass",
+        f"release bundle verifies wheel and sdist for v{version}; completed CycloneDX SBOM is valid",
+    )
+
+
+def _check_release_channel_parity(root: Path, runner: Runner) -> CheckResult:
+    try:
+        version = _read_project_version(root)
+    except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
+        return _result("channel parity", "fail", str(exc))
+    repo_result = _read_github_repo(runner, "channel parity")
+    if isinstance(repo_result, CheckResult):
+        return repo_result
+    repo = repo_result
+    subjects = _expected_distribution_names(version)
+    with tempfile.TemporaryDirectory(prefix="recon-channel-parity-") as temp_dir:
+        directory = Path(temp_dir)
+        assets = _ReleaseAssetClient(runner, repo, version, directory)
+        try:
+            assets.require_safe_inventory(subjects)
+            for subject in subjects:
+                assets.download(subject)
+        except _ReleaseEvidenceError as exc:
+            return _result("channel parity", "fail", str(exc))
+        parity = runner(
+            [
+                sys.executable,
+                str(root / "scripts" / "check_release_channel_parity.py"),
+                "--version",
+                version,
+                "--dist-dir",
+                str(directory),
+                "--attempts",
+                "1",
+            ]
+        )
+        if parity.returncode != 0:
+            detail = (parity.stderr or parity.stdout).strip() or "release channel parity check failed"
+            return _result("channel parity", "fail", detail)
+        detail = "; ".join(line.strip() for line in parity.stdout.splitlines() if line.strip())
+        if not detail:
+            return _result("channel parity", "fail", "parity checker returned no artifact digest evidence")
+    return _result("channel parity", "pass", detail)
 
 
 def _load_github_release_payload(runner: Runner, repo: str, version: str) -> dict[str, object] | CheckResult:
@@ -790,6 +981,33 @@ def _load_github_release_payload(runner: Runner, repo: str, version: str) -> dic
     return payload
 
 
+def _release_asset_problem(assets: object, version: str) -> str | None:
+    if not isinstance(assets, list):
+        return "release assets were not a list"
+    asset_names: list[str] = []
+    for asset in assets:
+        if not isinstance(asset, dict) or not isinstance(asset.get("name"), str):
+            return "release asset inventory contains a malformed entry"
+        asset_names.append(asset["name"])
+    expected_assets = {
+        f"recon_tool-{version}-py3-none-any.whl",
+        f"recon_tool-{version}.tar.gz",
+        f"recon-tool-{version}.cdx.json",
+        f"recon-tool-{version}.intoto.jsonl",
+    }
+    duplicates = sorted(name for name in set(asset_names) if asset_names.count(name) > 1)
+    if duplicates:
+        return "duplicate asset(s): " + ", ".join(duplicates)
+    observed_assets = set(asset_names)
+    missing = sorted(expected_assets - observed_assets)
+    if missing:
+        return "missing asset(s): " + ", ".join(missing)
+    unexpected = sorted(observed_assets - expected_assets)
+    if unexpected:
+        return "unexpected asset(s): " + ", ".join(unexpected)
+    return None
+
+
 def _github_release_problem(payload: dict[str, object], version: str) -> str | None:
     tag = payload.get("tagName")
     if tag != f"v{version}":
@@ -798,24 +1016,7 @@ def _github_release_problem(payload: dict[str, object], version: str) -> str | N
         return f"v{version} is still a draft"
     if payload.get("isPrerelease") is True:
         return f"v{version} is marked prerelease"
-    assets = payload.get("assets")
-    if not isinstance(assets, list):
-        return "release assets were not a list"
-    asset_names = {
-        asset.get("name")
-        for asset in assets
-        if isinstance(asset, dict) and isinstance(asset.get("name"), str)
-    }
-    expected_assets = {
-        f"recon_tool-{version}-py3-none-any.whl",
-        f"recon_tool-{version}.tar.gz",
-        f"recon-tool-{version}.cdx.json",
-        f"recon-tool-{version}.intoto.jsonl",
-    }
-    missing = sorted(expected_assets - asset_names)
-    if missing:
-        return "missing asset(s): " + ", ".join(missing)
-    return None
+    return _release_asset_problem(payload.get("assets"), version)
 
 
 def collect_checks(
@@ -848,6 +1049,7 @@ def collect_checks(
         checks.append(_check_pypi_attestations(root, actual_runner))
         checks.append(_check_github_release(root, actual_runner))
         checks.append(_check_github_attestations(root, actual_runner))
+        checks.append(_check_release_channel_parity(root, actual_runner))
     else:
         checks.append(_result("remote CI", "skip", "not requested; pass --remote after pushing main"))
         checks.append(_result("Scorecard API", "skip", "not requested; pass --remote after pushing main"))
@@ -855,6 +1057,7 @@ def collect_checks(
         checks.append(_result("PyPI attestations", "skip", "not requested; pass --remote after release publication"))
         checks.append(_result("GitHub release", "skip", "not requested; pass --remote after release publication"))
         checks.append(_result("GitHub attestations", "skip", "not requested; pass --remote after release publication"))
+        checks.append(_result("channel parity", "skip", "not requested; pass --remote after release publication"))
     return checks
 
 

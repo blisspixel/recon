@@ -6,12 +6,15 @@
 # Uninstall:
 #   uv tool uninstall recon-tool   # or: pipx uninstall recon-tool
 #
-# Prefers uv (fast, manages its own Python); falls back to pipx. Idempotent: a
-# second run upgrades.
+# Preserves the manager that already owns recon. For a clean install, prefers
+# uv (fast, manages its own Python) and falls back to pipx. The reviewed helper
+# installs the exact release version represented by this source tag.
 
 $ErrorActionPreference = "Stop"
 
 $Package = "recon-tool"
+$Version = "2.6.3"
+$Spec = "$Package==$Version"
 $Cli = "recon"
 
 function Test-Have($name) {
@@ -47,32 +50,32 @@ function Test-PackageInstalled($ListCmd) {
     $ErrorActionPreference = "Continue"
     try {
         $listed = & $ListCmd[0] @($ListCmd[1..($ListCmd.Count - 1)]) 2>&1 | Out-String
+        $exitCode = $LASTEXITCODE
     }
     finally {
         $ErrorActionPreference = $prev
     }
+    if ($exitCode -ne 0) {
+        Write-Host "Error: could not inspect $($ListCmd[0]) ownership for $Package." -ForegroundColor Red
+        Write-Host $listed
+        exit 1
+    }
     return ($listed -match "\b$([regex]::Escape($Package))\b")
 }
 
-function Install-OrUpgrade-Uv {
-    if (Test-PackageInstalled @("uv", "tool", "list")) {
-        Write-Host "==> Upgrading $Package with uv ..." -ForegroundColor Green
-        if ((Invoke-Tool uv tool upgrade $Package) -ne 0) { throw "uv tool upgrade $Package failed" }
-    }
-    else {
-        Write-Host "==> Installing $Package with uv ..." -ForegroundColor Green
-        if ((Invoke-Tool uv tool install $Package) -ne 0) { throw "uv tool install $Package failed" }
+function Install-Exact-Uv {
+    Write-Host "==> Installing reviewed $Spec with uv ..." -ForegroundColor Green
+    if ((Invoke-Tool uv tool install --force $Spec) -ne 0) {
+        Write-Host "Error: uv could not install $Spec." -ForegroundColor Red
+        exit 1
     }
 }
 
-function Install-OrUpgrade-Pipx {
-    if (Test-PackageInstalled @("pipx", "list")) {
-        Write-Host "==> Upgrading $Package with pipx ..." -ForegroundColor Green
-        if ((Invoke-Tool pipx upgrade $Package) -ne 0) { throw "pipx upgrade $Package failed" }
-    }
-    else {
-        Write-Host "==> Installing $Package with pipx ..." -ForegroundColor Green
-        if ((Invoke-Tool pipx install $Package) -ne 0) { throw "pipx install $Package failed" }
+function Install-Exact-Pipx {
+    Write-Host "==> Installing reviewed $Spec with pipx ..." -ForegroundColor Green
+    if ((Invoke-Tool pipx install --force $Spec) -ne 0) {
+        Write-Host "Error: pipx could not install $Spec." -ForegroundColor Red
+        exit 1
     }
 }
 
@@ -88,22 +91,48 @@ function Write-MissingToolHelp {
 Write-Host "==> recon installer (CLI: $Cli)" -ForegroundColor Cyan
 Write-Host ""
 
-if (-not (Test-Have "uv") -and -not (Test-Have "pipx")) {
+$uvAvailable = Test-Have "uv"
+$pipxAvailable = Test-Have "pipx"
+if (-not $uvAvailable -and -not $pipxAvailable) {
     Write-MissingToolHelp
 }
 
-if (Test-Have "uv") {
-    Install-OrUpgrade-Uv
+$uvOwns = $uvAvailable -and (Test-PackageInstalled @("uv", "tool", "list"))
+$pipxOwns = $pipxAvailable -and (Test-PackageInstalled @("pipx", "list"))
+
+if ($uvOwns -and $pipxOwns) {
+    Write-Host "Error: both uv and pipx report an installed $Package." -ForegroundColor Red
+    Write-Host "Uninstall one copy, confirm which 'recon' resolves on PATH, then re-run this helper."
+    exit 1
 }
-elseif (Test-Have "pipx") {
-    Install-OrUpgrade-Pipx
+if (-not $uvOwns -and -not $pipxOwns -and (Test-Have $Cli)) {
+    Write-Host "Error: an existing '$Cli' command is not owned by uv or pipx." -ForegroundColor Red
+    Write-Host "Use 'recon update', or uninstall that copy before running this helper."
+    exit 1
+}
+
+if ($uvOwns) {
+    $Manager = "uv"
+    Install-Exact-Uv
+}
+elseif ($pipxOwns) {
+    $Manager = "pipx"
+    Install-Exact-Pipx
+}
+elseif ($uvAvailable) {
+    $Manager = "uv"
+    Install-Exact-Uv
+}
+elseif ($pipxAvailable) {
+    $Manager = "pipx"
+    Install-Exact-Pipx
 }
 else {
     Write-MissingToolHelp
 }
 
 Write-Host ""
-Write-Host "==> Done." -ForegroundColor Green
+Write-Host "==> Done. $Spec installed with $Manager." -ForegroundColor Green
 Write-Host ""
 Write-Host "Next steps:" -ForegroundColor Cyan
 Write-Host "  1. Open a NEW terminal (so PATH updates take effect)"
@@ -119,6 +148,6 @@ Write-Host "  $Cli example.com --json"
 Write-Host ""
 Write-Host "Optional: enable tab-completion with  $Cli --install-completion"
 Write-Host ""
-Write-Host "Update later: re-run this same command."
+Write-Host "Update later: review and run the helper from the newer release tag."
 Write-Host "Uninstall:    uv tool uninstall $Package   (or: pipx uninstall $Package)"
 Write-Host ""

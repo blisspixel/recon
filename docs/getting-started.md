@@ -5,10 +5,13 @@ The short product overview is in [README.md](../README.md).
 
 ## Requirements
 
-- Python 3.11 or newer. The latest Python 3.14 patch is recommended; Python
-  3.11 through 3.14 retain the same supported behavior and output contracts.
+- Python 3.11 through 3.14. The latest Python 3.14 patch is recommended; every
+  version in that tested range retains the same supported behavior and output
+  contracts. Later Python versions are not yet part of the compatibility claim.
 - Windows, macOS, or Linux.
-- No API keys, credentials, paid accounts, or external services owned by recon.
+- The recon runtime needs no API keys, credentials, paid accounts, or external
+  services owned by recon. Optional GitHub Release verification uses an
+  authenticated GitHub CLI session or `GH_TOKEN` with public read access.
 
 ## Install or Update
 
@@ -20,11 +23,12 @@ uv tool install recon-tool
 pipx install recon-tool
 ```
 
-The optional platform helpers prefer `uv`, fall back to `pipx`, and ask you to
-install one of those tools if neither is present. They do not execute a remote
-tool installer on your behalf. Download them from a release-tag checkout and
-review the local file before running it. Running the same local helper later
-updates recon.
+The optional platform helpers ask you to install `uv` or `pipx` if neither is
+present. A helper from a release-tag checkout installs exactly that release,
+preserves the sole manager that already owns `recon-tool`, and refuses dual or
+unmanaged ownership with recovery guidance. It does not execute a remote tool
+installer on your behalf. Review the local file before running it. To update,
+review and run the helper from the newer release tag.
 
 **Windows (PowerShell):**
 
@@ -53,6 +57,14 @@ To test online connectivity to recon's public data sources, run:
 ```bash
 recon doctor
 ```
+
+## Verify a Published Release
+
+Security-sensitive consumers can verify the exact GitHub Release asset set,
+completed SBOM, tag-bound provenance bundle, PyPI attestations, cross-channel
+SHA-256 parity, and both wheel entry points before optionally installing the
+verified local wheel. The complete macOS/Linux and Windows PowerShell paths are
+in the [consumer verification quick path](supply-chain.md#consumer-verification-quick-path).
 
 ## Update
 

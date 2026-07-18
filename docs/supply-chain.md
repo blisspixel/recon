@@ -18,64 +18,306 @@ which produces and publishes:
 | Property | Mechanism | How a consumer verifies it |
 |---|---|---|
 | **Trusted publishing** | PyPI publishes via GitHub OIDC, no long-lived API token (`pypa/gh-action-pypi-publish`) | The PyPI project page shows the publishing workflow as a trusted publisher |
-| **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection | `gh attestation verify <file> --repo blisspixel/recon`; offline consumers can download the `.intoto.jsonl` release asset |
-| **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Fetch the file's PyPI provenance and verify it with `pypi-attestations verify pypi --repository https://github.com/blisspixel/recon <wheel-url>` |
+| **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection | Verify each artifact against the exported bundle, exact release workflow, source tag, commit digest, and hosted-runner boundary as shown below |
+| **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Fetch the file's PyPI provenance and verify it with the pinned `pypi-attestations==0.0.29` command shown below |
 | **Constrained deterministic-build check** | `SOURCE_DATE_EPOCH`, uv 0.11.17, and the exact hash-locked backend graph are fixed; CI builds the sdist and reconstructs its wheel twice in one Ubuntu job, then compares both hashes | See the bounded recipe and limitations below |
 | **Sealed distribution gate** | A separate read-only release job requires exactly one tag-matching wheel and sdist, then executes both `recon --version` and `python -m recon_tool --version` from the wheel before either publication channel can run | Inspect the `package-smoke` job in the tagged release workflow run |
+| **Published-channel parity gate** | After PyPI publication, a separate read-only job requires the exact wheel and sdist and compares their SHA-256 digests with the sealed build pair. GitHub Release publication cannot create or replace assets until parity passes | Inspect the `verify-pypi-parity` job or run `scripts/check_release_channel_parity.py` from the exact source tag |
 | **CycloneDX SBOM** | Generated from a runtime-requirements export of `uv.lock` (`pip-audit --format=cyclonedx-json`), completed with the `recon-tool` root component and dependency edge, validated as nonempty JSON, and attached to the GitHub Release. The isolated SBOM job may emit an artifact when findings exist because the separate enforcing audit already blocks the release test job. Any SBOM tool, output, or validation failure blocks both PyPI and GitHub publication | Download `recon-tool-<version>.cdx.json` from the release assets and inspect `metadata.component` and the root dependency entry |
 
 ## Consumer verification quick path
 
-For a published version, consumers can check the release from both distribution
-channels without trusting this repository's local state:
+Run either complete path below from a reviewed checkout of the exact source tag.
+Both paths require Git, GitHub CLI `gh`, Python 3.11 through 3.14, `uv`/`uvx`,
+and network access to GitHub and PyPI. GitHub CLI must have a working
+authenticated session or a `GH_TOKEN` with public read access. These credentials
+belong to verifier tooling; the recon runtime itself still needs none. The
+recipes pin the `pypi-attestations==0.0.29` verifier release instead of floating
+latest; uv and the verifier's transitive environment remain resolver-selected.
+The optional `RECON_INSTALL_MANAGER` setting installs the exact verified local
+wheel with the package manager that you select; leave it unset when ownership
+is uncertain.
+
+### macOS or Linux
 
 ```bash
+set -euo pipefail
+
 VERSION=2.6.3
+REPO=blisspixel/recon
+MAX_RELEASE_ASSET_BYTES=$((64 * 1024 * 1024))
 VERIFY_DIR="$(mktemp -d)"
+DIST_DIR="${VERIFY_DIR}/dist"
+EVIDENCE_DIR="${VERIFY_DIR}/evidence"
+URL_FILE="${VERIFY_DIR}/pypi-urls.txt"
+mkdir -p "${DIST_DIR}" "${EVIDENCE_DIR}"
+trap 'rm -rf "${VERIFY_DIR}"' EXIT
+
+if [ "$(git describe --tags --exact-match)" != "v${VERSION}" ]; then
+  echo "FAIL: checkout must be the exact v${VERSION} tag." >&2
+  exit 1
+fi
+if [ -n "$(git status --porcelain --untracked-files=normal)" ]; then
+  echo "FAIL: verification checkout must be clean." >&2
+  exit 1
+fi
+SOURCE_SHA="$(git rev-parse HEAD)"
+case "${SOURCE_SHA}" in
+  *[!0-9a-f]*|"") echo "FAIL: source digest is not a full lowercase commit SHA." >&2; exit 1 ;;
+esac
+if [ "${#SOURCE_SHA}" -ne 40 ] && [ "${#SOURCE_SHA}" -ne 64 ]; then
+  echo "FAIL: source digest must contain 40 or 64 hexadecimal characters." >&2
+  exit 1
+fi
+gh auth status
+
+EXPECTED_ASSETS="$(printf '%s\n' \
+  "recon-tool-${VERSION}.cdx.json" \
+  "recon-tool-${VERSION}.intoto.jsonl" \
+  "recon_tool-${VERSION}-py3-none-any.whl" \
+  "recon_tool-${VERSION}.tar.gz" | sort)"
+ACTUAL_ASSETS="$(gh release view "v${VERSION}" --repo "${REPO}" \
+  --json assets --jq '.assets[].name' | sort)"
+if [ "${ACTUAL_ASSETS}" != "${EXPECTED_ASSETS}" ]; then
+  echo "FAIL: GitHub Release does not contain the exact four expected assets." >&2
+  exit 1
+fi
+UNSAFE_ASSETS="$(gh release view "v${VERSION}" --repo "${REPO}" \
+  --json assets --jq ".assets[] | select(.size <= 0 or .size > ${MAX_RELEASE_ASSET_BYTES}) | .name")"
+if [ -n "${UNSAFE_ASSETS}" ]; then
+  echo "FAIL: GitHub Release reports an empty or oversized asset: ${UNSAFE_ASSETS}" >&2
+  exit 1
+fi
 
 gh release download "v${VERSION}" \
-  --repo blisspixel/recon \
+  --repo "${REPO}" \
   --pattern "recon_tool-${VERSION}-py3-none-any.whl" \
   --pattern "recon_tool-${VERSION}.tar.gz" \
+  --dir "${DIST_DIR}"
+gh release download "v${VERSION}" \
+  --repo "${REPO}" \
   --pattern "recon-tool-${VERSION}.cdx.json" \
   --pattern "recon-tool-${VERSION}.intoto.jsonl" \
-  --dir "${VERIFY_DIR}"
+  --dir "${EVIDENCE_DIR}"
+for asset in "${DIST_DIR}"/* "${EVIDENCE_DIR}"/*; do
+  ASSET_BYTES="$(wc -c < "${asset}")"
+  if [ "${ASSET_BYTES}" -le 0 ] || [ "${ASSET_BYTES}" -gt "${MAX_RELEASE_ASSET_BYTES}" ]; then
+    echo "FAIL: downloaded release asset is empty or oversized: ${asset}" >&2
+    exit 1
+  fi
+done
 
-gh attestation verify \
-  "${VERIFY_DIR}/recon_tool-${VERSION}-py3-none-any.whl" \
-  --repo blisspixel/recon
-gh attestation verify \
-  "${VERIFY_DIR}/recon_tool-${VERSION}.tar.gz" \
-  --repo blisspixel/recon
-```
+python scripts/check_release_channel_parity.py \
+  --version "${VERSION}" \
+  --dist-dir "${DIST_DIR}" \
+  --url-file "${URL_FILE}"
+python - "${VERSION}" "${EVIDENCE_DIR}/recon-tool-${VERSION}.cdx.json" <<'PY'
+import sys
+from pathlib import Path
 
-To verify the PyPI-hosted provenance, use the direct file URLs from the PyPI
-JSON API, then verify both the wheel and sdist:
+from scripts.finalize_sbom import validate_completed_sbom
 
-```bash
-python - <<'PY' | while IFS= read -r file_url; do
-    uvx --from pypi-attestations pypi-attestations verify pypi \
-      --repository https://github.com/blisspixel/recon \
-      "${file_url}"
-  done
-import json
-import urllib.request
-
-version = "2.6.3"
-with urllib.request.urlopen("https://pypi.org/pypi/recon-tool/json", timeout=30) as response:
-    payload = json.load(response)
-for file_record in payload["releases"][version]:
-    if file_record["filename"] in {
-        f"recon_tool-{version}-py3-none-any.whl",
-        f"recon_tool-{version}.tar.gz",
-    }:
-        print(file_record["url"])
+validate_completed_sbom(Path(sys.argv[2]), sys.argv[1])
+print(f"PASS: completed CycloneDX SBOM is valid for {sys.argv[1]}.")
 PY
+
+for artifact in \
+  "${DIST_DIR}/recon_tool-${VERSION}-py3-none-any.whl" \
+  "${DIST_DIR}/recon_tool-${VERSION}.tar.gz"; do
+  gh attestation verify "${artifact}" \
+    --bundle "${EVIDENCE_DIR}/recon-tool-${VERSION}.intoto.jsonl" \
+    --repo "${REPO}" \
+    --signer-workflow "${REPO}/.github/workflows/release.yml" \
+    --source-ref "refs/tags/v${VERSION}" \
+    --source-digest "${SOURCE_SHA}" \
+    --deny-self-hosted-runners
+done
+
+URL_COUNT=0
+while IFS= read -r file_url; do
+  [ -n "${file_url}" ] || { echo "FAIL: empty PyPI URL." >&2; exit 1; }
+  uvx --from "pypi-attestations==0.0.29" pypi-attestations verify pypi \
+    --repository "https://github.com/${REPO}" \
+    "${file_url}"
+  URL_COUNT=$((URL_COUNT + 1))
+done < "${URL_FILE}"
+if [ "${URL_COUNT}" -ne 2 ]; then
+  echo "FAIL: expected exactly two validated PyPI artifact URLs." >&2
+  exit 1
+fi
+
+WHEEL="${DIST_DIR}/recon_tool-${VERSION}-py3-none-any.whl"
+if [ "$(uv run --isolated --no-project --with "${WHEEL}" recon --version)" != "recon ${VERSION}" ]; then
+  echo "FAIL: wheel console entry point reported the wrong version." >&2
+  exit 1
+fi
+if [ "$(uv run --isolated --no-project --with "${WHEEL}" python -m recon_tool --version)" != "recon ${VERSION}" ]; then
+  echo "FAIL: wheel module entry point reported the wrong version." >&2
+  exit 1
+fi
+
+case "${RECON_INSTALL_MANAGER:-}" in
+  "") ;;
+  uv) uv tool install --force "${WHEEL}" ;;
+  pipx) pipx install --force "${WHEEL}" ;;
+  *) echo "FAIL: RECON_INSTALL_MANAGER must be uv, pipx, or unset." >&2; exit 1 ;;
+esac
+
+echo "PASS: v${VERSION} has an exact asset set, valid SBOM, tag-bound bundle,"
+echo "      PyPI provenance, channel byte parity, and both working wheel entry points."
 ```
 
-This path checks source-to-artifact provenance and integrity. It is not a claim
-that installers enforce PyPI attestations automatically, and it is not a claim
-that recon has reached a named SLSA level beyond the controls listed here.
+### Windows PowerShell
+
+```powershell
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$Version = "2.6.3"
+$Repo = "blisspixel/recon"
+$MaxReleaseAssetBytes = 64 * 1024 * 1024
+$VerifyDir = Join-Path ([IO.Path]::GetTempPath()) ("recon-verify-" + [guid]::NewGuid())
+$DistDir = Join-Path $VerifyDir "dist"
+$EvidenceDir = Join-Path $VerifyDir "evidence"
+$UrlFile = Join-Path $VerifyDir "pypi-urls.txt"
+New-Item -ItemType Directory -Path $DistDir, $EvidenceDir | Out-Null
+
+function Invoke-Native {
+    param([string]$Label, [string]$Command, [string[]]$Arguments)
+    $PreviousPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $Output = @()
+    $ExitCode = 1
+    try {
+        $Output = & $Command @Arguments
+        $ExitCode = $LASTEXITCODE
+    }
+    finally {
+        $ErrorActionPreference = $PreviousPreference
+    }
+    if ($ExitCode -ne 0) { throw "$Label failed with exit code $ExitCode." }
+    return $Output
+}
+
+try {
+    $Tag = (Invoke-Native "tag check" "git" @("describe", "--tags", "--exact-match")) -join "`n"
+    if ($Tag.Trim() -ne "v$Version") { throw "Checkout must be the exact v$Version tag." }
+    $Worktree = (Invoke-Native "worktree check" "git" @(
+        "status", "--porcelain", "--untracked-files=normal"
+    )) -join "`n"
+    if ($Worktree.Trim()) { throw "Verification checkout must be clean." }
+    $SourceSha = ((Invoke-Native "source digest" "git" @("rev-parse", "HEAD")) -join "`n").Trim().ToLowerInvariant()
+    if ($SourceSha -notmatch '^[0-9a-f]{40}([0-9a-f]{24})?$') {
+        throw "Source digest must be a full 40- or 64-character commit SHA."
+    }
+    Invoke-Native "GitHub authentication" "gh" @("auth", "status") | Out-Host
+
+    $ExpectedAssets = @(
+        "recon-tool-$Version.cdx.json"
+        "recon-tool-$Version.intoto.jsonl"
+        "recon_tool-$Version-py3-none-any.whl"
+        "recon_tool-$Version.tar.gz"
+    ) | Sort-Object
+    $ReleaseJson = (Invoke-Native "release asset inventory" "gh" @(
+        "release", "view", "v$Version", "--repo", $Repo, "--json", "assets"
+    )) -join "`n"
+    $ActualAssets = @((ConvertFrom-Json $ReleaseJson).assets.name) | Sort-Object
+    if (($ActualAssets -join "`n") -ne ($ExpectedAssets -join "`n")) {
+        throw "GitHub Release does not contain the exact four expected assets."
+    }
+    foreach ($Asset in (ConvertFrom-Json $ReleaseJson).assets) {
+        if ($null -eq $Asset.size -or $Asset.size -le 0 -or $Asset.size -gt $MaxReleaseAssetBytes) {
+            throw "GitHub Release reports an empty or oversized asset: $($Asset.name)"
+        }
+    }
+
+    Invoke-Native "distribution download" "gh" @(
+        "release", "download", "v$Version", "--repo", $Repo,
+        "--pattern", "recon_tool-$Version-py3-none-any.whl",
+        "--pattern", "recon_tool-$Version.tar.gz", "--dir", $DistDir
+    ) | Out-Host
+    Invoke-Native "evidence download" "gh" @(
+        "release", "download", "v$Version", "--repo", $Repo,
+        "--pattern", "recon-tool-$Version.cdx.json",
+        "--pattern", "recon-tool-$Version.intoto.jsonl", "--dir", $EvidenceDir
+    ) | Out-Host
+    foreach ($AssetPath in @(Get-ChildItem -LiteralPath $DistDir, $EvidenceDir -File)) {
+        if ($AssetPath.Length -le 0 -or $AssetPath.Length -gt $MaxReleaseAssetBytes) {
+            throw "Downloaded release asset is empty or oversized: $($AssetPath.FullName)"
+        }
+    }
+
+    Invoke-Native "channel parity" "python" @(
+        "scripts/check_release_channel_parity.py", "--version", $Version,
+        "--dist-dir", $DistDir, "--url-file", $UrlFile
+    ) | Out-Host
+    $Sbom = Join-Path $EvidenceDir "recon-tool-$Version.cdx.json"
+    $SbomCheck = 'import sys; from pathlib import Path; from scripts.finalize_sbom import validate_completed_sbom; validate_completed_sbom(Path(sys.argv[2]), sys.argv[1]); print(f"PASS: completed CycloneDX SBOM is valid for {sys.argv[1]}.")'
+    Invoke-Native "SBOM validation" "python" @("-c", $SbomCheck, $Version, $Sbom) | Out-Host
+
+    $Bundle = Join-Path $EvidenceDir "recon-tool-$Version.intoto.jsonl"
+    $Wheel = Join-Path $DistDir "recon_tool-$Version-py3-none-any.whl"
+    $Sdist = Join-Path $DistDir "recon_tool-$Version.tar.gz"
+    foreach ($Artifact in @($Wheel, $Sdist)) {
+        Invoke-Native "GitHub attestation verification" "gh" @(
+            "attestation", "verify", $Artifact, "--bundle", $Bundle,
+            "--repo", $Repo,
+            "--signer-workflow", "$Repo/.github/workflows/release.yml",
+            "--source-ref", "refs/tags/v$Version", "--source-digest", $SourceSha,
+            "--deny-self-hosted-runners"
+        ) | Out-Host
+    }
+
+    $Urls = @(Get-Content -LiteralPath $UrlFile | Where-Object { $_ })
+    if ($Urls.Count -ne 2) { throw "Expected exactly two validated PyPI artifact URLs." }
+    foreach ($FileUrl in $Urls) {
+        Invoke-Native "PyPI attestation verification" "uvx" @(
+            "--from", "pypi-attestations==0.0.29", "pypi-attestations", "verify", "pypi",
+            "--repository", "https://github.com/$Repo", $FileUrl
+        ) | Out-Host
+    }
+
+    $ConsoleVersion = (Invoke-Native "wheel console smoke" "uv" @(
+        "run", "--isolated", "--no-project", "--with", $Wheel, "recon", "--version"
+    )) -join "`n"
+    if ($ConsoleVersion.Trim() -ne "recon $Version") {
+        throw "Wheel console entry point reported the wrong version."
+    }
+    $ModuleVersion = (Invoke-Native "wheel module smoke" "uv" @(
+        "run", "--isolated", "--no-project", "--with", $Wheel,
+        "python", "-m", "recon_tool", "--version"
+    )) -join "`n"
+    if ($ModuleVersion.Trim() -ne "recon $Version") {
+        throw "Wheel module entry point reported the wrong version."
+    }
+
+    if ($env:RECON_INSTALL_MANAGER -eq "uv") {
+        Invoke-Native "verified-wheel install" "uv" @("tool", "install", "--force", $Wheel) | Out-Host
+    }
+    elseif ($env:RECON_INSTALL_MANAGER -eq "pipx") {
+        Invoke-Native "verified-wheel install" "pipx" @("install", "--force", $Wheel) | Out-Host
+    }
+    elseif ($env:RECON_INSTALL_MANAGER) {
+        throw "RECON_INSTALL_MANAGER must be uv, pipx, or unset."
+    }
+
+    Write-Host "PASS: v$Version has an exact asset set, valid SBOM, tag-bound bundle,"
+    Write-Host "      PyPI provenance, channel byte parity, and both working wheel entry points."
+}
+finally {
+    if (Test-Path -LiteralPath $VerifyDir) {
+        Remove-Item -LiteralPath $VerifyDir -Recurse -Force -ErrorAction Stop
+    }
+}
+```
+
+Each recipe stops on a producer, inventory, digest, verifier, SBOM, bundle,
+signer, tag, or entry-point failure and prints the consolidated success line
+only after every required check passes. If an install manager was selected,
+open a new terminal and confirm `recon --version` reports the same version. The
+verification path does not make installers enforce PyPI attestations
+automatically. It is also not a claim that recon has reached a named SLSA level
+beyond the controls listed here.
 
 ## Deterministic-build evidence
 
@@ -152,11 +394,11 @@ uv export --frozen --only-group build --no-emit-project \
 ## PyPI attestation verification
 
 PyPI exposes attestations through the simple index and Integrity API as
-file-level provenance objects. For a consumer-side check, install the
-`pypi-attestations` CLI, get the released wheel's direct PyPI file URL, and run:
+file-level provenance objects. For a consumer-side check, get the released
+wheel's direct PyPI file URL and run the reviewed verifier version:
 
 ```bash
-pypi-attestations verify pypi \
+uvx --from "pypi-attestations==0.0.29" pypi-attestations verify pypi \
   --repository https://github.com/blisspixel/recon \
   <wheel-url>
 ```
@@ -180,11 +422,15 @@ The `test`, `sbom`, and `attest` jobs run on separate runners that
 never see `dist/`, and publish or attestation jobs with elevated OIDC-minted
 scopes do not execute project runtime dependencies. The provenance export job downloads the
 signed GitHub attestation bundles and uploads a `.intoto.jsonl` artifact for the
-GitHub Release without running project dependency code. The PyPI and GitHub
-release jobs wait for sealed-distribution validation and wheel execution,
-provenance attestation, and the validated SBOM, so a release fails closed if
-any integrity path fails. The full
-rationale and threat model are documented inline in
+GitHub Release without running project dependency code. PyPI publication waits
+for sealed-distribution validation and wheel execution, provenance attestation,
+and the validated SBOM. GitHub publication additionally waits until the exact
+PyPI wheel and sdist match the sealed pair byte for byte. A parity failure after
+PyPI accepts immutable files blocks the GitHub Release and leaves an explicit
+partial-publication state. Maintainers must diagnose the mismatch and rerun the
+same tagged workflow only when the sealed bytes match the existing PyPI files;
+they must never replace or work around either channel's evidence. The full
+rationale and recovery boundary are documented inline in
 [`release.yml`](../.github/workflows/release.yml).
 
 ## Repository posture checks
@@ -205,9 +451,9 @@ The repository also runs supply-chain posture checks outside the release flow:
   in a trailing comment. `scripts/check_workflow_pins.py` gates this locally and
   in CI.
 - Installer scripts do not bootstrap package managers by executing remote shell
-  or PowerShell installers. Users install `uv` or `pipx` through their preferred
-  trusted channel, then recon's installer installs or upgrades only
-  `recon-tool`.
+  or PowerShell installers. Each reviewed tag installs its exact `recon-tool`
+  version, preserves a sole existing `uv` or `pipx` owner, refuses ambiguous or
+  unmanaged ownership, and exposes manager failures.
 - Generated security and surface artifacts used by CI are checked locally and in
   the CI validation job, including ClusterFuzzLite requirements, schema source
   tracing, surface inventory, CLI surface docs, file-size ratchets, and PLR
@@ -224,14 +470,14 @@ The repository also runs supply-chain posture checks outside the release flow:
   line behind a later cleanup commit.
 - Tracked Markdown relative links and local heading anchors are checked locally,
   in main CI, and again by the release gate.
-- Remote release readiness checks PyPI's latest `recon-tool` version and the
-  GitHub Release asset set for the current version, so wheel, sdist, SBOM, and
-  attestation drift is caught after publication rather than verified by hand.
-  It also verifies public Scorecard API freshness for `HEAD`, checks that
-  code-owned Scorecard controls remain green, checks the documented SAST floor,
-  verifies the PyPI wheel and sdist with `pypi-attestations verify pypi`, then
-  downloads the GitHub Release wheel and sdist and runs `gh attestation verify`
-  against both artifacts.
+- Remote release readiness checks PyPI's exact current-version record and the
+  exact GitHub Release asset set for the current version. It validates the
+  completed SBOM, verifies both GitHub artifacts against the downloaded bundle,
+  exact release workflow, exact source tag and commit digest, and hosted-runner
+  boundary, and
+  requires the PyPI and GitHub wheel and sdist digests to match. It also verifies
+  public Scorecard API freshness for `HEAD`, code-owned Scorecard controls, the
+  documented SAST floor, and both PyPI PEP 740 attestations.
 - Checkout steps set `persist-credentials: false`, so the workflow token is not
   left in the local Git config after source checkout.
 - Every workflow job has an explicit timeout so CI and release automation fail
