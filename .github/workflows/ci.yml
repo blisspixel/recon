@@ -48,7 +48,7 @@ jobs:
         run: uv sync
 
       - name: Lint
-        run: uv run ruff check .
+        run: uv run ruff check --no-cache .
 
   typecheck:
     runs-on: ubuntu-latest

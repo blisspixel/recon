@@ -51,6 +51,8 @@ uv run python scripts/check.py > logs\check-full.log 2>&1
 ```
 
 That changes only terminal handling. It does not skip any gate.
+The wrapper emits ANSI styling only to a capable terminal, so the redirected
+log is plain text and remains searchable without escape-sequence cleanup.
 
 ## What The Public Bundle Validates
 

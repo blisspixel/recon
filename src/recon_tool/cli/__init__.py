@@ -601,7 +601,7 @@ def batch(
         "--ndjson",
         help=(
             "Stream one JSON object per line, flushed as each domain completes. "
-            "Recommended for large corpora — gives visible progress and lower memory "
+            "Recommended for large corpora; gives visible progress and lower memory "
             "use vs the default --json array. Mutually exclusive with --json/--md/--csv."
         ),
         rich_help_panel=_OUTPUT_HELP_PANEL,
@@ -611,9 +611,9 @@ def batch(
         "--include-ecosystem",
         help=(
             "(v1.8+) Compute the cross-domain ecosystem hypergraph and attach it "
-            "to JSON output as ``ecosystem_hyperedges``. Requires --json. "
+            "to JSON output as ecosystem_hyperedges. Requires --json. "
             "Hyperedges describe shared infrastructure / fingerprint / BIMI / "
-            "parent-vendor signatures across the batch — observable structure, "
+            "parent-vendor signatures across the batch; observable structure, "
             "not ownership."
         ),
         rich_help_panel=_ANALYSIS_HELP_PANEL,
@@ -625,7 +625,7 @@ def batch(
             "Compute model-relative Bayesian-network posteriors and "
             "evidence-responsive uncertainty bands "
             "over high-level claims for every domain. On by default from v2.0; "
-            "--no-fusion skips it. Adds the ``posterior_observations`` field to "
+            "--no-fusion skips it. Adds the posterior_observations field to "
             "each domain's JSON. Pure post-processing, no extra network calls."
         ),
         rich_help_panel=_EVIDENCE_HELP_PANEL,
@@ -713,9 +713,9 @@ def discover(
     """
     Mine a single domain for fingerprint candidates in one shot.
 
-    Bundles ``recon <domain> --json --include-unclassified`` with the
+    Bundles recon DOMAIN --json --include-unclassified with the
     bucket / intra-org / already-covered filters. Output is the same shape
-    consumed by the ``/recon-fingerprint-triage`` skill, ready for human or
+    consumed by the /recon-fingerprint-triage skill, ready for human or
     LLM judgment.
     """
     asyncio.run(
@@ -771,7 +771,7 @@ def update(
 
     Detects how recon was installed (pipx / uv / pip / editable) and
     runs the matching upgrade, or prints the exact command when it can't safely
-    self-upgrade. ``--check`` only reports. Status goes to stderr; the result
+    self-upgrade. --check only reports. Status goes to stderr; the result
     line to stdout, so `recon update --check` is scriptable.
     """
     import subprocess

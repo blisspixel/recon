@@ -43,7 +43,7 @@ def mcp_callback(ctx: typer.Context) -> None:
     server_main()
 
 
-@mcp_app.command("install")
+@mcp_app.command("install", short_help="Install client config.")
 def mcp_install_command(
     client: str = typer.Option(
         ...,
@@ -176,15 +176,9 @@ def mcp_install_command(
     )
 
 
-@mcp_app.command("doctor")
+@mcp_app.command("doctor", short_help="Check the MCP handshake.")
 def mcp_doctor_command() -> None:
-    """End-to-end MCP self-check.
-
-    Spawns the recon MCP server as a subprocess, performs the standard
-    initialize + tools/list handshake the way a real MCP client would,
-    and reports what came back. Verifies the server actually serves
-    requests — `recon doctor --mcp` is its static-shape sibling.
-    """
+    """Run the end-to-end MCP self-check against a local JSON-RPC subprocess."""
     try:
         from recon_tool.mcp_client.doctor import run_doctor
     except ImportError as exc:
