@@ -9,9 +9,10 @@ facade. Imports the shared cli helpers / formatter; never imports cli.py.
 from __future__ import annotations
 
 import asyncio
+import logging
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
-from typing import Any, TextIO, TypeVar, cast
+from typing import Any, Literal, TextIO, TypeVar, cast
 
 import typer
 from rich.markup import escape
@@ -24,6 +25,11 @@ from recon_tool.exit_codes import (
 )
 from recon_tool.formatter import get_console, get_err_console
 from recon_tool.validator import strip_control_chars
+
+logger = logging.getLogger("recon")
+
+_BatchErrorKind = Literal["validation", "lookup", "timeout"]
+_UNEXPECTED_BATCH_ERROR = "Internal batch error. Retry: recon --debug batch ... for details."
 
 
 class _BatchInputError(ValueError):
@@ -637,6 +643,7 @@ def _batch_error_result(
     domain: str,
     message: str,
     *,
+    error_kind: _BatchErrorKind,
     json_output: bool,
     ndjson: bool,
     csv_output: bool,
@@ -651,15 +658,8 @@ def _batch_error_result(
     sentinel), preserving the pre-refactor behaviour exactly.
     """
     if json_output or ndjson:
-        # SH8: machine-readable error_kind so a consumer can route on a code
-        # rather than the free-text message. markdown_skips marks the
-        # validate-error path; otherwise it is a lookup error (timeout split out).
-        if markdown_skips:
-            error_kind = "validation"
-        elif "timeout" in message.lower() or "timed out" in message.lower():
-            error_kind = "timeout"
-        else:
-            error_kind = "lookup"
+        # SH8: machine-readable error_kind comes from structured control flow,
+        # never from the user-facing error text.
         # SH7: record_type discriminator (this is the error shape).
         return {"domain": domain, "error": message, "error_kind": error_kind, "record_type": "error"}
     if csv_output:
@@ -724,6 +724,7 @@ async def _batch_process_one(
         return _batch_error_result(
             domain,
             str(exc),
+            error_kind="validation",
             json_output=json_output,
             ndjson=ndjson,
             csv_output=csv_output,
@@ -741,7 +742,17 @@ async def _batch_process_one(
             info, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
             if fusion:
                 if fusion_configuration_error is not None:
-                    raise RuntimeError(fusion_configuration_error)
+                    return _batch_error_result(
+                        domain,
+                        fusion_configuration_error,
+                        error_kind="lookup",
+                        json_output=json_output,
+                        ndjson=ndjson,
+                        csv_output=csv_output,
+                        markdown=markdown,
+                        markdown_skips=False,
+                        error_prefix=error_prefix,
+                    )
                 if fusion_network is None or fusion_priors_override is None:
                     raise RuntimeError("Batch fusion configuration was not initialized")
                 info = _batch_apply_fusion(
@@ -764,6 +775,7 @@ async def _batch_process_one(
             return _batch_error_result(
                 domain,
                 str(exc),
+                error_kind="timeout" if exc.error_type == "timeout" else "lookup",
                 json_output=json_output,
                 ndjson=ndjson,
                 csv_output=csv_output,
@@ -772,9 +784,11 @@ async def _batch_process_one(
                 error_prefix=error_prefix,
             )
         except Exception as exc:
+            logger.debug("Unexpected batch processing error for %s: %r", validated, exc, exc_info=True)
             return _batch_error_result(
                 domain,
-                str(exc),
+                _UNEXPECTED_BATCH_ERROR,
+                error_kind="lookup",
                 json_output=json_output,
                 ndjson=ndjson,
                 csv_output=csv_output,
@@ -850,12 +864,15 @@ async def batch(
         try:
             fusion_network = load_network()
             fusion_priors_override = load_priors_override()
-        except Exception as exc:
+        except ValueError as exc:
             # Preserve the pre-optimization per-domain error contract. Valid
             # domains still resolve before fusion, then receive the same loader
             # failure in their normal output shape; malformed domains remain
             # validation errors and one configuration read still serves the run.
             fusion_configuration_error = str(exc)
+        except Exception as exc:
+            logger.debug("Unexpected batch fusion configuration error: %r", exc, exc_info=True)
+            fusion_configuration_error = _UNEXPECTED_BATCH_ERROR
 
     # Batch-scope token clustering. Each successful resolution
     # stashes its TenantInfo here keyed by the *input* domain string,

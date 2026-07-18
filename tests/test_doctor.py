@@ -204,6 +204,19 @@ class TestDoctorFixSubcommand:
         # network state.
         assert result.exit_code in (0, 1)
 
+    def test_doctor_fix_documents_every_supported_fingerprint_type(self, tmp_path, monkeypatch) -> None:
+        from recon_tool.fingerprints import _VALID_DETECTION_TYPES  # pyright: ignore[reportPrivateUsage]
+
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+        runner.invoke(app, ["doctor", "--fix"])
+
+        template = (tmp_path / "fingerprints.yaml").read_text(encoding="utf-8")
+        type_line = next(line for line in template.splitlines() if line.startswith("#   type:"))
+        documented = {item.strip() for item in type_line.partition("Detection type:")[2].split(",")}
+
+        assert documented == set(_VALID_DETECTION_TYPES)
+        assert "http" not in documented
+
     def test_doctor_fix_idempotent(self, tmp_path, monkeypatch) -> None:
         """Running `doctor --fix` twice doesn't overwrite existing files."""
         monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))

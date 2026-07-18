@@ -8,8 +8,10 @@ SystemExits (help, version, usage errors) pass through untouched.
 
 from __future__ import annotations
 
+import errno
 import os
 import stat
+import sys
 
 import pytest
 
@@ -95,3 +97,45 @@ def test_normal_systemexit_passes_through(monkeypatch) -> None:
     with pytest.raises(SystemExit) as ei:
         cli.run()
     assert ei.value.code == 2
+
+
+@pytest.mark.parametrize("exc", [BrokenPipeError(), OSError(errno.EPIPE, "closed pipe")])
+def test_closed_pipe_exits_cleanly_without_crash_log(monkeypatch, capsys, tmp_path, exc) -> None:
+    monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+    monkeypatch.setattr(cli, "app", _raise(exc))
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.run()
+
+    assert exc_info.value.code == 0
+    assert capsys.readouterr().err == ""
+    assert list(tmp_path.glob("recon-crash-*.log")) == []
+    assert getattr(sys.stdout, "name", None) == os.devnull
+    assert getattr(sys.stderr, "name", None) == os.devnull
+
+
+@pytest.mark.skipif(os.name != "nt", reason="Windows emits EINVAL for an early-closing pipeline")
+def test_windows_closed_pipe_einval_exits_without_crash_log(monkeypatch, capsys, tmp_path) -> None:
+    monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+    monkeypatch.setattr(cli, "app", _raise(OSError(errno.EINVAL, "invalid argument")))
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.run()
+
+    assert exc_info.value.code == 0
+    assert capsys.readouterr().err == ""
+    assert list(tmp_path.glob("recon-crash-*.log")) == []
+    assert getattr(sys.stdout, "name", None) == os.devnull
+    assert getattr(sys.stderr, "name", None) == os.devnull
+
+
+def test_unrelated_oserror_still_uses_crash_handler(monkeypatch, capsys, tmp_path) -> None:
+    monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+    monkeypatch.setattr(cli, "app", _raise(OSError(errno.EACCES, "permission denied")))
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.run()
+
+    assert exc_info.value.code == EXIT_INTERNAL
+    assert "unexpected error" in capsys.readouterr().err
+    assert len(list(tmp_path.glob("recon-crash-*.log"))) == 1

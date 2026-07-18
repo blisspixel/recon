@@ -77,6 +77,18 @@ without removing presentation lines. Verbose source diagnostics use explicit
 `match`, `no match`, and `error` states; a clean negative observation is not
 styled or labeled as a transport failure.
 
+Batch processing is record-oriented. Once batch arguments and input are valid,
+per-domain validation, lookup, timeout, and internal failure records retain
+exit 0 even when every record is an error. JSON and NDJSON consumers must
+inspect `record_type` and `error_kind`; CSV consumers must inspect `error`.
+Changing that run-level behavior requires a compatibility decision. Unexpected
+per-domain exception details are replaced with stable output and retained only
+in opt-in debug logs.
+
+When a downstream consumer closes a normal output pipe early, recon exits 0
+without creating a crash log. Other unexpected operating-system errors retain
+the exit 4 crash-artifact path.
+
 MCP validation rejections emit one structured warning containing a request ID
 and the stable reason `invalid_domain`. The rejected argument and exception
 text are returned only through the caller's private tool response and are not
@@ -91,7 +103,9 @@ owned logger namespaces (`recon` and `recon_tool`), installs one CLI stderr
 handler per namespace without adding another on repeat configuration, and
 prevents propagation to host root handlers. Direct handlers explicitly
 installed on an owned or child logger by an embedding host are preserved and
-remain the host's responsibility.
+remain the host's responsibility. Debug diagnostics can include domain inputs,
+local paths, configuration context, and exception details. Review and redact
+them before sharing.
 
 MCP lookup tools preserve the same distinction. Only `error_type="no_data"`
 uses `No information found for ...`; timeouts and total source failure retain
@@ -140,6 +154,12 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   CT key; `recon cache clear <host> --exact` removes that host from both caches.
   Without `--exact`, cache commands retain normal apex reduction. CT entries
   written before v2.6.1 lack the binding metadata and repopulate on demand.
+- **Cache deletion failures remain visible.** The CLI clears CT and result
+  layers independently, reports completed deletions, identifies any layer that
+  failed, and exits 4 after partial work. Missing entries remain a successful
+  no-op. Ordinary output never includes the raw filesystem exception; opt-in
+  debug logging retains it for diagnosis. Existing Python bool and count
+  helpers remain non-raising compatibility surfaces.
 - **Rate-limiter warm starts fail closed.** Persisted state is versioned and
   provider-bound. Oversized, nested, stale, cross-provider, non-finite,
   overflowing, or out-of-range fields are ignored as one invalid snapshot.

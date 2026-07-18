@@ -51,13 +51,13 @@ current debt without turning every refinement into feature work.
 | Debt class | Current state | Next boundary |
 |---|---|---|
 | Feature work | Governed by the dependency order below, not by the polish loop | Do not add commands, schemas, hosted surfaces, or inference modes without their existing evidence gate |
-| UX flow | Root help, no-argument onboarding, malformed-input recovery, and low-confidence next steps are aligned in Unreleased | Specify batch all-error exit semantics before considering an opt-in strict mode |
-| Visual polish | Lookup help has task panels and the terminal result hierarchy is stable | Measure batch-help grouping and narrow-width behavior before changing presentation metadata |
-| Observability | MCP validation rejection logs are target-free and retain a request ID plus stable reason | Define metadata-only result-cache inspection and a versioned doctor record before adding operator surfaces |
-| Reliability | Typed batch error records, bounded workers, partial results, and explicit exit codes are shipped | Do not change the current batch exit contract without a compatibility decision covering mixed and all-error streams |
-| Security | Rejected MCP arguments no longer enter logs; output, cache, HTTP, subprocess, and filesystem boundaries remain gated | Any exact configured-launcher doctor must require a safe explicit execution boundary |
+| UX flow | Root help, no-argument onboarding, malformed-input recovery, low-confidence next steps, and batch outcome guidance are aligned in Unreleased | Specify batch all-error exit semantics before considering an opt-in strict mode |
+| Visual polish | Lookup and batch help use task panels, and the terminal result hierarchy is stable | Measure narrow-width help behavior before changing presentation metadata |
+| Observability | MCP validation rejection logs are target-free; unexpected batch details are available only under explicit debug logging | Define metadata-only result-cache inspection and a versioned doctor record before adding operator surfaces |
+| Reliability | Typed batch errors, bounded workers, visible cache-clear failures, closed-pipe handling, partial results, and explicit exit codes are shipped | Do not change the current batch exit contract without a compatibility decision covering mixed and all-error streams |
+| Security | Rejected MCP arguments and unexpected batch details stay out of default output; debug help now warns before sharing diagnostics | Any exact configured-launcher doctor must require a safe explicit execution boundary |
 | Accessibility | `--plain` is shipped and now appears in canonical onboarding | A linear narrow-help fallback remains bounded debt; do not replace the parser or hide specialist controls |
-| Documentation accuracy | README, generated CLI reference, operational contract, and security model track current first-run and logging behavior | Consolidate cache-freshness and batch-error semantics when their deferred designs are selected |
+| Documentation accuracy | README, generated CLI reference, operational contract, automation examples, and security model track current batch, cache, first-run, and logging behavior | Consolidate cache-freshness semantics when metadata-only inspection is designed |
 
 ## Priority Order
 

@@ -7,11 +7,20 @@ without coercing malformed values into plausible domain observations.
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass
 from typing import Any
 
 from recon_tool.models import ConfidenceLevel
 
 _MAX_CACHE_COUNT = 2_147_483_647
+
+
+@dataclass(frozen=True)
+class CacheClearResult:
+    """Non-raising outcome for one cache layer's destructive clear operation."""
+
+    removed: int = 0
+    failed: bool = False
 
 
 def cache_count(

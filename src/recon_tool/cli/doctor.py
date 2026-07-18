@@ -128,7 +128,7 @@ _FINGERPRINTS_TEMPLATE = """\
 # Fields:
 #   name:           Human-readable service name (shown in output)
 #   slug:           Unique identifier (lowercase, hyphens)
-#   type:           Detection type — txt, mx, cname, ns, caa, http
+#   type:           Detection type: txt, spf, mx, ns, cname, cname_target, subdomain_txt, caa, srv, dmarc_rua
 #   pattern:        Regex pattern to match against DNS record value
 #   category:       Service category — email, security, identity, saas, infrastructure
 #   provider_group: (optional) Group for display — microsoft365, google-workspace
