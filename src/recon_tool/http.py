@@ -116,14 +116,15 @@ def _parse_ip_address(host: str) -> ipaddress.IPv4Address | ipaddress.IPv6Addres
 
 
 async def _is_private_ip_async(host: str) -> bool:
-    """Async check if a host resolves to a blocked IP address.
+    """Async check if a host must be refused by destination validation.
 
     Two-layer defense against SSRF and DNS rebinding:
     1. If the host is a literal IP address, check it directly.
     2. If the host is a hostname, resolve it via getaddrinfo in a thread pool
        (non-blocking) and check all returned addresses.
 
-    Returns True if the host should be blocked.
+    Returns True if the host is non-public or cannot be resolved and therefore
+    cannot be validated safely.
     """
     # Layer 1: literal IP check (fast path, no I/O)
     addr = _parse_ip_address(host)
@@ -132,13 +133,18 @@ async def _is_private_ip_async(host: str) -> bool:
 
     # Layer 2: resolve hostname in thread pool and check all returned IPs
     if not host:
-        return False
+        logger.warning("SSRF validation refused: request has no hostname")
+        return True
     try:
         loop = asyncio.get_running_loop()
         addrinfos = await loop.getaddrinfo(host, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM)
+        if not addrinfos:
+            logger.warning("SSRF validation refused: hostname %s resolved to no addresses", host)
+            return True
         for _family, _type, _proto, _canonname, sockaddr in addrinfos:
             ip_str = str(sockaddr[0])
-            if _is_blocked_ip(ip_str):
+            resolved = _parse_ip_address(ip_str)
+            if resolved is None or _is_blocked_ip(ip_str):
                 logger.warning(
                     "SSRF blocked: hostname %s resolves to non-public IP %s",
                     host,
@@ -146,14 +152,13 @@ async def _is_private_ip_async(host: str) -> bool:
                 )
                 return True
     except (socket.gaierror, OSError):
-        # DNS resolution failed — allow the request through so httpx
-        # can produce a proper connection error downstream.
-        return False
+        logger.warning("SSRF validation refused: hostname %s could not be resolved", host)
+        return True
     return False
 
 
 def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
-    """Synchronous check if a host resolves to a blocked IP address.
+    """Synchronous check if a host must be refused by destination validation.
 
     Called only by tests/test_http.py (which is why pyright flags it unused
     from the production scan). Production uses the async variant via
@@ -168,12 +173,17 @@ def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
 
     # Layer 2: resolve hostname and check all returned IPs
     if not host:
-        return False
+        logger.warning("SSRF validation refused: request has no hostname")
+        return True
     try:
         addrinfos = socket.getaddrinfo(host, None, socket.AF_UNSPEC, socket.SOCK_STREAM)
+        if not addrinfos:
+            logger.warning("SSRF validation refused: hostname %s resolved to no addresses", host)
+            return True
         for _family, _type, _proto, _canonname, sockaddr in addrinfos:
             ip_str = str(sockaddr[0])
-            if _is_blocked_ip(ip_str):
+            resolved = _parse_ip_address(ip_str)
+            if resolved is None or _is_blocked_ip(ip_str):
                 logger.warning(
                     "SSRF blocked: hostname %s resolves to non-public IP %s",
                     host,
@@ -181,7 +191,8 @@ def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
                 )
                 return True
     except (socket.gaierror, OSError):
-        return False
+        logger.warning("SSRF validation refused: hostname %s could not be resolved", host)
+        return True
     return False
 
 
@@ -253,7 +264,10 @@ class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         host = request.url.host or ""
         if await _is_private_ip_async(host):
-            raise httpx.ConnectError(f"SSRF blocked: request to non-public/internal IP {host}")
+            raise httpx.ConnectError(
+                f"SSRF blocked: request destination is non-public or could not be validated: {host}",
+                request=request,
+            )
         response = await super().handle_async_request(request)
         if isinstance(response.stream, httpx.AsyncByteStream):
             stream = response.stream

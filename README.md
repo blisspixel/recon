@@ -38,13 +38,11 @@ retain the same product behavior and output contracts. Current measurements
 and version-specific decisions are in
 [docs/performance.md](https://github.com/blisspixel/recon/blob/main/docs/performance.md).
 
-Optional
-[PowerShell](https://github.com/blisspixel/recon/blob/main/scripts/install.ps1)
-and
-[macOS/Linux](https://github.com/blisspixel/recon/blob/main/scripts/install.sh)
-helpers use an existing `uv` or `pipx` installation. Download them from a
-release-tag checkout, review the local file, and then run it. Do not pipe
-mutable branch content directly into a shell.
+Optional helpers at `scripts/install.ps1` and `scripts/install.sh` use an
+existing `uv` or `pipx` installation. Download a
+[release-tag source archive](https://github.com/blisspixel/recon/releases/latest),
+review the local helper, and then run it. Do not pipe mutable branch content
+directly into a shell.
 
 Open a new terminal and run an offline verification of the installed command:
 

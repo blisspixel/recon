@@ -523,6 +523,35 @@ class TestTTYStartupGuard:
         assert "NOT an interactive REPL" not in captured.err
         assert "Listening on stdio transport." in captured.err
 
+    def test_unexpected_failure_is_one_bounded_control_free_line(
+        self,
+        capsys: pytest.CaptureFixture[str],
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from recon_tool import server
+
+        hostile = "[red]forged[/red]\nFORGED\u2028SPLIT\u2029\x1b]52;c;cGF5bG9hZA==\x07\u202e" + "x" * 3000
+        monkeypatch.setattr(server, "_stdin_is_tty", lambda: False)
+        monkeypatch.setattr(server.mcp, "run", lambda: (_ for _ in ()).throw(RuntimeError(hostile)))
+
+        with pytest.raises(SystemExit) as exc_info:
+            server.main()
+
+        assert exc_info.value.code == 1
+        captured = capsys.readouterr()
+        fatal = captured.err.split("MCP server exited unexpectedly", 1)[1]
+        assert "RuntimeError" in fatal
+        assert "[red]forged[/red] FORGED SPLIT" in fatal
+        assert "\nFORGED" not in fatal
+        assert "\x1b" not in fatal
+        assert "\x07" not in fatal
+        assert "\u202e" not in fatal
+        assert "\u2028" not in fatal
+        assert "\u2029" not in fatal
+        assert "[truncated]" in fatal
+        assert fatal.count("\n") == 1
+        assert len(fatal) <= 600
+
     def test_stdin_is_tty_helper_handles_missing_isatty(
         self,
         monkeypatch: pytest.MonkeyPatch,

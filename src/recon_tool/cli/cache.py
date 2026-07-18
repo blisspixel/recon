@@ -110,11 +110,14 @@ def _render_result_listing(console: Console, listing: CacheListing[ResultCacheIn
 
 
 def _render_ct_listing(console: Console, listing: CacheListing[CTCacheInfo]) -> bool:
+    from recon_tool.ct_cache import CT_CACHE_TTL
+
     label = _entry_count_label(len(listing.entries), incomplete=listing.failed > 0)
     console.print(f"  [bold]CT cache ({label})[/bold]")
     for entry in listing.entries:
+        status = "reusable" if entry.age_seconds <= CT_CACHE_TTL else "expired"
         console.print(
-            f"    {_safe_field(entry.domain):<30s}  {entry.subdomain_count:>4d} subs  "
+            f"    {_safe_field(entry.domain):<24s}  {status:<8s}  {entry.subdomain_count:>4d} subs  "
             f"{_age_label(entry.age_seconds):>14s}  {_safe_field(entry.provider_used)}"
         )
     if listing.failed:

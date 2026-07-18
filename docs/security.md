@@ -147,9 +147,15 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
   multicast, and IPv6 unique-local ranges
 - Literal IP check on URL host
 - Asynchronous DNS resolution check (IP from resolver vs public-unicast policy)
+- Missing hosts, DNS errors, empty answers, and invalid resolved addresses fail
+  closed before the HTTP transport can perform its own resolution
 - Used by default in all outbound HTTP (OIDC discovery, UserRealm, cert providers, Google identity)
 
-**Known limitation:** DNS rebinding with sub-second TTLs is not fully defeated (`http.py:9-16`). The check happens before the request, and `httpx` resolves the hostname again for the actual connection. For typical attacker TTLs (minutes) this is safe; for millisecond-TTL rebinding it is not. An attacker who controls both a public hostname and can flip its DNS within the connection window could bypass the check. This is documented in-code as a known tradeoff.
+**Known limitation:** The validated address is not pinned to the connection.
+`httpx` resolves the hostname again after the preflight, so an attacker who can
+change the answer between those operations may still rebind the request. Failing
+closed on unresolved destinations removes the prior fail-open path but does not
+eliminate this time-of-check/time-of-use residual.
 
 ### Path traversal in local caches
 
@@ -210,6 +216,10 @@ documented local-user trust boundary.
 - Invalid domain arguments produce a target-free structured warning with a
   request ID and stable reason code. Raw rejected values and repeated exception
   text are not written to MCP operator logs.
+- Importing the server does not mutate shared logging. A default stderr handler
+  exists only for the running stdio loop and is removed on exit.
+- Unexpected server exits retain one bounded control-free diagnostic line with
+  the exception type, so exception text cannot forge terminal rows.
 - `inject_ephemeral_fingerprint` only persists in current process memory; it
   never writes to built-in files, custom config files, or the cache.
 - Ephemeral fingerprint injection is quota-bounded in-process: 100 fingerprints,

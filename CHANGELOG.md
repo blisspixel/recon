@@ -26,7 +26,9 @@ entry path. `recon fingerprints new` now includes the current verification
 date in its candidate YAML. The no-argument welcome banner now prioritizes
 plain, JSON, and evidence-review workflows over specialist modes. Human help
 now names the domain-or-command grammar and uses a complete linear layout below
-70 columns.
+70 columns. Narrow root summaries and no-argument usage now remain complete and
+associated at the actual terminal width. CT cache overview rows now state
+whether each entry is reusable or expired.
 
 ### Changed
 
@@ -89,13 +91,31 @@ now names the domain-or-command grammar and uses a complete linear layout below
 - Local release-readiness text and JSON now identify whether only local checks
   or local plus remote publication checks were assessed.
 - Installer helper guidance now requires a reviewed release-tag checkout and
-  no longer recommends piping mutable branch content into a shell.
+  no longer recommends piping mutable branch content into a shell. README
+  helper discovery now leads to the latest release selection page instead of
+  mutable `main` files.
 - Main CI and the tagged release workflow now execute both installed CLI entry
   points from a built wheel. Publication waits for the separate read-only
   sealed-wheel smoke job.
 
 ### Fixed
 
+- Outbound HTTP destination validation now fails closed when the hostname is
+  absent or DNS fails, returns no address, or returns an invalid address. The
+  request is refused before the HTTP transport can perform its own unchecked resolution;
+  public addresses and the existing every-redirect validation remain intact.
+- Importing the MCP server no longer installs a process-wide logging handler.
+  Default stderr logging exists only while the server loop runs, and unexpected
+  server exits now emit one bounded, control-free line with the exception type.
+- `recon doctor` now converts every ordinary `httpx.RequestError`, including
+  protocol and proxy failures, into a named row and continues independent
+  checks. Core failures exit 1; optional CT failures remain warnings.
+- Narrow command help no longer exposes literal Rich tags or truncated root
+  summaries. The no-argument welcome path keeps descriptions indented beneath
+  their commands at 40 and 60 columns.
+- CT cache overview rows now label fresh entries `reusable` and entries older
+  than the 30-day TTL `expired`, matching single-entry inspection and the
+  documented metadata-only cache contract.
 - Batch `error_kind` now follows structured resolver state instead of timeout
   words in the display message. Unexpected per-domain exceptions use stable,
   redacted output across JSON, NDJSON, CSV, and panels while retaining details

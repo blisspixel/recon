@@ -11,9 +11,12 @@ from __future__ import annotations
 
 import math
 import shutil
+import textwrap
+from collections.abc import Sequence
 from typing import Literal, Never
 
 import typer
+from rich.console import Console
 from rich.markup import escape
 
 from recon_tool.cli.options import LookupOptions
@@ -29,6 +32,26 @@ def help_markup_mode() -> Literal["rich"] | None:
     """Use complete linear help when Rich tables cannot preserve tokens."""
     columns = shutil.get_terminal_size(fallback=(80, 24)).columns
     return None if columns < _NARROW_HELP_COLUMNS else "rich"
+
+
+def render_usage_rows(console: Console, rows: Sequence[tuple[str, str]]) -> None:
+    """Render welcome commands without detaching narrow descriptions."""
+    if console.width >= _NARROW_HELP_COLUMNS:
+        for command, description in rows:
+            console.print(f"  {command:<34s} → {description}")
+        return
+
+    description_width = max(1, console.width - 4)
+    for command, description in rows:
+        console.print(f"  {command}", highlight=False)
+        wrapped = textwrap.wrap(
+            description,
+            width=description_width,
+            break_long_words=False,
+            break_on_hyphens=False,
+        ) or [""]
+        for line in wrapped:
+            console.print(f"    {line}", highlight=False)
 
 
 def positive_finite_float(value: float) -> float:
@@ -107,8 +130,7 @@ def lookup_validate(
     except ValueError as exc:
         render_error(fmt_exc(exc))
         get_err_console().print(
-            "Expected a domain with a public suffix, such as contoso.com. "
-            "Run recon with no arguments for examples."
+            "Expected a domain with a public suffix, such as contoso.com. Run recon with no arguments for examples."
         )
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
