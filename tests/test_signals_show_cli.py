@@ -103,6 +103,14 @@ def test_list_category_filter_with_no_matches_exits_cleanly() -> None:
     assert "No signals match those filters" in result.output
 
 
+@pytest.mark.parametrize("value", ["", "   "])
+def test_list_rejects_explicitly_empty_category(value: str) -> None:
+    result = runner.invoke(app, ["signals", "list", "--category", value])
+
+    assert result.exit_code == EXIT_VALIDATION
+    assert "category filter cannot be empty" in result.output.lower()
+
+
 def test_search_empty_query_exits_validation() -> None:
     result = runner.invoke(app, ["signals", "search", "   "])
 
@@ -148,6 +156,22 @@ def test_search_text_mode_prints_matches() -> None:
     plain_output = _plain(result.output)
     assert "match" in plain_output
     assert label in plain_output
+
+
+def test_search_text_preserves_rank_without_false_category_groups() -> None:
+    structured = runner.invoke(app, ["signals", "search", "email", "--json"])
+    rendered = runner.invoke(app, ["signals", "search", "email"])
+
+    assert structured.exit_code == 0
+    assert rendered.exit_code == 0
+    payload = json.loads(structured.stdout)
+    plain_output = _plain(rendered.output)
+    assert len(payload) > 1
+    assert plain_output.count("Category:") == len(payload)
+    assert plain_output.count("Confidence:") == len(payload)
+    cursor = 0
+    for row in payload:
+        cursor = plain_output.index(row["name"], cursor) + len(row["name"])
 
 
 def test_search_no_matches_exits_cleanly() -> None:
@@ -233,6 +257,7 @@ def test_show_unknown_signal_exits_validation_with_suggestion() -> None:
     assert result.exit_code == EXIT_VALIDATION
     assert "No signal named" in result.output
     assert "Did you mean" in result.output
+    assert "recon signals search" in result.output
 
 
 def test_show_unknown_signal_no_suggestion() -> None:

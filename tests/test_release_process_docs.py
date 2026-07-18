@@ -81,6 +81,11 @@ def test_partial_release_recovery_is_exact_and_evidence_preserving() -> None:
     assert block.startswith("set -euo pipefail\n")
     assert "recovery_fail" in block
     assert "PASS: release recovery preconditions hold" in block
+    assert (
+        'TAG_SHA="$(git rev-list -n 1 "refs/tags/v${VERSION}" 2>/dev/null)" '
+        '|| recovery_fail "git to resolve the local tag v${VERSION}"'
+    ) in block
+    assert 'git rev-list -n 1 "refs/tags/v${VERSION}" 2>/dev/null || true' not in block
 
 
 @pytest.mark.skipif(sys.platform == "win32", reason="POSIX CI executes the Bash recovery contract")
@@ -91,6 +96,7 @@ def test_partial_release_recovery_is_exact_and_evidence_preserving() -> None:
         ("dirty", "clean worktree"),
         ("status_error", "inspect the worktree"),
         ("tag", "local tag"),
+        ("tag_error_output", "git to resolve the local tag"),
         ("run_error_output", "GitHub CLI to list"),
         ("missing_run", "Release workflow run"),
         ("run_sha", "selected Release run"),
@@ -123,7 +129,10 @@ case "$1 ${2:-}" in
     [ "${SCENARIO}" = dirty ] && printf ' M tracked-file\\n' || true
     ;;
   'rev-parse HEAD') printf 'head-sha\\n' ;;
-  'rev-list -n') [ "${SCENARIO}" = tag ] && printf 'other-sha\\n' || printf 'head-sha\\n' ;;
+  'rev-list -n')
+    if [ "${SCENARIO}" = tag_error_output ]; then printf 'head-sha\\n'; exit 9; fi
+    [ "${SCENARIO}" = tag ] && printf 'other-sha\\n' || printf 'head-sha\\n'
+    ;;
   *) exit 2 ;;
 esac
 """,

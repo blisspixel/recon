@@ -372,6 +372,31 @@ class TestSubprocessEntryPoint:
         assert all(not line.endswith("→") for line in usage.splitlines())
         assert max(len(line) for line in result.stdout.splitlines()) <= columns
 
+    @pytest.mark.parametrize("columns", [70, 80])
+    def test_ordinary_welcome_keeps_usage_rows_associated(self, columns: int) -> None:
+        env = {
+            **os.environ,
+            "COLUMNS": str(columns),
+            "NO_COLOR": "1",
+            "PYTHONUTF8": "1",
+            "TERM": "dumb",
+        }
+        result = subprocess.run(
+            [sys.executable, "-m", "recon_tool"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+            check=False,
+            env=env,
+        )
+
+        assert result.returncode == 0, result.stderr
+        usage = result.stdout.split("Usage", 1)[1].split("Common examples", 1)[0]
+        assert "linear output for screen readers and grep" in " ".join(usage.split())
+        assert all(not line or line.startswith("  ") for line in usage.splitlines())
+        assert max(len(line) for line in result.stdout.splitlines()) <= columns
+
 
 class TestCliExportsAreImportable:
     """The ``recon_tool.cli`` module must expose ``app`` (the Typer

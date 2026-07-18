@@ -219,6 +219,24 @@ This is the linear view for a standard single-domain lookup. Chain, compare,
 exposure, and gaps reports use their own formats; batch and delta have
 mode-specific output.
 
+## Inspect Local Cache State
+
+`cache show` reads metadata only. The default overview enumerates cache
+filenames for exact totals but opens at most the lexicographically first 100
+result files and 100 CT files. Use `--all` only when a complete inspection is
+worth the additional local work:
+
+```bash
+recon cache show
+recon cache show --all
+```
+
+An interrupted atomic write can leave a cache-writer-shaped temporary file.
+The overview counts that residue without reading or printing its payload,
+exits 4, and points to the confirmed `recon cache clear --all` workflow. That
+clear-all operation removes both completed entries and recognized temporary
+write artifacts, while unrelated `*.tmp` files are left alone.
+
 ## Explore the Local Catalogs
 
 The list, search, and show commands below are local and do not query a domain or
@@ -247,10 +265,22 @@ after 1,024 characters.
 `recon fingerprints test` is different: it resolves every domain in the chosen
 local corpus through the ordinary live lookup pipeline. DNS infrastructure may
 observe those queries, MTA-STS remains the one default target-owned HTTP
-request, and the usual public CT and identity-source boundaries apply.
+request, and the usual public CT and identity-source boundaries apply. The
+entire UTF-8 input is validated before the first lookup: at most 1 MiB total,
+1 KiB per logical line, and 500 non-comment domain rows. Valid URL and sub-host
+forms normalize to their apex and duplicate normalized domains resolve once.
+Any malformed row rejects the file before collection begins. Human output
+counts matches, clean non-matches, and lookup errors separately. JSON rows
+retain `matched` and `detail` and add `status` with `matched`, `not_matched`, or
+`error`, so failed collection is not negative evidence.
+Valid corpus invocations retain exit 0 even when one or every lookup reports an
+error. Automation must inspect each JSON row's `status` instead of treating the
+process exit status as collection success.
 
 At terminal widths below 70 columns, command help automatically switches to a
-complete linear layout so long option names remain visible.
+complete linear layout so long option names remain visible. Ranked signal
+search results keep relevance order and carry an explicit category and
+confidence instead of implying category grouping.
 
 If a lookup times out or every online source fails, run `recon doctor` to
 check source connectivity, then retry the lookup.
