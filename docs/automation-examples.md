@@ -6,8 +6,8 @@ not define a new contract.
 
 Use these rules before parsing:
 
-1. Check the process exit code first. `0` means output is parseable. `2` and `3`
-   produce no JSON.
+1. Check the process exit code first. `0` means output is parseable. For batch
+   modes it does not mean every domain succeeded. `2` and `3` produce no JSON.
 2. Do not parse the Rich panel or Markdown output. Use `--json`, `--ndjson`, or
    MCP `structuredContent`.
 3. Ignore unknown JSON fields. Additive fields are non-breaking in the 2.x
@@ -32,6 +32,11 @@ assert payload["schema_version"] == "2.0"
 
 `recon batch domains.txt --json` emits a bare array. Each element is either a
 lookup object or a closed `BatchErrorRecord`.
+
+A valid batch invocation retains exit 0 for mixed-error and all-error output.
+Inspect every record. `error_kind` is derived from structured control flow, not
+display-message keywords. Unexpected internal details are replaced with stable
+text; use reviewed local debug logs when diagnosis requires the full exception.
 
 ```python
 import json

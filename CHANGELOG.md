@@ -34,6 +34,11 @@ plain, JSON, and evidence-review workflows over specialist modes.
   JSON, evidence review, batch use, online diagnostics, and MCP client setup in
   that order. README and getting-started documentation now expose `--plain` for
   screen readers and grep.
+- Batch help now groups output, collection, analysis, and evidence controls by
+  task. It also states the 1 to 20 concurrency clamp and the existing rule that
+  per-domain failure records do not change a valid batch invocation's exit 0.
+- Root `--debug` help now warns operators to review diagnostics before sharing
+  because logs can contain domain inputs and local details.
 - Default low-confidence panels now point to `--explain` for evidence and
   `--verbose` for per-source status. Verbose and explain output suppress the
   repeated cue.
@@ -72,6 +77,17 @@ plain, JSON, and evidence-review workflows over specialist modes.
 
 ### Fixed
 
+- Batch `error_kind` now follows structured resolver state instead of timeout
+  words in the display message. Unexpected per-domain exceptions use stable,
+  redacted output across JSON, NDJSON, CSV, and panels while retaining details
+  in opt-in debug logs. The closed four-key error schema is unchanged.
+- `recon cache clear` now distinguishes a missing entry from a deletion
+  failure, reports partial layer success, and exits 4 after an unlink failure
+  without exposing the underlying path or exception in ordinary output.
+- Early-closing output pipelines now exit cleanly without creating a crash log.
+  Unrelated operating-system errors still use the existing internal-error path.
+- `recon doctor --fix` now lists every supported fingerprint detection type in
+  its generated template and no longer advertises unsupported `http` rules.
 - MCP validation-failure logs now retain only a request ID and stable
   `invalid_domain` reason. Rejected argument values and exception text remain
   out of operator logs while existing tool-facing correction messages stay
