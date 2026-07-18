@@ -58,7 +58,7 @@ def _three_vendor_tenant() -> TenantInfo:
         queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=8,
-        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid"),
+        tenant_domains=("alpha.invalid", "alpha.test", "alpha.example"),
         services=("AWS CloudFront", "Cloudflare", "GCP Compute Engine"),
         slugs=("aws-cloudfront", "cloudflare", "gcp-compute"),
         surface_attributions=(
@@ -143,7 +143,7 @@ class TestCrossProcessDeterminism:
             queried_domain='alpha.invalid',
             confidence=ConfidenceLevel.HIGH,
             domain_count=8,
-            tenant_domains=('alpha.invalid', 'alpha.invalid', 'alpha.invalid'),
+            tenant_domains=('alpha.invalid', 'alpha.test', 'alpha.example'),
             services=('AWS CloudFront', 'Cloudflare', 'GCP Compute Engine'),
             slugs=('aws-cloudfront', 'cloudflare', 'gcp-compute'),
             surface_attributions=(

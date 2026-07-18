@@ -65,7 +65,7 @@ def _build_tenant(slug_count: int) -> TenantInfo:
         queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=5,
-        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid"),
+        tenant_domains=("alpha.invalid", "alpha.test", "alpha.example"),
         services=services,
         slugs=slugs,
     )
@@ -90,7 +90,7 @@ def _build_surface_heavy_tenant(attrib_count: int) -> TenantInfo:
         queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=5,
-        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid"),
+        tenant_domains=("alpha.invalid", "alpha.test", "alpha.example"),
         services=("Cloudflare", "Fastly"),
         slugs=("cloudflare", "fastly"),
         surface_attributions=attribs,

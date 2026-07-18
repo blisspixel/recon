@@ -54,8 +54,8 @@ def _sparse_multi_domain_tenant(**overrides: object) -> TenantInfo:
         "domain_count": 4,
         "tenant_domains": (
             "alpha.invalid",
-            "alpha.invalid",
-            "alpha.invalid",
+            "alpha.test",
+            "alpha.example",
             "alpha-mail.invalid",
         ),
         # One short Email entry — categorized() will produce one or two
@@ -75,7 +75,7 @@ def _dense_categorized_tenant() -> TenantInfo:
         queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=12,
-        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid", "alpha-mail.invalid"),
+        tenant_domains=("alpha.invalid", "alpha.test", "alpha.example", "alpha-mail.invalid"),
         services=(
             "Microsoft 365",
             "Okta",

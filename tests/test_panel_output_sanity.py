@@ -42,7 +42,7 @@ def _multi_cloud_with_duplicate_potential() -> TenantInfo:
         queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=4,
-        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid"),
+        tenant_domains=("alpha.invalid", "alpha.test", "alpha.example"),
         services=("AWS Route 53", "Cloudflare"),
         slugs=("aws-route53", "cloudflare"),
         evidence=(

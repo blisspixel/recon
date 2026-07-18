@@ -14,34 +14,17 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.4] - 2026-07-18
+
 ### Tool Surface Changes
 
-Tool surface changes: `recon cache show` adds `--all` as an explicit complete
-inspection mode. `fingerprints test --json` rows add `status` while retaining
-`matched` and `detail`. No default lookup JSON, MCP, cache format, or public
-import contract changes. Human `cache show` output now covers
-payload-free metadata for both result and CT cache layers. The opt-in, non-schema
-`--include-unclassified` maintenance output adds typed catalog diagnostics.
-The root CLI help summary text and the human-facing delta panel label for the
-email control count are clearer. `python -m recon_tool` is now a supported
-entry path. `recon fingerprints new` now includes the current verification
-date in its candidate YAML. The no-argument welcome banner now prioritizes
-plain, JSON, and evidence-review workflows over specialist modes. Human help
-now names the domain-or-command grammar and uses a complete linear layout below
-70 columns. Narrow root summaries and no-argument usage now remain complete and
-associated at the actual terminal width. CT cache overview rows now state
-whether each entry is reusable or expired. The existing maintenance JSON from
-`fingerprints show` now adds `record_count` and `records` so same-slug records
-are not collapsed. Each added record retains original descriptions,
-relationship hints, tiers, weights, references, and verification dates. Signal
-search summaries now include `min_matches` like signal list summaries. No
-default lookup JSON or MCP output schema changed. The existing MCP diagnostics
-now verify canonical tool and resource registrations, and the live doctor reads
-and validates each canonical local JSON resource without adding or changing an
-MCP tool, resource URI, or schema.
+Tool surface changes: added flags `--all` on `recon cache show`.
 
 ### Changed
 
+- Synthetic tenant-domain fixtures now keep every listed domain unique and use
+  only reserved namespace values. Privacy regression assertions check complete
+  input domains so harmless aggregate text cannot cause false failures.
 - Release source distributions now explicitly exclude every private validation
   and agent-work path. The package regression test creates an ignored local
   sentinel before building and rejects private paths or retired target-example

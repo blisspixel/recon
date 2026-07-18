@@ -31,7 +31,7 @@ def _multi_cloud_tenant() -> TenantInfo:
         queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=8,
-        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid"),
+        tenant_domains=("alpha.invalid", "alpha.test", "alpha.example"),
         services=("AWS CloudFront", "Cloudflare", "Fastly"),
         slugs=("aws-cloudfront", "cloudflare", "fastly"),
         surface_attributions=tuple(
