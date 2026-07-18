@@ -30,6 +30,12 @@ malformed, negative, and non-finite values use exponential backoff instead.
 `Retry-After: 0` retries without sleeping. The cumulative sleep cap still
 applies across all attempts.
 
+Before each shared-client request and redirect, recon resolves the destination
+and requires every returned address to be public unicast. A missing hostname,
+DNS error, empty answer, or invalid address fails closed before the HTTP
+transport runs. The validated address is not pinned to the connection, so the
+documented DNS rebinding time-of-check/time-of-use residual still applies.
+
 ## Resource caps
 
 A representative set; the full list lives in the source constants the
@@ -109,6 +115,12 @@ remain the host's responsibility. Debug diagnostics can include domain inputs,
 local paths, configuration context, and exception details. Review and redact
 them before sharing.
 
+Importing the MCP server does not add a process-wide logging handler. When the
+stdio server actually runs without an existing logging configuration, it adds a
+temporary stderr handler for that runtime and removes it on exit. An unexpected
+server failure emits one bounded control-free line with the exception type;
+exception text cannot inject a second row or terminal control sequence.
+
 MCP lookup tools preserve the same distinction. Only `error_type="no_data"`
 uses `No information found for ...`; timeouts and total source failure retain
 truthful failure text instead of being presented as an empty observation.
@@ -123,6 +135,9 @@ Default mode contacts Microsoft identity endpoints, DNS for `example.com`, and
 crt.sh using synthetic inputs; it does not accept or query a target namespace.
 The `--fix`, `--mcp`, and `--client` modes are local-only. Every dynamic doctor
 row strips control bytes, escapes terminal markup, and bounds displayed detail.
+Every ordinary `httpx.RequestError` becomes a named failed row for a core probe
+or a warning row for optional CT enrichment, and remaining independent checks
+continue before the final summary and exit status.
 
 ## Batch CSV contract
 
@@ -162,7 +177,8 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   Without `--exact`, cache commands retain normal apex reduction. CT entries
   written before v2.6.1 lack the binding metadata and repopulate on demand.
 - **Cache inspection is metadata-only and failure-aware.** `recon cache show`
-  reports both disk layers independently, including reuse status, age, TTL,
+  reports both disk layers independently in single-entry and overview modes,
+  including reuse status, age, TTL,
   timestamps, and file size, plus CT provider and subdomain count. It never
   renders cached tenant, service, evidence, or raw record fields. Missing files
   remain a successful `no entry`; an invalid, redirected, unreadable, or

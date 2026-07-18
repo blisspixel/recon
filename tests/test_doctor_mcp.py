@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import json
+import subprocess
+import sys
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -18,6 +20,29 @@ runner = CliRunner()
 
 
 class TestDoctorMcp:
+    def test_importing_server_does_not_install_a_shared_logger_handler(self) -> None:
+        probe = (
+            "import logging; "
+            "logger = logging.getLogger('recon'); logger.handlers.clear(); "
+            "import recon_tool.server; "
+            "print(len(logger.handlers)); "
+            "logging.getLogger().handlers.clear(); "
+            "ctx = recon_tool.server._runtime_logging(); ctx.__enter__(); "
+            "print(len(logger.handlers), logger.level); "
+            "ctx.__exit__(None, None, None); "
+            "print(len(logger.handlers), logger.level)"
+        )
+        result = subprocess.run(  # noqa: S603 - fixed interpreter and test-owned probe.
+            [sys.executable, "-c", probe],
+            capture_output=True,
+            text=True,
+            timeout=30,
+            check=False,
+        )
+
+        assert result.returncode == 0, result.stderr
+        assert result.stdout.splitlines() == ["0", "1 20", "0 0"]
+
     def test_doctor_mcp_succeeds(self) -> None:
         """With MCP installed, --mcp should run all checks and emit config snippet."""
         result = runner.invoke(app, ["doctor", "--mcp"])

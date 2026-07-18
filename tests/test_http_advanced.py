@@ -94,8 +94,8 @@ class TestIsPrivateIpAsync:
         assert await _is_private_ip_async("8.8.8.8") is False
 
     @pytest.mark.asyncio
-    async def test_empty_string_allowed(self):
-        assert await _is_private_ip_async("") is False
+    async def test_empty_hostname_is_blocked(self):
+        assert await _is_private_ip_async("") is True
 
     @pytest.mark.asyncio
     async def test_literal_metadata_blocked(self):
@@ -124,12 +124,31 @@ class TestIsPrivateIpAsync:
         assert await _is_private_ip_async("login.microsoftonline.com") is False
 
     @pytest.mark.asyncio
-    async def test_nonexistent_hostname_allowed(self, monkeypatch: pytest.MonkeyPatch):
+    async def test_hostname_with_mixed_public_and_private_answers_is_blocked(self, monkeypatch: pytest.MonkeyPatch):
+        def resolve_mixed(*_args: object, **_kwargs: object) -> list[tuple[object, ...]]:
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("8.8.8.8", 443)),
+                (socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("127.0.0.1", 443)),
+            ]
+
+        monkeypatch.setattr("recon_tool.http.socket.getaddrinfo", resolve_mixed)
+        assert await _is_private_ip_async("mixed-answer.example") is True
+
+    @pytest.mark.asyncio
+    async def test_nonexistent_hostname_is_blocked(self, monkeypatch: pytest.MonkeyPatch):
         def fail_resolution(*_args: object, **_kwargs: object) -> list[tuple[object, ...]]:
             raise socket.gaierror("synthetic DNS failure")
 
         monkeypatch.setattr("recon_tool.http.socket.getaddrinfo", fail_resolution)
-        assert await _is_private_ip_async("this-domain-does-not-exist-12345.invalid") is False
+        assert await _is_private_ip_async("this-domain-does-not-exist-12345.invalid") is True
+
+    @pytest.mark.asyncio
+    async def test_hostname_with_no_resolved_addresses_is_blocked(self, monkeypatch: pytest.MonkeyPatch):
+        def resolve_nothing(*_args: object, **_kwargs: object) -> list[tuple[object, ...]]:
+            return []
+
+        monkeypatch.setattr("recon_tool.http.socket.getaddrinfo", resolve_nothing)
+        assert await _is_private_ip_async("empty-answer.example") is True
 
 
 class TestSSRFSafeTransport:
@@ -153,6 +172,31 @@ class TestSSRFSafeTransport:
         request = httpx.Request("GET", "http://0.0.0.0/")
         with pytest.raises(httpx.ConnectError, match="SSRF blocked"):
             await transport.handle_async_request(request)
+
+    @pytest.mark.asyncio
+    async def test_resolution_failure_never_reaches_wrapped_transport(self, monkeypatch: pytest.MonkeyPatch):
+        called = False
+
+        def fail_resolution(*_args: object, **_kwargs: object) -> list[tuple[object, ...]]:
+            raise socket.gaierror("synthetic DNS failure")
+
+        async def record_transport_call(
+            _transport: httpx.AsyncHTTPTransport,
+            request: httpx.Request,
+        ) -> httpx.Response:
+            nonlocal called
+            called = True
+            return httpx.Response(200, request=request)
+
+        monkeypatch.setattr("recon_tool.http.socket.getaddrinfo", fail_resolution)
+        monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", record_transport_call)
+        transport = _SSRFSafeTransport()
+        request = httpx.Request("GET", "https://unresolved.example/")
+
+        with pytest.raises(httpx.ConnectError, match="could not be validated"):
+            await transport.handle_async_request(request)
+
+        assert called is False
 
 
 class TestRetryTransport:

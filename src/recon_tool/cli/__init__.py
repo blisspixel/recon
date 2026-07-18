@@ -1,13 +1,13 @@
 """CLI application facade for recon.
 
-Supports shorthand ``recon DOMAIN``, explicit ``recon lookup DOMAIN``, doctor,
-batch, and MCP commands. Typer's ``invoke_without_command`` callback routes
-non-command first arguments to lookup so domain validation owns diagnostics.
+Supports shorthand ``recon DOMAIN``, explicit lookup, doctor, batch, and MCP.
+Non-command first arguments route to lookup so domain validation owns diagnostics.
 """
 
 from __future__ import annotations
 
 import asyncio
+import shutil
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -31,6 +31,7 @@ from recon_tool.cli.options import (
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.cli.shared import help_markup_mode as _help_markup_mode
 from recon_tool.cli.shared import positive_finite_float, raise_lookup_error
+from recon_tool.cli.shared import render_usage_rows as _render_usage_rows
 from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
 
@@ -86,6 +87,7 @@ _REPORT_HELP_PANEL = "Report detail and wording"
 _COLLECTION_HELP_PANEL = "Collection, cache, and scope"
 _ANALYSIS_HELP_PANEL = "Analysis modes"
 _EVIDENCE_HELP_PANEL = "Evidence model"
+_HELP_TERMINAL_WIDTH = shutil.get_terminal_size(fallback=(80, 24)).columns
 
 
 class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseClass, reportAttributeAccessIssue]
@@ -127,7 +129,7 @@ app = typer.Typer(
     subcommand_metavar="[DOMAIN | COMMAND [ARGS]...]",
     # `-h` as a help alias everywhere (Click propagates help_option_names to
     # every subcommand context), matching the near-universal CLI convention.
-    context_settings={"help_option_names": ["-h", "--help"]},
+    context_settings={"help_option_names": ["-h", "--help"], "terminal_width": _HELP_TERMINAL_WIDTH},
 )
 
 
@@ -200,7 +202,7 @@ def main(
     ),
 ) -> None:
     """
-    [bold]recon[/bold] - passive domain intelligence from public sources.
+    recon - passive domain intelligence from public sources.
 
     Give it any domain. Get back public identity responses, email-routing
     observations, domain-control indicators, and their provenance.
@@ -240,13 +242,18 @@ def _print_welcome_banner() -> None:
     )
     console.print()
     console.print("[bold cyan]Usage[/bold cyan]")
-    console.print("  recon <domain>                    → clean summary (recommended)")
-    console.print("  recon <domain> --plain            → linear output for screen readers and grep")
-    console.print("  recon <domain> --json             → structured automation")
-    console.print("  recon <domain> --explain          → evidence and explanation")
-    console.print("  recon batch domains.txt           → process multiple domains")
-    console.print("  recon doctor                      → check online source connectivity")
-    console.print("  recon mcp install --help          → connect an MCP client")
+    _render_usage_rows(
+        console,
+        (
+            ("recon <domain>", "clean summary (recommended)"),
+            ("recon <domain> --plain", "linear output for screen readers and grep"),
+            ("recon <domain> --json", "structured automation"),
+            ("recon <domain> --explain", "evidence and explanation"),
+            ("recon batch domains.txt", "process multiple domains"),
+            ("recon doctor", "check online source connectivity"),
+            ("recon mcp install --help", "connect an MCP client"),
+        ),
+    )
     console.print()
     console.print("[bold cyan]Common examples[/bold cyan]")
     console.print("  recon contoso.com")
@@ -263,7 +270,7 @@ def _print_welcome_banner() -> None:
     )
 
 
-@app.command()
+@app.command(short_help="Look up a domain.")
 def lookup(
     domain: str = typer.Argument(help="Domain to look up"),
     json_output: bool = typer.Option(
@@ -483,9 +490,9 @@ def lookup(
     """
     Look up a domain. This is the default command.
 
-    [dim]Start with recon DOMAIN. Add --full for detail, --explain for evidence,
+    Start with recon DOMAIN. Add --full for detail, --explain for evidence,
     or --json for automation. Google CSE and BIMI probes require --direct-probes;
-    MTA-STS is the only default target-owned HTTP request.[/dim]
+    MTA-STS is the only default target-owned HTTP request.
     """
     effective_confidence_mode = "strict" if strict else confidence_mode
     options = LookupOptions(
@@ -535,7 +542,7 @@ def lookup(
     )
 
 
-@app.command()
+@app.command(short_help="Look up domains in a file.")
 def batch(
     file: str = typer.Argument(help="File with one domain per line, or - to read domains from stdin"),
     json_output: bool = typer.Option(
@@ -650,7 +657,7 @@ def batch(
     """
     Look up multiple domains from a file.
 
-    [dim]One domain per line. Lines starting with # are skipped.[/dim]
+    One domain per line. Lines starting with # are skipped.
 
     Per-domain failures are output records and keep exit 0. In JSON or NDJSON,
     inspect record_type; in CSV, inspect error.
@@ -675,7 +682,7 @@ def batch(
     )
 
 
-@app.command()
+@app.command(short_help="Find fingerprint candidates.")
 def discover(
     domain: str = typer.Argument(help="Domain to mine for fingerprint candidates"),
     output: str | None = typer.Option(
@@ -723,7 +730,7 @@ def discover(
     )
 
 
-@app.command()
+@app.command(short_help="Check source health.")
 def doctor(
     fix: bool = typer.Option(False, "--fix", help="Scaffold template config files"),
     mcp: bool = typer.Option(False, "--mcp", help="Validate MCP server setup and emit an mcpServers reference config"),
@@ -756,7 +763,7 @@ def doctor(
     asyncio.run(_doctor())
 
 
-@app.command()
+@app.command(short_help="Check for updates.")
 def update(
     check: bool = typer.Option(False, "--check", help="Only report whether a newer version exists; do not install."),
 ) -> None:
@@ -816,31 +823,28 @@ def update(
     console.print(f"[green]Updated to {latest}. Open a new shell and run `recon --version` to confirm.[/green]")
 
 
-# ── Template content for doctor --fix ────────────────────────────────────
-
-
 # ── MCP CLI ───────────────────────────────────────────────────────────
 
-app.add_typer(mcp_app, name="mcp")
+app.add_typer(mcp_app, name="mcp", short_help="Run or configure MCP.")
 
 
 # ── Cache CLI ─────────────────────────────────────────────────────────
 
-app.add_typer(cache_app, name="cache")
+app.add_typer(cache_app, name="cache", short_help="Manage local caches.")
 
 
 # ── Fingerprints CLI ──────────────────────────────────────────────────
 
-app.add_typer(fingerprints_app, name="fingerprints")
+app.add_typer(fingerprints_app, name="fingerprints", short_help="Browse fingerprints.")
 
 # ── Signals CLI ───────────────────────────────────────────────────────
 
-app.add_typer(signals_app, name="signals")
+app.add_typer(signals_app, name="signals", short_help="Browse signals.")
 
 # ── Delta CLI ─────────────────────────────────────────────────────────
 
 
-@app.command()
+@app.command(short_help="Compare cached state.")
 def delta(
     domain: str = typer.Argument(..., help="Domain to diff against cached snapshot"),
     json_output: bool = typer.Option(False, "--json", help="Output structured JSON"),

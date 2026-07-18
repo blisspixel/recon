@@ -111,6 +111,12 @@ If you launch `recon mcp` (or `python -m recon_tool.server`) by hand in a shell,
 
 If you genuinely need to drive the JSON-RPC loop by hand (e.g. piping crafted requests for debugging), set `RECON_MCP_FORCE_STDIO=1` (case-insensitive: `1`, `true`, `yes`, `on` all enable the bypass) before launching.
 
+Importing the server module does not install a shared logging handler. The
+actual stdio runtime supplies a temporary stderr handler only when no host
+logging configuration exists, then removes it on exit. If the loop fails
+unexpectedly, stderr receives one bounded control-free line with the exception
+type instead of raw multiline exception text.
+
 ## Available Tools
 
 Start with `lookup_tenant` for a single-domain summary. Use `format="json"`
