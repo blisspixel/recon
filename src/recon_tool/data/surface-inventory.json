@@ -1112,7 +1112,7 @@
           "mcp",
           "doctor"
         ],
-        "summary": "Run the end-to-end MCP self-check against a local JSON-RPC subprocess.",
+        "summary": "Check local MCP startup, discovery, tools, and JSON resources.",
         "usage": "recon mcp doctor"
       },
       {

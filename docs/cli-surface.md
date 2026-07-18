@@ -297,7 +297,7 @@ Summary: Resolve a local corpus through live lookups and report fingerprint matc
 ## `recon mcp doctor`
 
 Kind: command
-Summary: Run the end-to-end MCP self-check against a local JSON-RPC subprocess.
+Summary: Check local MCP startup, discovery, tools, and JSON resources.
 
 No parameters.
 

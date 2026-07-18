@@ -11,6 +11,7 @@ import os
 
 import typer
 
+from recon_tool.cli.shared import render_diagnostic_status_row as _render_status_row
 from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_INTERNAL, EXIT_VALIDATION
 from recon_tool.formatter import get_console
@@ -20,6 +21,20 @@ mcp_app = typer.Typer(
     invoke_without_command=True,
     no_args_is_help=False,
 )
+
+
+def _render_install_verification(client: str) -> None:
+    """Show the ordered checks that complete one client installation."""
+    console = get_console()
+    console.print("  Restart your MCP client to pick up the new server, then verify in order:")
+    steps = (
+        ("Static registry", "recon doctor --mcp"),
+        ("Live tools and resources", "recon mcp doctor"),
+        ("This client config", f"recon doctor --client={client}"),
+    )
+    for number, (description, command) in enumerate(steps, start=1):
+        console.print(f"    {number}. {description}")
+        console.print(f"       [bold]{_safe_markup(command)}[/bold]", soft_wrap=True)
 
 
 @mcp_app.callback()
@@ -95,8 +110,7 @@ def mcp_install_command(
 
     if client not in SUPPORTED_CLIENTS:
         console.print(
-            f"[red]Unknown client `{_safe_markup(client)}`.[/red]\n"
-            f"  Supported: {', '.join(SUPPORTED_CLIENTS)}"
+            f"[red]Unknown client `{_safe_markup(client)}`.[/red]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}"
         )
         raise typer.Exit(EXIT_VALIDATION)
 
@@ -170,15 +184,12 @@ def mcp_install_command(
         console.print(f"  [yellow]{_safe_markup(fallback_warning)}[/yellow]")
         console.print()
 
-    console.print(
-        "  Restart your MCP client to pick up the new server. "
-        "Run [bold]recon mcp doctor[/bold] for a live JSON-RPC handshake check."
-    )
+    _render_install_verification(client)
 
 
-@mcp_app.command("doctor", short_help="Check the MCP handshake.")
+@mcp_app.command("doctor", short_help="Check MCP tools and resources.")
 def mcp_doctor_command() -> None:
-    """Run the end-to-end MCP self-check against a local JSON-RPC subprocess."""
+    """Check local MCP startup, discovery, tools, and JSON resources."""
     try:
         from recon_tool.mcp_client.doctor import run_doctor
     except ImportError as exc:
@@ -190,7 +201,7 @@ def mcp_doctor_command() -> None:
 
     console = get_console()
     console.print()
-    console.print("  Running MCP self-check (this spawns the server and walks the JSON-RPC handshake)...")
+    console.print("  Checking local MCP startup, discovery, tools, and JSON resources...")
     console.print()
 
     report = run_doctor()
@@ -198,7 +209,13 @@ def mcp_doctor_command() -> None:
     for check in report.checks:
         mark = "ok" if check.status == "ok" else "FAIL"
         style = "green" if check.status == "ok" else "red"
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {_safe_markup(check.name)}: {_safe_markup(check.detail)}")
+        _render_status_row(
+            console,
+            mark=mark,
+            style=style,
+            name=check.name,
+            detail=check.detail,
+        )
 
     console.print()
     console.print(f"  elapsed: {report.elapsed_seconds:.2f}s")
@@ -212,4 +229,6 @@ def mcp_doctor_command() -> None:
         )
         raise typer.Exit(EXIT_INTERNAL)
 
-    console.print("  [green]All checks passed.[/green] An MCP client can talk to this install.")
+    console.print("  [green]All checks passed.[/green]")
+    console.print("  Verified: canonical tool registrations and five local JSON resource reads.")
+    console.print("  [dim]Client config was not checked; run recon doctor --client=<name>.[/dim]")

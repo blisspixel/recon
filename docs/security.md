@@ -74,6 +74,9 @@ the rejected domain or validation exception. Dynamic fields rendered by the
 default doctor, `doctor --mcp`, `doctor --client`, `doctor --fix`,
 `recon mcp install`, and live `recon mcp doctor` paths strip control bytes,
 escape Rich markup, and bound displayed detail before rendering.
+The live MCP doctor validates local JSON resource structure but never copies a
+resource payload into its failure text. A failed later protocol phase retains
+only prior check summaries plus bounded spawned-server stderr.
 
 ### Malicious DNS responses
 

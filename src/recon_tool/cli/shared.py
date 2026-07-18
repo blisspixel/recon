@@ -84,6 +84,57 @@ def safe_diagnostic_markup(value: object) -> str:
     return escape(cleaned)
 
 
+def render_diagnostic_status_row(
+    console: Console,
+    *,
+    mark: str,
+    style: str,
+    name: object,
+    detail: object,
+) -> None:
+    """Render a safe status row with associated detail at narrow widths."""
+    safe_name = safe_diagnostic_markup(name)
+    safe_detail = safe_diagnostic_markup(detail)
+    header = f"  [{style}]{mark:>4}[/{style}]  {safe_name}:"
+    visible_header_length = 2 + 4 + 2 + len(str(name)) + 1
+    if visible_header_length > console.width:
+        console.print(f"  [{style}]{mark:>4}[/{style}]")
+        name_indent = "        "
+        name_lines = textwrap.wrap(
+            safe_name,
+            width=max(1, console.width - len(name_indent)),
+            break_long_words=False,
+            break_on_hyphens=False,
+        ) or [""]
+        for index, line in enumerate(name_lines):
+            suffix = ":" if index == len(name_lines) - 1 else ""
+            console.print(f"{name_indent}{line}{suffix}", soft_wrap=True)
+        detail_indent = "            "
+        detail_lines = textwrap.wrap(
+            safe_detail,
+            width=max(1, console.width - len(detail_indent)),
+            break_long_words=False,
+            break_on_hyphens=False,
+        ) or [""]
+        for line in detail_lines:
+            console.print(f"{detail_indent}{line}", soft_wrap=True)
+        return
+    if visible_header_length + 1 + len(str(detail)) <= console.width:
+        console.print(f"{header} {safe_detail}")
+        return
+
+    console.print(header)
+    continuation = "        "
+    wrapped = textwrap.wrap(
+        safe_detail,
+        width=max(1, console.width - len(continuation)),
+        break_long_words=False,
+        break_on_hyphens=False,
+    ) or [""]
+    for line in wrapped:
+        console.print(f"{continuation}{line}", soft_wrap=True)
+
+
 def raise_lookup_error(error: ReconLookupError, *, domain: str | None = None) -> Never:
     """Render one structured resolver failure and raise its CLI exit.
 
