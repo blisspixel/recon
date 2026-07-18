@@ -16,8 +16,10 @@ operator, corporate group, ownership, or control.
 
 ### Tool Surface Changes
 
-Tool surface changes: no stable CLI command, flag, default JSON, MCP, cache
-format, or public import contract changes. Human `cache show` output now covers
+Tool surface changes: `recon cache show` adds `--all` as an explicit complete
+inspection mode. `fingerprints test --json` rows add `status` while retaining
+`matched` and `detail`. No default lookup JSON, MCP, cache format, or public
+import contract changes. Human `cache show` output now covers
 payload-free metadata for both result and CT cache layers. The opt-in, non-schema
 `--include-unclassified` maintenance output adds typed catalog diagnostics.
 The root CLI help summary text and the human-facing delta panel label for the
@@ -54,7 +56,9 @@ default lookup JSON or MCP output schema changed.
   `--client` as local-only modes.
 - Fingerprint and signal category filters now use one word-prefix or phrase
   matcher across CLI and MCP discovery. A short query such as `ai` therefore
-  no longer produces different category sets between interfaces.
+  no longer produces different category sets between interfaces. Explicit
+  empty category and detection-type values now fail validation instead of
+  expanding into a full human catalog dump.
 - Human fingerprint search now previews at most ten unique slugs, reports the
   complete record and unique-slug totals, and points to `--json` for the full
   record set. Fingerprint and signal rows use field-associated layouts that
@@ -63,7 +67,16 @@ default lookup JSON or MCP output schema changed.
   characters.
 - Catalog onboarding now limits its no-network promise to list, search, and
   show. `fingerprints test --help` discloses that corpus rows use ordinary live
-  lookup boundaries.
+  lookup boundaries. Corpus input is validated, apex-normalized, and
+  deduplicated before the first lookup and is bounded to 1 MiB, 1 KiB per line,
+  and 500 domain rows. A malformed row prevents all collection. Human and JSON
+  output now distinguish lookup errors from clean non-matches; existing JSON
+  keys remain intact. Valid invocations retain exit 0 when lookups report
+  errors, and the documented automation contract requires checking each row's
+  tri-state `status`.
+- Ranked signal search now keeps relevance order without reopening
+  noncontiguous category headings. Each human result carries explicit Category
+  and Confidence fields, and ambiguous show failures point to search.
 - Nested command help now keeps concise, complete summaries at 40 columns, and
   detailed help no longer exposes documentation-source markers.
 - The canonical local-gate wrapper now emits ANSI styling only to a capable
@@ -71,14 +84,25 @@ default lookup JSON or MCP output schema changed.
   stage, command, or pass condition. Local and CI Ruff stages now disable the
   cache so rapid same-size edits cannot reuse a stale lint result.
 - The documented partial-release recovery path now checks the exit status from
-  Release-run discovery separately from its output, so plausible partial output
-  cannot bypass a failed GitHub CLI call and reach rerun mutation.
+  both local tag resolution and Release-run discovery separately from output,
+  so plausible partial output cannot bypass a failed Git or GitHub CLI call and
+  reach rerun mutation.
 - Extracting fingerprint search ranking and rendering reduced the repository's
   remaining too-many-branches count from 11 to 10; the enforced PLR0912 ceiling
   is tightened to retain that reduction.
+- Extracting bounded corpus loading reduced the remaining too-many-statements
+  count from 9 to 8; the enforced PLR0915 ceiling is tightened to retain that
+  reduction.
 - `recon cache show` now reports metadata for the 24-hour result cache and the
   30-day CT cache independently. It shows reusable, expired, missing, and
   unreadable states without printing cached tenant, service, or evidence data.
+  Its default overview opens at most the first 100 JSON files per layer while
+  reporting exact total and uninspected counts; `--all` opts into complete
+  inspection. Rows select compact or vertical layout from their actual rendered
+  width, so long values remain field-associated at ordinary terminal widths.
+  Cache-writer-shaped interrupted-write artifacts are counted without payload
+  reads, produce a visible exit 4, and are removed and counted by confirmed
+  clear-all; unrelated `*.tmp` files are preserved.
 - Default low-confidence panels now point to `--explain` for evidence and
   `--verbose` for per-source status. Verbose and explain output suppress the
   repeated cue.

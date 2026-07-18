@@ -7,9 +7,10 @@ commands; the shared exception formatter comes from ``recon_tool.cli.shared``.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import typer
 from rich.markup import escape
@@ -18,11 +19,23 @@ from recon_tool.catalog_discovery import category_matches
 from recon_tool.cli.catalog_rendering import print_field, print_indented
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.exit_codes import EXIT_VALIDATION
-from recon_tool.formatter import get_console, get_err_console
-from recon_tool.validator import strip_control_chars
+from recon_tool.formatter import get_console, get_err_console, render_error
+from recon_tool.validator import strip_control_chars, validate_domain
 
 fingerprints_app = typer.Typer(help="Inspect the built-in fingerprint catalog.")
 HUMAN_SEARCH_PREVIEW_LIMIT = 10
+_MAX_CORPUS_FILE_BYTES = 1024 * 1024
+_MAX_CORPUS_LINE_BYTES = 1024
+_MAX_CORPUS_DOMAINS = 500
+_MAX_CORPUS_ERROR_LENGTH = 500
+
+
+@dataclass(frozen=True)
+class _CorpusTestResult:
+    domain: str
+    status: Literal["matched", "not_matched", "error"]
+    matched: bool
+    detail: str = ""
 
 _PUBLIC_DETECTION_CONTRACTS: dict[str, str] = {
     "txt": "a public TXT domain-control or account-registration indicator",
@@ -228,6 +241,81 @@ def _find_example_corpus_path() -> Path | None:
     return None
 
 
+def _read_fingerprint_corpus(path: Path) -> list[str]:
+    """Read one bounded UTF-8 corpus without exposing rejected row contents."""
+    with path.open("rb") as handle:
+        raw = handle.read(_MAX_CORPUS_FILE_BYTES + 1)
+    if len(raw) > _MAX_CORPUS_FILE_BYTES:
+        raise ValueError(f"Corpus exceeds the {_MAX_CORPUS_FILE_BYTES:,}-byte limit")
+    try:
+        text = raw.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ValueError("Corpus must be valid UTF-8") from exc
+
+    domains: list[str] = []
+    seen: set[str] = set()
+    domain_rows = 0
+    for line_number, raw_line in enumerate(text.splitlines(), 1):
+        if len(raw_line.encode("utf-8")) > _MAX_CORPUS_LINE_BYTES:
+            raise ValueError(f"Corpus line {line_number} exceeds the {_MAX_CORPUS_LINE_BYTES:,}-byte limit")
+        domain = raw_line.strip()
+        if not domain or domain.startswith("#"):
+            continue
+        domain_rows += 1
+        if domain_rows > _MAX_CORPUS_DOMAINS:
+            raise ValueError(f"Corpus exceeds the {_MAX_CORPUS_DOMAINS:,}-domain limit")
+        try:
+            normalized = validate_domain(domain)
+        except ValueError as exc:
+            raise ValueError(f"Corpus line {line_number} has invalid domain format") from exc
+        if normalized not in seen:
+            seen.add(normalized)
+            domains.append(normalized)
+    if not domains:
+        raise ValueError("Corpus contains no domains")
+    return domains
+
+
+def _bounded_corpus_error(exc: BaseException) -> str:
+    """Return control-free bounded lookup detail for text and JSON output."""
+    cleaned = strip_control_chars(_fmt_exc(exc), max_len=_MAX_CORPUS_ERROR_LENGTH + 1)
+    if len(cleaned) > _MAX_CORPUS_ERROR_LENGTH:
+        cleaned = f"{cleaned[:_MAX_CORPUS_ERROR_LENGTH]} [truncated]"
+    return f"error: {cleaned}"
+
+
+def _load_fingerprint_corpus(corpus: str | None) -> tuple[list[str], bool]:
+    """Resolve the configured corpus path and validate all input before lookup."""
+    using_example_corpus = False
+    if corpus is None:
+        from recon_tool.paths import config_dir
+
+        user_corpus = config_dir() / "corpus.txt"
+        example = _find_example_corpus_path()
+        if user_corpus.exists():
+            corpus_path = user_corpus
+        elif example is not None:
+            corpus_path = example
+            using_example_corpus = True
+        else:
+            render_error(
+                "No corpus specified. Pass --corpus path/to/file or drop a "
+                "newline-delimited apex list at ~/.recon/corpus.txt."
+            )
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+    else:
+        corpus_path = Path(corpus)
+        if not corpus_path.exists():
+            render_error(f"Corpus file not found: {corpus_path}")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+
+    try:
+        return _read_fingerprint_corpus(corpus_path), using_example_corpus
+    except (OSError, ValueError) as exc:
+        render_error(f"Could not use corpus: {_fmt_exc(exc)}")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
+
 @fingerprints_app.command("list", short_help="Summarize fingerprints.")
 def fingerprints_list(
     category: str | None = typer.Option(
@@ -252,10 +340,17 @@ def fingerprints_list(
 
     fps = load_fingerprints()
     had_filter = category is not None or detection_type is not None
-    if category:
+    if category is not None:
+        category = category.strip()
+        if not category:
+            render_error("Fingerprint category filter cannot be empty.")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
         fps = tuple(fp for fp in fps if category_matches(fp.category, category))
-    if detection_type:
-        dtype = detection_type.lower()
+    if detection_type is not None:
+        dtype = detection_type.strip().lower()
+        if not dtype:
+            render_error("Fingerprint detection type filter cannot be empty.")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
         fps = tuple(fp for fp in fps if any(d.type.lower() == dtype for d in fp.detections))
 
     if json_output:
@@ -538,7 +633,7 @@ def fingerprints_new(
 
 @fingerprints_app.command("test", short_help="Test against a corpus.")
 def fingerprints_test(
-    slug: str = typer.Argument(..., help="Slug to test against the public validation corpus"),
+    slug: str = typer.Argument(..., help="Slug to test against a local validation corpus"),
     corpus: str | None = typer.Option(
         None,
         "--corpus",
@@ -558,53 +653,19 @@ def fingerprints_test(
     remains the one default target-owned HTTP request.
     """
     import asyncio
-    from pathlib import Path as _Path
 
     from recon_tool.fingerprints import load_fingerprints
     from recon_tool.resolver import resolve_tenant
 
     fps = load_fingerprints()
     if not any(fp.slug == slug for fp in fps):
-        from recon_tool.formatter import render_error
-
         render_error(f"No fingerprint with slug {slug!r} in the built-in catalog.")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
-    using_example_corpus = False
-    if corpus is None:
-        from recon_tool.paths import config_dir as _config_dir
+    domains, using_example_corpus = _load_fingerprint_corpus(corpus)
 
-        user_corpus = _config_dir() / "corpus.txt"
-        example = _find_example_corpus_path()
-        if user_corpus.exists():
-            corpus_path = user_corpus
-        elif example is not None:
-            corpus_path = example
-            using_example_corpus = True
-        else:
-            from recon_tool.formatter import render_error
-
-            render_error(
-                "No corpus specified. Pass --corpus path/to/file or drop a "
-                "newline-delimited apex list at ~/.recon/corpus.txt."
-            )
-            raise typer.Exit(code=EXIT_VALIDATION) from None
-    else:
-        corpus_path = _Path(corpus)
-        if not corpus_path.exists():
-            from recon_tool.formatter import render_error
-
-            render_error(f"Corpus file not found: {corpus_path}")
-            raise typer.Exit(code=EXIT_VALIDATION) from None
-
-    domains = [
-        line.strip()
-        for line in corpus_path.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.startswith("#")
-    ]
-
-    async def _resolve_all() -> list[tuple[str, bool, str]]:
-        out: list[tuple[str, bool, str]] = []
+    async def _resolve_all() -> list[_CorpusTestResult]:
+        out: list[_CorpusTestResult] = []
         for domain in domains:
             try:
                 info, _ = await resolve_tenant(domain, timeout=60.0)
@@ -614,14 +675,30 @@ def fingerprints_test(
                     detail = ", ".join(f"{e.source_type}:{e.raw_value[:40]}" for e in info.evidence if e.slug == slug)[
                         :120
                     ]
-                out.append((domain, matched, detail))
+                status: Literal["matched", "not_matched"] = "matched" if matched else "not_matched"
+                out.append(_CorpusTestResult(domain=domain, status=status, matched=matched, detail=detail))
             except Exception as exc:
-                out.append((domain, False, f"error: {_fmt_exc(exc)}"))
+                out.append(
+                    _CorpusTestResult(
+                        domain=domain,
+                        status="error",
+                        matched=False,
+                        detail=_bounded_corpus_error(exc),
+                    )
+                )
         return out
 
     if json_output:
         results = asyncio.run(_resolve_all())
-        payload = [{"domain": d, "matched": m, "detail": detail} for d, m, detail in results]
+        payload = [
+            {
+                "domain": result.domain,
+                "status": result.status,
+                "matched": result.matched,
+                "detail": result.detail,
+            }
+            for result in results
+        ]
         typer.echo(json.dumps(payload, indent=2))
         return
 
@@ -637,15 +714,27 @@ def fingerprints_test(
     with get_err_console().status(f"Resolving {len(domains)} domains..."):
         results = asyncio.run(_resolve_all())
 
-    hits = [(d, detail) for d, m, detail in results if m]
-    misses = [d for d, m, _ in results if not m]
-    for d, detail in hits:
+    hits = [result for result in results if result.status == "matched"]
+    misses = [result for result in results if result.status == "not_matched"]
+    errors = [result for result in results if result.status == "error"]
+    for result in hits:
         # detail carries evidence raw_value (e.g. BIMI VMC org); escape
         # markup and strip control bytes so it cannot inject Rich markup
         # or ANSI into the operator's terminal.
-        console.print(f"    [green]MATCH[/green]  {escape(d)}    {escape(strip_control_chars(detail))}")
+        console.print(
+            f"    [green]MATCH[/green]  {escape(strip_control_chars(result.domain))}    "
+            f"{escape(strip_control_chars(result.detail))}"
+        )
+    for result in errors:
+        console.print(
+            f"    [red]ERROR[/red]  {escape(strip_control_chars(result.domain))}    {escape(result.detail)}"
+        )
     console.print()
-    console.print(f"  [bold]{len(hits)} of {len(domains)} matched[/bold]  ({len(misses)} did not)")
+    error_label = "lookup error" if len(errors) == 1 else "lookup errors"
+    console.print(
+        f"  [bold]{len(hits)} of {len(domains)} matched[/bold]  "
+        f"({len(misses)} did not match; {len(errors)} {error_label})"
+    )
     if hits:
         console.print(f"  [dim]Next:[/dim]  recon fingerprints show {slug}")
     console.print()

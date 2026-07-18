@@ -12,6 +12,7 @@ import pytest
 
 from recon_tool.cache import DEFAULT_TTL, cache_dir, cache_put
 from recon_tool.cache_inspection import inspect_result_cache, list_result_cache
+from recon_tool.cache_values import CacheInspection
 from recon_tool.models import ConfidenceLevel, TenantInfo
 
 
@@ -84,3 +85,29 @@ def test_list_result_cache_counts_invalid_entries(isolated_cache: Path) -> None:
 
     assert [entry.domain for entry in listing.entries] == ["valid.com"]
     assert listing.failed == 1
+    assert listing.inspected == 2
+    assert listing.total == 2
+
+
+def test_list_result_cache_bounds_payload_inspection_and_counts_residue(isolated_cache: Path) -> None:
+    cache_dir().mkdir(parents=True)
+    for index in range(105):
+        (cache_dir() / f"d{index:03d}.invalid.json").write_text("{}", encoding="utf-8")
+    (cache_dir() / "d000.invalid.abcd1234.tmp").write_text("private payload", encoding="utf-8")
+    (cache_dir() / "operator-notes.tmp").write_text("keep", encoding="utf-8")
+
+    with patch(
+        "recon_tool.cache_inspection.inspect_result_cache",
+        return_value=CacheInspection(failed=True),
+    ) as inspect:
+        listing = list_result_cache(limit=3)
+
+    assert [call.args[0] for call in inspect.call_args_list] == [
+        "d000.invalid",
+        "d001.invalid",
+        "d002.invalid",
+    ]
+    assert listing.inspected == 3
+    assert listing.total == 105
+    assert listing.failed == 3
+    assert listing.temporary_files == 1
