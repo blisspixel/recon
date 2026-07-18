@@ -29,7 +29,9 @@ Unreleased maintenance also refuses HTTP destinations whose hostname or DNS
 result cannot be validated, confines default MCP logging to the running server,
 bounds fatal MCP stderr, keeps doctor checks useful across ordinary HTTP
 request failures, labels CT cache overview freshness, and completes narrow root
-and welcome help.
+and welcome help. Release-shaped builds now select exact uv and a hash-locked
+backend graph, reconstruct the wheel from the new sdist, and reject any sealed
+artifact set other than one tag-matching wheel and sdist.
 
 The catalog-quality track uses deduplicated private rounds with distinct rank,
 regional, vertical, vendor-seed, or drift questions. It must account for every

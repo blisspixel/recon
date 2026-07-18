@@ -36,6 +36,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -63,6 +65,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -95,6 +99,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -145,6 +151,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -174,6 +182,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -205,6 +215,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -360,6 +372,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -375,8 +389,9 @@ jobs:
   reproducible-build:
     # Same-job deterministic-build check. With a fixed SOURCE_DATE_EPOCH, two
     # builds of the same source in this Ubuntu job must produce matching wheel
-    # and sdist hashes under the same resolved toolchain. This does not claim
-    # byte identity across independently resolved environments. Builds go to
+    # and sdist hashes under the same exact uv and hash-locked backend graph.
+    # This does not claim byte identity across different Python, runner, or
+    # operating-system environments. Builds go to
     # RUNNER_TEMP (outside the checkout) so build output never lands in the
     # packaged source tree and falsely breaks the comparison.
     runs-on: ubuntu-latest
@@ -393,6 +408,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -402,8 +419,18 @@ jobs:
       - name: Build twice and compare artifact hashes
         run: |
           set -euo pipefail
-          uv build --out-dir "$RUNNER_TEMP/r1"
-          uv build --out-dir "$RUNNER_TEMP/r2"
+          build_once() {
+            out_dir="$1"
+            uv build --sdist --out-dir "$out_dir" --build-constraints build-constraints.txt --require-hashes
+            sdists=("$out_dir"/*.tar.gz)
+            if [ "${#sdists[@]}" -ne 1 ] || [ ! -f "${sdists[0]}" ]; then
+              echo "Expected exactly one source distribution in $out_dir" >&2
+              exit 1
+            fi
+            uv build --wheel "${sdists[0]}" --out-dir "$out_dir" --build-constraints build-constraints.txt --require-hashes
+          }
+          build_once "$RUNNER_TEMP/r1"
+          build_once "$RUNNER_TEMP/r2"
           fail=0
           for f in "$RUNNER_TEMP/r1"/*.whl "$RUNNER_TEMP/r1"/*.tar.gz; do
             name="$(basename "$f")"
