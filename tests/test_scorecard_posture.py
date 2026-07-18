@@ -426,8 +426,10 @@ def _consumer_recipe_block(language: str) -> str:
     text = (_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8")
     section = text.split("## Consumer verification quick path", 1)[1].split("## Deterministic-build evidence", 1)[0]
     blocks = re.findall(rf"```{re.escape(language)}\n(.*?)\n```", section, flags=re.DOTALL)
-    assert len(blocks) == 1
-    return blocks[0]
+    marker = {"bash": "set -euo pipefail", "powershell": "Set-StrictMode -Version Latest"}[language]
+    recipes = [block for block in blocks if block.startswith(marker)]
+    assert len(recipes) == 1
+    return recipes[0]
 
 
 def test_posix_consumer_verification_recipe_parses() -> None:
@@ -437,13 +439,19 @@ def test_posix_consumer_verification_recipe_parses() -> None:
     if bash is None:
         pytest.skip("bash is not available")
 
-    subprocess.run(  # noqa: S603
-        [bash, "-n"],
-        input=_consumer_recipe_block("bash"),
-        text=True,
-        capture_output=True,
-        check=True,
-    )
+    text = (_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8")
+    section = text.split("## Consumer verification quick path", 1)[1].split("## Deterministic-build evidence", 1)[0]
+    blocks = re.findall(r"```bash\n(.*?)\n```", section, flags=re.DOTALL)
+    assert any(block.startswith("git clone --branch") for block in blocks)
+    assert _consumer_recipe_block("bash") in blocks
+    for block in blocks:
+        subprocess.run(  # noqa: S603
+            [bash, "-n"],
+            input=block,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
 
 
 def test_powershell_consumer_verification_recipe_parses() -> None:
