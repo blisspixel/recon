@@ -117,6 +117,10 @@ and exits 1 when a core check fails, so a CI or monitoring job can gate on
 environment health instead of always reading success. `recon doctor --mcp`
 follows the same rule for MCP setup: it exits 1 when the server cannot be
 validated (package missing, server import failure, or no tools registered).
+Default mode contacts Microsoft identity endpoints, DNS for `example.com`, and
+crt.sh using synthetic inputs; it does not accept or query a target namespace.
+The `--fix`, `--mcp`, and `--client` modes are local-only. Every dynamic doctor
+row strips control bytes, escapes terminal markup, and bounds displayed detail.
 
 ## Batch CSV contract
 
@@ -150,10 +154,19 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   write atomically with a sibling `mkstemp` file followed by `os.replace`.
 - **Cache identity follows lookup identity.** Result and CT payloads are bound
   to the validated domain in their filename. Registrable-apex and literal-host
-  entries are independent. `recon cache show <host> --exact` inspects a literal
-  CT key; `recon cache clear <host> --exact` removes that host from both caches.
+  entries are independent. `recon cache show <host> --exact` inspects literal
+  result and CT keys; `recon cache clear <host> --exact` removes that host from
+  both caches.
   Without `--exact`, cache commands retain normal apex reduction. CT entries
   written before v2.6.1 lack the binding metadata and repopulate on demand.
+- **Cache inspection is metadata-only and failure-aware.** `recon cache show`
+  reports both disk layers independently, including reuse status, age, TTL,
+  timestamps, and file size, plus CT provider and subdomain count. It never
+  renders cached tenant, service, evidence, or raw record fields. Missing files
+  remain a successful `no entry`; an invalid, redirected, unreadable, or
+  rejected entry is `could not inspect`, retains its raw reason only in debug
+  logging, and causes exit 4 after other available metadata is shown. Expired
+  files remain visible but are labeled for refresh instead of reuse.
 - **Cache deletion failures remain visible.** The CLI clears CT and result
   layers independently, reports completed deletions, identifies any layer that
   failed, and exits 4 after partial work. Missing entries remain a successful

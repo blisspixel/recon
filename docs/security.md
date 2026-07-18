@@ -70,7 +70,8 @@ is logged only at debug level. Root help warns operators to review diagnostics
 before sharing. The top-level crash handler keeps its existing redaction notice,
 and normal downstream pipe closure does not create a crash artifact. Structured
 MCP validation-failure logs retain only a request ID and stable reason, never
-the rejected domain or validation exception.
+the rejected domain or validation exception. Default and MCP doctor rows strip
+control bytes, escape Rich markup, and bound dynamic fields before rendering.
 
 ### Malicious DNS responses
 
@@ -168,6 +169,10 @@ JSON loader:
 - Reject or ignore invalid paths and entries without raising to the caller
   (tests: `tests/test_ct_cache.py`, `tests/test_cache_roundtrip.py`,
   `tests/test_cache_cli.py`, `tests/test_json_limits.py`).
+- Keep operator inspection payload-free. `recon cache show` validates the full
+  cached object but renders only bounded metadata, distinguishes absence from
+  inspection failure, withholds raw exceptions outside debug logging, and exits
+  4 when any requested entry cannot be inspected.
 
 **Boundary:** The cache is not a privilege boundary against another local actor
 who can replace directories inside the invoking user's configuration tree while

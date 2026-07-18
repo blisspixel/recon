@@ -209,7 +209,7 @@ Summary: Clear both CT subdomain cache and TenantInfo result cache.
 ## `recon cache show`
 
 Kind: command
-Summary: Show CT cache state for a domain, or list all cached domains.
+Summary: Show payload-free metadata for the result and CT cache layers.
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|
