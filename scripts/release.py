@@ -7,8 +7,9 @@ run the complete local gate on that prospective tree, commit, tag, and prompt
 before an atomic push.
 
 The GitHub Actions release pipeline (`.github/workflows/release.yml`) takes
-over after the tag is pushed: build the wheel, publish to PyPI via OIDC,
-create the GitHub release with changelog notes.
+over after the tag is pushed: seal the sdist and wheel, publish to PyPI via
+OIDC, prove channel byte parity, then create the GitHub release with changelog
+notes.
 
 Usage:
     python scripts/release.py [--dry-run]
@@ -39,6 +40,10 @@ _VERSIONED_DOCS = (
     ROOT / "docs" / "roadmap.md",
     ROOT / "docs" / "engineering-refinement-plan.md",
     ROOT / "docs" / "supply-chain.md",
+)
+_VERSIONED_INSTALLERS = (
+    ROOT / "scripts" / "install.sh",
+    ROOT / "scripts" / "install.ps1",
 )
 _REVIEWED_DOCS = (
     ROOT / "docs" / "correlation.md",
@@ -269,6 +274,8 @@ def _bump_release_surfaces(current: str, new: str, release_date: str) -> None:
     _bump_init(new, False)
     for path in _VERSIONED_DOCS:
         _replace_required(path, current, new)
+    for path in _VERSIONED_INSTALLERS:
+        _replace_required(path, current, new)
     for path in _REVIEWED_DOCS:
         content = path.read_text(encoding="utf-8")
         pattern = re.compile(rf"Reviewed against v{re.escape(current)} on\s+\d{{4}}-\d{{2}}-\d{{2}}")
@@ -318,6 +325,7 @@ def _release_mutation_paths() -> tuple[Path, ...]:
         PLUGIN_MANIFEST,
         CITATION,
         *_VERSIONED_DOCS,
+        *_VERSIONED_INSTALLERS,
         *_REVIEWED_DOCS,
         *_GENERATED_RELEASE_FILES,
     )

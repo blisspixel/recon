@@ -446,3 +446,39 @@ class TestGithubReleaseAttachesBothArtifacts:
         assert "sbom" in names, "github-release must download the sbom artifact"
         assert "provenance" in names, "github-release must download the provenance artifact"
         assert "provenance/*" in run_text, "github-release must attach exported provenance to the release"
+
+
+class TestPublishedChannelParity:
+    """GitHub publication must not diverge from immutable PyPI files."""
+
+    def test_parity_job_is_read_only_and_waits_for_pypi(self, workflow):
+        job = workflow["jobs"]["verify-pypi-parity"]
+        assert set(job["needs"]) == {"build", "publish-pypi"}
+        assert job["permissions"] == {"contents": "read"}
+        assert job["timeout-minutes"] == 10
+
+    def test_parity_job_checks_out_safely_and_downloads_sealed_dist(self, workflow):
+        steps = _steps(workflow["jobs"]["verify-pypi-parity"])
+        checkout = next(step for step in steps if str(step.get("uses", "")).startswith("actions/checkout@"))
+        downloads = [
+            step
+            for step in steps
+            if str(step.get("uses", "")).startswith("actions/download-artifact@")
+        ]
+
+        assert checkout["with"]["persist-credentials"] is False
+        assert len(downloads) == 1
+        assert downloads[0]["with"] == {"name": "dist", "path": "dist/"}
+
+    def test_parity_job_runs_bounded_exact_pair_checker(self, workflow):
+        text = "\n".join(_step_text(step) for step in _steps(workflow["jobs"]["verify-pypi-parity"]))
+
+        assert "set -euo pipefail" in text
+        assert "scripts/check_release_channel_parity.py" in text
+        assert '--version "${VERSION#v}"' in text
+        assert "--dist-dir dist" in text
+        assert "--attempts 12" in text
+        assert "--delay-seconds 10" in text
+
+    def test_github_release_waits_for_channel_parity(self, workflow):
+        assert "verify-pypi-parity" in workflow["jobs"]["github-release"]["needs"]

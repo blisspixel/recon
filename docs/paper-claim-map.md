@@ -35,8 +35,10 @@ therefore uses these boundaries for the write-up package:
   `scripts/release_readiness.py --remote` checks that required GitHub Actions
   runs passed, the public Scorecard API reports the exact `HEAD` and the
   expected code-owned controls, and PyPI plus the GitHub Release expose the
-  expected wheel, sdist, SBOM, and attestation export. It also verifies PyPI
-  and GitHub provenance for the release wheel and sdist. This is release-state
+  exact wheel, sdist, completed SBOM, and attestation export. It verifies PyPI
+  provenance, binds GitHub evidence to the exported bundle, release workflow,
+  source tag and commit digest, and hosted-runner boundary, and requires both distribution
+  channels to expose identical wheel and sdist bytes. This is release-state
   evidence, not empirical result validation.
 
 The most recent recorded public proof gate is the historical
@@ -88,7 +90,7 @@ security guidance:
 | Entropy reduction field is a signed marginal entropy change; model-derived posture buckets are descriptive diagnostics | Public validation memo | `validation/posture_distributions.py`, `tests/test_posture_distributions.py`, [public-list-calibration.md](../validation/public-list-calibration.md), [public-label-snapshot-decision.md](public-label-snapshot-decision.md) | State as a selected public-list cross-check. The sum can double count dependent nodes and the posture buckets are construction-linked. Do not call it information leakage, hardening effect, or population behavior. |
 | Per-vertical residual weakness appears across the curated publisher strata | Aggregate-only private memo | [2026-06-28-full-corpus-calibration-refresh.md](../validation/2026-06-28-full-corpus-calibration-refresh.md), [statistical-assurance.md](statistical-assurance.md) | State across the 22 disclosed, DMARC-publisher-conditional development strata only. Do not generalize beyond them. |
 | The discussion and conclusion do not claim broad calibration | Aggregate-only private memo plus public claim audit | [2026-06-28-full-corpus-calibration-refresh.md](../validation/2026-06-28-full-corpus-calibration-refresh.md), [m365-tenancy-decision.md](m365-tenancy-decision.md), [2026-06-29-scorecard-gate-claim-audit.md](../validation/2026-06-29-scorecard-gate-claim-audit.md) | State that recon has no training-disjoint, predictor-input-disjoint passing calibration result today; DMARC rows are in-sample agreement/negative diagnostics, M365 is corroboration, and Google Workspace is one-sided recall. |
-| The public artifact is signed and provenance-linked; same-job build repeatability fixes uv and a hash-locked backend graph | Invariant | [supply-chain.md](supply-chain.md), `scripts/release_readiness.py --remote`, `tests/test_release_workflow_contract.py`, `tests/test_scorecard_posture.py` | State the bounded deterministic-build check and release provenance. Do not claim cross-environment byte identity or independently reproduced empirical results. |
+| The public artifact is signed and provenance-linked; same-job build repeatability fixes uv and a hash-locked backend graph; PyPI and GitHub publication bytes must match | Invariant | [supply-chain.md](supply-chain.md), `scripts/release_readiness.py --remote`, `scripts/check_release_channel_parity.py`, `tests/test_release_workflow_contract.py`, `tests/test_release_channel_parity.py`, `tests/test_scorecard_posture.py` | State the bounded deterministic-build check, exact release evidence, and cross-channel publication parity. Do not claim that a fresh build on another environment will reproduce the same bytes or that empirical results were independently reproduced. |
 | Public artifacts exclude target identifiers and private rows | Invariant | [data-handling-policy.md](data-handling-policy.md), `scripts/check_validation_hygiene.py`, `tests/test_validation_hygiene.py`, `tests/test_public_validation_memo.py` | State the disclosure control and its mechanical gates. Keep semantic review as a separate requirement. |
 
 ## Submission Gate
@@ -112,8 +114,10 @@ Before the external write-up can leave draft status:
 8. After `main` and the current version are published, remote release readiness
    must pass:
    `uv run python scripts/release_readiness.py --remote`.
-   This includes public Scorecard API freshness plus PyPI and GitHub provenance
-   verification for the published wheel and sdist.
+   This includes public Scorecard API freshness, pinned PyPI provenance
+   verification, GitHub bundle verification bound to the exact workflow, tag,
+   source digest, and hosted-runner boundary, completed SBOM validation, and
+   cross-channel byte parity for the published wheel and sdist.
 9. The public-list sampling boundary must stay linked to
    [public-label-snapshot-decision.md](public-label-snapshot-decision.md):
    public-list numbers are robustness checks rather than population rates.

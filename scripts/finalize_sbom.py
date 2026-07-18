@@ -18,6 +18,16 @@ class SbomError(RuntimeError):
     """The generated SBOM is incomplete or malformed."""
 
 
+def _read_sbom(path: Path) -> dict[str, Any]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError) as exc:
+        raise SbomError(f"cannot read valid JSON from {path}: {exc}") from exc
+    if not isinstance(payload, dict):
+        raise SbomError("SBOM must be a JSON object")
+    return payload
+
+
 def _component_refs(components: list[dict[str, Any]], root_ref: str) -> list[str]:
     refs: list[str] = []
     for component in components:
@@ -51,14 +61,12 @@ def _validate_dependencies(dependencies: list[dict[str, Any]], allowed_refs: set
             raise SbomError(f"SBOM dependsOn refs do not resolve to components: {dangling!r}")
 
 
-def finalize_sbom(path: Path, version: str) -> dict[str, Any]:
+def _validated_parts(
+    payload: dict[str, Any], version: str
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]], str, list[str]]:
     if _STABLE_VERSION.fullmatch(version) is None:
         raise SbomError("version must use stable X.Y.Z syntax")
-    try:
-        payload = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        raise SbomError(f"cannot read valid JSON from {path}: {exc}") from exc
-    if not isinstance(payload, dict) or payload.get("bomFormat") != "CycloneDX":
+    if payload.get("bomFormat") != "CycloneDX":
         raise SbomError("SBOM must be a CycloneDX JSON object")
     if not isinstance(payload.get("specVersion"), str):
         raise SbomError("SBOM must declare specVersion")
@@ -67,6 +75,52 @@ def finalize_sbom(path: Path, version: str) -> dict[str, Any]:
         raise SbomError("SBOM components must be a nonempty array of objects")
 
     root_ref = f"pkg:pypi/recon-tool@{version}"
+    component_refs = _component_refs(components, root_ref)
+    dependencies = payload.get("dependencies")
+    if not isinstance(dependencies, list) or not all(isinstance(item, dict) for item in dependencies):
+        raise SbomError("SBOM dependencies must be an array of objects")
+    _validate_dependencies(dependencies, {root_ref, *component_refs})
+    return components, dependencies, root_ref, component_refs
+
+
+def validate_completed_sbom(path: Path, version: str) -> dict[str, Any]:
+    """Validate an immutable release SBOM without rewriting or repairing it."""
+    payload = _read_sbom(path)
+    _components, dependencies, root_ref, component_refs = _validated_parts(payload, version)
+    metadata = payload.get("metadata")
+    if not isinstance(metadata, dict):
+        raise SbomError("SBOM metadata must be an object")
+    root = metadata.get("component")
+    if not isinstance(root, dict):
+        raise SbomError("SBOM metadata must contain the project root component")
+    expected_root = {
+        "type": "application",
+        "bom-ref": root_ref,
+        "name": "recon-tool",
+        "version": version,
+        "purl": root_ref,
+    }
+    mismatched = sorted(key for key, value in expected_root.items() if root.get(key) != value)
+    if mismatched:
+        raise SbomError("SBOM project root has mismatched field(s): " + ", ".join(mismatched))
+
+    root_edges = [item for item in dependencies if item.get("ref") == root_ref]
+    if len(root_edges) != 1:
+        raise SbomError("SBOM must contain exactly one project root dependency edge")
+    depends_on = root_edges[0].get("dependsOn")
+    if (
+        not isinstance(depends_on, list)
+        or sorted(depends_on) != component_refs
+        or len(depends_on) != len(component_refs)
+    ):
+        raise SbomError("SBOM project root dependency edge must reference every component exactly once")
+    return payload
+
+
+def finalize_sbom(path: Path, version: str) -> dict[str, Any]:
+    payload = _read_sbom(path)
+    payload.setdefault("dependencies", [])
+    _components, dependencies, root_ref, component_refs = _validated_parts(payload, version)
     metadata = payload.setdefault("metadata", {})
     if not isinstance(metadata, dict):
         raise SbomError("SBOM metadata must be an object")
@@ -78,17 +132,13 @@ def finalize_sbom(path: Path, version: str) -> dict[str, Any]:
         "purl": root_ref,
     }
 
-    component_refs = _component_refs(components, root_ref)
-    dependencies = payload.setdefault("dependencies", [])
-    if not isinstance(dependencies, list) or not all(isinstance(item, dict) for item in dependencies):
-        raise SbomError("SBOM dependencies must be an array of objects")
-    _validate_dependencies(dependencies, {root_ref, *component_refs})
     dependencies[:] = [item for item in dependencies if item.get("ref") != root_ref]
     dependencies.append({"ref": root_ref, "dependsOn": component_refs})
     try:
         path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     except OSError as exc:
         raise SbomError(f"cannot write completed SBOM to {path}: {exc}") from exc
+    validate_completed_sbom(path, version)
     return payload
 
 
