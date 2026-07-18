@@ -464,7 +464,7 @@ def _scorecard_payload(sha: str, score: float = 8.3, **check_overrides: int) -> 
     return {"repo": {"commit": sha}, "score": score, "checks": checks}
 
 
-def test_scorecard_api_passes_current_commit_and_code_owned_tens() -> None:
+def test_scorecard_api_passes_current_commit_and_required_controls() -> None:
     sha = "a" * 40
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
@@ -510,14 +510,14 @@ def test_scorecard_api_fails_on_regressed_code_owned_check() -> None:
     assert "Pinned-Dependencies=9" in problem
 
 
-def test_scorecard_api_fails_when_sast_regresses() -> None:
+def test_scorecard_api_fails_when_sast_drops_below_documented_floor() -> None:
     sha = "a" * 40
 
     problem = release_readiness._scorecard_problem(_scorecard_payload(sha, SAST=6), sha)
 
     assert problem is not None
     assert "SAST=6" in problem
-    assert "regressed" in problem
+    assert "below expected floor" in problem
 
 
 def test_remote_release_tag_binding_requires_current_version_tag_at_head(tmp_path: Path) -> None:
