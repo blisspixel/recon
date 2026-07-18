@@ -14,6 +14,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.5] - 2026-07-18
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Changed
 
 - CodeQL now runs on every pull request targeting `main` while retaining its
