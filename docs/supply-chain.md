@@ -20,8 +20,8 @@ which produces and publishes:
 | **Trusted publishing** | PyPI publishes via GitHub OIDC, no long-lived API token (`pypa/gh-action-pypi-publish`) | The PyPI project page shows the publishing workflow as a trusted publisher |
 | **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection | `gh attestation verify <file> --repo blisspixel/recon`; offline consumers can download the `.intoto.jsonl` release asset |
 | **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Fetch the file's PyPI provenance and verify it with `pypi-attestations verify pypi --repository https://github.com/blisspixel/recon <wheel-url>` |
-| **Same-job deterministic-build check** | `SOURCE_DATE_EPOCH` is fixed and CI builds twice in one Ubuntu job, then compares wheel and sdist hashes under the same resolved toolchain | See the bounded recipe and limitations below |
-| **Sealed-wheel execution gate** | A separate read-only release job downloads the sealed wheel and executes both `recon --version` and `python -m recon_tool --version` in isolated environments before either publication channel can run | Inspect the `package-smoke` job in the tagged release workflow run |
+| **Constrained deterministic-build check** | `SOURCE_DATE_EPOCH`, uv 0.11.17, and the exact hash-locked backend graph are fixed; CI builds the sdist and reconstructs its wheel twice in one Ubuntu job, then compares both hashes | See the bounded recipe and limitations below |
+| **Sealed distribution gate** | A separate read-only release job requires exactly one tag-matching wheel and sdist, then executes both `recon --version` and `python -m recon_tool --version` from the wheel before either publication channel can run | Inspect the `package-smoke` job in the tagged release workflow run |
 | **CycloneDX SBOM** | Generated from a runtime-requirements export of `uv.lock` (`pip-audit --format=cyclonedx-json`), completed with the `recon-tool` root component and dependency edge, validated as nonempty JSON, and attached to the GitHub Release. The isolated SBOM job may emit an artifact when findings exist because the separate enforcing audit already blocks the release test job. Any SBOM tool, output, or validation failure blocks both PyPI and GitHub publication | Download `recon-tool-<version>.cdx.json` from the release assets and inspect `metadata.component` and the root dependency entry |
 
 ## Consumer verification quick path
@@ -79,39 +79,75 @@ that recon has reached a named SLSA level beyond the controls listed here.
 
 ## Deterministic-build evidence
 
-The release workflow pins `SOURCE_DATE_EPOCH` to the tagged commit's committer
-timestamp. [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) then tests
-same-job repeatability on every change: its `reproducible-build` job builds the
-same source twice in one Ubuntu job under the same Python, runner, and resolved
-build-tool window, and compares the wheel and sdist SHA-256 hashes.
+The release workflow fixes `SOURCE_DATE_EPOCH` to the tagged commit's committer
+timestamp and selects uv 0.11.17. `pyproject.toml` declares exact Hatchling
+1.31.0 in both the build system and a non-default PEP 735 `build` group.
+[`build-constraints.txt`](../build-constraints.txt) is the frozen export of that
+group's `uv.lock` closure. Every backend package has an exact version and
+SHA-256 hashes, and each artifact command uses both `--build-constraints` and
+`--require-hashes`.
 
-That check is evidence of deterministic behavior under the tested environment.
-It is not proof that source plus `SOURCE_DATE_EPOCH` alone produces identical
-bytes across operating systems, Python versions, `uv` versions, or independently
-resolved build-backend versions. The build backend is declared in
-`pyproject.toml`, but it is not part of the runtime `uv.lock` graph.
+The constraint fixes dependency identity and makes updates reviewable. It does
+not prove that a selected build dependency is free of vulnerabilities; normal
+dependency review and the isolated release-job boundary remain separate
+controls.
+
+[`.github/workflows/ci.yml`](../.github/workflows/ci.yml) tests same-job
+repeatability on every change. Its `reproducible-build` job creates one sdist,
+constructs the wheel from that exact sdist, repeats that sequence in the same
+Ubuntu job, and compares both artifact hashes. The tagged release uses the same
+two commands before immediately sealing `dist/`.
+
+This fixes uv-version and backend-resolver drift in the tested build path. It
+does not prove byte identity across different Python versions, operating
+systems, runner images, archive implementations, or other host environment
+details. The release and CI paths use Python 3.11 on Ubuntu; a consumer seeking
+an exact hash match should reproduce those inputs as closely as practical.
 
 To verify a published release yourself:
 
 ```bash
 # 1. Check out the exact tag.
-git clone https://github.com/blisspixel/recon && cd recon
-git checkout v<version>
+VERSION=2.6.3  # replace with the release being verified
+git clone https://github.com/blisspixel/recon
+cd recon
+git checkout "v${VERSION}"
 
-# 2. Rebuild with the release's build-time stamp.
-SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct) uv build --out-dir /tmp/verify
+# 2. Confirm the tag-selected build executable and match release Python.
+uv --version  # must report uv 0.11.17; pyproject.toml rejects drift
+export UV_PYTHON=3.11
+export SOURCE_DATE_EPOCH="$(git log -1 --pretty=%ct)"
 
-# 3. Compare against the published artifacts (from PyPI or the GitHub Release).
-sha256sum /tmp/verify/recon_tool-<version>-py3-none-any.whl
-sha256sum /tmp/verify/recon_tool-<version>.tar.gz
+# 3. Build the sdist, then reconstruct the wheel from that exact sdist.
+uv build --sdist --out-dir /tmp/verify \
+  --build-constraints build-constraints.txt --require-hashes
+uv build --wheel "/tmp/verify/recon_tool-${VERSION}.tar.gz" \
+  --out-dir /tmp/verify \
+  --build-constraints build-constraints.txt --require-hashes
+
+# 4. Compare against the published artifacts (from PyPI or the GitHub Release).
+sha256sum "/tmp/verify/recon_tool-${VERSION}-py3-none-any.whl"
+sha256sum "/tmp/verify/recon_tool-${VERSION}.tar.gz"
 ```
 
-An exact hash match is strong confirmation under the consumer's resolved build
-environment. A mismatch is not, by itself, evidence of tampering because the
-published build toolchain is not fully frozen for cross-environment replay.
-Use the signed provenance and PyPI attestations above to verify source and
-workflow identity. Build into a directory outside the checkout, as above, so
-the build output is not itself swept into the sdist.
+An exact hash match is strong confirmation under a matched host environment. A
+mismatch is not, by itself, evidence of tampering because the runner and host
+environment are not fully content-addressed. Use the signed provenance and
+PyPI attestations above to verify source and workflow identity. Build into a
+directory outside the checkout, as above, so build output is not swept into
+the sdist. The sdist itself includes `build-constraints.txt`, so its build-tool
+boundary remains inspectable after source distribution.
+
+Maintainers regenerate the constraint after an intentional build-group update
+with the following command. `tests/test_build_constraints.py` fails if the
+export, exact root requirement, hashes, selected uv version, or workflow use
+drifts.
+
+```bash
+uv export --frozen --only-group build --no-emit-project \
+  --format requirements.txt --no-header \
+  --output-file build-constraints.txt
+```
 
 ## PyPI attestation verification
 
@@ -133,19 +169,21 @@ documents that behavior.
 
 ## Supply-chain isolation contract
 
-The release jobs are scoped to least privilege. The `build` job runs `uv` and
-the declared Hatchling build backend, which is part of the trusted build-tool
-boundary, then immediately uploads the artifacts. No project runtime
+The release jobs are scoped to least privilege. The `build` job runs exact uv
+and the hash-locked Hatchling graph, creates the sdist, constructs the wheel
+from that sdist, then immediately uploads both artifacts. No project runtime
 dependency or unrelated tool runs after artifact creation and before sealing.
-The `package-smoke` job downloads the sealed wheel into a separate read-only
-runner and executes both installed entry points without OIDC or write
-permissions. The `test`, `sbom`, and `attest` jobs run on separate runners that
+The `package-smoke` job downloads the sealed distribution into a separate
+read-only runner, rejects anything except one tag-matching wheel and sdist,
+and executes both installed entry points without OIDC or write permissions.
+The `test`, `sbom`, and `attest` jobs run on separate runners that
 never see `dist/`, and publish or attestation jobs with elevated OIDC-minted
 scopes do not execute project runtime dependencies. The provenance export job downloads the
 signed GitHub attestation bundles and uploads a `.intoto.jsonl` artifact for the
 GitHub Release without running project dependency code. The PyPI and GitHub
-release jobs wait for sealed-wheel execution, provenance attestation, and the
-validated SBOM, so a release fails closed if any integrity path fails. The full
+release jobs wait for sealed-distribution validation and wheel execution,
+provenance attestation, and the validated SBOM, so a release fails closed if
+any integrity path fails. The full
 rationale and threat model are documented inline in
 [`release.yml`](../.github/workflows/release.yml).
 

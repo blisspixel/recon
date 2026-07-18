@@ -257,11 +257,12 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   deterministic connected components. Cluster, member, edge, burst, and
   subdomain orderings are sorted and canonical. Enriched services, slugs, and
   `degraded_sources` are emitted sorted.
-- **Same-job build repeatability is checked.** With `SOURCE_DATE_EPOCH` fixed,
-  CI builds the same source twice inside one Ubuntu job and requires matching
-  wheel and sdist hashes under that job's resolved toolchain. This does not
-  promise byte identity across independently resolved environments; signed
-  provenance remains the source-to-workflow verification mechanism. See
+- **Constrained same-job build repeatability is checked.** With
+  `SOURCE_DATE_EPOCH`, uv 0.11.17, and the hash-locked backend graph fixed, CI
+  builds the sdist, reconstructs its wheel, repeats that sequence inside one
+  Ubuntu job, and requires matching hashes. This does not promise byte identity
+  across different Python, runner, operating-system, or archive environments;
+  signed provenance remains the source-to-workflow verification mechanism. See
   [supply-chain.md](supply-chain.md).
 - **Apex normalization is deterministic per installed version.** Input is
   reduced to its registrable apex (eTLD+1) using the Public Suffix List bundled

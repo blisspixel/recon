@@ -52,7 +52,12 @@ def test_ci_runs_the_interface_layout_guard() -> None:
 
 def test_reproducible_build_smokes_built_wheel_entry_points() -> None:
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+    build_commands = [line.strip() for line in workflow.splitlines() if line.strip().startswith("uv build")]
 
     assert "Smoke-test built wheel entry points" in workflow
+    assert len(build_commands) == 2
+    assert all("--build-constraints build-constraints.txt --require-hashes" in line for line in build_commands)
+    assert 'uv build --sdist --out-dir "$out_dir"' in workflow
+    assert 'uv build --wheel "${sdists[0]}" --out-dir "$out_dir"' in workflow
     assert 'uv tool run --isolated --from "$wheel" recon --version' in workflow
     assert 'uv run --no-project --isolated --with "$wheel" python -m recon_tool --version' in workflow

@@ -97,6 +97,14 @@ whether each entry is reusable or expired.
 - Main CI and the tagged release workflow now execute both installed CLI entry
   points from a built wheel. Publication waits for the separate read-only
   sealed-wheel smoke job.
+- Artifact builds now select uv 0.11.17 and an exact, hash-locked Hatchling
+  dependency graph. CI and release build the sdist first, reconstruct the wheel
+  from that exact file, and keep the constrained replay recipe in the
+  supply-chain guide.
+- The release package-smoke gate now rejects missing, duplicate, unexpected, or
+  tag-mismatched distribution artifacts before either publication channel can
+  run. A valid release contains exactly one canonical wheel and one canonical
+  sdist.
 
 ### Fixed
 

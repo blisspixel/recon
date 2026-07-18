@@ -66,7 +66,7 @@ Changelog = "https://github.com/blisspixel/recon/blob/main/CHANGELOG.md"
 Issues = "https://github.com/blisspixel/recon/issues"
 
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling==1.31.0"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -79,6 +79,11 @@ exclude = ["src/recon_tool/data/fingerprints/*.yaml"]
 # not published as an installable extra, so `pip install recon-tool[dev]`
 # no longer pulls the test toolchain (that was never a real use case).
 [dependency-groups]
+build = [
+    # Exact root for the hash-locked isolated artifact build graph exported to
+    # build-constraints.txt. This group is not installed by default.
+    "hatchling==1.31.0",
+]
 dev = [
     "hypothesis>=6.0",
     # The Markdown gate wraps v4 inline rules to retain exact source offsets.
@@ -99,6 +104,11 @@ dev = [
 mutation = [
     "cosmic-ray>=8.4",
 ]
+
+[tool.uv]
+# Artifact workflows select this exact uv release too. Keeping the requirement
+# here makes local constraint export and release-shaped builds fail on drift.
+required-version = "==0.11.17"
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"

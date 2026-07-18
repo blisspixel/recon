@@ -348,6 +348,11 @@ coverage. Focused `pytest` commands stay serial by default. Do not push on
 so text hygiene covers every added line in the pushed or release commit range,
 not only the final diff.
 
+Release-shaped package builds use uv 0.11.17 and the exact hashed backend graph
+in `build-constraints.txt`. The build creates the sdist first and constructs the
+wheel from that file; the replay commands and remaining environment limits are
+documented in [docs/supply-chain.md](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md).
+
 Project hygiene: keep examples fictional or synthetic, keep validation artifacts
 aggregate-only, run `uv run python scripts/check.py`, and
 avoid dead code or placeholders.
