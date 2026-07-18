@@ -1,17 +1,15 @@
 {
   "cache_version": 1,
-  "tenant_id": "northwind-gcp-okta",
-  "display_name": "Northwind Engineering",
-  "default_domain": "northwind-eng.com",
-  "queried_domain": "northwind-eng.com",
+  "default_domain": "synthetic-beta-eng-com.invalid",
+  "queried_domain": "synthetic-beta-eng-com.invalid",
   "confidence": "high",
   "domain_count": 5,
   "tenant_domains": [
-    "northwind-eng.com",
-    "northwind.dev",
-    "northwind-prod.com",
-    "nw-eng.io",
-    "nw-stage.com"
+    "synthetic-beta-eng-com.invalid",
+    "synthetic-beta-dev.invalid",
+    "synthetic-beta-prod-com.invalid",
+    "synthetic-beta-eng-io.invalid",
+    "synthetic-beta-stage-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -30,17 +28,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "api.northwind-eng.com",
+      "subdomain": "api.synthetic-beta-eng-com.invalid",
       "primary_slug": "gcp-compute",
       "primary_name": "GCP Compute Engine",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "portal.northwind-eng.com",
+      "subdomain": "portal.synthetic-beta-eng-com.invalid",
       "primary_slug": "okta",
       "primary_name": "Okta",
       "primary_tier": "application"
     }
   ],
+  "display_name": "Synthetic Scenario 345119129790",
+  "tenant_id": "synthetic-scenario-345119129790",
   "_stratum": "gcp"
 }

@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "contoso-az-apim",
-  "display_name": "Contoso Azure APIs",
-  "default_domain": "contoso-apim.com",
-  "queried_domain": "contoso-apim.com",
+  "default_domain": "synthetic-alpha-apim-com.invalid",
+  "queried_domain": "synthetic-alpha-apim-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "contoso-apim.com",
-    "contoso-gateway.com",
-    "contoso-svc.com"
+    "synthetic-alpha-apim-com.invalid",
+    "synthetic-alpha-gateway-com.invalid",
+    "synthetic-alpha-svc-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -26,11 +24,13 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "api.contoso-apim.com",
+      "subdomain": "api.synthetic-alpha-apim-com.invalid",
       "primary_slug": "azure-api-management",
       "primary_name": "Azure API Management",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 017369770094",
+  "tenant_id": "synthetic-scenario-017369770094",
   "_stratum": "azure"
 }

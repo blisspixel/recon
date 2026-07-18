@@ -4,18 +4,17 @@ Thanks for your interest in contributing to recon. Read the section below
 first: it is the project's single non-negotiable rule. By taking part you also
 agree to the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-## No real company data, ever
+## No evaluated-target data
 
-**Never commit real-company apex domains as examples, targets, test
-corpora, regression fixtures, or anywhere else in this repository.**
-This applies to commits, PRs, issue comments, code comments, YAML
-fingerprints, test fixtures, snapshots, and discussion threads.
+**Never commit evaluated-target data.** This includes real organization names
+used as targets, real target apexes or hosts, tenant identifiers, target-owned
+record values, screenshots, and per-domain output. The rule applies to commits,
+PRs, issue comments, code comments, YAML fingerprints, test fixtures,
+snapshots, and discussion threads.
 
-Use Microsoft's fictional-company names: `contoso.com`,
-`northwindtraders.com`, `fabrikam.com`, `tailspintoys.com`,
-`wingtiptoys.com`, `adventure-works.com`, `wideworldimporters.com`.
-Or IETF reserved placeholders (`example.com`, `example.org`,
-`example.net`).
+Use explicit synthetic identities under `.invalid` or `.test`, or IETF
+reserved placeholders (`example.com`, `example.org`, `example.net`). These
+names teach the method without implying an organization or evaluated target.
 
 It does **not** apply to:
 
@@ -41,13 +40,13 @@ validation artifacts. It is a backstop, not a substitute for reviewing prose.
 If a bug report needs a real domain to reproduce, do not open a public issue.
 Use the private non-security report path in
 [`docs/data-handling-policy.md`](docs/data-handling-policy.md#private-non-security-reports),
-or describe the behavior with a fictional fixture when the real identity is not
+or describe the behavior with a reserved synthetic fixture when the real identity is not
 load-bearing. Public issue forms require an acknowledgement that target names,
 records, identifiers, screenshots, and per-domain output were removed.
 
-Reviewers actively check incoming PRs for real-apex strings before
-merge. A PR found to contain real-company data will be rejected and
-the contributor asked to refactor it against the fictional brands.
+Reviewers actively check incoming PRs for evaluated-target data before merge.
+A PR found to contain it will be rejected and the contributor asked to
+refactor it against reserved synthetic sentinels.
 
 ---
 
@@ -107,7 +106,7 @@ are welcome:
 | **Refined fingerprints** | `match_mode: all` to eliminate false positives, improved regex, broader selector coverage. | Converting ambiguous slug to a chained pattern |
 | **New signals** | Must derive from existing evidence. Hedged language. | "AI tooling indicators observed alongside identity-provider signals" |
 | **New profiles** | Must reweight existing observations; cannot invent new ones. | "Retail / e-commerce" profile |
-| **Bug reports** | Reproducible with a fictional or reserved domain, a minimal synthetic fixture, and sanitized diagnostics. Real target output uses the private non-security report path. | Wrong provider classification, insight wording, display glitch |
+| **Bug reports** | Reproducible with a reserved domain, a minimal synthetic fixture, and sanitized diagnostics. Real target output uses the private non-security report path. | Wrong provider classification, insight wording, display glitch |
 | **Accuracy reports** | A controlled or otherwise well-understood public record shape, plus the exact observation recon got wrong. | "Our test domain publishes the documented M365 MX route, but recon reports custom or unclassified MX" (omit real names in public reports) |
 | **Documentation fixes** | Typos, clarifications, better examples. | README, CONTRIBUTING, docs/* |
 | **Performance improvements** | With before/after measurement. Hot paths: `detect_provider`, `_curate_insights`, DNS query batching. | Reducing average lookup time, eliminating redundant DNS queries |
@@ -177,7 +176,7 @@ internal naming should stay local.
 - Detections that apply to at least one publicly-known service
 - At least one vendor-published example, documented public record shape, or
   maintainer-local observation supporting the pattern. Real apexes stay local;
-  use a fictionalized or aggregate description in the PR.
+  use a reserved synthetic or aggregate description in the PR.
 - General-purpose (not a specific org's internal pattern)
 
 ---

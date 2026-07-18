@@ -1,7 +1,7 @@
 # validation/
 
 Live-validation workspace. The directory hosts the runners, the gap-analysis
-tooling, and the fingerprint-discovery loop, plus a small fictional-example
+tooling, and the fingerprint-discovery loop, plus a small reserved-example
 corpus. Real-target corpora and per-domain outputs belong only in the ignored
 private workspaces described below. Git ignore rules protect those paths, not a
 real name copied into an arbitrary tracked file; see [Policy](#policy) below.
@@ -40,8 +40,8 @@ Committed (generic tooling, no company names):
 - `reproduce_paper_numbers.py`: one-command public reproduction bundle for the
   paper's no-private-data numbers. It runs existing synthetic/proof harnesses and
   writes local artifacts under `validation/local/`.
-- `corpus-example.txt`: fictional-company sample showing the format. Safe to
-  commit because the names are made up.
+- `corpus-example.txt`: numbered `.invalid` scenarios showing the format
+  without implying a company or querying a live namespace.
 
 Gitignored (your private workspace):
 
@@ -74,8 +74,8 @@ Two entry points feed the same triage logic:
 ### Single-domain (incidental discovery during normal use)
 
 ```bash
-recon discover contoso.com \
-    --output validation/local/contoso-candidates.json
+recon discover scenario.example.invalid \
+    --output validation/local/scenario-candidates.json
 ```
 
 `recon discover` performs the same lookup, bucketing, and existing-pattern and
@@ -91,7 +91,7 @@ skill, or to any agent reading the same input shape.
 ```bash
 # Build (once) a private corpus
 mkdir -p validation/corpus-private/
-echo "contoso.com" > validation/corpus-private/saas-b2b.txt
+echo "scenario.example.invalid" > validation/corpus-private/saas-b2b.txt
 # ... add more domains, organize as you like ...
 
 # Run respectfully: concurrency 2 stays well under crt.sh's tolerance
@@ -387,8 +387,11 @@ codifies the same rule for the rest of the repo. The .gitignore carves out
 `corpus-private/`,
 `runs-private/`, `live_runs/`, and `local/` so users can curate without worrying
 about accidentally leaking their list. `scripts/check_validation_hygiene.py`
-runs in the local gate and release readiness to catch forced-added private paths
-and target-domain fields in committed validation artifacts.
+runs in the local gate and release readiness to catch forced-added private
+paths, identity-bearing JSON and NDJSON, target columns in CSV, target-domain
+fields, raw target records, tenant and verification identifiers, and detailed
+candidate-rejection rows in committed validation artifacts. Generator parity
+tests bind the public synthetic sources to every tracked generated artifact.
 
 When you discover a generally-useful pattern (a real third-party SaaS
 that any user would benefit from), open a PR adding the

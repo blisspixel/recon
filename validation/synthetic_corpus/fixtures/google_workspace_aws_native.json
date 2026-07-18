@@ -1,17 +1,15 @@
 {
   "cache_version": 1,
-  "tenant_id": "northwind-eng",
-  "display_name": "Northwind Traders",
-  "default_domain": "northwind.com",
-  "queried_domain": "northwind.com",
+  "default_domain": "synthetic-beta-com.invalid",
+  "queried_domain": "synthetic-beta-com.invalid",
   "confidence": "high",
   "domain_count": 5,
   "tenant_domains": [
-    "northwind.com",
-    "northwind.net",
-    "northwind.dev",
-    "nw-corp.com",
-    "nw-eng.io"
+    "synthetic-beta-com.invalid",
+    "synthetic-beta-net.invalid",
+    "synthetic-beta-dev.invalid",
+    "synthetic-beta-corp-com.invalid",
+    "synthetic-beta-eng-io.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -32,23 +30,25 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "api.northwind.com",
+      "subdomain": "api.synthetic-beta-com.invalid",
       "primary_slug": "aws-cloudfront",
       "primary_name": "AWS CloudFront",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "docs.northwind.com",
+      "subdomain": "docs.synthetic-beta-com.invalid",
       "primary_slug": "aws-s3",
       "primary_name": "AWS S3",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "blog.northwind.com",
+      "subdomain": "blog.synthetic-beta-com.invalid",
       "primary_slug": "aws-cloudfront",
       "primary_name": "AWS CloudFront",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 945182730727",
+  "tenant_id": "synthetic-scenario-945182730727",
   "_stratum": "baseline"
 }

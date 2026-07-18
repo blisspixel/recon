@@ -3,7 +3,8 @@
 Drives 3 personas x 2 fixtures x 2 fusion modes = 12 sessions through
 a single LLM provider, scores the transcripts against the rubric in
 ``score.py``, and emits a self-contained markdown report
-(``validation/v1.9.2-agentic-ux.md`` by default).
+under the gitignored ``validation/agentic_ux/local/`` directory by
+default.
 
 Why a single provider per run: the per-provider differences are the
 *data* of a future cross-vendor study; we don't bake the comparison
@@ -41,22 +42,26 @@ if TYPE_CHECKING:
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _PERSONA_DIR = Path(__file__).resolve().parent / "personas"
 _FIXTURE_DIR = Path(__file__).resolve().parent / "fixtures"
+_LOCAL_OUTPUT_DIR = Path(__file__).resolve().parent / "local"
+_RUNS_OUTPUT_DIR = Path(__file__).resolve().parent / "runs"
 
 _DEFAULT_PERSONAS = ("analyst", "researcher", "ops")
-_DEFAULT_FIXTURES = ("contoso-dense", "hardened-sparse")
+_DENSE_FIXTURE = "synthetic-dense"
+_SPARSE_FIXTURE = "synthetic-sparse"
+_DEFAULT_FIXTURES = (_DENSE_FIXTURE, _SPARSE_FIXTURE)
 
 # v1.9.3.6: persona/fixture name format. Restricts caller-supplied
 # --personas / --fixtures values to a strict identifier shape so a
 # CLI argument like "../../etc/passwd" or "/etc/passwd" cannot be
 # interpolated into a file path that escapes the intended directory.
-# The format permits the existing in-repo names ("contoso-dense",
-# "hardened-sparse", "analyst", etc.) and rejects everything else.
+# The format permits the existing in-repo names ("synthetic-dense",
+# "synthetic-sparse", "analyst", etc.) and rejects everything else.
 _SAFE_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_-]{0,63}$")
 
 # Top-level JSON keys that are exclusively part of the v1.9 fusion
 # layer. Stripping these is what the "fusion off" arm of the rubric
 # tests against. Earlier-vintage fields (chain_motifs from v1.7,
-# infrastructure_clusters from v1.8) stay in place — fusion is the
+# infrastructure_clusters from v1.8) stay in place - fusion is the
 # thing under evaluation, not the broader correlation work.
 _FUSION_FIELDS = ("posterior_observations", "slug_confidences")
 
@@ -86,7 +91,7 @@ def _strip_fusion(payload: dict[str, Any]) -> dict[str, Any]:
 def _validate_name(kind: str, name: str) -> str:
     """Reject persona/fixture selectors that aren't safe identifiers.
 
-    v1.9.3.6 — defense in depth for the dev-only validation harness.
+    v1.9.3.6 - defense in depth for the dev-only validation harness.
     The audit finding (informational) flagged that ``--personas`` and
     ``--fixtures`` values were interpolated directly into ``Path``
     objects without rejecting traversal (``../``), absolute paths
@@ -104,7 +109,7 @@ def _validate_name(kind: str, name: str) -> str:
     """
     if not _SAFE_NAME_RE.match(name):
         raise ValueError(
-            f"{kind} name {name!r} is not a safe identifier — "
+            f"{kind} name {name!r} is not a safe identifier - "
             f"allowed: letters, digits, underscore, hyphen (max 64 "
             f"chars, must start with letter or digit). Rejected to "
             f"prevent path traversal in the validation harness."
@@ -222,8 +227,8 @@ def score_records(records: list[SessionRecord]) -> score_mod.RubricSummary:
     for persona in {r.persona for r in records}:
         # sparse vs dense, with fusion ON (the configuration the v1.9
         # layer is meant to make legible)
-        dense_key = (persona, "contoso-dense", True)
-        sparse_key = (persona, "hardened-sparse", True)
+        dense_key = (persona, _DENSE_FIXTURE, True)
+        sparse_key = (persona, _SPARSE_FIXTURE, True)
         if dense_key in score_by_key and sparse_key in score_by_key:
             diffs.append(
                 score_mod.diff_sparse_vs_dense(
@@ -235,8 +240,8 @@ def score_records(records: list[SessionRecord]) -> score_mod.RubricSummary:
             )
         # fusion on vs off, on the dense fixture (where fusion has the
         # most material to disagree with)
-        on_key = (persona, "contoso-dense", True)
-        off_key = (persona, "contoso-dense", False)
+        on_key = (persona, _DENSE_FIXTURE, True)
+        off_key = (persona, _DENSE_FIXTURE, False)
         if on_key in score_by_key and off_key in score_by_key:
             diffs.append(
                 score_mod.diff_fusion_on_vs_off(
@@ -299,8 +304,8 @@ def _summarize_findings(summary: score_mod.RubricSummary) -> str:
     personas = {s.persona for s in sessions}
     persona_ignores_fusion = personas - fusion_on_engaged
 
-    sparse_only_intervals = [s for s in sessions if s.cited_credible_interval and s.fixture == "hardened-sparse"]
-    dense_only_intervals = [s for s in sessions if s.cited_credible_interval and s.fixture == "contoso-dense"]
+    sparse_only_intervals = [s for s in sessions if s.cited_credible_interval and s.fixture == _SPARSE_FIXTURE]
+    dense_only_intervals = [s for s in sessions if s.cited_credible_interval and s.fixture == _DENSE_FIXTURE]
 
     diff_no_change = [d for d in summary.diffs if not d.differed]
 
@@ -337,8 +342,8 @@ def _summarize_findings(summary: score_mod.RubricSummary) -> str:
         findings.append(
             "**Numeric band citation only appears on the deliberately thin fixture.** "
             f"All {len(sparse_only_intervals)} citations occurred on the "
-            "historically named `hardened-sparse` fixture; none occurred on "
-            "`contoso-dense`. This measures agent engagement with the fields, not "
+            f"`{_SPARSE_FIXTURE}` fixture; none occurred on "
+            f"`{_DENSE_FIXTURE}`. This measures agent engagement with the fields, not "
             "a general relationship between `sparse`, band width, or hardening.",
         )
     for diff in diff_no_change:
@@ -369,7 +374,7 @@ def _summarize_findings(summary: score_mod.RubricSummary) -> str:
         "it shows that fusion's value is bounded by the agent's framing. "
         "Technical personas (analyst, ops) read and use posterior material; "
         "narrative personas do not. The most actionable finding for v2.0 is the "
-        "explain-DAG invisibility — that is a fixable shape-of-the-JSON issue, "
+        "explain-DAG invisibility - that is a fixable shape-of-the-JSON issue, "
         "not a model-of-uncertainty issue. The v1.9.3 bridge milestone "
         "(email_security_strong topology surgery) is independent of this run; "
         "the v2.0 schema-lock disposition for `posterior_observations` is "
@@ -400,9 +405,9 @@ def render_report(
     fixture_count = len({r.fixture for r in records})
 
     parts: list[str] = []
-    parts.append("# Agentic UX Validation — v1.9.2\n")
+    parts.append("# Agentic UX Validation - v1.9.2\n")
     parts.append(
-        "Bridge milestone: **v1.9.2 — UX validation via agentic QA** (see `docs/roadmap.md`).\n",
+        "Bridge milestone: **v1.9.2: UX validation via agentic QA** (see `docs/roadmap.md`).\n",
     )
     parts.append("**Run metadata.**\n")
     parts.append(f"- Provider / model: `{provider}` / `{model}`")
@@ -417,12 +422,12 @@ def render_report(
     parts.append(
         "Three persona system prompts (security analyst, due-diligence "
         "researcher, ops engineer) are run against two fixtures: a dense "
-        "recon lookup of `contoso.com` (Microsoft's fictional brand) and "
-        "a hand-stripped `hardened-sparse` fixture for "
-        "`northwindtraders.com` with a single weak signal. Each "
-        "persona/fixture pair runs twice — once with the v1.9 fusion "
+        f"recon lookup of `dense.example.invalid` (`{_DENSE_FIXTURE}`) and "
+        f"a hand-stripped `{_SPARSE_FIXTURE}` fixture for "
+        "`sparse.example.invalid` with a single weak signal. Each "
+        "persona/fixture pair runs twice: once with the v1.9 fusion "
         "fields (`posterior_observations`, `slug_confidences`) included, "
-        "once with them stripped — so the rubric can diff the agent's "
+        "once with them stripped, so the rubric can diff the agent's "
         "reasoning between the two.\n",
     )
     parts.append(
@@ -431,10 +436,10 @@ def render_report(
         "rubric measures whether the agent finds and uses those "
         "affordances unprompted.\n",
     )
-    parts.append("## Rubric — per-session\n")
+    parts.append("## Rubric - per-session\n")
     parts.append(_markdown_session_table(summary.session_table))
     parts.append("")
-    parts.append("## Rubric — cross-session diffs\n")
+    parts.append("## Rubric - cross-session diffs\n")
     parts.append(_markdown_diff_table(summary.diff_table))
     parts.append("")
     parts.append("## Findings\n")
@@ -457,7 +462,7 @@ def render_report(
         fusion_label = "fusion=on" if record.fusion else "fusion=off"
         parts.append(f"### {record.persona} / {record.fixture} / {fusion_label}\n")
         parts.append(
-            f"_Tokens: {record.input_tokens:,} in / {record.output_tokens:,} out — cost ${record.cost_usd:.4f}_\n",
+            f"_Tokens: {record.input_tokens:,} in / {record.output_tokens:,} out; cost ${record.cost_usd:.4f}_\n",
         )
         parts.append("**Agent response:**\n")
         parts.append("```markdown")
@@ -470,7 +475,7 @@ def render_report(
     parts.append("python -m validation.agentic_ux.run \\")
     parts.append(f"    --provider {provider} \\")
     parts.append(f"    --model {model} \\")
-    parts.append("    --output validation/v1.9.2-agentic-ux.md")
+    parts.append("    --output validation/agentic_ux/local/report.md")
     parts.append("```")
     parts.append("")
     parts.append(
@@ -492,6 +497,22 @@ def _parse_csv(value: str | None, default: tuple[str, ...]) -> tuple[str, ...]:
     return items or default
 
 
+def _validate_output_path(path: Path) -> Path:
+    """Keep raw agentic outputs outside tracked repository surfaces."""
+    resolved = path.expanduser().resolve()
+    repo_root = _REPO_ROOT.resolve()
+    allowed_roots = (_LOCAL_OUTPUT_DIR.resolve(), _RUNS_OUTPUT_DIR.resolve())
+    if resolved in allowed_roots or (resolved.exists() and not resolved.is_file()):
+        raise ValueError("agentic output path must name a file, not a directory")
+    if not resolved.is_relative_to(repo_root) or any(
+        resolved.is_relative_to(allowed_root) for allowed_root in allowed_roots
+    ):
+        return resolved
+    raise ValueError(
+        "in-repository agentic outputs must stay under validation/agentic_ux/local/ or validation/agentic_ux/runs/"
+    )
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="validation.agentic_ux.run",
@@ -506,7 +527,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--max-tokens", type=int, default=2048)
     parser.add_argument("--personas", default=None, help="Comma-separated subset (default: all).")
     parser.add_argument("--fixtures", default=None, help="Comma-separated subset (default: all).")
-    default_output = _REPO_ROOT / "validation" / "v1.9.2-agentic-ux.md"
+    default_output = _LOCAL_OUTPUT_DIR / "report.md"
     parser.add_argument("--output", "-o", type=Path, default=default_output)
     parser.add_argument(
         "--records-json",
@@ -521,6 +542,14 @@ def main(argv: list[str] | None = None) -> int:
     args = _build_parser().parse_args(argv)
     personas = _parse_csv(args.personas, _DEFAULT_PERSONAS)
     fixtures = _parse_csv(args.fixtures, _DEFAULT_FIXTURES)
+    try:
+        output_path = _validate_output_path(args.output)
+        records_path = _validate_output_path(args.records_json) if args.records_json else None
+        if records_path is not None and records_path == output_path:
+            raise ValueError("report and raw-record outputs must use different files")
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 2
 
     provider_kwargs: dict[str, object] = {}
     if args.api_key is not None:
@@ -553,11 +582,10 @@ def main(argv: list[str] | None = None) -> int:
     summary = score_records(records)
     report = render_report(records, summary, started_at=started, finished_at=finished)
 
-    output_path = args.output
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text(report, encoding="utf-8")
 
-    if args.records_json:
+    if records_path:
         records_payload = [
             {
                 "persona": r.persona,
@@ -572,15 +600,15 @@ def main(argv: list[str] | None = None) -> int:
             }
             for r in records
         ]
-        args.records_json.parent.mkdir(parents=True, exist_ok=True)
-        args.records_json.write_text(
+        records_path.parent.mkdir(parents=True, exist_ok=True)
+        records_path.write_text(
             json.dumps(records_payload, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
 
     total_cost = sum(r.cost_usd for r in records)
     print(
-        f"wrote {output_path} ({len(records)} sessions, ${total_cost:.4f} realized cost)",
+        f"wrote agentic validation report ({len(records)} sessions, ${total_cost:.4f} realized cost)",
         file=sys.stderr,
     )
     return 0

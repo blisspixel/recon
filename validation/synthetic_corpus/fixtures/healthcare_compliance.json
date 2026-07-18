@@ -1,17 +1,15 @@
 {
   "cache_version": 1,
-  "tenant_id": "adatum-health",
-  "display_name": "Adatum Health",
-  "default_domain": "adatum-health.com",
-  "queried_domain": "adatum-health.com",
+  "default_domain": "synthetic-delta-health-com.invalid",
+  "queried_domain": "synthetic-delta-health-com.invalid",
   "confidence": "high",
   "domain_count": 5,
   "tenant_domains": [
-    "adatum-health.com",
-    "adatum-care.com",
-    "adatum-hospital.com",
-    "adatum.health",
-    "adatum-rx.com"
+    "synthetic-delta-health-com.invalid",
+    "synthetic-delta-care-com.invalid",
+    "synthetic-delta-hospital-com.invalid",
+    "synthetic-delta-health.invalid",
+    "synthetic-delta-rx-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -36,17 +34,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "patient.adatum-health.com",
+      "subdomain": "patient.synthetic-delta-health-com.invalid",
       "primary_slug": "aws-cloudfront",
       "primary_name": "AWS CloudFront",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "portal.adatum-health.com",
+      "subdomain": "portal.synthetic-delta-health-com.invalid",
       "primary_slug": "okta",
       "primary_name": "Okta",
       "primary_tier": "application"
     }
   ],
+  "display_name": "Synthetic Scenario 566665593414",
+  "tenant_id": "synthetic-scenario-566665593414",
   "_stratum": "baseline"
 }

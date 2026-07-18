@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "contoso-paas-cfp",
-  "display_name": "Contoso Cloudflare Pages",
-  "default_domain": "contoso-cfp.com",
-  "queried_domain": "contoso-cfp.com",
+  "default_domain": "synthetic-alpha-cfp-com.invalid",
+  "queried_domain": "synthetic-alpha-cfp-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "contoso-cfp.com",
-    "contoso-pages.com",
-    "contoso-app.com"
+    "synthetic-alpha-cfp-com.invalid",
+    "synthetic-alpha-pages-com.invalid",
+    "synthetic-alpha-app-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -24,11 +22,13 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "www.contoso-cfp.com",
+      "subdomain": "www.synthetic-alpha-cfp-com.invalid",
       "primary_slug": "cloudflare-pages",
       "primary_name": "Cloudflare Pages",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 053288765455",
+  "tenant_id": "synthetic-scenario-053288765455",
   "_stratum": "paas"
 }

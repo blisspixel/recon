@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "northwind-paas-nl",
-  "display_name": "Northwind Netlify",
-  "default_domain": "northwind-nl.com",
-  "queried_domain": "northwind-nl.com",
+  "default_domain": "synthetic-beta-nl-com.invalid",
+  "queried_domain": "synthetic-beta-nl-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "northwind-nl.com",
-    "northwind-marketing.com",
-    "northwind-docs.com"
+    "synthetic-beta-nl-com.invalid",
+    "synthetic-beta-marketing-com.invalid",
+    "synthetic-beta-docs-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -24,17 +22,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "www.northwind-nl.com",
+      "subdomain": "www.synthetic-beta-nl-com.invalid",
       "primary_slug": "netlify",
       "primary_name": "Netlify",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "docs.northwind-nl.com",
+      "subdomain": "docs.synthetic-beta-nl-com.invalid",
       "primary_slug": "netlify",
       "primary_name": "Netlify",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 346076271708",
+  "tenant_id": "synthetic-scenario-346076271708",
   "_stratum": "paas"
 }
