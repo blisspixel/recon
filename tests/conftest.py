@@ -67,7 +67,7 @@ def fully_populated_tenant_info() -> TenantInfo:
         auth_type="Federated",
         dmarc_policy="reject",
         domain_count=3,
-        tenant_domains=("alpha.invalid", "alpha.onmicrosoft.com", "alpha.invalid"),
+        tenant_domains=("alpha.invalid", "alpha.test", "alpha.example"),
         related_domains=("api.alpha.invalid", "login.alpha.invalid"),
         insights=("Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",),
         degraded_sources=(),
