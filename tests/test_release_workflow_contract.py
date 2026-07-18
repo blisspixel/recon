@@ -285,6 +285,38 @@ class TestSbomJobIsIsolated:
         assert "audit_status" in text
         assert "|| true" not in text
 
+    def test_sbom_job_seals_only_the_exact_expected_regular_file(self, workflow):
+        text = "\n".join(_step_text(step) for step in _steps(workflow["jobs"]["sbom"]))
+
+        assert "shopt -s nullglob dotglob" in text
+        assert 'sbom_entries=(sbom/*)' in text
+        assert '"${#sbom_entries[@]}" -ne 1' in text
+        assert '"${sbom_entries[0]}" != "$expected_sbom"' in text
+        assert '[ -L "$expected_sbom" ]' in text
+
+
+class TestAttestationJob:
+    """The signed subject set must cover every completed release artifact."""
+
+    def test_attestation_waits_for_and_downloads_dist_and_sbom(self, workflow):
+        job = workflow["jobs"]["attest"]
+        assert set(job["needs"]) == {"build", "sbom"}
+        downloads = [
+            step.get("with", {}).get("name")
+            for step in _steps(job)
+            if str(step.get("uses", "")).startswith("actions/download-artifact@")
+        ]
+        assert downloads == ["dist", "sbom"]
+
+    def test_attestation_subject_set_includes_completed_sbom(self, workflow):
+        job = workflow["jobs"]["attest"]
+        attest_step = next(
+            step for step in _steps(job) if str(step.get("uses", "")).startswith("actions/attest-build-provenance@")
+        )
+        subjects = str(attest_step["with"]["subject-path"]).splitlines()
+
+        assert subjects == ["dist/*", "sbom/*"]
+
 
 class TestProvenanceExportJob:
     """The release workflow must surface a Scorecard-recognized provenance asset
@@ -303,10 +335,11 @@ class TestProvenanceExportJob:
             needs_list = []
 
         assert "build" in needs_list, "export-attestations must wait for build (dist/)"
+        assert "sbom" in needs_list, "export-attestations must wait for the completed SBOM"
         assert "attest" in needs_list, "export-attestations must wait for signed build provenance"
         assert job["permissions"] == {"contents": "read"}
 
-    def test_export_attestations_downloads_dist_and_uploads_provenance(self, workflow):
+    def test_export_attestations_downloads_all_subjects_and_uploads_provenance(self, workflow):
         job = workflow["jobs"]["export-attestations"]
         text = "\n".join(_step_text(step) for step in _steps(job))
 
@@ -328,6 +361,10 @@ class TestProvenanceExportJob:
         assert any(isinstance(s.get("with"), dict) and s["with"].get("name") == "dist" for s in downloads), (
             "export-attestations must download the dist artifact"
         )
+        assert any(isinstance(s.get("with"), dict) and s["with"].get("name") == "sbom" for s in downloads), (
+            "export-attestations must download the completed SBOM"
+        )
+        assert '"$GITHUB_WORKSPACE"/dist/* "$GITHUB_WORKSPACE"/sbom/*' in text
         assert any(isinstance(s.get("with"), dict) and s["with"].get("name") == "provenance" for s in uploads), (
             "export-attestations must upload a provenance artifact"
         )
@@ -446,6 +483,23 @@ class TestGithubReleaseAttachesBothArtifacts:
         assert "sbom" in names, "github-release must download the sbom artifact"
         assert "provenance" in names, "github-release must download the provenance artifact"
         assert "provenance/*" in run_text, "github-release must attach exported provenance to the release"
+
+    def test_existing_release_is_validated_before_assets_can_be_replaced(self, workflow):
+        job = workflow["jobs"]["github-release"]
+        text = "\n".join(_step_text(step) for step in _steps(job))
+
+        metadata = "--json tagName,name,isDraft,isPrerelease,isImmutable,assets"
+        validator = "python3 scripts/check_release_recovery.py"
+        clobber = "gh release upload"
+        remote_tag = "git ls-remote --exit-code --refs origin"
+        assert metadata in text
+        assert validator in text
+        assert clobber in text
+        assert remote_tag in text
+        assert text.index(remote_tag) < text.index(metadata) < text.index(validator) < text.index(clobber)
+        assert '"$remote_tag_sha" != "$GITHUB_SHA"' in text
+        assert ">/dev/null" not in text
+        assert "--verify-tag" in text
 
 
 class TestPublishedChannelParity:

@@ -34,12 +34,12 @@ INIT_PY = ROOT / "src" / "recon_tool" / "__init__.py"
 CHANGELOG = ROOT / "CHANGELOG.md"
 PLUGIN_MANIFEST = ROOT / "agents" / "claude-code" / ".claude-plugin" / "plugin.json"
 CITATION = ROOT / "CITATION.cff"
+_SUPPLY_CHAIN_DOC = ROOT / "docs" / "supply-chain.md"
 
 _VERSIONED_DOCS = (
     ROOT / "ROADMAP.md",
     ROOT / "docs" / "roadmap.md",
     ROOT / "docs" / "engineering-refinement-plan.md",
-    ROOT / "docs" / "supply-chain.md",
 )
 _VERSIONED_INSTALLERS = (
     ROOT / "scripts" / "install.sh",
@@ -268,12 +268,37 @@ def _replace_required(path: Path, old: str, new: str) -> None:
     path.write_text(content.replace(old, new), encoding="utf-8")
 
 
+def _bump_supply_chain_recipe(current: str, new: str) -> None:
+    content = _SUPPLY_CHAIN_DOC.read_text(encoding="utf-8")
+    replacements = (
+        (
+            f"git clone --branch v{current} --single-branch "
+            f"https://github.com/blisspixel/recon.git recon-{current}",
+            f"git clone --branch v{new} --single-branch https://github.com/blisspixel/recon.git recon-{new}",
+            1,
+        ),
+        (f"cd recon-{current}", f"cd recon-{new}", 1),
+        (f"VERSION={current}", f"VERSION={new}", 2),
+        (f'$Version = "{current}"', f'$Version = "{new}"', 1),
+    )
+    for old, replacement, expected_count in replacements:
+        observed = content.count(old)
+        if observed != expected_count:
+            raise ReleaseError(
+                f"Expected {expected_count} occurrence(s) of {old!r} in "
+                f"{_SUPPLY_CHAIN_DOC.relative_to(ROOT)}, found {observed}"
+            )
+        content = content.replace(old, replacement)
+    _SUPPLY_CHAIN_DOC.write_text(content, encoding="utf-8")
+
+
 def _bump_release_surfaces(current: str, new: str, release_date: str) -> None:
     """Synchronize every code-owned version surface before validation."""
     _bump_pyproject(new, False)
     _bump_init(new, False)
     for path in _VERSIONED_DOCS:
         _replace_required(path, current, new)
+    _bump_supply_chain_recipe(current, new)
     for path in _VERSIONED_INSTALLERS:
         _replace_required(path, current, new)
     for path in _REVIEWED_DOCS:
@@ -324,6 +349,7 @@ def _release_mutation_paths() -> tuple[Path, ...]:
         ROOT / "uv.lock",
         PLUGIN_MANIFEST,
         CITATION,
+        _SUPPLY_CHAIN_DOC,
         *_VERSIONED_DOCS,
         *_VERSIONED_INSTALLERS,
         *_REVIEWED_DOCS,

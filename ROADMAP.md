@@ -39,7 +39,12 @@ validates the completed SBOM, exported provenance bundle, exact signer workflow,
 source tag and commit digest, and cross-channel digests. Reviewed installer
 helpers bind installation to their release version
 and preserve one existing package-manager owner; consumer verification now has
-complete fail-closed POSIX and PowerShell paths.
+complete fail-closed POSIX and PowerShell paths. Current release hardening also
+reuses one bounded exact PyPI metadata validator, includes the completed SBOM in
+GitHub provenance, and rejects unsafe existing-release state before recovery
+can replace assets. One digest-bound v2.6.3 historical exception preserves the
+published distribution-only bundle while still requiring SBOM validation;
+future releases fail if SBOM provenance is absent.
 
 The catalog-quality track uses deduplicated private rounds with distinct rank,
 regional, vertical, vendor-seed, or drift questions. It must account for every

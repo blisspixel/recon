@@ -25,7 +25,7 @@ def test_submission_freeze_checklist_is_linked_from_current_docs() -> None:
 
 
 def test_submission_freeze_checklist_names_required_gates() -> None:
-    text = _read(FREEZE)
+    text = " ".join(_read(FREEZE).split())
 
     for required in (
         "uv run python scripts/check_paper_claims.py",
@@ -37,6 +37,8 @@ def test_submission_freeze_checklist_names_required_gates() -> None:
         "uv run python scripts/check.py",
         "uv run python scripts/release_readiness.py --allow-dirty",
         "uv run python scripts/release_readiness.py --remote",
+        "only when this exact commit is also the published",
+        "keep release-state evidence tied to the named published release",
         "2026-06-29-scorecard-gate-claim-audit.md",
         "2026-06-30-submission-freeze-local-proof.md",
     ):

@@ -29,6 +29,8 @@ def test_replication_runbook_names_public_commands_and_preconditions() -> None:
         "GitHub CI, Secrets scan, and Scorecard pass",
         "uv run python scripts/check.py",
         "uv run python scripts/release_readiness.py --remote",
+        "exact published current-version tag",
+        "A later source-only target must not inherit that release-state claim",
         "validation.reproduce_paper_numbers --profile smoke",
         "validation.reproduce_paper_numbers --profile paper",
         "scripts/generate_paper_figures.py --check",
