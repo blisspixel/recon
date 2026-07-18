@@ -1157,7 +1157,7 @@
           "cache",
           "show"
         ],
-        "summary": "Show CT cache state for a domain, or list all cached domains.",
+        "summary": "Show payload-free metadata for the result and CT cache layers.",
         "usage": "recon cache show"
       },
       {

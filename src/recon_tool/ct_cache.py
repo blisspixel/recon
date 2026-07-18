@@ -30,7 +30,7 @@ from recon_tool.cache import (
     infrastructure_clusters_to_cache_dict,
 )
 from recon_tool.cache_paths import resolve_cache_directory
-from recon_tool.cache_values import CacheClearResult
+from recon_tool.cache_values import CacheClearResult, CacheInspection, CacheListing
 from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.models import CertSummary, InfrastructureClusterReport
 from recon_tool.validator import validate_domain
@@ -86,6 +86,7 @@ class CTCacheInfo:
     cached_at: str
     age_days: int
     file_size_bytes: int
+    age_seconds: float = 0.0
 
 
 def ct_cache_dir() -> Path:
@@ -242,8 +243,8 @@ def ct_cache_clear_all() -> int:
     return _ct_cache_clear_all_detailed().removed
 
 
-def ct_cache_show(domain: str) -> CTCacheInfo | None:
-    """Return metadata about a cached CT entry, or None if not cached."""
+def _ct_cache_inspect(domain: str) -> CacheInspection[CTCacheInfo]:
+    """Inspect one CT entry while distinguishing absence from read failure."""
     try:
         expected_domain = validate_domain(domain, apex=False)
         path = _safe_path(domain)
@@ -251,34 +252,59 @@ def ct_cache_show(domain: str) -> CTCacheInfo | None:
         if not isinstance(data, dict):
             raise ValueError("CT cache payload must be a JSON object")
         entry = _entry_from_dict(data, age_seconds, expected_domain)
-        return CTCacheInfo(
-            domain=expected_domain,
-            provider_used=entry.provider_used,
-            subdomain_count=len(entry.subdomains),
-            cached_at=entry.cached_at,
-            age_days=int(age_seconds / 86400),
-            file_size_bytes=file_stat.st_size,
+        return CacheInspection(
+            entry=CTCacheInfo(
+                domain=expected_domain,
+                provider_used=entry.provider_used,
+                subdomain_count=len(entry.subdomains),
+                cached_at=entry.cached_at,
+                age_days=int(age_seconds / 86400),
+                file_size_bytes=file_stat.st_size,
+                age_seconds=age_seconds,
+            )
         )
+    except FileNotFoundError:
+        return CacheInspection()
     except (OSError, OverflowError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
-        logger.debug("CT cache show failed for %s", domain, exc_info=True)
-        return None
+        logger.debug("CT cache inspection failed for %s", domain, exc_info=True)
+        return CacheInspection(failed=True)
 
 
-def ct_cache_list() -> list[CTCacheInfo]:
-    """List all cached CT entries with metadata."""
+def ct_cache_show(domain: str) -> CTCacheInfo | None:
+    """Return metadata about a valid cached CT entry, or None otherwise."""
+    return _ct_cache_inspect(domain).entry
+
+
+def _ct_cache_list_detailed() -> CacheListing[CTCacheInfo]:
+    """List valid CT metadata and count entries that could not be inspected."""
     entries: list[CTCacheInfo] = []
     try:
         d = resolve_cache_directory("ct-cache")
-        if d is None or not d.is_dir():
-            return entries
+        if d is None:
+            logger.debug("CT cache listing rejected its configured directory")
+            return CacheListing(failed=1)
+        if not d.exists():
+            return CacheListing()
+        if not d.is_dir():
+            logger.debug("CT cache listing path is not a directory")
+            return CacheListing(failed=1)
+        failed = 0
         for f in sorted(d.glob("*.json")):
             domain = f.stem
-            info = ct_cache_show(domain)
-            if info is not None:
-                entries.append(info)
+            inspection = _ct_cache_inspect(domain)
+            if inspection.entry is not None:
+                entries.append(inspection.entry)
+            elif inspection.failed:
+                failed += 1
+        return CacheListing(entries=tuple(entries), failed=failed)
     except OSError:
         logger.debug("CT cache list failed", exc_info=True)
-    return entries
+        return CacheListing(failed=1)
+
+
+def ct_cache_list() -> list[CTCacheInfo]:
+    """List all valid cached CT entries with metadata."""
+    return list(_ct_cache_list_detailed().entries)
 
 
 # ── Serialization ─────────────────────────────────────────────────────
