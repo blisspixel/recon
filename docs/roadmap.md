@@ -52,12 +52,12 @@ current debt without turning every refinement into feature work.
 |---|---|---|
 | Feature work | Governed by the dependency order below, not by the polish loop | Do not add commands, schemas, hosted surfaces, or inference modes without their existing evidence gate |
 | UX flow | Root help, no-argument onboarding, malformed-input recovery, all-source failure recovery, low-confidence next steps, and batch outcome guidance are implemented on main (Unreleased) | Specify batch all-error exit semantics before considering an opt-in strict mode |
-| Visual polish | Lookup and batch help use task panels; below 70 columns, complete linear help keeps long options visible on main (Unreleased) | Preserve complete option visibility before changing presentation metadata |
-| Observability | MCP validation rejection logs are target-free; unexpected batch details are debug-only; `cache show` exposes payload-free metadata for both disk layers | Define a versioned doctor record before adding a machine-facing operator contract |
-| Reliability | Typed batch errors, bounded workers, truthful cache inspection and clearing, closed-pipe handling, partial results, and exact exit-code semantics are implemented on main and listed in Unreleased | Do not change the current batch exit contract without a compatibility decision covering mixed and all-error streams |
-| Security | Rejected MCP arguments and unexpected batch details stay out of default output; live MCP, installer, doctor, and persisted-cache diagnostics cross sanitized terminal boundaries on main (Unreleased) | Any exact configured-launcher doctor must require a safe explicit execution boundary |
-| Accessibility | `--plain` is shipped and the complete narrow-help fallback is implemented on main (Unreleased) | Keep both paths complete; do not replace the parser or hide specialist controls |
-| Documentation accuracy | README, generated CLI reference, operational contract, automation examples, security model, and release-gate descriptions track current behavior on main (Unreleased) | Keep the eventual versioned doctor record separate from human diagnostic output |
+| Visual polish | Lookup and batch help use task panels; below 70 columns, linear help keeps long options and complete command summaries visible; narrow welcome descriptions remain attached to their commands (Unreleased) | Preserve complete option visibility before changing presentation metadata |
+| Observability | MCP validation rejection logs are target-free; unexpected batch details are debug-only; doctor retains independent rows across ordinary HTTP request failures; `cache show` exposes payload-free metadata and reuse status for both disk layers (Unreleased) | Define a versioned doctor record before adding a machine-facing operator contract |
+| Reliability | Typed batch errors, bounded workers, truthful cache inspection and clearing, closed-pipe handling, partial results, exact exit-code semantics, and import-safe runtime-scoped MCP logging are implemented and listed in Unreleased | Do not change the current batch exit contract without a compatibility decision covering mixed and all-error streams |
+| Security | Unresolved HTTP destinations fail closed; rejected MCP arguments and unexpected batch details stay out of default output; fatal MCP, live MCP, installer, doctor, and persisted-cache diagnostics cross bounded terminal boundaries (Unreleased) | Any exact configured-launcher doctor must require a safe explicit execution boundary |
+| Accessibility | `--plain` is shipped; complete narrow help uses the actual terminal width without literal markup or truncated root summaries; the no-argument path uses indented linear pairs below 70 columns (Unreleased) | Keep both paths complete; do not replace the parser or hide specialist controls |
+| Documentation accuracy | README helper discovery follows release-tag review; generated CLI reference, operational contract, automation examples, security model, and release-gate descriptions track current behavior (Unreleased) | Keep the eventual versioned doctor record separate from human diagnostic output |
 
 ## Priority Order
 
@@ -668,11 +668,13 @@ at 80 columns, and the collection boundary moves from near the end into the
 first half. The grouping changes presentation metadata only; all 28 options,
 aliases, defaults, validation rules, and runtime paths remain unchanged.
 
-Do not introduce a core-versus-advanced CLI mode. The measured problem was
-solved by grouping without hiding specialist controls. Rich can still truncate
-two long option names at 56 columns, down from five in the baseline. Treat a
-plain linear narrow-help fallback as bounded accessibility debt, not as a
-reason to replace the current parser or hide options.
+Do not introduce a core-versus-advanced CLI mode. Grouping solves ordinary
+widths without hiding specialist controls. The shipped fallback now selects
+linear help below 70 columns, passes the actual terminal width through to the
+formatter, preserves long option tokens and concise root summaries at 40, 60,
+and 69 columns, and removes presentation markup from command prose. The
+no-argument path uses indented command and description pairs at narrow widths.
+This closes the measured accessibility debt without replacing the parser.
 
 The dated MCP measurement is also complete. A real local stdio session on the
 production SDK yields 81,562 compact serialized result-body bytes across

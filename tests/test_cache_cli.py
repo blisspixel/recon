@@ -83,12 +83,18 @@ class TestCacheShow:
     def test_show_list_all(self, tmp_cache: Path) -> None:
         ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
         ct_cache_put("b.com", ["x.b.com"], None, "certspotter")
+        old = time.time() - (31 * 86400)
+        os.utime(tmp_cache / "b.com.json", (old, old))
         result = runner.invoke(app, ["cache", "show"])
         assert result.exit_code == 0
         assert "Result cache (empty)" in result.output
         assert "CT cache (2 entries)" in result.output
         assert "a.com" in result.output
         assert "b.com" in result.output
+        a_row = next(line for line in result.output.splitlines() if "a.com" in line)
+        b_row = next(line for line in result.output.splitlines() if "b.com" in line)
+        assert "reusable" in a_row
+        assert "expired" in b_row
 
     def test_show_list_surfaces_unreadable_entries_without_payload_details(self, tmp_cache: Path) -> None:
         tmp_cache.mkdir(parents=True)

@@ -57,6 +57,10 @@ def test_helper_guidance_requires_local_review_before_execution() -> None:
     for label, text in texts.items():
         assert "raw.githubusercontent.com/blisspixel/recon/main/scripts/install" not in text, label
         assert "review" in text.lower(), label
+    assert "blob/main/scripts/install" not in texts["README"]
+    assert "https://github.com/blisspixel/recon/releases/latest" in texts["README"]
+    assert "scripts/install.sh" in texts["README"]
+    assert "scripts/install.ps1" in texts["README"]
     assert "bash scripts/install.sh" in texts["Unix installer"]
     assert "-File .\\scripts\\install.ps1" in texts["PowerShell installer"]
 
