@@ -52,6 +52,7 @@ def test_release_test_and_build_jobs_are_read_only() -> None:
     assert jobs["test"]["permissions"] == {"contents": "read"}
     assert jobs["build"]["permissions"] == {"contents": "read"}
     assert jobs["package-smoke"]["permissions"] == {"contents": "read"}
+    assert jobs["verify-pypi-parity"]["permissions"] == {"contents": "read"}
 
 
 def test_release_preflight_blocks_mismatched_or_non_main_tags() -> None:
@@ -91,3 +92,11 @@ def test_pypi_publication_waits_for_valid_sbom() -> None:
     workflow = _load_release_workflow()
     assert "sbom" in workflow["jobs"]["publish-pypi"]["needs"]
     assert "package-smoke" in workflow["jobs"]["publish-pypi"]["needs"]
+
+
+def test_github_publication_waits_for_pypi_byte_parity() -> None:
+    workflow = _load_release_workflow()
+    jobs = workflow["jobs"]
+
+    assert set(jobs["verify-pypi-parity"]["needs"]) == {"build", "publish-pypi"}
+    assert "verify-pypi-parity" in jobs["github-release"]["needs"]

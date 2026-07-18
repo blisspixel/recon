@@ -264,6 +264,16 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   across different Python, runner, operating-system, or archive environments;
   signed provenance remains the source-to-workflow verification mechanism. See
   [supply-chain.md](supply-chain.md).
+- **Published distribution channels must agree byte for byte.** After PyPI
+  publication, a read-only release job requires the exact wheel and sdist and
+  matches both SHA-256 digests against the sealed build pair before GitHub
+  Release assets can be created or replaced. Remote readiness repeats that
+  comparison and validates the completed SBOM plus the exported provenance
+  bundle bound to the source tag and commit digest. A mismatch after PyPI
+  publication is a visible partial-publication state that blocks GitHub Release
+  creation; it does not roll back immutable PyPI files. This is
+  publication-state integrity, not a promise that a fresh build on another host
+  will reproduce the same bytes.
 - **Apex normalization is deterministic per installed version.** Input is
   reduced to its registrable apex (eTLD+1) using the Public Suffix List bundled
   in the pinned `publicsuffixlist` dependency, so the same input yields the same

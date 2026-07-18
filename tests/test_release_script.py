@@ -105,18 +105,23 @@ def test_release_rejects_impossible_changelog_date(monkeypatch: pytest.MonkeyPat
         release._changelog_release_date("2.5.9")
 
 
-def test_release_surface_generation_writes_both_artifacts(
+def test_release_surface_generation_updates_installers_and_artifacts(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     plugin = tmp_path / "plugin.json"
     plugin.write_text('{"version": "2.5.8"}\n', encoding="utf-8")
     citation = tmp_path / "CITATION.cff"
     citation.write_text('version: 2.5.8\ndate-released: "2026-07-13"\n', encoding="utf-8")
+    unix_installer = tmp_path / "install.sh"
+    unix_installer.write_text('VERSION="2.5.8"\n', encoding="utf-8")
+    windows_installer = tmp_path / "install.ps1"
+    windows_installer.write_text('$Version = "2.5.8"\n', encoding="utf-8")
     commands: list[list[str]] = []
 
     monkeypatch.setattr(release, "PLUGIN_MANIFEST", plugin)
     monkeypatch.setattr(release, "CITATION", citation)
     monkeypatch.setattr(release, "_VERSIONED_DOCS", ())
+    monkeypatch.setattr(release, "_VERSIONED_INSTALLERS", (unix_installer, windows_installer))
     monkeypatch.setattr(release, "_REVIEWED_DOCS", ())
 
     def ignore_version_write(_version: str, _dry: bool) -> None:
@@ -135,6 +140,8 @@ def test_release_surface_generation_writes_both_artifacts(
 
     monkeypatch.setattr(release, "_run", fake_run)
     release._bump_release_surfaces("2.5.8", "2.5.9", "2026-07-13")
+    assert unix_installer.read_text(encoding="utf-8") == 'VERSION="2.5.9"\n'
+    assert windows_installer.read_text(encoding="utf-8") == '$Version = "2.5.9"\n'
     assert commands == [
         [
             "uv",
@@ -145,6 +152,13 @@ def test_release_surface_generation_writes_both_artifacts(
             "--write-cli-surface",
         ]
     ]
+
+
+def test_release_transaction_owns_both_installer_helpers() -> None:
+    owned = set(release._release_mutation_paths())
+
+    assert release.ROOT / "scripts" / "install.sh" in owned
+    assert release.ROOT / "scripts" / "install.ps1" in owned
 
 
 def test_release_rollback_restores_files_index_commit_and_owned_tag(

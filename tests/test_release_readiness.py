@@ -6,11 +6,60 @@ import json
 import subprocess
 from pathlib import Path
 
+import pytest
+
 from scripts import release_readiness
+
+_RELEASE_SHA = "a" * 40
 
 
 def _cp(cmd: list[str], returncode: int = 0, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess[str]:
     return subprocess.CompletedProcess(cmd, returncode, stdout, stderr)
+
+
+def test_runner_enforces_a_process_deadline(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def _run(*_args: object, **kwargs: object) -> subprocess.CompletedProcess[str]:
+        assert kwargs["timeout"] == 120
+        raise subprocess.TimeoutExpired(["gh"], 120)
+
+    monkeypatch.setattr(subprocess, "run", _run)
+
+    result = release_readiness._make_runner(tmp_path)(["gh", "release", "view"])
+
+    assert result.returncode == 124
+    assert result.stderr == "command timed out after 120 seconds"
+
+
+def _completed_sbom(version: str) -> str:
+    root_ref = f"pkg:pypi/recon-tool@{version}"
+    component_ref = "pkg:pypi/httpx@0.28.1"
+    return json.dumps(
+        {
+            "bomFormat": "CycloneDX",
+            "specVersion": "1.6",
+            "metadata": {
+                "component": {
+                    "type": "application",
+                    "bom-ref": root_ref,
+                    "name": "recon-tool",
+                    "version": version,
+                    "purl": root_ref,
+                }
+            },
+            "components": [{"type": "library", "name": "httpx", "bom-ref": component_ref}],
+            "dependencies": [{"ref": root_ref, "dependsOn": [component_ref]}],
+        }
+    )
+
+
+def _release_inventory(version: str = "2.2.17", size: int = 1024) -> str:
+    names = (
+        f"recon_tool-{version}-py3-none-any.whl",
+        f"recon_tool-{version}.tar.gz",
+        f"recon-tool-{version}.cdx.json",
+        f"recon-tool-{version}.intoto.jsonl",
+    )
+    return json.dumps({"assets": [{"name": name, "size": size} for name in names]})
 
 
 def _write_file(root: Path, relative: str, text: str) -> None:
@@ -53,14 +102,29 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
             [
                 "Consumer verification quick path",
                 f"VERSION={version}",
-                f'version = "{version}"',
+                f'$Version = "{version}"',
+                "set -euo pipefail",
+                "Set-StrictMode -Version Latest",
+                "git status --porcelain",
+                "gh auth status",
+                "MAX_RELEASE_ASSET_BYTES",
                 '--pattern "recon_tool-${VERSION}-py3-none-any.whl"',
                 '--pattern "recon_tool-${VERSION}.tar.gz"',
                 '--pattern "recon-tool-${VERSION}.cdx.json"',
                 '--pattern "recon-tool-${VERSION}.intoto.jsonl"',
+                "scripts/check_release_channel_parity.py",
+                "--url-file",
+                "validate_completed_sbom",
                 "gh attestation verify",
-                "https://pypi.org/pypi/recon-tool/json",
+                "--bundle",
+                "--signer-workflow",
+                "--source-ref",
+                "--source-digest",
+                "pypi-attestations==0.0.29",
                 "pypi-attestations verify pypi",
+                "URL_COUNT",
+                "RECON_INSTALL_MANAGER",
+                "both working wheel entry points",
             ]
         ),
     )
@@ -183,15 +247,15 @@ def test_supply_chain_recipe_version_rejects_stale_version(tmp_path: Path) -> No
     assert "consumer verification recipe" in check.action
 
 
-def test_supply_chain_recipe_version_rejects_stale_pypi_lookup_version(tmp_path: Path) -> None:
+def test_supply_chain_recipe_version_rejects_stale_powershell_version(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path, version="2.2.17")
     supply_chain = (tmp_path / "docs" / "supply-chain.md").read_text(encoding="utf-8")
-    _write_file(tmp_path, "docs/supply-chain.md", supply_chain.replace('version = "2.2.17"', 'version = "2.2.16"'))
+    _write_file(tmp_path, "docs/supply-chain.md", supply_chain.replace('$Version = "2.2.17"', '$Version = "2.2.16"'))
 
     check = release_readiness._check_supply_chain_recipe_version(tmp_path)
 
     assert check.status == "fail"
-    assert 'version = "2.2.17"' in check.detail
+    assert '$Version = "2.2.17"' in check.detail
 
 
 def test_citation_metadata_accepts_current_release(tmp_path: Path) -> None:
@@ -484,7 +548,7 @@ def test_pypi_attestations_verify_wheel_and_sdist(tmp_path: Path) -> None:
                     }
                 ),
             )
-        if cmd[:4] == ["uvx", "--from", "pypi-attestations", "pypi-attestations"]:
+        if cmd[:4] == ["uvx", "--from", "pypi-attestations==0.0.29", "pypi-attestations"]:
             assert cmd[4:8] == ["verify", "pypi", "--repository", "https://github.com/blisspixel/recon"]
             verified_urls.append(cmd[8])
             return _cp(cmd, stdout="OK\n")
@@ -522,7 +586,7 @@ def test_pypi_attestations_fail_when_verification_fails(tmp_path: Path) -> None:
                     }
                 ),
             )
-        if cmd[:4] == ["uvx", "--from", "pypi-attestations", "pypi-attestations"]:
+        if cmd[:4] == ["uvx", "--from", "pypi-attestations==0.0.29", "pypi-attestations"]:
             return _cp(cmd, returncode=1, stderr="verification failed\n")
         raise AssertionError(f"unexpected command: {cmd}")
 
@@ -603,6 +667,32 @@ def test_github_release_requires_all_release_assets(tmp_path: Path) -> None:
     assert "recon_tool-2.2.17.tar.gz" in check.detail
 
 
+def test_github_release_rejects_unexpected_release_asset(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    assets = [
+        {"name": "recon-tool-2.2.17.cdx.json"},
+        {"name": "recon-tool-2.2.17.intoto.jsonl"},
+        {"name": "recon_tool-2.2.17-py3-none-any.whl"},
+        {"name": "recon_tool-2.2.17.tar.gz"},
+        {"name": "unreviewed.txt"},
+    ]
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(
+                cmd,
+                stdout=json.dumps({"tagName": "v2.2.17", "isDraft": False, "isPrerelease": False, "assets": assets}),
+            )
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_release(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "unexpected asset(s): unreviewed.txt" in check.detail
+
+
 def test_github_attestations_verify_wheel_and_sdist(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path, version="2.2.17")
     verified: list[str] = []
@@ -610,13 +700,23 @@ def test_github_attestations_verify_wheel_and_sdist(tmp_path: Path) -> None:
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         if cmd == ["git", "remote", "get-url", "origin"]:
             return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(cmd, stdout=_release_inventory())
         if cmd[:3] == ["gh", "release", "download"]:
             directory = Path(cmd[cmd.index("--dir") + 1])
             subject = cmd[cmd.index("--pattern") + 1]
-            (directory / subject).write_text("artifact", encoding="utf-8")
+            content = _completed_sbom("2.2.17") if subject.endswith(".cdx.json") else "artifact"
+            (directory / subject).write_text(content, encoding="utf-8")
             return _cp(cmd)
         if cmd[:3] == ["gh", "attestation", "verify"]:
             verified.append(Path(cmd[3]).name)
+            assert cmd[cmd.index("--bundle") + 1].endswith("recon-tool-2.2.17.intoto.jsonl")
+            assert cmd[cmd.index("--signer-workflow") + 1] == "blisspixel/recon/.github/workflows/release.yml"
+            assert cmd[cmd.index("--source-ref") + 1] == "refs/tags/v2.2.17"
+            assert cmd[cmd.index("--source-digest") + 1] == _RELEASE_SHA
+            assert "--deny-self-hosted-runners" in cmd
             return _cp(cmd, stdout="Verified signature\n")
         raise AssertionError(f"unexpected command: {cmd}")
 
@@ -624,6 +724,7 @@ def test_github_attestations_verify_wheel_and_sdist(tmp_path: Path) -> None:
 
     assert check.status == "pass"
     assert verified == ["recon_tool-2.2.17-py3-none-any.whl", "recon_tool-2.2.17.tar.gz"]
+    assert "CycloneDX SBOM is valid" in check.detail
 
 
 def test_github_attestations_fail_when_verification_fails(tmp_path: Path) -> None:
@@ -632,10 +733,15 @@ def test_github_attestations_fail_when_verification_fails(tmp_path: Path) -> Non
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         if cmd == ["git", "remote", "get-url", "origin"]:
             return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(cmd, stdout=_release_inventory())
         if cmd[:3] == ["gh", "release", "download"]:
             directory = Path(cmd[cmd.index("--dir") + 1])
             subject = cmd[cmd.index("--pattern") + 1]
-            (directory / subject).write_text("artifact", encoding="utf-8")
+            content = _completed_sbom("2.2.17") if subject.endswith(".cdx.json") else "artifact"
+            (directory / subject).write_text(content, encoding="utf-8")
             return _cp(cmd)
         if cmd[:3] == ["gh", "attestation", "verify"]:
             return _cp(cmd, returncode=1, stderr="no matching attestations found\n")
@@ -647,12 +753,160 @@ def test_github_attestations_fail_when_verification_fails(tmp_path: Path) -> Non
     assert "no matching attestations found" in check.detail
 
 
+def test_github_attestations_fail_when_release_sbom_is_invalid(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(cmd, stdout=_release_inventory())
+        if cmd[:3] == ["gh", "release", "download"]:
+            directory = Path(cmd[cmd.index("--dir") + 1])
+            subject = cmd[cmd.index("--pattern") + 1]
+            content = "{}" if subject.endswith(".cdx.json") else "artifact"
+            (directory / subject).write_text(content, encoding="utf-8")
+            return _cp(cmd)
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "release SBOM validation failed" in check.detail
+
+
+def test_github_attestations_fail_cleanly_for_non_utf8_sbom(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(cmd, stdout=_release_inventory())
+        if cmd[:3] == ["gh", "release", "download"]:
+            directory = Path(cmd[cmd.index("--dir") + 1])
+            subject = cmd[cmd.index("--pattern") + 1]
+            content = b"\xff\xfe" if subject.endswith(".cdx.json") else b"artifact"
+            (directory / subject).write_bytes(content)
+            return _cp(cmd)
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "release SBOM validation failed" in check.detail
+    assert "cannot read valid JSON" in check.detail
+
+
+def test_github_attestations_reject_oversized_inventory_before_download(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    monkeypatch.setattr(release_readiness, "_MAX_RELEASE_ASSET_BYTES", 4)
+    commands: list[list[str]] = []
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        commands.append(cmd)
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(cmd, stdout=_release_inventory(size=5))
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "declares an empty or oversized file" in check.detail
+    assert not any(cmd[:3] == ["gh", "release", "download"] for cmd in commands)
+
+
+@pytest.mark.parametrize(("content", "message"), [(b"", "empty"), (b"12345", "safety limit")])
+def test_release_asset_download_is_size_bounded(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    content: bytes,
+    message: str,
+) -> None:
+    monkeypatch.setattr(release_readiness, "_MAX_RELEASE_ASSET_BYTES", 4)
+    subject = "recon_tool-2.2.17.tar.gz"
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        directory = Path(cmd[cmd.index("--dir") + 1])
+        (directory / subject).write_bytes(content)
+        return _cp(cmd)
+
+    client = release_readiness._ReleaseAssetClient(runner, "blisspixel/recon", "2.2.17", tmp_path)
+
+    with pytest.raises(release_readiness._ReleaseEvidenceError, match=message):
+        client.download(subject)
+
+
+def test_release_channel_parity_reports_exact_digest_evidence(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    expected = set(release_readiness._expected_distribution_names("2.2.17"))
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(cmd, stdout=_release_inventory())
+        if cmd[:3] == ["gh", "release", "download"]:
+            directory = Path(cmd[cmd.index("--dir") + 1])
+            subject = cmd[cmd.index("--pattern") + 1]
+            assert subject in expected
+            (directory / subject).write_bytes(subject.encode())
+            return _cp(cmd)
+        if len(cmd) > 1 and cmd[1].endswith("check_release_channel_parity.py"):
+            assert cmd[cmd.index("--version") + 1] == "2.2.17"
+            assert cmd[cmd.index("--attempts") + 1] == "1"
+            return _cp(cmd, stdout="PASS: wheel sha256=aaa\nPASS: sdist sha256=bbb\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_release_channel_parity(tmp_path, runner)
+
+    assert check.status == "pass"
+    assert check.detail == "PASS: wheel sha256=aaa; PASS: sdist sha256=bbb"
+
+
+def test_release_channel_parity_surfaces_checker_failure(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(cmd, stdout=_release_inventory())
+        if cmd[:3] == ["gh", "release", "download"]:
+            directory = Path(cmd[cmd.index("--dir") + 1])
+            subject = cmd[cmd.index("--pattern") + 1]
+            (directory / subject).write_bytes(b"artifact")
+            return _cp(cmd)
+        if len(cmd) > 1 and cmd[1].endswith("check_release_channel_parity.py"):
+            return _cp(cmd, returncode=1, stderr="channel digest mismatch\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_release_channel_parity(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert check.detail == "channel digest mismatch"
+
+
 def test_github_attestations_fail_when_download_missing_artifact(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path, version="2.2.17")
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         if cmd == ["git", "remote", "get-url", "origin"]:
             return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(cmd, stdout=_release_inventory())
         if cmd[:3] == ["gh", "release", "download"]:
             return _cp(cmd)
         raise AssertionError(f"unexpected command: {cmd}")
@@ -661,6 +915,38 @@ def test_github_attestations_fail_when_download_missing_artifact(tmp_path: Path)
 
     assert check.status == "fail"
     assert "release download did not produce" in check.detail
+
+
+def test_github_attestations_require_the_local_release_tag_commit(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, returncode=128, stderr="unknown revision\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert check.detail == "unknown revision"
+
+
+def test_github_attestations_reject_a_noncanonical_release_tag_digest(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout="a" * 48 + "\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "full commit SHA" in check.detail
 
 
 def test_json_renderer_reports_overall_failure(tmp_path: Path) -> None:
