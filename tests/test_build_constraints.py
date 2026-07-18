@@ -81,7 +81,7 @@ def test_build_constraints_match_frozen_build_group(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert exported.read_bytes() == _CONSTRAINTS.read_bytes()
+    assert exported.read_text(encoding="utf-8") == _CONSTRAINTS.read_text(encoding="utf-8")
 
 
 def test_artifact_workflows_select_required_uv_version() -> None:
