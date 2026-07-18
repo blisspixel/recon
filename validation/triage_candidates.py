@@ -113,7 +113,7 @@ def looks_intra_org(suffix: str, samples: list[dict[str, Any]]) -> bool:
 
     Delegates to ``recon_tool.discovery`` so both this script and the
     ``recon discover`` subcommand share the same heuristic. The brand-label
-    check correctly handles multi-part TLDs (``contoso.co.uk`` → ``contoso``)
+    check correctly handles multi-part TLDs (``sample.example.co.uk`` to ``example``)
     by skipping the second-level public suffix.
     """
     if not samples:
@@ -123,7 +123,7 @@ def looks_intra_org(suffix: str, samples: list[dict[str, Any]]) -> bool:
     sample = samples[0]
     sub = str(sample.get("subdomain", "")).lower()
     parts = sub.split(".")
-    # For multi-part TLDs (foo.contoso.co.uk), the apex is the rightmost three
+    # For multi-part TLDs (foo.sample.example.co.uk), the apex is the rightmost three
     # labels; for foo.example.com it's the rightmost two. Use the brand-label
     # extractor to drive the decision: pick whichever right-anchored slice
     # produces a non-empty brand label.

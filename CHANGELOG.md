@@ -42,6 +42,32 @@ MCP tool, resource URI, or schema.
 
 ### Changed
 
+- Tracked validation fixtures now use explicit synthetic identities under the
+  reserved `.invalid` namespace. Deterministic tests bind both validation
+  generators to their JSON, NDJSON, and CSV outputs without retaining
+  company-shaped target identities.
+- Detailed agentic transcripts, provider metadata, raw run records, and panel
+  snapshots now default to gitignored local paths. The tracked historical
+  agentic record and panel review retain aggregate results only.
+- Fingerprint-candidate ADD and EXTEND tables continue to retain generic
+  provider-controlled detection patterns. Rejected target-like candidates are
+  now represented only by aggregate counts and rejection reasons.
+- The validation hygiene gate now parses tracked JSON, NDJSON, and CSV
+  structurally, includes nonignored untracked candidates before staging, scans
+  previously exempt validation directories, rejects malformed CSV shapes,
+  target-domain fields, nested certificate-name lists, raw target records,
+  non-synthetic tenant identifiers, verification values, and detailed candidate-rejection
+  rows, and reports failures without echoing sensitive values.
+- The data-handling policy now records the complete bounded set of pre-policy
+  artifacts found by the full-history and distribution audit. It distinguishes
+  mutable release assets from immutable package bytes and explains why a
+  Git-only rewrite cannot retract mirrors, caches, copies, or attestations.
+  Contributor, legal, artifact-review, performance, onboarding, and roadmap
+  guidance now distinguish reserved target examples from allowed provider
+  references and explicitly track the remaining legacy migration debt.
+- Agentic validation report and raw-record paths now reject trackable
+  in-repository destinations before provider initialization; external and
+  gitignored local output paths remain available.
 - Root help and callback copy now say "Passive domain intelligence from public
   sources," name the primary `recon DOMAIN` shorthand, and point to the
   no-argument examples.
@@ -125,8 +151,8 @@ MCP tool, resource URI, or schema.
 - Explain-path confidence derivation for email-control insights now says
   "Email control count" instead of "Email security score."
 - Public bug and fingerprint issue forms now require a target-data
-  acknowledgement and request only fictional fixtures, sanitized diagnostics,
-  generic provider patterns, and provider-controlled references.
+  acknowledgement and request only reserved synthetic fixtures, sanitized
+  diagnostics, generic provider patterns, and provider-controlled references.
 - New fingerprint detections must include a valid, non-future `verified` date;
   the diff-aware local and CI gate leaves the legacy undated backlog available
   for reviewed backfill.
@@ -296,7 +322,7 @@ MCP tool, resource URI, or schema.
   lookup input now includes one accepted example and a path to the existing
   no-argument guidance while preserving exit code 2.
 - Bare undotted or otherwise invalid first arguments (for example
-  `recon contoso`) route to domain validation instead of Click's
+  `recon example`) route to domain validation instead of Click's
   "No such command" path.
 - Added `python -m recon_tool` package entry so local and scripted installs can
   invoke the CLI without relying only on the console script.
@@ -5365,9 +5391,12 @@ deferred from rounds 4 and 5 (priors clamp tightened, per-file
 catalog cap added).
 
 Source: deepmine and unclassified-CNAME-chain mining over the
-2026-05-26 full-corpus run; the per-candidate triage that produced
-this batch is `validation/v1.9.24-candidates-triage.md` (local-only,
-allowlisted into the otherwise-gitignored `/validation/*` tree).
+2026-05-26 full-corpus run. At release, the per-candidate triage record included
+detailed accepted and rejected rows. The current tracked copy at
+`validation/v1.9.24-candidates-triage.md` retains provider-controlled ADD and
+EXTEND patterns while reducing rejected target-like rows to aggregate counts
+and reasons. Historical copies are covered by the
+[data-handling policy's published-artifact exception](docs/data-handling-policy.md#historical-published-artifact-exception).
 
 Added (156 new vendor entries):
 
@@ -5442,8 +5471,11 @@ All new slugs are mapped explicitly in
 `tests/test_slug_category_invariant.py`. Cloud-categorized slugs
 either roll up via `_CLOUD_VENDOR_BY_SLUG` or are excluded from the
 multi-cloud rollup via `_CLOUD_VENDOR_ROLLUP_EXCLUSIONS` (DNS
-operators, single-purpose SaaS hosting, specialty CDN). The full
-candidate triage is in `validation/v1.9.24-candidates-triage.md`.
+operators, single-purpose SaaS hosting, specialty CDN). The current tracked
+candidate decision record at `validation/v1.9.24-candidates-triage.md` is
+aggregate-only for rejected target-like rows; the release-time detailed record
+remains in historical copies covered by the
+[published-artifact exception](docs/data-handling-policy.md#historical-published-artifact-exception).
 
 ### v1.9.24 shadow-handling consistency
 
@@ -6815,13 +6847,12 @@ self-contained.
   publicly-reproducible.
 - **Corpus aggregator** at `validation/corpus_aggregator.py` emits
   anonymized firing statistics for both the estimator path and the
-  authoritative render-based path. Run output committed at
-  `validation/synthetic_corpus/aggregate.json`: 8/19 multi-cloud
-  fires (42.1%), 11/19 ceiling fires (57.9%).
-- **Render snapshots** of all 21 fixtures (2 v1.9.2 agentic-UX +
-  19 synthetic) at `validation/synthetic_corpus/render_snapshots.md`
-  give the maintainer the operator-facing panel text for each
-  fixture without re-running the renderer.
+  authoritative render-based path. At release time the 19-fixture slice
+  produced 8 multi-cloud and 11 ceiling firings. The tracked aggregate is now
+  regenerated from the expanded 79-fixture reserved-identity corpus.
+- **Render review** at `validation/synthetic_corpus/render_snapshots.md`
+  now retains aggregate panel-shape counts only. Detailed panel text is
+  generated under the gitignored agentic local directory.
 - **Threshold sensitivity analysis** at
   `validation/threshold_sensitivity.md` sweeps each ceiling-trigger
   threshold across plausible values and reports the firing-rate
@@ -8823,16 +8854,17 @@ unaffected.
 **Agentic UX validation harness - first v1.9.x bridge milestone toward
 v2.0.** Operators are not the only persona that reads recon's `--fusion`
 output: the MCP server is a primary surface, and an AI agent reading
-recon JSON is itself a production user. v1.9.2 ships a reproducible
+recon JSON is itself a production user. v1.9.2 shipped a reproducible
 harness that drives three persona prompts (security analyst,
-due-diligence researcher, ops engineer) across two fixtures
-(`contoso.com` dense lookup and a hand-stripped `northwindtraders.com`
-hardened-sparse variant) under both `--fusion`-on and `--fusion`-off
-arms - twelve sessions per run - and scores the transcripts against
-the five-check rubric defined in `docs/roadmap.md`. The shipped
-artifact (`validation/v1.9.2-agentic-ux.md`) is the first calibration
-input for the v2.0 schema-lock disposition decisions; subsequent runs
-against other providers append to that record.
+due-diligence researcher, ops engineer) across one dense and one hand-stripped
+sparse fictional fixture under both `--fusion`-on and `--fusion`-off arms -
+twelve sessions per run - and scores the transcripts against
+the five-check rubric defined in `docs/roadmap.md`. The shipped record included
+detailed session rows. The current tracked aggregate at
+`validation/v1.9.2-agentic-ux.md` preserves the calibration input for the v2.0
+schema-lock disposition decisions. New detailed runs stay in gitignored local
+paths; the historical detailed copy is covered by the
+[data-handling policy's published-artifact exception](docs/data-handling-policy.md#historical-published-artifact-exception).
 
 ### Added
 
@@ -8849,14 +8881,14 @@ against other providers append to that record.
   none mention `posterior_observations`, `sparse=true`,
   `--explain-dag`, or credible intervals; the rubric measures
   whether the agent finds those affordances unprompted.
-- **Committed fixtures.** `fixtures/contoso-dense.json` (full
-  `recon contoso.com --json --fusion` output, Microsoft fictional
-  brand) and `fixtures/hardened-sparse.json` (hand-stripped to one
-  slug for `northwindtraders.com`, also Microsoft fictional). Real
-  apexes never get committed, per the no-real-company-data
-  invariant in `validation/README.md`.
-- **`validation/v1.9.2-agentic-ux.md`** - the first canonical run
-  artifact for the agentic UX workflow. Subsequent runs append.
+- **Committed fixtures.** The release-time dense and sparse fixtures used
+  fictional, non-reserved target identities. The current tracked replacements,
+  `fixtures/synthetic-dense.json` and `fixtures/synthetic-sparse.json`, preserve
+  those semantic shapes with explicit synthetic sentinels under the reserved
+  `.invalid` namespace.
+- **`validation/v1.9.2-agentic-ux.md`** - originally a detailed session record;
+  now a disclosure-safe historical aggregate for the agentic UX workflow. New
+  detailed run output stays local.
 
 ### Changed
 
@@ -9911,7 +9943,7 @@ leaves to sister tooling.
   "Fictional-example policy" section in `CONTRIBUTING.md` for the
   full rule and carve-outs (vendor/product detection names and the
   upstream service hostnames recon itself queries are unaffected).
-- **`tests/fixtures/corpus-public.txt` removed.** The 40 real-apex
+- **`tests/fixtures/corpus-public.txt` removed.** The 38 real-apex
   corpus previously bundled for `recon fingerprints test <slug>` is
   no longer in-tree. The command now looks for `~/.recon/corpus.txt`
   first, falls back to a new fictional-only `tests/fixtures/
@@ -11950,7 +11982,10 @@ changing the core architecture.
 ### Changed
 
 - README panel alignment fixed (all lines exactly 72 characters).
-- All test fixtures and examples use fictional company names only (Contoso, Northwind Traders, Fabrikam). Zero real company names in the repository.
+- At release time, test fixtures and examples were converted to fictional
+  identities. The later full-history audit recorded in the data-handling policy
+  supersedes the historical claim that the complete repository history had no
+  evaluated-target identities.
 - Validation corpus fixtures are gitignored - never committed.
 - Release workflow: `skip-existing: true` prevents PyPI duplicate upload failures on tag re-pushes.
 

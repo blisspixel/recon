@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "adatum-ali-min",
-  "display_name": "Adatum Alibaba Minimal",
-  "default_domain": "adatum-ali.com",
-  "queried_domain": "adatum-ali.com",
+  "default_domain": "synthetic-delta-ali-com.invalid",
+  "queried_domain": "synthetic-delta-ali-com.invalid",
   "confidence": "low",
   "domain_count": 3,
   "tenant_domains": [
-    "adatum-ali.com",
-    "adatum-cn.com",
-    "adatum-corp.com"
+    "synthetic-delta-ali-com.invalid",
+    "synthetic-delta-cn-com.invalid",
+    "synthetic-delta-corp-com.invalid"
   ],
   "services": [
     "Alibaba Cloud"
@@ -19,5 +17,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 817624017909",
+  "tenant_id": "synthetic-scenario-817624017909",
   "_stratum": "alibaba"
 }

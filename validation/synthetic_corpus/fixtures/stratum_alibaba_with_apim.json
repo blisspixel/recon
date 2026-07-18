@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "trey-ali-api",
-  "display_name": "Trey Alibaba API",
-  "default_domain": "trey-ali-api.com",
-  "queried_domain": "trey-ali-api.com",
+  "default_domain": "synthetic-theta-ali-api-com.invalid",
+  "queried_domain": "synthetic-theta-ali-api-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "trey-ali-api.com",
-    "trey-cn-api.com",
-    "trey-svc.com"
+    "synthetic-theta-ali-api-com.invalid",
+    "synthetic-theta-cn-api-com.invalid",
+    "synthetic-theta-svc-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -24,11 +22,13 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "api.trey-ali-api.com",
+      "subdomain": "api.synthetic-theta-ali-api-com.invalid",
       "primary_slug": "alibaba-api",
       "primary_name": "Alibaba API",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 191771338125",
+  "tenant_id": "synthetic-scenario-191771338125",
   "_stratum": "alibaba"
 }

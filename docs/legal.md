@@ -48,17 +48,20 @@ Output is derived from public DNS records and unauthenticated endpoints. It may 
 
 DNS records are self-reported metadata. Organizations may leave stale records from previous configurations, and sophisticated actors could intentionally publish misleading information. All output should be treated as observed indicators, not confirmed facts. The tool's dual confidence model, per-detection corroboration scoring, and evidence traceability are designed to surface uncertainty, but no passive tool can guarantee the accuracy of self-reported public data.
 
-## Fictional Examples
+## Reserved Synthetic Examples
 
-All depicted target companies, target domains, tenant IDs, and organization
-identifiers in the README, `examples/`, and test fixtures are fictional. Real
-provider infrastructure hostnames can appear when they are necessary to model
-documented DNS signatures or public endpoint behavior. Target examples use
-[Microsoft's standard sample company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges)
-(Contoso, Northwind Traders, Fabrikam, and others) or clearly fabricated
-identifiers. The README example is based on the structure and density of a real
-Fortune 500 lookup, with all identifying details replaced. No real target
-company is depicted. Any resemblance to real organizations is coincidental.
+The current contribution and public-validation rule requires evaluated-target
+examples to use explicit synthetic identities under reserved namespaces. The
+README example uses fabricated values under a reserved namespace and is not a
+report about a real organization. Legacy fictional examples outside validation
+remain bounded migration debt in the roadmap and must not be copied into new
+surfaces.
+
+Real vendor and product names, plus provider-controlled infrastructure
+hostnames, can appear when they are detection classes or are necessary to model
+documented DNS signatures and public endpoint behavior. They are references,
+not evaluated targets. No real organization should be presented as an
+evaluated target. See [Data Handling Policy](data-handling-policy.md).
 
 ## Third-Party Services
 

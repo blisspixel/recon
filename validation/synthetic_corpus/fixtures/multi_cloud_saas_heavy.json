@@ -1,18 +1,16 @@
 {
   "cache_version": 1,
-  "tenant_id": "fabrikam-saas",
-  "display_name": "Fabrikam, Inc.",
-  "default_domain": "fabrikam.com",
-  "queried_domain": "fabrikam.com",
+  "default_domain": "synthetic-gamma-com.invalid",
+  "queried_domain": "synthetic-gamma-com.invalid",
   "confidence": "high",
   "domain_count": 6,
   "tenant_domains": [
-    "fabrikam.com",
-    "fabrikam.io",
-    "fabrikam-cloud.com",
-    "fabrikam.net",
-    "fabrikam-eu.com",
-    "fabrikam-jp.com"
+    "synthetic-gamma-com.invalid",
+    "synthetic-gamma-io.invalid",
+    "synthetic-gamma-cloud-com.invalid",
+    "synthetic-gamma-net.invalid",
+    "synthetic-gamma-eu-com.invalid",
+    "synthetic-gamma-jp-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -33,35 +31,37 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "api.fabrikam.com",
+      "subdomain": "api.synthetic-gamma-com.invalid",
       "primary_slug": "fastly",
       "primary_name": "Fastly",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "app.fabrikam.com",
+      "subdomain": "app.synthetic-gamma-com.invalid",
       "primary_slug": "aws-cloudfront",
       "primary_name": "AWS CloudFront",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "data.fabrikam.com",
+      "subdomain": "data.synthetic-gamma-com.invalid",
       "primary_slug": "snowflake",
       "primary_name": "Snowflake",
       "primary_tier": "application"
     },
     {
-      "subdomain": "ml.fabrikam.com",
+      "subdomain": "ml.synthetic-gamma-com.invalid",
       "primary_slug": "gcp-compute",
       "primary_name": "GCP Compute Engine",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "status.fabrikam.com",
+      "subdomain": "status.synthetic-gamma-com.invalid",
       "primary_slug": "atlassian",
       "primary_name": "Atlassian Statuspage",
       "primary_tier": "application"
     }
   ],
+  "display_name": "Synthetic Scenario 213505869239",
+  "tenant_id": "synthetic-scenario-213505869239",
   "_stratum": "baseline"
 }

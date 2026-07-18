@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "contoso-paas-vc",
-  "display_name": "Contoso Vercel Stack",
-  "default_domain": "contoso-vc.com",
-  "queried_domain": "contoso-vc.com",
+  "default_domain": "synthetic-alpha-vc-com.invalid",
+  "queried_domain": "synthetic-alpha-vc-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "contoso-vc.com",
-    "contoso-app.com",
-    "contoso-blog.com"
+    "synthetic-alpha-vc-com.invalid",
+    "synthetic-alpha-app-com.invalid",
+    "synthetic-alpha-blog-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -26,17 +24,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "www.contoso-vc.com",
+      "subdomain": "www.synthetic-alpha-vc-com.invalid",
       "primary_slug": "vercel",
       "primary_name": "Vercel",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "app.contoso-vc.com",
+      "subdomain": "app.synthetic-alpha-vc-com.invalid",
       "primary_slug": "vercel",
       "primary_name": "Vercel",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 127237351450",
+  "tenant_id": "synthetic-scenario-127237351450",
   "_stratum": "paas"
 }

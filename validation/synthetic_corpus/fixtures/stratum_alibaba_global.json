@@ -1,17 +1,15 @@
 {
   "cache_version": 1,
-  "tenant_id": "northwind-ali",
-  "display_name": "Northwind Alibaba Global",
-  "default_domain": "northwind-ali.com",
-  "queried_domain": "northwind-ali.com",
+  "default_domain": "synthetic-beta-ali-com.invalid",
+  "queried_domain": "synthetic-beta-ali-com.invalid",
   "confidence": "high",
   "domain_count": 5,
   "tenant_domains": [
-    "northwind-ali.com",
-    "northwind-cn.com",
-    "northwind-jp.com",
-    "northwind-sg.com",
-    "northwind-corp.com"
+    "synthetic-beta-ali-com.invalid",
+    "synthetic-beta-cn-com.invalid",
+    "synthetic-beta-jp-com.invalid",
+    "synthetic-beta-sg-com.invalid",
+    "synthetic-beta-corp-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -27,5 +25,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 875002827971",
+  "tenant_id": "synthetic-scenario-875002827971",
   "_stratum": "alibaba"
 }

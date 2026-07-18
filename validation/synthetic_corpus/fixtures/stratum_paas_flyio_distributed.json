@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "wingtip-paas-fly",
-  "display_name": "Wingtip Fly.io",
-  "default_domain": "wingtip-fly.com",
-  "queried_domain": "wingtip-fly.com",
+  "default_domain": "synthetic-zeta-fly-com.invalid",
+  "queried_domain": "synthetic-zeta-fly-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "wingtip-fly.com",
-    "wingtip-edge.com",
-    "wingtip-app.com"
+    "synthetic-zeta-fly-com.invalid",
+    "synthetic-zeta-edge-com.invalid",
+    "synthetic-zeta-app-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -23,5 +21,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 137309239999",
+  "tenant_id": "synthetic-scenario-137309239999",
   "_stratum": "paas"
 }

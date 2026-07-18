@@ -17,13 +17,13 @@ legal liability with no offsetting benefit.
 
 ## The one rule
 
-**No real-company data enters the repository, anywhere, ever.** Real
-apex domains, organization names, tenant IDs, and per-domain analysis
-output must not appear in commits, pull requests, issue or PR comments,
-code comments, YAML fingerprints, test fixtures, golden snapshots,
-validation memos, or commit messages. "Ever" includes history: a value
-committed and later removed still lives in the git history and is
-treated as a leak.
+**No evaluated-target data enters the public repository.** Real apex domains,
+organization names, tenant IDs, target-owned records, and per-domain analysis
+output must not appear in commits, pull requests, issue or PR comments, code
+comments, YAML fingerprints, test fixtures, golden snapshots, validation
+memos, or commit messages. History and published source distributions are
+inside this boundary: deleting a value from the current tree does not make a
+past disclosure disappear.
 
 This boundary applies to evaluated targets, not to the public provider catalog.
 Real vendor and product names, provider-controlled service domains used as
@@ -35,11 +35,11 @@ customer and its observed records do not become a public example.
 
 | Allowed | Why it is not target data |
 |---|---|
-| The Microsoft fictional brands (`contoso.com`, `northwindtraders.com`, `fabrikam.com`, `tailspintoys.com`, `wingtiptoys.com`, `adventure-works.com`, `wideworldimporters.com`) and IETF reserved placeholders (`example.com` / `.org` / `.net`) | Fabricated names that teach the method without naming a real target |
+| Explicit synthetic identities under `.invalid` or `.test`, plus IETF reserved examples (`example.com` / `.org` / `.net`) | Reserved names teach the method without implying an organization or evaluated target |
 | Vendor and product names recon detects (Cloudflare, Okta, Microsoft 365, Google Workspace, Proofpoint, ...) | Detection classes in the fingerprint catalogue, not targeting examples |
 | Upstream service hostnames recon itself queries (`login.microsoftonline.com`, `crt.sh`, `api.certspotter.com`, `dns.google`, ...) | Public infrastructure recon talks to, not targets it reports on |
 | Aggregate metrics from corpus work (counts, rates, calibration numbers, drift deltas, entropy-reduction distributions) | Statistics over a set, carrying no apex or per-domain identity |
-| Synthetic corpora and fixtures (the generator, the fictional-brand sample corpus, the synthetic calibration draws) | Generated data with no real-world target in it |
+| Synthetic corpora and fixtures (constrained reserved scenarios and synthetic calibration draws) | Generated data with no real-world target in it |
 
 ## Aggregate validation disclosure controls
 
@@ -57,7 +57,7 @@ or satisfy these controls:
 - Tables report counts, rates, intervals, quantiles, or deltas only. If a
   stratum has fewer than 10 domains, suppress it, combine it with a larger
   bucket, or report only that it was too small to publish.
-- Examples inside the memo use the fictional or reserved domains listed above.
+- Examples inside the memo use only the reserved domains listed above.
   If the real case is load-bearing, describe the behavior generically instead
   of naming the target.
 - The memo states which disclosure controls were applied before it is committed.
@@ -88,7 +88,7 @@ is the practical analogue for reviewing statistical outputs before release.
 
 Public GitHub issues, issue attachments, pull requests, and discussion comments
 are inside the repository disclosure boundary. The public issue forms require a
-privacy acknowledgement and ask only for fictional fixtures, sanitized
+privacy acknowledgement and ask only for reserved synthetic fixtures, sanitized
 diagnostics, generic provider patterns, and provider-controlled references.
 
 If a non-security bug cannot be reproduced without a real target identity, do
@@ -100,8 +100,9 @@ GitHub private vulnerability reporting or the security-reporting instructions
 instead.
 
 Private correspondence does not become a public reproduction. Any resulting
-fix must use a fictional regression fixture, a generic provider-controlled
-pattern, or a disclosure-safe aggregate result before it enters GitHub.
+fix must use a reserved synthetic regression fixture, a generic
+provider-controlled pattern, or a disclosure-safe aggregate result before it
+enters GitHub.
 
 ## Where real data lives instead
 
@@ -140,10 +141,10 @@ The rule is enforced by layered mechanisms, not by vigilance alone:
 |---|---|---|
 | `.gitignore` blocks the private paths by default (`/validation/*` is denied, then specific safe tooling is re-allowed by name) | A real corpus or run output cannot be added without overriding the ignore on purpose | An explicit `git add -f` can still force an ignored file in; the reviewer check is the backstop |
 | `gitleaks` secrets-scan (`.github/workflows/secrets-scan.yml`) on every PR, every push to main, and weekly over full history | Credentials and key material, including values already in history | Tuned to secret patterns, not to real-apex strings; it catches keys, not company names |
-| `scripts/check_validation_hygiene.py`, run by the local gate and release readiness | Forced-added private validation paths, root per-domain JSON dumps, corpus lines, and target-domain fields in committed validation artifacts | It cannot identify every company name in prose or distinguish all vendor reference domains from targets; review still owns that |
-| Private validation output-root guards in `validation/run_path_safety.py` | Maintainer-local validation runners reject in-repository output roots outside the ignored validation workspaces before writing run artifacts | Outside-repository operator paths are allowed; review still owns anything copied back into the repo |
+| `scripts/check_validation_hygiene.py`, run by the local gate and release readiness | Forced-added private paths, tracked and nonignored untracked candidates, unsafe filenames, structured identity fields, Python literals, detailed rejection rows, and non-synthetic identifiers in public validation artifacts | Provider references are explicitly separated from evaluated targets; organization-shaped free prose still requires review |
+| Private validation output-root guards in `validation/run_path_safety.py` and the agentic UX harness | Maintainer-local runners reject in-repository output roots outside ignored validation workspaces before collection or provider initialization | Outside-repository operator paths are allowed; review still owns anything copied back into the repo |
 | `validation/render_calibration_memo.py`, run after private calibration harnesses emit aggregate JSON | Target-identifying JSON keys, target-looking domain string values, and unsuppressed strata below 10 domains before a memo is rendered | It validates the aggregate payload shape, not the semantic interpretation; a human still reviews the memo before committing |
-| The fictional-brand convention (this doc, CONTRIBUTING.md) and reviewer inspection of incoming diffs for real-apex strings | Real company names in examples, fixtures, comments, and prose | Manual; a determined contributor could slip a name past review, which is why the convention is documented loudly |
+| The reserved-synthetic convention (this doc, CONTRIBUTING.md) and reviewer inspection of incoming diffs for evaluated-target identities, records, and output | Real target names and values in examples, fixtures, comments, and prose | Manual; a determined contributor could slip a value past review, which is why the convention is documented loudly |
 | The aggregate-only discipline for validation memos and the cohort summary (PV1) | Per-domain identity in committed statistics: only counts, public-claim rates, model support coverage, intervals, and quantiles reach the repo | Small-cell suppression and review remain semantic controls, not fully mechanical gates |
 
 The honest position: the deterministic mechanisms (`.gitignore`,
@@ -172,11 +173,41 @@ deferred under
 [public-label-snapshot-decision.md](public-label-snapshot-decision.md) unless a
 separate data-handling and architecture review approves it.
 
+## Historical published-artifact exception
+
+A 2026-07-18 full-history and distribution audit found a bounded set of
+pre-policy artifacts. A retired 38-row apex-only input list persisted in four
+older source distributions; it contained no credentials, tenant IDs, or
+per-domain results. Git history, release source snapshots, and the sealed
+v2.6.3 source distribution also retain a detailed per-domain agentic record,
+two former agentic fixtures, a rendered snapshot, and a candidate memo whose
+rejected rows were not aggregate-only. Those artifacts can contain opaque
+identifier-shaped or token-shaped values and domain occurrences. None of the
+identities or values are repeated here.
+
+The audited artifacts are absent from the current tree, and the strengthened
+gate prevents their current shapes from returning. That does not remove them
+from existing Git objects, already downloaded distributions, mirrors, caches,
+or release source snapshots. PyPI distribution bytes are immutable in place;
+GitHub release assets can be removed or replaced, but doing so cannot retract
+copies. Existing attestations remain valid evidence for their original
+artifacts and commits. Rewriting tags and branches would sever the same-name
+source and provenance alignment without erasing those copies.
+
+The project therefore records the complete audited exception instead of
+presenting a partial reference rewrite as erasure. It does not authorize new
+target data. The project maintainer owns any retraction decision and must
+reassess it after a legal, safety, or credential report, or after a material
+change in hosting or package-index removal capabilities. Such a response must
+be coordinated across GitHub, package indexes, mirrors, signatures, caches,
+and downstream users.
+
 ## If real data lands anyway
 
-Treat it as an incident, not an embarrassment to hide. Because history
-counts, removing the file in a new commit is not enough: the value must
-be scrubbed from history (a history rewrite) and, for any credential,
-rotated immediately. The weekly full-history gitleaks run exists so a
-leak that survived review still surfaces rather than sitting quietly in
-the past.
+Treat it as an incident, not an embarrassment to hide. Stop publication,
+remove the data from the current tree and open changes, assess every published
+channel that received it, and document a coordinated remediation decision.
+History rewriting is one possible control, not proof of retraction once signed
+or immutable artifacts have propagated. Rotate any credential immediately.
+The weekly full-history gitleaks run exists so a leak that survived review still
+surfaces rather than sitting quietly in the past.

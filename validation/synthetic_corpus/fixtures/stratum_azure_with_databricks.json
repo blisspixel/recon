@@ -1,16 +1,14 @@
 {
   "cache_version": 1,
-  "tenant_id": "litware-az-db",
-  "display_name": "Litware Azure Analytics",
-  "default_domain": "litware-an.com",
-  "queried_domain": "litware-an.com",
+  "default_domain": "synthetic-eta-an-com.invalid",
+  "queried_domain": "synthetic-eta-an-com.invalid",
   "confidence": "high",
   "domain_count": 4,
   "tenant_domains": [
-    "litware-an.com",
-    "litware-data.com",
-    "litware-bi.com",
-    "litware-ml.com"
+    "synthetic-eta-an-com.invalid",
+    "synthetic-eta-data-com.invalid",
+    "synthetic-eta-bi-com.invalid",
+    "synthetic-eta-ml-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -28,5 +26,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 893198827098",
+  "tenant_id": "synthetic-scenario-893198827098",
   "_stratum": "azure"
 }

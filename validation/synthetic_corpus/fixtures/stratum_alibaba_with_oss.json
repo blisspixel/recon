@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "litware-ali-oss",
-  "display_name": "Litware Alibaba OSS",
-  "default_domain": "litware-ali.com",
-  "queried_domain": "litware-ali.com",
+  "default_domain": "synthetic-eta-ali-com.invalid",
+  "queried_domain": "synthetic-eta-ali-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "litware-ali.com",
-    "litware-cn.com",
-    "litware-storage.com"
+    "synthetic-eta-ali-com.invalid",
+    "synthetic-eta-cn-com.invalid",
+    "synthetic-eta-storage-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -21,5 +19,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 132537563679",
+  "tenant_id": "synthetic-scenario-132537563679",
   "_stratum": "alibaba"
 }

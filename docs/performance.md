@@ -404,15 +404,16 @@ The command below remains useful for local characterization, but one timing run
 is not a benchmark. A current baseline must record the commit, Python and OS
 versions, hardware, network class, provider outcomes, cache state, corpus
 shape, repetition count, p50/p95, peak allocation, and degraded-source count.
-Use a newline-delimited list of apex domains stored locally. The project ships
-only fictional examples; any real corpus remains private under the data policy.
+Use a newline-delimited list of apex domains stored locally. Public
+performance-validation inputs use only reserved synthetic examples; any real
+corpus remains private under the data policy.
 
 ```bash
 recon cache clear --all                                # start cold
 time recon batch path/to/your-corpus.txt --json > /dev/null
 ```
 
-See [CONTRIBUTING.md](../CONTRIBUTING.md#no-real-company-data-ever) for
+See [CONTRIBUTING.md](../CONTRIBUTING.md#no-evaluated-target-data) for
 why the project does not commit a real-company corpus. Local corpora
 conventionally live at `~/.recon/corpus.txt`; they are never
 transmitted anywhere recon does not already query.

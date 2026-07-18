@@ -1,17 +1,15 @@
 {
   "cache_version": 1,
-  "tenant_id": "tailspin-ali-aws",
-  "display_name": "Tailspin Alibaba-AWS",
-  "default_domain": "tailspin-ali-aws.com",
-  "queried_domain": "tailspin-ali-aws.com",
+  "default_domain": "synthetic-epsilon-ali-aws-com.invalid",
+  "queried_domain": "synthetic-epsilon-ali-aws-com.invalid",
   "confidence": "high",
   "domain_count": 5,
   "tenant_domains": [
-    "tailspin-ali-aws.com",
-    "tailspin-cn.com",
-    "tailspin-us.com",
-    "tailspin-eu.com",
-    "tailspin-corp.com"
+    "synthetic-epsilon-ali-aws-com.invalid",
+    "synthetic-epsilon-cn-com.invalid",
+    "synthetic-epsilon-us-com.invalid",
+    "synthetic-epsilon-eu-com.invalid",
+    "synthetic-epsilon-corp-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -29,5 +27,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 388942705316",
+  "tenant_id": "synthetic-scenario-388942705316",
   "_stratum": "alibaba"
 }

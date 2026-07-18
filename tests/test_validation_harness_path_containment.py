@@ -10,7 +10,7 @@ The audit finding (informational) flagged that ``--personas`` and
 ``--fixtures`` CLI values were interpolated directly into ``Path``
 objects without rejecting traversal, absolute paths, or separators.
 The harness then read the resulting file and embedded its contents
-in a prompt sent to a configured LLM provider — turning a
+in a prompt sent to a configured LLM provider - turning a
 maintainer-only tool into a local-file-exfiltration sink when run
 with hostile arguments.
 
@@ -45,8 +45,8 @@ class TestValidateName:
             "analyst",
             "researcher",
             "ops",
-            "contoso-dense",
-            "hardened-sparse",
+            "synthetic-dense",
+            "synthetic-sparse",
             "a",
             "Z",
             "name_with_underscore",
@@ -85,7 +85,7 @@ class TestValidateName:
             _validate_name("persona", name)
 
     def test_safe_name_regex_anchored(self):
-        # The regex must be anchored — otherwise "../valid" would
+        # The regex must be anchored - otherwise "../valid" would
         # match because "valid" appears at the end.
         assert _SAFE_NAME_RE.pattern.startswith("^")
         assert _SAFE_NAME_RE.pattern.endswith("$")
@@ -144,7 +144,7 @@ class TestLegitimateLoaders:
         assert isinstance(body, str)
         assert body  # non-empty
 
-    @pytest.mark.parametrize("name", ["contoso-dense", "hardened-sparse"])
+    @pytest.mark.parametrize("name", ["synthetic-dense", "synthetic-sparse"])
     def test_existing_fixtures_load(self, name):
         payload = _load_fixture(name)
         assert isinstance(payload, dict)

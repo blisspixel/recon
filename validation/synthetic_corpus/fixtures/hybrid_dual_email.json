@@ -1,18 +1,16 @@
 {
   "cache_version": 1,
-  "tenant_id": "contoso-hybrid",
-  "display_name": "Contoso Mergers",
-  "default_domain": "contoso-merger.com",
-  "queried_domain": "contoso-merger.com",
+  "default_domain": "synthetic-alpha-merger-com.invalid",
+  "queried_domain": "synthetic-alpha-merger-com.invalid",
   "confidence": "medium",
   "domain_count": 6,
   "tenant_domains": [
-    "contoso-merger.com",
-    "contoso.com",
-    "contoso.net",
-    "contoso-acquired.com",
-    "merger-corp.com",
-    "contoso-eu.com"
+    "synthetic-alpha-merger-com.invalid",
+    "synthetic-alpha-com.invalid",
+    "synthetic-alpha-net.invalid",
+    "synthetic-alpha-acquired-com.invalid",
+    "synthetic-merger-corp-com.invalid",
+    "synthetic-alpha-eu-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -33,17 +31,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "api.contoso-merger.com",
+      "subdomain": "api.synthetic-alpha-merger-com.invalid",
       "primary_slug": "aws-cloudfront",
       "primary_name": "AWS CloudFront",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "sso.contoso-merger.com",
+      "subdomain": "sso.synthetic-alpha-merger-com.invalid",
       "primary_slug": "okta",
       "primary_name": "Okta",
       "primary_tier": "application"
     }
   ],
+  "display_name": "Synthetic Scenario 767717440971",
+  "tenant_id": "synthetic-scenario-767717440971",
   "_stratum": "baseline"
 }

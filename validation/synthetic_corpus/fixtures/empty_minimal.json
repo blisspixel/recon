@@ -1,17 +1,17 @@
 {
   "cache_version": 1,
-  "tenant_id": "northwind-min",
-  "display_name": "Northwind Minimal",
-  "default_domain": "northwind-min.com",
-  "queried_domain": "northwind-min.com",
+  "default_domain": "synthetic-beta-min-com.invalid",
+  "queried_domain": "synthetic-beta-min-com.invalid",
   "confidence": "low",
   "domain_count": 1,
   "tenant_domains": [
-    "northwind-min.com"
+    "synthetic-beta-min-com.invalid"
   ],
   "services": [],
   "slugs": [],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 676205248132",
+  "tenant_id": "synthetic-scenario-676205248132",
   "_stratum": "baseline"
 }

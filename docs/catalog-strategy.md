@@ -7,8 +7,10 @@ This document is the plan for growing and maintaining the fingerprint catalog
 (`src/recon_tool/data/fingerprints/*.yaml`) so coverage, precision, and
 freshness improve deliberately rather than by accretion. It sets direction; it
 does not change runtime behavior. All corpora and per-domain scan outputs stay
-private and off GitHub per [data-handling-policy.md](data-handling-policy.md);
-only aggregate patterns, generic tooling, and fictional examples are committed.
+private and off GitHub per [data-handling-policy.md](data-handling-policy.md).
+New review artifacts use aggregate patterns, generic tooling, and explicit
+synthetic examples under reserved namespaces. Legacy fictional examples outside
+validation remain bounded migration debt in the roadmap.
 Real vendor and product names, plus provider-controlled domains used in generic
 fingerprint rules, may be committed. The evaluated target names, target-owned
 records, and per-domain results may not.
@@ -108,8 +110,8 @@ Every round records the catalog digest, collection options, source-success
 counts, observation-opportunity counts, unresolved counts, and gap counts by
 record type. Re-run the frozen round after a candidate patch and report only
 aggregate before-and-after deltas. Do not publish a target sample to explain a
-rule. The rule itself, a provider-controlled public reference, fictional
-fixtures, and aggregate counts are sufficient for review.
+rule. The rule itself, a provider-controlled public reference, reserved
+synthetic fixtures, and aggregate counts are sufficient for review.
 
 Stop adding inputs when a round does not answer a new sampling question. Stop a
 promotion pass when the highest-frequency survivors lack an independent public
@@ -228,7 +230,7 @@ declarative-token space.
    and explicit pending, promoted, rejected, or deferred disposition. A vendor
    name alone is not an actionable candidate.
 3. Keep the opt-in unmatched-observation envelope and private ranking tool
-   covered by per-type bounds, fictional fixtures, and default-output absence
+   covered by per-type bounds, reserved synthetic fixtures, and default-output absence
    tests.
 4. Stand up a rank-stratified private corpus and run it once to produce the
    first comparable multi-record baseline and prioritized growth queues.

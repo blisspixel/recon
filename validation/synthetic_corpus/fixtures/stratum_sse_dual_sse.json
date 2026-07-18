@@ -1,17 +1,15 @@
 {
   "cache_version": 1,
-  "tenant_id": "litware-sse-dual",
-  "display_name": "Litware Dual SSE",
-  "default_domain": "litware-dse.com",
-  "queried_domain": "litware-dse.com",
+  "default_domain": "synthetic-eta-dse-com.invalid",
+  "queried_domain": "synthetic-eta-dse-com.invalid",
   "confidence": "high",
   "domain_count": 5,
   "tenant_domains": [
-    "litware-dse.com",
-    "litware-zt.com",
-    "litware-sase.com",
-    "litware-portal.com",
-    "litware-corp.com"
+    "synthetic-eta-dse-com.invalid",
+    "synthetic-eta-zt-com.invalid",
+    "synthetic-eta-sase-com.invalid",
+    "synthetic-eta-portal-com.invalid",
+    "synthetic-eta-corp-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -27,5 +25,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 975318244569",
+  "tenant_id": "synthetic-scenario-975318244569",
   "_stratum": "sse"
 }

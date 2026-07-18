@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "contoso-gcp-cr",
-  "display_name": "Contoso Modern Stack",
-  "default_domain": "contoso-modern.com",
-  "queried_domain": "contoso-modern.com",
+  "default_domain": "synthetic-alpha-modern-com.invalid",
+  "queried_domain": "synthetic-alpha-modern-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "contoso-modern.com",
-    "contoso-app.com",
-    "contoso-stage.com"
+    "synthetic-alpha-modern-com.invalid",
+    "synthetic-alpha-app-com.invalid",
+    "synthetic-alpha-stage-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -26,11 +24,13 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "app.contoso-modern.com",
+      "subdomain": "app.synthetic-alpha-modern-com.invalid",
       "primary_slug": "firebase-hosting",
       "primary_name": "Firebase Hosting",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 599328865647",
+  "tenant_id": "synthetic-scenario-599328865647",
   "_stratum": "gcp"
 }

@@ -24,7 +24,7 @@ If a non-security bug cannot be reproduced without a real target identity, do
 not open a public issue and do not use GitHub private vulnerability reporting.
 Email `nick@pueo.io` with the subject `Private recon data report`, put no target
 identity in the subject, and share the minimum description first. Wait before
-sending full output. Any public fix or regression test will use fictional data
+sending full output. Any public fix or regression test will use reserved synthetic data
 or disclosure-safe aggregates under the
 [data-handling policy](docs/data-handling-policy.md#private-non-security-reports).
 

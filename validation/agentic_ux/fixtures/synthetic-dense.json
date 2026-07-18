@@ -1,0 +1,562 @@
+{
+  "tenant_id": "synthetic-dense-tenant",
+  "display_name": "Synthetic Dense Namespace",
+  "default_domain": "dense.example.invalid",
+  "queried_domain": "dense.example.invalid",
+  "provider": "Microsoft 365 (primary)",
+  "confidence": "high",
+  "evidence_confidence": "high",
+  "inference_confidence": "high",
+  "region": "NA",
+  "auth_type": "Managed",
+  "dmarc_policy": "reject",
+  "domain_count": 1,
+  "sources": [
+    "oidc_discovery",
+    "user_realm",
+    "dns_records"
+  ],
+  "services": [
+    "ADFS SSO hub",
+    "Agari (DMARC)",
+    "Azure DNS",
+    "DMARC",
+    "Exchange Server (on-prem / hybrid)",
+    "Microsoft 365",
+    "SPF: strict (-all)"
+  ],
+  "slugs": [
+    "adfs-sso-hub",
+    "agari",
+    "azure-dns",
+    "exchange-onprem",
+    "microsoft365"
+  ],
+  "insights": [
+    "Cloud-managed identity indicators (Entra ID native)",
+    "Email security: DMARC reject, SPF strict",
+    "No DKIM at common selectors (custom selectors possible)",
+    "DMARC Governance Investment: Agari"
+  ],
+  "tenant_domains": [
+    "dense.example.invalid"
+  ],
+  "related_domains": [
+    "related-001.dense.example.invalid",
+    "related-002.dense.example.invalid",
+    "related-003.dense.example.invalid",
+    "related-004.dense.example.invalid",
+    "related-005.dense.example.invalid",
+    "related-006.dense.example.invalid",
+    "related-007.dense.example.invalid",
+    "related-008.dense.example.invalid",
+    "related-009.dense.example.invalid",
+    "related-010.dense.example.invalid",
+    "related-011.dense.example.invalid",
+    "related-012.dense.example.invalid",
+    "related-013.dense.example.invalid",
+    "related-014.dense.example.invalid",
+    "related-015.dense.example.invalid",
+    "related-016.dense.example.invalid",
+    "related-017.dense.example.invalid",
+    "related-018.dense.example.invalid",
+    "related-019.dense.example.invalid",
+    "related-020.dense.example.invalid",
+    "related-021.dense.example.invalid",
+    "related-022.dense.example.invalid",
+    "related-023.dense.example.invalid",
+    "related-024.dense.example.invalid",
+    "related-025.dense.example.invalid",
+    "related-026.dense.example.invalid",
+    "related-027.dense.example.invalid",
+    "related-028.dense.example.invalid",
+    "related-029.dense.example.invalid",
+    "related-030.dense.example.invalid",
+    "related-031.dense.example.invalid",
+    "related-032.dense.example.invalid"
+  ],
+  "partial": false,
+  "degraded_sources": [
+    "crt.sh"
+  ],
+  "google_auth_type": null,
+  "google_idp_name": null,
+  "mta_sts_mode": null,
+  "site_verification_tokens": [],
+  "primary_email_provider": "Microsoft 365",
+  "likely_primary_email_provider": null,
+  "email_gateway": null,
+  "dmarc_pct": 100,
+  "ct_provider_used": "certspotter",
+  "ct_subdomain_count": 28,
+  "ct_cache_age_days": null,
+  "slug_confidences": [
+    [
+      "microsoft365",
+      0.9615
+    ],
+    [
+      "agari",
+      0.6923
+    ],
+    [
+      "akamai",
+      0.6667
+    ],
+    [
+      "adfs-sso-hub",
+      0.6364
+    ],
+    [
+      "exchange-onprem",
+      0.6364
+    ]
+  ],
+  "posterior_observations": [
+    {
+      "name": "m365_tenant",
+      "description": "Domain has a Microsoft 365 / Entra tenant.",
+      "posterior": 0.9526,
+      "interval_low": 0.8309,
+      "interval_high": 1.0,
+      "evidence_used": [
+        "slug:microsoft365"
+      ],
+      "n_eff": 5.0,
+      "sparse": false,
+      "conflict_provenance": []
+    },
+    {
+      "name": "google_workspace_tenant",
+      "description": "Domain has a Google Workspace tenant.",
+      "posterior": 0.2852,
+      "interval_low": 0.0,
+      "interval_high": 0.5745,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "federated_identity",
+      "description": "Domain uses an external IdP for SSO (Okta, Auth0, Ping, etc.).",
+      "posterior": 0.4325,
+      "interval_low": 0.115,
+      "interval_high": 0.7499,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "okta_idp",
+      "description": "Identity provider is Okta.",
+      "posterior": 0.1326,
+      "interval_low": 0.0,
+      "interval_high": 0.3499,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "email_gateway_present",
+      "description": "Third-party email security gateway in front of MX.",
+      "posterior": 0.2585,
+      "interval_low": 0.0,
+      "interval_high": 0.5391,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "email_security_modern_provider",
+      "description": "Domain runs a modern, managed mail provider (M365 or Google Workspace) and/or a third-party email gateway in front of MX.",
+      "posterior": 0.945,
+      "interval_low": 0.79,
+      "interval_high": 1.0,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "email_security_policy_enforcing",
+      "description": "Observable DMARC policy is enforcing (reject or quarantine); strict SPF and MTA-STS are supporting public signals.",
+      "posterior": 0.9477,
+      "interval_low": 0.82,
+      "interval_high": 1.0,
+      "evidence_used": [
+        "signal:dmarc_reject"
+      ],
+      "n_eff": 5.0,
+      "sparse": false,
+      "conflict_provenance": []
+    },
+    {
+      "name": "cdn_fronting",
+      "description": "A CDN or edge proxy fronts the apex/origin.",
+      "posterior": 0.45,
+      "interval_low": 0.1312,
+      "interval_high": 0.7688,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    },
+    {
+      "name": "aws_hosting",
+      "description": "AWS-hosted infrastructure observed in chains or fingerprints.",
+      "posterior": 0.4,
+      "interval_low": 0.0861,
+      "interval_high": 0.7139,
+      "evidence_used": [],
+      "n_eff": 4.0,
+      "sparse": true,
+      "conflict_provenance": []
+    }
+  ],
+  "email_security_score": 2,
+  "cloud_instance": "microsoftonline.com",
+  "tenant_region_sub_scope": null,
+  "msgraph_host": "graph.microsoft.com",
+  "lexical_observations": [],
+  "cert_summary": {
+    "cert_count": 100,
+    "issuer_diversity": 1,
+    "issuance_velocity": 0,
+    "newest_cert_age_days": 112,
+    "oldest_cert_age_days": 359,
+    "top_issuers": [
+      "Microsoft"
+    ],
+    "wildcard_sibling_clusters": [
+      [
+        "certificate-name-001.example.invalid",
+        "certificate-name-002.example.invalid",
+        "certificate-name-003.example.invalid",
+        "certificate-name-004.example.invalid",
+        "certificate-name-005.example.invalid",
+        "certificate-name-006.example.invalid",
+        "certificate-name-007.example.invalid"
+      ]
+    ],
+    "deployment_bursts": [
+      {
+        "window_start": "2025-10-17T10:34:21+00:00",
+        "window_end": "2025-10-17T10:34:21+00:00",
+        "span_seconds": 0,
+        "names": [
+          "certificate-name-001.example.invalid",
+          "certificate-name-002.example.invalid",
+          "certificate-name-003.example.invalid",
+          "certificate-name-004.example.invalid",
+          "certificate-name-005.example.invalid",
+          "certificate-name-006.example.invalid",
+          "certificate-name-007.example.invalid"
+        ]
+      },
+      {
+        "window_start": "2025-12-10T22:10:44+00:00",
+        "window_end": "2025-12-10T22:10:44+00:00",
+        "span_seconds": 0,
+        "names": [
+          "certificate-name-008.example.invalid",
+          "certificate-name-009.example.invalid",
+          "certificate-name-010.example.invalid",
+          "certificate-name-011.example.invalid",
+          "certificate-name-012.example.invalid",
+          "certificate-name-013.example.invalid",
+          "certificate-name-014.example.invalid",
+          "certificate-name-015.example.invalid",
+          "certificate-name-016.example.invalid",
+          "certificate-name-017.example.invalid",
+          "certificate-name-018.example.invalid",
+          "certificate-name-019.example.invalid",
+          "certificate-name-020.example.invalid",
+          "certificate-name-021.example.invalid",
+          "certificate-name-022.example.invalid",
+          "certificate-name-023.example.invalid",
+          "certificate-name-024.example.invalid",
+          "certificate-name-025.example.invalid",
+          "certificate-name-026.example.invalid",
+          "certificate-name-027.example.invalid",
+          "certificate-name-028.example.invalid",
+          "certificate-name-029.example.invalid",
+          "certificate-name-030.example.invalid",
+          "certificate-name-031.example.invalid",
+          "certificate-name-032.example.invalid"
+        ]
+      },
+      {
+        "window_start": "2025-12-28T14:33:54+00:00",
+        "window_end": "2025-12-28T14:33:54+00:00",
+        "span_seconds": 0,
+        "names": [
+          "certificate-name-001.example.invalid",
+          "certificate-name-002.example.invalid",
+          "certificate-name-003.example.invalid",
+          "certificate-name-004.example.invalid",
+          "certificate-name-005.example.invalid",
+          "certificate-name-006.example.invalid",
+          "certificate-name-007.example.invalid"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T07:45:08+00:00",
+        "window_end": "2026-01-14T07:45:48+00:00",
+        "span_seconds": 40,
+        "names": [
+          "certificate-name-033.example.invalid",
+          "certificate-name-034.example.invalid",
+          "certificate-name-035.example.invalid"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T07:54:24+00:00",
+        "window_end": "2026-01-14T07:55:11+00:00",
+        "span_seconds": 47,
+        "names": [
+          "certificate-name-036.example.invalid",
+          "certificate-name-037.example.invalid",
+          "certificate-name-038.example.invalid"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T08:04:13+00:00",
+        "window_end": "2026-01-14T08:04:49+00:00",
+        "span_seconds": 36,
+        "names": [
+          "certificate-name-039.example.invalid",
+          "certificate-name-040.example.invalid",
+          "certificate-name-041.example.invalid"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T08:07:09+00:00",
+        "window_end": "2026-01-14T08:07:09+00:00",
+        "span_seconds": 0,
+        "names": [
+          "certificate-name-008.example.invalid",
+          "certificate-name-009.example.invalid",
+          "certificate-name-010.example.invalid",
+          "certificate-name-011.example.invalid",
+          "certificate-name-012.example.invalid",
+          "certificate-name-013.example.invalid",
+          "certificate-name-014.example.invalid",
+          "certificate-name-015.example.invalid",
+          "certificate-name-016.example.invalid",
+          "certificate-name-017.example.invalid",
+          "certificate-name-018.example.invalid",
+          "certificate-name-019.example.invalid",
+          "certificate-name-020.example.invalid",
+          "certificate-name-021.example.invalid",
+          "certificate-name-022.example.invalid",
+          "certificate-name-023.example.invalid",
+          "certificate-name-024.example.invalid",
+          "certificate-name-025.example.invalid",
+          "certificate-name-026.example.invalid",
+          "certificate-name-027.example.invalid",
+          "certificate-name-028.example.invalid",
+          "certificate-name-029.example.invalid",
+          "certificate-name-030.example.invalid",
+          "certificate-name-031.example.invalid",
+          "certificate-name-032.example.invalid"
+        ]
+      },
+      {
+        "window_start": "2026-01-14T10:48:00+00:00",
+        "window_end": "2026-01-14T10:48:44+00:00",
+        "span_seconds": 44,
+        "names": [
+          "certificate-name-033.example.invalid",
+          "certificate-name-034.example.invalid",
+          "certificate-name-035.example.invalid"
+        ]
+      }
+    ]
+  },
+  "bimi_identity": null,
+  "evidence": [
+    {
+      "source_type": "HTTP",
+      "raw_value": "tenant_id=synthetic-dense-tenant",
+      "rule_name": "OIDC Discovery",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "HTTP",
+      "raw_value": "FederationBrandName=Synthetic Dense Namespace",
+      "rule_name": "GetUserRealm",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "HTTP",
+      "raw_value": "NameSpaceType=Managed",
+      "rule_name": "GetUserRealm",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "MX",
+      "raw_value": "10 synthetic-dense.mail.protection.outlook.com",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "TXT",
+      "raw_value": "MS=synthetic-ms-token-001",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "TXT",
+      "raw_value": "ms-domain-verification=synthetic-domain-token-001",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "TXT",
+      "raw_value": "MS=synthetic-ms-token-002",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "TXT",
+      "raw_value": "MS=synthetic-ms-token-003",
+      "rule_name": "Microsoft 365",
+      "slug": "microsoft365"
+    },
+    {
+      "source_type": "DMARC_RUA",
+      "raw_value": "rua=mailto:synthetic@rua.agari.com",
+      "rule_name": "Agari (DMARC)",
+      "slug": "agari"
+    },
+    {
+      "source_type": "A",
+      "raw_value": "adfs.dense.example.invalid",
+      "rule_name": "ADFS SSO hub",
+      "slug": "adfs-sso-hub"
+    },
+    {
+      "source_type": "A",
+      "raw_value": "autodiscover.dense.example.invalid, mail.dense.example.invalid",
+      "rule_name": "Exchange Server (on-prem / hybrid)",
+      "slug": "exchange-onprem"
+    },
+    {
+      "source_type": "CNAME",
+      "raw_value": "www.dense.example.invalid: origin.dense.example.invalid -> synthetic-dense.edgekey.net -> synthetic-dense.akamaiedge.net -> synthetic-dense.akamai.net",
+      "rule_name": "Akamai",
+      "slug": "akamai"
+    }
+  ],
+  "detection_scores": {
+    "adfs-sso-hub": "low",
+    "agari": "low",
+    "akamai": "low",
+    "exchange-onprem": "low",
+    "microsoft365": "high"
+  },
+  "evidence_conflicts": [],
+  "chain_motifs": [],
+  "infrastructure_clusters": {
+    "algorithm": "louvain",
+    "modularity": 0.02317562126657868,
+    "node_count": 67,
+    "edge_count": 1791,
+    "clusters": [
+      {
+        "cluster_id": 0,
+        "size": 50,
+        "members": [
+          "certificate-name-008.example.invalid",
+          "certificate-name-009.example.invalid",
+          "certificate-name-010.example.invalid",
+          "certificate-name-011.example.invalid",
+          "certificate-name-012.example.invalid",
+          "certificate-name-013.example.invalid",
+          "certificate-name-014.example.invalid",
+          "certificate-name-015.example.invalid",
+          "certificate-name-016.example.invalid",
+          "certificate-name-017.example.invalid",
+          "certificate-name-018.example.invalid",
+          "certificate-name-019.example.invalid",
+          "certificate-name-020.example.invalid",
+          "certificate-name-021.example.invalid",
+          "certificate-name-022.example.invalid",
+          "certificate-name-023.example.invalid",
+          "certificate-name-024.example.invalid",
+          "certificate-name-025.example.invalid",
+          "certificate-name-026.example.invalid",
+          "certificate-name-027.example.invalid",
+          "certificate-name-028.example.invalid",
+          "certificate-name-029.example.invalid",
+          "certificate-name-030.example.invalid",
+          "certificate-name-031.example.invalid",
+          "certificate-name-032.example.invalid",
+          "certificate-name-042.example.invalid",
+          "certificate-name-043.example.invalid",
+          "certificate-name-044.example.invalid",
+          "certificate-name-045.example.invalid",
+          "certificate-name-046.example.invalid",
+          "certificate-name-047.example.invalid",
+          "certificate-name-048.example.invalid",
+          "certificate-name-049.example.invalid",
+          "certificate-name-050.example.invalid",
+          "certificate-name-051.example.invalid",
+          "certificate-name-052.example.invalid",
+          "certificate-name-053.example.invalid",
+          "certificate-name-054.example.invalid",
+          "certificate-name-055.example.invalid",
+          "certificate-name-056.example.invalid",
+          "certificate-name-057.example.invalid",
+          "certificate-name-058.example.invalid",
+          "certificate-name-059.example.invalid",
+          "certificate-name-060.example.invalid",
+          "certificate-name-061.example.invalid",
+          "certificate-name-062.example.invalid",
+          "certificate-name-063.example.invalid",
+          "certificate-name-064.example.invalid",
+          "certificate-name-065.example.invalid",
+          "certificate-name-066.example.invalid"
+        ],
+        "shared_cert_count": 2450,
+        "dominant_issuer": "Microsoft"
+      },
+      {
+        "cluster_id": 1,
+        "size": 7,
+        "members": [
+          "certificate-name-001.example.invalid",
+          "certificate-name-002.example.invalid",
+          "certificate-name-003.example.invalid",
+          "certificate-name-004.example.invalid",
+          "certificate-name-005.example.invalid",
+          "certificate-name-006.example.invalid",
+          "certificate-name-007.example.invalid"
+        ],
+        "shared_cert_count": 42,
+        "dominant_issuer": "Microsoft"
+      }
+    ]
+  },
+  "fingerprint_metadata": {
+    "microsoft365": {
+      "product_family": "Microsoft 365",
+      "parent_vendor": "Microsoft",
+      "bimi_org": null
+    }
+  },
+  "surface_attributions": [
+    {
+      "subdomain": "surface-001.dense.example.invalid",
+      "primary_slug": "akamai",
+      "primary_name": "Akamai",
+      "primary_tier": "infrastructure",
+      "infra_slug": null,
+      "infra_name": null
+    }
+  ]
+}

@@ -1,18 +1,16 @@
 {
   "cache_version": 1,
-  "tenant_id": "trey-oracle-global",
-  "display_name": "Trey Oracle Global",
-  "default_domain": "trey-oracle.com",
-  "queried_domain": "trey-oracle.com",
+  "default_domain": "synthetic-theta-oracle-com.invalid",
+  "queried_domain": "synthetic-theta-oracle-com.invalid",
   "confidence": "high",
   "domain_count": 6,
   "tenant_domains": [
-    "trey-oracle.com",
-    "trey-eu.com",
-    "trey-jp.com",
-    "trey-au.com",
-    "trey-br.com",
-    "trey-corp.com"
+    "synthetic-theta-oracle-com.invalid",
+    "synthetic-theta-eu-com.invalid",
+    "synthetic-theta-jp-com.invalid",
+    "synthetic-theta-au-com.invalid",
+    "synthetic-theta-br-com.invalid",
+    "synthetic-theta-corp-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -28,5 +26,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 533389343674",
+  "tenant_id": "synthetic-scenario-533389343674",
   "_stratum": "oracle"
 }

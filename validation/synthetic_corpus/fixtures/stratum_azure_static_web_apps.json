@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "fabrikam-az-swa",
-  "display_name": "Fabrikam SWA Sites",
-  "default_domain": "fabrikam-swa.com",
-  "queried_domain": "fabrikam-swa.com",
+  "default_domain": "synthetic-gamma-swa-com.invalid",
+  "queried_domain": "synthetic-gamma-swa-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "fabrikam-swa.com",
-    "fabrikam-marketing.com",
-    "fabrikam-blog.com"
+    "synthetic-gamma-swa-com.invalid",
+    "synthetic-gamma-marketing-com.invalid",
+    "synthetic-gamma-blog-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -24,11 +22,13 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "www.fabrikam-swa.com",
+      "subdomain": "www.synthetic-gamma-swa-com.invalid",
       "primary_slug": "azure-static-web-apps",
       "primary_name": "Azure Static Web Apps",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 453687287435",
+  "tenant_id": "synthetic-scenario-453687287435",
   "_stratum": "azure"
 }

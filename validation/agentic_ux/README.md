@@ -1,7 +1,7 @@
 # Agentic UX validation harness
 
 **Audience:** recon maintainers running bridge-milestone validation for
-the v1.9.x → v2.0 schema lock. End users running `recon contoso.com` do
+the v1.9.x to v2.0 schema lock. End users running `recon example.com` do
 not need this directory and do not need an LLM API key. The default
 recon CLI never calls an LLM.
 
@@ -18,12 +18,13 @@ change a conclusion.
 
 The harness drives three persona prompts (security analyst,
 due-diligence researcher, ops engineer) across two committed fixtures
-(`contoso-dense.json` for a populated lookup; `hardened-sparse.json`
+(`synthetic-dense.json` for a populated lookup; `synthetic-sparse.json`
 for a deliberately-thin lookup) under fusion-on and fusion-off arms,
 records transcripts, scores them against five binary checks, and
-produces a self-contained markdown report at
-`validation/v1.9.2-agentic-ux.md`. The findings feed the v2.0
-schema-lock disposition decisions in the roadmap.
+produces a self-contained markdown report under the gitignored
+`validation/agentic_ux/local/` directory. The sanitized historical
+aggregate at `validation/v1.9.2-agentic-ux.md` records the original
+schema-lock disposition without retaining transcripts or target rows.
 
 ## Why it makes recon better
 
@@ -70,10 +71,10 @@ are falsifiable.
 ## Running it
 
 ```bash
-# Default  -  Anthropic Sonnet 4.6, ~$0.36 per full run
+# Default provider and model, with provider charges
 python -m validation.agentic_ux.run
 
-# Cheaper / faster  -  Haiku 4.5, ~$0.10 per run (lower fidelity)
+# Lower-cost model option
 python -m validation.agentic_ux.run --model claude-haiku-4-5
 
 # OpenAI
@@ -83,13 +84,15 @@ python -m validation.agentic_ux.run --provider openai --model gpt-5
 python -m validation.agentic_ux.run --provider xai --model grok-4
 
 # Subset of personas / fixtures
-python -m validation.agentic_ux.run --personas analyst,ops --fixtures contoso-dense
+python -m validation.agentic_ux.run --personas analyst,ops --fixtures synthetic-dense
 ```
 
-The runner writes the report to `validation/v1.9.2-agentic-ux.md` by
-default. Override with `--output`. Pass `--records-json <path>` to
-also dump raw session records (the report itself contains
-transcripts already; the JSON is for downstream tooling).
+The runner writes the report to
+`validation/agentic_ux/local/report.md` by default. `--output` and
+`--records-json` accept paths outside the repository or under the
+gitignored `validation/agentic_ux/local/` and
+`validation/agentic_ux/runs/` directories. Other in-repository paths
+are rejected before provider initialization.
 
 ## Privacy and data discipline
 
@@ -97,16 +100,15 @@ Everything in this directory respects the project's
 no-real-company-data invariant (see `validation/README.md` →
 Policy):
 
-- Both fixtures use Microsoft fictional brands (Contoso, Northwind
-  Traders).
-- Persona prompts and fixtures are committed; agent transcripts are
-  generated against fictional inputs and are also safe to commit.
+- Both fixtures use explicit synthetic identities under the reserved
+  `.invalid` namespace.
+- Persona prompts and neutral fixtures are committed. Transcripts,
+  provider metadata, and raw run records stay local and gitignored.
 - API keys never get committed. The harness reads them from env or
   from a `--api-key` argument; it does not log them and does not
   embed them in the report.
-- If you adapt the harness for a private corpus, point the
-  fixtures and report path at `validation/agentic_ux/runs/` or
-  `validation/agentic_ux/local/` (both gitignored).
+- Keep every run output under `validation/agentic_ux/runs/` or
+  `validation/agentic_ux/local/`, both of which are gitignored.
 
 ## What this is NOT
 

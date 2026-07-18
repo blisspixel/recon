@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "contoso-sse-pa-only",
-  "display_name": "Contoso PA Only",
-  "default_domain": "contoso-pa.com",
-  "queried_domain": "contoso-pa.com",
+  "default_domain": "synthetic-alpha-pa-com.invalid",
+  "queried_domain": "synthetic-alpha-pa-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "contoso-pa.com",
-    "contoso-firewall.com",
-    "contoso-corp.com"
+    "synthetic-alpha-pa-com.invalid",
+    "synthetic-alpha-firewall-com.invalid",
+    "synthetic-alpha-corp-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -21,5 +19,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 446572492532",
+  "tenant_id": "synthetic-scenario-446572492532",
   "_stratum": "sse"
 }

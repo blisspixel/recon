@@ -15,7 +15,7 @@ behaviour on the v1.9.9 panels to the v1.9.2 baseline.
 Usage::
 
     python validation/synthetic_corpus/render_snapshots.py \\
-        --output validation/synthetic_corpus/render_snapshots.md
+        --output validation/agentic_ux/local/render-snapshots.md
 """
 
 from __future__ import annotations
@@ -50,7 +50,7 @@ def _fixture_paths() -> list[tuple[str, Path]]:
     synthetic corpus fixtures alphabetical second."""
     pairs: list[tuple[str, Path]] = []
     agentic_dir = REPO_ROOT / "validation" / "agentic_ux" / "fixtures"
-    for name in ("contoso-dense.json", "hardened-sparse.json"):
+    for name in ("synthetic-dense.json", "synthetic-sparse.json"):
         path = agentic_dir / name
         if path.exists():
             pairs.append((f"v1.9.2: {path.stem}", path))
@@ -68,7 +68,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--output",
         type=Path,
-        default=REPO_ROOT / "validation" / "synthetic_corpus" / "render_snapshots.md",
+        default=REPO_ROOT / "validation" / "agentic_ux" / "local" / "render-snapshots.md",
     )
     args = parser.parse_args(argv)
 
@@ -124,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
         lines.append(f"- Passive-DNS ceiling: **{ceiling}**")
         lines.append("")
 
+    args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text("\n".join(lines), encoding="utf-8")
     print(f"wrote {args.output} ({len(pairs)} fixtures)")
     return 0

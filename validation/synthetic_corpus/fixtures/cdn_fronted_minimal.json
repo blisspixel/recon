@@ -1,14 +1,12 @@
 {
   "cache_version": 1,
-  "tenant_id": "northwind-cdn",
-  "display_name": "Northwind Boutique",
-  "default_domain": "northwind-boutique.com",
-  "queried_domain": "northwind-boutique.com",
+  "default_domain": "synthetic-beta-boutique-com.invalid",
+  "queried_domain": "synthetic-beta-boutique-com.invalid",
   "confidence": "medium",
   "domain_count": 2,
   "tenant_domains": [
-    "northwind-boutique.com",
-    "northwind-shop.com"
+    "synthetic-beta-boutique-com.invalid",
+    "synthetic-beta-shop-com.invalid"
   ],
   "services": [
     "Cloudflare",
@@ -21,11 +19,13 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "shop.northwind-boutique.com",
+      "subdomain": "shop.synthetic-beta-boutique-com.invalid",
       "primary_slug": "shopify",
       "primary_name": "Shopify",
       "primary_tier": "application"
     }
   ],
+  "display_name": "Synthetic Scenario 500695670712",
+  "tenant_id": "synthetic-scenario-500695670712",
   "_stratum": "baseline"
 }

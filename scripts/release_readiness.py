@@ -168,9 +168,7 @@ class _ReleaseAssetClient:
             raise _ReleaseEvidenceError("release asset size inventory is missing: " + ", ".join(missing))
         unsafe = sorted(name for name, size in sizes.items() if size <= 0 or size > _MAX_RELEASE_ASSET_BYTES)
         if unsafe:
-            raise _ReleaseEvidenceError(
-                f"release asset declares an empty or oversized file: {', '.join(unsafe)}"
-            )
+            raise _ReleaseEvidenceError(f"release asset declares an empty or oversized file: {', '.join(unsafe)}")
 
     def download(self, subject: str) -> Path:
         result = self.runner(
@@ -407,11 +405,7 @@ def _check_roadmap_version(root: Path) -> CheckResult:
         }
     except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
         return _result("roadmap version", "fail", str(exc))
-    stale = [
-        relative
-        for relative, text in roadmaps.items()
-        if f"v{version}" not in "\n".join(text.splitlines()[:80])
-    ]
+    stale = [relative for relative, text in roadmaps.items() if f"v{version}" not in "\n".join(text.splitlines()[:80])]
     if stale:
         return _result(
             "roadmap version",
@@ -467,18 +461,29 @@ def _check_readme_usage(root: Path) -> CheckResult:
     except OSError as exc:
         return _result("README usage", "fail", str(exc))
     anchors = (
-        "recon contoso.com",
+        "recon example.com",
         "recon batch domains.txt --json",
         "recon mcp install --client=",
-        "Examples use [Microsoft's fictional company names]",
+        "Examples use IETF reserved namespaces",
         "python scripts/check.py",
-        "Project hygiene: keep examples fictional or synthetic",
+        "Project hygiene: keep examples reserved and synthetic",
         "keep validation artifacts",
         "avoid dead code or placeholders",
     )
     missing = [anchor for anchor in anchors if anchor not in text]
     if missing:
         return _result("README usage", "fail", "missing anchors: " + ", ".join(missing))
+    unsafe_examples = any(
+        not check_validation_hygiene.is_allowed_public_domain(match.group(1))
+        for match in check_validation_hygiene.RECON_COMMAND_RE.finditer(text)
+    )
+    if unsafe_examples:
+        return _result(
+            "README usage",
+            "fail",
+            "README contains a non-reserved recon domain example",
+            "use an IETF-reserved or synthetic domain without repeating the target",
+        )
     forbidden = [fragment for fragment in _README_FORBIDDEN_FRAGMENTS if fragment in text]
     if forbidden:
         detail = "forbidden README wording: " + ", ".join(forbidden)
@@ -532,11 +537,11 @@ def _check_supply_chain_recipe_version(root: Path) -> CheckResult:
 
 
 def _check_private_tracked_files(runner: Runner, root: Path = ROOT) -> CheckResult:
-    result = runner(["git", "ls-files"])
+    result = runner(list(check_validation_hygiene.GIT_FILE_INVENTORY_ARGS))
     if result.returncode != 0:
-        return _result("private data", "fail", result.stderr.strip() or "could not list tracked files")
-    tracked = [line.strip().replace("\\", "/") for line in result.stdout.splitlines() if line.strip()]
-    violations = check_validation_hygiene.find_violations(root, tracked)
+        return _result("private data", "fail", result.stderr.strip() or "could not list candidate files")
+    candidates = check_validation_hygiene.parse_git_file_inventory(result.stdout)
+    violations = check_validation_hygiene.find_violations(root, candidates)
     if violations:
         leaked = sorted(violation.render() for violation in violations)
         return _result(
@@ -545,7 +550,11 @@ def _check_private_tracked_files(runner: Runner, root: Path = ROOT) -> CheckResu
             "; ".join(leaked),
             "remove private validation artifacts or target-specific fields from git",
         )
-    return _result("private data", "pass", "no tracked private corpus, run output, or target-domain validation fields")
+    return _result(
+        "private data",
+        "pass",
+        "configured validation hygiene checks passed for candidate public artifacts",
+    )
 
 
 def _has_pictograph(text: str) -> bool:

@@ -65,8 +65,16 @@ regional, vertical, vendor-seed, or drift questions. It must account for every
 bounded record path as measured, partial, unavailable, or unmeasured before
 claiming broad coverage. The opt-in typed reducer now covers all current catalog
 paths; its detailed queues and manifests remain private. Target identities,
-target-owned records, and per-domain rows stay off GitHub; only generic provider
-patterns, fictional fixtures, and disclosure-safe aggregates are public.
+target-owned records, and per-domain rows stay off GitHub. Within validation,
+only generic provider patterns, reserved synthetic fixtures, and
+disclosure-safe aggregates are public. Current validation generators are
+deterministic, their tracked outputs must match source, and the local and
+release gates reject identity-bearing JSON,
+NDJSON, CSV, candidate-rejection rows, and detailed run artifacts.
+Remaining legacy fictional examples and fixtures outside validation, including
+prose, CLI and help examples, structured samples, snapshots, tests, and agent
+guidance, will move to reserved identities as bounded migration debt, without
+changing behavior.
 The first frozen convenience-sample baseline, provider-supported promotion
 gate, and unseen vertical holdout are complete. Independent rank, regional,
 vendor-seed, and drift rounds remain before any broad catalog-coverage claim.

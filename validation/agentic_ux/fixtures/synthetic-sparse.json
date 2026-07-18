@@ -1,8 +1,8 @@
 {
   "tenant_id": null,
   "display_name": null,
-  "default_domain": "northwindtraders.com",
-  "queried_domain": "northwindtraders.com",
+  "default_domain": "sparse.example.invalid",
+  "queried_domain": "sparse.example.invalid",
   "provider": "Microsoft 365 (primary)",
   "confidence": "low",
   "evidence_confidence": "low",
@@ -24,7 +24,7 @@
     "Single weak indicator: user-realm endpoint returned a Federated tenant marker. No DNS, MX, TXT, or CT corroboration."
   ],
   "tenant_domains": [
-    "northwindtraders.com"
+    "sparse.example.invalid"
   ],
   "related_domains": [],
   "ct_subdomain_count": 0,
@@ -66,7 +66,7 @@
   "evidence": [
     {
       "source": "user_realm",
-      "domain": "northwindtraders.com",
+      "domain": "sparse.example.invalid",
       "fact": "NameSpaceType=Federated",
       "weight": 0.4
     }

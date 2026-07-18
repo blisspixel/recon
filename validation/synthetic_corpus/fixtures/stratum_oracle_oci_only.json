@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "northwind-oci",
-  "display_name": "Northwind OCI",
-  "default_domain": "northwind-oci.com",
-  "queried_domain": "northwind-oci.com",
+  "default_domain": "synthetic-beta-oci-com.invalid",
+  "queried_domain": "synthetic-beta-oci-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "northwind-oci.com",
-    "northwind-cloud.com",
-    "northwind-svc.com"
+    "synthetic-beta-oci-com.invalid",
+    "synthetic-beta-cloud-com.invalid",
+    "synthetic-beta-svc-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -23,5 +21,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 953292979626",
+  "tenant_id": "synthetic-scenario-953292979626",
   "_stratum": "oracle"
 }

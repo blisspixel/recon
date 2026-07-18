@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "trey-gcp-data",
-  "display_name": "Trey Data Sciences",
-  "default_domain": "trey-data.com",
-  "queried_domain": "trey-data.com",
+  "default_domain": "synthetic-theta-data-com.invalid",
+  "queried_domain": "synthetic-theta-data-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "trey-data.com",
-    "trey-bi.com",
-    "trey-ml.com"
+    "synthetic-theta-data-com.invalid",
+    "synthetic-theta-bi-com.invalid",
+    "synthetic-theta-ml-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -27,5 +25,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 091852762720",
+  "tenant_id": "synthetic-scenario-091852762720",
   "_stratum": "gcp"
 }

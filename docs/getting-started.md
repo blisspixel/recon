@@ -164,24 +164,25 @@ standards-defined MTA-STS policy fetch at
 probes run only when `--direct-probes` is explicitly enabled.
 
 ```bash
-recon contoso.com
+recon example.com
 ```
 
-Use fictional or reserved domains in examples and docs. Public validation work
-with real apexes stays in gitignored local workspaces.
+Use explicit synthetic identities under reserved namespaces in examples and
+docs. Public validation work with real apexes stays in gitignored local
+workspaces.
 
 ## Input Normalization
 
-Pass a public-suffix domain (for example `contoso.com`). A bare hostname without
+Pass a public-suffix domain (for example `example.com`). A bare hostname without
 a dot is rejected with `Invalid domain format` rather than treated as an unknown
 CLI command.
 
 recon accepts common paste shapes:
 
 ```bash
-recon https://www.contoso.com/path
-recon contoso.com.
-recon mail.contoso.com
+recon https://www.example.com/path
+recon example.com.
+recon mail.example.com
 ```
 
 By default, recon reduces a URL or sub-host to the registrable apex where tenant,
@@ -189,18 +190,18 @@ MX, SPF, DMARC, and CT evidence usually live. Pass `--exact` only when you want
 DNS facts for the literal host:
 
 ```bash
-recon mail.contoso.com --exact
+recon mail.example.com --exact
 ```
 
 ## Output Modes
 
 ```bash
-recon contoso.com
-recon contoso.com --full
-recon contoso.com --explain
-recon contoso.com --plain
-recon contoso.com --json
-recon contoso.com --md
+recon example.com
+recon example.com --full
+recon example.com --explain
+recon example.com --plain
+recon example.com --json
+recon example.com --md
 ```
 
 Services are already present in the compact default panel. `--verbose` keeps
@@ -291,7 +292,7 @@ check source connectivity, then retry the lookup.
 recon batch domains.txt --json
 recon batch domains.txt --ndjson
 cat domains.txt | recon batch - --json
-recon delta contoso.com
+recon delta example.com
 ```
 
 Batch files contain one domain per line. Blank lines and lines beginning with

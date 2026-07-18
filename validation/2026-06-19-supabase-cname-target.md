@@ -30,7 +30,7 @@ Supabase-specific fingerprint.
 The regression uses a fictional chain:
 
 ```text
-api.contoso.com -> abcdefghijklmnopqrst.supabase.co
+api.example.invalid -> abcdefghijklmnopqrst.supabase.co
 ```
 
 Expected result:
