@@ -113,9 +113,12 @@ class TestLookupExitContract:
         assert result.exit_code == expected_code
         if error_type == "no_data":
             assert "No information found for contoso.com" in result.stderr
+            assert "Run recon doctor" not in result.stderr
         else:
             assert message in result.stderr
             assert "No information found" not in result.stderr
+            assert "Run recon doctor to check online source connectivity, then retry." in result.stderr
+            assert result.stdout == ""
 
 
 class TestBatchMachineOutputClean:

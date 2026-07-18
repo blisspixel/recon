@@ -12,6 +12,8 @@ import pytest
 _ROOT = Path(__file__).resolve().parents[1]
 _INSTALL_SH = _ROOT / "scripts" / "install.sh"
 _INSTALL_PS1 = _ROOT / "scripts" / "install.ps1"
+_README = _ROOT / "README.md"
+_GETTING_STARTED = _ROOT / "docs" / "getting-started.md"
 
 
 def test_installers_do_not_bootstrap_pipx_with_unpinned_pip() -> None:
@@ -42,6 +44,21 @@ def test_installers_preserve_the_offline_first_run_trust_sequence() -> None:
         assert "Google CSE" in installer
         assert "BIMI" in installer
         assert "--direct-probes" in installer
+
+
+def test_helper_guidance_requires_local_review_before_execution() -> None:
+    texts = {
+        "README": _README.read_text(encoding="utf-8"),
+        "Getting Started": _GETTING_STARTED.read_text(encoding="utf-8"),
+        "PowerShell installer": _INSTALL_PS1.read_text(encoding="utf-8"),
+        "Unix installer": _INSTALL_SH.read_text(encoding="utf-8"),
+    }
+
+    for label, text in texts.items():
+        assert "raw.githubusercontent.com/blisspixel/recon/main/scripts/install" not in text, label
+        assert "review" in text.lower(), label
+    assert "bash scripts/install.sh" in texts["Unix installer"]
+    assert "-File .\\scripts\\install.ps1" in texts["PowerShell installer"]
 
 
 def test_unix_installer_shell_syntax() -> None:

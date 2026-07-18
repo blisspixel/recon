@@ -180,6 +180,28 @@ class TestBuildJobIsPure:
             )
 
 
+class TestPackageSmokeJob:
+    """A low-privilege job must execute the sealed wheel before publication."""
+
+    def test_package_smoke_consumes_dist_and_runs_both_entry_points(self, workflow):
+        job = workflow["jobs"]["package-smoke"]
+        text = "\n".join(_step_text(step) for step in _steps(job))
+        needs = job.get("needs")
+
+        assert needs == "build"
+        assert job["permissions"] == {"contents": "read"}
+        assert "actions/download-artifact@" in text
+        assert "name=dist" in text
+        assert 'uv tool run --isolated --from "$wheel" recon --version' in text
+        assert 'uv run --no-project --isolated --with "$wheel" python -m recon_tool --version' in text
+        assert job.get("permissions", {}).get("id-token") != _PERM_WRITE
+
+    def test_publication_waits_for_package_smoke(self, workflow):
+        for name in ("publish-pypi", "github-release"):
+            needs = workflow["jobs"][name]["needs"]
+            assert "package-smoke" in needs, f"{name} must wait for the sealed-wheel smoke test"
+
+
 class TestSbomJobIsIsolated:
     """The sbom job must run in a separate workspace and must not
     have access to dist/."""

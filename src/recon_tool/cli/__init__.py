@@ -1,14 +1,8 @@
-"""CLI application — recon: domain intelligence from the command line.
+"""CLI application facade for recon.
 
-Supports both:
-  recon contoso.com          (shorthand — domain has a dot)
-  recon lookup contoso.com   (explicit subcommand)
-  recon doctor
-  recon batch domains.txt
-  recon mcp                (start MCP server)
-
-The shorthand syntax uses Typer's invoke_without_command callback to route
-domain-like arguments to the lookup command. No sys.argv mutation needed.
+Supports shorthand ``recon DOMAIN``, explicit ``recon lookup DOMAIN``, doctor,
+batch, and MCP commands. Typer's ``invoke_without_command`` callback routes
+non-command first arguments to lookup so domain validation owns diagnostics.
 """
 
 from __future__ import annotations
@@ -35,6 +29,7 @@ from recon_tool.cli.options import (
     LookupOutputOptions,
 )
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
+from recon_tool.cli.shared import help_markup_mode as _help_markup_mode
 from recon_tool.cli.shared import positive_finite_float, raise_lookup_error
 from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
@@ -127,8 +122,9 @@ app = typer.Typer(
         "Passive domain intelligence from public sources. "
         "Start with recon DOMAIN; run recon with no arguments for examples."
     ),
-    rich_markup_mode="rich",
+    rich_markup_mode=_help_markup_mode(),
     cls=_DomainGroup,
+    subcommand_metavar="[DOMAIN | COMMAND [ARGS]...]",
     # `-h` as a help alias everywhere (Click propagates help_option_names to
     # every subcommand context), matching the near-universal CLI convention.
     context_settings={"help_option_names": ["-h", "--help"]},
@@ -247,7 +243,7 @@ def _print_welcome_banner() -> None:
     console.print("  recon <domain>                    → clean summary (recommended)")
     console.print("  recon <domain> --plain            → linear output for screen readers and grep")
     console.print("  recon <domain> --json             → structured automation")
-    console.print("  recon <domain> --explain          → full reasoning and evidence")
+    console.print("  recon <domain> --explain          → evidence and explanation")
     console.print("  recon batch domains.txt           → process multiple domains")
     console.print("  recon doctor                      → check online source connectivity")
     console.print("  recon mcp install --help          → connect an MCP client")

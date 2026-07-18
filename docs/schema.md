@@ -98,16 +98,18 @@ the CLI and the MCP server entry point.
 | Code | Name | Meaning |
 |---|---|---|
 | `0` | success | The command completed and produced its output. |
-| `1` | general error | An unexpected or uncaught failure, plus a few handled fallbacks that are neither a clean validation nor a no-data case (an optional MCP dependency missing, an unexpected MCP server fault). This is also the Python default for an uncaught exception, so it covers paths recon does not explicitly classify. |
+| `1` | general error | An explicitly handled command or server failure that is neither validation, no-data, nor a caught pipeline case, such as a missing optional MCP dependency or failed doctor check. It is also Python's default if an exception escapes before the CLI last-resort handler is active, or from an alternate entry point without that handler. |
 | `2` | validation error | Input recon rejected before doing work: a malformed domain, a missing file, mutually exclusive flags, or a refused unsafe invocation. No JSON is emitted on this path. |
 | `3` | no data | The target resolved but no information was available, or `recon delta` had no cached baseline. No JSON is emitted on this path. |
-| `4` | internal error | A network or pipeline failure recon caught and classified itself, rather than letting it surface as an uncaught `1`. |
+| `4` | internal error | A network or pipeline failure recon caught and classified, or an unexpected runtime crash caught by the CLI last-resort handler. |
 
 Notes for scripters:
 
 - Codes `2`, `3`, and `4` are emitted deliberately by the lookup and delta
-  paths; `1` is the general fallback; `0` is success. `recon delta` and
-  `recon <domain> --compare <file>` follow the same contract.
+  paths; the top-level CLI crash handler also emits `4`. Code `1` covers
+  explicitly handled general failures and pre-handler fallbacks; `0` is
+  success. `recon delta` and `recon <domain> --compare <file>` follow the same
+  contract.
 - For a single-domain lookup, only `error_type="no_data"` maps to `3`.
   Aggregate timeout, `all_sources_failed`, and unknown structured resolver
   failures are caught pipeline failures and map to `4`.

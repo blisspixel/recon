@@ -7,21 +7,24 @@ names a constant instead of a bare integer literal.
 The contract (documented for consumers in ``docs/schema.md``):
 
 * ``0`` success: the command completed and produced its output.
-* ``1`` general error: an unexpected or uncaught failure, plus the few
-  handled fallbacks that are neither a clean validation nor no-data case
-  (an optional MCP dependency missing, an unexpected MCP server fault).
-  This is the Python default for an uncaught exception, so it also
-  covers paths recon does not explicitly classify.
+* ``1`` general error: an explicitly handled command or server failure that
+  is neither a clean validation, no-data, nor caught pipeline case (for
+  example, a missing optional MCP dependency or a failed doctor check). It is
+  also Python's default when an exception escapes before recon's CLI
+  last-resort handler is active, or from an alternate entry point without that
+  handler.
 * ``2`` validation error: bad input that recon rejected before doing
   work (malformed domain, missing file, mutually exclusive flags, a
   refused unsafe invocation).
 * ``3`` no data: the target resolved but no information was available.
-* ``4`` internal error: recon classified its own failure (a network or
-  pipeline error it caught and reported) rather than letting it surface
-  as an uncaught ``1``.
+* ``4`` internal error: recon caught and classified a network or pipeline
+  failure, or the CLI last-resort handler caught an unexpected runtime crash
+  and reported its local crash-artifact path.
 
-Codes ``2``, ``3``, and ``4`` are the ones the lookup and delta paths
-emit deliberately; ``1`` is the general fallback; ``0`` is success.
+Codes ``2``, ``3``, and ``4`` are the ones the lookup and delta paths emit
+deliberately; the top-level CLI crash handler also emits ``4``. Code ``1`` is
+the explicitly handled general failure and pre-handler fallback; ``0`` is
+success.
 """
 
 from __future__ import annotations
