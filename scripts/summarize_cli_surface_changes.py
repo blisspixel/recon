@@ -129,9 +129,9 @@ def _code_list(values: Sequence[str], limit: int = 5) -> str:
     return rendered
 
 
-def _flag_list(values: Sequence[FlagToken], limit: int = 5) -> str:
+def _flag_list(values: Sequence[FlagToken], preposition: str, limit: int = 5) -> str:
     shown = list(values[:limit])
-    rendered = ", ".join(f"`{item.token}` on `{item.command}`" for item in shown)
+    rendered = ", ".join(f"`{item.token}` {preposition} `{item.command}`" for item in shown)
     extra = len(values) - len(shown)
     if extra > 0:
         rendered = f"{rendered}, plus {extra} more" if rendered else f"{extra} more"
@@ -148,9 +148,11 @@ def summarize_cli_surface_changes(diff: CliSurfaceDiff) -> str:
     if diff.removed_commands:
         parts.append(f"removed commands {_code_list(diff.removed_commands)}")
     if diff.added_flags:
-        parts.append(f"added flags {_flag_list(diff.added_flags)}")
+        noun = "flag" if len(diff.added_flags) == 1 else "flags"
+        parts.append(f"added {noun} {_flag_list(diff.added_flags, 'to')}")
     if diff.removed_flags:
-        parts.append(f"removed flags {_flag_list(diff.removed_flags)}")
+        noun = "flag" if len(diff.removed_flags) == 1 else "flags"
+        parts.append(f"removed {noun} {_flag_list(diff.removed_flags, 'from')}")
     return "Tool surface changes: " + "; ".join(parts) + "."
 
 

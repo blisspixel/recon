@@ -15,8 +15,8 @@ Services
 
 Domains (3)
   alpha.invalid
-  alpha.onmicrosoft.com
-  alpha.invalid
+  alpha.test
+  alpha.example
 
 
 Related domains

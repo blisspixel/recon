@@ -58,8 +58,8 @@ def test_diff_cli_surfaces_detects_command_and_flag_changes() -> None:
     assert diff.removed_flags == (FlagToken("recon lookup", "--plain"),)
     assert summarize_cli_surface_changes(diff) == (
         "Tool surface changes: added commands `recon mcp doctor`; "
-        "added flags `--exact` on `recon lookup`; "
-        "removed flags `--plain` on `recon lookup`."
+        "added flag `--exact` to `recon lookup`; "
+        "removed flag `--plain` from `recon lookup`."
     )
 
 
@@ -72,6 +72,23 @@ def test_summarize_cli_surface_changes_reports_no_changes() -> None:
     )
 
     assert summarize_cli_surface_changes(diff) == "Tool surface changes: no CLI command or flag changes."
+
+
+def test_summarize_cli_surface_changes_uses_plural_flag_grammar() -> None:
+    diff = CliSurfaceDiff(
+        added_commands=(),
+        removed_commands=(),
+        added_flags=(
+            FlagToken("recon lookup", "--exact"),
+            FlagToken("recon lookup", "--plain"),
+        ),
+        removed_flags=(),
+    )
+
+    assert summarize_cli_surface_changes(diff) == (
+        "Tool surface changes: added flags `--exact` to `recon lookup`, "
+        "`--plain` to `recon lookup`."
+    )
 
 
 def test_load_inventory_from_text_rejects_non_object() -> None:
@@ -90,7 +107,7 @@ def test_main_emits_summary_for_inventory_paths(tmp_path: Path, capsys: pytest.C
 
     assert main([str(old_path), str(new_path)]) == 0
 
-    assert capsys.readouterr().out.strip() == ("Tool surface changes: added flags `--exact` on `recon lookup`.")
+    assert capsys.readouterr().out.strip() == ("Tool surface changes: added flag `--exact` to `recon lookup`.")
 
 
 def test_main_emits_json_for_inventory_paths(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:

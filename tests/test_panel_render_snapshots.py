@@ -55,8 +55,8 @@ def _multi_cloud_fixture() -> TenantInfo:
         default_domain="alpha.invalid",
         queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
-        domain_count=8,
-        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid", "alpha-corp.invalid"),
+        domain_count=4,
+        tenant_domains=("alpha.invalid", "alpha.test", "alpha.example", "alpha-corp.invalid"),
         services=("AWS CloudFront", "AWS Route 53", "Cloudflare", "Fastly", "Okta", "Slack"),
         slugs=("aws-cloudfront", "aws-route53", "cloudflare", "fastly", "okta", "slack"),
         evidence=(

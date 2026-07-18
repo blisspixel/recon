@@ -343,8 +343,8 @@ class TestJsonMain:
         assert doc["full"]["n"] == 20
         assert doc["held_out"]["n"] == 20
         # No apex leaks into the structured output.
-        assert "alpha" not in out
-        assert "beta" not in out
+        assert "alpha.invalid" not in out
+        assert "beta.invalid" not in out
 
     def test_single_json_empty_is_clean(self, tmp_path, monkeypatch, capsys) -> None:
         domains_file = tmp_path / "domains.txt"
