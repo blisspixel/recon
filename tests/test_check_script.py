@@ -48,3 +48,11 @@ def test_ci_runs_the_interface_layout_guard() -> None:
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
 
     assert "run: uv run python scripts/check_interface_layout.py" in workflow
+
+
+def test_reproducible_build_smokes_built_wheel_entry_points() -> None:
+    workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "Smoke-test built wheel entry points" in workflow
+    assert 'uv tool run --isolated --from "$wheel" recon --version' in workflow
+    assert 'uv run --no-project --isolated --with "$wheel" python -m recon_tool --version' in workflow

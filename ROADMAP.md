@@ -11,8 +11,10 @@ surface description, requires verification dates on new fingerprint
 detections, groups batch help by task, redacts unexpected batch exception
 details, reports cache deletion failures, exposes payload-free result and CT
 cache metadata, hardens diagnostic rendering, discloses doctor connectivity,
-and treats closed output pipes as normal control flow. The active product work is
-evidence-semantic integrity and a reproducible product-quality baseline. The
+keeps narrow help complete, adds all-source failure recovery, executes the
+sealed wheel before publication, and treats closed output pipes as normal
+control flow. The active product work is evidence-semantic integrity and a
+reproducible product-quality baseline. The
 isolated MCP v1.28.1
 and v2.0.0b1 matrix passed on 2026-07-13, with production remaining on stable v1
 and the final v2 adoption gate still pending. Measured latency, catalog quality,

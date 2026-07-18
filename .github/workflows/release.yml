@@ -24,6 +24,9 @@ on:
 #     the backend declared in ``pyproject.toml``; ``dist/`` is then uploaded
 #     immediately. No additional code executes between build and upload.
 #     ``actions/upload-artifact`` seals the bytes into GitHub-managed storage.
+#   * ``package-smoke`` downloads the sealed wheel into a separate read-only
+#     job and executes both installed entry points. Publication waits for this
+#     gate, so source-tree tests cannot mask a broken package entry point.
 #   * ``sbom`` job runs on a separate runner. It installs pip-audit
 #     in its own workspace and generates the CycloneDX SBOM from the
 #     locked-requirements text. dist/ does not exist in this runner,
@@ -31,8 +34,9 @@ on:
 #   * ``export-attestations`` downloads GitHub's signed attestation bundles for
 #     the sealed dist artifacts and stores them as a release-asset-friendly
 #     ``*.intoto.jsonl`` artifact. It runs no project dependency code.
-#   * ``publish-pypi`` and ``github-release`` wait for the provenance
-#     attestation path, then download the sealed artifacts from GitHub storage.
+#   * ``publish-pypi`` and ``github-release`` wait for the package smoke,
+#     provenance attestation, and SBOM paths, then download the sealed artifacts
+#     from GitHub storage.
 #     They never re-build, never re-install dev deps, never execute additional
 #     dependency code. If provenance attestation fails, the release fails closed
 #     instead of publishing unauthenticated files.
@@ -196,6 +200,42 @@ jobs:
           name: dist
           path: dist/
 
+  package-smoke:
+    # Execute the sealed wheel in a separate low-privilege workspace. The pure
+    # build job still uploads immediately, and publication cannot proceed if
+    # either supported installed entry path fails here.
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Download build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Smoke-test sealed wheel entry points
+        run: |
+          set -euo pipefail
+          wheels=(dist/*.whl)
+          if [ "${#wheels[@]}" -ne 1 ] || [ ! -f "${wheels[0]}" ]; then
+            echo "Expected exactly one sealed wheel in dist" >&2
+            exit 1
+          fi
+          wheel="${wheels[0]}"
+          uv tool run --isolated --from "$wheel" recon --version
+          uv run --no-project --isolated --with "$wheel" python -m recon_tool --version
+
   attest:
     # SLSA build-provenance attestation. Kept in its own job, like
     # publish-pypi and github-release, so the supply-chain isolation
@@ -346,7 +386,7 @@ jobs:
           path: sbom/
 
   publish-pypi:
-    needs: [build, attest, sbom]
+    needs: [build, attest, package-smoke, sbom]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     environment: pypi
@@ -371,7 +411,7 @@ jobs:
           attestations: true
 
   github-release:
-    needs: [build, attest, export-attestations, sbom]
+    needs: [build, attest, export-attestations, package-smoke, sbom]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

@@ -107,7 +107,11 @@ uv run python scripts/release_readiness.py --json
 ```
 
 The JSON output is deliberately local and deterministic unless `--remote` is
-passed. It is a maintainer signal, not a runtime contract for recon users.
+passed. Text and JSON both identify the assessed scope. Default text states
+that remote publication checks were not assessed; default JSON reports
+`"scope": "local"` and `"remote_checks_assessed": false`. With `--remote`,
+those fields become `"local-and-remote"` and `true`. It is a maintainer signal,
+not a runtime contract for recon users.
 
 ---
 
@@ -195,27 +199,33 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
    hash-pinned runtime requirements export is audited with `pip-audit`.
 3. **build**: after `test`, `uv build` produces and immediately seals the sdist
    and wheel under `dist/`; main CI separately requires matching hashes across
-   two builds in one resolved job.
-4. **attest**: after `build`, records GitHub artifact attestations for the wheel
+   two builds in one resolved job and executes both entry points from one built
+   wheel.
+4. **package-smoke**: after `build`, downloads the sealed artifact into a
+   separate read-only job and executes both `recon --version` and
+   `python -m recon_tool --version` from the wheel in isolated environments.
+5. **attest**: after `build`, records GitHub artifact attestations for the wheel
    and sdist.
-5. **export-attestations**: after `build` and `attest`, exports the GitHub
+6. **export-attestations**: after `build` and `attest`, exports the GitHub
    artifact-attestation bundles as `recon-tool-<version>.intoto.jsonl` so the
    GitHub Release carries an offline, Scorecard-recognized provenance asset.
-6. **sbom**: after `test`, generates the CycloneDX release SBOM independently of
+7. **sbom**: after `test`, generates the CycloneDX release SBOM independently of
    the package build path, adds the project root and dependency edge, and
    validates the resulting document. Findings may coexist with this artifact
    because the enforcing dependency audit already ran in `test`; SBOM tool or
    validation failure is fatal.
-7. **publish-pypi**: after `build`, `attest`, and `sbom`, uses
+8. **publish-pypi**: after `build`, `attest`, `package-smoke`, and `sbom`, uses
    `pypa/gh-action-pypi-publish@release/v1` with OIDC Trusted Publishing and PEP
    740 attestations. No static API tokens.
-8. **github-release**: after `build`, `attest`, `export-attestations`, and
-   `sbom`, extracts the matching `## [X.Y.Z]` section from `CHANGELOG.md` as the
-   release body and attaches the package, SBOM, and provenance artifacts.
+9. **github-release**: after `build`, `attest`, `export-attestations`,
+   `package-smoke`, and `sbom`, extracts the matching `## [X.Y.Z]` section from
+   `CHANGELOG.md` as the release body and attaches the package, SBOM, and
+   provenance artifacts.
 
 The dependency graph blocks both publication channels when tag preflight, the
-complete test gate, package build, provenance attestation, or SBOM validation
-fails, while allowing `build` and `sbom` to run independently after `test`.
+complete test gate, package build, installed-wheel smoke, provenance
+attestation, or SBOM validation fails, while allowing `build` and `sbom` to run
+independently after `test`.
 
 Workflow permissions are least-privilege: read-only jobs use `contents: read`,
 `attest` and `publish-pypi` receive `id-token: write` only where OIDC is needed,

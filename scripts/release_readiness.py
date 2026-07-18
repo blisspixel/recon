@@ -862,7 +862,7 @@ def _has_failure(checks: list[CheckResult]) -> bool:
     return any(check.status == "fail" for check in checks)
 
 
-def _render_text(checks: list[CheckResult]) -> str:
+def _render_text(checks: list[CheckResult], *, remote: bool = False) -> str:
     width = max(len(check.name) for check in checks)
     lines: list[str] = []
     for check in checks:
@@ -871,17 +871,22 @@ def _render_text(checks: list[CheckResult]) -> str:
         if check.action:
             line += f"  [{check.action}]"
         lines.append(line)
-    if _has_failure(checks):
-        lines.append("")
-        lines.append("Release readiness failed.")
+    lines.append("")
+    outcome = "failed" if _has_failure(checks) else "passed"
+    if remote:
+        lines.append(f"Release readiness {outcome}, including remote publication checks.")
     else:
-        lines.append("")
-        lines.append("Release readiness passed.")
+        lines.append(f"Local release readiness {outcome}. Remote publication checks were not assessed.")
     return "\n".join(lines)
 
 
-def _render_json(checks: list[CheckResult]) -> str:
-    payload = {"ok": not _has_failure(checks), "checks": [asdict(check) for check in checks]}
+def _render_json(checks: list[CheckResult], *, remote: bool = False) -> str:
+    payload = {
+        "ok": not _has_failure(checks),
+        "scope": "local-and-remote" if remote else "local",
+        "remote_checks_assessed": remote,
+        "checks": [asdict(check) for check in checks],
+    }
     return json.dumps(payload, indent=2, sort_keys=True)
 
 
@@ -898,7 +903,7 @@ def main(argv: list[str] | None = None) -> int:
         allow_non_main=args.allow_non_main,
         remote=args.remote,
     )
-    print(_render_json(checks) if args.json else _render_text(checks))
+    print(_render_json(checks, remote=args.remote) if args.json else _render_text(checks, remote=args.remote))
     return 1 if _has_failure(checks) else 0
 
 

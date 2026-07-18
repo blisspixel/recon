@@ -10,13 +10,25 @@ them back to their historical `_name` where convenient.
 from __future__ import annotations
 
 import math
-from typing import Never
+import shutil
+from typing import Literal, Never
 
 import typer
+from rich.markup import escape
 
 from recon_tool.cli.options import LookupOptions
 from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_NO_DATA, EXIT_VALIDATION
 from recon_tool.models import ReconLookupError
+from recon_tool.validator import strip_control_chars
+
+_MAX_DIAGNOSTIC_LEN = 2000
+_NARROW_HELP_COLUMNS = 70
+
+
+def help_markup_mode() -> Literal["rich"] | None:
+    """Use complete linear help when Rich tables cannot preserve tokens."""
+    columns = shutil.get_terminal_size(fallback=(80, 24)).columns
+    return None if columns < _NARROW_HELP_COLUMNS else "rich"
 
 
 def positive_finite_float(value: float) -> float:
@@ -35,6 +47,15 @@ def fmt_exc(exc: BaseException) -> str:
     return str(exc) or type(exc).__name__
 
 
+def safe_diagnostic_markup(value: object) -> str:
+    """Return bounded literal text safe to interpolate into Rich markup."""
+    raw = str(value)
+    cleaned = strip_control_chars(raw, max_len=_MAX_DIAGNOSTIC_LEN)
+    if len(raw) > _MAX_DIAGNOSTIC_LEN:
+        cleaned = f"{cleaned} [truncated]"
+    return escape(cleaned)
+
+
 def raise_lookup_error(error: ReconLookupError, *, domain: str | None = None) -> Never:
     """Render one structured resolver failure and raise its CLI exit.
 
@@ -43,13 +64,15 @@ def raise_lookup_error(error: ReconLookupError, *, domain: str | None = None) ->
     collection pipeline did not complete and use the documented internal-error
     exit instead of being mislabeled as an empty observation.
     """
-    from recon_tool.formatter import render_error, render_warning
+    from recon_tool.formatter import get_err_console, render_error, render_warning
 
     if error.error_type == "no_data":
         render_warning(domain or error.domain, error)
         raise typer.Exit(code=EXIT_NO_DATA) from None
 
     render_error(fmt_exc(error))
+    if error.error_type in {"timeout", "all_sources_failed"}:
+        get_err_console().print("Run recon doctor to check online source connectivity, then retry.")
     raise typer.Exit(code=EXIT_INTERNAL) from None
 
 
