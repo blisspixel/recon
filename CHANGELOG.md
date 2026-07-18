@@ -17,10 +17,11 @@ operator, corporate group, ownership, or control.
 ### Changed
 
 - CodeQL now runs on every pull request targeting `main` while retaining its
-  weekly and manual default-branch scans. Remote release readiness keeps every
-  other required code-owned Scorecard control at `10` and enforces the observed
-  SAST transition floor of `7` until the public recent-PR window is fully
-  covered by supported SAST checks.
+  weekly and manual default-branch scans, and the active `main` ruleset requires
+  the passing CodeQL job. Remote release readiness keeps every other required
+  code-owned Scorecard control at `10` and enforces the observed SAST transition
+  floor of `7` until the public recent-PR window is fully covered by supported
+  SAST checks.
 - OpenSSF and supply-chain guidance now records the current v2.6.4 Scorecard
   snapshot, explains the merged-PR-head scoring boundary, and distinguishes
   dated external state from the enforced release policy.

@@ -365,6 +365,7 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
         "overall score of at least `8.0`",
         "enforces the current SAST floor of `7`",
         "public API reports successful supported SAST checks for every merged pull request",
+        "requires the CI matrix, gitleaks, and CodeQL checks",
         "June 28 review found one code-owned gap",
         "remaining Scorecard limits are intentional or process-bound",
         "public Scorecard API freshness for `HEAD`",

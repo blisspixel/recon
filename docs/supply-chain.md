@@ -570,9 +570,9 @@ unpinned installer download-and-run path; the installer now refuses to execute
 remote tool installers. The Scorecard SARIF upload step also uses CodeQL Action
 v4 to avoid the scheduled v3 deprecation. Live repository settings now enforce
 full-SHA GitHub Action pins, enable dependency security updates, and protect
-`main` with an active repository ruleset that requires the CI matrix and
-gitleaks, blocks deletion and non-fast-forward updates, and requires linear
-history.
+`main` with an active repository ruleset that requires the CI matrix, gitleaks,
+and CodeQL checks, blocks deletion and non-fast-forward updates, and requires
+linear history.
 
 The remaining Scorecard limits are intentional or process-bound:
 
