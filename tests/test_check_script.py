@@ -79,6 +79,14 @@ def test_pyright_scope_comes_only_from_pyproject() -> None:
     assert "pyright src/recon_tool/ tests/" not in workflow
 
 
+def test_ruff_scope_and_cache_policy_match_ci() -> None:
+    local_stage = next(command for _group, name, command in check._STAGES if name == "ruff")
+    workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert local_stage == [check._PY, "-m", "ruff", "check", "--no-cache", "."]
+    assert "run: uv run ruff check --no-cache .\n" in workflow
+
+
 def test_ci_runs_the_interface_layout_guard() -> None:
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
 

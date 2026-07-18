@@ -35,7 +35,7 @@ _PY = sys.executable
 _CORE = "core"
 _TEST = "test"
 _STAGES: list[tuple[str, str, list[str]]] = [
-    (_CORE, "ruff", [_PY, "-m", "ruff", "check", "."]),
+    (_CORE, "ruff", [_PY, "-m", "ruff", "check", "--no-cache", "."]),
     (_CORE, "pyright", [_PY, "-m", "pyright"]),
     (
         _TEST,

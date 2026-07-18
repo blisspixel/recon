@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import pytest
+
 from recon_tool.catalog_discovery import category_matches
 
 

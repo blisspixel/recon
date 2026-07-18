@@ -20,8 +20,8 @@ import pytest
 pytest.importorskip("mcp")
 
 from mcp.server.fastmcp.exceptions import ToolError
-from recon_tool.catalog_discovery import category_matches
 
+from recon_tool.catalog_discovery import category_matches
 from recon_tool.models import (
     CandidateValue,
     ConfidenceLevel,

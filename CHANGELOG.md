@@ -68,7 +68,8 @@ default lookup JSON or MCP output schema changed.
   detailed help no longer exposes documentation-source markers.
 - The canonical local-gate wrapper now emits ANSI styling only to a capable
   terminal. Redirected and captured logs are plain text without changing any
-  stage, command, or pass condition.
+  stage, command, or pass condition. Local and CI Ruff stages now disable the
+  cache so rapid same-size edits cannot reuse a stale lint result.
 - The documented partial-release recovery path now checks the exit status from
   Release-run discovery separately from its output, so plausible partial output
   cannot bypass a failed GitHub CLI call and reach rerun mutation.
