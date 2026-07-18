@@ -22,9 +22,9 @@ RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
 
 _INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
 )
 
@@ -34,7 +34,7 @@ class TestDiscoverCommand:
     def test_emits_json_list_to_stdout(self, mock_resolve) -> None:
         """Default output is a JSON candidate list on stdout, exit 0."""
         mock_resolve.return_value = (_INFO, [])
-        result = runner.invoke(app, ["discover", "contoso.com"])
+        result = runner.invoke(app, ["discover", "alpha.invalid"])
         assert result.exit_code == 0
         assert isinstance(json.loads(result.output), list)
 
@@ -48,7 +48,7 @@ class TestDiscoverCommand:
         """--output routes the candidate JSON to a file instead of stdout."""
         mock_resolve.return_value = (_INFO, [])
         out = tmp_path / "candidates.json"
-        result = runner.invoke(app, ["discover", "contoso.com", "--output", str(out)])
+        result = runner.invoke(app, ["discover", "alpha.invalid", "--output", str(out)])
         assert result.exit_code == 0
         assert isinstance(json.loads(out.read_text(encoding="utf-8")), list)
 
@@ -56,14 +56,14 @@ class TestDiscoverCommand:
     def test_no_data_exits_3(self, mock_resolve) -> None:
         """A clean 'resolved but nothing to show' maps to exit 3 = EXIT_NO_DATA."""
         mock_resolve.side_effect = ReconLookupError(
-            domain="contoso.com", message="no indicators found", error_type="no_data"
+            domain="alpha.invalid", message="no indicators found", error_type="no_data"
         )
-        result = runner.invoke(app, ["discover", "contoso.com"])
+        result = runner.invoke(app, ["discover", "alpha.invalid"])
         assert result.exit_code == 3
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_unexpected_error_exits_4(self, mock_resolve) -> None:
         """An unclassified failure maps to exit 4 = EXIT_INTERNAL."""
         mock_resolve.side_effect = RuntimeError("boom")
-        result = runner.invoke(app, ["discover", "contoso.com"])
+        result = runner.invoke(app, ["discover", "alpha.invalid"])
         assert result.exit_code == 4

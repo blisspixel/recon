@@ -34,9 +34,9 @@ def _info(**overrides: object) -> TenantInfo:
     """Synthetic TenantInfo for agentic tool tests. No real company names."""
     defaults: dict[str, object] = {
         "tenant_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        "display_name": "Contoso Ltd",
-        "default_domain": "contoso.onmicrosoft.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha Ltd",
+        "default_domain": "alpha.onmicrosoft.com",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.HIGH,
         "region": "NA",
         "sources": ("oidc_discovery", "user_realm", "dns_records"),
@@ -59,7 +59,7 @@ def _results() -> list[SourceResult]:
         ),
         SourceResult(
             source_name="user_realm",
-            display_name="Contoso Ltd",
+            display_name="Synthetic Alpha Ltd",
             m365_detected=True,
             auth_type="Federated",
         ),
@@ -190,10 +190,10 @@ class TestExplainSignal:
     async def test_with_domain_evaluates_signal(self, mocked_resolve) -> None:
         from recon_tool.server import explain_signal
 
-        result = await explain_signal("AI Adoption", domain="contoso.com")
+        result = await explain_signal("AI Adoption", domain="alpha.invalid")
         assert "fired" in result
         assert "matched_slugs" in result
-        assert result["domain"] == "contoso.com"
+        assert result["domain"] == "alpha.invalid"
 
 
 # ── test_hypothesis ──────────────────────────────────────────────────
@@ -204,7 +204,7 @@ class TestHypothesis:
     async def test_returns_structured_assessment(self, mocked_resolve) -> None:
         from recon_tool.server import test_hypothesis
 
-        result = await test_hypothesis("contoso.com", "they are doing email migration")
+        result = await test_hypothesis("alpha.invalid", "they are doing email migration")
         # Required keys
         for key in (
             "domain",
@@ -217,7 +217,7 @@ class TestHypothesis:
             "disclaimer",
         ):
             assert key in result, f"missing key: {key}"
-        assert result["domain"] == "contoso.com"
+        assert result["domain"] == "alpha.invalid"
         assert result["likelihood"] == "unresolved"
         assert result["confidence"] in {"high", "medium", "low"}
 
@@ -225,14 +225,14 @@ class TestHypothesis:
     async def test_unresolved_when_no_relevant_signals(self, mocked_resolve) -> None:
         from recon_tool.server import test_hypothesis
 
-        result = await test_hypothesis("contoso.com", "this organization is using a quantum SaaS")
+        result = await test_hypothesis("alpha.invalid", "this organization is using a quantum SaaS")
         assert result["likelihood"] == "unresolved"
 
     @pytest.mark.asyncio
     async def test_disclaimer_always_present(self, mocked_resolve) -> None:
         from recon_tool.server import test_hypothesis
 
-        result = await test_hypothesis("contoso.com", "they use cloud identity")
+        result = await test_hypothesis("alpha.invalid", "they use cloud identity")
         assert "indicators" in result["disclaimer"].lower()
 
     @pytest.mark.asyncio
@@ -248,7 +248,7 @@ class TestHypothesis:
             ), _results()
 
         with patch("recon_tool.server_app.resolve_or_cache", side_effect=fake):
-            result = await test_hypothesis("contoso.com", "AI identity migration")
+            result = await test_hypothesis("alpha.invalid", "AI identity migration")
 
         public_copy = "\n".join(
             [
@@ -274,7 +274,7 @@ class TestHypothesis:
             ), _results()
 
         with patch("recon_tool.server_app.resolve_or_cache", side_effect=fake):
-            result = await test_hypothesis("contoso.com", "the organization actively uses OpenAI")
+            result = await test_hypothesis("alpha.invalid", "the organization actively uses OpenAI")
 
         assert result["likelihood"] == "unresolved"
         assert result["supporting_signals"] == ["AI-platform indicators observed"]
@@ -289,7 +289,7 @@ class TestSimulateHardening:
     async def test_returns_score_delta(self, mocked_resolve) -> None:
         from recon_tool.server import simulate_hardening
 
-        result = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
+        result = await simulate_hardening("alpha.invalid", ["DMARC reject", "MTA-STS enforce"])
         assert "current_score" in result
         assert "simulated_score" in result
         assert "score_delta" in result
@@ -299,7 +299,7 @@ class TestSimulateHardening:
     async def test_applies_known_fixes(self, mocked_resolve) -> None:
         from recon_tool.server import simulate_hardening
 
-        result = await simulate_hardening("contoso.com", ["DKIM", "BIMI", "SPF strict"])
+        result = await simulate_hardening("alpha.invalid", ["DKIM", "BIMI", "SPF strict"])
         applied = result["applied_fixes"]
         # All three should be recognized
         assert any("DKIM" in a for a in applied)
@@ -310,7 +310,7 @@ class TestSimulateHardening:
     async def test_unrecognized_fix_noted(self, mocked_resolve) -> None:
         from recon_tool.server import simulate_hardening
 
-        result = await simulate_hardening("contoso.com", ["something completely made up"])
+        result = await simulate_hardening("alpha.invalid", ["something completely made up"])
         applied = result["applied_fixes"]
         assert any("Unrecognized" in a for a in applied)
 
@@ -325,7 +325,7 @@ class TestSimulateHardening:
             return _info(dmarc_policy="none"), _results()
 
         with patch("recon_tool.server_app.resolve_or_cache", side_effect=fake):
-            result = await simulate_hardening("contoso.com", ["DMARC reject"])
+            result = await simulate_hardening("alpha.invalid", ["DMARC reject"])
         assert result["score_delta"] >= 0
 
 
@@ -369,7 +369,7 @@ class TestEphemeralFingerprints:
         listed = await list_ephemeral_fingerprints()
         assert any(fp["slug"] == "test-platform" for fp in listed)
 
-        _cache["contoso.com"] = (time.monotonic(), _info(display_name="Before Clear"), tuple(_results()))
+        _cache["alpha.invalid"] = (time.monotonic(), _info(display_name="Before Clear"), tuple(_results()))
 
         # Clear removes it
         refreshed_info = _info(display_name="After Clear")
@@ -381,7 +381,7 @@ class TestEphemeralFingerprints:
         # List is now empty (or doesn't have our slug)
         listed_after = await list_ephemeral_fingerprints()
         assert not any(fp["slug"] == "test-platform" for fp in listed_after)
-        assert _cache["contoso.com"][1].display_name == "After Clear"
+        assert _cache["alpha.invalid"][1].display_name == "After Clear"
 
     @pytest.mark.asyncio
     async def test_inject_invalid_returns_error(self) -> None:
@@ -439,11 +439,11 @@ class TestReevaluateDomain:
 
         info = _info()
         results = _results()
-        _cache["contoso.com"] = (time.monotonic(), info, tuple(results))
+        _cache["alpha.invalid"] = (time.monotonic(), info, tuple(results))
 
-        result = await reevaluate_domain("contoso.com")
+        result = await reevaluate_domain("alpha.invalid")
         # A tenant-info dict (raises ToolError on failure, never an error payload)
-        assert result.get("display_name") == "Contoso Ltd"
+        assert result.get("display_name") == "Synthetic Alpha Ltd"
         assert result["evidence"] == []
         assert result["record_type"] == "lookup"
         assert result["schema_version"] == "2.0"
@@ -457,13 +457,13 @@ class TestReevaluateDomain:
         original = _info(display_name="Original")
         refreshed = _info(display_name="Refreshed")
         results = _results()
-        _cache["contoso.com"] = (time.monotonic(), original, tuple(results))
+        _cache["alpha.invalid"] = (time.monotonic(), original, tuple(results))
 
         with patch("recon_tool.merger.merge_results", return_value=refreshed):
-            result = await reevaluate_domain("contoso.com")
+            result = await reevaluate_domain("alpha.invalid")
 
         assert result["display_name"] == "Refreshed"
-        cached = _cache_get("contoso.com")
+        cached = _cache_get("alpha.invalid")
         assert cached is not None
         assert cached[0].display_name == "Refreshed"
 
@@ -479,8 +479,8 @@ class TestReloadData:
 
         from recon_tool.server import _cache, _rate_limit, reload_data
 
-        _cache["contoso.com"] = (time.monotonic(), _info(), tuple(_results()))
-        _rate_limit["contoso.com"] = time.monotonic()
+        _cache["alpha.invalid"] = (time.monotonic(), _info(), tuple(_results()))
+        _rate_limit["alpha.invalid"] = time.monotonic()
 
         result = await reload_data()
 
@@ -488,7 +488,7 @@ class TestReloadData:
         assert "rate limiter preserved" in result.lower()
         assert _cache == {}
         # The rate-limit entry survives the reload.
-        assert "contoso.com" in _rate_limit
+        assert "alpha.invalid" in _rate_limit
 
 
 class TestClusterVerificationTokensCap:

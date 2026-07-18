@@ -75,12 +75,12 @@ def _make_tenant(
     surface_count: int = 0,
     evidence: tuple[EvidenceRecord, ...] = (),
 ) -> TenantInfo:
-    domains = tuple(f"contoso-{i}.example" for i in range(domain_count))
+    domains = tuple(f"alpha-{i}.example" for i in range(domain_count))
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid",
-        display_name="Contoso, Ltd",
-        default_domain="contoso.example",
-        queried_domain="contoso.example",
+        display_name="Synthetic Alpha, Ltd",
+        default_domain="alpha.example",
+        queried_domain="alpha.example",
         confidence=ConfidenceLevel.HIGH,
         domain_count=domain_count,
         tenant_domains=domains,
@@ -142,7 +142,7 @@ class TestMultiCloudInvariantsOnCatalogInputs:
         evidence = tuple(
             EvidenceRecord(
                 "CNAME",
-                f"{slug}.contoso.example -> synthetic.endpoint.example",
+                f"{slug}.alpha.example -> synthetic.endpoint.example",
                 slug.title(),
                 slug,
             )

@@ -33,9 +33,9 @@ from recon_tool.models import EvidenceRecord, PosteriorObservation, TenantInfo
 def _bare_tenant_info(**overrides) -> TenantInfo:
     base = {
         "tenant_id": None,
-        "display_name": "Contoso",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "services": (),
         "slugs": (),
     }
@@ -184,7 +184,7 @@ class TestCLIFlagCombinations:
 
         with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
             mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-            result = runner.invoke(app, ["lookup", "contoso.com", "--explain-dag", "--no-cache"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain-dag", "--no-cache"])
             assert result.exit_code == 0
             assert "## m365_tenant" in result.output
             # Plain English narrative
@@ -200,7 +200,7 @@ class TestCLIFlagCombinations:
         )
         with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
             mock_resolve.return_value = (degraded, SAMPLE_RESULTS)
-            result = runner.invoke(app, ["lookup", "contoso.com", "--explain-dag", "--no-cache"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain-dag", "--no-cache"])
 
         assert result.exit_code == 0
         assert "degraded_sources: dns:dmarc, http:mta_sts_policy" in result.output
@@ -214,7 +214,7 @@ class TestCLIFlagCombinations:
             mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
             result = runner.invoke(
                 app,
-                ["lookup", "contoso.com", "--explain-dag", "--explain-dag-format", "dot", "--no-cache"],
+                ["lookup", "alpha.invalid", "--explain-dag", "--explain-dag-format", "dot", "--no-cache"],
             )
             assert result.exit_code == 0
             assert "digraph" in result.output
@@ -229,7 +229,7 @@ class TestCLIFlagCombinations:
             mock_resolve.return_value = (degraded, SAMPLE_RESULTS)
             result = runner.invoke(
                 app,
-                ["lookup", "contoso.com", "--explain-dag", "--explain-dag-format", "dot", "--no-cache"],
+                ["lookup", "alpha.invalid", "--explain-dag", "--explain-dag-format", "dot", "--no-cache"],
             )
 
         assert result.exit_code == 0
@@ -244,7 +244,7 @@ class TestCLIFlagCombinations:
             mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
             result = runner.invoke(
                 app,
-                ["lookup", "contoso.com", "--explain-dag", "--explain-dag-format", "rubbish", "--no-cache"],
+                ["lookup", "alpha.invalid", "--explain-dag", "--explain-dag-format", "rubbish", "--no-cache"],
             )
             # Should error (validation exit code), not crash.
             assert result.exit_code != 0
@@ -256,7 +256,7 @@ class TestCLIFlagCombinations:
 
         with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
             mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-            result = runner.invoke(app, ["lookup", "contoso.com", "--fusion", "--json", "--no-cache"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--fusion", "--json", "--no-cache"])
             assert result.exit_code == 0
             d = json.loads(result.output)
             # Both layers populated.
@@ -270,7 +270,7 @@ class TestCLIFlagCombinations:
 
         with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
             mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-            result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--no-cache", "--no-fusion"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--json", "--no-cache", "--no-fusion"])
             assert result.exit_code == 0
             d = json.loads(result.output)
             assert d.get("posterior_observations", []) == []
@@ -285,7 +285,7 @@ class TestCLIFlagCombinations:
 
         with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
             mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-            result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--no-cache"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--json", "--no-cache"])
             assert result.exit_code == 0
             d = json.loads(result.output)
             assert isinstance(d.get("posterior_observations"), list)
@@ -418,7 +418,7 @@ class TestMCPErrorPaths:
         from recon_tool.server import explain_dag
 
         async def main():
-            return await explain_dag("contoso.com", output_format="png")
+            return await explain_dag("alpha.invalid", output_format="png")
 
         result = asyncio.run(main())
         assert result.startswith("Error:")

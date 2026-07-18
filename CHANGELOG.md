@@ -42,6 +42,15 @@ MCP tool, resource URI, or schema.
 
 ### Changed
 
+- Release source distributions now explicitly exclude every private validation
+  and agent-work path. The package regression test creates an ignored local
+  sentinel before building and rejects private paths or retired target-example
+  identities in the resulting archive.
+- Live CLI help, agent guidance, public documentation, structured examples,
+  schemas, snapshots, and tests now use one neutral reserved target vocabulary.
+  The release hygiene gate scans every tracked and nonignored-untracked text
+  candidate for the retired fictional target vocabulary while preserving
+  genuine ACME protocol references and provider-controlled catalog patterns.
 - Tracked validation fixtures now use explicit synthetic identities under the
   reserved `.invalid` namespace. Deterministic tests bind both validation
   generators to their JSON, NDJSON, and CSV outputs without retaining
@@ -64,7 +73,8 @@ MCP tool, resource URI, or schema.
   Git-only rewrite cannot retract mirrors, caches, copies, or attestations.
   Contributor, legal, artifact-review, performance, onboarding, and roadmap
   guidance now distinguish reserved target examples from allowed provider
-  references and explicitly track the remaining legacy migration debt.
+  references and record the bounded historical exception separately from the
+  clean current-tree contract.
 - Agentic validation report and raw-record paths now reject trackable
   in-repository destinations before provider initialization; external and
   gitignored local output paths remain available.
@@ -1820,7 +1830,7 @@ No CLI command or flag changes.
   `p = reject` (RFC 7489 / 6376 tag syntax permits whitespace around `=`) was
   dropped, silently understating the email-security posture. The parser now
   splits each tag on its first `=` and strips both sides.
-- **Trailing-dot FQDNs are accepted.** An absolute FQDN like `contoso.com.` was
+- **Trailing-dot FQDNs are accepted.** An absolute FQDN like `alpha.invalid.` was
   rejected as malformed; it now normalizes to the apex the same way the scheme,
   `www.`, and port paste-artifacts already do.
 - **The retry transport no longer returns a closed response when the cumulative
@@ -1876,8 +1886,8 @@ No CLI command or flag changes.
 - **`www.<tld>` registrable domains are no longer rejected.** Blindly stripping
   `www.` turned the real domain `www.com` into a bare TLD that failed validation;
   the strip now only fires when the remainder is still a valid domain.
-- **Bare `host:port` input normalizes like the URL form.** `contoso.com:8443`
-  was rejected on the stray colon while `https://contoso.com:8443` succeeded; the
+- **Bare `host:port` input normalizes like the URL form.** `alpha.invalid:8443`
+  was rejected on the stray colon while `https://alpha.invalid:8443` succeeded; the
   bare-host path now strips a trailing port too.
 - **Atomic CT cache writes.** `ct_cache_put` now writes via a temp file and
   `os.replace`, matching the main cache: a concurrent reader can no longer see a
@@ -2216,10 +2226,10 @@ No CLI command or flag changes.
 
 - **Apex input normalization.** Any lookup target is now reduced to its
   registrable apex (eTLD+1) by default, so a pasted browser URL or sub-host
-  (`https://mail.acme.co.uk/login`) is analyzed at `acme.co.uk`, where recon's
+  (`https://mail.example.co.uk/login`) is analyzed at `example.co.uk`, where recon's
   signal lives (tenant, MX, `_dmarc`, CT). This generalizes the previous
   special-case `www.` strip and is backed by the Public Suffix List, so
-  multi-label TLDs (`acme.co.uk`, `acme.com.au`) reduce correctly. A sub-host
+  multi-label TLDs (`example.co.uk`, `example.com.au`) reduce correctly. A sub-host
   reduction prints a one-line note naming what was analyzed; `--exact` opts out.
   Applies everywhere a domain is validated (CLI, batch, delta, MCP, cache keys).
 
@@ -3116,9 +3126,9 @@ Security:
   target like `manageengine.com.attacker.tld` matched the `manageengine.com`
   rule. Matching is now DNS-label-aware (exact or proper subdomain).
 - IDNA2003 wrong-domain mapping (Medium): the stdlib idna codec is lossy
-  (`faß.de` maps to `fass.de`, a different registrable domain). A round-trip
+  (`faß.invalid` maps to `fass.invalid`, a different registrable domain). A round-trip
   check now rejects lossy compatibility mappings rather than querying the wrong
-  domain; non-lossy IDNs (`münchen.de` to `xn--mnchen-3ya.de`) still convert. No
+  domain; non-lossy IDNs (`café.invalid` to `xn--caf-dma.invalid`) still convert. No
   new dependency.
 - Terminal-escape injection in client-doctor output (Medium): `recon doctor
   --client` printed config-derived strings (a workspace MCP `command`) through
@@ -4549,7 +4559,7 @@ No runtime behavior change: the output is held byte-identical by the
 Before decomposing `format_tenant_markdown` (the next C901 target), pin the
 render branches the existing markdown fixtures leave dark.
 
-- **`tests/test_golden_renders.py`.** A `_markdown_rich_info` fixture (Contoso,
+- **`tests/test_golden_renders.py`.** A `_markdown_rich_info` fixture (Synthetic Alpha,
   fictional) carries a Google Workspace service set, GWS auth type / identity
   provider / active modules / CSE, and a degraded source. The new
   `markdown_rich` snapshot pins the GWS services split, the GWS details block,
@@ -4633,7 +4643,7 @@ Services subdomain summary, the Unclassified surface block, and the full-mode
 External surface section. Decomposing those without a snapshot would risk a
 silent output change, so this patch pins them first.
 
-- **`tests/test_golden_renders.py`.** A `_surface_rich_info` fixture (Contoso,
+- **`tests/test_golden_renders.py`.** A `_surface_rich_info` fixture (Synthetic Alpha,
   fictional) populates `surface_attributions` (a collapsed CDN group, layered
   application-plus-infrastructure rows, a standalone app) and
   `unclassified_cname_chains`. Two new snapshots, `panel_surface_default` and
@@ -4673,7 +4683,7 @@ run; the full suite passes with pyright at `pythonVersion=3.11`.
 
 ### Restore the bare `recon <domain>` shorthand on fresh installs
 
-`recon contoso.com` (the shorthand that routes a domain-like first argument
+`recon alpha.invalid` (the shorthand that routes a domain-like first argument
 to the `lookup` command, without an explicit subcommand) stopped working on
 fresh installs. The cause was a dependency change, not our routing logic:
 Typer >=0.25 vendors its own copy of Click, so the `UsageError` raised during
@@ -4704,7 +4714,7 @@ unit tests alone would not have:
 - **IDN handling (`recon_tool/validator.py`).** `validate_domain` rejected
   raw-Unicode internationalized domains (an IDN apex was the only failure
   in the run). It now IDNA-encodes them to punycode
-  (`münchen.de` to `xn--mnchen-3ya.de`) using the stdlib codec before the
+  (`café.invalid` to `xn--caf-dma.invalid`) using the stdlib codec before the
   format check, so an operator can paste an IDN directly. No new
   dependency; un-encodable labels still fall through to the clear
   "Invalid domain format" rejection. Tested with the failing case and
@@ -4771,8 +4781,8 @@ the complexity decomposition, robustness work), not behind docs currency.
   `tests/golden_renders/`; regenerate intentionally with
   `RECON_REGEN_GOLDEN=1`. These guarantee byte-identical output when those
   functions are decomposed in the next patches, so the user-facing panel
-  cannot change silently. Every fixture uses Microsoft fictional brands
-  (Contoso, Northwind, Fabrikam); no real company data.
+  cannot change silently. Every fixture uses explicit synthetic labels and
+  reserved domains; no real company data.
 - `docs/roadmap.md`: a "Pre-2.0 hardening phase" section laying out the
   four tracks (complexity decomposition, test and validation rigor,
   catalog growth, robustness and security) and the corpus-driven
@@ -5229,8 +5239,8 @@ array when no domain resolved.
 
 ### Testing
 
-- `tests/test_batch_ndjson_schema.py` (new): validates a synthetic batch
-  NDJSON sample (Microsoft fictional brands) with the rule set, confirms
+- `tests/test_batch_ndjson_schema.py` (new): validates a reserved synthetic
+  batch NDJSON sample with the rule set, confirms
   every record classifies as success or error, and checks the schema
   file's batch `$defs` agree with the classifier.
 - `tests/test_json_schema_file.py` (extended): asserts the four batch
@@ -6209,7 +6219,7 @@ the v2.0 quality bar requires.
 - **Per-stratum aggregator misbucketing.** `validation/corpus_aggregator.py`
   classified strata from a tenant_id substring matcher
   (`_stratum_for_tenant`). Three v1.9.10 fixtures landed in the
-  wrong bucket: `tailspin-firebase` (GCP) and `northwind-oci`
+  wrong bucket: `tailspin-firebase` (GCP) and `gamma-oci`
   (Oracle) fell into `baseline` because their tenant_ids lacked
   the `-gcp-` / `-oracle-` substring; `wingtip-azure` (baseline)
   was pulled into the Azure bucket because its tenant_id
@@ -6487,7 +6497,7 @@ This is the v1.9.10 step of the v1.9.4 to v2.0 linear sequence in
   roadmap original quality bar called for "publicly-documented
   users of that vendor sourced from vendor case-studies, vendor
   blog posts, or job listings". The maintainer's no-real-data
-  discipline (Microsoft fictional brands only) takes precedence;
+  discipline (explicit synthetic labels and reserved domains) takes precedence;
   v1.9.10 ships with synthetic stratified fixtures modelled after
   public deployment patterns.
 - **Trend table v1.6 → v1.9.10 per stratum** deferred to v1.9.11
@@ -6569,7 +6579,7 @@ self-contained.
   with vendor-product backing (Snowflake under `data`, Vertex AI under
   `ai`, internal portals under `internal`, SIEM consoles under
   `security`). The CT-side additions keep prioritization parity so a CT
-  response surfacing `data.contoso.com` sorts to the top of the bounded
+  response surfacing `data.alpha.invalid` sorts to the top of the bounded
   output rather than falling off the cap.
 - **`tests/test_formatter_ceiling.py`** (7 tests). Pins the trigger
   heuristic: fires on sparse-services + multi-domain apex; suppressed
@@ -6608,8 +6618,8 @@ self-contained.
   inputs are in the map, distinct vendor count is bounded above by
   the input slug count.
 - **`tests/test_panel_render_snapshots.py`** (12 end-to-end render
-  snapshot tests). Two reference TenantInfo fixtures (Contoso
-  multi-cloud rich-stack, Northwind sparse-hardened) exercised through
+  snapshot tests). Two reference TenantInfo fixtures (Synthetic Alpha
+  multi-cloud rich-stack, Synthetic Gamma sparse-hardened) exercised through
   ``render_tenant_panel`` with structural asserts on which v1.9.9
   surfaces fire on which fixture, the layout invariant that
   Multi-cloud renders above Confidence in the key-facts block, and
@@ -8030,7 +8040,7 @@ mappings against future schema drift via a CI gate.
   always-present-on-M365 fields the SIEM mappings reference:
   `slugs`, `email_security_score`, `cloud_instance`,
   `msgraph_host`, `primary_email_provider`. Still fictional
-  Northwind Traders; no real-company data. Existing consumers of
+  Synthetic Gamma; no real-company data. Existing consumers of
   the sample see additional fields, not renamed ones -
   schema-additive.
 
@@ -9538,7 +9548,7 @@ new fingerprints surfaced from the first discovery-loop runs.
 
 - Intra-org heuristic now skips second-level public suffixes (`co`,
   `ac`, `org`, `net`, `gov`, `edu`, ...) when extracting the apex's
-  brand label. `contoso.co.uk` correctly resolves to brand `contoso`
+  brand label. `alpha.invalid` correctly resolves to brand `alpha`
   instead of `co`. Same brand-label extractor used by the
   `recon discover` subcommand and `validation/triage_candidates.py`.
 - `release.yml` test job now runs the same `validate-fingerprints`
@@ -10126,7 +10136,7 @@ calls, zero new sources.
   each entry carries a ``shared_display_name`` list with the raw
   display names (for audit), the normalized key, and the peer
   domains. Conservative match - exact normalized equality only
-  (``Acme Corp`` + ``Acme Corp.`` cluster; ``Acme`` + ``Acme Holdings``
+  (``Synthetic Delta Corp`` + ``Synthetic Delta Corp.`` cluster; ``Synthetic Delta`` + ``Synthetic Delta Holdings``
   do not). Normalization strips one trailing corporate suffix
   (``inc`` / ``llc`` / ``gmbh`` / etc.) and collapses whitespace /
   punctuation.
@@ -11178,7 +11188,7 @@ within the passive / zero-creds / zero-additional-network invariants.
   pure-Python rule parser that classifies CT-discovered subdomains
   into environment (`dev-`, `stg-`, `uat-`, `prd-`, `sbx-`), region
   (`us-east`, `eu-west`, `ap-southeast`, `apne1`), and tenancy-shard
-  (`t-1234`, `org-acme`, `tenant-xyz`) taxonomies. No ML, no bundled
+  (`t-1234`, `org-delta`, `tenant-xyz`) taxonomies. No ML, no bundled
   embeddings, no generated candidates. Emits hedged
   ``LexicalObservation`` entries on the standard insights list:
   "Mature environment separation pattern observed (3 env-prefixed
@@ -11864,7 +11874,7 @@ changing the core architecture.
 - `tests/test_integration.py` - replaced real corporate apex
   references with RFC-2606 reserved `example.com` / `example.org`.
   Repo is now clean of real company names outside of fingerprint
-  detection targets and the Contoso/Northwind/Fabrikam fictional-
+  detection targets and the Synthetic Alpha/Synthetic Gamma/Synthetic Beta fictional-
   example convention.
 - Refined roadmap with a tight "Now / Soon / Later" plan driven by
   real-world findings from hardened enterprise targets.
@@ -12060,7 +12070,7 @@ changing the core architecture.
 ### Changed
 
 - Inference language tightened across insights and signals. Derived claims now use hedged language ("suggests," "indicators," "likely") instead of declarative phrasing. Factual observations (DMARC values, DKIM presence, email security scores) remain declarative.
-- Removed `_preprocess_args()` sys.argv mutation hack. Domain shorthand routing (`recon contoso.com`) now uses a custom Typer group with `resolve_command()` override - cleaner, safer for library imports, no global state mutation.
+- Removed `_preprocess_args()` sys.argv mutation hack. Domain shorthand routing (`recon alpha.invalid`) now uses a custom Typer group with `resolve_command()` override - cleaner, safer for library imports, no global state mutation.
 - `_SUBCOMMANDS` now includes `"mcp"`.
 - Mutual exclusion enforced for output format flags (`--json`, `--md`, `--csv`).
 
@@ -12167,7 +12177,7 @@ changing the core architecture.
 - Dual provider insight - shortened from "Hybrid/migration signal: Google email + Microsoft services detected" to "Dual provider: Google + Microsoft coexistence". No longer styled as a warning.
 - Panel color palette - muted, modern tones replacing harsh ANSI primaries. Labels use `dim` instead of `bold`. Panel border is `dim`. Confidence colors: sage green (High), sky blue (Medium), terracotta (Low).
 - Panel alignment - services and insights now use consistent label:value column alignment. Service continuation lines align under the first service name. Long insights word-wrap within the panel.
-- All README examples now use fictional companies (Northwind Traders, Contoso, Fabrikam).
+- All README examples now use explicit synthetic labels and reserved domains.
 - README tagline updated to be more precise and humble.
 - Panel output: fixed width (80 chars), related domains now dim instead of cyan.
 - Updated Enterprise Security Stack, Zero Trust Posture, and Enterprise IT Maturity signals to include new security slugs.

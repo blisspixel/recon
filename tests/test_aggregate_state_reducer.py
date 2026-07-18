@@ -90,10 +90,10 @@ def test_reducer_tolerates_malformed_records(tmp_path: Any) -> None:
 
     bad = [
         42,
-        "contoso.com",
+        "alpha.invalid",
         None,  # non-dict records, must be filtered
         {
-            "queried_domain": "a.com",
+            "queried_domain": "a.invalid",
             "provider": "Microsoft 365",
             "slugs": "proofpoint",
             "posterior_observations": 5,
@@ -111,9 +111,9 @@ def test_reducer_tolerates_malformed_records(tmp_path: Any) -> None:
 def test_reducer_skips_malformed_ndjson_line(tmp_path: Any) -> None:
     p = tmp_path / "bad.ndjson"
     p.write_text(
-        '{"queried_domain":"a.com","provider":"Microsoft 365"}\n'
+        '{"queried_domain":"a.invalid","provider":"Microsoft 365"}\n'
         "not valid json\n"
-        '{"queried_domain":"b.com","provider":"Google Workspace"}\n',
+        '{"queried_domain":"b.invalid","provider":"Google Workspace"}\n',
         encoding="utf-8",
     )
     recs = agg.load_records(str(p))

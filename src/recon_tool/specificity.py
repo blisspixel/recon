@@ -102,7 +102,7 @@ def _cname_corpus() -> list[str]:
     bases = [
         "alpha",
         "beta",
-        "acme",
+        "delta",
         "example",
         "sample",
         "test",

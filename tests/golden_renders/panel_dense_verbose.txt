@@ -1,5 +1,5 @@
-Contoso Ltd
-contoso.com
+Synthetic Alpha Ltd
+alpha.invalid
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX
                delivery path)
@@ -19,7 +19,7 @@ Passive-DNS ceiling
   public DNS records.
 
 High-signal related domains
-  api.contoso.com, login.contoso.com
+  api.alpha.invalid, login.alpha.invalid
 
 Insights
   Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)

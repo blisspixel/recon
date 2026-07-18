@@ -107,7 +107,7 @@ are welcome:
 | **New signals** | Must derive from existing evidence. Hedged language. | "AI tooling indicators observed alongside identity-provider signals" |
 | **New profiles** | Must reweight existing observations; cannot invent new ones. | "Retail / e-commerce" profile |
 | **Bug reports** | Reproducible with a reserved domain, a minimal synthetic fixture, and sanitized diagnostics. Real target output uses the private non-security report path. | Wrong provider classification, insight wording, display glitch |
-| **Accuracy reports** | A controlled or otherwise well-understood public record shape, plus the exact observation recon got wrong. | "Our test domain publishes the documented M365 MX route, but recon reports custom or unclassified MX" (omit real names in public reports) |
+| **Accuracy reports** | A controlled or otherwise well-understood public record shape, plus the exact observation recon got wrong. | "The `alpha.invalid` fixture publishes the documented M365 MX shape, but recon reports custom or unclassified MX" |
 | **Documentation fixes** | Typos, clarifications, better examples. | README, CONTRIBUTING, docs/* |
 | **Performance improvements** | With before/after measurement. Hot paths: `detect_provider`, `_curate_insights`, DNS query batching. | Reducing average lookup time, eliminating redundant DNS queries |
 | **Test additions** | Sparse-data fixtures, adversarial inputs, corner cases. | Domain with zero MX + no tenant, IDN / punycode, wildcard DNS |

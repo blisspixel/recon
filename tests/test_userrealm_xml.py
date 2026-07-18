@@ -10,9 +10,9 @@ VALID_XML = """<?xml version="1.0" encoding="utf-8"?>
     <GetFederationInformationResponseMessage xmlns="http://schemas.microsoft.com/exchange/2010/Autodiscover">
       <Response>
         <Domains>
-          <Domain>contoso.com</Domain>
-          <Domain>contoso.onmicrosoft.com</Domain>
-          <Domain>contosoltd.onmicrosoft.com</Domain>
+          <Domain>alpha.invalid</Domain>
+          <Domain>synthetic-alpha.onmicrosoft.com</Domain>
+          <Domain>synthetic-alpha-legacy.onmicrosoft.com</Domain>
         </Domains>
       </Response>
     </GetFederationInformationResponseMessage>
@@ -23,9 +23,9 @@ VALID_XML = """<?xml version="1.0" encoding="utf-8"?>
 class TestParseAutodiscoverDomains:
     def test_extracts_all_domains(self):
         domains, _default = _parse_autodiscover_domains(VALID_XML)
-        assert "contoso.com" in domains
-        assert "contoso.onmicrosoft.com" in domains
-        assert "contosoltd.onmicrosoft.com" in domains
+        assert "alpha.invalid" in domains
+        assert "synthetic-alpha.onmicrosoft.com" in domains
+        assert "synthetic-alpha-legacy.onmicrosoft.com" in domains
 
     def test_extracts_default_onmicrosoft_domain(self):
         _domains, default = _parse_autodiscover_domains(VALID_XML)
@@ -33,9 +33,9 @@ class TestParseAutodiscoverDomains:
         assert default.endswith(".onmicrosoft.com")
 
     def test_domains_are_lowercase(self):
-        xml = VALID_XML.replace("contoso.com", "CONTOSO.COM")
+        xml = VALID_XML.replace("alpha.invalid", "ALPHA.INVALID")
         domains, _ = _parse_autodiscover_domains(xml)
-        assert "contoso.com" in domains
+        assert "alpha.invalid" in domains
 
     def test_domains_are_sorted_and_deduped(self):
         domains, _ = _parse_autodiscover_domains(VALID_XML)
@@ -61,7 +61,7 @@ class TestParseAutodiscoverDomains:
         xml = """<?xml version="1.0"?>
         <root xmlns="http://example.com">
           <Domain>example.com</Domain>
-          <Domain>other.com</Domain>
+          <Domain>other.invalid</Domain>
         </root>"""
         domains, default = _parse_autodiscover_domains(xml)
         assert len(domains) == 2
@@ -71,7 +71,7 @@ class TestParseAutodiscoverDomains:
         """ElementTree handles XML entities correctly unlike regex."""
         xml = """<?xml version="1.0"?>
         <root xmlns="http://example.com">
-          <Domain>test&amp;co.com</Domain>
+          <Domain>test&amp;co.invalid</Domain>
         </root>"""
         domains, _ = _parse_autodiscover_domains(xml)
-        assert "test&co.com" in domains
+        assert "test&co.invalid" in domains

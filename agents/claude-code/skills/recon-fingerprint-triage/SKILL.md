@@ -16,7 +16,7 @@ recognize those targets.
 
 The user wants to grow the fingerprint catalog by mining real DNS data:
 
-- "Find new fingerprints from contoso.com"
+- "Find new fingerprints from alpha.invalid"
 - "What service patterns are visible here that we don't fingerprint?"
 - "Triage gaps from my latest validation run"
 - "Is there a fingerprint candidate in this CNAME chain?"
@@ -69,8 +69,8 @@ five outcomes:
 
 3. **Same-zone or brand-similar heuristic match** - the chain stays under the
    queried namespace or its target resembles the query's brand label (for
-   example, ``contoso.com -> gslb-contoso.com`` or
-   ``contoso.co.uk -> eglb.contoso.co.uk``). This heuristic is a noise filter;
+   example, ``alpha.invalid -> gslb-alpha.invalid`` or
+   ``alpha.invalid -> eglb.alpha.invalid``). This heuristic is a noise filter;
    it does not establish common ownership, an internal network, or an
    organizational relationship. **Action:** skip automatic fingerprint
    proposal unless independent evidence identifies a reusable provider pattern.

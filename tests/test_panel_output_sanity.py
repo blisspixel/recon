@@ -37,12 +37,12 @@ def _multi_cloud_with_duplicate_potential() -> TenantInfo:
     list AWS twice. The sanity check pins that this does not happen."""
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid",
-        display_name="Contoso, Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha, Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=4,
-        tenant_domains=("contoso.com", "contoso.net", "contoso.co.uk"),
+        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid"),
         services=("AWS Route 53", "Cloudflare"),
         slugs=("aws-route53", "cloudflare"),
         evidence=(
@@ -51,7 +51,7 @@ def _multi_cloud_with_duplicate_potential() -> TenantInfo:
         ),
         surface_attributions=tuple(
             SurfaceAttribution(
-                subdomain=f"sub{i}.contoso.com",
+                subdomain=f"sub{i}.alpha.invalid",
                 primary_slug="aws-cloudfront",
                 primary_name="AWS CloudFront",
                 primary_tier="infrastructure",
@@ -64,12 +64,12 @@ def _multi_cloud_with_duplicate_potential() -> TenantInfo:
 def _three_vendor_apex() -> TenantInfo:
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid",
-        display_name="Contoso, Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha, Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=4,
-        tenant_domains=("contoso.com",),
+        tenant_domains=("alpha.invalid",),
         services=("AWS CloudFront", "Cloudflare", "GCP Compute Engine"),
         slugs=("aws-cloudfront", "cloudflare", "gcp-compute"),
         evidence=(
@@ -83,12 +83,12 @@ def _three_vendor_apex() -> TenantInfo:
 def _sparse_ceiling_tenant() -> TenantInfo:
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid",
-        display_name="Northwind Traders",
-        default_domain="northwind.com",
-        queried_domain="northwind.com",
+        display_name="Synthetic Gamma",
+        default_domain="gamma.invalid",
+        queried_domain="gamma.invalid",
         confidence=ConfidenceLevel.LOW,
         domain_count=5,
-        tenant_domains=("northwind.com", "nw.net", "nw.co.uk", "nw-corp.com", "nw-internal.com"),
+        tenant_domains=("gamma.invalid", "gamma.test", "gamma.example", "gamma-corp.invalid", "gamma-internal.invalid"),
         services=("Cloudflare",),
         slugs=("cloudflare",),
     )

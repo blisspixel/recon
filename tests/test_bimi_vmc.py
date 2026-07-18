@@ -108,7 +108,7 @@ async def test_accepts_public_https_without_trusting_subject():
     pem = "-----BEGIN CERTIFICATE-----\nMAA=\n-----END CERTIFICATE-----"
 
     with patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, pem), calls)):
-        await dns_email._parse_bimi_vmc(ctx, "v=BIMI1; a=https://amplify.contoso.com/vmc.pem")
+        await dns_email._parse_bimi_vmc(ctx, "v=BIMI1; a=https://amplify.alpha.example.com/vmc.pem")
 
     # A legitimate public https URL is fetched, with redirects disabled.
     assert len(calls) == 1

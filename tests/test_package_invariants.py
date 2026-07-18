@@ -15,9 +15,22 @@ import tarfile
 import zipfile
 from email.parser import Parser
 from pathlib import Path
+from uuid import uuid4
+
+from scripts import check_validation_hygiene
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _BUILD_CONSTRAINTS = _REPO_ROOT / "build-constraints.txt"
+
+_PRIVATE_SDIST_PREFIXES = (
+    ".agent/",
+    "validation/agentic_ux/local/",
+    "validation/agentic_ux/runs/",
+    "validation/corpus-private/",
+    "validation/live_runs/",
+    "validation/local/",
+    "validation/runs-private/",
+)
 
 _EXPECTED_DATA_FILES = {
     "recon_tool/data/bayesian_network.yaml",
@@ -164,9 +177,7 @@ def test_wheel_ships_only_expected_catalog_data(tmp_path: Path) -> None:
     data_files = {name for name in names if name.startswith("recon_tool/data/") and not name.endswith("/")}
     assert data_files == _EXPECTED_DATA_FILES
 
-    forbidden_data = {
-        name for name in data_files if Path(name).suffix.lower() in _FORBIDDEN_DATA_SUFFIXES
-    }
+    forbidden_data = {name for name in data_files if Path(name).suffix.lower() in _FORBIDDEN_DATA_SUFFIXES}
     assert forbidden_data == set()
 
     unexpected_top_levels = {
@@ -177,15 +188,45 @@ def test_wheel_ships_only_expected_catalog_data(tmp_path: Path) -> None:
     assert unexpected_top_levels == set()
 
 
-def test_sdist_retains_canonical_fingerprint_sources_and_generated_artifact(tmp_path: Path) -> None:
-    sdist = _build_sdist(tmp_path)
+def test_sdist_retains_public_sources_and_excludes_private_artifacts(tmp_path: Path) -> None:
+    sentinel_dir = _REPO_ROOT / "validation" / "agentic_ux" / "local"
+    sentinel_dir.mkdir(parents=True, exist_ok=True)
+    sentinel = sentinel_dir / f"package-invariant-{uuid4().hex}.txt"
+    sentinel.write_text("private package sentinel\n", encoding="utf-8")
+    try:
+        sdist = _build_sdist(tmp_path)
+    finally:
+        sentinel.unlink(missing_ok=True)
+
     with tarfile.open(sdist, "r:gz") as archive:
-        names = {Path(name).as_posix() for name in archive.getnames()}
+        members = [member for member in archive.getmembers() if member.isfile()]
+        names = {Path(member.name).as_posix() for member in members}
+        text_payloads = []
+        for member in members:
+            stream = archive.extractfile(member)
+            if stream is None:
+                continue
+            try:
+                text_payloads.append((member.name, stream.read().decode("utf-8")))
+            except UnicodeDecodeError:
+                continue
+
+    relative_names = {name.split("/", 1)[1] for name in names if "/" in name}
+    private_members = {
+        name for name in relative_names if any(name.startswith(prefix) for prefix in _PRIVATE_SDIST_PREFIXES)
+    }
+    assert private_members == set()
+
+    retired_identity_members = {
+        name
+        for name, text in text_payloads
+        if check_validation_hygiene.RETIRED_TARGET_BRAND_RE.search(text)
+        or check_validation_hygiene.RETIRED_PLACEHOLDER_RE.search(text)
+    }
+    assert retired_identity_members == set()
 
     fingerprint_sources = {
-        Path(name).name
-        for name in names
-        if "/src/recon_tool/data/fingerprints/" in name and name.endswith(".yaml")
+        Path(name).name for name in names if "/src/recon_tool/data/fingerprints/" in name and name.endswith(".yaml")
     }
     assert fingerprint_sources == _CANONICAL_FINGERPRINT_SOURCES
     assert any(name.endswith("/src/recon_tool/data/fingerprints.generated.json") for name in names)

@@ -121,12 +121,14 @@ violating the hedging or provenance invariants.
 Before committing a new fingerprint to the built-in set:
 
 1. Validate: `python scripts/validate_fingerprint.py ~/.recon/fingerprints.yaml`
-2. Dry-run against a real domain that should match:
-   `recon <domain> --explain --no-cache`. Verify the slug fires and
-   the evidence is what you expected.
-3. Dry-run against 10-15 domains that should *not* match, especially
-   parked / dormant / proxy-fronted domains. If your fingerprint fires
-   on any of them, tighten the pattern or switch to `match_mode: all`.
+2. Prove the positive path with a minimal reserved synthetic fixture. If live
+   validation is needed, keep every real apex and result under the gitignored
+   `validation/corpus-private/` and `validation/runs-private/` workspaces.
+3. Check negative cases with reserved synthetic fixtures and, when useful, a
+   private local domain set that includes parked, dormant, and proxy-fronted
+   shapes. If the fingerprint fires unexpectedly, tighten the pattern or switch
+   to `match_mode: all`. Commit only the fixtures and disclosure-safe aggregate
+   summary, never the real domain list or per-domain output.
 4. Keep regexes anchored (`^`, `$`) where possible. Unanchored substring
    matches in TXT are the #1 source of false positives.
 5. Add `description` and, when public vendor docs exist, `reference` metadata

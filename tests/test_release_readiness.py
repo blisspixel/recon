@@ -336,8 +336,8 @@ def test_private_candidate_files_fail() -> None:
         return _cp(
             cmd,
             stdout=(
-                "README.md\0validation/corpus-private/acme.txt\0"
-                "validation/live_runs/run/results.json\0example.com.json\0"
+                "README.md\0validation/corpus-private/targets.txt\0"
+                "validation/live_runs/run/results.json\0example.invalid.json\0"
             ),
         )
 
@@ -350,7 +350,7 @@ def test_private_candidate_files_fail() -> None:
 
 
 def test_private_data_check_rejects_target_domain_fields(tmp_path: Path) -> None:
-    _write_file(tmp_path, "validation/new-calibration.md", "queried_domain: acme.com\n")
+    _write_file(tmp_path, "validation/new-calibration.md", "queried_domain: evaluated-target.localhost\n")
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         assert cmd == list(check_validation_hygiene.GIT_FILE_INVENTORY_ARGS)
@@ -360,7 +360,7 @@ def test_private_data_check_rejects_target_domain_fields(tmp_path: Path) -> None
 
     assert check.status == "fail"
     assert "target-domain field" in check.detail
-    assert "acme.com" not in check.detail
+    assert "evaluated-target.localhost" not in check.detail
 
 
 def test_commit_hygiene_rejects_attribution_marker() -> None:

@@ -3,8 +3,8 @@
 recon's signal is apex-level: tenant resolution, MX, SPF/``_dmarc``, DKIM,
 MTA-STS, and certificate-transparency discovery all live at, or are keyed off,
 the registrable domain (eTLD+1) rather than an arbitrary sub-host. So a pasted
-browser URL like ``https://mail.acme.co.uk/login`` should be analyzed as
-``acme.co.uk``.
+browser URL like ``https://mail.example.co.uk/login`` should be analyzed as
+``example.co.uk``.
 
 Finding the eTLD+1 correctly requires the Public Suffix List: a naive
 "last two labels" rule mis-handles ``co.uk``, ``com.au``, and every other
@@ -27,7 +27,7 @@ _PSL = PublicSuffixList()
 def to_apex(host: str) -> str:
     """Reduce *host* to its registrable domain (eTLD+1).
 
-    ``mail.acme.co.uk`` -> ``acme.co.uk``; ``www.example.com`` ->
+    ``mail.example.co.uk`` -> ``example.co.uk``; ``www.example.com`` ->
     ``example.com``; an unknown TLD degrades gracefully (the bundled list
     treats it as a single-label suffix, so ``foo.bar.newtld`` ->
     ``bar.newtld``).

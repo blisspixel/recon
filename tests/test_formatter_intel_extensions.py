@@ -32,8 +32,8 @@ def _make_info(**overrides) -> TenantInfo:
     defaults = {
         "tenant_id": "tid",
         "display_name": "Test",
-        "default_domain": "test.com",
-        "queried_domain": "test.com",
+        "default_domain": "test.invalid",
+        "queried_domain": "test.invalid",
         "confidence": ConfidenceLevel.HIGH,
         "services": ("Svc",),
         "sources": ("dns_records",),
@@ -85,7 +85,7 @@ class TestPostureRendering:
 class TestDeltaRendering:
     def test_format_delta_no_changes(self):
         delta = DeltaReport(
-            domain="test.com",
+            domain="test.invalid",
             added_services=(),
             removed_services=(),
             added_slugs=(),
@@ -95,12 +95,12 @@ class TestDeltaRendering:
         )
         d = format_delta_dict(delta)
         assert d["has_changes"] is False
-        assert d["domain"] == "test.com"
+        assert d["domain"] == "test.invalid"
         assert d["incomplete_comparison"] is None
 
     def test_format_delta_with_changes(self):
         delta = DeltaReport(
-            domain="test.com",
+            domain="test.invalid",
             added_services=("New",),
             removed_services=("Old",),
             added_slugs=(),
@@ -116,7 +116,7 @@ class TestDeltaRendering:
 
     def test_format_delta_json(self):
         delta = DeltaReport(
-            domain="test.com",
+            domain="test.invalid",
             added_services=(),
             removed_services=(),
             added_slugs=(),
@@ -126,11 +126,11 @@ class TestDeltaRendering:
         )
         j = format_delta_json(delta)
         parsed = json.loads(j)
-        assert parsed["domain"] == "test.com"
+        assert parsed["domain"] == "test.invalid"
 
     def test_render_delta_panel(self):
         delta = DeltaReport(
-            domain="test.com",
+            domain="test.invalid",
             added_services=("New",),
             removed_services=(),
             added_slugs=(),
@@ -143,7 +143,7 @@ class TestDeltaRendering:
 
     def test_incomplete_delta_is_machine_readable_and_warned(self) -> None:
         delta = DeltaReport(
-            domain="test.com",
+            domain="test.invalid",
             added_services=(),
             removed_services=(),
             added_slugs=(),
@@ -173,7 +173,7 @@ class TestDeltaRendering:
 
     def test_incomplete_delta_panel_distinguishes_previous_and_current(self) -> None:
         delta = DeltaReport(
-            domain="test.com",
+            domain="test.invalid",
             added_services=(),
             removed_services=(),
             added_slugs=(),
@@ -201,7 +201,7 @@ class TestChainRendering:
     def test_format_chain_dict(self):
         info = _make_info()
         report = ChainReport(
-            results=(ChainResult(domain="test.com", info=info, chain_depth=0),),
+            results=(ChainResult(domain="test.invalid", info=info, chain_depth=0),),
             max_depth_reached=0,
             truncated=False,
         )
@@ -214,7 +214,7 @@ class TestChainRendering:
     def test_format_chain_json(self):
         info = _make_info()
         report = ChainReport(
-            results=(ChainResult(domain="test.com", info=info, chain_depth=0),),
+            results=(ChainResult(domain="test.invalid", info=info, chain_depth=0),),
             max_depth_reached=0,
             truncated=False,
         )
@@ -225,7 +225,7 @@ class TestChainRendering:
     def test_render_chain_panel(self):
         info = _make_info()
         report = ChainReport(
-            results=(ChainResult(domain="test.com", info=info, chain_depth=0),),
+            results=(ChainResult(domain="test.invalid", info=info, chain_depth=0),),
             max_depth_reached=0,
             truncated=False,
         )
@@ -240,7 +240,7 @@ class TestChainRendering:
     def test_render_chain_truncated(self):
         info = _make_info()
         report = ChainReport(
-            results=(ChainResult(domain="test.com", info=info, chain_depth=0),),
+            results=(ChainResult(domain="test.invalid", info=info, chain_depth=0),),
             max_depth_reached=1,
             truncated=True,
         )
@@ -253,7 +253,7 @@ class TestDeltaRenderingBranches:
 
     def test_render_delta_no_changes(self):
         delta = DeltaReport(
-            domain="test.com",
+            domain="test.invalid",
             added_services=(),
             removed_services=(),
             added_slugs=(),
@@ -266,7 +266,7 @@ class TestDeltaRenderingBranches:
 
     def test_render_delta_all_change_types(self):
         delta = DeltaReport(
-            domain="test.com",
+            domain="test.invalid",
             added_services=("NewSvc",),
             removed_services=("OldSvc",),
             added_slugs=("new-slug",),
@@ -288,7 +288,7 @@ class TestDeltaRenderingBranches:
 
     def test_format_delta_all_scalar_changes(self):
         delta = DeltaReport(
-            domain="test.com",
+            domain="test.invalid",
             added_services=(),
             removed_services=(),
             added_slugs=(),
@@ -319,7 +319,7 @@ class TestMarkdownRendering:
         info = _make_info()
         md = format_tenant_markdown(info)
         assert "# Tenant Report:" in md
-        assert r"test\.com" in md
+        assert r"test\.invalid" in md
 
     def test_markdown_with_cert_summary(self):
         from recon_tool.formatter import format_tenant_markdown
@@ -341,8 +341,8 @@ class TestMarkdownRendering:
         from recon_tool.formatter import format_tenant_markdown
 
         info = _make_info(
-            tenant_domains=("a.com", "b.com"),
-            related_domains=("c.com",),
+            tenant_domains=("a.invalid", "b.invalid"),
+            related_domains=("c.invalid",),
             domain_count=2,
             insights=("Some insight",),
             auth_type="Federated",
@@ -404,7 +404,7 @@ class TestMarkdownRendering:
             evidence=(
                 EvidenceRecord(
                     source_type="CNAME",
-                    raw_value="drive.test.com -> ghs.googlehosted.com",
+                    raw_value="drive.test.invalid -> ghs.googlehosted.com",
                     rule_name="Google Workspace: Drive",
                     slug="google-workspace",
                 ),
@@ -461,8 +461,8 @@ class TestChainRenderingMultiDepth:
         info2 = _make_info(display_name="Related")
         report = ChainReport(
             results=(
-                ChainResult(domain="test.com", info=info1, chain_depth=0),
-                ChainResult(domain="related.com", info=info2, chain_depth=1),
+                ChainResult(domain="test.invalid", info=info1, chain_depth=0),
+                ChainResult(domain="related.invalid", info=info2, chain_depth=1),
             ),
             max_depth_reached=1,
             truncated=False,

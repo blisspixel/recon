@@ -22,9 +22,9 @@ RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
     region="NA",
     sources=("oidc_discovery", "dns_records"),
@@ -32,9 +32,9 @@ SAMPLE_INFO = TenantInfo(
     slugs=("microsoft365", "slack"),
     auth_type="Federated",
     insights=("Federated identity indicators observed (likely Okta)",),
-    related_domains=("contoso-internal.com",),
+    related_domains=("alpha-internal.invalid",),
     domain_count=3,
-    tenant_domains=("contoso.com", "contoso.onmicrosoft.com", "contoso-internal.com"),
+    tenant_domains=("alpha.invalid", "alpha.onmicrosoft.com", "alpha-internal.invalid"),
 )
 
 SAMPLE_RESULTS = [
@@ -113,8 +113,8 @@ class TestLookupFlags:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_services_flag(self, mock_resolve):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        default = runner.invoke(app, ["lookup", "contoso.com", "--no-cache"])
-        compatibility = runner.invoke(app, ["lookup", "contoso.com", "--services", "--no-cache"])
+        default = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache"])
+        compatibility = runner.invoke(app, ["lookup", "alpha.invalid", "--services", "--no-cache"])
 
         assert default.exit_code == 0
         assert compatibility.exit_code == 0
@@ -124,15 +124,15 @@ class TestLookupFlags:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_domains_flag(self, mock_resolve):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--domains"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--domains"])
         assert result.exit_code == 0
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_full_flag(self, mock_resolve):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--full", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--full", "--no-cache"])
         assert result.exit_code == 0
-        assert "Contoso Ltd" in result.output
+        assert "Synthetic Alpha Ltd" in result.output
 
 
 class TestDoctorFailures:
@@ -163,7 +163,7 @@ class TestBatchEdgeCases:
     def test_batch_deduplicates(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\ncontoso.com\nCONTOSO.COM\n")
+        domain_file.write_text("alpha.invalid\nalpha.invalid\nALPHA.INVALID\n")
 
         result = runner.invoke(app, ["batch", str(domain_file), "--json"])
         assert result.exit_code == 0
@@ -174,7 +174,7 @@ class TestBatchEdgeCases:
     def test_batch_unexpected_error(self, mock_resolve, tmp_path):
         mock_resolve.side_effect = RuntimeError("network exploded")
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\n")
+        domain_file.write_text("alpha.invalid\n")
 
         result = runner.invoke(app, ["batch", str(domain_file), "--json"])
         assert result.exit_code == 0
@@ -185,19 +185,19 @@ class TestBatchEdgeCases:
     def test_batch_panel_error_display(self, mock_resolve, tmp_path):
         """Batch in default (panel) mode should show errors inline."""
         mock_resolve.side_effect = ReconLookupError(
-            domain="bad.com",
+            domain="bad.invalid",
             message="No data",
             error_type="all_sources_failed",
         )
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("bad.com\n")
+        domain_file.write_text("bad.invalid\n")
 
         result = runner.invoke(app, ["batch", str(domain_file)])
         assert result.exit_code == 0
 
     def test_batch_too_many_domains(self, tmp_path):
         domain_file = tmp_path / "big.txt"
-        lines = "\n".join(f"domain{i}.com" for i in range(10001))
+        lines = "\n".join(f"domain{i}.invalid" for i in range(10001))
         domain_file.write_text(lines)
 
         result = runner.invoke(app, ["batch", str(domain_file)])

@@ -6,7 +6,7 @@ Unit tests for:
 - 11.4: simulate_hardening MCP tool
 - 11.5: explain parameter on lookup_tenant and analyze_posture
 
-All examples use fictional companies (Contoso, Northwind, Fabrikam).
+All examples use explicit synthetic labels and reserved domains.
 """
 
 from __future__ import annotations
@@ -58,7 +58,7 @@ _EVIDENCE = (
     ),
     EvidenceRecord(
         source_type="MX",
-        raw_value="contoso-com.mail.protection.outlook.com",
+        raw_value="alpha-com.mail.protection.outlook.com",
         rule_name="MX M365",
         slug="microsoft365",
     ),
@@ -66,9 +66,9 @@ _EVIDENCE = (
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
     region="NA",
     sources=("oidc_discovery", "azure_ad_metadata", "dns_records"),
@@ -102,8 +102,8 @@ SAMPLE_RESULTS: list[SourceResult] = [
 
 _CONFLICTS = MergeConflicts(
     display_name=(
-        CandidateValue("Contoso Ltd", "oidc_discovery", "high"),
-        CandidateValue("Contoso Corporation", "azure_ad_metadata", "medium"),
+        CandidateValue("Synthetic Alpha Ltd", "oidc_discovery", "high"),
+        CandidateValue("Synthetic Alpha Corporation", "azure_ad_metadata", "medium"),
     ),
 )
 
@@ -262,7 +262,7 @@ class TestExplainSignal:
     async def test_unknown_signal_raises_tool_error(self) -> None:
         """Unknown signal name raises ToolError (isError) listing available names."""
         with pytest.raises(ToolError, match="not found"):
-            await explain_signal("Nonexistent Fabrikam Signal")
+            await explain_signal("Nonexistent Synthetic Beta Signal")
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize("name", ["Dual Email Delivery Path", "Incomplete Identity Migration"])
@@ -280,7 +280,7 @@ class TestExplainSignal:
 
         _signal, public_label = reportable_signals()[0]
 
-        data = await explain_signal(public_label, domain="contoso.com")
+        data = await explain_signal(public_label, domain="alpha.invalid")
         assert "domain" in data
         assert "fired" in data
         assert isinstance(data["fired"], bool)
@@ -294,11 +294,11 @@ class TestExplainSignal:
         from recon_tool.signals import reportable_signals
 
         _signal, public_label = reportable_signals()[0]
-        raw = "https://www.contoso.com/private/path?token=secret"
+        raw = "https://www.alpha.invalid/private/path?token=secret"
 
         data = await explain_signal(public_label, domain=raw)
 
-        assert data["domain"] == "contoso.com"
+        assert data["domain"] == "alpha.invalid"
         assert raw not in str(data)
         assert "/private/path" not in str(data)
 
@@ -322,7 +322,7 @@ class TestExplainSignal:
         )
         mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
 
-        data = await explain_signal("AI-platform indicators observed", domain="contoso.com")
+        data = await explain_signal("AI-platform indicators observed", domain="alpha.invalid")
 
         assert data["fired"] is False
         assert data["matched_slugs"] == []
@@ -340,7 +340,7 @@ class TestTestHypothesis:
     async def test_returns_correct_json_structure(self, mock_resolve: AsyncMock) -> None:
         """test_hypothesis returns JSON with likelihood, supporting, contradicting, etc."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        data = await mcp_test_hypothesis("contoso.com", "mid-migration to cloud identity")
+        data = await mcp_test_hypothesis("alpha.invalid", "mid-migration to cloud identity")
         assert "likelihood" in data
         assert data["likelihood"] == "unresolved"
         assert "supporting_signals" in data
@@ -356,11 +356,11 @@ class TestTestHypothesis:
     @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_domain_output_uses_resolved_normalized_domain(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        raw = "https://www.contoso.com/private/path?token=secret"
+        raw = "https://www.alpha.invalid/private/path?token=secret"
 
         data = await mcp_test_hypothesis(raw, "email configuration")
 
-        assert data["domain"] == "contoso.com"
+        assert data["domain"] == "alpha.invalid"
         assert raw not in str(data)
         assert "/private/path" not in str(data)
 
@@ -369,7 +369,7 @@ class TestTestHypothesis:
     async def test_keyword_matching_maps_hypothesis(self, mock_resolve: AsyncMock) -> None:
         """Hypothesis keywords map to relevant signals via keyword matching."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        data = await mcp_test_hypothesis("contoso.com", "security posture assessment")
+        data = await mcp_test_hypothesis("alpha.invalid", "security posture assessment")
         # The tool should produce lists (possibly empty) for all signal categories
         assert isinstance(data["supporting_signals"], list)
         assert isinstance(data["contradicting_signals"], list)
@@ -380,7 +380,7 @@ class TestTestHypothesis:
     async def test_hedged_language_in_disclaimer(self, mock_resolve: AsyncMock) -> None:
         """Output uses hedged language ('indicators suggest', not 'confirms')."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        data = await mcp_test_hypothesis("contoso.com", "email security")
+        data = await mcp_test_hypothesis("alpha.invalid", "email security")
         disclaimer = data.get("disclaimer", "")
         assert "suggest" in disclaimer.lower() or "indicators" in disclaimer.lower()
         # "confirm" should only appear in negated form
@@ -398,7 +398,7 @@ class TestSimulateHardening:
     async def test_returns_correct_json_structure(self, mock_resolve: AsyncMock) -> None:
         """simulate_hardening returns JSON with score delta and applied fixes."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        data = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
+        data = await simulate_hardening("alpha.invalid", ["DMARC reject", "MTA-STS enforce"])
         assert "current_score" in data
         assert isinstance(data["current_score"], int)
         assert "simulated_score" in data
@@ -414,11 +414,11 @@ class TestSimulateHardening:
     @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_domain_output_uses_resolved_normalized_domain(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        raw = "https://www.contoso.com/private/path?token=secret"
+        raw = "https://www.alpha.invalid/private/path?token=secret"
 
         data = await simulate_hardening(raw, ["DMARC reject"])
 
-        assert data["domain"] == "contoso.com"
+        assert data["domain"] == "alpha.invalid"
         assert raw not in str(data)
         assert "/private/path" not in str(data)
 
@@ -428,7 +428,7 @@ class TestSimulateHardening:
         """Remaining gaps use 'Consider' language in recommendations."""
         info_weak = replace(SAMPLE_INFO, dmarc_policy=None, services=("Exchange Online",))
         mock_resolve.return_value = (info_weak, list(SAMPLE_RESULTS))
-        data = await simulate_hardening("contoso.com", ["BIMI"])
+        data = await simulate_hardening("alpha.invalid", ["BIMI"])
         for gap in data["remaining_gaps"]:
             assert "recommendation" in gap
             assert "observation" in gap
@@ -445,7 +445,7 @@ class TestSimulateHardening:
         )
         mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
 
-        data = await simulate_hardening("contoso.com", ["BIMI"])
+        data = await simulate_hardening("alpha.invalid", ["BIMI"])
 
         assert data["current_score"] == 0
         assert data["simulated_score"] == 5
@@ -457,7 +457,7 @@ class TestSimulateHardening:
         """Applying hardening fixes should not decrease the posture score."""
         info_weak = replace(SAMPLE_INFO, dmarc_policy=None, mta_sts_mode=None)
         mock_resolve.return_value = (info_weak, list(SAMPLE_RESULTS))
-        data = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
+        data = await simulate_hardening("alpha.invalid", ["DMARC reject", "MTA-STS enforce"])
         assert data["score_delta"] >= 0
 
 
@@ -472,7 +472,7 @@ class TestLookupTenantExplain:
     async def test_explain_true_includes_explanations(self, mock_resolve: AsyncMock) -> None:
         """explain=True on lookup_tenant includes explanations in JSON response."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="json", explain=True)
+        result = await lookup_tenant("alpha.invalid", format="json", explain=True)
         data = json.loads(result)
         assert "explanations" in data
         assert isinstance(data["explanations"], list)
@@ -483,7 +483,7 @@ class TestLookupTenantExplain:
     async def test_explain_false_no_explanations(self, mock_resolve: AsyncMock) -> None:
         """explain=False on lookup_tenant produces standard output without explanations."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="json", explain=False)
+        result = await lookup_tenant("alpha.invalid", format="json", explain=False)
         data = json.loads(result)
         assert "explanations" not in data
 
@@ -492,7 +492,7 @@ class TestLookupTenantExplain:
     async def test_explain_omitted_no_explanations(self, mock_resolve: AsyncMock) -> None:
         """Omitting explain on lookup_tenant produces standard output."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="json")
+        result = await lookup_tenant("alpha.invalid", format="json")
         data = json.loads(result)
         assert "explanations" not in data
 
@@ -501,7 +501,7 @@ class TestLookupTenantExplain:
     async def test_explain_with_conflicts_includes_conflicts_key(self, mock_resolve: AsyncMock) -> None:
         """explain=True with merge conflicts includes 'conflicts' key."""
         mock_resolve.return_value = (SAMPLE_INFO_WITH_CONFLICTS, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="json", explain=True)
+        result = await lookup_tenant("alpha.invalid", format="json", explain=True)
         data = json.loads(result)
         assert "explanations" in data
         assert "conflicts" in data
@@ -519,7 +519,7 @@ class TestAnalyzePostureExplain:
     async def test_explain_true_includes_explanations(self, mock_resolve: AsyncMock) -> None:
         """explain=True on analyze_posture includes explanations in response."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        data = await analyze_posture("contoso.com", explain=True)
+        data = await analyze_posture("alpha.invalid", explain=True)
         assert "explanations" in data
         assert isinstance(data["explanations"], list)
 
@@ -528,7 +528,7 @@ class TestAnalyzePostureExplain:
     async def test_explain_false_returns_plain_list(self, mock_resolve: AsyncMock) -> None:
         """explain=False on analyze_posture returns a plain observation list."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        data = await analyze_posture("contoso.com", explain=False)
+        data = await analyze_posture("alpha.invalid", explain=False)
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
@@ -536,7 +536,7 @@ class TestAnalyzePostureExplain:
     async def test_explain_omitted_returns_plain_list(self, mock_resolve: AsyncMock) -> None:
         """Omitting explain on analyze_posture returns a plain observation list."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        data = await analyze_posture("contoso.com")
+        data = await analyze_posture("alpha.invalid")
         assert isinstance(data, list)
 
     @pytest.mark.asyncio
@@ -547,13 +547,13 @@ class TestAnalyzePostureExplain:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        raw = "https://www.contoso.com/private/path?token=secret"
+        raw = "https://www.alpha.invalid/private/path?token=secret"
 
         with caplog.at_level("INFO", logger="recon"):
             await analyze_posture(raw)
 
-        mock_resolve.assert_awaited_once_with("contoso.com")
-        assert "contoso.com" in caplog.text
+        mock_resolve.assert_awaited_once_with("alpha.invalid")
+        assert "alpha.invalid" in caplog.text
         assert raw not in caplog.text
         assert "/private/path" not in caplog.text
 
@@ -571,19 +571,19 @@ class TestDiscoverCacheSafety:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_skip_ct_result_does_not_poison_shared_cache(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        assert _cache_get("contoso.com") is None
-        await discover_fingerprint_candidates("contoso.com", skip_ct=True)
-        assert _cache_get("contoso.com") is None
+        assert _cache_get("alpha.invalid") is None
+        await discover_fingerprint_candidates("alpha.invalid", skip_ct=True)
+        assert _cache_get("alpha.invalid") is None
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_full_result_still_populates_shared_cache(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        assert _cache_get("contoso.com") is None
-        await discover_fingerprint_candidates("contoso.com", skip_ct=False)
-        cached = _cache_get("contoso.com")
+        assert _cache_get("alpha.invalid") is None
+        await discover_fingerprint_candidates("alpha.invalid", skip_ct=False)
+        cached = _cache_get("alpha.invalid")
         assert cached is not None
-        assert cached[0].queried_domain == "contoso.com"
+        assert cached[0].queried_domain == "alpha.invalid"
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
@@ -593,13 +593,13 @@ class TestDiscoverCacheSafety:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        raw = "https://www.contoso.com/private/path?token=secret"
+        raw = "https://www.alpha.invalid/private/path?token=secret"
 
         with caplog.at_level("INFO", logger="recon"):
             await discover_fingerprint_candidates(raw)
 
-        mock_resolve.assert_awaited_once_with("contoso.com", skip_ct=False)
-        assert "contoso.com" in caplog.text
+        mock_resolve.assert_awaited_once_with("alpha.invalid", skip_ct=False)
+        assert "alpha.invalid" in caplog.text
         assert raw not in caplog.text
         assert "/private/path" not in caplog.text
 
@@ -614,14 +614,14 @@ class TestDiscoverCacheSafety:
             return False
 
         monkeypatch.setattr(server_introspection, "rate_limit_try_acquire", deny)
-        raw = "https://www.contoso.com/private/path?token=secret"
+        raw = "https://www.alpha.invalid/private/path?token=secret"
 
         with pytest.raises(ToolError) as exc_info:
             await discover_fingerprint_candidates(raw)
 
         message = str(exc_info.value)
-        assert acquired == ["contoso.com"]
-        assert "Rate limited: contoso.com" in message
+        assert acquired == ["alpha.invalid"]
+        assert "Rate limited: alpha.invalid" in message
         assert raw not in message
         assert "/private/path" not in message
 
@@ -633,15 +633,15 @@ class TestDiscoverCacheSafety:
         caplog: pytest.LogCaptureFixture,
     ) -> None:
         mock_resolve.side_effect = RuntimeError("boom")
-        raw = "https://www.contoso.com/private/path?token=secret"
+        raw = "https://www.alpha.invalid/private/path?token=secret"
 
         with caplog.at_level("ERROR", logger="recon"), pytest.raises(ToolError) as exc_info:
             await discover_fingerprint_candidates(raw)
 
         message = str(exc_info.value)
-        assert "Error mining contoso.com" in message
+        assert "Error mining alpha.invalid" in message
         assert raw not in message
         assert "/private/path" not in message
-        assert "discover for contoso.com" in caplog.text
+        assert "discover for alpha.invalid" in caplog.text
         assert raw not in caplog.text
         assert "/private/path" not in caplog.text

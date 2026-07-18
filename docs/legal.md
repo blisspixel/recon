@@ -53,9 +53,9 @@ DNS records are self-reported metadata. Organizations may leave stale records fr
 The current contribution and public-validation rule requires evaluated-target
 examples to use explicit synthetic identities under reserved namespaces. The
 README example uses fabricated values under a reserved namespace and is not a
-report about a real organization. Legacy fictional examples outside validation
-remain bounded migration debt in the roadmap and must not be copied into new
-surfaces.
+report about a real organization. Current public examples, tests, schemas,
+snapshots, and agent guidance use the same reserved convention, and the release
+gate rejects the retired target vocabulary.
 
 Real vendor and product names, plus provider-controlled infrastructure
 hostnames, can appear when they are detection classes or are necessary to model

@@ -53,11 +53,11 @@ def test_inspect_result_cache_returns_only_validated_metadata(isolated_cache: Pa
 
 
 def test_inspect_result_cache_reports_expired_entry_without_hiding_it(isolated_cache: Path) -> None:
-    cache_put("expired.com", _info("expired.com"))
+    cache_put("expired.invalid", _info("expired.invalid"))
     old = time.time() - DEFAULT_TTL - 1
-    os.utime(cache_dir() / "expired.com.json", (old, old))
+    os.utime(cache_dir() / "expired.invalid.json", (old, old))
 
-    inspection = inspect_result_cache("expired.com")
+    inspection = inspect_result_cache("expired.invalid")
 
     assert not inspection.failed
     assert inspection.entry is not None
@@ -66,10 +66,10 @@ def test_inspect_result_cache_reports_expired_entry_without_hiding_it(isolated_c
 
 
 def test_inspect_result_cache_distinguishes_missing_from_invalid(isolated_cache: Path) -> None:
-    missing = inspect_result_cache("missing.com")
+    missing = inspect_result_cache("missing.invalid")
     cache_dir().mkdir(parents=True)
-    (cache_dir() / "broken.com.json").write_text("NOT JSON", encoding="utf-8")
-    broken = inspect_result_cache("broken.com")
+    (cache_dir() / "broken.invalid.json").write_text("NOT JSON", encoding="utf-8")
+    broken = inspect_result_cache("broken.invalid")
 
     assert missing.entry is None
     assert not missing.failed
@@ -78,12 +78,12 @@ def test_inspect_result_cache_distinguishes_missing_from_invalid(isolated_cache:
 
 
 def test_list_result_cache_counts_invalid_entries(isolated_cache: Path) -> None:
-    cache_put("valid.com", _info("valid.com"))
-    (cache_dir() / "broken.com.json").write_text("NOT JSON", encoding="utf-8")
+    cache_put("valid.invalid", _info("valid.invalid"))
+    (cache_dir() / "broken.invalid.json").write_text("NOT JSON", encoding="utf-8")
 
     listing = list_result_cache()
 
-    assert [entry.domain for entry in listing.entries] == ["valid.com"]
+    assert [entry.domain for entry in listing.entries] == ["valid.invalid"]
     assert listing.failed == 1
     assert listing.inspected == 2
     assert listing.total == 2

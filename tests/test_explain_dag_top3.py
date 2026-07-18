@@ -148,20 +148,20 @@ class TestRenderDagTextTop3:
 
     def test_zero_bindings_omits_influence_section(self, network):
         result = infer(network, [], [], priors_override={})
-        out = render_dag_text(network, result, domain="contoso.com")
+        out = render_dag_text(network, result, domain="alpha.invalid")
         # Sparse target: no node should print a "Top influence" section.
         assert "Top influence" not in out
 
     def test_single_binding_uses_singular_header(self, network):
         result = infer(network, [], ["m365_tenant_observed"], priors_override={})
-        out = render_dag_text(network, result, domain="contoso.com")
+        out = render_dag_text(network, result, domain="alpha.invalid")
         # Singular header for the one-binding case.
         assert "**Top influence:**" in out
         assert "**Top influences (ranked" not in out
 
     def test_multi_binding_uses_plural_with_count(self, network):
         result = infer(network, [], ["dmarc_reject", "spf_strict"], priors_override={})
-        out = render_dag_text(network, result, domain="contoso.com")
+        out = render_dag_text(network, result, domain="alpha.invalid")
         assert "**Top influences (ranked, 2 fired):**" in out
 
     def test_more_than_three_influences_truncates_to_top_three(self):
@@ -191,7 +191,7 @@ class TestRenderDagTextTop3:
 
     def test_llr_appears_with_sign_and_two_decimals(self, network):
         result = infer(network, [], ["m365_tenant_observed"], priors_override={})
-        out = render_dag_text(network, result, domain="contoso.com")
+        out = render_dag_text(network, result, domain="alpha.invalid")
         # Format: "LLR +3.46" — signed, two-decimal.
         import re
 
@@ -199,7 +199,7 @@ class TestRenderDagTextTop3:
 
     def test_influence_percentage_appears(self, network):
         result = infer(network, [], ["m365_tenant_observed"], priors_override={})
-        out = render_dag_text(network, result, domain="contoso.com")
+        out = render_dag_text(network, result, domain="alpha.invalid")
         assert "% of evidence influence" in out
 
 
@@ -250,7 +250,7 @@ def test_dense_m365_snapshot(network):
     by accident.
     """
     result = infer(network, [], ["m365_tenant_observed"], priors_override={})
-    out = render_dag_text(network, result, domain="contoso.com")
+    out = render_dag_text(network, result, domain="alpha.invalid")
     assert _SNAPSHOT_FRAGMENT in out, (
         "m365_tenant section drifted from pinned snapshot — either the "
         "renderer changed (update the snapshot intentionally) or LLR "
@@ -270,5 +270,5 @@ def test_declarative_node_explains_absence_as_evidence(network):
     node = next(p for p in result.posteriors if p.name == "email_security_policy_enforcing")
     assert node.evidence_used == ()  # nothing fired
     assert node.absence_informative is True
-    out = render_dag_text(network, result, domain="contoso.com")
+    out = render_dag_text(network, result, domain="alpha.invalid")
     assert "absence of an expected public declaration is itself evidence" in out

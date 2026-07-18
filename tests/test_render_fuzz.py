@@ -62,7 +62,7 @@ def _surface_attribution(draw: st.DrawFn) -> SurfaceAttribution:
     sub_n = draw(st.integers(min_value=0, max_value=99))
     slug = draw(_slug_strategy)
     return SurfaceAttribution(
-        subdomain=f"sub{sub_n}.contoso.com",
+        subdomain=f"sub{sub_n}.alpha.invalid",
         primary_slug=slug,
         primary_name=slug.replace("-", " ").title(),
         primary_tier=draw(st.sampled_from(["application", "infrastructure"])),
@@ -75,7 +75,7 @@ def _fuzz_tenant(draw: st.DrawFn) -> TenantInfo:
     v1.9.9 surfaces. Every drawn TenantInfo must round-trip through
     ``render_tenant_panel`` without raising."""
     n_domains = draw(st.integers(min_value=0, max_value=15))
-    domains = tuple(f"contoso-{i}.example" for i in range(n_domains))
+    domains = tuple(f"alpha-{i}.example" for i in range(n_domains))
     slugs = tuple(draw(st.lists(_slug_strategy, min_size=0, max_size=10)))
     services = tuple(draw(st.lists(_service_names, min_size=0, max_size=10)))
     attribs = tuple(draw(st.lists(_surface_attribution(), min_size=0, max_size=12)))
@@ -83,9 +83,9 @@ def _fuzz_tenant(draw: st.DrawFn) -> TenantInfo:
 
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid-fuzz",
-        display_name="Contoso Fuzz",
-        default_domain="contoso.example",
-        queried_domain="contoso.example",
+        display_name="Synthetic Alpha Fuzz",
+        default_domain="alpha.example",
+        queried_domain="alpha.example",
         confidence=confidence,
         domain_count=n_domains,
         tenant_domains=domains,
@@ -146,6 +146,6 @@ class TestRenderOutputIsString:
     def test_default_render_is_non_empty(self, info):
         out = _render(info, show_domains=False)
         assert isinstance(out, str)
-        # The display name "Contoso Fuzz" always appears in the hero
+        # The display name "Synthetic Alpha Fuzz" always appears in the hero
         # header, so a non-empty render is a load-bearing invariant.
-        assert "Contoso Fuzz" in out
+        assert "Synthetic Alpha Fuzz" in out

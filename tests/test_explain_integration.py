@@ -52,7 +52,7 @@ CHAIN_RESOLVE_PATH = "recon_tool.chain.resolve_tenant"
 SERVER_RESOLVE_PATH = "recon_tool.server_app.resolve_tenant"
 SERVER_RESOLVE_OR_CACHE = "recon_tool.server_app.resolve_or_cache"
 
-# Fictional company fixture data
+# Explicit synthetic fixture data
 _EVIDENCE = (
     EvidenceRecord(
         source_type="TXT",
@@ -61,15 +61,15 @@ _EVIDENCE = (
         slug="microsoft365",
     ),
     EvidenceRecord(
-        source_type="MX", raw_value="contoso-com.mail.protection.outlook.com", rule_name="MX M365", slug="microsoft365"
+        source_type="MX", raw_value="alpha-com.mail.protection.outlook.com", rule_name="MX M365", slug="microsoft365"
     ),
 )
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
     region="NA",
     sources=("oidc_discovery", "azure_ad_metadata", "dns_records"),
@@ -96,8 +96,8 @@ SAMPLE_RESULTS = [
 # TenantInfo with merge conflicts for conflict annotation tests
 _CONFLICTS = MergeConflicts(
     display_name=(
-        CandidateValue("Contoso Ltd", "oidc_discovery", "high"),
-        CandidateValue("Contoso Corporation", "azure_ad_metadata", "medium"),
+        CandidateValue("Synthetic Alpha Ltd", "oidc_discovery", "high"),
+        CandidateValue("Synthetic Alpha Corporation", "azure_ad_metadata", "medium"),
     ),
     auth_type=(
         CandidateValue("Managed", "userrealm", "high"),
@@ -138,7 +138,7 @@ class TestCLIExplainFlag:
         buf = StringIO()
         set_console(Console(file=buf, width=120, force_terminal=True))
         try:
-            result = runner.invoke(app, ["lookup", "contoso.com", "--explain", "--no-cache"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain", "--no-cache"])
             assert result.exit_code == 0
             output = buf.getvalue() + result.output
             assert "Explanations" in output
@@ -149,7 +149,7 @@ class TestCLIExplainFlag:
     def test_explain_json_output(self, mock_resolve: AsyncMock) -> None:
         """--explain --json includes explanations key."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--explain", "--json", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain", "--json", "--no-cache"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "explanations" in data
@@ -160,7 +160,7 @@ class TestCLIExplainFlag:
     def test_explain_md_output(self, mock_resolve: AsyncMock) -> None:
         """--explain --md appends ## Explanations section."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--explain", "--md", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain", "--md", "--no-cache"])
         assert result.exit_code == 0
         assert "## Explanations" in result.output
 
@@ -178,7 +178,7 @@ class TestCLIExplainFlag:
         buf = StringIO()
         set_console(Console(file=buf, width=120, force_terminal=True))
         try:
-            result = runner.invoke(app, ["lookup", "contoso.com", "--explain", "--chain", "--no-cache"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain", "--chain", "--no-cache"])
             assert result.exit_code == 0
             output = buf.getvalue() + result.output
             assert "Explanations" in output or "Chain" in output
@@ -199,7 +199,7 @@ class TestCLIExplainFlag:
         buf = StringIO()
         set_console(Console(file=buf, width=120, force_terminal=True))
         try:
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache"])
             assert result.exit_code == 0
             output = buf.getvalue() + result.output
             assert "Explanations" not in output
@@ -210,7 +210,7 @@ class TestCLIExplainFlag:
     def test_no_explain_json_backward_compat(self, mock_resolve: AsyncMock) -> None:
         """Without --explain, JSON output has no explanations key."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--json", "--no-cache"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "explanations" not in data
@@ -326,7 +326,7 @@ class TestExplainSignal:
         signals = load_signals()
         sig_name = signals[0].name
 
-        data = await explain_signal(sig_name, domain="contoso.com")
+        data = await explain_signal(sig_name, domain="alpha.invalid")
         assert "domain" in data
         assert "fired" in data
         assert "matched_slugs" in data
@@ -342,7 +342,7 @@ class TestTestHypothesis:
     @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_returns_correct_structure(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        data = await mcp_test_hypothesis("contoso.com", "mid-migration to cloud identity")
+        data = await mcp_test_hypothesis("alpha.invalid", "mid-migration to cloud identity")
         assert "likelihood" in data
         assert "supporting_signals" in data
         assert "contradicting_signals" in data
@@ -355,7 +355,7 @@ class TestTestHypothesis:
     async def test_keyword_matching(self, mock_resolve: AsyncMock) -> None:
         """Hypothesis keywords map to relevant signals."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        data = await mcp_test_hypothesis("contoso.com", "security posture assessment")
+        data = await mcp_test_hypothesis("alpha.invalid", "security posture assessment")
         # Should have some signals matched via keyword matching
         assert isinstance(data["supporting_signals"], list)
         assert isinstance(data["contradicting_signals"], list)
@@ -366,7 +366,7 @@ class TestTestHypothesis:
     async def test_hedged_language(self, mock_resolve: AsyncMock) -> None:
         """Output uses hedged language (indicators suggest, not confirms)."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        data = await mcp_test_hypothesis("contoso.com", "email security")
+        data = await mcp_test_hypothesis("alpha.invalid", "email security")
         disclaimer = data["disclaimer"]
         assert "suggest" in disclaimer.lower() or "indicators" in disclaimer.lower()
         assert "confirm" not in disclaimer.lower() or "do not confirm" in disclaimer.lower()
@@ -389,7 +389,7 @@ class TestSimulateHardening:
     @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_returns_correct_structure(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
-        data = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
+        data = await simulate_hardening("alpha.invalid", ["DMARC reject", "MTA-STS enforce"])
         assert "current_score" in data
         assert "simulated_score" in data
         assert "score_delta" in data
@@ -404,7 +404,7 @@ class TestSimulateHardening:
         # Use info without DMARC to ensure gaps exist
         info_no_dmarc = replace(SAMPLE_INFO, dmarc_policy=None, services=("Exchange Online",))
         mock_resolve.return_value = (info_no_dmarc, list(SAMPLE_RESULTS))
-        data = await simulate_hardening("contoso.com", ["BIMI"])
+        data = await simulate_hardening("alpha.invalid", ["BIMI"])
         # Check remaining_gaps have recommendation text
         for gap in data["remaining_gaps"]:
             assert "recommendation" in gap
@@ -416,7 +416,7 @@ class TestSimulateHardening:
         """Applying fixes should not decrease the score."""
         info_weak = replace(SAMPLE_INFO, dmarc_policy=None, mta_sts_mode=None)
         mock_resolve.return_value = (info_weak, list(SAMPLE_RESULTS))
-        data = await simulate_hardening("contoso.com", ["DMARC reject", "MTA-STS enforce"])
+        data = await simulate_hardening("alpha.invalid", ["DMARC reject", "MTA-STS enforce"])
         assert data["score_delta"] >= 0
 
     @pytest.mark.asyncio
@@ -437,7 +437,7 @@ class TestLookupTenantExplain:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_explain_true_includes_explanations(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="json", explain=True)
+        result = await lookup_tenant("alpha.invalid", format="json", explain=True)
         data = json.loads(result)
         assert "explanations" in data
         assert isinstance(data["explanations"], list)
@@ -447,7 +447,7 @@ class TestLookupTenantExplain:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_explain_false_no_explanations(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="json", explain=False)
+        result = await lookup_tenant("alpha.invalid", format="json", explain=False)
         data = json.loads(result)
         assert "explanations" not in data
 
@@ -455,7 +455,7 @@ class TestLookupTenantExplain:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_explain_omitted_no_explanations(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="json")
+        result = await lookup_tenant("alpha.invalid", format="json")
         data = json.loads(result)
         assert "explanations" not in data
 
@@ -464,7 +464,7 @@ class TestLookupTenantExplain:
     async def test_explain_with_conflicts(self, mock_resolve: AsyncMock) -> None:
         """explain=True with conflicts includes conflicts key."""
         mock_resolve.return_value = (SAMPLE_INFO_WITH_CONFLICTS, SAMPLE_RESULTS)
-        result = await lookup_tenant("contoso.com", format="json", explain=True)
+        result = await lookup_tenant("alpha.invalid", format="json", explain=True)
         data = json.loads(result)
         assert "explanations" in data
         assert "conflicts" in data
@@ -478,7 +478,7 @@ class TestAnalyzePostureExplain:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_explain_true_includes_explanations(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        data = await analyze_posture("contoso.com", explain=True)
+        data = await analyze_posture("alpha.invalid", explain=True)
         assert "explanations" in data
         assert isinstance(data["explanations"], list)
 
@@ -486,7 +486,7 @@ class TestAnalyzePostureExplain:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_explain_false_no_explanations(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        data = await analyze_posture("contoso.com", explain=False)
+        data = await analyze_posture("alpha.invalid", explain=False)
         # Without explain, result is a plain list of observations
         assert isinstance(data, list)
 
@@ -494,7 +494,7 @@ class TestAnalyzePostureExplain:
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
     async def test_explain_omitted_no_explanations(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        data = await analyze_posture("contoso.com")
+        data = await analyze_posture("alpha.invalid")
         assert isinstance(data, list)
 
 
@@ -513,8 +513,8 @@ class TestConflictAnnotations:
         """Verbose mode shows all candidate values."""
         ann = render_conflict_annotation("display_name", _CONFLICTS, verbose=True)
         assert "2 sources disagree" in ann
-        assert "Contoso Ltd" in ann
-        assert "Contoso Corporation" in ann
+        assert "Synthetic Alpha Ltd" in ann
+        assert "Synthetic Alpha Corporation" in ann
         assert "oidc_discovery" in ann
         assert "azure_ad_metadata" in ann
 
@@ -550,7 +550,7 @@ class TestConflictAnnotations:
         console.print(panel)
         output = buf.getvalue()
         assert "sources disagree" in output
-        assert "Contoso Corporation" in output
+        assert "Synthetic Alpha Corporation" in output
 
     def test_panel_without_explain_no_annotations(self) -> None:
         """Without explain, no conflict indicators (backward compatible)."""
@@ -579,7 +579,7 @@ class TestConflictAnnotations:
         buf = StringIO()
         set_console(Console(file=buf, width=120, force_terminal=True))
         try:
-            result = runner.invoke(app, ["lookup", "contoso.com", "--explain", "--no-cache"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain", "--no-cache"])
             assert result.exit_code == 0
             output = buf.getvalue() + result.output
             assert "sources disagree" in output
@@ -600,7 +600,7 @@ class TestConflictAnnotations:
         buf = StringIO()
         set_console(Console(file=buf, width=120, force_terminal=True))
         try:
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache"])
             assert result.exit_code == 0
             output = buf.getvalue() + result.output
             assert "sources disagree" not in output

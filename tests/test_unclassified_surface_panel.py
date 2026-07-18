@@ -51,9 +51,9 @@ def _make_tenant(**overrides: object) -> TenantInfo:
     """
     base: dict[str, object] = {
         "tenant_id": "a1b2c3d4",
-        "display_name": "Contoso, Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha, Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.HIGH,
     }
     base.update(overrides)
@@ -68,8 +68,8 @@ class TestUnclassifiedSurfaceVisible:
         info = _make_tenant(
             unclassified_cname_chains=(
                 UnclassifiedCnameChain(
-                    subdomain="data.contoso.com",
-                    chain=("strange-host.example.cloud",),
+                    subdomain="data.alpha.invalid",
+                    chain=("strange-host.surface.invalid",),
                 ),
             ),
         )
@@ -82,8 +82,8 @@ class TestUnclassifiedSurfaceVisible:
         info = _make_tenant(
             unclassified_cname_chains=(
                 UnclassifiedCnameChain(
-                    subdomain="data.contoso.com",
-                    chain=("strange-host.example.cloud",),
+                    subdomain="data.alpha.invalid",
+                    chain=("strange-host.surface.invalid",),
                 ),
             ),
         )
@@ -96,16 +96,16 @@ class TestUnclassifiedSurfaceVisible:
         info = _make_tenant(
             unclassified_cname_chains=(
                 UnclassifiedCnameChain(
-                    subdomain="data.contoso.com",
-                    chain=("a.example.cloud",),
+                    subdomain="data.alpha.invalid",
+                    chain=("a.surface.invalid",),
                 ),
                 UnclassifiedCnameChain(
-                    subdomain="analytics.contoso.com",
-                    chain=("b.example.cloud",),
+                    subdomain="analytics.alpha.invalid",
+                    chain=("b.surface.invalid",),
                 ),
                 UnclassifiedCnameChain(
-                    subdomain="api.contoso.com",
-                    chain=("c.example.cloud",),
+                    subdomain="api.alpha.invalid",
+                    chain=("c.surface.invalid",),
                 ),
             ),
         )
@@ -120,13 +120,13 @@ class TestUnclassifiedSurfaceVisible:
         info = _make_tenant(
             unclassified_cname_chains=(
                 UnclassifiedCnameChain(
-                    subdomain="data.contoso.com",
-                    chain=("strange.example.cloud",),
+                    subdomain="data.alpha.invalid",
+                    chain=("strange.surface.invalid",),
                 ),
             ),
         )
         out = _render_to_string(info)
-        assert "recon discover contoso.com" in out, "section must point operators at `recon discover` for triage"
+        assert "recon discover alpha.invalid" in out, "section must point operators at `recon discover` for triage"
 
     def test_shows_up_to_two_examples(self):
         """Examples are capped at 2 so the default panel stays
@@ -134,8 +134,8 @@ class TestUnclassifiedSurfaceVisible:
         count only; full list is on --full / `recon discover`."""
         chains = tuple(
             UnclassifiedCnameChain(
-                subdomain=f"sub{i}.contoso.com",
-                chain=(f"terminus{i}.example.cloud",),
+                subdomain=f"sub{i}.alpha.invalid",
+                chain=(f"terminus{i}.surface.invalid",),
             )
             for i in range(5)
         )
@@ -143,8 +143,8 @@ class TestUnclassifiedSurfaceVisible:
         out = _render_to_string(info)
         # First two examples appear; remaining three don't pollute
         # the example pair list.
-        assert "sub0.contoso.com" in out
-        assert "sub1.contoso.com" in out
+        assert "sub0.alpha.invalid" in out
+        assert "sub1.alpha.invalid" in out
         # The example line shows up to 2; the count (5) is also
         # mentioned, but sub2/sub3/sub4 should not appear as inline
         # examples.
@@ -162,20 +162,20 @@ class TestUnclassifiedSurfaceVisible:
         info = _make_tenant(
             unclassified_cname_chains=(
                 UnclassifiedCnameChain(
-                    subdomain="api.contoso.com",
-                    chain=("intermediate.proxy.io", "true-terminus.weird.cloud"),
+                    subdomain="api.alpha.invalid",
+                    chain=("intermediate.proxy.example", "true-terminus.weird.example"),
                 ),
             ),
         )
         out = _render_to_string(info)
-        assert "true-terminus.weird.cloud" in out
+        assert "true-terminus.weird.example" in out
         # The intermediate hop should not be reported as the
         # terminus — the operator's signal is the END of the chain.
         # We allow it to appear elsewhere (e.g. in a future
         # full-chain rendering) but not as the example terminus.
         example_section = out.split("examples:", 1)
         if len(example_section) == 2:
-            assert "true-terminus.weird.cloud" in example_section[1]
+            assert "true-terminus.weird.example" in example_section[1]
 
 
 class TestUnclassifiedSurfaceHiddenWhenEmpty:
@@ -199,8 +199,8 @@ class TestUnclassifiedSurfaceHiddenWhenEmpty:
         info = _make_tenant(
             unclassified_cname_chains=(
                 UnclassifiedCnameChain(
-                    subdomain="data.contoso.com",
-                    chain=("strange.example.cloud",),
+                    subdomain="data.alpha.invalid",
+                    chain=("strange.surface.invalid",),
                 ),
             ),
         )
@@ -218,17 +218,17 @@ class TestUnclassifiedSurfaceIsolated:
 
     def test_related_domains_section_still_renders(self):
         info = _make_tenant(
-            related_domains=("login.contoso.com", "api.contoso.com"),
+            related_domains=("login.alpha.invalid", "api.alpha.invalid"),
             unclassified_cname_chains=(
                 UnclassifiedCnameChain(
-                    subdomain="data.contoso.com",
-                    chain=("strange.example.cloud",),
+                    subdomain="data.alpha.invalid",
+                    chain=("strange.surface.invalid",),
                 ),
             ),
         )
         out = _render_to_string(info)
         assert "High-signal related domains" in out
-        assert "login.contoso.com" in out
+        assert "login.alpha.invalid" in out
         # And the unclassified section also appears.
         assert "Unclassified surface" in out
 
@@ -238,7 +238,7 @@ class TestUnclassifiedSurfaceIsolated:
         info = _make_tenant()
         out = _render_to_string(info)
         assert isinstance(out, str)
-        assert "Contoso, Ltd" in out
+        assert "Synthetic Alpha, Ltd" in out
 
     def test_text_renderable_returned(self):
         """Sanity check that the panel returns a Rich-renderable,

@@ -24,7 +24,7 @@ body:
     attributes:
       label: Provider or product
       description: The public provider or product name recon should classify.
-      placeholder: Acme Email Security
+      placeholder: Synthetic Delta Email Security
     validations:
       required: true
   - type: input

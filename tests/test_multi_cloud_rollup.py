@@ -38,9 +38,9 @@ def _render_to_string(info: TenantInfo) -> str:
 def _tenant(**overrides: object) -> TenantInfo:
     base: dict[str, object] = {
         "tenant_id": "tid",
-        "display_name": "Contoso, Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha, Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.HIGH,
         "domain_count": 4,
     }
@@ -123,7 +123,7 @@ class TestCountCloudVendors:
         assert counts == {}
 
     def test_cname_role_counts_as_a_cloud_endpoint_binding(self):
-        evidence = (EvidenceRecord("CNAME", "www.contoso.com -> edge.cloudflare.net", "Cloudflare", "cloudflare"),)
+        evidence = (EvidenceRecord("CNAME", "www.alpha.invalid -> edge.cloudflare.net", "Cloudflare", "cloudflare"),)
 
         counts = count_cloud_vendors(("cloudflare",), apex_evidence=evidence)
 
@@ -178,7 +178,7 @@ class TestRollupRenderingFires:
             evidence=(EvidenceRecord("CNAME", "www -> cloudfront.net", "AWS CloudFront", "aws-cloudfront"),),
             surface_attributions=(
                 SurfaceAttribution(
-                    subdomain="api.contoso.com",
+                    subdomain="api.alpha.invalid",
                     primary_slug="fastly",
                     primary_name="Fastly",
                     primary_tier="infrastructure",
@@ -240,7 +240,7 @@ class TestRollupSuppressed:
             slugs=("aws-acm", "cloudflare"),
             evidence=(
                 EvidenceRecord("CAA", '0 issue "amazon.com"', "CAA: AWS Certificate Manager", "aws-acm"),
-                EvidenceRecord("CNAME", "www.contoso.com -> edge.cloudflare.net", "Cloudflare", "cloudflare"),
+                EvidenceRecord("CNAME", "www.alpha.invalid -> edge.cloudflare.net", "Cloudflare", "cloudflare"),
             ),
         )
 

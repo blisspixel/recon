@@ -4,7 +4,7 @@ Unit tests for:
 - 11.1: --explain CLI flag (Rich, JSON, markdown, backward compat)
 - 11.6: Conflict annotations in Rich panel with --explain
 
-All examples use fictional companies (Contoso, Northwind, Fabrikam).
+All examples use explicit synthetic labels and reserved domains.
 """
 
 from __future__ import annotations
@@ -49,7 +49,7 @@ _EVIDENCE = (
     ),
     EvidenceRecord(
         source_type="MX",
-        raw_value="contoso-com.mail.protection.outlook.com",
+        raw_value="alpha-com.mail.protection.outlook.com",
         rule_name="MX M365",
         slug="microsoft365",
     ),
@@ -57,9 +57,9 @@ _EVIDENCE = (
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
     region="NA",
     sources=("oidc_discovery", "azure_ad_metadata", "dns_records"),
@@ -93,8 +93,8 @@ SAMPLE_RESULTS: list[SourceResult] = [
 
 _CONFLICTS = MergeConflicts(
     display_name=(
-        CandidateValue("Contoso Ltd", "oidc_discovery", "high"),
-        CandidateValue("Contoso Corporation", "azure_ad_metadata", "medium"),
+        CandidateValue("Synthetic Alpha Ltd", "oidc_discovery", "high"),
+        CandidateValue("Synthetic Alpha Corporation", "azure_ad_metadata", "medium"),
     ),
     auth_type=(
         CandidateValue("Managed", "userrealm", "high"),
@@ -131,7 +131,7 @@ class TestCLIExplainRichOutput:
     def test_explain_produces_explanations_section(self, mock_resolve: AsyncMock) -> None:
         """--explain alone produces 'Explanations' in Rich output."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result, output = _capture_rich_cli(["lookup", "contoso.com", "--explain", "--no-cache"], mock_resolve)
+        result, output = _capture_rich_cli(["lookup", "alpha.invalid", "--explain", "--no-cache"], mock_resolve)
         assert result.exit_code == 0  # pyright: ignore[reportAttributeAccessIssue]
         assert "Explanations" in output
 
@@ -142,7 +142,7 @@ class TestCLIExplainJSON:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_explain_json_has_explanations_key(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--explain", "--json", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain", "--json", "--no-cache"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "explanations" in data
@@ -156,7 +156,7 @@ class TestCLIExplainMarkdown:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_explain_md_has_explanations_heading(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--explain", "--md", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain", "--md", "--no-cache"])
         assert result.exit_code == 0
         assert "## Explanations" in result.output
 
@@ -177,7 +177,7 @@ class TestCLIPostureMarkdown:
             ),
         )
 
-        result = runner.invoke(app, ["lookup", "contoso.com", "--posture", "--md", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--posture", "--md", "--no-cache"])
 
         assert result.exit_code == 0
         assert "[category](https://evil.invalid)" not in result.output
@@ -194,7 +194,7 @@ class TestCLINoExplainBackwardCompat:
     def test_no_explain_rich_no_explanations(self, mock_resolve: AsyncMock) -> None:
         """Rich output without --explain has no Explanations section."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result, output = _capture_rich_cli(["lookup", "contoso.com", "--no-cache"], mock_resolve)
+        result, output = _capture_rich_cli(["lookup", "alpha.invalid", "--no-cache"], mock_resolve)
         assert result.exit_code == 0  # pyright: ignore[reportAttributeAccessIssue]
         assert "Explanations" not in output
 
@@ -202,7 +202,7 @@ class TestCLINoExplainBackwardCompat:
     def test_no_explain_json_no_explanations_key(self, mock_resolve: AsyncMock) -> None:
         """JSON output without --explain has no explanations key."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--json", "--no-cache"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "explanations" not in data
@@ -223,8 +223,8 @@ class TestConflictAnnotationUnit:
         """Verbose mode lists all candidate values and sources."""
         ann = render_conflict_annotation("display_name", _CONFLICTS, verbose=True)
         assert "2 sources disagree" in ann
-        assert "Contoso Ltd" in ann
-        assert "Contoso Corporation" in ann
+        assert "Synthetic Alpha Ltd" in ann
+        assert "Synthetic Alpha Corporation" in ann
         assert "oidc_discovery" in ann
         assert "azure_ad_metadata" in ann
 
@@ -255,7 +255,7 @@ class TestConflictAnnotationPanel:
         console.print(panel)
         output = buf.getvalue()
         assert "sources disagree" in output
-        assert "Contoso Corporation" in output
+        assert "Synthetic Alpha Corporation" in output
 
     def test_panel_without_explain_no_annotations(self) -> None:
         """Without explain, no conflict indicators (backward compatible)."""
@@ -274,7 +274,7 @@ class TestConflictAnnotationCLI:
     def test_cli_explain_with_conflicts(self, mock_resolve: AsyncMock) -> None:
         """CLI --explain with conflicts shows dim annotation."""
         mock_resolve.return_value = (SAMPLE_INFO_WITH_CONFLICTS, SAMPLE_RESULTS)
-        result, output = _capture_rich_cli(["lookup", "contoso.com", "--explain", "--no-cache"], mock_resolve)
+        result, output = _capture_rich_cli(["lookup", "alpha.invalid", "--explain", "--no-cache"], mock_resolve)
         assert result.exit_code == 0  # pyright: ignore[reportAttributeAccessIssue]
         assert "sources disagree" in output
 
@@ -282,6 +282,6 @@ class TestConflictAnnotationCLI:
     def test_cli_no_explain_no_conflict_indicators(self, mock_resolve: AsyncMock) -> None:
         """CLI without --explain shows no conflict indicators."""
         mock_resolve.return_value = (SAMPLE_INFO_WITH_CONFLICTS, SAMPLE_RESULTS)
-        result, output = _capture_rich_cli(["lookup", "contoso.com", "--no-cache"], mock_resolve)
+        result, output = _capture_rich_cli(["lookup", "alpha.invalid", "--no-cache"], mock_resolve)
         assert result.exit_code == 0  # pyright: ignore[reportAttributeAccessIssue]
         assert "sources disagree" not in output

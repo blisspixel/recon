@@ -28,9 +28,9 @@ def _panel_text(info: TenantInfo) -> str:
 def _info(services: tuple[str, ...], slugs: tuple[str, ...]) -> TenantInfo:
     return TenantInfo(
         tenant_id=None,
-        display_name="Contoso Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.MEDIUM,
         sources=("dns_records",),
         services=services,

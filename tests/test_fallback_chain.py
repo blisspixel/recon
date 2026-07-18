@@ -340,7 +340,7 @@ class TestCTFailureOutcome:
     def test_numeric_domain_in_other_http_error_is_not_rate_limit(self):
         request = httpx.Request("GET", "https://example.com/")
         response = httpx.Response(500, request=request)
-        exc = httpx.HTTPStatusError("crt.sh returned HTTP 500 for 429.com", request=request, response=response)
+        exc = httpx.HTTPStatusError("crt.sh returned HTTP 500 for 429.invalid", request=request, response=response)
         assert classify_ct_failure(exc) == "other"
 
     def test_rate_limit_beats_separate_breaker(self):

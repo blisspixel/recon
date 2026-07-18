@@ -16,9 +16,9 @@ from recon_tool.validation_runner import (
 def test_run_batch_validation_parses_stdout_separately_from_warnings(tmp_path: Path) -> None:
     result = SimpleNamespace(
         exit_code=0,
-        stdout='[{"queried_domain":"contoso.com"}]\n',
+        stdout='[{"queried_domain":"alpha.invalid"}]\n',
         stderr="warning: ignored malformed public record\n",
-        output='warning: ignored malformed public record\n[{"queried_domain":"contoso.com"}]\n',
+        output='warning: ignored malformed public record\n[{"queried_domain":"alpha.invalid"}]\n',
     )
 
     def invoke(*_args: object, **_kwargs: object) -> SimpleNamespace:
@@ -29,13 +29,13 @@ def test_run_batch_validation_parses_stdout_separately_from_warnings(tmp_path: P
     with patch("typer.testing.CliRunner", return_value=runner):
         records = run_batch_validation_sync(tmp_path / "private-corpus.txt")
 
-    assert records == [{"queried_domain": "contoso.com"}]
+    assert records == [{"queried_domain": "alpha.invalid"}]
 
 
 def _sample_results() -> list[dict[str, object]]:
     return [
         {
-            "queried_domain": "alpha.com",
+            "queried_domain": "alpha.invalid",
             "provider": "Microsoft 365",
             "confidence": "high",
             "services": ["Microsoft 365", "DMARC"],
@@ -48,7 +48,7 @@ def _sample_results() -> list[dict[str, object]]:
             "partial": False,
         },
         {
-            "queried_domain": "beta.com",
+            "queried_domain": "beta.invalid",
             "provider": "Google Workspace",
             "confidence": "medium",
             "services": ["Google Workspace"],
@@ -61,8 +61,8 @@ def _sample_results() -> list[dict[str, object]]:
             "partial": True,
         },
         {
-            "domain": "gamma.com",
-            "error": "No information found for gamma.com",
+            "domain": "gamma.invalid",
+            "error": "No information found for gamma.invalid",
         },
     ]
 
@@ -76,8 +76,8 @@ def test_summarize_batch_results_counts_and_top_lists() -> None:
     assert summary["partials"] == 1
     assert summary["degraded"] == 1
     assert summary["top_services"][0] == ("Microsoft 365", 1)
-    assert summary["error_domains"] == ["gamma.com"]
-    assert summary["partial_domains"] == ["beta.com"]
+    assert summary["error_domains"] == ["gamma.invalid"]
+    assert summary["partial_domains"] == ["beta.invalid"]
     assert summary["top_sparse_diagnoses"] == [
         ("Sparse public signal — minimal public DNS footprint.", 1),
         ("Sparse public signal — edge-heavy footprint.", 1),
@@ -102,7 +102,7 @@ def test_compare_batch_summaries_returns_deltas() -> None:
 def test_compare_batch_results_reports_semantic_domain_changes() -> None:
     before = [
         {
-            "queried_domain": "alpha.com",
+            "queried_domain": "alpha.invalid",
             "provider": "Microsoft 365",
             "confidence": "high",
             "services": ["Microsoft 365", "DMARC"],
@@ -112,7 +112,7 @@ def test_compare_batch_results_reports_semantic_domain_changes() -> None:
             "partial": False,
         },
         {
-            "queried_domain": "beta.com",
+            "queried_domain": "beta.invalid",
             "provider": "Google Workspace",
             "confidence": "medium",
             "services": ["Google Workspace"],
@@ -124,7 +124,7 @@ def test_compare_batch_results_reports_semantic_domain_changes() -> None:
     ]
     after = [
         {
-            "queried_domain": "alpha.com",
+            "queried_domain": "alpha.invalid",
             "provider": "Microsoft 365",
             "confidence": "medium",
             "services": ["Microsoft 365", "DMARC", "Cloudflare"],
@@ -134,7 +134,7 @@ def test_compare_batch_results_reports_semantic_domain_changes() -> None:
             "partial": True,
         },
         {
-            "queried_domain": "gamma.com",
+            "queried_domain": "gamma.invalid",
             "provider": "Unknown",
             "confidence": "low",
             "services": [],
@@ -147,8 +147,8 @@ def test_compare_batch_results_reports_semantic_domain_changes() -> None:
 
     comparison = compare_batch_results(before, after)
 
-    assert comparison["added_domains"] == ["gamma.com"]
-    assert comparison["removed_domains"] == ["beta.com"]
+    assert comparison["added_domains"] == ["gamma.invalid"]
+    assert comparison["removed_domains"] == ["beta.invalid"]
     assert comparison["changed_domain_count"] == 1
     assert comparison["change_counts"]["confidence_changes"] == 1
     assert comparison["change_counts"]["partial_changes"] == 1
@@ -171,7 +171,7 @@ def test_compare_batch_results_reports_semantic_domain_changes() -> None:
     }
 
     changed = comparison["changed_domains"][0]
-    assert changed["domain"] == "alpha.com"
+    assert changed["domain"] == "alpha.invalid"
     assert changed["severity"] == "medium"
     assert changed["change_type"] == "regression"
     assert changed["confidence_change"] == {"from": "high", "to": "medium"}
@@ -194,8 +194,8 @@ def test_render_summary_markdown_includes_attention_sections() -> None:
     assert "# Sample Run" in rendered
     assert "## Headline counts" in rendered
     assert "## Top sparse diagnoses" in rendered
-    assert "`gamma.com`: ERROR" in rendered
-    assert "degraded: `beta.com` via crt.sh" in rendered
+    assert "`gamma.invalid`: ERROR" in rendered
+    assert "degraded: `beta.invalid` via crt.sh" in rendered
 
 
 def test_render_summary_markdown_includes_regression_detail() -> None:
@@ -203,7 +203,7 @@ def test_render_summary_markdown_includes_regression_detail() -> None:
     summary = summarize_batch_results(results)
     detailed = {
         "shared_domains": 1,
-        "added_domains": ["delta.com"],
+        "added_domains": ["delta.invalid"],
         "removed_domains": [],
         "changed_domain_count": 1,
         "change_counts": {
@@ -231,7 +231,7 @@ def test_render_summary_markdown_includes_regression_detail() -> None:
         },
         "changed_domains": [
             {
-                "domain": "alpha.com",
+                "domain": "alpha.invalid",
                 "severity": "high",
                 "change_type": "review",
                 "provider_change": {"from": "Microsoft 365", "to": "Google Workspace"},
@@ -262,31 +262,31 @@ def test_render_summary_markdown_includes_regression_detail() -> None:
     assert "- changed domains: 1" in rendered
     assert "- high regressions: 1" in rendered
     assert "- review changes: 1" in rendered
-    assert "Added domains: `delta.com`" in rendered
+    assert "Added domains: `delta.invalid`" in rendered
     assert "## Changed domains" in rendered
-    assert "- `alpha.com` (high, review)" in rendered
+    assert "- `alpha.invalid` (high, review)" in rendered
     assert "provider: `Microsoft 365` -> `Google Workspace`" in rendered
     assert "sparse diagnosis:" in rendered
 
 
 def test_compare_batch_results_sorts_by_severity() -> None:
     before = [
-        {"queried_domain": "alpha.com", "provider": "Microsoft 365"},
-        {"queried_domain": "beta.com", "provider": "Google Workspace"},
-        {"queried_domain": "gamma.com", "provider": "Unknown", "confidence": "low"},
+        {"queried_domain": "alpha.invalid", "provider": "Microsoft 365"},
+        {"queried_domain": "beta.invalid", "provider": "Google Workspace"},
+        {"queried_domain": "gamma.invalid", "provider": "Unknown", "confidence": "low"},
     ]
     after = [
-        {"queried_domain": "alpha.com", "error": "timeout"},
-        {"queried_domain": "beta.com", "provider": "Microsoft 365"},
-        {"queried_domain": "gamma.com", "provider": "Unknown", "confidence": "medium", "services": ["Cloudflare"]},
+        {"queried_domain": "alpha.invalid", "error": "timeout"},
+        {"queried_domain": "beta.invalid", "provider": "Microsoft 365"},
+        {"queried_domain": "gamma.invalid", "provider": "Unknown", "confidence": "medium", "services": ["Cloudflare"]},
     ]
 
     comparison = compare_batch_results(before, after)
 
     assert [entry["domain"] for entry in comparison["changed_domains"]] == [
-        "alpha.com",
-        "beta.com",
-        "gamma.com",
+        "alpha.invalid",
+        "beta.invalid",
+        "gamma.invalid",
     ]
     assert [entry["severity"] for entry in comparison["changed_domains"]] == [
         "critical",

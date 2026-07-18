@@ -23,9 +23,9 @@ def _build_fixture() -> TenantInfo:
     """Build a TenantInfo with every documented field populated."""
     return TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Contoso Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
         sources=("oidc_discovery", "userrealm", "dns_records"),
@@ -34,8 +34,8 @@ def _build_fixture() -> TenantInfo:
         auth_type="Federated",
         dmarc_policy="reject",
         domain_count=3,
-        tenant_domains=("contoso.com", "contoso.onmicrosoft.com", "contoso.co.uk"),
-        related_domains=("api.contoso.com", "login.contoso.com"),
+        tenant_domains=("alpha.invalid", "alpha.onmicrosoft.com", "alpha.invalid"),
+        related_domains=("api.alpha.invalid", "login.alpha.invalid"),
         insights=("Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)",),
         degraded_sources=(),
         cert_summary=CertSummary(
@@ -58,11 +58,11 @@ def _build_fixture() -> TenantInfo:
         inference_confidence=ConfidenceLevel.HIGH,
         detection_scores=(("microsoft365", "high"), ("slack", "medium")),
         bimi_identity=BIMIIdentity(
-            organization="Contoso Ltd",
+            organization="Synthetic Alpha Ltd",
             country="US",
             state="WA",
             locality="Redmond",
-            trademark="CONTOSO",
+            trademark="SYNTHETIC ALPHA",
         ),
         site_verification_tokens=("MS=ms12345", "google-site-verification=abc"),
         mta_sts_mode="enforce",
@@ -244,8 +244,8 @@ class TestJSONSchemaContract:
             info,
             merge_conflicts=MergeConflicts(
                 display_name=(
-                    CandidateValue(value="Acme Corp", source="oidc", confidence="high"),
-                    CandidateValue(value="Acme Corporation", source="userrealm", confidence="medium"),
+                    CandidateValue(value="Synthetic Delta Corp", source="oidc", confidence="high"),
+                    CandidateValue(value="Synthetic Delta Corporation", source="userrealm", confidence="medium"),
                 ),
             ),
         )

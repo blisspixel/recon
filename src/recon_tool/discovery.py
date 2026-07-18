@@ -47,8 +47,8 @@ def is_intra_org(apex: str, terminal: str) -> bool:
 
 
 # Second-level public suffixes that aren't a brand label. Skipped when
-# extracting the apex's brand stem so ``contoso.co.uk`` → "contoso" and
-# ``contoso.co.jp`` → "contoso" instead of "co".
+# extracting the apex's brand stem so ``alpha.invalid`` maps to "alpha" and
+# a multi-label public suffix does not leak "co" as the brand.
 _SECOND_LEVEL_PUBLIC: frozenset[str] = frozenset(
     {"co", "com", "ac", "org", "net", "gov", "edu", "ne", "or", "go", "mil", "biz"}
 )
@@ -61,11 +61,11 @@ def extract_brand_label(apex: str) -> str:
     common second-level public suffixes (co, ac, org, net, gov, edu, ...)
     so that:
 
-    * ``contoso.co.uk`` → ``"contoso"``
-    * ``contoso.com`` → ``"contoso"``
-    * ``contoso.co.jp`` → ``"contoso"``
-    * ``northwind-traders.de`` → ``"northwind-traders"``
-    * ``fabrikam.com`` → ``"fabrikam"``
+    * ``alpha.invalid`` maps to ``"alpha"``
+    * ``beta.test`` maps to ``"beta"``
+    * ``gamma.example`` maps to ``"gamma"``
+    * ``scenario-group.invalid`` maps to ``"scenario-group"``
+    * ``delta.invalid`` maps to ``"delta"``
 
     Returns an empty string when the apex has fewer than two labels or no
     plausible brand label survives the skip rules.
@@ -88,18 +88,17 @@ def looks_intra_org_brand(apex: str, suffix: str, samples: list[dict[str, Any]])
 
     The strict ``is_intra_org`` check only catches chains that stay within
     the apex's own zone. Many enterprises route through a sibling brand
-    domain (a vendor-prefixed sibling like ``gslb-contoso.com`` from
-    ``contoso.com``, or a project-suffixed sibling like
-    ``contoso-labs.co.uk`` from ``contoso.com``). Two patterns are caught
+    domain (a vendor-prefixed sibling like ``gslb-alpha.invalid`` from
+    ``alpha.invalid``, or a project-suffixed sibling like
+    ``alpha-labs.invalid`` from ``alpha.invalid``). Two patterns are caught
     here:
 
-    1. **Full brand label substring** — ``contoso`` appears anywhere in
+    1. **Full brand label substring**: ``alpha`` appears anywhere in
        the suffix.
     2. **Brand-stem abbreviation** — the brand's first 3+ characters appear
        as a standalone label in the suffix. Catches the
-       ``examplecorp.com`` → ``ec.net`` case (brand="examplecorp",
-       abbreviation="exa") without over-matching on arbitrary 3-char
-       substrings.
+       a synthetic long brand to a standalone three-letter stem without
+       over-matching on arbitrary three-character substrings.
 
     Best-effort. Genuine acronym abbreviations (multi-word legal names
     abbreviated to two- or three-letter tickers) won't match — those need

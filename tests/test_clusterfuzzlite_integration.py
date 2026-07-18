@@ -63,5 +63,5 @@ def test_clusterfuzzlite_workflow_is_bounded_and_pinned() -> None:
 def test_recon_input_fuzzer_accepts_seed_inputs() -> None:
     module = _load_fuzzer()
 
-    for seed in (b"", b"https://www.contoso.example/path?q=1", b"\x1b[31m_bad\nvalue", b"xn--mnchen-3ya.de"):
+    for seed in (b"", b"https://www.alpha.example/path?q=1", b"\x1b[31m_bad\nvalue", b"xn--caf-dma.invalid"):
         module.TestOneInput(seed)

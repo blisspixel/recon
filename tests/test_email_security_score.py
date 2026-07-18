@@ -55,7 +55,7 @@ def _info(
         tenant_id=None,
         display_name="Test Corp",
         default_domain="test.onmicrosoft.com",
-        queried_domain="test.com",
+        queried_domain="test.invalid",
         confidence=ConfidenceLevel.HIGH,
         sources=("test_source",),
         services=tuple(services),

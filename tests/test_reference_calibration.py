@@ -328,7 +328,7 @@ class TestJsonMain:
 
     def test_single_json_is_parseable_aggregate(self, tmp_path, monkeypatch, capsys) -> None:
         domains_file = tmp_path / "domains.txt"
-        domains_file.write_text("contoso.com\nfabrikam.com\n", encoding="utf-8")
+        domains_file.write_text("alpha.invalid\nbeta.invalid\n", encoding="utf-8")
 
         async def _fake_collect(domains, *, timeout, skip_ct, concurrency, label="resolving"):
             return self._pairs(20)
@@ -343,12 +343,12 @@ class TestJsonMain:
         assert doc["full"]["n"] == 20
         assert doc["held_out"]["n"] == 20
         # No apex leaks into the structured output.
-        assert "contoso" not in out
-        assert "fabrikam" not in out
+        assert "alpha" not in out
+        assert "beta" not in out
 
     def test_single_json_empty_is_clean(self, tmp_path, monkeypatch, capsys) -> None:
         domains_file = tmp_path / "domains.txt"
-        domains_file.write_text("contoso.com\n", encoding="utf-8")
+        domains_file.write_text("alpha.invalid\n", encoding="utf-8")
 
         async def _fake_collect(domains, *, timeout, skip_ct, concurrency, label="resolving"):
             return []
@@ -360,8 +360,8 @@ class TestJsonMain:
         assert doc == {"mode": "single", "n": 0, "full": {"n": 0}, "held_out": {"n": 0}}
 
     def test_stratified_json_carries_both_constructions(self, tmp_path, monkeypatch, capsys) -> None:
-        (tmp_path / "alpha.txt").write_text("contoso.com\n", encoding="utf-8")
-        (tmp_path / "beta.txt").write_text("fabrikam.com\n", encoding="utf-8")
+        (tmp_path / "alpha.txt").write_text("alpha.invalid\n", encoding="utf-8")
+        (tmp_path / "beta.txt").write_text("beta.invalid\n", encoding="utf-8")
 
         async def _fake_collect(domains, *, timeout, skip_ct, concurrency, label="resolving"):
             return self._pairs(12)

@@ -70,7 +70,7 @@
       "type": "string"
     },
     "queried_domain": {
-      "description": "The registrable apex (eTLD+1) recon analyzed, after validating and normalizing the input. A pasted URL or sub-host is reduced to its apex (e.g. mail.acme.co.uk -> acme.co.uk); recon --exact keeps the literal host.",
+      "description": "The registrable apex (eTLD+1) recon analyzed, after validating and normalizing the input. A pasted URL or sub-host is reduced to its apex (e.g. mail.example.co.uk -> example.co.uk); recon --exact keeps the literal host.",
       "type": "string"
     },
     "provider": {

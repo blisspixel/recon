@@ -2,8 +2,8 @@
 # One domain per line. Lines starting with # are ignored.
 # Usage: recon batch examples/sample-batch.txt --json
 
-northwindtraders.com
-contoso.com
-fabrikam.com
-tailspintoys.com
-woodgrovebank.com
+scenario-001.invalid
+scenario-002.invalid
+scenario-003.invalid
+scenario-004.invalid
+scenario-005.invalid

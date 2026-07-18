@@ -33,9 +33,9 @@ from recon_tool.models import (
 def _bare_tenant_info(**overrides: object) -> TenantInfo:
     base = TenantInfo(
         tenant_id=None,
-        display_name="Contoso",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         services=(),
         slugs=("microsoft365",),
         auth_type="Federated",
@@ -225,7 +225,7 @@ class TestDagRendering:
 
     def test_text_renderer_surfaces_conflicts(self) -> None:
         net, result = self._result_with_conflicts()
-        out = render_dag_text(net, result, domain="contoso.com")
+        out = render_dag_text(net, result, domain="alpha.invalid")
         assert "**Conflicts:**" in out
         assert "auth_type" in out
         assert "graph vs openid_config" in out
@@ -237,10 +237,10 @@ class TestDagRendering:
             observed_slugs={"microsoft365"},
             observed_signals=set(),
         )
-        out = render_dag_text(net, result, domain="contoso.com")
+        out = render_dag_text(net, result, domain="alpha.invalid")
         assert "**Conflicts:**" not in out
 
     def test_dot_renderer_annotates_conflicts(self) -> None:
         net, result = self._result_with_conflicts()
-        out = render_dag_dot(net, result, domain="contoso.com")
+        out = render_dag_dot(net, result, domain="alpha.invalid")
         assert "conflicts: auth_type" in out

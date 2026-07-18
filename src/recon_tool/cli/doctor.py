@@ -105,7 +105,7 @@ _SIGNALS_TEMPLATE = """\
 #     confidence: "medium"
 #     description: "Custom security tooling indicators"
 #     requires:
-#       - "acme-sso"
+#       - "delta-sso"
 #     min_matches: 1
 
 signals: []
@@ -127,10 +127,10 @@ _FINGERPRINTS_TEMPLATE = """\
 #
 # Example:
 # fingerprints:
-#   - name: "Acme SSO"
-#     slug: "acme-sso"
+#   - name: "Synthetic Delta SSO"
+#     slug: "delta-sso"
 #     type: "txt"
-#     pattern: "acme-domain-verification="
+#     pattern: "delta-domain-verification="
 #     category: "identity"
 
 fingerprints: []

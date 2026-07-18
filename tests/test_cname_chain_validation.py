@@ -91,15 +91,15 @@ class TestPublicDnsNameSuffix:
             # responses or lax resolvers could otherwise smuggle these
             # to evidence output.
             "evil<script>.com",
-            "name with space.com",
-            "name\tab.com",
-            "name\nnewline.com",
-            "name;semicolon.com",
-            "name&amp.com",
+            "name with space.invalid",
+            "name\tab.invalid",
+            "name\nnewline.invalid",
+            "name;semicolon.invalid",
+            "name&amp.invalid",
             "ñoño.example.com",  # non-ASCII (legitimate IDN uses Punycode)
-            "name|pipe.com",
-            "name`backtick.com",
-            "name$dollar.com",
+            "name|pipe.invalid",
+            "name`backtick.invalid",
+            "name$dollar.invalid",
         ],
     )
     def test_rejects_private_and_malformed(self, name):
@@ -112,10 +112,10 @@ class TestPublicDnsNameSuffix:
             "edge.fastly.net",
             "tenant.azurewebsites.net",
             "dx-12345.cloudfront.net",
-            "deep.subdomain.contoso.com",
+            "deep.subdomain.alpha.example.com",
             # Legitimate DKIM / SRV selectors use underscore.
-            "selector1._domainkey.contoso.com",
-            "_sipfederationtls._tcp.contoso.com",
+            "selector1._domainkey.alpha.example.com",
+            "_sipfederationtls._tcp.alpha.example.com",
             # Punycode IDN names use ASCII LDH only.
             "xn--p1ai.example.com",
         ],
@@ -172,10 +172,10 @@ class TestResolveCnameChainBlocksPrivateTargets:
         # this test pins the restored invariant.
         queries_made: list[tuple[str, str]] = []
         plan: dict[tuple[str, str], list[str]] = {
-            ("attacker.example.com", "CNAME"): ["split.attacker-domain.com"],
+            ("attacker.example.com", "CNAME"): ["split.attacker-domain.example.net"],
             # If the walker were to query A on the terminus, this
             # answer would be served - but the walker must not query.
-            ("split.attacker-domain.com", "A"): ["8.8.8.8"],
+            ("split.attacker-domain.example.net", "A"): ["8.8.8.8"],
         }
 
         async def _tracking_resolve(domain: str, rdtype: str, **kwargs) -> list[str]:
@@ -185,7 +185,9 @@ class TestResolveCnameChainBlocksPrivateTargets:
         monkeypatch.setattr(dns_base, "safe_resolve", _tracking_resolve)
         chain = await dns_mod._resolve_cname_chain("attacker.example.com")
 
-        assert chain == ["split.attacker-domain.com"], f"walker should accept a public-suffix hop; got chain={chain!r}"
+        assert chain == ["split.attacker-domain.example.net"], (
+            f"walker should accept a public-suffix hop; got chain={chain!r}"
+        )
         a_aaaa = [q for q in queries_made if q[1] in ("A", "AAAA")]
         assert a_aaaa == [], (
             "v1.9.4 + v1.9.14 invariant: walker must not issue A/AAAA "
@@ -196,13 +198,13 @@ class TestResolveCnameChainBlocksPrivateTargets:
 
     @pytest.mark.asyncio
     async def test_walker_accepts_legitimate_public_chain(self, monkeypatch):
-        # contoso.com CNAME -> contoso.azurewebsites.net (public suffix).
+        # alpha.example.com CNAME -> synthetic-alpha.azurewebsites.net.
         plan: dict[tuple[str, str], list[str]] = {
-            ("contoso.com", "CNAME"): ["contoso.azurewebsites.net"],
+            ("alpha.example.com", "CNAME"): ["synthetic-alpha.azurewebsites.net"],
         }
         monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
-        chain = await dns_mod._resolve_cname_chain("contoso.com")
-        assert chain == ["contoso.azurewebsites.net"], (
+        chain = await dns_mod._resolve_cname_chain("alpha.example.com")
+        assert chain == ["synthetic-alpha.azurewebsites.net"], (
             f"walker should follow a legitimate public CNAME; got chain={chain!r}"
         )
 
@@ -274,7 +276,7 @@ class TestSpfRedirectBlocksPrivateTargets:
         # SPF zone that ends in -all. The chaser follows it and credits
         # SPF strict, confirming the guard does not block normal traffic.
         plan: dict[tuple[str, str], list[str]] = {
-            ("_spf.mail.contoso.com", "TXT"): [
+            ("_spf.mail.alpha.example.com", "TXT"): [
                 "v=spf1 include:spf.protection.outlook.com -all",
             ],
         }
@@ -282,7 +284,7 @@ class TestSpfRedirectBlocksPrivateTargets:
         ctx = dns_mod._DetectionCtx()
         await dns_email._follow_spf_redirect(
             ctx,
-            "v=spf1 redirect=_spf.mail.contoso.com",
+            "v=spf1 redirect=_spf.mail.alpha.example.com",
             depth=0,
             max_depth=3,
         )
@@ -375,7 +377,7 @@ class TestNoAAAAQueriesFromWalker:
         queries_made: list[tuple[str, str]] = []
         plan: dict[tuple[str, str], list[str]] = {
             ("attacker.example.com", "CNAME"): ["hop1.attacker.example.com"],
-            ("hop1.attacker.example.com", "CNAME"): ["terminus.something.com"],
+            ("hop1.attacker.example.com", "CNAME"): ["terminus.something.example.net"],
             # Terminus has no further CNAME → natural exit. If the
             # walker queried A here, a malicious authoritative server
             # could return a CNAME to internal space.
@@ -389,7 +391,7 @@ class TestNoAAAAQueriesFromWalker:
         chain = await dns_mod._resolve_cname_chain("attacker.example.com")
         assert chain == [
             "hop1.attacker.example.com",
-            "terminus.something.com",
+            "terminus.something.example.net",
         ]
         a_aaaa = [q for q in queries_made if q[1] in ("A", "AAAA")]
         assert a_aaaa == [], f"walker must not issue A/AAAA on natural exit. Got: {a_aaaa!r}"
@@ -473,12 +475,12 @@ class TestM365RedirectDomainFilter:
 
     @pytest.mark.asyncio
     async def test_public_suffix_redirect_domain_still_added(self, monkeypatch):
-        # autodiscover.legit.example -> mail.partner.com
-        # redirect_domain = "partner.com" (public) → still added.
+        # autodiscover.legit.example -> mail.partner.example.net
+        # redirect_domain = "example.net" (public) → still added.
         # The v1.9.13 filter is a defense-in-depth tightening, not
         # a behavioral change for legitimate cross-apex chains.
         plan: dict[tuple[str, str], list[str]] = {
-            ("autodiscover.legit.example", "CNAME"): ["mail.partner.com"],
+            ("autodiscover.legit.example", "CNAME"): ["mail.partner.example.net"],
         }
 
         async def _stub(domain: str, rdtype: str, **kwargs: Any) -> list[str]:
@@ -487,26 +489,26 @@ class TestM365RedirectDomainFilter:
         monkeypatch.setattr(dns_base, "safe_resolve", _stub)
         ctx = dns_mod._DetectionCtx()
         await dns_mod._detect_m365_cnames(ctx, "legit.example")
-        assert "partner.com" in ctx.related_domains
+        assert "example.net" in ctx.related_domains
 
     @pytest.mark.asyncio
     async def test_lookalike_suffix_is_not_treated_as_intra_domain(self, monkeypatch):
         plan: dict[tuple[str, str], list[str]] = {
-            ("autodiscover.example.com", "CNAME"): ["mail.attackerexample.com"],
+            ("autodiscover.example.com", "CNAME"): ["mail.example.com.attacker.example.net"],
         }
 
         monkeypatch.setattr(dns_base, "safe_resolve", _stub_safe_resolve(plan))
         ctx = dns_mod._DetectionCtx()
         await dns_mod._detect_m365_cnames(ctx, "example.com")
 
-        assert "attackerexample.com" in ctx.related_domains
+        assert "example.net" in ctx.related_domains
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
         ("query", "target", "expected"),
         [
-            ("two.example", "partner.com", "partner.com"),
-            ("multi.example", "mail.eu.partner.co.uk", "partner.co.uk"),
+            ("two.example", "partner.example.net", "example.net"),
+            ("multi.example", "mail.eu.partner.example.co.uk", "example.co.uk"),
         ],
     )
     async def test_redirect_is_reduced_to_registrable_apex(
@@ -589,7 +591,7 @@ class TestSafeResolveCanonicalGuard:
     @pytest.mark.asyncio
     async def test_public_canonical_chase_is_kept(self, monkeypatch):
         # Legitimate public CNAME delegation (DKIM selector -> provider).
-        answer = _FakeAnswer("sel._domainkey.provider.net.", ["v=DKIM1; k=rsa; p=AAA"])
+        answer = _FakeAnswer("sel._domainkey.provider.example.net.", ["v=DKIM1; k=rsa; p=AAA"])
         monkeypatch.setattr(dns_base, "get_resolver", lambda: _fake_resolver(answer))
         result = await dns_base.safe_resolve("sel._domainkey.example.com", "TXT")
         assert result == ["v=DKIM1; k=rsa; p=AAA"]

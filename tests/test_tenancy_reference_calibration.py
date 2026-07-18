@@ -6,7 +6,7 @@ attestation as channel-split corroboration, and reports a one-sided recall check
 for GWS. The network
 orchestration is maintainer-local; the label derivation, the channel
 split, and the aggregation are pure functions pinned here with synthetic
-SourceResults (no network, no real apex — fictional brands only).
+SourceResults (no network, no real apex: explicit synthetic labels only).
 """
 
 from __future__ import annotations
@@ -91,13 +91,13 @@ class TestDnsOnlyPosteriors:
             evidence=(
                 EvidenceRecord(
                     source_type="MX",
-                    raw_value="contoso-com.mail.protection.outlook.com",
+                    raw_value="alpha-com.mail.protection.outlook.com",
                     rule_name="Microsoft 365",
                     slug="microsoft365",
                 ),
             ),
         )
-        pair = dns_only_tenancy_posteriors([dns], "contoso.com")
+        pair = dns_only_tenancy_posteriors([dns], "alpha.invalid")
         assert pair is not None
         m365, gws = pair
         assert m365 > 0.9  # strong DNS evidence
@@ -107,7 +107,7 @@ class TestDnsOnlyPosteriors:
         # "We looked and found nothing" must stay in the calibration as a
         # near-prior predictor, or the negative stratum is biased away.
         dns = SourceResult(source_name="dns_records")
-        pair = dns_only_tenancy_posteriors([dns], "contoso.com")
+        pair = dns_only_tenancy_posteriors([dns], "alpha.invalid")
         assert pair is not None
         m365, gws = pair
         assert m365 == pytest.approx(0.30, abs=1e-2)
@@ -124,17 +124,17 @@ class TestDnsOnlyPosteriors:
             detected_slugs=("microsoft365",),
         )
         realm = SourceResult(source_name="user_realm", auth_type="Managed", m365_detected=True)
-        with_endpoints = dns_only_tenancy_posteriors([dns, oidc, realm], "contoso.com")
-        without_endpoints = dns_only_tenancy_posteriors([dns], "contoso.com")
+        with_endpoints = dns_only_tenancy_posteriors([dns, oidc, realm], "alpha.invalid")
+        without_endpoints = dns_only_tenancy_posteriors([dns], "alpha.invalid")
         assert with_endpoints == without_endpoints
 
     def test_no_dns_channel_returns_none(self) -> None:
         oidc = SourceResult(source_name="oidc_discovery", tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890")
-        assert dns_only_tenancy_posteriors([oidc], "contoso.com") is None
+        assert dns_only_tenancy_posteriors([oidc], "alpha.invalid") is None
 
     def test_errored_dns_channel_returns_none(self) -> None:
         dns = SourceResult(source_name="dns_records", error="timeout")
-        assert dns_only_tenancy_posteriors([dns], "contoso.com") is None
+        assert dns_only_tenancy_posteriors([dns], "alpha.invalid") is None
 
     def test_user_local_priors_cannot_leak_into_dns_predictor(self, monkeypatch) -> None:
         import recon_tool.bayesian as bayesian
@@ -295,7 +295,7 @@ class TestJsonMain:
 
     def test_single_json_is_parseable_aggregate(self, tmp_path, monkeypatch, capsys) -> None:
         domains_file = tmp_path / "domains.txt"
-        domains_file.write_text("contoso.com\nfabrikam.com\n", encoding="utf-8")
+        domains_file.write_text("alpha.invalid\nbeta.invalid\n", encoding="utf-8")
         self._patch_collect(monkeypatch)
         rc = main([str(domains_file), "--json"])
         assert rc == 0
@@ -306,8 +306,8 @@ class TestJsonMain:
         assert doc["m365_full"]["n"] == 20
         assert doc["gws_one_sided"]["n"] == 4
         assert "counts" in doc
-        assert "contoso" not in out
-        assert "fabrikam" not in out
+        assert "alpha" not in out
+        assert "beta" not in out
 
     def test_single_json_full_block_independent_of_dns_block(self, tmp_path, monkeypatch, capsys) -> None:
         # Regression: m365_full must be gated on its OWN records, not on the
@@ -315,7 +315,7 @@ class TestJsonMain:
         # (m365_dns_only is None) but the full pipeline produced posteriors, the
         # JSON must still report m365_full, not silently drop it to n=0.
         domains_file = tmp_path / "domains.txt"
-        domains_file.write_text("contoso.com\n", encoding="utf-8")
+        domains_file.write_text("alpha.invalid\n", encoding="utf-8")
         records = [
             _record(POSITIVE if i % 2 else NEGATIVE, dns_only=None, full=0.95 if i % 2 else 0.05) for i in range(12)
         ]
@@ -331,8 +331,8 @@ class TestJsonMain:
         assert doc["m365_full"]["n"] == 12  # full pipeline still calibrated
 
     def test_stratified_json_carries_dns_and_gws(self, tmp_path, monkeypatch, capsys) -> None:
-        (tmp_path / "alpha.txt").write_text("contoso.com\n", encoding="utf-8")
-        (tmp_path / "beta.txt").write_text("fabrikam.com\n", encoding="utf-8")
+        (tmp_path / "alpha.txt").write_text("alpha.invalid\n", encoding="utf-8")
+        (tmp_path / "beta.txt").write_text("beta.invalid\n", encoding="utf-8")
         self._patch_collect(monkeypatch)
         rc = main(["--stratify-dir", str(tmp_path), "--json"])
         assert rc == 0

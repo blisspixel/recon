@@ -1124,7 +1124,7 @@ def _append_collapsed_rows(
 ) -> None:
     """Append the collapsed per-service groups after any individual rows: one
     bold header per service, then the wrapped list of subdomains with the apex
-    suffix stripped to a bare label (``app`` instead of ``app.contoso.com``) so
+    suffix stripped to a bare label (``app`` instead of ``app.alpha.invalid``) so
     more fit per wrapped line.
     """
     if not collapsed:
@@ -1181,7 +1181,7 @@ def _render_external_surface(info: TenantInfo, show_domains: bool) -> Text | Non
         noun = "subdomain" if n == 1 else "subdomains"
         surf.append("\n  ")
         surf.append(
-            f"{n} unclassified {noun} — `recon discover {info.queried_domain}` to surface fingerprint candidates",
+            f"{n} unclassified {noun}: `recon discover {info.queried_domain}` to surface fingerprint candidates",
             style="dim italic",
         )
         surf.append("\n")

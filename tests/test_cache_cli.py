@@ -39,7 +39,7 @@ class TestCacheShow:
         assert "empty" in result.output.lower()
 
     def test_show_domain_missing(self, tmp_cache: Path) -> None:
-        result = runner.invoke(app, ["cache", "show", "nope.com"])
+        result = runner.invoke(app, ["cache", "show", "nope.invalid"])
         assert result.exit_code == 0
         assert "Result cache" in result.output
         assert "CT cache" in result.output
@@ -84,26 +84,26 @@ class TestCacheShow:
         assert "crt.sh" in result.output
 
     def test_show_list_all(self, tmp_cache: Path) -> None:
-        ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
-        ct_cache_put("b.com", ["x.b.com"], None, "certspotter")
+        ct_cache_put("a.invalid", ["x.a.invalid"], None, "crt.sh")
+        ct_cache_put("b.invalid", ["x.b.invalid"], None, "certspotter")
         old = time.time() - (31 * 86400)
-        os.utime(tmp_cache / "b.com.json", (old, old))
+        os.utime(tmp_cache / "b.invalid.json", (old, old))
         result = runner.invoke(app, ["cache", "show"])
         assert result.exit_code == 0
         assert "Result cache (empty)" in result.output
         assert "CT cache (2 entries)" in result.output
-        assert "a.com" in result.output
-        assert "b.com" in result.output
-        a_row = next(line for line in result.output.splitlines() if "a.com" in line)
-        b_row = next(line for line in result.output.splitlines() if "b.com" in line)
+        assert "a.invalid" in result.output
+        assert "b.invalid" in result.output
+        a_row = next(line for line in result.output.splitlines() if "a.invalid" in line)
+        b_row = next(line for line in result.output.splitlines() if "b.invalid" in line)
         assert "reusable" in a_row
         assert "expired" in b_row
 
     def test_show_list_surfaces_unreadable_entries_without_payload_details(self, tmp_cache: Path) -> None:
         tmp_cache.mkdir(parents=True)
         cache_dir().mkdir(parents=True)
-        (tmp_cache / "broken-ct.com.json").write_text('{"private": "ct-marker"', encoding="utf-8")
-        (cache_dir() / "broken-result.com.json").write_text(
+        (tmp_cache / "broken-ct.invalid.json").write_text('{"private": "ct-marker"', encoding="utf-8")
+        (cache_dir() / "broken-result.invalid.json").write_text(
             '{"private": "result-marker"',
             encoding="utf-8",
         )
@@ -120,7 +120,7 @@ class TestCacheShow:
         assert "recon --debug cache show" in normalized
 
     def test_show_domain_reports_both_layers_without_result_payload(self, tmp_cache: Path) -> None:
-        domain = "layered.com"
+        domain = "layered.invalid"
         private_marker = "PRIVATE-DISPLAY-MARKER"
         cache_put(
             domain,
@@ -149,7 +149,7 @@ class TestCacheShow:
         assert "private-service-marker" not in result.output
 
     def test_show_marks_expired_result_entry_as_not_reusable(self, tmp_cache: Path) -> None:
-        domain = "expired.com"
+        domain = "expired.invalid"
         cache_put(
             domain,
             TenantInfo(
@@ -170,7 +170,7 @@ class TestCacheShow:
         assert "TTL:        24 hours" in result.output
 
     def test_show_corrupt_ct_entry_is_not_reported_as_absent(self, tmp_cache: Path) -> None:
-        domain = "broken-ct.com"
+        domain = "broken-ct.invalid"
         tmp_cache.mkdir(parents=True)
         (tmp_cache / f"{domain}.json").write_text('{"private": "do-not-print"', encoding="utf-8")
 
@@ -184,7 +184,7 @@ class TestCacheShow:
         assert "recon --debug cache show" in result.output
 
     def test_show_corrupt_result_entry_is_not_reported_as_absent(self, tmp_cache: Path) -> None:
-        domain = "broken-result.com"
+        domain = "broken-result.invalid"
         cache_dir().mkdir(parents=True)
         (cache_dir() / f"{domain}.json").write_text('{"private": "do-not-print"', encoding="utf-8")
 
@@ -198,24 +198,24 @@ class TestCacheShow:
 
     def test_show_lists_result_and_ct_layers_independently(self, tmp_cache: Path) -> None:
         cache_put(
-            "result-only.com",
+            "result-only.invalid",
             TenantInfo(
                 tenant_id=None,
                 display_name="Result Only",
-                default_domain="result-only.com",
-                queried_domain="result-only.com",
+                default_domain="result-only.invalid",
+                queried_domain="result-only.invalid",
                 confidence=ConfidenceLevel.LOW,
             ),
         )
-        ct_cache_put("ct-only.com", ["a.ct-only.com"], None, "crt.sh")
+        ct_cache_put("ct-only.invalid", ["a.ct-only.invalid"], None, "crt.sh")
 
         result = runner.invoke(app, ["cache", "show"])
 
         assert result.exit_code == 0
         assert "Result cache (1 entry)" in result.output
-        assert "result-only.com" in result.output
+        assert "result-only.invalid" in result.output
         assert "CT cache (1 entry)" in result.output
-        assert "ct-only.com" in result.output
+        assert "ct-only.invalid" in result.output
 
     def test_show_default_is_bounded_and_all_is_explicit(
         self,
@@ -358,13 +358,13 @@ class TestCacheShow:
         assert result_notes.read_text(encoding="utf-8") == "keep"
 
     def test_show_exact_inspects_literal_result_cache_key(self, tmp_cache: Path) -> None:
-        domain = "mail.exact-result.com"
+        domain = "mail.exact-result.invalid"
         cache_put(
             domain,
             TenantInfo(
                 tenant_id=None,
                 display_name="Exact Result",
-                default_domain="exact-result.com",
+                default_domain="exact-result.invalid",
                 queried_domain=domain,
                 confidence=ConfidenceLevel.LOW,
             ),
@@ -380,19 +380,19 @@ class TestCacheShow:
 
 class TestCacheClear:
     def test_clear_domain(self, tmp_cache: Path) -> None:
-        ct_cache_put("clear.com", ["a.clear.com"], None, "crt.sh")
-        result = runner.invoke(app, ["cache", "clear", "clear.com"])
+        ct_cache_put("clear.invalid", ["a.clear.invalid"], None, "crt.sh")
+        result = runner.invoke(app, ["cache", "clear", "clear.invalid"])
         assert result.exit_code == 0
         assert "Cleared" in result.output
 
     def test_clear_domain_missing(self, tmp_cache: Path) -> None:
-        result = runner.invoke(app, ["cache", "clear", "nope.com"])
+        result = runner.invoke(app, ["cache", "clear", "nope.invalid"])
         assert result.exit_code == 0
         assert "No cache entry" in result.output
 
     def test_clear_all(self, tmp_cache: Path) -> None:
-        ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
-        ct_cache_put("b.com", ["x.b.com"], None, "crt.sh")
+        ct_cache_put("a.invalid", ["x.a.invalid"], None, "crt.sh")
+        ct_cache_put("b.invalid", ["x.b.invalid"], None, "crt.sh")
         result = runner.invoke(app, ["cache", "clear", "--all", "--force"])
         assert result.exit_code == 0
         assert "Cleared 2 CT cache" in result.output
@@ -400,7 +400,7 @@ class TestCacheClear:
     def test_clear_all_refuses_without_force_when_noninteractive(self, tmp_cache: Path) -> None:
         # CliRunner stdin is not a TTY, so --all must refuse (exit 2) without
         # --force rather than wipe everything unprompted (old behavior: exit 0).
-        ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
+        ct_cache_put("a.invalid", ["x.a.invalid"], None, "crt.sh")
         result = runner.invoke(app, ["cache", "clear", "--all"])
         assert result.exit_code == 2
 
@@ -420,12 +420,12 @@ class TestCacheClear:
 
     def test_clear_normalizes_domain_before_clearing_result_cache(self, tmp_cache: Path) -> None:
         cache_put(
-            "clear.com",
+            "clear.invalid",
             TenantInfo(
                 tenant_id=None,
                 display_name="Clear Example",
-                default_domain="clear.com",
-                queried_domain="clear.com",
+                default_domain="clear.invalid",
+                queried_domain="clear.invalid",
                 confidence=ConfidenceLevel.HIGH,
                 region=None,
                 sources=("dns_records",),
@@ -437,21 +437,21 @@ class TestCacheClear:
             ),
         )
 
-        result = runner.invoke(app, ["cache", "clear", "https://www.clear.com/path"])
+        result = runner.invoke(app, ["cache", "clear", "https://www.clear.invalid/path"])
 
         assert result.exit_code == 0
         assert "Cleared result cache" in result.output
-        assert not (cache_dir() / "clear.com.json").exists()
+        assert not (cache_dir() / "clear.invalid.json").exists()
 
     def test_clear_exact_removes_literal_subhost_from_both_caches(self, tmp_cache: Path) -> None:
-        exact_domain = "mail.clear.com"
-        ct_cache_put(exact_domain, ["a.mail.clear.com"], None, "crt.sh")
+        exact_domain = "mail.clear.invalid"
+        ct_cache_put(exact_domain, ["a.mail.clear.invalid"], None, "crt.sh")
         cache_put(
             exact_domain,
             TenantInfo(
                 tenant_id=None,
                 display_name="Mail Clear Example",
-                default_domain="clear.com",
+                default_domain="clear.invalid",
                 queried_domain=exact_domain,
                 confidence=ConfidenceLevel.HIGH,
                 region=None,
@@ -472,7 +472,7 @@ class TestCacheClear:
         assert not (cache_dir() / f"{exact_domain}.json").exists()
 
     def test_clear_domain_reports_partial_unlink_failure(self, tmp_cache: Path, caplog) -> None:
-        domain = "partial-clear.com"
+        domain = "partial-clear.invalid"
         ct_cache_put(domain, [f"a.{domain}"], None, "crt.sh")
         cache_put(
             domain,
@@ -515,7 +515,7 @@ class TestCacheClear:
         assert not (cache_dir() / f"{domain}.json").exists()
 
     def test_clear_all_reports_layer_failure_after_partial_success(self, tmp_cache: Path) -> None:
-        domain = "partial-all.com"
+        domain = "partial-all.invalid"
         ct_cache_put(domain, [f"a.{domain}"], None, "crt.sh")
         cache_put(
             domain,
@@ -555,7 +555,7 @@ class TestCacheClear:
         assert (cache_dir() / f"{domain}.json").exists()
 
     def test_clear_domain_never_reports_failures_as_absence(self, tmp_cache: Path) -> None:
-        domain = "failed-clear.com"
+        domain = "failed-clear.invalid"
         ct_cache_put(domain, [f"a.{domain}"], None, "crt.sh")
         cache_put(
             domain,

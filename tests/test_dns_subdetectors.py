@@ -798,22 +798,22 @@ class TestExchangeDkimSuffixMatch:
     """
 
     def test_host_has_suffix_helper(self):
-        assert host_has_suffix("contoso.onmicrosoft.com", "onmicrosoft.com")
+        assert host_has_suffix("alpha.onmicrosoft.com", "onmicrosoft.com")
         assert host_has_suffix("onmicrosoft.com", "onmicrosoft.com")
         assert not host_has_suffix("x.onmicrosoft.com.example.com", "onmicrosoft.com")
-        assert not host_has_suffix("notonmicrosoft.com", "onmicrosoft.com")
+        assert not host_has_suffix("notonmicrosoft.invalid", "onmicrosoft.com")
 
     def test_real_tenant_cname_attributes_m365(self):
         ctx = dns_source._DetectionCtx()
-        dns_email._apply_exchange_dkim(ctx, (["selector1._domainkey.contoso.onmicrosoft.com"], []))
+        dns_email._apply_exchange_dkim(ctx, (["selector1._domainkey.alpha.onmicrosoft.com"], []))
         assert ctx.m365 is True
-        assert ctx.related_domains == {"contoso.onmicrosoft.com"}
+        assert ctx.related_domains == {"alpha.onmicrosoft.com"}
 
     def test_trailing_dot_tenant_cname_attributes_m365(self):
         ctx = dns_source._DetectionCtx()
-        dns_email._apply_exchange_dkim(ctx, (["selector1._domainkey.contoso.onmicrosoft.com."], []))
+        dns_email._apply_exchange_dkim(ctx, (["selector1._domainkey.alpha.onmicrosoft.com."], []))
         assert ctx.m365 is True
-        assert ctx.related_domains == {"contoso.onmicrosoft.com"}
+        assert ctx.related_domains == {"alpha.onmicrosoft.com"}
 
     def test_lookalike_cname_does_not_attribute_m365(self):
         ctx = dns_source._DetectionCtx()
@@ -840,7 +840,7 @@ class TestGoogleDkimSuffixMatch:
 
     def test_google_lookalike_cname_does_not_attribute_google_workspace(self):
         ctx = dns_source._DetectionCtx()
-        dns_email._apply_google_dkim(ctx, [], ["selector._domainkey.evilgoogle.com"])
+        dns_email._apply_google_dkim(ctx, [], ["selector._domainkey.evilgoogle.invalid"])
 
         assert "DKIM (Google Workspace)" not in ctx.services
         assert "google-workspace" not in ctx.slugs

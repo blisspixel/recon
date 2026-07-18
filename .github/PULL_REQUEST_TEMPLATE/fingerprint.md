@@ -1,5 +1,10 @@
 # Fingerprint PR
 
+This is a public pull request. Provider and product names, provider-controlled
+service domains, and provider-owned documentation are allowed. Do not include
+evaluated-target names or domains, target-owned records, tenant identifiers,
+screenshots, private corpus rows, or per-domain recon output.
+
 ## Service
 
 **Name:**
@@ -12,20 +17,23 @@
 - [ ] `recon fingerprints show <slug>` prints the new entry as expected
 - [ ] `pytest tests/` passes locally
 - [ ] The detection pattern is service-specific (not a generic substring)
-- [ ] Tested against at least one public domain known to use this service
+- [ ] Tested with positive and negative reserved synthetic fixtures
+- [ ] Any live-target validation stayed in a gitignored local workspace and is summarized only with disclosure-safe aggregates
 - [ ] If the detection is probabilistic (e.g. common CNAME target), uses `match_mode: all` with a corroborating record
+- [ ] This PR contains no evaluated-target identity, record, identifier, screenshot, corpus row, or per-domain output
 
-## Test domain
+## Disclosure-safe evidence
 
-`example.com`: expected to match after this PR.
+- **Provider-controlled reference:**
+- **Generic provider record shape:**
+- **Reserved positive fixture:**
+- **Reserved negative fixture:**
+- **Optional suppressed aggregate summary:**
 
-Run:
-
-```bash
-uv run recon example.com --json | jq '.slugs'
-```
-
-Expected to include `"<slug>"`.
+Use `.invalid`, `.test`, or IETF example domains for fixtures. Replace
+tenant-specific values with explicit placeholders. If a real identity is
+load-bearing, use the private reporting path in `docs/data-handling-policy.md`
+instead of including it here.
 
 ## Notes
 

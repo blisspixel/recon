@@ -143,7 +143,7 @@ async def lookup_tenant(
     No credentials or API keys required.
 
     Args:
-        domain: A domain name to look up (e.g., contoso.com, northwindtraders.com).
+        domain: A domain name to look up (e.g., alpha.invalid, gamma.invalid).
         format: Output format: "text" (default), "json" (structured), or "markdown" (full report).
         explain: When true, include structured explanations for insights and signals in the response.
 

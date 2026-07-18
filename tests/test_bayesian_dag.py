@@ -43,8 +43,8 @@ def sparse_inference(network):
 
 class TestTextRenderer:
     def test_includes_domain_in_header(self, network, dense_inference):
-        out = render_dag_text(network, dense_inference, domain="contoso.com")
-        assert "contoso.com" in out
+        out = render_dag_text(network, dense_inference, domain="alpha.invalid")
+        assert "alpha.invalid" in out
 
     def test_default_header_when_no_domain(self, network, dense_inference):
         out = render_dag_text(network, dense_inference)
@@ -105,8 +105,8 @@ class TestTextRenderer:
 
 class TestDotRenderer:
     def test_well_formed_digraph(self, network, dense_inference):
-        out = render_dag_dot(network, dense_inference, domain="contoso.com")
-        assert out.startswith('digraph "recon_bayesian_contoso.com" {')
+        out = render_dag_dot(network, dense_inference, domain="alpha.invalid")
+        assert out.startswith('digraph "recon_bayesian_alpha.invalid" {')
         assert out.rstrip().endswith("}")
 
     def test_one_node_per_network_node(self, network, dense_inference):
@@ -225,10 +225,10 @@ class TestHelpers:
 
 class TestMermaidRenderer:
     def test_starts_with_graph_lr_header(self, network, dense_inference):
-        out = render_dag_mermaid(network, dense_inference, domain="contoso.com")
+        out = render_dag_mermaid(network, dense_inference, domain="alpha.invalid")
         # Mermaid requires the direction directive on the first non-comment line.
         # Header comment (`%% ...`) carries the domain so an agent can identify the run.
-        assert "%% recon Bayesian DAG for contoso.com" in out
+        assert "%% recon Bayesian DAG for alpha.invalid" in out
         assert "graph LR" in out
 
     def test_includes_every_network_node(self, network, dense_inference):

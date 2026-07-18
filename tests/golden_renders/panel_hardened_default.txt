@@ -1,5 +1,5 @@
-Fabrikam, Inc.
-fabrikam.com
+Synthetic Beta, Inc.
+beta.invalid
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Unknown (no known provider pattern matched)
   Confidence   ●○○ Low (2 sources)

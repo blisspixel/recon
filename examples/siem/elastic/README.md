@@ -6,9 +6,9 @@ Elastic's alerting framework. Field naming follows ECS (Elastic
 Common Schema) where a sensible mapping exists; project-specific
 fields stay under a `recon.*` namespace.
 
-The example uses the shared input at
-`examples/sample-output.json` (Northwind Traders, a Microsoft
-fictional brand  -  see `examples/README.md`).
+The example uses the reserved synthetic input at
+`examples/sample-output.json`; see `examples/README.md` for the disclosure
+boundary.
 
 ## Ingestion mechanics
 
@@ -103,7 +103,7 @@ operator policy, such as an unexpected persistent change on a critical domain.
 Kibana saved search (or Elastic alert rule):
 
 ```
-host.domain : "northwindtraders.com"
+host.domain : "gamma.invalid"
 AND NOT recon.slugs : "intune"
 ```
 

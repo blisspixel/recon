@@ -1,7 +1,7 @@
-# Tenant Report: Northwind Traders
+# Tenant Report: Synthetic Gamma
 
-**Domain:** northwindtraders\.com\
-**Default Domain:** northwindtraders\.com\
+**Domain:** gamma\.invalid\
+**Default Domain:** gamma\.invalid\
 **Confidence:** low (1 source)\
 **Evidence Confidence:** medium\
 **Inference Confidence:** medium

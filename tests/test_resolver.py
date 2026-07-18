@@ -134,13 +134,13 @@ class TestResolveTenant:
         ok = SourceResult(
             source_name="s2",
             tenant_id="11111111-2222-3333-4444-555555555555",
-            display_name="Contoso",
+            display_name="Synthetic Alpha",
         )
         pool = SourcePool([FakeSource("s1", fail), FakeSource("s2", ok)])
-        info, results = await resolve_tenant("contoso.com", pool=pool)
+        info, results = await resolve_tenant("alpha.invalid", pool=pool)
 
         assert info.tenant_id == "11111111-2222-3333-4444-555555555555"
-        assert info.display_name == "Contoso"
+        assert info.display_name == "Synthetic Alpha"
         assert len(results) == 2
 
     @pytest.mark.asyncio
@@ -150,7 +150,7 @@ class TestResolveTenant:
         pool = SourcePool([FakeSource("s1", fail1), FakeSource("s2", fail2)])
 
         with pytest.raises(ReconLookupError) as exc_info:
-            await resolve_tenant("bad.com", pool=pool)
+            await resolve_tenant("bad.invalid", pool=pool)
         assert exc_info.value.error_type == "all_sources_failed"
 
     @pytest.mark.asyncio
@@ -343,7 +343,7 @@ class TestPropertyAllSourcesExhausted:
         pool = SourcePool(sources)
 
         with pytest.raises(ReconLookupError) as exc_info:
-            await resolve_tenant("bad.com", pool=pool)
+            await resolve_tenant("bad.invalid", pool=pool)
 
         assert exc_info.value.error_type == "all_sources_failed"
 

@@ -49,7 +49,7 @@ from recon_tool.validator import validate_domain
 # same key, corrupt then re-write) frequent. Valid keys are already normalized
 # (lowercase, no scheme), so the raw string equals its cache key. The invalid
 # keys exercise the traversal / format rejection in `_safe_cache_path`.
-_VALID_DOMAINS = ["contoso.com", "northwind.example", "fabrikam.test", "x.io"]
+_VALID_DOMAINS = ["alpha.invalid", "gamma.example", "beta.test", "x.test"]
 _INVALID_DOMAINS = ["", "../etc/passwd", "nodot"]
 _ALL_DOMAINS = _VALID_DOMAINS + _INVALID_DOMAINS
 
