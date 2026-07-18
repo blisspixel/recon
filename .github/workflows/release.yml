@@ -32,9 +32,10 @@ on:
 #     in its own workspace and generates the CycloneDX SBOM from the
 #     locked-requirements text. dist/ does not exist in this runner,
 #     so even a compromised pip-audit cannot reach release artifacts.
-#   * ``export-attestations`` downloads GitHub's signed attestation bundles for
-#     the sealed dist artifacts and stores them as a release-asset-friendly
-#     ``*.intoto.jsonl`` artifact. It runs no project dependency code.
+#   * ``attest`` signs the sealed dist artifacts and completed SBOM as one
+#     subject set. ``export-attestations`` downloads those signed bundles and
+#     stores them as a release-asset-friendly ``*.intoto.jsonl`` artifact. It
+#     runs no project dependency code.
 #   * ``publish-pypi`` waits for the package smoke, provenance attestation, and
 #     SBOM paths. A separate read-only parity job then proves PyPI serves the
 #     sealed wheel and sdist bytes before ``github-release`` can publish or
@@ -267,13 +268,14 @@ jobs:
     # contract holds: this job downloads the sealed artifacts and runs
     # NO project dependency code, so the id-token it is granted cannot be
     # minted by a compromised dependency. It signs a provenance
-    # attestation (GitHub-native, OIDC) linking the wheel and sdist to
-    # this workflow run; verify later with `gh attestation verify`.
+    # attestation (GitHub-native, OIDC) linking the wheel, sdist, and
+    # completed SBOM to this workflow run; verify later with
+    # `gh attestation verify`.
     # Same-job deterministic-build evidence (SOURCE_DATE_EPOCH, gated in ci.yml) and
     # sigstore-signed PyPI attestations (PEP 740, in the publish-pypi job)
     # now ship alongside this; only the full SLSA L3 generator workflow
     # stays deferred as disproportionate (see docs/supply-chain.md).
-    needs: build
+    needs: [build, sbom]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -287,10 +289,18 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Download SBOM artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: sbom
+          path: sbom/
+
       - name: Attest build provenance
         uses: actions/attest-build-provenance@0f67c3f4856b2e3261c31976d6725780e5e4c373 # v4
         with:
-          subject-path: "dist/*"
+          subject-path: |
+            dist/*
+            sbom/*
 
   export-attestations:
     # GitHub artifact attestations live in the GitHub attestation store, but
@@ -298,7 +308,7 @@ jobs:
     # signature/provenance filename. Export the signed attestation bundles into a
     # release-asset-friendly `*.intoto.jsonl` file without introducing keys,
     # mutable action refs, or project dependency execution.
-    needs: [build, attest]
+    needs: [build, sbom, attest]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -310,6 +320,12 @@ jobs:
           name: dist
           path: dist/
 
+      - name: Download SBOM artifact
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: sbom
+          path: sbom/
+
       - name: Export attestation bundles
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -320,7 +336,7 @@ jobs:
           out="$GITHUB_WORKSPACE/provenance/recon-tool-${version}.intoto.jsonl"
           : > "$out"
 
-          for artifact in "$GITHUB_WORKSPACE"/dist/*; do
+          for artifact in "$GITHUB_WORKSPACE"/dist/* "$GITHUB_WORKSPACE"/sbom/*; do
             work="$(mktemp -d)"
             (
               cd "$work"
@@ -404,7 +420,17 @@ jobs:
           python3 scripts/finalize_sbom.py \
             "sbom/recon-tool-${VERSION}.cdx.json" \
             --version "$VERSION"
-          ls -la sbom/
+          expected_sbom="sbom/recon-tool-${VERSION}.cdx.json"
+          shopt -s nullglob dotglob
+          sbom_entries=(sbom/*)
+          shopt -u nullglob dotglob
+          if [ "${#sbom_entries[@]}" -ne 1 ] || \
+             [ "${sbom_entries[0]}" != "$expected_sbom" ] || \
+             [ ! -f "$expected_sbom" ] || [ -L "$expected_sbom" ]; then
+            echo "SBOM output is not the exact expected regular file: $expected_sbom" >&2
+            printf 'Observed: %s\n' "${sbom_entries[@]:-none}" >&2
+            exit 1
+          fi
 
       - name: Upload SBOM artifact
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
@@ -517,8 +543,9 @@ jobs:
         # through the job's GITHUB_TOKEN with no moving major-version tag to
         # regress (a softprops/action-gh-release@v3 token-handling regression
         # 401'd the v2.1.14 release after v2.1.13 succeeded on the same step).
-        # Idempotent so a re-run re-uploads instead of failing on an existing
-        # release. Attaches wheels, sdist, and the CycloneDX SBOM, which
+        # A re-run may replace assets only after the existing release's tag,
+        # title, publication state, and expected-only inventory pass a bounded
+        # local validator. Attaches wheels, sdist, and the CycloneDX SBOM, which
         # consumers pull by stable name (recon-tool-<version>.cdx.json) for
         # downstream supply-chain audits.
         env:
@@ -526,10 +553,24 @@ jobs:
         run: |
           set -euo pipefail
           version="${GITHUB_REF_NAME#v}"
-          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+          read -r remote_tag_sha remote_tag_ref extra <<< "$(
+            git ls-remote --exit-code --refs origin "refs/tags/$GITHUB_REF_NAME"
+          )"
+          if [ -n "${extra:-}" ] || \
+             [ "$remote_tag_ref" != "refs/tags/$GITHUB_REF_NAME" ] || \
+             [ "$remote_tag_sha" != "$GITHUB_SHA" ]; then
+            echo "Remote release tag does not resolve exactly to GITHUB_SHA; refusing publication." >&2
+            exit 1
+          fi
+          if release_json="$(gh release view "$GITHUB_REF_NAME" \
+            --json tagName,name,isDraft,isPrerelease,isImmutable,assets)"; then
+            printf '%s\n' "$release_json" | \
+              python3 scripts/check_release_recovery.py --version "$version"
             gh release upload "$GITHUB_REF_NAME" dist/* sbom/* provenance/* --clobber
           else
+            echo "No readable existing GitHub Release was found; attempting a new fail-closed release." >&2
             gh release create "$GITHUB_REF_NAME" \
+              --verify-tag \
               --title "v${version}" \
               --notes-file release_notes.md \
               dist/* sbom/* provenance/*

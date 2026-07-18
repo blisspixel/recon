@@ -79,7 +79,9 @@ not outrank product truthfulness or measured user value.
   verifies required GitHub Actions checks, public Scorecard API freshness and
   code-owned control scores, PyPI wheel and sdist publication, and GitHub
   Release wheel, sdist, SBOM, and attestation export assets; it also verifies
-  PyPI and GitHub provenance for the release wheel and sdist.
+  PyPI provenance for the release wheel and sdist. The next published release
+  must additionally pass the current GitHub provenance check for the completed
+  SBOM; the historical evidence predates that subject expansion.
 - CI, secrets scan, Scorecard workflows, and the public Scorecard API passed on
   the published main branch. Any in-progress release checkout requires fresh
   local and remote evidence before publication.

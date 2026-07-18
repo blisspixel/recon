@@ -76,6 +76,8 @@ def test_archive_readiness_names_freeze_and_security_review_gates() -> None:
         "Rerun the public smoke and full paper proof profiles",
         "uv run python scripts/check.py",
         "uv run python scripts/release_readiness.py --remote",
+        "exact published current-version tag",
+        "name the published release to which remote release-state evidence applies",
         "Security Review",
         "static, typing, coverage, validation, text, and release gates",
         "dependency audit and workflow-pin checks",

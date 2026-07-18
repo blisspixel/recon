@@ -109,18 +109,39 @@ def test_release_surface_generation_updates_installers_and_artifacts(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ) -> None:
     plugin = tmp_path / "plugin.json"
-    plugin.write_text('{"version": "2.5.8"}\n', encoding="utf-8")
+    plugin.write_text('{"version": "2.6.3"}\n', encoding="utf-8")
     citation = tmp_path / "CITATION.cff"
-    citation.write_text('version: 2.5.8\ndate-released: "2026-07-13"\n', encoding="utf-8")
+    citation.write_text('version: 2.6.3\ndate-released: "2026-07-13"\n', encoding="utf-8")
     unix_installer = tmp_path / "install.sh"
-    unix_installer.write_text('VERSION="2.5.8"\n', encoding="utf-8")
+    unix_installer.write_text('VERSION="2.6.3"\n', encoding="utf-8")
     windows_installer = tmp_path / "install.ps1"
-    windows_installer.write_text('$Version = "2.5.8"\n', encoding="utf-8")
+    windows_installer.write_text('$Version = "2.6.3"\n', encoding="utf-8")
+    supply_chain = tmp_path / "supply-chain.md"
+    legacy_digest = "3d5218e00e969874dda40956d677e131d392dbf9"
+    supply_chain.write_text(
+        "\n".join(
+            (
+                "git clone --branch v2.6.3 --single-branch "
+                "https://github.com/blisspixel/recon.git recon-2.6.3",
+                "cd recon-2.6.3",
+                "VERSION=2.6.3",
+                '$Version = "2.6.3"',
+                "VERSION=2.6.3  # rebuild recipe",
+                'if [ "${VERSION}" = "2.6.3" ]; then',
+                'if ($Version -eq "2.6.3") {',
+                f"LEGACY_SBOM_ATTESTATION_SHA={legacy_digest}",
+                f'$LegacySbomAttestationSha = "{legacy_digest}"',
+            )
+        )
+        + "\n",
+        encoding="utf-8",
+    )
     commands: list[list[str]] = []
 
     monkeypatch.setattr(release, "PLUGIN_MANIFEST", plugin)
     monkeypatch.setattr(release, "CITATION", citation)
     monkeypatch.setattr(release, "_VERSIONED_DOCS", ())
+    monkeypatch.setattr(release, "_SUPPLY_CHAIN_DOC", supply_chain)
     monkeypatch.setattr(release, "_VERSIONED_INSTALLERS", (unix_installer, windows_installer))
     monkeypatch.setattr(release, "_REVIEWED_DOCS", ())
 
@@ -139,9 +160,17 @@ def test_release_surface_generation_updates_installers_and_artifacts(
         return subprocess.CompletedProcess(cmd, 0, "", "")
 
     monkeypatch.setattr(release, "_run", fake_run)
-    release._bump_release_surfaces("2.5.8", "2.5.9", "2026-07-13")
-    assert unix_installer.read_text(encoding="utf-8") == 'VERSION="2.5.9"\n'
-    assert windows_installer.read_text(encoding="utf-8") == '$Version = "2.5.9"\n'
+    release._bump_release_surfaces("2.6.3", "2.6.4", "2026-07-13")
+    assert unix_installer.read_text(encoding="utf-8") == 'VERSION="2.6.4"\n'
+    assert windows_installer.read_text(encoding="utf-8") == '$Version = "2.6.4"\n'
+    updated_supply_chain = supply_chain.read_text(encoding="utf-8")
+    assert "git clone --branch v2.6.4 --single-branch" in updated_supply_chain
+    assert "cd recon-2.6.4" in updated_supply_chain
+    assert updated_supply_chain.count("VERSION=2.6.4") == 2
+    assert '$Version = "2.6.4"' in updated_supply_chain
+    assert 'if [ "${VERSION}" = "2.6.3" ]; then' in updated_supply_chain
+    assert 'if ($Version -eq "2.6.3") {' in updated_supply_chain
+    assert updated_supply_chain.count(legacy_digest) == 2
     assert commands == [
         [
             "uv",
@@ -159,6 +188,7 @@ def test_release_transaction_owns_both_installer_helpers() -> None:
 
     assert release.ROOT / "scripts" / "install.sh" in owned
     assert release.ROOT / "scripts" / "install.ps1" in owned
+    assert release._SUPPLY_CHAIN_DOC in owned
 
 
 def test_release_rollback_restores_files_index_commit_and_owned_tag(

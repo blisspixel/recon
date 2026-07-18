@@ -19,7 +19,7 @@ from urllib.parse import urlparse
 
 _PACKAGE = "recon-tool"
 _PYPI_RELEASE_URL = f"https://pypi.org/pypi/{_PACKAGE}/{{version}}/json"
-_MAX_METADATA_BYTES = 5 * 1024 * 1024
+MAX_METADATA_BYTES = 5 * 1024 * 1024
 _MAX_ARTIFACT_BYTES = 64 * 1024 * 1024
 _CHUNK_BYTES = 1024 * 1024
 _STABLE_VERSION = re.compile(r"^(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)$")
@@ -75,7 +75,7 @@ def _read_bounded(response: _Readable, limit: int, label: str) -> bytes:
 def _load_release_payload(version: str, opener: _Opener) -> dict[str, object]:
     try:
         with opener(_PYPI_RELEASE_URL.format(version=version), timeout=30) as response:
-            raw = _read_bounded(response, _MAX_METADATA_BYTES, "PyPI release metadata")
+            raw = _read_bounded(response, MAX_METADATA_BYTES, "PyPI release metadata")
         payload = json.loads(raw)
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
         raise ParityError(f"PyPI release metadata is not valid JSON: {exc}") from exc
@@ -95,17 +95,36 @@ def _release_record(record: object, expected: set[str]) -> tuple[str, str | None
         return filename, None
     if not isinstance(url, str) or not url:
         raise ParityError(f"PyPI release is missing a file URL for {filename}")
-    parsed = urlparse(url)
-    if parsed.scheme != "https" or parsed.hostname != "files.pythonhosted.org":
+    try:
+        parsed = urlparse(url)
+        has_port = parsed.port is not None
+    except ValueError as exc:
+        raise ParityError(f"PyPI returned an unexpected file URL for {filename}") from exc
+    if (
+        parsed.scheme != "https"
+        or parsed.hostname != "files.pythonhosted.org"
+        or parsed.username is not None
+        or parsed.password is not None
+        or has_port
+        or parsed.params
+        or parsed.query
+        or parsed.fragment
+        or parsed.path.rsplit("/", 1)[-1] != filename
+    ):
         raise ParityError(f"PyPI returned an unexpected file URL for {filename}")
     return filename, url
 
 
-def _release_file_urls(version: str, opener: _Opener) -> dict[str, str]:
-    payload = _load_release_payload(version, opener)
+def release_file_urls_from_payload(version: str, payload: object) -> dict[str, str]:
+    """Return the exact, trusted PyPI file pair described by *payload*."""
+    if not isinstance(payload, dict):
+        raise ParityError("PyPI release metadata must be a JSON object")
     info = payload.get("info")
-    if not isinstance(info, dict) or info.get("version") != version:
-        raise ParityError(f"PyPI release metadata does not describe {_PACKAGE} {version}")
+    observed_version = info.get("version") if isinstance(info, dict) else None
+    if observed_version != version:
+        raise ParityError(
+            f"PyPI release metadata describes version {observed_version!r}, expected {_PACKAGE} {version}"
+        )
     records = payload.get("urls")
     if not isinstance(records, list):
         raise _RetryableParityError(f"PyPI has no file list for {_PACKAGE} {version}")
@@ -130,6 +149,12 @@ def _release_file_urls(version: str, opener: _Opener) -> dict[str, str]:
     if len(observed) != len(expected):
         raise ParityError(f"PyPI release must contain exactly {len(expected)} distribution files")
     return urls
+
+
+def release_file_urls(version: str, opener: _Opener | None = None) -> dict[str, str]:
+    """Fetch and validate one bounded, exact, version-scoped PyPI file pair."""
+    actual_opener = opener or cast(_Opener, urllib.request.urlopen)
+    return release_file_urls_from_payload(version, _load_release_payload(version, actual_opener))
 
 
 def _sha256_stream(stream: _Readable, label: str) -> str:
@@ -213,7 +238,7 @@ def check_channel_parity(
     last_error: Exception | None = None
     for attempt in range(1, actual_retry.attempts + 1):
         try:
-            urls = _release_file_urls(version, actual_opener)
+            urls = release_file_urls(version, actual_opener)
             for filename in expected:
                 remote = _remote_digest(urls[filename], filename, actual_opener)
                 local = local_digests[filename]

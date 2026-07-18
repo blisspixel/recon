@@ -268,8 +268,11 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   publication, a read-only release job requires the exact wheel and sdist and
   matches both SHA-256 digests against the sealed build pair before GitHub
   Release assets can be created or replaced. Remote readiness repeats that
-  comparison and validates the completed SBOM plus the exported provenance
-  bundle bound to the source tag and commit digest. A mismatch after PyPI
+  comparison and validates the completed SBOM. Releases produced by the current
+  workflow verify the wheel, sdist, and SBOM against the exported provenance
+  bundle bound to the source tag and commit digest; the exact v2.6.3 historical
+  exception verifies its wheel and sdist. Existing-release recovery also rejects
+  unsafe publication state before replacing assets. A mismatch after PyPI
   publication is a visible partial-publication state that blocks GitHub Release
   creation; it does not roll back immutable PyPI files. This is
   publication-state integrity, not a promise that a fresh build on another host
