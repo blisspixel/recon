@@ -1,13 +1,11 @@
 {
   "cache_version": 1,
-  "tenant_id": "litware-small",
-  "display_name": "Litware, Inc.",
-  "default_domain": "litware.com",
-  "queried_domain": "litware.com",
+  "default_domain": "synthetic-eta-com.invalid",
+  "queried_domain": "synthetic-eta-com.invalid",
   "confidence": "high",
   "domain_count": 1,
   "tenant_domains": [
-    "litware.com"
+    "synthetic-eta-com.invalid"
   ],
   "services": [
     "Microsoft 365"
@@ -17,5 +15,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 786032689765",
+  "tenant_id": "synthetic-scenario-786032689765",
   "_stratum": "baseline"
 }

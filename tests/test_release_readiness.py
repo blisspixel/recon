@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts import release_readiness
+from scripts import check_validation_hygiene, release_readiness
 
 _RELEASE_SHA = "a" * 40
 
@@ -93,12 +93,12 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
         "README.md",
         "\n".join(
             [
-                "recon contoso.com",
+                "recon example.com",
                 "recon batch domains.txt --json",
                 "recon mcp install --client=",
-                "Examples use [Microsoft's fictional company names]",
+                "Examples use IETF reserved namespaces",
                 "python scripts/check.py",
-                "Project hygiene: keep examples fictional or synthetic",
+                "Project hygiene: keep examples reserved and synthetic",
                 "keep validation artifacts",
                 "avoid dead code or placeholders",
             ]
@@ -150,8 +150,8 @@ def _happy_runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         return _cp(cmd, stdout="## main...origin/main\n")
     if cmd == ["uv", "lock", "--check"]:
         return _cp(cmd, stdout="Resolved 1 package\n")
-    if cmd == ["git", "ls-files"]:
-        return _cp(cmd, stdout="README.md\nsrc/recon_tool/__init__.py\n")
+    if cmd == list(check_validation_hygiene.GIT_FILE_INVENTORY_ARGS):
+        return _cp(cmd, stdout="README.md\0src/recon_tool/__init__.py\0")
     if cmd == ["git", "log", "-1", "--pretty=%B"]:
         return _cp(cmd, stdout="Add release readiness gate\n")
     raise AssertionError(f"unexpected command: {cmd}")
@@ -167,9 +167,7 @@ def test_collect_checks_passes_local_happy_path(tmp_path: Path) -> None:
     assert statuses["release tag binding"] == "skip"
     assert statuses["remote CI"] == "skip"
     assert statuses["Scorecard API"] == "skip"
-    remote_skips = [
-        check for check in checks if check.name in {"release tag binding", "remote CI", "Scorecard API"}
-    ]
+    remote_skips = [check for check in checks if check.name in {"release tag binding", "remote CI", "Scorecard API"}]
     assert all("exact published current-version tag" in check.detail for check in remote_skips)
     assert statuses["coverage gates"] == "pass"
     assert statuses["commit hygiene"] == "pass"
@@ -195,6 +193,34 @@ def test_roadmap_version_rejects_stale_root_summary(tmp_path: Path) -> None:
     assert check.status == "fail"
     assert "ROADMAP.md" in check.detail
     assert "v2.2.8" in check.detail
+
+
+@pytest.mark.parametrize(
+    "command",
+    [
+        "recon target.localhost",
+        "recon https://target.localhost/path",
+        "recon lookup target.localhost",
+        "recon delta target.localhost",
+        "recon cache show target.localhost",
+        "recon cache clear target.localhost",
+        "recon --plain target.localhost",
+        "python -m recon_tool target.localhost",
+    ],
+)
+def test_readme_usage_rejects_non_reserved_recon_examples_without_echo(
+    command: str,
+    tmp_path: Path,
+) -> None:
+    _write_minimal_root(tmp_path)
+    readme = tmp_path / "README.md"
+    readme.write_text(readme.read_text(encoding="utf-8") + f"\n{command}\n", encoding="utf-8")
+
+    check = release_readiness._check_readme_usage(tmp_path)
+
+    assert check.status == "fail"
+    assert "non-reserved recon domain" in check.detail
+    assert "target.localhost" not in check.detail
 
 
 def test_coverage_gate_rejects_stale_src_layout_target(tmp_path: Path) -> None:
@@ -304,33 +330,37 @@ def test_citation_metadata_rejects_stale_release_date(tmp_path: Path) -> None:
     assert "2026-06-26" in check.detail
 
 
-def test_private_tracked_files_fail() -> None:
+def test_private_candidate_files_fail() -> None:
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        assert cmd == ["git", "ls-files"]
+        assert cmd == list(check_validation_hygiene.GIT_FILE_INVENTORY_ARGS)
         return _cp(
             cmd,
-            stdout="README.md\nvalidation/corpus-private/acme.txt\nvalidation/live_runs/run/results.json\nexample.com.json\n",
+            stdout=(
+                "README.md\0validation/corpus-private/acme.txt\0"
+                "validation/live_runs/run/results.json\0example.com.json\0"
+            ),
         )
 
     check = release_readiness._check_private_tracked_files(runner)
 
     assert check.status == "fail"
-    assert "validation/corpus-private/acme.txt" in check.detail
-    assert "validation/live_runs/run/results.json" in check.detail
-    assert "example.com.json" in check.detail
+    assert "validation/corpus-private/[redacted]" in check.detail
+    assert "validation/live_runs/[redacted]" in check.detail
+    assert "[redacted]: root per-domain JSON dump" in check.detail
 
 
 def test_private_data_check_rejects_target_domain_fields(tmp_path: Path) -> None:
     _write_file(tmp_path, "validation/new-calibration.md", "queried_domain: acme.com\n")
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        assert cmd == ["git", "ls-files"]
-        return _cp(cmd, stdout="validation/new-calibration.md\n")
+        assert cmd == list(check_validation_hygiene.GIT_FILE_INVENTORY_ARGS)
+        return _cp(cmd, stdout="validation/new-calibration.md\0")
 
     check = release_readiness._check_private_tracked_files(runner, tmp_path)
 
     assert check.status == "fail"
-    assert "acme.com" in check.detail
+    assert "target-domain field" in check.detail
+    assert "acme.com" not in check.detail
 
 
 def test_commit_hygiene_rejects_attribution_marker() -> None:
@@ -356,7 +386,7 @@ def test_commit_hygiene_checks_ahead_stack() -> None:
         assert cmd == ["git", "log", "--format=%H%x00%B%x00%x1e", "origin/main..HEAD"]
         return _cp(
             cmd,
-            stdout=("abc123456789\x00Clean commit\x00\x1e" f"def123456789\x00Ship thing\n\n{bad_marker}\x00\x1e"),
+            stdout=(f"abc123456789\x00Clean commit\x00\x1edef123456789\x00Ship thing\n\n{bad_marker}\x00\x1e"),
         )
 
     check = release_readiness._check_latest_commit_message(runner)
@@ -417,9 +447,7 @@ def test_remote_workflows_fail_when_pending_or_missing() -> None:
         {"workflowName": "Secrets scan", "status": "in_progress", "conclusion": None, "databaseId": 2},
     ]
 
-    problems = release_readiness._remote_workflow_problems(
-        {str(record["workflowName"]): record for record in records}
-    )
+    problems = release_readiness._remote_workflow_problems({str(record["workflowName"]): record for record in records})
 
     assert "Secrets scan#2: in_progress" in problems
     assert "Scorecard supply-chain security: missing" in problems
@@ -427,8 +455,7 @@ def test_remote_workflows_fail_when_pending_or_missing() -> None:
 
 def _scorecard_payload(sha: str, score: float = 8.3, **check_overrides: int) -> dict[str, object]:
     checks = [
-        {"name": name, "score": check_overrides.get(name, 10)}
-        for name in release_readiness._REQUIRED_SCORECARD_TENS
+        {"name": name, "score": check_overrides.get(name, 10)} for name in release_readiness._REQUIRED_SCORECARD_TENS
     ]
     checks.extend(
         {"name": name, "score": check_overrides.get(name, minimum)}
@@ -561,10 +588,7 @@ def test_remote_release_tag_binding_rejects_ambiguous_remote_ref_output(tmp_path
         if cmd == ["git", "ls-remote", "--exit-code", "--refs", "origin", "refs/tags/v2.2.17"]:
             return _cp(
                 cmd,
-                stdout=(
-                    f"{_RELEASE_SHA}\trefs/tags/v2.2.17\n"
-                    f"{_RELEASE_SHA}\trefs/tags/v2.2.17\n"
-                ),
+                stdout=(f"{_RELEASE_SHA}\trefs/tags/v2.2.17\n{_RELEASE_SHA}\trefs/tags/v2.2.17\n"),
             )
         raise AssertionError(f"unexpected command: {cmd}")
 
@@ -722,9 +746,7 @@ def test_github_release_passes_when_assets_are_complete(tmp_path: Path) -> None:
         if cmd[:3] == ["gh", "release", "view"]:
             return _cp(
                 cmd,
-                stdout=json.dumps(
-                    {"tagName": "v2.2.17", "isDraft": False, "isPrerelease": False, "assets": assets}
-                ),
+                stdout=json.dumps({"tagName": "v2.2.17", "isDraft": False, "isPrerelease": False, "assets": assets}),
             )
         raise AssertionError(f"unexpected command: {cmd}")
 

@@ -1,3 +1,6 @@
+.gitattributes text eol=lf
 *.sh text eol=lf
 *.ps1 text eol=crlf
 *.generated.json text eol=lf
+*.ndjson text eol=lf
+validation/aggregate/synthetic_groups.csv text eol=lf

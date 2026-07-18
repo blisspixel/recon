@@ -79,9 +79,11 @@ def render_at(slug_count):
     slugs = tuple((cloud_slugs[i % len(cloud_slugs)] + f'-{i}') if i >= len(cloud_slugs) else cloud_slugs[i] for i in range(slug_count))
     services = tuple(s.replace('-', ' ').title() for s in slugs)
     info = TenantInfo(
-        tenant_id='tid', display_name='Contoso', default_domain='contoso.com',
-        queried_domain='contoso.com', confidence=ConfidenceLevel.HIGH,
-        domain_count=5, tenant_domains=('a.com','b.com','c.com'),
+        tenant_id='synthetic-scenario-000', display_name='Synthetic Scenario 000',
+        default_domain='performance.example.invalid',
+        queried_domain='performance.example.invalid', confidence=ConfidenceLevel.HIGH,
+        domain_count=5,
+        tenant_domains=('one.example.invalid','two.example.invalid','three.example.invalid'),
         services=services, slugs=slugs,
     )
     times = []

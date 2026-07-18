@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "wingtip-sse-zs-min",
-  "display_name": "Wingtip Zscaler Minimal",
-  "default_domain": "wingtip-zs.com",
-  "queried_domain": "wingtip-zs.com",
+  "default_domain": "synthetic-zeta-zs-com.invalid",
+  "queried_domain": "synthetic-zeta-zs-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "wingtip-zs.com",
-    "wingtip-corp.com",
-    "wingtip-eu.com"
+    "synthetic-zeta-zs-com.invalid",
+    "synthetic-zeta-corp-com.invalid",
+    "synthetic-zeta-eu-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -21,5 +19,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 090776447663",
+  "tenant_id": "synthetic-scenario-090776447663",
   "_stratum": "sse"
 }

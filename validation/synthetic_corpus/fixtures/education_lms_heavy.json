@@ -1,17 +1,15 @@
 {
   "cache_version": 1,
-  "tenant_id": "trey-university",
-  "display_name": "Trey University",
-  "default_domain": "trey-university.edu",
-  "queried_domain": "trey-university.edu",
+  "default_domain": "synthetic-theta-university-edu.invalid",
+  "queried_domain": "synthetic-theta-university-edu.invalid",
   "confidence": "high",
   "domain_count": 5,
   "tenant_domains": [
-    "trey-university.edu",
-    "trey-u.edu",
-    "trey-campus.edu",
-    "trey-online.edu",
-    "trey-alumni.edu"
+    "synthetic-theta-university-edu.invalid",
+    "synthetic-theta-u-edu.invalid",
+    "synthetic-theta-campus-edu.invalid",
+    "synthetic-theta-online-edu.invalid",
+    "synthetic-theta-alumni-edu.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -30,17 +28,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "learn.trey-university.edu",
+      "subdomain": "learn.synthetic-theta-university-edu.invalid",
       "primary_slug": "canvas-lms",
       "primary_name": "Canvas LMS",
       "primary_tier": "application"
     },
     {
-      "subdomain": "portal.trey-university.edu",
+      "subdomain": "portal.synthetic-theta-university-edu.invalid",
       "primary_slug": "aws-cloudfront",
       "primary_name": "AWS CloudFront",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 332818783967",
+  "tenant_id": "synthetic-scenario-332818783967",
   "_stratum": "baseline"
 }

@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "tailspin-paas-rd",
-  "display_name": "Tailspin Render",
-  "default_domain": "tailspin-rd.com",
-  "queried_domain": "tailspin-rd.com",
+  "default_domain": "synthetic-epsilon-rd-com.invalid",
+  "queried_domain": "synthetic-epsilon-rd-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "tailspin-rd.com",
-    "tailspin-app.com",
-    "tailspin-svc.com"
+    "synthetic-epsilon-rd-com.invalid",
+    "synthetic-epsilon-app-com.invalid",
+    "synthetic-epsilon-svc-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -23,5 +21,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 826571486142",
+  "tenant_id": "synthetic-scenario-826571486142",
   "_stratum": "paas"
 }

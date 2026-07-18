@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "fabrikam-jam",
-  "display_name": "Fabrikam Marketing",
-  "default_domain": "fabrikam-marketing.com",
-  "queried_domain": "fabrikam-marketing.com",
+  "default_domain": "synthetic-gamma-marketing-com.invalid",
+  "queried_domain": "synthetic-gamma-marketing-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "fabrikam-marketing.com",
-    "fabrikam.io",
-    "fabrikam-blog.com"
+    "synthetic-gamma-marketing-com.invalid",
+    "synthetic-gamma-io.invalid",
+    "synthetic-gamma-blog-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -28,17 +26,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "www.fabrikam-marketing.com",
+      "subdomain": "www.synthetic-gamma-marketing-com.invalid",
       "primary_slug": "vercel",
       "primary_name": "Vercel",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "docs.fabrikam-marketing.com",
+      "subdomain": "docs.synthetic-gamma-marketing-com.invalid",
       "primary_slug": "vercel",
       "primary_name": "Vercel",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 591962958490",
+  "tenant_id": "synthetic-scenario-591962958490",
   "_stratum": "baseline"
 }

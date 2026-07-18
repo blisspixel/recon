@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "fabrikam-ali",
-  "display_name": "Fabrikam Alibaba Secured",
-  "default_domain": "fabrikam-ali.com",
-  "queried_domain": "fabrikam-ali.com",
+  "default_domain": "synthetic-gamma-ali-com.invalid",
+  "queried_domain": "synthetic-gamma-ali-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "fabrikam-ali.com",
-    "fabrikam-cn.com",
-    "fabrikam-corp.com"
+    "synthetic-gamma-ali-com.invalid",
+    "synthetic-gamma-cn-com.invalid",
+    "synthetic-gamma-corp-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -23,5 +21,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 927908363062",
+  "tenant_id": "synthetic-scenario-927908363062",
   "_stratum": "alibaba"
 }

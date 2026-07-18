@@ -20,18 +20,18 @@ bookkeeping records every same-record match.
 ## Before
 
 - Catalog audit: `match modes: any=841`.
-- `procurement-note=crowdstrike renewal` on `northwindtraders.com` could fire
+- `procurement-note=crowdstrike renewal` on `scenario-001.example.invalid` could fire
   the broad TXT rule as `CrowdStrike Falcon`.
-- `crowdstrike-falcon-site-verification=abc123` on `contoso.com` fired the
+- `crowdstrike-falcon-site-verification=synthetic-token-001` on `scenario-002.example.invalid` fired the
   canonical verification rule.
 
 ## After
 
 - Catalog audit: `match modes: all=1, any=840`.
 - Audit recommendation for `crowdstrike`: `already_all`.
-- `procurement-note=crowdstrike renewal` on `northwindtraders.com` is removed
+- `procurement-note=crowdstrike renewal` on `scenario-001.example.invalid` is removed
   by `match_mode: all` enforcement.
-- `crowdstrike-falcon-site-verification=abc123` on `contoso.com` still detects
+- `crowdstrike-falcon-site-verification=synthetic-token-001` on `scenario-002.example.invalid` still detects
   `CrowdStrike Falcon` because both TXT patterns match the same record.
 
 ## Local Validation

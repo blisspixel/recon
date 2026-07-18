@@ -149,7 +149,7 @@ def sweep_thresholds(corpus: list[dict[str, Any]]) -> dict[str, Any]:
 
 def _format_markdown(result: dict[str, Any]) -> str:
     out: list[str] = []
-    out.append("# v1.9.9 — trigger threshold sensitivity analysis")
+    out.append("# Current trigger threshold sensitivity analysis for the v1.9.9 surface")
     out.append("")
     out.append(f"**Corpus:** {result['corpus_size']} fixtures from `validation/synthetic_corpus/results.json`.")
     out.append("")

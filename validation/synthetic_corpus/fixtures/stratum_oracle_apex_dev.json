@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "adatum-oracle-apex",
-  "display_name": "Adatum Oracle APEX",
-  "default_domain": "adatum-apex.com",
-  "queried_domain": "adatum-apex.com",
+  "default_domain": "synthetic-delta-apex-com.invalid",
+  "queried_domain": "synthetic-delta-apex-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "adatum-apex.com",
-    "adatum-dev.com",
-    "adatum-app.com"
+    "synthetic-delta-apex-com.invalid",
+    "synthetic-delta-dev-com.invalid",
+    "synthetic-delta-app-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -21,5 +19,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 405999540957",
+  "tenant_id": "synthetic-scenario-405999540957",
   "_stratum": "oracle"
 }

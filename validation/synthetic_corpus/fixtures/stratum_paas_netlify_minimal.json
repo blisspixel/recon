@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "trey-paas-nl-min",
-  "display_name": "Trey Netlify Minimal",
-  "default_domain": "trey-nl.com",
-  "queried_domain": "trey-nl.com",
+  "default_domain": "synthetic-theta-nl-com.invalid",
+  "queried_domain": "synthetic-theta-nl-com.invalid",
   "confidence": "low",
   "domain_count": 3,
   "tenant_domains": [
-    "trey-nl.com",
-    "trey-blog.com",
-    "trey-corp.com"
+    "synthetic-theta-nl-com.invalid",
+    "synthetic-theta-blog-com.invalid",
+    "synthetic-theta-corp-com.invalid"
   ],
   "services": [
     "Netlify"
@@ -19,5 +17,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 414557130223",
+  "tenant_id": "synthetic-scenario-414557130223",
   "_stratum": "paas"
 }

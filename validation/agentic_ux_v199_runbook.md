@@ -8,7 +8,8 @@ maintainer's recipe for re-running the harness against v1.9.9
 panels with the smallest LLM footprint and clearest output.
 
 The harness needs an LLM API key; recon itself does not. Keep the
-operational boundary clean.
+operational boundary clean. This is optional paid validation and must not run
+without explicit budget approval.
 
 ## Smallest-cost invocation
 
@@ -19,14 +20,14 @@ covering the v1.9.9 surfaces, run a focused subset:
 ```bash
 # Set AGENTIC_UX_PROVIDER and AGENTIC_UX_MODEL to a currently available
 # low-cost instruction-following model before running.
-# One persona (analyst) × multi-cloud-firing fixture × fusion-on
+# One persona against the dense compatibility fixture
 python -m validation.agentic_ux.run \
     --provider "$AGENTIC_UX_PROVIDER" \
     --model "$AGENTIC_UX_MODEL" \
     --personas analyst \
-    --fixtures contoso-dense \
+    --fixtures synthetic-dense \
     --max-tokens 1024 \
-    --output validation/v1.9.9-agentic-ux-update.md
+    --output validation/agentic_ux/local/v1.9.9-update.md
 ```
 
 Rough cost envelope at a low-cost instruction-following tier:
@@ -42,35 +43,32 @@ cheaper and easier to review.
 The harness produces transcripts and a per-persona scoring table.
 The v1.9.9-specific questions to add to the rubric:
 
-1. **Did the agent read the Multi-cloud row?** The row appears in
-   the key-facts block above Confidence on the contoso-dense
-   fixture (Azure DNS + Akamai surface attribution = 2 vendors).
-   The agent should cite "Azure" and "Akamai" or "two cloud
-   vendors" in its analysis.
-2. **Did the agent treat the Multi-cloud signal as evidence?**
-   On a multi-cloud apex, the agent should mention the multi-vendor
-   nature when describing the footprint, not skip it.
-3. **Does the agent mistake the ceiling footer for an error?** The
-   footer reads as a teaching note ("Passive DNS surfaces what
-   publishes externally..."). The agent should treat it as
-   architectural context, not as a tool failure or a sparse-data
-   warning the operator should act on.
+1. **Does the agent avoid inventing a Multi-cloud claim?** The dense
+   compatibility fixture has one unresolved DNS-provider indicator and one
+   endpoint-bound surface provider. The renderer correctly suppresses the
+   rollup because those observations do not establish two workload providers.
+2. **Does the agent preserve the role qualifier?** The unresolved DNS role
+   remains visible in Services below Confidence and must not be promoted into a
+   stronger key fact.
+3. **Does the agent distinguish sparse evidence from a tool failure?** The
+   deliberately incomplete sparse fixture pins a loader error. It is not a
+   successful low-confidence lookup and should not be narrated as one.
 
-The hardened-sparse fixture has `display_name: null` and does not
+The synthetic-sparse fixture has `display_name: null` and does not
 load via the cache deserializer; skip it for the v1.9.9 update or
 fix the loader contract first.
 
 ## Expanding the matrix later
 
-When budget allows, expand to:
+When explicit paid-validation approval is available, expand to:
 
 ```bash
-# All three personas, both fixtures, both modes  -  full v1.9.2
+# All three personas, both fixtures, both modes: full v1.9.2
 # methodology re-run on v1.9.9 panels.
 python -m validation.agentic_ux.run \
     --provider "$AGENTIC_UX_PROVIDER" \
     --model "$AGENTIC_UX_MODEL" \
-    --output validation/v1.9.9-agentic-ux-full.md
+    --output validation/agentic_ux/local/v1.9.9-full.md
 ```
 
 Rough cost envelope: confirm against the selected provider's current
@@ -91,8 +89,7 @@ public price sheet before running.
 
 ## Related artifacts
 
-- `validation/agentic_ux/README.md`  -  full harness documentation.
-- `validation/synthetic_corpus/render_snapshots.md`  -  actual panel
-  text for all 21 fixtures so the maintainer can preview what each
-  agent will see.
-- `validation/v1.9.2-agentic-ux.md`  -  the v1.9.2 baseline report.
+- `validation/agentic_ux/README.md`: full harness documentation.
+- `validation/synthetic_corpus/render_snapshots.md`: current aggregate panel
+  review; detailed local output is gitignored.
+- `validation/v1.9.2-agentic-ux.md`: sanitized historical aggregate.

@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "fabrikam-paas-auth",
-  "display_name": "Fabrikam Vercel + Auth0",
-  "default_domain": "fabrikam-vc.com",
-  "queried_domain": "fabrikam-vc.com",
+  "default_domain": "synthetic-gamma-vc-com.invalid",
+  "queried_domain": "synthetic-gamma-vc-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "fabrikam-vc.com",
-    "fabrikam-app.com",
-    "fabrikam-id.com"
+    "synthetic-gamma-vc-com.invalid",
+    "synthetic-gamma-app-com.invalid",
+    "synthetic-gamma-id-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -26,11 +24,13 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "login.fabrikam-vc.com",
+      "subdomain": "login.synthetic-gamma-vc-com.invalid",
       "primary_slug": "auth0",
       "primary_name": "Auth0",
       "primary_tier": "application"
     }
   ],
+  "display_name": "Synthetic Scenario 929896139393",
+  "tenant_id": "synthetic-scenario-929896139393",
   "_stratum": "paas"
 }

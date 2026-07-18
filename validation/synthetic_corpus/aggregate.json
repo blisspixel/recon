@@ -3,24 +3,23 @@
   "counted": 79,
   "skipped_load_errors": 0,
   "multi_cloud": {
-    "fired": 23,
-    "suppressed": 56,
-    "fired_share": 0.291,
+    "fired": 5,
+    "suppressed": 74,
+    "fired_share": 0.063,
     "vendor_count_distribution": {
-      "3": 5,
-      "4": 1,
-      "2": 17
+      "2": 4,
+      "3": 1
     },
-    "rendered_fired": 23,
-    "rendered_fired_share": 0.291
+    "rendered_fired": 5,
+    "rendered_fired_share": 0.063
   },
   "ceiling": {
     "fired": 73,
     "suppressed": 6,
     "fired_share": 0.924,
     "fired_with_zero_attribs": 43,
-    "rendered_fired": 68,
-    "rendered_fired_share": 0.861
+    "rendered_fired": 70,
+    "rendered_fired_share": 0.886
   },
   "wordlist_breadth_proxy": {
     "subdomain_count_mean": 0,
@@ -30,10 +29,10 @@
   "per_stratum": {
     "alibaba": {
       "counted": 10,
-      "multi_cloud_rendered": 1,
-      "multi_cloud_share": 0.1,
-      "ceiling_rendered": 9,
-      "ceiling_share": 0.9
+      "multi_cloud_rendered": 0,
+      "multi_cloud_share": 0.0,
+      "ceiling_rendered": 10,
+      "ceiling_share": 1.0
     },
     "azure": {
       "counted": 10,
@@ -44,29 +43,29 @@
     },
     "baseline": {
       "counted": 19,
-      "multi_cloud_rendered": 8,
-      "multi_cloud_share": 0.421,
+      "multi_cloud_rendered": 4,
+      "multi_cloud_share": 0.211,
       "ceiling_rendered": 11,
       "ceiling_share": 0.579
     },
     "gcp": {
       "counted": 10,
-      "multi_cloud_rendered": 3,
-      "multi_cloud_share": 0.3,
+      "multi_cloud_rendered": 0,
+      "multi_cloud_share": 0.0,
       "ceiling_rendered": 10,
       "ceiling_share": 1.0
     },
     "oracle": {
       "counted": 10,
-      "multi_cloud_rendered": 3,
-      "multi_cloud_share": 0.3,
-      "ceiling_rendered": 8,
-      "ceiling_share": 0.8
+      "multi_cloud_rendered": 0,
+      "multi_cloud_share": 0.0,
+      "ceiling_rendered": 9,
+      "ceiling_share": 0.9
     },
     "paas": {
       "counted": 10,
-      "multi_cloud_rendered": 7,
-      "multi_cloud_share": 0.7,
+      "multi_cloud_rendered": 0,
+      "multi_cloud_share": 0.0,
       "ceiling_rendered": 10,
       "ceiling_share": 1.0
     },

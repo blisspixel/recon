@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "treyresearch-saas",
-  "display_name": "Trey Research",
-  "default_domain": "treyresearch.com",
-  "queried_domain": "treyresearch.com",
+  "default_domain": "synthetic-theta-research-com.invalid",
+  "queried_domain": "synthetic-theta-research-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "treyresearch.com",
-    "treyresearch.net",
-    "trey-research.io"
+    "synthetic-theta-research-com.invalid",
+    "synthetic-theta-research-net.invalid",
+    "synthetic-theta-research-io.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -27,5 +25,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 580364567741",
+  "tenant_id": "synthetic-scenario-580364567741",
   "_stratum": "baseline"
 }

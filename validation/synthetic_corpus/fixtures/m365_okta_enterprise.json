@@ -1,19 +1,17 @@
 {
   "cache_version": 1,
-  "tenant_id": "contoso-mid",
-  "display_name": "Contoso Ltd",
-  "default_domain": "contoso.com",
-  "queried_domain": "contoso.com",
+  "default_domain": "synthetic-alpha-com.invalid",
+  "queried_domain": "synthetic-alpha-com.invalid",
   "confidence": "high",
   "domain_count": 7,
   "tenant_domains": [
-    "contoso.com",
-    "contoso.net",
-    "contoso.co.uk",
-    "contoso-corp.com",
-    "contoso-mail.com",
-    "contoso.io",
-    "contoso.eu"
+    "synthetic-alpha-com.invalid",
+    "synthetic-alpha-net.invalid",
+    "synthetic-alpha-co-uk.invalid",
+    "synthetic-alpha-corp-com.invalid",
+    "synthetic-alpha-mail-com.invalid",
+    "synthetic-alpha-io.invalid",
+    "synthetic-alpha-eu.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -36,29 +34,31 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "api.contoso.com",
+      "subdomain": "api.synthetic-alpha-com.invalid",
       "primary_slug": "aws-cloudfront",
       "primary_name": "AWS CloudFront",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "app.contoso.com",
+      "subdomain": "app.synthetic-alpha-com.invalid",
       "primary_slug": "aws-cloudfront",
       "primary_name": "AWS CloudFront",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "status.contoso.com",
+      "subdomain": "status.synthetic-alpha-com.invalid",
       "primary_slug": "fastly",
       "primary_name": "Fastly",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "support.contoso.com",
+      "subdomain": "support.synthetic-alpha-com.invalid",
       "primary_slug": "zendesk",
       "primary_name": "Zendesk",
       "primary_tier": "application"
     }
   ],
+  "display_name": "Synthetic Scenario 044742768835",
+  "tenant_id": "synthetic-scenario-044742768835",
   "_stratum": "baseline"
 }
