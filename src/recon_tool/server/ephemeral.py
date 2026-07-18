@@ -270,8 +270,8 @@ async def inject_ephemeral_fingerprint(
     It lives in memory only and is discarded when the server process ends.
 
     Args:
-        name: Display name for the fingerprint (e.g., "Acme Platform").
-        slug: Unique identifier (e.g., "acme-platform").
+        name: Display name for the fingerprint (e.g., "Synthetic Delta Platform").
+        slug: Unique identifier (e.g., "delta-platform").
         category: Category name (e.g., "SaaS").
         confidence: Detection confidence — "high", "medium", or "low".
         detections: List of detection rules, each with "type" and "pattern" keys.

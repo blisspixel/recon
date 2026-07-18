@@ -67,27 +67,27 @@ class TestEmptyAndTrivial:
         assert build_ecosystem_hyperedges({}) == ()
 
     def test_single_domain_returns_empty(self):
-        infos = {"a.com": _info("a.com", top_issuer="LE", slugs=("microsoft365",))}
+        infos = {"a.invalid": _info("a.invalid", top_issuer="LE", slugs=("microsoft365",))}
         assert build_ecosystem_hyperedges(infos) == ()
 
 
 class TestTopIssuer:
     def test_two_domains_same_issuer_fire(self):
         infos = {
-            "a.com": _info("a.com", top_issuer="Lets Encrypt"),
-            "b.com": _info("b.com", top_issuer="Lets Encrypt"),
+            "a.invalid": _info("a.invalid", top_issuer="Lets Encrypt"),
+            "b.invalid": _info("b.invalid", top_issuer="Lets Encrypt"),
         }
         edges = build_ecosystem_hyperedges(infos)
         types = {e.edge_type for e in edges}
         assert "top_issuer" in types
         edge = next(e for e in edges if e.edge_type == "top_issuer")
         assert edge.key == "Lets Encrypt"
-        assert edge.members == ("a.com", "b.com")
+        assert edge.members == ("a.invalid", "b.invalid")
 
     def test_different_issuers_dont_merge(self):
         infos = {
-            "a.com": _info("a.com", top_issuer="LE"),
-            "b.com": _info("b.com", top_issuer="DigiCert"),
+            "a.invalid": _info("a.invalid", top_issuer="LE"),
+            "b.invalid": _info("b.invalid", top_issuer="DigiCert"),
         }
         edges = build_ecosystem_hyperedges(infos)
         # Each issuer has only one domain — no top_issuer edge.
@@ -95,8 +95,8 @@ class TestTopIssuer:
 
     def test_no_cert_summary_skips_domain(self):
         infos = {
-            "a.com": _info("a.com"),
-            "b.com": _info("b.com", top_issuer="LE"),
+            "a.invalid": _info("a.invalid"),
+            "b.invalid": _info("b.invalid", top_issuer="LE"),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "top_issuer"]
         assert edges == []
@@ -119,8 +119,8 @@ class TestTopIssuer:
         assert reverse is not None
         assert forward.top_issuers == reverse.top_issuers == ("Alpha CA", "Zulu CA")
         infos = {
-            "a.com": replace(_info("a.com"), cert_summary=forward),
-            "b.com": replace(_info("b.com"), cert_summary=reverse),
+            "a.invalid": replace(_info("a.invalid"), cert_summary=forward),
+            "b.invalid": replace(_info("b.invalid"), cert_summary=reverse),
         }
 
         edges = [edge for edge in build_ecosystem_hyperedges(infos) if edge.edge_type == "top_issuer"]
@@ -132,24 +132,24 @@ class TestTopIssuer:
 class TestLegacyBimiOrgRetirement:
     def test_two_domains_same_legacy_bimi_do_not_fire(self):
         infos = {
-            "a.com": _info("a.com", bimi_org="Example Corp"),
-            "b.com": _info("b.com", bimi_org="Example Corp"),
+            "a.invalid": _info("a.invalid", bimi_org="Example Corp"),
+            "b.invalid": _info("b.invalid", bimi_org="Example Corp"),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "bimi_org"]
         assert edges == []
 
     def test_case_and_whitespace_do_not_restore_legacy_identity(self):
         infos = {
-            "a.com": _info("a.com", bimi_org="Example  Corp"),
-            "b.com": _info("b.com", bimi_org="example corp"),
+            "a.invalid": _info("a.invalid", bimi_org="Example  Corp"),
+            "b.invalid": _info("b.invalid", bimi_org="example corp"),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "bimi_org"]
         assert edges == []
 
     def test_retirement_is_input_order_invariant(self):
         forward = {
-            "a.com": _info("a.com", bimi_org="Example  Corp"),
-            "b.com": _info("b.com", bimi_org="example corp"),
+            "a.invalid": _info("a.invalid", bimi_org="Example  Corp"),
+            "b.invalid": _info("b.invalid", bimi_org="example corp"),
         }
         reverse = dict(reversed(tuple(forward.items())))
 
@@ -161,9 +161,9 @@ class TestLegacyBimiOrgRetirement:
 
     def test_public_builder_masks_unavailable_bimi_channel(self):
         infos = {
-            "a.com": _info("a.com", bimi_org="Example Corp"),
-            "b.com": _info(
-                "b.com",
+            "a.invalid": _info("a.invalid", bimi_org="Example Corp"),
+            "b.invalid": _info(
+                "b.invalid",
                 bimi_org="Example Corp",
                 degraded_sources=("dns:bimi",),
             ),
@@ -179,16 +179,16 @@ class TestParentVendor:
         # microsoft365 (parent_vendor=Microsoft) + github (parent_vendor=Microsoft)
         # both seeded in built-in YAMLs.
         infos = {
-            "a.com": _info("a.com", slugs=("microsoft365",)),
-            "b.com": _info("b.com", slugs=("github",)),
+            "a.invalid": _info("a.invalid", slugs=("microsoft365",)),
+            "b.invalid": _info("b.invalid", slugs=("github",)),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "parent_vendor"]
-        assert any(e.key == "Microsoft" and e.members == ("a.com", "b.com") for e in edges)
+        assert any(e.key == "Microsoft" and e.members == ("a.invalid", "b.invalid") for e in edges)
 
     def test_unknown_slugs_dont_fire(self):
         infos = {
-            "a.com": _info("a.com", slugs=("not-a-real-slug",)),
-            "b.com": _info("b.com", slugs=("also-fake",)),
+            "a.invalid": _info("a.invalid", slugs=("not-a-real-slug",)),
+            "b.invalid": _info("b.invalid", slugs=("also-fake",)),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "parent_vendor"]
         assert edges == []
@@ -203,17 +203,20 @@ class TestSharedSlugs:
     def test_three_overlapping_slugs_fire(self):
         """MIN_SLUG_OVERLAP raised to 3 to suppress trivial pairs."""
         infos = {
-            "a.com": _info("a.com", slugs=("slug1", "slug2", "slug3", "slug4")),
-            "b.com": _info("b.com", slugs=("slug1", "slug2", "slug3", "slug5")),
+            "a.invalid": _info("a.invalid", slugs=("slug1", "slug2", "slug3", "slug4")),
+            "b.invalid": _info("b.invalid", slugs=("slug1", "slug2", "slug3", "slug5")),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "shared_slugs"]
         assert len(edges) == 1
-        assert edges[0].members == ("a.com", "b.com")
+        assert edges[0].members == ("a.invalid", "b.invalid")
         assert edges[0].key == "slug1,slug2,slug3"
 
     def test_unavailable_legacy_caa_slugs_cannot_form_an_overlap_edge(self) -> None:
         stale = ("letsencrypt", "digicert", "sectigo")
-        infos = {domain: _info(domain, slugs=stale, degraded_sources=("dns:caa",)) for domain in ("a.com", "b.com")}
+        infos = {
+            domain: _info(domain, slugs=stale, degraded_sources=("dns:caa",))
+            for domain in ("a.invalid", "b.invalid")
+        }
 
         edges = build_ecosystem_hyperedges(infos)
 
@@ -222,16 +225,16 @@ class TestSharedSlugs:
     def test_two_overlap_no_longer_fires(self):
         """2-slug overlap is below MIN_SLUG_OVERLAP and stays silent."""
         infos = {
-            "a.com": _info("a.com", slugs=("slug1", "slug2", "extra-a")),
-            "b.com": _info("b.com", slugs=("slug1", "slug2", "extra-b")),
+            "a.invalid": _info("a.invalid", slugs=("slug1", "slug2", "extra-a")),
+            "b.invalid": _info("b.invalid", slugs=("slug1", "slug2", "extra-b")),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "shared_slugs"]
         assert edges == []
 
     def test_single_overlap_doesnt_fire(self):
         infos = {
-            "a.com": _info("a.com", slugs=("slug1", "slug2")),
-            "b.com": _info("b.com", slugs=("slug1", "slug3")),
+            "a.invalid": _info("a.invalid", slugs=("slug1", "slug2")),
+            "b.invalid": _info("b.invalid", slugs=("slug1", "slug3")),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "shared_slugs"]
         assert edges == []
@@ -247,7 +250,10 @@ class TestSharedSlugs:
         """
         ubiquitous = ("microsoft365", "google-site", "spf-strict")
         infos = {
-            f"d{i}.com": _info(f"d{i}.com", slugs=(*ubiquitous, f"unique-{i}-1", f"unique-{i}-2")) for i in range(8)
+            f"d{i}.invalid": _info(
+                f"d{i}.invalid", slugs=(*ubiquitous, f"unique-{i}-1", f"unique-{i}-2")
+            )
+            for i in range(8)
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "shared_slugs"]
         # Without the baseline filter every pair would fire on the 3
@@ -258,41 +264,41 @@ class TestSharedSlugs:
     def test_baseline_denominator_includes_empty_slug_rows(self):
         shared = ("shared-1", "shared-2", "shared-3")
         infos = {
-            **{f"empty-{i}.com": _info(f"empty-{i}.com") for i in range(97)},
-            **{f"hit-{i}.com": _info(f"hit-{i}.com", slugs=shared) for i in range(3)},
+            **{f"empty-{i}.invalid": _info(f"empty-{i}.invalid") for i in range(97)},
+            **{f"hit-{i}.invalid": _info(f"hit-{i}.invalid", slugs=shared) for i in range(3)},
         }
 
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "shared_slugs"]
 
         assert {edge.members for edge in edges} == {
-            ("hit-0.com", "hit-1.com"),
-            ("hit-0.com", "hit-2.com"),
-            ("hit-1.com", "hit-2.com"),
+            ("hit-0.invalid", "hit-1.invalid"),
+            ("hit-0.invalid", "hit-2.invalid"),
+            ("hit-1.invalid", "hit-2.invalid"),
         }
 
     def test_pairs_not_transitive(self):
         """A∩B and B∩C fire independently; A↔C may stay silent if their
         non-baseline overlap is below the threshold."""
         infos = {
-            "a.com": _info("a.com", slugs=("s1", "s2", "s3", "sa1", "sa2")),
-            "b.com": _info("b.com", slugs=("s1", "s2", "s3", "s4", "s5")),
-            "c.com": _info("c.com", slugs=("s3", "s4", "s5", "sc1", "sc2")),
+            "a.invalid": _info("a.invalid", slugs=("s1", "s2", "s3", "sa1", "sa2")),
+            "b.invalid": _info("b.invalid", slugs=("s1", "s2", "s3", "s4", "s5")),
+            "c.invalid": _info("c.invalid", slugs=("s3", "s4", "s5", "sc1", "sc2")),
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "shared_slugs"]
         member_sets = {e.members for e in edges}
         # (a,b) shares s1,s2,s3 → 3 → fires.
         # (b,c) shares s3,s4,s5 → 3 → fires.
         # (a,c) shares s3 only → 1 → silent.
-        assert ("a.com", "b.com") in member_sets
-        assert ("b.com", "c.com") in member_sets
-        assert ("a.com", "c.com") not in member_sets
+        assert ("a.invalid", "b.invalid") in member_sets
+        assert ("b.invalid", "c.invalid") in member_sets
+        assert ("a.invalid", "c.invalid") not in member_sets
 
 
 class TestSortingAndCaps:
     def test_output_respects_documented_type_precedence(self):
         infos = {
-            "a.com": _info("a.com", top_issuer="LE", slugs=("microsoft365",)),
-            "b.com": _info("b.com", top_issuer="LE", slugs=("github",)),
+            "a.invalid": _info("a.invalid", top_issuer="LE", slugs=("microsoft365",)),
+            "b.invalid": _info("b.invalid", top_issuer="LE", slugs=("github",)),
         }
         edges = build_ecosystem_hyperedges(infos)
         types_in_order = [e.edge_type for e in edges]
@@ -301,14 +307,14 @@ class TestSortingAndCaps:
     def test_global_cap_applied(self):
         # Build many shared_slugs pairs to push past MAX_HYPEREDGES.
         # 30 distinct domains → 435 pairs, each with overlap=2.
-        infos = {f"d{i}.com": _info(f"d{i}.com", slugs=("s1", "s2")) for i in range(30)}
+        infos = {f"d{i}.invalid": _info(f"d{i}.invalid", slugs=("s1", "s2")) for i in range(30)}
         edges = build_ecosystem_hyperedges(infos)
         assert len(edges) <= MAX_HYPEREDGES
 
     def test_returns_hyperedge_dataclass(self):
         infos = {
-            "a.com": _info("a.com", top_issuer="LE"),
-            "b.com": _info("b.com", top_issuer="LE"),
+            "a.invalid": _info("a.invalid", top_issuer="LE"),
+            "b.invalid": _info("b.invalid", top_issuer="LE"),
         }
         edges = build_ecosystem_hyperedges(infos)
         for e in edges:

@@ -144,10 +144,10 @@ class TestCTCachePutGet:
     def test_get_rejects_entry_bound_to_another_domain(self, tmp_cache: Path) -> None:
         ct_cache_put("example.com", SAMPLE_SUBDOMAINS, SAMPLE_CERT_SUMMARY, "crt.sh")
         source = tmp_cache / "example.com.json"
-        target = tmp_cache / "fabrikam.com.json"
+        target = tmp_cache / "beta.invalid.json"
         target.write_bytes(source.read_bytes())
 
-        assert ct_cache_get("fabrikam.com") is None
+        assert ct_cache_get("beta.invalid") is None
 
     def test_exact_subhost_has_an_independent_cache_key(self, tmp_cache: Path) -> None:
         ct_cache_put("mail.example.com", ["only.mail.example.com"], None, "crt.sh")
@@ -157,37 +157,37 @@ class TestCTCachePutGet:
         assert ct_cache_get("example.com") is None
 
     def test_round_trip_no_cert_summary(self, tmp_cache: Path) -> None:
-        ct_cache_put("bare.com", ["sub.bare.com"], None, "crt.sh")
-        entry = ct_cache_get("bare.com")
+        ct_cache_put("bare.invalid", ["sub.bare.invalid"], None, "crt.sh")
+        entry = ct_cache_get("bare.invalid")
         assert entry is not None
         assert entry.cert_summary is None
-        assert entry.subdomains == ("sub.bare.com",)
+        assert entry.subdomains == ("sub.bare.invalid",)
 
     def test_get_missing_returns_none(self, tmp_cache: Path) -> None:
-        assert ct_cache_get("nonexistent.com") is None
+        assert ct_cache_get("nonexistent.invalid") is None
 
     def test_get_stale_returns_none(self, tmp_cache: Path) -> None:
-        ct_cache_put("stale.com", ["s.stale.com"], None, "crt.sh")
-        path = tmp_cache / "stale.com.json"
+        ct_cache_put("stale.invalid", ["s.stale.invalid"], None, "crt.sh")
+        path = tmp_cache / "stale.invalid.json"
         # Backdate the file modification time beyond TTL
         old_time = time.time() - CT_CACHE_TTL - 100
         os.utime(path, (old_time, old_time))
-        assert ct_cache_get("stale.com") is None
+        assert ct_cache_get("stale.invalid") is None
 
     def test_future_mtime_is_rejected_without_negative_age(self, tmp_cache: Path) -> None:
-        ct_cache_put("future.com", [], None, "crt.sh")
-        path = tmp_cache / "future.com.json"
+        ct_cache_put("future.invalid", [], None, "crt.sh")
+        path = tmp_cache / "future.invalid.json"
         future = time.time() + 365 * 86400
         os.utime(path, (future, future))
 
-        assert ct_cache_get("future.com", ttl=0) is None
-        assert ct_cache_show("future.com") is None
+        assert ct_cache_get("future.invalid", ttl=0) is None
+        assert ct_cache_show("future.invalid") is None
 
     def test_get_corrupt_returns_none(self, tmp_cache: Path) -> None:
         d = tmp_cache
         d.mkdir(parents=True, exist_ok=True)
-        (d / "corrupt.com.json").write_text("NOT JSON", encoding="utf-8")
-        assert ct_cache_get("corrupt.com") is None
+        (d / "corrupt.invalid.json").write_text("NOT JSON", encoding="utf-8")
+        assert ct_cache_get("corrupt.invalid") is None
 
     @pytest.mark.parametrize(
         ("field", "value"),
@@ -198,16 +198,16 @@ class TestCTCachePutGet:
         ],
     )
     def test_get_rejects_valid_json_with_invalid_shape(self, tmp_cache: Path, field: str, value: object) -> None:
-        ct_cache_put("bad.com", [], None, "crt.sh")
-        path = tmp_cache / "bad.com.json"
+        ct_cache_put("bad.invalid", [], None, "crt.sh")
+        path = tmp_cache / "bad.invalid.json"
         payload = json.loads(path.read_text(encoding="utf-8"))
         payload[field] = value
         path.write_text(json.dumps(payload), encoding="utf-8")
-        assert ct_cache_get("bad.com") is None
+        assert ct_cache_get("bad.invalid") is None
 
     def test_get_rejects_legacy_unbound_entry(self, tmp_cache: Path) -> None:
         tmp_cache.mkdir(parents=True, exist_ok=True)
-        (tmp_cache / "legacy.com.json").write_text(
+        (tmp_cache / "legacy.invalid.json").write_text(
             json.dumps(
                 {
                     "cached_at": "2026-07-01T00:00:00Z",
@@ -219,7 +219,7 @@ class TestCTCachePutGet:
             encoding="utf-8",
         )
 
-        assert ct_cache_get("legacy.com") is None
+        assert ct_cache_get("legacy.invalid") is None
 
     def test_write_binds_one_resolved_cache_directory(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
         first = tmp_path / "first"
@@ -245,18 +245,18 @@ class TestCTCachePutGet:
         self, tmp_cache: Path, field: str, value: object
     ) -> None:
         ct_cache_put(
-            "bad.com",
+            "bad.invalid",
             SAMPLE_SUBDOMAINS,
             SAMPLE_CERT_SUMMARY,
             "crt.sh",
             infrastructure_clusters=SAMPLE_INFRASTRUCTURE,
         )
-        path = tmp_cache / "bad.com.json"
+        path = tmp_cache / "bad.invalid.json"
         payload = json.loads(path.read_text(encoding="utf-8"))
         payload["infrastructure_clusters"][field] = value
         path.write_text(json.dumps(payload), encoding="utf-8")
 
-        assert ct_cache_get("bad.com") is None
+        assert ct_cache_get("bad.invalid") is None
 
     def test_get_rejects_sibling_prefix_traversal(self, tmp_cache: Path) -> None:
         sibling = tmp_cache.parent / "ct-cache-malice"
@@ -278,7 +278,7 @@ class TestCTCachePutGet:
         assert outside.exists()
 
     def test_custom_ttl(self, tmp_cache: Path) -> None:
-        ct_cache_put("ttl.com", ["a.ttl.com"], None, "crt.sh")
+        ct_cache_put("ttl.com", ["a.ttl.invalid"], None, "crt.sh")
         path = tmp_cache / "ttl.com.json"
         # 1 hour old
         old_time = time.time() - 3600
@@ -291,12 +291,12 @@ class TestCTCachePutGet:
 
 class TestCTCacheClear:
     def test_clear_existing(self, tmp_cache: Path) -> None:
-        ct_cache_put("clear.com", ["a.clear.com"], None, "crt.sh")
-        assert ct_cache_clear("clear.com") is True
-        assert ct_cache_get("clear.com") is None
+        ct_cache_put("clear.invalid", ["a.clear.invalid"], None, "crt.sh")
+        assert ct_cache_clear("clear.invalid") is True
+        assert ct_cache_get("clear.invalid") is None
 
     def test_clear_nonexistent(self, tmp_cache: Path) -> None:
-        assert ct_cache_clear("nope.com") is False
+        assert ct_cache_clear("nope.invalid") is False
 
     def test_clear_rejects_sibling_prefix_traversal(self, tmp_cache: Path) -> None:
         sibling = tmp_cache.parent / "ct-cache-malice"
@@ -308,9 +308,9 @@ class TestCTCacheClear:
         assert outside.exists()
 
     def test_clear_all(self, tmp_cache: Path) -> None:
-        ct_cache_put("a.com", ["x.a.com"], None, "crt.sh")
-        ct_cache_put("b.com", ["x.b.com"], None, "certspotter")
-        ct_cache_put("c.com", ["x.c.com"], None, "crt.sh")
+        ct_cache_put("a.invalid", ["x.a.invalid"], None, "crt.sh")
+        ct_cache_put("b.invalid", ["x.b.invalid"], None, "certspotter")
+        ct_cache_put("c.invalid", ["x.c.invalid"], None, "crt.sh")
         count = ct_cache_clear_all()
         assert count == 3
         assert ct_cache_list() == []
@@ -389,17 +389,17 @@ class TestCTCacheClear:
 
 class TestCTCacheShow:
     def test_show_existing(self, tmp_cache: Path) -> None:
-        ct_cache_put("show.com", SAMPLE_SUBDOMAINS, SAMPLE_CERT_SUMMARY, "crt.sh")
-        info = ct_cache_show("show.com")
+        ct_cache_put("show.invalid", SAMPLE_SUBDOMAINS, SAMPLE_CERT_SUMMARY, "crt.sh")
+        info = ct_cache_show("show.invalid")
         assert info is not None
-        assert info.domain == "show.com"
+        assert info.domain == "show.invalid"
         assert info.provider_used == "crt.sh"
         assert info.subdomain_count == 3
         assert info.age_days == 0
         assert info.file_size_bytes > 0
 
     def test_show_missing(self, tmp_cache: Path) -> None:
-        assert ct_cache_show("nope.com") is None
+        assert ct_cache_show("nope.invalid") is None
 
     def test_detailed_list_bounds_payload_inspection(self, tmp_cache: Path) -> None:
         tmp_cache.mkdir(parents=True)
@@ -443,12 +443,12 @@ class TestCTCacheShow:
 
 class TestCTCacheList:
     def test_list_multiple(self, tmp_cache: Path) -> None:
-        ct_cache_put("alpha.com", ["a.alpha.com"], None, "crt.sh")
-        ct_cache_put("beta.com", ["a.beta.com", "b.beta.com"], None, "certspotter")
+        ct_cache_put("alpha.invalid", ["a.alpha.invalid"], None, "crt.sh")
+        ct_cache_put("beta.invalid", ["a.beta.invalid", "b.beta.invalid"], None, "certspotter")
         entries = ct_cache_list()
         assert len(entries) == 2
         domains = {e.domain for e in entries}
-        assert domains == {"alpha.com", "beta.com"}
+        assert domains == {"alpha.invalid", "beta.invalid"}
 
     def test_list_empty(self, tmp_cache: Path) -> None:
         assert ct_cache_list() == []

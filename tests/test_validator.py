@@ -13,7 +13,7 @@ class TestHostHasSuffix:
 
     def test_interior_label_and_lookalike_do_not_match(self):
         assert not host_has_suffix("okta.com.example.net", "okta.com")
-        assert not host_has_suffix("notokta.com", "okta.com")
+        assert not host_has_suffix("notokta.invalid", "okta.com")
         assert not host_has_suffix("", "okta.com")
 
 
@@ -23,7 +23,7 @@ class TestValidateDomain:
     # --- Happy path ---
 
     def test_simple_domain(self):
-        assert validate_domain("contoso.com") == "contoso.com"
+        assert validate_domain("alpha.invalid") == "alpha.invalid"
 
     def test_subdomain_reduced_to_apex(self):
         # By default a sub-host is reduced to its registrable apex, where
@@ -35,29 +35,29 @@ class TestValidateDomain:
         assert validate_domain("mail.google.com", apex=False) == "mail.google.com"
 
     def test_deep_subdomain_reduced_to_apex(self):
-        assert validate_domain("autodiscover.mail.contoso.com") == "contoso.com"
+        assert validate_domain("autodiscover.mail.alpha.invalid") == "alpha.invalid"
 
     def test_cctld_apex_reduction(self):
         # Multi-label public suffixes (ccTLDs) reduce correctly — the whole
         # reason recon carries the Public Suffix List rather than a naive
         # last-two-labels rule.
-        assert validate_domain("mail.acme.co.uk") == "acme.co.uk"
+        assert validate_domain("mail.example.co.uk") == "example.co.uk"
 
     def test_apex_input_idempotent(self):
-        assert validate_domain("contoso.com") == "contoso.com"
+        assert validate_domain("alpha.invalid") == "alpha.invalid"
 
     def test_apex_false_still_strips_www(self):
         # www. stripping is part of base normalization, independent of apex
         # reduction: --exact (apex=False) still drops www. but keeps a real
         # sub-host (see test_subdomain_exact_preserves_host).
-        assert validate_domain("www.contoso.com", apex=False) == "contoso.com"
+        assert validate_domain("www.alpha.invalid", apex=False) == "alpha.invalid"
 
     def test_trailing_dot_fqdn_normalized(self):
         # An absolute FQDN with a trailing root-label dot is a common paste
         # form; it normalizes like the apex without the dot.
-        assert validate_domain("contoso.com.") == "contoso.com"
-        assert validate_domain("mail.contoso.com.") == "contoso.com"
-        assert validate_domain("https://contoso.com./path") == "contoso.com"
+        assert validate_domain("alpha.invalid.") == "alpha.invalid"
+        assert validate_domain("mail.alpha.invalid.") == "alpha.invalid"
+        assert validate_domain("https://alpha.invalid./path") == "alpha.invalid"
 
     def test_public_suffix_input_falls_back_to_host(self):
         # A bare public suffix has no registrable part above it; rather than
@@ -66,10 +66,10 @@ class TestValidateDomain:
         assert validate_domain("co.uk") == "co.uk"
 
     def test_uppercase_normalized(self):
-        assert validate_domain("Contoso.COM") == "contoso.com"
+        assert validate_domain("ALPHA.INVALID") == "alpha.invalid"
 
     def test_leading_trailing_whitespace_stripped(self):
-        assert validate_domain("  contoso.com  ") == "contoso.com"
+        assert validate_domain("  alpha.invalid  ") == "alpha.invalid"
 
     # --- Internationalized domain names (IDN) ---
     # Raw-Unicode IDNs are IDNA-encoded to punycode rather than rejected.
@@ -77,78 +77,78 @@ class TestValidateDomain:
     # only rejected domain in a 200-domain run.
 
     def test_idn_unicode_converted_to_punycode(self):
-        assert validate_domain("münchen.de") == "xn--mnchen-3ya.de"
+        assert validate_domain("café.invalid") == "xn--caf-dma.invalid"
 
     def test_idn_accented_converted(self):
-        assert validate_domain("mehiläinen.com") == "xn--mehilinen-z2a.com"
+        assert validate_domain("mañana.invalid") == "xn--maana-pta.invalid"
 
     def test_punycode_passthrough(self):
-        assert validate_domain("xn--mnchen-3ya.de") == "xn--mnchen-3ya.de"
+        assert validate_domain("xn--caf-dma.invalid") == "xn--caf-dma.invalid"
 
     def test_idn_with_scheme_and_www_stripped(self):
-        assert validate_domain("https://www.münchen.de") == "xn--mnchen-3ya.de"
+        assert validate_domain("https://www.café.invalid") == "xn--caf-dma.invalid"
 
     def test_exact_idn_with_www_stripped(self):
-        assert validate_domain("www.münchen.de", apex=False) == "xn--mnchen-3ya.de"
+        assert validate_domain("www.café.invalid", apex=False) == "xn--caf-dma.invalid"
 
     def test_idn_uppercase_normalized(self):
-        assert validate_domain("MÜNCHEN.DE") == "xn--mnchen-3ya.de"
+        assert validate_domain("CAFÉ.INVALID") == "xn--caf-dma.invalid"
 
     # --- Scheme stripping ---
 
     def test_strip_https(self):
-        assert validate_domain("https://contoso.com") == "contoso.com"
+        assert validate_domain("https://alpha.invalid") == "alpha.invalid"
 
     def test_strip_http(self):
-        assert validate_domain("http://contoso.com") == "contoso.com"
+        assert validate_domain("http://alpha.invalid") == "alpha.invalid"
 
     def test_strip_scheme_case_insensitive(self):
-        assert validate_domain("HTTPS://Contoso.com") == "contoso.com"
+        assert validate_domain("HTTPS://ALPHA.INVALID") == "alpha.invalid"
 
     def test_strip_scheme_with_path(self):
-        assert validate_domain("https://contoso.com/some/path") == "contoso.com"
+        assert validate_domain("https://alpha.invalid/some/path") == "alpha.invalid"
 
     def test_strip_scheme_with_query(self):
-        assert validate_domain("https://www.contoso.com?utm=1") == "contoso.com"
+        assert validate_domain("https://www.alpha.invalid?utm=1") == "alpha.invalid"
 
     def test_strip_scheme_with_fragment(self):
-        assert validate_domain("https://www.contoso.com#section") == "contoso.com"
+        assert validate_domain("https://www.alpha.invalid#section") == "alpha.invalid"
 
     def test_strip_scheme_with_port(self):
-        assert validate_domain("https://www.contoso.com:443/some/path") == "contoso.com"
+        assert validate_domain("https://www.alpha.invalid:443/some/path") == "alpha.invalid"
 
     def test_strip_bare_port(self):
         # A bare host with a port normalizes the same way the scheme form does
         # (urlsplit strips the port there); the colon must not fail the format check.
-        assert validate_domain("contoso.com:8443") == "contoso.com"
-        assert validate_domain("mail.contoso.com:443/login", apex=False) == "mail.contoso.com"
+        assert validate_domain("alpha.invalid:8443") == "alpha.invalid"
+        assert validate_domain("mail.alpha.invalid:443/login", apex=False) == "mail.alpha.invalid"
 
     def test_strip_bare_query(self):
-        assert validate_domain("contoso.com?utm=1") == "contoso.com"
+        assert validate_domain("alpha.invalid?utm=1") == "alpha.invalid"
 
     def test_strip_bare_fragment(self):
-        assert validate_domain("contoso.com#section") == "contoso.com"
+        assert validate_domain("alpha.invalid#section") == "alpha.invalid"
 
     def test_strip_trailing_slash(self):
-        assert validate_domain("contoso.com/") == "contoso.com"
+        assert validate_domain("alpha.invalid/") == "alpha.invalid"
 
     # --- www. stripping ---
 
     def test_strip_www_prefix(self):
-        assert validate_domain("www.contoso.com") == "contoso.com"
+        assert validate_domain("www.alpha.invalid") == "alpha.invalid"
 
     def test_strip_www_with_scheme(self):
-        assert validate_domain("https://www.contoso.com/") == "contoso.com"
+        assert validate_domain("https://www.alpha.invalid/") == "alpha.invalid"
 
     def test_strip_www_case_insensitive(self):
-        assert validate_domain("WWW.Contoso.COM") == "contoso.com"
+        assert validate_domain("WWW.ALPHA.INVALID") == "alpha.invalid"
 
     def test_www_registrable_label_not_clobbered(self):
-        # ``www.com`` is itself a registrable domain; stripping ``www.`` would
+        # ``www.test`` is itself a two-label reserved domain; stripping ``www.`` would
         # leave a bare TLD that fails the format check. The strip only fires when
         # the remainder is still a valid domain.
-        assert validate_domain("www.com") == "www.com"
-        assert validate_domain("www.com", apex=False) == "www.com"
+        assert validate_domain("www.test") == "www.test"
+        assert validate_domain("www.test", apex=False) == "www.test"
 
     # --- Empty / whitespace rejection ---
 
@@ -172,45 +172,45 @@ class TestValidateDomain:
 
     def test_spaces_in_domain_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("con toso.com")
+            validate_domain("alpha invalid")
 
     def test_single_char_tld_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("contoso.c")
+            validate_domain("alpha.c")
 
     def test_consecutive_dots_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("contoso..com")
+            validate_domain("alpha..com")
 
     def test_leading_dot_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain(".contoso.com")
+            validate_domain(".alpha.invalid")
 
     def test_numeric_tld_raises(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("contoso.123")
+            validate_domain("alpha.123")
 
     # --- Input length limit ---
 
     def test_excessively_long_input_rejected(self):
         with pytest.raises(ValueError, match="Input too long"):
-            validate_domain("a" * 501 + ".com")
+            validate_domain("a" * 501 + ".invalid")
 
     def test_63_octet_label_is_accepted(self):
-        domain = "a" * 63 + ".com"
+        domain = "a" * 63 + ".invalid"
         assert validate_domain(domain) == domain
 
     def test_64_octet_label_is_rejected(self):
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("a" * 64 + ".com")
+            validate_domain("a" * 64 + ".invalid")
 
     def test_253_octet_domain_is_accepted(self):
-        domain = ".".join(("a" * 63, "b" * 63, "c" * 63, "d" * 57, "com"))
+        domain = ".".join(("a" * 63, "b" * 63, "c" * 63, "d" * 53, "invalid"))
         assert len(domain.encode("ascii")) == 253
-        assert validate_domain(domain) == "d" * 57 + ".com"
+        assert validate_domain(domain) == "d" * 53 + ".invalid"
 
     def test_254_octet_domain_is_rejected(self):
-        domain = ".".join(("a" * 63, "b" * 63, "c" * 63, "d" * 58, "com"))
+        domain = ".".join(("a" * 63, "b" * 63, "c" * 63, "d" * 54, "invalid"))
         assert len(domain.encode("ascii")) == 254
         with pytest.raises(ValueError, match="Invalid domain format"):
             validate_domain(domain)
@@ -291,7 +291,7 @@ class TestInvalidDomainFormatRejection:
     def test_consecutive_dots_raises(self, label: str):
         """A domain with consecutive dots is invalid."""
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain(f"{label}..com")
+            validate_domain(f"{label}..invalid")
 
 
 class TestSchemeStrippingPreservesDomain:
@@ -336,14 +336,14 @@ class TestStripControlChars:
         ("raw", "expected"),
         [
             ("DigiCert Inc", "DigiCert Inc"),  # printable preserved
-            ("Contoso, Ltd.", "Contoso, Ltd."),  # punctuation preserved
+            ("Synthetic Alpha, Ltd.", "Synthetic Alpha, Ltd."),  # punctuation preserved
             ("evil\x1b[31mred", "evil[31mred"),  # ESC removed, rest kept
             ("a\x00b", "ab"),  # NUL removed
             ("line1\nline2", "line1line2"),  # newline removed
             ("a\r\nb\tc\x07d", "abcd"),  # CR / LF / TAB / BEL removed
             ("x\x9bCSI", "xCSI"),  # C1 control (0x9b) removed
-            ("Acme\u202e[spoof]", "Acme[spoof]"),  # bidi override removed
-            ("Acme\u2066isolated\u2069", "Acmeisolated"),  # bidi isolate removed
+            ("Synthetic Delta\u202e[spoof]", "Synthetic Delta[spoof]"),  # bidi override removed
+            ("Synthetic Delta\u2066isolated\u2069", "Synthetic Deltaisolated"),  # bidi isolate removed
             ("café résumé", "café résumé"),  # non-control Unicode preserved
         ],
     )

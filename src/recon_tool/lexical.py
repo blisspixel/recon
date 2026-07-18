@@ -124,7 +124,7 @@ REGION_PREFIXES: tuple[str, ...] = (
 # followed by digits or a namespaced identifier.
 TENANCY_SHARD_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"^t-?\d{3,}", re.IGNORECASE),  # t-1234, t1234
-    re.compile(r"^org-?[a-z0-9]{3,}", re.IGNORECASE),  # org-abc123, org-acme
+    re.compile(r"^org-?[a-z0-9]{3,}", re.IGNORECASE),  # org-abc123, org-delta
     re.compile(r"^tenant-?[a-z0-9]{3,}", re.IGNORECASE),  # tenant-xyz
     re.compile(r"^cust(?:omer)?-?[a-z0-9]{3,}", re.IGNORECASE),  # cust-abc, customer-xyz
     re.compile(r"^c\d{4,}", re.IGNORECASE),  # c12345
@@ -238,8 +238,8 @@ def _label_matches_shard(label: str) -> str | None:
 def _first_label(subdomain: str, base_domain: str | None) -> str:
     """Return the first label of a subdomain relative to base_domain.
 
-    ``api.contoso.com`` with base ``contoso.com`` → ``"api"``.
-    ``dev-1.prod.contoso.com`` with base ``contoso.com`` → ``"dev-1"``.
+    ``api.alpha.invalid`` with base ``alpha.invalid`` → ``"api"``.
+    ``dev-1.prod.alpha.invalid`` with base ``alpha.invalid`` → ``"dev-1"``.
     If base_domain is None or the subdomain doesn't end with it, return
     the first label of the raw subdomain.
     """
@@ -266,7 +266,7 @@ def classify_subdomains(
     Args:
         subdomains: Iterable of subdomain hostnames.
         base_domain: Optional apex domain for label stripping. When
-            supplied, ``api.contoso.com`` with base ``contoso.com``
+            supplied, ``api.alpha.invalid`` with base ``alpha.invalid``
             contributes the first-label ``"api"`` instead of the full
             hostname.
 

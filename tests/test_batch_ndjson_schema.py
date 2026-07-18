@@ -12,9 +12,9 @@ These tests validate a synthetic batch NDJSON sample with the single
 deterministic rule set (``classify_batch_record``): success records carry
 the full single-domain shape, error records are handled by the explicit
 ``{domain, error}`` allowance, and nothing else is accepted. The sample
-uses Microsoft fictional brands only (Contoso, Northwind); no real or
-private-corpus data is committed. The maintainer can point the same rule
-set at a private-corpus ``--ndjson`` run locally.
+uses explicit synthetic labels and reserved domains; no real or private-corpus
+data is committed. The maintainer can point the same rule set at a
+private-corpus ``--ndjson`` run locally.
 """
 
 from __future__ import annotations
@@ -48,18 +48,18 @@ def synthetic_ndjson(fully_populated_tenant_info: TenantInfo) -> str:
     Mirrors exactly what the ``recon batch --ndjson`` path emits: one JSON
     object per line, a success object from ``format_tenant_dict`` for
     domains that resolved, and a ``{domain, error}`` record for one that
-    failed validation. Fictional brands only.
+    failed validation. Explicit synthetic labels only.
     """
-    contoso = fully_populated_tenant_info
-    northwind = replace(
+    alpha = fully_populated_tenant_info
+    gamma = replace(
         fully_populated_tenant_info,
-        display_name="Northwind Traders",
-        default_domain="northwind.com",
-        queried_domain="northwind.com",
+        display_name="Synthetic Gamma",
+        default_domain="gamma.invalid",
+        queried_domain="gamma.invalid",
     )
     lines = [
-        json.dumps(format_tenant_dict(contoso)),
-        json.dumps(format_tenant_dict(northwind)),
+        json.dumps(format_tenant_dict(alpha)),
+        json.dumps(format_tenant_dict(gamma)),
         # The exact shape cli.py emits on a validation failure (SH7/SH8 v2.0:
         # adds error_kind and the record_type discriminator).
         json.dumps(
@@ -200,9 +200,9 @@ def _cross_domain_info(
 def test_batch_token_overlap_ignores_unavailable_apex_txt(capsys) -> None:
     """Raw partial TXT state must not leak into cross-domain token output."""
     infos = {
-        "a.com": _cross_domain_info("a.com", tokens=("MS=shared",)),
-        "b.com": _cross_domain_info(
-            "b.com",
+        "a.invalid": _cross_domain_info("a.invalid", tokens=("MS=shared",)),
+        "b.invalid": _cross_domain_info(
+            "b.invalid",
             tokens=("MS=shared",),
             degraded_sources=("dns:apex_txt",),
         ),
@@ -220,9 +220,9 @@ def test_batch_token_overlap_ignores_unavailable_apex_txt(capsys) -> None:
 def test_batch_ecosystem_ignores_unavailable_bimi(capsys) -> None:
     """Raw partial BIMI identity must not produce a BIMI organization edge."""
     infos = {
-        "a.com": _cross_domain_info("a.com", bimi_org="Example Corp"),
-        "b.com": _cross_domain_info(
-            "b.com",
+        "a.invalid": _cross_domain_info("a.invalid", bimi_org="Example Corp"),
+        "b.invalid": _cross_domain_info(
+            "b.invalid",
             bimi_org="Example Corp",
             degraded_sources=("dns:bimi",),
         ),
@@ -241,9 +241,9 @@ def test_batch_ecosystem_uses_collection_observable_slugs(capsys) -> None:
     """An unavailable apex TXT channel cannot contribute shared slug overlap."""
     txt_slugs = ("microsoft365", "google-site", "spf-strict")
     infos = {
-        "a.com": _cross_domain_info("a.com", slugs=txt_slugs),
-        "b.com": _cross_domain_info(
-            "b.com",
+        "a.invalid": _cross_domain_info("a.invalid", slugs=txt_slugs),
+        "b.invalid": _cross_domain_info(
+            "b.invalid",
             slugs=txt_slugs,
             degraded_sources=("dns:apex_txt",),
         ),
@@ -262,8 +262,8 @@ def test_shared_tenant_uses_positive_identity_across_dns_degradation(capsys) -> 
     """DNS availability does not mask a positive provider identity response."""
     tenant_id = "a1b2c3d4-e5f6-7890-abcd-ef1234567890"
     infos = {
-        "a.com": _cross_domain_info("a.com", tenant_id=tenant_id),
-        "b.com": _cross_domain_info("b.com", tenant_id=tenant_id, degraded_sources=("dns",)),
+        "a.invalid": _cross_domain_info("a.invalid", tenant_id=tenant_id),
+        "b.invalid": _cross_domain_info("b.invalid", tenant_id=tenant_id, degraded_sources=("dns",)),
     }
     records = [{"queried_domain": domain} for domain in infos]
 
@@ -289,8 +289,8 @@ def test_shared_tenant_excludes_conflicted_identity(capsys) -> None:
         )
     )
     infos = {
-        "a.com": _cross_domain_info("a.com", tenant_id=tenant_id),
-        "b.com": _cross_domain_info("b.com", tenant_id=tenant_id, merge_conflicts=conflicts),
+        "a.invalid": _cross_domain_info("a.invalid", tenant_id=tenant_id),
+        "b.invalid": _cross_domain_info("b.invalid", tenant_id=tenant_id, merge_conflicts=conflicts),
     }
     records = [{"queried_domain": domain} for domain in infos]
 
@@ -307,10 +307,10 @@ def test_batch_only_fields_keep_a_record_classified_as_success(
 ) -> None:
     """The batch-wide enrichment keys are additive and do not break classification."""
     record = format_tenant_dict(fully_populated_tenant_info)
-    record["shared_verification_tokens"] = [{"token": "MS=ms12345", "peer": "northwind.com"}]
-    record["shared_tenant"] = [{"tenant_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "peers": ["northwind.com"]}]
+    record["shared_verification_tokens"] = [{"token": "MS=ms12345", "peer": "gamma.invalid"}]
+    record["shared_tenant"] = [{"tenant_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "peers": ["gamma.invalid"]}]
     record["shared_display_name"] = [
-        {"display_name": "Contoso Ltd", "normalized_name": "contoso", "peers": ["contoso.co.uk"]}
+        {"display_name": "Synthetic Alpha Ltd", "normalized_name": "alpha", "peers": ["alpha.invalid"]}
     ]
     assert classify_batch_record(record) == "success"
 

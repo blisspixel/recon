@@ -53,33 +53,33 @@ class TestClusterTokens:
         assert cluster_tokens({}) == {}
 
     def test_single_domain(self):
-        out = cluster_tokens({"contoso.com": ("google-site-verification=abc",)})
+        out = cluster_tokens({"alpha.invalid": ("google-site-verification=abc",)})
         assert "google-site-verification=abc" in out
-        assert out["google-site-verification=abc"] == {"contoso.com"}
+        assert out["google-site-verification=abc"] == {"alpha.invalid"}
 
     def test_two_domains_one_token(self):
         out = cluster_tokens(
             {
-                "contoso.com": ("google-site-verification=abc",),
-                "fabrikam.com": ("google-site-verification=abc",),
+                "alpha.invalid": ("google-site-verification=abc",),
+                "beta.invalid": ("google-site-verification=abc",),
             }
         )
-        assert out["google-site-verification=abc"] == {"contoso.com", "fabrikam.com"}
+        assert out["google-site-verification=abc"] == {"alpha.invalid", "beta.invalid"}
 
     def test_tokens_deduplicated_within_domain(self):
         """If the same token appears twice on one domain, it's counted once."""
         out = cluster_tokens(
             {
-                "contoso.com": (
+                "alpha.invalid": (
                     "google-site-verification=abc",
                     "google-site-verification=abc",
                 ),
             }
         )
-        assert out["google-site-verification=abc"] == {"contoso.com"}
+        assert out["google-site-verification=abc"] == {"alpha.invalid"}
 
     def test_empty_tokens_skipped(self):
-        out = cluster_tokens({"contoso.com": ("",)})
+        out = cluster_tokens({"alpha.invalid": ("",)})
         assert out == {}
 
 
@@ -94,8 +94,8 @@ class TestComputeSharedTokens:
         """A token on only one domain is not a 'shared' token."""
         out = compute_shared_tokens(
             {
-                "contoso.com": ("google-site-verification=abc",),
-                "fabrikam.com": (),
+                "alpha.invalid": ("google-site-verification=abc",),
+                "beta.invalid": (),
             }
         )
         assert out == {}
@@ -103,46 +103,46 @@ class TestComputeSharedTokens:
     def test_two_domains_one_shared_token(self):
         out = compute_shared_tokens(
             {
-                "contoso.com": ("google-site-verification=abc",),
-                "fabrikam.com": ("google-site-verification=abc",),
+                "alpha.invalid": ("google-site-verification=abc",),
+                "beta.invalid": ("google-site-verification=abc",),
             }
         )
-        assert "contoso.com" in out
-        assert "fabrikam.com" in out
-        assert len(out["contoso.com"]) == 1
-        assert out["contoso.com"][0].peer == "fabrikam.com"
-        assert out["fabrikam.com"][0].peer == "contoso.com"
+        assert "alpha.invalid" in out
+        assert "beta.invalid" in out
+        assert len(out["alpha.invalid"]) == 1
+        assert out["alpha.invalid"][0].peer == "beta.invalid"
+        assert out["beta.invalid"][0].peer == "alpha.invalid"
 
     def test_three_domains_one_shared_token(self):
         out = compute_shared_tokens(
             {
-                "a.com": ("t=x",),
-                "b.com": ("t=x",),
-                "c.com": ("t=x",),
+                "a.invalid": ("t=x",),
+                "b.invalid": ("t=x",),
+                "c.invalid": ("t=x",),
             }
         )
         # Each domain lists the two others as peers
-        assert len(out["a.com"]) == 2
-        assert {e.peer for e in out["a.com"]} == {"b.com", "c.com"}
+        assert len(out["a.invalid"]) == 2
+        assert {e.peer for e in out["a.invalid"]} == {"b.invalid", "c.invalid"}
 
     def test_symmetric(self):
         """If A has B as a peer, B must have A as a peer."""
         out = compute_shared_tokens(
             {
-                "a.com": ("t=x",),
-                "b.com": ("t=x",),
+                "a.invalid": ("t=x",),
+                "b.invalid": ("t=x",),
             }
         )
-        a_peers = {e.peer for e in out["a.com"]}
-        b_peers = {e.peer for e in out["b.com"]}
-        assert "b.com" in a_peers
-        assert "a.com" in b_peers
+        a_peers = {e.peer for e in out["a.invalid"]}
+        b_peers = {e.peer for e in out["b.invalid"]}
+        assert "b.invalid" in a_peers
+        assert "a.invalid" in b_peers
 
     def test_no_self_peers(self):
         out = compute_shared_tokens(
             {
-                "a.com": ("t=x", "t=y"),
-                "b.com": ("t=x",),
+                "a.invalid": ("t=x", "t=y"),
+                "b.invalid": ("t=x",),
             }
         )
         for domain, entries in out.items():
@@ -154,33 +154,33 @@ class TestComputeSharedTokens:
         per direction."""
         out = compute_shared_tokens(
             {
-                "a.com": ("t=x", "t=y"),
-                "b.com": ("t=x", "t=y"),
+                "a.invalid": ("t=x", "t=y"),
+                "b.invalid": ("t=x", "t=y"),
             }
         )
-        assert len(out["a.com"]) == 2
-        tokens = {e.token for e in out["a.com"]}
+        assert len(out["a.invalid"]) == 2
+        tokens = {e.token for e in out["a.invalid"]}
         assert tokens == {"t=x", "t=y"}
 
     def test_domain_with_no_shared_tokens_omitted(self):
         out = compute_shared_tokens(
             {
-                "a.com": ("t=x",),
-                "b.com": ("t=x",),
-                "c.com": ("t=y",),
+                "a.invalid": ("t=x",),
+                "b.invalid": ("t=x",),
+                "c.invalid": ("t=y",),
             }
         )
-        assert "c.com" not in out
+        assert "c.invalid" not in out
 
     def test_deterministic_ordering(self):
         out = compute_shared_tokens(
             {
-                "a.com": ("t=x", "t=y"),
-                "b.com": ("t=x", "t=y"),
+                "a.invalid": ("t=x", "t=y"),
+                "b.invalid": ("t=x", "t=y"),
             }
         )
         # Sorted by (token, peer)
-        entries_a = out["a.com"]
+        entries_a = out["a.invalid"]
         assert [e.token for e in entries_a] == sorted(e.token for e in entries_a)
 
 
@@ -194,9 +194,9 @@ class TestClusterEntry:
             e.token = "x"  # pyright: ignore[reportAttributeAccessIssue]  # noqa: S105
 
     def test_fields(self):
-        e = ClusterEntry(token="google-site-verification=abc", peer="fabrikam.com")  # noqa: S106
+        e = ClusterEntry(token="google-site-verification=abc", peer="beta.invalid")  # noqa: S106
         assert e.token == "google-site-verification=abc"  # noqa: S105
-        assert e.peer == "fabrikam.com"
+        assert e.peer == "beta.invalid"
 
 
 # ── v1.3: tenant-ID clustering ─────────────────────────────────────────
@@ -208,22 +208,22 @@ class TestTenantClusters:
 
         clusters = compute_tenant_clusters(
             {
-                "a.com": "tenant-abc",
-                "b.com": "tenant-abc",
-                "c.com": "tenant-xyz",
+                "a.invalid": "tenant-abc",
+                "b.invalid": "tenant-abc",
+                "c.invalid": "tenant-xyz",
             }
         )
         assert len(clusters) == 1
         assert clusters[0].tenant_id == "tenant-abc"
-        assert clusters[0].domains == ("a.com", "b.com")
+        assert clusters[0].domains == ("a.invalid", "b.invalid")
 
     def test_skips_singletons(self):
         from recon_tool.clustering import compute_tenant_clusters
 
         clusters = compute_tenant_clusters(
             {
-                "a.com": "tenant-abc",
-                "b.com": "tenant-xyz",
+                "a.invalid": "tenant-abc",
+                "b.invalid": "tenant-xyz",
             }
         )
         assert clusters == ()
@@ -233,9 +233,9 @@ class TestTenantClusters:
 
         clusters = compute_tenant_clusters(
             {
-                "a.com": None,
-                "b.com": None,
-                "c.com": "tenant-abc",
+                "a.invalid": None,
+                "b.invalid": None,
+                "c.invalid": "tenant-abc",
             }
         )
         assert clusters == ()
@@ -245,16 +245,16 @@ class TestTenantClusters:
 
         clusters = compute_tenant_clusters(
             {
-                "b.com": "zzz",
-                "c.com": "aaa",
-                "a.com": "zzz",
-                "d.com": "aaa",
+                "b.invalid": "zzz",
+                "c.invalid": "aaa",
+                "a.invalid": "zzz",
+                "d.invalid": "aaa",
             }
         )
         # Sorted by tenant_id; domains within each cluster sorted alphabetically.
         assert [c.tenant_id for c in clusters] == ["aaa", "zzz"]
-        assert clusters[0].domains == ("c.com", "d.com")
-        assert clusters[1].domains == ("a.com", "b.com")
+        assert clusters[0].domains == ("c.invalid", "d.invalid")
+        assert clusters[1].domains == ("a.invalid", "b.invalid")
 
 
 # ── v1.3: display-name clustering ──────────────────────────────────────
@@ -266,40 +266,39 @@ class TestDisplayNameClusters:
 
         clusters = compute_display_name_clusters(
             {
-                "a.com": "Acme Corp",
-                "b.com": "Acme Corp",
-                "c.com": "Different Org",
+                "a.invalid": "Synthetic Delta Corp",
+                "b.invalid": "Synthetic Delta Corp",
+                "c.invalid": "Different Org",
             }
         )
         assert len(clusters) == 1
-        assert clusters[0].normalized_name == "acme"
-        assert clusters[0].domains == ("a.com", "b.com")
+        assert clusters[0].normalized_name == "synthetic delta"
+        assert clusters[0].domains == ("a.invalid", "b.invalid")
 
     def test_corporate_suffix_stripped(self):
         from recon_tool.clustering import compute_display_name_clusters
 
-        # "Acme Corp" and "Acme Corp." both strip to "acme".
-        # "Acme Inc" also strips to "acme" and joins the cluster.
+        # The corporate suffixes strip while the explicit synthetic identity remains.
         clusters = compute_display_name_clusters(
             {
-                "a.com": "Acme Corp",
-                "b.com": "Acme Corp.",
-                "c.com": "Acme Inc",
+                "a.invalid": "Synthetic Delta Corp",
+                "b.invalid": "Synthetic Delta Corp.",
+                "c.invalid": "Synthetic Delta Inc",
             }
         )
         assert len(clusters) == 1
-        assert clusters[0].normalized_name == "acme"
-        assert set(clusters[0].domains) == {"a.com", "b.com", "c.com"}
+        assert clusters[0].normalized_name == "synthetic delta"
+        assert set(clusters[0].domains) == {"a.invalid", "b.invalid", "c.invalid"}
 
     def test_conservative_no_substring(self):
         from recon_tool.clustering import compute_display_name_clusters
 
-        # "Acme" vs "Acme Holdings" do NOT cluster (exact normalized
+        # "Synthetic Delta" vs "Synthetic Delta Holdings" do NOT cluster (exact normalized
         # match required; we don't do substring containment).
         clusters = compute_display_name_clusters(
             {
-                "a.com": "Acme",
-                "b.com": "Acme Holdings",
+                "a.invalid": "Synthetic Delta",
+                "b.invalid": "Synthetic Delta Holdings",
             }
         )
         assert clusters == ()
@@ -309,8 +308,8 @@ class TestDisplayNameClusters:
 
         clusters = compute_display_name_clusters(
             {
-                "a.com": None,
-                "b.com": None,
+                "a.invalid": None,
+                "b.invalid": None,
             }
         )
         assert clusters == ()
@@ -322,12 +321,12 @@ class TestDisplayNameClusters:
         # not the normalized form.
         clusters = compute_display_name_clusters(
             {
-                "a.com": "Acme Corp",
-                "b.com": "Acme Corp.",
+                "a.invalid": "Synthetic Delta Corp",
+                "b.invalid": "Synthetic Delta Corp.",
             }
         )
         assert len(clusters) == 1
-        assert set(clusters[0].raw_names) == {"Acme Corp", "Acme Corp."}
+        assert set(clusters[0].raw_names) == {"Synthetic Delta Corp", "Synthetic Delta Corp."}
 
 
 def test_compute_shared_tokens_skips_high_cardinality_token():

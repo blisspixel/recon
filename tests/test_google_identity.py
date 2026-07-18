@@ -38,7 +38,7 @@ def retry_delays(monkeypatch: pytest.MonkeyPatch) -> list[float]:
 
 class TestExtractIdpName:
     def test_okta(self):
-        assert _extract_idp_name("https://acme.okta.com/sso/saml") == "Okta"
+        assert _extract_idp_name("https://synthetic-delta.okta.com/sso/saml") == "Okta"
 
     def test_ping_identity(self):
         assert _extract_idp_name("https://sso.pingidentity.com/idp") == "Ping Identity"
@@ -56,10 +56,10 @@ class TestExtractIdpName:
         assert _extract_idp_name("https://accounts.google.com/o/saml2") == "Google"
 
     def test_auth0(self):
-        assert _extract_idp_name("https://acme.auth0.com/samlp/abc") == "Auth0"
+        assert _extract_idp_name("https://synthetic-delta.auth0.com/samlp/abc") == "Auth0"
 
     def test_onelogin(self):
-        assert _extract_idp_name("https://acme.onelogin.com/trust/saml2") == "OneLogin"
+        assert _extract_idp_name("https://synthetic-delta.onelogin.com/trust/saml2") == "OneLogin"
 
     def test_duo(self):
         assert _extract_idp_name("https://sso.duo.com/saml2/sp/abc") == "Duo Security"
@@ -68,20 +68,20 @@ class TestExtractIdpName:
         assert _extract_idp_name("https://sso.jumpcloud.com/saml2/app") == "JumpCloud"
 
     def test_unknown_falls_back_to_hostname(self):
-        assert _extract_idp_name("https://idp.customcorp.net/sso") == "idp.customcorp.net"
+        assert _extract_idp_name("https://idp.synthetic-idp.invalid/sso") == "idp.synthetic-idp.invalid"
 
     def test_unparseable_returns_raw(self):
         assert _extract_idp_name("not-a-url") == "not-a-url"
 
     def test_lookalike_host_does_not_match(self):
         # A vendor name as a non-suffix part of the hostname must not match.
-        assert _extract_idp_name("https://notokta.com/login") == "notokta.com"
+        assert _extract_idp_name("https://notokta.invalid/login") == "notokta.invalid"
         assert _extract_idp_name("https://oktatest.example/sso") == "oktatest.example"
 
     def test_pattern_only_in_path_or_query_does_not_match(self):
         # The IdP is the redirect host, not a string anywhere in the URL.
         assert _extract_idp_name("https://accounts.google.com/o/saml2?continue=https://x.okta.com") == "Google"
-        assert _extract_idp_name("https://sso.acme.net/auth?idp=okta.com") == "sso.acme.net"
+        assert _extract_idp_name("https://sso.delta.invalid/auth?idp=okta.com") == "sso.delta.invalid"
 
     def test_bare_vendor_host_matches(self):
         assert _extract_idp_name("https://okta.com/") == "Okta"
@@ -92,7 +92,7 @@ class TestExtractIdpName:
 
 class TestIsFederatedRedirect:
     def test_non_google_domain_is_federated(self):
-        assert GoogleIdentitySource._is_federated_redirect("https://acme.okta.com/sso") is True
+        assert GoogleIdentitySource._is_federated_redirect("https://synthetic-delta.okta.com/sso") is True
 
     def test_google_accounts_not_federated(self):
         assert (
@@ -113,7 +113,7 @@ class TestIsFederatedRedirect:
         assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/adfs/ls") is True
 
     def test_google_lookalike_host_is_federated(self):
-        assert GoogleIdentitySource._is_federated_redirect("https://evilgoogle.com/accounts/servicelogin") is True
+        assert GoogleIdentitySource._is_federated_redirect("https://evilgoogle.invalid/accounts/servicelogin") is True
         assert GoogleIdentitySource._is_federated_redirect("https://google.com.example.net/accounts") is True
 
     def test_google_string_in_path_or_query_does_not_define_host(self):
@@ -139,7 +139,7 @@ class TestClassifyResponse:
 
     def test_federated_redirect_to_okta(self):
         resp = self._make_response(
-            "https://acme.okta.com/sso/saml2?SAMLRequest=abc",
+            "https://synthetic-delta.okta.com/sso/saml2?SAMLRequest=abc",
             "<html>Okta login</html>",
         )
         source = GoogleIdentitySource()
@@ -203,7 +203,7 @@ class TestGoogleIdentityLookup:
     async def test_federated_lookup(self):
         mock_resp = httpx.Response(
             status_code=200,
-            request=httpx.Request("GET", "https://acme.okta.com/sso"),
+            request=httpx.Request("GET", "https://synthetic-delta.okta.com/sso"),
             content=b"<html>Okta SSO</html>",
         )
 

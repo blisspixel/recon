@@ -106,7 +106,7 @@ class TestOIDCSource:
         transport = httpx.MockTransport(lambda request: httpx.Response(404))
         async with httpx.AsyncClient(transport=transport) as client:
             source = OIDCSource()
-            result = await source.lookup("nonexistent.com", client=client)
+            result = await source.lookup("nonexistent.invalid", client=client)
         assert result.error is not None
         assert "404" in result.error
         assert result.tenant_id is None
@@ -175,8 +175,8 @@ class TestOIDCSource:
         transport = httpx.MockTransport(capture_request)
         async with httpx.AsyncClient(transport=transport) as client:
             source = OIDCSource()
-            await source.lookup("contoso.com", client=client)
-        assert captured_url == DISCOVERY_URL_TEMPLATE.format(domain="contoso.com")
+            await source.lookup("alpha.invalid", client=client)
+        assert captured_url == DISCOVERY_URL_TEMPLATE.format(domain="alpha.invalid")
 
 
 # --- Property-based tests (Hypothesis) ---

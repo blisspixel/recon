@@ -1,7 +1,7 @@
 """Pin ``_SUBCOMMANDS`` to the registered command tree.
 
 The root callback uses ``_SUBCOMMANDS`` to tell a bare domain argument
-(``recon contoso.com``) apart from a subcommand. If a new command is added
+(``recon alpha.invalid``) apart from a subcommand. If a new command is added
 without updating the set, a dotted first argument matching that command could
 be mis-routed to ``lookup``. This test fails when the two drift, so the set
 stays in lockstep with the Typer app.

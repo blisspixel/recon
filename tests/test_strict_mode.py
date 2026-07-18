@@ -21,9 +21,9 @@ def _info(
 ) -> TenantInfo:
     return TenantInfo(
         tenant_id="t1",
-        display_name="Contoso",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=confidence,
         sources=sources,
     )

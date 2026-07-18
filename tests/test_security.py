@@ -14,7 +14,7 @@ class TestXmlInjectionPrevention:
     def test_xml_escape_in_autodiscover_body(self):
         from xml.sax.saxutils import escape as xml_escape
 
-        malicious = "foo.com</Domain></Request></GetFederationInformationRequestMessage>"
+        malicious = "foo.invalid</Domain></Request></GetFederationInformationRequestMessage>"
         escaped = xml_escape(malicious)
         assert "</" not in escaped
         assert "&lt;" in escaped
@@ -23,7 +23,7 @@ class TestXmlInjectionPrevention:
         from recon_tool.validator import validate_domain
 
         with pytest.raises(ValueError, match="Invalid domain format"):
-            validate_domain("foo.com</Domain>")
+            validate_domain("foo.invalid</Domain>")
 
 
 class TestReDoSPrevention:
@@ -105,7 +105,7 @@ class TestUUIDValidation:
         from recon_tool.sources.azure_metadata import AzureMetadataSource
 
         source = AzureMetadataSource()
-        result = await source.lookup("test.com", tenant_id="../../etc/passwd")
+        result = await source.lookup("test.invalid", tenant_id="../../etc/passwd")
         assert result.error is not None
         assert "Invalid tenant_id" in result.error
 
@@ -114,7 +114,7 @@ class TestUUIDValidation:
         from recon_tool.sources.azure_metadata import AzureMetadataSource
 
         source = AzureMetadataSource()
-        result = await source.lookup("test.com", tenant_id="abc?redirect=evil.com")
+        result = await source.lookup("test.invalid", tenant_id="abc?redirect=evil.invalid")
         assert result.error is not None
         assert "Invalid tenant_id" in result.error
 
@@ -141,7 +141,7 @@ class TestUUIDValidation:
 
         with patch("recon_tool.sources.azure_metadata.http_client", fake_http_client):
             result = await source.lookup(
-                "test.com",
+                "test.invalid",
                 tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
             )
             assert result.error is None
@@ -150,14 +150,14 @@ class TestUUIDValidation:
 
 class TestErrorSanitization:
     def test_recon_lookup_error_str(self):
-        err = ReconLookupError(domain="test.com", message="No data found", error_type="not_found")
+        err = ReconLookupError(domain="test.invalid", message="No data found", error_type="not_found")
         assert str(err) == "No data found"
-        assert "test.com" not in str(err)
+        assert "test.invalid" not in str(err)
 
     def test_recon_lookup_error_repr_has_all_fields(self):
-        err = ReconLookupError(domain="test.com", message="No data found", error_type="not_found")
+        err = ReconLookupError(domain="test.invalid", message="No data found", error_type="not_found")
         r = repr(err)
-        assert "test.com" in r
+        assert "test.invalid" in r
         assert "No data found" in r
 
 
@@ -195,7 +195,7 @@ class TestOutputInjectionSweep:
         err.source_errors = (("dns", "fail \x1b[2J [bold]evil[/bold]"),)
         buf = io.StringIO()
         with contextlib.redirect_stderr(buf):  # render_warning writes to stderr
-            render_warning("contoso.com\x1b[2J\x07", err)
+            render_warning("alpha.invalid\x1b[2J\x07", err)
         out = buf.getvalue()
         assert "\x1b" not in out
         assert "\x07" not in out
@@ -207,9 +207,9 @@ class TestOutputInjectionSweep:
 
         info = TenantInfo(
             tenant_id=None,
-            display_name="Contoso",
+            display_name="Synthetic Alpha",
             default_domain="evil[x](http://h)",
-            queried_domain="contoso.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.HIGH,
             tenant_domains=("a[b](c).com",),
             domain_count=1,
@@ -224,7 +224,7 @@ class TestOutputInjectionSweep:
 
         conflicts = MergeConflicts(
             display_name=(
-                CandidateValue(value="Contoso\x1b[2J", source="oidc", confidence="high"),
+                CandidateValue(value="Synthetic Alpha\x1b[2J", source="oidc", confidence="high"),
                 CandidateValue(value="Other", source="userrealm", confidence="medium"),
             )
         )
@@ -236,14 +236,14 @@ class TestSecurityReviewFixes:
     """Regression tests for the 2026-06 external security-review batch."""
 
     def test_idna_lossy_mapping_rejected(self):
-        # The stdlib idna codec is IDNA2003/nameprep: faß.de maps to fass.de, a
+        # The stdlib idna codec is IDNA2003/nameprep: faß.invalid maps to fass.invalid, a
         # different registrable domain. The round-trip check must reject the lossy
         # mapping rather than silently query the wrong domain; non-lossy IDNs still
         # convert.
         from recon_tool.validator import validate_domain
 
-        assert validate_domain("münchen.de") == "xn--mnchen-3ya.de"
-        for lossy in ("faß.de", "straße.de"):
+        assert validate_domain("café.invalid") == "xn--caf-dma.invalid"
+        for lossy in ("faß.invalid", "straße.invalid"):
             with pytest.raises(ValueError, match="Invalid domain"):
                 validate_domain(lossy)
 
@@ -270,18 +270,18 @@ class TestSecurityReviewFixes:
 
         d = cache_dir()
         d.mkdir(parents=True, exist_ok=True)
-        sentinel = d / "ex.com.json.tmp"
+        sentinel = d / "ex.invalid.json.tmp"
         sentinel.write_text("SENTINEL", encoding="utf-8")
         info = TenantInfo(
             tenant_id=None,
             display_name="X",
-            default_domain="ex.com",
-            queried_domain="ex.com",
+            default_domain="ex.invalid",
+            queried_domain="ex.invalid",
             confidence=ConfidenceLevel.LOW,
             domain_count=0,
         )
-        cache_put("ex.com", info)
-        assert cache_get("ex.com") is not None
+        cache_put("ex.invalid", info)
+        assert cache_get("ex.invalid") is not None
         assert sentinel.read_text(encoding="utf-8") == "SENTINEL"
 
     def test_ct_budget_summary_streams_ndjson(self, tmp_path):
@@ -300,10 +300,10 @@ class TestSecurityReviewFixes:
 
         results = tmp_path / "results.ndjson"
         results.write_text(
-            '{"queried_domain":"a.com","ct_attempt_outcome":"cache_hit"}\n'
+            '{"queried_domain":"a.invalid","ct_attempt_outcome":"cache_hit"}\n'
             "\n"
-            '{"queried_domain":"b.com","ct_attempt_outcome":"live_success"}\n'
-            '{"queried_domain":"c.com"}\n',
+            '{"queried_domain":"b.invalid","ct_attempt_outcome":"live_success"}\n'
+            '{"queried_domain":"c.invalid"}\n',
             encoding="utf-8",
         )
         scan._write_ct_budget_summary(results, tmp_path)
@@ -350,8 +350,8 @@ class TestBugHuntRound2:
         info = TenantInfo(
             tenant_id="aaaaaaaa-aaaa",
             display_name="X",
-            default_domain="ex.com",
-            queried_domain="ex.com",
+            default_domain="ex.invalid",
+            queried_domain="ex.invalid",
             confidence=ConfidenceLevel.LOW,
             domain_count=0,
             merge_conflicts=mc,

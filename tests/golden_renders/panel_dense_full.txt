@@ -1,5 +1,5 @@
-Contoso Ltd
-contoso.com
+Synthetic Alpha Ltd
+alpha.invalid
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX
                delivery path)
@@ -14,13 +14,13 @@ Services
 
 
 Domains (3)
-  contoso.com
-  contoso.onmicrosoft.com
-  contoso.co.uk
+  alpha.invalid
+  alpha.onmicrosoft.com
+  alpha.invalid
 
 
 Related domains
-  api.contoso.com, login.contoso.com
+  api.alpha.invalid, login.alpha.invalid
 
 Insights
   Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)

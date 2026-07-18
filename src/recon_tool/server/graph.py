@@ -180,7 +180,7 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
     up to the specified depth. Returns intelligence for all discovered domains.
 
     Args:
-        domain: Starting domain (e.g., "northwindtraders.com")
+        domain: Starting domain (e.g., "gamma.invalid")
         depth: Maximum recursion depth (1-3, default 1)
         result_limit: Optional compact-output cap. ``0`` returns the raw chain
             JSON. A positive value returns the first N domains in BFS chain

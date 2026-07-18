@@ -51,7 +51,7 @@ class TestCertProvidersHighSignalParity:
     """The CT subdomain filter uses ``HIGH_SIGNAL_PREFIXES`` to push
     interesting names to the top of the bounded output. The new
     tiers must appear there too; otherwise a CT response that
-    surfaces ``data.contoso.com`` could fall off the cap while
+    surfaces ``data.alpha.invalid`` could fall off the cap while
     lower-signal entries make it in."""
 
     def test_data_and_analytics_in_high_signal(self):

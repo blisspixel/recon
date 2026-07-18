@@ -64,9 +64,9 @@ def _make_console() -> tuple[Console, io.StringIO]:
 def _minimal_info(**overrides: object) -> TenantInfo:
     defaults: dict[str, object] = {
         "tenant_id": None,
-        "display_name": "Contoso",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.MEDIUM,
         "region": "NA",
         "sources": ("dns_records",),
@@ -253,7 +253,7 @@ class TestEvidenceRoleAwareServiceClassification:
         info = _minimal_info(
             services=("Cloudflare",),
             slugs=("cloudflare",),
-            evidence=(EvidenceRecord("CNAME", "www.contoso.com -> edge.cloudflare.net", "Cloudflare", "cloudflare"),),
+            evidence=(EvidenceRecord("CNAME", "www.alpha.invalid -> edge.cloudflare.net", "Cloudflare", "cloudflare"),),
         )
 
         assert categorize_services(info)["Cloud"] == ["Cloudflare (CDN/edge)"]
@@ -344,9 +344,9 @@ class TestCsvFormulaNeutralization:
         assert row["display_name"] == "'" + value
 
     def test_tenant_csv_row_leaves_safe_text_unchanged(self) -> None:
-        row = format_tenant_csv_row(_minimal_info(display_name="Contoso Ltd"))
+        row = format_tenant_csv_row(_minimal_info(display_name="Synthetic Alpha Ltd"))
 
-        assert row["display_name"] == "Contoso Ltd"
+        assert row["display_name"] == "Synthetic Alpha Ltd"
 
     def test_batch_csv_sanitizes_success_and_error_rows(self) -> None:
         info = _minimal_info(
@@ -455,7 +455,7 @@ class TestRenderTenantPanelEdgeCases:
 
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
-        assert "Contoso" in out
+        assert "Synthetic Alpha" in out
 
     def test_with_cert_summary(self) -> None:
         _, buf = _make_console()
@@ -535,13 +535,13 @@ class TestRenderTenantPanelEdgeCases:
         _, buf = _make_console()
         info = _minimal_info(
             services=("DMARC",),
-            related_domains=tuple(f"sub{i}.contoso.com" for i in range(25)),
+            related_domains=tuple(f"sub{i}.alpha.invalid" for i in range(25)),
         )
         from recon_tool.formatter import get_console
 
         get_console().print(render_tenant_panel(info))
         out = _strip(buf.getvalue())
-        assert "sub0.contoso.com" in out
+        assert "sub0.alpha.invalid" in out
         assert "25 total" in out
         assert "more" in out
         assert "--full" in out
@@ -551,14 +551,14 @@ class TestRenderTenantPanelEdgeCases:
         _, buf = _make_console()
         info = _minimal_info(
             services=("DMARC",),
-            related_domains=tuple(f"sub{i}.contoso.com" for i in range(15)),
+            related_domains=tuple(f"sub{i}.alpha.invalid" for i in range(15)),
         )
         from recon_tool.formatter import get_console
 
         get_console().print(render_tenant_panel(info, show_domains=True))
         out = _strip(buf.getvalue())
-        assert "sub14.contoso.com" in out
-        assert "and " not in out or "more" not in out.split("sub14.contoso.com")[1]
+        assert "sub14.alpha.invalid" in out
+        assert "and " not in out or "more" not in out.split("sub14.alpha.invalid")[1]
 
     def test_subdomain_summary_uses_aligned_lines_before_overflow(self) -> None:
         """Long provider names should not hide every other provider behind
@@ -567,7 +567,7 @@ class TestRenderTenantPanelEdgeCases:
         attributions = (
             *(
                 SurfaceAttribution(
-                    subdomain=f"azure{i}.contoso.com",
+                    subdomain=f"azure{i}.alpha.invalid",
                     primary_slug="azure-app-service",
                     primary_name="Azure App Service",
                     primary_tier="infrastructure",
@@ -576,7 +576,7 @@ class TestRenderTenantPanelEdgeCases:
             ),
             *(
                 SurfaceAttribution(
-                    subdomain=f"proxy{i}.contoso.com",
+                    subdomain=f"proxy{i}.alpha.invalid",
                     primary_slug="microsoft-entra-application-proxy",
                     primary_name="Microsoft Entra Application Proxy",
                     primary_tier="application",
@@ -585,7 +585,7 @@ class TestRenderTenantPanelEdgeCases:
             ),
             *(
                 SurfaceAttribution(
-                    subdomain=f"front{i}.contoso.com",
+                    subdomain=f"front{i}.alpha.invalid",
                     primary_slug="azure-front-door",
                     primary_name="Azure Front Door",
                     primary_tier="infrastructure",
@@ -593,7 +593,7 @@ class TestRenderTenantPanelEdgeCases:
                 for i in range(9)
             ),
             SurfaceAttribution(
-                subdomain="shop.contoso.com",
+                subdomain="shop.alpha.invalid",
                 primary_slug="shopify",
                 primary_name="Shopify",
                 primary_tier="application",
@@ -616,7 +616,7 @@ class TestRenderTenantPanelEdgeCases:
         _, buf = _make_console()
         info = _minimal_info(
             tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-            display_name="Contoso Ltd",
+            display_name="Synthetic Alpha Ltd",
             services=("Microsoft 365",),
             slugs=("microsoft365",),
             auth_type="Federated",
@@ -651,7 +651,7 @@ class TestRenderTenantPanelEdgeCases:
             primary_email_provider="Microsoft 365",
             email_gateway="Mimecast",
             evidence=(
-                EvidenceRecord("MX", "contoso-com.mail.protection.outlook.com", "Microsoft 365", "microsoft365"),
+                EvidenceRecord("MX", "alpha-com.mail.protection.outlook.com", "Microsoft 365", "microsoft365"),
                 EvidenceRecord("MX", "us-smtp-inbound.mimecast.com", "Mimecast", "mimecast"),
             ),
         )

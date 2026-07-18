@@ -28,9 +28,9 @@ RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
     sources=("oidc_discovery",),
     services=("Microsoft 365",),
@@ -49,35 +49,35 @@ class TestBatchCommand:
     def test_batch_json_output(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\nexample.com\n")
+        domain_file.write_text("alpha.invalid\nexample.com\n")
 
         result = runner.invoke(app, ["batch", str(domain_file), "--json"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert isinstance(data, list)
         assert len(data) == 2
-        assert data[0]["display_name"] == "Contoso Ltd"
+        assert data[0]["display_name"] == "Synthetic Alpha Ltd"
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_markdown_output(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\n")
+        domain_file.write_text("alpha.invalid\n")
 
         result = runner.invoke(app, ["batch", str(domain_file), "--md"])
         assert result.exit_code == 0
         assert "# " in result.output
-        assert "Contoso Ltd" in result.output
+        assert "Synthetic Alpha Ltd" in result.output
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_default_panel_output(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\n")
+        domain_file.write_text("alpha.invalid\n")
 
         result = runner.invoke(app, ["batch", str(domain_file)])
         assert result.exit_code == 0
-        assert "Contoso Ltd" in result.output
+        assert "Synthetic Alpha Ltd" in result.output
 
     def test_batch_file_not_found(self):
         result = runner.invoke(app, ["batch", "nonexistent.txt"])
@@ -94,7 +94,7 @@ class TestBatchCommand:
     def test_batch_skips_comments_and_blanks(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("# header\ncontoso.com\n\n# another comment\n")
+        domain_file.write_text("# header\nalpha.invalid\n\n# another comment\n")
 
         result = runner.invoke(app, ["batch", str(domain_file), "--json"])
         assert result.exit_code == 0
@@ -104,12 +104,12 @@ class TestBatchCommand:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_json_handles_errors(self, mock_resolve, tmp_path):
         mock_resolve.side_effect = ReconLookupError(
-            domain="bad.com",
+            domain="bad.invalid",
             message="No data",
             error_type="all_sources_failed",
         )
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("bad.com\n")
+        domain_file.write_text("bad.invalid\n")
 
         result = runner.invoke(app, ["batch", str(domain_file), "--json"])
         assert result.exit_code == 0
@@ -188,7 +188,7 @@ class TestBatchCommand:
         """Concurrency is clamped to 1-20 range."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\n")
+        domain_file.write_text("alpha.invalid\n")
 
         # -c 0 should be clamped to 1, -c 100 to 20 — both should work
         result = runner.invoke(app, ["batch", str(domain_file), "--json", "-c", "0"])
@@ -200,20 +200,20 @@ class TestBatchCommand:
     def test_non_streaming_batch_routes_through_ordered_map(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\ncontoso.com\nexample.com\n")
+        domain_file.write_text("alpha.invalid\nalpha.invalid\nexample.com\n")
 
         with patch("recon_tool.cli.batch._batch_map_ordered", wraps=_batch_map_ordered) as ordered_map:
             result = runner.invoke(app, ["batch", str(domain_file), "--json", "-c", "3"])
 
         assert result.exit_code == 0
-        assert ordered_map.await_args.args[0] == ["contoso.com", "example.com"]
+        assert ordered_map.await_args.args[0] == ["alpha.invalid", "example.com"]
         assert ordered_map.await_args.kwargs["max_pending"] == 3
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_timeout_passed_to_resolver(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\n")
+        domain_file.write_text("alpha.invalid\n")
 
         result = runner.invoke(app, ["batch", str(domain_file), "--json", "--timeout", "7"])
 
@@ -231,7 +231,7 @@ class TestBatchCommand:
         info = replace(SAMPLE_INFO, merge_conflicts=conflicts)
         mock_resolve.return_value = (info, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\n")
+        domain_file.write_text("alpha.invalid\n")
 
         result = runner.invoke(app, ["batch", str(domain_file), "--json", "--fusion"])
 
@@ -272,7 +272,7 @@ class TestBatchCommand:
         """Every domain in one batch shares one immutable inference snapshot."""
         process_one.return_value = {"record_type": "lookup"}
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\nexample.com\nexample.net\n")
+        domain_file.write_text("alpha.invalid\nexample.com\nexample.net\n")
         network = bayesian.load_network()
         priors_override = {"m365_tenant": 0.4}
 
@@ -294,7 +294,7 @@ class TestBatchCommand:
     def test_batch_skips_fusion_loaders_when_disabled(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\nexample.com\n")
+        domain_file.write_text("alpha.invalid\nexample.com\n")
 
         with (
             patch("recon_tool.bayesian.load_network") as network_loader,
@@ -310,7 +310,7 @@ class TestBatchCommand:
     def test_batch_fusion_loader_failure_preserves_json_records(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\nexample.com\n")
+        domain_file.write_text("alpha.invalid\nexample.com\n")
 
         with patch("recon_tool.bayesian.load_network", side_effect=ValueError("invalid model configuration")):
             result = runner.invoke(app, ["batch", str(domain_file), "--json", "--fusion"])
@@ -319,7 +319,7 @@ class TestBatchCommand:
         assert mock_resolve.await_count == 2
         assert json.loads(result.output) == [
             {
-                "domain": "contoso.com",
+                "domain": "alpha.invalid",
                 "error": "invalid model configuration",
                 "error_kind": "lookup",
                 "record_type": "error",
@@ -336,7 +336,7 @@ class TestBatchCommand:
     def test_batch_fusion_loader_failure_preserves_ndjson_records(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\nexample.com\n")
+        domain_file.write_text("alpha.invalid\nexample.com\n")
 
         with patch("recon_tool.bayesian.load_priors_override", side_effect=ValueError("invalid prior override")):
             result = runner.invoke(app, ["batch", str(domain_file), "--ndjson", "--fusion"])
@@ -344,7 +344,7 @@ class TestBatchCommand:
         assert result.exit_code == 0
         assert mock_resolve.await_count == 2
         records = [json.loads(line) for line in result.output.splitlines()]
-        assert [record["domain"] for record in records] == ["contoso.com", "example.com"]
+        assert [record["domain"] for record in records] == ["alpha.invalid", "example.com"]
         assert all(record["error"] == "invalid prior override" for record in records)
         assert all(record["error_kind"] == "lookup" for record in records)
         assert all(record["record_type"] == "error" for record in records)
@@ -354,7 +354,7 @@ class TestBatchCommand:
         private_detail = "unexpected loader detail at C:/private/model.yaml"
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\n")
+        domain_file.write_text("alpha.invalid\n")
 
         with (
             caplog.at_level(logging.DEBUG, logger="recon"),
@@ -365,7 +365,7 @@ class TestBatchCommand:
         assert result.exit_code == 0
         record = json.loads(result.output)[0]
         assert record == {
-            "domain": "contoso.com",
+            "domain": "alpha.invalid",
             "error": "Internal batch error. Retry: recon --debug batch ... for details.",
             "error_kind": "lookup",
             "record_type": "error",

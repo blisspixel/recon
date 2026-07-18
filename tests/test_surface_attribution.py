@@ -60,7 +60,7 @@ def test_supabase_cname_target_loads_and_classifies() -> None:
     terminal = "abcdefghijklmnopqrst.supabase.co"
 
     assert any(r.slug == "supabase" and r.pattern in terminal for r in rules)
-    application, infrastructure = _classify_chain(["api.contoso.com", terminal], rules)
+    application, infrastructure = _classify_chain(["api.alpha.invalid", terminal], rules)
 
     assert application is not None
     assert application.slug == "supabase"
@@ -73,7 +73,7 @@ def test_ultradns_web_forwarding_cname_target_loads_and_classifies() -> None:
     terminal = "crs.ultradns.net"
 
     assert any(r.slug == "ultradns" and r.pattern == terminal for r in rules)
-    application, infrastructure = _classify_chain(["go.contoso.com", terminal], rules)
+    application, infrastructure = _classify_chain(["go.alpha.invalid", terminal], rules)
 
     assert application is None
     assert infrastructure is not None
@@ -86,7 +86,7 @@ def test_marketo_tracking_link_cname_target_loads_and_classifies() -> None:
     terminal = "mkto-ab390043.com"
 
     assert any(r.slug == "marketo" and r.pattern == "mkto-" for r in rules)
-    application, infrastructure = _classify_chain(["go.contoso.com", terminal], rules)
+    application, infrastructure = _classify_chain(["go.alpha.invalid", terminal], rules)
 
     assert application is not None
     assert application.slug == "marketo"
@@ -99,7 +99,7 @@ def test_marketo_mktoapps_cname_target_loads_and_classifies() -> None:
     terminal = "live.mktoapps.com"
 
     assert any(r.slug == "marketo" and r.pattern == "mktoapps.com" for r in rules)
-    application, infrastructure = _classify_chain(["blog.contoso.com", terminal], rules)
+    application, infrastructure = _classify_chain(["blog.alpha.invalid", terminal], rules)
     lookalike_app, lookalike_infra = _classify_chain(["live.mktoapps.com.example.net"], rules)
 
     assert application is not None
@@ -115,7 +115,7 @@ def test_uptimecom_cname_target_classifies_as_application() -> None:
     """A status-page CNAME to cname.uptime.com attributes to Uptime.com."""
     rules = get_cname_target_rules()
     assert any(r.slug == "uptimecom" and r.pattern == "cname.uptime.com" for r in rules)
-    application, infrastructure = _classify_chain(["status.contoso.com", "cname.uptime.com"], rules)
+    application, infrastructure = _classify_chain(["status.alpha.invalid", "cname.uptime.com"], rules)
     assert application is not None
     assert application.slug == "uptimecom"
     assert infrastructure is None
@@ -125,7 +125,7 @@ def test_ngrok_cname_target_classifies_as_infrastructure() -> None:
     """A subdomain CNAME to an ngrok custom-domain edge attributes to ngrok."""
     rules = get_cname_target_rules()
     assert any(r.slug == "ngrok" and r.pattern == "ngrok-cname.com" for r in rules)
-    application, infrastructure = _classify_chain(["app.contoso.com", "abc123.def456.ngrok-cname.com"], rules)
+    application, infrastructure = _classify_chain(["app.alpha.invalid", "abc123.def456.ngrok-cname.com"], rules)
     assert application is None
     assert infrastructure is not None
     assert infrastructure.slug == "ngrok"
@@ -175,7 +175,7 @@ def test_edgecast_zetacdn_cname_target_loads_and_classifies() -> None:
     terminal = "wpc.0001.zetacdn.net"
 
     assert any(r.slug == "edgecast" and r.pattern == "zetacdn.net" for r in rules)
-    application, infrastructure = _classify_chain(["cdn.contoso.com", terminal], rules)
+    application, infrastructure = _classify_chain(["cdn.alpha.invalid", terminal], rules)
     attribution = application or infrastructure
 
     assert attribution is not None
@@ -189,12 +189,12 @@ def test_dotless_cname_target_pattern_requires_label_boundary() -> None:
     assert any(r.slug == "marketo" and r.pattern == "mkto-" for r in rules)
 
     # Legitimate Marketo tracking host (fragment at the start of a label) matches.
-    good_app, _ = _classify_chain(["go.contoso.com", "mkto-ab390043.com"], rules)
+    good_app, _ = _classify_chain(["go.alpha.invalid", "mkto-ab390043.com"], rules)
     assert good_app is not None
     assert good_app.slug == "marketo"
 
     # A host that merely embeds "mkto-" mid-label must not attribute to Marketo.
-    spoof_app, spoof_infra = _classify_chain(["promkto-analytics.attacker.net"], rules)
+    spoof_app, spoof_infra = _classify_chain(["promkto-analytics.attacker.invalid"], rules)
     assert not (spoof_app is not None and spoof_app.slug == "marketo")
     assert not (spoof_infra is not None and spoof_infra.slug == "marketo")
 
@@ -206,8 +206,8 @@ def test_oci_waf_cname_target_loads_and_classifies_without_generic_oraclecloud_n
     waf_terminal = "redirect.waf.oci.oraclecloud.net"
     waas_terminal = "tenant.o.waas.oci.oraclecloud.net"
 
-    waf_app, waf_infra = _classify_chain(["kb.contoso.com", waf_terminal], rules)
-    waas_app, waas_infra = _classify_chain(["app.contoso.com", waas_terminal], rules)
+    waf_app, waf_infra = _classify_chain(["kb.alpha.invalid", waf_terminal], rules)
+    waas_app, waas_infra = _classify_chain(["app.alpha.invalid", waas_terminal], rules)
     generic_app, generic_infra = _classify_chain(["ns1.p68.dns.oraclecloud.net"], rules)
 
     assert waf_app is None
@@ -226,7 +226,7 @@ def test_transcend_sync_cname_target_loads_and_classifies() -> None:
     terminal = "www.sync-transcend-cdn.com"
 
     assert any(r.slug == "transcend" and r.pattern == "sync-transcend-cdn.com" for r in rules)
-    application, infrastructure = _classify_chain(["consent-sync.contoso.com", terminal], rules)
+    application, infrastructure = _classify_chain(["consent-sync.alpha.invalid", terminal], rules)
     lookalike_app, lookalike_infra = _classify_chain(["sync-transcend-cdn.com.example.net"], rules)
 
     assert application is not None
@@ -242,7 +242,7 @@ def test_queue_it_waiting_room_cname_target_loads_and_classifies() -> None:
     terminal = "ticketmaster.queue-it.net"
 
     assert any(r.slug == "queue-it" and r.pattern == "queue-it.net" for r in rules)
-    application, infrastructure = _classify_chain(["queue.contoso.com", terminal], rules)
+    application, infrastructure = _classify_chain(["queue.alpha.invalid", terminal], rules)
     lookalike_app, lookalike_infra = _classify_chain(["ticketmaster.queue-it.net.example.net"], rules)
 
     assert application is not None
@@ -258,7 +258,7 @@ def test_squarespace_managed_subdomain_cname_target_loads_and_classifies() -> No
     terminal = "ext-sq.squarespace.com"
 
     assert any(r.slug == "squarespace" and r.pattern == terminal for r in rules)
-    application, infrastructure = _classify_chain(["blog.contoso.com", terminal], rules)
+    application, infrastructure = _classify_chain(["blog.alpha.invalid", terminal], rules)
 
     assert application is not None
     assert application.slug == "squarespace"
@@ -274,12 +274,12 @@ def test_descope_cname_target_loads_and_classifies() -> None:
     assert any(r.slug == "descope" and r.pattern == us_terminal for r in rules)
     assert any(r.slug == "descope" and r.pattern == eu_terminal for r in rules)
 
-    application, infrastructure = _classify_chain(["auth.contoso.com", us_terminal], rules)
+    application, infrastructure = _classify_chain(["auth.alpha.invalid", us_terminal], rules)
     assert application is not None
     assert application.slug == "descope"
     assert infrastructure is None
 
-    application, infrastructure = _classify_chain(["login.contoso.com", eu_terminal], rules)
+    application, infrastructure = _classify_chain(["login.alpha.invalid", eu_terminal], rules)
     assert application is not None
     assert application.slug == "descope"
     assert infrastructure is None
@@ -305,7 +305,7 @@ def test_infobip_email_messaging_target_loads_and_classifies() -> None:
     terminal = "emailtracking-us2.email-messaging.com"
 
     assert any(r.slug == "infobip" and r.pattern == "email-messaging.com" for r in rules)
-    application, infrastructure = _classify_chain(["track.contoso.com", terminal], rules)
+    application, infrastructure = _classify_chain(["track.alpha.invalid", terminal], rules)
 
     assert application is not None
     assert application.slug == "infobip"
@@ -585,14 +585,14 @@ async def test_unclassified_cname_chain_captured(mock_resolve):
         {
             "example.com/TXT": [],
             "example.com/MX": ["1 example-com.mail.protection.outlook.com."],
-            "app.example.com/CNAME": ["edge.totally-new-saas-co.io"],
-            "edge.totally-new-saas-co.io/CNAME": [],
+            "app.example.com/CNAME": ["edge.totally-new-saas-co.example.net"],
+            "edge.totally-new-saas-co.example.net/CNAME": [],
         }
     )
     result = await DNSSource().lookup("example.com")
     weird = [uc for uc in result.unclassified_cname_chains if uc.subdomain == "app.example.com"]
     assert weird, "expected unclassified chain for app.example.com"
-    assert weird[0].chain == ("edge.totally-new-saas-co.io",)
+    assert weird[0].chain == ("edge.totally-new-saas-co.example.net",)
 
 
 def test_format_tenant_dict_omits_unclassified_by_default() -> None:
@@ -606,7 +606,7 @@ def test_format_tenant_dict_omits_unclassified_by_default() -> None:
         default_domain="example.com",
         queried_domain="example.com",
         confidence=ConfidenceLevel.HIGH,
-        unclassified_cname_chains=(UnclassifiedCnameChain(subdomain="x.example.com", chain=("y.example.io",)),),
+        unclassified_cname_chains=(UnclassifiedCnameChain(subdomain="x.example.com", chain=("y.routing.invalid",)),),
     )
     d = format_tenant_dict(info)
     assert "unclassified_cname_chains" not in d
@@ -627,7 +627,7 @@ def test_format_tenant_dict_emits_unclassified_when_opted_in() -> None:
         unclassified_cname_chains=(
             UnclassifiedCnameChain(
                 subdomain="x.example.com",
-                chain=("intermediate.example.io", "edge.totally-new.io"),
+                chain=("intermediate.routing.invalid", "edge.totally-new.example"),
             ),
         ),
     )
@@ -635,8 +635,8 @@ def test_format_tenant_dict_emits_unclassified_when_opted_in() -> None:
     assert "unclassified_cname_chains" in d
     assert d["unclassified_cname_chains"][0]["subdomain"] == "x.example.com"
     assert d["unclassified_cname_chains"][0]["chain"] == [
-        "intermediate.example.io",
-        "edge.totally-new.io",
+        "intermediate.routing.invalid",
+        "edge.totally-new.example",
     ]
 
 
@@ -661,11 +661,11 @@ def test_extract_brand_label() -> None:
     """Brand-label extraction skips TLDs and second-level public suffixes."""
     from recon_tool.discovery import extract_brand_label
 
-    assert extract_brand_label("contoso.co.uk") == "contoso"
-    assert extract_brand_label("examplecorp.com") == "examplecorp"
-    assert extract_brand_label("contoso.co.jp") == "contoso"
-    assert extract_brand_label("northwind-traders.de") == "northwind-traders"
-    assert extract_brand_label("fabrikam.com") == "fabrikam"
+    assert extract_brand_label("alpha.invalid") == "alpha"
+    assert extract_brand_label("synthetic-corporation.invalid") == "synthetic-corporation"
+    assert extract_brand_label("alpha.invalid") == "alpha"
+    assert extract_brand_label("gamma-traders.invalid") == "gamma-traders"
+    assert extract_brand_label("beta.invalid") == "beta"
     assert extract_brand_label("gov.uk") == ""  # nothing distinctive
     assert extract_brand_label("a.b") == ""  # too short
     assert extract_brand_label("") == ""
@@ -675,31 +675,38 @@ def test_looks_intra_org_brand_handles_multi_part_tld() -> None:
     """Multi-part TLDs like .co.uk used to mis-identify 'co' as the brand."""
     from recon_tool.discovery import looks_intra_org_brand
 
-    samples = [{"subdomain": "test.contoso.co.uk", "terminal": "edge.contoso.co.uk"}]
-    assert looks_intra_org_brand("contoso.co.uk", "edge.contoso.co.uk", samples) is True
+    samples = [{"subdomain": "test.alpha.invalid", "terminal": "edge.alpha.invalid"}]
+    assert looks_intra_org_brand("alpha.invalid", "edge.alpha.invalid", samples) is True
     # Different brand should not falsely match.
-    samples2 = [{"subdomain": "test.contoso.co.uk", "terminal": "edge.fastly.net"}]
-    assert looks_intra_org_brand("contoso.co.uk", "fastly.net", samples2) is False
+    samples2 = [{"subdomain": "test.alpha.invalid", "terminal": "edge.fastly.net"}]
+    assert looks_intra_org_brand("alpha.invalid", "fastly.net", samples2) is False
 
 
 def test_looks_intra_org_brand_catches_stem_abbreviation() -> None:
-    """examplecorp.com → exa.net is the same org via a brand-stem abbreviation."""
+    """A reserved synthetic brand and its three-letter stem are correlated."""
     from recon_tool.discovery import looks_intra_org_brand
 
-    # Brand "examplecorp", stem-prefix "exa" appears as a label in the suffix.
-    samples = [{"subdomain": "api.dev.examplecorp.com", "terminal": "user-api.awsma.exa.net"}]
-    assert looks_intra_org_brand("examplecorp.com", "awsma.exa.net", samples) is True
+    # Brand "synthetic-corporation", stem-prefix "syn" appears as a label.
+    samples = [
+        {
+            "subdomain": "api.synthetic-corporation.invalid",
+            "terminal": "user-api.awsma.syn.example",
+        }
+    ]
+    assert looks_intra_org_brand(
+        "synthetic-corporation.invalid", "awsma.syn.example", samples
+    ) is True
 
     # Generic 3-letter sequences inside the suffix do NOT match — must be a
-    # standalone label. "fab" is inside "fabrikam-aws.com" but not a label.
-    samples2 = [{"subdomain": "x.fabrikam.com", "terminal": "y.fabrikam-aws.com"}]
-    # "fabrikam" brand is contained directly so this returns True via pattern 1.
-    assert looks_intra_org_brand("fabrikam.com", "fabrikam-aws.com", samples2) is True
+    # standalone label. "fab" is inside "beta-aws.invalid" but not a label.
+    samples2 = [{"subdomain": "x.beta.invalid", "terminal": "y.beta-aws.invalid"}]
+    # "beta" brand is contained directly so this returns True via pattern 1.
+    assert looks_intra_org_brand("beta.invalid", "beta-aws.invalid", samples2) is True
 
     # A short brand label (4 chars) does NOT enable stem abbreviation —
     # too risky for accidental matches.
-    samples3 = [{"subdomain": "x.acme.com", "terminal": "y.ace.net"}]
-    assert looks_intra_org_brand("acme.com", "ace.net", samples3) is False
+    samples3 = [{"subdomain": "x.delta.invalid", "terminal": "y.ace.example"}]
+    assert looks_intra_org_brand("delta.invalid", "ace.example", samples3) is False
 
 
 def test_find_candidates_filters_intra_org_and_covered() -> None:
@@ -710,16 +717,16 @@ def test_find_candidates_filters_intra_org_and_covered() -> None:
 
     runs = [
         (
-            "example.com",
+            "alpha.invalid",
             [
                 # Intra-org — should drop
-                {"subdomain": "static.example.com", "chain": ["cdn.example.com"]},
+                {"subdomain": "static.alpha.invalid", "chain": ["cdn.alpha.invalid"]},
                 # Already covered — should drop (cloudfront.net is a built-in pattern)
-                {"subdomain": "app.example.com", "chain": ["abc123.cloudfront.net"]},
+                {"subdomain": "app.alpha.invalid", "chain": ["abc123.cloudfront.net"]},
                 # Genuine candidate — should survive
                 {
-                    "subdomain": "auth.example.com",
-                    "chain": ["edge.totally-new-saas-co.io"],
+                    "subdomain": "auth.alpha.invalid",
+                    "chain": ["edge.totally-new-saas-co.example.net"],
                 },
             ],
         )
@@ -728,9 +735,9 @@ def test_find_candidates_filters_intra_org_and_covered() -> None:
     candidates = find_candidates(runs, fingerprints_dir=fingerprints)
     suffixes = {c["suffix"] for c in candidates}
     # The 3-label suffix bucket includes the parent label of "edge.".
-    assert any("totally-new-saas-co.io" in s for s in suffixes)
+    assert any("totally-new-saas-co.example.net" in s for s in suffixes)
     assert not any("cloudfront" in s for s in suffixes)
-    assert not any("example.com" in s for s in suffixes)
+    assert not any("alpha.invalid" in s for s in suffixes)
 
 
 def test_unclassified_cache_round_trip() -> None:
@@ -747,7 +754,7 @@ def test_unclassified_cache_round_trip() -> None:
         unclassified_cname_chains=(
             UnclassifiedCnameChain(
                 subdomain="x.example.com",
-                chain=("a.example.io", "b.example.io"),
+                chain=("a.routing.invalid", "b.routing.invalid"),
             ),
         ),
     )

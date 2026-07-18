@@ -108,7 +108,7 @@ soon as it arrives.
 ```json
 {
   "record_type": "delta",
-  "domain": "contoso.com",
+  "domain": "alpha.invalid",
   "added_services": ["MTA-STS"],
   "removed_services": [],
   "added_slugs": [],

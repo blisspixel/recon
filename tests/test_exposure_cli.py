@@ -26,9 +26,9 @@ RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Northwind Traders",
-    default_domain="northwindtraders.onmicrosoft.com",
-    queried_domain="northwindtraders.com",
+    display_name="Synthetic Gamma",
+    default_domain="gamma.onmicrosoft.com",
+    queried_domain="gamma.invalid",
     confidence=ConfidenceLevel.HIGH,
     region="NA",
     sources=("oidc_discovery", "dns_records"),
@@ -54,13 +54,13 @@ class TestExposureFlag:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_exposure_produces_output(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "northwindtraders.com", "--exposure", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "gamma.invalid", "--exposure", "--no-cache"])
         assert result.exit_code == 0
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_exposure_json_produces_valid_json(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "northwindtraders.com", "--exposure", "--json", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "gamma.invalid", "--exposure", "--json", "--no-cache"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "domain" in data
@@ -76,13 +76,13 @@ class TestGapsFlag:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_gaps_produces_output(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "northwindtraders.com", "--gaps", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "gamma.invalid", "--gaps", "--no-cache"])
         assert result.exit_code == 0
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_gaps_json_produces_valid_json(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "northwindtraders.com", "--gaps", "--json", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "gamma.invalid", "--gaps", "--json", "--no-cache"])
         assert result.exit_code == 0
         data = json.loads(result.output)
         assert "domain" in data
@@ -97,13 +97,13 @@ class TestMutualExclusion:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_exposure_chain_mutually_exclusive(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "northwindtraders.com", "--exposure", "--chain"])
+        result = runner.invoke(app, ["lookup", "gamma.invalid", "--exposure", "--chain"])
         assert result.exit_code == 2
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_gaps_compare_mutually_exclusive(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "northwindtraders.com", "--gaps", "--compare", "old.json"])
+        result = runner.invoke(app, ["lookup", "gamma.invalid", "--gaps", "--compare", "old.json"])
         assert result.exit_code == 2
 
 
@@ -122,19 +122,19 @@ class TestErrorHandling:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_exposure_resolution_failure(self, mock_resolve) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com",
+            domain="unknown.invalid",
             message="No data",
             error_type="all_sources_failed",
         )
-        result = runner.invoke(app, ["lookup", "unknown.com", "--exposure", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "unknown.invalid", "--exposure", "--no-cache"])
         assert result.exit_code == 4
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_gaps_resolution_failure(self, mock_resolve) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com",
+            domain="unknown.invalid",
             message="No data",
             error_type="all_sources_failed",
         )
-        result = runner.invoke(app, ["lookup", "unknown.com", "--gaps", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "unknown.invalid", "--gaps", "--no-cache"])
         assert result.exit_code == 4

@@ -160,8 +160,9 @@ def test_render_memo_includes_aggregate_sections_only() -> None:
     assert "| Full posterior | 30 | 0.24 | 0.08 | 0.04 | 0.03 | 0.02, 0.05 | 0.9 | 0.6 |" in memo
     assert "apexes" in memo.lower()
     assert "tenant IDs" in memo
-    assert "contoso" not in memo.lower()
-    assert "fabrikam" not in memo.lower()
+    assert "alpha.invalid" not in memo.lower()
+    assert "beta.invalid" not in memo.lower()
+    assert "gamma.invalid" not in memo.lower()
 
 
 def test_render_memo_handles_stratified_tenancy_payload() -> None:

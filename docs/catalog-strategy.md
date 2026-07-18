@@ -9,8 +9,8 @@ freshness improve deliberately rather than by accretion. It sets direction; it
 does not change runtime behavior. All corpora and per-domain scan outputs stay
 private and off GitHub per [data-handling-policy.md](data-handling-policy.md).
 New review artifacts use aggregate patterns, generic tooling, and explicit
-synthetic examples under reserved namespaces. Legacy fictional examples outside
-validation remain bounded migration debt in the roadmap.
+synthetic examples under reserved namespaces. The release gate rejects the
+retired fictional target vocabulary across current public text artifacts.
 Real vendor and product names, plus provider-controlled domains used in generic
 fingerprint rules, may be committed. The evaluated target names, target-owned
 records, and per-domain results may not.

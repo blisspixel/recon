@@ -60,7 +60,7 @@ async def test_researched_caa_issuers_match(
     "record",
     [
         '0 issue "ssl.com.evil.example"',
-        '0 issue "notssl.com"',
+        '0 issue "notssl.invalid"',
         '0 iodef "mailto:security@ssl.com"',
     ],
 )
@@ -160,9 +160,9 @@ async def test_host_record_patterns_require_dns_label_suffixes(
 @pytest.mark.parametrize(
     ("positive", "lookalike", "slug"),
     [
-        ("ns-123.awsdns-45.com.", "ns-123.evilawsdns-45.com.", "aws-route53"),
-        ("ns1-01.azure-dns.com.", "ns1-01.evilazure-dns.com.", "azure-dns"),
-        ("pdns1.ultradns.net.", "pdns1.evilultradns.net.", "ultradns"),
+        ("ns-123.awsdns-45.com.", "ns-123.evilawsdns-45.invalid.", "aws-route53"),
+        ("ns1-01.azure-dns.com.", "ns1-01.evilazure-dns.invalid.", "azure-dns"),
+        ("pdns1.ultradns.net.", "pdns1.evilultradns.invalid.", "ultradns"),
     ],
 )
 async def test_ns_legacy_label_patterns_require_label_boundaries(

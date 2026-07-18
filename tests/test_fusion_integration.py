@@ -20,9 +20,9 @@ def _make_tenant_info(
 ) -> TenantInfo:
     return TenantInfo(
         tenant_id=None,
-        display_name="Contoso",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         services=(),
         slugs=slugs,
         auth_type=auth_type,
@@ -102,17 +102,17 @@ class TestEndToEndAdapter:
         result = infer_from_tenant_info(info)
         from recon_tool.bayesian import load_network
 
-        out = render_dag_text(load_network(), result, domain="contoso.com")
+        out = render_dag_text(load_network(), result, domain="alpha.invalid")
         assert "## m365_tenant" in out
         assert "## okta_idp" in out
-        assert "contoso.com" in out
+        assert "alpha.invalid" in out
 
     def test_dag_dot_renders_for_real_tenant_info(self) -> None:
         info = _make_tenant_info(slugs=("microsoft365",))
         result = infer_from_tenant_info(info)
         from recon_tool.bayesian import load_network
 
-        out = render_dag_dot(load_network(), result, domain="contoso.com")
+        out = render_dag_dot(load_network(), result, domain="alpha.invalid")
         assert out.startswith("digraph")
         assert '"m365_tenant"' in out
 

@@ -658,7 +658,7 @@ async def discover_fingerprint_candidates(
     output into YAML stanzas for ``recon_tool/data/fingerprints/surface.yaml``.
 
     Args:
-        domain: A domain name to mine (e.g., ``contoso.com``).
+        domain: A domain name to mine (e.g., ``alpha.invalid``).
         skip_ct: When true, skip cert-transparency providers (crt.sh,
             CertSpotter). Discovery falls back to common-subdomain probes
             and apex CNAME walks. Use for high-volume runs.
@@ -805,7 +805,7 @@ async def get_posteriors(domain: str) -> PosteriorBlockResult:
     posterior plus uncertainty band.
 
     Args:
-        domain: Apex domain to evaluate (e.g. ``contoso.com``).
+        domain: Apex domain to evaluate (e.g. ``alpha.invalid``).
 
     Returns:
         JSON string with the posterior block for the queried domain.

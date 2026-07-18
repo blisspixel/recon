@@ -35,11 +35,11 @@ def test_run_corpus_allows_operator_path_outside_repository(tmp_path: Path) -> N
 
 def test_run_corpus_filters_prior_results_into_private_manifest(tmp_path: Path) -> None:
     corpus = tmp_path / "corpus.txt"
-    corpus.write_text("alpha.com\nsub.beta.net\nbeta.net\n", encoding="utf-8")
+    corpus.write_text("alpha.invalid\nsub.beta.invalid\nbeta.invalid\n", encoding="utf-8")
     prior = tmp_path / "prior"
     prior.mkdir()
     (prior / "results-1.json").write_text(
-        json.dumps([{"queried_domain": "alpha.com"}]),
+        json.dumps([{"queried_domain": "alpha.invalid"}]),
         encoding="utf-8",
     )
     output = tmp_path / "private-output"
@@ -50,7 +50,7 @@ def test_run_corpus_filters_prior_results_into_private_manifest(tmp_path: Path) 
 
     assert scheduled == 1
     assert excluded_rows == 1
-    assert manifest.read_text(encoding="utf-8") == "beta.net\n"
+    assert manifest.read_text(encoding="utf-8") == "beta.invalid\n"
 
 
 def test_run_corpus_loads_nested_ndjson_exclusions(tmp_path: Path) -> None:
@@ -59,8 +59,8 @@ def test_run_corpus_loads_nested_ndjson_exclusions(tmp_path: Path) -> None:
     (prior / "results.ndjson").write_text(
         "\n".join(
             [
-                json.dumps({"queried_domain": "alpha.com"}),
-                json.dumps({"domain": "sub.beta.net", "error_kind": "timeout", "record_type": "error"}),
+                json.dumps({"queried_domain": "alpha.invalid"}),
+                json.dumps({"domain": "sub.beta.invalid", "error_kind": "timeout", "record_type": "error"}),
             ]
         )
         + "\n",
@@ -69,7 +69,7 @@ def test_run_corpus_loads_nested_ndjson_exclusions(tmp_path: Path) -> None:
 
     excluded = _load_excluded_domains([tmp_path / "prior"])
 
-    assert excluded == {"alpha.com", "beta.net"}
+    assert excluded == {"alpha.invalid", "beta.invalid"}
 
 
 def test_run_corpus_filtered_manifest_rejects_malformed_domain(tmp_path: Path) -> None:
@@ -84,17 +84,17 @@ def test_run_corpus_filtered_manifest_rejects_malformed_domain(tmp_path: Path) -
 
 def test_run_corpus_filtered_manifest_applies_limit_after_exclusions(tmp_path: Path) -> None:
     corpus = tmp_path / "corpus.txt"
-    corpus.write_text("alpha.com\nbeta.net\ngamma.org\n", encoding="utf-8")
+    corpus.write_text("alpha.invalid\nbeta.invalid\ngamma.invalid\n", encoding="utf-8")
     output = tmp_path / "private-output"
     output.mkdir()
 
     manifest, scheduled, excluded_rows = _write_filtered_manifest(
         corpus,
         output,
-        {"alpha.com"},
+        {"alpha.invalid"},
         limit=1,
     )
 
     assert scheduled == 1
     assert excluded_rows == 1
-    assert manifest.read_text(encoding="utf-8") == "beta.net\n"
+    assert manifest.read_text(encoding="utf-8") == "beta.invalid\n"

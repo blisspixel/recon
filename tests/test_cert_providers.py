@@ -270,11 +270,11 @@ class TestFilterSubdomains:
             assert not any(r.startswith(prefix) for r in result)
 
     def test_validates_subdomain_of_domain(self):
-        raw = ["app.example.com", "app.other.com", "notexample.com"]
+        raw = ["app.example.com", "app.other.invalid", "notexample.invalid"]
         result = filter_subdomains(raw, "example.com")
         assert "app.example.com" in result
-        assert "app.other.com" not in result
-        assert "notexample.com" not in result
+        assert "app.other.invalid" not in result
+        assert "notexample.invalid" not in result
 
     def test_suffix_match_is_not_high_signal(self):
         # "webapp" ends with the high-signal prefix "app" but is not itself a

@@ -9,7 +9,7 @@ body:
       value: |
         This is a public issue. Do not include a real target name, apex or subdomain, organization name, tenant ID, DNS value, IP address, screenshot, stack trace containing target data, or per-domain recon output.
 
-        Reproduce with an IETF-reserved domain such as `example.com`, a Microsoft fictional brand listed in `CONTRIBUTING.md`, or a minimal synthetic fixture. If the real identity is essential, do not file a public issue. Follow the private non-security report path in the data-handling policy.
+        Reproduce with an IETF-reserved domain such as `example.com`, an explicit synthetic identity under `.invalid` or `.test`, or a minimal synthetic fixture. If the real identity is essential, do not file a public issue. Follow the private non-security report path in the data-handling policy.
 
   - type: checkboxes
     id: public_data_acknowledgement

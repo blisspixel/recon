@@ -116,9 +116,9 @@ class TestPlainOutput:
     def _info() -> TenantInfo:
         return TenantInfo(
             tenant_id="aaaa-bbbb",
-            display_name="Contoso",
-            default_domain="contoso.onmicrosoft.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.HIGH,
             services=("Microsoft 365", "DMARC"),
             slugs=("microsoft365", "dmarc"),
@@ -165,7 +165,7 @@ class TestPlainOutput:
             tenant_id=None,
             display_name="Evil\x1b[2J\x07Corp",
             default_domain="x.onmicrosoft.com",
-            queried_domain="contoso.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.LOW,
         )
         out = format_tenant_plain(info)
@@ -179,9 +179,9 @@ class TestPlainOutput:
 
         info = TenantInfo(
             tenant_id=None,
-            display_name="Contoso",
-            default_domain="contoso.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha",
+            default_domain="alpha.invalid",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.LOW,
             services=("Okta",),
             slugs=("okta",),
@@ -218,10 +218,10 @@ class TestStdoutStderrDiscipline:
         assert "boom-message-xyz" not in captured.out
 
     def test_render_warning_goes_to_stderr_not_stdout(self, capsys) -> None:
-        render_warning("contoso.example")
+        render_warning("alpha.example")
         captured = capsys.readouterr()
-        assert "contoso.example" in captured.err
-        assert "contoso.example" not in captured.out
+        assert "alpha.example" in captured.err
+        assert "alpha.example" not in captured.out
 
 
 class TestColorSuppressionContract:

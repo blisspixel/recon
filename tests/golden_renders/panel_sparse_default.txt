@@ -1,5 +1,5 @@
-Northwind Traders
-northwindtraders.com
+Synthetic Gamma
+gamma.invalid
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (role unavailable)
   Confidence   ●○○ Low (1 source)

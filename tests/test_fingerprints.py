@@ -451,7 +451,7 @@ fingerprints:
   category: Misc
   confidence: high
   parent_vendor: "   "
-  product_family: "  ACME  "
+  product_family: "  SYNTHETIC  "
   detections:
   - type: txt
     pattern: "^test=value"
@@ -460,7 +460,7 @@ fingerprints:
         fps = _load_from_path(path)
         assert len(fps) == 1
         assert fps[0].parent_vendor is None  # whitespace-only → None
-        assert fps[0].product_family == "ACME"  # stripped
+        assert fps[0].product_family == "SYNTHETIC"  # stripped
 
 
 class TestFingerprintMetadataInJson:
@@ -498,8 +498,8 @@ class TestFingerprintMetadataInJson:
         info = TenantInfo(
             tenant_id=None,
             display_name="X",
-            default_domain="x.com",
-            queried_domain="x.com",
+            default_domain="x.invalid",
+            queried_domain="x.invalid",
             confidence=ConfidenceLevel.LOW,
             slugs=("zoho",),  # no relationship metadata seeded
         )
@@ -527,7 +527,7 @@ def test_discovered_cname_targets_classify():
         assert by_pattern.get(pattern) == slug, f"missing/incorrect cname_target {pattern} -> {slug}"
 
     rules = get_cname_target_rules()
-    terminal = "community.acme.hosted-by-discourse.com"
+    terminal = "community.synthetic-delta.hosted-by-discourse.com"
     assert "discourse" in [r.slug for r in rules if r.pattern in terminal]
 
 

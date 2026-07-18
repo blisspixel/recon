@@ -6,9 +6,9 @@
   "_sourcetype": "recon:lookup",
   "_index": "recon",
   "tenant_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-  "display_name": "Northwind Traders",
-  "default_domain": "northwindtraders.onmicrosoft.com",
-  "queried_domain": "northwindtraders.com",
+  "display_name": "Synthetic Gamma",
+  "default_domain": "gamma.onmicrosoft.com",
+  "queried_domain": "gamma.invalid",
   "provider": "Microsoft 365",
   "confidence": "high",
   "region": "NA",
@@ -55,12 +55,12 @@
     "zendesk"
   ],
   "tenant_domains{}": [
-    "northwindtraders.com",
-    "northwindtraders.onmicrosoft.com",
-    "northwind-internal.com"
+    "gamma.invalid",
+    "gamma.onmicrosoft.com",
+    "gamma-internal.invalid"
   ],
   "related_domains{}": [
-    "northwind-internal.com"
+    "gamma-internal.invalid"
   ],
   "insights{}": [
     "Federated identity observed; identity-vendor indicators: Okta",
