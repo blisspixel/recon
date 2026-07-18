@@ -21,8 +21,11 @@ stop on named preconditions before mutation. The current maintenance pass also
 bounds default cache payload inspection with exact completeness counts, exposes
 and clears interrupted-write residue, separates fingerprint corpus errors from
 misses under bounded input, rejects empty catalog filters, preserves ranked
-signal hierarchy, and keeps welcome descriptions associated at 80 columns. The
-active product work is evidence-semantic integrity and a
+signal hierarchy, and keeps welcome descriptions associated at 80 columns.
+The current MCP diagnostics pass makes static registry failures exit non-zero,
+exercises every canonical local JSON resource through live stdio, preserves the
+failed protocol phase, and documents the three-part server and client check.
+The active product work is evidence-semantic integrity and a
 reproducible product-quality baseline. The
 isolated MCP v1.28.1
 and v2.0.0b1 matrix passed on 2026-07-13, with production remaining on stable v1

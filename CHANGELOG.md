@@ -35,7 +35,10 @@ whether each entry is reusable or expired. The existing maintenance JSON from
 are not collapsed. Each added record retains original descriptions,
 relationship hints, tiers, weights, references, and verification dates. Signal
 search summaries now include `min_matches` like signal list summaries. No
-default lookup JSON or MCP output schema changed.
+default lookup JSON or MCP output schema changed. The existing MCP diagnostics
+now verify canonical tool and resource registrations, and the live doctor reads
+and validates each canonical local JSON resource without adding or changing an
+MCP tool, resource URI, or schema.
 
 ### Changed
 
@@ -54,6 +57,11 @@ default lookup JSON or MCP output schema changed.
 - `recon doctor --help` now names its default synthetic Microsoft identity,
   `example.com` DNS, and crt.sh contacts and identifies `--fix`, `--mcp`, and
   `--client` as local-only modes.
+- MCP setup guidance now presents the complete verification sequence: static
+  registry check, live local stdio tools and resource check, then the named
+  client's saved-config check. Installer completion text names all three
+  verification commands, and live success copy states that client configuration was not
+  inspected.
 - Fingerprint and signal category filters now use one word-prefix or phrase
   matcher across CLI and MCP discovery. A short query such as `ai` therefore
   no longer produces different category sets between interfaces. Explicit
@@ -93,6 +101,9 @@ default lookup JSON or MCP output schema changed.
 - Extracting bounded corpus loading reduced the remaining too-many-statements
   count from 9 to 8; the enforced PLR0915 ceiling is tightened to retain that
   reduction.
+- Extracting static MCP registry checks and reference-config rendering reduced
+  the remaining too-many-statements count from 8 to 7; the enforced PLR0915
+  ceiling is tightened to retain that reduction.
 - `recon cache show` now reports metadata for the 24-hour result cache and the
   30-day CT cache independently. It shows reusable, expired, missing, and
   unreadable states without printing cached tenant, service, or evidence data.
@@ -201,6 +212,18 @@ default lookup JSON or MCP output schema changed.
   commit and still validates the completed SBOM structure.
 
 ### Fixed
+
+- `recon doctor --mcp` no longer exits successfully when server instructions
+  or canonical tools are missing. It now independently verifies all canonical
+  local resource registrations, so a tool-list failure cannot hide a resource
+  registration failure.
+- `recon mcp doctor` now lists and reads all five canonical local JSON
+  resources, validates their URI, media type, text envelope, and JSON object
+  shape plus minimal catalog, schema, and surface-inventory structure, and
+  checks candidate-v2 cache metadata. A later protocol failure keeps
+  successful prior rows and names the failed phase instead of collapsing the
+  report into one generic handshake failure. Resource payloads are never copied
+  into diagnostic errors.
 
 - `recon fingerprints show` no longer returns only the first catalog record
   for a slug defined in multiple records. Human and JSON output retain every

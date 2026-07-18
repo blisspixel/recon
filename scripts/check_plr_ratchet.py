@@ -18,7 +18,7 @@ MAX_COUNTS = {
     "PLR0911": 22,  # too many return statements
     "PLR0912": 10,  # too many branches
     "PLR0913": 50,  # too many arguments
-    "PLR0915": 8,  # too many statements
+    "PLR0915": 7,  # too many statements
 }
 
 _STAT_RE = re.compile(r"^\s*(\d+)\s+(PLR\d{4})\s+", re.MULTILINE)
