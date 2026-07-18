@@ -44,10 +44,10 @@ class TestCseIdpNameMatching:
         assert _extract_idp_name("https://login.okta.com/oauth2/discovery") == "Okta"
 
     def test_lookalike_host_does_not_match(self):
-        assert _extract_idp_name("https://notokta.com/.well-known/openid") == "notokta.com"
+        assert _extract_idp_name("https://notokta.invalid/.well-known/openid") == "notokta.invalid"
 
     def test_pattern_only_in_path_does_not_match(self):
-        assert _extract_idp_name("https://kacls.acme.net/discovery?ref=okta.com") == "kacls.acme.net"
+        assert _extract_idp_name("https://kacls.delta.invalid/discovery?ref=okta.com") == "kacls.delta.invalid"
 
 
 def _mock_safe_resolve_factory(records_by_query: dict[str, list[str]]):
@@ -122,7 +122,7 @@ class TestDetectGwsCnames:
             {
                 "example.com/TXT": [],
                 "example.com/MX": [],
-                "mail.example.com/CNAME": ["some.other.host.com"],
+                "mail.example.com/CNAME": ["some.other.host.invalid"],
             }
         )
         result = await DNSSource().lookup("example.com")
@@ -230,7 +230,7 @@ class TestParseBimiVmc:
         )
 
         # A certificate-looking subject line does not make an invalid PEM trusted.
-        pem_content = "Subject: O=Northwind Traders, C=US\n-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----"
+        pem_content = "Subject: O=Synthetic Gamma, C=US\n-----BEGIN CERTIFICATE-----\nfake\n-----END CERTIFICATE-----"
         mock_resp = httpx.Response(
             status_code=200,
             request=httpx.Request("GET", "https://example.com/vmc.pem"),
@@ -643,7 +643,7 @@ class TestComputeInferenceConfidence:
     def test_tenant_id_with_corroboration(self):
         results = [
             SourceResult(source_name="oidc_discovery", tenant_id="tid"),
-            SourceResult(source_name="user_realm", m365_detected=True, display_name="Contoso"),
+            SourceResult(source_name="user_realm", m365_detected=True, display_name="Synthetic Alpha"),
         ]
         assert compute_inference_confidence(results) == ConfidenceLevel.HIGH
 
@@ -668,7 +668,7 @@ class TestComputeInferenceConfidence:
 
         assert compute_inference_confidence(results) == ConfidenceLevel.LOW
 
-        merged = merge_results(results, queried_domain="contoso.example")
+        merged = merge_results(results, queried_domain="alpha.example")
         assert "Microsoft 365" not in merged.services
         assert merged.sources == ("oidc_discovery",)
 
@@ -725,7 +725,7 @@ class TestComputeInferenceConfidence:
 
         assert compute_inference_confidence(results) == ConfidenceLevel.LOW
 
-        merged = merge_results(results, queried_domain="contoso.example")
+        merged = merge_results(results, queried_domain="alpha.example")
         assert merged.evidence_confidence == ConfidenceLevel.MEDIUM
         assert merged.inference_confidence == ConfidenceLevel.LOW
         assert merged.confidence == ConfidenceLevel.LOW
@@ -1019,13 +1019,13 @@ class TestCorrelateSiteVerification:
     def test_shared_tokens_add_insights(self):
         results = [
             ChainResult(
-                domain="a.com",
-                info=_make_info("a.com", site_verification_tokens=("token1",)),
+                domain="a.invalid",
+                info=_make_info("a.invalid", site_verification_tokens=("token1",)),
                 chain_depth=0,
             ),
             ChainResult(
-                domain="b.com",
-                info=_make_info("b.com", site_verification_tokens=("token1",)),
+                domain="b.invalid",
+                info=_make_info("b.invalid", site_verification_tokens=("token1",)),
                 chain_depth=1,
             ),
         ]
@@ -1033,19 +1033,19 @@ class TestCorrelateSiteVerification:
         a_insights = updated[0].info.insights
         b_insights = updated[1].info.insights
         assert any("Shares google-site-verification" in i for i in a_insights)
-        assert any("b.com" in i for i in a_insights)
-        assert any("a.com" in i for i in b_insights)
+        assert any("b.invalid" in i for i in a_insights)
+        assert any("a.invalid" in i for i in b_insights)
 
     def test_no_shared_tokens_no_change(self):
         results = [
             ChainResult(
-                domain="a.com",
-                info=_make_info("a.com", site_verification_tokens=("token1",)),
+                domain="a.invalid",
+                info=_make_info("a.invalid", site_verification_tokens=("token1",)),
                 chain_depth=0,
             ),
             ChainResult(
-                domain="b.com",
-                info=_make_info("b.com", site_verification_tokens=("token2",)),
+                domain="b.invalid",
+                info=_make_info("b.invalid", site_verification_tokens=("token2",)),
                 chain_depth=1,
             ),
         ]
@@ -1065,7 +1065,7 @@ class TestCorrelateSiteVerification:
                 ),
                 chain_depth=depth,
             )
-            for domain, depth in (("a.com", 0), ("b.com", 1))
+            for domain, depth in (("a.invalid", 0), ("b.invalid", 1))
         ]
 
         updated = _correlate_site_verification(results)
@@ -1081,8 +1081,8 @@ class TestCorrelateSiteVerification:
     def test_single_domain_no_correlation(self):
         results = [
             ChainResult(
-                domain="a.com",
-                info=_make_info("a.com", site_verification_tokens=("token1",)),
+                domain="a.invalid",
+                info=_make_info("a.invalid", site_verification_tokens=("token1",)),
                 chain_depth=0,
             ),
         ]
@@ -1093,37 +1093,37 @@ class TestCorrelateSiteVerification:
     def test_three_domains_shared_token(self):
         results = [
             ChainResult(
-                domain="a.com",
-                info=_make_info("a.com", site_verification_tokens=("shared",)),
+                domain="a.invalid",
+                info=_make_info("a.invalid", site_verification_tokens=("shared",)),
                 chain_depth=0,
             ),
             ChainResult(
-                domain="b.com",
-                info=_make_info("b.com", site_verification_tokens=("shared",)),
+                domain="b.invalid",
+                info=_make_info("b.invalid", site_verification_tokens=("shared",)),
                 chain_depth=1,
             ),
             ChainResult(
-                domain="c.com",
-                info=_make_info("c.com", site_verification_tokens=("shared",)),
+                domain="c.invalid",
+                info=_make_info("c.invalid", site_verification_tokens=("shared",)),
                 chain_depth=1,
             ),
         ]
         updated = _correlate_site_verification(results)
-        # a.com should mention b.com and c.com
+        # a.invalid should mention b.invalid and c.invalid
         a_insights = " ".join(updated[0].info.insights)
-        assert "b.com" in a_insights
-        assert "c.com" in a_insights
+        assert "b.invalid" in a_insights
+        assert "c.invalid" in a_insights
 
     def test_no_tokens_no_change(self):
         results = [
             ChainResult(
-                domain="a.com",
-                info=_make_info("a.com"),
+                domain="a.invalid",
+                info=_make_info("a.invalid"),
                 chain_depth=0,
             ),
             ChainResult(
-                domain="b.com",
-                info=_make_info("b.com"),
+                domain="b.invalid",
+                info=_make_info("b.invalid"),
                 chain_depth=1,
             ),
         ]

@@ -28,9 +28,9 @@ runner = CliRunner()
 def _fake_info() -> TenantInfo:
     return TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Contoso Ltd",
-        default_domain="contoso.onmicrosoft.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha Ltd",
+        default_domain="alpha.onmicrosoft.com",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
         sources=("oidc_discovery", "user_realm", "dns_records"),
@@ -45,7 +45,7 @@ def _fake_info() -> TenantInfo:
 def _fake_source_results() -> list[SourceResult]:
     return [
         SourceResult(source_name="oidc_discovery", tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890"),
-        SourceResult(source_name="user_realm", display_name="Contoso Ltd", m365_detected=True),
+        SourceResult(source_name="user_realm", display_name="Synthetic Alpha Ltd", m365_detected=True),
         SourceResult(source_name="dns_records", dmarc_policy="reject", detected_services=("Microsoft 365",)),
     ]
 
@@ -261,7 +261,7 @@ class TestCliTimeoutFlag:
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
             result = runner.invoke(
                 app,
-                ["lookup", "contoso.com", "--no-cache", "--timeout", "30"],
+                ["lookup", "alpha.invalid", "--no-cache", "--timeout", "30"],
             )
         assert result.exit_code == 0
 
@@ -277,7 +277,7 @@ class TestCliSourcesFlag:
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
             result = runner.invoke(
                 app,
-                ["lookup", "contoso.com", "--no-cache", "--sources"],
+                ["lookup", "alpha.invalid", "--no-cache", "--sources"],
             )
         assert result.exit_code == 0
 
@@ -334,7 +334,7 @@ class TestBatchJsonMode:
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
             result = runner.invoke(app, ["batch", str(f), "--csv"])
         assert result.exit_code == 0
-        assert "example.com" in result.stdout or "Contoso" in result.stdout
+        assert "example.com" in result.stdout or "Synthetic Alpha" in result.stdout
 
 
 class TestCliExposureMode:
@@ -346,7 +346,7 @@ class TestCliExposureMode:
             return info, results
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--exposure"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache", "--exposure"])
         assert result.exit_code == 0
 
     def test_exposure_mode_json(self) -> None:
@@ -354,7 +354,7 @@ class TestCliExposureMode:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--exposure", "--json"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache", "--exposure", "--json"])
         assert result.exit_code == 0
 
 
@@ -364,7 +364,7 @@ class TestCliGapsMode:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--gaps"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache", "--gaps"])
         assert result.exit_code == 0
 
     def test_gaps_mode_json(self) -> None:
@@ -372,7 +372,7 @@ class TestCliGapsMode:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--gaps", "--json"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache", "--gaps", "--json"])
         assert result.exit_code == 0
 
 
@@ -382,7 +382,7 @@ class TestCliPostureAndExplainFlags:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--posture"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache", "--posture"])
         assert result.exit_code == 0
 
     def test_explain_renders_source_status_panel(self) -> None:
@@ -395,7 +395,7 @@ class TestCliPostureAndExplainFlags:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--explain"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache", "--explain"])
         assert result.exit_code == 0
         assert "Source Status" in result.stdout
         assert "oidc_discovery" in result.stdout
@@ -403,9 +403,9 @@ class TestCliPostureAndExplainFlags:
     def test_source_panels_project_unavailable_channel_payloads(self) -> None:
         info = TenantInfo(
             tenant_id=None,
-            display_name="Contoso",
-            default_domain="contoso.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha",
+            default_domain="alpha.invalid",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.LOW,
             degraded_sources=("dns:dmarc",),
         )
@@ -425,7 +425,7 @@ class TestCliPostureAndExplainFlags:
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
             result = runner.invoke(
                 app,
-                ["lookup", "contoso.com", "--no-cache", "--sources", "--explain"],
+                ["lookup", "alpha.invalid", "--no-cache", "--sources", "--explain"],
             )
 
         assert result.exit_code == 0
@@ -445,13 +445,13 @@ class TestCliPostureAndExplainFlags:
         env_orig = os.environ.get("RECON_CONFIG_DIR")
         os.environ["RECON_CONFIG_DIR"] = str(tmp_path)
         try:
-            cache_put("contoso.com", _fake_info())
+            cache_put("alpha.invalid", _fake_info())
             # Resolver should NOT be called — cache hit
             from unittest.mock import MagicMock
 
             unused_mock = MagicMock(side_effect=AssertionError("resolver should not be called on cache hit"))
             with patch("recon_tool.resolver.resolve_tenant", unused_mock):
-                result = runner.invoke(app, ["lookup", "contoso.com", "--explain"])
+                result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain"])
             assert result.exit_code == 0
             # Source Status panel must appear with synthesized entries
             assert "Source Status" in result.stdout
@@ -468,7 +468,7 @@ class TestCliPostureAndExplainFlags:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--explain"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache", "--explain"])
         assert result.exit_code == 0
 
     def test_full_flag(self) -> None:
@@ -476,7 +476,7 @@ class TestCliPostureAndExplainFlags:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--full"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache", "--full"])
         assert result.exit_code == 0
 
     def test_md_flag(self) -> None:
@@ -484,12 +484,12 @@ class TestCliPostureAndExplainFlags:
             return _fake_info(), _fake_source_results()
 
         with patch("recon_tool.resolver.resolve_tenant", side_effect=fake_resolve):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache", "--md"])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache", "--md"])
         assert result.exit_code == 0
         assert "#" in result.stdout  # markdown header
 
     def test_mutually_exclusive_output_flags_rejected(self) -> None:
-        result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--md"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--json", "--md"])
         assert result.exit_code != 0
 
 

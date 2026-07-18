@@ -204,8 +204,8 @@ class TestTieredOutput:
         defaults = {
             "tenant_id": "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
             "display_name": "TestCo",
-            "default_domain": "testco.com",
-            "queried_domain": "testco.com",
+            "default_domain": "alpha.invalid",
+            "queried_domain": "alpha.invalid",
             "confidence": ConfidenceLevel.HIGH,
             "region": "NA",
             "auth_type": "Federated",
@@ -214,7 +214,7 @@ class TestTieredOutput:
             "sources": ("oidc_discovery", "user_realm"),
             "services": ("Exchange Online", "Google Workspace", "Slack"),
             "insights": ("Federated identity", "DMARC: reject"),
-            "tenant_domains": ("testco.com", "testco.onmicrosoft.com"),
+            "tenant_domains": ("alpha.invalid", "testco.onmicrosoft.com"),
         }
         defaults.update(kwargs)
         return TenantInfo(**defaults)
@@ -261,7 +261,7 @@ class TestTieredOutput:
     def test_domains_flag_shows_domains(self):
         info = self._make_info()
         output = self._render(render_tenant_panel(info, show_domains=True))
-        assert "testco.com" in output
+        assert "alpha.invalid" in output
         assert "testco.onmicrosoft.com" in output
         assert "Domains (5)" in output
 

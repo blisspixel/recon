@@ -284,7 +284,7 @@ class TestExplainConfidence:
                 source_name="oidc_discovery",
                 tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
             ),
-            SourceResult(source_name="user_realm", display_name="Contoso", m365_detected=True),
+            SourceResult(source_name="user_realm", display_name="Synthetic Alpha", m365_detected=True),
             SourceResult(
                 source_name="dns_records",
                 m365_detected=True,

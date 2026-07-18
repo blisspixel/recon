@@ -2,9 +2,9 @@
 
 Ingest recon `--json` output into Splunk, extract structured fields,
 review public-namespace observations, and optionally drive operator-defined
-alerts. The example uses the shared
-input at `examples/sample-output.json` (Northwind Traders, a
-Microsoft fictional brand  -  see `examples/README.md`).
+alerts. The example uses the reserved synthetic input at
+`examples/sample-output.json`; see `examples/README.md` for the disclosure
+boundary.
 
 ## Ingestion mechanics
 
@@ -111,7 +111,7 @@ Search: a `dmarc_policy` weakening (`reject` → `quarantine` →
 `none`) on the same queried domain across lookups.
 
 ```spl
-index=recon sourcetype=recon:lookup queried_domain="northwindtraders.com"
+index=recon sourcetype=recon:lookup queried_domain="gamma.invalid"
 | sort _time
 | streamstats current=f last(dmarc_policy) as prev_policy by queried_domain
 | where (prev_policy="reject" AND dmarc_policy!="reject") OR (prev_policy="quarantine" AND dmarc_policy="none")

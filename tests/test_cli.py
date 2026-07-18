@@ -30,9 +30,9 @@ def _strip_ansi(value: str) -> str:
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
     region="NA",
     sources=("oidc_discovery", "azure_ad_metadata"),
@@ -168,7 +168,7 @@ class TestHelp:
 
 
 class TestDirectDomainLookup:
-    """``recon contoso.com`` (no ``lookup`` subcommand) routes to the lookup
+    """``recon alpha.invalid`` (no ``lookup`` subcommand) routes to the lookup
     command via ``_DomainGroup``. This is exercised through CliRunner: the
     routing runs inside Click's command resolution, which CliRunner drives."""
 
@@ -180,21 +180,21 @@ class TestDirectDomainLookup:
         # vendored one). A bare domain must reach the lookup command, not error
         # with "No such command".
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["contoso.com", "--no-cache"])
+        result = runner.invoke(app, ["alpha.invalid", "--no-cache"])
         assert result.exit_code == 0, result.output
         assert "No such command" not in result.output
-        assert "Contoso Ltd" in result.output
+        assert "Synthetic Alpha Ltd" in result.output
 
     def test_undotted_domain_attempt_uses_domain_validation(self) -> None:
         # Hostnames without a dot (or other invalid tokens) must not fall through
         # as Click "No such command". Route them to lookup so the user gets a
         # domain-format rejection.
-        result = runner.invoke(app, ["contoso"])
+        result = runner.invoke(app, ["alpha"])
         assert result.exit_code == 2
         assert "No such command" not in result.output
         assert "Invalid domain format" in result.output
         collapsed = " ".join(result.output.split())
-        assert "Expected a domain with a public suffix, such as contoso.com." in collapsed
+        assert "Expected a domain with a public suffix, such as example.com." in collapsed
         assert "Run recon with no arguments for examples." in collapsed
 
     def test_malformed_undotted_token_is_not_unknown_command(self) -> None:
@@ -217,44 +217,44 @@ class TestDirectDomainLookup:
         # ``--no-cache`` ensures the mocked resolver is actually called
         # rather than the test reading whatever is in the developer's
         # ``~/.recon/cache/`` from prior real runs.
-        result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache"])
         assert result.exit_code == 0
-        assert "Contoso Ltd" in result.output
+        assert "Synthetic Alpha Ltd" in result.output
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_json(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--json", "--no-cache"])
         assert result.exit_code == 0
         data = json.loads(result.output)
-        assert data["display_name"] == "Contoso Ltd"
+        assert data["display_name"] == "Synthetic Alpha Ltd"
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_md(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--md", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--md", "--no-cache"])
         assert result.exit_code == 0
         assert "# " in result.output
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_plain(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--plain", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--plain", "--no-cache"])
         assert result.exit_code == 0
-        assert "queried_domain: contoso.com" in result.output
+        assert "queried_domain: alpha.invalid" in result.output
         # Linear text — no box-drawing characters.
         assert "─" not in result.output
         assert "│" not in result.output
 
     def test_lookup_json_plain_mutually_exclusive(self) -> None:
-        result = runner.invoke(app, ["lookup", "contoso.com", "--json", "--plain"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--json", "--plain"])
         assert result.exit_code == 2
 
     def test_lookup_plain_rejected_with_alternate_modes(self) -> None:
         # --plain only governs the standard render; combining it with a mode
         # that has its own output is rejected, not silently ignored.
         for mode in ("--exposure", "--gaps", "--chain"):
-            result = runner.invoke(app, ["lookup", "contoso.com", "--plain", mode])
+            result = runner.invoke(app, ["lookup", "alpha.invalid", "--plain", mode])
             assert result.exit_code == 2, f"--plain {mode} should be rejected"
 
 
@@ -262,21 +262,21 @@ class TestLookupSubcommand:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_lookup_subcommand(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--no-cache"])
         assert result.exit_code == 0
-        assert "Contoso Ltd" in result.output
+        assert "Synthetic Alpha Ltd" in result.output
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_verbose_flag(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--verbose", "--no-cache"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--verbose", "--no-cache"])
         assert result.exit_code == 0
         assert "oidc_discovery" in result.output
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_sources_flag(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--sources"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--sources"])
         assert result.exit_code == 0
         assert "Source Details" in result.output
 
@@ -287,12 +287,12 @@ class TestLookupSubcommand:
             seen["confidence_mode"] = options.confidence_mode
 
         monkeypatch.setattr("recon_tool.cli._lookup", fake_lookup)
-        result = runner.invoke(app, ["lookup", "contoso.com", "--strict"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--strict"])
         assert result.exit_code == 0
         assert seen["confidence_mode"] == "strict"
 
     def test_confidence_mode_rejects_typo(self) -> None:
-        result = runner.invoke(app, ["lookup", "contoso.com", "--confidence-mode", "scrict"])
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--confidence-mode", "scrict"])
         assert result.exit_code == 2
         assert "hedged" in result.output
         assert "strict" in result.output
@@ -310,11 +310,11 @@ class TestErrors:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_all_sources_failed(self, mock_resolve) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="unknown.com",
+            domain="unknown.invalid",
             message="No tenant found",
             error_type="all_sources_failed",
         )
-        result = runner.invoke(app, ["lookup", "unknown.com"])
+        result = runner.invoke(app, ["lookup", "unknown.invalid"])
         assert result.exit_code == 4
         assert "No tenant found" in result.output
 

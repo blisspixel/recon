@@ -11,7 +11,7 @@ Unit tests and Hypothesis property-based tests for:
 - PBT Property 4: Detection Weight Monotonicity (2.8)
 - PBT Property 5: Meta-Signal Biconditional Evaluation (2.9)
 
-All examples use fictional companies (Contoso, Northwind, Fabrikam).
+All examples use explicit synthetic labels and reserved domains.
 """
 
 from __future__ import annotations
@@ -56,90 +56,90 @@ class TestMatchModeAll:
     def test_match_mode_all_all_detections_match(self) -> None:
         """Fingerprint with match_mode: all where all detections match → detection produced."""
         fp = Fingerprint(
-            name="Contoso Platform",
-            slug="contoso-platform",
+            name="Synthetic Alpha Platform",
+            slug="alpha-platform",
             category="SaaS",
             confidence="high",
             m365=False,
             match_mode="all",
             detections=(
-                DetectionRule(type="txt", pattern="^contoso-verify="),
-                DetectionRule(type="cname", pattern="login.contoso.com"),
+                DetectionRule(type="txt", pattern="^alpha-verify="),
+                DetectionRule(type="cname", pattern="login.alpha.invalid"),
             ),
         )
 
         ctx = _DetectionCtx()
-        ctx.add("Contoso Platform", "contoso-platform", source_type="TXT", raw_value="contoso-verify=abc")
-        ctx.record_fp_match("contoso-platform", "txt", "^contoso-verify=")
-        ctx.record_fp_match("contoso-platform", "cname", "login.contoso.com")
+        ctx.add("Synthetic Alpha Platform", "alpha-platform", source_type="TXT", raw_value="alpha-verify=abc")
+        ctx.record_fp_match("alpha-platform", "txt", "^alpha-verify=")
+        ctx.record_fp_match("alpha-platform", "cname", "login.alpha.invalid")
 
         with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
-        assert "contoso-platform" in ctx.slugs
-        assert "Contoso Platform" in ctx.services
+        assert "alpha-platform" in ctx.slugs
+        assert "Synthetic Alpha Platform" in ctx.services
 
     def test_match_mode_all_one_detection_fails(self) -> None:
         """Fingerprint with match_mode: all where one detection fails → no detection."""
         fp = Fingerprint(
-            name="Contoso Platform",
-            slug="contoso-platform",
+            name="Synthetic Alpha Platform",
+            slug="alpha-platform",
             category="SaaS",
             confidence="high",
             m365=False,
             match_mode="all",
             detections=(
-                DetectionRule(type="txt", pattern="^contoso-verify="),
-                DetectionRule(type="cname", pattern="login.contoso.com"),
+                DetectionRule(type="txt", pattern="^alpha-verify="),
+                DetectionRule(type="cname", pattern="login.alpha.invalid"),
             ),
         )
 
         ctx = _DetectionCtx()
-        ctx.add("Contoso Platform", "contoso-platform", source_type="TXT", raw_value="contoso-verify=abc")
+        ctx.add("Synthetic Alpha Platform", "alpha-platform", source_type="TXT", raw_value="alpha-verify=abc")
         # Only record one of two detections
-        ctx.record_fp_match("contoso-platform", "txt", "^contoso-verify=")
+        ctx.record_fp_match("alpha-platform", "txt", "^alpha-verify=")
 
         with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
-        assert "contoso-platform" not in ctx.slugs
-        assert "Contoso Platform" not in ctx.services
+        assert "alpha-platform" not in ctx.slugs
+        assert "Synthetic Alpha Platform" not in ctx.services
 
     def test_match_mode_any_single_match_produces_detection(self) -> None:
         """Fingerprint with match_mode: any (default) → single match produces detection."""
         fp = Fingerprint(
-            name="Northwind Analytics",
-            slug="northwind-analytics",
+            name="Synthetic Gamma Analytics",
+            slug="gamma-analytics",
             category="Analytics",
             confidence="medium",
             m365=False,
             match_mode="any",
             detections=(
-                DetectionRule(type="txt", pattern="^northwind-verify="),
-                DetectionRule(type="cname", pattern="track.northwind.com"),
+                DetectionRule(type="txt", pattern="^gamma-verify="),
+                DetectionRule(type="cname", pattern="track.gamma.invalid"),
             ),
         )
 
         ctx = _DetectionCtx()
-        ctx.add("Northwind Analytics", "northwind-analytics", source_type="TXT", raw_value="northwind-verify=xyz")
-        ctx.record_fp_match("northwind-analytics", "txt", "^northwind-verify=")
+        ctx.add("Synthetic Gamma Analytics", "gamma-analytics", source_type="TXT", raw_value="gamma-verify=xyz")
+        ctx.record_fp_match("gamma-analytics", "txt", "^gamma-verify=")
 
         with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
         # match_mode: any — single match is enough
-        assert "northwind-analytics" in ctx.slugs
-        assert "Northwind Analytics" in ctx.services
+        assert "gamma-analytics" in ctx.slugs
+        assert "Synthetic Gamma Analytics" in ctx.services
 
     def test_invalid_match_mode_skips_fingerprint(self, caplog: object) -> None:
         """Invalid match_mode value → warning logged, fingerprint skipped."""
         fp_dict = {
-            "name": "Fabrikam Widget",
-            "slug": "fabrikam-widget",
+            "name": "Synthetic Beta Widget",
+            "slug": "beta-widget",
             "category": "SaaS",
             "confidence": "high",
             "match_mode": "invalid_mode",
-            "detections": [{"type": "txt", "pattern": "^fabrikam="}],
+            "detections": [{"type": "txt", "pattern": "^beta="}],
         }
         result = _validate_fingerprint(fp_dict, "test")
         assert result is None
@@ -379,11 +379,11 @@ class TestDetectionWeight:
     def test_weight_parsed_correctly(self) -> None:
         """Weight parsed correctly from YAML."""
         fp_dict = {
-            "name": "Contoso CDN",
-            "slug": "contoso-cdn",
+            "name": "Synthetic Alpha CDN",
+            "slug": "alpha-cdn",
             "category": "CDN",
             "confidence": "high",
-            "detections": [{"type": "cname", "pattern": "cdn.contoso.com", "weight": 0.7}],
+            "detections": [{"type": "cname", "pattern": "cdn.alpha.invalid", "weight": 0.7}],
         }
         fp = _validate_fingerprint(fp_dict, "test")
         assert fp is not None
@@ -392,11 +392,11 @@ class TestDetectionWeight:
     def test_weight_defaults_to_1_when_omitted(self) -> None:
         """Weight defaults to 1.0 when omitted."""
         fp_dict = {
-            "name": "Contoso CDN",
-            "slug": "contoso-cdn",
+            "name": "Synthetic Alpha CDN",
+            "slug": "alpha-cdn",
             "category": "CDN",
             "confidence": "high",
-            "detections": [{"type": "cname", "pattern": "cdn.contoso.com"}],
+            "detections": [{"type": "cname", "pattern": "cdn.alpha.invalid"}],
         }
         fp = _validate_fingerprint(fp_dict, "test")
         assert fp is not None
@@ -405,18 +405,18 @@ class TestDetectionWeight:
     def test_out_of_range_weight_defaults_to_1(self) -> None:
         """Out-of-range weight → warning, defaults to 1.0."""
         fp_dict = {
-            "name": "Contoso CDN",
-            "slug": "contoso-cdn",
+            "name": "Synthetic Alpha CDN",
+            "slug": "alpha-cdn",
             "category": "CDN",
             "confidence": "high",
-            "detections": [{"type": "cname", "pattern": "cdn.contoso.com", "weight": 2.5}],
+            "detections": [{"type": "cname", "pattern": "cdn.alpha.invalid", "weight": 2.5}],
         }
         fp = _validate_fingerprint(fp_dict, "test")
         assert fp is not None
         assert fp.detections[0].weight == 1.0
 
         # Negative weight
-        fp_dict["detections"] = [{"type": "cname", "pattern": "cdn.contoso.com", "weight": -0.5}]
+        fp_dict["detections"] = [{"type": "cname", "pattern": "cdn.alpha.invalid", "weight": -0.5}]
         fp = _validate_fingerprint(fp_dict, "test")
         assert fp is not None
         assert fp.detections[0].weight == 1.0
@@ -424,21 +424,26 @@ class TestDetectionWeight:
     def test_weighted_detection_scores_computation(self) -> None:
         """Weighted detection_scores computation with explicit weights dict."""
         evidence = (
-            EvidenceRecord(source_type="TXT", raw_value="contoso-verify=abc", rule_name="Contoso", slug="contoso"),
-            EvidenceRecord(source_type="CNAME", raw_value="login.contoso.com", rule_name="Contoso", slug="contoso"),
-            EvidenceRecord(source_type="MX", raw_value="mx.fabrikam.com", rule_name="Fabrikam", slug="fabrikam"),
+            EvidenceRecord(source_type="TXT", raw_value="alpha-verify=abc", rule_name="Synthetic Alpha", slug="alpha"),
+            EvidenceRecord(
+                source_type="CNAME",
+                raw_value="login.alpha.invalid",
+                rule_name="Synthetic Alpha",
+                slug="alpha",
+            ),
+            EvidenceRecord(source_type="MX", raw_value="mx.beta.invalid", rule_name="Synthetic Beta", slug="beta"),
         )
         weights = {
-            ("contoso", "TXT"): 0.3,
-            ("contoso", "CNAME"): 0.9,
-            ("fabrikam", "MX"): 1.0,
+            ("alpha", "TXT"): 0.3,
+            ("alpha", "CNAME"): 0.9,
+            ("beta", "MX"): 1.0,
         }
         scores = compute_detection_scores(evidence, weights=weights)
         score_dict = dict(scores)
-        # contoso: 0.3 + 0.9 = 1.2 → < 1.5 → "low"
-        assert score_dict["contoso"] == "low"
-        # fabrikam: 1.0 → < 1.5 → "low"
-        assert score_dict["fabrikam"] == "low"
+        # alpha: 0.3 + 0.9 = 1.2 → < 1.5 → "low"
+        assert score_dict["alpha"] == "low"
+        # beta: 1.0 → < 1.5 → "low"
+        assert score_dict["beta"] == "low"
 
     def test_weighted_scores_high_threshold(self) -> None:
         """Weighted scores reach 'high' when sum >= 2.5."""
@@ -471,28 +476,28 @@ class TestExplainField:
         """explain parsed and stored on Signal dataclass."""
         result = _validate_and_build_signal(
             {
-                "name": "Contoso Signal",
-                "requires": {"any": ["contoso"]},
-                "explain": "Contoso integration indicates enterprise deployment",
+                "name": "Synthetic Alpha Signal",
+                "requires": {"any": ["alpha"]},
+                "explain": "Synthetic Alpha integration indicates enterprise deployment",
             },
             0,
         )
         assert result is not None
-        assert result.explain == "Contoso integration indicates enterprise deployment"
+        assert result.explain == "Synthetic Alpha integration indicates enterprise deployment"
 
     def test_explain_parsed_on_posture_rule(self) -> None:
         """explain parsed and stored on _PostureRule dataclass."""
         rule_dict = {
-            "name": "Contoso Observation",
+            "name": "Synthetic Alpha Observation",
             "category": "infrastructure",
             "salience": "medium",
-            "template": "Contoso infrastructure detected",
-            "condition": {"slugs_any": ["contoso"]},
-            "explain": "Contoso infrastructure suggests enterprise hosting",
+            "template": "Synthetic Alpha infrastructure detected",
+            "condition": {"slugs_any": ["alpha"]},
+            "explain": "Synthetic Alpha infrastructure suggests enterprise hosting",
         }
         result = _validate_and_build_rule(rule_dict, 0)
         assert result is not None
-        assert result.explain == "Contoso infrastructure suggests enterprise hosting"
+        assert result.explain == "Synthetic Alpha infrastructure suggests enterprise hosting"
 
     def test_explain_defaults_to_empty_on_signal(self) -> None:
         """Omitted explain defaults to empty string on Signal."""
@@ -673,8 +678,8 @@ class TestPBTMatchModeAll:
 
         detections = tuple(DetectionRule(type="txt", pattern=f"^pattern-{i}=") for i in range(num_detections))
         fp = Fingerprint(
-            name="Contoso Multi",
-            slug="contoso-multi",
+            name="Synthetic Alpha Multi",
+            slug="alpha-multi",
             category="SaaS",
             confidence="high",
             m365=False,
@@ -683,17 +688,17 @@ class TestPBTMatchModeAll:
         )
 
         ctx = _DetectionCtx()
-        ctx.add("Contoso Multi", "contoso-multi", source_type="TXT", raw_value="test")
+        ctx.add("Synthetic Alpha Multi", "alpha-multi", source_type="TXT", raw_value="test")
 
         # Record all detections EXCEPT the missing one
         for i in range(num_detections):
             if i != missing_index:
-                ctx.record_fp_match("contoso-multi", "txt", f"^pattern-{i}=")
+                ctx.record_fp_match("alpha-multi", "txt", f"^pattern-{i}=")
 
         with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
-        assert "contoso-multi" not in ctx.slugs
+        assert "alpha-multi" not in ctx.slugs
 
     @given(
         num_detections=st.integers(min_value=1, max_value=5),
@@ -706,8 +711,8 @@ class TestPBTMatchModeAll:
         """Fingerprint with match_mode: all and all matches → detection produced."""
         detections = tuple(DetectionRule(type="txt", pattern=f"^pattern-{i}=") for i in range(num_detections))
         fp = Fingerprint(
-            name="Contoso Full",
-            slug="contoso-full",
+            name="Synthetic Alpha Full",
+            slug="alpha-full",
             category="SaaS",
             confidence="high",
             m365=False,
@@ -716,16 +721,16 @@ class TestPBTMatchModeAll:
         )
 
         ctx = _DetectionCtx()
-        ctx.add("Contoso Full", "contoso-full", source_type="TXT", raw_value="test")
+        ctx.add("Synthetic Alpha Full", "alpha-full", source_type="TXT", raw_value="test")
 
         # Record ALL detections
         for i in range(num_detections):
-            ctx.record_fp_match("contoso-full", "txt", f"^pattern-{i}=")
+            ctx.record_fp_match("alpha-full", "txt", f"^pattern-{i}=")
 
         with patch("recon_tool.sources.dns_base.load_fingerprints", return_value=(fp,)):
             ctx.enforce_match_mode_all()
 
-        assert "contoso-full" in ctx.slugs
+        assert "alpha-full" in ctx.slugs
 
 
 # ── 2.8 PBT Property 4: Detection Weight Monotonicity ──────────────────

@@ -161,7 +161,7 @@ cloud_instance_st = st.one_of(
             "microsoftonline.com",
             "microsoftonline.us",
             "partner.microsoftonline.cn",
-            "fabrikam.b2clogin.com",
+            "beta.b2clogin.com",
         )
     ),
 )

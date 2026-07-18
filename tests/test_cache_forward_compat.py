@@ -37,9 +37,9 @@ def _make_minimal_dict() -> dict:
     """
     info = TenantInfo(
         tenant_id=None,
-        display_name="Contoso, Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha, Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
     )
     return tenant_info_to_dict(info)
@@ -54,20 +54,20 @@ class TestUnknownTopLevelFields:
         info = tenant_info_from_dict(data)
         # Reader returns a TenantInfo; the unknown field is simply not
         # carried into the dataclass (no public attribute appears).
-        assert info.display_name == "Contoso, Ltd"
+        assert info.display_name == "Synthetic Alpha, Ltd"
         assert not hasattr(info, "future_field_v1_10")
 
     def test_extra_top_level_dict_field_ignored(self) -> None:
         data = _make_minimal_dict()
         data["future_nested_v2"] = {"new_key": "new_value", "another": 42}
         info = tenant_info_from_dict(data)
-        assert info.display_name == "Contoso, Ltd"
+        assert info.display_name == "Synthetic Alpha, Ltd"
 
     def test_extra_top_level_list_field_ignored(self) -> None:
         data = _make_minimal_dict()
         data["future_list_v2"] = ["alpha", "beta", "gamma"]
         info = tenant_info_from_dict(data)
-        assert info.display_name == "Contoso, Ltd"
+        assert info.display_name == "Synthetic Alpha, Ltd"
 
     def test_higher_cache_version_loads_with_known_fields(self) -> None:
         """A future cache writer that bumps _cache_version but keeps
@@ -78,7 +78,7 @@ class TestUnknownTopLevelFields:
         data = _make_minimal_dict()
         data["_cache_version"] = _CACHE_VERSION + 99
         info = tenant_info_from_dict(data)
-        assert info.display_name == "Contoso, Ltd"
+        assert info.display_name == "Synthetic Alpha, Ltd"
 
 
 class TestUnknownNestedFields:
@@ -167,7 +167,7 @@ class TestRoundTripSafety:
         # output," not "v1.9 reader preserves v1.10 fields it doesn't
         # understand."
         re_serialized = tenant_info_to_dict(info)
-        assert re_serialized["display_name"] == "Contoso, Ltd"
+        assert re_serialized["display_name"] == "Synthetic Alpha, Ltd"
         assert "future_top" not in re_serialized
         assert "future_nested" not in re_serialized.get("cert_summary", {})
 

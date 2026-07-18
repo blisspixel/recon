@@ -71,10 +71,13 @@ disclosure-safe aggregates are public. Current validation generators are
 deterministic, their tracked outputs must match source, and the local and
 release gates reject identity-bearing JSON,
 NDJSON, CSV, candidate-rejection rows, and detailed run artifacts.
-Remaining legacy fictional examples and fixtures outside validation, including
-prose, CLI and help examples, structured samples, snapshots, tests, and agent
-guidance, will move to reserved identities as bounded migration debt, without
-changing behavior.
+Current prose, CLI and help examples, agent guidance, structured samples,
+snapshots, schemas, and tests use reserved synthetic identities. The local and
+release gates reject the retired fictional target vocabulary across tracked and
+nonignored-untracked text candidates without changing provider definitions or
+generic ACME protocol references. Release source distributions explicitly
+exclude ignored agent work and private validation paths, and an artifact test
+plants an ignored sentinel before inspecting the built archive.
 The first frozen convenience-sample baseline, provider-supported promotion
 gate, and unseen vertical holdout are complete. Independent rank, regional,
 vendor-seed, and drift rounds remain before any broad catalog-coverage claim.

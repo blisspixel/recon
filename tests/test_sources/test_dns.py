@@ -37,11 +37,11 @@ class TestM365Detection:
     async def test_exchange_via_mx(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "contoso.com/TXT": [],
-                "contoso.com/MX": ["10 contoso-com.mail.protection.outlook.com"],
+                "alpha.invalid/TXT": [],
+                "alpha.invalid/MX": ["10 alpha-com.mail.protection.outlook.com"],
             }
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.m365_detected is True
         assert "Microsoft 365" in result.detected_services
 
@@ -50,11 +50,11 @@ class TestM365Detection:
     async def test_exchange_via_spf(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "contoso.com/TXT": ["v=spf1 include:spf.protection.outlook.com ~all"],
-                "contoso.com/MX": [],
+                "alpha.invalid/TXT": ["v=spf1 include:spf.protection.outlook.com ~all"],
+                "alpha.invalid/MX": [],
             }
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.m365_detected is True
         assert "Microsoft 365" in result.detected_services
 
@@ -63,11 +63,11 @@ class TestM365Detection:
     async def test_domain_verification(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "contoso.com/TXT": ["MS=ms12345678"],
-                "contoso.com/MX": [],
+                "alpha.invalid/TXT": ["MS=ms12345678"],
+                "alpha.invalid/MX": [],
             }
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.m365_detected is True
         assert "Microsoft 365" in result.detected_services
 
@@ -76,12 +76,12 @@ class TestM365Detection:
     async def test_teams_via_lyncdiscover(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "contoso.com/TXT": [],
-                "contoso.com/MX": [],
-                "lyncdiscover.contoso.com/CNAME": ["webdir.online.lync.com"],
+                "alpha.invalid/TXT": [],
+                "alpha.invalid/MX": [],
+                "lyncdiscover.alpha.invalid/CNAME": ["webdir.online.lync.com"],
             }
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert "Microsoft Teams" in result.detected_services
 
     @pytest.mark.asyncio
@@ -89,12 +89,12 @@ class TestM365Detection:
     async def test_intune_via_enterpriseregistration(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "contoso.com/TXT": [],
-                "contoso.com/MX": [],
-                "enterpriseregistration.contoso.com/CNAME": ["enterpriseregistration.windows.net"],
+                "alpha.invalid/TXT": [],
+                "alpha.invalid/MX": [],
+                "enterpriseregistration.alpha.invalid/CNAME": ["enterpriseregistration.windows.net"],
             }
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert "Intune / MDM" in result.detected_services
 
     @pytest.mark.asyncio
@@ -102,12 +102,12 @@ class TestM365Detection:
     async def test_dkim_exchange(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "contoso.com/TXT": [],
-                "contoso.com/MX": [],
-                "selector1._domainkey.contoso.com/CNAME": ["sel1.protection.outlook.com"],
+                "alpha.invalid/TXT": [],
+                "alpha.invalid/MX": [],
+                "selector1._domainkey.alpha.invalid/CNAME": ["sel1.protection.outlook.com"],
             }
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert "DKIM (Exchange Online)" in result.detected_services
 
     @pytest.mark.asyncio
@@ -116,14 +116,14 @@ class TestM365Detection:
         """DKIM CNAME pointing to *.onmicrosoft.com should also be detected."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "fabrikam.com/TXT": [],
-                "fabrikam.com/MX": [],
-                "selector1._domainkey.fabrikam.com/CNAME": [
-                    "selector1-fabrikam-com._domainkey.fabrikam.onmicrosoft.com"
+                "beta.invalid/TXT": [],
+                "beta.invalid/MX": [],
+                "selector1._domainkey.beta.invalid/CNAME": [
+                    "selector1-beta-com._domainkey.beta.onmicrosoft.com"
                 ],
             }
         )
-        result = await DNSSource().lookup("fabrikam.com")
+        result = await DNSSource().lookup("beta.invalid")
         assert "DKIM (Exchange Online)" in result.detected_services
 
     @pytest.mark.asyncio
@@ -131,12 +131,12 @@ class TestM365Detection:
     async def test_autodiscover(self, mock_resolve):
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "contoso.com/TXT": [],
-                "contoso.com/MX": [],
-                "autodiscover.contoso.com/CNAME": ["autodiscover.outlook.com"],
+                "alpha.invalid/TXT": [],
+                "alpha.invalid/MX": [],
+                "autodiscover.alpha.invalid/CNAME": ["autodiscover.outlook.com"],
             }
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert "Exchange Autodiscover" in result.detected_services
 
 
@@ -317,7 +317,7 @@ class TestTechStackFingerprinting:
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
                 "example.com/TXT": ["some-random-record"],
-                "example.com/MX": ["10 mx.randomhost.com"],
+                "example.com/MX": ["10 mx.randomhost.invalid"],
             }
         )
         result = await DNSSource().lookup("example.com")
@@ -346,20 +346,20 @@ class TestTechStackFingerprinting:
         """A domain with many services should detect them all."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "big.com/TXT": [
+                "big.invalid/TXT": [
                     "MS=ms99999",
                     "google-site-verification=abc",
                     "atlassian-domain-verification=xyz",
                     "v=spf1 include:spf.protection.outlook.com include:sendgrid.net ~all",
                 ],
-                "big.com/MX": ["10 big-com.mail.protection.outlook.com"],
-                "autodiscover.big.com/CNAME": ["autodiscover.outlook.com"],
-                "lyncdiscover.big.com/CNAME": ["webdir.online.lync.com"],
-                "enterpriseregistration.big.com/CNAME": ["enterpriseregistration.windows.net"],
-                "_dmarc.big.com/TXT": ["v=DMARC1; p=quarantine"],
+                "big.invalid/MX": ["10 big-com.mail.protection.outlook.com"],
+                "autodiscover.big.invalid/CNAME": ["autodiscover.outlook.com"],
+                "lyncdiscover.big.invalid/CNAME": ["webdir.online.lync.com"],
+                "enterpriseregistration.big.invalid/CNAME": ["enterpriseregistration.windows.net"],
+                "_dmarc.big.invalid/TXT": ["v=DMARC1; p=quarantine"],
             }
         )
-        result = await DNSSource().lookup("big.com")
+        result = await DNSSource().lookup("big.invalid")
         assert result.m365_detected is True
         assert len(result.detected_services) >= 7
 
@@ -372,7 +372,7 @@ class TestDNSSourceErrorHandling:
             return []
 
         mock_resolve.side_effect = always_empty
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.m365_detected is False
         assert isinstance(result, SourceResult)
 
@@ -380,7 +380,7 @@ class TestDNSSourceErrorHandling:
     async def test_total_failure_returns_error(self):
         """If _detect_services raises, lookup returns an error SourceResult."""
         with patch.object(DNSSource, "_detect_services", side_effect=RuntimeError("boom")):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
             assert result.error is not None
             assert isinstance(result, SourceResult)
 

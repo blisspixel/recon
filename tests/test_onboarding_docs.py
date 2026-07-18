@@ -148,7 +148,7 @@ def test_mcp_onboarding_requests_json_for_explanation_dag() -> None:
     assert "with format=json and explain=true" in guide
     assert 'When `format="json"` and `explain=true`' in guide
     assert 'requires `format="json"` with\n`explain=true`' in guide
-    assert '"Look up contoso.com with explain=true.' not in guide
+    assert '"Look up alpha.invalid with explain=true.' not in guide
 
 
 def test_agent_guidance_distinguishes_flat_explain_from_both_dags() -> None:

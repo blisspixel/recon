@@ -73,8 +73,8 @@ class DisplayNameCluster:
 # Corporate-entity suffixes stripped during display-name normalization.
 # Kept deliberately short — we're removing unambiguous legal-form
 # markers, not every possible suffix. Over-stripping risks collapsing
-# unrelated orgs (e.g. "Acme Group" vs "Beta Group" would both become
-# "acme"/"beta" and the "Group" signal is actually useful for context).
+# unrelated orgs (e.g. "Synthetic Delta Group" vs "Beta Group" would both become
+# "delta"/"beta" and the "Group" signal is actually useful for context).
 _CORPORATE_SUFFIXES: tuple[str, ...] = (
     "inc",
     "inc.",
@@ -233,8 +233,8 @@ def _normalize_display_name(name: str) -> str:
     2. Collapse runs of whitespace / commas / hyphens / underscores
        to a single space.
     3. Drop trailing corporate-form suffixes (``inc``, ``llc``, ``gmbh``,
-       etc.) — one pass only so ``Acme Holdings Inc.`` becomes
-       ``acme holdings``, not ``acme``.
+       etc.): one pass only so ``Synthetic Delta Holdings Inc.`` becomes
+       ``delta holdings``, not ``delta``.
     4. Strip leading / trailing whitespace one more time.
 
     Returns the empty string if normalization leaves nothing
@@ -300,8 +300,8 @@ def compute_display_name_clusters(
     collapse whitespace and strip one trailing corporate-form
     suffix, but we do NOT do fuzzy matching or substring containment.
     Conservatism is deliberate — display names are customer-supplied
-    and substring matches easily conflate unrelated orgs (``Acme``
-    matches ``Acme Holdings`` matches ``Acme Properties``).
+    and substring matches easily conflate unrelated orgs (``Synthetic Delta``
+    matches ``Synthetic Delta Holdings`` matches ``Synthetic Delta Properties``).
     """
     buckets: dict[str, list[tuple[str, str]]] = defaultdict(list)
     for domain, display_name in domain_names.items():

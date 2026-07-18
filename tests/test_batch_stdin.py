@@ -25,9 +25,9 @@ RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
 
 SAMPLE_INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
     sources=("oidc_discovery",),
     services=("Microsoft 365",),
@@ -37,20 +37,20 @@ SAMPLE_RESULTS = [SourceResult(source_name="oidc_discovery", tenant_id=SAMPLE_IN
 
 
 def test_read_batch_domains_skips_blanks_and_comments() -> None:
-    stream = io.StringIO("contoso.com\n# a comment\n\n  fabrikam.com  \n")
-    assert _read_batch_domains(stream) == ["contoso.com", "fabrikam.com"]
+    stream = io.StringIO("alpha.invalid\n# a comment\n\n  beta.invalid  \n")
+    assert _read_batch_domains(stream) == ["alpha.invalid", "beta.invalid"]
 
 
 def test_read_batch_domains_enforces_domain_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli_batch, "_MAX_BATCH_DOMAINS", 2)
-    stream = io.StringIO("a.com\nb.com\nc.com\n")
+    stream = io.StringIO("a.invalid\nb.invalid\nc.invalid\n")
     with pytest.raises(_BatchInputError, match="maximum of 2 domains"):
         _read_batch_domains(stream)
 
 
 def test_read_batch_domains_enforces_size_cap(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(cli_batch, "_MAX_BATCH_FILE_BYTES", 8)
-    stream = io.StringIO("aaaa.com\nbbbb.com\n")
+    stream = io.StringIO("aaaa.invalid\nbbbb.invalid\n")
     with pytest.raises(_BatchInputError, match="maximum size"):
         _read_batch_domains(stream)
 
@@ -84,7 +84,7 @@ def test_read_batch_domains_rejects_surrogateescaped_input() -> None:
 @patch(RESOLVE_PATH, new_callable=AsyncMock)
 def test_batch_reads_domains_from_stdin(mock_resolve: AsyncMock) -> None:
     mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
-    result = runner.invoke(app, ["batch", "-", "--json"], input="contoso.com\nfabrikam.com\n")
+    result = runner.invoke(app, ["batch", "-", "--json"], input="alpha.invalid\nbeta.invalid\n")
     assert result.exit_code == 0, result.output
     data = json.loads(result.output)
     assert isinstance(data, list)
@@ -97,7 +97,7 @@ def test_batch_deduplicates_inputs_by_canonical_apex(mock_resolve: AsyncMock) ->
     result = runner.invoke(
         app,
         ["batch", "-", "--json"],
-        input="contoso.com\nwww.contoso.com\nhttps://mail.contoso.com/path\n",
+        input="alpha.invalid\nwww.alpha.invalid\nhttps://mail.alpha.invalid/path\n",
     )
     assert result.exit_code == 0, result.output
     assert len(json.loads(result.output)) == 1

@@ -47,12 +47,12 @@ def _info(
     degraded_sources: tuple[str, ...] = (),
     resolved_at: str | None = NOW.isoformat(),
     merge_conflicts: MergeConflicts | None = None,
-    queried_domain: str = "contoso.com",
+    queried_domain: str = "alpha.invalid",
 ) -> TenantInfo:
     return TenantInfo(
         tenant_id=None,
-        display_name="Contoso",
-        default_domain="contoso.com",
+        display_name="Synthetic Alpha",
+        default_domain="alpha.invalid",
         queried_domain=queried_domain,
         dmarc_policy=policy,
         evidence=evidence,
@@ -81,7 +81,7 @@ def _unit(
         collection_state=collection_state,
         construction_state=ConstructionState.COMPLETE,
         observed_at=observed_at,
-        record_owner="_claim.contoso.com",
+        record_owner="_claim.alpha.invalid",
         source_family="synthetic",
         vantage="test",
         provenance_complete=provenance_complete,
@@ -125,9 +125,9 @@ class TestDmarcApexRejectAdapter:
         )
 
         assert dossier.claim_id == "dns.dmarc.valid_policy_is_reject.v1"
-        assert dossier.subject == "contoso.com"
+        assert dossier.subject == "alpha.invalid"
         assert dossier.namespace == "dns"
-        assert dossier.scope == "_dmarc.contoso.com TXT"
+        assert dossier.scope == "_dmarc.alpha.invalid TXT"
         assert dossier.as_of == (NOW + timedelta(hours=1)).isoformat()
         assert dossier.freshness_seconds == 86_400
         assert dossier.state is ClaimState.SUPPORTED
@@ -135,7 +135,7 @@ class TestDmarcApexRejectAdapter:
         assert dossier.negative_certificates == ()
         assert dossier.positive_certificates == (frozenset({dossier.units[0].unit_id}),)
         assert dossier.units[0].evidence == (evidence,)
-        assert dossier.units[0].record_owner == "_dmarc.contoso.com"
+        assert dossier.units[0].record_owner == "_dmarc.alpha.invalid"
         assert dossier.certificates_complete
         assert dossier.provenance_complete
         assert dossier.provenance_limitations == (
@@ -315,7 +315,7 @@ class TestDmarcApexRejectAdapter:
             _info(
                 policy="reject",
                 evidence=(evidence,),
-                queried_domain="CONTOSO.COM.",
+                queried_domain="ALPHA.INVALID.",
                 resolved_at="2026-07-11T12:00:00Z",
             ),
             as_of=NOW,
@@ -412,9 +412,9 @@ class TestClaimAlgebra:
         dossier = evaluate_claim(
             DMARC_APEX_REJECT_CONTRACT,
             ledger,
-            subject="contoso.com",
+            subject="alpha.invalid",
             namespace="dns",
-            scope="_dmarc.contoso.com TXT",
+            scope="_dmarc.alpha.invalid TXT",
             as_of=NOW,
         )
 
@@ -429,7 +429,7 @@ class TestClaimAlgebra:
         )
         ledger = ObservationLedger((_unit("positive", "p"), _unit("negative", "n")))
 
-        dossier = evaluate_claim(contract, ledger, subject="contoso.com", namespace="test", scope="test", as_of=NOW)
+        dossier = evaluate_claim(contract, ledger, subject="alpha.invalid", namespace="test", scope="test", as_of=NOW)
 
         assert dossier.state is ClaimState.CONFLICTED
         assert dossier.positive_certificates == (frozenset({"positive"}),)

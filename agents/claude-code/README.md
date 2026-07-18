@@ -85,7 +85,7 @@ After install, run `recon mcp doctor` for a live JSON-RPC handshake check - spaw
 In a Claude Code session:
 
 ```
-Run a recon lookup on contoso.com and summarize what's observable.
+Run a recon lookup on alpha.invalid and summarize what's observable.
 ```
 
 The skill auto-loads when you mention a domain alongside recon-shaped intent. The MCP server starts on demand.

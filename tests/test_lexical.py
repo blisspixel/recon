@@ -28,94 +28,94 @@ from recon_tool.lexical import (
 
 class TestEnvironmentClassification:
     def test_exact_match(self):
-        out = classify_subdomains(["dev.contoso.com"], "contoso.com")
+        out = classify_subdomains(["dev.alpha.invalid"], "alpha.invalid")
         assert "dev" in out["env"]
 
     def test_prefix_with_digit(self):
-        out = classify_subdomains(["dev01.contoso.com"], "contoso.com")
+        out = classify_subdomains(["dev01.alpha.invalid"], "alpha.invalid")
         assert "dev01" in out["env"]
 
     def test_prefix_with_dash(self):
-        out = classify_subdomains(["stg-web.contoso.com"], "contoso.com")
+        out = classify_subdomains(["stg-web.alpha.invalid"], "alpha.invalid")
         assert "stg-web" in out["env"]
 
     def test_suffix_after_dash(self):
-        out = classify_subdomains(["api-staging.contoso.com"], "contoso.com")
+        out = classify_subdomains(["api-staging.alpha.invalid"], "alpha.invalid")
         assert "api-staging" in out["env"]
 
     def test_multiple_envs(self):
         out = classify_subdomains(
-            ["dev.contoso.com", "stg.contoso.com", "prod.contoso.com"],
-            "contoso.com",
+            ["dev.alpha.invalid", "stg.alpha.invalid", "prod.alpha.invalid"],
+            "alpha.invalid",
         )
         assert len(out["env"]) == 3
 
     def test_preprod_is_env(self):
-        out = classify_subdomains(["preprod.contoso.com"], "contoso.com")
+        out = classify_subdomains(["preprod.alpha.invalid"], "alpha.invalid")
         assert "preprod" in out["env"]
 
     def test_sbx_is_env(self):
-        out = classify_subdomains(["sbx-api.contoso.com"], "contoso.com")
+        out = classify_subdomains(["sbx-api.alpha.invalid"], "alpha.invalid")
         assert "sbx-api" in out["env"]
 
     def test_does_not_match_unrelated_words(self):
-        out = classify_subdomains(["developers.contoso.com"], "contoso.com")
+        out = classify_subdomains(["developers.alpha.invalid"], "alpha.invalid")
         # "dev" is followed by "e" which is not a separator — no match
         assert out["env"] == []
 
 
 class TestRegionClassification:
     def test_us_east(self):
-        out = classify_subdomains(["us-east-1-api.contoso.com"], "contoso.com")
+        out = classify_subdomains(["us-east-1-api.alpha.invalid"], "alpha.invalid")
         assert any("us-east" in r for r in out["region"])
 
     def test_eu_west(self):
-        out = classify_subdomains(["eu-west-1.contoso.com"], "contoso.com")
+        out = classify_subdomains(["eu-west-1.alpha.invalid"], "alpha.invalid")
         assert any("eu-west" in r for r in out["region"])
 
     def test_apac(self):
-        out = classify_subdomains(["ap-southeast-2.contoso.com"], "contoso.com")
+        out = classify_subdomains(["ap-southeast-2.alpha.invalid"], "alpha.invalid")
         assert any("ap-southeast" in r for r in out["region"])
 
     def test_short_region_code(self):
-        out = classify_subdomains(["apne1.contoso.com"], "contoso.com")
+        out = classify_subdomains(["apne1.alpha.invalid"], "alpha.invalid")
         assert any("apne1" in r for r in out["region"])
 
     def test_does_not_match_europe(self):
         """'europe' is not 'eu-west' — must not match a region."""
-        out = classify_subdomains(["europe.contoso.com"], "contoso.com")
+        out = classify_subdomains(["europe.alpha.invalid"], "alpha.invalid")
         assert out["region"] == []
 
     def test_region_after_substring_collision(self):
         # "house1-use1": the region code "use1" also appears inside "house1"
         # without a boundary. The matcher must scan past that first occurrence
         # to the valid trailing "-use1" rather than stop at the first hit.
-        out = classify_subdomains(["house1-use1.contoso.com"], "contoso.com")
+        out = classify_subdomains(["house1-use1.alpha.invalid"], "alpha.invalid")
         assert any("use1" in r for r in out["region"])
 
 
 class TestShardClassification:
     def test_t_dash_digits(self):
-        out = classify_subdomains(["t-1234.contoso.com"], "contoso.com")
+        out = classify_subdomains(["t-1234.alpha.invalid"], "alpha.invalid")
         assert len(out["shard"]) == 1
 
     def test_org_shard(self):
-        out = classify_subdomains(["org-acme.contoso.com"], "contoso.com")
+        out = classify_subdomains(["org-delta.alpha.invalid"], "alpha.invalid")
         assert len(out["shard"]) == 1
 
     def test_tenant_shard(self):
-        out = classify_subdomains(["tenant-xyz.contoso.com"], "contoso.com")
+        out = classify_subdomains(["tenant-xyz.alpha.invalid"], "alpha.invalid")
         assert len(out["shard"]) == 1
 
     def test_short_t_rejected(self):
         """t-12 is too short — only 3+ digit shards count."""
-        out = classify_subdomains(["t-12.contoso.com"], "contoso.com")
+        out = classify_subdomains(["t-12.alpha.invalid"], "alpha.invalid")
         assert out["shard"] == []
 
 
 class TestMultiCategory:
     def test_dev_and_region(self):
-        out = classify_subdomains(["dev-eu-west-1.contoso.com"], "contoso.com")
+        out = classify_subdomains(["dev-eu-west-1.alpha.invalid"], "alpha.invalid")
         # Matches environment (dev) AND region (eu-west)
         assert out["env"]
         assert out["region"]
@@ -123,19 +123,19 @@ class TestMultiCategory:
 
 class TestBaseDomainHandling:
     def test_strips_base_domain(self):
-        out = classify_subdomains(["dev.sub.contoso.com"], "contoso.com")
+        out = classify_subdomains(["dev.sub.alpha.invalid"], "alpha.invalid")
         # The first label of "dev.sub" is "dev" — should match env
         assert "dev" in out["env"]
 
     def test_no_base_domain(self):
-        out = classify_subdomains(["dev.contoso.com"])
+        out = classify_subdomains(["dev.alpha.invalid"])
         # Without base_domain, first label is still "dev"
         assert "dev" in out["env"]
 
 
 class TestWildcardSkipping:
     def test_wildcard_ignored(self):
-        out = classify_subdomains(["*.contoso.com", "dev.contoso.com"], "contoso.com")
+        out = classify_subdomains(["*.alpha.invalid", "dev.alpha.invalid"], "alpha.invalid")
         assert len(out["env"]) == 1
 
 
@@ -145,13 +145,13 @@ class TestWildcardSkipping:
 class TestObservationThreshold:
     def test_single_match_does_not_fire(self):
         """One matching subdomain is coincidence, not a pattern."""
-        obs = lexical_observations(["dev.contoso.com"], "contoso.com")
+        obs = lexical_observations(["dev.alpha.invalid"], "alpha.invalid")
         assert obs == []
 
     def test_meets_min_matches(self):
         obs = lexical_observations(
-            ["dev.contoso.com", "stg.contoso.com"],
-            "contoso.com",
+            ["dev.alpha.invalid", "stg.alpha.invalid"],
+            "alpha.invalid",
         )
         assert len(obs) == 1
         assert obs[0].category == "Environment-like Labels"
@@ -164,8 +164,8 @@ class TestObservationThreshold:
 class TestObservationLanguage:
     def test_env_observation_reports_count_and_compatible_explanations(self):
         obs = lexical_observations(
-            ["dev.contoso.com", "stg.contoso.com", "prod.contoso.com"],
-            "contoso.com",
+            ["dev.alpha.invalid", "stg.alpha.invalid", "prod.alpha.invalid"],
+            "alpha.invalid",
         )
         assert obs
         stmt = obs[0].statement.lower()
@@ -176,8 +176,8 @@ class TestObservationLanguage:
 
     def test_region_observation_is_hedged(self):
         obs = lexical_observations(
-            ["us-east-1.contoso.com", "eu-west-1.contoso.com"],
-            "contoso.com",
+            ["us-east-1.alpha.invalid", "eu-west-1.alpha.invalid"],
+            "alpha.invalid",
         )
         assert any(o.category == "Region-like Labels" for o in obs)
         geo = next(o for o in obs if o.category == "Region-like Labels")
@@ -187,8 +187,8 @@ class TestObservationLanguage:
 
     def test_shard_observation_is_hedged(self):
         obs = lexical_observations(
-            ["t-1234.contoso.com", "org-acme.contoso.com"],
-            "contoso.com",
+            ["t-1234.alpha.invalid", "org-delta.alpha.invalid"],
+            "alpha.invalid",
         )
         tenant = next(o for o in obs if o.category == "Tenant-like Labels")
         assert tenant.statement.lower().startswith("2 observed public names")
@@ -197,13 +197,13 @@ class TestObservationLanguage:
 
     def test_sample_labels_capped_at_3(self):
         subs = [
-            "dev.contoso.com",
-            "stg.contoso.com",
-            "prod.contoso.com",
-            "uat.contoso.com",
-            "qa.contoso.com",
+            "dev.alpha.invalid",
+            "stg.alpha.invalid",
+            "prod.alpha.invalid",
+            "uat.alpha.invalid",
+            "qa.alpha.invalid",
         ]
-        obs = lexical_observations(subs, "contoso.com")
+        obs = lexical_observations(subs, "alpha.invalid")
         assert obs[0].match_count == 5
         assert len(obs[0].sample_labels) == 3
 
@@ -211,12 +211,12 @@ class TestObservationLanguage:
 class TestMultipleCategoriesObserved:
     def test_env_and_region_both_fire(self):
         subs = [
-            "dev.contoso.com",
-            "stg.contoso.com",
-            "us-east-1.contoso.com",
-            "eu-west-1.contoso.com",
+            "dev.alpha.invalid",
+            "stg.alpha.invalid",
+            "us-east-1.alpha.invalid",
+            "eu-west-1.alpha.invalid",
         ]
-        obs = lexical_observations(subs, "contoso.com")
+        obs = lexical_observations(subs, "alpha.invalid")
         categories = {o.category for o in obs}
         assert "Environment-like Labels" in categories
         assert "Region-like Labels" in categories

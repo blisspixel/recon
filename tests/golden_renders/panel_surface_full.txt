@@ -1,5 +1,5 @@
-Contoso Ltd
-contoso.com
+Synthetic Alpha Ltd
+alpha.invalid
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (role unavailable)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
@@ -14,17 +14,17 @@ Services
 
 
 Related domains
-  api.contoso.com, login.contoso.com
+  api.alpha.invalid, login.alpha.invalid
 
 External surface (9)
-  login.contoso.com         Auth0, Cloudflare
-  sso.contoso.com           Auth0
-  support.contoso.com       Zendesk
+  login.alpha.invalid       Auth0, Cloudflare
+  sso.alpha.invalid         Auth0
+  support.alpha.invalid     Zendesk
 
   Fastly (6)
     cdn1, cdn2, cdn3, cdn4, cdn5, cdn6
 
-  3 unclassified subdomains — `recon discover contoso.com` to surface fingerprint candidates
+  3 unclassified subdomains: `recon discover alpha.invalid` to surface fingerprint candidates
 
 
 Insights

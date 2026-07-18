@@ -36,12 +36,12 @@ from recon_tool.signals import (
 
 
 def _make_tenant_info(**overrides: object) -> TenantInfo:
-    """Create a TenantInfo with Contoso defaults, overriding specific fields."""
+    """Create a TenantInfo with Synthetic Alpha defaults, overriding specific fields."""
     defaults: dict[str, object] = {
-        "tenant_id": "contoso-tenant-id",
-        "display_name": "Contoso Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "tenant_id": "alpha-tenant-id",
+        "display_name": "Synthetic Alpha Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.MEDIUM,
     }
     defaults.update(overrides)
@@ -111,9 +111,9 @@ class TestTenantInfoNewFields:
             info.dmarc_pct = 100  # type: ignore[misc]
 
     def test_all_three_fields_set_together(self) -> None:
-        """Northwind Traders with full email topology."""
+        """Synthetic Gamma with full email topology."""
         info = _make_tenant_info(
-            display_name="Northwind Traders",
+            display_name="Synthetic Gamma",
             primary_email_provider="Microsoft 365",
             email_gateway="Proofpoint",
             dmarc_pct=25,
@@ -220,12 +220,12 @@ class TestExpectedCounterpartsParsing:
     """Verify expected_counterparts parsing in _validate_and_build_signal()."""
 
     def _build_signal_dict(self, **overrides: object) -> dict[str, object]:
-        """Minimal valid signal dict for Fabrikam test signals."""
+        """Minimal valid signal dict for Synthetic Beta test signals."""
         base: dict[str, object] = {
-            "name": "Fabrikam Test Signal",
+            "name": "Synthetic Beta Test Signal",
             "category": "Test",
             "confidence": "medium",
-            "description": "Test signal for Fabrikam Corp",
+            "description": "Test signal for Synthetic Beta Corp",
             "requires": {"any": ["openai"]},
             "min_matches": 1,
         }
@@ -356,15 +356,15 @@ class TestDmarcRuaDetectionType:
         from recon_tool.fingerprints import _validate_fingerprint  # pyright: ignore[reportPrivateUsage]
 
         fp_dict = {
-            "name": "Contoso DMARC Vendor",
-            "slug": "contoso-dmarc",
+            "name": "Synthetic Alpha DMARC Vendor",
+            "slug": "alpha-dmarc",
             "category": "Email Governance",
             "confidence": "high",
-            "detections": [{"type": "dmarc_rua", "pattern": "contoso.com"}],
+            "detections": [{"type": "dmarc_rua", "pattern": "alpha.invalid"}],
         }
         result = _validate_fingerprint(fp_dict, "test")
         assert result is not None
-        assert result.slug == "contoso-dmarc"
+        assert result.slug == "alpha-dmarc"
         assert result.detections[0].type == "dmarc_rua"
 
 
@@ -387,7 +387,7 @@ class TestSourceResultNewFields:
         assert result.dmarc_pct == 75
 
     def test_raw_dns_records_set_explicitly(self) -> None:
-        records = (("TXT", "v=spf1 include:_spf.google.com ~all"), ("MX", "10 mail.contoso.com"))
+        records = (("TXT", "v=spf1 include:_spf.google.com ~all"), ("MX", "10 mail.alpha.invalid"))
         result = SourceResult(source_name="DNS", raw_dns_records=records)
         assert result.raw_dns_records == records
         assert len(result.raw_dns_records) == 2

@@ -69,8 +69,8 @@ def _info_without_clusters() -> TenantInfo:
     return TenantInfo(
         tenant_id=None,
         display_name="Empty",
-        default_domain="empty.com",
-        queried_domain="empty.com",
+        default_domain="empty.invalid",
+        queried_domain="empty.invalid",
         confidence=ConfidenceLevel.LOW,
         infrastructure_clusters=None,
     )
@@ -240,7 +240,7 @@ class TestGetInfrastructureClusters:
 
     def test_skipped_envelope_when_no_report(self, stub_resolve):
         stub_resolve(_info_without_clusters())
-        payload = asyncio.run(server.get_infrastructure_clusters("empty.com"))
+        payload = asyncio.run(server.get_infrastructure_clusters("empty.invalid"))
         assert payload["algorithm"] == "skipped"
         assert payload["modularity"] == 0.0
         assert payload["clusters"] == []
@@ -304,7 +304,7 @@ class TestExportGraph:
 
     def test_skipped_envelope_when_no_report(self, stub_resolve):
         stub_resolve(_info_without_clusters())
-        payload = asyncio.run(server.export_graph("empty.com"))
+        payload = asyncio.run(server.export_graph("empty.invalid"))
         assert payload["algorithm"] == "skipped"
         assert payload["nodes"] == []
         assert payload["edges"] == []

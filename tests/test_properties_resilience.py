@@ -66,7 +66,7 @@ def _raw_subdomain_names(domain: str) -> st.SearchStrategy[list[str]]:
     valid = _label.map(lambda lbl: f"{lbl}.{domain}")
     wildcard = st.just(f"*.{domain}")
     noise = st.sampled_from([f"{p}{domain}" for p in SKIP_PREFIXES])
-    other_domain = _label.map(lambda lbl: f"{lbl}.other.com")
+    other_domain = _label.map(lambda lbl: f"{lbl}.other.invalid")
     bare = st.just(domain)
     return st.lists(st.one_of(valid, wildcard, noise, other_domain, bare), max_size=200)
 
@@ -190,8 +190,8 @@ class TestProperty3CrtshDegradedDerivation:
         ti = TenantInfo(
             tenant_id="t1",
             display_name="Test",
-            default_domain="test.com",
-            queried_domain="test.com",
+            default_domain="test.invalid",
+            queried_domain="test.invalid",
             degraded_sources=degraded,
         )
         assert ti.crtsh_degraded == ("crt.sh" in degraded)
@@ -221,7 +221,7 @@ class TestProperty4MergerDegradedUnion:
         for r in results:
             expected.update(r.degraded_sources)
 
-        merged = merge_results(results, queried_domain="test.com")
+        merged = merge_results(results, queried_domain="test.invalid")
         assert set(merged.degraded_sources) == expected
 
 
@@ -240,8 +240,8 @@ def _make_ti_with_degraded(degraded: tuple[str, ...]) -> TenantInfo:
     return TenantInfo(
         tenant_id="t1",
         display_name="Test Corp",
-        default_domain="test.com",
-        queried_domain="test.com",
+        default_domain="test.invalid",
+        queried_domain="test.invalid",
         confidence=ConfidenceLevel.MEDIUM,
         sources=("dns_records",),
         services=("DMARC",),
@@ -312,8 +312,8 @@ class TestProperty6JsonPartialKey:
         ti = TenantInfo(
             tenant_id="t1",
             display_name="Test",
-            default_domain="test.com",
-            queried_domain="test.com",
+            default_domain="test.invalid",
+            queried_domain="test.invalid",
             confidence=ConfidenceLevel.MEDIUM,
             sources=("dns_records",),
             services=("DMARC",),

@@ -108,7 +108,7 @@ class TestBoundaryValidators:
 
     def test_has_no_control_chars(self) -> None:
         assert _has_no_control_chars("DigiCert Inc")
-        assert _has_no_control_chars("Contoso, Ltd.")
+        assert _has_no_control_chars("Synthetic Alpha, Ltd.")
         assert _has_no_control_chars("")  # vacuously true
         # Café — non-control Unicode is preserved, so the predicate accepts it.
         assert _has_no_control_chars("Café")
@@ -120,15 +120,15 @@ class TestBoundaryValidators:
         assert not _has_no_control_chars("x\x85")  # C1 NEL
 
     def test_is_normalized_domain(self) -> None:
-        assert _is_normalized_domain("contoso.com")
-        assert _is_normalized_domain("sub.northwindtraders.co.uk")
-        assert _is_normalized_domain("xn--mnchen-3ya.de")  # punycode IDN
+        assert _is_normalized_domain("alpha.invalid")
+        assert _is_normalized_domain("sub.gamma.invalid")
+        assert _is_normalized_domain("xn--caf-dma.invalid")  # punycode IDN
         # Uppercase is not normalized (validate_domain lowercases before return).
-        assert not _is_normalized_domain("Contoso.com")
+        assert not _is_normalized_domain("Alpha.Invalid")
         # Not a domain grammar at all.
         assert not _is_normalized_domain("not a domain")
         assert not _is_normalized_domain("")
-        assert not _is_normalized_domain("https://contoso.com")  # scheme not stripped
+        assert not _is_normalized_domain("https://alpha.invalid")  # scheme not stripped
 
 
 class TestContractFires:
@@ -137,7 +137,7 @@ class TestContractFires:
     def test_validator_post_raises_on_unnormalized_domain(self) -> None:
         @deal.post(_is_normalized_domain)
         def _bad() -> str:
-            return "NotLowercased.COM"  # violates the normalized-domain postcondition
+            return "NotLowercased.invalid"  # violates the normalized-domain postcondition
 
         with pytest.raises(deal.PostContractError):
             _bad()

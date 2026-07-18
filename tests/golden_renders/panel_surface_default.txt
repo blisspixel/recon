@@ -1,5 +1,5 @@
-Contoso Ltd
-contoso.com
+Synthetic Alpha Ltd
+alpha.invalid
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (role unavailable)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
@@ -15,13 +15,13 @@ Services
 
 
 High-signal related domains
-  api.contoso.com, login.contoso.com
+  api.alpha.invalid, login.alpha.invalid
 
 Unclassified surface
   3 CNAME chain termini reached, no fingerprint match. We walked them but cannot name them — open a fingerprint PR or 
 run
-  `recon discover contoso.com` to triage candidates.
-  examples: weird.contoso.com → origin.unknown.net, legacy.contoso.com → old.vendor.net
+  `recon discover alpha.invalid` to triage candidates.
+  examples: weird.alpha.invalid → origin.unknown.example, legacy.alpha.invalid → old.vendor.example
 
 Insights
   Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)

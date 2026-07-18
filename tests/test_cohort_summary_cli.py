@@ -85,22 +85,22 @@ def _info(
 
 def _cohort() -> dict[str, TenantInfo]:
     return {
-        "contoso.com": _info(
-            "contoso.com",
+        "alpha.invalid": _info(
+            "alpha.invalid",
             ("Microsoft 365",),
             ("microsoft365",),
             "reject",
             posteriors=(_po("m365_tenant", 0.93, 0.85, 0.97),),
         ),
-        "northwind.com": _info(
-            "northwind.com",
+        "gamma.invalid": _info(
+            "gamma.invalid",
             ("Microsoft 365",),
             ("microsoft365",),
             "quarantine",
             posteriors=(_po("m365_tenant", 0.9, 0.82, 0.96),),
         ),
-        "fabrikam.com": _info(
-            "fabrikam.com",
+        "beta.invalid": _info(
+            "beta.invalid",
             ("Google Workspace",),
             ("google-workspace",),
             "none",

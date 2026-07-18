@@ -40,7 +40,7 @@ def _with_secondary_mail_service(info: TenantInfo) -> TenantInfo:
             *info.evidence,
             EvidenceRecord(
                 source_type="CNAME",
-                raw_value="email.contoso.com -> u123.wl.sendgrid.net",
+                raw_value="email.alpha.invalid -> u123.wl.sendgrid.net",
                 rule_name="SendGrid",
                 slug="sendgrid",
             ),

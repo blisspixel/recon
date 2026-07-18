@@ -39,12 +39,12 @@ from mcp.server.fastmcp.exceptions import ToolError
 
 
 def _make_fingerprint(
-    name: str = "Contoso Platform",
-    slug: str = "contoso-platform",
+    name: str = "Synthetic Alpha Platform",
+    slug: str = "alpha-platform",
     category: str = "SaaS",
     confidence: str = "high",
     det_type: str = "txt",
-    pattern: str = "^contoso-verification=",
+    pattern: str = "^alpha-verification=",
     m365: bool = False,
 ) -> Fingerprint:
     """Create a minimal valid Fingerprint for testing."""
@@ -99,11 +99,11 @@ class TestEphemeralCoreFunctions:
 
     def test_inject_then_load_includes_ephemeral(self) -> None:
         """inject → load_fingerprints() includes ephemeral fingerprint."""
-        fp = _make_fingerprint(slug="northwind-test")
+        fp = _make_fingerprint(slug="gamma-test")
         inject_ephemeral(fp)
         all_fps = load_fingerprints()
         slugs = {f.slug for f in all_fps}
-        assert "northwind-test" in slugs
+        assert "gamma-test" in slugs
 
     def test_clear_then_get_returns_empty(self) -> None:
         """clear → get returns empty collection."""
@@ -114,18 +114,18 @@ class TestEphemeralCoreFunctions:
 
     def test_clear_then_load_excludes_ephemeral(self) -> None:
         """clear → load_fingerprints() excludes ephemeral fingerprint."""
-        fp = _make_fingerprint(slug="fabrikam-temp")
+        fp = _make_fingerprint(slug="beta-temp")
         inject_ephemeral(fp)
         clear_ephemeral()
         all_fps = load_fingerprints()
         slugs = {f.slug for f in all_fps}
-        assert "fabrikam-temp" not in slugs
+        assert "beta-temp" not in slugs
 
     def test_clear_returns_correct_count(self) -> None:
         """clear returns correct count of removed fingerprints."""
-        inject_ephemeral(_make_fingerprint(slug="contoso-a"))
-        inject_ephemeral(_make_fingerprint(slug="contoso-b"))
-        inject_ephemeral(_make_fingerprint(slug="contoso-c"))
+        inject_ephemeral(_make_fingerprint(slug="alpha-a"))
+        inject_ephemeral(_make_fingerprint(slug="alpha-b"))
+        inject_ephemeral(_make_fingerprint(slug="alpha-c"))
         count = clear_ephemeral()
         assert count == 3
 
@@ -138,7 +138,7 @@ class TestEphemeralCoreFunctions:
         """_get_detections and load_fingerprints caches cleared on inject."""
         # Load fingerprints to populate cache
         before = load_fingerprints()
-        fp = _make_fingerprint(slug="contoso-cache-test")
+        fp = _make_fingerprint(slug="alpha-cache-test")
         inject_ephemeral(fp)
         after = load_fingerprints()
         # After inject, the new fingerprint should appear (cache was cleared)
@@ -146,7 +146,7 @@ class TestEphemeralCoreFunctions:
 
     def test_cache_invalidation_on_clear(self) -> None:
         """_get_detections and load_fingerprints caches cleared on clear."""
-        fp = _make_fingerprint(slug="contoso-cache-clear")
+        fp = _make_fingerprint(slug="alpha-cache-clear")
         inject_ephemeral(fp)
         with_ephemeral = load_fingerprints()
         clear_ephemeral()
@@ -156,11 +156,11 @@ class TestEphemeralCoreFunctions:
     def test_m365_views_invalidate_on_inject_and_clear(self) -> None:
         before_names = get_m365_names()
         before_slugs = get_m365_slugs()
-        fp = _make_fingerprint(name="Contoso M365", slug="contoso-m365", m365=True)
+        fp = _make_fingerprint(name="Synthetic Alpha M365", slug="alpha-m365", m365=True)
 
         inject_ephemeral(fp)
-        assert "Contoso M365" in get_m365_names()
-        assert "contoso-m365" in get_m365_slugs()
+        assert "Synthetic Alpha M365" in get_m365_names()
+        assert "alpha-m365" in get_m365_slugs()
 
         clear_ephemeral()
         assert get_m365_names() == before_names
@@ -168,8 +168,8 @@ class TestEphemeralCoreFunctions:
 
     def test_multiple_inject_all_present(self) -> None:
         """Multiple injections → all fingerprints present in get_ephemeral()."""
-        fp1 = _make_fingerprint(slug="northwind-a")
-        fp2 = _make_fingerprint(slug="northwind-b")
+        fp1 = _make_fingerprint(slug="gamma-a")
+        fp2 = _make_fingerprint(slug="gamma-b")
         inject_ephemeral(fp1)
         inject_ephemeral(fp2)
         result = get_ephemeral()
@@ -188,10 +188,10 @@ class TestEphemeralCoreFunctions:
         assert get_ephemeral() == ()
 
     def test_inject_rejects_existing_ephemeral_slug_collision(self) -> None:
-        inject_ephemeral(_make_fingerprint(slug="contoso-unique"))
+        inject_ephemeral(_make_fingerprint(slug="alpha-unique"))
 
         with pytest.raises(ValueError, match="already exists"):
-            inject_ephemeral(_make_fingerprint(slug="contoso-unique", pattern="^other="))
+            inject_ephemeral(_make_fingerprint(slug="alpha-unique", pattern="^other="))
 
         assert len(get_ephemeral()) == 1
 
@@ -200,9 +200,9 @@ class TestEphemeralCoreFunctions:
         [
             "SPF: strict (-all)",
             "Google Workspace CSE",
-            "CAA: Acme",
-            "CDN: Acme",
-            "CSE Key Manager: Acme",
+            "CAA: Synthetic Delta",
+            "CDN: Synthetic Delta",
+            "CSE Key Manager: Synthetic Delta",
             "Google Workspace: Drive",
         ],
     )
@@ -211,7 +211,7 @@ class TestEphemeralCoreFunctions:
             inject_ephemeral(
                 _make_fingerprint(
                     name=reserved_name,
-                    slug="contoso-semantic-name",
+                    slug="alpha-semantic-name",
                 )
             )
 
@@ -221,8 +221,8 @@ class TestEphemeralCoreFunctions:
         """Oversized single ephemeral fingerprint is rejected before storage."""
         detections = tuple(DetectionRule(type="txt", pattern=f"^quota-{idx}=") for idx in range(21))
         fp = Fingerprint(
-            name="Contoso Quota",
-            slug="contoso-quota",
+            name="Synthetic Alpha Quota",
+            slug="alpha-quota",
             category="SaaS",
             confidence="high",
             m365=False,
@@ -242,8 +242,8 @@ class TestEphemeralCoreFunctions:
             )
             inject_ephemeral(
                 Fingerprint(
-                    name=f"Contoso Quota {fp_idx}",
-                    slug=f"contoso-quota-{fp_idx}",
+                    name=f"Synthetic Alpha Quota {fp_idx}",
+                    slug=f"alpha-quota-{fp_idx}",
                     category="SaaS",
                     confidence="high",
                     m365=False,
@@ -253,7 +253,7 @@ class TestEphemeralCoreFunctions:
 
         assert len(get_ephemeral()) == 25
         with pytest.raises(EphemeralCapacityError, match="Ephemeral detection cap"):
-            inject_ephemeral(_make_fingerprint(slug="contoso-overflow", pattern="^contoso-overflow="))
+            inject_ephemeral(_make_fingerprint(slug="alpha-overflow", pattern="^alpha-overflow="))
         assert len(get_ephemeral()) == 25
 
 
@@ -269,16 +269,16 @@ class TestInjectEphemeralFingerprintMCP:
         from recon_tool.server import inject_ephemeral_fingerprint
 
         result = await inject_ephemeral_fingerprint(
-            name="Contoso Analytics",
-            slug="contoso-analytics",
+            name="Synthetic Alpha Analytics",
+            slug="alpha-analytics",
             category="SaaS",
             confidence="high",
-            detections=[{"type": "txt", "pattern": "^contoso-analytics="}],
+            detections=[{"type": "txt", "pattern": "^alpha-analytics="}],
         )
         data = result
         assert data["status"] == "ok"
-        assert data["name"] == "Contoso Analytics"
-        assert data["slug"] == "contoso-analytics"
+        assert data["name"] == "Synthetic Alpha Analytics"
+        assert data["slug"] == "alpha-analytics"
         assert data["detections_accepted"] == 1
 
     @pytest.mark.asyncio
@@ -288,11 +288,11 @@ class TestInjectEphemeralFingerprintMCP:
 
         with pytest.raises(ToolError):
             await inject_ephemeral_fingerprint(
-                name="Fabrikam Widget",
-                slug="fabrikam-widget",
+                name="Synthetic Beta Widget",
+                slug="beta-widget",
                 category="SaaS",
                 confidence="high",
-                detections=[{"type": "invalid_type", "pattern": "fabrikam"}],
+                detections=[{"type": "invalid_type", "pattern": "beta"}],
             )
 
     @pytest.mark.asyncio
@@ -302,8 +302,8 @@ class TestInjectEphemeralFingerprintMCP:
 
         with pytest.raises(ToolError):
             await inject_ephemeral_fingerprint(
-                name="Northwind Unsafe",
-                slug="northwind-unsafe",
+                name="Synthetic Gamma Unsafe",
+                slug="gamma-unsafe",
                 category="SaaS",
                 confidence="high",
                 detections=[{"type": "txt", "pattern": "(a+)+"}],
@@ -318,8 +318,8 @@ class TestInjectEphemeralFingerprintMCP:
         pattern = "_proof:^a*a*a*a*a*b$" if detection_type == "subdomain_txt" else "^a*a*a*a*a*b$"
         with pytest.raises(ToolError):
             await inject_ephemeral_fingerprint(
-                name="Northwind Polynomial",
-                slug=f"northwind-polynomial-{detection_type}",
+                name="Synthetic Gamma Polynomial",
+                slug=f"gamma-polynomial-{detection_type}",
                 category="SaaS",
                 confidence="high",
                 detections=[{"type": detection_type, "pattern": pattern}],
@@ -332,8 +332,8 @@ class TestInjectEphemeralFingerprintMCP:
 
         with pytest.raises(ToolError):
             await inject_ephemeral_fingerprint(
-                name="Contoso Empty",
-                slug="contoso-empty",
+                name="Synthetic Alpha Empty",
+                slug="alpha-empty",
                 category="SaaS",
                 confidence="high",
                 detections=[],
@@ -345,11 +345,11 @@ class TestInjectEphemeralFingerprintMCP:
         from recon_tool.server import inject_ephemeral_fingerprint
 
         result = await inject_ephemeral_fingerprint(
-            name="Fabrikam Conf",
-            slug="fabrikam-conf",
+            name="Synthetic Beta Conf",
+            slug="beta-conf",
             category="SaaS",
             confidence="ultra-high",
-            detections=[{"type": "txt", "pattern": "^fabrikam-conf="}],
+            detections=[{"type": "txt", "pattern": "^beta-conf="}],
         )
         data = result
         # _validate_fingerprint defaults invalid confidence to "medium" and still succeeds
@@ -361,13 +361,13 @@ class TestInjectEphemeralFingerprintMCP:
         from recon_tool.server import inject_ephemeral_fingerprint
 
         result = await inject_ephemeral_fingerprint(
-            name="Contoso Multi",
-            slug="contoso-multi",
+            name="Synthetic Alpha Multi",
+            slug="alpha-multi",
             category="SaaS",
             confidence="high",
             detections=[
-                {"type": "txt", "pattern": "^contoso-multi="},
-                {"type": "spf", "pattern": "include:contoso.example.com"},
+                {"type": "txt", "pattern": "^alpha-multi="},
+                {"type": "spf", "pattern": "include:alpha.example.com"},
             ],
         )
         data = result
@@ -381,11 +381,11 @@ class TestInjectEphemeralFingerprintMCP:
 
         with pytest.raises(ToolError, match="detection cap"):
             await inject_ephemeral_fingerprint(
-                name="Contoso Oversized",
-                slug="contoso-oversized",
+                name="Synthetic Alpha Oversized",
+                slug="alpha-oversized",
                 category="SaaS",
                 confidence="high",
-                detections=[{"type": "invalid_type", "pattern": f"^contoso-{idx}="} for idx in range(21)],
+                detections=[{"type": "invalid_type", "pattern": f"^alpha-{idx}="} for idx in range(21)],
             )
         assert get_ephemeral() == ()
 
@@ -411,8 +411,8 @@ class TestListEphemeralFingerprintsMCP:
         from recon_tool.server import list_ephemeral_fingerprints
 
         fp = _make_fingerprint(
-            name="Northwind CRM",
-            slug="northwind-crm",
+            name="Synthetic Gamma CRM",
+            slug="gamma-crm",
             category="CRM",
             confidence="medium",
         )
@@ -421,8 +421,8 @@ class TestListEphemeralFingerprintsMCP:
         result = await list_ephemeral_fingerprints()
         data = result
         assert len(data) == 1
-        assert data[0]["name"] == "Northwind CRM"
-        assert data[0]["slug"] == "northwind-crm"
+        assert data[0]["name"] == "Synthetic Gamma CRM"
+        assert data[0]["slug"] == "gamma-crm"
         assert data[0]["category"] == "CRM"
         assert data[0]["confidence"] == "medium"
         assert data[0]["detection_count"] == 1
@@ -449,8 +449,8 @@ class TestClearEphemeralFingerprintsMCP:
         """Clear when populated → correct count."""
         from recon_tool.server import clear_ephemeral_fingerprints
 
-        inject_ephemeral(_make_fingerprint(slug="contoso-x"))
-        inject_ephemeral(_make_fingerprint(slug="contoso-y"))
+        inject_ephemeral(_make_fingerprint(slug="alpha-x"))
+        inject_ephemeral(_make_fingerprint(slug="alpha-y"))
 
         result = await clear_ephemeral_fingerprints()
         data = result
@@ -490,12 +490,12 @@ class TestReevaluateDomainMCP:
         """Uncached domain → error JSON 'No cached data...'."""
         from recon_tool.server import reevaluate_domain
 
-        raw = "https://www.contoso.com/private/path?token=secret"
+        raw = "https://www.alpha.invalid/private/path?token=secret"
         with pytest.raises(ToolError) as exc_info:
             await reevaluate_domain(raw)
 
         message = str(exc_info.value)
-        assert "No cached data for contoso.com" in message
+        assert "No cached data for alpha.invalid" in message
         assert raw not in message
         assert "/private/path" not in message
 
@@ -509,25 +509,25 @@ class TestReevaluateDomainMCP:
         from recon_tool.models import SourceResult
         from recon_tool.server import _cache_set, reevaluate_domain  # pyright: ignore[reportPrivateUsage]
 
-        source = SourceResult(source_name="DNS", display_name="Contoso Ltd")
-        info = merge_results([source], "contoso.com")
-        _cache_set("contoso.com", info, [source])
+        source = SourceResult(source_name="DNS", display_name="Synthetic Alpha Ltd")
+        info = merge_results([source], "alpha.invalid")
+        _cache_set("alpha.invalid", info, [source])
 
         def fail(_results: object, domain: str) -> None:
-            assert domain == "contoso.com"
+            assert domain == "alpha.invalid"
             raise RuntimeError("boom")
 
         monkeypatch.setattr("recon_tool.merger.merge_results", fail)
-        raw = "https://www.contoso.com/private/path?token=secret"
+        raw = "https://www.alpha.invalid/private/path?token=secret"
 
         with caplog.at_level("ERROR", logger="recon"), pytest.raises(ToolError) as exc_info:
             await reevaluate_domain(raw)
 
         message = str(exc_info.value)
-        assert "Error re-evaluating contoso.com" in message
+        assert "Error re-evaluating alpha.invalid" in message
         assert raw not in message
         assert "/private/path" not in message
-        assert "merge failed for contoso.com" in caplog.text
+        assert "merge failed for alpha.invalid" in caplog.text
         assert raw not in caplog.text
         assert "/private/path" not in caplog.text
 
@@ -540,14 +540,14 @@ class TestReevaluateDomainMCP:
         # Build a minimal cached entry
         source = SourceResult(
             source_name="DNS",
-            display_name="Contoso Ltd",
-            default_domain="contoso.example.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.example.com",
             detected_services=("DMARC",),
             detected_slugs=("microsoft365",),
             evidence=(
                 EvidenceRecord(
                     source_type="MX",
-                    raw_value="contoso-example-com.mail.protection.outlook.com",
+                    raw_value="alpha-example-com.mail.protection.outlook.com",
                     rule_name="Microsoft 365",
                     slug="microsoft365",
                 ),
@@ -557,14 +557,14 @@ class TestReevaluateDomainMCP:
 
         # Use an apex domain: reevaluate_domain validates input, which reduces a
         # sub-host to its registrable apex, so the cache key must be the apex too.
-        info = merge_results([source], "contoso.com")
-        _cache_set("contoso.com", info, [source])
+        info = merge_results([source], "alpha.invalid")
+        _cache_set("alpha.invalid", info, [source])
 
-        result = await reevaluate_domain("contoso.com")
+        result = await reevaluate_domain("alpha.invalid")
         data = result
         # Should return valid tenant info JSON
         assert "display_name" in data
-        assert data["queried_domain"] == "contoso.com"
+        assert data["queried_domain"] == "alpha.invalid"
 
     @pytest.mark.asyncio
     async def test_zero_network_calls(self) -> None:
@@ -576,20 +576,20 @@ class TestReevaluateDomainMCP:
 
         source = SourceResult(
             source_name="DNS",
-            display_name="Fabrikam Inc",
-            default_domain="fabrikam.example.com",
+            display_name="Synthetic Beta Inc",
+            default_domain="beta.example.com",
             detected_services=("DMARC",),
             detected_slugs=(),
             evidence=(),
         )
         from recon_tool.merger import merge_results
 
-        info = merge_results([source], "fabrikam.com")
-        _cache_set("fabrikam.com", info, [source])
+        info = merge_results([source], "beta.invalid")
+        _cache_set("beta.invalid", info, [source])
 
         # Patch resolve_tenant to verify it's never called
         with patch("recon_tool.server_app.resolve_tenant", new_callable=AsyncMock) as mock_resolve:
-            result = await reevaluate_domain("fabrikam.com")
+            result = await reevaluate_domain("beta.invalid")
             mock_resolve.assert_not_called()
 
         data = result
@@ -604,26 +604,26 @@ class TestReevaluateDomainMCP:
         # Cache a domain with a TXT record that matches our ephemeral fingerprint
         source = SourceResult(
             source_name="DNS",
-            display_name="Northwind Traders",
-            default_domain="northwind.example.com",
+            display_name="Synthetic Gamma",
+            default_domain="gamma.example.com",
             detected_services=("DMARC",),
             detected_slugs=(),
             evidence=(),
-            raw_dns_records=(("TXT", "northwind-verification=abc123"),),
+            raw_dns_records=(("TXT", "gamma-verification=abc123"),),
         )
         from recon_tool.merger import merge_results
 
-        info = merge_results([source], "northwind.com")
-        _cache_set("northwind.com", info, [source])
+        info = merge_results([source], "gamma.invalid")
+        _cache_set("gamma.invalid", info, [source])
 
-        fp = _make_fingerprint(slug="northwind-ephemeral", pattern="^northwind-verification=")
+        fp = _make_fingerprint(slug="gamma-ephemeral", pattern="^gamma-verification=")
         inject_ephemeral(fp)
 
-        result = await reevaluate_domain("northwind.com")
-        assert "northwind-ephemeral" in result["slugs"]
-        assert "Contoso Platform" in result["services"]
+        result = await reevaluate_domain("gamma.invalid")
+        assert "gamma-ephemeral" in result["slugs"]
+        assert "Synthetic Alpha Platform" in result["services"]
         assert {(record["source_type"], record["raw_value"], record["slug"]) for record in result["evidence"]} >= {
-            ("TXT", "northwind-verification=abc123", "northwind-ephemeral")
+            ("TXT", "gamma-verification=abc123", "gamma-ephemeral")
         }
 
     @pytest.mark.asyncio
@@ -634,21 +634,21 @@ class TestReevaluateDomainMCP:
 
         source = SourceResult(
             source_name="dns_records",
-            display_name="Northwind Traders",
-            default_domain="northwind.com",
+            display_name="Synthetic Gamma",
+            default_domain="gamma.invalid",
             degraded_sources=("dns:apex_txt",),
-            raw_dns_records=(("TXT", "northwind-verification=abc123"),),
+            raw_dns_records=(("TXT", "gamma-verification=abc123"),),
         )
         from recon_tool.merger import merge_results
 
-        info = merge_results([source], "northwind.com")
-        _cache_set("northwind.com", info, [source])
-        inject_ephemeral(_make_fingerprint(slug="northwind-ephemeral", pattern="^northwind-verification="))
+        info = merge_results([source], "gamma.invalid")
+        _cache_set("gamma.invalid", info, [source])
+        inject_ephemeral(_make_fingerprint(slug="gamma-ephemeral", pattern="^gamma-verification="))
 
-        result = await reevaluate_domain("northwind.com")
+        result = await reevaluate_domain("gamma.invalid")
 
-        assert "northwind-ephemeral" not in result["slugs"]
-        assert all(record["slug"] != "northwind-ephemeral" for record in result["evidence"])
+        assert "gamma-ephemeral" not in result["slugs"]
+        assert all(record["slug"] != "gamma-ephemeral" for record in result["evidence"])
 
     @pytest.mark.asyncio
     async def test_reevaluation_does_not_duplicate_existing_match(self) -> None:
@@ -656,18 +656,18 @@ class TestReevaluateDomainMCP:
         from recon_tool.models import EvidenceRecord, SourceResult
         from recon_tool.server import _cache_set, reevaluate_domain  # pyright: ignore[reportPrivateUsage]
 
-        fingerprint = _make_fingerprint(slug="northwind-ephemeral", pattern="^northwind-verification=")
+        fingerprint = _make_fingerprint(slug="gamma-ephemeral", pattern="^gamma-verification=")
         inject_ephemeral(fingerprint)
         occurrence = EvidenceRecord(
             source_type="TXT",
-            raw_value="northwind-verification=abc123",
+            raw_value="gamma-verification=abc123",
             rule_name=fingerprint.name,
             slug=fingerprint.slug,
         )
         source = SourceResult(
             source_name="dns_records",
-            display_name="Northwind Traders",
-            default_domain="northwind.com",
+            display_name="Synthetic Gamma",
+            default_domain="gamma.invalid",
             detected_services=(fingerprint.name,),
             detected_slugs=(fingerprint.slug,),
             evidence=(occurrence,),
@@ -675,11 +675,11 @@ class TestReevaluateDomainMCP:
         )
         from recon_tool.merger import merge_results
 
-        info = merge_results([source], "northwind.com")
-        _cache_set("northwind.com", info, [source])
+        info = merge_results([source], "gamma.invalid")
+        _cache_set("gamma.invalid", info, [source])
 
-        first = await reevaluate_domain("northwind.com")
-        second = await reevaluate_domain("northwind.com")
+        first = await reevaluate_domain("gamma.invalid")
+        second = await reevaluate_domain("gamma.invalid")
 
         for result in (first, second):
             matches = [record for record in result["evidence"] if record["slug"] == fingerprint.slug]
@@ -693,24 +693,24 @@ class TestReevaluateDomainMCP:
 
         source = SourceResult(
             source_name="dns_records",
-            display_name="Northwind Traders",
-            default_domain="northwind.com",
-            raw_dns_records=(("TXT", "northwind-verification=abc123"),),
+            display_name="Synthetic Gamma",
+            default_domain="gamma.invalid",
+            raw_dns_records=(("TXT", "gamma-verification=abc123"),),
         )
         from recon_tool.merger import merge_results
 
-        info = merge_results([source], "northwind.com")
-        _cache_set("northwind.com", info, [source])
+        info = merge_results([source], "gamma.invalid")
+        _cache_set("gamma.invalid", info, [source])
         inject_ephemeral(
             _make_fingerprint(
-                slug="northwind-surface",
+                slug="gamma-surface",
                 det_type="cname_target",
-                pattern=r"\.northwind\.example$",
+                pattern=r"\.gamma\.example$",
             )
         )
 
         with pytest.raises(ToolError, match="cannot replay owner-qualified cname_target"):
-            await reevaluate_domain("northwind.com")
+            await reevaluate_domain("gamma.invalid")
 
     @pytest.mark.asyncio
     async def test_clear_removes_ephemeral_projection_collected_before_cache(self) -> None:
@@ -722,18 +722,18 @@ class TestReevaluateDomainMCP:
             clear_ephemeral_fingerprints,
         )
 
-        fingerprint = _make_fingerprint(slug="northwind-ephemeral", pattern="^northwind-verification=")
+        fingerprint = _make_fingerprint(slug="gamma-ephemeral", pattern="^gamma-verification=")
         inject_ephemeral(fingerprint)
         occurrence = EvidenceRecord(
             source_type="TXT",
-            raw_value="northwind-verification=abc123",
+            raw_value="gamma-verification=abc123",
             rule_name=fingerprint.name,
             slug=fingerprint.slug,
         )
         source = SourceResult(
             source_name="dns_records",
-            display_name="Northwind Traders",
-            default_domain="northwind.com",
+            display_name="Synthetic Gamma",
+            default_domain="gamma.invalid",
             detected_services=(fingerprint.name,),
             detected_slugs=(fingerprint.slug,),
             evidence=(occurrence,),
@@ -741,11 +741,11 @@ class TestReevaluateDomainMCP:
         )
         from recon_tool.merger import merge_results
 
-        info = merge_results([source], "northwind.com")
-        _cache_set("northwind.com", info, [source])
+        info = merge_results([source], "gamma.invalid")
+        _cache_set("gamma.invalid", info, [source])
 
         cleared = await clear_ephemeral_fingerprints()
-        cached = _cache_get("northwind.com")
+        cached = _cache_get("gamma.invalid")
 
         assert cleared["removed"] == 1
         assert cached is not None
@@ -769,25 +769,25 @@ class TestEphemeralPipelineIntegration:
         # Before injection, our custom pattern shouldn't exist
         patterns_before = get_txt_patterns()
         slugs_before = {p.slug for p in patterns_before}
-        assert "contoso-scoring" not in slugs_before
+        assert "alpha-scoring" not in slugs_before
 
         # Inject ephemeral fingerprint
-        fp = _make_fingerprint(slug="contoso-scoring", pattern="^contoso-scoring=")
+        fp = _make_fingerprint(slug="alpha-scoring", pattern="^alpha-scoring=")
         inject_ephemeral(fp)
 
         # After injection, the pattern should be available
         patterns_after = get_txt_patterns()
         slugs_after = {p.slug for p in patterns_after}
-        assert "contoso-scoring" in slugs_after
+        assert "alpha-scoring" in slugs_after
 
     def test_unique_txt_fingerprint_is_role_qualified_in_service_output(self) -> None:
         from recon_tool.formatter.classify import categorize_services
         from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
         fingerprint = _make_fingerprint(
-            name="Acme Platform",
-            slug="acme-platform-observation",
-            pattern="^acme-platform=",
+            name="Synthetic Delta Platform",
+            slug="delta-platform-observation",
+            pattern="^delta-platform=",
         )
         inject_ephemeral(fingerprint)
         info = TenantInfo(
@@ -801,7 +801,7 @@ class TestEphemeralPipelineIntegration:
             evidence=(
                 EvidenceRecord(
                     "TXT",
-                    "acme-platform=token",
+                    "delta-platform=token",
                     fingerprint.name,
                     fingerprint.slug,
                 ),
@@ -810,7 +810,7 @@ class TestEphemeralPipelineIntegration:
 
         labels = [label for category in categorize_services(info).values() for label in category]
 
-        assert labels == ["Acme Platform (public TXT account indicator)"]
+        assert labels == ["Synthetic Delta Platform (public TXT account indicator)"]
 
     def test_unique_ephemeral_slug_does_not_impersonate_signal_candidate(self) -> None:
         """A custom match cannot silently acquire a reserved signal meaning."""
@@ -818,9 +818,9 @@ class TestEphemeralPipelineIntegration:
         from recon_tool.signals import evaluate_signals
 
         fp = _make_fingerprint(
-            name="Contoso AI",
-            slug="contoso-ai-observation",
-            pattern="^contoso-openai=",
+            name="Synthetic Alpha AI",
+            slug="alpha-ai-observation",
+            pattern="^alpha-openai=",
         )
         inject_ephemeral(fp)
 
@@ -835,9 +835,9 @@ class TestEphemeralPipelineIntegration:
         from recon_tool.signals import evaluate_signals, load_signals
 
         fp = _make_fingerprint(
-            name="Contoso AI",
-            slug="contoso-ai-observation",
-            pattern="^contoso-openai=",
+            name="Synthetic Alpha AI",
+            slug="alpha-ai-observation",
+            pattern="^alpha-openai=",
         )
         inject_ephemeral(fp)
 
@@ -864,16 +864,16 @@ class TestEphemeralPipelineIntegration:
 _VALID_DET_TYPES = ["txt", "spf", "mx", "ns", "cname", "caa", "srv", "dmarc_rua"]
 _VALID_CONFIDENCES = ["high", "medium", "low"]
 _SAFE_PATTERNS = [
-    "^contoso-verify=",
-    "include:contoso\\.example\\.com",
-    "contoso\\.mail\\.protection\\.outlook\\.com",
-    "ns1\\.contoso\\.example\\.com",
-    "autodiscover\\.contoso\\.example\\.com",
-    "contoso\\.example\\.com",
-    "fabrikam\\.example\\.com",
-    "northwind\\.example\\.com",
-    "^northwind-site-verification=",
-    "^fabrikam-domain-verify=",
+    "^alpha-verify=",
+    "include:alpha\\.example\\.com",
+    "alpha\\.mail\\.protection\\.outlook\\.com",
+    "ns1\\.alpha\\.example\\.com",
+    "autodiscover\\.alpha\\.example\\.com",
+    "alpha\\.example\\.com",
+    "beta\\.example\\.com",
+    "gamma\\.example\\.com",
+    "^gamma-site-verification=",
+    "^beta-domain-verify=",
 ]
 
 
