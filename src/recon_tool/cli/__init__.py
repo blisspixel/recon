@@ -740,9 +740,9 @@ def doctor(
         "to --mcp, which validates the server itself.",
     ),
 ) -> None:
-    """
-    Check installation health and online source connectivity.
-    """
+    """Check installation health and online source connectivity.
+    Synthetic checks: Microsoft identity endpoints, DNS for example.com, and crt.sh. No user-supplied target is queried.
+    --fix, --mcp, and --client are local-only modes."""
     mode_count = int(fix) + int(mcp) + int(client is not None)
     if mode_count > 1:
         get_console().print("[red]Choose exactly one of --fix, --mcp, or --client.[/red]")

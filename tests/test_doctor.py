@@ -6,13 +6,16 @@ checks run without touching the real network. Pushes cli.py coverage.
 
 from __future__ import annotations
 
+from io import StringIO
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
+from rich.console import Console
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
+from recon_tool.cli.doctor import _doctor_render, _render_mcp_checks
 
 runner = CliRunner()
 
@@ -160,6 +163,37 @@ class TestDoctorCommandFailures:
         assert "FAIL  crt.sh" not in result.output
         assert "Core checks passed. Optional enrichment sources are degraded." in result.output
         assert "Some checks failed" not in result.output
+
+
+class TestDoctorDiagnosticRendering:
+    def test_default_rows_escape_markup_strip_controls_and_bound_detail(self) -> None:
+        stream = StringIO()
+        console = Console(file=stream, force_terminal=False, color_system=None, width=120)
+        hostile = "[red]forged[/red]\n  ok  forged-row\x1b]52;c;cGF5bG9hZA==\x07" + "x" * 2500
+
+        has_failures = _doctor_render(console, [("Probe [name]", "fail", hostile)])
+
+        output = stream.getvalue()
+        normalized = " ".join(output.split())
+        assert has_failures
+        assert "Probe [name]" in output
+        assert "[red]forged[/red] ok forged-row]52;c;cGF5bG9hZA==" in normalized
+        assert "\n  ok  forged-row" not in output
+        assert "\x1b" not in output
+        assert "\x07" not in output
+        assert "[truncated]" in output
+
+    def test_mcp_rows_use_the_same_safe_rendering_boundary(self) -> None:
+        stream = StringIO()
+        console = Console(file=stream, force_terminal=False, color_system=None, width=120)
+
+        with patch("recon_tool.cli.doctor.get_console", return_value=console):
+            _render_mcp_checks([("Tools [name]", False, "[red]forged[/red]\n  ok  forged-row")])
+
+        output = stream.getvalue()
+        assert "Tools [name]" in output
+        assert "[red]forged[/red]  ok  forged-row" in output
+        assert "\n  ok  forged-row" not in output
 
 
 class TestDoctorExitCode:

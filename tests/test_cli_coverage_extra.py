@@ -551,3 +551,15 @@ class TestHelpOutput:
         assert result.exit_code == 0
         assert "Review before sharing" in normalized
         assert "domain inputs and local details" in normalized
+
+    def test_doctor_help_discloses_default_contacts_and_local_modes(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("FORCE_COLOR", "1")
+        result = runner.invoke(app, ["doctor", "--help"])
+        normalized = " ".join(click.unstyle(result.output).replace("│", " ").split())
+
+        assert result.exit_code == 0
+        assert "Microsoft identity endpoints" in normalized
+        assert "DNS for example.com" in normalized
+        assert "crt.sh" in normalized
+        assert "No user-supplied target is queried" in normalized
+        assert "local-only" in normalized

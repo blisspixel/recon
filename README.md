@@ -65,6 +65,10 @@ Optionally test online connectivity to recon's public data sources:
 recon doctor
 ```
 
+The default diagnostic uses synthetic requests to Microsoft identity endpoints,
+DNS for `example.com`, and crt.sh. It does not query a user-supplied target.
+The `--fix`, `--mcp`, and `--client` modes are local-only.
+
 Before the first lookup, note that recon makes DNS queries which recursive and
 authoritative DNS infrastructure may observe. Its only default request to a
 target-owned HTTP endpoint is the standards-defined MTA-STS policy fetch at
@@ -133,7 +137,7 @@ recon batch domains.txt --json                 # batch JSON array
 recon batch domains.txt --ndjson               # one record per line
 recon batch domains.txt --summary              # aggregate-only cohort summary
 recon delta contoso.com                        # diff against cached snapshot
-recon cache show mail.contoso.com --exact      # inspect one literal-host CT cache key
+recon cache show mail.contoso.com --exact      # inspect literal-host result and CT cache metadata
 recon cache clear mail.contoso.com --exact     # clear literal-host CT and result cache keys
 recon mcp install --client=cursor              # wire MCP into a client
 recon mcp doctor                               # live MCP handshake check

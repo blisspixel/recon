@@ -8,11 +8,28 @@ from __future__ import annotations
 
 import math
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Generic, TypeVar
 
 from recon_tool.models import ConfidenceLevel
 
 _MAX_CACHE_COUNT = 2_147_483_647
+_T = TypeVar("_T")
+
+
+@dataclass(frozen=True)
+class CacheInspection(Generic[_T]):
+    """Read-only inspection outcome that distinguishes absence from failure."""
+
+    entry: _T | None = None
+    failed: bool = False
+
+
+@dataclass(frozen=True)
+class CacheListing(Generic[_T]):
+    """Validated cache metadata plus the number of unreadable entries."""
+
+    entries: tuple[_T, ...] = ()
+    failed: int = 0
 
 
 @dataclass(frozen=True)
