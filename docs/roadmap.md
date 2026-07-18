@@ -51,13 +51,13 @@ current debt without turning every refinement into feature work.
 | Debt class | Current state | Next boundary |
 |---|---|---|
 | Feature work | Governed by the dependency order below, not by the polish loop | Do not add commands, schemas, hosted surfaces, or inference modes without their existing evidence gate |
-| UX flow | Root help, no-argument onboarding, malformed-input recovery, low-confidence next steps, and batch outcome guidance are aligned in Unreleased | Specify batch all-error exit semantics before considering an opt-in strict mode |
-| Visual polish | Lookup and batch help use task panels, and the terminal result hierarchy is stable | Measure narrow-width help behavior before changing presentation metadata |
+| UX flow | Root help, no-argument onboarding, malformed-input recovery, all-source failure recovery, low-confidence next steps, and batch outcome guidance are implemented on main (Unreleased) | Specify batch all-error exit semantics before considering an opt-in strict mode |
+| Visual polish | Lookup and batch help use task panels; below 70 columns, complete linear help keeps long options visible on main (Unreleased) | Preserve complete option visibility before changing presentation metadata |
 | Observability | MCP validation rejection logs are target-free; unexpected batch details are debug-only; `cache show` exposes payload-free metadata for both disk layers | Define a versioned doctor record before adding a machine-facing operator contract |
-| Reliability | Typed batch errors, bounded workers, truthful cache inspection and clearing, closed-pipe handling, partial results, and explicit exit codes are shipped | Do not change the current batch exit contract without a compatibility decision covering mixed and all-error streams |
-| Security | Rejected MCP arguments and unexpected batch details stay out of default output; doctor rows and persisted cache metadata cross sanitized terminal boundaries | Any exact configured-launcher doctor must require a safe explicit execution boundary |
-| Accessibility | `--plain` is shipped and now appears in canonical onboarding | A linear narrow-help fallback remains bounded debt; do not replace the parser or hide specialist controls |
-| Documentation accuracy | README, generated CLI reference, operational contract, automation examples, and security model track current batch, cache, doctor, first-run, and logging behavior | Keep the eventual versioned doctor record separate from human diagnostic output |
+| Reliability | Typed batch errors, bounded workers, truthful cache inspection and clearing, closed-pipe handling, partial results, and exact exit-code semantics are implemented on main and listed in Unreleased | Do not change the current batch exit contract without a compatibility decision covering mixed and all-error streams |
+| Security | Rejected MCP arguments and unexpected batch details stay out of default output; live MCP, installer, doctor, and persisted-cache diagnostics cross sanitized terminal boundaries on main (Unreleased) | Any exact configured-launcher doctor must require a safe explicit execution boundary |
+| Accessibility | `--plain` is shipped and the complete narrow-help fallback is implemented on main (Unreleased) | Keep both paths complete; do not replace the parser or hide specialist controls |
+| Documentation accuracy | README, generated CLI reference, operational contract, automation examples, security model, and release-gate descriptions track current behavior on main (Unreleased) | Keep the eventual versioned doctor record separate from human diagnostic output |
 
 ## Priority Order
 

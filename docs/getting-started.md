@@ -20,21 +20,26 @@ uv tool install recon-tool
 pipx install recon-tool
 ```
 
-The platform installer prefers `uv`, falls back to `pipx`, and asks you to
-install one of those tools if neither is present. It does not execute a remote
-tool installer on your behalf. Running the same command later updates recon.
+The optional platform helpers prefer `uv`, fall back to `pipx`, and ask you to
+install one of those tools if neither is present. They do not execute a remote
+tool installer on your behalf. Download them from a release-tag checkout and
+review the local file before running it. Running the same local helper later
+updates recon.
 
 **Windows (PowerShell):**
 
 ```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
+powershell -ExecutionPolicy ByPass -File .\scripts\install.ps1
 ```
 
 **macOS or Linux:**
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
+bash scripts/install.sh
 ```
+
+These commands assume a reviewed local checkout. Do not pipe mutable branch
+content directly into a shell.
 
 Open a new terminal after install, then run an offline verification of the
 installed command:
@@ -190,10 +195,20 @@ observations. `--services` remains accepted for compatibility; new
 workflows do not need it.
 
 Use `--explain` when a claim matters. It shows the evidence chain behind the
-result.
+result. Some insight and posture associations are reconstructed, so graph
+reachability is not exact generation-time lineage.
 
 Use `--plain` for screen readers, grep, and other linear-text workflows. It
 removes color and layout while preserving the observation content.
+This is the linear view for a standard single-domain lookup. Chain, compare,
+exposure, and gaps reports use their own formats; batch and delta have
+mode-specific output.
+
+At terminal widths below 70 columns, command help automatically switches to a
+complete linear layout so long option names remain visible.
+
+If a lookup times out or every online source fails, run `recon doctor` to
+check source connectivity, then retry the lookup.
 
 ## Batch and Delta
 

@@ -24,7 +24,9 @@ The root CLI help summary text and the human-facing delta panel label for the
 email control count are clearer. `python -m recon_tool` is now a supported
 entry path. `recon fingerprints new` now includes the current verification
 date in its candidate YAML. The no-argument welcome banner now prioritizes
-plain, JSON, and evidence-review workflows over specialist modes.
+plain, JSON, and evidence-review workflows over specialist modes. Human help
+now names the domain-or-command grammar and uses a complete linear layout below
+70 columns.
 
 ### Changed
 
@@ -81,6 +83,16 @@ plain, JSON, and evidence-review workflows over specialist modes.
 - Project documentation now describes the shipped package, CLI, JSON, and local
   MCP surfaces without implying a separate top-level library facade, and the
   release process now batches ordinary work into coherent package releases.
+- `--explain` and `--plain` documentation now distinguish retained evidence
+  and reconstructed explanation links from exact generation-time lineage, and
+  standard lookup output from mode-specific reports.
+- Local release-readiness text and JSON now identify whether only local checks
+  or local plus remote publication checks were assessed.
+- Installer helper guidance now requires a reviewed release-tag checkout and
+  no longer recommends piping mutable branch content into a shell.
+- Main CI and the tagged release workflow now execute both installed CLI entry
+  points from a built wheel. Publication waits for the separate read-only
+  sealed-wheel smoke job.
 
 ### Fixed
 
@@ -96,6 +108,15 @@ plain, JSON, and evidence-review workflows over specialist modes.
   logs, and exits 4 after rendering all available metadata.
 - Default and MCP doctor rows now strip control bytes, escape Rich markup, and
   bound dynamic diagnostic fields before terminal rendering.
+- Live MCP doctor output, MCP install plans and failures, client doctor output,
+  and doctor-fix paths and failures now cross the same bounded terminal-safety
+  boundary.
+- Timeout and all-source-failure lookups now direct the operator to
+  `recon doctor` before retrying, while preserving the original error and exit
+  code on stderr.
+- Exit-code documentation now distinguishes handled general failures from the
+  CLI last-resort crash handler, which reports unexpected runtime failures as
+  exit 4.
 - Early-closing output pipelines now exit cleanly without creating a crash log.
   Unrelated operating-system errors still use the existing internal-error path.
 - `recon doctor --fix` now lists every supported fingerprint detection type in

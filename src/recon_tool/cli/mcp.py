@@ -11,6 +11,7 @@ import os
 
 import typer
 
+from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_INTERNAL, EXIT_VALIDATION
 from recon_tool.formatter import get_console
 
@@ -93,7 +94,10 @@ def mcp_install_command(
     console = get_console()
 
     if client not in SUPPORTED_CLIENTS:
-        console.print(f"[red]Unknown client `{client}`.[/red]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}")
+        console.print(
+            f"[red]Unknown client `{_safe_markup(client)}`.[/red]\n"
+            f"  Supported: {', '.join(SUPPORTED_CLIENTS)}"
+        )
         raise typer.Exit(EXIT_VALIDATION)
 
     if scope == "auto":
@@ -101,7 +105,7 @@ def mcp_install_command(
     elif scope in {"user", "workspace"}:
         resolved_scope = scope
     else:
-        console.print(f"[red]--scope must be `user`, `workspace`, or `auto` (got `{scope}`)[/red]")
+        console.print(f"[red]--scope must be `user`, `workspace`, or `auto` (got `{_safe_markup(scope)}`)[/red]")
         raise typer.Exit(EXIT_VALIDATION)
 
     # `--config-path ~/foo.json` is a common reflex on macOS / Linux and
@@ -118,14 +122,14 @@ def mcp_install_command(
             force=force,
         )
     except (InstallError, ValueError) as exc:
-        console.print(f"[red]install refused:[/red] {exc}")
+        console.print(f"[red]install refused:[/red] {_safe_markup(exc)}")
         raise typer.Exit(EXIT_VALIDATION) from exc
 
     console.print()
-    console.print(f"  client    {client}")
-    console.print(f"  scope     {resolved_scope}")
-    console.print(f"  path      {plan.path}")
-    console.print(f"  action    {plan.action}")
+    console.print(f"  client    {_safe_markup(client)}")
+    console.print(f"  scope     {_safe_markup(resolved_scope)}")
+    console.print(f"  path      {_safe_markup(plan.path)}")
+    console.print(f"  action    {_safe_markup(plan.action)}")
     if plan.existing_block is not None and plan.action == "replace":
         console.print(
             "  [yellow]existing recon block will be replaced.[/yellow] Use --dry-run to preview without writing."
@@ -151,10 +155,10 @@ def mcp_install_command(
             dry_run=False,
         )
     except (InstallError, ValueError, OSError) as exc:
-        console.print(f"[red]install failed:[/red] {exc}")
+        console.print(f"[red]install failed:[/red] {_safe_markup(exc)}")
         raise typer.Exit(EXIT_INTERNAL) from exc
 
-    console.print(f"  [green]wrote {result.path}[/green]")
+    console.print(f"  [green]wrote {_safe_markup(result.path)}[/green]")
     console.print()
 
     # Emit the cwd-shadow warning when the fallback launch
@@ -163,7 +167,7 @@ def mcp_install_command(
     # so MCP clients on Python 3.11+ are protected.
     fallback_warning = warn_if_fallback()
     if fallback_warning is not None:
-        console.print(f"  [yellow]{fallback_warning}[/yellow]")
+        console.print(f"  [yellow]{_safe_markup(fallback_warning)}[/yellow]")
         console.print()
 
     console.print(
@@ -200,7 +204,7 @@ def mcp_doctor_command() -> None:
     for check in report.checks:
         mark = "ok" if check.status == "ok" else "FAIL"
         style = "green" if check.status == "ok" else "red"
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {check.name} — {check.detail}")
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {_safe_markup(check.name)}: {_safe_markup(check.detail)}")
 
     console.print()
     console.print(f"  elapsed: {report.elapsed_seconds:.2f}s")

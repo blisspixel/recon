@@ -21,6 +21,7 @@ which produces and publishes:
 | **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection | `gh attestation verify <file> --repo blisspixel/recon`; offline consumers can download the `.intoto.jsonl` release asset |
 | **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Fetch the file's PyPI provenance and verify it with `pypi-attestations verify pypi --repository https://github.com/blisspixel/recon <wheel-url>` |
 | **Same-job deterministic-build check** | `SOURCE_DATE_EPOCH` is fixed and CI builds twice in one Ubuntu job, then compares wheel and sdist hashes under the same resolved toolchain | See the bounded recipe and limitations below |
+| **Sealed-wheel execution gate** | A separate read-only release job downloads the sealed wheel and executes both `recon --version` and `python -m recon_tool --version` in isolated environments before either publication channel can run | Inspect the `package-smoke` job in the tagged release workflow run |
 | **CycloneDX SBOM** | Generated from a runtime-requirements export of `uv.lock` (`pip-audit --format=cyclonedx-json`), completed with the `recon-tool` root component and dependency edge, validated as nonempty JSON, and attached to the GitHub Release. The isolated SBOM job may emit an artifact when findings exist because the separate enforcing audit already blocks the release test job. Any SBOM tool, output, or validation failure blocks both PyPI and GitHub publication | Download `recon-tool-<version>.cdx.json` from the release assets and inspect `metadata.component` and the root dependency entry |
 
 ## Consumer verification quick path
@@ -136,14 +137,16 @@ The release jobs are scoped to least privilege. The `build` job runs `uv` and
 the declared Hatchling build backend, which is part of the trusted build-tool
 boundary, then immediately uploads the artifacts. No project runtime
 dependency or unrelated tool runs after artifact creation and before sealing.
-The `test`, `sbom`, and `attest` jobs run on separate runners that never see
-`dist/`, and publish or attestation jobs with elevated OIDC-minted scopes do not
-execute project runtime dependencies. The provenance export job downloads the
+The `package-smoke` job downloads the sealed wheel into a separate read-only
+runner and executes both installed entry points without OIDC or write
+permissions. The `test`, `sbom`, and `attest` jobs run on separate runners that
+never see `dist/`, and publish or attestation jobs with elevated OIDC-minted
+scopes do not execute project runtime dependencies. The provenance export job downloads the
 signed GitHub attestation bundles and uploads a `.intoto.jsonl` artifact for the
 GitHub Release without running project dependency code. The PyPI and GitHub
-release jobs wait for both provenance attestation and the validated SBOM, so a
-release fails closed if either integrity path fails. The full rationale and
-threat model are documented inline in
+release jobs wait for sealed-wheel execution, provenance attestation, and the
+validated SBOM, so a release fails closed if any integrity path fails. The full
+rationale and threat model are documented inline in
 [`release.yml`](../.github/workflows/release.yml).
 
 ## Repository posture checks

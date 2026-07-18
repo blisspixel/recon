@@ -16,16 +16,15 @@ from pathlib import Path
 from typing import Any, Literal, TypeAlias
 
 import typer
-from rich.markup import escape
 
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
+from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import (
     EXIT_ERROR,
     EXIT_NO_DATA,
     EXIT_VALIDATION,
 )
 from recon_tool.formatter import get_console
-from recon_tool.validator import strip_control_chars
 
 McpCheck: TypeAlias = tuple[str, bool, str]
 
@@ -35,17 +34,6 @@ DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
 
 DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
 TemplateCreateStatus: TypeAlias = Literal["created", "exists", "non_file"]
-
-_MAX_DIAGNOSTIC_LEN = 2000
-
-
-def _safe_diagnostic(value: str) -> str:
-    """Sanitize a diagnostic without silently dropping its repair guidance."""
-    cleaned = strip_control_chars(value, max_len=_MAX_DIAGNOSTIC_LEN)
-    if len(value) > _MAX_DIAGNOSTIC_LEN:
-        return f"{cleaned} [truncated]"
-    return cleaned
-
 
 def _classify_template_collision(target: Path) -> TemplateCreateStatus | None:
     """Classify a publish collision without letting a probe mask the original error."""
@@ -92,19 +80,19 @@ def _create_template_atomically(target: Path, content: str) -> TemplateCreateSta
 
 
 _SIGNALS_TEMPLATE = """\
-# Custom signals — merged with built-in signals at load time.
+# Custom signals are merged with built-in signals at load time.
 # Each entry defines a derived intelligence signal.
 #
 # Fields:
 #   name:           Signal display name
-#   category:       Signal category — security, identity, infrastructure, saas
-#   confidence:     Signal confidence — high, medium, low
+#   category:       Signal category: security, identity, infrastructure, saas
+#   confidence:     Signal confidence: high, medium, low
 #   description:    Human-readable description (use hedged language for inferences)
 #   requires:       List of fingerprint slugs required (all must match)
 #   min_matches:    (optional) Minimum number of required slugs that must match
 #   metadata:       (optional) Additional conditions on metadata fields
-#     - field:      Metadata field — dmarc_policy, auth_type, email_security_score
-#       operator:   Comparison — eq, neq, gte, lte
+#     - field:      Metadata field: dmarc_policy, auth_type, email_security_score
+#       operator:   Comparison: eq, neq, gte, lte
 #       value:      Value to compare against
 #
 # Example:
@@ -122,7 +110,7 @@ signals: []
 
 
 _FINGERPRINTS_TEMPLATE = """\
-# Custom fingerprints — merged with built-in fingerprints at load time.
+# Custom fingerprints are merged with built-in fingerprints at load time.
 # Each entry adds a new SaaS/service detection rule.
 #
 # Fields:
@@ -130,8 +118,8 @@ _FINGERPRINTS_TEMPLATE = """\
 #   slug:           Unique identifier (lowercase, hyphens)
 #   type:           Detection type: txt, spf, mx, ns, cname, cname_target, subdomain_txt, caa, srv, dmarc_rua
 #   pattern:        Regex pattern to match against DNS record value
-#   category:       Service category — email, security, identity, saas, infrastructure
-#   provider_group: (optional) Group for display — microsoft365, google-workspace
+#   category:       Service category: email, security, identity, saas, infrastructure
+#   provider_group: (optional) Group for display: microsoft365, google-workspace
 #   display_group:  (optional) Override display grouping
 #
 # Example:
@@ -185,7 +173,7 @@ def doctor_mcp() -> None:
     if instructions:
         checks.append(("Server Instructions", True, f"{len(instructions)} chars"))
     else:
-        checks.append(("Server Instructions", False, "missing — agents may misuse tools"))
+        checks.append(("Server Instructions", False, "missing; agents may misuse tools"))
 
     # 4. Enumerate tools through the public SDK surface.
     tools_ok = True
@@ -260,9 +248,9 @@ def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
     for name, ok, detail in checks:
         mark = "ok" if ok else "FAIL"
         style = "green" if ok else "red"
-        safe_name = escape(_safe_diagnostic(name))
-        safe_detail = escape(_safe_diagnostic(detail))
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {safe_name} \N{EM DASH} {safe_detail}")
+        safe_name = _safe_markup(name)
+        safe_detail = _safe_markup(detail)
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {safe_name}: {safe_detail}")
 
 
 def doctor_client(client: str) -> None:
@@ -279,11 +267,14 @@ def doctor_client(client: str) -> None:
     console.print()
 
     if client not in SUPPORTED_CLIENTS:
-        console.print(f"  [red]unknown client '{escape(client)}'[/red]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}")
+        console.print(
+            f"  [red]unknown client '{_safe_markup(client)}'[/red]\n"
+            f"  Supported: {', '.join(SUPPORTED_CLIENTS)}"
+        )
         raise typer.Exit(EXIT_VALIDATION)
 
     report = check_client(client)  # pyright: ignore[reportArgumentType]
-    console.print(f"  [bold]MCP client config check — {client}[/bold]")
+    console.print(f"  [bold]MCP client config check: {_safe_markup(client)}[/bold]")
     console.print()
 
     _style = {"ok": "green", "warn": "yellow", "fail": "red", "info": "dim"}
@@ -292,12 +283,12 @@ def doctor_client(client: str) -> None:
     for check in report.checks:
         style = _style[check.status]
         mark = _mark[check.status]
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {check.name}: {escape(_safe_diagnostic(check.detail))}")
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {_safe_markup(check.name)}: {_safe_markup(check.detail)}")
 
     if report.notes:
         console.print()
         for note in report.notes:
-            console.print(f"  [dim]note:[/dim] {escape(_safe_diagnostic(note))}")
+            console.print(f"  [dim]note:[/dim] {_safe_markup(note)}")
 
     console.print()
     if report.ok:
@@ -323,7 +314,7 @@ def doctor_fix() -> bool:
     try:
         config_dir.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        console.print(f"[red]Cannot create config directory {config_dir}: {exc}[/red]")
+        console.print(f"[red]Cannot create config directory {_safe_markup(config_dir)}: {_safe_markup(exc)}[/red]")
         return False
 
     templates = [
@@ -337,15 +328,15 @@ def doctor_fix() -> bool:
         try:
             status = _create_template_atomically(target, content)
             if status == "created":
-                console.print(f"  [green]created:[/green] {target}")
+                console.print(f"  [green]created:[/green] {_safe_markup(target)}")
             elif status == "exists":
-                console.print(f"  already exists: {target}")
+                console.print(f"  already exists: {_safe_markup(target)}")
             else:
                 failures += 1
-                console.print(f"  [red]cannot use {target}: path is not a regular file[/red]")
+                console.print(f"  [red]cannot use {_safe_markup(target)}: path is not a regular file[/red]")
         except OSError as exc:
             failures += 1
-            console.print(f"  [red]failed to create {target}: {exc}[/red]")
+            console.print(f"  [red]failed to create {_safe_markup(target)}: {_safe_markup(exc)}[/red]")
 
     if failures:
         noun = "template" if failures == 1 else "templates"
@@ -383,7 +374,7 @@ async def _doctor_identity_checks() -> list[DoctorCheck]:
         except (httpx.TimeoutException, httpx.ConnectError, httpx.ConnectTimeout, OSError) as exc:
             checks.append(("OIDC discovery", "fail", _fmt_exc(exc)))
 
-        # Synthetic non-existent address — avoids probing a real account.
+        # Synthetic non-existent address avoids probing a real account.
         try:
             resp = await client.get(
                 "https://login.microsoftonline.com/GetUserRealm.srf",
@@ -459,7 +450,7 @@ def _doctor_fingerprint_db_check() -> DoctorCheck:
         fps = load_fingerprints()
         if fps:
             return ("Fingerprint database", "ok", f"{len(fps)} fingerprints loaded")
-        return ("Fingerprint database", "fail", "no fingerprints loaded — detection will not work")
+        return ("Fingerprint database", "fail", "no fingerprints loaded; detection will not work")
     except Exception as exc:
         return ("Fingerprint database", "fail", _fmt_exc(exc))
 
@@ -498,7 +489,7 @@ def _doctor_signal_db_check() -> DoctorCheck:
         sigs = load_signals()
         if sigs:
             return ("Signal database", "ok", f"{len(sigs)} signals loaded")
-        return ("Signal database", "fail", "no signals loaded — signal intelligence will not work")
+        return ("Signal database", "fail", "no signals loaded; signal intelligence will not work")
     except Exception as exc:
         return ("Signal database", "fail", _fmt_exc(exc))
 
@@ -563,9 +554,9 @@ def _doctor_render(console: Any, checks: list[DoctorCheck]) -> bool:
     for name, status, detail in checks:
         mark = {"ok": "ok", "warn": "WARN", "fail": "FAIL"}[status]
         style = {"ok": "green", "warn": "yellow", "fail": "red"}[status]
-        safe_name = escape(_safe_diagnostic(name))
-        safe_detail = escape(_safe_diagnostic(detail))
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {safe_name} \N{EM DASH} {safe_detail}")
+        safe_name = _safe_markup(name)
+        safe_detail = _safe_markup(detail)
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {safe_name}: {safe_detail}")
         if status == "fail":
             has_failures = True
         elif status == "warn":

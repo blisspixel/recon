@@ -60,10 +60,10 @@ A script can branch on the outcome without parsing output (full contract in
 | Code | Constant | Meaning |
 |---|---|---|
 | 0 | `EXIT_SUCCESS` | Completed and produced output |
-| 1 | `EXIT_ERROR` | General / uncaught error (also the Python default) |
+| 1 | `EXIT_ERROR` | Explicitly handled general command or server failure, plus Python's default before the CLI last-resort handler is active |
 | 2 | `EXIT_VALIDATION` | Bad input rejected before work (malformed domain, missing file, mutually exclusive flags, refused unsafe invocation) |
 | 3 | `EXIT_NO_DATA` | Target resolved but no information available, or `recon delta` had no cached baseline |
-| 4 | `EXIT_INTERNAL` | recon classified its own caught network/pipeline failure |
+| 4 | `EXIT_INTERNAL` | recon caught a network/pipeline failure, or the CLI last-resort handler caught an unexpected runtime crash |
 
 For single-domain lookup paths, only a structured resolver error with
 `error_type="no_data"` maps to exit 3. A first `recon delta` call also exits 3
@@ -86,8 +86,10 @@ per-domain exception details are replaced with stable output and retained only
 in opt-in debug logs.
 
 When a downstream consumer closes a normal output pipe early, recon exits 0
-without creating a crash log. Other unexpected operating-system errors retain
-the exit 4 crash-artifact path.
+without creating a crash log. Other unexpected runtime and operating-system
+errors caught by the top-level CLI handler retain the exit 4 crash-artifact
+path. Code 1 remains available for explicitly handled general command and
+server failures, and for exceptions that escape before that handler is active.
 
 MCP validation rejections emit one structured warning containing a request ID
 and the stable reason `invalid_domain`. The rejected argument and exception
