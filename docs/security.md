@@ -57,6 +57,21 @@ certificate requests are explicit opt-in direct probes.
 - Invalid input raises `ValueError`; the CLI maps it to exit code 2
   (`EXIT_VALIDATION`). See the full [exit-code contract](schema.md#exit-codes).
 
+### Diagnostic output and local failure artifacts
+
+**Surface:** Debug logs and unexpected-crash artifacts can contain queried
+namespaces, local paths, configuration context, or exception details. An
+unexpected per-domain batch exception could otherwise copy those details into
+structured output consumed or shared downstream.
+
+**Mitigation:** Default batch output replaces unexpected exception details with
+stable recovery text in JSON, NDJSON, CSV, and human modes. The full exception
+is logged only at debug level. Root help warns operators to review diagnostics
+before sharing. The top-level crash handler keeps its existing redaction notice,
+and normal downstream pipe closure does not create a crash artifact. Structured
+MCP validation-failure logs retain only a request ID and stable reason, never
+the rejected domain or validation exception.
+
 ### Malicious DNS responses
 
 **Surface:** A compromised or adversarial DNS response could attempt to exfiltrate via crafted values or trigger injection in downstream formatting.

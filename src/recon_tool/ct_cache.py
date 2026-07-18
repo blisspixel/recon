@@ -30,6 +30,7 @@ from recon_tool.cache import (
     infrastructure_clusters_to_cache_dict,
 )
 from recon_tool.cache_paths import resolve_cache_directory
+from recon_tool.cache_values import CacheClearResult
 from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.models import CertSummary, InfrastructureClusterReport
 from recon_tool.validator import validate_domain
@@ -189,35 +190,56 @@ def ct_cache_put(
         logger.debug("CT cache write failed for %s", domain, exc_info=True)
 
 
-def ct_cache_clear(domain: str) -> bool:
-    """Remove cached CT data for a domain. Returns True if file existed."""
+def _ct_cache_clear_detailed(domain: str) -> CacheClearResult:
+    """Remove one CT cache entry and distinguish absence from I/O failure."""
     try:
         path = _safe_path(domain)
-        if path.exists():
+        if not path.exists():
+            return CacheClearResult()
+        try:
             path.unlink()
-            return True
-        return False
+        except FileNotFoundError:
+            return CacheClearResult()
+        return CacheClearResult(removed=1)
     except (OSError, ValueError):
         logger.debug("CT cache clear failed for %s", domain, exc_info=True)
-        return False
+        return CacheClearResult(failed=True)
 
 
-def ct_cache_clear_all() -> int:
-    """Remove all cached CT data. Returns count of files removed."""
+def ct_cache_clear(domain: str) -> bool:
+    """Remove cached CT data for a domain. Returns True if file existed."""
+    return _ct_cache_clear_detailed(domain).removed > 0
+
+
+def _ct_cache_clear_all_detailed() -> CacheClearResult:
+    """Remove all CT cache data and retain any partial-failure state."""
     count = 0
+    failed = False
     try:
         d = resolve_cache_directory("ct-cache")
-        if d is None or not d.is_dir():
-            return 0
+        if d is None:
+            logger.debug("CT cache clear-all rejected redirected or inaccessible cache directory")
+            return CacheClearResult(failed=True)
+        if not d.is_dir():
+            return CacheClearResult()
         for f in d.glob("*.json"):
             try:
                 f.unlink()
                 count += 1
+            except FileNotFoundError:
+                continue
             except OSError:
+                failed = True
                 logger.debug("Failed to remove %s", f, exc_info=True)
     except OSError:
         logger.debug("CT cache clear-all failed", exc_info=True)
-    return count
+        failed = True
+    return CacheClearResult(removed=count, failed=failed)
+
+
+def ct_cache_clear_all() -> int:
+    """Remove all cached CT data. Returns count of files removed."""
+    return _ct_cache_clear_all_detailed().removed
 
 
 def ct_cache_show(domain: str) -> CTCacheInfo | None:

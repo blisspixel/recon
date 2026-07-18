@@ -193,7 +193,7 @@ def main(
         "--debug",
         callback=_debug_callback,
         is_eager=True,
-        help="Enable debug logging.",
+        help=("Enable diagnostic logging. Review before sharing; logs may contain domain inputs and local details."),
     ),
     color: bool | None = typer.Option(
         None,
@@ -542,14 +542,30 @@ def lookup(
 @app.command()
 def batch(
     file: str = typer.Argument(help="File with one domain per line, or - to read domains from stdin"),
-    json_output: bool = typer.Option(False, "--json", help="JSON array output"),
-    markdown: bool = typer.Option(False, "--md", help="Markdown report per domain"),
-    csv_output: bool = typer.Option(False, "--csv", help="CSV output"),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="JSON array output",
+        rich_help_panel=_OUTPUT_HELP_PANEL,
+    ),
+    markdown: bool = typer.Option(
+        False,
+        "--md",
+        help="Markdown report per domain",
+        rich_help_panel=_OUTPUT_HELP_PANEL,
+    ),
+    csv_output: bool = typer.Option(
+        False,
+        "--csv",
+        help="CSV output",
+        rich_help_panel=_OUTPUT_HELP_PANEL,
+    ),
     concurrency: int = typer.Option(
         5,
         "--concurrency",
         "-c",
-        help="Max concurrent lookups (1-20)",
+        help="Max concurrent lookups. Concurrency is clamped to 1-20.",
+        rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     timeout: float = typer.Option(
         120.0,
@@ -557,6 +573,7 @@ def batch(
         "-t",
         help="Max seconds for each domain's full resolve pipeline.",
         callback=positive_finite_float,
+        rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     include_unclassified: bool = typer.Option(
         False,
@@ -565,6 +582,7 @@ def batch(
             "Include bounded typed catalog coverage and unmatched DNS values "
             "in JSON output for the private fingerprint-discovery loop. Off by default."
         ),
+        rich_help_panel=_OUTPUT_HELP_PANEL,
     ),
     no_ct: bool = typer.Option(
         False,
@@ -573,6 +591,7 @@ def batch(
             "Skip cert-transparency providers (crt.sh, CertSpotter) for every "
             "domain in the batch. For high-volume corpus runs."
         ),
+        rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     ndjson: bool = typer.Option(
         False,
@@ -582,6 +601,7 @@ def batch(
             "Recommended for large corpora — gives visible progress and lower memory "
             "use vs the default --json array. Mutually exclusive with --json/--md/--csv."
         ),
+        rich_help_panel=_OUTPUT_HELP_PANEL,
     ),
     include_ecosystem: bool = typer.Option(
         False,
@@ -593,6 +613,7 @@ def batch(
             "parent-vendor signatures across the batch — observable structure, "
             "not ownership."
         ),
+        rich_help_panel=_ANALYSIS_HELP_PANEL,
     ),
     fusion: bool = typer.Option(
         True,
@@ -604,6 +625,7 @@ def batch(
             "--no-fusion skips it. Adds the ``posterior_observations`` field to "
             "each domain's JSON. Pure post-processing, no extra network calls."
         ),
+        rich_help_panel=_EVIDENCE_HELP_PANEL,
     ),
     summary: bool = typer.Option(
         False,
@@ -616,6 +638,7 @@ def batch(
             "baselines, names no domain. Add --json for machine output. For "
             "caller-grouped analysis, see docs/aggregate-state.md."
         ),
+        rich_help_panel=_ANALYSIS_HELP_PANEL,
     ),
     summary_schema: str = typer.Option(
         "2.1",
@@ -625,12 +648,16 @@ def batch(
             "2.2 opts into raw-evidence-bound public claims and corrected missingness. "
             "The nondefault 2.2 value requires --summary."
         ),
+        rich_help_panel=_ANALYSIS_HELP_PANEL,
     ),
 ) -> None:
     """
     Look up multiple domains from a file.
 
     [dim]One domain per line. Lines starting with # are skipped.[/dim]
+
+    Per-domain failures are output records and keep exit 0. In JSON or NDJSON,
+    inspect record_type; in CSV, inspect error.
     """
     concurrency = max(1, min(20, concurrency))
     asyncio.run(
@@ -888,6 +915,21 @@ def delta(
     asyncio.run(_run())
 
 
+def _silence_closed_standard_streams() -> None:
+    """Prevent interpreter-shutdown flush noise after a closed output pipe."""
+    import os
+    import sys
+
+    # Python flushes the current standard streams again during interpreter
+    # shutdown. Point both at the null device after the original pipe failure.
+    for stream_name in ("stdout", "stderr"):
+        try:
+            replacement = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
+        except OSError:
+            continue
+        setattr(sys, stream_name, replacement)
+
+
 def run() -> None:
     """Entry point — invokes the Typer app.
 
@@ -906,7 +948,17 @@ def run() -> None:
         raise SystemExit(130) from None
     except SystemExit:
         raise
-    except Exception:  # top-level last-resort crash handler (catch-all is intentional)
+    except Exception as exc:  # top-level last-resort crash handler (catch-all is intentional)
+        import errno
+        import os
+
+        closed_pipe = isinstance(exc, BrokenPipeError) or (
+            isinstance(exc, OSError) and (exc.errno == errno.EPIPE or (os.name == "nt" and exc.errno == errno.EINVAL))
+        )
+        if closed_pipe:
+            _silence_closed_standard_streams()
+            raise SystemExit(0) from None
+
         import tempfile
         import traceback
 

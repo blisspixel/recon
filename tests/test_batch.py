@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import logging
 from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from recon_tool import bayesian
@@ -114,6 +116,61 @@ class TestBatchCommand:
         data = json.loads(result.output)
         assert len(data) == 1
         assert "error" in data[0]
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_timeout_kind_uses_structured_error_type(self, mock_resolve, tmp_path):
+        mock_resolve.side_effect = ReconLookupError(
+            domain="slow.example",
+            message="Resolver exceeded its deadline",
+            error_type="timeout",
+        )
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("slow.example\n")
+
+        result = runner.invoke(app, ["batch", str(domain_file), "--json", "--no-fusion"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)[0]["error_kind"] == "timeout"
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_lookup_kind_ignores_timeout_words_in_message(self, mock_resolve, tmp_path):
+        mock_resolve.side_effect = ReconLookupError(
+            domain="bad.example",
+            message="Configuration field timeout is invalid",
+            error_type="all_sources_failed",
+        )
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("bad.example\n")
+
+        result = runner.invoke(app, ["batch", str(domain_file), "--json", "--no-fusion"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.output)[0]["error_kind"] == "lookup"
+
+    @pytest.mark.parametrize("output_flags", [("--json",), ("--ndjson",), ("--csv",), ()])
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_unexpected_errors_are_redacted_but_debuggable(
+        self,
+        mock_resolve,
+        tmp_path,
+        caplog,
+        output_flags,
+    ):
+        private_detail = "unexpected detail at C:/private/config.yaml"
+        mock_resolve.side_effect = RuntimeError(private_detail)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("bad.example\n")
+
+        with caplog.at_level(logging.DEBUG, logger="recon"):
+            result = runner.invoke(
+                app,
+                ["batch", str(domain_file), *output_flags, "--no-fusion"],
+            )
+
+        assert result.exit_code == 0
+        assert "Internal batch error. Retry: recon --debug batch ... for details." in " ".join(result.output.split())
+        assert private_detail not in result.output
+        assert private_detail in caplog.text
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_json_handles_invalid_domain(self, mock_resolve, tmp_path):
@@ -291,3 +348,27 @@ class TestBatchCommand:
         assert all(record["error"] == "invalid prior override" for record in records)
         assert all(record["error_kind"] == "lookup" for record in records)
         assert all(record["record_type"] == "error" for record in records)
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_unexpected_fusion_loader_failure_is_redacted(self, mock_resolve, tmp_path, caplog):
+        private_detail = "unexpected loader detail at C:/private/model.yaml"
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("contoso.com\n")
+
+        with (
+            caplog.at_level(logging.DEBUG, logger="recon"),
+            patch("recon_tool.bayesian.load_network", side_effect=OSError(private_detail)),
+        ):
+            result = runner.invoke(app, ["batch", str(domain_file), "--json", "--fusion"])
+
+        assert result.exit_code == 0
+        record = json.loads(result.output)[0]
+        assert record == {
+            "domain": "contoso.com",
+            "error": "Internal batch error. Retry: recon --debug batch ... for details.",
+            "error_kind": "lookup",
+            "record_type": "error",
+        }
+        assert private_detail not in result.output
+        assert private_detail in caplog.text

@@ -24,10 +24,16 @@ from recon_tool.cache_paths import (
 from recon_tool.cache_paths import (
     validated_cache_path as _cache_path_in,
 )
+from recon_tool.cache_values import (
+    CacheClearResult,
+    cache_object_tuple,
+    cache_string,
+    cache_string_tuple,
+    required_cache_float,
+)
 from recon_tool.cache_values import cache_bool as _cache_bool
 from recon_tool.cache_values import cache_count as _cache_count
 from recon_tool.cache_values import cache_float as _cache_float
-from recon_tool.cache_values import cache_object_tuple, cache_string, cache_string_tuple, required_cache_float
 from recon_tool.cache_values import optional_cache_count as _optional_cache_count
 from recon_tool.cache_values import optional_cache_string as _optional_cache_string
 from recon_tool.cache_values import parse_confidence as _parse_confidence
@@ -158,6 +164,25 @@ def cache_put(domain: str, info: TenantInfo) -> None:
         logger.debug("Cache write failed for %s", domain, exc_info=True)
 
 
+def _cache_clear_detailed(domain: str) -> CacheClearResult:
+    """Remove one cached TenantInfo and distinguish absence from I/O failure."""
+    try:
+        path = _safe_cache_path(domain)
+        if path is None:
+            logger.debug("Cache clear rejected invalid domain or cache directory: %r", domain)
+            return CacheClearResult(failed=True)
+        if not path.exists():
+            return CacheClearResult()
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            return CacheClearResult()
+        return CacheClearResult(removed=1)
+    except OSError:
+        logger.debug("Cache clear failed for %s", domain, exc_info=True)
+        return CacheClearResult(failed=True)
+
+
 def cache_clear(domain: str) -> bool:
     """Remove the cached TenantInfo for domain. Returns True if a file was deleted.
 
@@ -166,37 +191,38 @@ def cache_clear(domain: str) -> bool:
     returns ``False`` rather than deleting a file outside the cache
     directory.
     """
-    try:
-        path = _safe_cache_path(domain)
-        if path is None:
-            logger.debug("Cache clear rejected invalid domain: %r", domain)
-            return False
-        if path.exists():
-            path.unlink()
-            return True
-        return False
-    except OSError:
-        logger.debug("Cache clear failed for %s", domain, exc_info=True)
-        return False
+    return _cache_clear_detailed(domain).removed > 0
 
 
-def cache_clear_all() -> int:
-    """Remove all cached TenantInfo files. Returns the count deleted."""
+def _cache_clear_all_detailed() -> CacheClearResult:
+    """Remove every cached TenantInfo and retain any partial-failure state."""
+    count = 0
+    failed = False
     try:
         d = resolve_cache_directory()
-        if d is None or not d.is_dir():
-            return 0
-        count = 0
+        if d is None:
+            logger.debug("Cache clear-all rejected redirected or inaccessible cache directory")
+            return CacheClearResult(failed=True)
+        if not d.is_dir():
+            return CacheClearResult()
         for path in d.glob("*.json"):
             try:
                 path.unlink()
                 count += 1
+            except FileNotFoundError:
+                continue
             except OSError:
+                failed = True
                 logger.debug("Cache entry unlink failed: %s", path, exc_info=True)
-        return count
     except OSError:
         logger.debug("Cache clear-all failed", exc_info=True)
-        return 0
+        failed = True
+    return CacheClearResult(removed=count, failed=failed)
+
+
+def cache_clear_all() -> int:
+    """Remove all cached TenantInfo files. Returns the count deleted."""
+    return _cache_clear_all_detailed().removed
 
 
 def cert_summary_to_cache_dict(cert_summary: CertSummary | None) -> dict[str, Any] | None:
