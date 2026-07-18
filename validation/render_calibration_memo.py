@@ -18,16 +18,9 @@ from pathlib import Path
 DOMAIN_RE = re.compile(r"(?i)\b[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9-]{2,})+\b")
 
 ALLOWED_DOMAINS = {
-    "adventure-works.com",
-    "contoso.com",
     "example.com",
     "example.net",
     "example.org",
-    "fabrikam.com",
-    "northwindtraders.com",
-    "tailspintoys.com",
-    "wideworldimporters.com",
-    "wingtiptoys.com",
 }
 
 FORBIDDEN_TARGET_KEYS = {
@@ -165,8 +158,7 @@ CALIBRATION_TABLE_HEADER = (
 )
 CALIBRATION_TABLE_RULE = "|---|---:|---:|---:|---:|---:|---|---:|---:|"
 STRATUM_TABLE_HEADER = (
-    "| Stratum | n | ECE fixed-bin | ECE tie-preserving | ECE naive-iid bootstrap range80 | "
-    "Agreement | Base rate |"
+    "| Stratum | n | ECE fixed-bin | ECE tie-preserving | ECE naive-iid bootstrap range80 | Agreement | Base rate |"
 )
 STRATUM_TABLE_RULE = "|---|---:|---:|---:|---|---:|---:|"
 

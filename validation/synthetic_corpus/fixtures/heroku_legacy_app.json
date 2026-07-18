@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "contoso-legacy",
-  "display_name": "Contoso Legacy Apps",
-  "default_domain": "contoso-legacy.com",
-  "queried_domain": "contoso-legacy.com",
+  "default_domain": "synthetic-alpha-legacy-com.invalid",
+  "queried_domain": "synthetic-alpha-legacy-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "contoso-legacy.com",
-    "contoso-old.com",
-    "legacy-contoso.net"
+    "synthetic-alpha-legacy-com.invalid",
+    "synthetic-alpha-old-com.invalid",
+    "legacy-synthetic-alpha-net.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -26,11 +24,13 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "app.contoso-legacy.com",
+      "subdomain": "app.synthetic-alpha-legacy-com.invalid",
       "primary_slug": "heroku",
       "primary_name": "Heroku",
       "primary_tier": "application"
     }
   ],
+  "display_name": "Synthetic Scenario 376193385537",
+  "tenant_id": "synthetic-scenario-376193385537",
   "_stratum": "baseline"
 }

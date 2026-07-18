@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "fabrikam-aws-only",
-  "display_name": "Fabrikam Cloud Services",
-  "default_domain": "fabrikam-cloud.com",
-  "queried_domain": "fabrikam-cloud.com",
+  "default_domain": "synthetic-gamma-cloud-com.invalid",
+  "queried_domain": "synthetic-gamma-cloud-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "fabrikam-cloud.com",
-    "fabrikam.io",
-    "fabrikam-cs.com"
+    "synthetic-gamma-cloud-com.invalid",
+    "synthetic-gamma-io.invalid",
+    "synthetic-gamma-cs-com.invalid"
   ],
   "services": [
     "AWS Route 53",
@@ -25,5 +23,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 569645947424",
+  "tenant_id": "synthetic-scenario-569645947424",
   "_stratum": "baseline"
 }

@@ -1,17 +1,15 @@
 {
   "cache_version": 1,
-  "tenant_id": "fabrikam-oracle-legacy",
-  "display_name": "Fabrikam Oracle Hybrid",
-  "default_domain": "fabrikam-oracle.com",
-  "queried_domain": "fabrikam-oracle.com",
+  "default_domain": "synthetic-gamma-oracle-com.invalid",
+  "queried_domain": "synthetic-gamma-oracle-com.invalid",
   "confidence": "medium",
   "domain_count": 5,
   "tenant_domains": [
-    "fabrikam-oracle.com",
-    "fabrikam-erp.com",
-    "fabrikam-hcm.com",
-    "fabrikam-corp.com",
-    "fabrikam-legacy.com"
+    "synthetic-gamma-oracle-com.invalid",
+    "synthetic-gamma-erp-com.invalid",
+    "synthetic-gamma-hcm-com.invalid",
+    "synthetic-gamma-corp-com.invalid",
+    "synthetic-gamma-legacy-com.invalid"
   ],
   "services": [
     "Microsoft 365",
@@ -27,5 +25,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 067031417377",
+  "tenant_id": "synthetic-scenario-067031417377",
   "_stratum": "oracle"
 }

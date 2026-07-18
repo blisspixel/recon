@@ -1,20 +1,18 @@
 {
   "cache_version": 1,
-  "tenant_id": "adatum-hard",
-  "display_name": "Adatum Corporation",
-  "default_domain": "adatum.com",
-  "queried_domain": "adatum.com",
+  "default_domain": "synthetic-delta-com.invalid",
+  "queried_domain": "synthetic-delta-com.invalid",
   "confidence": "low",
   "domain_count": 8,
   "tenant_domains": [
-    "adatum.com",
-    "adatum.net",
-    "adatum.co.uk",
-    "adatum-corp.com",
-    "adatum-secure.com",
-    "adatum.eu",
-    "adatum.jp",
-    "adatum.au"
+    "synthetic-delta-com.invalid",
+    "synthetic-delta-net.invalid",
+    "synthetic-delta-co-uk.invalid",
+    "synthetic-delta-corp-com.invalid",
+    "synthetic-delta-secure-com.invalid",
+    "synthetic-delta-eu.invalid",
+    "synthetic-delta-jp.invalid",
+    "synthetic-delta-au.invalid"
   ],
   "services": [
     "Cloudflare"
@@ -24,5 +22,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 152532779211",
+  "tenant_id": "synthetic-scenario-152532779211",
   "_stratum": "baseline"
 }

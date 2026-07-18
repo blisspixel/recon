@@ -81,7 +81,7 @@ probes run only when `--direct-probes` is explicitly enabled.
 Run the first lookup:
 
 ```bash
-recon contoso.com
+recon example.com
 ```
 
 If a lookup times out or every online source fails, run `recon doctor` to
@@ -90,8 +90,8 @@ check source connectivity, then retry the lookup.
 Example output shape:
 
 ```text
-Contoso Ltd
-contoso.com
+Synthetic Example Namespace
+example.com
 
 Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)
 Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -109,9 +109,9 @@ Insights
   MX gateway observed: Proofpoint
 ```
 
-Examples use [Microsoft's fictional company names](https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges).
-Tenant IDs, services, and domains in examples are fabricated. No real company is
-depicted.
+Examples use IETF reserved namespaces. Tenant IDs, services, and domains in
+this rendered example are fabricated. No real organization is depicted as the
+evaluated target.
 
 For detailed install, update, uninstall, and first-run workflows, read
 [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
@@ -131,22 +131,22 @@ decides what those facts mean in context.
 ## Common Commands
 
 ```bash
-recon contoso.com                              # default panel
-recon https://www.contoso.com/path             # normalize URL to apex
-recon mail.contoso.com                         # reduce sub-host to apex
-recon mail.contoso.com --exact                 # keep that literal host
-recon contoso.com --explain                    # retained evidence and explanation
-recon contoso.com --full                       # expanded evidence, domains, posture
-recon contoso.com --plain                      # linear text for screen readers and grep
-recon contoso.com --json                       # structured lookup record
+recon example.com                              # default panel
+recon https://www.example.com/path             # normalize URL to apex
+recon mail.example.com                         # reduce sub-host to apex
+recon mail.example.com --exact                 # keep that literal host
+recon example.com --explain                    # retained evidence and explanation
+recon example.com --full                       # expanded evidence, domains, posture
+recon example.com --plain                      # linear text for screen readers and grep
+recon example.com --json                       # structured lookup record
 recon batch domains.txt --json                 # batch JSON array
 recon batch domains.txt --ndjson               # one record per line
 recon batch domains.txt --summary              # aggregate-only cohort summary
-recon delta contoso.com                        # diff against cached snapshot
+recon delta example.com                        # diff against cached snapshot
 recon cache show                               # bounded payload-free cache overview
 recon cache show --all                         # inspect every completed JSON cache file
-recon cache show mail.contoso.com --exact      # inspect literal-host result and CT cache metadata
-recon cache clear mail.contoso.com --exact     # clear literal-host CT and result cache keys
+recon cache show mail.example.com --exact      # inspect literal-host result and CT cache metadata
+recon cache clear mail.example.com --exact     # clear literal-host CT and result cache keys
 recon mcp install --client=cursor              # wire MCP into a client
 recon doctor --mcp                             # static MCP registry check
 recon mcp doctor                               # live MCP tools/resources check
@@ -249,10 +249,10 @@ and explicit metric kinds. The standalone reducer uses
 `--schema-version 2.2` for the corresponding atemporal compatibility view.
 
 ```bash
-recon contoso.com --json
+recon example.com --json
 recon batch domains.txt --json
 recon batch domains.txt --ndjson
-recon delta contoso.com --json
+recon delta example.com --json
 ```
 
 Read these before building an integration:
@@ -343,7 +343,7 @@ priorities are:
 Catalog coverage work uses deduplicated private rounds across rank, region, and
 domain-class strata. Real target names and per-domain records stay in ignored
 local validation workspaces. GitHub receives only generic provider patterns,
-provider-owned references, fictional fixtures, and disclosure-safe aggregates.
+provider-owned references, reserved synthetic fixtures, and disclosure-safe aggregates.
 The opt-in maintenance path now accounts separately for CNAME chains, apex
 CNAME, non-SPF TXT, SPF targets, MX, NS, CAA, DMARC RUA, bounded owner-qualified
 TXT, and bounded SRV observations. A frozen aggregate baseline and distinct
@@ -405,7 +405,7 @@ in `build-constraints.txt`. The build creates the sdist first and constructs the
 wheel from that file; the replay commands and remaining environment limits are
 documented in [docs/supply-chain.md](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md).
 
-Project hygiene: keep examples fictional or synthetic, keep validation artifacts
+Project hygiene: keep examples reserved and synthetic, keep validation artifacts
 aggregate-only, run `uv run python scripts/check.py`, and
 avoid dead code or placeholders.
 Contributor details:

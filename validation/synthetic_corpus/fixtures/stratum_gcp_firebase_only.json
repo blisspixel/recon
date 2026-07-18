@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "tailspin-firebase",
-  "display_name": "Tailspin Mobile",
-  "default_domain": "tailspin-mobile.com",
-  "queried_domain": "tailspin-mobile.com",
+  "default_domain": "synthetic-epsilon-mobile-com.invalid",
+  "queried_domain": "synthetic-epsilon-mobile-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "tailspin-mobile.com",
-    "tailspin-app.com",
-    "tailspin-api.com"
+    "synthetic-epsilon-mobile-com.invalid",
+    "synthetic-epsilon-app-com.invalid",
+    "synthetic-epsilon-api-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -24,17 +22,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "app.tailspin-mobile.com",
+      "subdomain": "app.synthetic-epsilon-mobile-com.invalid",
       "primary_slug": "firebase-hosting",
       "primary_name": "Firebase Hosting",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "api.tailspin-mobile.com",
+      "subdomain": "api.synthetic-epsilon-mobile-com.invalid",
       "primary_slug": "firebase-realtime",
       "primary_name": "Firebase Realtime",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 104289888437",
+  "tenant_id": "synthetic-scenario-104289888437",
   "_stratum": "gcp"
 }

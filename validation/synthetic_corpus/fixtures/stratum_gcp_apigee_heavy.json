@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "adatum-gcp-apigee",
-  "display_name": "Adatum API Platform",
-  "default_domain": "adatum-api.com",
-  "queried_domain": "adatum-api.com",
+  "default_domain": "synthetic-delta-api-com.invalid",
+  "queried_domain": "synthetic-delta-api-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "adatum-api.com",
-    "adatum-gateway.com",
-    "adatum-services.com"
+    "synthetic-delta-api-com.invalid",
+    "synthetic-delta-gateway-com.invalid",
+    "synthetic-delta-services-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -26,17 +24,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "api.adatum-api.com",
+      "subdomain": "api.synthetic-delta-api-com.invalid",
       "primary_slug": "apigee",
       "primary_name": "Apigee",
       "primary_tier": "application"
     },
     {
-      "subdomain": "v2.adatum-api.com",
+      "subdomain": "v2.synthetic-delta-api-com.invalid",
       "primary_slug": "apigee",
       "primary_name": "Apigee",
       "primary_tier": "application"
     }
   ],
+  "display_name": "Synthetic Scenario 638981634464",
+  "tenant_id": "synthetic-scenario-638981634464",
   "_stratum": "gcp"
 }

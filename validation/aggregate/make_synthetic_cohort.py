@@ -1,10 +1,10 @@
 """Generate a fully synthetic recon-output cohort for the aggregate-state example.
 
-Every domain, brand, and number here is fabricated. The companies are Microsoft's
-fictional sample brands (Contoso, Northwind, Fabrikam, and so on); the industry
-labels are generic words used only to illustrate caller-supplied grouping; the
-distributions are invented to exercise the reducer, not measured from anyone. This
-is the only kind of cohort data that may live in the public repo.
+Every identity and number here is fabricated. Targets use explicit synthetic
+sentinels under the reserved ``.invalid`` namespace. Group labels are generic
+words used only to illustrate caller-supplied grouping, and distributions are
+invented to exercise the reducer rather than measured from anyone. This is the
+only kind of cohort data that may live in the public repo.
 
 Run it to regenerate the fixture and its grouping file:
 
@@ -18,37 +18,12 @@ reproducible.
 from __future__ import annotations
 
 import json
-import os
 import random
+from pathlib import Path
 from typing import Any
 
-# Fictional Microsoft sample brands only. No real company appears here.
-_BRANDS = [
-    "contoso",
-    "northwind",
-    "fabrikam",
-    "adventureworks",
-    "wingtiptoys",
-    "tailspintoys",
-    "proseware",
-    "fourthcoffee",
-    "litware",
-    "alpineskihouse",
-    "wideworldimporters",
-    "blueyonder",
-    "graphicdesigninstitute",
-    "lucernepublishing",
-    "margiestravel",
-    "trey-research",
-    "vanarsdel",
-    "woodgrovebank",
-    "consolidated-messenger",
-    "famfields",
-    "relecloud",
-    "southridgevideo",
-    "tailwindtraders",
-    "coho-vineyard",
-]
+# Numbered sentinels avoid implying a real or fictional company identity.
+_SCENARIOS = tuple(f"scenario-{index:03d}" for index in range(1, 25))
 
 # Fabricated per-group profiles: probabilities used only to sample the fixture.
 # These are illustrative inventions, not findings.
@@ -156,9 +131,9 @@ def _node(
     }
 
 
-def _record(rng: random.Random, brand: str, group: str) -> dict[str, object]:
+def _record(rng: random.Random, scenario: str, group: str) -> dict[str, object]:
     prof = _PROFILES[group]
-    domain = f"{brand}.com"
+    domain = f"{scenario}.example.invalid"
     is_m365 = rng.random() < prof["m365"]
     dmarc = (
         "reject"
@@ -187,8 +162,8 @@ def _record(rng: random.Random, brand: str, group: str) -> dict[str, object]:
         _node(rng, "federated_identity", rng.random() < 0.4),
     ]
     return {
-        "tenant_id": f"{brand[:8]}-0000-0000-0000-000000000000" if is_m365 else None,
-        "display_name": brand.replace("-", " ").title(),
+        "tenant_id": f"synthetic-{scenario}" if is_m365 else None,
+        "display_name": f"Synthetic {scenario.replace('-', ' ').title()}",
         "default_domain": domain,
         "queried_domain": domain,
         "provider": "Microsoft 365" if is_m365 else "Google Workspace",
@@ -221,26 +196,39 @@ def _record(rng: random.Random, brand: str, group: str) -> dict[str, object]:
     }
 
 
-def main() -> int:
+def build_cohort() -> tuple[list[dict[str, object]], list[tuple[str, str]]]:
+    """Return the deterministic synthetic records and grouping rows."""
     rng = random.Random(20260606)
     groups = list(_PROFILES)
-    here = os.path.dirname(os.path.abspath(__file__))
     records: list[dict[str, object]] = []
     grouping: list[tuple[str, str]] = []
-    for i, brand in enumerate(_BRANDS):
-        group = groups[i % len(groups)]
-        rec = _record(rng, brand, group)
+    for index, scenario in enumerate(_SCENARIOS):
+        group = groups[index % len(groups)]
+        rec = _record(rng, scenario, group)
         records.append(rec)
         grouping.append((str(rec["queried_domain"]), group))
+    return records, grouping
 
-    with open(os.path.join(here, "synthetic_cohort.ndjson"), "w", encoding="utf-8") as fh:
-        for rec in records:
-            fh.write(json.dumps(rec) + "\n")
-    with open(os.path.join(here, "synthetic_groups.csv"), "w", encoding="utf-8") as fh:
-        fh.write("domain,label\n")
-        for dom, grp in grouping:
-            fh.write(f"{dom},{grp}\n")
-    print(f"wrote {len(records)} synthetic records across {len(groups)} groups")
+
+def render_records(records: list[dict[str, object]]) -> str:
+    """Render the canonical tracked NDJSON representation."""
+    return "".join(json.dumps(record) + "\n" for record in records)
+
+
+def render_grouping(grouping: list[tuple[str, str]]) -> str:
+    """Render the canonical tracked CSV representation."""
+    return "domain,label\n" + "".join(f"{domain},{group}\n" for domain, group in grouping)
+
+
+def main() -> int:
+    here = Path(__file__).resolve().parent
+    records, grouping = build_cohort()
+
+    with (here / "synthetic_cohort.ndjson").open("w", encoding="utf-8", newline="") as fh:
+        fh.write(render_records(records))
+    with (here / "synthetic_groups.csv").open("w", encoding="utf-8", newline="") as fh:
+        fh.write(render_grouping(grouping))
+    print(f"wrote {len(records)} synthetic records across {len(_PROFILES)} groups")
     return 0
 
 

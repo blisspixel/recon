@@ -147,7 +147,9 @@ simulating that persona with a script gives us:
 - Reproducibility: anyone can rerun the agentic QA suite against
   a future build and compare.
 - Speed: today, not "after we recruit three humans."
-- Publishability: synthetic / fictional domains, no private data.
+- Publishability under the release-time convention: fictional target scenarios
+  and no intentionally private corpus data. Current tracked replacements use
+  reserved synthetic identities and aggregate-only public records.
 
 **Method.**
 
@@ -160,10 +162,10 @@ simulating that persona with a script gives us:
   output). No mention of credible intervals, sparse flags, or
   evidence DAGs in the prompt - we want to see whether the
   agent finds and uses those affordances on its own.
-- **Test domains.** Two fictional Microsoft examples
-  (`contoso.com` for dense, a deliberately-hardened scenario
-  built by stripping a normal lookup down to one slug for
-  sparse). Synthetic, public, reproducible.
+- **Test domains at release.** Two fictional synthetic scenarios: one dense and
+  one deliberately sparse. The current tracked replacements preserve those
+  semantic shapes under the reserved `.invalid` namespace without implying an
+  organization identity.
 - **Scoring rubric.**
   - *Did the agent read the posterior block?* (binary; check
     transcript)
@@ -176,9 +178,12 @@ simulating that persona with a script gives us:
   - *Did the agent reach a different conclusion than it would
     have without `--fusion`?* (re-run with `--fusion` off and
     diff)
-- **Documented in `validation/v1.9.2-agentic-ux.md`.** The
-  prompts, transcripts, and rubric all public-reproducible.
-  Per-persona summary table makes the result skimmable.
+- **Documented in `validation/v1.9.2-agentic-ux.md`.** The release-time record
+  included detailed session rows. The current tracked copy keeps aggregate
+  rubric results and decisions; new detailed prompts, transcripts, provider
+  metadata, and raw records stay in gitignored local paths. The retained
+  historical copy is covered by the
+  [data-handling policy's published-artifact exception](data-handling-policy.md#historical-published-artifact-exception).
 - **Failure modes that change v2.0.** If the agent ignores the
   posterior block on both runs, intervals are not load-bearing
   and v2.0 should consider promoting `posterior_observations`
@@ -671,7 +676,7 @@ with its own validation pass.
    (Snowflake under `data`, Vertex AI under `ai`, internal portals
    under `internal`, SIEM consoles under `security`). The CT-side
    additions keep prioritization parity so a CT response surfacing
-   `data.contoso.com` sorts to the top of the bounded output rather
+   `data.example.invalid` sorts to the top of the bounded output rather
    than falling off the cap.
 3. **Apex-level multi-cloud rollup indicator.** When the canonicalized
    vendor count across apex slugs and surface attributions is at least
@@ -752,20 +757,25 @@ across cloud strata, not just the ones the historical corpus
 over-represented. Strata-specific behaviour is documented
 explicitly in the per-stratum aggregate output rather than hidden.
 
-**Scope discipline (no real customer data).** The roadmap original
+**Scope discipline at release (no real customer data).** The roadmap's original
 quality bar called for "publicly-documented users of that vendor
 sourced from vendor case-studies, vendor blog posts, or job
-listings". The maintainer's no-real-data discipline (Microsoft
-fictional brands only for committed examples) takes precedence:
-v1.9.10 ships with **synthetic** stratified fixtures modelled
+listings". The maintainer's no-real-data discipline, which at the time allowed
+fictional synthetic identities for committed examples, took precedence:
+v1.9.10 shipped with **synthetic** stratified fixtures modelled
 after public deployment patterns, not with real customer apex
 names. The corpus aggregator is reusable against the maintainer's
 gitignored private corpus; that real-corpus run produces the
 truth-of-record numbers and remains standing work.
 
+The current tracked fixtures preserve the release-time scenario shapes and
+counts but use constrained identities under the reserved `.invalid` namespace.
+The historical release artifacts remain covered by the
+[data-handling policy's published-artifact exception](data-handling-policy.md#historical-published-artifact-exception).
+
 **Quality bar - verified at ship.**
-- 60 stratified synthetic fixtures (10 per stratum) all
-  Microsoft-fictional, deterministic generator at
+- 60 stratified synthetic fixtures (10 per stratum) from a deterministic
+  generator at
   `validation/synthetic_corpus/generator.py`.
 - Per-stratum coverage metric reported in
   `validation/synthetic_corpus/aggregate.json` and the

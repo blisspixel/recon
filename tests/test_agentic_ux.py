@@ -2,11 +2,11 @@
 
 These tests cover three things:
 
-1. The provider adapter shape — that ``get_provider`` constructs each
+1. The provider adapter shape - that ``get_provider`` constructs each
    adapter with mocked SDK clients without ever calling the network.
-2. The rubric scoring — that the binary regex/keyword scans correctly
+2. The rubric scoring - that the binary regex/keyword scans correctly
    classify both positive and negative synthetic transcripts.
-3. The runner / report writer — that ``run_matrix`` orchestrates the
+3. The runner / report writer - that ``run_matrix`` orchestrates the
    3 x 2 x 2 = 12 sessions, that fusion-stripping removes only the
    v1.9 fields, and that the markdown report is well-formed.
 
@@ -32,7 +32,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(_REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(_REPO_ROOT))
 
-from validation.agentic_ux import providers, run, score  # noqa: I001 — sys.path bootstrap above
+from validation.agentic_ux import providers, run, score  # noqa: I001 - sys.path bootstrap above
 
 
 # --- Provider adapter --------------------------------------------------------
@@ -186,7 +186,7 @@ def test_xai_provider_uses_xai_base_url(monkeypatch: pytest.MonkeyPatch) -> None
 
 def test_score_session_negative_baseline() -> None:
     text = "This domain runs Microsoft 365. Email security looks normal."
-    s = score.score_session("analyst", "contoso-dense", True, text)
+    s = score.score_session("analyst", "synthetic-dense", True, text)
     assert s.read_posterior_block is False
     assert s.cited_credible_interval is False
     assert s.mentioned_explain_dag is False
@@ -195,45 +195,45 @@ def test_score_session_negative_baseline() -> None:
 
 def test_score_session_detects_posterior_reference() -> None:
     text = "The posterior_observations entry for m365_tenant has n_eff = 5.0."
-    s = score.score_session("analyst", "contoso-dense", True, text)
+    s = score.score_session("analyst", "synthetic-dense", True, text)
     assert s.read_posterior_block is True
 
 
 def test_score_session_rejects_credible_interval_mislabel() -> None:
     text = "The credible interval [0.83, 1.0] suggests high confidence."
-    s = score.score_session("ops", "contoso-dense", True, text)
+    s = score.score_session("ops", "synthetic-dense", True, text)
     assert s.cited_credible_interval is False
 
 
 def test_score_session_detects_uncertainty_band_phrase() -> None:
     text = "The 80% uncertainty band [0.83, 1.0] is model-relative."
-    s = score.score_session("ops", "contoso-dense", True, text)
+    s = score.score_session("ops", "synthetic-dense", True, text)
     assert s.cited_credible_interval is True
 
 
 def test_score_session_detects_numeric_interval() -> None:
     text = "Range looks like 0.21 to 0.95 which is wide."
-    s = score.score_session("ops", "hardened-sparse", True, text)
+    s = score.score_session("ops", "synthetic-sparse", True, text)
     assert s.cited_credible_interval is True
 
 
 def test_score_session_detects_explain_dag_invocation() -> None:
-    text = "I would run recon contoso.com --explain-dag for the evidence DAG."
-    s = score.score_session("researcher", "contoso-dense", True, text)
+    text = "I would run recon example.com --explain-dag for the evidence DAG."
+    s = score.score_session("researcher", "synthetic-dense", True, text)
     assert s.mentioned_explain_dag is True
 
 
 def test_score_session_counts_hedge_phrases() -> None:
     text = "Limited evidence. Cannot confirm the email provider. The signal is sparse and the target appears hardened."
-    s = score.score_session("analyst", "hardened-sparse", True, text)
+    s = score.score_session("analyst", "synthetic-sparse", True, text)
     assert s.hedge_count >= 3
 
 
 def test_diff_sparse_vs_dense_positive() -> None:
-    dense = score.score_session("analyst", "contoso-dense", True, "All clear, normal stack.")
+    dense = score.score_session("analyst", "synthetic-dense", True, "All clear, normal stack.")
     sparse = score.score_session(
         "analyst",
-        "hardened-sparse",
+        "synthetic-sparse",
         True,
         "Limited evidence; cannot confirm. The target looks hardened with sparse signals.",
     )
@@ -248,8 +248,8 @@ def test_diff_sparse_vs_dense_positive() -> None:
 
 def test_diff_sparse_vs_dense_negative_when_identical_tone() -> None:
     text = "Microsoft 365 with normal posture."
-    dense = score.score_session("ops", "contoso-dense", True, text)
-    sparse = score.score_session("ops", "hardened-sparse", True, text)
+    dense = score.score_session("ops", "synthetic-dense", True, text)
+    sparse = score.score_session("ops", "synthetic-sparse", True, text)
     diff = score.diff_sparse_vs_dense(dense, sparse, dense_text=text, sparse_text=text)
     assert diff.differed is False
 
@@ -257,16 +257,16 @@ def test_diff_sparse_vs_dense_negative_when_identical_tone() -> None:
 def test_diff_fusion_on_vs_off_positive() -> None:
     on_text = "Posterior 0.95 for m365_tenant, uncertainty band [0.83, 1.0]."
     off_text = "Microsoft 365 detected from the tenant ID."
-    on_score = score.score_session("analyst", "contoso-dense", True, on_text)
-    off_score = score.score_session("analyst", "contoso-dense", False, off_text)
+    on_score = score.score_session("analyst", "synthetic-dense", True, on_text)
+    off_score = score.score_session("analyst", "synthetic-dense", False, off_text)
     diff = score.diff_fusion_on_vs_off(on_score, off_score, on_text=on_text, off_text=off_text)
     assert diff.differed is True
 
 
 def test_diff_fusion_on_vs_off_negative_when_neither_engages() -> None:
     text = "Microsoft 365 detected. Email looks fine."
-    on_score = score.score_session("ops", "contoso-dense", True, text)
-    off_score = score.score_session("ops", "contoso-dense", False, text)
+    on_score = score.score_session("ops", "synthetic-dense", True, text)
+    off_score = score.score_session("ops", "synthetic-dense", False, text)
     diff = score.diff_fusion_on_vs_off(on_score, off_score, on_text=text, off_text=text)
     assert diff.differed is False
     assert "did not engage" in diff.reason
@@ -297,7 +297,7 @@ class _FakeProvider:
         # Synthesize a response that varies with whether the input has
         # the fusion fields, so the rubric exercises both arms.
         has_fusion = "posterior_observations" in user_text
-        is_sparse = "northwindtraders.com" in user_text
+        is_sparse = "sparse.example.invalid" in user_text
         if has_fusion and not is_sparse:
             text = (
                 "Reading posterior_observations: m365_tenant has a credible "
@@ -328,7 +328,7 @@ def test_run_session_strips_fusion_fields_when_off() -> None:
     record = run.run_session(
         fake,
         "analyst",
-        "contoso-dense",
+        "synthetic-dense",
         fusion=False,
         max_tokens=512,
     )
@@ -342,7 +342,7 @@ def test_run_session_includes_fusion_fields_when_on() -> None:
     record = run.run_session(
         fake,
         "analyst",
-        "contoso-dense",
+        "synthetic-dense",
         fusion=True,
         max_tokens=512,
     )
@@ -375,10 +375,10 @@ def test_render_report_contains_required_sections(tmp_path: Path) -> None:
     started = datetime(2026, 5, 8, 12, 0, 0, tzinfo=UTC)
     finished = datetime(2026, 5, 8, 12, 5, 0, tzinfo=UTC)
     body = run.render_report(records, summary, started_at=started, finished_at=finished)
-    assert "# Agentic UX Validation — v1.9.2" in body
+    assert "# Agentic UX Validation - v1.9.2" in body
     assert "## Methodology" in body
-    assert "## Rubric — per-session" in body
-    assert "## Rubric — cross-session diffs" in body
+    assert "## Rubric - per-session" in body
+    assert "## Rubric - cross-session diffs" in body
     assert "## Transcripts" in body
     assert "fusion=on" in body
     assert "fusion=off" in body
@@ -389,7 +389,11 @@ def test_render_report_contains_required_sections(tmp_path: Path) -> None:
     assert out.read_text(encoding="utf-8") == body
 
 
-def test_main_writes_output_with_fake_provider(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+def test_main_writes_output_with_fake_provider(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """The main entrypoint should write a report when given a fake provider."""
 
     def _fake_get_provider(*args: object, **kwargs: object) -> _FakeProvider:
@@ -413,10 +417,14 @@ def test_main_writes_output_with_fake_provider(monkeypatch: pytest.MonkeyPatch, 
     assert rc == 0
     assert output.exists()
     body = output.read_text(encoding="utf-8")
-    assert "# Agentic UX Validation — v1.9.2" in body
+    assert "# Agentic UX Validation - v1.9.2" in body
     payload = json.loads(records_json.read_text(encoding="utf-8"))
     assert len(payload) == 12
     assert all("response_text" in entry for entry in payload)
+    stderr = capsys.readouterr().err
+    assert "wrote agentic validation report" in stderr
+    assert str(output) not in stderr
+    assert str(records_json) not in stderr
 
 
 def test_main_returns_nonzero_on_provider_error(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
@@ -437,16 +445,96 @@ def test_main_returns_nonzero_on_provider_error(monkeypatch: pytest.MonkeyPatch,
     assert rc == 2
 
 
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["--output", str(run._REPO_ROOT / "docs" / "agentic-report.md")],
+        [
+            "--output",
+            str(run._LOCAL_OUTPUT_DIR / "report.md"),
+            "--records-json",
+            str(run._REPO_ROOT / "validation" / "public-records.json"),
+        ],
+    ],
+)
+def test_main_rejects_trackable_output_paths_before_provider_initialization(
+    arguments: list[str],
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    provider_initialized = False
+
+    def _unexpected_provider(*args: object, **kwargs: object) -> _FakeProvider:
+        nonlocal provider_initialized
+        provider_initialized = True
+        return _FakeProvider()
+
+    monkeypatch.setattr(run, "get_provider", _unexpected_provider)
+
+    rc = run.main(["--provider", "anthropic", "--model", "fake", *arguments])
+
+    assert rc == 2
+    assert provider_initialized is False
+
+
+@pytest.mark.parametrize("directory", [run._LOCAL_OUTPUT_DIR, run._RUNS_OUTPUT_DIR])
+def test_output_path_guard_accepts_gitignored_agentic_directories(directory: Path) -> None:
+    candidate = directory / "nested" / "report.md"
+
+    assert run._validate_output_path(candidate) == candidate.resolve()
+
+
+@pytest.mark.parametrize("directory", [run._LOCAL_OUTPUT_DIR, run._RUNS_OUTPUT_DIR])
+def test_output_path_guard_rejects_allowed_directory_roots(directory: Path) -> None:
+    with pytest.raises(ValueError, match="must name a file"):
+        run._validate_output_path(directory)
+
+
+def test_output_path_guard_rejects_existing_external_directory(tmp_path: Path) -> None:
+    with pytest.raises(ValueError, match="must name a file"):
+        run._validate_output_path(tmp_path)
+
+
+def test_main_rejects_overlapping_report_and_record_paths_before_provider(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    provider_initialized = False
+
+    def _unexpected_provider(*args: object, **kwargs: object) -> _FakeProvider:
+        nonlocal provider_initialized
+        provider_initialized = True
+        return _FakeProvider()
+
+    monkeypatch.setattr(run, "get_provider", _unexpected_provider)
+    output = tmp_path / "shared-output.json"
+
+    rc = run.main(
+        [
+            "--provider",
+            "anthropic",
+            "--model",
+            "fake",
+            "--output",
+            str(output),
+            "--records-json",
+            str(output),
+        ]
+    )
+
+    assert rc == 2
+    assert provider_initialized is False
+
+
 # --- Fixture sanity ----------------------------------------------------------
 
 
 def test_committed_fixtures_have_expected_shape() -> None:
     """The committed fixtures must round-trip through the runner's loader."""
-    dense = run._load_fixture("contoso-dense")
-    sparse = run._load_fixture("hardened-sparse")
-    assert dense["queried_domain"] == "contoso.com"
-    assert sparse["queried_domain"] == "northwindtraders.com"
-    # Fictional brands only — see feedback_no_real_company_data.md
+    dense = run._load_fixture("synthetic-dense")
+    sparse = run._load_fixture("synthetic-sparse")
+    assert dense["queried_domain"] == "dense.example.invalid"
+    assert sparse["queried_domain"] == "sparse.example.invalid"
+    # Explicit synthetic sentinels only; see validation/README.md.
     assert "posterior_observations" in dense
     assert "posterior_observations" in sparse
     # Sparse fixture should report sparse=true on at least one node, by design.

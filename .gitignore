@@ -34,10 +34,10 @@ docs/accuracy.md
 # Agent working files
 /.agent/
 
-# Local validation sweeps. Real company names and per-domain JSON output
-# live here during accuracy work; never committed. Fictional-example
-# discipline requires anything committed to use Contoso / Northwind /
-# Fabrikam. Validation artifacts use real targets and stay local.
+# Local validation sweeps. Evaluated-target names and per-domain JSON output
+# live here during accuracy work; never committed. Anything committed uses
+# explicit synthetic identities under reserved namespaces or safe aggregates.
+# Validation artifacts using real targets stay local.
 # Generic tooling (runner, gap finder, diff, triage) is committed; the
 # corpus and run outputs stay local so users can curate their own
 # private test bed without leaking targets.
@@ -135,8 +135,8 @@ docs/accuracy.md
 # Typed DNS catalog baseline (2026-07-17): aggregate counts and generic
 # provider patterns only. No target names, target records, tenant IDs, or rows.
 !/validation/2026-07-17-typed-catalog-baseline.md
-# v2.1a: aggregate-state methodology example. Fully synthetic (fictional
-# brands, fabricated numbers); the reference reducer, generator, and synthetic
+# v2.1a: aggregate-state methodology example. Fully synthetic (numbered
+# reserved identities, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a
 # regenerable artifact (the doc shows how), so it stays out of the repo.
 !/validation/aggregate/
@@ -187,15 +187,15 @@ docs/accuracy.md
 !/validation/corpus_aggregator.py
 !/validation/synthetic_corpus/
 !/validation/synthetic_corpus/**
+/validation/synthetic_corpus/**/__pycache__/
 # validation/__init__.py: added in v1.9.2 to make ``validation`` a
 # proper package (previously implicit namespace) so static analysis
 # resolves intra-package imports cleanly.
 !/validation/__init__.py
 # v1.9.2 agentic UX validation harness. Dev-only tooling. Fixtures use
-# Microsoft fictional brands (Contoso/Northwind) so the committed
-# transcripts and report are safe. Any local run outputs against real
-# corpora must stay under runs/ or local/ inside the harness, both of
-# which are ignored below.
+# explicit synthetic identities under the reserved .invalid namespace. Detailed reports,
+# transcripts, raw records, and any private-corpus outputs must stay under
+# runs/ or local/ inside the harness, both of which are ignored below.
 !/validation/agentic_ux/
 !/validation/agentic_ux/**
 # Re-ignore Python build/cache artifacts and any per-run output dirs

@@ -57,7 +57,7 @@ current debt without turning every refinement into feature work.
 | Reliability | Static and live MCP diagnostics require canonical tools and resources, with live JSON resource reads; typed batch errors, bounded workers, bounded corpus and default cache inspection, residue-aware cache clearing, closed-pipe handling, explicit degradation, exact exit codes, complete catalog inspection, sealed artifact reconstruction and parity, and command-status-aware release recovery are implemented and listed in Unreleased | Do not change the current batch or corpus-test exit contract without a compatibility decision covering mixed and all-error streams |
 | Security | Unresolved HTTP destinations fail closed; rejected values and unexpected details stay out of default output; persisted inputs, corpus files, local catalog text, and default cache payload work are bounded; empty catalog filters cannot bypass compact defaults; release verification binds artifacts and recovery commands to exact status, workflow, tag, signer, and commit evidence (Unreleased) | Any exact configured-launcher doctor must require a safe explicit execution boundary |
 | Accessibility | `--plain` is shipped; help uses complete linear output when needed; welcome alignment is content-aware at ordinary widths; catalog and cache rows preserve labels when narrow; color is never the only status channel (Unreleased) | Keep both paths complete; do not replace the parser or hide specialist controls |
-| Documentation accuracy | README, MCP quick starts, stability, operational, security, generated CLI, release, catalog, cache, and corpus guidance track current behavior and keep target data out of public artifacts (Unreleased) | Keep eventual machine diagnostics separate from human output until versioned contracts are justified |
+| Documentation accuracy | README, MCP quick starts, stability, operational, security, generated CLI, release, catalog, cache, and corpus guidance track current behavior; public validation artifacts are reserved synthetic or aggregate-only (Unreleased) | Migrate remaining legacy fictional examples and fixtures outside validation, including prose, CLI and help examples, structured samples, snapshots, tests, and agent guidance, to reserved identities as bounded work; keep eventual machine diagnostics separate from human output until versioned contracts are justified |
 
 ## Priority Order
 
@@ -648,8 +648,8 @@ not evidence of completeness. The unseen vertical holdout is complete without
 post-holdout tuning. Independent rank, regional, vendor-seed, and drift rounds
 remain open. Evaluated apexes, organization names, tenant identifiers,
 target-owned record values, and per-domain rows remain off GitHub. Generic
-provider patterns, provider-owned references, fictional fixtures, and
-disclosure-safe aggregates are the public review surface.
+provider patterns, provider-owned references, reserved synthetic fixtures, and
+disclosure-safe aggregates are the validation review surface.
 
 Do not keep vendor-name-only proposals. A catalog candidate enters the backlog
 only with an exact record type and pattern, a source or disclosure-safe
@@ -808,7 +808,9 @@ Green process gates are necessary but are not proof of product utility.
 - No runtime aggregate database. No real-target corpus or per-domain rows are
   committed or published; maintainer-local validation data stays in the
   permanently ignored workspaces defined by the data-handling policy.
-- Public examples are fictional, synthetic, reserved, or aggregate-only.
+- New evaluated-target examples use explicit synthetic identities under
+  reserved namespaces; public validation artifacts are otherwise
+  aggregate-only.
 - Observations are hedged and provenance-bearing. Sparse or degraded evidence
   lowers confidence and may require abstention.
 - Stable CLI, JSON, MCP, cache, and import surfaces change only through their

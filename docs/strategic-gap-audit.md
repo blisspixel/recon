@@ -94,7 +94,7 @@ not outrank product truthfulness or measured user value.
 - `scripts/check_validation_hygiene.py` and release readiness confirm private
   validation run directories are not tracked.
 - Public bug and fingerprint intake now requires a target-data acknowledgement.
-  The forms accept fictional fixtures, sanitized diagnostics, provider names,
+  The forms accept reserved synthetic fixtures, sanitized diagnostics, provider names,
   provider-controlled service patterns, and provider documentation, but not
   evaluated-target identities, records, screenshots, or per-domain output.
 - The product introduction now promises a Python package, CLI, versioned JSON,

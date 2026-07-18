@@ -168,15 +168,16 @@ disposition).
 ### 3. Agent operator UX on v1.9.9 surfaces
 
 **Status:** v1.9.2 fixtures re-rendered through v1.9.9 panel
-(snapshot report at `validation/synthetic_corpus/render_snapshots.md`),
-but agent-step not run.
+(aggregate snapshot report at
+`validation/synthetic_corpus/render_snapshots.md`; detailed output stays local),
+but the paid agent step was not run.
 **Remediation milestone:** v1.9.11 documentation polish includes
 the agentic-UX runbook (`validation/agentic_ux_v199_runbook.md`)
 that names the smallest-cost LLM invocation. Maintainer runs the
 agent step locally before v2.0 tag.
-**Definition of done:** a `validation/v1.9.9-agentic-ux-update.md`
-that captures whether agents read the new surfaces correctly on
-the rendered fixtures.
+**Definition of done:** a gitignored local agentic report captures whether
+agents read the new surfaces correctly on the rendered fixtures, and only its
+disclosure-safe aggregate is considered for tracking.
 
 ### 4. Performance / memory bounds
 

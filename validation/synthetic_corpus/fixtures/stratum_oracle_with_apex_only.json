@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "northwind-oracle-bare",
-  "display_name": "Northwind Oracle Bare",
-  "default_domain": "northwind-or.com",
-  "queried_domain": "northwind-or.com",
+  "default_domain": "synthetic-beta-or-com.invalid",
+  "queried_domain": "synthetic-beta-or-com.invalid",
   "confidence": "medium",
   "domain_count": 3,
   "tenant_domains": [
-    "northwind-or.com",
-    "northwind-svc.com",
-    "northwind-internal.com"
+    "synthetic-beta-or-com.invalid",
+    "synthetic-beta-svc-com.invalid",
+    "synthetic-beta-internal-com.invalid"
   ],
   "services": [
     "Oracle Cloud"
@@ -19,5 +17,7 @@
   ],
   "sources": [],
   "surface_attributions": [],
+  "display_name": "Synthetic Scenario 998501322610",
+  "tenant_id": "synthetic-scenario-998501322610",
   "_stratum": "oracle"
 }

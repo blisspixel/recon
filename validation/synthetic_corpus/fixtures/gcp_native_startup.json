@@ -1,15 +1,13 @@
 {
   "cache_version": 1,
-  "tenant_id": "tailspin-startup",
-  "display_name": "Tailspin Toys",
-  "default_domain": "tailspin.com",
-  "queried_domain": "tailspin.com",
+  "default_domain": "synthetic-epsilon-com.invalid",
+  "queried_domain": "synthetic-epsilon-com.invalid",
   "confidence": "high",
   "domain_count": 3,
   "tenant_domains": [
-    "tailspin.com",
-    "tailspin.io",
-    "tailspin-app.com"
+    "synthetic-epsilon-com.invalid",
+    "synthetic-epsilon-io.invalid",
+    "synthetic-epsilon-app-com.invalid"
   ],
   "services": [
     "Google Workspace",
@@ -26,17 +24,19 @@
   "sources": [],
   "surface_attributions": [
     {
-      "subdomain": "app.tailspin.com",
+      "subdomain": "app.synthetic-epsilon-com.invalid",
       "primary_slug": "firebase-hosting",
       "primary_name": "Firebase Hosting",
       "primary_tier": "infrastructure"
     },
     {
-      "subdomain": "api.tailspin.com",
+      "subdomain": "api.synthetic-epsilon-com.invalid",
       "primary_slug": "gcp-cloud-functions",
       "primary_name": "GCP Cloud Functions",
       "primary_tier": "infrastructure"
     }
   ],
+  "display_name": "Synthetic Scenario 178149460384",
+  "tenant_id": "synthetic-scenario-178149460384",
   "_stratum": "baseline"
 }
