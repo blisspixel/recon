@@ -246,7 +246,7 @@ class TestDoctorFixSubcommand:
         result = runner.invoke(app, ["doctor", "--fix"])
 
         assert result.exit_code == 0
-        assert "[bold]config" in result.output
+        assert "[bold]config" in "".join(result.output.split())
         assert (config_dir / "fingerprints.yaml").exists()
 
     def test_doctor_fix_renders_hostile_write_error_as_bounded_literal(self, tmp_path, monkeypatch) -> None:

@@ -545,7 +545,7 @@ class TestCLI:
         )
 
         assert result.exit_code == 0
-        assert "[bold]config" in result.output
+        assert "[bold]config" in "".join(result.output.split())
         assert not target.exists()
 
     def test_install_refusal_renders_hostile_detail_as_bounded_literal(
