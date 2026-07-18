@@ -672,7 +672,11 @@ def _probe_live_doctor() -> ProbeCheck:
             failures = [f"{item.name}: {item.detail}" for item in doctor.checks if item.status == "fail"]
             raise RuntimeError("; ".join(failures))
         discovery = [item.name for item in doctor.checks if item.name in {"initialize handshake", "server/discover"}]
-        return ProbeCheck("recon_live_doctor", "pass", f"discovery={','.join(discovery)} tools=verified")
+        return ProbeCheck(
+            "recon_live_doctor",
+            "pass",
+            f"discovery={','.join(discovery)} registrations=verified resources=read",
+        )
     except Exception as exc:
         return ProbeCheck("recon_live_doctor", "fail", _exception_detail(exc))
 

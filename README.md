@@ -148,7 +148,9 @@ recon cache show --all                         # inspect every completed JSON ca
 recon cache show mail.contoso.com --exact      # inspect literal-host result and CT cache metadata
 recon cache clear mail.contoso.com --exact     # clear literal-host CT and result cache keys
 recon mcp install --client=cursor              # wire MCP into a client
-recon mcp doctor                               # live MCP handshake check
+recon doctor --mcp                             # static MCP registry check
+recon mcp doctor                               # live MCP tools/resources check
+recon doctor --client=cursor                   # verify the client config
 ```
 
 The default cache overview enumerates filenames but opens at most the
@@ -275,13 +277,17 @@ untrusted input.
 
 ```bash
 recon mcp install --client=claude-desktop
-recon mcp install --client=cursor --dry-run
+recon doctor --mcp
 recon mcp doctor
+recon doctor --client=claude-desktop
 ```
 
-The installer writes the right per-client config shape and preserves sibling
-MCP servers. Full setup, tool list, read-only versus stateful guidance, and
-troubleshooting live in
+The three checks cover different boundaries in order: static server registry,
+live local stdio discovery plus canonical tool and JSON resource reads, then
+the named client's saved configuration. The live check does not inspect client
+configuration. The installer writes the right per-client config shape and
+preserves sibling MCP servers. Full setup, tool list, read-only versus stateful
+guidance, and troubleshooting live in
 [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md).
 Per-client scaffolds live in
 [agents/](https://github.com/blisspixel/recon/tree/main/agents).

@@ -8,6 +8,7 @@ facade. Imports the shared cli helpers / formatter; never imports cli.py.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import sys
@@ -18,6 +19,7 @@ from typing import Any, Literal, TypeAlias
 import typer
 
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
+from recon_tool.cli.shared import render_diagnostic_status_row as _render_status_row
 from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import (
     EXIT_ERROR,
@@ -135,8 +137,89 @@ fingerprints: []
 """
 
 
+def _mcp_tool_registry_check(server_mcp: Any, required_tools: frozenset[str]) -> McpCheck:
+    """Return the static canonical-tool registry check."""
+    try:
+        tools = asyncio.run(server_mcp.list_tools())
+        tool_names = {str(getattr(tool, "name", "")) for tool in tools}
+        missing_tools = sorted(required_tools - tool_names)
+        if missing_tools:
+            return (
+                "Tools enumerated",
+                False,
+                f"{len(tools)} registered; missing canonical: {', '.join(missing_tools)}",
+            )
+        return (
+            "Tools enumerated",
+            True,
+            f"{len(tools)} registered; {len(required_tools)} canonical tools present",
+        )
+    except Exception as exc:
+        return ("Tools enumerated", False, f"{exc}")
+
+
+def _mcp_resource_registry_check(server_mcp: Any, required_resources: tuple[str, ...]) -> McpCheck:
+    """Return the static canonical-resource registry check."""
+    try:
+        resources = asyncio.run(server_mcp.list_resources())
+        resource_uris = {str(getattr(resource, "uri", "")) for resource in resources}
+        missing_resources = [uri for uri in required_resources if uri not in resource_uris]
+        if missing_resources:
+            return (
+                "Resources enumerated",
+                False,
+                f"{len(resources)} registered; missing canonical: {', '.join(missing_resources)}",
+            )
+        return (
+            "Resources enumerated",
+            True,
+            f"{len(resources)} registered; {len(required_resources)} canonical resources present",
+        )
+    except Exception as exc:
+        return ("Resources enumerated", False, f"{exc}")
+
+
+def _render_mcp_reference_config() -> None:
+    """Render the generic config and safe-installer guidance."""
+    from recon_tool.mcp_client.install import build_recon_block, warn_if_fallback
+
+    console = get_console()
+    recon_block = build_recon_block()
+    console.print()
+    console.print(
+        "  [yellow]Security note:[/yellow] `recon mcp` runs with the privileges of\n"
+        "  the calling user. Start with manual approvals and only expand\n"
+        "  `autoApprove` if you fully understand the risk."
+    )
+    console.print()
+    console.print("  [bold]Reference config for clients that use `mcpServers`[/bold]")
+    console.print()
+    console.print("  [dim]# Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
+    console.print("  [dim]# Cursor: ~/.cursor/mcp.json or <project>/.cursor/mcp.json[/dim]")
+    console.print("  [dim]# Windsurf: ~/.codeium/windsurf/mcp_config.json[/dim]")
+    console.print("  [dim]# Kiro: ~/.kiro/settings/mcp.json or <project>/.kiro/settings/mcp.json[/dim]")
+    console.print(
+        "  [dim]# VS Code uses a different top-level `servers` key; run `recon mcp install --client=vscode`.[/dim]"
+    )
+    console.print(
+        "  [dim]# Prefer `recon mcp install --client=<name>` so existing client configuration is merged safely.[/dim]"
+    )
+    console.print()
+    typer.echo(json.dumps({"mcpServers": {"recon": recon_block}}, indent=2))
+    console.print()
+
+    if warn_if_fallback() is not None:
+        console.print(
+            "  [yellow]Tip:[/yellow] GUI clients (Claude Desktop, Windsurf) often don't\n"
+            "  inherit your shell PATH. The config above uses recon's safe\n"
+            "  sys.path-stripping Python fallback. For a shorter config, add\n"
+            "  `recon` to PATH and rerun `recon doctor --mcp`."
+        )
+        console.print()
+
+
 def doctor_mcp() -> None:
-    """Validate MCP server setup and emit copy-pasteable client config."""
+    """Validate the static MCP registry and emit copy-pasteable client config."""
     import shutil
     import sys
 
@@ -171,27 +254,22 @@ def doctor_mcp() -> None:
 
     # 3. MCP server has instructions
     instructions = getattr(server_mcp, "instructions", None)
-    if instructions:
+    if isinstance(instructions, str) and instructions.strip():
         checks.append(("Server Instructions", True, f"{len(instructions)} chars"))
     else:
         checks.append(("Server Instructions", False, "missing; agents may misuse tools"))
 
-    # 4. Enumerate tools through the public SDK surface.
-    tools_ok = True
-    try:
-        import asyncio
+    # 4. Enumerate tools through the public SDK surface and require the
+    # canonical workflow anchors. Extra registered tools remain compatible.
+    from recon_tool.mcp_client.doctor import REQUIRED_RESOURCES, REQUIRED_TOOLS
 
-        tools = asyncio.run(server_mcp.list_tools())
-        if tools:
-            checks.append(("Tools enumerated", True, f"{len(tools)} tools registered"))
-        else:
-            checks.append(("Tools enumerated", False, "no tools registered"))
-            tools_ok = False
-    except Exception as exc:
-        checks.append(("Tools enumerated", False, f"{exc}"))
-        tools_ok = False
+    checks.append(_mcp_tool_registry_check(server_mcp, REQUIRED_TOOLS))
 
-    # 5. recon executable on PATH (important for short GUI-client configs)
+    # 5. Enumerate local resources independently so a tool-list failure does
+    # not hide a second registration problem.
+    checks.append(_mcp_resource_registry_check(server_mcp, REQUIRED_RESOURCES))
+
+    # 6. recon executable on PATH (important for short GUI-client configs)
     recon_path = shutil.which("recon")
     if recon_path:
         checks.append(("recon on PATH", True, recon_path))
@@ -200,46 +278,10 @@ def doctor_mcp() -> None:
 
     _render_mcp_checks(checks)
 
-    # Emit copy-pasteable config. Keep this in sync with the installer
-    # rather than hand-writing a stale launch block.
-    from recon_tool.mcp_client.install import build_recon_block, warn_if_fallback
+    # Keep the reference config in sync with the safe installer.
+    _render_mcp_reference_config()
 
-    recon_block = build_recon_block()
-    console.print()
-    console.print(
-        "  [yellow]Security note:[/yellow] `recon mcp` runs with the privileges of\n"
-        "  the calling user. Start with manual approvals and only expand\n"
-        "  `autoApprove` if you fully understand the risk."
-    )
-    console.print()
-    console.print("  [bold]Reference config for clients that use `mcpServers`[/bold]")
-    console.print()
-    console.print("  [dim]# Claude Desktop: ~/Library/Application Support/Claude/claude_desktop_config.json[/dim]")
-    console.print("  [dim]# Cursor: ~/.cursor/mcp.json or <project>/.cursor/mcp.json[/dim]")
-    console.print("  [dim]# Windsurf: ~/.codeium/windsurf/mcp_config.json[/dim]")
-    console.print("  [dim]# Kiro: ~/.kiro/settings/mcp.json or <project>/.kiro/settings/mcp.json[/dim]")
-    console.print(
-        "  [dim]# VS Code uses a different top-level `servers` key; run `recon mcp install --client=vscode`.[/dim]"
-    )
-    console.print(
-        "  [dim]# Prefer `recon mcp install --client=<name>` so existing client configuration is merged safely.[/dim]"
-    )
-    console.print()
-    snippet = json.dumps({"mcpServers": {"recon": recon_block}}, indent=2)
-    typer.echo(snippet)
-    console.print()
-
-    fallback_warning = warn_if_fallback()
-    if fallback_warning is not None:
-        console.print(
-            "  [yellow]Tip:[/yellow] GUI clients (Claude Desktop, Windsurf) often don't\n"
-            "  inherit your shell PATH. The config above uses recon's safe\n"
-            "  sys.path-stripping Python fallback. For a shorter config, add\n"
-            "  `recon` to PATH and rerun `recon doctor --mcp`."
-        )
-        console.print()
-
-    if not tools_ok:
+    if not all(ok for _name, ok, _detail in checks):
         raise typer.Exit(code=EXIT_ERROR)
 
 
@@ -249,9 +291,7 @@ def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
     for name, ok, detail in checks:
         mark = "ok" if ok else "FAIL"
         style = "green" if ok else "red"
-        safe_name = _safe_markup(name)
-        safe_detail = _safe_markup(detail)
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {safe_name}: {safe_detail}")
+        _render_status_row(console, mark=mark, style=style, name=name, detail=detail)
 
 
 def doctor_client(client: str) -> None:
