@@ -38,20 +38,13 @@ retain the same product behavior and output contracts. Current measurements
 and version-specific decisions are in
 [docs/performance.md](https://github.com/blisspixel/recon/blob/main/docs/performance.md).
 
-If `uv` or `pipx` is already installed, the platform script can install or
-update recon:
-
-**Windows (PowerShell):**
-
-```powershell
-powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
-```
-
-**macOS or Linux:**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
-```
+Optional
+[PowerShell](https://github.com/blisspixel/recon/blob/main/scripts/install.ps1)
+and
+[macOS/Linux](https://github.com/blisspixel/recon/blob/main/scripts/install.sh)
+helpers use an existing `uv` or `pipx` installation. Download them from a
+release-tag checkout, review the local file, and then run it. Do not pipe
+mutable branch content directly into a shell.
 
 Open a new terminal and run an offline verification of the installed command:
 
@@ -80,6 +73,9 @@ Run the first lookup:
 ```bash
 recon contoso.com
 ```
+
+If a lookup times out or every online source fails, run `recon doctor` to
+check source connectivity, then retry the lookup.
 
 Example output shape:
 
@@ -129,7 +125,7 @@ recon contoso.com                              # default panel
 recon https://www.contoso.com/path             # normalize URL to apex
 recon mail.contoso.com                         # reduce sub-host to apex
 recon mail.contoso.com --exact                 # keep that literal host
-recon contoso.com --explain                    # reasoning and provenance
+recon contoso.com --explain                    # retained evidence and explanation
 recon contoso.com --full                       # expanded evidence, domains, posture
 recon contoso.com --plain                      # linear text for screen readers and grep
 recon contoso.com --json                       # structured lookup record
@@ -142,6 +138,11 @@ recon cache clear mail.contoso.com --exact     # clear literal-host CT and resul
 recon mcp install --client=cursor              # wire MCP into a client
 recon mcp doctor                               # live MCP handshake check
 ```
+
+At terminal widths below 70 columns, command help automatically switches to a
+complete linear layout so long option names remain visible. `--plain` is the
+linear view for a standard single-domain lookup; batch, delta, chain, compare,
+exposure, and gaps reports keep their mode-specific formats.
 
 Built-in posture profiles: `fintech`, `healthcare`, `saas-b2b`,
 `high-value-target`, `public-sector`, and `higher-ed`. Custom profiles live in

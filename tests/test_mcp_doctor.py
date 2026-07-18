@@ -171,6 +171,28 @@ class TestCLI:
         assert "server spawn" in result.output
         assert "subprocess refused to start" in result.output
 
+    def test_doctor_renders_hostile_report_fields_as_one_bounded_literal_row(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        hostile = "[red]forged[/red]\n  ok  forged-row\x1b]52;c;cGF5bG9hZA==\x07" + "x" * 2500
+
+        def _stub_run() -> DoctorReport:
+            return DoctorReport(
+                checks=(DoctorCheck("spawn [name]", "fail", hostile),),
+                elapsed_seconds=0.1,
+            )
+
+        monkeypatch.setattr("recon_tool.mcp_doctor.run_doctor", _stub_run)
+        result = runner.invoke(app, ["mcp", "doctor"])
+
+        assert result.exit_code != 0
+        assert "spawn [name]" in result.output
+        assert "[red]forged[/red]" in result.output
+        assert "\n  ok  forged-row" not in result.output
+        assert "\x1b]52" not in result.output
+        assert "[truncated]" in result.output
+
     def test_doctor_renders_ok_report_with_zero_exit(self, monkeypatch: pytest.MonkeyPatch) -> None:
         def _stub_run() -> DoctorReport:
             return DoctorReport(

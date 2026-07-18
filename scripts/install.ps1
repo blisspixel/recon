@@ -1,7 +1,7 @@
-# One-line installer / updater for recon (Windows PowerShell).
+# Installer / updater for recon (Windows PowerShell).
 #
-# Install or update (same command - re-run any time to upgrade to the latest):
-#   powershell -ExecutionPolicy ByPass -c "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
+# Review this file from a release-tag checkout, then install or update with:
+#   powershell -ExecutionPolicy ByPass -File .\scripts\install.ps1
 #
 # Uninstall:
 #   uv tool uninstall recon-tool   # or: pipx uninstall recon-tool

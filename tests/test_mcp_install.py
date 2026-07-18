@@ -529,6 +529,43 @@ class TestCLI:
         assert parsed_block == {"mcpServers": {"recon": expected.new_block}}
         assert not target.exists()
 
+    def test_install_plan_renders_markup_like_path_as_literal(self, tmp_path: Path) -> None:
+        target = tmp_path / "[bold]config" / "mcp.json"
+        result = runner.invoke(
+            app,
+            [
+                "mcp",
+                "install",
+                "--client",
+                "cursor",
+                "--config-path",
+                str(target),
+                "--dry-run",
+            ],
+        )
+
+        assert result.exit_code == 0
+        assert "[bold]config" in "".join(result.output.split())
+        assert not target.exists()
+
+    def test_install_refusal_renders_hostile_detail_as_bounded_literal(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        hostile = "[red]forged[/red]\n  ok  forged-row\x1b]52;c;cGF5bG9hZA==\x07" + "x" * 2500
+
+        def _refuse(*_args: object, **_kwargs: object) -> object:
+            raise InstallError(hostile)
+
+        monkeypatch.setattr("recon_tool.mcp_client.install.plan_install", _refuse)
+        result = runner.invoke(app, ["mcp", "install", "--client", "cursor"])
+
+        assert result.exit_code == 2
+        assert "[red]forged[/red]" in result.output
+        assert "\n  ok  forged-row" not in result.output
+        assert "\x1b]52" not in result.output
+        assert "[truncated]" in result.output
+
     def test_install_vscode_dry_run_uses_servers_key(self, tmp_path: Path) -> None:
         target = tmp_path / "mcp.json"
         result = runner.invoke(
