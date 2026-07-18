@@ -18,7 +18,7 @@ operator, corporate group, ownership, or control.
 
 ### Tool Surface Changes
 
-Tool surface changes: added flags `--all` on `recon cache show`.
+Tool surface changes: added flag `--all` to `recon cache show`.
 
 ### Changed
 
@@ -232,6 +232,8 @@ Tool surface changes: added flags `--all` on `recon cache show`.
 
 ### Fixed
 
+- CLI surface summaries now use singular or plural flag grammar and the
+  directionally accurate `to` and `from` prepositions.
 - `recon doctor --mcp` no longer exits successfully when server instructions
   or canonical tools are missing. It now independently verifies all canonical
   local resource registrations, so a tool-list failure cannot hide a resource
