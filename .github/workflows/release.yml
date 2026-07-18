@@ -35,12 +35,15 @@ on:
 #   * ``export-attestations`` downloads GitHub's signed attestation bundles for
 #     the sealed dist artifacts and stores them as a release-asset-friendly
 #     ``*.intoto.jsonl`` artifact. It runs no project dependency code.
-#   * ``publish-pypi`` and ``github-release`` wait for the package smoke,
-#     provenance attestation, and SBOM paths, then download the sealed artifacts
-#     from GitHub storage.
-#     They never re-build, never re-install dev deps, never execute additional
-#     dependency code. If provenance attestation fails, the release fails closed
-#     instead of publishing unauthenticated files.
+#   * ``publish-pypi`` waits for the package smoke, provenance attestation, and
+#     SBOM paths. A separate read-only parity job then proves PyPI serves the
+#     sealed wheel and sdist bytes before ``github-release`` can publish or
+#     clobber the matching GitHub assets during partial-release recovery.
+#     These jobs never re-build, never re-install dev deps, and never execute
+#     project dependency code. A pre-publication trust failure blocks both
+#     channels. A parity failure after PyPI accepts immutable files blocks the
+#     GitHub Release and leaves a visible partial-publication state that may be
+#     recovered only by proving the sealed bytes match the existing PyPI pair.
 #
 # The threat the contract addresses: if a transitive dev dependency
 # of pip-audit (or pip-audit itself) is compromised at the locked
@@ -434,8 +437,46 @@ jobs:
           # build-provenance attestation produced by the ``attest`` job.
           attestations: true
 
+  verify-pypi-parity:
+    # PyPI upload is idempotent because a partial release may need recovery.
+    # If PyPI already contains this version, skip-existing preserves those
+    # immutable files while the current run has a newly sealed pair. Compare
+    # both SHA-256 digests before the write-capable GitHub Release job can
+    # create or clobber assets, preventing a split release across channels.
+    needs: [build, publish-pypi]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Download sealed build artifacts
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: dist
+          path: dist/
+
+      - name: Require PyPI and sealed artifact parity
+        env:
+          VERSION: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          python3 scripts/check_release_channel_parity.py \
+            --version "${VERSION#v}" \
+            --dist-dir dist \
+            --attempts 12 \
+            --delay-seconds 10
+
   github-release:
-    needs: [build, attest, export-attestations, package-smoke, sbom]
+    needs: [build, attest, export-attestations, package-smoke, sbom, verify-pypi-parity]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

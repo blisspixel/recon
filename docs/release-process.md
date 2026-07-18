@@ -20,7 +20,8 @@ uv run python scripts/release.py
 
 # 4. Confirm the atomic main + exact-tag push when prompted. The tag triggers
 #    source/tag preflight, the complete quality gate, one sealed build and
-#    attestation path, SBOM validation, PyPI publication, and GitHub Release.
+#    attestation path, SBOM validation, PyPI publication, channel parity, and
+#    GitHub Release.
 ```
 
 ## Release Decision and Cadence
@@ -90,11 +91,14 @@ uv run python scripts/release_readiness.py
 
 After pushing `main`, add the optional remote check. In remote mode the gate
 verifies required GitHub Actions checks for `HEAD`, public Scorecard API
-freshness and code-owned control scores, PyPI's latest `recon-tool` release,
-and the GitHub Release assets for the current version (wheel, sdist, SBOM, and
-attestation export). It also verifies the PyPI wheel and sdist with
-`pypi-attestations verify pypi`, then downloads the GitHub Release wheel and
-sdist and runs `gh attestation verify` against both files:
+freshness and code-owned control scores, PyPI's exact current-version record,
+and the exact four GitHub Release assets for the current version. It verifies
+both PyPI files with pinned `pypi-attestations==0.0.29`, validates the completed
+CycloneDX SBOM without repairing it, verifies the GitHub wheel and sdist against
+the downloaded bundle with the exact release workflow, tag ref, local release
+tag commit digest, and hosted-runner boundary, and reports the SHA-256 parity of
+both files across PyPI and GitHub. The remote check therefore requires the
+current release tag locally plus an authenticated `gh` session or `GH_TOKEN`:
 
 ```bash
 uv run python scripts/release_readiness.py --remote
@@ -153,6 +157,7 @@ The script enforces the release transaction in this order:
 7. **Snapshot**: capture every file the release transaction owns.
 8. **Synchronize surfaces**: update `pyproject.toml`, the package fallback,
    both roadmaps, the engineering refinement plan, supply-chain recipe,
+   exact-version POSIX and PowerShell installer helpers,
    correlation and statistical-assurance review headers, Claude Code plugin
    manifest, `CITATION.cff`, `uv.lock`, generated surface inventories, and the
    generated CLI surface.
@@ -219,15 +224,22 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
 8. **publish-pypi**: after `build`, `attest`, `package-smoke`, and `sbom`, uses
    `pypa/gh-action-pypi-publish@release/v1` with OIDC Trusted Publishing and PEP
    740 attestations. No static API tokens.
-9. **github-release**: after `build`, `attest`, `export-attestations`,
-   `package-smoke`, and `sbom`, extracts the matching `## [X.Y.Z]` section from
-   `CHANGELOG.md` as the release body and attaches the package, SBOM, and
-   provenance artifacts.
+9. **verify-pypi-parity**: after `publish-pypi`, downloads the sealed pair in a
+   read-only job, waits for the exact two PyPI records, and requires both
+   SHA-256 digests to match before GitHub publication can proceed.
+10. **github-release**: after `build`, `attest`, `export-attestations`,
+    `package-smoke`, `sbom`, and `verify-pypi-parity`, extracts the matching
+    `## [X.Y.Z]` section from `CHANGELOG.md` as the release body and attaches
+    the package, SBOM, and provenance artifacts.
 
 The dependency graph blocks both publication channels when tag preflight, the
 complete test gate, package build, installed-wheel smoke, provenance
 attestation, or SBOM validation fails, while allowing `build` and `sbom` to run
-independently after `test`.
+independently after `test`. Once PyPI accepts its immutable files, a parity
+failure blocks only the GitHub Release and leaves a visible partial-publication
+state. Diagnose the failed row, preserve the existing PyPI files, and rerun the
+same tag only when its sealed pair is byte-identical to PyPI. Never rebuild,
+replace, or bypass evidence to complete the second channel.
 
 Workflow permissions are least-privilege: read-only jobs use `contents: read`,
 `attest` and `publish-pypi` receive `id-token: write` only where OIDC is needed,
@@ -259,15 +271,17 @@ Before running `scripts/release.py`:
 
 After the tag is published and the PyPI release exists:
 
-- [ ] Confirm the GitHub Release assets include wheel, sdist, SBOM, and
+- [ ] Confirm the GitHub Release contains exactly the wheel, sdist, SBOM, and
       `recon-tool-<version>.intoto.jsonl`.
 - [ ] Run `uv run python scripts/release_readiness.py --remote` after the
       release so CI, public Scorecard API freshness, PyPI files, PyPI
-      provenance, GitHub Release assets, GitHub provenance attestations,
-      and citation metadata are checked together.
+      provenance, exact GitHub Release assets, completed SBOM, tag-bound GitHub
+      provenance, cross-channel digests, and citation metadata are checked
+      together.
 
-The `pipx` / `uv` / `pip` install paths need no per-release action. They
-resolve the latest from PyPI automatically.
+The direct `pipx` / `uv` / `pip` install paths need no per-release action. The
+release transaction updates and validates both reviewed installer-helper pins
+before creating the tag.
 
 ---
 

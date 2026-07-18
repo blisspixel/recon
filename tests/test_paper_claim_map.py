@@ -35,9 +35,12 @@ def test_claim_map_covers_required_evidence_tiers_and_gates() -> None:
         "scripts/release_readiness.py --remote",
         "release-state evidence",
         "public Scorecard API reports the exact `HEAD`",
-        "public Scorecard API freshness plus PyPI and GitHub provenance",
-        "verifies PyPI and GitHub provenance",
-        "PyPI and GitHub provenance verification for the published wheel and sdist",
+        "public Scorecard API freshness",
+        "verifies PyPI provenance",
+        "binds GitHub evidence to the exported bundle",
+        "source tag and commit digest",
+        "completed SBOM validation",
+        "cross-channel byte parity",
     ):
         assert required in text
 

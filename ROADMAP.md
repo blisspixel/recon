@@ -32,6 +32,14 @@ request failures, labels CT cache overview freshness, and completes narrow root
 and welcome help. Release-shaped builds now select exact uv and a hash-locked
 backend graph, reconstruct the wheel from the new sdist, and reject any sealed
 artifact set other than one tag-matching wheel and sdist.
+Publication now waits for exact PyPI-to-sealed byte parity before GitHub assets
+can be created or replaced, and documents the recoverable partial-publication
+state if parity fails after PyPI accepts immutable files. Remote readiness
+validates the completed SBOM, exported provenance bundle, exact signer workflow,
+source tag and commit digest, and cross-channel digests. Reviewed installer
+helpers bind installation to their release version
+and preserve one existing package-manager owner; consumer verification now has
+complete fail-closed POSIX and PowerShell paths.
 
 The catalog-quality track uses deduplicated private rounds with distinct rank,
 regional, vertical, vendor-seed, or drift questions. It must account for every

@@ -2,10 +2,15 @@
 
 from __future__ import annotations
 
+import base64
+import os
 import re
+import shutil
+import subprocess
 from pathlib import Path
 from typing import Any
 
+import pytest
 import yaml
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -354,9 +359,10 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
         "June 28 review found one code-owned gap",
         "remaining Scorecard limits are intentional or process-bound",
         "public Scorecard API freshness for `HEAD`",
-        "code-owned Scorecard controls remain green",
-        "verifies the PyPI wheel and sdist",
-        "runs `gh attestation verify` against both artifacts",
+        "code-owned Scorecard controls",
+        "both PyPI PEP 740 attestations",
+        "verifies both GitHub artifacts against the downloaded bundle",
+        "requires the PyPI and GitHub wheel and sdist digests to match",
     ):
         assert required in text
 
@@ -375,19 +381,84 @@ def test_supply_chain_docs_provide_consumer_verification_recipe() -> None:
 
     for required in (
         "Consumer verification quick path",
+        "macOS or Linux",
+        "Windows PowerShell",
+        "Python 3.11 through 3.14",
+        "set -euo pipefail",
+        "Set-StrictMode -Version Latest",
+        "git status --porcelain",
+        "gh auth status",
+        "GH_TOKEN",
+        "MAX_RELEASE_ASSET_BYTES",
+        "gh release view",
         "gh release download",
-        "--pattern \"recon_tool-${VERSION}-py3-none-any.whl\"",
-        "--pattern \"recon_tool-${VERSION}.tar.gz\"",
-        "--pattern \"recon-tool-${VERSION}.cdx.json\"",
-        "--pattern \"recon-tool-${VERSION}.intoto.jsonl\"",
+        '--pattern "recon_tool-${VERSION}-py3-none-any.whl"',
+        '--pattern "recon_tool-${VERSION}.tar.gz"',
+        '--pattern "recon-tool-${VERSION}.cdx.json"',
+        '--pattern "recon-tool-${VERSION}.intoto.jsonl"',
+        "scripts/check_release_channel_parity.py",
+        "--url-file",
+        "validate_completed_sbom",
         "gh attestation verify",
-        "https://pypi.org/pypi/recon-tool/json",
-        "while IFS= read -r file_url",
-        "uvx --from pypi-attestations pypi-attestations verify pypi",
-        "source-to-artifact provenance and integrity",
+        "--bundle",
+        "--signer-workflow",
+        "--source-ref",
+        "--source-digest",
+        "--deny-self-hosted-runners",
+        'done < "${URL_FILE}"',
+        'uvx --from "pypi-attestations==0.0.29" pypi-attestations verify pypi',
+        "uv run --isolated --no-project --with",
+        "RECON_INSTALL_MANAGER",
+        "both working wheel entry points",
+        "stops on a producer, inventory, digest, verifier, SBOM, bundle",
         "not a claim that recon has reached a named SLSA level",
     ):
         assert required in text
+
+    assert "python - <<'PY' | while" not in text
+
+
+def _consumer_recipe_block(language: str) -> str:
+    text = (_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8")
+    section = text.split("## Consumer verification quick path", 1)[1].split("## Deterministic-build evidence", 1)[0]
+    blocks = re.findall(rf"```{re.escape(language)}\n(.*?)\n```", section, flags=re.DOTALL)
+    assert len(blocks) == 1
+    return blocks[0]
+
+
+def test_posix_consumer_verification_recipe_parses() -> None:
+    if os.name == "nt":
+        pytest.skip("POSIX recipe syntax is checked on Unix CI")
+    bash = shutil.which("bash")
+    if bash is None:
+        pytest.skip("bash is not available")
+
+    subprocess.run(  # noqa: S603
+        [bash, "-n"],
+        input=_consumer_recipe_block("bash"),
+        text=True,
+        capture_output=True,
+        check=True,
+    )
+
+
+def test_powershell_consumer_verification_recipe_parses() -> None:
+    if os.name != "nt":
+        pytest.skip("Windows PowerShell recipe syntax is checked on Windows CI")
+    powershell = shutil.which("powershell")
+    if powershell is None:
+        pytest.skip("Windows PowerShell is not available")
+    encoded_recipe = base64.b64encode(_consumer_recipe_block("powershell").encode("utf-16le")).decode()
+    command = (
+        "$recipe=[Text.Encoding]::Unicode.GetString([Convert]::FromBase64String('"
+        + encoded_recipe
+        + "')); [scriptblock]::Create($recipe) | Out-Null"
+    )
+
+    subprocess.run(  # noqa: S603
+        [powershell, "-NoProfile", "-Command", command],
+        check=True,
+    )
 
 
 def test_supply_chain_docs_do_not_overclaim_pypi_attestation_consumption() -> None:
@@ -398,7 +469,7 @@ def test_supply_chain_docs_do_not_overclaim_pypi_attestation_consumption() -> No
         "pypi-attestations verify pypi",
         "Trusted Publisher identity matches the repository argument",
         "Do not treat PyPI attestations as installer-level enforcement",
-        "not a claim that installers enforce PyPI attestations automatically",
+        "verification path does not make installers enforce PyPI attestations automatically",
     ):
         assert required in text
 
