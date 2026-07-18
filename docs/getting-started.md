@@ -61,10 +61,13 @@ recon doctor
 ## Verify a Published Release
 
 Security-sensitive consumers can verify the exact GitHub Release asset set,
-completed SBOM, tag-bound provenance bundle, PyPI attestations, cross-channel
-SHA-256 parity, and both wheel entry points before optionally installing the
-verified local wheel. The complete macOS/Linux and Windows PowerShell paths are
-in the [consumer verification quick path](supply-chain.md#consumer-verification-quick-path).
+completed SBOM, tag-bound bundle, PyPI attestations, cross-channel SHA-256
+parity, and both wheel entry points before optionally installing the verified
+local wheel. Releases produced by the current workflow include the SBOM in the
+signed subject set; the exact v2.6.3 historical exception covers its wheel and
+sdist while still requiring SBOM structure validation. The complete
+macOS/Linux and Windows PowerShell paths are in the
+[consumer verification quick path](supply-chain.md#consumer-verification-quick-path).
 
 ## Update
 

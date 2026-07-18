@@ -62,6 +62,17 @@ def _release_inventory(version: str = "2.2.17", size: int = 1024) -> str:
     return json.dumps({"assets": [{"name": name, "size": size} for name in names]})
 
 
+def _pypi_payload(version: str = "2.2.17", records: list[dict[str, object]] | None = None) -> str:
+    actual_records = records
+    if actual_records is None:
+        names = (
+            f"recon_tool-{version}-py3-none-any.whl",
+            f"recon_tool-{version}.tar.gz",
+        )
+        actual_records = [{"filename": name, "url": f"https://files.pythonhosted.org/{name}"} for name in names]
+    return json.dumps({"info": {"version": version}, "urls": actual_records})
+
+
 def _write_file(root: Path, relative: str, text: str) -> None:
     path = root / relative
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,8 +164,13 @@ def test_collect_checks_passes_local_happy_path(tmp_path: Path) -> None:
 
     assert not release_readiness._has_failure(checks)
     statuses = {check.name: check.status for check in checks}
+    assert statuses["release tag binding"] == "skip"
     assert statuses["remote CI"] == "skip"
     assert statuses["Scorecard API"] == "skip"
+    remote_skips = [
+        check for check in checks if check.name in {"release tag binding", "remote CI", "Scorecard API"}
+    ]
+    assert all("exact published current-version tag" in check.detail for check in remote_skips)
     assert statuses["coverage gates"] == "pass"
     assert statuses["commit hygiene"] == "pass"
     assert "Homebrew formula" not in statuses
@@ -477,20 +493,96 @@ def test_scorecard_api_fails_when_sast_regresses() -> None:
     assert "regressed" in problem
 
 
+def test_remote_release_tag_binding_requires_current_version_tag_at_head(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd == ["git", "ls-remote", "--exit-code", "--refs", "origin", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=f"{_RELEASE_SHA}\trefs/tags/v2.2.17\n")
+        if cmd == ["git", "rev-parse", "HEAD"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_release_tag_binding(tmp_path, runner)
+
+    assert check.status == "pass"
+    assert "remote and local v2.2.17, plus HEAD" in check.detail
+
+
+def test_remote_release_tag_binding_rejects_mixed_head_and_release_state(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    head_sha = "b" * 40
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd == ["git", "ls-remote", "--exit-code", "--refs", "origin", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=f"{_RELEASE_SHA}\trefs/tags/v2.2.17\n")
+        if cmd == ["git", "rev-parse", "HEAD"]:
+            return _cp(cmd, stdout=head_sha + "\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_release_tag_binding(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert _RELEASE_SHA[:12] in check.detail
+    assert head_sha[:12] in check.detail
+
+
+def test_remote_release_tag_binding_rejects_moved_public_tag(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    remote_sha = "c" * 40
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd == ["git", "ls-remote", "--exit-code", "--refs", "origin", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=f"{remote_sha}\trefs/tags/v2.2.17\n")
+        if cmd == ["git", "rev-parse", "HEAD"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_release_tag_binding(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "remote v2.2.17" in check.detail
+    assert remote_sha[:12] in check.detail
+    assert _RELEASE_SHA[:12] in check.detail
+
+
+def test_remote_release_tag_binding_rejects_ambiguous_remote_ref_output(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "rev-list", "-n", "1", "refs/tags/v2.2.17"]:
+            return _cp(cmd, stdout=_RELEASE_SHA + "\n")
+        if cmd == ["git", "ls-remote", "--exit-code", "--refs", "origin", "refs/tags/v2.2.17"]:
+            return _cp(
+                cmd,
+                stdout=(
+                    f"{_RELEASE_SHA}\trefs/tags/v2.2.17\n"
+                    f"{_RELEASE_SHA}\trefs/tags/v2.2.17\n"
+                ),
+            )
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_release_tag_binding(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "exactly one ref" in check.detail
+
+
 def test_pypi_release_passes_when_latest_has_wheel_and_sdist(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path, version="2.2.17")
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         assert cmd[1] == "-c"
-        return _cp(
-            cmd,
-            stdout=json.dumps(
-                {
-                    "version": "2.2.17",
-                    "files": ["recon_tool-2.2.17-py3-none-any.whl", "recon_tool-2.2.17.tar.gz"],
-                }
-            ),
-        )
+        script = cmd[2]
+        assert "release_file_urls(version)" in script
+        assert "urllib.request" not in script
+        return _cp(cmd, stdout=_pypi_payload())
 
     check = release_readiness._check_pypi_release(tmp_path, runner)
 
@@ -503,7 +595,7 @@ def test_pypi_release_rejects_stale_latest(tmp_path: Path) -> None:
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         assert cmd[1] == "-c"
-        return _cp(cmd, stdout=json.dumps({"version": "2.2.16", "files": []}))
+        return _cp(cmd, stdout=_pypi_payload("2.2.16"))
 
     check = release_readiness._check_pypi_release(tmp_path, runner)
 
@@ -516,7 +608,11 @@ def test_pypi_release_requires_wheel_and_sdist(tmp_path: Path) -> None:
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         assert cmd[1] == "-c"
-        return _cp(cmd, stdout=json.dumps({"version": "2.2.17", "files": ["recon_tool-2.2.17.tar.gz"]}))
+        record = {
+            "filename": "recon_tool-2.2.17.tar.gz",
+            "url": "https://files.pythonhosted.org/recon_tool-2.2.17.tar.gz",
+        }
+        return _cp(cmd, stdout=_pypi_payload(records=[record]))
 
     check = release_readiness._check_pypi_release(tmp_path, runner)
 
@@ -530,24 +626,7 @@ def test_pypi_attestations_verify_wheel_and_sdist(tmp_path: Path) -> None:
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         if cmd[1] == "-c":
-            return _cp(
-                cmd,
-                stdout=json.dumps(
-                    {
-                        "version": "2.2.17",
-                        "files": [
-                            {
-                                "filename": "recon_tool-2.2.17-py3-none-any.whl",
-                                "url": "https://files.pythonhosted.org/recon_tool-2.2.17-py3-none-any.whl",
-                            },
-                            {
-                                "filename": "recon_tool-2.2.17.tar.gz",
-                                "url": "https://files.pythonhosted.org/recon_tool-2.2.17.tar.gz",
-                            },
-                        ],
-                    }
-                ),
-            )
+            return _cp(cmd, stdout=_pypi_payload())
         if cmd[:4] == ["uvx", "--from", "pypi-attestations==0.0.29", "pypi-attestations"]:
             assert cmd[4:8] == ["verify", "pypi", "--repository", "https://github.com/blisspixel/recon"]
             verified_urls.append(cmd[8])
@@ -568,24 +647,7 @@ def test_pypi_attestations_fail_when_verification_fails(tmp_path: Path) -> None:
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         if cmd[1] == "-c":
-            return _cp(
-                cmd,
-                stdout=json.dumps(
-                    {
-                        "version": "2.2.17",
-                        "files": [
-                            {
-                                "filename": "recon_tool-2.2.17-py3-none-any.whl",
-                                "url": "https://files.pythonhosted.org/recon_tool-2.2.17-py3-none-any.whl",
-                            },
-                            {
-                                "filename": "recon_tool-2.2.17.tar.gz",
-                                "url": "https://files.pythonhosted.org/recon_tool-2.2.17.tar.gz",
-                            },
-                        ],
-                    }
-                ),
-            )
+            return _cp(cmd, stdout=_pypi_payload())
         if cmd[:4] == ["uvx", "--from", "pypi-attestations==0.0.29", "pypi-attestations"]:
             return _cp(cmd, returncode=1, stderr="verification failed\n")
         raise AssertionError(f"unexpected command: {cmd}")
@@ -603,21 +665,46 @@ def test_pypi_attestations_fail_without_file_url(tmp_path: Path) -> None:
         assert cmd[1] == "-c"
         return _cp(
             cmd,
-            stdout=json.dumps(
-                {
-                    "version": "2.2.17",
-                    "files": [
-                        {"filename": "recon_tool-2.2.17-py3-none-any.whl"},
-                        {"filename": "recon_tool-2.2.17.tar.gz"},
-                    ],
-                }
+            stdout=_pypi_payload(
+                records=[
+                    {"filename": "recon_tool-2.2.17-py3-none-any.whl"},
+                    {"filename": "recon_tool-2.2.17.tar.gz"},
+                ]
             ),
         )
 
     check = release_readiness._check_pypi_attestations(tmp_path, runner)
 
     assert check.status == "fail"
-    assert "missing PyPI file URL" in check.detail
+    assert "missing a file URL" in check.detail
+
+
+def test_pypi_attestations_reject_unsafe_url_before_verifier_execution(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    verifier_called = False
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        nonlocal verifier_called
+        if cmd[1] == "-c":
+            wheel = "recon_tool-2.2.17-py3-none-any.whl"
+            sdist = "recon_tool-2.2.17.tar.gz"
+            return _cp(
+                cmd,
+                stdout=_pypi_payload(
+                    records=[
+                        {"filename": wheel, "url": f"https://example.test/{wheel}"},
+                        {"filename": sdist, "url": f"https://files.pythonhosted.org/{sdist}"},
+                    ]
+                ),
+            )
+        verifier_called = True
+        return _cp(cmd)
+
+    check = release_readiness._check_pypi_attestations(tmp_path, runner)
+
+    assert check.status == "fail"
+    assert "unexpected file URL" in check.detail
+    assert verifier_called is False
 
 
 def test_github_release_passes_when_assets_are_complete(tmp_path: Path) -> None:
@@ -693,7 +780,16 @@ def test_github_release_rejects_unexpected_release_asset(tmp_path: Path) -> None
     assert "unexpected asset(s): unreviewed.txt" in check.detail
 
 
-def test_github_attestations_verify_wheel_and_sdist(tmp_path: Path) -> None:
+def test_sbom_attestation_exception_is_bound_to_exact_historical_release() -> None:
+    legacy_version, legacy_digest = next(iter(release_readiness._LEGACY_SBOM_ATTESTATION_EXCEPTIONS.items()))
+
+    assert release_readiness._release_requires_sbom_attestation(legacy_version, legacy_digest) is False
+    assert release_readiness._release_requires_sbom_attestation("2.6.4", _RELEASE_SHA) is True
+    with pytest.raises(release_readiness._ReleaseEvidenceError, match="exact historical"):
+        release_readiness._release_requires_sbom_attestation(legacy_version, _RELEASE_SHA)
+
+
+def test_github_attestations_verify_wheel_sdist_and_sbom(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path, version="2.2.17")
     verified: list[str] = []
 
@@ -723,8 +819,46 @@ def test_github_attestations_verify_wheel_and_sdist(tmp_path: Path) -> None:
     check = release_readiness._check_github_attestations(tmp_path, runner)
 
     assert check.status == "pass"
-    assert verified == ["recon_tool-2.2.17-py3-none-any.whl", "recon_tool-2.2.17.tar.gz"]
-    assert "CycloneDX SBOM is valid" in check.detail
+    assert verified == [
+        "recon_tool-2.2.17-py3-none-any.whl",
+        "recon_tool-2.2.17.tar.gz",
+        "recon-tool-2.2.17.cdx.json",
+    ]
+    assert "wheel, sdist, and completed CycloneDX SBOM" in check.detail
+
+
+def test_github_attestations_preserve_exact_v263_legacy_subject_boundary(tmp_path: Path) -> None:
+    version = "2.6.3"
+    source_digest = release_readiness._LEGACY_SBOM_ATTESTATION_EXCEPTIONS[version]
+    _write_minimal_root(tmp_path, version=version)
+    verified: list[str] = []
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["git", "rev-list", "-n", "1", f"refs/tags/v{version}"]:
+            return _cp(cmd, stdout=source_digest + "\n")
+        if cmd[:3] == ["gh", "release", "view"]:
+            return _cp(cmd, stdout=_release_inventory(version))
+        if cmd[:3] == ["gh", "release", "download"]:
+            directory = Path(cmd[cmd.index("--dir") + 1])
+            subject = cmd[cmd.index("--pattern") + 1]
+            content = _completed_sbom(version) if subject.endswith(".cdx.json") else "artifact"
+            (directory / subject).write_text(content, encoding="utf-8")
+            return _cp(cmd)
+        if cmd[:3] == ["gh", "attestation", "verify"]:
+            verified.append(Path(cmd[3]).name)
+            return _cp(cmd, stdout="Verified signature\n")
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_github_attestations(tmp_path, runner)
+
+    assert check.status == "pass"
+    assert verified == [
+        "recon_tool-2.6.3-py3-none-any.whl",
+        "recon_tool-2.6.3.tar.gz",
+    ]
+    assert "tagged workflow predates SBOM attestation" in check.detail
 
 
 def test_github_attestations_fail_when_verification_fails(tmp_path: Path) -> None:
@@ -849,7 +983,7 @@ def test_release_asset_download_is_size_bounded(
 
 def test_release_channel_parity_reports_exact_digest_evidence(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path, version="2.2.17")
-    expected = set(release_readiness._expected_distribution_names("2.2.17"))
+    expected = set(release_readiness.expected_distribution_names("2.2.17"))
 
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         if cmd == ["git", "remote", "get-url", "origin"]:
@@ -978,3 +1112,14 @@ def test_renderers_name_local_and_remote_validation_scope() -> None:
     assert remote_text.endswith("Release readiness passed, including remote publication checks.")
     assert remote_payload["scope"] == "local-and-remote"
     assert remote_payload["remote_checks_assessed"] is True
+
+
+def test_cli_help_scopes_remote_checks_to_the_exact_published_tag(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    with pytest.raises(SystemExit) as exc_info:
+        release_readiness.main(["--help"])
+
+    assert exc_info.value.code == 0
+    help_text = " ".join(capsys.readouterr().out.split())
+    assert "Verify the exact published current-version tag, CI, and release evidence." in help_text

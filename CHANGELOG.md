@@ -111,11 +111,24 @@ whether each entry is reusable or expired.
   upload. If parity fails after PyPI accepts immutable files, the workflow now
   documents the resulting partial-publication state and evidence-preserving
   recovery boundary.
-- Remote release readiness now validates the completed CycloneDX SBOM and
-  verifies the wheel and sdist against the downloaded provenance bundle, exact
-  release workflow, exact version tag and commit digest, and hosted-runner
-  boundary. It pins the PEP 740 verifier, bounds external commands and
-  downloaded evidence, and reports the cross-channel digest parity result.
+- Existing GitHub Release recovery now validates the exact tag, title,
+  non-draft, non-prerelease, and mutable state, and expected-only asset
+  inventory, complete or partial, before any replacement upload. It rechecks
+  the remote tag against the workflow commit immediately before mutation.
+  Malformed, duplicate, unexpected, or immutable state fails before
+  `--clobber`, and new release creation refuses to synthesize a missing tag.
+- Remote release readiness now validates the completed CycloneDX SBOM. For
+  releases produced by the current workflow, it verifies the wheel, sdist, and
+  SBOM against the downloaded provenance bundle, exact release workflow, exact
+  version tag and commit digest, and hosted-runner boundary. The exact v2.6.3
+  historical exception verifies its wheel and sdist provenance while retaining
+  mandatory SBOM structure validation. The release workflow signs all three
+  subjects. Remote PyPI checks now reuse the bounded exact-pair metadata
+  validator, reject untrusted file
+  URLs before invoking the verifier, pin the PEP 740 verifier, bound external
+  commands and downloaded evidence, and report cross-channel digest parity.
+  It also rejects mixed-state reports unless the remote and local current
+  project-version tag plus `HEAD` resolve to the same full commit.
 - Release-tag installer helpers now install exactly the reviewed version,
   preserve a sole existing `uv` or `pipx` owner, refuse dual or unmanaged
   ownership, and surface manager inspection and installation failures.
@@ -124,7 +137,11 @@ whether each entry is reusable or expired.
   bundle validation, PyPI provenance, channel parity, both wheel entry-point
   smokes, optional verified-wheel installation, and one final success state.
   Both require a clean exact-tag checkout, bind provenance to its commit
-  digest, pin the PEP 740 verifier, and reject empty or oversized assets.
+  digest, pin the PEP 740 verifier, reject empty or oversized assets, and
+  classify recovery actions by failure type. Releases produced by the current
+  workflow verify the completed SBOM as a signed subject; the published v2.6.3
+  recipe binds its distribution-only historical exception to the exact tagged
+  commit and still validates the completed SBOM structure.
 
 ### Fixed
 

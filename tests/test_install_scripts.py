@@ -15,6 +15,7 @@ _INSTALL_SH = _ROOT / "scripts" / "install.sh"
 _INSTALL_PS1 = _ROOT / "scripts" / "install.ps1"
 _README = _ROOT / "README.md"
 _GETTING_STARTED = _ROOT / "docs" / "getting-started.md"
+_VERSION = tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 
 
 def test_installers_do_not_bootstrap_pipx_with_unpinned_pip() -> None:
@@ -48,12 +49,11 @@ def test_installers_preserve_the_offline_first_run_trust_sequence() -> None:
 
 
 def test_installers_bind_the_reviewed_release_version_and_owner() -> None:
-    version = tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
     script = _INSTALL_SH.read_text(encoding="utf-8")
     powershell = _INSTALL_PS1.read_text(encoding="utf-8")
 
-    assert f'VERSION="{version}"' in script
-    assert f'$Version = "{version}"' in powershell
+    assert f'VERSION="{_VERSION}"' in script
+    assert f'$Version = "{_VERSION}"' in powershell
     for installer in (script, powershell):
         assert "==${VERSION}" in installer or "==$Version" in installer
         assert "--force" in installer
@@ -181,7 +181,7 @@ def test_unix_installer_preserves_existing_pipx_owner(tmp_path: Path) -> None:
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "pipx install --force recon-tool==2.6.3" in log
+    assert f"pipx install --force recon-tool=={_VERSION}" in log
     assert "uv tool install" not in log
 
 
@@ -213,8 +213,8 @@ def test_unix_installer_surfaces_native_install_failure(tmp_path: Path) -> None:
 
     assert result.returncode == 1
     assert "native install failure" in result.stderr
-    assert "uv could not install recon-tool==2.6.3" in result.stderr
-    assert "uv tool install --force recon-tool==2.6.3" in log
+    assert f"uv could not install recon-tool=={_VERSION}" in result.stderr
+    assert f"uv tool install --force recon-tool=={_VERSION}" in log
 
 
 def test_powershell_installer_parses() -> None:
@@ -311,7 +311,7 @@ def test_powershell_installer_preserves_existing_pipx_owner(tmp_path: Path) -> N
     )
 
     assert result.returncode == 0, result.stdout + result.stderr
-    assert "pipx install --force recon-tool==2.6.3" in log
+    assert f"pipx install --force recon-tool=={_VERSION}" in log
     assert "uv tool install" not in log
 
 
@@ -343,5 +343,5 @@ def test_powershell_installer_surfaces_native_install_failure(tmp_path: Path) ->
 
     assert result.returncode == 1
     assert "native install failure" in result.stdout
-    assert "uv could not install recon-tool==2.6.3" in result.stdout
-    assert "uv tool install --force recon-tool==2.6.3" in log
+    assert f"uv could not install recon-tool=={_VERSION}" in result.stdout
+    assert f"uv tool install --force recon-tool=={_VERSION}" in log

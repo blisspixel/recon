@@ -75,7 +75,9 @@ Run from the repository root:
 | Canonical local gate | `uv run python scripts/check.py` | Lint, type checks, coverage, generated artifacts, hygiene checks, and ratchets pass. |
 | Local release readiness | `uv run python scripts/release_readiness.py --allow-dirty` | Version, citation metadata, lockfile, roadmap, private-data hygiene, and release inputs agree locally. |
 
-After pushing the exact freeze commit, run:
+After pushing the exact freeze commit, verify its required GitHub workflows.
+Run the publication check only when this exact commit is also the published
+current-version tag:
 
 ```bash
 uv run python scripts/release_readiness.py --remote
@@ -84,7 +86,9 @@ uv run python scripts/release_readiness.py --remote
 Remote readiness checks the public branch, required GitHub Actions state,
 Scorecard API freshness, PyPI release assets, GitHub Release assets, SBOM, and
 provenance. It validates release state only. It does not validate empirical
-paper claims.
+paper claims. For a docs-only or tests-only freeze commit, keep release-state
+evidence tied to the named published release instead of claiming that the freeze
+commit itself passed publication checks.
 
 ## Claim Freeze Rules
 

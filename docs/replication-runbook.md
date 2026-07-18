@@ -46,8 +46,9 @@ Before sending this runbook to a reviewer:
 1. `main` is clean and pushed.
 2. GitHub CI, Secrets scan, and Scorecard pass on the target commit.
 3. `uv run python scripts/check.py` passes locally.
-4. `uv run python scripts/release_readiness.py --remote` passes on clean
-   `main`.
+4. When the target is the exact published current-version tag,
+   `uv run python scripts/release_readiness.py --remote` passes on clean
+   `main`. A later source-only target must not inherit that release-state claim.
 5. The target commit has its own completed public proof memo, or the outcome
    note explicitly records that only the older historical memo exists. The
    current draft remains unfrozen until the full submission gate produces a new
