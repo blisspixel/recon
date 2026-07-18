@@ -26,7 +26,7 @@ For the JSON output contract in full field-by-field detail, see
 | `recon doctor` | Stable | Check labels and exit codes. `--fix` and `--mcp` sub-flags. |
 | `recon mcp` | Stable | stdio transport only. |
 | `recon delta <domain>` | Stable | Auto-cache diff (v0.10.2). Diff panel + `--json`. |
-| `recon cache show [domain]` | Stable | Per-domain CT cache inspection; `--exact` selects a literal-host key. |
+| `recon cache show [domain]` | Stable | Payload-free result and CT cache metadata; `--exact` selects literal-host keys. Missing, expired, and inspection-failure states remain distinct. |
 | `recon cache clear [domain \| --all]` | Stable | Clears both CT subdomain cache and TenantInfo result cache (v1.0.2+); `--exact` selects a literal-host key. |
 | `recon fingerprints list` | Stable | v1.1+. Per-category summary by default; `--category`, `--type`, `--all`, `--json`. |
 | `recon fingerprints search <query>` | Stable | v1.1+. Search slug / name / category / detection pattern. |

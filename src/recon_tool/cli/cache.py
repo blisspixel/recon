@@ -10,6 +10,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 import typer
+from rich.console import Console
 from rich.markup import escape
 
 from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_VALIDATION
@@ -17,9 +18,108 @@ from recon_tool.formatter import get_console
 from recon_tool.validator import strip_control_chars
 
 if TYPE_CHECKING:
-    from recon_tool.cache_values import CacheClearResult
+    from recon_tool.cache_inspection import ResultCacheInfo
+    from recon_tool.cache_values import CacheClearResult, CacheInspection, CacheListing
+    from recon_tool.ct_cache import CTCacheInfo
 
 cache_app = typer.Typer(help="Manage the CT subdomain cache and TenantInfo result cache.")
+
+
+def _safe_field(value: object) -> str:
+    """Render persisted metadata without control or Rich-markup injection."""
+    return escape(strip_control_chars(str(value)))
+
+
+def _age_label(age_seconds: float) -> str:
+    """Return a compact, readable cache age without false precision."""
+    if age_seconds < 60:
+        return "under 1 minute"
+    if age_seconds < 3600:
+        minutes = int(age_seconds // 60)
+        return f"{minutes} minute{'s' if minutes != 1 else ''}"
+    if age_seconds < 86400:
+        hours = int(age_seconds // 3600)
+        return f"{hours} hour{'s' if hours != 1 else ''}"
+    days = int(age_seconds // 86400)
+    return f"{days} day{'s' if days != 1 else ''}"
+
+
+def _entry_count_label(count: int, *, incomplete: bool = False) -> str:
+    if incomplete:
+        return f"{count} readable entr{'y' if count == 1 else 'ies'}"
+    return "empty" if count == 0 else f"{count} entr{'y' if count == 1 else 'ies'}"
+
+
+def _render_result_inspection(
+    console: Console,
+    inspection: CacheInspection[ResultCacheInfo],
+) -> bool:
+    from recon_tool.cache_contract import DEFAULT_TTL
+
+    console.print("  [bold]Result cache[/bold]")
+    if inspection.failed:
+        console.print("    Status:     [red]could not inspect[/red]")
+    elif inspection.entry is None:
+        console.print("    Status:     no entry")
+    else:
+        entry = inspection.entry
+        status = "reusable" if entry.reusable else "expired; next lookup refreshes"
+        console.print(f"    Status:     {status}")
+        console.print(f"    Cached:     {_safe_field(entry.cached_at)}")
+        console.print(f"    Resolved:   {_safe_field(entry.resolved_at)}")
+        console.print(f"    Age:        {_age_label(entry.age_seconds)}")
+        console.print(f"    Size:       {entry.file_size_bytes:,} bytes")
+    console.print(f"    TTL:        {DEFAULT_TTL // 3600} hours")
+    return inspection.failed
+
+
+def _render_ct_inspection(console: Console, inspection: CacheInspection[CTCacheInfo]) -> bool:
+    from recon_tool.ct_cache import CT_CACHE_TTL
+
+    console.print("  [bold]CT cache[/bold]")
+    if inspection.failed:
+        console.print("    Status:     [red]could not inspect[/red]")
+    elif inspection.entry is None:
+        console.print("    Status:     no entry")
+    else:
+        entry = inspection.entry
+        reusable = entry.age_seconds <= CT_CACHE_TTL
+        status = "reusable" if reusable else "expired; next CT lookup refreshes"
+        console.print(f"    Status:     {status}")
+        console.print(f"    Provider:   {_safe_field(entry.provider_used)}")
+        console.print(f"    Subdomains: {entry.subdomain_count}")
+        console.print(f"    Cached:     {_safe_field(entry.cached_at)}")
+        console.print(f"    Age:        {_age_label(entry.age_seconds)}")
+        console.print(f"    Size:       {entry.file_size_bytes:,} bytes")
+    console.print(f"    TTL:        {CT_CACHE_TTL // 86400} days")
+    return inspection.failed
+
+
+def _render_result_listing(console: Console, listing: CacheListing[ResultCacheInfo]) -> bool:
+    label = _entry_count_label(len(listing.entries), incomplete=listing.failed > 0)
+    console.print(f"  [bold]Result cache ({label})[/bold]")
+    for entry in listing.entries:
+        status = "reusable" if entry.reusable else "expired"
+        console.print(
+            f"    {_safe_field(entry.domain):<30s}  {status:<8s}  "
+            f"{_age_label(entry.age_seconds):>14s}  {entry.file_size_bytes:>8,d} bytes"
+        )
+    if listing.failed:
+        console.print(f"    [red]Inspection failures: {listing.failed}[/red]")
+    return listing.failed > 0
+
+
+def _render_ct_listing(console: Console, listing: CacheListing[CTCacheInfo]) -> bool:
+    label = _entry_count_label(len(listing.entries), incomplete=listing.failed > 0)
+    console.print(f"  [bold]CT cache ({label})[/bold]")
+    for entry in listing.entries:
+        console.print(
+            f"    {_safe_field(entry.domain):<30s}  {entry.subdomain_count:>4d} subs  "
+            f"{_age_label(entry.age_seconds):>14s}  {_safe_field(entry.provider_used)}"
+        )
+    if listing.failed:
+        console.print(f"    [red]Inspection failures: {listing.failed}[/red]")
+    return listing.failed > 0
 
 
 def _report_clear_all(ct_result: CacheClearResult, result: CacheClearResult) -> None:
@@ -66,14 +166,18 @@ def _report_clear_domain(
 @cache_app.command("show")
 def cache_show(
     domain: str = typer.Argument(None, help="Domain to inspect (omit to list all)"),
-    exact: bool = typer.Option(False, "--exact", help="Inspect the literal host cache key instead of its apex."),
+    exact: bool = typer.Option(
+        False,
+        "--exact",
+        help="Inspect literal-host result and CT cache keys instead of their apex.",
+    ),
 ) -> None:
-    """Show CT cache state for a domain, or list all cached domains.
-
-    Only surfaces the CT subdomain cache. The TenantInfo result cache
-    under ``~/.recon/cache/`` is managed opaquely.
-    """
-    from recon_tool.ct_cache import ct_cache_list, ct_cache_show
+    """Show payload-free metadata for the result and CT cache layers."""
+    from recon_tool.cache_inspection import inspect_result_cache, list_result_cache
+    from recon_tool.ct_cache import (
+        _ct_cache_inspect,  # pyright: ignore[reportPrivateUsage]
+        _ct_cache_list_detailed,  # pyright: ignore[reportPrivateUsage]
+    )
     from recon_tool.formatter import render_error
     from recon_tool.validator import validate_domain
 
@@ -86,37 +190,27 @@ def cache_show(
             render_error(str(exc))
             raise typer.Exit(code=EXIT_VALIDATION) from None
 
-        info = ct_cache_show(validated)
-        if info is None:
-            console.print(f"  No CT cache entry for [bold]{validated}[/bold]")
-            return
-        age_str = "today" if info.age_days == 0 else f"{info.age_days} day{'s' if info.age_days != 1 else ''} old"
         console.print()
-        console.print(f"  [bold]{info.domain}[/bold]")
-        # provider_used / cached_at come from the cache file; escape markup
-        # and strip control bytes so a poisoned entry cannot inject ANSI or
-        # Rich markup (or crash the command on unbalanced tags).
-        console.print(f"    Provider:   {escape(strip_control_chars(str(info.provider_used)))}")
-        console.print(f"    Subdomains: {info.subdomain_count}")
-        console.print(f"    Cached:     {escape(strip_control_chars(str(info.cached_at)))}")
-        console.print(f"    Age:        {age_str}")
-        console.print(f"    Size:       {info.file_size_bytes:,} bytes")
+        console.print(f"  [bold]{validated}[/bold]")
         console.print()
+        failed = _render_result_inspection(console, inspect_result_cache(validated))
+        console.print()
+        failed = _render_ct_inspection(console, _ct_cache_inspect(validated)) or failed
+        console.print()
+        if failed:
+            render_error("Cache inspection failed. Retry: recon --debug cache show ...")
+            raise typer.Exit(code=EXIT_INTERNAL)
     else:
-        entries = ct_cache_list()
-        if not entries:
-            console.print("  CT cache is empty.")
-            return
+        result_listing = list_result_cache()
+        ct_listing = _ct_cache_list_detailed()
         console.print()
-        console.print(f"  [bold]{len(entries)} cached domain{'s' if len(entries) != 1 else ''}[/bold]")
+        failed = _render_result_listing(console, result_listing)
         console.print()
-        for e in entries:
-            age_str = "today" if e.age_days == 0 else f"{e.age_days}d"
-            console.print(
-                f"    {e.domain:<30s}  {e.subdomain_count:>4d} subs  {age_str:>5s}  "
-                f"{escape(strip_control_chars(str(e.provider_used)))}"
-            )
+        failed = _render_ct_listing(console, ct_listing) or failed
         console.print()
+        if failed:
+            render_error("Some cache entries could not be inspected. Retry: recon --debug cache show ...")
+            raise typer.Exit(code=EXIT_INTERNAL)
 
 
 @cache_app.command("clear")

@@ -16,8 +16,9 @@ operator, corporate group, ownership, or control.
 
 ### Tool Surface Changes
 
-Tool surface changes: no stable CLI command, flag, default JSON, MCP, cache, or
-public import contract changes. The opt-in, non-schema
+Tool surface changes: no stable CLI command, flag, default JSON, MCP, cache
+format, or public import contract changes. Human `cache show` output now covers
+payload-free metadata for both result and CT cache layers. The opt-in, non-schema
 `--include-unclassified` maintenance output adds typed catalog diagnostics.
 The root CLI help summary text and the human-facing delta panel label for the
 email control count are clearer. `python -m recon_tool` is now a supported
@@ -39,6 +40,12 @@ plain, JSON, and evidence-review workflows over specialist modes.
   per-domain failure records do not change a valid batch invocation's exit 0.
 - Root `--debug` help now warns operators to review diagnostics before sharing
   because logs can contain domain inputs and local details.
+- `recon doctor --help` now names its default synthetic Microsoft identity,
+  `example.com` DNS, and crt.sh contacts and identifies `--fix`, `--mcp`, and
+  `--client` as local-only modes.
+- `recon cache show` now reports metadata for the 24-hour result cache and the
+  30-day CT cache independently. It shows reusable, expired, missing, and
+  unreadable states without printing cached tenant, service, or evidence data.
 - Default low-confidence panels now point to `--explain` for evidence and
   `--verbose` for per-source status. Verbose and explain output suppress the
   repeated cue.
@@ -84,6 +91,11 @@ plain, JSON, and evidence-review workflows over specialist modes.
 - `recon cache clear` now distinguishes a missing entry from a deletion
   failure, reports partial layer success, and exits 4 after an unlink failure
   without exposing the underlying path or exception in ordinary output.
+- `recon cache show` no longer reports an unreadable or rejected cache entry as
+  absent. It reports the affected layer, retains raw failure detail for debug
+  logs, and exits 4 after rendering all available metadata.
+- Default and MCP doctor rows now strip control bytes, escape Rich markup, and
+  bound dynamic diagnostic fields before terminal rendering.
 - Early-closing output pipelines now exit cleanly without creating a crash log.
   Unrelated operating-system errors still use the existing internal-error path.
 - `recon doctor --fix` now lists every supported fingerprint detection type in

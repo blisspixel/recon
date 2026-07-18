@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import logging
 import os
+import time
 from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import patch
@@ -37,7 +38,9 @@ class TestCacheShow:
     def test_show_domain_missing(self, tmp_cache: Path) -> None:
         result = runner.invoke(app, ["cache", "show", "nope.com"])
         assert result.exit_code == 0
-        assert "No CT cache entry" in result.output
+        assert "Result cache" in result.output
+        assert "CT cache" in result.output
+        assert result.output.count("Status:     no entry") == 2
 
     def test_show_domain_present(self, tmp_cache: Path) -> None:
         ct_cache_put("example.com", ["a.example.com", "b.example.com"], None, "crt.sh")
@@ -82,9 +85,148 @@ class TestCacheShow:
         ct_cache_put("b.com", ["x.b.com"], None, "certspotter")
         result = runner.invoke(app, ["cache", "show"])
         assert result.exit_code == 0
-        assert "2 cached domains" in result.output
+        assert "Result cache (empty)" in result.output
+        assert "CT cache (2 entries)" in result.output
         assert "a.com" in result.output
         assert "b.com" in result.output
+
+    def test_show_list_surfaces_unreadable_entries_without_payload_details(self, tmp_cache: Path) -> None:
+        tmp_cache.mkdir(parents=True)
+        cache_dir().mkdir(parents=True)
+        (tmp_cache / "broken-ct.com.json").write_text('{"private": "ct-marker"', encoding="utf-8")
+        (cache_dir() / "broken-result.com.json").write_text(
+            '{"private": "result-marker"',
+            encoding="utf-8",
+        )
+
+        result = runner.invoke(app, ["cache", "show"])
+
+        normalized = " ".join(result.output.split())
+        assert result.exit_code == EXIT_INTERNAL
+        assert "Result cache (0 readable entries)" in normalized
+        assert "CT cache (0 readable entries)" in normalized
+        assert normalized.count("Inspection failures: 1") == 2
+        assert "ct-marker" not in result.output
+        assert "result-marker" not in result.output
+        assert "recon --debug cache show" in normalized
+
+    def test_show_domain_reports_both_layers_without_result_payload(self, tmp_cache: Path) -> None:
+        domain = "layered.com"
+        private_marker = "PRIVATE-DISPLAY-MARKER"
+        cache_put(
+            domain,
+            TenantInfo(
+                tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                display_name=private_marker,
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.HIGH,
+                sources=("dns_records",),
+                services=("private-service-marker",),
+            ),
+        )
+        ct_cache_put(domain, [f"a.{domain}"], None, "crt.sh")
+
+        result = runner.invoke(app, ["cache", "show", domain])
+
+        assert result.exit_code == 0
+        assert "Result cache" in result.output
+        assert "CT cache" in result.output
+        assert result.output.count("Status:     reusable") == 2
+        assert "TTL:        24 hours" in result.output
+        assert "TTL:        30 days" in result.output
+        assert private_marker not in result.output
+        assert "a1b2c3d4-e5f6-7890-abcd-ef1234567890" not in result.output
+        assert "private-service-marker" not in result.output
+
+    def test_show_marks_expired_result_entry_as_not_reusable(self, tmp_cache: Path) -> None:
+        domain = "expired.com"
+        cache_put(
+            domain,
+            TenantInfo(
+                tenant_id=None,
+                display_name="Expired Example",
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.LOW,
+            ),
+        )
+        old = time.time() - 90000
+        os.utime(cache_dir() / f"{domain}.json", (old, old))
+
+        result = runner.invoke(app, ["cache", "show", domain])
+
+        assert result.exit_code == 0
+        assert "Status:     expired; next lookup refreshes" in result.output
+        assert "TTL:        24 hours" in result.output
+
+    def test_show_corrupt_ct_entry_is_not_reported_as_absent(self, tmp_cache: Path) -> None:
+        domain = "broken-ct.com"
+        tmp_cache.mkdir(parents=True)
+        (tmp_cache / f"{domain}.json").write_text('{"private": "do-not-print"', encoding="utf-8")
+
+        result = runner.invoke(app, ["cache", "show", domain])
+
+        assert result.exit_code == EXIT_INTERNAL
+        assert "CT cache" in result.output
+        assert "Status:     could not inspect" in result.output
+        assert "No CT cache entry" not in result.output
+        assert "do-not-print" not in result.output
+        assert "recon --debug cache show" in result.output
+
+    def test_show_corrupt_result_entry_is_not_reported_as_absent(self, tmp_cache: Path) -> None:
+        domain = "broken-result.com"
+        cache_dir().mkdir(parents=True)
+        (cache_dir() / f"{domain}.json").write_text('{"private": "do-not-print"', encoding="utf-8")
+
+        result = runner.invoke(app, ["cache", "show", domain])
+
+        assert result.exit_code == EXIT_INTERNAL
+        assert "Result cache" in result.output
+        assert "Status:     could not inspect" in result.output
+        assert "do-not-print" not in result.output
+        assert "recon --debug cache show" in result.output
+
+    def test_show_lists_result_and_ct_layers_independently(self, tmp_cache: Path) -> None:
+        cache_put(
+            "result-only.com",
+            TenantInfo(
+                tenant_id=None,
+                display_name="Result Only",
+                default_domain="result-only.com",
+                queried_domain="result-only.com",
+                confidence=ConfidenceLevel.LOW,
+            ),
+        )
+        ct_cache_put("ct-only.com", ["a.ct-only.com"], None, "crt.sh")
+
+        result = runner.invoke(app, ["cache", "show"])
+
+        assert result.exit_code == 0
+        assert "Result cache (1 entry)" in result.output
+        assert "result-only.com" in result.output
+        assert "CT cache (1 entry)" in result.output
+        assert "ct-only.com" in result.output
+
+    def test_show_exact_inspects_literal_result_cache_key(self, tmp_cache: Path) -> None:
+        domain = "mail.exact-result.com"
+        cache_put(
+            domain,
+            TenantInfo(
+                tenant_id=None,
+                display_name="Exact Result",
+                default_domain="exact-result.com",
+                queried_domain=domain,
+                confidence=ConfidenceLevel.LOW,
+            ),
+        )
+
+        result = runner.invoke(app, ["cache", "show", domain, "--exact"])
+
+        assert result.exit_code == 0
+        assert domain in result.output
+        assert "Result cache" in result.output
+        assert "Status:     reusable" in result.output
 
 
 class TestCacheClear:
