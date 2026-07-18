@@ -14,7 +14,7 @@ import typer
 from recon_tool.catalog_discovery import category_matches
 from recon_tool.cli.catalog_rendering import print_field, print_indented
 from recon_tool.exit_codes import EXIT_VALIDATION
-from recon_tool.formatter import get_console
+from recon_tool.formatter import get_console, render_error
 
 signals_app = typer.Typer(help="Inspect the built-in signal catalog.")
 
@@ -44,6 +44,16 @@ def _render_signal_rows(console: Any, items: Sequence[tuple[Any, str]]) -> None:
         print_field(console, "Confidence", signal.confidence, indent=6)
 
 
+def _render_signal_search_rows(console: Any, items: Sequence[tuple[Any, str]]) -> None:
+    """Render relevance-ranked results without implying category grouping."""
+    for index, (signal, label) in enumerate(items):
+        if index:
+            console.print()
+        print_indented(console, label, indent=2, style="bold")
+        print_field(console, "Category", signal.category, indent=4)
+        print_field(console, "Confidence", signal.confidence, indent=4)
+
+
 @signals_app.command("list", short_help="List public signals.")
 def signals_list(
     category: str | None = typer.Option(None, "--category", "-c", help="Filter by category word prefix or phrase"),
@@ -53,7 +63,11 @@ def signals_list(
     from recon_tool.signals import reportable_signals
 
     sigs = reportable_signals()
-    if category:
+    if category is not None:
+        category = category.strip()
+        if not category:
+            render_error("Signal category filter cannot be empty.")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
         sigs = tuple((signal, label) for signal, label in sigs if category_matches(signal.category, category))
 
     if json_output:
@@ -85,8 +99,6 @@ def signals_search(
     sigs = reportable_signals()
     needle = query.lower().strip()
     if not needle:
-        from recon_tool.formatter import render_error
-
         render_error("Empty search query.")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
@@ -126,7 +138,7 @@ def signals_search(
         style="bold",
     )
     console.print()
-    _render_signal_rows(console, matches)
+    _render_signal_search_rows(console, matches)
     console.print()
 
 
@@ -152,13 +164,12 @@ def _signal_show_payload(match: Any, public_label: str) -> dict[str, Any]:
 
 def _render_signal_not_found(name: str, labels: Sequence[str]) -> NoReturn:
     """Render a not-found error with near-miss suggestions, then exit."""
-    from recon_tool.formatter import render_error
-
     needle = name.lower()
     candidates = [label for label in labels if needle in label.lower()][:5]
     render_error(f"No signal named {name!r}.")
     if candidates:
         get_console().print(f"  Did you mean: {', '.join(repr(c) for c in candidates)}?")
+        get_console().print("  Try `recon signals search` with part of the name.")
     raise typer.Exit(code=EXIT_VALIDATION) from None
 
 

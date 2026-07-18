@@ -215,6 +215,7 @@ Summary: Show payload-free metadata for the result and CT cache layers.
 |---|---|---|---|---|---|---|
 | `domain` | argument | `domain` | no | text |  |  |
 | `exact` | option | `--exact` | no | boolean | false |  |
+| `all_entries` | option | `--all` | no | boolean | false |  |
 
 <a id="recon-fingerprints-check"></a>
 ## `recon fingerprints check`

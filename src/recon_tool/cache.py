@@ -30,6 +30,7 @@ from recon_tool.cache_values import (
     cache_object_tuple,
     cache_string,
     cache_string_tuple,
+    clear_cache_directory,
     required_cache_float,
 )
 from recon_tool.cache_values import cache_bool as _cache_bool
@@ -193,9 +194,7 @@ def cache_clear(domain: str) -> bool:
 
 
 def _cache_clear_all_detailed() -> CacheClearResult:
-    """Remove every cached TenantInfo and retain any partial-failure state."""
-    count = 0
-    failed = False
+    """Remove every TenantInfo entry and interrupted-write artifact."""
     try:
         d = resolve_cache_directory()
         if d is None:
@@ -203,24 +202,16 @@ def _cache_clear_all_detailed() -> CacheClearResult:
             return CacheClearResult(failed=True)
         if not d.is_dir():
             return CacheClearResult()
-        for path in d.glob("*.json"):
-            try:
-                path.unlink()
-                count += 1
-            except FileNotFoundError:
-                continue
-            except OSError:
-                failed = True
-                logger.debug("Cache entry unlink failed: %s", path, exc_info=True)
+        return clear_cache_directory(d, layer="Result")
     except OSError:
         logger.debug("Cache clear-all failed", exc_info=True)
-        failed = True
-    return CacheClearResult(removed=count, failed=failed)
+        return CacheClearResult(failed=True)
 
 
 def cache_clear_all() -> int:
-    """Remove all cached TenantInfo files. Returns the count deleted."""
-    return _cache_clear_all_detailed().removed
+    """Remove all TenantInfo cache files. Returns the total file count."""
+    result = _cache_clear_all_detailed()
+    return result.removed + result.temporary_removed
 
 
 def cert_summary_to_cache_dict(cert_summary: CertSummary | None) -> dict[str, Any] | None:

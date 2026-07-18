@@ -30,7 +30,13 @@ from recon_tool.cache import (
     infrastructure_clusters_to_cache_dict,
 )
 from recon_tool.cache_paths import resolve_cache_directory
-from recon_tool.cache_values import CacheClearResult, CacheInspection, CacheListing
+from recon_tool.cache_values import (
+    CacheClearResult,
+    CacheInspection,
+    CacheListing,
+    clear_cache_directory,
+    select_cache_file_stems,
+)
 from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.models import CertSummary, InfrastructureClusterReport
 from recon_tool.validator import validate_domain
@@ -213,9 +219,7 @@ def ct_cache_clear(domain: str) -> bool:
 
 
 def _ct_cache_clear_all_detailed() -> CacheClearResult:
-    """Remove all CT cache data and retain any partial-failure state."""
-    count = 0
-    failed = False
+    """Remove all CT entries and interrupted-write artifacts."""
     try:
         d = resolve_cache_directory("ct-cache")
         if d is None:
@@ -223,24 +227,16 @@ def _ct_cache_clear_all_detailed() -> CacheClearResult:
             return CacheClearResult(failed=True)
         if not d.is_dir():
             return CacheClearResult()
-        for f in d.glob("*.json"):
-            try:
-                f.unlink()
-                count += 1
-            except FileNotFoundError:
-                continue
-            except OSError:
-                failed = True
-                logger.debug("Failed to remove %s", f, exc_info=True)
+        return clear_cache_directory(d, layer="CT")
     except OSError:
         logger.debug("CT cache clear-all failed", exc_info=True)
-        failed = True
-    return CacheClearResult(removed=count, failed=failed)
+        return CacheClearResult(failed=True)
 
 
 def ct_cache_clear_all() -> int:
-    """Remove all cached CT data. Returns count of files removed."""
-    return _ct_cache_clear_all_detailed().removed
+    """Remove all cached CT data. Returns the total file count removed."""
+    result = _ct_cache_clear_all_detailed()
+    return result.removed + result.temporary_removed
 
 
 def _ct_cache_inspect(domain: str) -> CacheInspection[CTCacheInfo]:
@@ -275,8 +271,8 @@ def ct_cache_show(domain: str) -> CTCacheInfo | None:
     return _ct_cache_inspect(domain).entry
 
 
-def _ct_cache_list_detailed() -> CacheListing[CTCacheInfo]:
-    """List valid CT metadata and count entries that could not be inspected."""
+def _ct_cache_list_detailed(*, limit: int | None = None) -> CacheListing[CTCacheInfo]:
+    """List CT metadata with optional bounded payload inspection."""
     entries: list[CTCacheInfo] = []
     try:
         d = resolve_cache_directory("ct-cache")
@@ -288,15 +284,21 @@ def _ct_cache_list_detailed() -> CacheListing[CTCacheInfo]:
         if not d.is_dir():
             logger.debug("CT cache listing path is not a directory")
             return CacheListing(failed=1)
+        selection = select_cache_file_stems(d, limit=limit)
         failed = 0
-        for f in sorted(d.glob("*.json")):
-            domain = f.stem
-            inspection = _ct_cache_inspect(domain)
+        for stem in selection.stems:
+            inspection = _ct_cache_inspect(stem)
             if inspection.entry is not None:
                 entries.append(inspection.entry)
             elif inspection.failed:
                 failed += 1
-        return CacheListing(entries=tuple(entries), failed=failed)
+        return CacheListing(
+            entries=tuple(entries),
+            failed=failed,
+            inspected=len(selection.stems),
+            total=selection.total,
+            temporary_files=selection.temporary_files,
+        )
     except OSError:
         logger.debug("CT cache list failed", exc_info=True)
         return CacheListing(failed=1)

@@ -16,9 +16,11 @@ from unittest.mock import patch
 
 import pytest
 
+from recon_tool.cache_values import CacheInspection
 from recon_tool.ct_cache import (
     CT_CACHE_TTL,
     CTCacheEntry,
+    _ct_cache_list_detailed,
     _safe_path,
     ct_cache_clear,
     ct_cache_clear_all,
@@ -316,6 +318,17 @@ class TestCTCacheClear:
     def test_clear_all_empty(self, tmp_cache: Path) -> None:
         assert ct_cache_clear_all() == 0
 
+    def test_clear_all_counts_temporary_write_artifacts(self, tmp_cache: Path) -> None:
+        tmp_cache.mkdir(parents=True)
+        temporary = tmp_cache / "alpha.invalid.abcd1234.tmp"
+        unrelated = tmp_cache / "operator-notes.tmp"
+        temporary.write_text("private payload", encoding="utf-8")
+        unrelated.write_text("keep", encoding="utf-8")
+
+        assert ct_cache_clear_all() == 1
+        assert not temporary.exists()
+        assert unrelated.read_text(encoding="utf-8") == "keep"
+
     def test_redirected_cache_directory_cannot_escape_configured_root(
         self,
         monkeypatch: pytest.MonkeyPatch,
@@ -387,6 +400,26 @@ class TestCTCacheShow:
 
     def test_show_missing(self, tmp_cache: Path) -> None:
         assert ct_cache_show("nope.com") is None
+
+    def test_detailed_list_bounds_payload_inspection(self, tmp_cache: Path) -> None:
+        tmp_cache.mkdir(parents=True)
+        for index in range(105):
+            (tmp_cache / f"d{index:03d}.invalid.json").write_text("{}", encoding="utf-8")
+
+        with patch(
+            "recon_tool.ct_cache._ct_cache_inspect",
+            return_value=CacheInspection(failed=True),
+        ) as inspect:
+            listing = _ct_cache_list_detailed(limit=3)
+
+        assert [call.args[0] for call in inspect.call_args_list] == [
+            "d000.invalid",
+            "d001.invalid",
+            "d002.invalid",
+        ]
+        assert listing.inspected == 3
+        assert listing.total == 105
+        assert listing.failed == 3
 
     def test_show_rejects_sibling_prefix_traversal(self, tmp_cache: Path) -> None:
         sibling = tmp_cache.parent / "ct-cache-malice"
