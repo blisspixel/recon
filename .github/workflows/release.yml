@@ -20,13 +20,14 @@ on:
 #     exists, so a compromised dev dep cannot tamper with release
 #     artifacts from this job.
 #   * ``build`` job is PURE: it does not create or sync a project
-#     environment. ``uv build`` creates its isolated build environment from
-#     the backend declared in ``pyproject.toml``; ``dist/`` is then uploaded
+#     environment. Exact uv creates one sdist, then one wheel from that sdist,
+#     using the committed hash-locked backend graph; ``dist/`` is uploaded
 #     immediately. No additional code executes between build and upload.
 #     ``actions/upload-artifact`` seals the bytes into GitHub-managed storage.
-#   * ``package-smoke`` downloads the sealed wheel into a separate read-only
-#     job and executes both installed entry points. Publication waits for this
-#     gate, so source-tree tests cannot mask a broken package entry point.
+#   * ``package-smoke`` downloads the sealed distribution into a separate
+#     read-only job, requires one tag-matching wheel and sdist, and executes
+#     both installed entry points. Publication waits for this gate, so
+#     source-tree tests cannot mask a broken package entry point.
 #   * ``sbom`` job runs on a separate runner. It installs pip-audit
 #     in its own workspace and generates the CycloneDX SBOM from the
 #     locked-requirements text. dist/ does not exist in this runner,
@@ -99,6 +100,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -154,8 +157,9 @@ jobs:
   build:
     # Pure build job. The supply-chain isolation contract requires
     # that no project environment is installed and no additional dependency
-    # code executes in this workspace. ``uv build`` resolves only its isolated
-    # build backend, then ``actions/upload-artifact`` immediately seals the
+    # code executes in this workspace. The exact uv release constructs one
+    # sdist and then one wheel from that sdist under the hash-locked isolated
+    # build graph. ``actions/upload-artifact`` immediately seals the
     # result. Do not add ``uv sync``, pip-audit, SBOM generation, ruff,
     # pyright, pytest, or any other project-dependency execution here. Those
     # belong in jobs that do not touch dist/.
@@ -171,6 +175,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -180,15 +186,18 @@ jobs:
       - name: Pin deterministic build timestamp
         # Pin file mtimes in the wheel and sdist to the tagged commit's
         # committer timestamp. ci.yml checks matching hashes across two builds
-        # inside one resolved job; it does not claim cross-environment byte
-        # identity. hatchling and uv build honor SOURCE_DATE_EPOCH. checkout is shallow, but the tagged
+        # under the same exact uv and hash-locked backend graph; it does not
+        # claim cross-environment byte identity. Hatchling and uv honor
+        # SOURCE_DATE_EPOCH. Checkout is shallow, but the tagged
         # commit is present, so ``git log -1`` reads its timestamp. This is a git
         # read, not project dependency code, so the supply-chain isolation
         # contract (no dependency code between build and seal) is unaffected.
         run: echo "SOURCE_DATE_EPOCH=$(git log -1 --pretty=%ct)" >> "$GITHUB_ENV"
 
       - name: Build package
-        run: uv build
+        run: |
+          uv build --sdist --out-dir dist --build-constraints build-constraints.txt --require-hashes
+          uv build --wheel dist/recon_tool-*.tar.gz --out-dir dist --build-constraints build-constraints.txt --require-hashes
 
       # IMMEDIATE upload: nothing executes between build and seal.
       # The artifact bytes are stored in GitHub-managed artifact
@@ -212,6 +221,8 @@ jobs:
     steps:
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
@@ -227,12 +238,23 @@ jobs:
       - name: Smoke-test sealed wheel entry points
         run: |
           set -euo pipefail
-          wheels=(dist/*.whl)
-          if [ "${#wheels[@]}" -ne 1 ] || [ ! -f "${wheels[0]}" ]; then
-            echo "Expected exactly one sealed wheel in dist" >&2
+          artifacts=(dist/*)
+          wheels=(dist/recon_tool-*-py3-none-any.whl)
+          sdists=(dist/recon_tool-*.tar.gz)
+          if [ "${#artifacts[@]}" -ne 2 ] || [ ! -f "${artifacts[0]}" ] || [ ! -f "${artifacts[1]}" ] || \
+             [ "${#wheels[@]}" -ne 1 ] || [ ! -f "${wheels[0]}" ] || \
+             [ "${#sdists[@]}" -ne 1 ] || [ ! -f "${sdists[0]}" ]; then
+            echo "Expected exactly one canonical wheel and one canonical sdist in dist" >&2
             exit 1
           fi
           wheel="${wheels[0]}"
+          version="${GITHUB_REF_NAME#v}"
+          expected_wheel="dist/recon_tool-${version}-py3-none-any.whl"
+          expected_sdist="dist/recon_tool-${version}.tar.gz"
+          if [ "$wheel" != "$expected_wheel" ] || [ "${sdists[0]}" != "$expected_sdist" ]; then
+            echo "Artifact names do not match the validated release tag" >&2
+            exit 1
+          fi
           uv tool run --isolated --from "$wheel" recon --version
           uv run --no-project --isolated --with "$wheel" python -m recon_tool --version
 
@@ -334,6 +356,8 @@ jobs:
 
       - name: Install uv
         uses: astral-sh/setup-uv@fac544c07dec837d0ccb6301d7b5580bf5edae39 # v8.2.0
+        with:
+          version: "0.11.17"
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6

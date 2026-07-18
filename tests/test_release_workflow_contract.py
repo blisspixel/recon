@@ -29,6 +29,7 @@ import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parent.parent
 _RELEASE_YML = _REPO_ROOT / ".github" / "workflows" / "release.yml"
+_BUILD_CONSTRAINT_ARGS = "--build-constraints build-constraints.txt --require-hashes"
 
 # GitHub Actions permission value, not a credential. Hoisted so ruff
 # doesn't flag the literal string as a hardcoded password (S105).
@@ -101,7 +102,11 @@ class TestBuildJobIsPure:
         run_steps = [step["run"] for step in steps if isinstance(step.get("run"), str)]
         assert len(run_steps) == 2
         assert "SOURCE_DATE_EPOCH=" in run_steps[0]
-        assert run_steps[1].strip() == "uv build"
+        build_lines = [line.strip() for line in run_steps[1].splitlines() if line.strip()]
+        assert build_lines == [
+            f"uv build --sdist --out-dir dist {_BUILD_CONSTRAINT_ARGS}",
+            f"uv build --wheel dist/recon_tool-*.tar.gz --out-dir dist {_BUILD_CONSTRAINT_ARGS}",
+        ]
 
         action_steps = [step["uses"] for step in steps if isinstance(step.get("uses"), str)]
         assert len(action_steps) == 4
@@ -192,6 +197,15 @@ class TestPackageSmokeJob:
         assert job["permissions"] == {"contents": "read"}
         assert "actions/download-artifact@" in text
         assert "name=dist" in text
+        assert "artifacts=(dist/*)" in text
+        assert "sdists=(dist/recon_tool-*.tar.gz)" in text
+        assert 'version="${GITHUB_REF_NAME#v}"' in text
+        assert 'expected_wheel="dist/recon_tool-${version}-py3-none-any.whl"' in text
+        assert 'expected_sdist="dist/recon_tool-${version}.tar.gz"' in text
+        assert '"${#artifacts[@]}" -ne 2' in text
+        assert '"${#sdists[@]}" -ne 1' in text
+        assert '"$wheel" != "$expected_wheel"' in text
+        assert '"${sdists[0]}" != "$expected_sdist"' in text
         assert 'uv tool run --isolated --from "$wheel" recon --version' in text
         assert 'uv run --no-project --isolated --with "$wheel" python -m recon_tool --version' in text
         assert job.get("permissions", {}).get("id-token") != _PERM_WRITE
