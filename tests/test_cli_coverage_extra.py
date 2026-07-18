@@ -14,6 +14,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from unittest.mock import patch
 
+import click
 import pytest
 import typer
 from typer.testing import CliRunner
@@ -513,8 +514,10 @@ class TestHelpOutput:
         assert result.exit_code == 0
         assert "domain" in result.stdout.lower()
 
-    def test_batch_help(self) -> None:
+    def test_batch_help(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("FORCE_COLOR", "1")
         result = runner.invoke(app, ["batch", "--help"])
+        output = click.unstyle(result.output)
         assert result.exit_code == 0
         for option in (
             "--json",
@@ -531,18 +534,19 @@ class TestHelpOutput:
             "--fusion",
             "--no-fusion",
         ):
-            assert option in result.output
-        assert "Output" in result.output
-        assert "Collection, cache, and scope" in result.output
-        assert "Analysis modes" in result.output
-        assert "Evidence model" in result.output
-        assert "clamped to 1-20" in result.output
-        assert "Per-domain failures are output records" in result.output
-        assert "record_type" in result.output
+            assert option in output
+        assert "Output" in output
+        assert "Collection, cache, and scope" in output
+        assert "Analysis modes" in output
+        assert "Evidence model" in output
+        assert "clamped to 1-20" in output
+        assert "Per-domain failures are output records" in output
+        assert "record_type" in output
 
-    def test_root_help_warns_before_sharing_debug_diagnostics(self) -> None:
+    def test_root_help_warns_before_sharing_debug_diagnostics(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setenv("FORCE_COLOR", "1")
         result = runner.invoke(app, ["--help"])
-        normalized = " ".join(result.output.replace("│", " ").split())
+        normalized = " ".join(click.unstyle(result.output).replace("│", " ").split())
 
         assert result.exit_code == 0
         assert "Review before sharing" in normalized
