@@ -28,7 +28,12 @@ plain, JSON, and evidence-review workflows over specialist modes. Human help
 now names the domain-or-command grammar and uses a complete linear layout below
 70 columns. Narrow root summaries and no-argument usage now remain complete and
 associated at the actual terminal width. CT cache overview rows now state
-whether each entry is reusable or expired.
+whether each entry is reusable or expired. The existing maintenance JSON from
+`fingerprints show` now adds `record_count` and `records` so same-slug records
+are not collapsed. Each added record retains original descriptions,
+relationship hints, tiers, weights, references, and verification dates. Signal
+search summaries now include `min_matches` like signal list summaries. No
+default lookup JSON or MCP output schema changed.
 
 ### Changed
 
@@ -47,6 +52,29 @@ whether each entry is reusable or expired.
 - `recon doctor --help` now names its default synthetic Microsoft identity,
   `example.com` DNS, and crt.sh contacts and identifies `--fix`, `--mcp`, and
   `--client` as local-only modes.
+- Fingerprint and signal category filters now use one word-prefix or phrase
+  matcher across CLI and MCP discovery. A short query such as `ai` therefore
+  no longer produces different category sets between interfaces.
+- Human fingerprint search now previews at most ten unique slugs, reports the
+  complete record and unique-slug totals, and points to `--json` for the full
+  record set. Fingerprint and signal rows use field-associated layouts that
+  remain understandable when a terminal wraps them. Locally extended catalog
+  detail text cannot emit terminal controls and is visibly bounded at 1,024
+  characters.
+- Catalog onboarding now limits its no-network promise to list, search, and
+  show. `fingerprints test --help` discloses that corpus rows use ordinary live
+  lookup boundaries.
+- Nested command help now keeps concise, complete summaries at 40 columns, and
+  detailed help no longer exposes documentation-source markers.
+- The canonical local-gate wrapper now emits ANSI styling only to a capable
+  terminal. Redirected and captured logs are plain text without changing any
+  stage, command, or pass condition.
+- The documented partial-release recovery path now checks the exit status from
+  Release-run discovery separately from its output, so plausible partial output
+  cannot bypass a failed GitHub CLI call and reach rerun mutation.
+- Extracting fingerprint search ranking and rendering reduced the repository's
+  remaining too-many-branches count from 11 to 10; the enforced PLR0912 ceiling
+  is tightened to retain that reduction.
 - `recon cache show` now reports metadata for the 24-hour result cache and the
   30-day CT cache independently. It shows reusable, expired, missing, and
   unreadable states without printing cached tenant, service, or evidence data.
@@ -117,6 +145,10 @@ whether each entry is reusable or expired.
   the remote tag against the workflow commit immediately before mutation.
   Malformed, duplicate, unexpected, or immutable state fails before
   `--clobber`, and new release creation refuses to synthesize a missing tag.
+- Partial-publication recovery instructions now use strict Bash mode and named
+  branch, worktree, tag, run-selection, and run-commit guards. A visible
+  checkpoint is required before the first rerun command, and every failed
+  precondition stops before mutation.
 - Remote release readiness now validates the completed CycloneDX SBOM. For
   releases produced by the current workflow, it verifies the wheel, sdist, and
   SBOM against the downloaded provenance bundle, exact release workflow, exact
@@ -144,6 +176,14 @@ whether each entry is reusable or expired.
   commit and still validates the completed SBOM structure.
 
 ### Fixed
+
+- `recon fingerprints show` no longer returns only the first catalog record
+  for a slug defined in multiple records. Human and JSON output retain every
+  record and its exact semantic fields while preserving the original top-level
+  JSON projection for compatibility. Near-match suggestions are deduplicated.
+- Signal list and search JSON no longer expose different summary field sets;
+  both now use the same projection including `min_matches`. An empty signal
+  search result also points back to the local catalog list.
 
 - The PyPI consumer-verification path can no longer report shell success after
   a failed metadata producer or zero matched artifacts. It consumes a newly

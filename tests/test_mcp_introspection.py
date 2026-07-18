@@ -20,6 +20,7 @@ import pytest
 pytest.importorskip("mcp")
 
 from mcp.server.fastmcp.exceptions import ToolError
+from recon_tool.catalog_discovery import category_matches
 
 from recon_tool.models import (
     CandidateValue,
@@ -165,6 +166,14 @@ class TestGetFingerprints:
         assert lower == upper
 
     @pytest.mark.asyncio
+    async def test_category_filter_uses_word_prefix_or_phrase_matching(self) -> None:
+        data = await get_fingerprints(category="ai")
+
+        assert data
+        assert all(category_matches(entry["category"], "ai") for entry in data)
+        assert all(entry["category"].lower() != "email" for entry in data)
+
+    @pytest.mark.asyncio
     async def test_pagination_is_additive(self) -> None:
         """limit/offset slice the list; omitting them returns the full list
         (backward-compatible default)."""
@@ -205,6 +214,14 @@ class TestGetSignals:
         assert len(data) > 0
         for sig in data:
             assert "security" in sig["category"].lower()
+
+    @pytest.mark.asyncio
+    async def test_category_filter_uses_word_prefix_or_phrase_matching(self) -> None:
+        data = await get_signals(category="ai")
+
+        assert data
+        assert all(category_matches(entry["category"], "ai") for entry in data)
+        assert all(entry["category"].lower() != "email" for entry in data)
 
     @pytest.mark.asyncio
     async def test_layer_filter(self) -> None:

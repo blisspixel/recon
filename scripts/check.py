@@ -22,6 +22,7 @@ paths now, so one configured include list owns the complete scope.
 from __future__ import annotations
 
 import argparse
+import os
 import subprocess
 import sys
 import time
@@ -81,6 +82,18 @@ _STAGES: list[tuple[str, str, list[str]]] = [
 ]
 
 
+def _supports_color() -> bool:
+    """Return whether wrapper status text should contain ANSI styling."""
+    if "NO_COLOR" in os.environ or os.environ.get("TERM", "").lower() == "dumb":
+        return False
+    return bool(getattr(sys.stdout, "isatty", lambda: False)())
+
+
+def _style(text: str, code: str, *, enabled: bool) -> str:
+    """Apply one ANSI style only for a color-capable terminal."""
+    return f"\033[{code}m{text}\033[0m" if enabled else text
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run the CI gate locally (parity with ci.yml).")
     parser.add_argument("--fast", action="store_true", help="Skip the test run; lint + types + quick checks only.")
@@ -96,9 +109,11 @@ def main(argv: list[str] | None = None) -> int:
             (group, name, [*cmd, "--range", args.text_range] if name == "text-hygiene" else cmd)
             for group, name, cmd in stages
         ]
+    color = _supports_color()
     results: list[tuple[str, bool, float]] = []
     for _group, name, cmd in stages:
-        print(f"\n\033[1m==> {name}\033[0m  ({' '.join(cmd[1:])})", flush=True)
+        heading = _style(f"==> {name}", "1", enabled=color)
+        print(f"\n{heading}  ({' '.join(cmd[1:])})", flush=True)
         start = time.monotonic()
         rc = subprocess.run(cmd, cwd=_ROOT, check=False).returncode  # noqa: S603 - fixed dev-tool argv
         results.append((name, rc == 0, time.monotonic() - start))
@@ -106,15 +121,17 @@ def main(argv: list[str] | None = None) -> int:
     print("\n" + "=" * 60)
     failed = [n for n, ok, _ in results if not ok]
     for name, ok, dur in results:
-        mark = "\033[32mok  \033[0m" if ok else "\033[31mFAIL\033[0m"
+        mark = _style("ok  " if ok else "FAIL", "32" if ok else "31", enabled=color)
         print(f"  {mark} {name:<24} {dur:6.1f}s")
     print("=" * 60)
     if failed:
-        print(f"\033[31m{len(failed)} stage(s) failed: {', '.join(failed)}\033[0m")
+        message = f"{len(failed)} stage(s) failed: {', '.join(failed)}"
+        print(_style(message, "31", enabled=color))
         if args.fast:
             print("(--fast skipped the test run; run without --fast before pushing)")
         return 1
-    print("\033[32mAll gate stages passed." + (" (--fast: test run skipped)" if args.fast else "") + "\033[0m")
+    message = "All gate stages passed." + (" (--fast: test run skipped)" if args.fast else "")
+    print(_style(message, "32", enabled=color))
     return 0
 
 

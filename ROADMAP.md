@@ -13,7 +13,11 @@ details, reports cache deletion failures, exposes payload-free result and CT
 cache metadata, hardens diagnostic rendering, discloses doctor connectivity,
 keeps narrow help complete, adds all-source failure recovery, executes the
 sealed wheel before publication, and treats closed output pipes as normal
-control flow. The active product work is evidence-semantic integrity and a
+control flow. Current polish also makes catalog search bounded and
+field-associated, preserves every same-slug fingerprint record in `show`,
+aligns CLI and MCP category matching, keeps signal summary projections
+consistent, emits plain redirected gate logs, and makes partial-release reruns
+stop on named preconditions before mutation. The active product work is evidence-semantic integrity and a
 reproducible product-quality baseline. The
 isolated MCP v1.28.1
 and v2.0.0b1 matrix passed on 2026-07-13, with production remaining on stable v1
@@ -42,7 +46,9 @@ and preserve one existing package-manager owner; consumer verification now has
 complete fail-closed POSIX and PowerShell paths. Current release hardening also
 reuses one bounded exact PyPI metadata validator, includes the completed SBOM in
 GitHub provenance, and rejects unsafe existing-release state before recovery
-can replace assets. One digest-bound v2.6.3 historical exception preserves the
+can replace assets. The operator recovery block itself now uses strict Bash
+mode, named failures, and a visible pre-mutation success checkpoint. One
+digest-bound v2.6.3 historical exception preserves the
 published distribution-only bundle while still requiring SBOM validation;
 future releases fail if SBOM provenance is absent.
 

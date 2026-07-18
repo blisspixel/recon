@@ -166,7 +166,7 @@ def _report_clear_domain(
         raise typer.Exit(code=EXIT_INTERNAL)
 
 
-@cache_app.command("show")
+@cache_app.command("show", short_help="Show cache metadata.")
 def cache_show(
     domain: str = typer.Argument(None, help="Domain to inspect (omit to list all)"),
     exact: bool = typer.Option(
@@ -216,7 +216,7 @@ def cache_show(
             raise typer.Exit(code=EXIT_INTERNAL)
 
 
-@cache_app.command("clear")
+@cache_app.command("clear", short_help="Clear both cache layers.")
 def cache_clear(
     domain: str = typer.Argument(None, help="Domain to clear (omit with --all for everything)"),
     all_domains: bool = typer.Option(False, "--all", help="Clear all cached data"),
@@ -226,11 +226,11 @@ def cache_clear(
     """Clear both CT subdomain cache and TenantInfo result cache.
 
     Earlier this only cleared the CT cache, which left stale
-    TenantInfo results silently served from ``~/.recon/cache/`` even
-    after a ``recon cache clear``.
+    TenantInfo results silently served from ~/.recon/cache/ even
+    after a recon cache clear.
 
-    ``--all`` wipes everything, so it confirms first when run interactively and
-    requires ``--force`` in a non-interactive (scripted) context.
+    --all wipes everything, so it confirms first when run interactively and
+    requires --force in a non-interactive scripted context.
     """
     import sys
 
