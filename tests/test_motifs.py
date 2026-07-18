@@ -47,27 +47,27 @@ class TestBuiltinCatalog:
     def test_microsoft_triad_motif_present_and_fires(self):
         motifs = load_motifs()
         chain = [
-            "contoso.trafficmanager.net",
-            "contoso.azurefd.net",
-            "contoso.t-msedge.net",
+            "alpha.trafficmanager.net",
+            "alpha.azurefd.net",
+            "alpha.t-msedge.net",
         ]
 
-        matches = match_chain_motifs(chain, motifs, subdomain="api.contoso.com")
+        matches = match_chain_motifs(chain, motifs, subdomain="api.alpha.invalid")
 
         assert any(m.motif_name == "tm_to_azurefd_to_msedge" for m in matches)
         triad = next(m for m in matches if m.motif_name == "tm_to_azurefd_to_msedge")
-        assert triad.subdomain == "api.contoso.com"
+        assert triad.subdomain == "api.alpha.invalid"
         assert triad.chain == tuple(chain)
 
     def test_microsoft_triad_motif_requires_order(self):
         motifs = load_motifs()
         chain = [
-            "contoso.azurefd.net",
-            "contoso.trafficmanager.net",
-            "contoso.t-msedge.net",
+            "alpha.azurefd.net",
+            "alpha.trafficmanager.net",
+            "alpha.t-msedge.net",
         ]
 
-        matches = match_chain_motifs(chain, motifs, subdomain="api.contoso.com")
+        matches = match_chain_motifs(chain, motifs, subdomain="api.alpha.invalid")
 
         assert all(m.motif_name != "tm_to_azurefd_to_msedge" for m in matches)
 

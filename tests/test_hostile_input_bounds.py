@@ -66,7 +66,7 @@ def _autodiscover_xml(domains: list[str]) -> str:
 
 class TestAutodiscoverBounds:
     def test_domain_flood_is_capped(self) -> None:
-        xml = _autodiscover_xml([f"d{i}.contoso.com" for i in range(5000)])
+        xml = _autodiscover_xml([f"d{i}.alpha.invalid" for i in range(5000)])
         domains, _default = _parse_autodiscover_domains(xml)
         assert len(domains) <= _MAX_AUTODISCOVER_DOMAINS
 
@@ -106,11 +106,11 @@ class TestAutodiscoverBounds:
 
 class TestCrtshEntryBounds:
     def test_per_cert_san_flood_is_capped(self) -> None:
-        name_value = "\n".join(f"h{i}.contoso.com" for i in range(5000))
+        name_value = "\n".join(f"h{i}.alpha.invalid" for i in range(5000))
         cert = {
             "name_value": name_value,
             "issuer_ca_id": 1,
-            "issuer_name": "Fabrikam CA",
+            "issuer_name": "Synthetic Beta CA",
             "not_before": "2026-01-01T00:00:00",
             "not_after": "2026-04-01T00:00:00",
         }
@@ -123,9 +123,9 @@ class TestCrtshEntryBounds:
     def test_entry_flood_is_capped(self) -> None:
         certs = [
             {
-                "name_value": f"h{i}.contoso.com",
+                "name_value": f"h{i}.alpha.invalid",
                 "issuer_ca_id": 1,
-                "issuer_name": "Fabrikam CA",
+                "issuer_name": "Synthetic Beta CA",
                 "not_before": "2026-01-01T00:00:00",
                 "not_after": "2026-04-01T00:00:00",
             }
@@ -140,7 +140,7 @@ class TestCrtshEntryBounds:
         cert = {
             "name_value": "a" * (1024 * 1024),
             "issuer_ca_id": 1,
-            "issuer_name": "Fabrikam CA",
+            "issuer_name": "Synthetic Beta CA",
             "not_before": "2026-01-01T00:00:00",
             "not_after": "2026-04-01T00:00:00",
         }
@@ -173,24 +173,39 @@ class TestCtGroupingBounds:
         entries = []
         for w in range(50):
             ts = f"2026-01-01T00:{w * 2:02d}:00+00:00"
-            entries.append({"not_before": ts, "dns_names": [f"w{w}-a.com", f"w{w}-b.com", f"w{w}-c.com"]})
+            entries.append({"not_before": ts, "dns_names": [f"w{w}-a.invalid", f"w{w}-b.invalid", f"w{w}-c.invalid"]})
         bursts = _detect_deployment_bursts(entries)
         assert len(bursts) <= _MAX_BURSTS
 
     def test_names_per_burst_capped(self) -> None:
-        entries = [{"not_before": "2026-01-01T00:00:00+00:00", "dns_names": [f"n{i}.com" for i in range(500)]}]
+        entries = [
+            {
+                "not_before": "2026-01-01T00:00:00+00:00",
+                "dns_names": [f"n{i}.invalid" for i in range(500)],
+            }
+        ]
         bursts = _detect_deployment_bursts(entries)
         for burst in bursts:
             assert len(burst.names) <= _MAX_NAMES_PER_BURST
 
     def test_wildcard_clusters_capped(self) -> None:
         # 50 distinct wildcard certs => 50 candidate clusters, capped to the max.
-        entries = [{"dns_names": ["*.x.com", f"c{c}-only.com", f"c{c}-also.com", f"c{c}-third.com"]} for c in range(50)]
+        entries = [
+            {
+                "dns_names": [
+                    "*.x.invalid",
+                    f"c{c}-only.invalid",
+                    f"c{c}-also.invalid",
+                    f"c{c}-third.invalid",
+                ]
+            }
+            for c in range(50)
+        ]
         clusters = _extract_wildcard_sibling_clusters(entries)
         assert len(clusters) <= _MAX_WILDCARD_CLUSTERS
 
     def test_names_per_wildcard_cluster_capped(self) -> None:
-        entries = [{"dns_names": ["*.x.com", *[f"s{i}.com" for i in range(500)]]}]
+        entries = [{"dns_names": ["*.x.invalid", *[f"s{i}.invalid" for i in range(500)]]}]
         clusters = _extract_wildcard_sibling_clusters(entries)
         for cluster in clusters:
             assert len(cluster) <= _MAX_NAMES_PER_CLUSTER
@@ -209,18 +224,18 @@ class TestDnsParserBounds:
         async def _fake_resolve(domain: str, rdtype: str, timeout: float = 5.0) -> list[str]:
             calls.append(domain)
             # Always answer with another redirect to a public target.
-            return ["v=spf1 redirect=_spf.fabrikam.com"]
+            return ["v=spf1 redirect=_spf.beta.invalid"]
 
         ctx = dns_mod._DetectionCtx()
         with patch.object(dns_base, "safe_resolve", _fake_resolve):
-            await dns_email._follow_spf_redirect(ctx, "v=spf1 redirect=_spf.fabrikam.com", depth=0, max_depth=3)
+            await dns_email._follow_spf_redirect(ctx, "v=spf1 redirect=_spf.beta.invalid", depth=0, max_depth=3)
         # depth 0 starts the walk; at most max_depth resolver queries follow.
         assert len(calls) <= 3
 
     def test_dmarc_rua_mailto_flood_is_bounded(self) -> None:
         """A DMARC record with thousands of rua mailto addresses parses without
         crashing; the work is bounded by the (DNS-ceiling-bounded) record."""
-        addrs = ",".join(f"mailto:a{i}@dmarc.fabrikam.com" for i in range(2000))
+        addrs = ",".join(f"mailto:a{i}@dmarc.beta.invalid" for i in range(2000))
         record = f"v=DMARC1; p=reject; rua={addrs}"
         ctx = dns_mod._DetectionCtx()
         # Must complete and not raise; the rua matcher is linear in the record.
@@ -242,7 +257,7 @@ class TestDnsParserBounds:
             patch.object(dns_infra, "get_subdomain_txt_patterns", return_value=[rule]),
             patch.object(dns_base, "safe_resolve", _resolve),
         ):
-            await dns_mod._detect_subdomain_txt(ctx, "contoso.com")
+            await dns_mod._detect_subdomain_txt(ctx, "alpha.invalid")
         assert "fakevendor" not in ctx.slugs
 
     @pytest.mark.asyncio
@@ -261,7 +276,7 @@ class TestDnsParserBounds:
             patch.object(dns_infra, "get_subdomain_txt_patterns", return_value=[rule]),
             patch.object(dns_base, "safe_resolve", _resolve),
         ):
-            await dns_mod._detect_subdomain_txt(ctx, "contoso.com")
+            await dns_mod._detect_subdomain_txt(ctx, "alpha.invalid")
         assert "fakevendor" in ctx.slugs
 
     @pytest.mark.asyncio
@@ -282,7 +297,7 @@ class TestDnsParserBounds:
             patch.object(dns_infra, "get_cname_patterns", return_value=[rule]),
             patch.object(dns_base, "safe_resolve", _resolve),
         ):
-            await dns_mod._detect_cname_infra(ctx, "contoso.com")
+            await dns_mod._detect_cname_infra(ctx, "alpha.invalid")
         assert "fakecdn" not in ctx.slugs
 
     @pytest.mark.asyncio
@@ -302,7 +317,7 @@ class TestDnsParserBounds:
             patch.object(dns_infra, "get_cname_patterns", return_value=[rule]),
             patch.object(dns_base, "safe_resolve", _resolve),
         ):
-            await dns_mod._detect_cname_infra(ctx, "contoso.com")
+            await dns_mod._detect_cname_infra(ctx, "alpha.invalid")
         assert "fakecdn" in ctx.slugs
 
     def test_match_txt_oversized_value_is_skipped(self) -> None:
@@ -386,19 +401,19 @@ _FAILURE_MODES = [
 
 
 async def _invoke_oidc(client: Any) -> SourceResult:
-    return await OIDCSource().lookup("contoso.com", client=client)
+    return await OIDCSource().lookup("alpha.invalid", client=client)
 
 
 async def _invoke_userrealm(client: Any) -> SourceResult:
-    return await UserRealmSource().lookup("contoso.com", client=client)
+    return await UserRealmSource().lookup("alpha.invalid", client=client)
 
 
 async def _invoke_google(client: Any) -> SourceResult:
-    return await GoogleSource().lookup("contoso.com", client=client, active_probes=True)
+    return await GoogleSource().lookup("alpha.invalid", client=client, active_probes=True)
 
 
 async def _invoke_azure(client: Any) -> SourceResult:
-    return await AzureMetadataSource().lookup("contoso.com", client=client, tenant_id=_TENANT_UUID)
+    return await AzureMetadataSource().lookup("alpha.invalid", client=client, tenant_id=_TENANT_UUID)
 
 
 _HTTP_SOURCES: dict[str, Callable[[Any], Awaitable[SourceResult]]] = {

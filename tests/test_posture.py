@@ -8,8 +8,8 @@ def _make_info(**overrides) -> TenantInfo:
     defaults = {
         "tenant_id": None,
         "display_name": "Test",
-        "default_domain": "test.com",
-        "queried_domain": "test.com",
+        "default_domain": "test.invalid",
+        "queried_domain": "test.invalid",
         "confidence": ConfidenceLevel.MEDIUM,
     }
     defaults.update(overrides)

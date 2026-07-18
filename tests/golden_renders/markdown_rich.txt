@@ -1,8 +1,8 @@
-# Tenant Report: Contoso Ltd
+# Tenant Report: Synthetic Alpha Ltd
 
-**Domain:** contoso\.com\
+**Domain:** alpha\.invalid\
 **Tenant ID:** `a1b2c3d4-e5f6-7890-abcd-ef1234567890`\
-**Default Domain:** contoso\.com\
+**Default Domain:** alpha\.invalid\
 **Region:** NA\
 **Auth Type:** Federated\
 **Confidence:** high (3 sources)\
@@ -44,12 +44,12 @@
 
 ## Tenant Domains (2)
 
-- contoso\.com
-- contoso\.onmicrosoft\.com
+- alpha\.invalid
+- alpha\.onmicrosoft\.com
 
 ## Related Domains
 
-- api\.contoso\.com
+- api\.alpha\.invalid
 
 ---
 *Note: Some sources were unavailable (crt\.sh) - subdomain discovery may be incomplete.*\

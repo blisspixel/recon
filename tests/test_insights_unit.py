@@ -119,9 +119,9 @@ class TestEmailSecurityInsights:
 
     def test_extensible_email_name_does_not_make_email_scoreable(self):
         ctx = _ctx(
-            services={"Acme Email"},
-            slugs={"acme-email"},
-            evidence=(EvidenceRecord("TXT", "acme=token", "Acme Email", "acme-email"),),
+            services={"Synthetic Delta Email"},
+            slugs={"delta-email"},
+            evidence=(EvidenceRecord("TXT", "delta=token", "Synthetic Delta Email", "delta-email"),),
         )
 
         assert _email_security_insights(ctx) == []
@@ -129,8 +129,8 @@ class TestEmailSecurityInsights:
     def test_extensible_spf_prefix_does_not_claim_spf_policy(self):
         ctx = _ctx(
             services={"SPF: neutral"},
-            slugs={"acme-spf"},
-            evidence=(EvidenceRecord("TXT", "acme=token", "SPF: neutral", "acme-spf"),),
+            slugs={"delta-spf"},
+            evidence=(EvidenceRecord("TXT", "delta=token", "SPF: neutral", "delta-spf"),),
             has_mx_records=True,
         )
 

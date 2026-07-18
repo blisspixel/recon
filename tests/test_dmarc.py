@@ -46,12 +46,12 @@ def _mock_safe_resolve_factory(records_by_query: dict[str, list[str]]):
 
 
 def _make_tenant_info(**overrides: object) -> TenantInfo:
-    """Create a TenantInfo with Contoso defaults, overriding specific fields."""
+    """Create a TenantInfo with Synthetic Alpha defaults, overriding specific fields."""
     defaults: dict[str, object] = {
-        "tenant_id": "contoso-tenant-id",
-        "display_name": "Contoso Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "tenant_id": "alpha-tenant-id",
+        "display_name": "Synthetic Alpha Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.MEDIUM,
     }
     defaults.update(overrides)
@@ -69,9 +69,9 @@ class TestDmarcPctParsing:
     async def test_valid_pct_50(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """pct=50 → dmarc_pct == 50."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; pct=50"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; pct=50"]}
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_pct == 50
 
     @pytest.mark.asyncio
@@ -79,9 +79,9 @@ class TestDmarcPctParsing:
     async def test_valid_pct_0(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """pct=0 → dmarc_pct == 0 (monitoring only)."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=quarantine; pct=0"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=quarantine; pct=0"]}
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_pct == 0
 
     @pytest.mark.asyncio
@@ -89,17 +89,17 @@ class TestDmarcPctParsing:
     async def test_valid_pct_100(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """pct=100 → dmarc_pct == 100 (full enforcement)."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; pct=100"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; pct=100"]}
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_pct == 100
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_absent_pct(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """No pct= tag → dmarc_pct is None (not defaulting to 100)."""
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject"]})
-        result = await DNSSource().lookup("contoso.com")
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject"]})
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_pct is None
 
     @pytest.mark.asyncio
@@ -107,10 +107,10 @@ class TestDmarcPctParsing:
     async def test_non_integer_pct(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
         """pct=abc → warning logged, dmarc_pct is None."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; pct=abc"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; pct=abc"]}
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_pct is None
         assert any("not a valid integer" in r.message for r in caplog.records)
 
@@ -119,10 +119,10 @@ class TestDmarcPctParsing:
     async def test_out_of_range_pct_150(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
         """pct=150 → warning logged, dmarc_pct is None."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; pct=150"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; pct=150"]}
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_pct is None
         assert any("out of range" in r.message for r in caplog.records)
 
@@ -131,10 +131,10 @@ class TestDmarcPctParsing:
     async def test_out_of_range_pct_negative(self, mock_resolve, caplog: pytest.LogCaptureFixture) -> None:  # type: ignore[no-untyped-def]
         """pct=-5 → warning logged, dmarc_pct is None."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; pct=-5"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; pct=-5"]}
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_pct is None
         assert any("out of range" in r.message for r in caplog.records)
 
@@ -147,9 +147,9 @@ class TestDmarcPctParsing:
         raw_pct: str,
     ) -> None:  # type: ignore[no-untyped-def]
         record = f"v=DMARC1; p=reject; pct={raw_pct}"
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
 
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
 
         assert result.dmarc_policy == "reject"
         assert result.dmarc_pct is None
@@ -166,9 +166,9 @@ class TestDmarcRfc9989Tags:
     async def test_np_and_testing_mode_parsed_from_dns_source(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """``np=`` and ``t=y`` are kept on the internal DNS result."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; np=quarantine; t=y"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; np=quarantine; t=y"]}
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy == "reject"
         assert result.dmarc_np == "quarantine"
         assert result.dmarc_testing is True
@@ -181,10 +181,10 @@ class TestDmarcRfc9989Tags:
         caplog: pytest.LogCaptureFixture,
     ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; np=bogus"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; np=bogus"]}
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert result.dmarc_np is None
         assert result.dmarc_testing is False
@@ -198,10 +198,10 @@ class TestDmarcRfc9989Tags:
         caplog: pytest.LogCaptureFixture,
     ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; t=maybe"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; t=maybe"]}
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy == "reject"
         assert result.dmarc_testing is False
         assert any("DMARC t= value" in r.message for r in caplog.records)
@@ -210,9 +210,9 @@ class TestDmarcRfc9989Tags:
     @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_invalid_sp_with_valid_rua_uses_fallback_without_fabricating_p(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; sp=bogus; rua=mailto:dmarc@agari.com"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; sp=bogus; rua=mailto:dmarc@agari.com"]}
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert "DMARC" in result.detected_services
 
@@ -225,9 +225,9 @@ class TestDmarcRfc9989Tags:
         invalid_tag: str,
     ) -> None:  # type: ignore[no-untyped-def]
         record = f"v=DMARC1; p=none; {invalid_tag}; rua=mailto:dmarc@example.com"
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
 
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
 
         assert result.dmarc_policy is None
         assert "DMARC" in result.detected_services
@@ -239,10 +239,10 @@ class TestDmarcRfc9989Tags:
         self, mock_resolve, caplog: pytest.LogCaptureFixture
     ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=bogus; pct=50; np=reject; t=y"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=bogus; pct=50; np=reject; t=y"]}
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert result.dmarc_pct is None
         assert result.dmarc_np is None
@@ -255,10 +255,10 @@ class TestDmarcRfc9989Tags:
         self, mock_resolve, caplog: pytest.LogCaptureFixture
     ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=bogus; rua=mailto:dmarc@valimail.com"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=bogus; rua=mailto:dmarc@valimail.com"]}
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert "DMARC" in result.detected_services
         assert "valimail" in result.detected_slugs
@@ -269,9 +269,9 @@ class TestDmarcRfc9989Tags:
     @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_missing_policy_retains_valid_rua_without_fabricating_p(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; rua=mailto:dmarc@agari.com"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; rua=mailto:dmarc@agari.com"]}
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert "DMARC" in result.detected_services
         assert "agari" in result.detected_slugs
@@ -280,8 +280,8 @@ class TestDmarcRfc9989Tags:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_missing_policy_without_valid_rua_is_not_processed(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": ["v=DMARC1; t=y"]})
-        result = await DNSSource().lookup("contoso.com")
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": ["v=DMARC1; t=y"]})
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert "DMARC" not in result.detected_services
         assert any(evidence.slug == "dmarc-invalid" for evidence in result.evidence)
@@ -309,8 +309,8 @@ class TestDmarcRfc9989Tags:
         mock_resolve,
         record: str,
     ) -> None:  # type: ignore[no-untyped-def]
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
-        result = await DNSSource().lookup("contoso.com")
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert "DMARC" not in result.detected_services
         assert result.detected_slugs == ()
@@ -337,8 +337,8 @@ class TestDmarcRfc9989Tags:
         mock_resolve,
         rua: str,
     ) -> None:  # type: ignore[no-untyped-def]
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [f"v=DMARC1; rua={rua}"]})
-        result = await DNSSource().lookup("contoso.com")
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [f"v=DMARC1; rua={rua}"]})
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert "DMARC" in result.detected_services
 
@@ -354,9 +354,9 @@ class TestDmarcRfc9989Tags:
         invalid_vendor_uri: str,
     ) -> None:  # type: ignore[no-untyped-def]
         record = f"v=DMARC1; rua=https://valid.example/r,{invalid_vendor_uri}"
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
 
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
 
         assert "DMARC" in result.detected_services
         assert "agari" not in result.detected_slugs
@@ -366,9 +366,9 @@ class TestDmarcRfc9989Tags:
     @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_uri_list_separator_whitespace_preserves_valid_fallback(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         record = "v=DMARC1; p=bogus; rua=mailto:a@example.com , bad"
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
 
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
 
         assert result.dmarc_policy is None
         assert "DMARC" in result.detected_services
@@ -390,9 +390,9 @@ class TestDmarcRfc9989Tags:
         caplog: pytest.LogCaptureFixture,
         record: str,
     ) -> None:  # type: ignore[no-untyped-def]
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert "DMARC" not in result.detected_services
         assert result.detected_slugs == ()
@@ -416,8 +416,8 @@ class TestDmarcRfc9989Tags:
         mock_resolve,
         record: str,
     ) -> None:  # type: ignore[no-untyped-def]
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
-        result = await DNSSource().lookup("contoso.com")
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy == "reject"
         assert "DMARC" in result.detected_services
 
@@ -435,9 +435,9 @@ class TestDmarcRfc9989Tags:
         mock_resolve,
         record: str,
     ) -> None:  # type: ignore[no-untyped-def]
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
 
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
 
         assert result.dmarc_policy is None
         assert "DMARC" not in result.detected_services
@@ -461,9 +461,9 @@ class TestDmarcRfc9989Tags:
         policy: str | None,
         testing: bool,
     ) -> None:  # type: ignore[no-untyped-def]
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
 
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
 
         assert result.dmarc_policy == policy
         assert result.dmarc_testing is testing
@@ -474,9 +474,9 @@ class TestDmarcRfc9989Tags:
     @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_dmarc_version_tag_must_be_leading(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["p=reject; v=DMARC1; rua=mailto:dmarc@agari.com"]}
+            {"_dmarc.alpha.invalid/TXT": ["p=reject; v=DMARC1; rua=mailto:dmarc@agari.com"]}
         )
-        result = await DNSSource().lookup("contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert "DMARC" not in result.detected_services
         assert result.detected_slugs == ()
@@ -488,14 +488,14 @@ class TestDmarcRfc9989Tags:
     ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "_dmarc.contoso.com/TXT": [
+                "_dmarc.alpha.invalid/TXT": [
                     "v=DMARC1; p=reject; p=none; rua=mailto:dmarc@agari.com",
                     "v=DMARC1; p=reject; rua=mailto:dmarc@valimail.com",
                 ]
             }
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert "DMARC" not in result.detected_services
         assert result.detected_slugs == ()
@@ -520,9 +520,9 @@ class TestDmarcRfc9989Tags:
         caplog: pytest.LogCaptureFixture,
         record: str,
     ) -> None:  # type: ignore[no-untyped-def]
-        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.contoso.com/TXT": [record]})
+        mock_resolve.side_effect = _mock_safe_resolve_factory({"_dmarc.alpha.invalid/TXT": [record]})
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert result.dmarc_pct is None
         assert result.dmarc_np is None
@@ -536,14 +536,14 @@ class TestDmarcRfc9989Tags:
     ) -> None:  # type: ignore[no-untyped-def]
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "_dmarc.contoso.com/TXT": [
+                "_dmarc.alpha.invalid/TXT": [
                     "v=DMARC1; p=reject; pct=100",
                     "v=DMARC1; p=quarantine; t=y",
                 ]
             }
         )
         with caplog.at_level(logging.WARNING, logger="recon"):
-            result = await DNSSource().lookup("contoso.com")
+            result = await DNSSource().lookup("alpha.invalid")
         assert result.dmarc_policy is None
         assert result.dmarc_pct is None
         assert result.dmarc_testing is False
@@ -564,10 +564,10 @@ class TestDmarcRfc9989Tags:
     async def test_testing_mode_reaches_merged_tenant_info(self, mock_resolve) -> None:  # type: ignore[no-untyped-def]
         """The merge layer preserves internal RFC 9989 tags for signal logic."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
-            {"_dmarc.contoso.com/TXT": ["v=DMARC1; p=reject; np=reject; t=y"]}
+            {"_dmarc.alpha.invalid/TXT": ["v=DMARC1; p=reject; np=reject; t=y"]}
         )
-        result = await DNSSource().lookup("contoso.com")
-        info = merge_results([result], "contoso.com")
+        result = await DNSSource().lookup("alpha.invalid")
+        info = merge_results([result], "alpha.invalid")
         assert info.dmarc_policy == "reject"
         assert info.dmarc_testing is True
 
@@ -665,7 +665,7 @@ class TestDmarcRuaExtraction:
         "rua",
         [
             "mailto:d@evil.example?subject=agari.com",
-            "mailto:d@notagari.com",
+            "mailto:d@notagari.invalid",
             "mailto:d@evil/.agari.com",
             "mailto:d@.agari.com",
             "mailto:d@-bad.agari.com",
@@ -713,10 +713,10 @@ class TestDmarcRuaExtraction:
         """End-to-end: DNSSource extracts rua= and detects vendor slug."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
-                "_dmarc.northwind.com/TXT": ["v=DMARC1; p=reject; rua=mailto:dmarc@valimail.com"],
+                "_dmarc.gamma.invalid/TXT": ["v=DMARC1; p=reject; rua=mailto:dmarc@valimail.com"],
             }
         )
-        result = await DNSSource().lookup("northwind.com")
+        result = await DNSSource().lookup("gamma.invalid")
         assert "valimail" in result.detected_slugs
 
 
@@ -923,12 +923,12 @@ class TestProperty3DmarcPctParsing:
         ctx = _DetectionCtx()
 
         async def _mock_resolve(domain: str, rdtype: str, **kwargs: object) -> list[str]:
-            if domain == "_dmarc.contoso.com" and rdtype == "TXT":
+            if domain == "_dmarc.alpha.invalid" and rdtype == "TXT":
                 return [f"v=DMARC1; p=reject; pct={n}"]
             return []
 
         with patch("recon_tool.sources.dns_base.safe_resolve", side_effect=_mock_resolve):
-            asyncio.new_event_loop().run_until_complete(_detect_email_security(ctx, "contoso.com"))
+            asyncio.new_event_loop().run_until_complete(_detect_email_security(ctx, "alpha.invalid"))
 
         assert ctx.dmarc_pct == n, f"Expected dmarc_pct={n}, got {ctx.dmarc_pct}"
 
@@ -941,12 +941,12 @@ class TestProperty3DmarcPctParsing:
         ctx = _DetectionCtx()
 
         async def _mock_resolve(domain: str, rdtype: str, **kwargs: object) -> list[str]:
-            if domain == "_dmarc.contoso.com" and rdtype == "TXT":
+            if domain == "_dmarc.alpha.invalid" and rdtype == "TXT":
                 return [f"v=DMARC1; p={policy}"]
             return []
 
         with patch("recon_tool.sources.dns_base.safe_resolve", side_effect=_mock_resolve):
-            asyncio.new_event_loop().run_until_complete(_detect_email_security(ctx, "contoso.com"))
+            asyncio.new_event_loop().run_until_complete(_detect_email_security(ctx, "alpha.invalid"))
 
         assert ctx.dmarc_pct is None, f"Expected None for absent pct=, got {ctx.dmarc_pct}"
 
@@ -969,12 +969,12 @@ class TestProperty3DmarcPctParsing:
         ctx = _DetectionCtx()
 
         async def _mock_resolve(domain: str, rdtype: str, **kwargs: object) -> list[str]:
-            if domain == "_dmarc.contoso.com" and rdtype == "TXT":
+            if domain == "_dmarc.alpha.invalid" and rdtype == "TXT":
                 return [f"v=DMARC1; p=reject; pct={bad_val}"]
             return []
 
         with patch("recon_tool.sources.dns_base.safe_resolve", side_effect=_mock_resolve):
-            asyncio.new_event_loop().run_until_complete(_detect_email_security(ctx, "contoso.com"))
+            asyncio.new_event_loop().run_until_complete(_detect_email_security(ctx, "alpha.invalid"))
 
         assert ctx.dmarc_pct is None, f"Expected None for invalid pct={bad_val}, got {ctx.dmarc_pct}"
 

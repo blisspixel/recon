@@ -148,7 +148,7 @@ class TestMergeKeepsDmarcTagsSourceBound:
             dmarc_policy="reject",
             detected_services=(SVC_DMARC,),
             detected_slugs=("dmarc",),
-            tenant_domains=("contoso.com",),
+            tenant_domains=("alpha.invalid",),
         )
         related = SourceResult(
             source_name="related_dns",
@@ -159,7 +159,7 @@ class TestMergeKeepsDmarcTagsSourceBound:
             detected_slugs=("dmarc",),
         )
 
-        merged = merge_results([primary, related], queried_domain="contoso.com")
+        merged = merge_results([primary, related], queried_domain="alpha.invalid")
 
         assert merged.dmarc_policy == "reject"
         assert merged.dmarc_pct is None

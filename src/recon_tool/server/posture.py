@@ -308,7 +308,7 @@ async def analyze_posture(
     should be.
 
     Args:
-        domain: A domain name to analyze (e.g., "northwindtraders.com")
+        domain: A domain name to analyze (e.g., "gamma.invalid")
         explain: When true, include explanation data for each posture observation.
         profile: Optional profile name (e.g. "fintech", "healthcare",
             "saas-b2b", "high-value-target", "public-sector"). Reweights
@@ -401,7 +401,7 @@ async def assess_exposure(domain: str) -> ExposureAssessmentResult:
     a floor with its ceiling; a low score can mean "quiet", not "weak".
 
     Args:
-        domain: A domain name to assess (e.g., "northwindtraders.com")
+        domain: A domain name to assess (e.g., "gamma.invalid")
 
     Returns:
         JSON object with the full exposure assessment, or an error message.
@@ -450,7 +450,7 @@ async def find_hardening_gaps(domain: str) -> GapReportResult:
     false-flagged gap as "not observed", not as a confirmed gap.
 
     Args:
-        domain: A domain name to analyze (e.g., "northwindtraders.com")
+        domain: A domain name to analyze (e.g., "gamma.invalid")
 
     Returns:
         JSON object with the gap report, or an error message.
@@ -495,8 +495,8 @@ async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonRes
     control differences, and relative posture assessment.
 
     Args:
-        domain_a: First domain to compare (e.g., "northwindtraders.com")
-        domain_b: Second domain to compare (e.g., "contoso.com")
+        domain_a: First domain to compare (e.g., "gamma.invalid")
+        domain_b: Second domain to compare (e.g., "alpha.invalid")
 
     Returns:
         A structured posture comparison. Raises ToolError (isError) when either
@@ -543,7 +543,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
     beyond the initial domain resolution.
 
     Args:
-        domain: A domain name to test against (e.g., "northwindtraders.com").
+        domain: A domain name to test against (e.g., "gamma.invalid").
         hypothesis: A theory whose related public indicators should be listed.
 
     Returns:
@@ -797,7 +797,7 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
     beyond the initial domain resolution.
 
     Args:
-        domain: A domain name to simulate against (e.g., "northwindtraders.com").
+        domain: A domain name to simulate against (e.g., "gamma.invalid").
         fixes: Array of fix descriptions or gap slugs to hypothetically apply.
 
     Returns:

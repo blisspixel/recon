@@ -45,6 +45,53 @@ ALLOWED_DOMAINS = {
     "example.org",
 }
 
+_RETIRED_TARGET_BRANDS = (
+    "con" + "toso",
+    "fab" + "rikam",
+    "north" + "wind",
+    "north" + "windtraders",
+    "ada" + "tum",
+    "adventure" + "-works",
+    "adventure" + " works",
+    "tailspin" + "toys",
+    "tailspin" + " toys",
+    "wingtip" + "toys",
+    "wingtip" + " toys",
+    "woodgrove" + "bank",
+    "woodgrove" + " bank",
+    "lit" + "ware",
+    "lucerne" + " publishing",
+    "pro" + "ware",
+    "humongous" + " insurance",
+    "trey" + "research",
+    "trey" + " research",
+    "graphic design" + " institute",
+    "consolidated" + " messenger",
+)
+RETIRED_TARGET_BRAND_RE = re.compile(
+    r"\b(?:" + "|".join(re.escape(value) for value in _RETIRED_TARGET_BRANDS) + r")\b",
+    re.IGNORECASE,
+)
+_RETIRED_PLACEHOLDER_LOWER = "ac" + "me"
+_RETIRED_PLACEHOLDER_TITLE = "Ac" + "me"
+_RETIRED_PLACEHOLDER_UPPER = "AC" + "ME"
+_UPPER_PLACEHOLDER_TARGET_SUFFIX = (
+    r"(?:\.[a-z0-9]|[- ](?i:bank|cloud|company|corp(?:oration)?|email|group|holdings|inc|labs|llc|"
+    r"ltd|security|sso)\b)"
+)
+RETIRED_PLACEHOLDER_RE = re.compile(
+    r"(?<!_)\b(?:"
+    + re.escape(_RETIRED_PLACEHOLDER_LOWER)
+    + "|"
+    + re.escape(_RETIRED_PLACEHOLDER_TITLE)
+    + "|"
+    + re.escape(_RETIRED_PLACEHOLDER_UPPER)
+    + r"(?="
+    + _UPPER_PLACEHOLDER_TARGET_SUFFIX
+    + ")"
+    + r")\b(?!-challenge)"
+)
+
 _DOMAIN_LABEL = r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?"
 _DOMAIN_TLD = r"[a-z](?:[a-z0-9-]{0,60}[a-z0-9])"
 _DOMAIN_PATTERN = rf"{_DOMAIN_LABEL}(?:\.{_DOMAIN_LABEL})*\.{_DOMAIN_TLD}"
@@ -220,9 +267,15 @@ def _has_target_path_component(path: str) -> bool:
     return False
 
 
+def _has_retired_target_example(value: str) -> bool:
+    return RETIRED_TARGET_BRAND_RE.search(value) is not None or RETIRED_PLACEHOLDER_RE.search(value) is not None
+
+
 def _safe_display_path(path: str) -> str:
     normalized = path.replace("\\", "/")
     folded = normalized.casefold()
+    if _has_retired_target_example(normalized) or any(ord(character) < 32 for character in normalized):
+        return "[redacted]"
     for prefix in PRIVATE_PREFIXES:
         if folded.startswith(prefix.casefold()):
             return f"{prefix}[redacted]"
@@ -1252,6 +1305,30 @@ def _content_violations(root: Path, paths: list[str]) -> list[Violation]:
     return violations
 
 
+def _retired_target_example_violations(root: Path, paths: list[str]) -> list[Violation]:
+    violations: list[Violation] = []
+    for path in paths:
+        if _has_retired_target_example(path):
+            violations.append(Violation(path, "retired target-example identity is tracked"))
+        full_path = root / path
+        if full_path.is_symlink() or not full_path.is_file():
+            continue
+        try:
+            content = full_path.read_bytes()
+        except OSError:
+            continue
+        if b"\0" in content:
+            continue
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            continue
+        for line, value in enumerate(text.splitlines(), start=1):
+            if _has_retired_target_example(value):
+                violations.append(Violation(path, "retired target-example identity is tracked", line))
+    return violations
+
+
 def _deduplicate(violations: list[Violation]) -> list[Violation]:
     seen: set[tuple[str, str, int | None]] = set()
     unique: list[Violation] = []
@@ -1266,7 +1343,13 @@ def _deduplicate(violations: list[Violation]) -> list[Violation]:
 def find_violations(root: Path = ROOT, paths: list[str] | None = None) -> list[Violation]:
     tracked = paths if paths is not None else _tracked_files(root)
     normalized = [path.replace("\\", "/") for path in tracked]
-    return _deduplicate([*_path_violations(normalized), *_content_violations(root, normalized)])
+    return _deduplicate(
+        [
+            *_path_violations(normalized),
+            *_content_violations(root, normalized),
+            *_retired_target_example_violations(root, normalized),
+        ]
+    )
 
 
 def main() -> int:

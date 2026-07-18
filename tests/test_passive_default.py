@@ -61,7 +61,7 @@ async def test_google_source_passive_by_default_makes_no_cse_probe() -> None:
     """Without active_probes, GoogleSource makes no network call at all."""
     calls: list[str] = []
     client = _RecordingClient(calls)
-    result = await GoogleSource().lookup("contoso.com", client=client)
+    result = await GoogleSource().lookup("alpha.invalid", client=client)
     assert calls == [], "the CSE probe must not run by default"
     # A clean empty result, not a degraded error.
     assert result.error is None
@@ -73,8 +73,8 @@ async def test_google_source_probes_cse_when_active() -> None:
     """With active_probes=True, the CSE endpoint is queried and detected."""
     calls: list[str] = []
     client = _RecordingClient(calls, response=_CSEResponse())
-    result = await GoogleSource().lookup("contoso.com", client=client, active_probes=True)
-    assert calls == ["https://cse.contoso.com/.well-known/cse-configuration"]
+    result = await GoogleSource().lookup("alpha.invalid", client=client, active_probes=True)
+    assert calls == ["https://cse.alpha.invalid/.well-known/cse-configuration"]
     assert "google-cse" in result.detected_slugs
 
 
@@ -112,7 +112,7 @@ async def test_bimi_vmc_not_fetched_by_default() -> None:
     ctx = dns_mod._DetectionCtx()  # active_probes defaults to False
     calls: list[str] = []
     with patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, "pem"), calls)):
-        await dns_email._apply_bimi(ctx, ["v=BIMI1; a=https://logo.example/vmc.pem"], "contoso.com")
+        await dns_email._apply_bimi(ctx, ["v=BIMI1; a=https://logo.example/vmc.pem"], "alpha.invalid")
     assert SVC_BIMI in ctx.services, "BIMI presence must still be detected from the TXT record"
     assert calls == [], "the VMC fetch must not run by default"
     assert ctx.bimi_identity is None
@@ -124,10 +124,10 @@ async def test_bimi_vmc_fetched_when_active() -> None:
     ctx = dns_mod._DetectionCtx()
     ctx.active_probes = True
     calls: list[str] = []
-    # A public-DNS https .pem host (fictional brand) that passes the SSRF guard.
-    a_url = "https://bimi.fabrikam.com/vmc.pem"
+    # A reserved public-DNS https .pem host that passes the SSRF guard.
+    a_url = "https://bimi.beta.example.com/vmc.pem"
     with patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, "not-a-real-pem"), calls)):
-        await dns_email._apply_bimi(ctx, [f"v=BIMI1; a={a_url}"], "contoso.com")
+        await dns_email._apply_bimi(ctx, [f"v=BIMI1; a={a_url}"], "alpha.invalid")
     assert SVC_BIMI in ctx.services
     assert calls == [a_url], "the VMC fetch must run when opted in"
 
@@ -165,7 +165,7 @@ class _CapturingSource:
 async def test_resolve_tenant_passive_by_default() -> None:
     """resolve_tenant does not opt sources into active probes unless asked."""
     src = _CapturingSource()
-    await resolve_tenant("contoso.com", pool=SourcePool([src]), timeout=10.0)
+    await resolve_tenant("alpha.invalid", pool=SourcePool([src]), timeout=10.0)
     assert src.kwargs_seen
     assert src.kwargs_seen[0].get("active_probes", False) is False
 
@@ -182,7 +182,7 @@ def test_resolve_tenant_documents_recursive_dns_visibility() -> None:
 async def test_resolve_tenant_threads_active_probes() -> None:
     """active_probes=True is forwarded to every source's lookup."""
     src = _CapturingSource()
-    await resolve_tenant("contoso.com", pool=SourcePool([src]), timeout=10.0, active_probes=True)
+    await resolve_tenant("alpha.invalid", pool=SourcePool([src]), timeout=10.0, active_probes=True)
     assert src.kwargs_seen[0].get("active_probes") is True
 
 
@@ -194,9 +194,9 @@ from recon_tool.server import _cache_clear, _rate_limit, analyze_posture
 
 _POSTURE_INFO = TenantInfo(
     tenant_id=_TENANT_UUID,
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.MEDIUM,
     services=("Microsoft 365", "DMARC"),
     slugs=("microsoft365", "dmarc"),
@@ -217,7 +217,7 @@ async def test_analyze_posture_non_string_profile_does_not_crash() -> None:
 
     with patch("recon_tool.server_app.resolve_tenant", new_callable=AsyncMock) as mock_resolve:
         mock_resolve.return_value = (_POSTURE_INFO, [])
-        parsed = await analyze_posture("contoso.com", profile=123)  # type: ignore[arg-type]
+        parsed = await analyze_posture("alpha.invalid", profile=123)  # type: ignore[arg-type]
     # A non-string profile is treated as no lens, so this returns the plain
     # observation list, not the "Unknown profile" ToolError.
     assert isinstance(parsed, list)

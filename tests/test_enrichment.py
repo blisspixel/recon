@@ -29,8 +29,8 @@ class TestEnrichFromRelated:
         info = TenantInfo(
             tenant_id="aaa",
             display_name="Test",
-            default_domain="test.com",
-            queried_domain="test.com",
+            default_domain="test.invalid",
+            queried_domain="test.invalid",
             related_domains=(),
         )
         enriched, _results = await _enrich_from_related(info, [])
@@ -41,9 +41,9 @@ class TestEnrichFromRelated:
         info = TenantInfo(
             tenant_id="aaa",
             display_name="Test",
-            default_domain="test.com",
-            queried_domain="test.com",
-            related_domains=("contoso.onmicrosoft.com",),
+            default_domain="test.invalid",
+            queried_domain="test.invalid",
+            related_domains=("alpha.onmicrosoft.com",),
         )
         enriched, _results = await _enrich_from_related(info, [])
         assert enriched is info  # onmicrosoft filtered out, no enrichment
@@ -53,12 +53,12 @@ class TestEnrichFromRelated:
         """More than MAX_RELATED_ENRICHMENTS candidates should be capped."""
         # MAX_RELATED_ENRICHMENTS is 15 (tightened from 25 in v1.0.1). Submit
         # 30 candidates and assert the cap holds.
-        related = tuple(f"related{i}.com" for i in range(30))
+        related = tuple(f"related{i}.invalid" for i in range(30))
         info = TenantInfo(
             tenant_id="aaa",
             display_name="Test",
-            default_domain="test.com",
-            queried_domain="test.com",
+            default_domain="test.invalid",
+            queried_domain="test.invalid",
             related_domains=related,
         )
         # Real DNS lookups on the fake domains fail gracefully — the point
@@ -136,7 +136,7 @@ class TestEnrichFromRelated:
                     EvidenceRecord("MX", "1 aspmx.l.google.com", "Google Workspace", "google-workspace"),
                     EvidenceRecord(
                         "DKIM",
-                        "google._domainkey.brand2.com",
+                        "google._domainkey.brand2.invalid",
                         "DKIM (Google Workspace)",
                         "google-workspace",
                     ),
@@ -147,9 +147,9 @@ class TestEnrichFromRelated:
         info = TenantInfo(
             tenant_id=None,
             display_name="Brand 1",
-            default_domain="brand1.com",
-            queried_domain="brand1.com",
-            related_domains=("brand2.com",),
+            default_domain="brand1.invalid",
+            queried_domain="brand1.invalid",
+            related_domains=("brand2.invalid",),
         )
 
         enriched, _results = await _enrich_from_related(info, [])

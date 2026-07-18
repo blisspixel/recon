@@ -33,6 +33,72 @@ def test_file_inventory_includes_nonignored_untracked_files(
     assert check_validation_hygiene._tracked_files(tmp_path) == ["tracked.md", "untracked.md"]
 
 
+@pytest.mark.parametrize(
+    "parts",
+    [
+        ("con", "toso"),
+        ("fab", "rikam"),
+        ("north", "wind"),
+        ("north", "windtraders"),
+        ("ada", "tum"),
+        ("adventure", "-works"),
+        ("tailspin", "toys"),
+        ("wingtip", "toys"),
+        ("woodgrove", "bank"),
+        ("lit", "ware"),
+        ("lucerne", " publishing"),
+        ("pro", "ware"),
+        ("humongous", " insurance"),
+        ("trey", "research"),
+        ("graphic design", " institute"),
+        ("consolidated", " messenger"),
+    ],
+)
+def test_retired_target_brand_fails_outside_validation(parts: tuple[str, str], tmp_path: Path) -> None:
+    marker = "".join(parts)
+    path = "docs/tutorial.md"
+    _write(tmp_path, path, f"Run `recon {marker}.invalid` locally.\n")
+
+    violations = check_validation_hygiene.find_violations(tmp_path, [path])
+
+    assert [violation.detail for violation in violations] == ["retired target-example identity is tracked"]
+    assert marker not in violations[0].render().casefold()
+
+
+def test_retired_placeholder_name_fails_but_acme_protocol_passes(tmp_path: Path) -> None:
+    placeholder = "".join(("Ac", "me"))
+    target_path = "examples/sample.md"
+    uppercase_target_path = "examples/uppercase-sample.md"
+    protocol_path = "docs/protocol.md"
+    _write(tmp_path, target_path, f"Display name: {placeholder} Corp\n")
+    _write(tmp_path, uppercase_target_path, f"Display name: {placeholder.upper()} CORP\n")
+    _write(
+        tmp_path,
+        protocol_path,
+        "ACME validation uses `_acme-challenge` and `/.well-known/acme-challenge`.\n",
+    )
+
+    violations = check_validation_hygiene.find_violations(
+        tmp_path,
+        [target_path, uppercase_target_path, protocol_path],
+    )
+
+    assert [violation.path for violation in violations] == [target_path, uppercase_target_path]
+    assert all(placeholder.casefold() not in violation.render().casefold() for violation in violations)
+
+
+def test_retired_identity_in_path_is_redacted(tmp_path: Path) -> None:
+    marker = "".join(("con", "toso"))
+    path = f"docs/{marker}-sample.md"
+    _write(tmp_path, path, "Reserved example only.\n")
+
+    violations = check_validation_hygiene.find_violations(tmp_path, [path])
+
+    assert [violation.render() for violation in violations] == [
+        "[redacted]: retired target-example identity is tracked"
+    ]
+
+
 def test_private_run_paths_fail_even_if_forced_into_git(tmp_path: Path) -> None:
     paths = [
         "validation/live_runs/20260618/results.json",
@@ -47,10 +113,10 @@ def test_private_run_paths_fail_even_if_forced_into_git(tmp_path: Path) -> None:
 
 
 def test_root_per_domain_json_dump_fails(tmp_path: Path) -> None:
-    violations = check_validation_hygiene.find_violations(tmp_path, ["acme.com.json"])
+    violations = check_validation_hygiene.find_violations(tmp_path, ["evaluated-target.localhost.json"])
 
     assert len(violations) == 1
-    assert violations[0].path == "acme.com.json"
+    assert violations[0].path == "evaluated-target.localhost.json"
     assert "root per-domain JSON dump" in violations[0].detail
 
 
@@ -64,21 +130,21 @@ def test_generic_root_json_artifact_fails_closed(tmp_path: Path) -> None:
 
 
 def test_target_domain_fields_fail_in_committed_validation_artifact(tmp_path: Path) -> None:
-    _write(tmp_path, "validation/new-calibration.md", "queried_domain: acme.com\n")
+    _write(tmp_path, "validation/new-calibration.md", "queried_domain: evaluated-target.localhost\n")
 
     violations = check_validation_hygiene.find_violations(tmp_path, ["validation/new-calibration.md"])
 
     assert len(violations) == 1
     assert violations[0].line == 1
     assert "target-domain field" in violations[0].detail
-    assert "acme.com" not in violations[0].render()
+    assert "evaluated-target.localhost" not in violations[0].render()
 
 
 def test_quoted_json_target_field_fails_in_synthetic_directory(tmp_path: Path) -> None:
     _write(
         tmp_path,
         "validation/synthetic_corpus/fixtures/sample.json",
-        '{"display_name": "Synthetic Scenario 001", "queried_domain": "acme.com"}\n',
+        '{"display_name": "Synthetic Scenario 001", "queried_domain": "evaluated-target.localhost"}\n',
     )
 
     violations = check_validation_hygiene.find_violations(
@@ -87,21 +153,21 @@ def test_quoted_json_target_field_fails_in_synthetic_directory(tmp_path: Path) -
     )
 
     assert any("queried_domain is not reserved or synthetic" in violation.detail for violation in violations)
-    assert all("acme.com" not in violation.render() for violation in violations)
+    assert all("evaluated-target.localhost" not in violation.render() for violation in violations)
 
 
 @pytest.mark.parametrize(
     "command",
     [
-        "recon acme.com --json",
-        "recon https://acme.com/path",
-        "recon lookup acme.com",
-        "recon delta acme.com",
-        "recon cache show acme.com",
-        "recon cache clear acme.com",
-        "recon --plain acme.com",
-        "python -m recon_tool acme.com",
-        "uv run recon acme.com",
+        "recon evaluated-target.localhost --json",
+        "recon https://evaluated-target.localhost/path",
+        "recon lookup evaluated-target.localhost",
+        "recon delta evaluated-target.localhost",
+        "recon cache show evaluated-target.localhost",
+        "recon cache clear evaluated-target.localhost",
+        "recon --plain evaluated-target.localhost",
+        "python -m recon_tool evaluated-target.localhost",
+        "uv run recon evaluated-target.localhost",
     ],
 )
 def test_recon_example_with_real_domain_fails(command: str, tmp_path: Path) -> None:
@@ -138,14 +204,14 @@ def test_validation_corpus_lines_must_be_reserved_or_synthetic(tmp_path: Path) -
     _write(
         tmp_path,
         "validation/corpus-example.txt",
-        "scenario.example.invalid\nexample.org\nacme.com\n",
+        "scenario.example.invalid\nexample.org\nevaluated-target.localhost\n",
     )
 
     violations = check_validation_hygiene.find_violations(tmp_path, ["validation/corpus-example.txt"])
 
     assert len(violations) == 1
     assert "corpus line is not reserved or synthetic" in violations[0].detail
-    assert "acme.com" not in violations[0].render()
+    assert "evaluated-target.localhost" not in violations[0].render()
 
 
 def test_synthetic_and_reserved_validation_artifacts_pass(tmp_path: Path) -> None:
@@ -174,7 +240,7 @@ def test_ndjson_identity_fields_are_parsed_structurally(tmp_path: Path) -> None:
         tmp_path,
         "validation/aggregate/sample.ndjson",
         '{"display_name":"Synthetic Scenario 001","queried_domain":"safe.example.invalid"}\n'
-        '{"display_name":"Acme Corp","queried_domain":"acme.com"}\n',
+        '{"display_name":"Synthetic Delta Corp","queried_domain":"evaluated-target.localhost"}\n',
     )
 
     violations = check_validation_hygiene.find_violations(
@@ -186,7 +252,10 @@ def test_ndjson_identity_fields_are_parsed_structurally(tmp_path: Path) -> None:
         "display_name is not a constrained synthetic sentinel",
         "queried_domain is not reserved or synthetic",
     }
-    assert all("Acme" not in violation.render() and "acme.com" not in violation.render() for violation in violations)
+    assert all(
+        "Synthetic Delta" not in violation.render() and "evaluated-target.localhost" not in violation.render()
+        for violation in violations
+    )
 
 
 def test_malformed_structured_artifact_cannot_bypass_scan(tmp_path: Path) -> None:
@@ -289,7 +358,7 @@ def test_candidate_skip_domain_detail_fails_but_provider_table_passes(tmp_path: 
         "|---|---|\n"
         "| Example CDN | provider.example.net |\n\n"
         "### SKIP (generic / ambiguous)\n\n"
-        "one-off.target.com (1)\n",
+        "one-off.target.localhost (1)\n",
     )
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
@@ -313,25 +382,25 @@ def test_csv_domain_column_is_checked_structurally(tmp_path: Path) -> None:
     _write(
         tmp_path,
         path,
-        "domain,label\nscenario.example.invalid,fintech\nacme.com,healthcare\n",
+        "domain,label\nscenario.example.invalid,fintech\nevaluated-target.localhost,healthcare\n",
     )
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
 
     assert [violation.detail for violation in violations] == ["domain is not reserved or synthetic"]
-    assert all("acme.com" not in violation.render() for violation in violations)
+    assert all("evaluated-target.localhost" not in violation.render() for violation in violations)
 
 
 def test_csv_extra_column_cannot_bypass_domain_column_check(tmp_path: Path) -> None:
     path = "validation/aggregate/synthetic_groups.csv"
-    _write(tmp_path, path, "domain,label\nscenario.example.invalid,fintech,acme.com\n")
+    _write(tmp_path, path, "domain,label\nscenario.example.invalid,fintech,evaluated-target.localhost\n")
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
 
     assert [violation.detail for violation in violations] == [
         "structured validation artifact has an invalid CSV row",
     ]
-    assert all("acme.com" not in violation.render() for violation in violations)
+    assert all("evaluated-target.localhost" not in violation.render() for violation in violations)
 
 
 def test_nested_certificate_names_and_raw_domains_fail(tmp_path: Path) -> None:
@@ -340,8 +409,8 @@ def test_nested_certificate_names_and_raw_domains_fail(tmp_path: Path) -> None:
         tmp_path,
         path,
         '{"display_name":"Synthetic Scenario 001","queried_domain":"sample.example.invalid",'
-        '"cert_summary":{"deployment_bursts":[{"names":["target.example.biz"]}]},'
-        '"evidence":[{"raw_value":"10 target.example.biz"}]}\n',
+        '"cert_summary":{"deployment_bursts":[{"names":["target.localhost"]}]},'
+        '"evidence":[{"raw_value":"10 target.localhost"}]}\n',
     )
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
@@ -350,7 +419,7 @@ def test_nested_certificate_names_and_raw_domains_fail(tmp_path: Path) -> None:
         "names contains a non-reserved domain",
         "raw_value contains a non-reserved domain",
     }
-    assert all("target.example.biz" not in violation.render() for violation in violations)
+    assert all("target.localhost" not in violation.render() for violation in violations)
 
 
 def test_nested_mapping_inside_domain_list_cannot_bypass_scan(tmp_path: Path) -> None:
@@ -359,18 +428,18 @@ def test_nested_mapping_inside_domain_list_cannot_bypass_scan(tmp_path: Path) ->
         tmp_path,
         path,
         '{"display_name":"Synthetic Scenario 001","queried_domain":"sample.example.invalid",'
-        '"cert_summary":{"deployment_bursts":[{"names":[{"value":"target.example.biz"}]}]}}\n',
+        '"cert_summary":{"deployment_bursts":[{"names":[{"value":"target.localhost"}]}]}}\n',
     )
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
 
     assert "names contains a non-reserved domain" in {violation.detail for violation in violations}
-    assert all("target.example.biz" not in violation.render() for violation in violations)
+    assert all("target.localhost" not in violation.render() for violation in violations)
 
 
 def test_whitespace_padded_structured_key_cannot_bypass_scan(tmp_path: Path) -> None:
     path = "validation/aggregate/sample.json"
-    _write(tmp_path, path, '{" domain ":"target.example.biz"}\n')
+    _write(tmp_path, path, '{" domain ":"target.localhost"}\n')
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
 
@@ -380,14 +449,14 @@ def test_whitespace_padded_structured_key_cannot_bypass_scan(tmp_path: Path) -> 
 @pytest.mark.parametrize(
     "path",
     [
-        "target.ai.json",
-        "sub.target.co.uk.json",
-        "target.xn--p1ai.json",
-        "TARGET.BIZ.JSON",
+        "target.localhost.json",
+        "sub.target.localhost.json",
+        "deep.target.localhost.json",
+        "TARGET.LOCALHOST.JSON",
         "sc-private-result.json",
     ],
 )
-def test_root_domain_and_scan_dumps_fail_for_all_tlds_without_echo(path: str, tmp_path: Path) -> None:
+def test_root_domain_and_scan_dump_filename_shapes_fail_without_echo(path: str, tmp_path: Path) -> None:
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
 
     assert any("root per-domain JSON dump" in violation.detail for violation in violations)
@@ -397,7 +466,7 @@ def test_root_domain_and_scan_dumps_fail_for_all_tlds_without_echo(path: str, tm
 def test_case_variant_private_path_and_target_filename_fail_without_echo(tmp_path: Path) -> None:
     paths = [
         "Validation/Corpus-Private/private-target.txt",
-        "validation/target.example.biz.md",
+        "validation/target.localhost.md",
     ]
 
     violations = check_validation_hygiene.find_violations(tmp_path, paths)
@@ -407,12 +476,12 @@ def test_case_variant_private_path_and_target_filename_fail_without_echo(tmp_pat
         "validation artifact path contains a non-reserved domain",
     }
     assert all("private-target" not in violation.render() for violation in violations)
-    assert all("target.example.biz" not in violation.render() for violation in violations)
+    assert all("target.localhost" not in violation.render() for violation in violations)
 
 
 def test_yaml_identity_lists_are_parsed_structurally(tmp_path: Path) -> None:
     path = "validation/aggregate/sample.yaml"
-    _write(tmp_path, path, "tenant_domains:\n  - safe.example.invalid\n  - target.example.biz\n")
+    _write(tmp_path, path, "tenant_domains:\n  - safe.example.invalid\n  - target.localhost\n")
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
 
@@ -422,8 +491,8 @@ def test_yaml_identity_lists_are_parsed_structurally(tmp_path: Path) -> None:
 @pytest.mark.parametrize(
     ("payload", "expected"),
     [
-        ('{"target_domain":"target.example.biz"}\n', "target_domain is not reserved or synthetic"),
-        ('{"members":"target.example.biz"}\n', "members contains a non-reserved domain"),
+        ('{"target_domain":"target.localhost"}\n', "target_domain is not reserved or synthetic"),
+        ('{"members":"target.localhost"}\n', "members contains a non-reserved domain"),
         (
             '{"organization_name":"Actual Organization"}\n',
             "organization_name retains nonpublishable organization detail",
@@ -434,11 +503,11 @@ def test_yaml_identity_lists_are_parsed_structurally(tmp_path: Path) -> None:
         ),
         ('{"bimi_org":"Actual Organization"}\n', "bimi_org retains nonpublishable organization detail"),
         (
-            '{"shared_verification_tokens":[{"token":"opaque","peer":"target.example.biz"}]}\n',
+            '{"shared_verification_tokens":[{"token":"opaque","peer":"target.localhost"}]}\n',
             "shared_verification_tokens retains nonpublishable identity detail",
         ),
         (
-            '{"shared_display_name":{"peers":["target.example.biz"]}}\n',
+            '{"shared_display_name":{"peers":["target.localhost"]}}\n',
             "shared_display_name retains nonpublishable identity detail",
         ),
         (
@@ -457,7 +526,7 @@ def test_yaml_identity_lists_are_parsed_structurally(tmp_path: Path) -> None:
             '{"lexical_observations":[{"label":"nonpublishable-target-label"}]}\n',
             "lexical_observations retains nonpublishable identity detail",
         ),
-        ('{"chain":["safe.example.invalid","target.example.biz"]}\n', "chain contains a non-reserved domain"),
+        ('{"chain":["safe.example.invalid","target.localhost"]}\n', "chain contains a non-reserved domain"),
         ('{"display_name":"Synthetic Actual Organization"}\n', "display_name is not a constrained synthetic sentinel"),
         ('{"tenant_id":"synthetic-actual-tenant"}\n', "tenant_id is not a constrained synthetic sentinel"),
     ],
@@ -474,7 +543,7 @@ def test_structured_identity_surfaces_fail_closed(payload: str, expected: str, t
 @pytest.mark.parametrize(
     ("key", "value", "expected_fragment"),
     [
-        ("queriedDomain", "target.example.biz", "queried_domain"),
+        ("queriedDomain", "target.localhost", "queried_domain"),
         ("tenantId", "actual-tenant", "tenant_id"),
         ("oidcTenantId", "actual-tenant", "tenant_id"),
         ("displayName", "Actual Organization", "display_name"),
@@ -499,7 +568,7 @@ def test_identity_key_variants_are_canonicalized(
 @pytest.mark.parametrize("key", ["queried_domain", "raw_value"])
 def test_identity_scalar_keys_reject_collection_shapes(key: str, tmp_path: Path) -> None:
     path = "validation/aggregate/sample.json"
-    _write(tmp_path, path, json.dumps({key: ["target.example.biz"]}) + "\n")
+    _write(tmp_path, path, json.dumps({key: ["target.localhost"]}) + "\n")
 
     assert check_validation_hygiene.find_violations(tmp_path, [path])
 
@@ -598,10 +667,10 @@ def test_multiple_values_on_one_line_cannot_mask_unsafe_values(tmp_path: Path) -
     _write(
         tmp_path,
         path,
-        "queried_domain: example.com; domain: target.example.biz; "
+        "queried_domain: example.com; domain: target.localhost; "
         "tenant_id: synthetic-scenario-001; tenant_id: actual-alias; "
         "MS=synthetic-safe; MS=actual-token; "
-        "recon example.com; recon target.example.biz\n",
+        "recon example.com; recon target.localhost\n",
     )
 
     details = {violation.detail for violation in check_validation_hygiene.find_violations(tmp_path, [path])}
@@ -620,7 +689,7 @@ def test_candidate_skip_sections_fail_in_any_review_file_and_heading_level(
     tmp_path: Path,
 ) -> None:
     path = "validation/renamed-review.md"
-    _write(tmp_path, path, f"{heading}\n\ntarget.example.biz\n")
+    _write(tmp_path, path, f"{heading}\n\ntarget.localhost\n")
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
 
@@ -630,11 +699,11 @@ def test_candidate_skip_sections_fail_in_any_review_file_and_heading_level(
 @pytest.mark.parametrize(
     "csv_text",
     [
-        "target.example.biz\n",
-        "target.example.biz\nsibling.example.biz\n",
-        "customer,label\ntarget.example.biz,fintech\n",
-        "members,label\ntarget.example.biz,fintech\n",
-        "\ufeffdomain,label\ntarget.example.biz,fintech\n",
+        "target.localhost\n",
+        "target.localhost\nsibling.localhost\n",
+        "customer,label\ntarget.localhost,fintech\n",
+        "members,label\ntarget.localhost,fintech\n",
+        "\ufeffdomain,label\ntarget.localhost,fintech\n",
     ],
 )
 def test_csv_header_and_schema_bypasses_fail(csv_text: str, tmp_path: Path) -> None:
@@ -647,7 +716,7 @@ def test_csv_header_and_schema_bypasses_fail(csv_text: str, tmp_path: Path) -> N
 def test_python_literal_target_field_is_scanned_without_expression_false_positive(tmp_path: Path) -> None:
     unsafe_path = "validation/sample.py"
     safe_path = "validation/expression.py"
-    _write(tmp_path, unsafe_path, 'queried_domain = "target.example.biz"\n')
+    _write(tmp_path, unsafe_path, 'queried_domain = "target.localhost"\n')
     _write(tmp_path, safe_path, 'domain = payload.get("domain")\n')
 
     assert check_validation_hygiene.find_violations(tmp_path, [unsafe_path])
@@ -659,7 +728,7 @@ def test_dns_arrow_owner_and_prose_identity_fields_are_checked(tmp_path: Path) -
     _write(
         tmp_path,
         path,
-        "target.example.biz -> provider.example.net\n"
+        "target.localhost -> provider.example.net\n"
         "display_name: Actual Organization\n"
         "organization_name: Actual Organization\n",
     )
@@ -726,7 +795,7 @@ def test_reserved_dns_record_table_uses_disclosure_safe_values(tmp_path: Path) -
     [
         (
             "validation/aggregate/sample.json",
-            '{"queried_domain":"target.example.biz","queried_domain":"safe.example.invalid"}\n',
+            '{"queried_domain":"target.localhost","queried_domain":"safe.example.invalid"}\n',
         ),
         (
             "validation/aggregate/sample.ndjson",
@@ -734,7 +803,7 @@ def test_reserved_dns_record_table_uses_disclosure_safe_values(tmp_path: Path) -
         ),
         (
             "validation/aggregate/sample.yaml",
-            "tenant_domains: [target.example.biz]\ntenant_domains: [safe.example.invalid]\n",
+            "tenant_domains: [target.localhost]\ntenant_domains: [safe.example.invalid]\n",
         ),
     ],
 )
@@ -749,9 +818,9 @@ def test_duplicate_structured_keys_cannot_hide_identity(path: str, payload: str,
 @pytest.mark.parametrize(
     ("path", "payload"),
     [
-        ("validation/aggregate/sample.json", '["target.example.biz"]\n'),
-        ("validation/aggregate/sample.ndjson", '"target.example.biz"\n'),
-        ("validation/aggregate/sample.yaml", "- target.example.biz\n"),
+        ("validation/aggregate/sample.json", '["target.localhost"]\n'),
+        ("validation/aggregate/sample.ndjson", '"target.localhost"\n'),
+        ("validation/aggregate/sample.yaml", "- target.localhost\n"),
     ],
 )
 def test_unkeyed_structured_corpora_fail_closed(path: str, payload: str, tmp_path: Path) -> None:
@@ -766,7 +835,7 @@ def test_unkeyed_structured_corpora_fail_closed(path: str, payload: str, tmp_pat
     "path", ["validation/report.html", "validation/report.log", "validation/report.tsv", "validation/report"]
 )
 def test_unapproved_validation_extensions_fail(path: str, tmp_path: Path) -> None:
-    _write(tmp_path, path, "target.example.biz\n")
+    _write(tmp_path, path, "target.localhost\n")
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])
 
@@ -775,7 +844,7 @@ def test_unapproved_validation_extensions_fail(path: str, tmp_path: Path) -> Non
 
 def test_validation_symlinks_fail_before_content_read(tmp_path: Path) -> None:
     target = tmp_path / "outside.json"
-    target.write_text('{"queried_domain":"target.example.biz"}\n', encoding="utf-8")
+    target.write_text('{"queried_domain":"target.localhost"}\n', encoding="utf-8")
     link = tmp_path / "validation" / "linked.json"
     link.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -793,8 +862,8 @@ def test_repeated_structural_findings_are_collapsed(tmp_path: Path) -> None:
     _write(
         tmp_path,
         path,
-        '{"display_name":"Acme One","queried_domain":"one.example.biz"}\n'
-        '{"display_name":"Acme Two","queried_domain":"two.example.biz"}\n',
+        '{"display_name":"Synthetic Delta One","queried_domain":"one.localhost"}\n'
+        '{"display_name":"Synthetic Delta Two","queried_domain":"two.localhost"}\n',
     )
 
     violations = check_validation_hygiene.find_violations(tmp_path, [path])

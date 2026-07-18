@@ -10,7 +10,7 @@ Unit tests and Hypothesis property-based tests for:
 - PBT Property 9: Signal Explanation Evidence Completeness (6.7)
 - PBT Property 10: Weakening Conditions Completeness (6.8)
 
-All examples use fictional companies (Contoso, Northwind, Fabrikam).
+All examples use explicit synthetic labels and reserved domains.
 """
 
 from __future__ import annotations
@@ -91,29 +91,29 @@ class TestConflictAwareMerge:
             _source(
                 "oidc_discovery",
                 tenant_id="tid-1",
-                display_name="Contoso Corp",
-                default_domain="contoso.com",
+                display_name="Synthetic Alpha Corp",
+                default_domain="alpha.invalid",
                 detected_services=("Microsoft 365",),
             ),
             _source(
                 "user_realm",
                 tenant_id="tid-1",
-                display_name="Contoso Ltd",
-                default_domain="contoso.com",
+                display_name="Synthetic Alpha Ltd",
+                default_domain="alpha.invalid",
                 m365_detected=True,
                 detected_services=("Microsoft 365",),
             ),
         ]
         with patch("recon_tool.merger.build_insights_with_signals", return_value=[]):
-            info = merge_results(results, "contoso.com")
+            info = merge_results(results, "alpha.invalid")
 
         assert info.merge_conflicts is not None
         assert info.merge_conflicts.has_conflicts is True
         candidates = info.merge_conflicts.display_name
         assert len(candidates) == 2
         values = {c.value for c in candidates}
-        assert "Contoso Corp" in values
-        assert "Contoso Ltd" in values
+        assert "Synthetic Alpha Corp" in values
+        assert "Synthetic Alpha Ltd" in values
         sources = {c.source for c in candidates}
         assert "oidc_discovery" in sources
         assert "user_realm" in sources
@@ -124,21 +124,21 @@ class TestConflictAwareMerge:
             _source(
                 "oidc_discovery",
                 tenant_id="tid-1",
-                display_name="Northwind Traders",
-                default_domain="northwind.com",
+                display_name="Synthetic Gamma",
+                default_domain="gamma.invalid",
                 detected_services=("Microsoft 365",),
             ),
             _source(
                 "user_realm",
                 tenant_id="tid-1",
-                display_name="Northwind Traders",
-                default_domain="northwind.com",
+                display_name="Synthetic Gamma",
+                default_domain="gamma.invalid",
                 m365_detected=True,
                 detected_services=("Microsoft 365",),
             ),
         ]
         with patch("recon_tool.merger.build_insights_with_signals", return_value=[]):
-            info = merge_results(results, "northwind.com")
+            info = merge_results(results, "gamma.invalid")
 
         # No conflicts when values agree
         assert info.merge_conflicts is None or info.merge_conflicts.has_conflicts is False
@@ -149,13 +149,13 @@ class TestConflictAwareMerge:
             _source(
                 "oidc_discovery",
                 tenant_id="tid-1",
-                display_name="Fabrikam Inc",
-                default_domain="fabrikam.com",
+                display_name="Synthetic Beta Inc",
+                default_domain="beta.invalid",
                 detected_services=("Microsoft 365",),
             ),
         ]
         with patch("recon_tool.merger.build_insights_with_signals", return_value=[]):
-            info = merge_results(results, "fabrikam.com")
+            info = merge_results(results, "beta.invalid")
 
         assert info.merge_conflicts is None or info.merge_conflicts.has_conflicts is False
 
@@ -163,17 +163,17 @@ class TestConflictAwareMerge:
         """serialize_conflicts() produces correct JSON structure."""
         conflicts = MergeConflicts(
             display_name=(
-                CandidateValue(value="Contoso Corp", source="oidc_discovery", confidence="high"),
-                CandidateValue(value="Contoso Ltd", source="user_realm", confidence="medium"),
+                CandidateValue(value="Synthetic Alpha Corp", source="oidc_discovery", confidence="high"),
+                CandidateValue(value="Synthetic Alpha Ltd", source="user_realm", confidence="medium"),
             ),
         )
         result = serialize_conflicts(conflicts)
         assert "display_name" in result
         assert len(result["display_name"]) == 2
-        assert result["display_name"][0]["value"] == "Contoso Corp"
+        assert result["display_name"][0]["value"] == "Synthetic Alpha Corp"
         assert result["display_name"][0]["source"] == "oidc_discovery"
         assert result["display_name"][0]["confidence"] == "high"
-        assert result["display_name"][1]["value"] == "Contoso Ltd"
+        assert result["display_name"][1]["value"] == "Synthetic Alpha Ltd"
         # Fields with no conflicts should be omitted
         assert "auth_type" not in result
         assert "region" not in result
@@ -191,54 +191,54 @@ class TestExplanationRecordSerialization:
     def test_serialize_explanation_produces_json_safe_dict(self) -> None:
         """serialize_explanation() produces JSON-safe dict with all fields."""
         record = ExplanationRecord(
-            item_name="Contoso AI Adoption",
+            item_name="Synthetic Alpha AI Adoption",
             item_type="signal",
             matched_evidence=(
                 EvidenceRecord(
-                    source_type="TXT", raw_value="contoso-verify=abc", rule_name="Contoso AI", slug="contoso-ai"
+                    source_type="TXT", raw_value="alpha-verify=abc", rule_name="Synthetic Alpha AI", slug="alpha-ai"
                 ),
             ),
-            fired_rules=("Contoso AI Adoption (requires.any: contoso-ai; min_matches: 1)",),
+            fired_rules=("Synthetic Alpha AI Adoption (requires.any: alpha-ai; min_matches: 1)",),
             confidence_derivation="Signal confidence: high. 1 of 1 candidates matched.",
             weakening_conditions=(
-                "Removing slug 'contoso-ai' would drop match count to 0 (below min_matches=1), suppressing this signal",
+                "Removing slug 'alpha-ai' would drop match count to 0 (below min_matches=1), suppressing this signal",
             ),
-            curated_explanation="Contoso AI integration detected",
+            curated_explanation="Synthetic Alpha AI integration detected",
         )
         result = serialize_explanation(record)
 
-        assert result["item_name"] == "Contoso AI Adoption"
+        assert result["item_name"] == "Synthetic Alpha AI Adoption"
         assert result["item_type"] == "signal"
         assert isinstance(result["matched_evidence"], list)
         assert len(result["matched_evidence"]) == 1
         assert result["matched_evidence"][0]["source_type"] == "TXT"
-        assert result["matched_evidence"][0]["slug"] == "contoso-ai"
+        assert result["matched_evidence"][0]["slug"] == "alpha-ai"
         assert isinstance(result["fired_rules"], list)
         assert isinstance(result["weakening_conditions"], list)
         assert result["confidence_derivation"] == "Signal confidence: high. 1 of 1 candidates matched."
-        assert result["curated_explanation"] == "Contoso AI integration detected"
+        assert result["curated_explanation"] == "Synthetic Alpha AI integration detected"
 
     def test_round_trip_create_serialize_verify(self) -> None:
         """Round-trip: create → serialize → verify all fields preserved."""
         evidence = (
             EvidenceRecord(
-                source_type="CNAME", raw_value="login.northwind.com", rule_name="Northwind SSO", slug="northwind-sso"
+                source_type="CNAME", raw_value="login.gamma.invalid", rule_name="Synthetic Gamma SSO", slug="gamma-sso"
             ),
             EvidenceRecord(
                 source_type="TXT",
-                raw_value="northwind-verify=xyz",
-                rule_name="Northwind Platform",
-                slug="northwind-platform",
+                raw_value="gamma-verify=xyz",
+                rule_name="Synthetic Gamma Platform",
+                slug="gamma-platform",
             ),
         )
         record = ExplanationRecord(
-            item_name="Northwind Enterprise Stack",
+            item_name="Synthetic Gamma Enterprise Stack",
             item_type="signal",
             matched_evidence=evidence,
             fired_rules=("Rule A", "Rule B"),
             confidence_derivation="High confidence based on 2 evidence records",
             weakening_conditions=("Condition 1", "Condition 2"),
-            curated_explanation="Northwind enterprise deployment detected",
+            curated_explanation="Synthetic Gamma enterprise deployment detected",
         )
         serialized = serialize_explanation(record)
 
@@ -277,7 +277,7 @@ _explanation_record_st = st.builds(
     fired_rules=st.lists(_safe_text_st, min_size=0, max_size=2).map(tuple),
     confidence_derivation=_safe_text_st,
     weakening_conditions=st.lists(_safe_text_st, min_size=0, max_size=2).map(tuple),
-    curated_explanation=st.sampled_from(["", "Contoso explanation", "Northwind context"]),
+    curated_explanation=st.sampled_from(["", "Synthetic Alpha explanation", "Synthetic Gamma context"]),
 )
 
 
@@ -347,11 +347,11 @@ class TestPBTConflictDetectionCompleteness:
 
         # Build two SourceResults with conflicting values for the chosen field
         kwargs_a: dict[str, object] = {
-            "detected_services": ("Contoso Service",),
+            "detected_services": ("Synthetic Alpha Service",),
             field_name: value_a,
         }
         kwargs_b: dict[str, object] = {
-            "detected_services": ("Fabrikam Service",),
+            "detected_services": ("Synthetic Beta Service",),
             field_name: value_b,
         }
 
@@ -361,7 +361,7 @@ class TestPBTConflictDetectionCompleteness:
         ]
 
         with patch("recon_tool.merger.build_insights_with_signals", return_value=[]):
-            info = merge_results(results, "contoso.com")
+            info = merge_results(results, "alpha.invalid")
 
         assert info.merge_conflicts is not None
         assert info.merge_conflicts.has_conflicts is True
@@ -409,11 +409,11 @@ class TestPBTFirstWinsMergePreservation:
             value_b = value_b + "x"
 
         kwargs_a: dict[str, object] = {
-            "detected_services": ("Contoso Service",),
+            "detected_services": ("Synthetic Alpha Service",),
             field_name: value_a,
         }
         kwargs_b: dict[str, object] = {
-            "detected_services": ("Fabrikam Service",),
+            "detected_services": ("Synthetic Beta Service",),
             field_name: value_b,
         }
 
@@ -423,7 +423,7 @@ class TestPBTFirstWinsMergePreservation:
         ]
 
         with patch("recon_tool.merger.build_insights_with_signals", return_value=[]):
-            info = merge_results(results, "contoso.com")
+            info = merge_results(results, "alpha.invalid")
 
         # The merged field should equal the first source's value
         merged_value = getattr(info, field_name)
@@ -439,12 +439,12 @@ class TestPBTFirstWinsMergePreservation:
     ) -> None:
         """When first source has None, second source's value wins."""
         results = [
-            _source("source_first", detected_services=("Contoso Service",)),
-            _source("source_second", display_name=value_b, detected_services=("Fabrikam Service",)),
+            _source("source_first", detected_services=("Synthetic Alpha Service",)),
+            _source("source_second", display_name=value_b, detected_services=("Synthetic Beta Service",)),
         ]
 
         with patch("recon_tool.merger.build_insights_with_signals", return_value=[]):
-            info = merge_results(results, "contoso.com")
+            info = merge_results(results, "alpha.invalid")
 
         assert info.display_name == value_b
 
@@ -473,7 +473,7 @@ class TestPBTExplainFieldRoundTrip:
     ) -> None:
         """Signal explain field is preserved through evaluate → explain → serialize."""
         signal = Signal(
-            name="Contoso Explain Test",
+            name="Synthetic Alpha Explain Test",
             category="Test",
             confidence="high",
             description="Test signal with explain",
@@ -517,7 +517,7 @@ class TestPBTExplainFieldRoundTrip:
     ) -> None:
         """Signal without explain field → curated_explanation is empty string."""
         signal = Signal(
-            name="Contoso No Explain",
+            name="Synthetic Alpha No Explain",
             category="Test",
             confidence="medium",
             description="Test signal without explain",
@@ -577,7 +577,7 @@ class TestPBTSignalExplanationEvidenceCompleteness:
         all_detected = set(candidate_slugs) | set(extra_slugs)
 
         signal = Signal(
-            name="Contoso Evidence Test",
+            name="Synthetic Alpha Evidence Test",
             category="Test",
             confidence="high",
             description="Test signal for evidence completeness",
@@ -650,7 +650,7 @@ class TestPBTWeakeningConditionsCompleteness:
         min_matches = len(slugs)  # All slugs needed → removing any one drops below
 
         signal = Signal(
-            name="Contoso Weakening Test",
+            name="Synthetic Alpha Weakening Test",
             category="Test",
             confidence="high",
             description="Test signal",
@@ -690,7 +690,7 @@ class TestPBTWeakeningConditionsCompleteness:
         from recon_tool.models import MetadataCondition
 
         signal = Signal(
-            name="Contoso Metadata Weakening",
+            name="Synthetic Alpha Metadata Weakening",
             category="Test",
             confidence="high",
             description="Test signal",
@@ -723,7 +723,7 @@ class TestPBTWeakeningConditionsCompleteness:
             clean_contradicts = ["unique-contradict-slug"]
 
         signal = Signal(
-            name="Contoso Contradicts Weakening",
+            name="Synthetic Alpha Contradicts Weakening",
             category="Test",
             confidence="high",
             description="Test signal",

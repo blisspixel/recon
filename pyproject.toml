@@ -36,8 +36,8 @@ dependencies = [
     "mcp>=1.28.1,<2",
     "networkx>=3.0",
     # Public Suffix List for registrable-domain (apex) reduction, so a pasted
-    # browser URL or sub-host (mail.acme.co.uk) is analyzed at the apex
-    # (acme.co.uk) where recon's signal lives (MX, tenant, _dmarc, CT). Naive
+    # browser URL or sub-host (mail.example.co.uk) is analyzed at the apex
+    # (example.co.uk) where recon's signal lives (MX, tenant, _dmarc, CT). Naive
     # last-two-labels logic mishandles ccTLDs; this carries the real PSL.
     # Pure-Python with zero required runtime dependencies, bundles the list and
     # ships its own updater, so it stays within recon's lean, offline,
@@ -72,6 +72,20 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/recon_tool"]
 exclude = ["src/recon_tool/data/fingerprints/*.yaml"]
+
+# Hatchling's VCS filtering does not reliably re-apply nested ignore rules after
+# a parent validation directory is re-included. Keep private operator artifacts
+# outside the sdist with an explicit, release-tested denylist as well.
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.agent/**",
+    "/validation/agentic_ux/local/**",
+    "/validation/agentic_ux/runs/**",
+    "/validation/corpus-private/**",
+    "/validation/live_runs/**",
+    "/validation/local/**",
+    "/validation/runs-private/**",
+]
 
 # PEP 735 dependency group. uv treats `dev` as a default group, so
 # `uv sync` installs it and `uv sync --no-dev` / `uv export --no-dev`

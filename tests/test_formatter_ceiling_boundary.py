@@ -73,20 +73,20 @@ def _tenant_at_boundary(
 
     attribs = tuple(
         SurfaceAttribution(
-            subdomain=f"sub{i}.contoso.com",
+            subdomain=f"sub{i}.alpha.invalid",
             primary_slug="aws-cloudfront",
             primary_name="AWS CloudFront",
             primary_tier="infrastructure",
         )
         for i in range(surface_attribs)
     )
-    domains = tuple(f"contoso-{i}.com" for i in range(domain_count)) if domain_count else ()
+    domains = tuple(f"alpha-{i}.invalid" for i in range(domain_count)) if domain_count else ()
 
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid-boundary",
-        display_name="Contoso, Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha, Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.LOW,
         domain_count=domain_count,
         tenant_domains=domains,

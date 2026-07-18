@@ -101,7 +101,7 @@ class TestPartialSuccessStillRenders:
     def test_errored_degradation_payload_lowers_observation_confidence(self) -> None:
         results = [
             SourceResult(source_name="oidc_discovery", tenant_id="tid"),
-            SourceResult(source_name="user_realm", m365_detected=True, display_name="Contoso"),
+            SourceResult(source_name="user_realm", m365_detected=True, display_name="Synthetic Alpha"),
             SourceResult(
                 source_name="dns_records",
                 m365_detected=True,

@@ -39,10 +39,10 @@ from recon_tool.signals import (
 
 def _make_tenant_info(**overrides: object) -> TenantInfo:
     defaults: dict[str, object] = {
-        "tenant_id": "contoso-tenant-id",
-        "display_name": "Contoso Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "tenant_id": "alpha-tenant-id",
+        "display_name": "Synthetic Alpha Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.MEDIUM,
     }
     defaults.update(overrides)
@@ -232,12 +232,12 @@ class TestBackwardCompatDefaults:
         # TenantInfo without new fields
         info = TenantInfo(
             tenant_id="test-id",
-            display_name="Fabrikam Inc",
-            default_domain="fabrikam.com",
-            queried_domain="fabrikam.com",
+            display_name="Synthetic Beta Inc",
+            default_domain="beta.invalid",
+            queried_domain="beta.invalid",
         )
         assert info.tenant_id == "test-id"
-        assert info.display_name == "Fabrikam Inc"
+        assert info.display_name == "Synthetic Beta Inc"
         # New fields should be None/empty without affecting existing fields
         assert info.primary_email_provider is None
         assert info.email_gateway is None
@@ -454,8 +454,8 @@ class TestProperty6BackwardCompatibility:
         info = TenantInfo(
             tenant_id=data.draw(st.one_of(st.none(), st.text(min_size=1, max_size=20))),
             display_name=data.draw(st.text(min_size=1, max_size=30)),
-            default_domain="contoso.com",
-            queried_domain="contoso.com",
+            default_domain="alpha.invalid",
+            queried_domain="alpha.invalid",
         )
         assert info.primary_email_provider is None
         assert info.email_gateway is None

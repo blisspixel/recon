@@ -48,9 +48,9 @@ By default, recon validates the input, strips browser paste artifacts, and
 reduces the target to the registrable apex:
 
 ```text
-https://www.mail.acme.co.uk/path -> acme.co.uk
-mail.acme.co.uk                 -> acme.co.uk
-mail.acme.co.uk --exact         -> mail.acme.co.uk
+https://www.mail.example.co.uk/path -> example.co.uk
+mail.example.co.uk                 -> example.co.uk
+mail.example.co.uk --exact         -> mail.example.co.uk
 ```
 
 This matches where the high-signal records usually live: MX, SPF, DMARC,
@@ -197,14 +197,14 @@ Plain `--explain` renders the panel, per-source status, and flat deterministic
 explanation records:
 
 ```bash
-recon contoso.com --explain
+recon alpha.invalid --explain
 ```
 
 Use `--json --explain` when automation needs the reconstructed structured
 terminal-provenance DAG:
 
 ```bash
-recon contoso.com --json --explain
+recon alpha.invalid --json --explain
 ```
 
 The structured explanation DAG reports `provenance_complete` and
@@ -219,7 +219,7 @@ DMARC claim contract instead binds its evaluator atom to the collector-retained
 raw record. General generation-time lineage and per-query observation timestamps
 remain open work.
 
-Use `recon contoso.com --explain-dag` for the separate Bayesian
+Use `recon alpha.invalid --explain-dag` for the separate Bayesian
 evidence-to-network renderer in text, DOT, or Mermaid form. That diagnostic does
 not emit the structured `explanation_dag` object or its terminal-completeness
 fields.

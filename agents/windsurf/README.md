@@ -57,6 +57,6 @@ See @AGENTS.md for recon usage guidance.
 
 In Windsurf, ask:
 
-> Run a recon lookup on contoso.com and summarize what's observable.
+> Run a recon lookup on alpha.invalid and summarize what's observable.
 
 Windsurf should report the `recon` MCP server connected and tools enumerated. If not, check [`docs/mcp.md`](../../docs/mcp.md#troubleshooting).

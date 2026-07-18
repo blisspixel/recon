@@ -30,9 +30,9 @@ from recon_tool.posture import (
 def _minimal_info(**overrides: object) -> TenantInfo:
     defaults: dict[str, object] = {
         "tenant_id": None,
-        "display_name": "Contoso",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.MEDIUM,
         "region": "NA",
         "sources": ("dns_records",),

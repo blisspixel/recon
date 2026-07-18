@@ -183,7 +183,7 @@ class TestCollectorContract:
 
     def test_main_runs_against_paired_collector(self, tmp_path, monkeypatch, capsys) -> None:
         domains_file = tmp_path / "domains.txt"
-        domains_file.write_text("contoso.com\nnorthwindtraders.com\nfabrikam.com\n", encoding="utf-8")
+        domains_file.write_text("alpha.invalid\ngamma.invalid\nbeta.invalid\n", encoding="utf-8")
 
         pairs = [
             CalibrationPair(
@@ -210,7 +210,7 @@ class TestCollectorContract:
 
     def test_main_rejects_invalid_alpha_before_collection(self, tmp_path, capsys) -> None:
         domains_file = tmp_path / "domains.txt"
-        domains_file.write_text("contoso.com\n", encoding="utf-8")
+        domains_file.write_text("alpha.invalid\n", encoding="utf-8")
 
         with pytest.raises(SystemExit) as exc_info:
             conformal_main([str(domains_file), "--alpha", "nan"])
@@ -220,7 +220,7 @@ class TestCollectorContract:
 
     def test_main_json_is_aggregate_only(self, tmp_path, monkeypatch, capsys) -> None:
         domains_file = tmp_path / "domains.txt"
-        domains_file.write_text("contoso.com\nnorthwindtraders.com\nfabrikam.com\n", encoding="utf-8")
+        domains_file.write_text("alpha.invalid\ngamma.invalid\nbeta.invalid\n", encoding="utf-8")
 
         pairs = [
             CalibrationPair(
@@ -247,8 +247,9 @@ class TestCollectorContract:
         assert "no future-point coverage claim" in payload["interpretation"]["coverage_scope"]
         assert "mean_set_size" in payload["interpretation"]["legacy_summary_keys"]
         rendered = json.dumps(payload)
-        assert "contoso" not in rendered
-        assert "fabrikam" not in rendered
+        assert "alpha.invalid" not in rendered
+        assert "beta.invalid" not in rendered
+        assert "gamma.invalid" not in rendered
 
 
 class TestAggregatesOnly:

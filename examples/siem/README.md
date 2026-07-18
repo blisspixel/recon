@@ -4,9 +4,9 @@ End-to-end mappings from recon's `--json` / `--ndjson` output to two
 common SIEM ingestion paths. Each example carries:
 
 - A field-by-field mapping table (recon JSON path → SIEM field).
-- A worked example: the same `examples/sample-output.json` (Northwind
-  Traders, a Microsoft fictional brand) parsed and reshaped into the
-  SIEM's native event shape.
+- A worked example: the same reserved synthetic
+  `examples/sample-output.json` fixture parsed and reshaped into the SIEM's
+  native event shape.
 - A copy-pasteable parser snippet (Splunk `props.conf`, Elasticsearch
   ingest pipeline).
 

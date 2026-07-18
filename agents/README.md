@@ -84,7 +84,7 @@ Kiro is also a desktop app but its MCP loader has been more forgiving in practic
 
 Once configured, ask the client:
 
-> Run a recon lookup on contoso.com and summarize what's observable.
+> Run a recon lookup on alpha.invalid and summarize what's observable.
 
 If the client reports the recon MCP server is connected and tools enumerate, you're done. If not, check:
 

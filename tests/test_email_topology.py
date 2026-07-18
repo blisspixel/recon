@@ -328,9 +328,9 @@ class TestProviderSurfaceConsistency:
     ) -> None:
         info = TenantInfo(
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-            display_name="Contoso Ltd",
-            default_domain="contoso.onmicrosoft.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.HIGH,
             services=("Microsoft 365", secondary_name),
             slugs=("microsoft365", secondary_slug),
@@ -348,9 +348,9 @@ class TestProviderSurfaceConsistency:
     def test_txt_only_secondary_is_omitted_from_json_and_csv_provider_lines(self) -> None:
         info = TenantInfo(
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-            display_name="Contoso Ltd",
-            default_domain="contoso.onmicrosoft.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.HIGH,
             services=("Microsoft 365", "Google Workspace"),
             slugs=("microsoft365", "google-workspace"),
@@ -368,9 +368,9 @@ class TestProviderSurfaceConsistency:
     def test_gateway_does_not_promote_second_account_signal_to_secondary(self) -> None:
         info = TenantInfo(
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-            display_name="Contoso Ltd",
-            default_domain="contoso.onmicrosoft.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.MEDIUM,
             services=("Proofpoint", "Microsoft 365", "Google Workspace"),
             slugs=("proofpoint", "microsoft365", "google-workspace"),
@@ -395,9 +395,9 @@ class TestProviderSurfaceConsistency:
         """Legacy cache fields cannot survive without supporting evidence."""
         info = TenantInfo(
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-            display_name="Contoso Ltd",
-            default_domain="contoso.onmicrosoft.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha Ltd",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.MEDIUM,
             services=("Microsoft 365",),
             slugs=("microsoft365",),
@@ -522,7 +522,7 @@ class TestLegacyProviderResidueSignal:
 
     def test_fires_when_provider_slug_and_primary_set(self) -> None:
         """Signal fires when provider slug detected and primary_email_provider is set."""
-        # Contoso has M365 slug detected (via TXT/DKIM) but a different primary
+        # Synthetic Alpha has M365 slug detected (via TXT/DKIM) but a different primary
         result = evaluate_signals(
             _ctx(
                 {"microsoft365"},

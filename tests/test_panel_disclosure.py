@@ -38,9 +38,9 @@ def _obs(name: str, posterior: float, low: float, high: float) -> PosteriorObser
 def _panel_text(posteriors: tuple[PosteriorObservation, ...]) -> str:
     info = TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Contoso",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         sources=("oidc", "userrealm", "dns", "ct"),
         services=("Microsoft 365",),

@@ -53,17 +53,17 @@ def _render(info: TenantInfo, **kwargs: object) -> str:
 def _three_vendor_tenant() -> TenantInfo:
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid",
-        display_name="Contoso, Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha, Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=8,
-        tenant_domains=("contoso.com", "contoso.net", "contoso.co.uk"),
+        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid"),
         services=("AWS CloudFront", "Cloudflare", "GCP Compute Engine"),
         slugs=("aws-cloudfront", "cloudflare", "gcp-compute"),
         surface_attributions=(
             SurfaceAttribution(
-                subdomain="api.contoso.com",
+                subdomain="api.alpha.invalid",
                 primary_slug="fastly",
                 primary_name="Fastly",
                 primary_tier="infrastructure",
@@ -107,12 +107,12 @@ class TestInProcessDeterminism:
         particular bucket order in the underlying dict)."""
         info = TenantInfo(  # type: ignore[arg-type]
             tenant_id="tid",
-            display_name="Contoso",
-            default_domain="contoso.com",
-            queried_domain="contoso.com",
+            display_name="Synthetic Alpha",
+            default_domain="alpha.invalid",
+            queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.HIGH,
             domain_count=4,
-            tenant_domains=("a.com", "b.com", "c.com"),
+            tenant_domains=("a.invalid", "b.invalid", "c.invalid"),
             slugs=tuple(slugs),
             services=tuple(s.replace("-", " ").title() for s in slugs),
         )
@@ -138,17 +138,17 @@ class TestCrossProcessDeterminism:
 
         info = TenantInfo(
             tenant_id='tid',
-            display_name='Contoso, Ltd',
-            default_domain='contoso.com',
-            queried_domain='contoso.com',
+            display_name='Synthetic Alpha, Ltd',
+            default_domain='alpha.invalid',
+            queried_domain='alpha.invalid',
             confidence=ConfidenceLevel.HIGH,
             domain_count=8,
-            tenant_domains=('contoso.com', 'contoso.net', 'contoso.co.uk'),
+            tenant_domains=('alpha.invalid', 'alpha.invalid', 'alpha.invalid'),
             services=('AWS CloudFront', 'Cloudflare', 'GCP Compute Engine'),
             slugs=('aws-cloudfront', 'cloudflare', 'gcp-compute'),
             surface_attributions=(
                 SurfaceAttribution(
-                    subdomain='api.contoso.com',
+                    subdomain='api.alpha.invalid',
                     primary_slug='fastly',
                     primary_name='Fastly',
                     primary_tier='infrastructure',

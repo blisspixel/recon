@@ -96,7 +96,7 @@ class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseC
     When the first positional arg is not a known subcommand or flag, treat it
     as a domain and route to ``lookup`` so validation can speak in domain
     language. Requiring a dot used to force undotted attempts such as
-    ``recon contoso`` into Click's "No such command" path.
+    ``recon alpha`` into Click's "No such command" path.
     """
 
     def resolve_command(
@@ -256,12 +256,12 @@ def _print_welcome_banner() -> None:
     )
     console.print()
     console.print("[bold cyan]Common examples[/bold cyan]")
-    console.print("  recon contoso.com")
-    console.print("  recon northwindtraders.com --verbose")
-    console.print("  recon fabrikam.com --full --json")
+    console.print("  recon alpha.invalid")
+    console.print("  recon gamma.invalid --verbose")
+    console.print("  recon beta.invalid --full --json")
     console.print()
     console.print(
-        "[dim]Pass a public-suffix domain (contoso.com). Bare hostnames without a "
+        "[dim]Pass a public-suffix domain (for example, example.com). Bare hostnames without a "
         "dot are rejected as invalid domain format.[/dim]"
     )
     console.print(
@@ -480,7 +480,7 @@ def lookup(
         help=(
             "Analyze the exact host given instead of reducing to the "
             "registrable apex. By default a pasted URL or sub-host "
-            "(mail.acme.co.uk) is reduced to its apex (acme.co.uk), where "
+            "(mail.example.co.uk) is reduced to its apex (example.co.uk), where "
             "recon's signal lives; --exact keeps the literal host for the "
             "narrow case of wanting DNS facts about that one sub-host."
         ),
@@ -933,7 +933,7 @@ def _silence_closed_standard_streams() -> None:
 def run() -> None:
     """Entry point — invokes the Typer app.
 
-    The callback handles shorthand domain syntax (e.g., `recon contoso.com`)
+    The callback handles shorthand domain syntax (e.g., `recon alpha.invalid`)
     via invoke_without_command routing. No preprocessing needed.
 
     Wraps the app in a last-resort handler so an *unexpected* crash writes its

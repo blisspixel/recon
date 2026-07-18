@@ -406,8 +406,9 @@ wheel from that file; the replay commands and remaining environment limits are
 documented in [docs/supply-chain.md](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md).
 
 Project hygiene: keep examples reserved and synthetic, keep validation artifacts
-aggregate-only, run `uv run python scripts/check.py`, and
-avoid dead code or placeholders.
+aggregate-only, and run `uv run python scripts/check.py`. The gate rejects the
+retired target-example vocabulary across public text while preserving provider
+definitions and ACME protocol terms; avoid dead code or placeholders.
 Contributor details:
 [CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md).
 

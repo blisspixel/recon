@@ -49,16 +49,16 @@ def test_summarize_sessions_deduplicates_by_best_outcome(summary, tmp_path: Path
     _write_run(
         run_a,
         [
-            {"queried_domain": "contoso.com", "ct_attempt_outcome": "breaker_open"},
-            {"queried_domain": "fabrikam.com", "ct_attempt_outcome": "live_success"},
+            {"queried_domain": "alpha.invalid", "ct_attempt_outcome": "breaker_open"},
+            {"queried_domain": "beta.invalid", "ct_attempt_outcome": "live_success"},
         ],
         malformed_tail=True,
     )
     _write_run(
         run_b,
         [
-            {"queried_domain": "contoso.com", "ct_attempt_outcome": "cache_hit"},
-            {"queried_domain": "northwindtraders.com", "ct_attempt_outcome": "live_rate_limited"},
+            {"queried_domain": "alpha.invalid", "ct_attempt_outcome": "cache_hit"},
+            {"queried_domain": "gamma.invalid", "ct_attempt_outcome": "live_rate_limited"},
             {"ct_attempt_outcome": "not_attempted"},
         ],
     )
@@ -84,9 +84,9 @@ def test_summarize_sessions_deduplicates_by_best_outcome(summary, tmp_path: Path
         "live_rate_limited": 1,
         "live_success": 1,
     }
-    assert "contoso.com" not in rendered
-    assert "fabrikam.com" not in rendered
-    assert "northwindtraders.com" not in rendered
+    assert "alpha.invalid" not in rendered
+    assert "beta.invalid" not in rendered
+    assert "gamma.invalid" not in rendered
 
 
 def test_summarize_sessions_accepts_legacy_json_array(summary, tmp_path: Path) -> None:
@@ -95,8 +95,8 @@ def test_summarize_sessions_accepts_legacy_json_array(summary, tmp_path: Path) -
     (run_dir / "results.json").write_text(
         json.dumps(
             [
-                {"queried_domain": "contoso.com", "ct_attempt_outcome": "live_success"},
-                {"queried_domain": "fabrikam.com", "ct_attempt_outcome": "cache_miss"},
+                {"queried_domain": "alpha.invalid", "ct_attempt_outcome": "live_success"},
+                {"queried_domain": "beta.invalid", "ct_attempt_outcome": "cache_miss"},
             ]
         ),
         encoding="utf-8",

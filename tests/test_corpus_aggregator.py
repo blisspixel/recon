@@ -42,9 +42,9 @@ def _make_dict(**overrides) -> dict:
     only what they care about."""
     base = {
         "tenant_id": "tid",
-        "display_name": "Contoso, Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha, Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": "high",
         "sources": [],
     }
@@ -57,7 +57,7 @@ def _cname_evidence(*slugs: str) -> list[dict[str, str]]:
     return [
         {
             "source_type": "CNAME",
-            "raw_value": f"{slug}.contoso.com -> synthetic.endpoint.example",
+            "raw_value": f"{slug}.alpha.invalid -> synthetic.endpoint.example",
             "rule_name": slug.title(),
             "slug": slug,
         }
@@ -117,7 +117,7 @@ class TestMultiCloudFired:
                 evidence=_cname_evidence("aws-cloudfront"),
                 surface_attributions=[
                     {
-                        "subdomain": "api.contoso.com",
+                        "subdomain": "api.alpha.invalid",
                         "primary_slug": "fastly",
                         "primary_name": "Fastly",
                         "primary_tier": "infrastructure",
@@ -137,7 +137,7 @@ class TestCeilingFired:
                 slugs=["m365"],
                 services=["Microsoft 365"],
                 domain_count=4,
-                tenant_domains=["a.com", "b.com", "c.com", "d.com"],
+                tenant_domains=["a.invalid", "b.invalid", "c.invalid", "d.invalid"],
             )
         )
         cat_count = _estimate_categorized_count(info)
@@ -149,7 +149,7 @@ class TestCeilingFired:
                 slugs=["m365"],
                 services=["Microsoft 365"],
                 domain_count=1,
-                tenant_domains=["a.com"],
+                tenant_domains=["a.invalid"],
             )
         )
         cat_count = _estimate_categorized_count(info)
@@ -173,7 +173,7 @@ class TestAggregateOverCorpus:
                 slugs=["m365"],
                 services=["Microsoft 365"],
                 domain_count=4,
-                tenant_domains=["a.com", "b.com", "c.com", "d.com"],
+                tenant_domains=["a.invalid", "b.invalid", "c.invalid", "d.invalid"],
             ),
         ]
         agg = aggregate(results)
@@ -213,7 +213,7 @@ class TestStratumDerivation:
     """The aggregator buckets entries by the ``_stratum`` tag the
     synthetic-corpus generator injects (v1.9.11+). The previous
     tenant_id-substring matcher misbucketed brand-style fixtures like
-    ``tailspin-firebase`` (GCP) and ``northwind-oci`` (Oracle), and a
+    ``tailspin-firebase`` (GCP) and ``gamma-oci`` (Oracle), and a
     baseline fixture (``wingtip-azure``) was misbucketed into the
     Azure stratum because its tenant_id happened to contain the
     ``-az`` token. These tests pin the new derivation."""
@@ -231,10 +231,10 @@ class TestStratumDerivation:
         assert _stratum_for_entry(entry) == "baseline"
 
     def test_brand_style_oracle_tenant_id_no_longer_misbucketed(self):
-        """``northwind-oci`` has no ``-oracle-`` substring; the
+        """``gamma-oci`` has no ``-oracle-`` substring; the
         previous matcher binned it under baseline. The new derivation
         reads the explicit tag emitted by the generator."""
-        entry = _make_dict(tenant_id="northwind-oci", _stratum="oracle")
+        entry = _make_dict(tenant_id="gamma-oci", _stratum="oracle")
         assert _stratum_for_entry(entry) == "oracle"
 
     def test_baseline_with_azure_in_tenant_id_no_longer_misbucketed(self):
@@ -252,9 +252,9 @@ class TestPerStratumAggregation:
 
     def test_per_stratum_groups_by_explicit_tag(self):
         results = [
-            _make_dict(tenant_id="contoso-mid", _stratum="baseline", slugs=["m365"]),
-            _make_dict(tenant_id="contoso-gcp-pure", _stratum="gcp", slugs=["gcp-compute"]),
-            _make_dict(tenant_id="northwind-oci", _stratum="oracle", slugs=["oracle-cloud"]),
+            _make_dict(tenant_id="alpha-mid", _stratum="baseline", slugs=["m365"]),
+            _make_dict(tenant_id="alpha-gcp-pure", _stratum="gcp", slugs=["gcp-compute"]),
+            _make_dict(tenant_id="gamma-oci", _stratum="oracle", slugs=["oracle-cloud"]),
             _make_dict(tenant_id="tailspin-firebase", _stratum="gcp", slugs=["gcp-firebase"]),
         ]
         agg = aggregate(results)
@@ -275,9 +275,9 @@ class TestCliInputParsing:
 
     def test_main_parses_ndjson_and_skips_error_records(self, tmp_path: Path) -> None:
         records = [
-            _make_dict(tenant_id="contoso", slugs=["m365", "cloudflare-cdn"]),
-            _make_dict(tenant_id="northwind", slugs=["gcp-compute", "fastly-cdn"]),
-            {"domain": "northwindtraders.example", "error": "Invalid domain format: bad"},
+            _make_dict(tenant_id="alpha", slugs=["m365", "cloudflare-cdn"]),
+            _make_dict(tenant_id="gamma", slugs=["gcp-compute", "fastly-cdn"]),
+            {"domain": "gamma.example", "error": "Invalid domain format: bad"},
         ]
         ndjson_path = tmp_path / "results.ndjson"
         ndjson_path.write_text("\n".join(json.dumps(r) for r in records) + "\n", encoding="utf-8")
@@ -291,7 +291,7 @@ class TestCliInputParsing:
         assert agg["counted"] == 2
 
     def test_main_still_parses_json_array(self, tmp_path: Path) -> None:
-        records = [_make_dict(tenant_id="contoso", slugs=["m365"])]
+        records = [_make_dict(tenant_id="alpha", slugs=["m365"])]
         json_path = tmp_path / "results.json"
         json_path.write_text(json.dumps(records), encoding="utf-8")
         out_path = tmp_path / "aggregate.json"

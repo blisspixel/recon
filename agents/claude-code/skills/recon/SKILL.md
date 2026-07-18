@@ -20,11 +20,11 @@ opt-in direct probes.
 
 Reach for recon when the user wants to understand a domain's public-facing configuration:
 
-- "Is `acme.com` on Microsoft 365? What's their tenant ID?"
-- "Score the email security on `northwindtraders.com`."
-- "What SaaS vendors does `fabrikam.com` appear to use?"
-- "Find related domains for `contoso.com`."
-- "Compare the posture of `a.com` and `b.com`."
+- "Is `delta.invalid` on Microsoft 365? What's their tenant ID?"
+- "Score the email security on `gamma.invalid`."
+- "What SaaS vendors does `beta.invalid` appear to use?"
+- "Find related domains for `alpha.invalid`."
+- "Compare the posture of `a.invalid` and `b.invalid`."
 
 Do not reach for recon when the user wants:
 
@@ -67,13 +67,13 @@ Lowercase the input, strip any leading `https://` / `http://` / `www.`, then mat
 
 Pass the validated domain inside double quotes in the Bash command (`recon "validated.example.com"`) as defense-in-depth; the regex is the primary control. The MCP path takes structured arguments and is not subject to this rule.
 
-Once a domain passes validation, recon reduces it to the registrable apex (eTLD+1) before analysis, so `mail.acme.co.uk` is analyzed as `acme.co.uk` and `queried_domain` is the apex - almost always what you want, since the signal lives at the apex. Pass `--exact` only when the user specifically wants DNS facts about that one literal sub-host. This does not relax the validation rule above.
+Once a domain passes validation, recon reduces it to the registrable apex (eTLD+1) before analysis, so `mail.example.co.uk` is analyzed as `example.co.uk` and `queried_domain` is the apex - almost always what you want, since the signal lives at the apex. Pass `--exact` only when the user specifically wants DNS facts about that one literal sub-host. This does not relax the validation rule above.
 
 ## Two invocation modes
 
 ### Default mode - panel output
 
-Use this when the user asks recon-shaped questions conversationally - "recon contoso.com", "what does fabrikam.com run on" - without explicitly requesting full or structured data.
+Use this when the user asks recon-shaped questions conversationally - "recon alpha.invalid", "what does beta.invalid run on" - without explicitly requesting full or structured data.
 
 When MCP is connected, call `lookup_tenant(domain)` and reformat to a panel-equivalent summary. Otherwise shell out (after validating `<domain>` per the rule above):
 
@@ -87,8 +87,8 @@ recon "<domain>"
 <summary>Sample panel (collapsed)</summary>
 
 ```
-Contoso Ltd
-contoso.com
+Synthetic Alpha Ltd
+alpha.invalid
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
@@ -269,7 +269,7 @@ Every `TenantInfo` carries `resolved_at` (when the live resolution produced this
 
 ## Ephemeral fingerprints
 
-If the user wants to test a hypothesis about a custom or internal SaaS - "does Contoso publish an Acme Platform verification token?" - use the ephemeral fingerprint workflow:
+If the user wants to test a hypothesis about a custom or internal SaaS - "does Synthetic Alpha publish an Synthetic Delta Platform verification token?" - use the ephemeral fingerprint workflow:
 
 1. `inject_ephemeral_fingerprint(name, slug, category, confidence, detections=[...])`.
 2. `reevaluate_domain(domain)` - uses cached data, no new network calls.
@@ -290,7 +290,7 @@ The sharp edges that have actually bitten this workflow. Skim before a session;
 the detail for each lives in the section above.
 
 - **`recon delta` on a never-seen domain exits with code 3.** It reports "No cached snapshot" and asks for an ordinary lookup to establish the baseline; it does not emit a delta.
-- **A sub-host is analyzed as its apex unless you pass `--exact`.** `mail.acme.com` returns facts for `acme.com`; the `queried_domain` field tells you what was actually analyzed. Reporting apex tenancy as the sub-host's is wrong.
+- **A sub-host is analyzed as its apex unless you pass `--exact`.** `mail.delta.invalid` returns facts for `delta.invalid`; the `queried_domain` field tells you what was actually analyzed. Reporting apex tenancy as the sub-host's is wrong.
 - **`--full --json` is 3-10 KB; never dump it inline.** Save it to a file and reply with the 3-line headline. Inline JSON burns context for no benefit.
 - **Do not test MCP connectivity by calling a tool.** Read your own tool list for `mcp__recon__*`; a speculative call to "check" is a wasted, confusing round-trip.
 - **`--exposure` / `assess_exposure` is cache first and may resolve on a miss.** The index calculation adds no network calls after the ordinary base lookup. Do not imply that the 0-100 value comes from a separate scan or measures overall security.

@@ -22,9 +22,9 @@ RESOLVE_PATH = "recon_tool.resolver.resolve_tenant"
 
 _INFO = TenantInfo(
     tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
-    display_name="Contoso Ltd",
-    default_domain="contoso.onmicrosoft.com",
-    queried_domain="contoso.com",
+    display_name="Synthetic Alpha Ltd",
+    default_domain="alpha.onmicrosoft.com",
+    queried_domain="alpha.invalid",
     confidence=ConfidenceLevel.HIGH,
     sources=("oidc_discovery",),
     services=("Microsoft 365",),
@@ -41,7 +41,7 @@ class TestLookupExitContract:
         raises typer.Exit(2) from inside the lookup try block, which was being
         caught by the generic handler and reclassified."""
         mock_resolve.return_value = (_INFO, _RESULTS)
-        result = runner.invoke(app, ["contoso.com", "--profile", "totally-bogus-xyz"])
+        result = runner.invoke(app, ["alpha.invalid", "--profile", "totally-bogus-xyz"])
         assert result.exit_code == 2
         assert "Exit\n" not in result.output
 
@@ -56,11 +56,11 @@ class TestLookupExitContract:
 
         result = runner.invoke(
             app,
-            ["contoso.com", detail_flag, "--json", "--no-cache"],
+            ["alpha.invalid", detail_flag, "--json", "--no-cache"],
         )
 
         assert result.exit_code == 0
-        assert json.loads(result.stdout)["queried_domain"] == "contoso.com"
+        assert json.loads(result.stdout)["queried_domain"] == "alpha.invalid"
         assert result.stdout.lstrip().startswith("{")
         assert "oidc_discovery" in result.stderr
 
@@ -79,7 +79,7 @@ class TestLookupExitContract:
 
         result = runner.invoke(
             app,
-            ["contoso.com", "--full", output_flag, "--no-cache"],
+            ["alpha.invalid", "--full", output_flag, "--no-cache"],
         )
 
         assert result.exit_code == 0
@@ -89,8 +89,8 @@ class TestLookupExitContract:
     @pytest.mark.parametrize(
         ("error_type", "expected_code", "message"),
         [
-            ("timeout", 4, "Resolution timed out after 5s for contoso.com"),
-            ("all_sources_failed", 4, "All public sources failed for contoso.com"),
+            ("timeout", 4, "Resolution timed out after 5s for alpha.invalid"),
+            ("all_sources_failed", 4, "All public sources failed for alpha.invalid"),
             ("no_data", 3, "No indicators observed"),
         ],
     )
@@ -103,16 +103,16 @@ class TestLookupExitContract:
         message: str,
     ) -> None:
         mock_resolve.side_effect = ReconLookupError(
-            domain="contoso.com",
+            domain="alpha.invalid",
             message=message,
             error_type=error_type,
         )
 
-        result = runner.invoke(app, ["contoso.com", "--no-cache"])
+        result = runner.invoke(app, ["alpha.invalid", "--no-cache"])
 
         assert result.exit_code == expected_code
         if error_type == "no_data":
-            assert "No information found for contoso.com" in result.stderr
+            assert "No information found for alpha.invalid" in result.stderr
             assert "Run recon doctor" not in result.stderr
         else:
             assert message in result.stderr
@@ -129,7 +129,7 @@ class TestBatchMachineOutputClean:
         JSON."""
         mock_resolve.return_value = (_INFO, _RESULTS)
         domain_file = tmp_path / "domains.txt"
-        domain_file.write_text("contoso.com\nCONTOSO.com\n", encoding="utf-8")
+        domain_file.write_text("alpha.invalid\nALPHA.INVALID\n", encoding="utf-8")
 
         result = runner.invoke(app, ["batch", str(domain_file), "--ndjson"])
         assert result.exit_code == 0
@@ -158,18 +158,18 @@ class TestBadInputIsCleanError:
 
     def test_non_utf8_batch_input_exits_2(self, tmp_path) -> None:
         bad = tmp_path / "domains.txt"
-        bad.write_bytes("contoso.com\n".encode("utf-16"))
+        bad.write_bytes("alpha.invalid\n".encode("utf-16"))
         result = runner.invoke(app, ["batch", str(bad)])
         assert result.exit_code == 2
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_discover_output_to_directory_exits_2(self, mock_resolve, tmp_path) -> None:
         mock_resolve.return_value = (_INFO, [])
-        result = runner.invoke(app, ["discover", "contoso.com", "--output", str(tmp_path)])
+        result = runner.invoke(app, ["discover", "alpha.invalid", "--output", str(tmp_path)])
         assert result.exit_code == 2
 
     def test_md_with_exposure_is_rejected(self) -> None:
         # --exposure renders its own output and does not honor --md, so the flag
         # is rejected rather than silently dropped.
-        result = runner.invoke(app, ["contoso.com", "--exposure", "--md"])
+        result = runner.invoke(app, ["alpha.invalid", "--exposure", "--md"])
         assert result.exit_code == 2

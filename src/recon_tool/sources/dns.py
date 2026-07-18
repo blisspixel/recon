@@ -561,7 +561,7 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
     # win over substrings (``vercel.com``) when both would match the same hop.
     sorted_rules: tuple[Any, ...] = tuple(sorted(rules, key=lambda r: -len(r.pattern)))
 
-    # Wildcard-DNS guard. Some apexes (kayak.com, certain higher-ed orgs)
+    # Wildcard-DNS guard. Some apexes
     # answer every ``*.<apex>`` query with the same CNAME - typically a
     # CDN. Without this guard the common-subdomain and IDP-hub probes
     # generate dozens of fake "subdomains" that all CNAME to the same

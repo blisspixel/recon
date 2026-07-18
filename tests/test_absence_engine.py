@@ -62,11 +62,11 @@ class TestEvaluateAbsenceSignals:
     def test_all_counterparts_present_no_absence(self) -> None:
         """Signal with expected_counterparts where all present → no absence signal."""
         sig = _make_signal(
-            "Contoso Security Stack",
+            "Synthetic Alpha Security Stack",
             candidates=("crowdstrike", "okta"),
             expected_counterparts=("proofpoint", "mimecast"),
         )
-        match = _make_match("Contoso Security Stack", matched=("crowdstrike", "okta"))
+        match = _make_match("Synthetic Alpha Security Stack", matched=("crowdstrike", "okta"))
         detected = frozenset({"crowdstrike", "okta", "proofpoint", "mimecast"})
 
         result = evaluate_absence_signals([match], (sig,), detected)
@@ -75,11 +75,11 @@ class TestEvaluateAbsenceSignals:
     def test_some_counterparts_absent_fires(self) -> None:
         """Signal with expected_counterparts where some absent → absence signal fires."""
         sig = _make_signal(
-            "Contoso Security Stack",
+            "Synthetic Alpha Security Stack",
             candidates=("crowdstrike", "okta"),
             expected_counterparts=("proofpoint", "mimecast"),
         )
-        match = _make_match("Contoso Security Stack", matched=("crowdstrike", "okta"))
+        match = _make_match("Synthetic Alpha Security Stack", matched=("crowdstrike", "okta"))
         detected = frozenset({"crowdstrike", "okta", "proofpoint"})  # mimecast absent
 
         result = evaluate_absence_signals([match], (sig,), detected)
@@ -90,11 +90,11 @@ class TestEvaluateAbsenceSignals:
     def test_empty_counterparts_no_evaluation(self) -> None:
         """Signal with empty expected_counterparts → no absence evaluation."""
         sig = _make_signal(
-            "Contoso Basic Signal",
+            "Synthetic Alpha Basic Signal",
             candidates=("crowdstrike",),
             expected_counterparts=(),
         )
-        match = _make_match("Contoso Basic Signal", matched=("crowdstrike",))
+        match = _make_match("Synthetic Alpha Basic Signal", matched=("crowdstrike",))
         detected = frozenset({"crowdstrike"})
 
         result = evaluate_absence_signals([match], (sig,), detected)
@@ -103,7 +103,7 @@ class TestEvaluateAbsenceSignals:
     def test_parent_not_fired_no_absence(self) -> None:
         """Parent signal did not fire → no absence signal regardless of counterpart presence."""
         sig = _make_signal(
-            "Contoso Security Stack",
+            "Synthetic Alpha Security Stack",
             candidates=("crowdstrike", "okta"),
             expected_counterparts=("proofpoint", "mimecast"),
         )
@@ -116,11 +116,11 @@ class TestEvaluateAbsenceSignals:
     def test_absence_signal_category(self) -> None:
         """Absence signal has category='Absence'."""
         sig = _make_signal(
-            "Fabrikam AI Stack",
+            "Synthetic Beta AI Stack",
             candidates=("openai",),
             expected_counterparts=("lakera",),
         )
-        match = _make_match("Fabrikam AI Stack", matched=("openai",))
+        match = _make_match("Synthetic Beta AI Stack", matched=("openai",))
         detected = frozenset({"openai"})  # lakera absent
 
         result = evaluate_absence_signals([match], (sig,), detected)
@@ -130,11 +130,11 @@ class TestEvaluateAbsenceSignals:
     def test_absence_signal_hedged_language(self) -> None:
         """Absence signal description uses hedged language ('not observed', 'may indicate')."""
         sig = _make_signal(
-            "Northwind Traders Security",
+            "Synthetic Gamma Security",
             candidates=("crowdstrike",),
             expected_counterparts=("proofpoint",),
         )
-        match = _make_match("Northwind Traders Security", matched=("crowdstrike",))
+        match = _make_match("Synthetic Gamma Security", matched=("crowdstrike",))
         detected = frozenset({"crowdstrike"})
 
         result = evaluate_absence_signals([match], (sig,), detected)
@@ -145,11 +145,11 @@ class TestEvaluateAbsenceSignals:
     def test_multiple_missing_counterparts(self) -> None:
         """Multiple missing counterparts → all listed in matched tuple."""
         sig = _make_signal(
-            "Contoso Full Stack",
+            "Synthetic Alpha Full Stack",
             candidates=("crowdstrike",),
             expected_counterparts=("proofpoint", "mimecast", "barracuda"),
         )
-        match = _make_match("Contoso Full Stack", matched=("crowdstrike",))
+        match = _make_match("Synthetic Alpha Full Stack", matched=("crowdstrike",))
         detected = frozenset({"crowdstrike"})  # all counterparts absent
 
         result = evaluate_absence_signals([match], (sig,), detected)
@@ -159,16 +159,16 @@ class TestEvaluateAbsenceSignals:
     def test_absence_signal_name_format(self) -> None:
         """Absence signal name follows '{parent} — Missing Counterparts' pattern."""
         sig = _make_signal(
-            "Contoso AI",
+            "Synthetic Alpha AI",
             candidates=("openai",),
             expected_counterparts=("lakera",),
         )
-        match = _make_match("Contoso AI", matched=("openai",))
+        match = _make_match("Synthetic Alpha AI", matched=("openai",))
         detected = frozenset({"openai"})
 
         result = evaluate_absence_signals([match], (sig,), detected)
         assert len(result) == 1
-        assert result[0].name == "Contoso AI \u2014 Missing Counterparts"
+        assert result[0].name == "Synthetic Alpha AI \u2014 Missing Counterparts"
 
 
 # ── 14.2: Built-in expected_counterparts definitions ──────────────────

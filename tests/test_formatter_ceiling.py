@@ -47,16 +47,16 @@ def _sparse_multi_domain_tenant(**overrides: object) -> TenantInfo:
     """
     base: dict[str, object] = {
         "tenant_id": "tid-sparse",
-        "display_name": "Contoso, Ltd",
-        "default_domain": "contoso.com",
-        "queried_domain": "contoso.com",
+        "display_name": "Synthetic Alpha, Ltd",
+        "default_domain": "alpha.invalid",
+        "queried_domain": "alpha.invalid",
         "confidence": ConfidenceLevel.LOW,
         "domain_count": 4,
         "tenant_domains": (
-            "contoso.com",
-            "contoso.net",
-            "contoso.co.uk",
-            "contoso-mail.com",
+            "alpha.invalid",
+            "alpha.invalid",
+            "alpha.invalid",
+            "alpha-mail.invalid",
         ),
         # One short Email entry — categorized() will produce one or two
         # families which is well under the 5-floor.
@@ -70,12 +70,12 @@ def _dense_categorized_tenant() -> TenantInfo:
     """Many distinct service families across categories — not sparse."""
     return TenantInfo(  # type: ignore[arg-type]
         tenant_id="tid-dense",
-        display_name="Contoso, Ltd",
-        default_domain="contoso.com",
-        queried_domain="contoso.com",
+        display_name="Synthetic Alpha, Ltd",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
         confidence=ConfidenceLevel.HIGH,
         domain_count=12,
-        tenant_domains=("contoso.com", "contoso.net", "contoso.co.uk", "contoso-mail.com"),
+        tenant_domains=("alpha.invalid", "alpha.invalid", "alpha.invalid", "alpha-mail.invalid"),
         services=(
             "Microsoft 365",
             "Okta",
@@ -116,7 +116,7 @@ class TestCeilingSuppressed:
         """Genuinely-small orgs may have one tenant domain and few
         services — that is not architecturally surprising; the ceiling
         line would be alarmist."""
-        info = _sparse_multi_domain_tenant(domain_count=1, tenant_domains=("contoso.com",))
+        info = _sparse_multi_domain_tenant(domain_count=1, tenant_domains=("alpha.invalid",))
         out = _render_to_string(info)
         assert "Passive-DNS ceiling" not in out
 
@@ -130,7 +130,7 @@ class TestCeilingSuppressed:
         is short; the ceiling line would misread that picture."""
         many_attribs = tuple(
             SurfaceAttribution(
-                subdomain=f"sub{i}.contoso.com",
+                subdomain=f"sub{i}.alpha.invalid",
                 primary_slug="aws-cloudfront",
                 primary_name="AWS CloudFront",
                 primary_tier="infrastructure",

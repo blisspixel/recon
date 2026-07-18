@@ -138,7 +138,7 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 | `tenant_id` | string | yes | UUID | stable | Microsoft 365 tenant UUID when observed. `null` means no UUID was observed; it does not distinguish a non-M365 domain from unavailable, incomplete, or non-disclosing tenant discovery. |
 | `display_name` | string | no | n/a | stable | Best available public display label, which may be an identity-provider federation brand; falls back to the queried domain. It is not a verified legal organization name or ownership claim. |
 | `default_domain` | string | no | n/a | stable | Primary domain within the tenant. Falls back to the queried domain when no tenant was detected. |
-| `queried_domain` | string | no | n/a | stable | The registrable apex (eTLD+1) recon analyzed, after validating and normalizing the input. A pasted URL or sub-host is reduced to its apex (`mail.acme.co.uk` → `acme.co.uk`); `--exact` keeps the literal host. |
+| `queried_domain` | string | no | n/a | stable | The registrable apex (eTLD+1) recon analyzed, after validating and normalizing the input. A pasted URL or sub-host is reduced to its apex (`mail.example.co.uk` → `example.co.uk`); `--exact` keeps the literal host. |
 
 ### Provider & confidence
 
@@ -287,8 +287,8 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 {
   "field": "display_name",
   "candidates": [
-    {"value": "Acme Corp", "source": "oidc", "confidence": "high"},
-    {"value": "Acme Corporation", "source": "userrealm", "confidence": "medium"}
+    {"value": "Synthetic Delta Corp", "source": "oidc", "confidence": "high"},
+    {"value": "Synthetic Delta Corporation", "source": "userrealm", "confidence": "medium"}
   ]
 }
 ```
@@ -435,11 +435,11 @@ success object.
 
 ```json
 {
-  "organization": "Contoso Ltd",
+  "organization": "Synthetic Alpha Ltd",
   "country": "US",
   "state": "WA",
   "locality": "Redmond",
-  "trademark": "CONTOSO"
+  "trademark": "SYNTHETIC ALPHA"
 }
 ```
 
@@ -633,7 +633,7 @@ Stability: stable.
 
 ```json
 {
-  "domain": "contoso.com",
+  "domain": "alpha.invalid",
   "added_services": ["Linear"],
   "removed_services": ["Asana"],
   "added_slugs": ["linear"],

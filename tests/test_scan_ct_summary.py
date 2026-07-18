@@ -66,7 +66,7 @@ def test_ndjson_mode_still_works(scan, tmp_path: Path) -> None:
 
 def test_count_result_records_skips_malformed_partial_tail(scan, tmp_path: Path) -> None:
     results = tmp_path / "results.ndjson"
-    results.write_text('{"queried_domain":"contoso.com"}\n{"queried_domain":', encoding="utf-8")
+    results.write_text('{"queried_domain":"alpha.invalid"}\n{"queried_domain":', encoding="utf-8")
 
     assert scan._count_result_records(results) == 1
 
@@ -76,9 +76,9 @@ def test_corpus_stats_match_batch_apex_deduplication(scan, tmp_path: Path) -> No
     corpus.write_text(
         "\n".join(
             [
-                "contoso.com",
-                "www.contoso.com",
-                "https://contoso.com/path",
+                "alpha.invalid",
+                "www.alpha.invalid",
+                "https://alpha.invalid/path",
                 "bad domain",
                 "BAD DOMAIN",
                 "# ignored",
@@ -122,10 +122,10 @@ def test_ct_retry_corpus_writes_under_output_root_and_deduplicates(scan, tmp_pat
     (prior / "results.ndjson").write_text(
         "\n".join(
             [
-                json.dumps({"queried_domain": "contoso.com", "ct_attempt_outcome": "live_rate_limited"}),
-                json.dumps({"queried_domain": "fabrikam.com", "ct_attempt_outcome": "breaker_open"}),
-                json.dumps({"queried_domain": "contoso.com", "ct_attempt_outcome": "cache_miss"}),
-                json.dumps({"queried_domain": "northwindtraders.com", "ct_attempt_outcome": "live_success"}),
+                json.dumps({"queried_domain": "alpha.invalid", "ct_attempt_outcome": "live_rate_limited"}),
+                json.dumps({"queried_domain": "beta.invalid", "ct_attempt_outcome": "breaker_open"}),
+                json.dumps({"queried_domain": "alpha.invalid", "ct_attempt_outcome": "cache_miss"}),
+                json.dumps({"queried_domain": "gamma.invalid", "ct_attempt_outcome": "live_success"}),
                 '{"queried_domain":',
             ]
         ),
@@ -136,8 +136,8 @@ def test_ct_retry_corpus_writes_under_output_root_and_deduplicates(scan, tmp_pat
 
     assert retry_corpus.parent == output_root / "_inputs"
     assert retry_corpus.read_text(encoding="utf-8").splitlines() == [
-        "contoso.com",
-        "fabrikam.com",
+        "alpha.invalid",
+        "beta.invalid",
     ]
 
 
@@ -148,8 +148,8 @@ def test_ct_retry_corpus_accepts_legacy_json_array(scan, tmp_path: Path) -> None
     (prior / "results.json").write_text(
         json.dumps(
             [
-                {"queried_domain": "contoso.com", "ct_attempt_outcome": "live_other_failure"},
-                {"queried_domain": "fabrikam.com", "ct_attempt_outcome": "cache_hit"},
+                {"queried_domain": "alpha.invalid", "ct_attempt_outcome": "live_other_failure"},
+                {"queried_domain": "beta.invalid", "ct_attempt_outcome": "cache_hit"},
             ]
         ),
         encoding="utf-8",
@@ -158,7 +158,7 @@ def test_ct_retry_corpus_accepts_legacy_json_array(scan, tmp_path: Path) -> None
     retry_corpus = scan._synthesize_ct_retry_corpus(prior, output_root)
 
     assert retry_corpus.parent == output_root / "_inputs"
-    assert retry_corpus.read_text(encoding="utf-8").splitlines() == ["contoso.com"]
+    assert retry_corpus.read_text(encoding="utf-8").splitlines() == ["alpha.invalid"]
 
 
 def test_ct_retry_corpus_validates_synthesized_domains(scan, tmp_path: Path) -> None:
@@ -168,9 +168,9 @@ def test_ct_retry_corpus_validates_synthesized_domains(scan, tmp_path: Path) -> 
     (prior / "results.ndjson").write_text(
         "\n".join(
             [
-                json.dumps({"queried_domain": "contoso.com", "ct_attempt_outcome": "live_rate_limited"}),
-                json.dumps({"queried_domain": "contoso.com\nexample.net", "ct_attempt_outcome": "cache_miss"}),
-                json.dumps({"queried_domain": "mail.fabrikam.com", "ct_attempt_outcome": "breaker_open"}),
+                json.dumps({"queried_domain": "alpha.invalid", "ct_attempt_outcome": "live_rate_limited"}),
+                json.dumps({"queried_domain": "alpha.invalid\nexample.net", "ct_attempt_outcome": "cache_miss"}),
+                json.dumps({"queried_domain": "mail.beta.invalid", "ct_attempt_outcome": "breaker_open"}),
             ]
         ),
         encoding="utf-8",
@@ -179,8 +179,8 @@ def test_ct_retry_corpus_validates_synthesized_domains(scan, tmp_path: Path) -> 
     retry_corpus = scan._synthesize_ct_retry_corpus(prior, output_root)
 
     assert retry_corpus.read_text(encoding="utf-8").splitlines() == [
-        "contoso.com",
-        "fabrikam.com",
+        "alpha.invalid",
+        "beta.invalid",
     ]
 
 
@@ -199,7 +199,7 @@ def test_cli_options_reject_finalize_with_ct_retry(scan) -> None:
 
 def test_run_batch_passes_timeout_to_recon_batch(scan, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     corpus = tmp_path / "domains.txt"
-    corpus.write_text("contoso.com\n", encoding="utf-8")
+    corpus.write_text("alpha.invalid\n", encoding="utf-8")
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     seen: dict[str, object] = {}
@@ -215,7 +215,7 @@ def test_run_batch_passes_timeout_to_recon_batch(scan, tmp_path: Path, monkeypat
 
         def communicate(self, timeout=None):
             seen["timeout"] = timeout
-            self.stdout.write('{"queried_domain":"contoso.com"}\n')
+            self.stdout.write('{"queried_domain":"alpha.invalid"}\n')
             self.stdout.flush()
             return None, ""
 
@@ -246,7 +246,7 @@ def test_run_batch_finalizes_streamed_partial_on_max_runtime(
     scan, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     corpus = tmp_path / "domains.txt"
-    corpus.write_text("contoso.com\nfabrikam.com\n", encoding="utf-8")
+    corpus.write_text("alpha.invalid\nbeta.invalid\n", encoding="utf-8")
     run_dir = tmp_path / "run"
     run_dir.mkdir()
 
@@ -262,7 +262,7 @@ def test_run_batch_finalizes_streamed_partial_on_max_runtime(
         def communicate(self, timeout=None):
             self.calls += 1
             if self.calls == 1:
-                self.stdout.write('{"queried_domain":"contoso.com","ct_attempt_outcome":"cache_hit"}\n')
+                self.stdout.write('{"queried_domain":"alpha.invalid","ct_attempt_outcome":"cache_hit"}\n')
                 self.stdout.flush()
                 raise scan.subprocess.TimeoutExpired(self.cmd, timeout)
             self.returncode = -9
@@ -288,11 +288,11 @@ def test_run_batch_finalizes_streamed_partial_on_max_runtime(
 
 def test_finalize_scan_writes_partial_meta(scan, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     corpus = tmp_path / "domains.txt"
-    corpus.write_text("contoso.com\nnorthwind.com\n", encoding="utf-8")
+    corpus.write_text("alpha.invalid\ngamma.invalid\n", encoding="utf-8")
     run_dir = tmp_path / "run"
     run_dir.mkdir()
     results = run_dir / "results.ndjson"
-    results.write_text('{"queried_domain":"contoso.com","ct_attempt_outcome":"cache_hit"}\n', encoding="utf-8")
+    results.write_text('{"queried_domain":"alpha.invalid","ct_attempt_outcome":"cache_hit"}\n', encoding="utf-8")
 
     def fake_run_step(cmd, description: str) -> None:
         if "--output" in cmd:
