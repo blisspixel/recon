@@ -58,7 +58,7 @@ def _complete_info() -> TenantInfo:
         slugs=("microsoft365", "google-workspace", "cloudflare"),
         auth_type="Federated",
         dmarc_policy="reject",
-        domain_count=5,
+        domain_count=2,
         tenant_domains=("alpha.invalid", "alpha.onmicrosoft.com"),
         related_domains=("api.alpha.invalid", "dev.alpha.invalid"),
         insights=("Federated auth", "Dual provider"),
