@@ -72,7 +72,9 @@ def test_artifact_review_guide_separates_private_and_public_results() -> None:
     assert "Published artifact integrity" in text
     assert "release state, not empirical paper results" in text
     assert "public Scorecard API state matches `HEAD`" in text
-    assert "PyPI plus GitHub provenance verify" in text
+    assert "PyPI provenance verifies for both distributions" in text
+    assert "GitHub provenance covers the wheel and sdist for the exact v2.6.3 historical exception" in text
+    assert "also covers the completed SBOM for later releases" in text
 
 
 def test_artifact_review_guide_names_figure_package() -> None:

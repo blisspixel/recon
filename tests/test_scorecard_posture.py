@@ -13,6 +13,8 @@ from typing import Any
 import pytest
 import yaml
 
+from scripts import release_readiness
+
 _ROOT = Path(__file__).resolve().parents[1]
 _PINNED_ACTION_RE = r"^[^@]+@[0-9a-f]{40}$"
 _READ_ONLY_PERMISSIONS = {"contents": "read"}
@@ -157,7 +159,7 @@ def test_release_workflow_exports_scorecard_recognized_provenance() -> None:
     export_text = "\n".join(str(step.get("run", "")) for step in export_job["steps"])
     release_text = "\n".join(str(step.get("run", "")) for step in github_release["steps"])
 
-    assert export_job["needs"] == ["build", "attest"]
+    assert export_job["needs"] == ["build", "sbom", "attest"]
     assert export_job["permissions"] == {"contents": "read"}
     assert ".intoto.jsonl" in export_text
     assert "gh attestation download" in export_text
@@ -361,7 +363,8 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
         "public Scorecard API freshness for `HEAD`",
         "code-owned Scorecard controls",
         "both PyPI PEP 740 attestations",
-        "verifies both GitHub artifacts against the downloaded bundle",
+        "verifies the policy-required GitHub subjects against the downloaded bundle",
+        "exact v2.6.3 historical exception covers its wheel and sdist",
         "requires the PyPI and GitHub wheel and sdist digests to match",
     ):
         assert required in text
@@ -373,7 +376,8 @@ def test_openssf_docs_do_not_turn_live_api_state_into_commit_promise() -> None:
     scorecard_text = "\n".join((openssf, supply_chain))
 
     assert "durable status promise" in openssf
-    assert re.search(r"\b[0-9a-f]{7,40}\b", scorecard_text) is None
+    documented_shas = set(re.findall(r"\b[0-9a-f]{7,40}\b", scorecard_text))
+    assert documented_shas == set(release_readiness._LEGACY_SBOM_ATTESTATION_EXCEPTIONS.values())
 
 
 def test_supply_chain_docs_provide_consumer_verification_recipe() -> None:
