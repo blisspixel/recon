@@ -1112,7 +1112,7 @@
           "mcp",
           "doctor"
         ],
-        "summary": "End-to-end MCP self-check.",
+        "summary": "Run the end-to-end MCP self-check against a local JSON-RPC subprocess.",
         "usage": "recon mcp doctor"
       },
       {
@@ -1473,7 +1473,7 @@
           "fingerprints",
           "new"
         ],
-        "summary": "Scaffold a new fingerprint entry, run checks, print YAML.",
+        "summary": "Scaffold a fingerprint and enforce slug, schema, and specificity checks.",
         "usage": "recon fingerprints new"
       },
       {
@@ -1516,7 +1516,7 @@
           "fingerprints",
           "test"
         ],
-        "summary": "Run one fingerprint against a domain corpus and report which match.",
+        "summary": "Resolve a local corpus through live lookups and report fingerprint matches.",
         "usage": "recon fingerprints test"
       },
       {
@@ -1630,7 +1630,7 @@
           "signals",
           "search"
         ],
-        "summary": "Search reportable signals by label, category, description, or candidate slug.",
+        "summary": "Search signals by label, category, description, or candidate slug.",
         "usage": "recon signals search"
       },
       {

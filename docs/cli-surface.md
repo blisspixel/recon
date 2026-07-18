@@ -244,7 +244,7 @@ Summary: List built-in fingerprints.
 ## `recon fingerprints new`
 
 Kind: command
-Summary: Scaffold a new fingerprint entry, run checks, print YAML.
+Summary: Scaffold a fingerprint and enforce slug, schema, and specificity checks.
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|
@@ -284,7 +284,7 @@ Summary: Show the full definition of a single fingerprint.
 ## `recon fingerprints test`
 
 Kind: command
-Summary: Run one fingerprint against a domain corpus and report which match.
+Summary: Resolve a local corpus through live lookups and report fingerprint matches.
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|
@@ -296,7 +296,7 @@ Summary: Run one fingerprint against a domain corpus and report which match.
 ## `recon mcp doctor`
 
 Kind: command
-Summary: End-to-end MCP self-check.
+Summary: Run the end-to-end MCP self-check against a local JSON-RPC subprocess.
 
 No parameters.
 
@@ -329,7 +329,7 @@ Summary: List reportable public signals, grouped by category.
 ## `recon signals search`
 
 Kind: command
-Summary: Search reportable signals by label, category, description, or candidate slug.
+Summary: Search signals by label, category, description, or candidate slug.
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|

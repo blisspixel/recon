@@ -219,6 +219,36 @@ This is the linear view for a standard single-domain lookup. Chain, compare,
 exposure, and gaps reports use their own formats; batch and delta have
 mode-specific output.
 
+## Explore the Local Catalogs
+
+The list, search, and show commands below are local and do not query a domain or
+another network source:
+
+```bash
+recon fingerprints list
+recon fingerprints search email
+recon fingerprints show <slug>
+recon signals list
+recon signals search email
+recon signals show "<signal name>"
+```
+
+Fingerprint slugs are named public-record indicators. A slug may have more than
+one catalog record, so `fingerprints show` renders every matching record and
+its detection rules, relationship hints, tiers, and verification dates. Signals
+are derived reportable-observation definitions built from candidate fingerprint
+slugs and metadata conditions. Human fingerprint search is a ten-slug preview;
+add `--json` to retrieve every matching catalog record. Category filters use
+word-prefix matching for one token and literal phrase matching for multiword
+queries in both the CLI and MCP server. Human catalog detail output strips
+terminal controls from locally extended text and visibly marks values truncated
+after 1,024 characters.
+
+`recon fingerprints test` is different: it resolves every domain in the chosen
+local corpus through the ordinary live lookup pipeline. DNS infrastructure may
+observe those queries, MTA-STS remains the one default target-owned HTTP
+request, and the usual public CT and identity-source boundaries apply.
+
 At terminal widths below 70 columns, command help automatically switches to a
 complete linear layout so long option names remain visible.
 
