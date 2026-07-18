@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from recon_tool.cache_contract import DEFAULT_TTL, MAX_RESULT_CACHE_FILE_BYTES, RESULT_CACHE_VERSION
 from recon_tool.cache_paths import (
     resolve_cache_directory,
 )
@@ -72,17 +73,14 @@ __all__ = [
 
 logger = logging.getLogger("recon")
 
-DEFAULT_TTL: int = 86400  # 24 hours
-
-_CACHE_VERSION = 3
-
 # A cache entry is a serialized TenantInfo (a few KB, up to ~100 KB with CT
 # data). Reject a file larger than this before descriptor-bound decoding so a
 # corrupt or hostile oversized file cannot be read whole into memory. Pairs with the
 # RecursionError catch below: a deeply-nested JSON file raises RecursionError
 # (a RuntimeError, not a ValueError), so without the catch a poisoned cache file
 # would crash the next lookup instead of degrading to a clean cache miss.
-_MAX_CACHE_FILE_BYTES = 5 * 1024 * 1024
+_MAX_CACHE_FILE_BYTES = MAX_RESULT_CACHE_FILE_BYTES
+_CACHE_VERSION = RESULT_CACHE_VERSION
 
 
 def cache_dir() -> Path:

@@ -260,7 +260,9 @@ def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
     for name, ok, detail in checks:
         mark = "ok" if ok else "FAIL"
         style = "green" if ok else "red"
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {name} — {detail}")
+        safe_name = escape(_safe_diagnostic(name))
+        safe_detail = escape(_safe_diagnostic(detail))
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {safe_name} \N{EM DASH} {safe_detail}")
 
 
 def doctor_client(client: str) -> None:
@@ -561,7 +563,9 @@ def _doctor_render(console: Any, checks: list[DoctorCheck]) -> bool:
     for name, status, detail in checks:
         mark = {"ok": "ok", "warn": "WARN", "fail": "FAIL"}[status]
         style = {"ok": "green", "warn": "yellow", "fail": "red"}[status]
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {name} — {detail}")
+        safe_name = escape(_safe_diagnostic(name))
+        safe_detail = escape(_safe_diagnostic(detail))
+        console.print(f"  [{style}]{mark:>4}[/{style}]  {safe_name} \N{EM DASH} {safe_detail}")
         if status == "fail":
             has_failures = True
         elif status == "warn":
