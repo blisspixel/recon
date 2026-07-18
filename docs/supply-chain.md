@@ -499,7 +499,9 @@ recovery boundary are documented in [release-process.md](release-process.md).
 The repository also runs supply-chain posture checks outside the release flow:
 
 - OpenSSF Scorecard publishes the public posture badge and SARIF results.
-- CodeQL runs as scheduled SAST and can also be run on demand.
+- CodeQL runs on pull requests targeting `main`, on a weekly schedule, and on
+  demand. The pull-request event supplies pre-merge analysis; the schedule keeps
+  a full default-branch scan independent of change traffic.
 - ClusterFuzzLite runs a PR-scoped Atheris fuzzer over recon's local parser,
   normalization, cache deserialization, and formatter-serialization boundaries.
   The workflow is read-only, SHA-pinned, and bounded to 180 seconds of fuzzing
@@ -552,19 +554,25 @@ The repository also runs supply-chain posture checks outside the release flow:
 - `.github/CODEOWNERS` routes all repository paths to the maintainer account so
   external pull requests have a clear review owner.
 
-The 2026-07-13 Scorecard recheck for the exact v2.5.7 `HEAD` commit reports
-score `8.3`, with SAST and the other measured code-owned controls at `10`. Remote
-release readiness requires an overall score of at least `8.0` and requires SAST
-to remain at `10`; the dated `8.3` value is a snapshot, not a permanent promise.
+The 2026-07-18 Scorecard recheck for the exact v2.6.4 `HEAD` commit reports
+score `8.2`. The non-SAST measured code-owned controls are at `10`; SAST is `7`
+because all 17 sampled merged pull requests predate PR-scoped CodeQL. Remote
+release readiness requires an overall score of at least `8.0`, keeps the other
+required code-owned controls at `10`, and enforces the current SAST floor of
+`7`. New pull requests targeting `main` run CodeQL, and the weekly and manual
+default-branch scans remain. The SAST requirement can return to `10` only after
+the public API reports successful supported SAST checks for every merged pull
+request in its sampled window. The dated `8.2` value is a snapshot, not a
+permanent promise.
 The June 28 review found one code-owned gap and several repository-process gaps.
 The code-owned gap was an
 unpinned installer download-and-run path; the installer now refuses to execute
 remote tool installers. The Scorecard SARIF upload step also uses CodeQL Action
 v4 to avoid the scheduled v3 deprecation. Live repository settings now enforce
 full-SHA GitHub Action pins, enable dependency security updates, and protect
-`main` with an active repository ruleset that requires the CI matrix, gitleaks,
-and Scorecard checks, blocks deletion and non-fast-forward updates, and requires
-linear history.
+`main` with an active repository ruleset that requires the CI matrix and
+gitleaks, blocks deletion and non-fast-forward updates, and requires linear
+history.
 
 The remaining Scorecard limits are intentional or process-bound:
 

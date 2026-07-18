@@ -6,25 +6,33 @@ while the Best Practices Badge is an account-backed project questionnaire.
 
 ## Current Snapshot
 
-- Date checked: 2026-07-13.
+- Date checked: 2026-07-18.
 - Live API state at check time: public API rechecked for the exact `HEAD` commit
-  that published v2.5.7 after CI and publication completed.
+  that published v2.6.4 after CI and publication completed.
 - Scorecard version: `v5.3.0`.
-- Score: `8.3`.
+- Score: `8.2`.
 - Public source: `https://api.securityscorecards.dev/projects/github.com/blisspixel/recon`.
 
 The public API is authoritative for the exact commit behind the badge. Docs-only
 commits can move `main` after a snapshot is written, so this file records the
 reviewed posture and the live API URL rather than treating a commit hash as a
 durable status promise. Remote release readiness queries that API for `HEAD`,
-requires an overall score of at least `8.0`, and fails if SAST or any other
-required code-owned control regresses below `10`.
+requires an overall score of at least `8.0`, keeps the non-SAST required
+code-owned controls at `10`, and requires the documented SAST floor of `7`.
 
-The measured code-owned controls are green: dangerous workflow patterns,
-dependency update automation, token permissions, pinned dependencies, binary
-artifacts, security policy, known vulnerabilities, packaging, fuzzing, signed
-releases, license, and SAST all score `10`. The exact overall score remains a
-dated external snapshot; the enforced `8.0` floor is the regression policy.
+The measured non-SAST code-owned controls are green: dangerous workflow
+patterns, dependency update automation, token permissions, pinned dependencies,
+binary artifacts, security policy, known vulnerabilities, packaging, fuzzing,
+signed releases, and license all score `10`. CI-Tests also scores `10` because
+all 17 sampled merged pull requests ran CI. SAST scores `7`: CodeQL is detected,
+but the same 17 pull-request heads predate PR-scoped CodeQL and have no supported
+SAST check. A scheduled or manual scan of `main` does not rewrite that history.
+New pull requests targeting `main` now run CodeQL while the weekly and manual
+main analysis remains available. The SAST gate can return to `10` only after the
+public API reports successful supported SAST checks for every merged pull
+request in its sampled window. The exact overall score remains a dated external
+snapshot; the enforced `8.0` overall and `7` SAST floors are the current
+regression policy.
 
 The remaining low or unknown checks are process-bound:
 
@@ -32,7 +40,6 @@ The remaining low or unknown checks are process-bound:
 |---|---|---|
 | `Branch-Protection` | `main` is protected, but administrator bypass remains and PRs are not mandatory. | Keep the current required-check ruleset for clean-main work. If the project moves to a multi-maintainer flow, require PRs, remove administrator bypass, and require CODEOWNERS review. |
 | `Code-Review` | No reviewed pull-request history exists for Scorecard to evaluate. | Use normal reviewed PRs for non-urgent work when there is another qualified reviewer. Do not manufacture review history. |
-| `CI-Tests` | Scorecard did not find a pull request to inspect. | It will become meaningful once normal PRs exist. The local gate and `main` CI are already mandatory for direct mainline work. |
 | `CII-Best-Practices` | No OpenSSF Best Practices Badge project is linked. | Use [openssf-badge-readiness.md](openssf-badge-readiness.md) to answer the questionnaire from committed evidence; link a badge only after the real project page exists and the answers match the repository. |
 | `Contributors` | Scorecard sees no contributor diversity across organizations. | Accept this for a single-maintainer project. Do not add artificial contributors. |
 

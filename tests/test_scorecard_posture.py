@@ -167,7 +167,7 @@ def test_release_workflow_exports_scorecard_recognized_provenance() -> None:
     assert "provenance/*" in release_text
 
 
-def test_codeql_workflow_is_scheduled_and_least_privilege() -> None:
+def test_codeql_workflow_is_pr_scoped_scheduled_and_least_privilege() -> None:
     workflow = _load_yaml(".github/workflows/codeql.yml")
     triggers = _workflow_on(workflow)
     job = workflow["jobs"]["analyze"]
@@ -175,6 +175,7 @@ def test_codeql_workflow_is_scheduled_and_least_privilege() -> None:
 
     assert "schedule" in triggers
     assert "workflow_dispatch" in triggers
+    assert triggers["pull_request"] == {"branches": ["main"]}
     assert "push" not in triggers
     assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
     assert job["permissions"] == _ALLOWED_ELEVATED_JOB_PERMISSIONS[".github/workflows/codeql.yml"]["analyze"]
@@ -327,14 +328,17 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
     text = " ".join((_ROOT / "docs" / "openssf-posture.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-07-13",
-        "Score: `8.3`",
-        "public API rechecked for the exact `HEAD` commit that published v2.5.7",
+        "2026-07-18",
+        "Score: `8.2`",
+        "public API rechecked for the exact `HEAD` commit that published v2.6.4",
         "live API URL",
         "Remote release readiness queries that API for `HEAD`",
         "overall score of at least `8.0`",
-        "SAST or any other required code-owned control regresses below `10`",
-        "license, and SAST all score `10`",
+        "requires the documented SAST floor of `7`",
+        "all 17 sampled merged pull requests ran CI",
+        "same 17 pull-request heads predate PR-scoped CodeQL",
+        "New pull requests targeting `main` now run CodeQL",
+        "public API reports successful supported SAST checks for every merged pull request",
         "OpenSSF Best Practices Badge is claimed",
         "openssf-badge-readiness.md",
         "must not be added as a placeholder",
@@ -355,9 +359,12 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
     text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-07-13 Scorecard recheck for the exact v2.5.7 `HEAD` commit reports score `8.3`",
-        "SAST and the other measured code-owned controls at `10`",
+        "2026-07-18 Scorecard recheck for the exact v2.6.4 `HEAD` commit reports score `8.2`",
+        "non-SAST measured code-owned controls are at `10`; SAST is `7`",
+        "all 17 sampled merged pull requests predate PR-scoped CodeQL",
         "overall score of at least `8.0`",
+        "enforces the current SAST floor of `7`",
+        "public API reports successful supported SAST checks for every merged pull request",
         "June 28 review found one code-owned gap",
         "remaining Scorecard limits are intentional or process-bound",
         "public Scorecard API freshness for `HEAD`",

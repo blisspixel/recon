@@ -250,3 +250,10 @@ def test_consumer_recipe_matches_exact_legacy_attestation_exceptions() -> None:
         assert f'if ($Version -eq "{version}")' in text
         assert f"LEGACY_SBOM_ATTESTATION_SHA={digest}" in text
         assert f'$LegacySbomAttestationSha = "{digest}"' in text
+
+
+def test_root_roadmap_preserves_exact_legacy_attestation_exception() -> None:
+    text = (ROOT / "ROADMAP.md").read_text(encoding="utf-8")
+
+    for version in release_readiness._LEGACY_SBOM_ATTESTATION_EXCEPTIONS:
+        assert f"digest-bound v{version} historical exception" in text

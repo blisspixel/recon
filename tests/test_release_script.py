@@ -183,6 +183,20 @@ def test_release_surface_generation_updates_installers_and_artifacts(
     ]
 
 
+def test_release_version_replacement_rejects_ambiguous_historical_reference(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    document = tmp_path / "ROADMAP.md"
+    original = "Current status: v2.6.4.\nHistorical exception: v2.6.4.\n"
+    document.write_text(original, encoding="utf-8")
+    monkeypatch.setattr(release, "ROOT", tmp_path)
+
+    with pytest.raises(release.ReleaseError, match="exactly one occurrence"):
+        release._replace_required(document, "2.6.4", "2.6.5")
+
+    assert document.read_text(encoding="utf-8") == original
+
+
 def test_release_transaction_owns_both_installer_helpers() -> None:
     owned = set(release._release_mutation_paths())
 
