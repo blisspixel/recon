@@ -17,7 +17,7 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- Release metadata is synchronized on v2.6.4. The remote release-readiness
+- Release metadata is synchronized on v2.6.5. The remote release-readiness
   check is the authority for whether GitHub, PyPI, and CI are aligned.
 - Local release readiness must pass before tagging; remote release readiness
   must pass for the same commit after publication.
