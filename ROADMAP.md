@@ -25,6 +25,12 @@ follow-up work. The first bounded internal claim contract now evaluates the exac
 DMARC `p=reject` observation and drives the opt-in cohort schema 2.2 DMARC
 denominator while schema 2.1 remains the default.
 
+Unreleased maintenance also refuses HTTP destinations whose hostname or DNS
+result cannot be validated, confines default MCP logging to the running server,
+bounds fatal MCP stderr, keeps doctor checks useful across ordinary HTTP
+request failures, labels CT cache overview freshness, and completes narrow root
+and welcome help.
+
 The catalog-quality track uses deduplicated private rounds with distinct rank,
 regional, vertical, vendor-seed, or drift questions. It must account for every
 bounded record path as measured, partial, unavailable, or unmeasured before

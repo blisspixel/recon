@@ -140,6 +140,67 @@ class TestDoctorCommandFailures:
 
         assert "recon" in result.stdout.lower()
 
+    @pytest.mark.parametrize(
+        "request_error",
+        [
+            httpx.RemoteProtocolError("synthetic protocol failure"),
+            httpx.ProxyError("synthetic proxy failure"),
+        ],
+    )
+    def test_doctor_reports_request_errors_and_continues(
+        self,
+        fake_httpx_client,
+        request_error: httpx.RequestError,
+    ) -> None:
+        fake_dns = MagicMock()
+        fake_dns.resolve.return_value = [MagicMock()]
+        fake_httpx_client.get = AsyncMock(
+            side_effect=[
+                request_error,
+                _ok_response(200),
+                _ok_response(200),
+            ]
+        )
+        fake_httpx_client.post = AsyncMock(return_value=_ok_response(200))
+
+        with (
+            patch("httpx.AsyncClient", return_value=fake_httpx_client),
+            patch("dns.resolver.resolve", fake_dns.resolve),
+        ):
+            result = runner.invoke(app, ["doctor"])
+
+        assert result.exit_code == 1
+        assert not isinstance(result.exception, httpx.RequestError)
+        assert "FAIL  OIDC discovery" in result.output
+        assert "ok  GetUserRealm" in result.output
+        assert "ok  Autodiscover" in result.output
+        assert "ok  DNS resolution" in result.output
+        assert "ok  crt.sh (cert transparency)" in result.output
+        assert "Some checks failed. Lookups may be incomplete." in result.output
+
+    def test_doctor_treats_crtsh_request_error_as_warning(self, fake_httpx_client) -> None:
+        fake_dns = MagicMock()
+        fake_dns.resolve.return_value = [MagicMock()]
+        fake_httpx_client.get = AsyncMock(
+            side_effect=[
+                _ok_response(200),
+                _ok_response(200),
+                httpx.RemoteProtocolError("synthetic CT protocol failure"),
+            ]
+        )
+        fake_httpx_client.post = AsyncMock(return_value=_ok_response(200))
+
+        with (
+            patch("httpx.AsyncClient", return_value=fake_httpx_client),
+            patch("dns.resolver.resolve", fake_dns.resolve),
+        ):
+            result = runner.invoke(app, ["doctor"])
+
+        assert result.exit_code == 0
+        assert not isinstance(result.exception, httpx.RequestError)
+        assert "WARN  crt.sh (cert transparency)" in result.output
+        assert "Core checks passed. Optional enrichment sources are degraded." in result.output
+
     def test_doctor_treats_crtsh_http_error_as_warning(self, fake_httpx_client) -> None:
         """crt.sh is optional enrichment; outage should not fail doctor."""
         fake_dns = MagicMock()

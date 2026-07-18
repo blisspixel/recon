@@ -11,6 +11,8 @@ repeatedly, and a bounded per-domain rate limiter to prevent abuse.
 from __future__ import annotations
 
 import logging
+from collections.abc import Generator
+from contextlib import contextmanager
 
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_VALIDATION
 from recon_tool.server import app as server_app
@@ -21,18 +23,41 @@ from recon_tool.server import lookup as server_lookup
 from recon_tool.server import posture as server_posture
 from recon_tool.server import runtime as _server_runtime
 from recon_tool.server.app import mcp
-from recon_tool.validator import validate_domain
+from recon_tool.validator import strip_control_chars, validate_domain
 
 logger = logging.getLogger("recon")
 
-# Configure the recon logger with a default handler so structured logs
-# are actually visible. Without this, log messages are silently dropped
-# unless the consumer configures the logger externally.
-if not logger.handlers:
-    _handler = logging.StreamHandler()
-    _handler.setFormatter(logging.Formatter("%(message)s"))
-    logger.addHandler(_handler)
+_MAX_FATAL_DETAIL = 500
+
+
+@contextmanager
+def _runtime_logging() -> Generator[None]:
+    """Provide default MCP stderr logging only while the server is running."""
+    if logger.hasHandlers():
+        yield
+        return
+
+    previous_level = logger.level
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter("%(message)s"))
+    logger.addHandler(handler)
     logger.setLevel(logging.INFO)
+    try:
+        yield
+    finally:
+        logger.removeHandler(handler)
+        handler.close()
+        logger.setLevel(previous_level)
+
+
+def _fatal_detail(exc: BaseException) -> str:
+    """Return one bounded terminal-safe detail for an unexpected MCP exit."""
+    raw = str(exc)
+    single_line = " ".join(raw.splitlines())
+    detail = strip_control_chars(single_line, max_len=_MAX_FATAL_DETAIL) or "no detail provided"
+    if len(raw) > _MAX_FATAL_DETAIL:
+        detail = f"{detail} [truncated]"
+    return detail
 
 
 # Re-export facade: the FastMCP instance and instructions live in
@@ -385,22 +410,23 @@ def main() -> None:
 
     _print_mcp_banner()
 
-    try:
-        mcp.run()
-    except KeyboardInterrupt:
-        sys.stderr.write("\nMCP server stopped.\n")
-        sys.stderr.flush()
-    except (BrokenPipeError, ConnectionResetError):
-        # Client disconnected — this is a clean shutdown from the
-        # stdio transport's perspective, not an error worth raising.
-        sys.stderr.write("\nMCP client disconnected — server stopped.\n")
-        sys.stderr.flush()
-    except Exception as exc:
-        # Any other unexpected failure: log a one-line summary, not
-        # a traceback. Users see a calm error, not a Python scream.
-        sys.stderr.write(f"\nMCP server exited unexpectedly: {exc}\n")
-        sys.stderr.flush()
-        raise SystemExit(EXIT_ERROR) from exc
+    with _runtime_logging():
+        try:
+            mcp.run()
+        except KeyboardInterrupt:
+            sys.stderr.write("\nMCP server stopped.\n")
+            sys.stderr.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            # Client disconnected. This is a clean shutdown from the
+            # stdio transport's perspective, not an error worth raising.
+            sys.stderr.write("\nMCP client disconnected. Server stopped.\n")
+            sys.stderr.flush()
+        except Exception as exc:
+            # Any other unexpected failure: retain one bounded line without
+            # allowing exception text to control the terminal.
+            sys.stderr.write(f"\nMCP server exited unexpectedly ({type(exc).__name__}): {_fatal_detail(exc)}\n")
+            sys.stderr.flush()
+            raise SystemExit(EXIT_ERROR) from exc
 
 
 # ── Bayesian fusion MCP tools (v1.9, stable v2.0+) ─────────────────────

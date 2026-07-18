@@ -140,10 +140,11 @@ class TestSubprocessEntryPoint:
             f"Typer help invocation must return exit code 0 in the subprocess; got: {result.stdout!r}"
         )
 
-    def test_narrow_help_preserves_complete_option_tokens(self) -> None:
+    @pytest.mark.parametrize("columns", [40, 60, 69])
+    def test_narrow_help_preserves_complete_option_tokens(self, columns: int) -> None:
         env = {
             **os.environ,
-            "COLUMNS": "60",
+            "COLUMNS": str(columns),
             "NO_COLOR": "1",
             "PYTHONUTF8": "1",
             "TERM": "dumb",
@@ -162,7 +163,72 @@ class TestSubprocessEntryPoint:
         for token in ("--include-unclassified", "--confidence-mode", "--explain-dag-format", "--direct-probes"):
             assert token in result.stdout
         assert "…" not in result.stdout
-        assert max(len(line) for line in result.stdout.splitlines()) <= 60
+        assert "[dim]" not in result.stdout
+        assert "[/dim]" not in result.stdout
+        assert max(len(line) for line in result.stdout.splitlines()) <= columns
+
+    @pytest.mark.parametrize("columns", [40, 60, 69])
+    def test_narrow_root_help_preserves_complete_command_summaries(self, columns: int) -> None:
+        env = {
+            **os.environ,
+            "COLUMNS": str(columns),
+            "NO_COLOR": "1",
+            "PYTHONUTF8": "1",
+            "TERM": "dumb",
+        }
+        result = subprocess.run(
+            [sys.executable, "-m", "recon_tool", "--help"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+            check=False,
+            env=env,
+        )
+
+        assert result.returncode == 0, result.stderr
+        collapsed = " ".join(result.stdout.split())
+        for summary in (
+            "lookup Look up a domain.",
+            "batch Look up domains in a file.",
+            "discover Find fingerprint candidates.",
+            "doctor Check source health.",
+            "update Check for updates.",
+            "delta Compare cached state.",
+            "mcp Run or configure MCP.",
+            "cache Manage local caches.",
+            "fingerprints Browse fingerprints.",
+            "signals Browse signals.",
+        ):
+            assert summary in collapsed
+        assert max(len(line) for line in result.stdout.splitlines()) <= columns
+
+    @pytest.mark.parametrize("columns", [40, 60])
+    def test_narrow_welcome_keeps_descriptions_indented(self, columns: int) -> None:
+        env = {
+            **os.environ,
+            "COLUMNS": str(columns),
+            "NO_COLOR": "1",
+            "PYTHONUTF8": "1",
+            "TERM": "dumb",
+        }
+        result = subprocess.run(
+            [sys.executable, "-m", "recon_tool"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+            check=False,
+            env=env,
+        )
+
+        assert result.returncode == 0, result.stderr
+        usage = result.stdout.split("Usage", 1)[1].split("Common examples", 1)[0]
+        assert "→" not in usage
+        assert "  recon <domain>\n    clean summary (recommended)" in usage
+        assert "    linear output for screen readers" in usage
+        assert all(not line.endswith("→") for line in usage.splitlines())
+        assert max(len(line) for line in result.stdout.splitlines()) <= columns
 
 
 class TestCliExportsAreImportable:
