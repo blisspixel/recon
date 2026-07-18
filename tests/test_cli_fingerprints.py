@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 from typer.testing import CliRunner
 
+import recon_tool.cli.fingerprints as fingerprint_cli
 from recon_tool.cli import app
 from recon_tool.cli.fingerprints import HUMAN_SEARCH_PREVIEW_LIMIT, _public_detection_description
 from recon_tool.exit_codes import EXIT_VALIDATION
@@ -130,6 +131,19 @@ def test_list_filter_with_no_matches_exits_cleanly() -> None:
 
     assert result.exit_code == 0
     assert "No fingerprints match those filters" in result.output
+
+
+@pytest.mark.parametrize(
+    ("option", "message"),
+    [("--category", "category filter cannot be empty"), ("--type", "detection type filter cannot be empty")],
+)
+@pytest.mark.parametrize("value", ["", "   "])
+def test_list_rejects_explicitly_empty_filters(option: str, message: str, value: str) -> None:
+    result = runner.invoke(app, ["fingerprints", "list", option, value])
+
+    assert result.exit_code == EXIT_VALIDATION
+    assert message in result.output.lower()
+    assert "catalog record" not in result.output
 
 
 def test_list_filtered_text_prints_full_rows() -> None:
@@ -595,9 +609,48 @@ def test_fingerprints_test_json_is_machine_readable(
     assert result.exit_code == 0, result.output
     payload = json.loads(result.stdout)
     assert payload == [
-        {"domain": "hit.example", "matched": True, "detail": "TXT:[bold]cycle31\x1b[31m"},
-        {"domain": "miss.example", "matched": False, "detail": ""},
-        {"domain": "error.example", "matched": False, "detail": "error: resolver failure"},
+        {
+            "domain": "hit.example",
+            "status": "matched",
+            "matched": True,
+            "detail": "TXT:[bold]cycle31\x1b[31m",
+        },
+        {"domain": "miss.example", "status": "not_matched", "matched": False, "detail": ""},
+        {
+            "domain": "error.example",
+            "status": "error",
+            "matched": False,
+            "detail": "error: resolver failure",
+        },
+    ]
+
+
+def test_fingerprints_test_all_lookup_errors_retain_valid_invocation_exit(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus = tmp_path / "corpus.txt"
+    corpus.write_text("error.example\n", encoding="utf-8")
+
+    async def fail_resolution(domain: str, timeout: float):
+        raise RuntimeError(f"reserved failure for {domain} after {timeout:g} seconds")
+
+    import recon_tool.resolver as resolver
+
+    monkeypatch.setattr(resolver, "resolve_tenant", fail_resolution)
+    result = runner.invoke(
+        app,
+        ["fingerprints", "test", _sample_fingerprint().slug, "--corpus", str(corpus), "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout) == [
+        {
+            "domain": "error.example",
+            "status": "error",
+            "matched": False,
+            "detail": "error: reserved failure for error.example after 60 seconds",
+        }
     ]
 
 
@@ -643,6 +696,163 @@ def test_fingerprints_test_text_mode_escapes_match_details(
     assert "1 of 2 matched" in plain_output
     assert "\x1b[31m" not in result.output
     assert "recon fingerprints show" in plain_output
+
+
+def test_fingerprints_test_text_separates_errors_from_misses(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    slug = _sample_fingerprint().slug
+    corpus = tmp_path / "corpus.txt"
+    corpus.write_text("miss.example\nerror.example\n", encoding="utf-8")
+
+    async def fake_resolve_tenant(domain: str, timeout: float):
+        if domain == "error.example":
+            raise RuntimeError("resolver failure\x1b[31m")
+        return (
+            TenantInfo(
+                tenant_id=None,
+                display_name=domain,
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.LOW,
+            ),
+            None,
+        )
+
+    import recon_tool.resolver as resolver
+
+    monkeypatch.setattr(resolver, "resolve_tenant", fake_resolve_tenant)
+
+    result = runner.invoke(app, ["fingerprints", "test", slug, "--corpus", str(corpus)])
+
+    assert result.exit_code == 0, result.output
+    plain_output = _plain(result.output)
+    assert "ERROR  error.example" in plain_output
+    assert "0 of 2 matched" in plain_output
+    assert "1 did not match; 1 lookup error" in plain_output
+    assert "\x1b[31m" not in result.output
+
+
+def test_fingerprints_test_rejects_empty_corpus_before_resolution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus = tmp_path / "corpus.txt"
+    corpus.write_text("# comments only\n\n", encoding="utf-8")
+
+    async def reject_resolution(domain: str, timeout: float):
+        pytest.fail(f"unexpected resolution of {domain} with timeout {timeout}")
+
+    import recon_tool.resolver as resolver
+
+    monkeypatch.setattr(resolver, "resolve_tenant", reject_resolution)
+    result = runner.invoke(app, ["fingerprints", "test", _sample_fingerprint().slug, "--corpus", str(corpus)])
+
+    assert result.exit_code == EXIT_VALIDATION
+    assert "Corpus contains no domains" in result.output
+
+
+@pytest.mark.parametrize(
+    ("constant", "contents", "message"),
+    [
+        ("_MAX_CORPUS_FILE_BYTES", b"a.invalid\n", "byte limit"),
+        ("_MAX_CORPUS_LINE_BYTES", b"long-domain.invalid\n", "line 1"),
+        ("_MAX_CORPUS_DOMAINS", b"a.invalid\nb.invalid\n", "domain limit"),
+    ],
+)
+def test_fingerprints_test_rejects_bounded_corpus_limits_before_resolution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    constant: str,
+    contents: bytes,
+    message: str,
+) -> None:
+    corpus = tmp_path / "corpus.txt"
+    corpus.write_bytes(contents)
+    monkeypatch.setattr(fingerprint_cli, constant, 1)
+
+    async def reject_resolution(domain: str, timeout: float):
+        pytest.fail(f"unexpected resolution of {domain} with timeout {timeout}")
+
+    import recon_tool.resolver as resolver
+
+    monkeypatch.setattr(resolver, "resolve_tenant", reject_resolution)
+    result = runner.invoke(app, ["fingerprints", "test", _sample_fingerprint().slug, "--corpus", str(corpus)])
+
+    assert result.exit_code == EXIT_VALIDATION
+    assert message in result.output
+
+
+def test_fingerprints_test_rejects_non_utf8_corpus_before_resolution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus = tmp_path / "corpus.txt"
+    corpus.write_bytes(b"\xff\xfe")
+
+    async def reject_resolution(domain: str, timeout: float):
+        pytest.fail(f"unexpected resolution of {domain} with timeout {timeout}")
+
+    import recon_tool.resolver as resolver
+
+    monkeypatch.setattr(resolver, "resolve_tenant", reject_resolution)
+    result = runner.invoke(app, ["fingerprints", "test", _sample_fingerprint().slug, "--corpus", str(corpus)])
+
+    assert result.exit_code == EXIT_VALIDATION
+    assert "valid UTF-8" in result.output
+
+
+def test_fingerprints_test_rejects_malformed_row_before_any_resolution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    corpus = tmp_path / "corpus.txt"
+    corpus.write_text("valid.invalid\nmalformed;row\n", encoding="utf-8")
+
+    async def reject_resolution(domain: str, timeout: float):
+        pytest.fail(f"unexpected resolution of {domain} with timeout {timeout}")
+
+    import recon_tool.resolver as resolver
+
+    monkeypatch.setattr(resolver, "resolve_tenant", reject_resolution)
+    result = runner.invoke(app, ["fingerprints", "test", _sample_fingerprint().slug, "--corpus", str(corpus)])
+
+    assert result.exit_code == EXIT_VALIDATION
+    assert "Corpus line 2 has invalid domain format" in result.output
+    assert "malformed;row" not in result.output
+
+
+def test_fingerprints_test_normalizes_and_deduplicates_before_resolution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    slug = _sample_fingerprint().slug
+    corpus = tmp_path / "corpus.txt"
+    corpus.write_text("ALPHA.INVALID\nhttps://www.alpha.invalid/path\n", encoding="utf-8")
+    resolved: list[str] = []
+
+    async def fake_resolve_tenant(domain: str, timeout: float):
+        resolved.append(domain)
+        return (
+            TenantInfo(
+                tenant_id=None,
+                display_name=domain,
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.LOW,
+            ),
+            None,
+        )
+
+    import recon_tool.resolver as resolver
+
+    monkeypatch.setattr(resolver, "resolve_tenant", fake_resolve_tenant)
+    result = runner.invoke(app, ["fingerprints", "test", slug, "--corpus", str(corpus), "--json"])
+
+    assert result.exit_code == 0, result.output
+    assert resolved == ["alpha.invalid"]
+    assert [row["domain"] for row in json.loads(result.stdout)] == ["alpha.invalid"]
 
 
 def test_fingerprints_check_missing_path_exits_validation(tmp_path: Path) -> None:

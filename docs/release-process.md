@@ -280,7 +280,7 @@ if ! test -z "${WORKTREE_STATUS}"; then
   recovery_fail "a clean worktree"
 fi
 HEAD_SHA="$(git rev-parse HEAD)" || recovery_fail "git to resolve HEAD"
-TAG_SHA="$(git rev-list -n 1 "refs/tags/v${VERSION}" 2>/dev/null || true)"
+TAG_SHA="$(git rev-list -n 1 "refs/tags/v${VERSION}" 2>/dev/null)" || recovery_fail "git to resolve the local tag v${VERSION}"
 if ! test -n "${TAG_SHA}" || ! test "${HEAD_SHA}" = "${TAG_SHA}"; then
   recovery_fail "the local tag v${VERSION} to resolve to HEAD"
 fi

@@ -143,11 +143,20 @@ recon batch domains.txt --json                 # batch JSON array
 recon batch domains.txt --ndjson               # one record per line
 recon batch domains.txt --summary              # aggregate-only cohort summary
 recon delta contoso.com                        # diff against cached snapshot
+recon cache show                               # bounded payload-free cache overview
+recon cache show --all                         # inspect every completed JSON cache file
 recon cache show mail.contoso.com --exact      # inspect literal-host result and CT cache metadata
 recon cache clear mail.contoso.com --exact     # clear literal-host CT and result cache keys
 recon mcp install --client=cursor              # wire MCP into a client
 recon mcp doctor                               # live MCP handshake check
 ```
+
+The default cache overview enumerates filenames but opens at most the
+lexicographically first 100 result files and 100 CT files. It reports exact
+file and uninspected counts; `--all` opts into complete JSON payload
+inspection. Cache-writer-shaped interrupted-write artifacts are counted
+without reading their payload, make the overview exit 4, and are removed by the confirmed
+`recon cache clear --all` workflow.
 
 These list, search, and show catalog commands are local and make no network
 requests:
@@ -173,9 +182,11 @@ marks values truncated after 1,024 characters.
 
 At terminal widths below 70 columns, command help automatically switches to a
 complete linear layout so long option names and command summaries remain
-visible without source markup. `--plain` is the linear view for a standard
-single-domain lookup; batch, delta, chain, compare, exposure, and gaps reports
-keep their mode-specific formats.
+visible without source markup. The no-argument welcome also switches to
+vertical command descriptions whenever an aligned row would not fit, including
+at ordinary widths. `--plain` is the linear view for a standard single-domain
+lookup; batch, delta, chain, compare, exposure, and gaps reports keep their
+mode-specific formats.
 
 Built-in posture profiles: `fintech`, `healthcare`, `saas-b2b`,
 `high-value-target`, `public-sector`, and `higher-ed`. Custom profiles live in

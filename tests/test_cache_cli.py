@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import io
 import logging
 import os
 import time
@@ -10,12 +11,14 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from rich.console import Console
 from typer.testing import CliRunner
 
 from recon_tool.cache import cache_dir, cache_put
 from recon_tool.cli import app
 from recon_tool.ct_cache import ct_cache_put
 from recon_tool.exit_codes import EXIT_INTERNAL
+from recon_tool.formatter import set_console
 from recon_tool.models import ConfidenceLevel, TenantInfo
 
 runner = CliRunner()
@@ -213,6 +216,146 @@ class TestCacheShow:
         assert "result-only.com" in result.output
         assert "CT cache (1 entry)" in result.output
         assert "ct-only.com" in result.output
+
+    def test_show_default_is_bounded_and_all_is_explicit(
+        self,
+        tmp_cache: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        domains = ["a.invalid", "b.invalid", "c.invalid"]
+        for domain in domains:
+            cache_put(
+                domain,
+                TenantInfo(
+                    tenant_id=None,
+                    display_name=domain,
+                    default_domain=domain,
+                    queried_domain=domain,
+                    confidence=ConfidenceLevel.LOW,
+                ),
+            )
+            ct_cache_put(domain, [f"x.{domain}"], None, "reserved-fixture-provider")
+        monkeypatch.setattr("recon_tool.cache_values.DEFAULT_CACHE_OVERVIEW_LIMIT", 2)
+
+        import recon_tool.cache_inspection as result_inspection
+        import recon_tool.ct_cache as ct_cache_module
+
+        with (
+            patch.object(
+                result_inspection,
+                "inspect_result_cache",
+                wraps=result_inspection.inspect_result_cache,
+            ) as result_spy,
+            patch.object(
+                ct_cache_module,
+                "_ct_cache_inspect",
+                wraps=ct_cache_module._ct_cache_inspect,
+            ) as ct_spy,
+        ):
+            bounded = runner.invoke(app, ["cache", "show"])
+
+        assert bounded.exit_code == 0, bounded.output
+        assert result_spy.call_count == 2
+        assert ct_spy.call_count == 2
+        assert bounded.output.count("inspected 2 of 3 files; 1 not inspected") == 2
+        assert "recon cache show --all" in bounded.output
+        assert "c.invalid" not in bounded.output
+
+        complete = runner.invoke(app, ["cache", "show", "--all"])
+
+        assert complete.exit_code == 0, complete.output
+        assert all(domain in complete.output for domain in domains)
+        assert "Overview limit" not in complete.output
+
+    def test_show_all_rejects_domain_combination(self, tmp_cache: Path) -> None:
+        result = runner.invoke(app, ["cache", "show", "example.invalid", "--all"])
+
+        assert result.exit_code == 2
+        assert "--all cannot be combined with a domain" in result.output
+
+    def test_show_narrow_rows_keep_fields_associated(self, tmp_cache: Path) -> None:
+        domain = "narrow.invalid"
+        cache_put(
+            domain,
+            TenantInfo(
+                tenant_id=None,
+                display_name=domain,
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.LOW,
+            ),
+        )
+        ct_cache_put(domain, [f"x.{domain}"], None, "fixture-provider")
+        stream = io.StringIO()
+        set_console(Console(file=stream, width=40, no_color=True, highlight=False))
+
+        result = runner.invoke(app, ["cache", "show"])
+
+        assert result.exit_code == 0, result.output
+        rendered = stream.getvalue()
+        assert rendered.count("    narrow.invalid") == 2
+        assert rendered.count("      Status:") == 2
+        assert "      Provider:" in rendered
+        assert "      Subdomains:" in rendered
+        assert max(len(line) for line in rendered.splitlines()) <= 40
+
+    @pytest.mark.parametrize("width", [70, 80])
+    def test_show_uses_vertical_rows_when_values_do_not_fit(self, tmp_cache: Path, width: int) -> None:
+        domain = f"{'long-cache-key-' + ('x' * 28)}.invalid"
+        provider = "reserved-fixture-provider-with-a-long-readable-name"
+        cache_put(
+            domain,
+            TenantInfo(
+                tenant_id=None,
+                display_name=domain,
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.LOW,
+            ),
+        )
+        ct_cache_put(domain, [f"x.{domain}"], None, provider)
+        stream = io.StringIO()
+        set_console(Console(file=stream, width=width, no_color=True, highlight=False))
+
+        result = runner.invoke(app, ["cache", "show"])
+
+        assert result.exit_code == 0, result.output
+        rendered = stream.getvalue()
+        assert rendered.count(f"    {domain}") == 2
+        assert rendered.count("      Status:") == 2
+        assert "      Provider:" in rendered
+        assert max(len(line) for line in rendered.splitlines()) <= width
+
+    def test_show_and_clear_all_surface_temporary_write_artifacts(self, tmp_cache: Path) -> None:
+        tmp_cache.mkdir(parents=True)
+        cache_dir().mkdir(parents=True)
+        ct_temporary = tmp_cache / "alpha.invalid.abcd1234.tmp"
+        result_temporary = cache_dir() / "beta.invalid.1234abcd.tmp"
+        ct_notes = tmp_cache / "operator-notes.tmp"
+        result_notes = cache_dir() / "operator-notes.tmp"
+        ct_temporary.write_text("PRIVATE CT PAYLOAD", encoding="utf-8")
+        result_temporary.write_text("PRIVATE RESULT PAYLOAD", encoding="utf-8")
+        ct_notes.write_text("keep", encoding="utf-8")
+        result_notes.write_text("keep", encoding="utf-8")
+
+        shown = runner.invoke(app, ["cache", "show"])
+
+        assert shown.exit_code == EXIT_INTERNAL
+        assert shown.output.count("Temporary write artifacts: 1") == 2
+        assert "Temporary cache write artifacts remain" in shown.output
+        assert "PRIVATE" not in shown.output
+        assert ct_temporary.exists()
+        assert result_temporary.exists()
+
+        cleared = runner.invoke(app, ["cache", "clear", "--all", "--force"])
+
+        assert cleared.exit_code == 0, cleared.output
+        assert "Cleared 1 CT temporary write artifact" in cleared.output
+        assert "Cleared 1 result-cache temporary write artifact" in cleared.output
+        assert not ct_temporary.exists()
+        assert not result_temporary.exists()
+        assert ct_notes.read_text(encoding="utf-8") == "keep"
+        assert result_notes.read_text(encoding="utf-8") == "keep"
 
     def test_show_exact_inspects_literal_result_cache_key(self, tmp_cache: Path) -> None:
         domain = "mail.exact-result.com"

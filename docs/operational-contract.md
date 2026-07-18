@@ -178,19 +178,26 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   written before v2.6.1 lack the binding metadata and repopulate on demand.
 - **Cache inspection is metadata-only and failure-aware.** `recon cache show`
   reports both disk layers independently in single-entry and overview modes,
-  including reuse status, age, TTL,
-  timestamps, and file size, plus CT provider and subdomain count. It never
-  renders cached tenant, service, evidence, or raw record fields. Missing files
-  remain a successful `no entry`; an invalid, redirected, unreadable, or
-  rejected entry is `could not inspect`, retains its raw reason only in debug
-  logging, and causes exit 4 after other available metadata is shown. Expired
-  files remain visible but are labeled for refresh instead of reuse.
+  including reuse status, age, TTL, timestamps, and file size, plus CT provider
+  and subdomain count. The default overview enumerates filenames for exact
+  totals while retaining and opening only the lexicographically first 100 JSON
+  files per layer; it reports the exact uninspected count. `--all` explicitly
+  opts into complete payload inspection. It never renders cached tenant,
+  service, evidence, or raw record fields. Missing files remain a successful
+  `no entry`; an invalid, redirected, unreadable, or rejected entry is `could
+  not inspect`, retains its raw reason only in debug logging, and causes exit 4
+  after other available metadata is shown. Expired files remain visible but are
+  labeled for refresh instead of reuse. Cache-writer-shaped `*.tmp` residue is
+  counted without payload inspection and also causes a visible exit 4.
 - **Cache deletion failures remain visible.** The CLI clears CT and result
-  layers independently, reports completed deletions, identifies any layer that
-  failed, and exits 4 after partial work. Missing entries remain a successful
-  no-op. Ordinary output never includes the raw filesystem exception; opt-in
-  debug logging retains it for diagnosis. Existing Python bool and count
-  helpers remain non-raising compatibility surfaces.
+  layers independently, including completed JSON entries and interrupted-write
+  artifacts matching the cache writer's filename shape during confirmed
+  clear-all. Unrelated `*.tmp` files are preserved. The command reports each
+  completed deletion class, identifies any layer that failed, and exits 4
+  after partial work. Missing entries remain a successful no-op. Ordinary
+  output never includes the raw filesystem exception; opt-in debug logging
+  retains it for diagnosis. Existing Python bool and count helpers remain
+  non-raising compatibility surfaces.
 - **Rate-limiter warm starts fail closed.** Persisted state is versioned and
   provider-bound. Oversized, nested, stale, cross-provider, non-finite,
   overflowing, or out-of-range fields are ignored as one invalid snapshot.
