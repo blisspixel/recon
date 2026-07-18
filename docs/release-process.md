@@ -197,12 +197,14 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
    then delegates to the complete `scripts/check.py` gate with added-line text
    hygiene covering the full previous-release-to-tag range. A separate
    hash-pinned runtime requirements export is audited with `pip-audit`.
-3. **build**: after `test`, `uv build` produces and immediately seals the sdist
-   and wheel under `dist/`; main CI separately requires matching hashes across
-   two builds in one resolved job and executes both entry points from one built
+3. **build**: after `test`, exact uv 0.11.17 uses the hash-locked build graph to
+   produce one sdist, constructs one wheel from that exact sdist, and
+   immediately seals both under `dist/`. Main CI runs the same sequence twice,
+   requires matching hashes, and executes both entry points from one built
    wheel.
 4. **package-smoke**: after `build`, downloads the sealed artifact into a
-   separate read-only job and executes both `recon --version` and
+   separate read-only job, requires exactly one tag-matching canonical wheel
+   and sdist, and executes both `recon --version` and
    `python -m recon_tool --version` from the wheel in isolated environments.
 5. **attest**: after `build`, records GitHub artifact attestations for the wheel
    and sdist.

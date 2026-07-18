@@ -108,17 +108,19 @@ rebuild under a matched environment. Full details and the bounded recipe are in
 
 | Mechanism | Proven by |
 |---|---|
-| Same-job deterministic-build check (`SOURCE_DATE_EPOCH`), matching wheel and sdist hashes under one resolved toolchain | `ci.yml` `reproducible-build` job (builds twice, compares hashes) |
-| A sealed wheel executes through both installed entry points in a separate read-only release job before either publication channel can run; main CI repeats the artifact smoke on one reproducible build | `release.yml` `package-smoke` job; `ci.yml` `reproducible-build` job; `tests/test_release_workflow_contract.py::TestPackageSmokeJob`; `tests/test_check_script.py::test_reproducible_build_smokes_built_wheel_entry_points` |
+| Exact uv and a hash-locked Hatchling dependency graph constrain every release-shaped build; the committed constraints are a frozen PEP 735 build-group export and ship in the sdist | `test_build_constraints::test_build_root_and_uv_are_exactly_selected`; `test_build_constraints::test_build_constraints_are_exact_complete_and_hashed`; `test_build_constraints::test_build_constraints_match_frozen_build_group`; `test_build_constraints::test_artifact_workflows_select_required_uv_version`; `test_package_invariants::test_sdist_retains_canonical_fingerprint_sources_and_generated_artifact` |
+| Same-job deterministic-build check (`SOURCE_DATE_EPOCH`) creates the sdist, reconstructs its wheel, repeats the sequence, and matches both hashes | `ci.yml` `reproducible-build` job; `test_check_script::test_reproducible_build_smokes_built_wheel_entry_points` |
+| A sealed release must contain exactly one tag-matching wheel and sdist; the wheel executes through both installed entry points in a separate read-only job before either publication channel can run | `release.yml` `package-smoke` job; `test_release_workflow_contract::TestPackageSmokeJob` |
 | Local release transaction starts from clean current `main`, stages only owned surfaces, creates one reviewed tag, and restores files, index, commit, and owned tag when the mutation transaction fails | `test_release_script::test_release_push_command_names_only_the_reviewed_tag`, `test_release_script::test_release_rollback_restores_files_index_commit_and_owned_tag` |
 | A release tag must match the project version and dated nonempty changelog section, identify the workflow SHA, and be contained in freshly fetched current `main` before the test gate can run | `test_validate_release_tag::test_matching_tag_with_notes_and_main_ancestry_passes`, `test_validate_release_tag::test_mismatched_tag_fails_before_git`, `test_validate_release_tag::test_non_main_tag_fails`, `test_release_workflow::test_release_preflight_blocks_mismatched_or_non_main_tags` |
 | CycloneDX output contains the versioned project root and dependency edge, and both publication channels depend on a valid SBOM | `test_finalize_sbom::test_finalize_sbom_adds_project_root_and_dependency_edge`, `test_finalize_sbom::test_finalize_sbom_rejects_incomplete_payloads`, `test_release_workflow::test_pypi_publication_waits_for_valid_sbom`, `test_release_workflow_contract::TestGithubReleaseAttachesBothArtifacts` |
 | Sigstore-signed PyPI attestations (PEP 740), GitHub build provenance, and OIDC Trusted Publishing | `release.yml` (`attest`, `publish-pypi` jobs); `tests/test_release_workflow_contract.py` |
 
-Residual: the build backend and runner environment are not fully frozen for
-cross-environment byte identity. Full SLSA Level 3 provenance via the reusable
-generator workflow stays deferred as disproportionate for a passive
-single-maintainer tool.
+Residual: the uv and build-backend graph are fixed, but Python, the Ubuntu
+runner image, operating-system libraries, and archive environment are not fully
+content-addressed for universal cross-environment byte identity. Full SLSA
+Level 3 provenance via the reusable generator workflow stays deferred as
+disproportionate for a passive single-maintainer tool.
 
 ## Standing gaps
 

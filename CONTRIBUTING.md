@@ -63,6 +63,10 @@ This doc answers:
 
 ## Quick Start
 
+Repository tasks require uv 0.11.17. `pyproject.toml` rejects another uv
+version so local lock, constraint, test, and release-shaped build behavior
+cannot drift silently.
+
 ```bash
 git clone https://github.com/blisspixel/recon.git
 cd recon
