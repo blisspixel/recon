@@ -50,6 +50,11 @@ a shell.
 For a provenance-first path that verifies the exact GitHub and PyPI artifacts,
 their signed evidence, and their byte parity before optional installation, use
 the [cross-platform consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
+The release workflow in this source revision signs the completed SBOM with the
+distributions and validates any existing release's exact identity and
+expected-only inventory before replacing assets during recovery. The published
+v2.6.3 bundle predates the SBOM subject expansion; the quick path binds that
+single historical exception to its exact commit and still validates the SBOM.
 
 Open a new terminal and run an offline verification of the installed command:
 

@@ -36,8 +36,13 @@ therefore uses these boundaries for the write-up package:
   runs passed, the public Scorecard API reports the exact `HEAD` and the
   expected code-owned controls, and PyPI plus the GitHub Release expose the
   exact wheel, sdist, completed SBOM, and attestation export. It verifies PyPI
-  provenance, binds GitHub evidence to the exported bundle, release workflow,
-  source tag and commit digest, and hosted-runner boundary, and requires both distribution
+  provenance, requires the remote and local current version tag plus `HEAD` to
+  identify one commit, and binds required GitHub subjects to the exported
+  bundle, release workflow, source tag and commit digest, and hosted-runner
+  boundary. Releases
+  produced by the current workflow require the wheel, sdist, and completed
+  SBOM; the exact v2.6.3 historical exception requires its wheel and sdist plus
+  completed SBOM structure validation. The gate also requires both distribution
   channels to expose identical wheel and sdist bytes. This is release-state
   evidence, not empirical result validation.
 
@@ -116,7 +121,8 @@ Before the external write-up can leave draft status:
    `uv run python scripts/release_readiness.py --remote`.
    This includes public Scorecard API freshness, pinned PyPI provenance
    verification, GitHub bundle verification bound to the exact workflow, tag,
-   source digest, and hosted-runner boundary, completed SBOM validation, and
+   source digest, and hosted-runner boundary for the policy-required subjects,
+   completed SBOM structure validation, and
    cross-channel byte parity for the published wheel and sdist.
 9. The public-list sampling boundary must stay linked to
    [public-label-snapshot-decision.md](public-label-snapshot-decision.md):

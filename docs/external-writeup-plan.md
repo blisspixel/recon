@@ -240,7 +240,8 @@ Reasoning:
    public proof smoke, full public proof, the local gate, and release readiness
    after any paper or package change that could move a claim boundary.
 12. **Release gate.** Run focused tests, hygiene checks, `scripts/check.py`, and
-   `scripts/release_readiness.py --remote` after push or publication.
+   local `scripts/release_readiness.py` before a push. Use `--remote` only after
+   the current version is published from that exact checked-out tag.
 13. **Strategic gap audit.** Refresh
    [strategic-gap-audit.md](strategic-gap-audit.md) when current best practices
    or the project state change enough to reorder OpenSSF, artifact archive,

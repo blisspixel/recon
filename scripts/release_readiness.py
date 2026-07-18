@@ -6,10 +6,10 @@ coverage gate wiring, lockfile freshness, docs anchors, citation metadata,
 private-corpus hygiene, supply-chain verification recipe freshness, and local
 commit-message hygiene.
 
-Use ``--remote`` after pushing when you want the same report to include GitHub
-Actions status for the current commit, PyPI publication state, PyPI provenance,
-GitHub Release asset completeness, exact release evidence, cross-channel byte
-parity for the current version, and public Scorecard API freshness.
+Use ``--remote`` only after the current version is published from the exact
+checked-out tag. It adds GitHub Actions status for that commit, PyPI publication
+state and provenance, GitHub Release asset completeness, exact release evidence,
+cross-channel byte parity, and public Scorecard API freshness.
 """
 
 from __future__ import annotations
@@ -28,9 +28,19 @@ from typing import Literal
 
 try:
     from scripts import check_validation_hygiene
+    from scripts.check_release_channel_parity import (
+        ParityError,
+        expected_distribution_names,
+        release_file_urls_from_payload,
+    )
     from scripts.finalize_sbom import SbomError, validate_completed_sbom
 except ImportError:
     import check_validation_hygiene  # type: ignore[no-redef]
+    from check_release_channel_parity import (  # type: ignore[no-redef]
+        ParityError,
+        expected_distribution_names,
+        release_file_urls_from_payload,
+    )
     from finalize_sbom import SbomError, validate_completed_sbom  # type: ignore[no-redef]
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -66,11 +76,14 @@ _REQUIRED_SCORECARD_TENS = (
 )
 _REQUIRED_SCORECARD_MINIMUMS: dict[str, int] = {}
 _PYPI_PACKAGE = "recon-tool"
-_PYPI_RELEASE_URL = f"https://pypi.org/pypi/{_PYPI_PACKAGE}/{{version}}/json"
 _PYPI_ATTESTATION_REPOSITORY = "https://github.com/blisspixel/recon"
 _PYPI_ATTESTATIONS_SPEC = "pypi-attestations==0.0.29"
 _COMMAND_TIMEOUT_SECONDS = 120
 _MAX_RELEASE_ASSET_BYTES = 64 * 1024 * 1024
+_REMOTE_RELEASE_HINT = "not requested; pass --remote on the exact published current-version tag"
+_LEGACY_SBOM_ATTESTATION_EXCEPTIONS = {
+    "2.6.3": "3d5218e00e969874dda40956d677e131d392dbf9",
+}
 _README_FORBIDDEN_FRAGMENTS = (
     "enterprise use, contact",
     "commercial or\nenterprise use",
@@ -202,6 +215,33 @@ def _release_tag_sha(runner: Runner, version: str) -> str:
     if _COMMIT_SHA_RE.fullmatch(sha) is None:
         raise _ReleaseEvidenceError(f"local v{version} tag did not resolve to a full commit SHA")
     return sha
+
+
+def _remote_release_tag_sha(runner: Runner, version: str) -> str:
+    tag_ref = f"refs/tags/v{version}"
+    result = runner(["git", "ls-remote", "--exit-code", "--refs", "origin", tag_ref])
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or f"could not resolve remote v{version} tag"
+        raise _ReleaseEvidenceError(detail)
+    lines = result.stdout.splitlines()
+    if len(lines) != 1:
+        raise _ReleaseEvidenceError(f"remote v{version} tag lookup did not return exactly one ref")
+    fields = lines[0].split()
+    if len(fields) != 2 or fields[1] != tag_ref:
+        raise _ReleaseEvidenceError(f"remote v{version} tag lookup returned an unexpected ref")
+    sha = fields[0].lower()
+    if _COMMIT_SHA_RE.fullmatch(sha) is None:
+        raise _ReleaseEvidenceError(f"remote v{version} tag did not resolve to a full commit SHA")
+    return sha
+
+
+def _release_requires_sbom_attestation(version: str, source_digest: str) -> bool:
+    legacy_digest = _LEGACY_SBOM_ATTESTATION_EXCEPTIONS.get(version)
+    if legacy_digest is None:
+        return True
+    if source_digest != legacy_digest:
+        raise _ReleaseEvidenceError(f"v{version} does not match its exact historical SBOM-attestation exception")
+    return False
 
 
 def _result(name: str, status: Status, detail: str, action: str = "") -> CheckResult:
@@ -738,70 +778,64 @@ def _check_pypi_release(root: Path, runner: Runner) -> CheckResult:
     except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
         return _result("PyPI release", "fail", str(exc))
 
-    payload = _load_pypi_release_payload(runner, version)
-    if isinstance(payload, CheckResult):
-        return payload
-    latest = payload.get("version")
-    if latest != version:
-        return _result("PyPI release", "fail", f"PyPI record is {latest!r}, project is {version}")
-    expected = _expected_distribution_names(version)
-    missing = sorted(set(expected) - _pypi_file_names(payload))
-    if missing:
-        return _result("PyPI release", "fail", "missing file(s): " + ", ".join(missing))
+    urls = _load_pypi_release_urls(runner, version)
+    if isinstance(urls, CheckResult):
+        return urls
     return _result("PyPI release", "pass", f"PyPI reports {_PYPI_PACKAGE} {version} with wheel and sdist")
 
 
-def _load_pypi_release_payload(runner: Runner, version: str) -> dict[str, object] | CheckResult:
-    release_url = _PYPI_RELEASE_URL.format(version=version)
-    script = (
-        "import json, urllib.request; "
-        f"data=json.load(urllib.request.urlopen({release_url!r}, timeout=30)); "
-        "print(json.dumps({'version': data['info']['version'], "
-        "'files': [{'filename': f.get('filename'), 'url': f.get('url')} "
-        "for f in data.get('urls', [])]}))"
+def _check_release_tag_binding(root: Path, runner: Runner) -> CheckResult:
+    try:
+        version = _read_project_version(root)
+        tag_sha = _release_tag_sha(runner, version)
+        remote_tag_sha = _remote_release_tag_sha(runner, version)
+    except (OSError, ValueError, tomllib.TOMLDecodeError, _ReleaseEvidenceError) as exc:
+        return _result("release tag binding", "fail", str(exc))
+    head_result = runner(["git", "rev-parse", "HEAD"])
+    if head_result.returncode != 0:
+        return _result("release tag binding", "fail", head_result.stderr.strip() or "could not read HEAD")
+    head_sha = head_result.stdout.strip().lower()
+    if _COMMIT_SHA_RE.fullmatch(head_sha) is None:
+        return _result("release tag binding", "fail", "HEAD did not resolve to a full commit SHA")
+    if remote_tag_sha != tag_sha:
+        return _result(
+            "release tag binding",
+            "fail",
+            f"remote v{version} resolves to {remote_tag_sha[:12]}, but the local tag resolves to {tag_sha[:12]}",
+        )
+    if tag_sha != head_sha:
+        return _result(
+            "release tag binding",
+            "fail",
+            f"v{version} resolves to {tag_sha[:12]}, but HEAD is {head_sha[:12]}",
+        )
+    return _result("release tag binding", "pass", f"remote and local v{version}, plus HEAD, resolve to {head_sha[:12]}")
+
+
+def _load_pypi_release_urls(runner: Runner, version: str) -> dict[str, str] | CheckResult:
+    script = "\n".join(
+        (
+            "import json",
+            "from scripts.check_release_channel_parity import release_file_urls",
+            f"version = {version!r}",
+            "urls = release_file_urls(version)",
+            "normalized = {'info': {'version': version}, 'urls': [",
+            "    {'filename': filename, 'url': url} for filename, url in urls.items()",
+            "]}",
+            "print(json.dumps(normalized, sort_keys=True))",
+        )
     )
     result = runner([sys.executable, "-c", script])
     if result.returncode != 0:
         return _result("PyPI release", "fail", (result.stderr or result.stdout).strip() or "could not query PyPI")
     try:
-        payload = json.loads(result.stdout)
+        payload: object = json.loads(result.stdout)
     except json.JSONDecodeError as exc:
         return _result("PyPI release", "fail", f"could not parse PyPI JSON: {exc}")
-    if not isinstance(payload, dict):
-        return _result("PyPI release", "fail", "PyPI JSON was not an object")
-    return payload
-
-
-def _expected_distribution_names(version: str) -> tuple[str, str]:
-    return (f"recon_tool-{version}-py3-none-any.whl", f"recon_tool-{version}.tar.gz")
-
-
-def _pypi_file_names(payload: dict[str, object]) -> set[str]:
-    files = payload.get("files")
-    if not isinstance(files, list):
-        return set()
-    names: set[str] = set()
-    for file in files:
-        if isinstance(file, str):
-            names.add(file)
-        elif isinstance(file, dict) and isinstance(file.get("filename"), str):
-            names.add(file["filename"])
-    return names
-
-
-def _pypi_file_urls(payload: dict[str, object]) -> dict[str, str]:
-    files = payload.get("files")
-    if not isinstance(files, list):
-        return {}
-    urls: dict[str, str] = {}
-    for file in files:
-        if (
-            isinstance(file, dict)
-            and isinstance(file.get("filename"), str)
-            and isinstance(file.get("url"), str)
-        ):
-            urls[file["filename"]] = file["url"]
-    return urls
+    try:
+        return release_file_urls_from_payload(version, payload)
+    except ParityError as exc:
+        return _result("PyPI release", "fail", str(exc))
 
 
 def _check_pypi_attestations(root: Path, runner: Runner) -> CheckResult:
@@ -809,14 +843,10 @@ def _check_pypi_attestations(root: Path, runner: Runner) -> CheckResult:
         version = _read_project_version(root)
     except (OSError, ValueError, tomllib.TOMLDecodeError) as exc:
         return _result("PyPI attestations", "fail", str(exc))
-    payload = _load_pypi_release_payload(runner, version)
-    if isinstance(payload, CheckResult):
-        return _result("PyPI attestations", payload.status, payload.detail, payload.action)
-    latest = payload.get("version")
-    if latest != version:
-        return _result("PyPI attestations", "fail", f"PyPI record is {latest!r}, project is {version}")
-    urls = _pypi_file_urls(payload)
-    expected = _expected_distribution_names(version)
+    urls = _load_pypi_release_urls(runner, version)
+    if isinstance(urls, CheckResult):
+        return _result("PyPI attestations", urls.status, urls.detail, urls.action)
+    expected = expected_distribution_names(version)
     for subject in expected:
         url = urls.get(subject)
         if url is None:
@@ -867,7 +897,7 @@ def _check_github_attestations(root: Path, runner: Runner) -> CheckResult:
     if isinstance(repo_result, CheckResult):
         return repo_result
     repo = repo_result
-    subjects = _expected_distribution_names(version)
+    distribution_subjects = expected_distribution_names(version)
     bundle_name = f"recon-tool-{version}.intoto.jsonl"
     sbom_name = f"recon-tool-{version}.cdx.json"
     with tempfile.TemporaryDirectory(prefix="recon-attestation-") as temp_dir:
@@ -875,7 +905,9 @@ def _check_github_attestations(root: Path, runner: Runner) -> CheckResult:
         assets = _ReleaseAssetClient(runner, repo, version, directory)
         try:
             source_digest = _release_tag_sha(runner, version)
-            required_assets = (*subjects, bundle_name, sbom_name)
+            attests_sbom = _release_requires_sbom_attestation(version, source_digest)
+            subjects = (*distribution_subjects, sbom_name) if attests_sbom else distribution_subjects
+            required_assets = (*distribution_subjects, bundle_name, sbom_name)
             assets.require_safe_inventory(required_assets)
             downloaded = {subject: assets.download(subject) for subject in required_assets}
             validate_completed_sbom(downloaded[sbom_name], version)
@@ -910,11 +942,12 @@ def _check_github_attestations(root: Path, runner: Runner) -> CheckResult:
             if verify.returncode != 0:
                 detail = (verify.stderr or verify.stdout).strip() or f"attestation verification failed for {subject}"
                 return _result("GitHub attestations", "fail", detail)
-    return _result(
-        "GitHub attestations",
-        "pass",
-        f"release bundle verifies wheel and sdist for v{version}; completed CycloneDX SBOM is valid",
-    )
+    detail = f"release bundle verifies wheel and sdist for v{version}; completed CycloneDX SBOM is valid"
+    if attests_sbom:
+        detail = f"release bundle verifies wheel, sdist, and completed CycloneDX SBOM for v{version}"
+    else:
+        detail += "; tagged workflow predates SBOM attestation"
+    return _result("GitHub attestations", "pass", detail)
 
 
 def _check_release_channel_parity(root: Path, runner: Runner) -> CheckResult:
@@ -926,7 +959,7 @@ def _check_release_channel_parity(root: Path, runner: Runner) -> CheckResult:
     if isinstance(repo_result, CheckResult):
         return repo_result
     repo = repo_result
-    subjects = _expected_distribution_names(version)
+    subjects = expected_distribution_names(version)
     with tempfile.TemporaryDirectory(prefix="recon-channel-parity-") as temp_dir:
         directory = Path(temp_dir)
         assets = _ReleaseAssetClient(runner, repo, version, directory)
@@ -1043,6 +1076,7 @@ def collect_checks(
         _check_latest_commit_message(actual_runner),
     ]
     if remote:
+        checks.append(_check_release_tag_binding(root, actual_runner))
         checks.append(_check_remote_workflows(actual_runner))
         checks.append(_check_scorecard_api(actual_runner))
         checks.append(_check_pypi_release(root, actual_runner))
@@ -1051,13 +1085,14 @@ def collect_checks(
         checks.append(_check_github_attestations(root, actual_runner))
         checks.append(_check_release_channel_parity(root, actual_runner))
     else:
-        checks.append(_result("remote CI", "skip", "not requested; pass --remote after pushing main"))
-        checks.append(_result("Scorecard API", "skip", "not requested; pass --remote after pushing main"))
-        checks.append(_result("PyPI release", "skip", "not requested; pass --remote after release publication"))
-        checks.append(_result("PyPI attestations", "skip", "not requested; pass --remote after release publication"))
-        checks.append(_result("GitHub release", "skip", "not requested; pass --remote after release publication"))
-        checks.append(_result("GitHub attestations", "skip", "not requested; pass --remote after release publication"))
-        checks.append(_result("channel parity", "skip", "not requested; pass --remote after release publication"))
+        checks.append(_result("release tag binding", "skip", _REMOTE_RELEASE_HINT))
+        checks.append(_result("remote CI", "skip", _REMOTE_RELEASE_HINT))
+        checks.append(_result("Scorecard API", "skip", _REMOTE_RELEASE_HINT))
+        checks.append(_result("PyPI release", "skip", _REMOTE_RELEASE_HINT))
+        checks.append(_result("PyPI attestations", "skip", _REMOTE_RELEASE_HINT))
+        checks.append(_result("GitHub release", "skip", _REMOTE_RELEASE_HINT))
+        checks.append(_result("GitHub attestations", "skip", _REMOTE_RELEASE_HINT))
+        checks.append(_result("channel parity", "skip", _REMOTE_RELEASE_HINT))
     return checks
 
 
@@ -1096,7 +1131,11 @@ def _render_json(checks: list[CheckResult], *, remote: bool = False) -> str:
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Check recon maintainer release readiness.")
     parser.add_argument("--json", action="store_true", help="Emit machine-readable JSON.")
-    parser.add_argument("--remote", action="store_true", help="Also inspect GitHub Actions runs for HEAD via gh.")
+    parser.add_argument(
+        "--remote",
+        action="store_true",
+        help="Verify the exact published current-version tag, CI, and release evidence.",
+    )
     parser.add_argument("--allow-dirty", action="store_true", help="Warn instead of failing on uncommitted changes.")
     parser.add_argument("--allow-non-main", action="store_true", help="Warn instead of failing off main.")
     args = parser.parse_args(argv)

@@ -104,7 +104,10 @@ Before creating or citing an archived artifact:
    paper, package, or claim-map wording changed.
 3. Run `uv run python scripts/check.py`.
 4. Push the frozen commit and verify GitHub CI, Secrets scan, and Scorecard.
-5. Run `uv run python scripts/release_readiness.py --remote` on clean `main`.
+5. If the archived object is the current package release, check out its exact
+   published current-version tag on clean `main` and run
+   `uv run python scripts/release_readiness.py --remote`. Otherwise, name the
+   published release to which remote release-state evidence applies.
 6. Confirm no private target identifiers or raw private rows are tracked.
 7. Choose the archive path: Zenodo GitHub integration, venue supplement, or
    another reviewed repository.

@@ -10,15 +10,16 @@ tool. The measures below are the ones that return more than they cost; the
 remaining aspirational items are listed at the end with the reason they are
 deferred.
 
-## What ships with every release
+## What the current release workflow ships
 
-A `v*` tag triggers [`.github/workflows/release.yml`](../.github/workflows/release.yml),
-which produces and publishes:
+A `v*` tag created from this source revision triggers
+[`.github/workflows/release.yml`](../.github/workflows/release.yml), which
+produces and publishes:
 
 | Property | Mechanism | How a consumer verifies it |
 |---|---|---|
 | **Trusted publishing** | PyPI publishes via GitHub OIDC, no long-lived API token (`pypa/gh-action-pypi-publish`) | The PyPI project page shows the publishing workflow as a trusted publisher |
-| **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel and sdist to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection | Verify each artifact against the exported bundle, exact release workflow, source tag, commit digest, and hosted-runner boundary as shown below |
+| **Build-provenance attestation** | GitHub-native, OIDC-signed (`actions/attest-build-provenance`), linking the wheel, sdist, and completed SBOM to the workflow run. The signed bundles are also exported to the GitHub Release as `recon-tool-<version>.intoto.jsonl` for offline and Scorecard-compatible inspection. The exact historical v2.6.3 release predates the SBOM subject expansion and binds only its wheel and sdist | Verify the subjects required by the exact release policy against the exported bundle, release workflow, source tag, commit digest, and hosted-runner boundary as shown below |
 | **PyPI attestations (PEP 740)** | sigstore-signed attestations generated at publish time (`attestations: true`) and stored on PyPI | Fetch the file's PyPI provenance and verify it with the pinned `pypi-attestations==0.0.29` command shown below |
 | **Constrained deterministic-build check** | `SOURCE_DATE_EPOCH`, uv 0.11.17, and the exact hash-locked backend graph are fixed; CI builds the sdist and reconstructs its wheel twice in one Ubuntu job, then compares both hashes | See the bounded recipe and limitations below |
 | **Sealed distribution gate** | A separate read-only release job requires exactly one tag-matching wheel and sdist, then executes both `recon --version` and `python -m recon_tool --version` from the wheel before either publication channel can run | Inspect the `package-smoke` job in the tagged release workflow run |
@@ -38,6 +39,25 @@ The optional `RECON_INSTALL_MANAGER` setting installs the exact verified local
 wheel with the package manager that you select; leave it unset when ownership
 is uncertain.
 
+Acquire the reviewed source before running either recipe. From an empty parent
+directory, these commands select the exact version tag and its commit instead
+of mutable branch content:
+
+```bash
+git clone --branch v2.6.3 --single-branch https://github.com/blisspixel/recon.git recon-2.6.3
+cd recon-2.6.3
+```
+
+Inspect this document and the referenced local scripts before execution. If you
+already have a checkout, fetch tags and explicitly check out the same exact tag;
+do not silently substitute `main` or a source archive whose tag you have not
+reviewed.
+The published v2.6.3 bundle covers its wheel and sdist; the recipe binds that
+historical exception to commit
+`3d5218e00e969874dda40956d677e131d392dbf9` and still validates the completed
+SBOM structure. Every later release must also verify the SBOM as an attestation
+subject.
+
 ### macOS or Linux
 
 ```bash
@@ -45,6 +65,7 @@ set -euo pipefail
 
 VERSION=2.6.3
 REPO=blisspixel/recon
+LEGACY_SBOM_ATTESTATION_SHA=3d5218e00e969874dda40956d677e131d392dbf9
 MAX_RELEASE_ASSET_BYTES=$((64 * 1024 * 1024))
 VERIFY_DIR="$(mktemp -d)"
 DIST_DIR="${VERIFY_DIR}/dist"
@@ -121,9 +142,19 @@ validate_completed_sbom(Path(sys.argv[2]), sys.argv[1])
 print(f"PASS: completed CycloneDX SBOM is valid for {sys.argv[1]}.")
 PY
 
-for artifact in \
-  "${DIST_DIR}/recon_tool-${VERSION}-py3-none-any.whl" \
-  "${DIST_DIR}/recon_tool-${VERSION}.tar.gz"; do
+ATTESTATION_ARTIFACTS=(
+  "${DIST_DIR}/recon_tool-${VERSION}-py3-none-any.whl"
+  "${DIST_DIR}/recon_tool-${VERSION}.tar.gz"
+)
+if [ "${VERSION}" = "2.6.3" ]; then
+  if [ "${SOURCE_SHA}" != "${LEGACY_SBOM_ATTESTATION_SHA}" ]; then
+    echo "FAIL: v2.6.3 does not match its exact historical attestation exception." >&2
+    exit 1
+  fi
+else
+  ATTESTATION_ARTIFACTS+=("${EVIDENCE_DIR}/recon-tool-${VERSION}.cdx.json")
+fi
+for artifact in "${ATTESTATION_ARTIFACTS[@]}"; do
   gh attestation verify "${artifact}" \
     --bundle "${EVIDENCE_DIR}/recon-tool-${VERSION}.intoto.jsonl" \
     --repo "${REPO}" \
@@ -175,6 +206,7 @@ $ErrorActionPreference = "Stop"
 
 $Version = "2.6.3"
 $Repo = "blisspixel/recon"
+$LegacySbomAttestationSha = "3d5218e00e969874dda40956d677e131d392dbf9"
 $MaxReleaseAssetBytes = 64 * 1024 * 1024
 $VerifyDir = Join-Path ([IO.Path]::GetTempPath()) ("recon-verify-" + [guid]::NewGuid())
 $DistDir = Join-Path $VerifyDir "dist"
@@ -258,7 +290,16 @@ try {
     $Bundle = Join-Path $EvidenceDir "recon-tool-$Version.intoto.jsonl"
     $Wheel = Join-Path $DistDir "recon_tool-$Version-py3-none-any.whl"
     $Sdist = Join-Path $DistDir "recon_tool-$Version.tar.gz"
-    foreach ($Artifact in @($Wheel, $Sdist)) {
+    $AttestationArtifacts = @($Wheel, $Sdist)
+    if ($Version -eq "2.6.3") {
+        if ($SourceSha -ne $LegacySbomAttestationSha) {
+            throw "v2.6.3 does not match its exact historical attestation exception."
+        }
+    }
+    else {
+        $AttestationArtifacts += $Sbom
+    }
+    foreach ($Artifact in $AttestationArtifacts) {
         Invoke-Native "GitHub attestation verification" "gh" @(
             "attestation", "verify", $Artifact, "--bundle", $Bundle,
             "--repo", $Repo,
@@ -318,6 +359,21 @@ open a new terminal and confirm `recon --version` reports the same version. The
 verification path does not make installers enforce PyPI attestations
 automatically. It is also not a claim that recon has reached a named SLSA level
 beyond the controls listed here.
+
+### Failure and recovery map
+
+Treat the final `PASS` line as the only complete success state. Before it:
+
+| Failure class | Required action |
+|---|---|
+| Missing local prerequisite or GitHub authentication | Repair the named prerequisite or read-only authentication, then restart from the same clean tag checkout. This failure makes no claim about artifact trust. |
+| Timeout, transient network response, or delayed publication visibility | Keep the checkout and tag unchanged, then rerun the complete recipe. Do not reuse partial output from the temporary directory. |
+| Asset inventory, digest, SBOM structure, bundle, signer, source ref, source digest, hosted-runner, version, or entry-point mismatch | Stop. Do not install the artifact and do not replace evidence. Preserve the failing output for maintainer investigation. |
+| Optional install step fails after the verification checks pass | Verification may be complete, but installation is not. The temporary directory is removed on failure; resolve package-manager ownership and rerun the complete flow. |
+
+The recipes never repair producer evidence. A permanent mismatch requires a
+new, correctly produced release rather than weakening a verifier or replacing
+an immutable published file.
 
 ## Deterministic-build evidence
 
@@ -418,20 +474,25 @@ dependency or unrelated tool runs after artifact creation and before sealing.
 The `package-smoke` job downloads the sealed distribution into a separate
 read-only runner, rejects anything except one tag-matching wheel and sdist,
 and executes both installed entry points without OIDC or write permissions.
-The `test`, `sbom`, and `attest` jobs run on separate runners that
-never see `dist/`, and publish or attestation jobs with elevated OIDC-minted
-scopes do not execute project runtime dependencies. The provenance export job downloads the
-signed GitHub attestation bundles and uploads a `.intoto.jsonl` artifact for the
-GitHub Release without running project dependency code. PyPI publication waits
+The `test` and `sbom` jobs run on separate runners that never see `dist/`.
+The `attest` job downloads only the sealed distribution and completed SBOM, and
+jobs with elevated OIDC-minted scopes do not execute project runtime
+dependencies. The provenance export job downloads the signed GitHub
+attestation bundles for the wheel, sdist, and SBOM and uploads a
+`.intoto.jsonl` artifact for the GitHub Release without running project
+dependency code. PyPI publication waits
 for sealed-distribution validation and wheel execution, provenance attestation,
 and the validated SBOM. GitHub publication additionally waits until the exact
 PyPI wheel and sdist match the sealed pair byte for byte. A parity failure after
 PyPI accepts immutable files blocks the GitHub Release and leaves an explicit
-partial-publication state. Maintainers must diagnose the mismatch and rerun the
-same tagged workflow only when the sealed bytes match the existing PyPI files;
-they must never replace or work around either channel's evidence. The full
-rationale and recovery boundary are documented inline in
-[`release.yml`](../.github/workflows/release.yml).
+partial-publication state. Existing GitHub Release recovery validates the exact
+tag, title, non-draft, non-prerelease, and mutable state, plus expected-only
+inventory, complete or partial, before any `--clobber` upload can run. It also
+requires the remote tag to resolve to the original workflow SHA. Maintainers
+must diagnose the mismatch and rerun the same tagged workflow only when the
+sealed bytes match the existing PyPI files; they must never manually rebuild,
+replace, or work around either channel's evidence. The full rationale and
+recovery boundary are documented in [release-process.md](release-process.md).
 
 ## Repository posture checks
 
@@ -471,10 +532,13 @@ The repository also runs supply-chain posture checks outside the release flow:
 - Tracked Markdown relative links and local heading anchors are checked locally,
   in main CI, and again by the release gate.
 - Remote release readiness checks PyPI's exact current-version record and the
-  exact GitHub Release asset set for the current version. It validates the
-  completed SBOM, verifies both GitHub artifacts against the downloaded bundle,
-  exact release workflow, exact source tag and commit digest, and hosted-runner
-  boundary, and
+  exact GitHub Release asset set for the current version. It first requires the
+  remote and local current version tag plus `HEAD` to resolve to the same full
+  commit, then validates the completed SBOM and verifies the policy-required
+  GitHub subjects against the downloaded bundle, exact release workflow, exact
+  source tag and commit digest, and hosted-runner boundary. The exact v2.6.3
+  historical exception covers its wheel and sdist; every later release also
+  requires the SBOM subject. The gate
   requires the PyPI and GitHub wheel and sdist digests to match. It also verifies
   public Scorecard API freshness for `HEAD`, code-owned Scorecard controls, the
   documented SAST floor, and both PyPI PEP 740 attestations.

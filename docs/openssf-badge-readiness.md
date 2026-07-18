@@ -108,8 +108,9 @@ Some answers must stay precise:
 4. Add the real project link only after the project page exists.
 5. Run `uv run pytest tests/test_scorecard_posture.py`.
 6. Run `uv run python scripts/check.py`.
-7. Push and verify GitHub CI, Secrets scan, Scorecard, and
-   `uv run python scripts/release_readiness.py --remote`.
+7. Push and verify GitHub CI, Secrets scan, and Scorecard.
+8. Run `uv run python scripts/release_readiness.py --remote` only if the exact
+   commit is also the published current-version tag.
 
 ## Stop Rules
 

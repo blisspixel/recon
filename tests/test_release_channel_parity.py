@@ -33,6 +33,10 @@ def _record(filename: str) -> dict[str, str]:
     return {"filename": filename, "url": f"https://files.pythonhosted.org/{filename}"}
 
 
+def _payload_object(version: str, records: list[dict[str, object]]) -> dict[str, object]:
+    return {"info": {"version": version}, "urls": records}
+
+
 def _write_pair(directory: Path, wheel: bytes = b"wheel", sdist: bytes = b"sdist") -> dict[str, bytes]:
     directory.mkdir()
     names = _names()
@@ -80,6 +84,53 @@ def test_metadata_request_is_scoped_to_the_exact_version(tmp_path: Path) -> None
     parity.check_channel_parity("2.6.3", dist, opener=_open)
 
     assert opened[0] == "https://pypi.org/pypi/recon-tool/2.6.3/json"
+
+
+def test_public_metadata_validator_returns_only_the_exact_safe_pair() -> None:
+    records = [_record(name) for name in _names()]
+
+    urls = parity.release_file_urls_from_payload("2.6.3", _payload_object("2.6.3", records))
+
+    assert urls == {record["filename"]: record["url"] for record in records}
+
+
+def test_public_metadata_loader_bounds_the_response(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(parity, "MAX_METADATA_BYTES", 4)
+
+    def _open(_url: str, **_kwargs: object) -> _Response:
+        return _Response(b"12345")
+
+    with pytest.raises(parity.ParityError, match="safety limit"):
+        parity.release_file_urls("2.6.3", opener=_open)
+
+
+@pytest.mark.parametrize(
+    ("payload", "message"),
+    [
+        ({"info": {"version": "2.6.2"}, "urls": []}, "describes version"),
+        ({"info": {"version": "2.6.3"}, "urls": [_record(_names()[0])]}, "missing distribution"),
+        (
+            {
+                "info": {"version": "2.6.3"},
+                "urls": [_record(_names()[0]), _record(_names()[1]), _record("unexpected.whl")],
+            },
+            "unexpected distribution",
+        ),
+        (
+            {
+                "info": {"version": "2.6.3"},
+                "urls": [
+                    _record(_names()[0]),
+                    {"filename": _names()[1], "url": f"https://example.test/{_names()[1]}"},
+                ],
+            },
+            "unexpected file URL",
+        ),
+    ],
+)
+def test_public_metadata_validator_rejects_untrusted_release_shapes(payload: dict[str, object], message: str) -> None:
+    with pytest.raises(parity.ParityError, match=message):
+        parity.release_file_urls_from_payload("2.6.3", payload)
 
 
 @pytest.mark.parametrize("extra", ["unexpected.whl", "notes.txt"])
@@ -154,6 +205,41 @@ def test_url_output_is_not_replaced(tmp_path: Path) -> None:
             [
                 _record(_names()[0]),
                 {"filename": _names()[1], "url": f"http://files.pythonhosted.org/{_names()[1]}"},
+            ],
+            "unexpected file URL",
+        ),
+        (
+            [
+                _record(_names()[0]),
+                {"filename": _names()[1], "url": "https://files.pythonhosted.org/packages/not-the-sdist.tgz"},
+            ],
+            "unexpected file URL",
+        ),
+        (
+            [
+                _record(_names()[0]),
+                {"filename": _names()[1], "url": f"https://files.pythonhosted.org/{_names()[1]}?download=1"},
+            ],
+            "unexpected file URL",
+        ),
+        (
+            [
+                _record(_names()[0]),
+                {"filename": _names()[1], "url": f"https://user@files.pythonhosted.org/{_names()[1]}"},
+            ],
+            "unexpected file URL",
+        ),
+        (
+            [
+                _record(_names()[0]),
+                {"filename": _names()[1], "url": f"https://files.pythonhosted.org:444/{_names()[1]}"},
+            ],
+            "unexpected file URL",
+        ),
+        (
+            [
+                _record(_names()[0]),
+                {"filename": _names()[1], "url": "https://[files.pythonhosted.org/not-valid"},
             ],
             "unexpected file URL",
         ),

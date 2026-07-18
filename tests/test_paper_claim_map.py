@@ -37,9 +37,10 @@ def test_claim_map_covers_required_evidence_tiers_and_gates() -> None:
         "public Scorecard API reports the exact `HEAD`",
         "public Scorecard API freshness",
         "verifies PyPI provenance",
-        "binds GitHub evidence to the exported bundle",
+        "binds required GitHub subjects to the exported bundle",
+        "Releases produced by the current workflow require the wheel, sdist, and completed SBOM",
         "source tag and commit digest",
-        "completed SBOM validation",
+        "completed SBOM structure validation",
         "cross-channel byte parity",
     ):
         assert required in text

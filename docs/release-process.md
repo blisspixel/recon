@@ -89,16 +89,24 @@ Before tagging or pushing a release, run it strictly:
 uv run python scripts/release_readiness.py
 ```
 
-After pushing `main`, add the optional remote check. In remote mode the gate
-verifies required GitHub Actions checks for `HEAD`, public Scorecard API
-freshness and code-owned control scores, PyPI's exact current-version record,
-and the exact four GitHub Release assets for the current version. It verifies
+After publishing the current version from the exact checked-out tag, add the
+optional remote check. In remote mode the gate first requires the remote and
+local current project-version tag plus `HEAD` to resolve to the same full
+commit. It then verifies required GitHub Actions checks for `HEAD`, public
+Scorecard API freshness and code-owned control scores, PyPI's exact
+current-version record, and the exact four GitHub Release assets for the current
+version. It verifies
 both PyPI files with pinned `pypi-attestations==0.0.29`, validates the completed
-CycloneDX SBOM without repairing it, verifies the GitHub wheel and sdist against
-the downloaded bundle with the exact release workflow, tag ref, local release
-tag commit digest, and hosted-runner boundary, and reports the SHA-256 parity of
-both files across PyPI and GitHub. The remote check therefore requires the
-current release tag locally plus an authenticated `gh` session or `GH_TOKEN`:
+CycloneDX SBOM without repairing it, and verifies the GitHub subjects required
+by the exact release policy against the downloaded bundle with the release
+workflow, tag ref, local release tag commit digest, and hosted-runner boundary.
+The exact v2.6.3 historical exception requires wheel and sdist provenance plus
+SBOM structure validation; every later release also requires SBOM provenance.
+Its PyPI metadata reader is bounded and accepts only the exact version-scoped
+pair from HTTPS `files.pythonhosted.org` URLs before any verifier runs. It also
+reports the SHA-256 parity of both distribution files across PyPI and GitHub.
+The remote check therefore requires the current release tag locally plus an
+authenticated `gh` session or `GH_TOKEN`:
 
 ```bash
 uv run python scripts/release_readiness.py --remote
@@ -211,16 +219,17 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
    separate read-only job, requires exactly one tag-matching canonical wheel
    and sdist, and executes both `recon --version` and
    `python -m recon_tool --version` from the wheel in isolated environments.
-5. **attest**: after `build`, records GitHub artifact attestations for the wheel
-   and sdist.
-6. **export-attestations**: after `build` and `attest`, exports the GitHub
-   artifact-attestation bundles as `recon-tool-<version>.intoto.jsonl` so the
-   GitHub Release carries an offline, Scorecard-recognized provenance asset.
-7. **sbom**: after `test`, generates the CycloneDX release SBOM independently of
+5. **sbom**: after `test`, generates the CycloneDX release SBOM independently of
    the package build path, adds the project root and dependency edge, and
    validates the resulting document. Findings may coexist with this artifact
    because the enforcing dependency audit already ran in `test`; SBOM tool or
    validation failure is fatal.
+6. **attest**: after `build` and `sbom`, records one GitHub provenance
+   attestation whose subject set contains the wheel, sdist, and completed SBOM.
+7. **export-attestations**: after `build`, `sbom`, and `attest`, exports the
+   GitHub artifact-attestation bundles as
+   `recon-tool-<version>.intoto.jsonl` so the GitHub Release carries an offline,
+   Scorecard-recognized provenance asset.
 8. **publish-pypi**: after `build`, `attest`, `package-smoke`, and `sbom`, uses
    `pypa/gh-action-pypi-publish@release/v1` with OIDC Trusted Publishing and PEP
    740 attestations. No static API tokens.
@@ -238,8 +247,56 @@ attestation, or SBOM validation fails, while allowing `build` and `sbom` to run
 independently after `test`. Once PyPI accepts its immutable files, a parity
 failure blocks only the GitHub Release and leaves a visible partial-publication
 state. Diagnose the failed row, preserve the existing PyPI files, and rerun the
-same tag only when its sealed pair is byte-identical to PyPI. Never rebuild,
-replace, or bypass evidence to complete the second channel.
+same tag only when its sealed pair is byte-identical to PyPI. Never manually
+rebuild or replace evidence, and never bypass a failed verifier to complete the
+second channel.
+
+### Recovery after partial publication
+
+A failed tagged run is recoverable only through the original run and unchanged
+tag. GitHub reruns retain the original `GITHUB_SHA` and `GITHUB_REF`; failed jobs
+and jobs that depend on them may execute again. The parity gate therefore
+remains the boundary that proves any rerun distribution bytes still match the
+immutable PyPI files. The run-selection check also requires the chosen run's
+`headSha` to equal the unchanged local tag and `HEAD` before a rerun begins.
+
+Inspect and rerun the failed path with the exact run ID:
+
+```bash
+VERSION="$(uv run python -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
+test "$(git branch --show-current)" = "main"
+test -z "$(git status --porcelain --untracked-files=normal)"
+HEAD_SHA="$(git rev-parse HEAD)"
+test "${HEAD_SHA}" = "$(git rev-list -n 1 "refs/tags/v${VERSION}")"
+read -r RUN_ID RUN_HEAD_SHA <<< "$(gh run list --workflow Release \
+  --branch "v${VERSION}" --event push --limit 1 --json databaseId,headSha \
+  --jq '.[0] | [.databaseId, .headSha] | @tsv')"
+test -n "${RUN_ID}"
+test "${RUN_HEAD_SHA}" = "${HEAD_SHA}"
+gh run view "${RUN_ID}" --log-failed
+gh run rerun "${RUN_ID}" --failed
+gh run watch "${RUN_ID}" --exit-status
+uv run python scripts/release_readiness.py --remote
+```
+
+Use that rerun path for transient timeouts, rate limits, temporary 5xx
+responses, delayed PyPI visibility, or a GitHub upload interruption after the
+sealed pair already passed parity. Do not rerun blindly after a digest,
+inventory, tag, signer, source, SBOM, or provenance mismatch. Preserve the
+failed output and inspect the original workflow artifacts first.
+
+This runbook applies to recovery of the current project version while clean
+`main` still points at that exact release tag. If a GitHub Release already
+exists, the workflow validates its exact tag and title, non-draft,
+non-prerelease, and mutable state, and expected-only inventory, complete or
+partial, before `gh release upload --clobber` can execute. It also rechecks the
+remote tag against the original workflow SHA immediately before mutation. A
+draft, prerelease, immutable release, unexpected asset, duplicate asset,
+malformed response, missing tag, or moved tag stops recovery. If PyPI contains
+incorrect immutable bytes, do not attempt to overwrite them;
+follow the documented PyPI project-management yanking path and cut a corrected
+version. A run is recovered only after the strict remote readiness command
+passes in full.
 
 Workflow permissions are least-privilege: read-only jobs use `contents: read`,
 `attest` and `publish-pypi` receive `id-token: write` only where OIDC is needed,
