@@ -18,6 +18,7 @@ from typing import cast
 
 from typing_extensions import TypedDict
 
+from recon_tool.catalog_discovery import category_matches
 from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
 from recon_tool.models import MetadataCondition, ReconLookupError
 from recon_tool.server import app as server_app
@@ -343,7 +344,7 @@ async def get_fingerprints(
     ``outputSchema``, alongside the serialized-JSON text block for compatibility.
 
     Args:
-        category: Optional category filter (case-insensitive partial match).
+        category: Optional category filter using a word prefix or phrase.
         limit: Optional page size. With 800+ fingerprints loaded, an agent that
             only needs a slice can cap the response; omit (default) for the full
             list, which keeps the result shape backward-compatible.
@@ -356,8 +357,7 @@ async def get_fingerprints(
 
     fps = load_fingerprints()
     if category:
-        cat_lower = category.lower()
-        fps = tuple(fp for fp in fps if cat_lower in fp.category.lower())
+        fps = tuple(fp for fp in fps if category_matches(fp.category, category))
     if limit is not None:
         start = max(0, offset)
         fps = fps[start : start + max(0, limit)]
@@ -418,7 +418,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
     Layers: 1=basic, 2=composite (has metadata), 3=consistency, 4=meta (requires_signals).
 
     Args:
-        category: Optional category filter (case-insensitive partial match).
+        category: Optional category filter using a word prefix or phrase.
         layer: Optional layer filter (1, 2, 3, or 4).
 
     Returns:
@@ -429,7 +429,7 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
     result: list[SignalSummary] = []
     for sig, public_label in reportable_signals():
         sig_layer = _classify_signal_layer(sig)
-        if category and category.lower() not in sig.category.lower():
+        if category and not category_matches(sig.category, category):
             continue
         if layer is not None and sig_layer != layer:
             continue

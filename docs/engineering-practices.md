@@ -25,6 +25,12 @@ validation, workflow and dependency-export guards, interface and paper checks,
 and size/complexity ratchets. Green here is the required local baseline for CI.
 Use `--fast` to skip the test run for rapid iteration; never push on `--fast`
 alone.
+The local wrapper and CI disable Ruff's cache so rapid same-size edits cannot
+reuse stale lint results; Ruff is fast enough that determinism is the better
+tradeoff.
+Wrapper headings and status marks use ANSI styling only on a capable terminal.
+Redirected or captured gate output is plain text so CI logs and local evidence
+files remain directly searchable.
 The package-index-dependent MCP SDK matrix is intentionally separate:
 `scripts/check_mcp_compatibility.py` creates isolated exact-pin environments,
 and the `mcp-compatibility` CI job blocks regressions on both supported stable

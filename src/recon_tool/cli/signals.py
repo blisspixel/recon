@@ -11,15 +11,42 @@ from typing import Any, NoReturn
 
 import typer
 
+from recon_tool.catalog_discovery import category_matches
+from recon_tool.cli.catalog_rendering import print_field, print_indented
 from recon_tool.exit_codes import EXIT_VALIDATION
 from recon_tool.formatter import get_console
 
 signals_app = typer.Typer(help="Inspect the built-in signal catalog.")
 
 
-@signals_app.command("list")
+def _signal_summary(signal: Any, label: str) -> dict[str, Any]:
+    """Return the stable summary projection shared by list and search."""
+    return {
+        "name": label,
+        "category": signal.category,
+        "confidence": signal.confidence,
+        "candidate_count": len(signal.candidates),
+        "min_matches": signal.min_matches,
+        "description": signal.description,
+    }
+
+
+def _render_signal_rows(console: Any, items: Sequence[tuple[Any, str]]) -> None:
+    """Render field-associated rows grouped by category."""
+    current_category: str | None = None
+    for signal, label in items:
+        if signal.category != current_category:
+            if current_category is not None:
+                console.print()
+            current_category = signal.category
+            print_indented(console, signal.category, indent=2, style="bold")
+        print_indented(console, label, indent=4)
+        print_field(console, "Confidence", signal.confidence, indent=6)
+
+
+@signals_app.command("list", short_help="List public signals.")
 def signals_list(
-    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category (substring)"),
+    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category word prefix or phrase"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
     """List reportable public signals, grouped by category."""
@@ -27,29 +54,10 @@ def signals_list(
 
     sigs = reportable_signals()
     if category:
-        needle = category.lower()
-        import re
-
-        def _match_cat(cat: str) -> bool:
-            cat_lower = cat.lower()
-            if " " in needle:
-                return needle in cat_lower
-            return any(word.startswith(needle) for word in re.findall(r"[a-z0-9]+", cat_lower))
-
-        sigs = tuple((signal, label) for signal, label in sigs if _match_cat(signal.category))
+        sigs = tuple((signal, label) for signal, label in sigs if category_matches(signal.category, category))
 
     if json_output:
-        payload = [
-            {
-                "name": label,
-                "category": signal.category,
-                "confidence": signal.confidence,
-                "candidate_count": len(signal.candidates),
-                "min_matches": signal.min_matches,
-                "description": signal.description,
-            }
-            for signal, label in sigs
-        ]
+        payload = [_signal_summary(signal, label) for signal, label in sigs]
         typer.echo(json.dumps(payload, indent=2))
         return
 
@@ -58,27 +66,20 @@ def signals_list(
         console.print("  No signals match those filters.")
         return
     console.print()
-    console.print(f"  [bold]{len(sigs)} signal{'s' if len(sigs) != 1 else ''}[/bold]")
+    print_indented(console, f"{len(sigs)} signal{'s' if len(sigs) != 1 else ''}", indent=2, style="bold")
     console.print()
-    name_w = max(len(label) for _, label in sigs)
-    for signal, label in sorted(sigs, key=lambda item: (item[0].category, item[1])):
-        console.print(f"    {label:<{name_w}s}  {signal.category:<20s}  {signal.confidence}")
+    _render_signal_rows(console, sorted(sigs, key=lambda item: (item[0].category, item[1])))
     console.print()
 
 
-@signals_app.command("search")
+@signals_app.command("search", short_help="Search public signals.")
 def signals_search(
     query: str = typer.Argument(
-        ..., help="Search term — matched against signal name, category, description, and candidate slugs"
+        ..., help="Search term matched against signal name, category, description, and candidate slugs"
     ),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
 ) -> None:
-    """Search reportable signals by label, category, description, or candidate slug.
-
-    Case-insensitive substring. Useful for "which signals look at my
-    new slug?" (``search <slug>``) and "what signals fire on email
-    posture?" (``search email``).
-    """
+    """Search signals by label, category, description, or candidate slug."""
     from recon_tool.signals import reportable_signals
 
     sigs = reportable_signals()
@@ -107,29 +108,25 @@ def signals_search(
     matches = [item for _, item in ranked]
 
     if json_output:
-        payload = [
-            {
-                "name": label,
-                "category": signal.category,
-                "confidence": signal.confidence,
-                "candidate_count": len(signal.candidates),
-                "description": signal.description,
-            }
-            for signal, label in matches
-        ]
+        payload = [_signal_summary(signal, label) for signal, label in matches]
         typer.echo(json.dumps(payload, indent=2))
         return
 
     console = get_console()
     if not matches:
-        console.print(f"  No signals match {query!r}.")
+        print_indented(console, f"No signals match {query!r}.", indent=2)
+        print_indented(console, "Browse the public signal catalog:", indent=2)
+        print_indented(console, "recon signals list", indent=4)
         return
     console.print()
-    console.print(f"  [bold]{len(matches)} match{'es' if len(matches) != 1 else ''} for {query!r}[/bold]")
+    print_indented(
+        console,
+        f"{len(matches)} match{'es' if len(matches) != 1 else ''} for {query!r}",
+        indent=2,
+        style="bold",
+    )
     console.print()
-    name_w = max(len(label) for _, label in matches)
-    for signal, label in matches:
-        console.print(f"    {label:<{name_w}s}  {signal.category:<20s}  {signal.confidence}")
+    _render_signal_rows(console, matches)
     console.print()
 
 
@@ -173,9 +170,9 @@ def _render_signal_section(console: Any, header: str, items: Sequence[str]) -> N
     if not items:
         return
     console.print()
-    console.print(f"  [bold]{header}[/bold]")
+    print_indented(console, header, indent=2, style="bold")
     for item in items:
-        console.print(f"    - {item}")
+        print_indented(console, f"- {item}", indent=4)
 
 
 def _render_signal_detail(match: Any, public_label: str) -> None:
@@ -184,11 +181,11 @@ def _render_signal_detail(match: Any, public_label: str) -> None:
 
     console = get_console()
     console.print()
-    console.print(f"  [bold]{public_label}[/bold]")
-    console.print(f"    Category:    {match.category}")
-    console.print(f"    Confidence:  {match.confidence}")
+    print_indented(console, public_label, indent=2, style="bold")
+    print_field(console, "Category", match.category, indent=4)
+    print_field(console, "Confidence", match.confidence, indent=4)
     if match.description:
-        console.print(f"    Description: {match.description}")
+        print_field(console, "Description", match.description, indent=4)
     _render_signal_section(
         console,
         f"Candidate slugs ({len(match.candidates)}, min_matches={match.min_matches})",
@@ -196,9 +193,9 @@ def _render_signal_detail(match: Any, public_label: str) -> None:
     )
     if match.metadata:
         console.print()
-        console.print("  [bold]Metadata conditions[/bold]")
+        print_indented(console, "Metadata conditions", indent=2, style="bold")
         for m in match.metadata:
-            console.print(f"    - {m.field} {m.operator} {m.value!r}")
+            print_indented(console, f"- {m.field} {m.operator} {m.value!r}", indent=4)
     _render_signal_section(console, "Contradicts", list(match.contradicts))
     _render_signal_section(console, "Requires other signals", public_signal_names(match.requires_signals))
     _render_signal_section(console, "Expected counterparts (absence engine)", list(match.expected_counterparts))
@@ -207,11 +204,11 @@ def _render_signal_detail(match: Any, public_label: str) -> None:
     )
     if match.explain:
         console.print()
-        console.print(f"  [bold]Explain[/bold] {match.explain}")
+        print_field(console, "Explain", match.explain, indent=2)
     console.print()
 
 
-@signals_app.command("show")
+@signals_app.command("show", short_help="Show one public signal.")
 def signals_show(
     name: str = typer.Argument(..., help="Signal name (quote if it contains spaces)"),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),

@@ -201,7 +201,149 @@ class TestSubprocessEntryPoint:
             "signals Browse signals.",
         ):
             assert summary in collapsed
-        assert max(len(line) for line in result.stdout.splitlines()) <= columns
+        content_lines = [line for line in result.stdout.splitlines() if not line.startswith("Usage:")]
+        assert max(len(line) for line in content_lines) <= columns
+
+    @pytest.mark.parametrize("columns", [40, 60, 69])
+    @pytest.mark.parametrize(
+        ("group", "summaries"),
+        [
+            (
+                "fingerprints",
+                (
+                    "list Summarize fingerprints.",
+                    "search Search fingerprints.",
+                    "show Show one fingerprint.",
+                    "new Scaffold a fingerprint.",
+                    "test Test against a corpus.",
+                    "check Validate fingerprint files.",
+                ),
+            ),
+            (
+                "signals",
+                (
+                    "list List public signals.",
+                    "search Search public signals.",
+                    "show Show one public signal.",
+                ),
+            ),
+            ("mcp", ("install Install client config.", "doctor Check the MCP handshake.")),
+            ("cache", ("show Show cache metadata.", "clear Clear both cache layers.")),
+        ],
+    )
+    def test_narrow_nested_help_preserves_complete_command_summaries(
+        self,
+        columns: int,
+        group: str,
+        summaries: tuple[str, ...],
+    ) -> None:
+        env = {
+            **os.environ,
+            "COLUMNS": str(columns),
+            "NO_COLOR": "1",
+            "PYTHONUTF8": "1",
+            "TERM": "dumb",
+        }
+        result = subprocess.run(  # noqa: S603 - fixed interpreter and local module
+            [sys.executable, "-m", "recon_tool", group, "--help"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+            check=False,
+            env=env,
+        )
+
+        assert result.returncode == 0, result.stderr
+        collapsed = " ".join(result.stdout.split())
+        for summary in summaries:
+            assert summary in collapsed
+        assert "\N{HORIZONTAL ELLIPSIS}" not in result.stdout
+        content_lines = [line for line in result.stdout.splitlines() if not line.startswith("Usage:")]
+        assert max(len(line) for line in content_lines) <= columns
+
+    def test_detailed_help_is_free_of_source_markup(self) -> None:
+        commands = (
+            (),
+            ("lookup",),
+            ("batch",),
+            ("discover",),
+            ("doctor",),
+            ("update",),
+            ("delta",),
+            ("mcp",),
+            ("mcp", "install"),
+            ("mcp", "doctor"),
+            ("cache",),
+            ("cache", "show"),
+            ("cache", "clear"),
+            ("fingerprints",),
+            ("fingerprints", "list"),
+            ("fingerprints", "search"),
+            ("fingerprints", "show"),
+            ("fingerprints", "new"),
+            ("fingerprints", "test"),
+            ("fingerprints", "check"),
+            ("signals",),
+            ("signals", "list"),
+            ("signals", "search"),
+            ("signals", "show"),
+        )
+        env = {
+            **os.environ,
+            "COLUMNS": "60",
+            "NO_COLOR": "1",
+            "PYTHONUTF8": "1",
+            "TERM": "dumb",
+        }
+        forbidden = ("``", "Examples::", "\N{EM DASH}", "\N{HORIZONTAL ELLIPSIS}")
+        for command in commands:
+            result = subprocess.run(  # noqa: S603 - fixed interpreter and local module
+                [sys.executable, "-m", "recon_tool", *command, "--help"],
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                timeout=30,
+                check=False,
+                env=env,
+            )
+            assert result.returncode == 0, (command, result.stderr)
+            for marker in forbidden:
+                assert marker not in result.stdout, (command, marker, result.stdout)
+
+    @pytest.mark.parametrize(
+        "command",
+        [
+            ("fingerprints", "search", "mail"),
+            ("signals", "list"),
+        ],
+    )
+    @pytest.mark.parametrize("columns", [20, 40])
+    def test_narrow_catalog_output_keeps_wrapped_lines_indented(
+        self,
+        command: tuple[str, ...],
+        columns: int,
+    ) -> None:
+        env = {
+            **os.environ,
+            "COLUMNS": str(columns),
+            "NO_COLOR": "1",
+            "PYTHONUTF8": "1",
+            "TERM": "dumb",
+        }
+        result = subprocess.run(  # noqa: S603 - fixed interpreter and local module
+            [sys.executable, "-m", "recon_tool", *command],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            timeout=30,
+            check=False,
+            env=env,
+        )
+
+        assert result.returncode == 0, (command, result.stderr)
+        assert result.stdout.strip()
+        assert all(not line or line.startswith("  ") for line in result.stdout.splitlines())
 
     @pytest.mark.parametrize("columns", [40, 60])
     def test_narrow_welcome_keeps_descriptions_indented(self, columns: int) -> None:

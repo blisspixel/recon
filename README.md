@@ -149,10 +149,33 @@ recon mcp install --client=cursor              # wire MCP into a client
 recon mcp doctor                               # live MCP handshake check
 ```
 
+These list, search, and show catalog commands are local and make no network
+requests:
+
+```bash
+recon fingerprints list                       # summarize public-record matchers
+recon fingerprints search email               # preview matching fingerprint slugs
+recon fingerprints show <slug>                 # show every record and rule for one slug
+recon signals list                             # list derived reportable observations
+recon signals search email                     # search signal definitions
+recon signals show "<signal name>"             # inspect one signal definition
+```
+
+A fingerprint slug is a named public-record indicator. One slug can
+intentionally have multiple catalog records, and `show` preserves every record,
+detection, relationship hint, tier, and verification date. A signal is a
+derived, reportable observation definition built from candidate fingerprint
+slugs and metadata conditions. Human fingerprint search previews at most ten
+unique slugs; `--json` returns every matching catalog record. Category filters
+use the same word-prefix or phrase rule in the CLI and MCP server. Human catalog
+detail output strips terminal controls from locally extended text and visibly
+marks values truncated after 1,024 characters.
+
 At terminal widths below 70 columns, command help automatically switches to a
-complete linear layout so long option names remain visible. `--plain` is the
-linear view for a standard single-domain lookup; batch, delta, chain, compare,
-exposure, and gaps reports keep their mode-specific formats.
+complete linear layout so long option names and command summaries remain
+visible without source markup. `--plain` is the linear view for a standard
+single-domain lookup; batch, delta, chain, compare, exposure, and gaps reports
+keep their mode-specific formats.
 
 Built-in posture profiles: `fintech`, `healthcare`, `saas-b2b`,
 `high-value-target`, `public-sector`, and `higher-ed`. Custom profiles live in

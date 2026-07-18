@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
+from recon_tool.cli.fingerprints import HUMAN_SEARCH_PREVIEW_LIMIT, _public_detection_description
 from recon_tool.exit_codes import EXIT_VALIDATION
 from recon_tool.fingerprints import Fingerprint, load_fingerprints
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
@@ -22,6 +24,11 @@ def _plain(text: str) -> str:
     return ANSI_RE.sub("", text)
 
 
+def _collapsed(text: str) -> str:
+    """Normalize terminal wrapping while preserving the rendered words."""
+    return " ".join(_plain(text).split())
+
+
 def _sample_fingerprint() -> Fingerprint:
     return load_fingerprints()[0]
 
@@ -31,6 +38,35 @@ def _unique_prefix_slug() -> Fingerprint:
         if len(fp.slug) > 5:
             return fp
     pytest.fail("expected at least one fingerprint slug long enough for suggestion coverage")
+
+
+def _split_slug_records() -> tuple[Fingerprint, ...]:
+    fps = load_fingerprints()
+    counts = Counter(fp.slug for fp in fps)
+    slug = next(slug for slug, count in counts.items() if count > 1)
+    return tuple(fp for fp in fps if fp.slug == slug)
+
+
+def _single_slug_record() -> Fingerprint:
+    fps = load_fingerprints()
+    counts = Counter(fp.slug for fp in fps)
+    return next(fp for fp in fps if counts[fp.slug] == 1)
+
+
+def _record_with_relationship_metadata() -> Fingerprint:
+    return next(
+        fp
+        for fp in load_fingerprints()
+        if fp.product_family is not None or fp.parent_vendor is not None or fp.bimi_org is not None
+    )
+
+
+def _record_with_rule_metadata() -> Fingerprint:
+    return next(
+        fp
+        for fp in load_fingerprints()
+        if any(rule.verified or rule.tier != "application" or rule.weight != 1.0 for rule in fp.detections)
+    )
 
 
 def _name_only_search_token() -> str:
@@ -49,7 +85,7 @@ def test_list_without_filters_prints_compact_category_summary() -> None:
 
     assert result.exit_code == 0
     plain_output = _plain(result.output)
-    assert "fingerprints across" in plain_output
+    assert "catalog records across" in plain_output
     assert "recon fingerprints" in plain_output
     assert "search" in plain_output
     assert "<query>" in plain_output
@@ -102,7 +138,7 @@ def test_list_filtered_text_prints_full_rows() -> None:
     result = runner.invoke(app, ["fingerprints", "list", "--category", fp.category])
 
     assert result.exit_code == 0
-    assert "fingerprint" in result.output
+    assert "catalog record" in result.output
     assert fp.slug in result.output
     assert fp.name in result.output
 
@@ -155,6 +191,24 @@ def test_search_text_prints_table_and_next_hint() -> None:
     assert "<slug>" in plain_output
 
 
+def test_broad_human_search_is_bounded_but_json_remains_complete() -> None:
+    query = "mail"
+    json_result = runner.invoke(app, ["fingerprints", "search", query, "--json"])
+    text_result = runner.invoke(app, ["fingerprints", "search", query])
+
+    assert json_result.exit_code == 0
+    assert text_result.exit_code == 0
+    records = json.loads(json_result.stdout)
+    unique_slugs = list(dict.fromkeys(entry["slug"] for entry in records))
+    assert len(unique_slugs) > HUMAN_SEARCH_PREVIEW_LIMIT
+    raw_output = _plain(text_result.output)
+    plain_output = _collapsed(text_result.output)
+    assert f"{len(records)} catalog records across {len(unique_slugs)} unique slugs" in plain_output
+    assert f"Showing {HUMAN_SEARCH_PREVIEW_LIMIT} of {len(unique_slugs)} unique slugs" in plain_output
+    assert raw_output.count("    Slug: ") == HUMAN_SEARCH_PREVIEW_LIMIT
+    assert "--json for all" in plain_output
+
+
 def test_search_ranking_covers_name_category_and_detection_pattern_matches() -> None:
     name_token = _name_only_search_token()
     category_query = "infrastructure"
@@ -178,6 +232,117 @@ def test_show_json_payload_matches_fingerprint_object() -> None:
     assert payload["category"] == fp.category
     assert payload["confidence"] == fp.confidence
     assert len(payload["detections"]) == len(fp.detections)
+    assert payload["record_count"] >= 1
+    assert payload["records"]
+    assert set(payload) == {
+        "slug",
+        "name",
+        "category",
+        "confidence",
+        "m365",
+        "provider_group",
+        "display_group",
+        "match_mode",
+        "detections",
+        "record_count",
+        "records",
+    }
+    assert payload["m365"] == fp.m365
+    assert payload["provider_group"] == fp.provider_group
+    assert payload["display_group"] == fp.display_group
+    assert payload["match_mode"] == fp.match_mode
+    for actual, expected in zip(payload["detections"], fp.detections, strict=True):
+        assert actual == {
+            "type": expected.type,
+            "pattern": expected.pattern,
+            "description": _public_detection_description(expected.type),
+            "reference": expected.reference,
+            "weight": expected.weight,
+        }
+
+
+def test_show_json_exposes_every_same_slug_record_and_detection() -> None:
+    records = _split_slug_records()
+
+    result = runner.invoke(app, ["fingerprints", "show", records[0].slug, "--json"])
+
+    assert result.exit_code == 0
+    payload = json.loads(result.stdout)
+    assert payload["record_count"] == len(records)
+    assert len(payload["records"]) == len(records)
+    for actual, expected in zip(payload["records"], records, strict=True):
+        assert actual["category"] == expected.category
+        assert actual["confidence"] == expected.confidence
+        assert actual["match_mode"] == expected.match_mode
+        assert actual["product_family"] == expected.product_family
+        assert actual["parent_vendor"] == expected.parent_vendor
+        assert actual["bimi_org"] == expected.bimi_org
+        for rule_payload, rule in zip(actual["detections"], expected.detections, strict=True):
+            assert rule_payload == {
+                "type": rule.type,
+                "pattern": rule.pattern,
+                "description": rule.description,
+                "public_meaning": _public_detection_description(rule.type),
+                "reference": rule.reference,
+                "weight": rule.weight,
+                "tier": rule.tier,
+                "verified": rule.verified,
+            }
+
+
+def test_show_text_exposes_every_same_slug_record() -> None:
+    records = _split_slug_records()
+
+    result = runner.invoke(app, ["fingerprints", "show", records[0].slug])
+
+    assert result.exit_code == 0
+    plain_output = _plain(result.output)
+    assert f"Catalog records ({len(records)})" in plain_output
+    for index, record in enumerate(records, 1):
+        assert f"Record {index}" in plain_output
+        for detection in record.detections:
+            assert detection.pattern in plain_output
+
+
+def test_show_single_record_remains_concise() -> None:
+    record = _single_slug_record()
+
+    result = runner.invoke(app, ["fingerprints", "show", record.slug])
+
+    assert result.exit_code == 0
+    assert "Catalog records" not in _plain(result.output)
+
+
+def test_show_text_exposes_relationship_and_rule_metadata() -> None:
+    relationship_record = _record_with_relationship_metadata()
+    rule_record = _record_with_rule_metadata()
+
+    relationship_result = runner.invoke(app, ["fingerprints", "show", relationship_record.slug])
+    rule_result = runner.invoke(app, ["fingerprints", "show", rule_record.slug])
+
+    assert relationship_result.exit_code == 0
+    assert rule_result.exit_code == 0
+    relationship_output = _plain(relationship_result.output)
+    rule_output = _plain(rule_result.output)
+    for label, value in (
+        ("Product family", relationship_record.product_family),
+        ("Parent vendor", relationship_record.parent_vendor),
+        ("BIMI certificate org", relationship_record.bimi_org),
+    ):
+        if value is not None:
+            assert label in relationship_output
+            assert value in relationship_output
+    assert "Catalog description" in rule_output
+    for rule in rule_record.detections:
+        if rule.verified:
+            assert "Verified" in rule_output
+            assert rule.verified in rule_output
+        if rule.tier != "application":
+            assert "Tier" in rule_output
+            assert rule.tier in rule_output
+        if rule.weight != 1.0:
+            assert "Weight" in rule_output
+            assert str(rule.weight) in rule_output
 
 
 def test_show_synthetic_slug_json_documents_probe_origin() -> None:
@@ -206,10 +371,11 @@ def test_show_synthetic_slug_text_mode_documents_probe_origin() -> None:
     result = runner.invoke(app, ["fingerprints", "show", "exchange-onprem"])
 
     assert result.exit_code == 0
-    assert "Exchange-style endpoint indicator" in result.output
-    assert "does not establish" in result.output
-    assert "server software or deployment model" in result.output
-    assert "synthetic slug" in result.output
+    plain_output = _collapsed(result.output)
+    assert "Exchange-style endpoint indicator" in plain_output
+    assert "does not establish" in plain_output
+    assert "server software or deployment model" in plain_output
+    assert "synthetic slug" in plain_output
 
 
 def test_show_unknown_slug_exits_validation_with_suggestion() -> None:
@@ -221,6 +387,8 @@ def test_show_unknown_slug_exits_validation_with_suggestion() -> None:
     assert result.exit_code == EXIT_VALIDATION
     assert "No fingerprint with slug" in result.output
     assert "Did you mean" in result.output
+    suggestion_line = next(line for line in _plain(result.output).splitlines() if "Did you mean" in line)
+    assert suggestion_line.count(fp.slug) == 1
 
 
 def test_show_unknown_slug_without_suggestion_exits_validation() -> None:
@@ -333,7 +501,7 @@ def test_new_valid_fingerprint_prints_candidate_yaml() -> None:
     )
 
     assert result.exit_code == 0, result.output
-    assert "Slug, schema, and specificity all pass" in result.output
+    assert "Slug, schema, and specificity all pass" in _collapsed(result.output)
     assert "cycle31-stdout-service" in result.output
 
 
@@ -378,7 +546,7 @@ def test_fingerprints_test_default_example_corpus_runs_without_user_corpus(
     result = runner.invoke(app, ["fingerprints", "test", slug])
 
     assert result.exit_code == 0, result.output
-    plain_output = _plain(result.output)
+    plain_output = _collapsed(result.output)
     assert "fictional-company example corpus" in plain_output
     assert "0 of" in plain_output
 

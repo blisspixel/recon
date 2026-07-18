@@ -127,6 +127,18 @@ def test_search_json_covers_name_category_candidate_and_description_matches() ->
         assert json.loads(result.stdout), query
 
 
+def test_list_and_search_json_use_the_same_summary_fields() -> None:
+    _signal, label = reportable_signals()[0]
+    listed = runner.invoke(app, ["signals", "list", "--json"])
+    searched = runner.invoke(app, ["signals", "search", label, "--json"])
+
+    assert listed.exit_code == 0
+    assert searched.exit_code == 0
+    list_row = next(row for row in json.loads(listed.stdout) if row["name"] == label)
+    search_row = next(row for row in json.loads(searched.stdout) if row["name"] == label)
+    assert search_row == list_row
+
+
 def test_search_text_mode_prints_matches() -> None:
     _sig, label = reportable_signals()[0]
 
@@ -143,6 +155,7 @@ def test_search_no_matches_exits_cleanly() -> None:
 
     assert result.exit_code == 0
     assert "No signals match" in result.output
+    assert "recon signals list" in result.output
 
 
 def test_show_json_payload_matches_signal_object() -> None:

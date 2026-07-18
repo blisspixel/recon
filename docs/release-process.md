@@ -263,21 +263,46 @@ immutable PyPI files. The run-selection check also requires the chosen run's
 Inspect and rerun the failed path with the exact run ID:
 
 ```bash
-VERSION="$(uv run python -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')"
-test "$(git branch --show-current)" = "main"
-test -z "$(git status --porcelain --untracked-files=normal)"
-HEAD_SHA="$(git rev-parse HEAD)"
-test "${HEAD_SHA}" = "$(git rev-list -n 1 "refs/tags/v${VERSION}")"
-read -r RUN_ID RUN_HEAD_SHA <<< "$(gh run list --workflow Release \
+set -euo pipefail
+
+recovery_fail() {
+  printf 'FAIL: release recovery requires %s\n' "$1" >&2
+  exit 1
+}
+
+VERSION="$(uv run python -c 'import pathlib, tomllib; print(tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))["project"]["version"])')" || recovery_fail "uv to read the project version"
+CURRENT_BRANCH="$(git branch --show-current)" || recovery_fail "git to report the current branch"
+if ! test "${CURRENT_BRANCH}" = "main"; then
+  recovery_fail "a clean main branch"
+fi
+WORKTREE_STATUS="$(git status --porcelain --untracked-files=normal)" || recovery_fail "git to inspect the worktree"
+if ! test -z "${WORKTREE_STATUS}"; then
+  recovery_fail "a clean worktree"
+fi
+HEAD_SHA="$(git rev-parse HEAD)" || recovery_fail "git to resolve HEAD"
+TAG_SHA="$(git rev-list -n 1 "refs/tags/v${VERSION}" 2>/dev/null || true)"
+if ! test -n "${TAG_SHA}" || ! test "${HEAD_SHA}" = "${TAG_SHA}"; then
+  recovery_fail "the local tag v${VERSION} to resolve to HEAD"
+fi
+RUN_ROW="$(gh run list --workflow Release \
   --branch "v${VERSION}" --event push --limit 1 --json databaseId,headSha \
-  --jq '.[0] | [.databaseId, .headSha] | @tsv')"
-test -n "${RUN_ID}"
-test "${RUN_HEAD_SHA}" = "${HEAD_SHA}"
+  --jq '.[0] | [.databaseId, .headSha] | @tsv')" || recovery_fail "GitHub CLI to list the Release workflow run"
+read -r RUN_ID RUN_HEAD_SHA <<< "${RUN_ROW}"
+if ! test -n "${RUN_ID}"; then
+  recovery_fail "an exact Release workflow run for v${VERSION}"
+fi
+if ! test "${RUN_HEAD_SHA}" = "${HEAD_SHA}"; then
+  recovery_fail "the selected Release run to target HEAD"
+fi
+printf 'PASS: release recovery preconditions hold for run %s at %s\n' "${RUN_ID}" "${HEAD_SHA}"
 gh run view "${RUN_ID}" --log-failed
 gh run rerun "${RUN_ID}" --failed
 gh run watch "${RUN_ID}" --exit-status
 uv run python scripts/release_readiness.py --remote
 ```
+
+Run this block in Bash or Git Bash so strict mode and the here-string use the
+documented shell semantics. A named precondition failure exits before any rerun.
 
 Use that rerun path for transient timeouts, rate limits, temporary 5xx
 responses, delayed PyPI visibility, or a GitHub upload interruption after the
