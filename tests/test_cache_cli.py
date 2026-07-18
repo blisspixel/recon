@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 import os
 from collections.abc import Iterator
 from pathlib import Path
@@ -13,6 +14,7 @@ from typer.testing import CliRunner
 from recon_tool.cache import cache_dir, cache_put
 from recon_tool.cli import app
 from recon_tool.ct_cache import ct_cache_put
+from recon_tool.exit_codes import EXIT_INTERNAL
 from recon_tool.models import ConfidenceLevel, TenantInfo
 
 runner = CliRunner()
@@ -177,3 +179,116 @@ class TestCacheClear:
         assert "Cleared CT cache and result cache" in result.output
         assert not (tmp_cache / f"{exact_domain}.json").exists()
         assert not (cache_dir() / f"{exact_domain}.json").exists()
+
+    def test_clear_domain_reports_partial_unlink_failure(self, tmp_cache: Path, caplog) -> None:
+        domain = "partial-clear.com"
+        ct_cache_put(domain, [f"a.{domain}"], None, "crt.sh")
+        cache_put(
+            domain,
+            TenantInfo(
+                tenant_id=None,
+                display_name="Partial Clear",
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.HIGH,
+                region=None,
+                sources=("dns_records",),
+                services=(),
+                slugs=(),
+                auth_type=None,
+                dmarc_policy=None,
+                domain_count=1,
+            ),
+        )
+        original_unlink = Path.unlink
+
+        def unlink_with_ct_failure(path: Path, *args: object, **kwargs: object) -> None:
+            if path.parent.name == "ct-cache":
+                raise PermissionError("secret-cache-path")
+            original_unlink(path, *args, **kwargs)
+
+        with (
+            caplog.at_level(logging.DEBUG, logger="recon"),
+            patch.object(Path, "unlink", unlink_with_ct_failure),
+        ):
+            result = runner.invoke(app, ["cache", "clear", domain])
+
+        normalized = " ".join(result.output.split())
+        assert result.exit_code == EXIT_INTERNAL
+        assert "Cleared result cache" in normalized
+        assert "CT cache clear failed" in normalized
+        assert "Retry: recon --debug cache clear" in normalized
+        assert "secret-cache-path" not in result.output
+        assert "secret-cache-path" in caplog.text
+        assert (tmp_cache / f"{domain}.json").exists()
+        assert not (cache_dir() / f"{domain}.json").exists()
+
+    def test_clear_all_reports_layer_failure_after_partial_success(self, tmp_cache: Path) -> None:
+        domain = "partial-all.com"
+        ct_cache_put(domain, [f"a.{domain}"], None, "crt.sh")
+        cache_put(
+            domain,
+            TenantInfo(
+                tenant_id=None,
+                display_name="Partial All",
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.HIGH,
+                region=None,
+                sources=("dns_records",),
+                services=(),
+                slugs=(),
+                auth_type=None,
+                dmarc_policy=None,
+                domain_count=1,
+            ),
+        )
+        original_unlink = Path.unlink
+
+        def unlink_with_result_failure(path: Path, *args: object, **kwargs: object) -> None:
+            if path.parent.name == "cache":
+                raise PermissionError("secret-result-path")
+            original_unlink(path, *args, **kwargs)
+
+        with patch.object(Path, "unlink", unlink_with_result_failure):
+            result = runner.invoke(app, ["cache", "clear", "--all", "--force"])
+
+        normalized = " ".join(result.output.split())
+        assert result.exit_code == EXIT_INTERNAL
+        assert "Cleared 1 CT cache entry" in normalized
+        assert "Cleared 0 result cache entries" in normalized
+        assert "Some result cache entries could not be cleared" in normalized
+        assert "Retry: recon --debug cache clear" in normalized
+        assert "secret-result-path" not in result.output
+        assert not (tmp_cache / f"{domain}.json").exists()
+        assert (cache_dir() / f"{domain}.json").exists()
+
+    def test_clear_domain_never_reports_failures_as_absence(self, tmp_cache: Path) -> None:
+        domain = "failed-clear.com"
+        ct_cache_put(domain, [f"a.{domain}"], None, "crt.sh")
+        cache_put(
+            domain,
+            TenantInfo(
+                tenant_id=None,
+                display_name="Failed Clear",
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.HIGH,
+                region=None,
+                sources=("dns_records",),
+                services=(),
+                slugs=(),
+                auth_type=None,
+                dmarc_policy=None,
+                domain_count=1,
+            ),
+        )
+
+        with patch.object(Path, "unlink", side_effect=PermissionError("private unlink detail")):
+            result = runner.invoke(app, ["cache", "clear", domain])
+
+        assert result.exit_code == EXIT_INTERNAL
+        assert "No cache entry" not in result.output
+        assert "CT cache clear failed" in result.output
+        assert "result cache clear failed" in result.output
+        assert "private unlink detail" not in result.output

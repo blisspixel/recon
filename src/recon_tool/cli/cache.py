@@ -7,14 +7,60 @@ CLI, so this module only needs the small shared surface below.
 
 from __future__ import annotations
 
+from typing import TYPE_CHECKING
+
 import typer
 from rich.markup import escape
 
-from recon_tool.exit_codes import EXIT_VALIDATION
+from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_VALIDATION
 from recon_tool.formatter import get_console
 from recon_tool.validator import strip_control_chars
 
+if TYPE_CHECKING:
+    from recon_tool.cache_values import CacheClearResult
+
 cache_app = typer.Typer(help="Manage the CT subdomain cache and TenantInfo result cache.")
+
+
+def _report_clear_all(ct_result: CacheClearResult, result: CacheClearResult) -> None:
+    """Report both cache-layer outcomes and fail visibly after partial work."""
+    from recon_tool.formatter import render_error
+
+    console = get_console()
+    console.print(f"  Cleared {ct_result.removed} CT cache entr{'ies' if ct_result.removed != 1 else 'y'}.")
+    console.print(f"  Cleared {result.removed} result cache entr{'ies' if result.removed != 1 else 'y'}.")
+    if ct_result.failed:
+        render_error("Some CT cache entries could not be cleared. Retry: recon --debug cache clear ...")
+    if result.failed:
+        render_error("Some result cache entries could not be cleared. Retry: recon --debug cache clear ...")
+    if ct_result.failed or result.failed:
+        raise typer.Exit(code=EXIT_INTERNAL)
+
+
+def _report_clear_domain(
+    domain: str,
+    ct_result: CacheClearResult,
+    result: CacheClearResult,
+) -> None:
+    """Report one domain's cache-layer outcomes without claiming false absence."""
+    from recon_tool.formatter import render_error
+
+    console = get_console()
+    if ct_result.removed or result.removed:
+        parts: list[str] = []
+        if ct_result.removed:
+            parts.append("CT cache")
+        if result.removed:
+            parts.append("result cache")
+        console.print(f"  Cleared {' and '.join(parts)} for [bold]{domain}[/bold].")
+    elif not ct_result.failed and not result.failed:
+        console.print(f"  No cache entry for [bold]{domain}[/bold].")
+    if ct_result.failed:
+        render_error(f"{domain}: CT cache clear failed. Retry: recon --debug cache clear ...")
+    if result.failed:
+        render_error(f"{domain}: result cache clear failed. Retry: recon --debug cache clear ...")
+    if ct_result.failed or result.failed:
+        raise typer.Exit(code=EXIT_INTERNAL)
 
 
 @cache_app.command("show")
@@ -91,9 +137,18 @@ def cache_clear(
     """
     import sys
 
-    from recon_tool.cache import cache_clear as result_cache_clear
-    from recon_tool.cache import cache_clear_all as result_cache_clear_all
-    from recon_tool.ct_cache import ct_cache_clear, ct_cache_clear_all
+    from recon_tool.cache import (
+        _cache_clear_all_detailed as result_cache_clear_all,  # pyright: ignore[reportPrivateUsage]
+    )
+    from recon_tool.cache import (
+        _cache_clear_detailed as result_cache_clear,  # pyright: ignore[reportPrivateUsage]
+    )
+    from recon_tool.ct_cache import (
+        _ct_cache_clear_all_detailed as ct_cache_clear_all,  # pyright: ignore[reportPrivateUsage]
+    )
+    from recon_tool.ct_cache import (
+        _ct_cache_clear_detailed as ct_cache_clear,  # pyright: ignore[reportPrivateUsage]
+    )
     from recon_tool.formatter import render_error
     from recon_tool.validator import validate_domain
 
@@ -112,10 +167,9 @@ def cache_clear(
             else:
                 render_error("Refusing to clear all cached data without confirmation; re-run with --force.")
                 raise typer.Exit(code=EXIT_VALIDATION)
-        ct_count = ct_cache_clear_all()
-        result_count = result_cache_clear_all()
-        console.print(f"  Cleared {ct_count} CT cache entr{'ies' if ct_count != 1 else 'y'}.")
-        console.print(f"  Cleared {result_count} result cache entr{'ies' if result_count != 1 else 'y'}.")
+        ct_result = ct_cache_clear_all()
+        result = result_cache_clear_all()
+        _report_clear_all(ct_result, result)
     elif domain:
         try:
             validated = validate_domain(domain, apex=not exact)
@@ -123,17 +177,9 @@ def cache_clear(
             render_error(str(exc))
             raise typer.Exit(code=EXIT_VALIDATION) from None
 
-        ct_removed = ct_cache_clear(validated)
-        result_removed = result_cache_clear(validated)
-        if ct_removed or result_removed:
-            parts: list[str] = []
-            if ct_removed:
-                parts.append("CT cache")
-            if result_removed:
-                parts.append("result cache")
-            console.print(f"  Cleared {' and '.join(parts)} for [bold]{validated}[/bold].")
-        else:
-            console.print(f"  No cache entry for [bold]{validated}[/bold].")
+        ct_result = ct_cache_clear(validated)
+        result = result_cache_clear(validated)
+        _report_clear_domain(validated, ct_result, result)
     else:
         console.print("  Specify a domain or use --all.")
         raise typer.Exit(code=EXIT_VALIDATION)

@@ -61,6 +61,9 @@ than dropping the domain silently:
 
 Four keys: `domain` and `error` (both strings), `error_kind` (enum:
 `validation`, `lookup`, `timeout`), and `record_type` (const `"error"`).
+`error_kind` follows the structured failure path and must not be inferred from
+words in `error`. Unexpected internal per-domain failures use `lookup` with a
+stable redacted message; full exception detail is not part of this contract.
 The shape is disjoint from the single-domain success object (which carries
 dozens of required fields), so a consumer can branch on the key set alone.
 The deterministic envelope-classification rule a consumer should apply to any
