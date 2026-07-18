@@ -1151,6 +1151,18 @@
               "--exact"
             ],
             "type": "boolean"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "all_entries",
+            "required": false,
+            "tokens": [
+              "--all"
+            ],
+            "type": "boolean"
           }
         ],
         "path": [

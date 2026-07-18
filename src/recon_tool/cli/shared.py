@@ -36,9 +36,14 @@ def help_markup_mode() -> Literal["rich"] | None:
 
 def render_usage_rows(console: Console, rows: Sequence[tuple[str, str]]) -> None:
     """Render welcome commands without detaching narrow descriptions."""
-    if console.width >= _NARROW_HELP_COLUMNS:
+    command_width = max((len(command) for command, _description in rows), default=0)
+    longest_row = max(
+        (2 + command_width + 3 + len(description) for _command, description in rows),
+        default=0,
+    )
+    if console.width >= _NARROW_HELP_COLUMNS and longest_row <= console.width:
         for command, description in rows:
-            console.print(f"  {command:<34s} → {description}")
+            console.print(f"  {command:<{command_width}s} → {description}")
         return
 
     description_width = max(1, console.width - 4)

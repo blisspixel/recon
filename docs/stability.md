@@ -26,15 +26,15 @@ For the JSON output contract in full field-by-field detail, see
 | `recon doctor` | Stable | Check labels and exit codes. `--fix` and `--mcp` sub-flags. |
 | `recon mcp` | Stable | stdio transport only. |
 | `recon delta <domain>` | Stable | Auto-cache diff (v0.10.2). Diff panel + `--json`. |
-| `recon cache show [domain]` | Stable | Payload-free result and CT cache metadata; `--exact` selects literal-host keys. Missing, expired, and inspection-failure states remain distinct. |
-| `recon cache clear [domain \| --all]` | Stable | Clears both CT subdomain cache and TenantInfo result cache (v1.0.2+); `--exact` selects a literal-host key. |
-| `recon fingerprints list` | Stable | v1.1+. Per-category summary by default; `--category`, `--type`, `--all`, `--json`. |
+| `recon cache show [domain]` | Stable | Payload-free result and CT cache metadata; overview mode opens the first 100 completed JSON files per layer and reports exact totals, while `--all` explicitly inspects every completed JSON file. `--exact` selects literal-host keys. Missing, expired, inspection-failure, and temporary-residue states remain distinct. |
+| `recon cache clear [domain \| --all]` | Stable | Clears both CT subdomain cache and TenantInfo result cache (v1.0.2+); confirmed clear-all also removes interrupted-write artifacts. `--exact` selects a literal-host key. |
+| `recon fingerprints list` | Stable | v1.1+. Per-category summary by default; `--category`, `--type`, `--all`, `--json`. Explicit empty filters are validation errors. |
 | `recon fingerprints search <query>` | Stable | v1.1+. Search slug / name / category / detection pattern. |
 | `recon fingerprints show <slug>` | Stable | v1.1+. Full entry definition, including synthetic-slug provenance. |
 | `recon fingerprints check [path]` | Stable | v1.1+. Runtime schema, duplicate-slug, and specificity (v1.2+) checks. |
 | `recon fingerprints new <slug>` | Stable | v1.2+. Scaffolding wizard: slug / schema / specificity gates then emits YAML. |
-| `recon fingerprints test <slug>` | Stable | v1.2+. Runs one fingerprint against the bundled public corpus. |
-| `recon signals list` / `search` / `show` | Stable | v1.1+. Same shape as the fingerprints inspect commands. |
+| `recon fingerprints test <slug>` | Stable | v1.2+. Validates, apex-normalizes, and deduplicates a bounded local UTF-8 corpus before live lookup, or uses the fictional format example. JSON rows retain `matched` and `detail` and add the tri-state `status`; human output separates lookup errors from clean misses. A valid invocation retains exit 0 even when lookups fail, so automation must inspect `status`. |
+| `recon signals list` / `search` / `show` | Stable | v1.1+. Ranked search rows carry explicit category and confidence fields; explicit empty category filters are validation errors. |
 
 ### CLI flags (on `recon <domain>`)
 

@@ -177,10 +177,17 @@ JSON loader:
 - Reject or ignore invalid paths and entries without raising to the caller
   (tests: `tests/test_ct_cache.py`, `tests/test_cache_roundtrip.py`,
   `tests/test_cache_cli.py`, `tests/test_json_limits.py`).
-- Keep operator inspection payload-free. `recon cache show` validates the full
-  cached object but renders only bounded metadata, distinguishes absence from
-  inspection failure, withholds raw exceptions outside debug logging, and exits
-  4 when any requested entry cannot be inspected.
+- Keep operator inspection payload-free. The default `recon cache show`
+  overview enumerates filenames for exact totals but validates only the
+  lexicographically first 100 cached objects per layer; `--all` is the explicit
+  complete mode. Both render only bounded metadata, distinguish absence from
+  inspection failure, withhold raw exceptions outside debug logging, and exit
+  4 when a requested entry cannot be inspected.
+- Count only `*.tmp` artifacts matching the cache writer's domain-and-random-
+  nonce filename shape without reading their payload, report them as an
+  incomplete exit-4 state, and remove them only in the already-confirmed
+  clear-all path. Unrelated temporary files remain untouched. Deletion stays
+  nonrecursive and inside the validated cache directory.
 
 **Boundary:** The cache is not a privilege boundary against another local actor
 who can replace directories inside the invoking user's configuration tree while

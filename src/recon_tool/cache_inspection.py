@@ -13,7 +13,7 @@ from recon_tool.cache_contract import (
     RESULT_CACHE_VERSION,
 )
 from recon_tool.cache_paths import resolve_cache_directory, resolve_result_cache_path
-from recon_tool.cache_values import CacheInspection, CacheListing
+from recon_tool.cache_values import CacheInspection, CacheListing, select_cache_file_stems
 from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.validator import validate_domain
 
@@ -69,8 +69,8 @@ def inspect_result_cache(domain: str) -> CacheInspection[ResultCacheInfo]:
         return CacheInspection(failed=True)
 
 
-def list_result_cache() -> CacheListing[ResultCacheInfo]:
-    """List validated result-cache metadata and count unreadable entries."""
+def list_result_cache(*, limit: int | None = None) -> CacheListing[ResultCacheInfo]:
+    """List result-cache metadata with optional bounded payload inspection."""
     try:
         directory = resolve_cache_directory()
         if directory is None:
@@ -82,15 +82,22 @@ def list_result_cache() -> CacheListing[ResultCacheInfo]:
             logger.debug("Result cache listing path is not a directory")
             return CacheListing(failed=1)
 
+        selection = select_cache_file_stems(directory, limit=limit)
         entries: list[ResultCacheInfo] = []
         failed = 0
-        for path in sorted(directory.glob("*.json")):
-            inspection = inspect_result_cache(path.stem)
+        for stem in selection.stems:
+            inspection = inspect_result_cache(stem)
             if inspection.entry is not None:
                 entries.append(inspection.entry)
             elif inspection.failed:
                 failed += 1
-        return CacheListing(entries=tuple(entries), failed=failed)
+        return CacheListing(
+            entries=tuple(entries),
+            failed=failed,
+            inspected=len(selection.stems),
+            total=selection.total,
+            temporary_files=selection.temporary_files,
+        )
     except OSError:
         logger.debug("Result cache listing failed", exc_info=True)
         return CacheListing(failed=1)
