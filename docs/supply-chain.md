@@ -51,8 +51,8 @@ directory, these commands select the exact version tag and its commit instead
 of mutable branch content:
 
 ```bash
-git clone --branch v2.6.5 --single-branch https://github.com/blisspixel/recon.git recon-2.6.5
-cd recon-2.6.5
+git clone --branch v2.6.6 --single-branch https://github.com/blisspixel/recon.git recon-2.6.6
+cd recon-2.6.6
 ```
 
 Inspect this document and the referenced local scripts before execution. If you
@@ -70,7 +70,7 @@ subject.
 ```bash
 set -euo pipefail
 
-VERSION=2.6.5
+VERSION=2.6.6
 REPO=blisspixel/recon
 LEGACY_SBOM_ATTESTATION_SHA=3d5218e00e969874dda40956d677e131d392dbf9
 MAX_RELEASE_ASSET_BYTES=$((64 * 1024 * 1024))
@@ -211,7 +211,7 @@ echo "      PyPI provenance, channel byte parity, and both working wheel entry p
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
-$Version = "2.6.5"
+$Version = "2.6.6"
 $Repo = "blisspixel/recon"
 $LegacySbomAttestationSha = "3d5218e00e969874dda40956d677e131d392dbf9"
 $MaxReleaseAssetBytes = 64 * 1024 * 1024
@@ -413,7 +413,7 @@ To verify a published release yourself:
 
 ```bash
 # 1. Check out the exact tag.
-VERSION=2.6.5  # replace with the release being verified
+VERSION=2.6.6  # replace with the release being verified
 git clone https://github.com/blisspixel/recon
 cd recon
 git checkout "v${VERSION}"

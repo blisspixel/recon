@@ -5,7 +5,7 @@
       "keyword_count": 8,
       "name": "recon",
       "path": "agents/claude-code/.claude-plugin/plugin.json",
-      "version": "2.6.5"
+      "version": "2.6.6"
     },
     "client_configs": [
       {
