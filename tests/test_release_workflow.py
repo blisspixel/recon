@@ -85,7 +85,8 @@ def test_release_test_job_runs_complete_quality_gate() -> None:
     assert "--text-range" in step_text
     assert "git describe --tags" in step_text
     assert "scripts/check_mcp_compatibility.py" in step_text
-    assert "pip-audit" in step_text
+    assert "scripts/run_dependency_audit.py" in step_text
+    assert "uv run pip-audit" not in step_text
 
 
 def test_pypi_publication_waits_for_valid_sbom() -> None:
