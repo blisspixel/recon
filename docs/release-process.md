@@ -209,7 +209,10 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
 2. **test**: after preflight, runs the exact stable and candidate MCP SDK matrix,
    then delegates to the complete `scripts/check.py` gate with added-line text
    hygiene covering the full previous-release-to-tag range. A separate
-   hash-pinned runtime requirements export is audited with `pip-audit`.
+   hash-pinned runtime requirements export is audited with `pip-audit`. The
+   audit runner resolves the installed auditor under Python isolated mode and
+   retries once only for recognized transport failures; findings, unknown
+   failures, and a second transport failure remain fatal.
 3. **build**: after `test`, exact uv 0.11.17 uses the hash-locked build graph to
    produce one sdist, constructs one wheel from that exact sdist, and
    immediately seals both under `dist/`. Main CI runs the same sequence twice,
@@ -221,9 +224,9 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
    `python -m recon_tool --version` from the wheel in isolated environments.
 5. **sbom**: after `test`, generates the CycloneDX release SBOM independently of
    the package build path, adds the project root and dependency edge, and
-   validates the resulting document. Findings may coexist with this artifact
-   because the enforcing dependency audit already ran in `test`; SBOM tool or
-   validation failure is fatal.
+   validates the resulting document. Every nonzero audit status is fatal here,
+   including a finding first disclosed after `test`; SBOM tool or validation
+   failure is also fatal.
 6. **attest**: after `build` and `sbom`, records one GitHub provenance
    attestation whose subject set contains the wheel, sdist, and completed SBOM.
 7. **export-attestations**: after `build`, `sbom`, and `attest`, exports the

@@ -18,13 +18,38 @@ notes, see [`docs/security.md`](security.md).
 
 ---
 
-## Closed: unresolved HTTP destinations and MCP diagnostic side effects (Unreleased)
+## Closed in v2.6.6: dependency-audit execution identity and advisory timing
+
+| Field | Value |
+|---|---|
+| **Severity (as audited)** | Low; release-control integrity requires a reviewed checkout change |
+| **Source** | Cycle 15 security diff review (2026-07) |
+| **Fully closed** | **v2.6.6** |
+| **Pinned by** | `tests/test_run_dependency_audit.py`, `tests/test_release_workflow_contract.py` |
+
+The enforcing audit runner previously invoked `python -m pip_audit` through the
+ordinary current-directory module search. A reviewed checkout containing a
+root-level `pip_audit.py` or `pip_audit/` package could therefore replace the
+installed auditor and return a false success. The runner now uses Python
+isolated mode, preserving the installed environment while excluding checkout
+module shadowing. A real subprocess regression creates a colliding module and
+requires the installed `pip-audit` version output.
+
+The later isolated SBOM job also previously accepted audit status 1 because the
+earlier release test job had already audited the same lock. Advisory state can
+change between jobs, so the SBOM job now treats every nonzero audit status as
+fatal. Artifact isolation, exact output validation, and publication dependencies
+remain unchanged.
+
+---
+
+## Closed in v2.6.4: unresolved HTTP destinations and MCP diagnostic side effects
 
 | Field | Value |
 |---|---|
 | **Severity (as audited)** | High for destination validation; medium for process and terminal diagnostic integrity |
 | **Source** | Cycle 5 bounded maintenance review (2026-07) |
-| **Fully closed** | **Unreleased** |
+| **Fully closed** | **v2.6.4** |
 | **Pinned by** | `tests/test_http.py`, `tests/test_http_advanced.py`, `tests/test_doctor_mcp.py`, `tests/test_server.py` |
 
 The shared HTTP preflight previously returned "not private" when hostname
@@ -728,9 +753,12 @@ the fix. No ignore needed; the audit passes on the upgraded version.
 **pyjwt, PYSEC-2025-183 / CVE-2025-45768 - fixed.** The historical
 2.12.1 exception was removed on 2026-07-10 after the lockfile moved to
 PyJWT 2.13.0 and an unignored audit of the frozen runtime dependency set
-reported no known vulnerabilities. CI and the release workflow now run the
-same unqualified `pip-audit` gate. The earlier reachability analysis remains
-part of the audit history, but no exception is active.
+reported no known vulnerabilities. CI and the release workflow run the
+installed `pip-audit` module under Python isolated mode through a fail-closed
+runner that retries once only for recognized transport failures. Findings,
+unknown failures, and a second transport failure remain nonzero. The earlier
+reachability analysis remains part of the audit history, but no exception is
+active.
 
 ---
 

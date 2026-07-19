@@ -200,7 +200,7 @@ jobs:
         run: uv export --frozen --no-dev --no-emit-project --format requirements.txt --output-file .ci-audit-requirements.txt
 
       - name: Audit dependencies
-        run: uv run pip-audit -r .ci-audit-requirements.txt
+        run: uv run python scripts/run_dependency_audit.py -r .ci-audit-requirements.txt
 
   validate-fingerprints:
     runs-on: ubuntu-latest

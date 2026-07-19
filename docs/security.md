@@ -258,8 +258,11 @@ recon does **not** defend against:
 - **DNS cache poisoning at the OS level.** If the user's resolver is compromised, the entire threat model is compromised regardless of what recon does.
 - **Supply-chain compromise of transitive dependencies.** Locked runtime
   dependencies are checked by blocking `pip-audit` gates in CI and release
-  workflows. This detects known advisories; it does not prevent a compromise or
-  inspect dependencies in-process.
+  workflows. Their runner resolves the installed auditor under Python isolated
+  mode, retries once only for recognized transport failures, and never converts
+  a finding or exhausted retry into success. The later isolated SBOM job also
+  blocks on every nonzero audit status. This detects known advisories; it does
+  not prevent a compromise or inspect dependencies in-process.
 - **Side-channel timing attacks against the user's identity.** Every query recon makes is visible to the intermediary services (OIDC endpoints, CT providers, the user's DNS resolver). See [`legal.md`](legal.md#what-sees-your-queries) for the exposure inventory.
 - **Logging / telemetry exfiltration.** recon emits no telemetry. All output goes to the user's terminal or files they own.
 - **Malicious plugin systems.** recon has no plugin system and executes no user code.

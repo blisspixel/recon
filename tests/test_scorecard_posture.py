@@ -167,7 +167,7 @@ def test_release_workflow_exports_scorecard_recognized_provenance() -> None:
     assert "provenance/*" in release_text
 
 
-def test_codeql_workflow_is_pr_scoped_scheduled_and_least_privilege() -> None:
+def test_codeql_workflow_covers_main_prs_pushes_and_schedule_with_least_privilege() -> None:
     workflow = _load_yaml(".github/workflows/codeql.yml")
     triggers = _workflow_on(workflow)
     job = workflow["jobs"]["analyze"]
@@ -176,7 +176,7 @@ def test_codeql_workflow_is_pr_scoped_scheduled_and_least_privilege() -> None:
     assert "schedule" in triggers
     assert "workflow_dispatch" in triggers
     assert triggers["pull_request"] == {"branches": ["main"]}
-    assert "push" not in triggers
+    assert triggers["push"] == {"branches": ["main"]}
     assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
     assert job["permissions"] == _ALLOWED_ELEVATED_JOB_PERMISSIONS[".github/workflows/codeql.yml"]["analyze"]
     assert "github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e" in step_text
@@ -330,14 +330,15 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
     for required in (
         "2026-07-18",
         "Score: `8.2`",
-        "public API rechecked for the exact `HEAD` commit that published v2.6.4",
+        "public API rechecked for the exact current release `HEAD`",
         "live API URL",
         "Remote release readiness queries that API for `HEAD`",
         "overall score of at least `8.0`",
         "requires the documented SAST floor of `7`",
-        "all 17 sampled merged pull requests ran CI",
-        "same 17 pull-request heads predate PR-scoped CodeQL",
-        "New pull requests targeting `main` now run CodeQL",
+        "every sampled merged pull request ran CI",
+        "sample still includes merged pull-request heads from before PR-scoped CodeQL was required",
+        "Current pull requests provide supported SAST evidence",
+        "pushes to `main` run CodeQL",
         "public API reports successful supported SAST checks for every merged pull request",
         "OpenSSF Best Practices Badge is claimed",
         "openssf-badge-readiness.md",
@@ -348,23 +349,29 @@ def test_openssf_posture_docs_track_real_scorecard_limits() -> None:
         "CII-Best-Practices",
         "Contributors",
         "Do not manufacture review history",
+        "automated review comments are not approvals",
         "bestpractices.dev",
         "github.com/ossf/scorecard",
         "about-code-owners",
     ):
         assert required in text
 
+    assert "v2.6.4" not in text
+    assert "17 sampled" not in text
+
 
 def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
     text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "2026-07-18 Scorecard recheck for the exact v2.6.4 `HEAD` commit reports score `8.2`",
+        "2026-07-18 Scorecard recheck for the exact current-release `HEAD` reports score `8.2`",
         "non-SAST measured code-owned controls are at `10`; SAST is `7`",
-        "all 17 sampled merged pull requests predate PR-scoped CodeQL",
+        "sampled window still includes merged pull-request heads from before PR-scoped CodeQL was required",
         "overall score of at least `8.0`",
         "enforces the current SAST floor of `7`",
         "public API reports successful supported SAST checks for every merged pull request",
+        "Current pull requests and pushes to `main` run CodeQL",
+        "retry exactly once only when their output matches a narrow set of recognized transport failures",
         "requires the CI matrix, gitleaks, and CodeQL checks",
         "June 28 review found one code-owned gap",
         "remaining Scorecard limits are intentional or process-bound",
@@ -376,6 +383,9 @@ def test_supply_chain_docs_name_current_scorecard_recheck() -> None:
         "requires the PyPI and GitHub wheel and sdist digests to match",
     ):
         assert required in text
+
+    assert "exact v2.6.4 `HEAD`" not in text
+    assert "17 sampled" not in text
 
 
 def test_openssf_docs_do_not_turn_live_api_state_into_commit_promise() -> None:
