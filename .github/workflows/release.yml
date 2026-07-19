@@ -156,7 +156,7 @@ jobs:
         run: uv export --frozen --no-dev --no-emit-project --format requirements.txt --output-file .ci-audit-requirements.txt
 
       - name: Audit dependencies
-        run: uv run pip-audit -r .ci-audit-requirements.txt
+        run: uv run python scripts/run_dependency_audit.py -r .ci-audit-requirements.txt
 
   build:
     # Pure build job. The supply-chain isolation contract requires
@@ -403,9 +403,9 @@ jobs:
           mkdir -p sbom
           # ``--no-deps`` tells pip-audit not to install the locked
           # requirements again; it just reads the requirements text
-          # to produce the SBOM. Exit 1 means findings and is accepted here
-          # because the enforcing audit runs in ``test``. Any higher status,
-          # missing/corrupt JSON, or missing project root fails publication.
+          # to produce the SBOM. Every nonzero status blocks publication,
+          # including a finding first disclosed after the enforcing audit ran.
+          # Missing/corrupt JSON or a missing project root also fails closed.
           set +e
           uv tool run pip-audit -r .ci-audit-requirements.txt \
             --format=cyclonedx-json \
@@ -413,7 +413,7 @@ jobs:
             --no-deps
           audit_status=$?
           set -e
-          if [ "$audit_status" -gt 1 ]; then
+          if [ "$audit_status" -ne 0 ]; then
             exit "$audit_status"
           fi
           test -s "sbom/recon-tool-${VERSION}.cdx.json"
