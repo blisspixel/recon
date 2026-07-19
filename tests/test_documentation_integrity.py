@@ -139,6 +139,10 @@ def test_security_and_maintainer_docs_name_current_runtime_surfaces() -> None:
     ):
         assert receipt in resolutions
 
+    assert "Closed in v2.6.4: unresolved HTTP destinations and MCP diagnostic side effects" in resolutions
+    assert "| **Fully closed** | **v2.6.4** |" in resolutions
+    assert "| **Fully closed** | **Unreleased** |" not in resolutions
+
 
 def test_traceability_records_current_mutation_gate() -> None:
     traceability = _read("docs/traceability-matrix.md")

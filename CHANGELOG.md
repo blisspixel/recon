@@ -14,6 +14,34 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.6] - 2026-07-18
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Changed
+
+- CodeQL now analyzes every push to `main` in addition to pull requests,
+  scheduled scans, and manual runs, keeping exact default-branch evidence
+  current without a release-time dispatch.
+- Roadmap, OpenSSF, supply-chain, security, and release guidance now separates
+  shipped behavior, durable policy, and volatile external evidence without
+  pinning current trust claims to an obsolete release or sample size.
+
+### Fixed
+
+- Enforcing CI and release dependency audits now retry exactly once only for a
+  strict allowlist of recognized transport failures. Vulnerability findings,
+  malformed input, unknown failures, and exhausted retries remain nonzero and
+  keep publication blocked.
+- The dependency-audit runner now resolves the installed auditor under Python
+  isolated mode, preventing checkout files from shadowing the blocking audit
+  module. The later isolated SBOM job now blocks on every nonzero audit status,
+  including a finding first disclosed after the enforcing audit ran.
+- The latest security-audit resolution now records v2.6.4 as its actual closure
+  release instead of retaining an Unreleased label.
+
 ## [2.6.5] - 2026-07-18
 
 ### Tool Surface Changes
