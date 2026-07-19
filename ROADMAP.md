@@ -4,8 +4,9 @@ The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
 Current status: recon v2.6.5 has a stable, production-ready baseline. The CLI,
 JSON schema, local stdio MCP server, bounded collectors, generated-artifact
-guards, validation gates, and release path are shipped. Unreleased work improves
-first-run help and error recovery, removes rejected MCP values from logs,
+guards, validation gates, and release path are shipped. Recent shipped work
+improves first-run help and error recovery, removes rejected MCP values from
+logs,
 aligns public issue intake with the no-target-data policy, corrects the package
 surface description, requires verification dates on new fingerprint
 detections, groups batch help by task, redacts unexpected batch exception
@@ -13,16 +14,16 @@ details, reports cache deletion failures, exposes payload-free result and CT
 cache metadata, hardens diagnostic rendering, discloses doctor connectivity,
 keeps narrow help complete, adds all-source failure recovery, executes the
 sealed wheel before publication, and treats closed output pipes as normal
-control flow. Current polish also makes catalog search bounded and
+control flow. Shipped polish also makes catalog search bounded and
 field-associated, preserves every same-slug fingerprint record in `show`,
 aligns CLI and MCP category matching, keeps signal summary projections
 consistent, emits plain redirected gate logs, and makes partial-release reruns
-stop on named preconditions before mutation. The current maintenance pass also
+stop on named preconditions before mutation. Shipped maintenance also
 bounds default cache payload inspection with exact completeness counts, exposes
 and clears interrupted-write residue, separates fingerprint corpus errors from
 misses under bounded input, rejects empty catalog filters, preserves ranked
 signal hierarchy, and keeps welcome descriptions associated at 80 columns.
-The current MCP diagnostics pass makes static registry failures exit non-zero,
+The shipped MCP diagnostics pass makes static registry failures exit non-zero,
 exercises every canonical local JSON resource through live stdio, preserves the
 failed protocol phase, and documents the three-part server and client check.
 The active product work is evidence-semantic integrity and a
@@ -37,7 +38,7 @@ follow-up work. The first bounded internal claim contract now evaluates the exac
 DMARC `p=reject` observation and drives the opt-in cohort schema 2.2 DMARC
 denominator while schema 2.1 remains the default.
 
-Unreleased maintenance also refuses HTTP destinations whose hostname or DNS
+Shipped maintenance also refuses HTTP destinations whose hostname or DNS
 result cannot be validated, confines default MCP logging to the running server,
 bounds fatal MCP stderr, keeps doctor checks useful across ordinary HTTP
 request failures, labels CT cache overview freshness, and completes narrow root
@@ -51,18 +52,21 @@ validates the completed SBOM, exported provenance bundle, exact signer workflow,
 source tag and commit digest, and cross-channel digests. Reviewed installer
 helpers bind installation to their release version
 and preserve one existing package-manager owner; consumer verification now has
-complete fail-closed POSIX and PowerShell paths. Current release hardening also
+complete fail-closed POSIX and PowerShell paths. Shipped release hardening also
 reuses one bounded exact PyPI metadata validator, includes the completed SBOM in
 GitHub provenance, and rejects unsafe existing-release state before recovery
 can replace assets. The operator recovery block itself now uses strict Bash
 mode, named failures, and a visible pre-mutation success checkpoint. One
-digest-bound v2.6.3 historical exception preserves the
-published distribution-only bundle while still requiring SBOM validation;
-future releases fail if SBOM provenance is absent.
+  digest-bound v2.6.3 historical exception preserves the
+  published distribution-only bundle while still requiring SBOM validation;
+  future releases fail if SBOM provenance is absent. Enforcing dependency
+  audits resolve the installed auditor under Python isolated mode, and the
+  later SBOM job treats every nonzero audit status as fatal.
 
-Pull requests targeting `main` now run CodeQL before merge while scheduled and
-manual default-branch scans remain available. Remote readiness keeps the other
-required code-owned Scorecard controls at `10` and uses the observed SAST floor
+Pull requests targeting `main` run CodeQL before merge, every push to `main`
+updates exact default-branch analysis, and scheduled and manual scans remain
+available. Remote readiness keeps the other required code-owned Scorecard
+controls at `10` and uses the observed SAST floor
 of `7` while the public sample still contains pre-policy pull requests. The
 SAST requirement returns to `10` only after the public API reports supported
 SAST checks for every sampled merged pull request; historical checks are not

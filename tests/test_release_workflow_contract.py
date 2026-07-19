@@ -283,6 +283,8 @@ class TestSbomJobIsIsolated:
         assert "scripts/finalize_sbom.py" in text
         assert "test -s" in text
         assert "audit_status" in text
+        assert 'if [ "$audit_status" -ne 0 ]; then' in text
+        assert '"$audit_status" -gt 1' not in text
         assert "|| true" not in text
 
     def test_sbom_job_seals_only_the_exact_expected_regular_file(self, workflow):

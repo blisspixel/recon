@@ -24,7 +24,14 @@ produces and publishes:
 | **Constrained deterministic-build check** | `SOURCE_DATE_EPOCH`, uv 0.11.17, and the exact hash-locked backend graph are fixed; CI builds the sdist and reconstructs its wheel twice in one Ubuntu job, then compares both hashes | See the bounded recipe and limitations below |
 | **Sealed distribution gate** | A separate read-only release job requires exactly one tag-matching wheel and sdist, then executes both `recon --version` and `python -m recon_tool --version` from the wheel before either publication channel can run | Inspect the `package-smoke` job in the tagged release workflow run |
 | **Published-channel parity gate** | After PyPI publication, a separate read-only job requires the exact wheel and sdist and compares their SHA-256 digests with the sealed build pair. GitHub Release publication cannot create or replace assets until parity passes | Inspect the `verify-pypi-parity` job or run `scripts/check_release_channel_parity.py` from the exact source tag |
-| **CycloneDX SBOM** | Generated from a runtime-requirements export of `uv.lock` (`pip-audit --format=cyclonedx-json`), completed with the `recon-tool` root component and dependency edge, validated as nonempty JSON, and attached to the GitHub Release. The isolated SBOM job may emit an artifact when findings exist because the separate enforcing audit already blocks the release test job. Any SBOM tool, output, or validation failure blocks both PyPI and GitHub publication | Download `recon-tool-<version>.cdx.json` from the release assets and inspect `metadata.component` and the root dependency entry |
+| **CycloneDX SBOM** | Generated from a runtime-requirements export of `uv.lock` (`pip-audit --format=cyclonedx-json`), completed with the `recon-tool` root component and dependency edge, validated as nonempty JSON, and attached to the GitHub Release. Any finding, SBOM tool failure, malformed output, or validation failure in this later isolated job blocks both PyPI and GitHub publication | Download `recon-tool-<version>.cdx.json` from the release assets and inspect `metadata.component` and the root dependency entry |
+
+The enforcing CI and release dependency audits resolve the installed auditor
+under Python isolated mode and retry exactly once only when their output matches
+a narrow set of recognized transport failures. A vulnerability summary,
+malformed input, unknown failure, or second transport failure remains nonzero.
+The later isolated SBOM job also fails on every nonzero audit status, including a
+finding first disclosed after the enforcing release audit ran.
 
 ## Consumer verification quick path
 
@@ -499,9 +506,10 @@ recovery boundary are documented in [release-process.md](release-process.md).
 The repository also runs supply-chain posture checks outside the release flow:
 
 - OpenSSF Scorecard publishes the public posture badge and SARIF results.
-- CodeQL runs on pull requests targeting `main`, on a weekly schedule, and on
-  demand. The pull-request event supplies pre-merge analysis; the schedule keeps
-  a full default-branch scan independent of change traffic.
+- CodeQL runs on pull requests targeting `main`, on pushes to `main`, on a
+  weekly schedule, and on demand. Pull requests supply pre-merge analysis;
+  pushes keep exact default-branch commits current; the schedule provides an
+  independent full default-branch scan.
 - ClusterFuzzLite runs a PR-scoped Atheris fuzzer over recon's local parser,
   normalization, cache deserialization, and formatter-serialization boundaries.
   The workflow is read-only, SHA-pinned, and bounded to 180 seconds of fuzzing
@@ -554,16 +562,16 @@ The repository also runs supply-chain posture checks outside the release flow:
 - `.github/CODEOWNERS` routes all repository paths to the maintainer account so
   external pull requests have a clear review owner.
 
-The 2026-07-18 Scorecard recheck for the exact v2.6.4 `HEAD` commit reports
+The 2026-07-18 Scorecard recheck for the exact current-release `HEAD` reports
 score `8.2`. The non-SAST measured code-owned controls are at `10`; SAST is `7`
-because all 17 sampled merged pull requests predate PR-scoped CodeQL. Remote
-release readiness requires an overall score of at least `8.0`, keeps the other
-required code-owned controls at `10`, and enforces the current SAST floor of
-`7`. New pull requests targeting `main` run CodeQL, and the weekly and manual
-default-branch scans remain. The SAST requirement can return to `10` only after
-the public API reports successful supported SAST checks for every merged pull
-request in its sampled window. The dated `8.2` value is a snapshot, not a
-permanent promise.
+because the sampled window still includes merged pull-request heads from before
+PR-scoped CodeQL was required. Remote release readiness requires an overall
+score of at least `8.0`, keeps the other required code-owned controls at `10`,
+and enforces the current SAST floor of `7`. Current pull requests and pushes to
+`main` run CodeQL, and weekly and manual default-branch scans remain. The SAST
+requirement can return to `10` only after the public API reports successful
+supported SAST checks for every merged pull request in its sampled window. The
+sample size and dated `8.2` value are snapshots, not permanent promises.
 The June 28 review found one code-owned gap and several repository-process gaps.
 The code-owned gap was an
 unpinned installer download-and-run path; the installer now refuses to execute

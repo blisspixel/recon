@@ -7,8 +7,8 @@ while the Best Practices Badge is an account-backed project questionnaire.
 ## Current Snapshot
 
 - Date checked: 2026-07-18.
-- Live API state at check time: public API rechecked for the exact `HEAD` commit
-  that published v2.6.4 after CI and publication completed.
+- Live API state at check time: public API rechecked for the exact current
+  release `HEAD` after CI and publication completed.
 - Scorecard version: `v5.3.0`.
 - Score: `8.2`.
 - Public source: `https://api.securityscorecards.dev/projects/github.com/blisspixel/recon`.
@@ -24,22 +24,23 @@ The measured non-SAST code-owned controls are green: dangerous workflow
 patterns, dependency update automation, token permissions, pinned dependencies,
 binary artifacts, security policy, known vulnerabilities, packaging, fuzzing,
 signed releases, and license all score `10`. CI-Tests also scores `10` because
-all 17 sampled merged pull requests ran CI. SAST scores `7`: CodeQL is detected,
-but the same 17 pull-request heads predate PR-scoped CodeQL and have no supported
-SAST check. A scheduled or manual scan of `main` does not rewrite that history.
-New pull requests targeting `main` now run CodeQL while the weekly and manual
-main analysis remains available. The SAST gate can return to `10` only after the
+every sampled merged pull request ran CI. SAST scores `7`: CodeQL is detected,
+but the sample still includes merged pull-request heads from before PR-scoped
+CodeQL was required. Current pull requests provide supported SAST evidence; a
+default-branch scan does not rewrite older pull-request history. Pull requests
+targeting `main` and pushes to `main` run CodeQL, while weekly and manual main
+analysis remains available. The SAST gate can return to `10` only after the
 public API reports successful supported SAST checks for every merged pull
-request in its sampled window. The exact overall score remains a dated external
-snapshot; the enforced `8.0` overall and `7` SAST floors are the current
-regression policy.
+request in its sampled window. The exact sample size and overall score remain
+dated external state; the enforced `8.0` overall and `7` SAST floors are the
+current regression policy.
 
 The remaining low or unknown checks are process-bound:
 
 | Check | Current reason | Real next step |
 |---|---|---|
 | `Branch-Protection` | `main` is protected, but administrator bypass remains and PRs are not mandatory. | Keep the current required-check ruleset for clean-main work. If the project moves to a multi-maintainer flow, require PRs, remove administrator bypass, and require CODEOWNERS review. |
-| `Code-Review` | No reviewed pull-request history exists for Scorecard to evaluate. | Use normal reviewed PRs for non-urgent work when there is another qualified reviewer. Do not manufacture review history. |
+| `Code-Review` | No human-approved changesets appear in Scorecard's sampled window; automated review comments are not approvals. | Use normal reviewed PRs for non-urgent work when there is another qualified reviewer. Do not manufacture review history. |
 | `CII-Best-Practices` | No OpenSSF Best Practices Badge project is linked. | Use [openssf-badge-readiness.md](openssf-badge-readiness.md) to answer the questionnaire from committed evidence; link a badge only after the real project page exists and the answers match the repository. |
 | `Contributors` | Scorecard sees no contributor diversity across organizations. | Accept this for a single-maintainer project. Do not add artificial contributors. |
 
