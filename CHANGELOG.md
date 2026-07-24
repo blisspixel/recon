@@ -14,6 +14,67 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.9] - 2026-07-24
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Fixed
+
+- RFC 7505 Null MX and RFC 2782 unavailable-service SRV records are detected
+  again. Record normalization stripped the trailing dot from every non-TXT
+  value, so a bare root-label target lost the character that carries its
+  meaning. A domain publishing `0 .` to declare that it accepts no mail was
+  reported as a live but unclassified delivery host, and the merged result
+  treated it as evidence that the domain accepts email. SRV records publishing
+  `0 0 0 .` to declare a service unavailable were reported as detected CalDAV
+  and XMPP services. Both downstream guards were already written for the
+  correct values and could not fire. A Null MX apex is now reported as its own
+  explicit declaration instead of being folded into sparse or unclassified
+  wording that claimed the operator could not be identified.
+- Fingerprint discovery consults the real catalog again. `discover_fingerprint_candidates`
+  and `recon discover` resolved their catalog path from the calling module's
+  own directory, which does not contain one, and the loader treats a missing
+  directory as zero known patterns rather than an error. The step that drops
+  terminals an existing fingerprint already covers therefore never ran, and
+  both surfaces re-proposed catalogued suffixes as new candidates.
+- A downstream consumer closing the output pipe exits 0, as the operational
+  contract states. The command framework converted the pipe error into exit 1
+  before recon's handler observed it, so the closed-pipe branch was
+  unreachable for real pipes.
+- `--explain` output is deterministic. The email-control branch iterated a set,
+  so matched slugs and evidence were ordered by hash seed and changed between
+  processes.
+
+### Security
+
+- CSV output now removes terminal control characters, as the panel, markdown,
+  and plain-text sinks already did. `display_name` originates from a provider
+  response and the batch error column echoes rejected input, so an escape,
+  operating-system-command, or bell sequence reached the file and acted on the
+  terminal when an operator inspected it. Spreadsheet formula-prefix
+  neutralization is unchanged.
+- Updated the development toolchain's transitive GitPython dependency to
+  3.1.54, clearing eight high-severity advisories. GitPython enters the graph
+  only through the mutation-testing group and is not part of the shipped
+  runtime, so end users were not exposed.
+
+### Changed
+
+- The `--exposure` panel labels the 0-100 value as a public-evidence index
+  rather than a posture score, matching every other surface and the documented
+  evidence semantics. The stable `posture_score` and `posture_score_label`
+  JSON fields are unchanged.
+- Removed em dashes from source comments, docstrings, and operator-facing
+  messages so the tracked source satisfies the project text standard directly.
+
+### Notes for downstream consumers
+
+- 2.6.8 was tagged but never published. Its pipeline stopped at the quality
+  gate before any artifact was built, so no 2.6.8 distribution exists on any
+  channel. 2.6.9 supersedes it.
+
 ## [2.6.8] - 2026-07-24
 
 ### Tool Surface Changes
