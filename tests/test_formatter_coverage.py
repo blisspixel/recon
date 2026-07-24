@@ -803,7 +803,7 @@ class TestCsvStripsTerminalControlCharacters:
     operator ran ``cat`` on it.
     """
 
-    _HOSTILE = "Acme\x1b]0;pwned\x07\x1b[2J ‮Orp"
+    _HOSTILE = "Synthetic\x1b]0;pwned\x07\x1b[2J ‮dtL"
 
     def test_display_name_column_is_stripped(self) -> None:
         from recon_tool.formatter.serialize import format_tenant_csv_row
