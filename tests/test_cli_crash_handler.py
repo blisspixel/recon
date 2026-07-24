@@ -139,3 +139,39 @@ def test_unrelated_oserror_still_uses_crash_handler(monkeypatch, capsys, tmp_pat
     assert exc_info.value.code == EXIT_INTERNAL
     assert "unexpected error" in capsys.readouterr().err
     assert len(list(tmp_path.glob("recon-crash-*.log"))) == 1
+
+
+def test_typer_epipe_systemexit_maps_to_zero(monkeypatch, tmp_path) -> None:
+    """A closed pipe must exit 0 even though Typer reports it as exit 1.
+
+    The tests above monkeypatch ``cli.app`` with the raw exception, which
+    removes the exact layer that breaks in production: Typer catches the EPIPE
+    ``OSError`` itself and calls ``sys.exit(1)`` (typer/core.py), so recon only
+    ever observes ``SystemExit(1)`` whose ``__context__`` holds the pipe error.
+    This reproduces that shape.
+    """
+    monkeypatch.setattr("tempfile.gettempdir", lambda: str(tmp_path))
+
+    def _exit_like_typer() -> None:
+        try:
+            raise BrokenPipeError(errno.EPIPE, "closed pipe")
+        except OSError:
+            sys.exit(1)
+
+    monkeypatch.setattr(cli, "app", _exit_like_typer)
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.run()
+
+    assert exc_info.value.code == 0
+    assert list(tmp_path.glob("recon-crash-*.log")) == []
+
+
+def test_ordinary_exit_one_is_not_rewritten(monkeypatch) -> None:
+    """A plain SystemExit(1) with no pipe context must stay 1."""
+    monkeypatch.setattr(cli, "app", _raise(SystemExit(1)))
+
+    with pytest.raises(SystemExit) as exc_info:
+        cli.run()
+
+    assert exc_info.value.code == 1

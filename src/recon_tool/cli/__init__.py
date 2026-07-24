@@ -30,8 +30,10 @@ from recon_tool.cli.options import (
 )
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.cli.shared import help_markup_mode as _help_markup_mode
+from recon_tool.cli.shared import is_closed_pipe as _is_closed_pipe
 from recon_tool.cli.shared import positive_finite_float, raise_lookup_error
 from recon_tool.cli.shared import render_usage_rows as _render_usage_rows
+from recon_tool.cli.shared import silence_closed_standard_streams as _silence_closed_standard_streams
 from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
 
@@ -915,21 +917,6 @@ def delta(
     asyncio.run(_run())
 
 
-def _silence_closed_standard_streams() -> None:
-    """Prevent interpreter-shutdown flush noise after a closed output pipe."""
-    import os
-    import sys
-
-    # Python flushes the current standard streams again during interpreter
-    # shutdown. Point both at the null device after the original pipe failure.
-    for stream_name in ("stdout", "stderr"):
-        try:
-            replacement = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
-        except OSError:
-            continue
-        setattr(sys, stream_name, replacement)
-
-
 def run() -> None:
     """Entry point - invokes the Typer app.
 
@@ -946,16 +933,17 @@ def run() -> None:
     except KeyboardInterrupt:
         get_err_console().print("[yellow]Interrupted.[/yellow]")
         raise SystemExit(130) from None
-    except SystemExit:
+    except SystemExit as exc:
+        # Typer converts an EPIPE OSError into sys.exit(1) inside its own
+        # handler (typer/core.py), so this frame never sees the original
+        # BrokenPipeError and the branch below could not fire for a real pipe.
+        # The raising context still holds it, so recover the documented exit 0.
+        if exc.code == 1 and _is_closed_pipe(exc.__context__):
+            _silence_closed_standard_streams()
+            raise SystemExit(0) from None
         raise
     except Exception as exc:  # top-level last-resort crash handler (catch-all is intentional)
-        import errno
-        import os
-
-        closed_pipe = isinstance(exc, BrokenPipeError) or (
-            isinstance(exc, OSError) and (exc.errno == errno.EPIPE or (os.name == "nt" and exc.errno == errno.EINVAL))
-        )
-        if closed_pipe:
+        if _is_closed_pipe(exc):
             _silence_closed_standard_streams()
             raise SystemExit(0) from None
 

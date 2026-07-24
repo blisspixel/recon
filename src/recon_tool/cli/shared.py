@@ -204,3 +204,30 @@ def lookup_validate(
             f"[dim]Analyzing apex {apex} (from {literal}). Use --exact to query {literal} directly.[/dim]"
         )
     return apex
+
+
+def is_closed_pipe(exc: BaseException | None) -> bool:
+    """Return True when *exc* is a downstream consumer closing the output pipe."""
+    import errno
+    import os
+
+    if isinstance(exc, BrokenPipeError):
+        return True
+    return isinstance(exc, OSError) and (
+        exc.errno == errno.EPIPE or (os.name == "nt" and exc.errno == errno.EINVAL)
+    )
+
+
+def silence_closed_standard_streams() -> None:
+    """Prevent interpreter-shutdown flush noise after a closed output pipe."""
+    import os
+    import sys
+
+    # Python flushes the current standard streams again during interpreter
+    # shutdown. Point both at the null device after the original pipe failure.
+    for stream_name in ("stdout", "stderr"):
+        try:
+            replacement = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
+        except OSError:
+            continue
+        setattr(sys, stream_name, replacement)
