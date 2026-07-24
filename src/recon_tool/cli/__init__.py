@@ -30,8 +30,10 @@ from recon_tool.cli.options import (
 )
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.cli.shared import help_markup_mode as _help_markup_mode
+from recon_tool.cli.shared import is_closed_pipe as _is_closed_pipe
 from recon_tool.cli.shared import positive_finite_float, raise_lookup_error
 from recon_tool.cli.shared import render_usage_rows as _render_usage_rows
+from recon_tool.cli.shared import silence_closed_standard_streams as _silence_closed_standard_streams
 from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
 
@@ -913,33 +915,6 @@ def delta(
         cache_put(validated, info)
 
     asyncio.run(_run())
-
-
-def _silence_closed_standard_streams() -> None:
-    """Prevent interpreter-shutdown flush noise after a closed output pipe."""
-    import os
-    import sys
-
-    # Python flushes the current standard streams again during interpreter
-    # shutdown. Point both at the null device after the original pipe failure.
-    for stream_name in ("stdout", "stderr"):
-        try:
-            replacement = open(os.devnull, "w", encoding="utf-8")  # noqa: SIM115
-        except OSError:
-            continue
-        setattr(sys, stream_name, replacement)
-
-
-def _is_closed_pipe(exc: BaseException | None) -> bool:
-    """Return True when *exc* is a downstream consumer closing the output pipe."""
-    import errno
-    import os
-
-    if isinstance(exc, BrokenPipeError):
-        return True
-    return isinstance(exc, OSError) and (
-        exc.errno == errno.EPIPE or (os.name == "nt" and exc.errno == errno.EINVAL)
-    )
 
 
 def run() -> None:
