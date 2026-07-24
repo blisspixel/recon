@@ -930,6 +930,18 @@ def _silence_closed_standard_streams() -> None:
         setattr(sys, stream_name, replacement)
 
 
+def _is_closed_pipe(exc: BaseException | None) -> bool:
+    """Return True when *exc* is a downstream consumer closing the output pipe."""
+    import errno
+    import os
+
+    if isinstance(exc, BrokenPipeError):
+        return True
+    return isinstance(exc, OSError) and (
+        exc.errno == errno.EPIPE or (os.name == "nt" and exc.errno == errno.EINVAL)
+    )
+
+
 def run() -> None:
     """Entry point - invokes the Typer app.
 
@@ -946,16 +958,17 @@ def run() -> None:
     except KeyboardInterrupt:
         get_err_console().print("[yellow]Interrupted.[/yellow]")
         raise SystemExit(130) from None
-    except SystemExit:
+    except SystemExit as exc:
+        # Typer converts an EPIPE OSError into sys.exit(1) inside its own
+        # handler (typer/core.py), so this frame never sees the original
+        # BrokenPipeError and the branch below could not fire for a real pipe.
+        # The raising context still holds it, so recover the documented exit 0.
+        if exc.code == 1 and _is_closed_pipe(exc.__context__):
+            _silence_closed_standard_streams()
+            raise SystemExit(0) from None
         raise
     except Exception as exc:  # top-level last-resort crash handler (catch-all is intentional)
-        import errno
-        import os
-
-        closed_pipe = isinstance(exc, BrokenPipeError) or (
-            isinstance(exc, OSError) and (exc.errno == errno.EPIPE or (os.name == "nt" and exc.errno == errno.EINVAL))
-        )
-        if closed_pipe:
+        if _is_closed_pipe(exc):
             _silence_closed_standard_streams()
             raise SystemExit(0) from None
 
