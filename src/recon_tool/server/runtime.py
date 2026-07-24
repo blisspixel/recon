@@ -168,7 +168,7 @@ def rate_limit_evict_expired() -> None:
 def rate_limit_check(domain: str) -> bool:
     """Return True if the domain lookup should be allowed.
 
-    Does NOT record the timestamp — call rate_limit_record() after a
+    Does NOT record the timestamp - call rate_limit_record() after a
     successful lookup so transient failures don't block retries.
     """
     return _STATE.rate_limit_check(domain)

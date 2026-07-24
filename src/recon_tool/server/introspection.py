@@ -648,7 +648,7 @@ async def discover_fingerprint_candidates(
     unclassified-CNAME-chain capture, applies intra-org and already-covered
     filters, and returns a ranked candidate list ready for triage. Each
     surviving entry is a real third-party SaaS or infrastructure pattern
-    that recon does not yet recognize — propose it as a new ``cname_target``
+    that recon does not yet recognize - propose it as a new ``cname_target``
     fingerprint or an extension of an existing one.
 
     Use after a regular ``lookup_tenant`` call when you notice unclassified
@@ -663,9 +663,9 @@ async def discover_fingerprint_candidates(
             CertSpotter). Discovery falls back to common-subdomain probes
             and apex CNAME walks. Use for high-volume runs.
         keep_intra_org: When true, retain CNAME chains that look intra-
-            organizational. Default ``false`` — false-positive prone but
+            organizational. Default ``false`` - false-positive prone but
             more inclusive when ``true``.
-        min_count: Drop suffixes seen fewer than N times. Default 1 — for
+        min_count: Drop suffixes seen fewer than N times. Default 1 - for
             single-domain runs, every distinct chain matters.
 
     Returns:
@@ -875,7 +875,7 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
     that shaped it. Pair with ``get_posteriors`` when you want both
     the structured posteriors and the prose explanation.
 
-    Stable v2.0+. Output language stays hedged — "the posterior
+    Stable v2.0+. Output language stays hedged - "the posterior
     places X at probability ..." rather than "X is true". Sparse-
     evidence nodes are flagged so the consumer doesn't over-interpret
     a confident-looking number.

@@ -176,7 +176,7 @@ def mcp_install_command(
     console.print()
 
     # Emit the cwd-shadow warning when the fallback launch
-    # form was persisted. Informational only — the persisted env
+    # form was persisted. Informational only - the persisted env
     # carries PYTHONSAFEPATH=1 plus the runtime guard in server.py,
     # so MCP clients on Python 3.11+ are protected.
     fallback_warning = warn_if_fallback()
