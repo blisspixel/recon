@@ -152,7 +152,7 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
 
     text.append("  Domain: ", style="dim")
     text.append(f"{assessment.domain}\n")
-    text.append("  Posture Score: ", style="dim")
+    text.append("  Public-evidence index: ", style="dim")
     score = assessment.posture_score
     score_style = "#a3d9a5" if score >= 60 else "#7ec8e3" if score >= 30 else "#e07a5f"
     text.append(f"{score}/100", style=score_style)
