@@ -120,9 +120,13 @@ mutation = [
 ]
 
 [tool.uv]
-# Artifact workflows select this exact uv release too. Keeping the requirement
-# here makes local constraint export and release-shaped builds fail on drift.
-required-version = "==0.11.17"
+# CI, the release workflow, and artifact builds pin the exact uv release
+# (0.11.17) through `astral-sh/setup-uv`, so reproducible builds do not depend
+# on this floor. The range stays wide enough for Dependabot's bundled uv to run
+# `uv lock`; without it, every Dependabot update fails closed and no Python
+# dependency or security update can land. See CONTRIBUTING.md and
+# docs/supply-chain.md.
+required-version = ">=0.11.8,<0.12"
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
