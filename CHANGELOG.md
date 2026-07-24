@@ -14,6 +14,23 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.8] - 2026-07-24
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Changed
+
+- Re-released the v2.6.7 content from rewritten commit history. Repository
+  history was rewritten to remove generated-author trailers from commit
+  messages, which changed every commit identifier from the v2.3.1 range
+  onward. Package content is unchanged from 2.6.7; this release restores the
+  invariant that the published release tag and its provenance commit are
+  contained in current `main`. The v2.6.7 tag and its published distributions
+  remain available and internally verifiable against their original commit,
+  which is no longer reachable from `main`.
+
 ## [2.6.7] - 2026-07-24
 
 ### Tool Surface Changes
