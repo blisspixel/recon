@@ -14,6 +14,11 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 _PYPROJECT = _REPO_ROOT / "pyproject.toml"
 _CONSTRAINTS = _REPO_ROOT / "build-constraints.txt"
 _WORKFLOW_DIR = _REPO_ROOT / ".github" / "workflows"
+# The exact uv release that reproduces the shipped build. CI, the release
+# workflow, and artifact builds pin this through `astral-sh/setup-uv`; the
+# `pyproject.toml` floor only has to admit it (and stay wide enough for
+# Dependabot's bundled uv to run `uv lock`).
+_REPRODUCIBLE_UV_VERSION = "0.11.17"
 _EXPECTED_BUILD_PACKAGES = {
     "hatchling",
     "packaging",
@@ -29,6 +34,41 @@ def _project_config() -> dict[str, object]:
         return tomllib.load(stream)
 
 
+def _version_tuple(version: str) -> tuple[int, ...]:
+    return tuple(int(part) for part in version.split("."))
+
+
+def _version_satisfies(version: str, specifier: str) -> bool:
+    """Evaluate a comma-separated set of numeric-version comparators.
+
+    Supports the ``>=``, ``>``, ``<=``, ``<``, and ``==`` operators over
+    dotted numeric versions, which is all uv release identifiers require.
+    """
+
+    target = _version_tuple(version)
+    for raw_clause in specifier.split(","):
+        clause = raw_clause.strip()
+        for operator in (">=", "<=", "==", ">", "<"):
+            if clause.startswith(operator):
+                bound = _version_tuple(clause[len(operator) :].strip())
+                if operator == ">=":
+                    ok = target >= bound
+                elif operator == "<=":
+                    ok = target <= bound
+                elif operator == "==":
+                    ok = target == bound
+                elif operator == ">":
+                    ok = target > bound
+                else:
+                    ok = target < bound
+                if not ok:
+                    return False
+                break
+        else:  # pragma: no cover - guards against an unsupported comparator
+            raise AssertionError(f"unsupported version comparator in {clause!r}")
+    return True
+
+
 def test_build_root_and_uv_are_exactly_selected() -> None:
     config = _project_config()
     build_system = config["build-system"]
@@ -37,7 +77,11 @@ def test_build_root_and_uv_are_exactly_selected() -> None:
 
     assert build_system["requires"] == ["hatchling==1.31.0"]
     assert dependency_groups["build"] == build_system["requires"]
-    assert uv_config["required-version"] == "==0.11.17"
+    # The floor must admit the reproducible uv version while staying a range
+    # (not an exact pin) so Dependabot's bundled uv can still run `uv lock`.
+    required_version = uv_config["required-version"]
+    assert not required_version.startswith("=="), required_version
+    assert _version_satisfies(_REPRODUCIBLE_UV_VERSION, required_version)
 
 
 def test_build_constraints_are_exact_complete_and_hashed() -> None:
@@ -84,8 +128,11 @@ def test_build_constraints_match_frozen_build_group(tmp_path: Path) -> None:
     assert exported.read_text(encoding="utf-8") == _CONSTRAINTS.read_text(encoding="utf-8")
 
 
-def test_artifact_workflows_select_required_uv_version() -> None:
-    required_version = _project_config()["tool"]["uv"]["required-version"].removeprefix("==")
+def test_artifact_workflows_select_reproducible_uv_version() -> None:
+    # Every workflow pins the exact reproducible uv version, and that version
+    # must satisfy the pyproject floor so local and CI toolchains agree.
+    required_version = _project_config()["tool"]["uv"]["required-version"]
+    assert _version_satisfies(_REPRODUCIBLE_UV_VERSION, required_version)
 
     uv_step_count = 0
     for path in sorted(_WORKFLOW_DIR.glob("*.yml")):
@@ -98,7 +145,7 @@ def test_artifact_workflows_select_required_uv_version() -> None:
         ]
         uv_step_count += len(uv_steps)
         for step in uv_steps:
-            assert step.get("with", {}).get("version") == required_version, (
-                f"{path.name} job step {step.get('name')!r} does not select uv {required_version}"
+            assert step.get("with", {}).get("version") == _REPRODUCIBLE_UV_VERSION, (
+                f"{path.name} job step {step.get('name')!r} does not select uv {_REPRODUCIBLE_UV_VERSION}"
             )
     assert uv_step_count > 0

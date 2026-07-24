@@ -419,7 +419,7 @@ cd recon
 git checkout "v${VERSION}"
 
 # 2. Confirm the tag-selected build executable and match release Python.
-uv --version  # must report uv 0.11.17; pyproject.toml rejects drift
+uv --version  # must report uv 0.11.17; the release workflow pins this exact uv
 export UV_PYTHON=3.11
 export SOURCE_DATE_EPOCH="$(git log -1 --pretty=%ct)"
 
