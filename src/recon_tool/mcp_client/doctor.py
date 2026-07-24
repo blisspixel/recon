@@ -78,7 +78,7 @@ class DoctorCheck:
 class DoctorReport:
     """Aggregate result for the whole run.
 
-    ``server_stderr_tail`` is empty when the handshake succeeded — a
+    ``server_stderr_tail`` is empty when the handshake succeeded - a
     healthy server's startup banner isn't useful diagnostic output.
     On failure, it carries the trailing N lines of the spawned
     server's stderr so the CLI can surface the actual import error,
@@ -277,7 +277,7 @@ async def _run_handshake(
 
     Server stderr is captured into ``errlog`` rather than forwarded
     to the doctor's own stderr. That way, if the handshake fails,
-    the caller can attach the captured tail to the failure detail —
+    the caller can attach the captured tail to the failure detail -
     a server crash during ``initialize`` would otherwise show as a
     bare ``BrokenPipeError`` with no hint at the underlying import
     error, traceback, or missing-dependency message that produced it.
@@ -285,7 +285,7 @@ async def _run_handshake(
     Supply-chain hardening (v1.9.3.4): the subprocess is spawned with
     ``cwd`` pointing at an empty temporary directory and the
     ``PYTHONSAFEPATH=1`` env var set. Both protect against the
-    cwd-shadow attack pattern audited in v1.9.3.4 — Python's ``-m``
+    cwd-shadow attack pattern audited in v1.9.3.4 - Python's ``-m``
     flag prepends cwd to ``sys.path`` on Python 3.10 (and absent
     ``PYTHONSAFEPATH``), so a malicious workspace containing a
     ``recon_tool/`` directory could otherwise shadow the installed
@@ -302,7 +302,7 @@ async def _run_handshake(
     phase_progress = progress if progress is not None else _HandshakeProgress()
 
     # Run the server through the same Python interpreter that's running
-    # the doctor — that way `recon mcp doctor` validates THIS install,
+    # the doctor - that way `recon mcp doctor` validates THIS install,
     # not whatever happens to be on PATH.
     env = dict(os.environ)
     env["RECON_MCP_FORCE_STDIO"] = "1"  # bypass the TTY guard added in v1.9.x
@@ -612,7 +612,7 @@ async def _run_with_timeout() -> DoctorReport:
     finally:
         with contextlib.suppress(OSError):
             errlog.close()
-        # Best effort — on Windows the subprocess may still hold the
+        # Best effort - on Windows the subprocess may still hold the
         # handle if cleanup races. The OS will sweep the tempdir
         # eventually; we don't gate doctor results on the unlink.
         with contextlib.suppress(OSError):
@@ -661,5 +661,5 @@ async def _run_with_timeout() -> DoctorReport:
 
 
 def run_doctor() -> DoctorReport:
-    """Public entry point — runs the async handshake from sync code."""
+    """Public entry point - runs the async handshake from sync code."""
     return asyncio.run(_run_with_timeout())

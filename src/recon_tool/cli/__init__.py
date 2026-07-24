@@ -74,7 +74,7 @@ from recon_tool.exit_codes import (  # noqa: E402
     EXIT_VALIDATION,
 )
 
-# Known subcommands — used by the callback to distinguish domains from commands.
+# Known subcommands - used by the callback to distinguish domains from commands.
 # Must equal the registered command tree; `tests/test_subcommands.py` pins it,
 # so a new command that is not added here fails CI rather than silently
 # mis-routing a dotted first argument.
@@ -218,7 +218,7 @@ def _print_welcome_banner() -> None:
     with no arguments. Replaces the raw Typer help dump that was
     shown before.
 
-    Kept tight — fits on ~15 lines — with a one-line value prop, the
+    Kept tight - fits on ~15 lines - with a one-line value prop, the
     recommended first command, progressive disclosure, three real
     examples, and a doctor hint. No emojis, no hype, no wall of
     flags. Users who want the full flag list can run
@@ -227,7 +227,7 @@ def _print_welcome_banner() -> None:
     from recon_tool import __version__
 
     console = get_console()
-    # Subtle cyan for the header and section labels — matches the
+    # Subtle cyan for the header and section labels - matches the
     # panel redesign tone. No red, no yellow, no alarmism.
     console.print(f"[bold cyan]recon {__version__}[/bold cyan] - Passive domain intelligence")
     console.print()
@@ -931,7 +931,7 @@ def _silence_closed_standard_streams() -> None:
 
 
 def run() -> None:
-    """Entry point — invokes the Typer app.
+    """Entry point - invokes the Typer app.
 
     The callback handles shorthand domain syntax (e.g., `recon alpha.invalid`)
     via invoke_without_command routing. No preprocessing needed.

@@ -612,16 +612,16 @@ FILTERED_SERVICE_PREFIXES: tuple[str, ...] = (
 
 # Qualifier map for Cloud-category services. Without
 # this, "AWS Route 53" under "Cloud" reads as "primary cloud = AWS",
-# which is almost always wrong — Route 53 is authoritative DNS, not
+# which is almost always wrong - Route 53 is authoritative DNS, not
 # compute. The qualifier makes the service type explicit so a CISO
 # scanning the output can't accidentally confuse DNS hosting with a
 # cloud compute / storage platform.
 #
 # Values:
-#   "DNS"   — authoritative DNS hosting only
-#   "CDN"   — content delivery / edge network
-#   "WAF"   — web application firewall
-#   "edge"  — edge compute / JAMstack platforms
+#   "DNS"   - authoritative DNS hosting only
+#   "CDN"   - content delivery / edge network
+#   "WAF"   - web application firewall
+#   "edge"  - edge compute / JAMstack platforms
 CLOUD_SLUG_QUALIFIERS: dict[str, str] = {
     # DNS hosting
     "aws-route53": "DNS",
@@ -658,8 +658,8 @@ CLOUD_SLUG_QUALIFIERS: dict[str, str] = {
     "hetzner": "hosting",
     "ovh": "hosting",
     "vultr": "hosting",
-    # Non-DNS AWS / Azure / GCP — these ARE compute/storage so no suffix
-    # (the raw name is enough — "AWS S3", "Azure App Service", …).
+    # Non-DNS AWS / Azure / GCP - these ARE compute/storage so no suffix
+    # (the raw name is enough - "AWS S3", "Azure App Service", …).
 }
 
 # Explicit display names for slugs whose
@@ -819,7 +819,7 @@ CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
 # explicitly. Silent omissions are not possible.
 CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
     {
-        # SaaS hosting — one application stack, not general cloud
+        # SaaS hosting - one application stack, not general cloud
         "wpengine",
         "kinsta",
         "pagely",
@@ -827,12 +827,12 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "wordpress-vip",
         "webflow",
         "github-pages",
-        # Developer / prototyping platforms — not production cloud
+        # Developer / prototyping platforms - not production cloud
         "replit",
         "glitch",
         # Ingress tunnel / developer preview platform, not general cloud
         "ngrok",
-        # Package / artifact registry — distribution, not general cloud
+        # Package / artifact registry - distribution, not general cloud
         "cloudsmith",
         # DNS / registrar providers from the NS signal mine. DNS
         # operators, not multi-cloud hosting vendors for the panel summary.
@@ -844,7 +844,7 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "gandi",
         "markmonitor",
         "worldnic",
-        # Specialty CDN / DAM — long-tail not in the rollup
+        # Specialty CDN / DAM - long-tail not in the rollup
         "cloudinary",
         "azion",
         "section-io",
@@ -878,7 +878,7 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "ovs-cdn",
         "taobao-cache",
         "yahoo-japan-cdn",
-        # Legacy specialty CDNs and standalone DNS providers — same
+        # Legacy specialty CDNs and standalone DNS providers - same
         # reasoning as the existing entries above (azion, cloudinary,
         # easydns). Operators do not list these alongside AWS/Azure/GCP
         # when describing a cloud footprint, but they are still

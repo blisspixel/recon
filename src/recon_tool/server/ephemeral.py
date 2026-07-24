@@ -273,7 +273,7 @@ async def inject_ephemeral_fingerprint(
         name: Display name for the fingerprint (e.g., "Synthetic Delta Platform").
         slug: Unique identifier (e.g., "delta-platform").
         category: Category name (e.g., "SaaS").
-        confidence: Detection confidence — "high", "medium", or "low".
+        confidence: Detection confidence - "high", "medium", or "low".
         detections: List of detection rules, each with "type" and "pattern" keys.
 
     Returns:
@@ -324,7 +324,7 @@ async def inject_ephemeral_fingerprint(
         verdict = evaluate_pattern(det.pattern, det.type)
         if verdict.threshold_exceeded:
             raise ToolError(
-                f"Pattern too broad — {det.type}:{det.pattern!r} matched "
+                f"Pattern too broad - {det.type}:{det.pattern!r} matched "
                 f"{verdict.matches}/{verdict.corpus_size} "
                 f"({verdict.match_rate:.1%}) of the synthetic adversarial "
                 f"corpus (>1% threshold). Tighten the regex before injecting."

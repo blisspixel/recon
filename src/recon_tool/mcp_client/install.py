@@ -7,10 +7,10 @@ otherwise blocks first-time MCP users.
 
 Design notes:
 
-- Pure-data path table — no client SDKs, no network calls, no shelling
+- Pure-data path table - no client SDKs, no network calls, no shelling
   out. We just know where each client expects its `mcp.json`-shaped
   file and write a stable canonical block.
-- Idempotent merge — if the user's config already has `mcpServers`,
+- Idempotent merge - if the user's config already has `mcpServers`,
   we add `recon` next to whatever else is there. If `recon` is
   already registered, we refuse without `--force` so we never silently
   overwrite a hand-tuned launch command (e.g. someone using `uvx` or
@@ -87,7 +87,7 @@ def _user_home() -> Path:
     """Resolve the user's home directory or raise ``InstallError``.
 
     ``Path.home()`` raises ``RuntimeError`` when neither ``HOME`` nor
-    ``USERPROFILE`` is set — which happens in some Docker images,
+    ``USERPROFILE`` is set - which happens in some Docker images,
     CI sandboxes, and embedded launch contexts. Without this guard
     the install command would crash with a Python traceback; with
     it the operator gets a one-line "where do you want this?" hint.
@@ -179,7 +179,7 @@ def _client_specs() -> dict[Client, _ClientSpec]:
 def _os_family(platform_name: str | None = None) -> str:
     """Bucket sys.platform into windows / darwin / linux.
 
-    Anything that isn't Windows or macOS gets the linux table — the
+    Anything that isn't Windows or macOS gets the linux table - the
     MCP clients that ship for BSDs / WSL all follow Linux conventions.
     """
     name = (platform_name if platform_name is not None else sys.platform).lower()
@@ -204,7 +204,7 @@ def resolve_config_path(
     spec = _client_specs()[client]
     if scope == "workspace":
         if spec.workspace_path is None:
-            raise ValueError(f"{client} does not support workspace-scoped config — use --scope=user instead.")
+            raise ValueError(f"{client} does not support workspace-scoped config - use --scope=user instead.")
         return Path.cwd() / spec.workspace_path
     # scope == "user"
     if spec.user_paths is None:
@@ -263,7 +263,7 @@ def build_recon_block(client: Client | None = None) -> dict[str, object]:
         # cwd-shadow attack on every supported Python. The previous
         # ``-m`` form left Python 3.10 reliant on the runtime guard,
         # which fires AFTER Python imports the (potentially malicious)
-        # module — too late to protect against an attacker who put a
+        # module - too late to protect against an attacker who put a
         # payload at module top-level. The ``-c`` launcher runs the
         # path-strip BEFORE any recon_tool import, so a shadow
         # ``recon_tool/server.py`` in cwd cannot be selected.
@@ -314,7 +314,7 @@ def _read_existing(path: Path) -> dict[str, object]:
     """Read the existing config or return an empty dict.
 
     Refuses to proceed (raises InstallError) when the file exists but
-    doesn't parse — overwriting unparseable JSON is exactly the kind
+    doesn't parse - overwriting unparseable JSON is exactly the kind
     of unhelpful action this command should not take.
 
     Reads with ``utf-8-sig`` so a UTF-8 BOM (which Windows tools like
@@ -349,7 +349,7 @@ def _merge_recon_block(
     """Compute the recon block we'd actually write.
 
     ``command`` and ``args`` are authoritative on the install side
-    — those are the things ``--force`` is meant to refresh (e.g. when
+    - those are the things ``--force`` is meant to refresh (e.g. when
     the operator moved their python install and `recon` now lives at a
     new path). Everything else the user added (custom ``env``,
     ``disabled``, non-empty ``autoApprove`` lists, hand-written notes
@@ -430,14 +430,14 @@ def plan_install(
                 )
             malformed_existing_recon = True
         else:
-            # str keys only — JSON guarantees this but we narrow for type-checkers.
+            # str keys only - JSON guarantees this but we narrow for type-checkers.
             existing_recon = {str(k): v for k, v in existing_recon_raw.items()}
 
     target_block = _merge_recon_block(existing_recon, canonical_block, client)
 
     if existing_recon is not None:
         if existing_recon == target_block:
-            # No-op merge — the existing block already has the canonical
+            # No-op merge - the existing block already has the canonical
             # `command` / `args`, and either an `autoApprove` we won't
             # touch or no other deltas. Idempotent rerun: skip the write.
             return InstallPlan(
@@ -552,8 +552,8 @@ def _atomic_write_text(path: Path, content: str) -> None:
     Writes to a sibling tempfile in the same directory (so the rename
     crosses no filesystem boundary), fsyncs, then ``os.replace``s the
     target. On POSIX and on Windows (10+) ``os.replace`` is atomic for
-    same-volume renames, so a partial write — disk full, antivirus
-    mid-scan, network drive drop, OS crash — leaves either the old
+    same-volume renames, so a partial write - disk full, antivirus
+    mid-scan, network drive drop, OS crash - leaves either the old
     config intact or the new config fully on disk. Never a half-
     written truncation.
 
@@ -575,7 +575,7 @@ def _atomic_write_text(path: Path, content: str) -> None:
             # Some filesystems (NFS, some Windows network shares) don't
             # support fsync. The atomicity guarantee from os.replace still
             # holds for the rename itself; we just lose the durability
-            # guarantee. Acceptable tradeoff — the alternative is refusing
+            # guarantee. Acceptable tradeoff - the alternative is refusing
             # to write at all on unusual filesystems.
             with contextlib.suppress(OSError):
                 os.fsync(fh.fileno())

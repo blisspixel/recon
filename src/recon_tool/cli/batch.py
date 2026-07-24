@@ -822,11 +822,11 @@ async def batch(
     an inter-domain delay prevents burst-flooding upstream endpoints.
 
     Output modes:
-      * default — rendered tenant panel per domain
-      * ``json_output`` — single JSON array at the end (back-compat shape)
-      * ``markdown`` — rendered markdown per domain
-      * ``csv_output`` — flat CSV of headline fields
-      * ``ndjson`` — one JSON object per line, flushed as each domain
+      * default - rendered tenant panel per domain
+      * ``json_output`` - single JSON array at the end (back-compat shape)
+      * ``markdown`` - rendered markdown per domain
+      * ``csv_output`` - flat CSV of headline fields
+      * ``ndjson`` - one JSON object per line, flushed as each domain
         completes. Recommended for large corpora where ``json_output`` would
         buffer the entire result set in memory.
     """
@@ -877,7 +877,7 @@ async def batch(
     # Batch-scope token clustering. Each successful resolution
     # stashes its TenantInfo here keyed by the *input* domain string,
     # so the post-processing pass can compute `shared_verification_tokens`
-    # across every domain in the batch. Scoped to this batch run — never
+    # across every domain in the batch. Scoped to this batch run - never
     # persisted to disk cache, never shared between batch invocations.
     batch_infos: dict[str, _TenantInfo] = {}
 
