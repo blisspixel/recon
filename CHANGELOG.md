@@ -14,6 +14,18 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- Dependabot can update Python dependencies again. The `[tool.uv]`
+  `required-version` was an exact `==0.11.17` pin, which Dependabot's bundled
+  uv (0.11.8) cannot satisfy, so every `uv lock` update failed closed and no
+  Python dependency or security update could land. The floor is now
+  `>=0.11.8,<0.12`. Reproducible builds are unchanged: CI, the release
+  workflow, and artifact builds still pin the exact 0.11.17 uv release through
+  `astral-sh/setup-uv`, and the committed `uv.lock` is still verified in CI. A
+  build-toolchain test now asserts the workflows pin the reproducible version
+  and that the pyproject floor admits it, instead of coupling the two.
+
 ## [2.6.6] - 2026-07-18
 
 ### Tool Surface Changes

@@ -62,9 +62,11 @@ This doc answers:
 
 ## Quick Start
 
-Repository tasks require uv 0.11.17. `pyproject.toml` rejects another uv
-version so local lock, constraint, test, and release-shaped build behavior
-cannot drift silently.
+Use uv 0.11.17 for repository tasks: CI, the release workflow, and artifact
+builds all pin that exact release, so it is the version that reproduces lock,
+constraint, test, and release-shaped build behavior. `pyproject.toml` requires
+uv `>=0.11.8,<0.12`, a floor wide enough for Dependabot to run `uv lock` while
+still fixing the reproducible build path to 0.11.17 in every workflow.
 
 ```bash
 git clone https://github.com/blisspixel/recon.git
