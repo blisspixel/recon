@@ -58,6 +58,19 @@ class TestExposureFlag:
         assert result.exit_code == 0
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_exposure_panel_labels_score_as_public_evidence_index(self, mock_resolve) -> None:
+        # The 0-100 value is a model-bound public-evidence index, not an
+        # overall security grade. The human panel must not reintroduce the
+        # "Posture Score" label that every other surface and
+        # tests/test_documentation_semantic_contracts.py already forbid.
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        result = runner.invoke(app, ["lookup", "gamma.invalid", "--exposure", "--no-cache"])
+        assert result.exit_code == 0
+        normalized = " ".join(result.output.split())
+        assert "Public-evidence index:" in normalized
+        assert "Posture Score" not in normalized
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_exposure_json_produces_valid_json(self, mock_resolve) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         result = runner.invoke(app, ["lookup", "gamma.invalid", "--exposure", "--json", "--no-cache"])
