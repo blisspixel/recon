@@ -28,15 +28,25 @@ def parse_rdata(raw: str) -> str:
     record value, not just the first 255-byte fragment.
 
     For non-TXT records (CNAME, MX, NS), dnspython appends a trailing dot
-    to FQDNs. We strip it for cleaner downstream matching.
+    to FQDNs. We strip it for cleaner downstream matching, except when the
+    target is the bare root label. A lone "." is a deliberate declaration,
+    not a hostname: RFC 7505 Null MX ("0 .") says the domain accepts no
+    mail, and RFC 2782 ("0 0 0 .") says the service is not available.
+    Stripping it there would turn an explicit negative declaration into an
+    ordinary unclassified host.
     """
     if raw.startswith('"'):
         # TXT record - join multi-part chunks, don't strip trailing dots
         # (dots can be meaningful in TXT values like SPF includes)
         parts = raw.split('" "')
         return "".join(p.strip('"') for p in parts)
-    # Non-TXT (CNAME, MX, NS, etc.) - strip trailing FQDN dot
-    return raw.strip('"').rstrip(".")
+    # Non-TXT (CNAME, MX, NS, SRV, etc.) - strip trailing FQDN dot
+    value = raw.strip('"')
+    stripped = value.rstrip(".")
+    if not stripped or stripped.endswith(" "):
+        # The whole target was the root label; keep it verbatim.
+        return value
+    return stripped
 
 
 def extract_bimi_vmc_url(bimi_txt: str) -> str | None:

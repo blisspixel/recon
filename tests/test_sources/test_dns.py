@@ -413,3 +413,35 @@ class TestDNSSourceErrorHandling:
         # in degraded_sources rather than silently dropped, so a real
         # regression breaking a detector for all inputs is visible in output.
         assert "detector:mx" in result.degraded_sources
+
+
+class TestRootLabelTargetsSurviveNormalization:
+    """parse_rdata must not strip a bare root-label target.
+
+    A lone "." is a publisher declaration, not a hostname: RFC 7505 Null MX
+    ("0 .") and RFC 2782 ("0 0 0 .") both use it to say a service is
+    deliberately unavailable. The detectors downstream already handle those
+    values; this guards the normalizer that feeds them, which the
+    safe_resolve-patching tests above deliberately bypass.
+    """
+
+    def test_null_mx_rdata_keeps_its_root_label(self) -> None:
+        from recon_tool.sources.dns_tables import parse_rdata
+
+        assert parse_rdata("0 .") == "0 ."
+
+    def test_srv_unavailable_rdata_keeps_its_root_label(self) -> None:
+        from recon_tool.sources.dns_tables import parse_rdata
+
+        assert parse_rdata("0 0 0 .") == "0 0 0 ."
+
+    def test_ordinary_fqdn_still_loses_its_trailing_dot(self) -> None:
+        from recon_tool.sources.dns_tables import parse_rdata
+
+        assert parse_rdata("10 mail.example.com.") == "10 mail.example.com"
+        assert parse_rdata("mail.example.com.") == "mail.example.com"
+
+    def test_bare_root_label_is_preserved(self) -> None:
+        from recon_tool.sources.dns_tables import parse_rdata
+
+        assert parse_rdata(".") == "."
