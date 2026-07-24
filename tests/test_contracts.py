@@ -213,3 +213,45 @@ class TestContractsDisabledUnderO:
         )
         assert result.returncode == 0, result.stderr
         assert "RAISED" in result.stdout
+
+
+class TestValidateDomainIsIdempotent:
+    """Normalization must be a fixpoint.
+
+    Callers treat the returned value as a stable identity and re-derive it.
+    Both cache layers rebuild their key from an already-normalized domain and
+    compare the stored payload against that re-derived value, so a normalizer
+    that keeps changing its own output makes the guard reject a legitimate
+    write. A single ``www.`` strip left ``www.www.example.com`` as
+    ``www.example.com``, which normalized again to ``example.com``, and that
+    host could then never be cached.
+    """
+
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "www.www.example.com",
+            "www.www.www.example.com",
+            "www.example.com",
+            "example.com",
+            "www.com",
+            "www.www.com",
+        ],
+    )
+    def test_normalization_reaches_a_fixpoint(self, raw: str) -> None:
+        from recon_tool.validator import validate_domain
+
+        once = validate_domain(raw, apex=False)
+        assert validate_domain(once, apex=False) == once
+
+    def test_registrable_www_names_are_preserved(self) -> None:
+        from recon_tool.validator import validate_domain
+
+        # ``com`` alone is not a valid domain, so the strip must stop.
+        assert validate_domain("www.com", apex=False) == "www.com"
+        assert validate_domain("www.www.com", apex=False) == "www.com"
+
+    def test_repeated_www_labels_reduce_to_the_host(self) -> None:
+        from recon_tool.validator import validate_domain
+
+        assert validate_domain("www.www.example.com", apex=False) == "example.com"
