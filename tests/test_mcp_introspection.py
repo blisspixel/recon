@@ -289,6 +289,37 @@ class TestExplainSignal:
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_no_fixes_reports_no_change(self, mock_resolve: AsyncMock) -> None:
+        """Applying nothing cannot change the index.
+
+        The simulated TenantInfo used to be rebuilt field by field, which
+        dropped every field the list omitted. The scorer reads some of them, so
+        an empty fix list reported a loss and every gateway-fronted simulation
+        understated its gain by the same amount.
+        """
+        info = replace(SAMPLE_INFO, email_gateway="Proofpoint")
+        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
+
+        data = await simulate_hardening("alpha.invalid", [])
+
+        assert data["score_delta"] == 0
+        assert data["simulated_score"] == data["current_score"]
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_observed_fields_survive_simulation(self, mock_resolve: AsyncMock) -> None:
+        """Fields a fix does not touch must carry into the simulated result."""
+        info = replace(SAMPLE_INFO, email_gateway="Proofpoint", dmarc_policy=None)
+        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
+
+        data = await simulate_hardening("alpha.invalid", ["DMARC reject"])
+
+        # The gateway is untouched by a DMARC fix, so its contribution must be
+        # present in both scores and the delta must be a gain.
+        assert data["score_delta"] > 0
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_domain_output_uses_resolved_normalized_domain(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
         from recon_tool.signals import reportable_signals

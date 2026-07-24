@@ -13,7 +13,7 @@ import logging
 import re
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Literal, cast
 
 from typing_extensions import TypedDict
@@ -821,38 +821,21 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
     # Parse fixes and simulate by mutating a copy of TenantInfo fields
     applied, state = _simulate_fixes([f.lower() for f in fixes], info)
 
-    # Build simulated TenantInfo
-    sim_info = TenantInfo(
-        tenant_id=info.tenant_id,
-        display_name=info.display_name,
-        default_domain=info.default_domain,
-        queried_domain=info.queried_domain,
-        confidence=info.confidence,
-        region=info.region,
-        sources=info.sources,
+    # Build the simulated TenantInfo by copying the observed one and
+    # overriding only what a fix actually changes. Listing every field by hand
+    # silently dropped whatever the list omitted, and the scorer reads some of
+    # those fields: email_gateway alone is worth SCORE_EMAIL_GATEWAY, so an
+    # empty fix list reported a negative delta and every gateway-fronted
+    # simulation understated its gain. replace() cannot fall behind the model.
+    sim_info = replace(
+        info,
         services=tuple(sorted(state.services)),
         slugs=tuple(sorted(state.slugs)),
-        auth_type=info.auth_type,
         dmarc_policy=state.dmarc,
         dmarc_pct=state.dmarc_pct,
         dmarc_testing=state.dmarc_testing,
-        spf_include_count=info.spf_include_count,
-        domain_count=info.domain_count,
-        tenant_domains=info.tenant_domains,
-        related_domains=info.related_domains,
-        insights=info.insights,
-        degraded_sources=info.degraded_sources,
-        cert_summary=info.cert_summary,
         evidence=tuple(state.evidence),
-        evidence_confidence=info.evidence_confidence,
-        inference_confidence=info.inference_confidence,
-        detection_scores=info.detection_scores,
-        bimi_identity=info.bimi_identity,
-        site_verification_tokens=info.site_verification_tokens,
         mta_sts_mode=state.mta_sts,
-        google_auth_type=info.google_auth_type,
-        google_idp_name=info.google_idp_name,
-        merge_conflicts=info.merge_conflicts,
     )
 
     sim_assessment = assess_exposure_from_info(sim_info)
