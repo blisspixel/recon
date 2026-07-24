@@ -340,8 +340,17 @@ class TestCsvFormulaNeutralization:
     )
     def test_tenant_csv_row_neutralizes_formula_prefixes(self, value: str) -> None:
         row = format_tenant_csv_row(_minimal_info(display_name=value))
+        rendered = row["display_name"]
 
-        assert row["display_name"] == "'" + value
+        # Two guarantees: the cell is quoted so a spreadsheet treats it as
+        # literal text, and control characters are removed first so the file is
+        # also safe to `cat`. Stripping removes any leading tab, CR, or LF that
+        # the raw value carried, so compare against the stripped original.
+        from recon_tool.validator import strip_control_chars
+
+        assert rendered.startswith("'")
+        assert not any(char in rendered for char in "\t\r\n")
+        assert rendered[1:] == strip_control_chars(value)
 
     def test_tenant_csv_row_leaves_safe_text_unchanged(self) -> None:
         row = format_tenant_csv_row(_minimal_info(display_name="Synthetic Alpha Ltd"))
@@ -373,7 +382,9 @@ class TestCsvFormulaNeutralization:
         assert rows[0]["auth_type"] == "'@Managed"
         assert rows[0]["dmarc_policy"] == "'-reject"
         assert rows[0]["mta_sts_mode"] == " enforce"
-        assert rows[0]["google_auth_type"] == "'\tmanaged"
+        # The leading tab is stripped as a control character, so the value is
+        # no longer formula-shaped and needs no quote.
+        assert rows[0]["google_auth_type"] == "managed"
         assert rows[1]["domain"] == "'=error.example"
         assert rows[0]["error"] == ""
         assert rows[1]["error"] == "lookup failed"
@@ -779,3 +790,46 @@ class TestRenderVerboseSources:
         detail = _strip(buf.getvalue())
         assert "failed" in detail
         assert "upstream failed" in detail
+
+
+class TestCsvStripsTerminalControlCharacters:
+    """CSV must sanitize like every other text sink.
+
+    ``display_name`` comes from the GetUserRealm ``FederationBrandName``
+    response and is attacker-controllable for any looked-up domain. The panel,
+    markdown, and plain-text sinks all strip control characters; CSV
+    historically neutralized only spreadsheet formula prefixes, so a raw ESC,
+    OSC, or BEL survived into the file and acted on the terminal as soon as the
+    operator ran ``cat`` on it.
+    """
+
+    _HOSTILE = "Synthetic\x1b]0;pwned\x07\x1b[2J ‮dtL"
+
+    def test_display_name_column_is_stripped(self) -> None:
+        from recon_tool.formatter.serialize import format_tenant_csv_row
+        from recon_tool.models import ConfidenceLevel, TenantInfo
+
+        info = TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name=self._HOSTILE,
+            default_domain="synthetic.onmicrosoft.com",
+            queried_domain="example.com",
+            confidence=ConfidenceLevel.LOW,
+        )
+        rendered = "".join(format_tenant_csv_row(info).values())
+        for forbidden in ("\x1b", "\x07", "‮"):
+            assert forbidden not in rendered
+
+    def test_batch_error_column_is_stripped(self) -> None:
+        from recon_tool.formatter.serialize import format_batch_csv
+
+        hostile_domain = "\x1b]0;PWNED\x07x"
+        out = format_batch_csv([(hostile_domain, None, f"Invalid domain format: {hostile_domain}")])
+        for forbidden in ("\x1b", "\x07"):
+            assert forbidden not in out
+
+    def test_formula_prefix_neutralization_still_applies(self) -> None:
+        from recon_tool.formatter.serialize import _csv_safe
+
+        assert _csv_safe('=HYPERLINK("http://evil.invalid")').startswith("'")
+        assert _csv_safe("ordinary value") == "ordinary value"
