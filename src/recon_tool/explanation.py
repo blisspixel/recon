@@ -580,7 +580,10 @@ def _classify_insight(
     # Email-control inventory insight scans slugs for parenthetical references.
     if lower.startswith("email security"):
         fired_rules.append("_email_security_insights")
-        for slug in slugs:
+        # Sort: slugs is a set, so unsorted iteration ordered matched_slugs and
+        # matched_evidence by hash seed and changed --explain output between
+        # processes. Every other slug loop here walks an ordered sequence.
+        for slug in sorted(slugs):
             if slug in lower:
                 relevant_slugs.append(slug)
                 relevant_evidence.extend(_evidence_for_slug(slug, evidence))

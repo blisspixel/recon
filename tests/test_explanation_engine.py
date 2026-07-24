@@ -737,3 +737,34 @@ class TestPBTWeakeningConditionsCompleteness:
         for slug in clean_contradicts:
             found = any(f"Detecting slug '{slug}'" in c for c in conditions)
             assert found, f"Missing contradiction weakening condition for slug '{slug}'"
+
+
+class TestEmailSecurityExplanationIsDeterministic:
+    """Explanation slug order must not depend on the hash seed.
+
+    ``_classify_insight`` receives ``slugs`` as a set. The email-control branch
+    iterated it directly, so ``matched_slugs`` and ``matched_evidence`` came out
+    in hash order and ``--explain`` output differed between processes. Every
+    other slug loop in the module walks an ordered sequence.
+    """
+
+    def test_matched_slugs_are_sorted(self) -> None:
+        from recon_tool.explanation import _classify_insight
+        from recon_tool.models import EvidenceRecord
+
+        slugs = frozenset({"dmarc", "dkim", "bimi", "mta-sts", "spf"})
+        evidence = tuple(
+            EvidenceRecord(
+                source_type="TXT",
+                raw_value=f"v={slug}",
+                rule_name=f"{slug}-rule",
+                slug=slug,
+            )
+            for slug in ("dmarc", "dkim", "bimi", "mta-sts", "spf")
+        )
+        insight = "Email security: observed controls: dmarc, dkim, bimi, mta-sts, spf"
+
+        matched_slugs, matched_evidence, _rules, _confidence = _classify_insight(insight, slugs, evidence)
+
+        assert matched_slugs == sorted(matched_slugs)
+        assert [record.slug for record in matched_evidence] == sorted(matched_slugs)
