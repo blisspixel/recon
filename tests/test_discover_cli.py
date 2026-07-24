@@ -67,3 +67,36 @@ class TestDiscoverCommand:
         mock_resolve.side_effect = RuntimeError("boom")
         result = runner.invoke(app, ["discover", "alpha.invalid"])
         assert result.exit_code == 4
+
+
+class TestDiscoveryUsesTheRealCatalogDirectory:
+    """The already-covered filter must see the real fingerprint catalog.
+
+    ``load_existing_patterns`` returns an empty set for a missing directory
+    rather than raising, so a wrong path does not fail loudly. It silently
+    drops the "skip suffixes an existing fingerprint already covers" step and
+    re-proposes catalogued vendors as new candidates. Both call sites live one
+    package level below the catalog, so they must resolve via ``parents[1]``.
+    """
+
+    def _patterns_for(self, module_file: str) -> int:
+        from pathlib import Path
+
+        from recon_tool.discovery import load_existing_patterns
+
+        directory = Path(module_file).resolve().parents[1] / "data" / "fingerprints"
+        assert directory.is_dir(), f"catalog directory not found from {module_file}: {directory}"
+        return len(load_existing_patterns(directory))
+
+    def test_server_discovery_resolves_a_populated_catalog(self) -> None:
+        from recon_tool.server import introspection
+
+        assert self._patterns_for(introspection.__file__) > 0
+
+    def test_cli_discovery_resolves_a_populated_catalog(self) -> None:
+        # ``recon_tool.cli.batch`` resolves to the Typer command, so import
+        # the module itself rather than the re-exported callable.
+        import importlib
+
+        batch_module = importlib.import_module("recon_tool.cli.batch")
+        assert self._patterns_for(batch_module.__file__) > 0
