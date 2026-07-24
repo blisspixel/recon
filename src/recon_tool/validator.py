@@ -235,7 +235,16 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     # Strip www. after IDNA normalization so Unicode and ASCII inputs follow
     # the same exact-host contract. Only strip when the remainder is still a
     # valid domain, preserving registrable names such as ``www.com``.
-    if domain.startswith("www.") and _DOMAIN_RE.fullmatch(domain[4:]):
+    #
+    # Loop rather than strip once, so the result is a fixpoint. Callers treat
+    # the returned value as a stable identity and re-derive it: the cache
+    # layers rebuild their key from an already-normalized domain, and a single
+    # strip made ``www.www.example.com`` normalize to ``www.example.com`` and
+    # then to ``example.com`` on the second pass. That mismatch made the
+    # payload-versus-key guard reject the write, so the host could never be
+    # cached. ``www.com`` is still preserved because ``com`` alone is not a
+    # valid domain, which also terminates the loop.
+    while domain.startswith("www.") and _DOMAIN_RE.fullmatch(domain[4:]):
         domain = domain[4:]
 
     # Validate format
