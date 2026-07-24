@@ -508,6 +508,24 @@ def _no_email_infrastructure_insights(ctx: InsightContext) -> list[str]:
     ]
 
 
+def _null_mx_insights(ctx: InsightContext) -> list[str]:
+    """Report an RFC 7505 Null MX apex as an explicit publisher declaration.
+
+    A single ``0 .`` MX record is not a missing or unclassified mail host.
+    It is the documented way for a publisher to state that the domain
+    accepts no mail, so it is reported as an observed declaration rather
+    than folded into the sparse or no-infrastructure wording. It describes
+    the apex only; other hosts in the namespace may still receive mail.
+    """
+    if "null-mx" not in ctx.slugs:
+        return []
+    return [
+        "Null MX observed at the apex (RFC 7505): the publisher declares that "
+        "this domain accepts no mail. Subdomains and other apexes are out of "
+        "scope for that declaration. Observation, not a verdict."
+    ]
+
+
 def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
     """Emit a hedged multi-sided observation when a domain's
     public signal is thin.
@@ -542,13 +560,21 @@ def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
         return []
 
     edge = _edge_services(ctx)
-    has_unclassified_mail = ctx.has_mx_records and (
-        "self-hosted-mail" in ctx.slugs
-        or "exchange-onprem" in ctx.slugs
-        or (
-            ctx.primary_email_provider is None
-            and ctx.likely_primary_email_provider is None
-            and ctx.email_gateway is None
+    # A Null MX apex is not sparse or unclassified. RFC 7505 makes it an
+    # explicit publisher declaration that the domain accepts no mail, so the
+    # operator is defined rather than unidentified. Its own observation is
+    # emitted by _null_mx_insights.
+    has_unclassified_mail = (
+        ctx.has_mx_records
+        and "null-mx" not in ctx.slugs
+        and (
+            "self-hosted-mail" in ctx.slugs
+            or "exchange-onprem" in ctx.slugs
+            or (
+                ctx.primary_email_provider is None
+                and ctx.likely_primary_email_provider is None
+                and ctx.email_gateway is None
+            )
         )
     )
 
@@ -655,6 +681,7 @@ _INSIGHT_GENERATORS = [
     _google_modules_insights,
     _infrastructure_insights,
     _no_email_infrastructure_insights,
+    _null_mx_insights,
     _sparse_signal_insights,
 ]
 
