@@ -14,6 +14,20 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.7] - 2026-07-24
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Changed
+
+- The `--exposure` panel now labels the 0-100 value as a "Public-evidence
+  index" instead of "Posture Score", so the last human surface matches every
+  other surface and the documented evidence-semantic contract that the value
+  is a model-bound public-evidence index, not an overall security grade. The
+  stable `posture_score` and `posture_score_label` JSON fields are unchanged.
+
 ### Fixed
 
 - Dependabot can update Python dependencies again. The `[tool.uv]`
@@ -25,6 +39,15 @@ operator, corporate group, ownership, or control.
   `astral-sh/setup-uv`, and the committed `uv.lock` is still verified in CI. A
   build-toolchain test now asserts the workflows pin the reproducible version
   and that the pyproject floor admits it, instead of coupling the two.
+
+### Security
+
+- Updated the development toolchain's transitive GitPython dependency from
+  3.1.50 to 3.1.54, clearing eight high-severity GitPython advisories.
+  GitPython enters the graph only through the mutation-testing group and is not
+  part of the shipped `recon-tool` runtime, so end users were not exposed; the
+  update hardens the contributor and CI environment. The bump could only land
+  after the `required-version` floor above unblocked Dependabot.
 
 ## [2.6.6] - 2026-07-18
 
