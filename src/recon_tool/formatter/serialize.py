@@ -439,7 +439,7 @@ _CSV_FORMULA_PREFIXES = frozenset(("=", "+", "-", "@", "\t", "\r", "\n"))
 
 
 def _csv_safe(value: str) -> str:
-    """Neutralize CSV formula-injection prefixes.
+    """Strip terminal control characters and neutralize formula prefixes.
 
     Spreadsheet applications (Excel, LibreOffice, Google Sheets)
     interpret cells starting with ``=``, ``+``, ``-``, ``@``, ``\\t``,
@@ -455,7 +455,17 @@ def _csv_safe(value: str) -> str:
     visible in the cell but not in the underlying data consumers
     doing machine parsing - those should use the ``--json`` output
     anyway; ``--csv`` is explicitly the human-spreadsheet path.
+
+    The same attacker-controlled values also reach a terminal whenever the
+    operator inspects the file, so strip control characters first, exactly as
+    the panel, markdown, and plain-text sinks already do. A CSV is routinely
+    read with ``cat``, where a raw ESC or OSC sequence would still act on the
+    terminal, and an interior newline would forge a record boundary for a
+    line-oriented consumer.
     """
+    if not value:
+        return value
+    value = strip_control_chars(value)
     if not value:
         return value
     candidate = value.lstrip(" ")
