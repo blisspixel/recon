@@ -391,7 +391,15 @@ async def _lookup_resolve_standard(
     """Cache read, resolve on miss, apply fusion, write back. Returns (info, results)."""
     info: Any = None
     results: list[Any] = []
-    if not options.no_cache:
+    # The cache key is the domain alone, so it cannot distinguish results
+    # collected under different scopes. Only the default scope is shared.
+    # --skip-ct produces a CT-degraded result, and --direct-probes produces one
+    # containing opt-in probe data. Sharing either would answer a full lookup
+    # from a degraded entry, or hand probe-derived data to a run that never
+    # opted in. The MCP server applies the same rule to its shared cache; see
+    # the note above its cache_set call in server/introspection.py.
+    shareable_scope = not options.skip_ct and not options.active_probes
+    if not options.no_cache and shareable_scope:
         from recon_tool.cache import cache_get
 
         cached = cache_get(validated, ttl=options.cache_ttl)
@@ -421,7 +429,7 @@ async def _lookup_resolve_standard(
 
     # Cache hits don't write back: the entry hasn't changed except for fusion
     # output, which is recomputed on read anyway.
-    if cache_miss and not options.no_cache:
+    if cache_miss and not options.no_cache and shareable_scope:
         from recon_tool.cache import cache_put
 
         cache_put(validated, info)
