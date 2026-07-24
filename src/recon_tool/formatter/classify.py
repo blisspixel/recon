@@ -80,7 +80,7 @@ def slug_to_relationship_metadata() -> dict[str, dict[str, str | None]]:
     """Return ``{slug: {product_family, parent_vendor, bimi_org}}`` for every
     fingerprint with at least one populated relationship-metadata field.
 
-    Pure data lookup — drives the ``fingerprint_metadata`` block in
+    Pure data lookup - drives the ``fingerprint_metadata`` block in
     ``format_tenant_dict``. Slugs without any populated field are
     omitted; callers do not need to filter again.
     """
@@ -468,7 +468,7 @@ def categorize_service(service: str, slug: str | None) -> str:
 
 
 def _is_service_artifact(name: str) -> bool:
-    """Verification tokens and registrar handoffs — filtered from the panel."""
+    """Verification tokens and registrar handoffs - filtered from the panel."""
     return any(name.endswith(suf) for suf in FILTERED_SERVICE_SUFFIXES) or any(
         name.startswith(pfx) for pfx in FILTERED_SERVICE_PREFIXES
     )
@@ -655,9 +655,9 @@ def categorize_services(info: TenantInfo) -> dict[str, list[str]]:
     Two-pass classification:
         1. For each detected slug with a known category, resolve the
            slug to its fingerprint display name and file it under
-           that category. This is the authoritative path — a slug's
+           that category. This is the authoritative path - a slug's
            category is pinned in ``CATEGORY_BY_SLUG``.
-        2. For each remaining service (not yet filed via slug — e.g.
+        2. For each remaining service (not yet filed via slug - e.g.
            DNS-derived labels like "DMARC", "DKIM", "SPF: strict"),
            classify by prefix / name pattern via
            ``categorize_service``.

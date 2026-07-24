@@ -219,7 +219,7 @@ AnalyzePostureOutput = (
 )
 
 
-# Keyword groups for hypothesis matching — maps keywords to signal/slug categories
+# Keyword groups for hypothesis matching - maps keywords to signal/slug categories
 _HYPOTHESIS_KEYWORDS: dict[str, list[str]] = {
     "migration": ["migration", "migrate", "transition", "moving", "switching"],
     "security": ["security", "secure", "protection", "defense", "defensive"],
@@ -304,7 +304,7 @@ async def analyze_posture(
 
     Returns factual observations about the domain's email security, identity,
     infrastructure, SaaS footprint, certificate activity, and configuration
-    consistency. Observations are neutral — they describe what is, not what
+    consistency. Observations are neutral - they describe what is, not what
     should be.
 
     Args:
@@ -539,7 +539,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
     unresolved status. Passive catalog matches cannot validate active use,
     organizational intent, topology, or causal explanations.
 
-    Operates purely on cached pipeline data — zero additional network calls
+    Operates purely on cached pipeline data - zero additional network calls
     beyond the initial domain resolution.
 
     Args:
@@ -793,7 +793,7 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
     and simulates how the model-bound compatibility index would change if those
     fixes were applied. This is not a prediction of overall security change.
 
-    Operates purely on cached pipeline data — zero additional network calls
+    Operates purely on cached pipeline data - zero additional network calls
     beyond the initial domain resolution.
 
     Args:

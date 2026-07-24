@@ -110,7 +110,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         "sources": list(info.sources),
         "services": list(info.services),
         # Emit slugs explicitly. TenantInfo.slugs is the
-        # canonical detected-fact identifier set — downstream
+        # canonical detected-fact identifier set - downstream
         # tooling matching on specific slugs had to read them out
         # of `detection_scores` before, which was awkward.
         "slugs": list(info.slugs),
@@ -240,13 +240,13 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         ]
     # v2.0 schema contract: always present (empty dict when no detections).
     d["detection_scores"] = dict(info.detection_scores)
-    # Cross-source evidence conflicts — top-level array. Always
+    # Cross-source evidence conflicts - top-level array. Always
     # emitted (empty list when none). Each entry is
     # {field, candidates: [{value, source, confidence}, ...]}. The
     # legacy `conflicts` dict under --explain is unchanged for
     # backwards compatibility.
     d["evidence_conflicts"] = serialize_conflicts_array(info.merge_conflicts)
-    # Chain motifs — observed CDN/edge → origin shapes from CNAME
+    # Chain motifs - observed CDN/edge → origin shapes from CNAME
     # chain analysis. Always emitted (empty list when none). Each entry
     # is one motif firing on one related subdomain.
     d["chain_motifs"] = [
@@ -259,7 +259,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
         }
         for cm in info.chain_motifs
     ]
-    # Infrastructure clusters — community detection over the CT
+    # Infrastructure clusters - community detection over the CT
     # SAN co-occurrence graph. Always emitted as a stable envelope; the
     # ``algorithm`` field reflects which path produced the partition
     # ("louvain" | "connected_components" | "skipped"). Empty
@@ -307,7 +307,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     # Per-slug relationship metadata. Always emitted; entries
     # appear only for slugs that fired AND have at least one populated
     # field. Empty object when no detected slug carries metadata. Drives
-    # the ecosystem hypergraph and downstream display logic — never
+    # the ecosystem hypergraph and downstream display logic - never
     # an ownership claim, just descriptive hints from the fingerprint
     # YAML.
     metadata_lookup = slug_to_relationship_metadata()
@@ -322,7 +322,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
             continue
         fingerprint_metadata[slug] = meta
     d["fingerprint_metadata"] = fingerprint_metadata
-    # External surface attributions — per-subdomain SaaS attribution
+    # External surface attributions - per-subdomain SaaS attribution
     # from CNAME chain classification. Always emitted (empty list when none).
     d["surface_attributions"] = [
         {
@@ -372,7 +372,7 @@ def format_tenant_json(info: TenantInfo, *, include_unclassified: bool = False) 
 def plain_lines(value: Any, key: str, indent: int) -> list[str]:
     """Render one (key, value) as linear, indented `key: value` lines.
 
-    Recurses into dicts and lists. No color, no box-drawing, no markup — a
+    Recurses into dicts and lists. No color, no box-drawing, no markup - a
     greppable, screen-reader-friendly serialization. Strings are control-char
     stripped (the same untrusted-content discipline the panel/markdown sinks
     use); empty/None values are omitted to keep the output scannable.
@@ -400,7 +400,7 @@ def format_tenant_plain(info: TenantInfo, *, include_unclassified: bool = False)
     """Format TenantInfo as plain, linear, greppable text (no Rich panel).
 
     Built from the same dict as the JSON output, so it carries every field the
-    structured output does — but as ``key: value`` lines a screen reader reads
+    structured output does - but as ``key: value`` lines a screen reader reads
     linearly and ``grep``/``awk`` can slice, with no color or box-drawing. This
     is the accessibility / scripting complement to the default panel.
     """
@@ -453,7 +453,7 @@ def _csv_safe(value: str) -> str:
     Neutralization strategy: prefix the value with a single quote so
     the spreadsheet treats the cell as literal text. The quote is
     visible in the cell but not in the underlying data consumers
-    doing machine parsing — those should use the ``--json`` output
+    doing machine parsing - those should use the ``--json`` output
     anyway; ``--csv`` is explicitly the human-spreadsheet path.
     """
     if not value:

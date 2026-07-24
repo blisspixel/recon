@@ -288,7 +288,7 @@ async def cluster_verification_tokens(
         JSON object with ``clusters`` (a map from each domain to its
         peers via shared tokens) and ``errors`` (a list of domains
         that could not be resolved). Empty ``clusters`` means no
-        shared tokens were observed — not an error.
+        shared tokens were observed - not an error.
     """
     from recon_tool.clustering import compute_shared_tokens
 
@@ -375,7 +375,7 @@ async def get_infrastructure_clusters(domain: str, member_limit_per_cluster: int
     Surfaces the same ``infrastructure_clusters`` envelope that ships in
     the default ``--json`` output: cluster membership, modularity score,
     algorithm path, and underlying graph metrics. The report describes
-    observable structure — names that co-occur on the same certificates,
+    observable structure - names that co-occur on the same certificates,
     grouped by the Louvain co-occurrence heuristic, never an ownership claim.
 
     No new network surface: the report was already computed during the
@@ -471,13 +471,13 @@ async def export_graph(domain: str, node_limit: int = 0, edge_limit: int = 0) ->
     structure directly.
 
     Edges are sorted by weight descending; both nodes and edges are
-    capped — see ``recon_tool/infra_graph.MAX_GRAPH_NODES`` and
+    capped - see ``recon_tool/infra_graph.MAX_GRAPH_NODES`` and
     ``MAX_EDGES_RETAINED`` for the bounds. ``cluster_assignment`` maps
     every surfaced node to the cluster id from the same report so
     downstream tools can colour the graph by community without re-
     running detection.
 
-    No new network surface — the graph was already built during the
+    No new network surface - the graph was already built during the
     last ``lookup_tenant``. Read-only exposure of computed state.
 
     Args:

@@ -40,11 +40,11 @@ def lookup_failure_message(domain: str, error: ReconLookupError) -> str:
     return f"Lookup failed for {domain} ({error.error_type}). Try again."
 
 
-# Server Instructions — injected into the model's context each session so the
+# Server Instructions - injected into the model's context each session so the
 # agent knows how to compose recon's tools without requiring the user to
 # explain. Keep this focused: what the server is, the passive-only invariant,
 # the tool composition patterns, and what the confidence levels mean. Avoid
-# duplicating individual tool docstrings — those speak for themselves.
+# duplicating individual tool docstrings - those speak for themselves.
 SERVER_INSTRUCTIONS = """\
 recon is a public-metadata domain-intelligence MCP server. It queries public
 DNS records, Microsoft/Google identity endpoints, and certificate-transparency
@@ -62,13 +62,13 @@ probes.
   namespace auth response, public email-control count, service indicators,
   related-domain observations, and claim-safe insights. Use `format="json"`
   with `explain=True` for the provenance DAG.
-- `analyze_posture(domain)` — neutral configuration observations. Accepts a
+- `analyze_posture(domain)` - neutral configuration observations. Accepts a
   `profile` argument (fintech, healthcare, saas-b2b, high-value-target,
   public-sector, higher-ed) to apply a posture lens.
-- `assess_exposure(domain)` / `find_hardening_gaps(domain)` — defensive-review
+- `assess_exposure(domain)` / `find_hardening_gaps(domain)` - defensive-review
   framing with a model-bound public-evidence index (0-100) and categorized gap
   list. The index is not an overall security score.
-- `compare_postures(domain_a, domain_b)` — side-by-side comparison for peer /
+- `compare_postures(domain_a, domain_b)` - side-by-side comparison for peer /
   acquisition / vendor analysis.
 - `simulate_hardening(domain, fixes=[...])` - what-if: re-computes the
   model-bound public-evidence index with hypothetical fixes applied. It is
@@ -87,8 +87,8 @@ probes.
 
 Typical agentic flow for a defensive review:
 1. `lookup_tenant(domain, format="json", explain=True)` - establish the baseline.
-2. `analyze_posture(domain)` with the relevant `profile` — posture lens.
-3. `find_hardening_gaps(domain)` — categorized gaps with severity.
+2. `analyze_posture(domain)` with the relevant `profile` - posture lens.
+3. `find_hardening_gaps(domain)` - categorized gaps with severity.
 4. `simulate_hardening(domain, fixes=[...])` - report the model-bound index
    delta and remaining public-configuration observations.
 
@@ -97,9 +97,9 @@ For introspection / hypothesis work:
   tool knows how to detect. Page fingerprints only as far as the task needs.
   Before reporting no catalog match, read the full fingerprint resource or
   continue 20-item pages until one returns fewer than 20 entries.
-- `explain_signal(signal_name, domain)` — understand why a signal did or did
+- `explain_signal(signal_name, domain)` - understand why a signal did or did
   not fire for this domain.
-- `inject_ephemeral_fingerprint(...)` + `reevaluate_domain(domain)` — test new
+- `inject_ephemeral_fingerprint(...)` + `reevaluate_domain(domain)` - test new
   detection patterns against cached DNS data without any network calls.
 
 ## Invariants (important for agent behavior)
@@ -113,7 +113,7 @@ For introspection / hypothesis work:
   same domain are cheap.
 - Output is hedged. Confidence levels: High (3+ corroborating sources),
   Medium (2 sources, partial), Low (1 source or indirect). Insights marked
-  "(likely)" are inferences, not DNS-confirmed detections — treat them as
+  "(likely)" are inferences, not DNS-confirmed detections - treat them as
   hypotheses the user can investigate, not verdicts.
 - The fingerprint database is rule-based and solo-maintained. A match means
   "evidence fits this service's DNS signature", not "this service is in use".
@@ -170,14 +170,14 @@ recon observed as present, so it is a *lower bound*, not a verdict on the
 organization. A low score can mean "hardened but quiet" rather than "weak". The
 `observability` block says how much the floor could understate the truth:
 `score_is_lower_bound`, `unconfirmable_absent_points` (points from controls
-whose absence the passive channel cannot confirm — DKIM at non-standard
+whose absence the passive channel cannot confirm - DKIM at non-standard
 selectors, security tooling, an email gateway behind non-MX routing), and
 `score_ceiling`. Report the score as a floor with its ceiling, not as a grade.
 
 On `find_hardening_gaps`, each gap carries `absence_confirmable`. When true, the
 gap is a confirmed public-records fact (a declarative record like DMARC or
 MTA-STS is genuinely absent or weak). When false, the gap rests on *not
-observing* a hideable control and may be a false positive — the control could
+observing* a hideable control and may be a false positive - the control could
 be present but unobservable. Do not report an `absence_confirmable=false` gap as
 a definite weakness; report it as "not observed", consistent with the
 absence-is-not-disproof rule above.

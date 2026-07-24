@@ -410,7 +410,7 @@ def fingerprints_search(
     # Rank each fingerprint by how strong the match is. Slug-prefix is
     # the strongest signal ("they know exactly what they're looking
     # for"); a hit only in a detection pattern is weakest. We don't use
-    # fuzzy matching — substring is enough for the built-in catalog
+    # fuzzy matching - substring is enough for the built-in catalog
     # and doesn't pull in a dependency.
     ranked: list[tuple[int, Any]] = []
     for fp in fps:
@@ -446,7 +446,7 @@ def fingerprints_show(
     Synthetic slugs emitted by a source probe are documented here too, so a
     slug observed in output always has a discoverable provenance note.
     """
-    # Synthetic slugs aren't in fingerprints.yaml — they're emitted
+    # Synthetic slugs aren't in fingerprints.yaml - they're emitted
     # by source-layer probes. Document provenance so users aren't left
     # grepping the code.
     _SYNTHETIC_SLUGS: dict[str, tuple[str, str]] = {
@@ -567,7 +567,7 @@ def fingerprints_new(
         )
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
-    # 2. Schema — build the entry dict and run the runtime validator
+    # 2. Schema - build the entry dict and run the runtime validator
     entry: dict[str, object] = {
         "name": name,
         "slug": slug,
@@ -585,15 +585,15 @@ def fingerprints_new(
     }
     validated = _validate_fingerprint(entry, "<wizard>")  # pyright: ignore[reportPrivateUsage]
     if validated is None:
-        render_error("Schema validation failed — see warnings above.")
+        render_error("Schema validation failed - see warnings above.")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
-    # 3. Specificity — only run against schema-validated detection rules.
+    # 3. Specificity - only run against schema-validated detection rules.
     for det in validated.detections:
         verdict = evaluate_pattern(det.pattern, det.type)
         if verdict.threshold_exceeded:
             render_error(
-                f"Pattern too broad — matched {verdict.matches}/{verdict.corpus_size} "
+                f"Pattern too broad - matched {verdict.matches}/{verdict.corpus_size} "
                 f"({verdict.match_rate:.1%}) of the synthetic adversarial corpus. "
                 f"Tighten the regex (anchor to ^, add vendor-specific tokens, use word "
                 "boundaries) before submitting."

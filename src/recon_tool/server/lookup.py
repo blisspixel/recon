@@ -163,7 +163,7 @@ async def lookup_tenant(
         log_validation_failed(request_id)
         return f"Error: {exc}"
 
-    # Check cache first — avoids hitting upstream endpoints for repeated lookups
+    # Check cache first - avoids hitting upstream endpoints for repeated lookups
     cached = cache_get(validated)
     if cached is not None:
         info, results = cached
@@ -174,7 +174,7 @@ async def lookup_tenant(
             domain=validated,
         )
     else:
-        # Rate limit check — only for cache misses (actual network calls)
+        # Rate limit check - only for cache misses (actual network calls)
         if not rate_limit_try_acquire(validated):
             cached = cache_get(validated)
             if cached is None:
