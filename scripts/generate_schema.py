@@ -132,9 +132,22 @@ def _display_path(path: Path) -> str:
 
 
 def _check_target(path: Path, generated_text: str) -> bool:
-    current = load_schema(path)
-    generated = json.loads(generated_text)
-    if current == generated:
+    """Compare the committed artifact with the canonical serialization.
+
+    Compare text rather than parsed objects, as the sibling generators do.
+    Comparing ``json.loads`` output accepted any file that merely *parsed* to
+    the same object, so a reserialization with different indentation, key
+    order, or separators passed while the committed bytes were stale and
+    ``--write`` would immediately rewrite them.
+
+    This gate proves the committed artifact matches what the generator emits.
+    It cannot validate a hand-authored property description or type, because
+    the generator has no independent source for those: it carries property
+    bodies through from the template. Property-to-field tracing is a separate
+    gate (``scripts/check_schema_sources.py``).
+    """
+    current_text = path.read_text(encoding="utf-8")
+    if current_text == generated_text:
         print(f"PASS {_display_path(path)} is current.")
         return True
     print(f"FAIL {_display_path(path)} is stale; run scripts/generate_schema.py.", file=sys.stderr)
@@ -177,7 +190,17 @@ def main(argv: list[str] | None = None) -> int:
     if args.check:
         docs_ok = _check_target(args.schema, generated_text)
         packaged_ok = _check_target(args.packaged_schema, generated_text)
-        return 0 if docs_ok and packaged_ok else 1
+        # The documented schema and the one shipped in the wheel are the same
+        # contract, so they must be byte-identical. Checking each against the
+        # generated text alone would let the pair diverge if the generator ever
+        # derived its template from only one of them.
+        identical = args.schema.read_text(encoding="utf-8") == args.packaged_schema.read_text(encoding="utf-8")
+        if not identical:
+            print(
+                f"FAIL {_display_path(args.schema)} and {_display_path(args.packaged_schema)} differ.",
+                file=sys.stderr,
+            )
+        return 0 if docs_ok and packaged_ok and identical else 1
     changed = _write_if_changed(args.schema, generated_text)
     changed = _write_if_changed(args.packaged_schema, generated_text) or changed
     if not changed:
