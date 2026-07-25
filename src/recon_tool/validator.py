@@ -10,6 +10,7 @@ __all__ = [
     "UUID_RE",
     "caa_issuer_host",
     "host_has_suffix",
+    "is_domain_shaped",
     "is_safe_dns_name",
     "strip_control_chars",
     "validate_domain",
