@@ -104,3 +104,64 @@ def test_main_check_accepts_current_schema_copies(tmp_path: Path) -> None:
     packaged_copy.write_text(GENERATOR._PACKAGED_SCHEMA.read_text(encoding="utf-8"), encoding="utf-8")
 
     assert GENERATOR.main(["--schema", str(docs_copy), "--packaged-schema", str(packaged_copy), "--check"]) == 0
+
+
+class TestSchemaCheckDetectsStalenessAndDivergence:
+    """The check must compare committed bytes, not parsed objects.
+
+    Comparing ``json.loads`` output accepted any file that merely parsed to the
+    same object, so a reserialization with different indentation or key order
+    passed while the committed bytes were stale and ``--write`` would rewrite
+    them immediately. The documented schema and the packaged one are the same
+    contract, so they must also stay byte-identical to each other.
+    """
+
+    @staticmethod
+    def _run(tmp_path, docs_text: str, packaged_text: str) -> int:
+        import subprocess
+        import sys
+
+        docs = tmp_path / "docs-schema.json"
+        packaged = tmp_path / "packaged-schema.json"
+        docs.write_text(docs_text, encoding="utf-8")
+        packaged.write_text(packaged_text, encoding="utf-8")
+        result = subprocess.run(  # noqa: S603 - fixed interpreter, repo-local script.
+            [
+                sys.executable,
+                "scripts/generate_schema.py",
+                "--check",
+                "--schema",
+                str(docs),
+                "--packaged-schema",
+                str(packaged),
+            ],
+            capture_output=True,
+            text=True,
+            cwd=ROOT,
+            check=False,
+        )
+        return result.returncode
+
+    def test_current_artifacts_pass(self, tmp_path) -> None:
+        canonical = (ROOT / "docs" / "recon-schema.json").read_text(encoding="utf-8")
+
+        assert self._run(tmp_path, canonical, canonical) == 0
+
+    def test_reserialized_artifact_is_stale(self, tmp_path) -> None:
+        import json
+
+        canonical = (ROOT / "docs" / "recon-schema.json").read_text(encoding="utf-8")
+        # Parses to the same object, different bytes.
+        compact = json.dumps(json.loads(canonical), separators=(",", ":"))
+
+        assert self._run(tmp_path, compact, compact) == 1
+
+    def test_the_two_copies_must_agree(self, tmp_path) -> None:
+        import json
+
+        canonical = (ROOT / "docs" / "recon-schema.json").read_text(encoding="utf-8")
+        diverged = json.loads(canonical)
+        diverged["properties"]["tenant_id"]["type"] = "boolean"
+        packaged = json.dumps(diverged, indent=2) + "\n"
+
+        assert self._run(tmp_path, canonical, packaged) == 1
