@@ -395,9 +395,8 @@ def _compute_hardening_status(info: TenantInfo) -> HardeningStatus:
 
 def _unconfirmable_absent_points(email: EmailPosture, info: TenantInfo) -> int:
     """Points from absent controls whose absence is not passively confirmable."""
-    return observability.ObservableEmailState.from_info(info).unconfirmable_points(
-        dkim_configured=email.dkim_configured,
-        email_gateway=email.email_gateway,
+    return observability.unconfirmable_absent_points(
+        info, dkim_configured=email.dkim_configured, email_gateway=email.email_gateway
     )
 
 
@@ -445,9 +444,9 @@ def _compute_posture_score(
     if caa_control and caa_control.present:
         score += 5
 
-    # Federated identity: 10
+    # Federated identity
     if identity.auth_type == "Federated":
-        score += 10
+        score += observability.SCORE_FEDERATED_IDENTITY
 
     # Enterprise email gateway: 5
     if email.email_gateway is not None:

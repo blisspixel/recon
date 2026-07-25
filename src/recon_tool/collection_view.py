@@ -8,6 +8,7 @@ leaving raw evidence and ``degraded_sources`` intact for inspection.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import replace
 from typing import TYPE_CHECKING
 
@@ -168,6 +169,17 @@ _GOOGLE_WORKSPACE_MARKERS = frozenset({"source:google_workspace", "google_worksp
 _IDENTITY_SOURCE_MARKERS = (
     _USER_REALM_MARKERS | _AUTODISCOVER_MARKERS | _OIDC_MARKERS | _GOOGLE_IDENTITY_MARKERS | _GOOGLE_WORKSPACE_MARKERS
 )
+
+
+def auth_type_channel_unavailable(degraded_sources: Iterable[str]) -> bool:
+    """True when the channel that determines ``auth_type`` was unavailable.
+
+    ``collection_claim_info`` masks ``auth_type`` to ``None`` for exactly these
+    markers. A consumer that scores a federated namespace needs the same
+    decision to tell a namespace that is not federated from one whose identity
+    channel could not be read.
+    """
+    return not frozenset(degraded_sources).isdisjoint(_USER_REALM_MARKERS)
 
 
 def _is_retired_numeric_domain_insight(normalized: str) -> bool:
