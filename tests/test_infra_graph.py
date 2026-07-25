@@ -12,6 +12,7 @@ Covers:
 
 from __future__ import annotations
 
+import collections
 import itertools
 from unittest.mock import Mock
 
@@ -42,12 +43,19 @@ def _entry(names: list[str], issuer: str = "Test CA", not_before: str = "2025-01
 
 def _unaggregated_graph_snapshot(
     entries: list[dict],
-) -> tuple[set[str], dict[tuple[str, str], tuple[int, float]], dict[tuple[str, str], tuple[str, ...]], bool]:
+) -> tuple[
+    set[str],
+    dict[tuple[str, str], tuple[int, float]],
+    dict[tuple[str, str], dict[str, int]],
+    dict[tuple[str, str], int],
+    bool,
+]:
     """Preserve the pre-aggregation builder as a differential test oracle."""
     from recon_tool import infra_graph
 
     graph: nx.Graph[str] = nx.Graph()
-    edge_issuers: dict[tuple[str, str], list[str]] = {}
+    edge_issuers: dict[tuple[str, str], collections.Counter[str]] = {}
+    edge_cert_counts: dict[tuple[str, str], int] = {}
     truncated = False
     for index, entry in enumerate(entries):
         if index >= infra_graph._MAX_GRAPH_ENTRIES:
@@ -70,16 +78,17 @@ def _unaggregated_graph_snapshot(
                 data["weight"] = float(data["shared_certs"])
             else:
                 graph.add_edge(left, right, shared_certs=1, weight=1.0)
+            edge_cert_counts[(left, right)] = edge_cert_counts.get((left, right), 0) + 1
             if issuer:
-                samples = edge_issuers.setdefault((left, right), [])
-                if len(samples) < infra_graph._MAX_EDGE_ISSUER_SAMPLES:
-                    samples.append(issuer)
+                counts = edge_issuers.setdefault((left, right), collections.Counter())
+                if issuer in counts or len(counts) < infra_graph._MAX_EDGE_ISSUER_NAMES:
+                    counts[issuer] += 1
     edge_snapshot = {
         (min(left, right), max(left, right)): (int(data["shared_certs"]), float(data["weight"]))
         for left, right, data in graph.edges(data=True)
     }
-    issuer_snapshot = {edge: tuple(issuers) for edge, issuers in edge_issuers.items()}
-    return set(graph.nodes), edge_snapshot, issuer_snapshot, truncated
+    issuer_snapshot = {edge: dict(issuers) for edge, issuers in edge_issuers.items()}
+    return set(graph.nodes), edge_snapshot, issuer_snapshot, edge_cert_counts, truncated
 
 
 class TestEmptyAndTrivial:
@@ -397,7 +406,7 @@ class TestRepeatedHyperedgeAggregation:
     def test_aggregation_matches_the_unaggregated_graph_contract(self, entries: list[dict]) -> None:
         from recon_tool.infra_graph import _build_graph
 
-        graph, issuers, truncated = _build_graph(entries)
+        graph, issuers, cert_counts, truncated = _build_graph(entries)
         edge_snapshot = {
             (min(left, right), max(left, right)): (int(data["shared_certs"]), float(data["weight"]))
             for left, right, data in graph.edges(data=True)
@@ -405,7 +414,8 @@ class TestRepeatedHyperedgeAggregation:
         actual = (
             set(graph.nodes),
             edge_snapshot,
-            {edge: tuple(samples) for edge, samples in issuers.items()},
+            {edge: dict(counts) for edge, counts in issuers.items()},
+            cert_counts,
             truncated,
         )
 
