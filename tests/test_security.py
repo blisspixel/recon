@@ -379,3 +379,62 @@ class TestBugHuntRound2:
                 evidence=(SimpleNamespace(source_type="SPF", slug="spf-strict"),),
             )
         )
+
+
+class TestAlternationOverlapByCharacterClass:
+    """Quantified alternation must be judged by what branches match.
+
+    Overlap was tested by literal prefix, so a branch that is a wildcard, a
+    shorthand class, or a character class was invisible: it shares no prefix
+    with a sibling yet matches the same characters, which is what makes the
+    group partition a subject ambiguously. ``(.|a)*`` costs roughly twice as
+    much per added character and was admitted by both the catalog gate and the
+    stricter ephemeral gate, which guards the untrusted
+    ``inject_ephemeral_fingerprint`` path.
+    """
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            r"^(.|a)*x$",
+            r"^(?:.|a)*x$",
+            r"(.|a)*\.vendor\.example$",
+            r"^(\w|a)*x$",
+            r"^([a-z]|a)*x$",
+        ],
+    )
+    def test_class_overlapping_alternation_is_rejected(self, pattern: str) -> None:
+        from recon_tool.regex_safety import validate_regex
+
+        assert validate_regex(pattern, "catalog:test") is False
+        assert validate_regex(pattern, "ephemeral:test") is False
+
+    @pytest.mark.parametrize(
+        "pattern",
+        [
+            r"(foo|bar)+",
+            r"^(dev|prod)\.example\.com$",
+            r"^[a-z0-9-]+\.example\.net$",
+            r"(a|b|c)*",
+            # An escaped literal dot is not a character class, so a branch
+            # starting with it must stay admissible.
+            r"\.(cdn|edge)\.vendor\.example$",
+        ],
+    )
+    def test_disjoint_alternation_remains_admissible(self, pattern: str) -> None:
+        from recon_tool.regex_safety import validate_regex
+
+        assert validate_regex(pattern, "catalog:test") is True
+
+    def test_the_shipped_catalog_is_unaffected(self) -> None:
+        from recon_tool.fingerprints import load_fingerprints
+        from recon_tool.regex_safety import validate_regex
+
+        rejected = [
+            (fingerprint.slug, detection.pattern)
+            for fingerprint in load_fingerprints()
+            for detection in fingerprint.detections
+            if not validate_regex(detection.pattern, f"catalog:{fingerprint.slug}")
+        ]
+
+        assert rejected == []
