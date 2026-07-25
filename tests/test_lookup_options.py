@@ -215,3 +215,38 @@ class TestFlagCombinationsAreRejectedNotIgnored:
         error = options.validation_error()
         assert error is not None
         assert "--explain-dag" in error
+
+
+class TestBatchInputBounds:
+    """Batch input bounds must describe the input, not its terminator.
+
+    The per-line cap counted the trailing newline, so a 1024-byte line was
+    rejected mid-file but accepted as the final unterminated line: the same
+    content produced different verdicts depending on where it sat. An
+    unreadable path also exited as an internal fault rather than bad input.
+    """
+
+    @staticmethod
+    def _line(content_bytes: int, *, newline: bool) -> str:
+        suffix = ".example.com"
+        body = "a" * (content_bytes - len(suffix)) + suffix
+        return body + ("\n" if newline else "")
+
+    @pytest.mark.parametrize("newline", [True, False])
+    def test_cap_is_independent_of_line_position(self, newline: bool) -> None:
+        import importlib
+        import io
+
+        batch = importlib.import_module("recon_tool.cli.batch")
+
+        accepted = batch.read_batch_domains(io.StringIO(self._line(1024, newline=newline)))
+        assert len(accepted) == 1
+
+    def test_line_over_the_cap_is_rejected(self) -> None:
+        import importlib
+        import io
+
+        batch = importlib.import_module("recon_tool.cli.batch")
+
+        with pytest.raises(Exception, match="exceeds maximum length"):
+            batch.read_batch_domains(io.StringIO(self._line(1025, newline=True)))
