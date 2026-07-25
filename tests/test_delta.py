@@ -686,3 +686,67 @@ class TestComputeDelta:
         delta = compute_delta(prev, info)
         assert not delta.added_services
         assert not delta.removed_services
+
+
+class TestScalarChangesRequireARecordedBaseline:
+    """A change needs a baseline that recorded the field.
+
+    ``changed_confidence`` and ``changed_domain_count`` withhold when the
+    snapshot did not carry the field. ``changed_auth_type`` and
+    ``changed_dmarc_policy`` did not, so a snapshot that never recorded them
+    produced ``None -> value`` as a confirmed transition, flipped
+    ``has_changes`` to True, and rendered it as a change in the panel.
+
+    The gate is key presence, not value: a recorded null is a real observation,
+    and comparing it is how a newly added control surfaces as a change.
+    """
+
+    @staticmethod
+    def _current():
+        from recon_tool.models import ConfidenceLevel, TenantInfo
+
+        return TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Synthetic Alpha",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
+            confidence=ConfidenceLevel.HIGH,
+            auth_type="Managed",
+            dmarc_policy="reject",
+        )
+
+    def test_unrecorded_fields_are_withheld_not_invented(self) -> None:
+        from recon_tool.delta import compute_delta
+
+        previous = {"services": [], "slugs": [], "insights": [], "degraded_sources": []}
+
+        report = compute_delta(previous, self._current())
+
+        assert report.changed_auth_type is None
+        assert report.changed_dmarc_policy is None
+        assert report.has_changes is False
+        suppressed = report.incomplete_comparison.suppressed_fields
+        assert "changed_auth_type" in suppressed
+        assert "changed_dmarc_policy" in suppressed
+
+    def test_a_recorded_null_still_reports_a_real_transition(self) -> None:
+        from recon_tool.delta import compute_delta
+        from recon_tool.formatter.serialize import format_tenant_dict
+        from recon_tool.models import ConfidenceLevel, TenantInfo
+
+        # A full export records both keys as null when nothing was observed, so
+        # adding DMARC later must still be reported.
+        previous = format_tenant_dict(
+            TenantInfo(
+                tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                display_name="Synthetic Alpha",
+                default_domain="alpha.onmicrosoft.com",
+                queried_domain="alpha.invalid",
+                confidence=ConfidenceLevel.HIGH,
+            )
+        )
+
+        report = compute_delta(previous, self._current())
+
+        assert report.changed_dmarc_policy == (None, "reject")
+        assert report.changed_auth_type == (None, "Managed")
