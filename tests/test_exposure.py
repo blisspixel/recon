@@ -1148,3 +1148,42 @@ class TestScoreObservability:
         assert metrics["service_count"].domain_a_value == "0 observed (partial collection)"
         assert "not comparable" in assessments["email_security"]
         assert "not compared" in assessments["public_fingerprints"]
+
+
+class TestExposureEvidenceIsDeduplicated:
+    """One observed record must appear once in the assessment evidence.
+
+    The subsections overlap by construction: DMARC is cited by the email
+    posture and again by its hardening control, and a CAA record by both the
+    infrastructure view and its control. Concatenating them made a single
+    record look like several, so anything counting corroborating records for a
+    claim saw about twice the support that exists.
+    """
+
+    def test_overlapping_sections_do_not_repeat_a_record(self) -> None:
+        from recon_tool.exposure import assess_exposure_from_info
+        from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
+
+        evidence = (
+            EvidenceRecord(source_type="TXT", raw_value="v=DMARC1; p=reject", rule_name="dmarc", slug="dmarc"),
+            EvidenceRecord(source_type="TXT", raw_value="v=spf1 -all", rule_name="spf", slug="spf"),
+            EvidenceRecord(source_type="CNAME", raw_value="sel._domainkey", rule_name="dkim", slug="dkim"),
+            EvidenceRecord(source_type="TXT", raw_value="v=BIMI1", rule_name="bimi", slug="bimi"),
+            EvidenceRecord(source_type="CAA", raw_value="0 issue letsencrypt.org", rule_name="caa", slug="letsencrypt"),
+        )
+        info = TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Synthetic Alpha",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
+            confidence=ConfidenceLevel.HIGH,
+            services=("DMARC", "DKIM", "SPF"),
+            slugs=("dmarc", "dkim", "spf", "bimi", "letsencrypt"),
+            evidence=evidence,
+            dmarc_policy="reject",
+            mta_sts_mode="enforce",
+        )
+
+        references = list(assess_exposure_from_info(info).evidence)
+
+        assert len(references) == len(set(references))
