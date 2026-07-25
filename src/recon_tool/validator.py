@@ -10,6 +10,7 @@ __all__ = [
     "UUID_RE",
     "caa_issuer_host",
     "host_has_suffix",
+    "is_domain_shaped",
     "is_safe_dns_name",
     "strip_control_chars",
     "validate_domain",
@@ -43,6 +44,19 @@ def host_has_suffix(host: str, suffix: str) -> bool:
     normalized_host = host.lower().rstrip(".")
     normalized_suffix = suffix.lower().rstrip(".")
     return normalized_host == normalized_suffix or normalized_host.endswith(f".{normalized_suffix}")
+
+
+def is_domain_shaped(value: str) -> bool:
+    """True when *value* is a whole domain name rather than a name fragment.
+
+    Detector tables mix the two: some hints are domains a target can sit below,
+    such as ``sendgrid.net``, and some are fragments that only ever appear
+    inside a name, such as an infix or a bare label. Only the former can be
+    compared with :func:`host_has_suffix`, so callers use this to choose the
+    boundary-aware test where it is meaningful and keep a substring test where
+    it is not.
+    """
+    return bool(_DOMAIN_RE.fullmatch(value.strip().rstrip(".")))
 
 
 def caa_issuer_host(record: str) -> str | None:

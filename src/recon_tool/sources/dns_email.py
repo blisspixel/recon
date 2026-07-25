@@ -46,7 +46,7 @@ from recon_tool.sources.dns_tables import (
     extract_bimi_vmc_url,
     is_public_dns_name,
 )
-from recon_tool.validator import host_has_suffix, strip_control_chars
+from recon_tool.validator import host_has_suffix, is_domain_shaped, strip_control_chars
 
 logger = logging.getLogger("recon")
 
@@ -80,6 +80,27 @@ def _matching_spf_patterns(
 ) -> list[Detection]:
     """Return provider patterns that match a parsed SPF target by DNS labels."""
     return [det for det in patterns if any(host_has_suffix(target, det.pattern.lower()) for target in targets)]
+
+
+def spf_all_qualifier(spf_record: str) -> str | None:
+    """Return the qualifier of the ``all`` mechanism, or None when absent.
+
+    RFC 7208 section 6 lets modifiers such as ``exp=`` and ``redirect=`` appear
+    anywhere in the record, including after ``all``; the RFC's own example is
+    ``v=spf1 mx -all exp=explain._spf.%{d}``. Matching on the end of the record
+    therefore missed the policy whenever a modifier trailed it, and it could
+    not see ``+all`` or ``?all`` at all. Walk the terms instead: a mechanism
+    carries an optional leading qualifier and never contains ``=``, which is
+    what distinguishes it from a modifier.
+    """
+    for term in spf_record.split():
+        if not term or "=" in term:
+            continue
+        qualifier = term[0] if term[0] in "+-~?" else "+"
+        mechanism = term[1:] if term[0] in "+-~?" else term
+        if mechanism.lower() == "all":
+            return qualifier
+    return None
 
 
 async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
@@ -139,10 +160,11 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             for det in filter_shadowed_matches(spf_matches):
                 ctx.add(det.name, det.slug, source_type="SPF", raw_value=txt)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
-            if txt_lower.rstrip().endswith("-all"):
+            all_qualifier = spf_all_qualifier(txt_lower)
+            if all_qualifier == "-":
                 ctx.services.add(SVC_SPF_STRICT)
                 ctx.evidence.append(EvidenceRecord("SPF", txt, SVC_SPF_STRICT, "spf-strict"))
-            elif txt_lower.rstrip().endswith("~all"):
+            elif all_qualifier == "~":
                 ctx.services.add(SVC_SPF_SOFTFAIL)
                 ctx.evidence.append(EvidenceRecord("SPF", txt, SVC_SPF_SOFTFAIL, "spf-softfail"))
             # Follow SPF redirect= chains. A record like
@@ -155,7 +177,12 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # does end in -all. Follow up to 3 chain hops to prevent
             # loops, mark each redirect target for SPF fingerprint
             # scanning too.
-            if "redirect=" in txt_lower and not txt_lower.rstrip().endswith(("-all", "~all")):
+            # RFC 7208 section 6.1: when an ``all`` mechanism appears anywhere
+            # in the record the redirect modifier MUST be ignored. Testing the
+            # end of the record let ``+all`` and ``?all`` through, so the
+            # redirect target's strict policy was credited to a record whose
+            # own policy passes everything.
+            if "redirect=" in txt_lower and all_qualifier is None:
                 await _follow_spf_redirect(ctx, txt_lower, depth=0, max_depth=3)
 
     # SPF complexity summary - runs once per domain after the TXT
@@ -236,11 +263,12 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
             # ends in -all, then umich.edu's SPF effectively ends
             # in -all via the redirect, and we credit the origin
             # with SPF strict.
-            if rec_lower.rstrip().endswith("-all"):
+            target_qualifier = spf_all_qualifier(rec_lower)
+            if target_qualifier == "-":
                 ctx.services.add(SVC_SPF_STRICT)
                 ctx.evidence.append(EvidenceRecord("SPF", record, SVC_SPF_STRICT, "spf-strict"))
                 return
-            if rec_lower.rstrip().endswith("~all"):
+            if target_qualifier == "~":
                 ctx.services.add(SVC_SPF_SOFTFAIL)
                 ctx.evidence.append(EvidenceRecord("SPF", record, SVC_SPF_SOFTFAIL, "spf-softfail"))
                 return
@@ -384,10 +412,21 @@ def _apply_esp_dkim(
     esp_selectors: list[tuple[str, str, str, str]],
     esp_results: list[list[str]],
 ) -> None:
-    """Attribute ESP DKIM (Mailchimp, SendGrid, ...) when a selector CNAME matches its hint."""
+    """Attribute ESP DKIM (Mailchimp, SendGrid, ...) when a selector CNAME matches its hint.
+
+    A hint that is itself a domain is matched on label boundaries, because the
+    CNAME target is attacker-controlled: a bare substring test attributed
+    ``sendgrid.net.attacker-controlled.test`` to SendGrid, while every sibling
+    detector here already uses ``host_has_suffix``. The remaining hints are
+    fragments rather than domains (an infix such as ``domainkey.u``, or a bare
+    label), so they keep the substring test they were written for.
+    """
     for (_, hint, svc_name, slug), cname_results in zip(esp_selectors, esp_results, strict=True):
+        hint_is_domain = is_domain_shaped(hint)
         for cname in cname_results:
-            if hint in cname.lower():
+            target = cname.lower()
+            matched = host_has_suffix(target, hint) if hint_is_domain else hint in target
+            if matched:
                 ctx.add(svc_name, slug, source_type="DKIM", raw_value=cname)
                 ctx.services.add(SVC_DKIM)
                 break
