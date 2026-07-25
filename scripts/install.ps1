@@ -13,7 +13,7 @@
 $ErrorActionPreference = "Stop"
 
 $Package = "recon-tool"
-$Version = "2.6.10"
+$Version = "2.6.11"
 $Spec = "$Package==$Version"
 $Cli = "recon"
 
