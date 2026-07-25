@@ -132,9 +132,15 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
   quantifiers like `(a+)+`, `(a*)+`, and `(\w+)+`; a balanced-paren scan
   (`_has_nested_quantifier`, v2.1.1) also catches the redundantly-nested
   `((a+))+` that a flat pattern misses; and an alternation-overlap check
-  (`_alternation_redos`) catches prefix-overlapping branches like `(a|aa)+`.
-  This is a heuristic guardrail, not a formal regex verifier; the input-length
-  caps bound what it does not catch.
+  (`_alternation_redos`) rejects a quantified group whose branches can match
+  the same input. That covers prefix-overlapping branches like `(a|aa)+` and,
+  since v2.6.12, branches that overlap by character class rather than by
+  literal text, such as `(.|a)*`, `(\w|a)*`, and `([a-z]|a)*`. Those share no
+  prefix, so the earlier literal-only comparison admitted them even though
+  they cost roughly twice as much per added input character. Disjoint
+  alternation such as `(foo|bar)+` and branches beginning with an escaped
+  literal such as `\.` remain accepted. This is a heuristic guardrail, not a
+  formal regex verifier; the input-length caps bound what it does not catch.
 - All patterns compile-validated via `re.compile` before use
 - Same checks run on `~/.recon/signals.yaml` via `_validate_signal` in `signals.py`
 - Custom entries are **additive only** - cannot override built-ins (design invariant)
