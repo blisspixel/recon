@@ -52,6 +52,16 @@ Raw values are re-matched with the helpers the production detectors use, so a
 fire counted here is a fire recorded by recon: regex search for TXT-shaped
 paths, and DNS-label suffix or dotless substring semantics elsewhere.
 
+`raw_value` is a rendering of the observed record rather than the parsed target
+the live detector matched, so each type is normalized before matching. Taking
+the last whitespace field is correct for MX, SRV, and NS but corrupts the rest:
+a CAA value carries a tag and an opening quote and may carry trailing
+parameters, an SPF record holds many mechanisms of which the last is not
+privileged, a DMARC `rua` target sits after `mailto:` and `@`, and a CNAME
+rendering prefixes the owner and may chain through `->`. An earlier revision of
+this measurement used the last field everywhere and understated 114 of the 630
+measurable rows, reporting all 13 CAA patterns as never firing.
+
 Base-rate denominators are the observation opportunities recorded in the run's
 own gap aggregate (`available + partial` namespaces per path), not the count of
 namespaces that produced an attribution. Using attributions as the denominator
@@ -80,7 +90,7 @@ output. Those 434 detections are recorded as unmeasured, not as zero.
 
 ## Result: discriminative power spans a factor of 3,800
 
-Of the 630 measurable detections, 410 fired at least once and 220 never fired
+Of the 630 measurable detections, 500 fired at least once and 130 never fired
 across 5,199 namespaces.
 
 Among patterns that fired, the base rate ranges from 0.000192 to 0.7294. Stated
@@ -89,10 +99,10 @@ interchangeable range from 0.5 bits to 12.3 bits.
 
 | Information content | Patterns |
 |---|---:|
-| Under 2 bits (near-universal) | 8 |
-| 2 to 5 bits | 69 |
-| 5 to 8 bits | 138 |
-| 8 bits or more (highly specific) | 195 |
+| Under 2 bits (near-universal) | 9 |
+| 2 to 5 bits | 99 |
+| 5 to 8 bits | 167 |
+| 8 bits or more (highly specific) | 225 |
 
 The single most common pattern, `^google-site-verification=`, fired on 72.9
 percent of measured namespaces and carries 0.5 bits. It currently contributes
@@ -104,13 +114,13 @@ the same TXT evidence weight as `^krisp-domain-verification=`, which fired on
 Corroboration here means the attributed slug also had evidence from a different
 source type on the same namespace. It is only interpretable for slugs whose
 catalog entry defines two or more detection types; for a single-type slug it is
-structurally zero and says nothing. Of the 145 patterns with at least 50 fires,
-82 belong to single-type slugs and are excluded from this reading.
+structurally zero and says nothing. Of the 185 patterns with at least 50 fires,
+97 belong to single-type slugs and are excluded from this reading.
 
-Of the remaining 63:
+Of the remaining 88:
 
-- 7 corroborate on 90 percent or more of their fires.
-- 20 corroborate on under 5 percent of their fires.
+- 9 corroborate on 90 percent or more of their fires.
+- 28 corroborate on under 5 percent of their fires.
 
 Prevalence and corroboration are close to independent. The Microsoft 365 apex
 verification TXT prefix is common (base rate 0.512) and corroborates on 100
@@ -121,7 +131,7 @@ as a token and cannot distinguish a catalog pattern from a real one.
 (0.227) and `aspmx.l.google.com` (0.211) likewise corroborate at 1.00 and 0.95.
 A common observation is not automatically a weak one.
 
-The 20 patterns that fire often and are almost never corroborated are the
+The 28 patterns that fire often and are almost never corroborated are the
 actionable set, because each one produces a service attribution that no other
 observed evidence supports. The largest by volume:
 
@@ -131,10 +141,10 @@ observed evidence supports. The largest by volume:
 | `txt` | `^docusign=` | docusign | 1,434 | 0.276 | 0.00 |
 | `cname` | `cloudfront.net` | aws-cloudfront | 1,065 | 0.205 | 0.00 |
 | `cname` | `.elb.` | aws-elb | 558 | 0.107 | 0.00 |
+| `dmarc_rua` | `vali.email` | valimail | 464 | 0.089 | 0.00 |
 | `txt` | `^stripe-verification=` | stripe | 457 | 0.088 | 0.02 |
 | `cname` | `elb.amazonaws.com` | aws-elb | 450 | 0.087 | 0.00 |
 | `cname` | `fastly.net` | fastly | 370 | 0.071 | 0.00 |
-| `dmarc_rua` | `dmarcian.com` | dmarcian | 266 | 0.051 | 0.00 |
 
 Two explanations are compatible with this pattern and this measurement cannot
 separate them: a verification token can persist after the service is dropped,
@@ -143,25 +153,28 @@ issue the token broadly enough that it does not imply a deployed integration.
 Neither reading is an accuracy finding. Both mean the observation is weaker than
 an equally weighted corroborated one.
 
-## Result: pattern ambiguity is rare but concentrated
+## Result: one fifth of firing patterns are ambiguous
 
-18 patterns matched raw values that also matched a different slug's pattern of
-the same type. The maximum was 8 competing slugs, on `_spf.google.com`, which is
-expected: many vendors instruct customers to include Google's SPF record, so the
-value is shared infrastructure rather than a discriminating mark.
+107 of the 500 firing patterns matched a raw value that also matched a different
+slug's pattern of the same type. The maximum was 60 competing slugs, on
+`_spf.google.com`. That concentration is expected rather than alarming: many
+vendors instruct customers to include Google's SPF record, so a single SPF
+record legitimately names many providers at once and the value is shared
+infrastructure rather than a discriminating mark. It does mean an SPF fire
+should not carry the same weight as an exclusive one.
 
-## Result: 220 measurable patterns never fired
+## Result: 130 measurable patterns never fired
 
 | Type | Never fired |
 |---|---:|
-| `spf` | 71 |
 | `txt` | 64 |
-| `cname` | 54 |
-| `caa` | 10 |
-| `dmarc_rua` | 10 |
+| `cname` | 45 |
+| `spf` | 8 |
 | `subdomain_txt` | 6 |
 | `mx` | 4 |
+| `dmarc_rua` | 2 |
 | `ns` | 1 |
+| `caa` | 0 |
 
 A pattern that never fires on 5,199 namespaces is not necessarily wrong. It may
 target a vendor absent from this convenience sample, or a namespace shape this
@@ -196,8 +209,11 @@ The measurement does support three conclusions that need no further evidence:
 - CT collection was disabled, so `cname_target`, the largest single detection
   type, is unmeasured rather than measured at zero.
 - The catalog moved from 850 entries at collection to 856 at measurement.
-  Patterns added after the run cannot fire and are indistinguishable from
-  patterns that fired zero times.
+  Because current patterns are re-matched against the retained raw values, a
+  rule promoted after the run is evaluated retroactively rather than being
+  invisible. The four CAA issuer rules promoted two hours after this run fire on
+  68 to 237 namespaces here, which is a retrospective check on those promotions
+  and not evidence of a live detection gap.
 - Corroboration uses distinct source types as the independence proxy. Two source
   types can share an upstream cause, so it bounds independence loosely.
 - The run predates the related-domain enrichment fix shipped in v2.6.13, so
