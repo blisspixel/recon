@@ -14,6 +14,55 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.11] - 2026-07-24
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Fixed
+
+- The dominant certificate issuer reported for an infrastructure cluster no
+  longer depends on the order certificates arrive in. Up to thirty-two issuer
+  strings were kept per edge and the budget was consumed first come first
+  served, so the issuer whose certificates arrived first won the vote even as
+  a minority contributor. On an identical hundred-certificate set the reported
+  issuer flipped with arrival order and named the issuer holding forty of the
+  hundred. The module already documents arrival order as unstable and carries
+  a tie-break intended to keep that instability out of this field.
+- A cluster's shared-certificate count no longer saturates at that cap, so a
+  cluster and the edge beneath it in the same document no longer report
+  different counts for the same relationship.
+- A certificate feed that omits the issuer name no longer produces a cluster
+  reporting zero shared certificates. The count is tracked independently of
+  issuer metadata, so absent metadata is no longer reported as an observed
+  zero.
+- Delta reporting requires a baseline that recorded the field. A snapshot that
+  never carried `auth_type` or `dmarc_policy` reported a transition from null
+  to the current value as a confirmed change and described the comparison as
+  complete. The gate is now key presence rather than value, so a full export
+  that observed no policy still reports a newly added one as a change, while a
+  partial snapshot suppresses the comparison and names it.
+- Replay of cached DNS records compares DNS labels, matching the live
+  detectors it states it mirrors. A cached MX, NS, or CNAME value matched a
+  catalog pattern anywhere inside it, and the SPF path searched the whole
+  record rather than its parsed targets, so a lookalike target was attributed
+  to the provider whose name appeared in an interior label. The target parser
+  now lives beside the other stateless DNS parsers so the live and replay
+  paths share one implementation.
+
+### Changed
+
+- Cohort posterior-claim shares are scoped to the records that carried the
+  node, matching the mean beside them and the documented formula. The share
+  counted only those records but divided by the whole cohort, so a node
+  present on a tenth of a cohort reported a mean model score of 0.97 beside a
+  share of 0.1. This changes the emitted `high_score_share` and its
+  compatibility alias whenever a node is absent from some records. The aliases
+  continue to carry the same numbers as the fields they alias, and
+  `observed_n` is still emitted so a consumer can derive a cohort-scaled
+  figure deliberately.
+
 ## [2.6.10] - 2026-07-24
 
 ### Tool Surface Changes
