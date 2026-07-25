@@ -308,6 +308,31 @@ def _removed_service_label(
     return role_aware_service_label(service, supporting)
 
 
+def _recorded_scalar_change(
+    previous_json: dict[str, Any],
+    key: str,
+    current_value: str | None,
+    suppressed_fields: set[str],
+    *,
+    comparable: bool,
+) -> tuple[str | None, str | None] | None:
+    """Report a scalar transition only when the snapshot recorded the field.
+
+    Gate on key presence, not value. A recorded null is a real observation, and
+    comparing it is how a newly added control surfaces as a change, so a full
+    export is unaffected. A snapshot that never carried the key recorded
+    nothing, and reporting null-to-value as a transition invented a change its
+    baseline cannot support, so that case is suppressed and named instead.
+    """
+    if key not in previous_json or not comparable:
+        suppressed_fields.add(f"changed_{key}")
+        return None
+    previous_value = _optional_str_field(previous_json, key)
+    if previous_value != current_value:
+        return previous_value, current_value
+    return None
+
+
 def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaReport:
     """Compare a deserialized JSON export against a live TenantInfo.
 
@@ -359,19 +384,23 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
     )
 
     # Scalar field comparisons
-    changed_auth_type: tuple[str | None, str | None] | None = None
-    prev_auth = _optional_str_field(previous_json, "auth_type")
-    curr_auth = observable_current.auth_type
-    if auth_comparison_available and prev_auth != curr_auth:
-        changed_auth_type = (prev_auth, curr_auth)
-
-    changed_dmarc_policy: tuple[str | None, str | None] | None = None
-    prev_dmarc = _optional_str_field(previous_json, "dmarc_policy")
-    curr_dmarc = observable_current.dmarc_policy
-    if previous_source_status.channel_unavailable("dmarc") or current_source_status.channel_unavailable("dmarc"):
-        suppressed_fields.add("changed_dmarc_policy")
-    elif prev_dmarc != curr_dmarc:
-        changed_dmarc_policy = (prev_dmarc, curr_dmarc)
+    changed_auth_type = _recorded_scalar_change(
+        previous_json,
+        "auth_type",
+        observable_current.auth_type,
+        suppressed_fields,
+        comparable=auth_comparison_available,
+    )
+    changed_dmarc_policy = _recorded_scalar_change(
+        previous_json,
+        "dmarc_policy",
+        observable_current.dmarc_policy,
+        suppressed_fields,
+        comparable=not (
+            previous_source_status.channel_unavailable("dmarc")
+            or current_source_status.channel_unavailable("dmarc")
+        ),
+    )
 
     changed_confidence: tuple[str, str] | None = None
     prev_confidence = _optional_str_field(previous_json, "confidence")
