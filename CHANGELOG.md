@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+This file records what shipped. What is planned, why it is ordered that way,
+and what is deliberately blocked live in [ROADMAP.md](ROADMAP.md) and
+[docs/roadmap.md](docs/roadmap.md). Which surfaces are stable and how they may
+change is [docs/stability.md](docs/stability.md).
+
+`Unreleased` holds merged work that has not been published to PyPI. It is
+routinely empty: the release policy batches coherent changes rather than
+cutting one version per merged pull request, and documentation or planning
+changes do not by themselves trigger a package release. Every released section
+carries a `Tool Surface Changes` line so skill and agent authors can scan
+command and flag changes without diffing help output.
+
 Historical release entries preserve the terminology used when those versions
 shipped and are not the current semantic contract. Older verification-token
 language is superseded by exact administrative-token reuse, and older

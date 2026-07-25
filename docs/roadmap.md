@@ -21,6 +21,26 @@ tracked separately from product work.
 > graph is an implementation aid, not a substitute for source and test
 > verification.
 
+## What Is Next, and Why
+
+Rank and urgency are different axes, and conflating them is how the wrong thing
+gets worked on. Priority 1 is the standing highest priority because output
+truthfulness outranks features. Priority 2 is the most urgent because it is the
+only track with an external clock, and it is bounded work. Schedule priority 2
+now; keep priority 1 as the default work between those tasks. Priority 3 cannot
+start until priority 1 produces a claim taxonomy.
+
+| Track | Why it sits here | State today | What closes it |
+|---|---|---|---|
+| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | One machine-readable claim contract exists, `dns.dmarc.valid_policy_is_reject.v1`. Every other material default claim rests on review and regression tests. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
+| [2. MCP protocol characterization](#2-characterize-mcp-v2-beta-compatibility-before-2026-07-28) | The only externally timed track. The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so deferring costs more than doing it. | The exact `1.28.1` and `2.0.0b1` matrix passed 2026-07-13 and CI keeps both pins blocking. The SDK published `2.0.0b2` on 2026-07-14, so the characterized candidate is one release behind. | A dated matrix over the current candidate and then the final specification with the stable v2 SDK, with deterministic ordering and conforming schemas, before the production `<2` pin moves. |
+| [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on the claim taxonomy from priority 1. Measuring claim families before they are defined measures something about to be redefined. | Specified, not started. Extensive process evidence exists; product-outcome evidence does not. | A dated aggregate-safe scorecard with a decision rule written before the run, deciding whether advanced fusion stays primary or becomes an advanced diagnostic. |
+
+Everything blocked behind these, and the gate that unblocks each, is in
+[ROADMAP.md](../ROADMAP.md#what-is-deliberately-not-next). The phased execution
+sequence is the
+[Quality Proof execution plan](strategic-gap-audit.md#quality-proof-execution-plan).
+
 ## Product Goal
 
 recon composes typed public DNS, certificate-transparency, and unauthenticated
@@ -175,6 +195,14 @@ claim lacks adequate evidence.
 Status: candidate checkpoint complete on 2026-07-13. The exact v1.28.1 and
 v2.0.0b1 matrix passes; final specification and stable-v2 adoption remain
 pending.
+
+Open gap: the SDK published `2.0.0b2` on 2026-07-14, the day after that
+checkpoint, so the pinned candidate in the CI matrix is one prerelease behind
+the current beta. Re-run the characterization against the current candidate
+before the final specification lands, so the final gate diffs against a current
+result rather than a stale one. The matrix pin lives in
+`.github/workflows/ci.yml` and the probe is
+`scripts/check_mcp_compatibility.py`.
 
 Why second: the final MCP 2026-07-28 specification and stable Python SDK are
 time-bound external changes. Production remains on the stable v1 SDK line until
@@ -628,9 +656,11 @@ cross-platform release contract. Neither exists in the current product.
 
 ### Turn catalog quality into the detection-improvement loop
 
-The current catalog has 855 entries and 1,062 detections. The first frozen
-classified-surface baseline and provider-supported promotion gate are recorded
-in [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md).
+The catalog currently holds 856 entries across 679 unique slugs, with 1,064
+detections. The frozen classified-surface baseline that the promotion gate
+measures against is 855 entries and 1,062 detections, recorded in
+[the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
+that number is a fixed reference point and does not move when the catalog does.
 Establish stale-rule and independent-stratum baselines before adding broad new
 families. Every promoted rule needs a current
 public reference or disclosure-safe aggregate basis, a `verified` date,
@@ -800,19 +830,56 @@ Green process gates are necessary but are not proof of product utility.
 
 ## Invariants
 
+These are the properties every track above must preserve. They change only
+through an ADR, never as a side effect of feature work, and most of the
+acceptance evidence in this document exists to keep them true. Each group names
+the mechanism that enforces it, so a reviewer can check rather than trust.
+
+**Collection boundary.** Enforced by
+[ADR-0001](adr/0001-passive-zero-credential.md),
+[ADR-0011](adr/0011-public-metadata-collection-boundary.md), and the transport
+and resolver tests.
+
 - Public metadata only: DNS, certificate transparency, unauthenticated identity
   discovery, and the documented standards-compliant MTA-STS policy fetch.
-  Google CSE and BIMI certificate fetches remain explicit opt-in direct probes.
+- Google CSE and BIMI certificate fetches remain explicit opt-in direct probes
+  and never run in a default lookup.
 - No credentials, API keys, paid feeds, port scanning, exploit checks, or
   target application crawling.
+
+**Claim discipline.** Enforced by claim contracts, golden output fixtures, and
+the regression guards named under priority 1.
+
+- A domain is a query coordinate. It is not an organization, owner, account
+  operator, corporate group, or deployed product.
+- Observations are hedged and provenance-bearing. Sparse or degraded evidence
+  lowers confidence and may require abstention; an unresolved answer is a
+  correct answer.
+- A source failure is an unavailable channel, never a negative observation, and
+  never evidence of absence.
+- Parent-platform presence never becomes a child-product licensing, enablement,
+  deployment, or use claim. Missing metadata, including sovereignty metadata,
+  stays unknown rather than defaulting.
+- Exact observed overlap in shared administrative tokens, tenant identifiers,
+  issuers, or certificate names does not become an ownership or control verdict.
+- A public-evidence index is never presented as overall security maturity.
+
+**Data handling.** Enforced by
+[data-handling-policy.md](data-handling-policy.md) and the validation-hygiene
+gate in `scripts/check_validation_hygiene.py`, which runs locally and in the
+release path.
+
 - No runtime aggregate database. No real-target corpus or per-domain rows are
   committed or published; maintainer-local validation data stays in the
   permanently ignored workspaces defined by the data-handling policy.
 - All current evaluated-target examples use explicit synthetic identities under
   reserved namespaces; public validation artifacts are otherwise
   aggregate-only.
-- Observations are hedged and provenance-bearing. Sparse or degraded evidence
-  lowers confidence and may require abstention.
+
+**Surface stability and bounds.** Enforced by
+[stability.md](stability.md), [ADR-0003](adr/0003-v2-schema-lock.md), and the
+generated-artifact drift gates.
+
 - Stable CLI, JSON, MCP, cache, and import surfaces change only through their
   documented compatibility discipline.
 - Bounded network, parser, cache, schema, and output behavior.
