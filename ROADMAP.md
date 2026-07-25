@@ -2,7 +2,7 @@
 
 The canonical roadmap lives in [docs/roadmap.md](docs/roadmap.md).
 
-Current status: recon v2.6.12 has a stable, production-ready baseline. The CLI,
+Current status: recon v2.6.13 has a stable, production-ready baseline. The CLI,
 JSON schema, local stdio MCP server, bounded collectors, generated-artifact
 guards, validation gates, and release path are shipped. Recent shipped work
 improves first-run help and error recovery, removes rejected MCP values from
