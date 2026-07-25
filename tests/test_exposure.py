@@ -1187,3 +1187,61 @@ class TestExposureEvidenceIsDeduplicated:
         references = list(assess_exposure_from_info(info).evidence)
 
         assert len(references) == len(set(references))
+
+
+class TestScoreCeilingSurvivesIdentityDegradation:
+    """The ceiling must stay an upper bound when any channel degrades.
+
+    A degraded identity channel masks ``auth_type`` to None, so a federated
+    namespace loses those points from its score. Every DNS channel contributes
+    a matching term to the unconfirmable total; identity was omitted, so the
+    reported ceiling fell below the undegraded ceiling and stopped bounding the
+    true posture from above.
+    """
+
+    @staticmethod
+    def _info(degraded: tuple[str, ...]):
+        from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
+
+        evidence = (
+            EvidenceRecord(source_type="TXT", raw_value="v=DMARC1; p=reject", rule_name="dmarc", slug="dmarc"),
+            EvidenceRecord(source_type="CAA", raw_value="0 issue letsencrypt.org", rule_name="caa", slug="letsencrypt"),
+        )
+        return TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Synthetic Alpha",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
+            confidence=ConfidenceLevel.HIGH,
+            services=("DMARC",),
+            slugs=("dmarc", "letsencrypt"),
+            evidence=evidence,
+            dmarc_policy="reject",
+            auth_type="Federated",
+            degraded_sources=degraded,
+        )
+
+    def _ceiling(self, degraded: tuple[str, ...]) -> int:
+        from recon_tool.exposure import assess_exposure_from_info
+
+        assessment = assess_exposure_from_info(self._info(degraded))
+        return min(100, assessment.posture_score + assessment.unconfirmable_absent_points)
+
+    def test_identity_degradation_does_not_lower_the_ceiling(self) -> None:
+        baseline = self._ceiling(())
+
+        assert self._ceiling(("identity:user_realm",)) == baseline
+
+    def test_a_dns_channel_still_behaves_the_same_way(self) -> None:
+        baseline = self._ceiling(())
+
+        assert self._ceiling(("dns:caa",)) == baseline
+
+    def test_identity_degradation_lowers_the_score_it_compensates(self) -> None:
+        from recon_tool.exposure import assess_exposure_from_info
+
+        undegraded = assess_exposure_from_info(self._info(()))
+        degraded = assess_exposure_from_info(self._info(("identity:user_realm",)))
+
+        assert degraded.posture_score < undegraded.posture_score
+        assert degraded.unconfirmable_absent_points > undegraded.unconfirmable_absent_points

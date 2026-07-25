@@ -23,6 +23,7 @@ SCORE_DMARC = 20
 SCORE_DKIM = 15
 SCORE_MTA_STS = 15
 SCORE_EMAIL_GATEWAY = 5
+SCORE_FEDERATED_IDENTITY = 10
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,3 +134,30 @@ class ObservableEmailState:
                 self.bimi_available,
             )
         )
+
+
+def unconfirmable_absent_points(
+    info: TenantInfo,
+    *,
+    dkim_configured: bool,
+    email_gateway: str | None,
+) -> int:
+    """Score points hidden by an unavailable channel, across every channel.
+
+    The exposure score reports a floor plus the points a degraded channel
+    could be hiding, so the two together bound the true posture from above.
+    Identity belongs in that total as much as the email channels do: a
+    degraded identity channel masks ``auth_type``, so a federated namespace
+    loses those points from its score, and without a matching term here the
+    ceiling fell below the value the same domain reports when nothing is
+    degraded.
+    """
+    from recon_tool.collection_view import auth_type_channel_unavailable
+
+    points = ObservableEmailState.from_info(info).unconfirmable_points(
+        dkim_configured=dkim_configured,
+        email_gateway=email_gateway,
+    )
+    if auth_type_channel_unavailable(info.degraded_sources):
+        points += SCORE_FEDERATED_IDENTITY
+    return points
