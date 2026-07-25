@@ -180,3 +180,84 @@ class TestEnrichmentIntegration:
         pool = SourcePool([FakeSource("s1", primary)])
         info, _results = await resolve_tenant("example.com", pool=pool)
         assert info.tenant_id == "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+
+
+class TestRelatedEnrichmentDoesNotBorrowEmailControls:
+    """A related namespace's records must not become this namespace's claims.
+
+    Enrichment unions a related domain's detections into the queried one. An
+    email-control label asserts that this namespace publishes that record, so
+    storing the raw union let a neighbouring domain's DMARC, DKIM, SPF, MTA-STS
+    and BIMI appear as the queried domain's own while its own dmarc_policy
+    stayed null and its control score stayed zero. The claim-safe projection
+    was already computed for the insight arguments; the stored tuples bypassed
+    it.
+    """
+
+    @staticmethod
+    def _apex():
+        from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
+
+        return TenantInfo(
+            tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            display_name="Synthetic Alpha",
+            default_domain="alpha.onmicrosoft.com",
+            queried_domain="alpha.invalid",
+            confidence=ConfidenceLevel.HIGH,
+            services=("Microsoft 365",),
+            slugs=("microsoft365",),
+            evidence=(
+                EvidenceRecord(
+                    source_type="CNAME",
+                    raw_value="autodiscover.outlook.com",
+                    rule_name="m365-cname",
+                    slug="microsoft365",
+                ),
+            ),
+            related_domains=("beta-internal.invalid",),
+        )
+
+    @staticmethod
+    def _stub(monkeypatch, services, slugs):
+        from recon_tool import resolver
+        from recon_tool.models import SourceResult
+
+        async def _lookup(_source, _domain, **_kwargs):
+            return SourceResult(
+                source_name="dns_records",
+                detected_services=tuple(services),
+                detected_slugs=tuple(slugs),
+            )
+
+        monkeypatch.setattr(resolver, "_safe_lookup", _lookup)
+
+    @pytest.mark.asyncio
+    async def test_control_slugs_are_not_borrowed(self, monkeypatch) -> None:
+        from recon_tool import resolver
+
+        self._stub(
+            monkeypatch,
+            ("DMARC", "DKIM", "SPF: strict (-all)", "MTA-STS", "BIMI"),
+            ("dmarc", "dkim", "spf-strict", "mta-sts", "mta-sts-enforce", "bimi"),
+        )
+
+        enriched, _results = await resolver._enrich_from_related(self._apex(), [], skip_ct=True)
+
+        borrowed = {"dmarc", "dkim", "spf-strict", "mta-sts", "mta-sts-enforce", "bimi"}
+        assert borrowed.isdisjoint(enriched.slugs)
+        assert not borrowed.intersection({s.lower() for s in enriched.services})
+        # The apex keeps what its own evidence proves.
+        assert "microsoft365" in enriched.slugs
+
+    @pytest.mark.asyncio
+    async def test_inventory_labels_still_merge(self, monkeypatch) -> None:
+        from recon_tool import resolver
+
+        # A non-control detection is an inventory label, not a record claim, so
+        # enrichment must still surface it.
+        self._stub(monkeypatch, ("Snowflake", "DMARC"), ("snowflake", "dmarc"))
+
+        enriched, _results = await resolver._enrich_from_related(self._apex(), [], skip_ct=True)
+
+        assert "snowflake" in enriched.slugs
+        assert "dmarc" not in enriched.slugs
