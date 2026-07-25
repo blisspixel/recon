@@ -45,18 +45,13 @@ from recon_tool.sources.dns_tables import (
     bimi_vmc_url_is_safe,
     extract_bimi_vmc_url,
     is_public_dns_name,
+    spf_targets,
 )
 from recon_tool.validator import host_has_suffix, is_domain_shaped, strip_control_chars
 
 logger = logging.getLogger("recon")
 
 _REPORTING_DOMAIN_LABEL_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", re.ASCII)
-_SPF_TARGET_RE = re.compile(
-    r"(?:^|\s)(?:[+?~-]?include:|redirect=)([^\s]+)",
-    re.IGNORECASE,
-)
-
-
 def _record_spf_targets(
     ctx: dns_base.DetectionCtx,
     spf_text: str,
@@ -64,10 +59,7 @@ def _record_spf_targets(
 ) -> tuple[str, ...]:
     """Record and return normalized include and redirect targets."""
     targets: list[str] = []
-    for match in _SPF_TARGET_RE.finditer(spf_text):
-        target = match.group(1).strip().lower().rstrip(".")
-        if not target:
-            continue
+    for target in spf_targets(spf_text):
         targets.append(target)
         classified = any(host_has_suffix(target, det.pattern.lower()) for det in patterns)
         ctx.record_catalog_observation("spf", "@", target, classified=classified)
@@ -143,7 +135,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
                 ctx.site_verification_tokens.add(token)
 
         if txt_lower.startswith("v=spf1"):
-            spf_targets = _record_spf_targets(ctx, txt_lower, spf_patterns)
+            observed_targets = _record_spf_targets(ctx, txt_lower, spf_patterns)
             ctx.spf_include_count = max(ctx.spf_include_count, txt_lower.count("include:"))
             # SPF patterns match parsed include: and redirect= domains on DNS
             # label boundaries. A raw substring match would misattribute a
@@ -156,7 +148,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # (e.g. ``cisco.com``) and a narrow one
             # (e.g. ``ess.cisco.com``) both match, only the narrow one's
             # slug fires , preventing double-counting of the same vendor.
-            spf_matches = _matching_spf_patterns(spf_targets, spf_patterns)
+            spf_matches = _matching_spf_patterns(observed_targets, spf_patterns)
             for det in filter_shadowed_matches(spf_matches):
                 ctx.add(det.name, det.slug, source_type="SPF", raw_value=txt)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
