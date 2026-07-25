@@ -29,6 +29,24 @@ _EMAIL_CONTROL_SERVICES = frozenset(
     }
 )
 
+# Slug counterparts of the control services above, plus the reporting and
+# null-delivery slugs the same detectors emit. A control slug states that the
+# queried namespace publishes that record, so it may only survive when the
+# queried namespace's own evidence carries it.
+_EMAIL_CONTROL_SLUGS = frozenset(
+    {
+        "bimi",
+        "dkim",
+        "dmarc",
+        "mta-sts",
+        "mta-sts-enforce",
+        "null-mx",
+        "spf-softfail",
+        "spf-strict",
+        "tls-rpt",
+    }
+)
+
 
 def observed_email_control_services(evidence: Iterable[EvidenceRecord]) -> set[str]:
     """Project evidence into only the email controls its record type proves."""
@@ -65,6 +83,23 @@ def claim_safe_email_services(
     projected.difference_update(_EMAIL_CONTROL_SERVICES)
     projected.update(observed_email_control_services(evidence))
     return projected
+
+
+def claim_safe_email_slugs(
+    slugs: Iterable[str],
+    evidence: Iterable[EvidenceRecord],
+) -> set[str]:
+    """Drop email-control slugs the queried namespace's own records do not carry.
+
+    The slug counterpart of :func:`claim_safe_email_services`. Related-domain
+    enrichment unions another namespace's detections into the queried one, and
+    a control slug asserts that this namespace publishes that record. Keeping a
+    borrowed one would let a neighbouring domain's DMARC or MTA-STS appear as
+    the queried domain's own. Every non-control slug is preserved, since those
+    are inventory labels rather than record claims.
+    """
+    observed = {record.slug for record in evidence if record.slug}
+    return {slug for slug in slugs if slug not in _EMAIL_CONTROL_SLUGS or slug in observed}
 
 
 def compute_email_security_score(info: TenantInfo) -> int:

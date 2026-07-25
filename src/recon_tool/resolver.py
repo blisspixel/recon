@@ -285,7 +285,11 @@ async def _enrich_from_related(
 
     # Re-run insight generation with the enriched data to get updated signals
     from recon_tool.constants import effective_dmarc_policy, email_security_score
-    from recon_tool.email_security import claim_safe_email_services, observed_email_control_services
+    from recon_tool.email_security import (
+        claim_safe_email_services,
+        claim_safe_email_slugs,
+        observed_email_control_services,
+    )
     from recon_tool.merger import build_insights_with_signals
 
     claim_services = claim_safe_email_services(extra_services, info.evidence)
@@ -321,11 +325,22 @@ async def _enrich_from_related(
         evidence=info.evidence,
     )
 
-    # Build enriched TenantInfo — keep identity fields, update services/slugs/insights
+    # Build enriched TenantInfo, keeping identity fields and updating
+    # services, slugs, and insights.
+    #
+    # Persist the claim-safe projection rather than the raw union. Enrichment
+    # merges a related namespace's detections into this one, and an
+    # email-control label asserts that this namespace publishes that record.
+    # Storing the union let a neighbouring domain's DMARC, DKIM, SPF, MTA-STS,
+    # and BIMI appear as the queried domain's own while its dmarc_policy stayed
+    # null and its email-control score stayed zero, so one record contradicted
+    # itself. The projection was already computed for the insight arguments;
+    # the stored tuples must not bypass it.
+    claim_slugs = claim_safe_email_slugs(extra_slugs, info.evidence)
     enriched = replace(
         info,
-        services=tuple(sorted(extra_services)),
-        slugs=tuple(sorted(extra_slugs)),
+        services=tuple(sorted(claim_services)),
+        slugs=tuple(sorted(claim_slugs)),
         insights=tuple(enriched_insights),
     )
 
