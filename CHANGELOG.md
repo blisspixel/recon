@@ -14,6 +14,71 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.10] - 2026-07-24
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Fixed
+
+- SPF policy is read as a record term rather than a record suffix. RFC 7208
+  section 6 allows `exp=` and `redirect=` anywhere, including after the `all`
+  mechanism, so any record with a trailing modifier lost its policy and its
+  contribution to the observed email-control count. Section 6.1 also requires
+  `redirect` to be ignored whenever an `all` mechanism appears, which the
+  previous tail check could not see for `+all` or `?all`; a redirect target's
+  strict policy was credited to a record whose own policy passes everything.
+  Redirect targets share the same parser, so a target with a trailing modifier
+  now propagates its qualifier correctly.
+- Domain normalization is a fixpoint. It stripped at most one leading `www`
+  label, so its own output was not always a stable input. Both cache layers
+  rebuild their key from an already-normalized domain, so for a host whose
+  normalized form still began with `www` the payload-versus-key guard rejected
+  the write, and that host could never be cached.
+- A non-default collection scope is no longer shared through the result cache.
+  The key is the domain alone, so a `--skip-ct` run published a
+  certificate-transparency-degraded result under the shared key and a later
+  full lookup was answered from it for the rest of the cache lifetime, with no
+  network call and no signal. `--direct-probes` had the mirror problem.
+- Hardening simulation copies the observed result instead of rebuilding it
+  field by field. The rebuild silently dropped every field it did not name,
+  including the observed email gateway, so applying no fixes reported a loss
+  and every gateway-fronted simulation understated its gain.
+- The exposure assessment reports each observed record once. Its subsections
+  overlap by construction, so a single record appeared several times and a
+  reader counting corroborating records saw about twice the support that
+  exists.
+- Catalog paging matches the cap convention used elsewhere in the server. A
+  zero limit returned an empty page instead of the full remainder, and a
+  negative limit returned an empty page instead of an error, producing the
+  no-catalog-match false negative the server instructions warn against. An
+  empty and a whitespace-only category filter now agree.
+- Supplied flag combinations are rejected rather than discarded. An empty
+  `--compare` path was treated as an absent flag, which also defeated the
+  `--chain` and `--compare` exclusion, and `--explain-dag` silently overrode
+  `--json`, `--md`, and `--plain`. An unreadable snapshot path and an
+  unreadable batch path now exit as invalid input rather than as internal
+  faults.
+- Batch input lines are bounded by their content rather than their terminator,
+  so the same line is no longer accepted or rejected depending on its position
+  in the file.
+
+### Security
+
+- MCP error text no longer echoes caller-supplied terminal control characters.
+  The validator names the value it rejected, and four tools returned that
+  message verbatim, so escape and operating-system-command sequences reached
+  tool results that agents and terminals consume.
+- Two MCP tools reported resolver failures by stringifying the internal error,
+  which carried resolver addresses, proxy URLs, and transport-security detail
+  from the host environment, and discarded the error kind. Both now use the
+  shared outcome mapper the other tools already use.
+- Certificate-transparency and DKIM attribution no longer accept a lookalike.
+  ESP DKIM hints that are whole domains are matched on label boundaries, so a
+  selector target such as a vendor name placed in an interior label is no
+  longer attributed to that vendor.
+
 ## [2.6.9] - 2026-07-24
 
 ### Tool Surface Changes
