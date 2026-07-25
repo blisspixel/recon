@@ -48,6 +48,7 @@ from __future__ import annotations
 
 import logging
 from collections import Counter
+from dataclasses import dataclass, field
 from itertools import combinations
 from typing import Any
 
@@ -98,7 +99,11 @@ _MAX_GRAPH_ENTRIES = 1000
 # Cap how many issuer samples accumulate per edge. The dominant issuer only
 # needs the most-common, not every contribution, so a handful of samples is
 # enough and the per-edge list cannot grow with the entry count.
-_MAX_EDGE_ISSUER_SAMPLES = 32
+# Bound the distinct issuer names remembered per edge, not the number of
+# certificates counted. Capping samples made the tally first-come-first-served,
+# so the issuer whose certificates arrived first won the vote even as a
+# minority, and the derived count saturated at the cap.
+_MAX_EDGE_ISSUER_NAMES = 32
 
 # Seed for Louvain — keeps partitions stable across runs.
 _LOUVAIN_SEED = 1729
@@ -130,9 +135,17 @@ def _clean_sans(raw: Any) -> list[str]:
     return cleaned
 
 
+@dataclass
+class _EdgeTallies:
+    """Per-edge issuer counts and contributing-certificate totals."""
+
+    issuers: dict[tuple[str, str], Counter[str]] = field(default_factory=dict)
+    cert_counts: dict[tuple[str, str], int] = field(default_factory=dict)
+
+
 def _apply_repeated_san_group(
     graph: nx.Graph[str],
-    edge_issuers: dict[tuple[str, str], list[str]],
+    tallies: _EdgeTallies,
     sans: tuple[str, ...],
     issuer: str,
     occurrences: int,
@@ -152,16 +165,19 @@ def _apply_repeated_san_group(
             data["weight"] = float(shared_certs)
         else:
             graph.add_edge(a, b, shared_certs=occurrences, weight=float(occurrences))
+        # Count every contributing certificate, whether or not the feed
+        # supplied an issuer name. Deriving this from the issuer tally reported
+        # zero shared certificates when issuer metadata was simply absent.
+        tallies.cert_counts[(a, b)] = tallies.cert_counts.get((a, b), 0) + occurrences
         if issuer:
-            samples = edge_issuers.setdefault((a, b), [])
-            remaining = _MAX_EDGE_ISSUER_SAMPLES - len(samples)
-            if remaining > 0:
-                samples.extend([issuer] * min(occurrences, remaining))
+            counts = tallies.issuers.setdefault((a, b), Counter())
+            if issuer in counts or len(counts) < _MAX_EDGE_ISSUER_NAMES:
+                counts[issuer] += occurrences
 
 
 def _build_graph(
     entries: list[dict[str, Any]],
-) -> tuple[nx.Graph[str], dict[tuple[str, str], list[str]], bool]:
+) -> tuple[nx.Graph[str], dict[tuple[str, str], Counter[str]], dict[tuple[str, str], int], bool]:
     """Build the SAN co-occurrence graph from cert entries.
 
     Returns ``(graph, edge_issuers, truncated)``. ``edge_issuers`` maps
@@ -180,7 +196,7 @@ def _build_graph(
     later cap is checked).
     """
     g: nx.Graph[str] = nx.Graph()
-    edge_issuers: dict[tuple[str, str], list[str]] = {}
+    tallies = _EdgeTallies()
     truncated = False
     observed_nodes: set[str] = set()
     pending_sans: tuple[str, ...] = ()
@@ -222,14 +238,16 @@ def _build_graph(
             continue
 
         if pending_occurrences:
-            _apply_repeated_san_group(g, edge_issuers, pending_sans, pending_issuer, pending_occurrences)
+            _apply_repeated_san_group(
+                g, tallies, pending_sans, pending_issuer, pending_occurrences
+            )
         pending_sans = canonical_sans
         pending_issuer = issuer
         pending_occurrences = 1
 
     if pending_occurrences:
-        _apply_repeated_san_group(g, edge_issuers, pending_sans, pending_issuer, pending_occurrences)
-    return g, edge_issuers, truncated
+        _apply_repeated_san_group(g, tallies, pending_sans, pending_issuer, pending_occurrences)
+    return g, tallies.issuers, tallies.cert_counts, truncated
 
 
 def _louvain_partition(g: nx.Graph[str]) -> tuple[list[set[str]], float, str]:
@@ -360,7 +378,8 @@ def _partition_stability(
 
 def _dominant_issuer_for_members(
     members: set[str],
-    edge_issuers: dict[tuple[str, str], list[str]],
+    edge_issuers: dict[tuple[str, str], Counter[str]],
+    edge_cert_counts: dict[tuple[str, str], int],
 ) -> tuple[str | None, int]:
     """Return (issuer, shared_cert_count) for the cluster.
 
@@ -371,9 +390,11 @@ def _dominant_issuer_for_members(
     """
     issuer_counter: Counter[str] = Counter()
     edge_count_in_cluster = 0
+    for (a, b), count in edge_cert_counts.items():
+        if a in members and b in members:
+            edge_count_in_cluster += count
     for (a, b), issuers in edge_issuers.items():
         if a in members and b in members:
-            edge_count_in_cluster += len(issuers)
             issuer_counter.update(issuers)
     if not issuer_counter:
         return None, edge_count_in_cluster
@@ -402,7 +423,7 @@ def build_infrastructure_clusters(
     ``MAX_CLUSTERS``. Within each cluster, members are sorted and
     capped by ``MAX_MEMBERS_PER_CLUSTER``.
     """
-    g, edge_issuers, truncated = _build_graph(entries)
+    g, edge_issuers, edge_cert_counts, truncated = _build_graph(entries)
     node_count = int(g.number_of_nodes())
     edge_count = int(g.number_of_edges())
 
@@ -445,7 +466,7 @@ def build_infrastructure_clusters(
             continue
         members_sorted = sorted(community)[:MAX_MEMBERS_PER_CLUSTER]
         members_set = set(members_sorted)
-        dominant, shared = _dominant_issuer_for_members(members_set, edge_issuers)
+        dominant, shared = _dominant_issuer_for_members(members_set, edge_issuers, edge_cert_counts)
         clusters.append(
             InfrastructureCluster(
                 cluster_id=cluster_id,
