@@ -90,10 +90,7 @@ def test_operation_options_reject_ambiguous_modes() -> None:
         _options(operation=LookupOperationOptions(show_exposure=True, show_gaps=True)).validation_error()
         == "--exposure and --gaps are mutually exclusive"
     )
-    assert (
-        _options(operation=LookupOperationOptions(chain_depth=2)).validation_error()
-        == "--depth requires --chain"
-    )
+    assert _options(operation=LookupOperationOptions(chain_depth=2)).validation_error() == "--depth requires --chain"
 
 
 def test_non_standard_modes_reject_unimplemented_renderers() -> None:
@@ -108,3 +105,59 @@ def test_non_standard_modes_reject_unimplemented_renderers() -> None:
 
     assert markdown_chain.validation_error() == "--md cannot be combined with --chain/--compare/--exposure/--gaps"
     assert plain_exposure.validation_error() == "--plain cannot be combined with --chain/--compare/--exposure/--gaps"
+
+
+class TestCollectionScopeIsNotSharedThroughTheCache:
+    """The disk cache key is the domain alone, so scope must gate sharing.
+
+    A --skip-ct result is CT-degraded and a --direct-probes result carries
+    opt-in probe data. Writing either under the shared domain key let a later
+    full lookup be answered from the degraded entry for the whole TTL window,
+    with no network call and no signal. The MCP server already refuses to share
+    a skip_ct result for exactly this reason.
+    """
+
+    @staticmethod
+    def _scoped(*, skip_ct: bool = False, active_probes: bool = False) -> LookupOptions:
+        return LookupOptions(
+            output=LookupOutputOptions(),
+            display=LookupDisplayOptions(),
+            operation=LookupOperationOptions(),
+            inference=LookupInferenceOptions(),
+            execution=LookupExecutionOptions(skip_ct=skip_ct, active_probes=active_probes),
+        )
+
+    def test_skip_ct_result_is_not_written_to_the_shared_cache(self, monkeypatch, tmp_path) -> None:
+        import asyncio
+        import importlib
+
+        from recon_tool.models import ConfidenceLevel, TenantInfo
+
+        monkeypatch.setenv("RECON_CONFIG_DIR", str(tmp_path))
+        cli_lookup = importlib.import_module("recon_tool.cli.lookup")
+
+        calls: list[bool] = []
+
+        async def _fake_resolve(_console: object, _validated: str, **kwargs: object):
+            skip_ct = bool(kwargs["skip_ct"])
+            calls.append(skip_ct)
+            return (
+                TenantInfo(
+                    tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+                    display_name="Synthetic Alpha",
+                    default_domain="alpha.onmicrosoft.com",
+                    queried_domain="alpha.invalid",
+                    confidence=ConfidenceLevel.HIGH,
+                    ct_subdomain_count=0 if skip_ct else 42,
+                ),
+                [],
+            )
+
+        monkeypatch.setattr(cli_lookup, "_resolve_with_spinner", _fake_resolve)
+
+        asyncio.run(cli_lookup._lookup_resolve_standard(None, "alpha.invalid", self._scoped(skip_ct=True)))
+        info, _results = asyncio.run(cli_lookup._lookup_resolve_standard(None, "alpha.invalid", self._scoped()))
+
+        # The full lookup must resolve rather than reuse the degraded entry.
+        assert calls == [True, False]
+        assert info.ct_subdomain_count == 42
