@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from recon_tool.cli.options import (
     LookupDisplayOptions,
     LookupExecutionOptions,
@@ -161,3 +163,55 @@ class TestCollectionScopeIsNotSharedThroughTheCache:
         # The full lookup must resolve rather than reuse the degraded entry.
         assert calls == [True, False]
         assert info.ct_subdomain_count == 42
+
+
+class TestFlagCombinationsAreRejectedNotIgnored:
+    """A supplied flag must never be silently discarded.
+
+    ``--compare ""`` is a supplied path, not an absent flag, but truthiness
+    treated it as absent: the run fell back to a standard lookup, and the
+    ``--chain``/``--compare`` exclusion could not see it either.
+    ``--explain-dag`` renders its own report and returns before the output
+    branches, so pairing it with a renderer discarded the requested format and
+    still exited 0 - a scripted ``--json --explain-dag | jq`` received prose.
+    """
+
+    def test_empty_compare_path_selects_compare_mode(self) -> None:
+        from recon_tool.cli.options import LookupOperationMode, LookupOperationOptions
+
+        assert LookupOperationOptions(compare_file="").mode is LookupOperationMode.COMPARE
+
+    def test_empty_compare_path_still_conflicts_with_chain(self) -> None:
+        from recon_tool.cli.options import LookupOperationOptions
+
+        error = LookupOperationOptions(compare_file="", chain_mode=True).validation_error()
+        assert error is not None
+        assert "mutually exclusive" in error
+
+    def test_absent_compare_remains_standard(self) -> None:
+        from recon_tool.cli.options import LookupOperationMode, LookupOperationOptions
+
+        assert LookupOperationOptions().mode is LookupOperationMode.STANDARD
+
+    @pytest.mark.parametrize("renderer", ["json_output", "markdown", "plain"])
+    def test_explain_dag_conflicts_with_an_output_renderer(self, renderer: str) -> None:
+        from recon_tool.cli.options import (
+            LookupDisplayOptions,
+            LookupExecutionOptions,
+            LookupInferenceOptions,
+            LookupOperationOptions,
+            LookupOptions,
+            LookupOutputOptions,
+        )
+
+        options = LookupOptions(
+            output=LookupOutputOptions(**{renderer: True}),
+            display=LookupDisplayOptions(),
+            operation=LookupOperationOptions(),
+            inference=LookupInferenceOptions(explain_dag=True),
+            execution=LookupExecutionOptions(),
+        )
+
+        error = options.validation_error()
+        assert error is not None
+        assert "--explain-dag" in error
