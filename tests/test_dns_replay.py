@@ -70,7 +70,10 @@ def test_cached_cname_replay_is_network_free_and_idempotent(monkeypatch) -> None
 
 def test_cached_txt_replay_preserves_txt_and_spf_evidence(monkeypatch) -> None:
     txt_rules = (_detection(r"verification=abc123", name="Verification Service", slug="verification-service"),)
-    spf_rules = (_detection("include:spf.example.test", name="Mail Gateway", slug="mail-gateway"),)
+    # Catalog SPF patterns are bare domains compared against parsed include:
+    # and redirect= targets, as the live detector does. No pattern in the
+    # shipped catalog carries an ``include:`` prefix.
+    spf_rules = (_detection("spf.example.test", name="Mail Gateway", slug="mail-gateway"),)
     monkeypatch.setattr(dns_replay, "get_txt_patterns", lambda: txt_rules)
     monkeypatch.setattr(dns_replay, "get_spf_patterns", lambda: spf_rules)
     original = SourceResult(
@@ -99,3 +102,41 @@ def test_cached_replay_does_not_project_unavailable_dns() -> None:
     )
 
     assert dns_replay.replay_cached_dns_fingerprints(original) is original
+
+
+def test_replay_rejects_lookalike_targets(monkeypatch) -> None:
+    """Replay must match DNS labels, as the live detector does.
+
+    The module docstring promises "the same record-type matchers used by live
+    collection", but replay compared raw text. A substring test attributed
+    ``vendor.example.test.attacker-controlled.test`` to the vendor, and the
+    SPF path searched the whole record rather than its parsed targets. The
+    live detectors document label matching as the defence against exactly
+    this, so replay must not reintroduce it.
+    """
+    spf_rules = (_detection("spf.example.test", name="Mail Gateway", slug="mail-gateway"),)
+    mx_rules = (_detection("mail.example.test", name="Mail Host", slug="mail-host"),)
+    monkeypatch.setattr(dns_replay, "get_txt_patterns", lambda: ())
+    monkeypatch.setattr(dns_replay, "get_spf_patterns", lambda: spf_rules)
+    monkeypatch.setattr(dns_replay, "get_mx_patterns", lambda: mx_rules)
+
+    hostile = SourceResult(
+        source_name="DNS",
+        raw_dns_records=(
+            ("TXT", "v=spf1 include:spf.example.test.attacker-controlled.test -all"),
+            ("MX", "10 mail.example.test.attacker-controlled.test"),
+        ),
+    )
+    legitimate = SourceResult(
+        source_name="DNS",
+        raw_dns_records=(
+            ("TXT", "v=spf1 include:spf.example.test -all"),
+            ("MX", "10 mail.example.test"),
+        ),
+    )
+
+    assert dns_replay.replay_cached_dns_fingerprints(hostile).detected_slugs == ()
+    assert set(dns_replay.replay_cached_dns_fingerprints(legitimate).detected_slugs) == {
+        "mail-gateway",
+        "mail-host",
+    }

@@ -30,6 +30,8 @@ from recon_tool.models import EvidenceRecord, SourceResult
 from recon_tool.regex_safety import compile_regex
 from recon_tool.source_status import ObservationChannel, SourceStatus
 from recon_tool.sources.dns_base import DetectionCtx
+from recon_tool.sources.dns_tables import spf_targets
+from recon_tool.validator import host_has_suffix, is_domain_shaped
 
 if TYPE_CHECKING:
     from recon_tool.fingerprints import Fingerprint
@@ -56,12 +58,22 @@ def _record_match(
 ) -> None:
     """Apply first-match, longest-pattern semantics to one cached record."""
     candidate = value.lower()[:_MAX_CNAME_MATCH_LEN] if regex else value.lower()
+    # The record's target is the final field: an MX value carries a preference
+    # before the host, while CNAME and NS values are the host alone.
+    target = candidate.split()[-1].rstrip(".") if candidate.split() else ""
     for detection in sorted(detections, key=lambda item: -len(item.pattern)):
         if regex:
             compiled = compile_regex(detection.pattern, re.IGNORECASE)
             matched = compiled is not None and compiled.search(candidate) is not None
         else:
-            matched = detection.pattern in candidate
+            # Match the live detector: compare DNS labels, not raw text. A
+            # substring test attributed a lookalike such as
+            # ``vendor.com.attacker-controlled.test`` to the vendor, which the
+            # live path documents as the reason it uses suffix matching.
+            pattern = detection.pattern.lower().rstrip(".")
+            matched = (
+                host_has_suffix(target, pattern) if is_domain_shaped(pattern) else pattern in candidate
+            )
         if not matched:
             continue
         ctx.add(
@@ -87,7 +99,15 @@ def _replay_txt(ctx: DetectionCtx, value: str) -> None:
     lowered = value.lower()
     if not lowered.startswith("v=spf1"):
         return
-    spf_matches = [rule for rule in get_spf_patterns() if rule.pattern.lower() in lowered]
+    # Compare parsed include: and redirect= targets on label boundaries, as the
+    # live detector does. Searching the whole record text let a lookalike
+    # include attribute the record to the impersonated provider.
+    targets = spf_targets(lowered)
+    spf_matches = [
+        rule
+        for rule in get_spf_patterns()
+        if any(host_has_suffix(target, rule.pattern.lower().rstrip(".")) for target in targets)
+    ]
     for match in filter_shadowed_matches(spf_matches):
         ctx.add(match.name, match.slug, source_type="SPF", raw_value=value)
         ctx.record_fp_match(match.slug, "spf", match.pattern)

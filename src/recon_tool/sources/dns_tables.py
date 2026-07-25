@@ -49,6 +49,30 @@ def parse_rdata(raw: str) -> str:
     return stripped
 
 
+_SPF_TARGET_RE = re.compile(
+    r"(?:^|\s)(?:[+?~-]?include:|redirect=)([^\s]+)",
+    re.IGNORECASE,
+)
+
+
+def spf_targets(spf_text: str) -> tuple[str, ...]:
+    """Return the normalized ``include:`` and ``redirect=`` targets of a record.
+
+    Provider attribution must compare a parsed target, not the raw record text.
+    Searching the whole string lets a lookalike such as
+    ``_spf.vendor.com.attacker-controlled.test`` match ``vendor.com``, because
+    the vendor name appears as an interior label rather than the target's
+    suffix. Both the live detector and the cached-record replay share this so
+    they cannot drift apart.
+    """
+    targets: list[str] = []
+    for match in _SPF_TARGET_RE.finditer(spf_text):
+        target = match.group(1).strip().lower().rstrip(".")
+        if target:
+            targets.append(target)
+    return tuple(targets)
+
+
 def extract_bimi_vmc_url(bimi_txt: str) -> str | None:
     """Return the ``a=`` VMC ``.pem`` URL from a BIMI TXT record, or None."""
     for part in bimi_txt.split(";"):
