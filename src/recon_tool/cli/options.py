@@ -118,7 +118,11 @@ class LookupOperationOptions:
 
     @property
     def mode(self) -> LookupOperationMode:
-        if self.compare_file:
+        # ``is not None`` rather than truthiness: --compare "" is a supplied
+        # path, not an absent flag. Treating it as absent selected STANDARD
+        # mode, so the empty path was ignored and the mutual-exclusion
+        # checks below could not see it either.
+        if self.compare_file is not None:
             return LookupOperationMode.COMPARE
         if self.chain_mode:
             return LookupOperationMode.CHAIN
@@ -129,13 +133,13 @@ class LookupOperationOptions:
         return LookupOperationMode.STANDARD
 
     def validation_error(self) -> str | None:
-        if self.chain_mode and self.compare_file:
+        if self.chain_mode and self.compare_file is not None:
             return "--chain and --compare are mutually exclusive"
         if self.show_exposure and self.show_gaps:
             return "--exposure and --gaps are mutually exclusive"
-        if self.show_exposure and (self.chain_mode or self.compare_file):
+        if self.show_exposure and (self.chain_mode or self.compare_file is not None):
             return "--exposure and --chain/--compare are mutually exclusive"
-        if self.show_gaps and (self.chain_mode or self.compare_file):
+        if self.show_gaps and (self.chain_mode or self.compare_file is not None):
             return "--gaps and --chain/--compare are mutually exclusive"
         if self.chain_depth > 1 and not self.chain_mode:
             return "--depth requires --chain"
@@ -182,6 +186,12 @@ class LookupOptions:
             return "--plain cannot be combined with --chain/--compare/--exposure/--gaps"
         if self.markdown and self.operation.mode is not LookupOperationMode.STANDARD:
             return "--md cannot be combined with --chain/--compare/--exposure/--gaps"
+        # --explain-dag renders its own report and returns before the output
+        # branches, so pairing it with a renderer silently discarded the
+        # requested format: a scripted `--json --explain-dag | jq` received
+        # prose and exit 0. `--json --md` is already rejected; be consistent.
+        if self.explain_dag and (self.json_output or self.markdown or self.plain):
+            return "--explain-dag cannot be combined with --json/--md/--plain"
         return None
 
     @property

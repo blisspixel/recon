@@ -168,14 +168,17 @@ async def _lookup_compare(
     from recon_tool.models import ReconLookupError
 
     compare_file = options.compare_file
-    if compare_file is None:
+    if compare_file is None or not compare_file.strip():
         render_error("--compare requires a snapshot path")
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
     try:
         previous = load_previous(_Path(compare_file))
         validate_snapshot_domain(previous, validated)
-    except (FileNotFoundError, ValueError) as exc:
+    except (OSError, ValueError) as exc:
+        # Any unreadable path is operator input, not an internal fault. A bare
+        # FileNotFoundError missed a directory or a permission failure, which
+        # reached the crash handler and exited 4 instead of the documented 2.
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
