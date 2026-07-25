@@ -14,6 +14,37 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.13] - 2026-07-25
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Fixed
+
+- A queried domain no longer reports email controls that only a related
+  domain publishes. Related-domain enrichment merges a related namespace's
+  detections into the queried record, and an email-control label asserts that
+  the queried namespace publishes that record, so the union must not carry one
+  across. The claim-safe projection was computed and then used only for the
+  insight arguments, while the stored services and slugs kept the raw union. A
+  domain whose related namespace published DMARC, DKIM, SPF, MTA-STS, and BIMI
+  therefore reported all five as its own while its own `dmarc_policy` stayed
+  null and its email-control count stayed zero, so one record contradicted
+  itself. The borrowed slugs also reached signal evaluation and the panel's
+  email summary, and were written to the result cache. Non-control detections
+  are inventory labels rather than record claims and still merge, so
+  enrichment keeps working as intended.
+- The generated-schema gate compares committed bytes rather than parsed
+  objects. It read both sides through `json.loads`, so it accepted any file
+  that merely parsed to the same object: a reserialization with different
+  indentation, key order, or separators passed while the committed bytes were
+  stale, and the very next `--write` rewrote them. The sibling generators for
+  the surface inventory and the fingerprint catalog already compare text. This
+  gate now compares text as well, and additionally requires the documented
+  schema and the packaged one to be byte-identical, since they are one
+  contract.
+
 ## [2.6.12] - 2026-07-25
 
 ### Tool Surface Changes
