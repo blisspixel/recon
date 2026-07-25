@@ -59,6 +59,21 @@ fingerprints:
     pattern: greenhouse.io
     description: >-
       Greenhouse SPF include (`greenhouse.io`). Indicates the org authorizes Greenhouse to send email for this domain.
+- name: Recruitee
+  slug: recruitee
+  category: HR & Operations
+  confidence: high
+  detections:
+  - type: cname_target
+    pattern: recruitee.com
+    tier: application
+    reference: https://docs.recruitee.com/en/articles/1868276-custom-careers-site-domain
+    verified: 2026-07-25
+    description: >-
+      Recruitee applicant-tracking platform. A branded careers site is published
+      by pointing a subdomain at Recruitee's hosted namespace, so the observed
+      target is provider-owned. It indicates a Recruitee-hosted careers surface,
+      not which roles, workflows, or hiring data the account holds.
 - name: Docebo
   slug: docebo
   category: Business Apps

@@ -92,6 +92,7 @@ EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
         "postman",
         "prismic",
         "qualtrics",
+        "recruitee",
         "redfin",
         "rippling",
         "salesforce",
