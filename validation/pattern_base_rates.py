@@ -99,6 +99,36 @@ class SafeRecord:
         return self._data.get(key, default)
 
 
+def _match_targets(detection_type: str, raw_value: str) -> list[str]:
+    """Extract the host targets a pattern should be tested against.
+
+    ``EvidenceRecord.raw_value`` is a rendering of the observed record, not the
+    parsed target the live detector matched. Taking the last whitespace field
+    works for MX, SRV, and NS but silently corrupts the others: a CAA value
+    carries a tag and an opening quote (``0 issue "amazon.com``) and may carry
+    trailing parameters, an SPF record holds many mechanisms of which the last
+    is not privileged, a DMARC ``rua`` target sits after ``mailto:`` and ``@``,
+    and a CNAME rendering prefixes the owner and may chain through ``->``.
+    Each type is normalized to the hosts the live path would have matched.
+    """
+    value = raw_value.lower()[:_MAX_CNAME_MATCH_LEN]
+    if detection_type == "caa":
+        # 0 issue "ca.example; params  ->  ca.example
+        body = value.split('"', 1)[1] if '"' in value else value.split(None, 2)[-1]
+        return [body.split(";", 1)[0].strip().strip('"').rstrip(".")]
+    if detection_type == "spf":
+        targets = re.findall(r"(?:include:|redirect=)([^\s]+)", value)
+        return [t.rstrip(".") for t in targets]
+    if detection_type == "dmarc_rua":
+        return [t.rstrip(".") for t in re.findall(r"mailto:[^@\s]*@([^\s,;]+)", value)]
+    if detection_type == "cname":
+        # "owner: target -> target2"  ->  every chain hop
+        chain = value.split(":", 1)[1] if ":" in value.split()[0] else value
+        return [hop.strip().rstrip(".") for hop in chain.split("->") if hop.strip()]
+    fields = value.split()
+    return [fields[-1].rstrip(".")] if fields else []
+
+
 def _pattern_matches(detection_type: str, pattern: str, raw_value: str) -> bool:
     """Apply production matching semantics for one pattern against one value."""
     if detection_type in REGEX_TYPES:
@@ -107,13 +137,11 @@ def _pattern_matches(detection_type: str, pattern: str, raw_value: str) -> bool:
         compiled = compile_regex(pattern, re.IGNORECASE)
         return compiled is not None and compiled.search(raw_value) is not None
 
-    candidate = raw_value.lower()[:_MAX_CNAME_MATCH_LEN]
-    fields = candidate.split()
-    target = fields[-1].rstrip(".") if fields else ""
     needle = pattern.lower().rstrip(".")
+    targets = _match_targets(detection_type, raw_value)
     if is_domain_shaped(needle):
-        return host_has_suffix(target, needle)
-    return needle in candidate
+        return any(host_has_suffix(target, needle) for target in targets)
+    return any(needle in target for target in targets)
 
 
 def _load_catalog_patterns() -> dict[str, list[tuple[str, str, str]]]:
