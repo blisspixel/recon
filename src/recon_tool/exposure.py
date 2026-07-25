@@ -480,15 +480,15 @@ def assess_exposure_from_info(info: TenantInfo) -> ExposureAssessment:
     hardening = _compute_hardening_status(info)
     score = _compute_posture_score(email, identity, hardening, info)
 
-    # Collect all evidence from subsections
-    all_evidence: list[EvidenceReference] = []
-    all_evidence.extend(email.evidence)
-    all_evidence.extend(identity.evidence)
-    all_evidence.extend(infra.evidence)
+    # Subsections overlap: DMARC is cited by the email posture and again by its
+    # hardening control, CAA by infrastructure and its control. Concatenating made
+    # one record look like several, so dict.fromkeys drops repeats in first order.
+    collected: list[EvidenceReference] = [*email.evidence, *identity.evidence, *infra.evidence]
     for obs in consistency:
-        all_evidence.extend(obs.evidence)
+        collected.extend(obs.evidence)
     for ctrl in hardening.controls:
-        all_evidence.extend(ctrl.evidence)
+        collected.extend(ctrl.evidence)
+    all_evidence = list(dict.fromkeys(collected))
 
     return ExposureAssessment(
         domain=info.queried_domain,
