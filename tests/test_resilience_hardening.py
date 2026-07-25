@@ -44,7 +44,7 @@ from recon_tool.http import (
     _SSRFSafeTransport,
     http_client,
 )
-from recon_tool.infra_graph import _MAX_EDGE_ISSUER_SAMPLES, _build_graph, build_infrastructure_clusters
+from recon_tool.infra_graph import _MAX_EDGE_ISSUER_NAMES, _build_graph, build_infrastructure_clusters
 from recon_tool.rate_limit import AdaptiveRateLimiter, rate_limit_state_dir
 from recon_tool.resolver import RESOLVE_TIMEOUT
 from recon_tool.sources import dns_base
@@ -229,6 +229,7 @@ class TestPoisonedCacheDegrades:
         assert path is not None
         old = time.time() - 10 * 86400
         os.utime(path, (old, old))
+
         def _unexpected_decode(_text: str) -> object:
             raise AssertionError("stale cache body was decoded")
 
@@ -370,15 +371,30 @@ class TestInfraGraphEntryBound:
             for _ in range(n)
         ]
 
-    def test_build_graph_bounds_edge_issuer_samples(self) -> None:
-        entries = self._reused_san_entries(5000)
-        g, edge_issuers, truncated = _build_graph(entries)
+    def test_build_graph_bounds_distinct_edge_issuers(self) -> None:
+        # Every cert carries a distinct issuer, so the per-edge store would grow
+        # without a bound. The bound is on distinct issuer names rather than
+        # counted samples: capping samples made the tally first-come-first-served
+        # and let a minority issuer win the dominant-issuer vote.
+        sans = [f"h{i}.beta.invalid" for i in range(60)]
+        entries = [
+            {
+                "dns_names": list(sans),
+                "issuer_name": f"Synthetic Beta CA {index}",
+                "not_before": "2026-01-01T00:00:00Z",
+            }
+            for index in range(5000)
+        ]
+        g, edge_issuers, edge_cert_counts, truncated = _build_graph(entries)
         assert truncated is True, "the entry-count cap should truncate"
         assert g.number_of_nodes() == 60
-        # 60-name clique => C(60, 2) = 1770 edges, each capped at the sample bound.
+        # 60-name clique => C(60, 2) = 1770 edges.
         assert g.number_of_edges() == 1770
-        for samples in edge_issuers.values():
-            assert len(samples) <= _MAX_EDGE_ISSUER_SAMPLES
+        for counts in edge_issuers.values():
+            assert len(counts) <= _MAX_EDGE_ISSUER_NAMES
+        # The contributing-certificate tally is not limited by that bound, and is
+        # recorded even when a feed omits the issuer name.
+        assert all(count > _MAX_EDGE_ISSUER_NAMES for count in edge_cert_counts.values())
 
     def test_report_builds_on_reused_san_flood(self) -> None:
         report = build_infrastructure_clusters(self._reused_san_entries(5000))
