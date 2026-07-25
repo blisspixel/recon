@@ -161,7 +161,7 @@ async def lookup_tenant(
         validated = validate_domain(domain)
     except ValueError as exc:
         log_validation_failed(request_id)
-        return f"Error: {exc}"
+        return server_app.invalid_domain_message(exc)
 
     # Check cache first - avoids hitting upstream endpoints for repeated lookups
     cached = cache_get(validated)
