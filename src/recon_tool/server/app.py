@@ -24,9 +24,21 @@ from recon_tool.server.runtime import (
     log_validation_failed,
     rate_limit_try_acquire,
 )
-from recon_tool.validator import validate_domain
+from recon_tool.validator import strip_control_chars, validate_domain
 
 logger = logging.getLogger("recon")
+
+
+def invalid_domain_message(error: ValueError) -> str:
+    """Return MCP-safe text for a domain the validator rejected.
+
+    ``validate_domain`` names the offending value so an operator can see what
+    was rejected, but a connected agent is untrusted input and that value is
+    echoed straight back. Strip terminal control characters and bound the
+    length before returning it, exactly as the CLI's error renderer does, so a
+    tool result cannot carry escape sequences or forged line structure.
+    """
+    return f"Error: {strip_control_chars(str(error))}"
 
 
 def lookup_failure_message(domain: str, error: ReconLookupError) -> str:
@@ -217,7 +229,7 @@ async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]]
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
-        return f"Error: {exc}"
+        return invalid_domain_message(exc)
 
     cached = cache_get(validated)
     if cached is not None:

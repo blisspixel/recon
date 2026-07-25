@@ -710,7 +710,11 @@ async def discover_fingerprint_candidates(
             try:
                 info, results = await server_app.resolve_tenant(validated, skip_ct=skip_ct)
             except ReconLookupError as exc:
-                raise ToolError(str(exc)) from exc
+                # As above: the raw message joins per-source failures carrying
+                # resolver addresses, proxy URLs, and TLS detail. Report the
+                # mapped outcome so error_type survives and the host
+                # environment does not.
+                raise ToolError(server_app.lookup_failure_message(validated, exc)) from exc
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
@@ -900,7 +904,7 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
         validated = validate_domain(domain)
     except ValueError as exc:
         log_validation_failed(request_id)
-        return f"Error: {exc}"
+        return server_app.invalid_domain_message(exc)
 
     fmt = (output_format or "text").lower()
     if fmt not in ("text", "dot"):
@@ -919,7 +923,11 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
             try:
                 info, results = await server_app.resolve_tenant(validated)
             except ReconLookupError as exc:
-                return f"Error: {exc}"
+                # The raw message joins every per-source failure, which carries
+                # resolver addresses, proxy URLs, and TLS detail from the host
+                # environment. Report the outcome through the shared mapper so
+                # this tool matches the others and preserves error_type.
+                return server_app.lookup_failure_message(validated, exc)
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
