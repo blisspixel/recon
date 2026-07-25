@@ -528,3 +528,58 @@ def test_panel_strips_control_chars_from_record_strings() -> None:
     out = console.file.getvalue()
     assert "\x1b" not in out
     assert "\x07" not in out
+
+
+class TestPosteriorClaimShareScope:
+    """A share must divide by the population its numerator counts.
+
+    Every metric in a posterior-claim block is scoped to the records that
+    carried that node, and the documented formula uses one N for the mean and
+    the share. The share counted only observed rows but divided by the whole
+    cohort, so it was not a proportion of any single population: a node present
+    on a tenth of the cohort reported a mean model score of 0.97 beside a share
+    of 0.1.
+    """
+
+    @staticmethod
+    def _cohort(total: int, carrying: int) -> list[dict]:
+        records = []
+        for index in range(total):
+            record: dict = {
+                "record_type": "lookup",
+                "domain": f"d{index}.invalid",
+                "services": [],
+                "slugs": [],
+                "degraded_sources": [],
+            }
+            if index < carrying:
+                record["posterior_observations"] = [
+                    {
+                        "name": "m365_tenant",
+                        "posterior": 0.97,
+                        "interval_low": 0.9,
+                        "interval_high": 1.0,
+                        "sparse": False,
+                    }
+                ]
+            records.append(record)
+        return records
+
+    def test_share_is_scoped_to_records_carrying_the_node(self) -> None:
+        from recon_tool.cohort_summary import summarize_cohort
+
+        block = summarize_cohort(self._cohort(100, 10))["posterior_claims"]["m365_tenant"]
+
+        # All ten carrying records exceed the threshold, so the share is 1.0
+        # over those ten, not 0.1 over the untouched cohort.
+        assert block["observed_n"] == 10
+        assert block["high_score_share"] == 1.0
+        assert block["mean_model_score"] == 0.97
+
+    def test_compatibility_aliases_still_carry_the_same_numbers(self) -> None:
+        from recon_tool.cohort_summary import summarize_cohort
+
+        block = summarize_cohort(self._cohort(50, 7))["posterior_claims"]["m365_tenant"]
+
+        assert block["expected_prevalence"] == block["mean_model_score"]
+        assert block["high_confidence_share"] == block["high_score_share"]
