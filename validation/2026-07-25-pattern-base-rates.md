@@ -58,9 +58,15 @@ the last whitespace field is correct for MX, SRV, and NS but corrupts the rest:
 a CAA value carries a tag and an opening quote and may carry trailing
 parameters, an SPF record holds many mechanisms of which the last is not
 privileged, a DMARC `rua` target sits after `mailto:` and `@`, and a CNAME
-rendering prefixes the owner and may chain through `->`. An earlier revision of
-this measurement used the last field everywhere and understated 114 of the 630
-measurable rows, reporting all 13 CAA patterns as never firing.
+rendering prefixes the owner and may chain through `->`. A `subdomain_txt`
+pattern is `owner:regex`, and only the regex half is matched against the value.
+
+An earlier revision of this measurement used the last whitespace field
+everywhere, matched the whole `owner:regex` string as a regex, and tested only
+`cname` rules against CNAME evidence. It understated 114 rows, reported all 13
+CAA patterns and all 6 `subdomain_txt` patterns as never firing, and treated
+434 `cname_target` rules as unmeasurable. The reconciliation described under
+Measurable surface exists to catch that class of error.
 
 Base-rate denominators are the observation opportunities recorded in the run's
 own gap aggregate (`available + partial` namespaces per path), not the count of
@@ -69,29 +75,23 @@ would condition it on a match having already happened and inflate every rate.
 
 ## Measurable surface
 
-| Detection type | Detections | Measurable |
-|---|---:|---|
-| `cname_target` | 434 | No |
-| `txt` | 299 | Yes |
-| `cname` | 98 | Yes |
-| `spf` | 84 | Yes |
-| `ns` | 45 | Yes |
-| `mx` | 43 | Yes |
-| `dmarc_rua` | 42 | Yes |
-| `caa` | 13 | Yes |
-| `subdomain_txt` | 6 | Yes |
+All 1,064 detections are measurable from this run. The surface-attribution
+pipeline emits its chain matches as `CNAME` evidence whose `raw_value` carries
+the full resolved chain, so a `cname_target` rule can be attributed to any hop
+of that chain even though CT collection was disabled for the run. An earlier
+revision of this memo recorded the 434 `cname_target` rules as unmeasurable;
+that was a limitation of the reducer, not of the data.
 
-630 of 1,064 detections are measurable from this run. The 434 `cname_target`
-rules are not: the run disabled CT collection, and `surface_attributions`
-retains the attributed slug and tier but not the CNAME target that matched, so a
-fire cannot be traced to an individual pattern. Attributing `cname_target`
-requires either a CT-enabled round or retaining the matched target in the run
-output. Those 434 detections are recorded as unmeasured, not as zero.
+Coverage was verified by reconciling against production's own attributions:
+for every source type, the set of slugs this reducer credits is a superset of
+the set production attributed in the same run, with no production-only slug
+left unexplained. The only intentional excess is the four CAA issuer rules
+promoted after the run.
 
 ## Result: discriminative power spans a factor of 3,800
 
-Of the 630 measurable detections, 500 fired at least once and 130 never fired
-across 5,199 namespaces.
+Of the 1,064 measurable detections, 856 fired at least once and 208 never
+fired across 5,199 namespaces.
 
 Among patterns that fired, the base rate ranges from 0.000192 to 0.7294. Stated
 as information content (`-log2(base rate)`), the observations recon treats as
@@ -99,10 +99,10 @@ interchangeable range from 0.5 bits to 12.3 bits.
 
 | Information content | Patterns |
 |---|---:|
-| Under 2 bits (near-universal) | 9 |
-| 2 to 5 bits | 99 |
-| 5 to 8 bits | 167 |
-| 8 bits or more (highly specific) | 225 |
+| Under 2 bits (near-universal) | 10 |
+| 2 to 5 bits | 123 |
+| 5 to 8 bits | 224 |
+| 8 bits or more (highly specific) | 499 |
 
 The single most common pattern, `^google-site-verification=`, fired on 72.9
 percent of measured namespaces and carries 0.5 bits. It currently contributes
@@ -114,13 +114,13 @@ the same TXT evidence weight as `^krisp-domain-verification=`, which fired on
 Corroboration here means the attributed slug also had evidence from a different
 source type on the same namespace. It is only interpretable for slugs whose
 catalog entry defines two or more detection types; for a single-type slug it is
-structurally zero and says nothing. Of the 185 patterns with at least 50 fires,
-97 belong to single-type slugs and are excluded from this reading.
+structurally zero and says nothing. Of the 231 patterns with at least 50 fires,
+105 belong to single-type slugs and are excluded from this reading.
 
-Of the remaining 88:
+Of the remaining 126:
 
-- 9 corroborate on 90 percent or more of their fires.
-- 28 corroborate on under 5 percent of their fires.
+- 12 corroborate on 90 percent or more of their fires.
+- 42 corroborate on under 5 percent of their fires.
 
 Prevalence and corroboration are close to independent. The Microsoft 365 apex
 verification TXT prefix is common (base rate 0.512) and corroborates on 100
@@ -131,7 +131,7 @@ as a token and cannot distinguish a catalog pattern from a real one.
 (0.227) and `aspmx.l.google.com` (0.211) likewise corroborate at 1.00 and 0.95.
 A common observation is not automatically a weak one.
 
-The 28 patterns that fire often and are almost never corroborated are the
+The 42 patterns that fire often and are almost never corroborated are the
 actionable set, because each one produces a service attribution that no other
 observed evidence supports. The largest by volume:
 
@@ -140,6 +140,7 @@ observed evidence supports. The largest by volume:
 | `txt` | `^atlassian-domain-verification=` | atlassian | 2,129 | 0.410 | 0.02 |
 | `txt` | `^docusign=` | docusign | 1,434 | 0.276 | 0.00 |
 | `cname` | `cloudfront.net` | aws-cloudfront | 1,065 | 0.205 | 0.00 |
+| `cname_target` | `cloudfront.net` | aws-cloudfront | 1,065 | 0.205 | 0.00 |
 | `cname` | `.elb.` | aws-elb | 558 | 0.107 | 0.00 |
 | `dmarc_rua` | `vali.email` | valimail | 464 | 0.089 | 0.00 |
 | `txt` | `^stripe-verification=` | stripe | 457 | 0.088 | 0.02 |
@@ -155,7 +156,7 @@ an equally weighted corroborated one.
 
 ## Result: one fifth of firing patterns are ambiguous
 
-107 of the 500 firing patterns matched a raw value that also matched a different
+184 of the 856 firing patterns matched a raw value that also matched a different
 slug's pattern of the same type. The maximum was 60 competing slugs, on
 `_spf.google.com`. That concentration is expected rather than alarming: many
 vendors instruct customers to include Google's SPF record, so a single SPF
@@ -163,15 +164,16 @@ record legitimately names many providers at once and the value is shared
 infrastructure rather than a discriminating mark. It does mean an SPF fire
 should not carry the same weight as an exclusive one.
 
-## Result: 130 measurable patterns never fired
+## Result: 208 measurable patterns never fired
 
 | Type | Never fired |
 |---|---:|
+| `cname_target` | 81 |
 | `txt` | 64 |
 | `cname` | 45 |
 | `spf` | 8 |
-| `subdomain_txt` | 6 |
 | `mx` | 4 |
+| `subdomain_txt` | 3 |
 | `dmarc_rua` | 2 |
 | `ns` | 1 |
 | `caa` | 0 |
