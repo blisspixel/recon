@@ -118,9 +118,7 @@ class TestM365Detection:
             {
                 "beta.invalid/TXT": [],
                 "beta.invalid/MX": [],
-                "selector1._domainkey.beta.invalid/CNAME": [
-                    "selector1-beta-com._domainkey.beta.onmicrosoft.com"
-                ],
+                "selector1._domainkey.beta.invalid/CNAME": ["selector1-beta-com._domainkey.beta.onmicrosoft.com"],
             }
         )
         result = await DNSSource().lookup("beta.invalid")
@@ -445,3 +443,59 @@ class TestRootLabelTargetsSurviveNormalization:
         from recon_tool.sources.dns_tables import parse_rdata
 
         assert parse_rdata(".") == "."
+
+
+class TestSpfAllMechanismParsing:
+    """The ``all`` qualifier must be read as a term, not a record suffix.
+
+    RFC 7208 section 6 lets ``exp=`` and ``redirect=`` appear anywhere,
+    including after ``all``; the RFC's own example is
+    ``v=spf1 mx -all exp=explain._spf.%{d}``. Suffix matching missed the policy
+    whenever a modifier trailed it, dropping the observed control count, and it
+    could not see ``+all`` or ``?all`` at all.
+    """
+
+    def test_trailing_modifier_does_not_hide_the_policy(self) -> None:
+        from recon_tool.sources.dns_email import spf_all_qualifier
+
+        assert spf_all_qualifier("v=spf1 mx -all") == "-"
+        assert spf_all_qualifier("v=spf1 mx -all exp=explain._spf.example.com") == "-"
+        assert spf_all_qualifier("v=spf1 a mx ~all exp=e.example.com") == "~"
+
+    def test_permissive_qualifiers_are_visible(self) -> None:
+        from recon_tool.sources.dns_email import spf_all_qualifier
+
+        # RFC 7208 6.1 ignores redirect when any all mechanism is present, so
+        # these must be reported rather than treated as "no all mechanism".
+        assert spf_all_qualifier("v=spf1 +all redirect=_spf.example.net") == "+"
+        assert spf_all_qualifier("v=spf1 ?all redirect=_spf.example.net") == "?"
+        assert spf_all_qualifier("v=spf1 all") == "+"
+
+    def test_absent_all_mechanism_reports_none(self) -> None:
+        from recon_tool.sources.dns_email import spf_all_qualifier
+
+        assert spf_all_qualifier("v=spf1 include:_spf.example.com") is None
+        assert spf_all_qualifier("v=spf1 redirect=_spf.example.net") is None
+
+
+class TestEspDkimHintMatching:
+    """A domain-shaped ESP hint must match on label boundaries.
+
+    The DKIM selector CNAME target is attacker-controlled, so a bare substring
+    test attributed ``sendgrid.net.attacker-controlled.test`` to SendGrid.
+    Hints that are only fragments keep the substring test they were written
+    for.
+    """
+
+    def test_domain_hint_rejects_an_interior_label(self) -> None:
+        from recon_tool.validator import host_has_suffix, is_domain_shaped
+
+        assert is_domain_shaped("sendgrid.net")
+        assert not host_has_suffix("sendgrid.net.attacker-controlled.test", "sendgrid.net")
+        assert host_has_suffix("em1234.example.com.sendgrid.net", "sendgrid.net")
+
+    def test_fragment_hints_are_not_treated_as_domains(self) -> None:
+        from recon_tool.validator import is_domain_shaped
+
+        assert not is_domain_shaped("domainkey.u")
+        assert not is_domain_shaped("mimecast")
