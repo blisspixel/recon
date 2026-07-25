@@ -59,16 +59,19 @@ from recon_tool.validator import host_has_suffix, is_domain_shaped  # noqa: E402
 # detection type (HTTP, DKIM, A, DMARC, BIMI, MTA_STS, MTA_STS_POLICY) carry
 # attribution but are not pattern-matched here; they still count toward
 # corroboration.
-SOURCE_TO_DETECTION_TYPE: dict[str, str] = {
-    "TXT": "txt",
-    "CNAME": "cname",
-    "SPF": "spf",
-    "NS": "ns",
-    "MX": "mx",
-    "CAA": "caa",
-    "SRV": "srv",
-    "DMARC_RUA": "dmarc_rua",
-    "SUBDOMAIN_TXT": "subdomain_txt",
+SOURCE_TO_DETECTION_TYPES: dict[str, tuple[str, ...]] = {
+    "TXT": ("txt",),
+    # The surface-attribution pipeline emits its chain matches as CNAME
+    # evidence, so one CNAME record carries both apex `cname` rules and the
+    # `cname_target` rules that match any hop of the resolved chain.
+    "CNAME": ("cname", "cname_target"),
+    "SPF": ("spf",),
+    "NS": ("ns",),
+    "MX": ("mx",),
+    "CAA": ("caa",),
+    "SRV": ("srv",),
+    "DMARC_RUA": ("dmarc_rua",),
+    "SUBDOMAIN_TXT": ("subdomain_txt",),
 }
 
 # Detection types whose patterns are regexes rather than DNS names.
@@ -121,8 +124,9 @@ def _match_targets(detection_type: str, raw_value: str) -> list[str]:
         return [t.rstrip(".") for t in targets]
     if detection_type == "dmarc_rua":
         return [t.rstrip(".") for t in re.findall(r"mailto:[^@\s]*@([^\s,;]+)", value)]
-    if detection_type == "cname":
-        # "owner: target -> target2"  ->  every chain hop
+    if detection_type in ("cname", "cname_target"):
+        # "owner: target -> target2"  ->  every chain hop. A cname_target rule
+        # fires on any hop of the resolved chain, not only its terminal.
         chain = value.split(":", 1)[1] if ":" in value.split()[0] else value
         return [hop.strip().rstrip(".") for hop in chain.split("->") if hop.strip()]
     fields = value.split()
@@ -134,7 +138,10 @@ def _pattern_matches(detection_type: str, pattern: str, raw_value: str) -> bool:
     if detection_type in REGEX_TYPES:
         if len(raw_value) > _MAX_TXT_MATCH_LENGTH:
             return False
-        compiled = compile_regex(pattern, re.IGNORECASE)
+        # A subdomain_txt pattern is `owner:regex`; only the regex half is
+        # matched against the value, exactly as detect_subdomain_txt splits it.
+        expression = pattern.split(":", 1)[1] if detection_type == "subdomain_txt" and ":" in pattern else pattern
+        compiled = compile_regex(expression, re.IGNORECASE)
         return compiled is not None and compiled.search(raw_value) is not None
 
     needle = pattern.lower().rstrip(".")
@@ -245,9 +252,9 @@ def _accumulate(results: Path, catalog: dict[str, list[tuple[str, str, str]]]) -
             evidence = record.get("evidence") or []
             slug_sources = _slug_source_types(evidence)
             for item in evidence:
-                detection_type = SOURCE_TO_DETECTION_TYPE.get(item.get("source_type") or "")
+                detection_types = SOURCE_TO_DETECTION_TYPES.get(item.get("source_type") or "", ())
                 raw_value = item.get("raw_value") or ""
-                if detection_type is not None and raw_value:
+                for detection_type in detection_types if raw_value else ():
                     _score_value(tally, detection_type, raw_value, ordinal, slug_sources)
     return tally
 
@@ -258,7 +265,8 @@ def measure(run_dir: Path) -> dict[str, Any]:
         raise SystemExit(f"no results.ndjson under {run_dir}")
 
     catalog = _load_catalog_patterns()
-    measurable_types = {t for t in catalog if t in SOURCE_TO_DETECTION_TYPE.values()}
+    mapped = {t for types in SOURCE_TO_DETECTION_TYPES.values() for t in types}
+    measurable_types = {t for t in catalog if t in mapped}
     observed = _observed_namespaces(run_dir)
     if not observed:
         raise SystemExit(f"no catalog-gaps.json under {run_dir}; cannot establish honest denominators")
