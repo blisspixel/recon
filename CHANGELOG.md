@@ -14,6 +14,46 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.12] - 2026-07-25
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Security
+
+- The pattern-admission gate rejects a quantified alternation whose branches
+  overlap by character class, not only by literal prefix. A branch that is a
+  wildcard, a shorthand class, or a character class shares no prefix with its
+  siblings while matching the same characters, which is what makes the group
+  partition a subject ambiguously, so a shape such as `(.|a)*` was admitted.
+  Matching that shape costs roughly twice as much per added input character,
+  and the same pattern passed the stricter subset that guards the
+  fingerprint-injection tool exposed to a connected agent. Disjoint
+  alternation and branches beginning with an escaped literal are unaffected,
+  and every shipped catalog pattern still validates.
+
+### Fixed
+
+- The exposure ceiling accounts for a degraded identity channel. The score
+  reports a floor together with the points an unavailable channel could be
+  hiding, and every DNS channel contributed to that total while identity did
+  not. A masked identity channel therefore lowered the reported ceiling below
+  the value the same domain reports when nothing is degraded, so it was not an
+  upper bound and nothing indicated that identity had been masked.
+- The GitBook detection matches a real published site. A published custom
+  domain resolves to a per-site target whose identifier is joined to the
+  hosting label by a hyphen rather than a dot, so the recorded pattern was not
+  a label suffix of any observed target and the detection could not fire.
+- BigCommerce storefronts served from the platform's second provider-owned
+  namespace are recognized; the previous pattern covered only the store
+  namespace.
+
+### Added
+
+- Recruitee applicant-tracking detection, from a branded careers site
+  published through the vendor's hosted namespace.
+
 ## [2.6.11] - 2026-07-24
 
 ### Tool Surface Changes
