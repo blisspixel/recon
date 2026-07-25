@@ -70,7 +70,10 @@ def read_batch_domains(stream: TextIO) -> list[str]:
             line_bytes = len(line.encode("utf-8"))
         except UnicodeEncodeError as exc:
             raise _BatchInputError("Batch input is not valid UTF-8") from exc
-        if line_bytes > _MAX_BATCH_LINE_BYTES:
+        # Measure the line's content, not its terminator. Counting the newline
+        # made the cap depend on position: 1024 content bytes was rejected
+        # mid-file but accepted as the final unterminated line.
+        if len(line.rstrip("\r\n").encode("utf-8")) > _MAX_BATCH_LINE_BYTES:
             msg = f"Batch input line exceeds maximum length of {_MAX_BATCH_LINE_BYTES} bytes"
             raise _BatchInputError(msg)
         total_bytes += line_bytes
@@ -233,8 +236,11 @@ def _batch_load_domains(file: str, console: Any, *, announce_dupes: bool) -> lis
         render_error(f"Cannot decode input as UTF-8: {exc}")
         raise typer.Exit(code=EXIT_VALIDATION) from None
     except OSError as exc:
+        # A path that cannot be read is operator input, not an internal fault.
+        # A directory, a missing file, and a permission failure all arrive here,
+        # and the contract lists those under the validation code.
         render_error(f"Cannot read file: {exc}")
-        raise typer.Exit(code=EXIT_INTERNAL) from None
+        raise typer.Exit(code=EXIT_VALIDATION) from None
 
     if not domain_list:
         source = "stdin" if from_stdin else "file"
