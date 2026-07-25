@@ -168,6 +168,12 @@ $$
 \text{high-score share} = \frac{\#\{i : P_{m,i}(X) > 0.8 \text{ and not sparse}_i\}}{N}.
 $$
 
+Here $N$ is the number of records that carried this node's posterior, reported
+as `observed_n`, and both statistics use it. A record without the node has no
+$P_{m,i}(X)$ to contribute, so scaling either statistic to the whole cohort
+would count that absence as a zero score. A consumer that wants a
+cohort-scaled figure can derive one from `observed_n`.
+
 These answer model questions, not population-prevalence questions. The first is
 "the committed model leans this way on average"; the second is "this fraction
 crossed one model threshold outside the minimum display-mass case." The reducer
