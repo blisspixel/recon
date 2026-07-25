@@ -326,7 +326,6 @@ def _prevalence_block(
 
 
 def _posterior_claims_block(records: Sequence[Mapping[str, Any]]) -> dict[str, Any]:
-    n = len(records)
     by_node: dict[str, list[Mapping[str, Any]]] = {}
     for r in records:
         for name, o in _posterior_map(r).items():
@@ -337,11 +336,21 @@ def _posterior_claims_block(records: Sequence[Mapping[str, Any]]) -> dict[str, A
         widths = [max(0.0, _safe_float(o.get("interval_high")) - _safe_float(o.get("interval_low"))) for o in obs]
         high_conf = sum(1 for o, p in zip(obs, posteriors, strict=True) if p > 0.8 and not o.get("sparse"))
         sparse = sum(1 for o in obs if o.get("sparse"))
+        # Every metric here is scoped to the records that carried this node, and
+        # the documented formula uses one N for the mean and the share. The
+        # share divided its observed-row numerator by the whole cohort, so it
+        # was not a proportion of any single population: a node present on a
+        # tenth of the cohort reported a mean model score of 0.97 beside a share
+        # of 0.1. Rescaling the mean to the cohort instead would treat a record
+        # without this node as a zero score, which is the absent-versus-observed
+        # conflation this reducer exists to avoid. ``observed_n`` is emitted
+        # alongside, so a consumer can still rescale deliberately.
+        observed = len(obs)
         block[node] = {
             "expected_prevalence": round(sum(posteriors) / len(posteriors), 4),
-            "high_confidence_share": round(high_conf / n, 4) if n else None,
+            "high_confidence_share": round(high_conf / observed, 4) if observed else None,
             "mean_model_score": round(sum(posteriors) / len(posteriors), 4),
-            "high_score_share": round(high_conf / n, 4) if n else None,
+            "high_score_share": round(high_conf / observed, 4) if observed else None,
             "mean_interval_width": round(sum(widths) / len(widths), 4),
             "sparse_share": round(sparse / len(obs), 4),
             "observed_n": len(obs),
