@@ -135,6 +135,11 @@ docs/accuracy.md
 # Typed DNS catalog baseline (2026-07-17): aggregate counts and generic
 # provider patterns only. No target names, target records, tenant IDs, or rows.
 !/validation/2026-07-17-typed-catalog-baseline.md
+# Per-pattern base-rate reducer and its aggregate memo (2026-07-25):
+# provider-owned patterns and aggregate counts only; the reducer never
+# reads target-identifying fields and its output stays in ignored paths.
+!/validation/pattern_base_rates.py
+!/validation/2026-07-25-pattern-base-rates.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (numbered
 # reserved identities, fabricated numbers); the reference reducer, generator, and synthetic
 # cohort are public. Real cohorts stay local. The reducer run-output is a
