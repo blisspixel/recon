@@ -356,11 +356,22 @@ async def get_fingerprints(
     from recon_tool.fingerprints import load_fingerprints
 
     fps = load_fingerprints()
-    if category:
-        fps = tuple(fp for fp in fps if category_matches(fp.category, category))
-    if limit is not None:
-        start = max(0, offset)
-        fps = fps[start : start + max(0, limit)]
+    # Strip first: "" and "   " were two spellings of an empty filter that gave
+    # opposite results, the blank one matching nothing at all.
+    normalized_category = (category or "").strip()
+    if normalized_category:
+        fps = tuple(fp for fp in fps if category_matches(fp.category, normalized_category))
+    # Match the cap convention the rest of the server uses: zero means the full
+    # remainder and a negative value is an error. Folding both to an empty page
+    # produced exactly the "no catalog match" false negative the server
+    # instructions warn agents about.
+    if limit is not None and limit < 0:
+        raise ToolError("limit must be zero or a positive integer")
+    start = max(0, offset)
+    if limit:
+        fps = fps[start : start + limit]
+    elif start:
+        fps = fps[start:]
     return [
         {
             "name": fp.name,

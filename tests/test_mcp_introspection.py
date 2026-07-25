@@ -676,3 +676,40 @@ class TestDiscoverCacheSafety:
         assert "discover for alpha.invalid" in caplog.text
         assert raw not in caplog.text
         assert "/private/path" not in caplog.text
+
+
+class TestGetFingerprintsPagingConvention:
+    """Paging must match the cap convention the rest of the server uses.
+
+    Every other cap treats zero as the full remainder and rejects a negative
+    value. get_fingerprints folded both to an empty page, which is exactly the
+    "no catalog match" false negative the server instructions warn agents
+    about. An empty and a blank category were also two spellings of the same
+    filter that returned opposite results.
+    """
+
+    @pytest.mark.asyncio
+    async def test_zero_limit_returns_the_full_remainder(self) -> None:
+        full = len(await get_fingerprints())
+
+        assert len(await get_fingerprints(limit=0)) == full
+
+    @pytest.mark.asyncio
+    async def test_negative_limit_is_rejected(self) -> None:
+        from recon_tool.mcp_client.sdk_compat import ToolError
+
+        with pytest.raises(ToolError):
+            await get_fingerprints(limit=-5)
+
+    @pytest.mark.asyncio
+    async def test_offset_still_applies_without_a_limit(self) -> None:
+        full = len(await get_fingerprints())
+
+        assert len(await get_fingerprints(limit=0, offset=10)) == full - 10
+
+    @pytest.mark.asyncio
+    async def test_blank_category_matches_an_empty_filter(self) -> None:
+        full = len(await get_fingerprints())
+
+        assert len(await get_fingerprints(category="")) == full
+        assert len(await get_fingerprints(category="   ")) == full
