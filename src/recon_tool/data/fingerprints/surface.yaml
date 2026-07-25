@@ -3148,10 +3148,19 @@ fingerprints:
   confidence: high
   detections:
   - type: cname_target
-    pattern: hosting.gitbook.io
+    pattern: gitbook.io
     tier: application
-    description: GitBook documentation platform; custom docs domains CNAME through hosting.gitbook.com to hosting.gitbook.io.
     reference: https://docs.gitbook.com/publishing/custom-domain
+    verified: 2026-07-25
+    description: >-
+      GitBook documentation platform. A published custom docs domain CNAMEs to
+      a per-site target in GitBook's hosting namespace whose site identifier is
+      joined to the `hosting` label by a hyphen rather than a dot, as in
+      `<site-id>-hosting.gitbook.io`. A pattern of `hosting.gitbook.io` does
+      not match that value under label-boundary comparison, because it is not a
+      DNS-label suffix of the observed target. The provider-owned registrable
+      domain is the stable part. It indicates a GitBook-published documentation
+      surface, not which content or access controls the space uses.
 
 - name: Hostinger Email
   slug: hostinger-email
@@ -5024,6 +5033,17 @@ fingerprints:
       BigCommerce (e-commerce platform) CNAME target
       (`mybigcommerce.com`). Indicates the subdomain hosts a
       BigCommerce store.
+  - type: cname_target
+    pattern: bigcommerce.net
+    tier: application
+    reference: https://support.bigcommerce.com/s/article/Changing-Domains
+    verified: 2026-07-25
+    description: >-
+      Second provider-owned namespace for the same platform. Storefronts served
+      through BigCommerce's managed hosting terminate in `bigcommerce.net`
+      rather than the `mybigcommerce.com` store namespace, so a storefront on
+      that path matched no pattern. It indicates a BigCommerce-served storefront
+      surface, not the store's catalogue, plan, or payment configuration.
 - name: Rio SEO
   slug: rio-seo
   category: Business Apps
