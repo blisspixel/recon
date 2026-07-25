@@ -59,11 +59,25 @@ _REDOS_RE = re.compile(
 _ALT_GROUP_QUANT_RE = re.compile(r"\(([^()]*\|[^()]*)\)[+*{]")
 
 
+# A branch beginning with a wildcard, a shorthand class, or a character class
+# can match the first character of a sibling branch, so the group partitions a
+# subject ambiguously even though the branches share no literal prefix. An
+# escaped literal such as ``\.`` is not wide: its first character is the
+# backslash, which neither alternative below matches.
+_WIDE_BRANCH_RE = re.compile(r"^(?:\\[wWsSdD]|[.\[])")
+
+
 def _alternation_redos(pattern: str) -> bool:
-    """Return whether a simple quantified alternation has prefix overlap."""
+    """Return whether a simple quantified alternation partitions ambiguously."""
     pattern = re.sub(r"\(\?[aimsxLu]*:", "(", pattern)
     for match in _ALT_GROUP_QUANT_RE.finditer(pattern):
         branches = [branch.strip() for branch in match.group(1).split("|")]
+        populated = [branch for branch in branches if branch]
+        # Overlap by character class, not only by literal prefix. ``(.|a)*``
+        # shares no prefix yet costs exponential time on a failing subject, so
+        # a literal-only comparison admitted it.
+        if len(populated) > 1 and any(_WIDE_BRANCH_RE.match(branch) for branch in populated):
+            return True
         for index, first in enumerate(branches):
             for second in branches[index + 1 :]:
                 if first and second and (first.startswith(second) or second.startswith(first)):
