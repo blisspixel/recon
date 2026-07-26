@@ -146,3 +146,21 @@ fingerprints:
       or implement the current MCP spec; treat as discovery metadata,
       not a contract.
     reference: https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/2368
+- name: ElevenLabs
+  slug: elevenlabs
+  category: AI & Generative
+  confidence: high
+  product_family: ElevenLabs
+  parent_vendor: ElevenLabs
+  detections:
+  - type: txt
+    pattern: ^elevenlabs=
+    verified: '2026-07-25'
+    reference: https://elevenlabs.io/docs
+    description: >-
+      ElevenLabs domain-verification TXT (`elevenlabs=` prefix
+      followed by an opaque token). Indicates the domain is
+      administratively claimed by an ElevenLabs workspace, which is
+      the precondition for verified-domain features. Does not
+      establish which voice or agent products are provisioned, and
+      does not imply generated audio is published from this domain.

@@ -796,3 +796,23 @@ fingerprints:
       Workspace ONE rebrand. Functionally equivalent to the
       `workspaceoneaccess.com` form; some tenants still use
       the legacy CNAME.
+- name: QuoVadis
+  slug: quovadis
+  category: Security
+  confidence: high
+  product_family: QuoVadis
+  parent_vendor: DigiCert
+  detections:
+  - type: txt
+    pattern: ^QuoVadis=
+    verified: '2026-07-25'
+    reference: https://www.digicert.com/
+    description: >-
+      QuoVadis domain-control-validation TXT (`QuoVadis=` prefix
+      followed by a UUID). QuoVadis is a certificate authority
+      acquired by DigiCert in 2019 whose brand and validation
+      tooling remain in use. Indicates the domain was validated for
+      certificate issuance through QuoVadis. A validation token can
+      outlive the certificate it was issued for, so this is not
+      evidence of a currently valid certificate; the certificate
+      transparency evidence covers that.

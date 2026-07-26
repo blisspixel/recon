@@ -1174,3 +1174,39 @@ fingerprints:
       sold as Splunk Observability Cloud; the signalfx.com
       domain persists for legacy ingestion endpoints).
       Indicates the domain uses Splunk Observability.
+- name: Infoblox
+  slug: infoblox
+  category: Infrastructure
+  confidence: high
+  product_family: Infoblox
+  parent_vendor: Infoblox
+  detections:
+  - type: txt
+    pattern: ^infoblox-domain-mastery=
+    verified: '2026-07-25'
+    reference: https://docs.infoblox.com/
+    description: >-
+      Infoblox domain-verification TXT (`infoblox-domain-mastery=`
+      prefix followed by an opaque token). Indicates the domain is
+      claimed inside an Infoblox tenant, the vendor's DNS, DHCP, and
+      IP address management platform. Claiming a namespace is an
+      administrative act and does not establish that Infoblox serves
+      authoritative DNS for it; check the NS evidence for that.
+- name: Cisco Intersight
+  slug: cisco-intersight
+  category: Infrastructure
+  confidence: high
+  product_family: Cisco Intersight
+  parent_vendor: Cisco
+  detections:
+  - type: txt
+    pattern: ^intersight=
+    verified: '2026-07-25'
+    reference: https://intersight.com/help/saas
+    description: >-
+      Cisco Intersight domain-verification TXT (`intersight=` prefix
+      followed by a hex token). Indicates the domain is claimed by an
+      Intersight account, Cisco's SaaS platform for UCS and HyperFlex
+      infrastructure management. Claiming a domain is an account
+      administrative step; it does not establish that any managed
+      infrastructure is deployed or currently reporting.

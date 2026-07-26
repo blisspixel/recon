@@ -3692,6 +3692,17 @@ fingerprints:
   product_family: IBM Cloud
   parent_vendor: IBM
   detections:
+  - type: txt
+    pattern: ^ibmid=
+    verified: '2026-07-25'
+    reference: https://cloud.ibm.com/docs
+    description: >-
+      IBMid domain-verification TXT (`ibmid=` prefix followed by a
+      UUID). Indicates the domain is administratively claimed by an
+      IBM account, which is the precondition for IBMid federated
+      sign-on. Does not establish which IBM Cloud services are
+      provisioned, and does not imply the workload endpoints below
+      are in use.
   - type: cname_target
     pattern: appdomain.cloud
     tier: infrastructure
