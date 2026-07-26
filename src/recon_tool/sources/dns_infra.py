@@ -14,7 +14,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from itertools import chain
 from typing import TYPE_CHECKING
 
@@ -452,6 +452,24 @@ async def detect_hosting_from_a_record(ctx: dns_base.DetectionCtx, domain: str) 
         break
 
 
+def _wildcard_txt_answers(results: Sequence[Sequence[str]]) -> frozenset[frozenset[str]]:
+    """Return the TXT answer sets that two or more distinct probe labels share.
+
+    The probe asks several unrelated owners (`_slack-challenge`,
+    `_github-challenge`, `_mcp`, ...) in one pass. A zone that returns the same
+    non-empty answer for more than one of them is answering by wildcard rather
+    than per owner, so none of those answers is evidence about any single
+    vendor. A domain genuinely holding two of these tokens would publish
+    different values at each owner, so an identical set is the discriminator.
+    """
+    seen: dict[frozenset[str], int] = {}
+    for txt_records in results:
+        if not txt_records:
+            continue
+        seen[frozenset(txt_records)] = seen.get(frozenset(txt_records), 0) + 1
+    return frozenset(answer for answer, count in seen.items() if count > 1)
+
+
 async def detect_subdomain_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Query TXT records at specific subdomains for vendor-specific verification.
 
@@ -490,9 +508,20 @@ async def detect_subdomain_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
     ctx.record_catalog_query("subdomain_txt", len(tasks))
     results = await asyncio.gather(*tasks)
 
+    wildcard_answers = _wildcard_txt_answers(results)
+
     for (_, regex, name, slug, original_pattern), txt_records in zip(parsed, results, strict=True):
         owner = original_pattern.split(":", 1)[0]
         detected = False
+        if txt_records and frozenset(txt_records) in wildcard_answers:
+            # A zone answering unrelated probe labels with one identical value
+            # set is publishing a wildcard, so the response carries nothing
+            # specific to this owner. Attributing it would credit whichever
+            # vendors have permissive patterns: a bare `.` matches any TXT, so
+            # one wildcard zone claimed three unrelated vendors at once.
+            for txt in txt_records:
+                ctx.record_catalog_observation("subdomain_txt", owner, txt, classified=False)
+            continue
         for txt in txt_records:
             # Bound the attacker-controlled TXT value before running a
             # user-supplied regex against it, mirroring match_txt. Without

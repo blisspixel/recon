@@ -207,6 +207,80 @@ async def test_webflow_cname_and_owner_qualified_txt(
 
 
 @pytest.mark.asyncio
+async def test_wildcard_txt_does_not_attribute_every_probed_vendor(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A wildcard TXT zone answers every probe label identically, so it is not evidence.
+
+    Three catalog patterns accept any non-empty TXT (`_slack-challenge:.`,
+    `_gitlab-pages-verification-code:.`, `_github-challenge:.+`). Against a zone
+    that answers every owner with the same unrelated record, each one matched
+    and the single zone was reported as running Slack, GitLab and GitHub
+    Advanced Security at once.
+    """
+    wildcard = ["v=spf1 ip6:fdcf:abda:4154::/48 -all"]
+    monkeypatch.setattr(
+        dns_base,
+        "safe_resolve",
+        _resolver(
+            {
+                ("_slack-challenge.example.com", "TXT"): list(wildcard),
+                ("_gitlab-pages-verification-code.example.com", "TXT"): list(wildcard),
+                ("_github-challenge.example.com", "TXT"): list(wildcard),
+                ("_mcp.example.com", "TXT"): list(wildcard),
+                ("_agent.example.com", "TXT"): list(wildcard),
+                ("_webflow.example.com", "TXT"): list(wildcard),
+            }
+        ),
+    )
+    ctx = dns_base.DetectionCtx()
+
+    await dns_infra.detect_subdomain_txt(ctx, "example.com")
+
+    assert "slack" not in ctx.slugs
+    assert "gitlab" not in ctx.slugs
+    assert "github-advanced-security" not in ctx.slugs
+
+
+@pytest.mark.asyncio
+async def test_single_owner_txt_still_attributes(monkeypatch: pytest.MonkeyPatch) -> None:
+    """The wildcard guard must not suppress a genuine single-owner token."""
+    monkeypatch.setattr(
+        dns_base,
+        "safe_resolve",
+        _resolver({("_slack-challenge.example.com", "TXT"): ["fictional-slack-token"]}),
+    )
+    ctx = dns_base.DetectionCtx()
+
+    await dns_infra.detect_subdomain_txt(ctx, "example.com")
+
+    assert "slack" in ctx.slugs
+
+
+@pytest.mark.asyncio
+async def test_distinct_tokens_at_two_owners_both_attribute(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Two real tokens differ in value, so neither is suppressed as a wildcard."""
+    monkeypatch.setattr(
+        dns_base,
+        "safe_resolve",
+        _resolver(
+            {
+                ("_slack-challenge.example.com", "TXT"): ["fictional-slack-token"],
+                ("_github-challenge.example.com", "TXT"): ["fictional-github-token"],
+            }
+        ),
+    )
+    ctx = dns_base.DetectionCtx()
+
+    await dns_infra.detect_subdomain_txt(ctx, "example.com")
+
+    assert "slack" in ctx.slugs
+    assert "github-advanced-security" in ctx.slugs
+
+
+@pytest.mark.asyncio
 async def test_webflow_cname_lookalike_does_not_match(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(
         dns_base,

@@ -26,6 +26,20 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- A wildcard TXT zone no longer reports every probed vendor at once. The
+  subdomain probe asks several unrelated owners in one pass, and three catalog
+  patterns accept any non-empty value, so a zone answering every owner with the
+  same unrelated record matched all three and was reported as running Slack,
+  GitLab, and GitHub Advanced Security simultaneously. Across one private
+  5,199-namespace round those three fired on 272, 342, and 244 namespaces from
+  identical values that were a certificate-authority verification token, an SPF
+  record, and a mail hostname. An answer set returned for more than one owner is
+  now treated as carrying nothing specific to any of them and is recorded as an
+  unclassified observation. A genuine token, and two distinct tokens at two
+  owners, still attribute normally.
+
 ## [2.6.13] - 2026-07-25
 
 ### Tool Surface Changes
