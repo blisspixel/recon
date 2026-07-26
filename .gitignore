@@ -139,6 +139,7 @@ docs/accuracy.md
 # provider-owned patterns and aggregate counts only; the reducer never
 # reads target-identifying fields and its output stays in ignored paths.
 !/validation/pattern_base_rates.py
+!/validation/slug_cooccurrence.py
 !/validation/2026-07-25-pattern-base-rates.md
 # v2.1a: aggregate-state methodology example. Fully synthetic (numbered
 # reserved identities, fabricated numbers); the reference reducer, generator, and synthetic

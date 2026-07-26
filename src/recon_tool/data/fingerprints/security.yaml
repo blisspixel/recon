@@ -627,6 +627,7 @@ fingerprints:
       a Cato tenant.
 - name: Auth0 (Okta)
   slug: auth0
+  parent_vendor: Okta
   category: Security & Compliance
   confidence: high
   detections:

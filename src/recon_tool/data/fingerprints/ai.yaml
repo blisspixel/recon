@@ -91,6 +91,7 @@ fingerprints:
     reference: https://docs.dify.ai/
 - name: AutoGen (Microsoft)
   slug: autogen
+  parent_vendor: Microsoft
   category: AI & Generative
   confidence: high
   detections:
