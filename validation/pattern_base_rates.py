@@ -74,8 +74,13 @@ SOURCE_TO_DETECTION_TYPES: dict[str, tuple[str, ...]] = {
     "SUBDOMAIN_TXT": ("subdomain_txt",),
 }
 
-# Detection types whose patterns are regexes rather than DNS names.
+# Detection types whose patterns are regexes rather than DNS names. `cname`
+# rules are regex-validated at load time and the live path matches them with
+# `regex=True`, so `^cdn\.webflow\.com\.?$` is an anchored expression and not a
+# hostname. `cname_target` keeps hostname-suffix and dotless-substring
+# semantics, so the two CNAME-derived types are matched differently.
 REGEX_TYPES = frozenset({"txt", "subdomain_txt"})
+REGEX_OVER_TARGETS = frozenset({"cname"})
 
 # Fields the reducer must never read. Enforced at runtime.
 _FORBIDDEN_FIELDS = ("queried_domain", "display_name", "tenant_id", "related_domains", "tenant_domains")
@@ -144,8 +149,12 @@ def _pattern_matches(detection_type: str, pattern: str, raw_value: str) -> bool:
         compiled = compile_regex(expression, re.IGNORECASE)
         return compiled is not None and compiled.search(raw_value) is not None
 
-    needle = pattern.lower().rstrip(".")
     targets = _match_targets(detection_type, raw_value)
+    if detection_type in REGEX_OVER_TARGETS:
+        compiled = compile_regex(pattern, re.IGNORECASE)
+        return compiled is not None and any(compiled.search(target) is not None for target in targets)
+
+    needle = pattern.lower().rstrip(".")
     if is_domain_shaped(needle):
         return any(host_has_suffix(target, needle) for target in targets)
     return any(needle in target for target in targets)
