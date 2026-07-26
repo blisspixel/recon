@@ -60,12 +60,15 @@ parameters, an SPF record holds many mechanisms of which the last is not
 privileged, a DMARC `rua` target sits after `mailto:` and `@`, and a CNAME
 rendering prefixes the owner and may chain through `->`. A `subdomain_txt`
 pattern is `owner:regex`, and only the regex half is matched against the value.
+A `cname` pattern is a regex applied to each resolved chain hop, while a
+`cname_target` pattern keeps hostname-suffix and dotless-substring semantics,
+so the two CNAME-derived types are matched differently.
 
 An earlier revision of this measurement used the last whitespace field
 everywhere, matched the whole `owner:regex` string as a regex, and tested only
 `cname` rules against CNAME evidence. It understated 114 rows, reported all 13
-CAA patterns and all 6 `subdomain_txt` patterns as never firing, and treated
-434 `cname_target` rules as unmeasurable. The reconciliation described under
+CAA patterns, all 6 `subdomain_txt` patterns and every regex-form `cname`
+pattern as never firing, and treated 434 `cname_target` rules as unmeasurable. The reconciliation described under
 Measurable surface exists to catch that class of error.
 
 Base-rate denominators are the observation opportunities recorded in the run's
@@ -90,7 +93,7 @@ promoted after the run.
 
 ## Result: discriminative power spans a factor of 3,800
 
-Of the 1,064 measurable detections, 856 fired at least once and 208 never
+Of the 1,064 measurable detections, 868 fired at least once and 196 never
 fired across 5,199 namespaces.
 
 Among patterns that fired, the base rate ranges from 0.000192 to 0.7294. Stated
@@ -100,9 +103,9 @@ interchangeable range from 0.5 bits to 12.3 bits.
 | Information content | Patterns |
 |---|---:|
 | Under 2 bits (near-universal) | 10 |
-| 2 to 5 bits | 123 |
-| 5 to 8 bits | 224 |
-| 8 bits or more (highly specific) | 499 |
+| 2 to 5 bits | 124 |
+| 5 to 8 bits | 225 |
+| 8 bits or more (highly specific) | 509 |
 
 The single most common pattern, `^google-site-verification=`, fired on 72.9
 percent of measured namespaces and carries 0.5 bits. It currently contributes
@@ -114,13 +117,13 @@ the same TXT evidence weight as `^krisp-domain-verification=`, which fired on
 Corroboration here means the attributed slug also had evidence from a different
 source type on the same namespace. It is only interpretable for slugs whose
 catalog entry defines two or more detection types; for a single-type slug it is
-structurally zero and says nothing. Of the 231 patterns with at least 50 fires,
+structurally zero and says nothing. Of the 232 patterns with at least 50 fires,
 105 belong to single-type slugs and are excluded from this reading.
 
-Of the remaining 126:
+Of the remaining 127:
 
 - 12 corroborate on 90 percent or more of their fires.
-- 42 corroborate on under 5 percent of their fires.
+- 43 corroborate on under 5 percent of their fires.
 
 Prevalence and corroboration are close to independent. The Microsoft 365 apex
 verification TXT prefix is common (base rate 0.512) and corroborates on 100
@@ -131,7 +134,7 @@ as a token and cannot distinguish a catalog pattern from a real one.
 (0.227) and `aspmx.l.google.com` (0.211) likewise corroborate at 1.00 and 0.95.
 A common observation is not automatically a weak one.
 
-The 42 patterns that fire often and are almost never corroborated are the
+The 43 patterns that fire often and are almost never corroborated are the
 actionable set, because each one produces a service attribution that no other
 observed evidence supports. The largest by volume:
 
@@ -154,9 +157,23 @@ issue the token broadly enough that it does not imply a deployed integration.
 Neither reading is an accuracy finding. Both mean the observation is weaker than
 an equally weighted corroborated one.
 
+## Result: 84 percent of slugs cannot corroborate by construction
+
+569 of the 679 slugs in the catalog define exactly one detection type, so the
+corroboration test above can never return anything but zero for them. 98 of
+those single-type slugs fire on 50 or more namespaces, including the largest
+entries in the catalog.
+
+This reframes what a catalog addition is worth. A new vendor adds a claim that
+nothing else can check. A second detection path for a vendor already present
+converts an unverifiable attribution into a testable one, and it does so with
+no new false-positive surface, because the slug and its wording already exist.
+On the measured evidence the second kind is worth more than the first, and the
+gap queue contains both.
+
 ## Result: one fifth of firing patterns are ambiguous
 
-184 of the 856 firing patterns matched a raw value that also matched a different
+192 of the 868 firing patterns matched a raw value that also matched a different
 slug's pattern of the same type. The maximum was 60 competing slugs, on
 `_spf.google.com`. That concentration is expected rather than alarming: many
 vendors instruct customers to include Google's SPF record, so a single SPF
@@ -164,13 +181,13 @@ record legitimately names many providers at once and the value is shared
 infrastructure rather than a discriminating mark. It does mean an SPF fire
 should not carry the same weight as an exclusive one.
 
-## Result: 208 measurable patterns never fired
+## Result: 196 measurable patterns never fired
 
 | Type | Never fired |
 |---|---:|
 | `cname_target` | 81 |
 | `txt` | 64 |
-| `cname` | 45 |
+| `cname` | 33 |
 | `spf` | 8 |
 | `mx` | 4 |
 | `subdomain_txt` | 3 |
