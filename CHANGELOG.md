@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.6.14] - 2026-07-26
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Added
 
 - Six apex verification-TXT detections promoted from one private
