@@ -220,25 +220,93 @@ technology
 database. The frontier stays in DNS-name, certificate-transparency, and
 declarative-token space.
 
+## 5b. What collection already yields that the catalog does not read
+
+Catalog growth has been mined in one direction: run a corpus, collect the
+strings no rule matched, triage them. That direction is close to exhausted at
+the current catalog size. The 2026-07-17 round produced 780 candidate buckets,
+and the promotion pass two hours later closed the queue's verifiable entries in
+a single commit. What remains is unnamed prefixes and target-owned
+infrastructure, neither of which is promotable.
+
+A second direction is available and cheaper, because the records are already
+being collected and simply are not read. Each row below is evidence recon
+already holds at the end of a normal lookup.
+
+| Surface | Current state | Why it matters |
+|---|---|---|
+| MTA-STS policy body | Fetched over HTTPS, only `mode:` parsed; the `mx:` lines are discarded | An operator-published, authoritative list of the domain's mail hosts, arriving over a different channel than the MX lookup. It corroborates mail attribution without a second DNS query. |
+| TLS-RPT `rua=` | Presence only | The reporting destination names the vendor exactly as DMARC `rua` does, and that path already carries 42 rules. |
+| CAA parameters | `issue` and `issuewild` values are matched; `iodef`, `accounturi`, and `validationmethods` are not parsed | `accounturi` identifies the issuing account and ACME client; `iodef` names a security-contact destination. |
+| SRV | Five owners probed, zero catalog rules; attribution runs through a hardcoded table | The record type carries service, target, port, priority, and weight. Standards-defined mail autoconfiguration owners under RFC 6186 name the mail host directly. |
+| DKIM selectors | About thirteen probed, attributed by CNAME target | Selector names are themselves vendor-assigned, so a selector that resolves is evidence even when its target does not match a known hint. |
+| MX preference and SRV priority | Discarded after matching | A primary and backup split across two vendors is a topology observation that a flat vendor list cannot express. |
+| Certificate transparency | Disabled in the 2026-07-17 round | Chain discovery ran on the common-subdomain probe alone. CT is where the existing `cname_target` rules came from. |
+
+These are ranked deliberately. The first three add an evidence path to slugs
+that already exist, which is worth more than a new vendor: 569 of 679 slugs
+define exactly one detection type, so no amount of new single-path vendors
+improves the share of claims that can be corroborated. See
+[the 2026-07-25 base-rate memo](../validation/2026-07-25-pattern-base-rates.md).
+
+## 5c. Inverting the discovery direction
+
+Corpus mining finds a vendor only after some sampled namespace already uses it,
+so it systematically misses the long tail and cannot anticipate a vendor at
+all. The inverse is to enumerate vendors and read each vendor's own published
+DNS requirements, deriving the pattern before it appears in any corpus.
+
+This stays inside the invariants. Vendor documentation is provider-owned public
+text, no target is queried, and the resulting candidate carries a reference by
+construction rather than needing one found afterwards. It also produces the
+disclosure-safe artifact the promotion gate wants: a vendor, a record type, a
+pattern, and a citation, with the corpus supplying only an aggregate
+observation count if the pattern is present at all.
+
+The standard the catalog actually applies is a prefix that names its vendor
+plus a vendor-owned reference; existing rules such as
+`^anthropic-domain-verification=` cite a documentation index rather than a page
+documenting the string, because vendors issue these tokens through an admin
+console and do not publish the prefix. A pattern whose prefix does not name a
+vendor cannot meet that standard from either direction and belongs in the
+deferred queue, not the proposal queue.
+
 ## 6. Prioritized backlog
 
-1. Freeze the round manifest and record the current classified-surface,
+Ordered by cost, not by appetite. Items 1 to 3 need no new network request
+and raise the share of claims that can be corroborated, which is the measured
+weakness; the corpus rounds that follow cannot fix that weakness no matter how
+many vendors they surface.
+
+1. Read the records already collected, in this order: the `mx:` lines in the
+   MTA-STS policy body, the TLS-RPT `rua=` destination, then the CAA
+   `accounturi` and `iodef` parameters. Each attaches to slugs that already
+   exist, so each converts single-path attributions into corroborated ones.
+2. Give SRV a catalog-driven path instead of a hardcoded table, and extend the
+   probed owners to the standards-defined mail autoconfiguration set. The
+   record type is already queried and currently carries no rules at all.
+3. Stand up vendor-enumerated discovery per section 5c and run it against the
+   vendors already present in the catalog before extending to new ones, so the
+   first pass strengthens existing slugs.
+4. Re-run a round with certificate transparency enabled before concluding that
+   `cname_target` discovery is exhausted; the last round ran without it.
+5. Freeze the round manifest and record the current classified-surface,
    observation-opportunity, unresolved, and stale-rule baseline across the
    implemented typed extractors.
-2. Admit a candidate to the proposal queue only when it has an identifier,
+6. Admit a candidate to the proposal queue only when it has an identifier,
    exact record type and pattern, source or disclosure-safe aggregate basis,
    and explicit pending, promoted, rejected, or deferred disposition. A vendor
    name alone is not an actionable candidate.
-3. Keep the opt-in unmatched-observation envelope and private ranking tool
+7. Keep the opt-in unmatched-observation envelope and private ranking tool
    covered by per-type bounds, reserved synthetic fixtures, and default-output absence
    tests.
-4. Stand up a rank-stratified private corpus and run it once to produce the
+8. Stand up a rank-stratified private corpus and run it once to produce the
    first comparable multi-record baseline and prioritized growth queues.
-5. Add regional strata (the largest expected coverage gap) and promote the
+9. Add regional strata (the largest expected coverage gap) and promote the
    verified regional vendors they surface.
-6. Add vertical rounds without pooling them into population rates.
-7. Backfill `verified` dates and raise the freshness auditor toward a ratchet.
-8. Measure recall on disjoint vendor-seed holdouts for the top vendors.
+10. Add vertical rounds without pooling them into population rates.
+11. Backfill `verified` dates and raise the freshness auditor toward a ratchet.
+12. Measure recall on disjoint vendor-seed holdouts for the top vendors.
 
 No promotion is complete without a current public reference or
 disclosure-safe aggregate basis, a `verified` date, a positive fixture, a
