@@ -269,6 +269,7 @@ fingerprints:
       SecureMX mail exchanger (`securemx.jp`). Indicates SecureMX handles inbound mail for this domain.
 - name: DMARC Analyzer (Mimecast)
   slug: dmarc-analyzer
+  parent_vendor: Mimecast
   category: Email & Communication
   confidence: high
   detections:
@@ -464,6 +465,7 @@ fingerprints:
       or marketing email.
 - name: PowerSPF
   slug: powerspf
+  parent_vendor: PowerDMARC
   category: Email
   confidence: high
   detections:
@@ -662,6 +664,7 @@ fingerprints:
       Hornetsecurity.
 - name: AppRiver (Zix)
   slug: appriver
+  parent_vendor: Zix
   category: Email
   confidence: high
   detections:
@@ -1618,6 +1621,7 @@ fingerprints:
       shadow `zendesk.com` / `mynewsdesk.com` via substring matching.
 - name: Certain (Cvent)
   slug: certain-cvent
+  parent_vendor: Cvent
   category: Business Apps
   confidence: high
   detections:

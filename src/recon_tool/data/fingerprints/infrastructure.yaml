@@ -228,6 +228,7 @@ fingerprints:
       support-portal SSO federation.
 - name: CloudHealth (VMware)
   slug: cloudhealth
+  parent_vendor: VMware
   category: DevTools & Infrastructure
   confidence: high
   detections:
@@ -394,6 +395,7 @@ fingerprints:
       financial-services configurations.
 - name: Dyn (Oracle)
   slug: dyn
+  parent_vendor: Oracle
   category: Infrastructure
   confidence: high
   detections:

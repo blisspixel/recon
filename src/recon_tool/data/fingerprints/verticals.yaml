@@ -53,6 +53,7 @@ fingerprints:
       products and is the lowest-signal Google binding.
 - name: Canvas LMS (Instructure)
   slug: canvas-lms
+  parent_vendor: Instructure
   category: Education
   confidence: high
   detections:
@@ -221,6 +222,7 @@ fingerprints:
       chain.
 - name: Classy (GoFundMe)
   slug: classy
+  parent_vendor: GoFundMe
   category: Nonprofit
   confidence: high
   detections:
