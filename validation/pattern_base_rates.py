@@ -268,6 +268,81 @@ def _accumulate(results: Path, catalog: dict[str, list[tuple[str, str, str]]]) -
     return tally
 
 
+def check_candidates(run_dir: Path) -> dict[str, Any]:
+    """Report which unclassified candidates the CURRENT catalog already covers.
+
+    A run's gap queue is generated against the catalog as it stood during
+    collection, so every rule promoted afterwards keeps appearing there as an
+    open gap. Re-mining that queue therefore rediscovers work already done: the
+    four CAA issuer rules, `_d.easydmarc.pro` and `valimail-legacy-spf` were all
+    promoted two hours after the 2026-07-17 round and still read as gaps.
+
+    `triage_candidates.py` performs this check, but only for `cname_target` and
+    only over the chain-only `gaps.json`. The all-path candidate queue in
+    `catalog-gaps.json` has no coverage check, which is where the rediscovery
+    happens. Deduplicating candidates against current coverage before they enter
+    a proposal queue is what keeps the discovery loop from cycling.
+
+    One limitation is inherited rather than introduced: a pattern permissive
+    enough to match anything reports coverage it does not have. The
+    `_slack-challenge`, `_gitlab-pages-verification-code` and `_github-challenge`
+    rules accept any non-empty value, so this check reports the `_mcp` and
+    `_agent` candidates as covered when what actually matched was a wildcard
+    answer. The detector-side guard suppresses that at lookup time; here it
+    still reads as a match, so treat a `subdomain_txt` coverage claim as
+    provisional.
+    """
+    gaps = run_dir / "catalog-gaps.json"
+    if not gaps.is_file():
+        raise SystemExit(f"no catalog-gaps.json under {run_dir}")
+    payload = json.loads(gaps.read_text(encoding="utf-8"))
+    catalog = _load_catalog_patterns()
+
+    covered: list[dict[str, Any]] = []
+    open_rows: list[dict[str, Any]] = []
+    for detection_type, entries in sorted(payload.get("candidates", {}).items()):
+        for entry in entries:
+            samples = [str(s.get("value", "")) for s in entry.get("samples", []) if s.get("value")]
+            if not samples:
+                continue
+            hit = None
+            for entry_slug, _, entry_pattern in catalog.get(detection_type, ()):
+                # A candidate sample may be a whole record or an already
+                # extracted target, so test both readings before calling it open.
+                if any(
+                    _pattern_matches(detection_type, entry_pattern, value)
+                    or any(
+                        _pattern_matches(detection_type, entry_pattern, target)
+                        for target in _match_targets(detection_type, value)
+                    )
+                    for value in samples
+                ):
+                    hit = entry_slug
+                    break
+            row = {
+                "type": detection_type,
+                "key": entry.get("key"),
+                "namespaces": entry.get("distinct_namespace_count"),
+                "occurrences": entry.get("count"),
+            }
+            if hit:
+                covered.append({**row, "covered_by": hit})
+            else:
+                open_rows.append(row)
+
+    covered.sort(key=lambda r: -(r["namespaces"] or 0))
+    open_rows.sort(key=lambda r: -(r["namespaces"] or 0))
+    return {
+        "schema": "gap-candidate-coverage/1.0",
+        "run_catalog": payload.get("aggregate", {}).get("catalog", {}),
+        "candidates_total": len(covered) + len(open_rows),
+        "already_covered_by_current_catalog": len(covered),
+        "still_open": len(open_rows),
+        "covered": covered,
+        "open": open_rows,
+    }
+
+
 def measure(run_dir: Path) -> dict[str, Any]:
     results = run_dir / "results.ndjson"
     if not results.is_file():
@@ -335,7 +410,24 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("run_dir", type=Path, help="ignored private run directory containing results.ndjson")
     parser.add_argument("--out", type=Path, required=True, help="output JSON path (must be an ignored workspace)")
+    parser.add_argument(
+        "--candidates",
+        action="store_true",
+        help="report which unclassified gap candidates the current catalog already covers, instead of measuring rules",
+    )
     args = parser.parse_args(argv)
+
+    if args.candidates:
+        payload = check_candidates(args.run_dir)
+        args.out.parent.mkdir(parents=True, exist_ok=True)
+        args.out.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        print(
+            f"{payload['candidates_total']} candidates: "
+            f"{payload['already_covered_by_current_catalog']} already covered by the current catalog, "
+            f"{payload['still_open']} still open"
+        )
+        print(f"wrote {args.out}")
+        return 0
 
     payload = measure(args.run_dir)
     args.out.parent.mkdir(parents=True, exist_ok=True)
