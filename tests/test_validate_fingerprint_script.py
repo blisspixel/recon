@@ -90,7 +90,7 @@ def test_fingerprints_check_without_path_validates_source_when_available(monkeyp
     result = runner.invoke(app, ["fingerprints", "check", "--quiet"])
 
     assert result.exit_code == 0
-    assert "Validated 856 entries: 856 passed, 0 failed" in result.output
+    assert "Validated 860 entries: 860 passed, 0 failed" in result.output
 
 
 def test_builtin_artifact_validator_reports_specificity_and_duplicate_failures(

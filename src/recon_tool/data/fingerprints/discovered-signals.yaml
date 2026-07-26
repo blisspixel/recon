@@ -191,6 +191,19 @@ fingerprints:
     pattern: trendmicro.eu
     description: >-
       Trend Micro Email Security mail exchanger (`trendmicro.eu`). Indicates Trend Micro Email Security handles inbound mail for this domain.
+  - type: txt
+    pattern: ^tmes=
+    verified: '2026-07-25'
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-configuring-a-domain
+    description: >-
+      Trend Micro Email Security domain-verification TXT. `TMES` is
+      the vendor's own abbreviation for the product, and the service
+      documents a console-issued TXT record as the domain-ownership
+      proof, with an MX record as the documented alternative.
+      Indicates the domain is registered in a Trend Micro Email
+      Security tenant. Verification can precede or outlive mail
+      routing, so corroborate with the MX evidence before reading
+      this as active mail filtering.
 - name: Mimecast
   slug: mimecast
   category: Email & Communication

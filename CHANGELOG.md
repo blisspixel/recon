@@ -26,6 +26,18 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Added
+
+- Six apex verification-TXT detections promoted from one private
+  5,199-namespace round, each with a vendor-named prefix, a vendor-owned
+  reference, a verification date, and a lookalike-negative fixture: IBMid
+  (95 namespaces), Infoblox (139), Cisco Intersight (130), ElevenLabs (63),
+  QuoVadis (50), and Trend Micro Email Security (43). All six pass the
+  pattern-specificity gate with zero matches against the adversarial corpus.
+  The IBMid and Trend Micro rules attach to slugs that already existed, so
+  they add a second and fourth evidence path rather than a new claim; the
+  other four are new vendor entries.
+
 ### Fixed
 
 - A wildcard TXT zone no longer reports every probed vendor at once. The

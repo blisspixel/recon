@@ -212,9 +212,11 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "globalsign-caa": "Security",
     "godaddy-caa": "Security",
     "entrust-caa": "Security",
+    "quovadis": "Security",
     "google-trust": "Security",
     # AI
     "openai": "AI",
+    "elevenlabs": "AI",
     "anthropic": "AI",
     "mistral": "AI",
     "perplexity": "AI",
@@ -432,6 +434,8 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "imgix": "Cloud",
     "keycdn": "Cloud",
     "ns1": "Cloud",
+    "infoblox": "Cloud",
+    "cisco-intersight": "Cloud",
     "stackpath": "Cloud",
     "ultradns": "Cloud",
     # Slugs for cname_target rules discovered via the corpus
@@ -864,6 +868,15 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "ionos",
         "easydns",
         "gandi-webredir",
+        # DDI (DNS, DHCP, IPAM) management platform. Same reasoning as the
+        # DNS operators above: claiming a namespace in Infoblox says nothing
+        # about where workloads run, so it does not belong in a cloud-vendor
+        # rollup.
+        "infoblox",
+        # Infrastructure-management SaaS for on-premises UCS and HyperFlex
+        # hardware. The account claim indicates a management plane, not a
+        # hosting footprint.
+        "cisco-intersight",
         # API management not tied to a major cloud at the rollup level
         "apigee",
         "mulesoft",

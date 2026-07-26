@@ -207,6 +207,63 @@ async def test_webflow_cname_and_owner_qualified_txt(
 
 
 @pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "slug"),
+    [
+        ("ibmid=00000000-0000-4000-8000-000000000000", "ibm-cloud"),
+        ("tmes=00000000000000000000000000000000", "trendmicro"),
+        ("elevenlabs=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA", "elevenlabs"),
+        ("infoblox-domain-mastery=0000000000000000000000000000000000000000000000000000000000000000", "infoblox"),
+        ("intersight=0000000000000000000000000000000000000000000000000000000000000000", "cisco-intersight"),
+        ("QuoVadis=00000000-0000-4000-8000-000000000000", "quovadis"),
+    ],
+)
+async def test_promoted_verification_tokens_match(
+    monkeypatch: pytest.MonkeyPatch, value: str, slug: str
+) -> None:
+    """Vendor-named apex verification TXT records promoted from a private round."""
+    monkeypatch.setattr(
+        dns_base,
+        "safe_resolve",
+        _resolver({("example.com", "TXT"): [value]}),
+    )
+    ctx = dns_base.DetectionCtx()
+
+    await dns_email.detect_txt(ctx, "example.com")
+
+    assert slug in ctx.slugs
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("value", "slug"),
+    [
+        # The prefix must open the record, not appear inside another value.
+        ("notibmid=00000000-0000-4000-8000-000000000000", "ibm-cloud"),
+        ("x-tmes=00000000000000000000000000000000", "trendmicro"),
+        ("v=spf1 include:elevenlabs=fictional -all", "elevenlabs"),
+        ("prefix-infoblox-domain-mastery=0000", "infoblox"),
+        ("cisco-intersight=0000", "cisco-intersight"),
+        ("not-QuoVadis=00000000-0000-4000-8000-000000000000", "quovadis"),
+    ],
+)
+async def test_promoted_verification_token_lookalikes_do_not_match(
+    monkeypatch: pytest.MonkeyPatch, value: str, slug: str
+) -> None:
+    """A vendor prefix embedded in a longer value is not that vendor's token."""
+    monkeypatch.setattr(
+        dns_base,
+        "safe_resolve",
+        _resolver({("example.com", "TXT"): [value]}),
+    )
+    ctx = dns_base.DetectionCtx()
+
+    await dns_email.detect_txt(ctx, "example.com")
+
+    assert slug not in ctx.slugs
+
+
+@pytest.mark.asyncio
 async def test_wildcard_txt_does_not_attribute_every_probed_vendor(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
