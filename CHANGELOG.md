@@ -26,6 +26,31 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-07-29
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Added
+
+- An opt-in, stateless Streamable HTTP MCP adapter for operators who need
+  authenticated remote access. The adapter exposes only the reviewed read-only
+  tools and resources, supports either application bearer authentication or a
+  trusted authenticated platform boundary, and enforces request, Host, and
+  Origin guards. The local stdio MCP server remains the default.
+- A non-root OCI container, a draft Terraform module for Google Cloud Run, and
+  a cross-platform deployment plan covering AWS, Azure, Google Cloud,
+  Cloudflare, Kubernetes, generic OCI hosts, Anthropic clients, and OpenAI
+  clients. These artifacts are optional, directionally useful starting points,
+  not provider-validated production templates.
+
+### Changed
+
+- MCP compatibility now runs against both SDK 1.28.1 and stable 2.0.0 in CI
+  and the release gate. The published dependency remains on the stable v1 line
+  until a separate production-adoption decision.
+
 ## [2.6.14] - 2026-07-26
 
 ### Tool Surface Changes
