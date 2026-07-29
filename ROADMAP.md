@@ -13,6 +13,12 @@ contract, the local stdio MCP server, bounded public-metadata collectors,
 generated-artifact guards, the validation gates, and a release path with
 reproducible builds, provenance, SBOM, and cross-channel byte parity.
 
+An optional authenticated remote container and draft Google Cloud Run IaC
+framework now exist as low-priority accessibility and scale polish. This draft
+is intended to be directionally useful, not a validated production deployment.
+It does not change the local default, and the project does not operate a hosted
+endpoint.
+
 Release verification binds every published artifact to its exact tag, workflow,
 signer, and commit digest, and requires SBOM provenance. One
 digest-bound v2.6.3 historical exception preserves that release's published
@@ -23,8 +29,8 @@ A complete baseline is not a finished product. Three things remain unproven,
 and the plan below is about exactly those three:
 
 - Not every default claim has been traced to the evidence that supports it.
-- The MCP protocol recon speaks is about to change, and the final gate has not
-  run.
+- Stable MCP v2 compatibility is now characterized, but production adoption
+  remains a separate release decision.
 - Nothing measures whether probabilistic fusion, certificate-transparency
   enrichment, the fingerprint catalog, or the broad agent surface improves an
   operator outcome over deterministic evidence plus explicit abstention.
@@ -64,27 +70,24 @@ ownership, control, or current-use claims; missing metadata stays unknown; and
 explanation output reports provenance completeness rather than asserting a
 complete path it does not have.
 
-### 2. Characterize the final MCP protocol before adopting it
+### 2. Keep final MCP v2 compatibility green before adopting it
 
-**Why now, despite ranking second:** this is the only track with an external
-clock. The Model Context Protocol 2026-07-28 specification is a breaking
-protocol release, and the official Python SDK moves on its own schedule
-regardless of recon. Every other track moves at the maintainer's pace. This one
-does not, and deferring it makes it harder rather than cheaper. The work itself
-is bounded, which is why it can be scheduled without stalling track 1.
+**Why second:** the Model Context Protocol 2026-07-28 specification is a
+breaking protocol release, and the official Python SDK moves on its own
+schedule regardless of recon. The compatibility work is bounded and remains
+blocking in CI without displacing track 1.
 
-**State:** the exact `1.28.1` and `2.0.0b1` matrix passed on 2026-07-13, and CI
-keeps both pins blocking. The SDK published `2.0.0b2` on 2026-07-14, one day
-after that run, so the characterized candidate is one release behind the
-current beta.
+**State:** the exact `1.28.1` and stable `2.0.0` matrix passed on 2026-07-28,
+and CI keeps both pins blocking. The same registration and domain logic passes
+legacy initialization and final stateless `server/discover` behavior.
 
-**Closed when:** the dated matrix covers the current candidate and then the
-final specification with the stable v2 SDK; tool and resource order stays
+**Closed when:** the stable matrix stays green; tool and resource order stays
 deterministic; declared output schemas and structured results conform on both
-generations; and the local stdio workflow is intact. Production stays on
-`mcp>=1.28.1,<2` until that full gate passes. Remote HTTP, OAuth, Roots,
-Sampling, Apps, and Tasks are not adopted along the way without a named product
-need and a separate architecture review.
+generations; and the local stdio workflow remains intact. Production stays on
+`mcp>=1.28.1,<2` until a separate adoption review changes it. The named
+optional remote-access need and its separate architecture review now live in
+[the cloud deployment plan](docs/optional-cloud-deployment-plan.md); that work
+does not imply production v2 adoption, OAuth, Roots, Sampling, Apps, or Tasks.
 
 ### 3. Freeze a product-quality baseline, then promote or retire
 
@@ -101,6 +104,28 @@ whether advanced fusion stays in the primary path or becomes an explicitly
 advanced diagnostic. An inconclusive or negative result is a valid outcome and
 is not reinterpreted into a promotion.
 
+### 4. Optional operator-hosted access and scale-out
+
+**Why fourth:** making recon easier to reach from different AI systems is useful
+polish for some operators, but it does not outrank output truthfulness,
+protocol compatibility, or evidence that the product improves an operator
+decision.
+
+**State:** draft shared runtime, non-root OCI container, Cloud Run Terraform,
+authentication boundaries, and CI structural checks exist. They pass local
+artifact checks but are not yet provider-validated or production-ready. Local
+CLI and stdio MCP remain the complete default. AWS AgentCore, Azure Container
+Apps, Cloudflare, Kubernetes, and per-user OAuth are research directions with
+explicit stop rules rather than unvalidated placeholder IaC.
+
+**Closed when:** one external operator has validated the chosen reference with
+a real MCP client, bounded load and cost evidence, credential rotation, log
+retention, and image rollback. Expansion to another provider requires named
+demand and that provider's validation context.
+
+Full architecture, research, provider choices, and sequencing:
+[docs/optional-cloud-deployment-plan.md](docs/optional-cloud-deployment-plan.md).
+
 ## What Is Deliberately Not Next
 
 Each of these is real work that is blocked on purpose, not forgotten.
@@ -110,6 +135,8 @@ Each of these is real work that is blocked on purpose, not forgotten.
 | Broad catalog growth | The independent rank, regional, vendor-seed, and drift rounds. A repeated list is a drift round, not new coverage. |
 | More graph or probabilistic machinery | Measured benefit to a named user outcome, from track 3. |
 | A core-versus-advanced MCP tool profile | A representative client proving material context benefit. Payload size alone is not the trigger. |
+| More optional cloud provider IaC | A named operator, provider-specific identity and region context, and the acceptance gate in the optional cloud plan. |
+| A project-operated public or multi-tenant service | A separate product, governance, privacy, abuse, support, and funding decision. The current plan provides operator-owned references only. |
 | Promoting generated discovery artifacts to a stable contract | A named external consumer, under [ADR-0007](docs/adr/0007-surface-inventory-discovery-context.md). |
 | Native acceleration in Rust, Go, or Mojo | The evidence gates in [ADR-0010](docs/adr/0010-evidence-gated-native-acceleration.md), measured on a real stage rather than a microbenchmark. |
 | Dimensioned email posture scoring | An ADR plus the RFC 9989 completion audit, keeping the current stable field as a compatibility view. |
@@ -184,6 +211,7 @@ and the most recent completed historical local submission-freeze proof is
 | How the next tracks get implemented | [docs/engineering-refinement-plan.md](docs/engineering-refinement-plan.md) |
 | Source, test, and facade cleanup | [docs/structural-maintainability.md](docs/structural-maintainability.md) |
 | MCP timeline, gate, and rollback criteria | [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.md) and [ADR-0009](docs/adr/0009-mcp-2026-readiness.md) |
+| Optional remote MCP, cloud hosting, authentication, and scale-out | [docs/optional-cloud-deployment-plan.md](docs/optional-cloud-deployment-plan.md) |
 | Catalog rounds and the promotion gate | [docs/catalog-strategy.md](docs/catalog-strategy.md) |
 | The publication freeze gate | [docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md) |
 | Earlier plans and superseded framing | [docs/roadmap-history.md](docs/roadmap-history.md) |
