@@ -50,6 +50,53 @@ jobs:
       - name: Lint
         run: uv run ruff check --no-cache .
 
+  optional-cloud-draft-artifacts:
+    # These checks keep the optional draft internally consistent. They do not
+    # establish that it has been deployed or validated on a real provider.
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6
+        with:
+          persist-credentials: false
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: "1.15.8"
+          terraform_wrapper: false
+
+      - name: Check draft Cloud Run Terraform syntax
+        run: |
+          terraform fmt -check -recursive deploy/gcp-cloud-run
+          terraform -chdir=deploy/gcp-cloud-run init -backend=false -input=false -lockfile=readonly
+          terraform -chdir=deploy/gcp-cloud-run validate
+
+      - name: Build draft remote container
+        run: docker build --file deploy/container/Dockerfile --tag recon-remote:ci .
+
+      - name: Smoke-test draft remote container locally
+        shell: bash
+        run: |
+          set -euo pipefail
+          token="$(openssl rand -base64 48 | tr -d '\n')"
+          docker run --detach --name recon-remote-ci --publish 18080:8080 \
+            --env RECON_REMOTE_BEARER_TOKEN="$token" recon-remote:ci
+          trap 'docker rm --force recon-remote-ci >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent http://127.0.0.1:18080/health >/dev/null; then
+              break
+            fi
+            if [ "$attempt" -eq 30 ]; then
+              docker logs recon-remote-ci
+              exit 1
+            fi
+            sleep 1
+          done
+          test "$(curl --silent --output /dev/null --write-out '%{http_code}' \
+            --request POST --header 'Content-Type: application/json' \
+            --data '{}' http://127.0.0.1:18080/mcp)" = "401"
+
   typecheck:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -81,15 +128,15 @@ jobs:
         run: uv run pyright
 
   mcp-compatibility:
-    # Exercise the supported stable SDK and the exact v2 release candidate in
+    # Exercise the supported stable v1 SDK and the exact stable v2 SDK in
     # isolated environments. Production remains constrained to stable v1; the
-    # candidate pin is a compatibility proof, not a published dependency.
+    # v2 pin is a compatibility proof, not a published dependency.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        mcp-version: ["1.28.1", "2.0.0b1"]
+        mcp-version: ["1.28.1", "2.0.0"]
     env:
       UV_PYTHON: "3.11"
     steps:

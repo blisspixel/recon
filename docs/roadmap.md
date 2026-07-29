@@ -12,7 +12,9 @@ tracked separately from product work.
 > release path. The product is not "finished." The active work is to make every
 > default claim evidence-tight, prove that advanced inference adds user value,
 > characterize MCP v2 compatibility, and make latency, degradation, catalog
-> quality, and agent context cost measurable.
+> quality, and agent context cost measurable. A separate fourth track provides
+> optional operator-hosted access and bounded scale-out without changing the
+> local default or creating a project-operated service.
 >
 > **Code-graph orientation:** refresh the ignored
 > `.agent/codegraph/manifest.json` after each tracked milestone and read it for
@@ -33,8 +35,9 @@ start until priority 1 produces a claim taxonomy.
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
 | [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | One machine-readable claim contract exists, `dns.dmarc.valid_policy_is_reject.v1`. Every other material default claim rests on review and regression tests. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
-| [2. MCP protocol characterization](#2-characterize-mcp-v2-beta-compatibility-before-2026-07-28) | The only externally timed track. The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so deferring costs more than doing it. | The exact `1.28.1` and `2.0.0b1` matrix passed 2026-07-13 and CI keeps both pins blocking. The SDK published `2.0.0b2` on 2026-07-14, so the characterized candidate is one release behind. | A dated matrix over the current candidate and then the final specification with the stable v2 SDK, with deterministic ordering and conforming schemas, before the production `<2` pin moves. |
+| [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-before-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | The exact stable `1.28.1` and `2.0.0` matrix passed 2026-07-28 and CI keeps both pins blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green; treat production v2 adoption as a separate release decision. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on the claim taxonomy from priority 1. Measuring claim families before they are defined measures something about to be redefined. | Specified, not started. Extensive process evidence exists; product-outcome evidence does not. | A dated aggregate-safe scorecard with a decision rule written before the run, deciding whether advanced fusion stays primary or becomes an advanced diagnostic. |
+| [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the three core evidence and compatibility tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
 Everything blocked behind these, and the gate that unblocks each, is in
 [ROADMAP.md](../ROADMAP.md#what-is-deliberately-not-next). The phased execution
@@ -70,7 +73,7 @@ current debt without turning every refinement into feature work.
 
 | Debt class | Current state | Next boundary |
 |---|---|---|
-| Feature work | Governed by the dependency order below, not by the polish loop | Do not add commands, schemas, hosted surfaces, or inference modes without their existing evidence gate |
+| Feature work | Governed by the dependency order below, not by the polish loop; the optional operator-hosted surface now has a named architecture and security gate | Do not add commands, schemas, provider claims, or inference modes without their existing evidence gate |
 | UX flow | Root help, no-argument onboarding, malformed-input recovery, all-source failure recovery, low-confidence next steps, batch outcome guidance, cross-platform release verification, target-free catalog discovery, and explicit bounded-versus-complete cache inspection are implemented | Specify batch all-error exit semantics before considering an opt-in strict mode |
 | Visual polish | Lookup and batch help use task panels; linear help and adaptive welcome rows keep commands complete; fingerprint previews, ranked signal results, and narrow cache rows keep hierarchy and field association without changing structured order | Preserve complete option visibility and exact technical-token copyability before changing presentation metadata |
 | Observability | MCP rejection logs and unexpected batch details stay bounded; live MCP diagnostics retain completed rows and name the failed protocol phase; cache overview names exact inspected, uninspected, failed, and temporary-artifact state; corpus tests separate collection errors from negative observations; captured gate logs are plain; remote readiness and release recovery name exact evidence and preconditions | Define a versioned doctor or cache record only after a machine consumer and compatibility envelope are named |
@@ -190,44 +193,40 @@ Acceptance evidence:
 Stop rule: do not add new inference or scoring semantics while a known default
 claim lacks adequate evidence.
 
-### 2. Characterize MCP v2 beta compatibility before 2026-07-28
+### 2. Keep final MCP v2 compatibility green before adoption
 
-Status: candidate checkpoint complete on 2026-07-13. The exact v1.28.1 and
-v2.0.0b1 matrix passes; final specification and stable-v2 adoption remain
-pending.
+Status: stable compatibility checkpoint complete on 2026-07-28. The exact
+v1.28.1 and v2.0.0 matrix passes; production adoption remains a separate
+release decision.
 
-Open gap: the SDK published `2.0.0b2` on 2026-07-14, the day after that
-checkpoint, so the pinned candidate in the CI matrix is one prerelease behind
-the current beta. Re-run the characterization against the current candidate
-before the final specification lands, so the final gate diffs against a current
-result rather than a stale one. The matrix pin lives in
-`.github/workflows/ci.yml` and the probe is
-`scripts/check_mcp_compatibility.py`.
+The matrix pin lives in `.github/workflows/ci.yml` and the probe is
+`scripts/check_mcp_compatibility.py`. It exercises both stable SDK generations
+without changing `pyproject.toml`, `uv.lock`, or the active environment.
 
 Why second: the final MCP 2026-07-28 specification and stable Python SDK are
-time-bound external changes. Production remains on the stable v1 SDK line until
-the final specification and stable v2 SDK pass recon's full gate.
+external compatibility boundaries. Production remains on the stable v1 SDK
+line until an explicit adoption review changes that decision.
 
-Completed checkpoint:
+Completed checkpoints:
 
-- Exact-pin `mcp==2.0.0b1` in an isolated compatibility environment without
-  publishing or widening the production dependency to a prerelease.
+- Exact-pin `mcp==2.0.0` in an isolated compatibility environment without
+  widening the production dependency.
 - Exercise server import, stdio startup, `recon mcp doctor`, discovery, tool
   calls, resource reads, structured output, errors, and deterministic listing
-  under v1.28.1 and the v2 beta.
+  under stable v1.28.1 and stable v2.0.0.
 - Record a migration result for `FastMCP`, protocol types, `ToolError`,
   annotations, discovery, wire aliases, and synchronous resource handlers.
 - Review shared catalog and cache behavior under the v2 worker-thread model.
 - Reject the unproven `mcp>=1.0` floor and raise it to the fully characterized
   stable v1.28.1 release.
 
-The same compatibility boundary now passes 22 tools, five resources, zero
+The same compatibility boundary passes 22 tools, five resources, zero
 resource templates, one prompt, 44 schema documents, representative structured
 success and error results, concurrent catalog reloads, real stdio calls, and
-the live doctor on both supported exact pins. Candidate v2 additionally proves
+the live doctor on both supported exact pins. Stable v2 additionally proves
 `server/discover`, worker-thread synchronous handlers, and conservative
 complete-result metadata on every cacheable method. Production remains on
-`mcp>=1.28.1,<2` until the final gate.
+`mcp>=1.28.1,<2` until a separate adoption review changes it.
 
 Acceptance evidence:
 
@@ -237,12 +236,12 @@ Acceptance evidence:
   generations.
 - Every complete `server/discover`, `tools/list`, supported resource-list, and
   resource-read result carries valid `ttlMs` and `cacheScope` hints as required
-  by the draft caching specification.
+  by the final caching specification.
 - The local stdio workflow remains intact.
-- Production stays on `<2` until the stable v2 SDK and final specification pass
-  the full gate.
-- Remote HTTP, OAuth, Roots, Sampling, Apps, Tasks, and protocol logging are not
-  added without a named product need and a separate architecture review.
+- Production stays on `<2` until a separate adoption review changes it.
+- The optional remote HTTP need now has a separate architecture and security
+  review. It does not imply OAuth, Roots, Sampling, Apps, Tasks, protocol
+  logging, or production SDK v2 adoption.
 
 Detailed work and rollback criteria live in
 [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md) and
@@ -277,7 +276,7 @@ Work:
   metric it should improve and the regression budget it must preserve.
 - Run the stable-v1 resolver, allocation, CT-value, and schema characterization
   before completing the scorecard. It supplies performance inputs to this
-  priority; only candidate-SDK deltas wait for the MCP v2 matrix.
+  priority; apply stable-v2 deltas from the completed MCP matrix separately.
 
 Primary evaluation design:
 
@@ -397,11 +396,76 @@ Acceptance evidence:
 Stop rule: do not expand graph or probabilistic machinery without measured
 benefit to a named user outcome.
 
+### 4. Optional operator-hosted access and scale-out
+
+Status: draft and not yet provider-validated, lower priority than the three
+core tracks above. It is intended to be directionally useful, not a validated
+production deployment.
+
+Why fourth: an authenticated remote endpoint can make recon accessible to
+operators who want to use it from several AI products, shared automation, or a
+cloud environment. That is useful depth and scale polish for some users. It is
+not required to use recon, does not replace the local CLI or stdio MCP server,
+and does not create a project-operated hosted service.
+The project does not operate a hosted endpoint.
+
+Principles:
+
+- Keep one model-neutral remote MCP boundary. OpenAI, Anthropic, Microsoft
+  Foundry, and other compatible clients consume that endpoint; they do not need
+  separate recon implementations.
+- Keep deployment operator-owned and opt-in. Local CLI and stdio MCP remain the
+  complete default and require no cloud account.
+- Use a stateless Streamable HTTP process in a non-root OCI container, with
+  bounded requests, explicit authentication, host and origin controls, no
+  stateful catalog-mutation tools, and provider-managed secret storage.
+- Treat a cloud provider as a hosting and identity choice, not as the AI model
+  choice. A caller can host on one provider and use an AI client from another.
+- Label every reference at the evidence level it has. Passing local syntax,
+  build, and protocol checks is not provider validation. A provider logo or
+  speculative Terraform module is not implementation evidence.
+
+Initial work:
+
+- Maintain the optional remote adapter and portable container as draft
+  artifacts without adding a new default CLI path or dependency group.
+- Maintain one draft Google Cloud Run Terraform reference because Cloud Run
+  documents remote MCP hosting, supports scale to zero, and accepts the
+  portable container contract.
+- Keep AWS AgentCore, Azure Container Apps, Cloudflare, Kubernetes, and
+  per-user OAuth as researched plans until each has named demand and the
+  provider-specific validation context needed to make its security and IaC
+  claims true.
+
+Acceptance evidence:
+
+- One external operator validates the reference through a real remote MCP
+  client and records the exact image digest, region, identity mode, and rollback
+  path.
+- Bounded load testing records concurrency, latency, timeout, scale-to-zero,
+  provider quota, and cost behavior without committing queried-domain data.
+- Credential rotation, secret versioning, log redaction and retention, image
+  rollback, and deletion are exercised.
+- CI keeps the container build, health boundary, unauthenticated rejection, and
+  Terraform formatting and validation green.
+- Adding another cloud implementation requires a named operator, provider
+  identity and region context, and the same evidence at that platform's
+  boundary.
+
+The full architecture, July 2026 research, provider matrix, threat model,
+sequencing, and runbook gates live in
+[optional-cloud-deployment-plan.md](optional-cloud-deployment-plan.md).
+
+Stop rule: do not turn this into a project-operated SaaS, claim model-vendor
+hosting where the vendor is only an MCP client, or add provider IaC that has not
+been validated against a real provider context.
+
 ## Next
 
 These tracks follow the top three in dependency order. The stable-v1 portion of
 the async and schema characterization is a supporting input to priority 3 and
-runs before its scorecard; only candidate-SDK deltas wait for priority 2.
+runs before its scorecard; stable-v2 deltas are available from the completed
+priority 2 matrix.
 
 ### Separate observation change from interpretation change
 
@@ -890,8 +954,11 @@ generated-artifact drift gates.
 
 - Active scanning, port enumeration, vulnerability or exploit testing.
 - Credentialed tenant or SaaS enumeration.
-- Remote hosted MCP, OAuth, or multi-tenant service operation without a named
-  consumer, threat model, and architecture review.
+- A project-operated public endpoint, SaaS, or multi-tenant service. The
+  optional references are operator-owned deployments only.
+- Per-user OAuth or additional provider implementations without the named
+  consumer, threat model, identity context, and validation gates in the
+  optional cloud plan.
 - Company ownership, firmographics, news, financial, or hiring inference.
 - Security verdicts, certifications, confirmed-vulnerability claims, or claims
   about controls that are not publicly observable.
@@ -901,11 +968,10 @@ generated-artifact drift gates.
 
 ## Current External Basis
 
-Checked through 2026-07-14 against primary sources and recent research:
+Checked through 2026-07-28 against primary sources and recent research:
 
 - [MCP 2026-07-28 release candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
-- [MCP draft tools specification](https://modelcontextprotocol.io/specification/draft/server/tools)
-- [MCP draft caching specification](https://modelcontextprotocol.io/specification/draft/server/utilities/caching)
+- [MCP current documentation](https://modelcontextprotocol.io/docs/getting-started/intro)
 - [MCP Python SDK release history](https://pypi.org/project/mcp/)
 - [RFC 9989: DMARC](https://www.rfc-editor.org/info/rfc9989/)
 - [RFC 3986: URI generic syntax](https://www.rfc-editor.org/info/rfc3986/)

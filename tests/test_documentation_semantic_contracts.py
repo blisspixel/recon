@@ -56,6 +56,58 @@ def test_public_package_and_development_metadata_use_current_language() -> None:
     assert "\N{EM DASH}" not in description
 
 
+def test_optional_cloud_docs_preserve_the_local_default_and_operator_boundary() -> None:
+    readme = " ".join(_read("README.md").split())
+    short_roadmap = " ".join(_read("ROADMAP.md").split())
+    roadmap = " ".join(_read("docs/roadmap.md").split())
+    plan = " ".join(_read("docs/optional-cloud-deployment-plan.md").split())
+
+    for text in (readme, short_roadmap, roadmap, plan):
+        assert "optional" in text.lower()
+        assert "local" in text.lower()
+        assert "project does not operate" in text.lower()
+        assert "draft" in text.lower()
+        assert "not a validated production deployment" in text
+
+    assert "lower priority than the three core" in roadmap
+    assert "A project-operated public SaaS or multi-tenant recon service is not planned." in plan
+    assert "Current provider-validation status: none." in plan
+    for maturity in (
+        "Research direction",
+        "Draft artifact",
+        "Provider-validated reference",
+        "Production-proven",
+    ):
+        assert maturity in plan
+    for platform in (
+        "Google Cloud Run",
+        "AWS Bedrock AgentCore Runtime",
+        "Azure Container Apps",
+        "Cloudflare Workers",
+        "Kubernetes",
+        "Anthropic and Claude",
+        "OpenAI and ChatGPT",
+    ):
+        assert platform in plan
+
+    for artifact in (
+        "src/recon_tool/remote_server.py",
+        "deploy/container/Dockerfile",
+        "deploy/gcp-cloud-run/main.tf",
+    ):
+        assert (ROOT / artifact).is_file()
+
+    deployment_docs = {
+        "deploy/README.md": "not yet provider-validated or production-ready",
+        "deploy/container/README.md": "not a production-readiness claim",
+        "deploy/gcp-cloud-run/README.md": "has not yet been applied and validated",
+    }
+    for path, required in deployment_docs.items():
+        text = " ".join(_read(path).split())
+        assert "draft" in text.lower()
+        assert required in text
+
+
 def test_weak_area_guidance_does_not_promote_sparse_shapes_to_org_facts() -> None:
     weak_areas = " ".join(_read("docs/weak-areas.md").split())
 
@@ -150,9 +202,7 @@ def test_contributor_fingerprint_guidance_uses_current_schema_and_claims() -> No
 
 def test_claude_integration_docs_preserve_replay_and_ownership_boundaries() -> None:
     plugin = " ".join(_read("agents/claude-code/README.md").split())
-    triage = " ".join(
-        _read("agents/claude-code/skills/recon-fingerprint-triage/SKILL.md").split()
-    )
+    triage = " ".join(_read("agents/claude-code/skills/recon-fingerprint-triage/SKILL.md").split())
 
     for required in (
         "retained apex/root TXT, SPF, MX, NS, and CNAME observations",

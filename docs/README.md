@@ -23,6 +23,7 @@ The docs are organized by reader need:
 | Dependency-ordered implementation plan | [engineering-refinement-plan.md](engineering-refinement-plan.md) |
 | Structural maintainability audit and refactor plan | [structural-maintainability.md](structural-maintainability.md) |
 | Time-bound MCP 2026 compatibility plan | [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md) |
+| Draft optional remote MCP and cloud scale-out framework, not yet provider-validated | [optional-cloud-deployment-plan.md](optional-cloud-deployment-plan.md) |
 | What recon can and cannot see | [limitations.md](limitations.md) |
 | Rules versus agent judgment | [agentic-balance.md](agentic-balance.md) |
 

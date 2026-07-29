@@ -14,6 +14,15 @@ Works with Claude Desktop, Cursor, VS Code + Copilot, ChatGPT, or any other
 > configure permissions through the client's documented controls, and prefer
 > an isolated workspace or container for production agent use.
 
+The local stdio server is the default. An entirely optional, operator-owned
+remote Streamable HTTP container and Cloud Run reference are documented in the
+[cloud deployment plan](optional-cloud-deployment-plan.md). They are for users
+who benefit from shared access or bounded scale-out; they are not required for
+any local workflow, and the project does not operate a hosted endpoint. The
+remote materials are a draft framework intended to be directionally useful.
+They have local artifact checks but are not yet provider-validated or
+production-ready.
+
 ## Setup
 
 1. Install recon:
@@ -187,12 +196,12 @@ Passing `result_limit`, `peer_limit_per_domain`, `member_limit_per_cluster`,
 omitted counts, a deterministic `selection_rule`, and a `raw_request` pointer
 so an agent can decide whether to request the raw result.
 
-Compatibility with the MCP 2026-07-28 release candidate is tracked in
+Compatibility with the final MCP 2026-07-28 release is tracked in
 [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md). The dated isolated
-matrix passes on both stable SDK v1.28.1 and candidate SDK v2.0.0b1 using the
-same local stdio server. Production stays on `mcp>=1.28.1,<2` until the final
-specification and stable v2 SDK pass recon's doctor, discovery, schema,
-resource, ordering, and full CI gates. Under the candidate, recon explicitly
+matrix passes on both stable SDK v1.28.1 and stable SDK v2.0.0 using the same
+local stdio server. Production stays on `mcp>=1.28.1,<2` pending a separate
+adoption review; stable v2 already passes recon's doctor, discovery, schema,
+resource, ordering, and compatibility gates. Under v2, recon explicitly
 uses conservative `ttlMs=0`, `cacheScope=private` hints for all six cacheable
 methods rather than promising freshness it cannot establish.
 
@@ -506,7 +515,7 @@ installed server; the third validates that the named client was told about it.
    fingerprint detection summaries must be populated; and the schema and
    surface inventory must retain their identifying contract structure. These
    resource reads are local and make no target network request. Stable v1 uses
-   `initialize`; candidate v2 uses
+   `initialize`; stable v2 uses
    `server/discover` and validates complete-result cache metadata for discovery,
    listing, and reads. A failure retains completed check rows and names the
    failed protocol phase. Spawned-server stderr is limited to its trailing
