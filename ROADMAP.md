@@ -7,7 +7,7 @@ boundaries that do not move. Shipped work lives in
 
 ## Status
 
-recon v2.6.14 has a complete, production-ready baseline. Shipped and now under
+recon v2.7.0 has a complete, production-ready baseline. Shipped and now under
 maintenance rather than active development: the CLI, the versioned JSON
 contract, the local stdio MCP server, bounded public-metadata collectors,
 generated-artifact guards, the validation gates, and a release path with
