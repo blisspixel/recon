@@ -15,6 +15,16 @@ build/
 *.whl
 *.tar.gz
 
+# Optional infrastructure working state
+**/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+*.tfvars.json
+crash.log
+crash.*.log
+
 # Test / Coverage
 .pytest_cache/
 .hypothesis/

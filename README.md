@@ -15,8 +15,10 @@ of one organization, owner, account, or deployed product.
 It uses no credentials, no API keys, no paid feeds, and no active scanning. It
 ships as a local Python package with a CLI, versioned JSON output, and a stdio
 MCP server.
-It is not a hosted service, scheduler, vulnerability scanner, company research
-tool, or firmographic database.
+The project does not operate a hosted service. Optional draft guidance is
+available for operator-owned remote access, but it is never required for local
+use. recon is not a scheduler, vulnerability scanner, company research tool,
+or firmographic database.
 
 > **Defensive use only.** Use recon for legitimate posture review, IT
 > architecture review, vendor diligence, and defensive hardening. See
@@ -292,6 +294,17 @@ guidance, and troubleshooting live in
 Per-client scaffolds live in
 [agents/](https://github.com/blisspixel/recon/tree/main/agents).
 
+## Optional Cloud Access
+
+Local execution remains the default. For teams that want shared remote access,
+the repository includes a draft authenticated container and Cloud Run Terraform
+starting point. The framework is intended to be directionally useful, not a
+validated production deployment. Operators own deployment, identity, data
+handling, cost, and operations.
+
+- [Optional cloud architecture and platform plan](https://github.com/blisspixel/recon/blob/main/docs/optional-cloud-deployment-plan.md)
+- [Draft deployment framework](https://github.com/blisspixel/recon/tree/main/deploy)
+
 ## Limitations
 
 The public channel has a ceiling:
@@ -315,6 +328,8 @@ before committing any validation artifact.
 - [docs/README.md](https://github.com/blisspixel/recon/blob/main/docs/README.md): complete docs index.
 - [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md): current plan, invariants, and scope
   boundaries.
+- [docs/optional-cloud-deployment-plan.md](https://github.com/blisspixel/recon/blob/main/docs/optional-cloud-deployment-plan.md): optional cloud
+  architecture, maturity, and validation gates.
 - [docs/structural-maintainability.md](https://github.com/blisspixel/recon/blob/main/docs/structural-maintainability.md): measured
   source, test, compatibility, and facade cleanup plan.
 - [docs/external-writeup-plan.md](https://github.com/blisspixel/recon/blob/main/docs/external-writeup-plan.md): active
@@ -333,12 +348,16 @@ priorities are:
 1. Make every default claim traceable to evidence and remove product-use,
    cloud-type, or security-maturity conclusions that public metadata cannot
    support.
-2. Keep the exact MCP v1.28.1 and v2.0.0b1 compatibility matrix green, then
-   repeat the full gate against the final 2026-07-28 specification and stable
-   v2 SDK before changing the production dependency.
+2. Keep the exact MCP v1.28.1 and v2.0.0 compatibility matrix green. The
+   stable-v2 compatibility gate passed on 2026-07-28; changing the production
+   dependency remains a separate, deliberate release decision.
 3. Establish an aggregate-safe quality baseline for claim precision,
    abstention, provenance, catalog coverage, degradation, latency, CT value,
    and agent context cost before expanding inference or graph machinery.
+
+A fourth, explicitly lower-priority track covers the optional cloud framework.
+It does not change the local default and remains subject to the maturity and
+validation gates in the linked plan.
 
 Catalog coverage work uses deduplicated private rounds across rank, region, and
 domain-class strata. Real target names and per-domain records stay in ignored

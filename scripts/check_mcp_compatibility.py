@@ -30,7 +30,7 @@ from typing import Any, Literal, TextIO, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENT_ROOT = REPO_ROOT / ".agent"
-DEFAULT_SDK_VERSIONS = ("1.28.1", "2.0.0b1")
+DEFAULT_SDK_VERSIONS = ("1.28.1", "2.0.0")
 
 ProbeStatus = Literal["pass", "fail", "blocked", "not_applicable"]
 

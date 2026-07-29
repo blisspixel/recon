@@ -122,19 +122,20 @@ Correct the smallest evidence-to-claim path first.
 
 ## Track 2: MCP 2026-07-28 Compatibility Matrix
 
-Status: candidate checkpoint complete 2026-07-13; final adoption gate pending
-Dependencies: none; this time-bound stream can proceed independently of Track 1
-Risk: time-bound dependency and protocol compatibility
+Status: stable compatibility checkpoint complete 2026-07-28; production
+adoption decision pending
+Dependencies: none; this stream can proceed independently of Track 1
+Risk: dependency and protocol compatibility
 
-The exact stable v1.28.1 and candidate v2.0.0b1 environments pass the full
-isolated matrix. Production remains on `mcp>=1.28.1,<2`; final adoption waits
-for the final specification, stable v2 SDK, and another full gate.
+The exact stable v1.28.1 and stable v2.0.0 environments pass the full isolated
+matrix. Production remains on `mcp>=1.28.1,<2`; adopting v2 remains a separate
+release decision.
 
 ### Scope
 
 - Test server import, stdio startup, doctor, discovery, representative tool
   calls, resource reads, error behavior, structured content, schemas, and
-  deterministic order on v1.28.1 and v2 beta.
+  deterministic order on stable v1.28.1 and stable v2.0.0.
 - Record an explicit migration decision for `FastMCP`, protocol type imports,
   `ToolError`, annotations, snake-case SDK attributes, `discover()`, and
   `model_dump(by_alias=True)` where required on the wire.
@@ -320,8 +321,8 @@ approved.
 
 Status: Python optimization checkpoints implemented; product-shaped async and
 v2 deltas remain
-Dependencies: none for resolver and current-schema baselines; Track 2 only for
-candidate-SDK deltas
+Dependencies: none for resolver and current-schema baselines; stable-v2 deltas
+are available from the completed Track 2 matrix
 Risk: concurrency and brittle-benchmark risk
 
 ### Scope
@@ -546,12 +547,10 @@ Execute this track in four bounded phases:
 
 ## Execution Order
 
-1. Treat evidence-semantic corrections and the time-bound MCP v2 matrix as two
-   independent Now streams. Keep one atomic implementation item in progress at
-   a time, but do not make either stream wait on a false technical dependency.
-   The first machine-enforced claim contract and candidate MCP matrix are
-   complete. Freeze the claim contract's unit and label boundaries before
-   benchmark enrollment, and keep the matrix blocking until final v2 review.
+1. Keep evidence-semantic corrections as the active trust stream and the
+   completed stable MCP v1/v2 matrix as a blocking regression stream. The first
+   machine-enforced claim contract and stable MCP matrix are complete. Freeze
+   the claim contract's unit and label boundaries before benchmark enrollment.
 2. Run the stable-v1 resolver, allocation, CT-value, and schema
    characterization from Track 5.
 3. Complete the product-quality scorecard and ablation using that artifact.
@@ -561,7 +560,7 @@ Execute this track in four bounded phases:
    and retirement rule.
 6. Qualify or demote CT graph correlation before adding graph machinery.
 7. Decide the dimensioned email-observation model from measured evidence.
-8. Apply candidate-SDK deltas to the Track 5 characterization after Track 2.
+8. Apply stable-v2 SDK deltas from Track 2 to the Track 5 characterization.
 9. Baseline and improve catalog quality.
 10. Measure and, only if justified, simplify operator and agent discovery.
 11. Decompose critical interface hotspots without changing behavior.

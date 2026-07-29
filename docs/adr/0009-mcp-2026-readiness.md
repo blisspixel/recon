@@ -93,9 +93,20 @@ The decision is enforced by:
 - the readiness gate in [../mcp-2026-07-28-readiness.md](../mcp-2026-07-28-readiness.md)
 
 The exact v1.28.1 and v2.0.0b1 matrix met the candidate validation target on
-2026-07-13. The final adoption target remains:
+2026-07-13. At that checkpoint, the remaining final compatibility target was:
 
 - `recon mcp doctor` passes with the updated discovery path.
 - Structured tools still advertise output schemas.
 - Deprecated features remain absent.
 - Full repository checks pass before any compatibility claim is made.
+
+## Final Compatibility Outcome
+
+On 2026-07-28, the exact v1.28.1 and stable v2.0.0 matrix passed the same
+isolated compatibility gate. Stable v2 passed `server/discover`, deterministic
+registration of 22 tools, five resources and one prompt, 44 JSON Schema
+documents, structured success and error behavior, concurrent catalog reloads,
+stdio framing, resource reads, the live doctor, and complete-result cache
+metadata. This closes the final compatibility target. It does not widen the
+production dependency or add remote transport; those remain separate release
+and architecture decisions under this ADR.

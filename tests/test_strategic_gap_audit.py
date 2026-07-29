@@ -27,7 +27,7 @@ def test_strategic_gap_audit_prioritizes_product_quality_without_runtime_expansi
     for required in (
         "The highest-value work is not runtime expansion",
         "evidence semantics, measured utility, catalog quality",
-        "completed MCP candidate matrix",
+        "completed stable MCP matrix",
         "aggregate-safe product-quality baseline",
         "does not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior",
         "Runtime expansion, broad catalog growth, stable-surface promotion, "
@@ -96,7 +96,7 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
 def test_strategic_gap_audit_cites_current_external_standards() -> None:
     text = _read(AUDIT)
 
-    assert "Checked: 2026-07-17." in text
+    assert "Checked: 2026-07-28." in text
 
     for url in (
         "https://www.acm.org/publications/policies/artifact-review-and-badging-current",
@@ -109,7 +109,8 @@ def test_strategic_gap_audit_cites_current_external_standards() -> None:
         "https://help.zenodo.org/docs/github/describe-software/citation-file/",
         "https://help.zenodo.org/docs/github/describe-software/zenodo-json/",
         "https://arxiv.org/abs/2605.06508",
-        "https://modelcontextprotocol.io/development/roadmap",
+        "https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/",
+        "https://modelcontextprotocol.io/docs/getting-started/intro",
         "https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/about-issue-and-pull-request-templates",
     ):
         assert url in text
