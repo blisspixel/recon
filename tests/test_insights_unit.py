@@ -126,6 +126,25 @@ class TestEmailSecurityInsights:
 
         assert _email_security_insights(ctx) == []
 
+    def test_dormant_provider_slug_alone_does_not_produce_an_email_score(self):
+        """Prevents a registered-but-unused tenant getting an "Email security 0/5" line.
+
+        A bare microsoft365 or google-workspace slug can come from OIDC tenant
+        discovery or identity routing, neither of which shows the domain
+        receives mail. Scoring it anyway reads as "configured but badly
+        secured" when the truth is that there is no email to score, so the
+        provider slug must be paired with an MX-backed signal.
+        """
+        for slug in ("microsoft365", "google-workspace"):
+            ctx = _ctx(services=set(), slugs={slug}, evidence=())
+            assert _email_security_insights(ctx) == [], slug
+
+    def test_provider_slug_with_an_mx_backed_signal_is_still_scored(self):
+        """Counter-case: the MX pairing must not suppress genuinely scoreable mail."""
+        ctx = _ctx(services=set(), slugs={"microsoft365"}, dmarc_policy="reject")
+
+        assert any(i.startswith("Email security:") for i in _email_security_insights(ctx))
+
     def test_extensible_spf_prefix_does_not_claim_spf_policy(self):
         ctx = _ctx(
             services={"SPF: neutral"},
@@ -228,6 +247,30 @@ class TestInfrastructureInsights:
         insights = _infrastructure_insights(ctx)
         assert any("Cloudflare" in i for i in insights)
 
+    def test_verification_token_alone_does_not_become_an_infrastructure_claim(self):
+        """Prevents an ownership-proof TXT record becoming a "traffic flows here" claim.
+
+        A vendor verification token proves only that someone pasted a string
+        into DNS. Saying "Infrastructure: Fastly" needs a record type that
+        actually establishes the role (CNAME, A or PTR), so the role gate must
+        keep TXT-only detections out of the infrastructure line.
+        """
+        ctx = _ctx(
+            services={"CDN: Fastly"},
+            evidence=(EvidenceRecord("TXT", "fastly-domain-delegation=abc", "CDN: Fastly", "fastly"),),
+        )
+
+        assert _infrastructure_insights(ctx) == []
+
+    def test_delegating_record_still_produces_an_infrastructure_claim(self):
+        """Counter-case: the role gate must not silence genuinely routed edge services."""
+        ctx = _ctx(
+            services={"CDN: Fastly"},
+            evidence=(EvidenceRecord("CNAME", "edge.fastly.net", "CDN: Fastly", "fastly"),),
+        )
+
+        assert _infrastructure_insights(ctx) == ["Infrastructure: Fastly"]
+
 
 class TestSparseSignalInsights:
     def test_edge_heavy_sparse_domain_gets_specific_diagnosis(self):
@@ -326,6 +369,24 @@ class TestGoogleModuleInsights:
 
         assert insights == ["Google Workspace module indicators observed: Drive, Groups"]
         assert not any("active" in insight.lower() or "enabled" in insight.lower() for insight in insights)
+
+    def test_site_verification_token_does_not_become_a_module_use_claim(self):
+        """Prevents parent-platform presence being reported as child-product use.
+
+        A google-site-verification TXT record shows the domain was claimed in
+        some Google property; it says nothing about Drive or Groups being
+        deployed. The role gate exists so only a module-establishing CNAME
+        produces the module-indicator line, and every test in this class feeds
+        conforming CNAME evidence, so nothing else notices if it is dropped.
+        """
+        ctx = _ctx(
+            services={"Google Workspace: Drive"},
+            evidence=(
+                EvidenceRecord("TXT", "google-site-verification=abc", "Google Workspace: Drive", "gws-drive"),
+            ),
+        )
+
+        assert _google_modules_insights(ctx) == []
 
 
 class TestNetworkSecurityInsights:

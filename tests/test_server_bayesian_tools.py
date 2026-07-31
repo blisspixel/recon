@@ -14,8 +14,8 @@ from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from mcp.server.fastmcp.exceptions import ToolError
 
+from recon_tool.mcp_client.sdk_compat import ToolError
 from recon_tool.models import (
     ConfidenceLevel,
     EvidenceRecord,

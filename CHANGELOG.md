@@ -26,6 +26,57 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Changed
+
+- Production now runs the MCP v2 SDK, so recon serves the 2026-07-28 protocol
+  revision. This is what makes recon reachable from a modern-only client: the
+  spec's own compatibility matrix says a modern client against a legacy server
+  fails, and `server/discover`, per-request `_meta`, `resultType`, and cache
+  hints all come from the SDK. A v2 server still answers the legacy
+  `initialize` handshake, so existing clients on 2025-11-25 keep working, and
+  recon's compatibility gate verifies that rather than trusting it. 1.28.1
+  remains the documented rollback pin and stays blocking in the matrix, so both
+  generations keep being exercised.
+- The optional remote adapter runs on both SDK generations instead of refusing
+  anything but v1. Two things had to move: the read-only allow-list read
+  `annotations.readOnlyHint`, which does not exist on v2, so every tool looked
+  non-read-only and the remote surface would have come up empty; and the
+  transport options moved from a mutable `settings` object to keyword arguments
+  on `streamable_http_app`. Both differences are resolved once in
+  `sdk_compat` rather than at the call sites.
+
+### Fixed
+
+- A Google CSE probe failure now stays an unavailable channel instead of
+  reporting no CSE configured, so a transport error cannot become a negative
+  observation.
+- A degraded email channel can no longer become a weak-email-security posture
+  claim. The score counts observed controls, so an unread channel dragged it to
+  zero and fired the weak-posture observation off a collection gap. The same
+  rule exists separately on the signal path and both are now pinned.
+- Parent-platform presence no longer becomes a child-product use claim through
+  a TXT verification token: the role-establishing record requirement is now
+  enforced for both the module and infrastructure insight paths.
+- A dormant provider slug alone no longer produces an email security score. A
+  tenant discovered through identity endpoints with no mail configuration
+  rendered "Email security 0/5", which reads as configured but badly secured
+  rather than not measured.
+- `chain_lookup` over MCP clamped depth with a literal `3` instead of the
+  shared `MAX_CHAIN_DEPTH`, so the two copies of that bound could drift apart
+  silently. Depth also scales the aggregate timeout.
+
+### Changed
+
+- The result-cache poison table asserted nothing. Every one of its twelve rows
+  wrote a payload for one domain into another domain's cache file, so
+  `cache_get` rejected on the domain binding before reaching the field under
+  test. Re-keying the rows made all twelve real and immediately caught a
+  range check that had never been exercised. A control row now fails if the
+  table goes vacuous again.
+- `recon fingerprints`, posture, chain-depth, and Google CSE invariants that
+  were enforced in code but named by no test are now pinned by tests verified
+  to fail when the guard is removed.
+
 ## [2.8.0] - 2026-07-31
 
 ### Tool Surface Changes

@@ -20,6 +20,7 @@ import pytest
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
+from recon_tool.mcp_client.sdk_compat import SDK_FAMILY
 from recon_tool.mcp_doctor import (
     REQUIRED_RESOURCES,
     REQUIRED_TOOLS,
@@ -38,6 +39,30 @@ pytest.importorskip("mcp")
 runner = CliRunner()
 
 
+# The doctor names its discovery phase after the protocol generation in use: the
+# modern SDK answers server/discover and carries a cache-metadata check beside
+# each cacheable call, while the legacy SDK negotiates through initialize and
+# has neither. Asserting the phase the active generation actually runs keeps
+# these tests meaningful on both pins instead of pinning one era.
+_MODERN_ERA = SDK_FAMILY != "v1"
+_DISCOVERY_CHECK = "server/discover" if _MODERN_ERA else "initialize handshake"
+
+
+def _expected_prefix_through_resources_list() -> list[str]:
+    """Check names emitted up to and including the resources/list phase."""
+    if _MODERN_ERA:
+        return [
+            "server spawn",
+            "server/discover",
+            "server/discover metadata",
+            "tools/list",
+            "tools/list metadata",
+            "resources/list",
+        ]
+    return ["server spawn", "initialize handshake", "tools/list", "resources/list"]
+
+
+
 class TestLiveHandshake:
     """End-to-end: actually spawn the server and walk the protocol.
 
@@ -54,7 +79,7 @@ class TestLiveHandshake:
         assert report.elapsed_seconds > 0
         names = {c.name for c in report.checks}
         assert "server spawn" in names
-        assert "initialize handshake" in names
+        assert _DISCOVERY_CHECK in names
         assert "tools/list" in names
         assert "required tools present" in names
         assert "resources/list" in names
@@ -109,12 +134,7 @@ class TestTimeoutPath:
 
         report = asyncio.run(_run_with_timeout())
 
-        assert [check.name for check in report.checks] == [
-            "server spawn",
-            "initialize handshake",
-            "tools/list",
-            "resources/list",
-        ]
+        assert [check.name for check in report.checks] == _expected_prefix_through_resources_list()
         assert report.checks[-1].status == "fail"
         assert "timed out" in report.checks[-1].detail
 
@@ -215,6 +235,8 @@ class TestExceptionPath:
 
         report = asyncio.run(_run_with_timeout())
 
+        # These names come from the synthetic `completed` stubs above plus the
+        # phase that failed, so they do not vary with the protocol generation.
         assert [check.name for check in report.checks] == [
             "server spawn",
             "initialize handshake",
@@ -296,7 +318,7 @@ class TestExceptionPath:
         report = run_doctor()
 
         assert [check.name for check in report.checks][-1] == "tools/list"
-        assert "initialize handshake" in {check.name for check in report.checks}
+        assert _DISCOVERY_CHECK in {check.name for check in report.checks}
         assert report.checks[-1].status == "fail"
         assert "synthetic live tools failure" in report.checks[-1].detail
 

@@ -14,6 +14,7 @@ import asyncio
 import json
 from pathlib import Path
 
+from recon_tool.mcp_client.sdk_compat import model_wire_dict
 from recon_tool.schema_contract import packaged_schema_text
 from recon_tool.server import mcp
 from recon_tool.surface_inventory import packaged_surface_inventory_text
@@ -49,7 +50,7 @@ def test_schema_resource_is_registered() -> None:
     resources = asyncio.run(mcp.list_resources())
     by_uri = {str(r.uri): r for r in resources}
     assert "recon://schema" in by_uri
-    assert by_uri["recon://schema"].mimeType == "application/json"
+    assert model_wire_dict(by_uri["recon://schema"]).get("mimeType") == "application/json"
 
 
 def test_bundled_surface_inventory_matches_docs() -> None:
@@ -70,4 +71,4 @@ def test_surface_inventory_resource_is_registered() -> None:
     resources = asyncio.run(mcp.list_resources())
     by_uri = {str(r.uri): r for r in resources}
     assert "recon://surface-inventory" in by_uri
-    assert by_uri["recon://surface-inventory"].mimeType == "application/json"
+    assert model_wire_dict(by_uri["recon://surface-inventory"]).get("mimeType") == "application/json"

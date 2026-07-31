@@ -14,6 +14,7 @@ import asyncio
 import re
 from pathlib import Path
 
+from recon_tool.mcp_client.sdk_compat import model_wire_dict
 from recon_tool.server import mcp
 
 _MCP_DOC = Path(__file__).resolve().parents[1] / "docs" / "mcp.md"
@@ -27,10 +28,14 @@ def _tool_hints() -> dict[str, bool]:
         hints: dict[str, bool] = {}
         for tool in await mcp.list_tools():
             ann = tool.annotations
-            if ann is None or ann.readOnlyHint is None:
+            # Read through the wire dictionary: the SDK generations expose this
+            # field under disjoint attribute names and only the protocol
+            # spelling is present on both.
+            hint = None if ann is None else model_wire_dict(ann).get("readOnlyHint")
+            if hint is None:
                 msg = f"{tool.name} must declare readOnlyHint explicitly"
                 raise AssertionError(msg)
-            hints[tool.name] = ann.readOnlyHint
+            hints[tool.name] = hint
         return hints
 
     return asyncio.run(_list())

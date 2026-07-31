@@ -77,14 +77,15 @@ breaking protocol release, and the official Python SDK moves on its own
 schedule regardless of recon. The compatibility work is bounded and remains
 blocking in CI without displacing track 1.
 
-**State:** the exact `1.28.1` and stable `2.0.0` matrix passed on 2026-07-28,
+**State:** adopted on 2026-07-31. Production serves 2026-07-28 on the v2 SDK,
 and CI keeps both pins blocking. The same registration and domain logic passes
-legacy initialization and final stateless `server/discover` behavior.
+legacy initialization and final stateless `server/discover` behavior, and the
+optional remote adapter now runs on either generation.
 
 **Closed when:** the stable matrix stays green; tool and resource order stays
 deterministic; declared output schemas and structured results conform on both
-generations; and the local stdio workflow remains intact. Production stays on
-`mcp>=1.28.1,<2` until a separate adoption review changes it. The named
+generations; and the local stdio workflow remains intact. Production runs
+`mcp>=2.0.0,<3`; `1.28.1` remains the documented rollback pin. The named
 optional remote-access need and its separate architecture review now live in
 [the cloud deployment plan](docs/optional-cloud-deployment-plan.md); that work
 does not imply production v2 adoption, OAuth, Roots, Sampling, Apps, or Tasks.

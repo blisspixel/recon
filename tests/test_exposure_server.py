@@ -12,8 +12,7 @@ import pytest
 
 pytest.importorskip("mcp")
 
-from mcp.server.fastmcp.exceptions import ToolError
-
+from recon_tool.mcp_client.sdk_compat import ToolError, model_wire_dict
 from recon_tool.models import (
     ConfidenceLevel,
     EvidenceRecord,
@@ -346,28 +345,28 @@ class TestToolAnnotations:
         tool = self._get_tool("assess_exposure")
         assert tool is not None
         assert tool.annotations is not None
-        assert tool.annotations.readOnlyHint is True
-        assert tool.annotations.destructiveHint is False
-        assert tool.annotations.idempotentHint is True
-        assert tool.annotations.openWorldHint is True
+        assert model_wire_dict(tool.annotations).get("readOnlyHint") is True
+        assert model_wire_dict(tool.annotations).get("destructiveHint") is False
+        assert model_wire_dict(tool.annotations).get("idempotentHint") is True
+        assert model_wire_dict(tool.annotations).get("openWorldHint") is True
 
     def test_find_hardening_gaps_annotations(self) -> None:
         tool = self._get_tool("find_hardening_gaps")
         assert tool is not None
         assert tool.annotations is not None
-        assert tool.annotations.readOnlyHint is True
-        assert tool.annotations.destructiveHint is False
-        assert tool.annotations.idempotentHint is True
-        assert tool.annotations.openWorldHint is True
+        assert model_wire_dict(tool.annotations).get("readOnlyHint") is True
+        assert model_wire_dict(tool.annotations).get("destructiveHint") is False
+        assert model_wire_dict(tool.annotations).get("idempotentHint") is True
+        assert model_wire_dict(tool.annotations).get("openWorldHint") is True
 
     def test_compare_postures_annotations(self) -> None:
         tool = self._get_tool("compare_postures")
         assert tool is not None
         assert tool.annotations is not None
-        assert tool.annotations.readOnlyHint is True
-        assert tool.annotations.destructiveHint is False
-        assert tool.annotations.idempotentHint is True
-        assert tool.annotations.openWorldHint is True
+        assert model_wire_dict(tool.annotations).get("readOnlyHint") is True
+        assert model_wire_dict(tool.annotations).get("destructiveHint") is False
+        assert model_wire_dict(tool.annotations).get("idempotentHint") is True
+        assert model_wire_dict(tool.annotations).get("openWorldHint") is True
 
 
 # ── Tool docstring tests ──────────────────────────────────────────────

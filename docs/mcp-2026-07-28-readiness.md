@@ -1,7 +1,7 @@
 # MCP 2026-07-28 Readiness Plan
 
-Status: final stable compatibility matrix complete; production adoption
-decision pending
+Status: adopted. Production serves MCP 2026-07-28 on the v2 SDK; 1.28.1
+remains the rollback pin and stays blocking in the compatibility matrix
 Review date: 2026-07-28
 
 The Model Context Protocol 2026-07-28 specification and official Python SDK
@@ -151,12 +151,18 @@ supported-version list for an unsupported version, `-32602` rather than the
 retired `-32002` for an unknown resource, and a `server/discover` payload
 carrying instructions and server identity. No SDK nonconformance was found.
 
-What blocks adoption. `build_remote_application` refuses any SDK family but v1
-(`src/recon_tool/remote_server.py`), so moving the pin does not degrade the
-optional remote adapter, it disables it. That adapter shipped in v2.7.0. The
-pin change is therefore gated on porting the adapter to the v2 HTTP application
-and settings API, or on an explicit decision to withdraw it. Nothing about the
-local stdio default is blocked.
+What blocked adoption, and how it was cleared. `build_remote_application`
+refused any SDK family but v1, so moving the pin would have disabled the
+optional remote adapter rather than degraded it. The adapter has since been
+ported and the guard removed. Two differences had to move into `sdk_compat`:
+the read-only allow-list read `annotations.readOnlyHint`, which does not exist
+as an attribute on v2, so every tool looked non-read-only and the remote
+surface would have come up empty; and the transport options moved from a
+mutable `settings` object to keyword arguments on `streamable_http_app`.
+
+Adoption landed on 2026-07-31. Both compatibility rows stay blocking: 24 of 24
+checks pass on 2.0.0, and 17 pass with 7 correctly reported not-applicable on
+1.28.1.
 
 Two defects the review found and fixed under the v1 pin, because both are
 era-independent:

@@ -353,6 +353,13 @@ class TestCacheDiskOperations:
         [
             ("services", "Mail"),
             ("domain_count", 1e999),
+            # Negative and out-of-range integers: the float case above is
+            # rejected on type alone, so nothing else exercised the range
+            # clauses that keep a poisoned count out of a rendered record.
+            ("domain_count", -1),
+            ("domain_count", 2**40),
+            ("spf_include_count", -5),
+            ("ct_subdomain_count", 2**63),
             ("auth_type", 123),
             ("confidence", "garbage"),
             ("evidence_confidence", "garbage"),
@@ -369,8 +376,26 @@ class TestCacheDiskOperations:
         cache_dir().mkdir(parents=True, exist_ok=True)
         payload = tenant_info_to_dict(_complete_info())
         payload[field] = value
-        (cache_dir() / "bad.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
-        assert cache_get("bad.invalid") is None
+        # Key the file to the payload's own queried_domain. Keying it to an
+        # unrelated name made cache_get reject on the domain binding, which is
+        # already covered by test_get_rejects_entry_bound_to_another_domain,
+        # before it ever reached the poisoned field, so every row of this table
+        # passed without exercising the value guard it names.
+        (cache_dir() / "alpha.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
+        assert cache_get("alpha.invalid") is None
+
+    def test_unpoisoned_control_payload_is_still_admitted(self) -> None:
+        """Keeps the poisoned-field table above from silently going vacuous again.
+
+        Every row of that table asserts a rejection, so any change that makes
+        the fixture unreadable for an unrelated reason turns the whole table
+        green while testing nothing. This control fails in that case.
+        """
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        payload = tenant_info_to_dict(_complete_info())
+        (cache_dir() / "alpha.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
+
+        assert cache_get("alpha.invalid") is not None
 
     def test_get_rejects_non_boolean_legacy_degradation_flag(self) -> None:
         cache_dir().mkdir(parents=True, exist_ok=True)

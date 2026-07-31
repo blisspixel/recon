@@ -21,8 +21,7 @@ import pytest
 
 pytest.importorskip("mcp")
 
-from mcp.server.fastmcp.exceptions import ToolError
-
+from recon_tool.mcp_client.sdk_compat import ToolError
 from recon_tool.models import (
     ConfidenceLevel,
     SourceResult,

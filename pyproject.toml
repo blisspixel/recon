@@ -30,16 +30,16 @@ dependencies = [
     "dnspython>=2.6",
     "pyyaml>=6.0",
     "defusedxml>=0.7",
-    # 1.28.1 is the first stable SDK covered by recon's complete compatibility
-    # matrix. Earlier releases do not all expose the FastMCP API recon uses.
-    #
-    # v2 is the line that speaks MCP 2026-07-28, and recon runs green on it
-    # under the compatibility gate, but adopting it is blocked on the optional
-    # remote adapter: build_remote_application refuses any family but v1, so the
-    # pin change would disable a shipped feature rather than degrade it. The
-    # remaining adoption steps and their evidence are in
-    # docs/mcp-2026-07-28-readiness.md.
-    "mcp>=1.28.1,<2",
+    # v2 is the SDK line that speaks MCP 2026-07-28. Serving that revision is
+    # what makes recon reachable from a modern-only client at all: the spec's
+    # compatibility matrix says modern client plus legacy server fails, and
+    # server/discover, per-request _meta, resultType, and cache hints are all
+    # SDK-provided. A v2 server still answers the legacy initialize handshake,
+    # so clients on 2025-11-25 keep working; recon's own gate verifies that
+    # rather than trusting it. 1.28.1 stays the documented rollback pin and
+    # stays blocking in the compatibility matrix, so both generations remain
+    # exercised. See docs/mcp-2026-07-28-readiness.md.
+    "mcp>=2.0.0,<3",
     "networkx>=3.0",
     # Public Suffix List for registrable-domain (apex) reduction, so a pasted
     # browser URL or sub-host (mail.example.co.uk) is analyzed at the apex
