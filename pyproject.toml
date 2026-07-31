@@ -32,7 +32,13 @@ dependencies = [
     "defusedxml>=0.7",
     # 1.28.1 is the first stable SDK covered by recon's complete compatibility
     # matrix. Earlier releases do not all expose the FastMCP API recon uses.
-    # Keep production on stable v1 while v2 remains a prerelease.
+    #
+    # v2 is the line that speaks MCP 2026-07-28, and recon runs green on it
+    # under the compatibility gate, but adopting it is blocked on the optional
+    # remote adapter: build_remote_application refuses any family but v1, so the
+    # pin change would disable a shipped feature rather than degrade it. The
+    # remaining adoption steps and their evidence are in
+    # docs/mcp-2026-07-28-readiness.md.
     "mcp>=1.28.1,<2",
     "networkx>=3.0",
     # Public Suffix List for registrable-domain (apex) reduction, so a pasted

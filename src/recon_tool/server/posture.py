@@ -18,7 +18,7 @@ from typing import Literal, cast
 
 from typing_extensions import TypedDict
 
-from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
+from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import EvidenceRecord, TenantInfo
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
@@ -288,11 +288,11 @@ def _keyword_group_matches(terms: frozenset[str], keywords: list[str]) -> bool:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def analyze_posture(
@@ -376,11 +376,11 @@ async def analyze_posture(
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def assess_exposure(domain: str) -> ExposureAssessmentResult:
@@ -429,11 +429,11 @@ async def assess_exposure(domain: str) -> ExposureAssessmentResult:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def find_hardening_gaps(domain: str) -> GapReportResult:
@@ -478,11 +478,11 @@ async def find_hardening_gaps(domain: str) -> GapReportResult:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonResult:
@@ -525,11 +525,11 @@ async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonRes
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentResult:
@@ -779,11 +779,11 @@ def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str]
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulationResult:

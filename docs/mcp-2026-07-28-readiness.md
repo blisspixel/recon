@@ -135,6 +135,53 @@ This is a compatibility result, not a production dependency change.
 
 This decision is recorded in [ADR-0009](adr/0009-mcp-2026-readiness.md).
 
+## Adoption Review, 2026-07-31
+
+A first adoption review ran the production pin at `mcp>=2.0.0,<3` end to end
+against the real specification rather than against release notes. Recording it
+here so the next review starts from evidence instead of repeating the work.
+
+What held up. The stdio server ran clean on v2: `recon mcp doctor` reported
+protocol `2026-07-28`, all 22 tools and 5 resources registered in the same
+deterministic order, and the compatibility gate passed every check on both
+1.28.1 and 2.0.0. Five wire-level probes were added to that gate so the modern
+requirements rest on recon's own evidence: dual-era `initialize` serving,
+`-32602` for a request missing the required `_meta` envelope, `-32022` with the
+supported-version list for an unsupported version, `-32602` rather than the
+retired `-32002` for an unknown resource, and a `server/discover` payload
+carrying instructions and server identity. No SDK nonconformance was found.
+
+What blocks adoption. `build_remote_application` refuses any SDK family but v1
+(`src/recon_tool/remote_server.py`), so moving the pin does not degrade the
+optional remote adapter, it disables it. That adapter shipped in v2.7.0. The
+pin change is therefore gated on porting the adapter to the v2 HTTP application
+and settings API, or on an explicit decision to withdraw it. Nothing about the
+local stdio default is blocked.
+
+Two defects the review found and fixed under the v1 pin, because both are
+era-independent:
+
+- The doctor read server identity from a top-level `serverInfo` field. This
+  revision moves it into `_meta` under `io.modelcontextprotocol/serverInfo`, so
+  the doctor printed a bare `?` for a server that was identifying itself
+  correctly. It now accepts both locations.
+- recon set no application version, so a v2 server advertised
+  `version: ""` and a client could not tell which recon it was connected to.
+
+One trap worth recording for whoever does the migration. The two generations
+spell tool annotations differently: v1 declares `readOnlyHint` as the field,
+while v2 declares `read_only_hint` with `readOnlyHint` as an alias. Passing the
+snake_case spelling to v1 does not raise. Pydantic stores it as an unrelated
+extra attribute and leaves the real hint unset, so a mechanical rename would
+have silently dropped every tool annotation on the rollback pin. Only the
+camelCase spelling is read by both, and it is now produced in one place by
+`sdk_compat.tool_annotations` instead of at each of the 22 registrations.
+
+Cache hints stay at `ttlMs=0`, which is conformant. `reload_data` and ephemeral
+injection can change what the cacheable methods return at any point in a
+process's life, so a positive TTL would let a client serve a catalog recon knows
+is stale. Raising it is a measured optimization, not a default.
+
 ## Implementation Plan
 
 ### Phase 0: Stable-v1 Safety Rails
