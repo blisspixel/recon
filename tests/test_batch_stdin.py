@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import io
 import json
+import sys
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -17,6 +19,7 @@ from recon_tool import cli, cli_batch
 from recon_tool.cli import app
 from recon_tool.cli_batch import _BatchInputError
 from recon_tool.cli_batch import read_batch_domains as _read_batch_domains
+from recon_tool.formatter import get_console
 from recon_tool.models import ConfidenceLevel, SourceResult, TenantInfo
 
 runner = CliRunner()
@@ -115,3 +118,40 @@ def test_batch_stdin_overlong_line_is_validation_error(monkeypatch: pytest.Monke
     result = runner.invoke(app, ["batch", "-"], input="averylongdomain.example\n")
     assert result.exit_code == cli.EXIT_VALIDATION
     assert "line exceeds maximum length" in result.output
+
+
+def test_batch_stdin_decodes_utf8_under_a_non_utf8_console(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Piped input must decode as UTF-8 even when the console codepage is not.
+
+    On Windows sys.stdin decodes with the ANSI codepage, so UTF-8 bytes piped
+    into `recon batch -` mojibaked into a different registrable domain and were
+    looked up with exit 0. The file path always decoded UTF-8, so the two input
+    routes disagreed on the same bytes.
+    """
+    raw = "café.invalid\nbeta.invalid\n".encode()
+    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(raw), encoding="cp1252"))
+
+    domains = cli_batch._batch_load_domains("-", get_console(), announce_dupes=False)
+
+    assert domains == ["café.invalid", "beta.invalid"]
+
+
+def test_batch_stdin_strips_a_leading_byte_order_mark(monkeypatch: pytest.MonkeyPatch) -> None:
+    raw = "﻿alpha.invalid\n".encode()
+    monkeypatch.setattr(sys, "stdin", io.TextIOWrapper(io.BytesIO(raw), encoding="utf-8"))
+
+    assert cli_batch._batch_load_domains("-", get_console(), announce_dupes=False) == ["alpha.invalid"]
+
+
+def test_batch_file_strips_a_leading_byte_order_mark(tmp_path: Path) -> None:
+    """A list saved by Notepad or a PowerShell redirect starts with a BOM.
+
+    Without utf-8-sig the BOM stayed glued to the first label, so the first
+    domain in the file was reported as malformed.
+    """
+    listing = tmp_path / "domains.txt"
+    listing.write_bytes("﻿alpha.invalid\nbeta.invalid\n".encode())
+
+    domains = cli_batch._batch_load_domains(str(listing), get_console(), announce_dupes=False)
+
+    assert domains == ["alpha.invalid", "beta.invalid"]

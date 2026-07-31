@@ -720,7 +720,7 @@ cross-platform release contract. Neither exists in the current product.
 
 ### Turn catalog quality into the detection-improvement loop
 
-The catalog currently holds 856 entries across 679 unique slugs, with 1,064
+The catalog currently holds 860 entries across 683 unique slugs, with 1,070
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);

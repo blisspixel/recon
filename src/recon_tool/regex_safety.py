@@ -109,8 +109,32 @@ def _strip_escapes_and_classes(pattern: str) -> str:
     return "".join(output)
 
 
+def _is_quantifier_at(cleaned: str, index: int) -> bool:
+    """Whether the character at ``index`` repeats the atom before it.
+
+    ``?`` carries three meanings and only one of them repeats: it makes the
+    preceding atom optional in ``a?``, but it opens a group construct in
+    ``(?:`` and ``(?=``, and it makes a preceding quantifier lazy in ``a+?``.
+    Distinguishing them is what lets the nested-quantifier scan below count
+    ``?`` at all without rejecting every non-capturing group.
+    """
+    char = cleaned[index]
+    if char in "*+{":
+        return True
+    if char != "?":
+        return False
+    previous = cleaned[index - 1] if index else ""
+    return previous not in {"(", "*", "+", "?", "}"}
+
+
 def _has_nested_quantifier(pattern: str) -> bool:
-    """Return whether a quantified group contains another quantifier."""
+    """Return whether a quantified group contains another quantifier.
+
+    ``?`` counts as an inner quantifier. Omitting it admitted ``(a?){50}a{50}$``,
+    which backtracks catastrophically: 49 subject characters were enough to run
+    past a minute, far below the pattern-length cap that was assumed to bound
+    whatever this heuristic misses.
+    """
     cleaned = _strip_escapes_and_classes(pattern)
     stack: list[int] = []
     for index, char in enumerate(cleaned):
@@ -119,7 +143,7 @@ def _has_nested_quantifier(pattern: str) -> bool:
         elif char == ")" and stack:
             opening = stack.pop()
             following = cleaned[index + 1] if index + 1 < len(cleaned) else ""
-            if following in "+*{" and any(mark in cleaned[opening + 1 : index] for mark in "+*{"):
+            if following in "+*{" and any(_is_quantifier_at(cleaned, inner) for inner in range(opening + 1, index)):
                 return True
     return False
 
@@ -127,15 +151,7 @@ def _has_nested_quantifier(pattern: str) -> bool:
 def _repetition_operator_count(pattern: str) -> int:
     """Count repetition operators outside escapes and character classes."""
     cleaned = _strip_escapes_and_classes(pattern)
-    count = 0
-    for index, char in enumerate(cleaned):
-        if char in "*+{":
-            count += 1
-        elif char == "?":
-            previous = cleaned[index - 1] if index else ""
-            if previous not in {"(", "*", "+", "?", "}"}:
-                count += 1
-    return count
+    return sum(1 for index in range(len(cleaned)) if _is_quantifier_at(cleaned, index))
 
 
 def validate_regex(pattern: str, source: str) -> bool:

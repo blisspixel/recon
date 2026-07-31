@@ -9,6 +9,8 @@ from __future__ import annotations
 
 import http.client
 import io
+import sys
+from pathlib import Path
 
 import pytest
 from typer.testing import CliRunner
@@ -17,6 +19,16 @@ from recon_tool import updater
 from recon_tool.cli import app
 
 runner = CliRunner()
+
+
+def _resolvable_launcher(name: str) -> str:
+    """A launcher that resolves outside the working directory."""
+    return f"/opt/tools/{name}"
+
+
+def _missing_launcher(name: str) -> str | None:
+    """No launcher on PATH at all."""
+    return None
 
 
 class TestCompareVersions:
@@ -59,9 +71,17 @@ class TestCompareVersions:
 
 
 class TestUpgradeCommand:
-    def test_pipx_uv_pip_argvs(self) -> None:
-        assert updater.upgrade_command(updater.PIPX) == ["pipx", "upgrade", "recon-tool"]
-        assert updater.upgrade_command(updater.UV) == ["uv", "tool", "upgrade", "recon-tool"]
+    def test_pipx_uv_pip_argvs(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(updater.shutil, "which", _resolvable_launcher)
+
+        pipx = updater.upgrade_command(updater.PIPX)
+        uv = updater.upgrade_command(updater.UV)
+        assert pipx is not None
+        assert uv is not None
+        assert pipx[1:] == ["upgrade", "recon-tool"]
+        assert uv[1:] == ["tool", "upgrade", "recon-tool"]
+        assert Path(pipx[0]).name.startswith("pipx")
+        assert Path(uv[0]).name.startswith("uv")
         pip = updater.upgrade_command(updater.PIP)
         assert pip is not None
         assert pip[-3:] == ["install", "-U", "recon-tool"]
@@ -74,6 +94,35 @@ class TestUpgradeCommand:
         assert "Homebrew install is retired" in updater.manual_hint(updater.HOMEBREW)
         assert "git" in updater.manual_hint(updater.EDITABLE)
         assert updater.manual_hint(updater.PIP) == "pip install -U recon-tool"
+        assert updater.manual_hint(updater.PIPX) == "pipx upgrade recon-tool"
+        assert updater.manual_hint(updater.UV) == "uv tool upgrade recon-tool"
+
+    def test_launcher_planted_in_the_working_directory_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        """A launcher found in the current directory must never be executed.
+
+        Windows resolves a bare program name against the current directory
+        before PATH, and shutil.which searches it first, so `recon update` run
+        from an attacker-writable directory would have spawned a planted uv.exe
+        or pipx.exe as the operator. Refusing degrades to the manual hint.
+        """
+        planted = tmp_path / ("uv.exe" if sys.platform == "win32" else "uv")
+        planted.write_text("", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+        def _planted(name: str) -> str:
+            return str(tmp_path / name)
+
+        monkeypatch.setattr(updater.shutil, "which", _planted)
+
+        assert updater.upgrade_command(updater.UV) is None
+        assert updater.upgrade_command(updater.PIPX) is None
+
+    def test_missing_launcher_falls_back_to_the_manual_hint(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(updater.shutil, "which", _missing_launcher)
+
+        assert updater.upgrade_command(updater.UV) is None
+        assert updater.upgrade_command(updater.PIPX) is None
 
 
 class TestDetectInstallMethod:
@@ -119,7 +168,7 @@ class TestFetchLatestVersion:
                 return None
 
             def read(self, _size: int = -1, /) -> bytes:
-                raise http.client.IncompleteRead(b'{}', 10)
+                raise http.client.IncompleteRead(b"{}", 10)
 
         def _response(*args: object, **kwargs: object) -> TruncatedResponse:
             return TruncatedResponse()
@@ -132,7 +181,7 @@ class TestFetchLatestVersion:
         "body",
         [
             b"[]",
-            b'{}',
+            b"{}",
             b'{"info": null}',
             b'{"info": {"version": null}}',
             b'{"info": {"version": []}}',
@@ -202,11 +251,29 @@ class TestUpdateCommand:
     def test_check_reports_available_without_installing(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater, "fetch_latest_version", lambda: "999.0.0")
         monkeypatch.setattr(updater, "detect_install_method", lambda: updater.PIPX)
+        # `recon update` only advertises self-upgrade when the launcher actually
+        # resolves outside the working directory, so the check has to state that
+        # precondition rather than depend on what the test machine has on PATH.
+        monkeypatch.setattr(updater.shutil, "which", _resolvable_launcher)
+        result = runner.invoke(app, ["update", "--check"])
+        # The resolved launcher is an absolute path, so the rendered line can
+        # wrap. Compare on collapsed whitespace rather than the raw output.
+        rendered = " ".join(result.output.split())
+        assert result.exit_code == 0
+        assert "999.0.0" in rendered
+        assert "pipx upgrade recon-tool" in rendered
+        assert "or just: recon update" in rendered
+
+    def test_check_does_not_advertise_self_upgrade_without_a_trusted_launcher(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        monkeypatch.setattr(updater, "fetch_latest_version", lambda: "999.0.0")
+        monkeypatch.setattr(updater, "detect_install_method", lambda: updater.PIPX)
+        monkeypatch.setattr(updater.shutil, "which", _missing_launcher)
         result = runner.invoke(app, ["update", "--check"])
         assert result.exit_code == 0
-        assert "999.0.0" in result.output
         assert "pipx upgrade recon-tool" in result.output
-        assert "or just: recon update" in result.output
+        assert "or just: recon update" not in result.output
 
     def test_check_manual_method_does_not_claim_self_upgrade(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater, "fetch_latest_version", lambda: "999.0.0")

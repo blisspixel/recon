@@ -43,6 +43,15 @@ __all__ = [
 MAX_HYPEREDGES = 200
 MAX_MEMBERS_PER_HYPEREDGE = 100
 
+# Per-builder cap on candidate edges, enforced during the scan rather than
+# after it. The shared-slugs pair scan is O(n^2) in batch size, and with the
+# cap applied only post-hoc a 4000-domain batch materialised 3.5M candidate
+# edges (~930 MiB) before MAX_HYPEREDGES truncation ever ran; the documented
+# 10,000-domain batch limit extrapolates to an out-of-memory. Ten times the
+# output cap keeps the final (edge_type, key, members) sort choosing from a
+# wide candidate pool while holding peak memory flat.
+_MAX_CANDIDATE_HYPEREDGES = MAX_HYPEREDGES * 10
+
 # Minimum overlap to fire a ``shared_slugs`` hyperedge between a pair
 # of domains. Bumped from 2 → 3 after the validation corpus showed
 # pair-of-2 overlap firing on trivial coincidences (every enterprise
@@ -97,7 +106,11 @@ def _top_issuer_hyperedges(
         top = info.cert_summary.top_issuers[0]
         buckets[top].append(domain)
     out: list[Hyperedge] = []
-    for issuer, members in buckets.items():
+    # Sorted key order means the candidate cap keeps exactly the edges the
+    # final (edge_type, key, members) output sort would have kept.
+    for issuer, members in sorted(buckets.items()):
+        if len(out) >= _MAX_CANDIDATE_HYPEREDGES:
+            break
         if len(members) < 2:
             continue
         members_sorted = tuple(sorted(set(members)))[:MAX_MEMBERS_PER_HYPEREDGE]
@@ -118,7 +131,11 @@ def _parent_vendor_hyperedges(
             if vendor:
                 buckets[vendor].add(domain)
     out: list[Hyperedge] = []
-    for vendor, members in buckets.items():
+    # Sorted key order means the candidate cap keeps exactly the edges the
+    # final (edge_type, key, members) output sort would have kept.
+    for vendor, members in sorted(buckets.items()):
+        if len(out) >= _MAX_CANDIDATE_HYPEREDGES:
+            break
         if len(members) < 2:
             continue
         members_sorted = tuple(sorted(members))[:MAX_MEMBERS_PER_HYPEREDGE]
@@ -172,6 +189,14 @@ def _shared_slugs_hyperedges(
     domains_sorted = sorted(discriminating)
     seen_keys: set[tuple[str, ...]] = set()
     for a, b in combinations(domains_sorted, 2):
+        # The pair scan is quadratic in batch size, so the candidate cap must
+        # stop the scan itself, not just trim its result. Slug-intersection
+        # keys are only known per pair, so unlike the bucketed builders the
+        # cap here keeps the first qualifying pairs in sorted-domain order
+        # (deterministic) rather than the globally smallest keys; the output
+        # sort still ranks within the collected pool.
+        if len(out) >= _MAX_CANDIDATE_HYPEREDGES:
+            break
         overlap = discriminating[a] & discriminating[b]
         if len(overlap) < _MIN_SLUG_OVERLAP:
             continue

@@ -406,23 +406,20 @@ class TestMCPErrorPaths:
             asyncio.run(get_posteriors("not a valid domain!"))
 
     def test_explain_dag_invalid_domain(self) -> None:
+        from mcp.server.fastmcp.exceptions import ToolError
+
         from recon_tool.server import explain_dag
 
-        async def main():
-            return await explain_dag("not.a.valid_domain_with_underscores")
-
-        result = asyncio.run(main())
-        assert result.startswith("Error:")
+        with pytest.raises(ToolError, match="Invalid domain format"):
+            asyncio.run(explain_dag("not.a.valid_domain_with_underscores"))
 
     def test_explain_dag_invalid_format(self) -> None:
+        from mcp.server.fastmcp.exceptions import ToolError
+
         from recon_tool.server import explain_dag
 
-        async def main():
-            return await explain_dag("alpha.invalid", output_format="png")
-
-        result = asyncio.run(main())
-        assert result.startswith("Error:")
-        assert "output_format" in result
+        with pytest.raises(ToolError, match="output_format"):
+            asyncio.run(explain_dag("alpha.invalid", output_format="png"))
 
 
 # ── Build a tiny network in-memory for inference smoke ────────────────

@@ -250,3 +250,20 @@ class TestBatchInputBounds:
 
         with pytest.raises(Exception, match="exceeds maximum length"):
             batch.read_batch_domains(io.StringIO(self._line(1025, newline=True)))
+
+
+def test_chain_depth_outside_the_documented_range_is_rejected() -> None:
+    """`--depth` is documented as 1 to 3 and the engine clamps to that.
+
+    Out-of-range values used to be accepted and silently clamped, so
+    `--depth 99` exited 0 having run a traversal the operator did not request
+    and `--depth 0` ran depth 1.
+    """
+    for depth in (0, 4, 99, -1):
+        assert (
+            _options(operation=LookupOperationOptions(chain_mode=True, chain_depth=depth)).validation_error()
+            == "--depth must be between 1 and 3"
+        )
+
+    for depth in (1, 2, 3):
+        assert _options(operation=LookupOperationOptions(chain_mode=True, chain_depth=depth)).validation_error() is None

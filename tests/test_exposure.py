@@ -1245,3 +1245,49 @@ class TestScoreCeilingSurvivesIdentityDegradation:
 
         assert degraded.posture_score < undegraded.posture_score
         assert degraded.unconfirmable_absent_points > undegraded.unconfirmable_absent_points
+
+
+class TestMtaStsModeNoneIsNotInEffect:
+    """RFC 8461 defines mode "none" as "policy not in effect".
+
+    Regression coverage: a fetched none-mode policy was credited as a present
+    MTA-STS control with no gap raised, so a domain that explicitly disabled
+    MTA-STS looked better than one that never deployed it.
+    """
+
+    @staticmethod
+    def _info() -> TenantInfo:
+        return TenantInfo(
+            tenant_id=None,
+            display_name="Test Corp",
+            default_domain="test.onmicrosoft.com",
+            queried_domain="test.invalid",
+            confidence=ConfidenceLevel.HIGH,
+            sources=("test_source",),
+            services=(SVC_MTA_STS,),
+            slugs=("mta-sts",),
+            mta_sts_mode="none",
+            evidence=(
+                EvidenceRecord("MTA_STS", "v=STSv1; id=1", SVC_MTA_STS, "mta-sts"),
+                EvidenceRecord("MTA_STS_POLICY", "mode: none", SVC_MTA_STS, "mta-sts"),
+            ),
+        )
+
+    def test_control_is_not_present_and_detail_stays_precise(self) -> None:
+        assessment = assess_exposure_from_info(self._info())
+        control = next(c for c in assessment.hardening_status.controls if c.name == "MTA-STS")
+
+        assert control.present is False
+        # "Declared but disabled" is different from "absent": the record was
+        # observed, so the detail must say so rather than erase it.
+        assert control.detail == "policy published with mode none (not in effect)"
+        assert control.evidence
+        assert assessment.email_posture.mta_sts_mode == "none"
+        assert assessment.email_posture.email_security_score == 0
+
+    def test_mode_none_raises_a_gap_distinct_from_absence(self) -> None:
+        report = find_gaps_from_info(self._info())
+        observations = [gap.observation for gap in report.gaps]
+
+        assert any("mode none" in observation for observation in observations)
+        assert not any("No MTA-STS policy detected" in observation for observation in observations)

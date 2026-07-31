@@ -62,6 +62,12 @@ class ObservableEmailState:
             services.difference_update({SVC_SPF_STRICT, SVC_SPF_SOFTFAIL})
         if not mta_sts_available:
             services.discard(SVC_MTA_STS)
+        # RFC 8461 mode "none" means the policy is not in effect, so the
+        # fetched mode revokes the credit the TXT record earned. The evidence
+        # projection already withholds it when the policy record is retained;
+        # this guard keeps the scalar authoritative when they disagree.
+        if mta_sts_available and info.mta_sts_mode == "none":
+            services.discard(SVC_MTA_STS)
         if not bimi_available:
             services.discard(SVC_BIMI)
         effective_policy = effective_dmarc_policy(

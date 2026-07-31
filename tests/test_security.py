@@ -61,6 +61,23 @@ class TestReDoSPrevention:
         assert _validate_regex("((a+)b)+", "test") is False
         assert _validate_regex("(a+b+)+", "test") is False
 
+    def test_optional_inner_quantifier_rejected(self):
+        # `?` is a repetition operator too. Counting only + * { admitted
+        # (a?){50}a{50}$, where 49 subject characters already run for over a
+        # minute, so the pattern-length cap did not bound this one.
+        assert _validate_regex("(a?){50}a{50}$", "test") is False
+        assert _validate_regex("(ab?)+", "test") is False
+        assert _validate_regex("((a?))+", "test") is False
+
+    def test_group_constructs_are_not_read_as_inner_quantifiers(self):
+        # The `?` in (?:, (?=, (?! and (?i) opens a construct rather than
+        # repeating an atom, so counting `?` must not reject ordinary
+        # non-capturing groups.
+        assert _validate_regex("(?:abc)+", "test") is True
+        assert _validate_regex("(?:foo|bar)+", "test") is True
+        assert _validate_regex("(?i)^ok-verification=", "test") is True
+        assert _validate_regex("(?=x)abc", "test") is True
+
     def test_nested_group_without_inner_quantifier_accepted(self):
         # An inner group with no quantifier inside the outer-quantified group is
         # linear and stays allowed (no false positive from the scan).

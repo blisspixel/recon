@@ -2,11 +2,16 @@
 
 import pytest
 
-from recon_tool.chain import MAX_CHAIN_DOMAINS, chain_resolve
-from recon_tool.models import ChainReport, ConfidenceLevel, TenantInfo
+from recon_tool.chain import MAX_CHAIN_DOMAINS, _correlate_site_verification, chain_resolve
+from recon_tool.models import ChainReport, ChainResult, ConfidenceLevel, TenantInfo
 
 
-def _make_info(domain: str, related: tuple[str, ...] = ()) -> TenantInfo:
+def _make_info(
+    domain: str,
+    related: tuple[str, ...] = (),
+    insights: tuple[str, ...] = (),
+    tokens: tuple[str, ...] = (),
+) -> TenantInfo:
     return TenantInfo(
         tenant_id=None,
         display_name=domain,
@@ -15,6 +20,8 @@ def _make_info(domain: str, related: tuple[str, ...] = ()) -> TenantInfo:
         confidence=ConfidenceLevel.MEDIUM,
         services=("svc",),
         related_domains=related,
+        insights=insights,
+        site_verification_tokens=tokens,
     )
 
 
@@ -107,3 +114,55 @@ class TestChainResolve:
         domains = [r.domain for r in report.results]
         assert "good.invalid" in domains
         assert "bad.invalid" not in domains
+
+
+class TestSiteVerificationCorrelation:
+    def test_correlation_preserves_existing_insight_order(self):
+        """merger.py inserts conflict warnings at index 0 on purpose.
+
+        Regression coverage: the correlation pass re-sorted the whole insight
+        list, alphabetizing the deliberately-first conflict warning away from
+        the front on any domain sharing a verification token.
+        """
+        existing = (
+            "Conflicting tenant IDs detected: a, b",
+            "Zebra note",
+            "Alpha note",
+        )
+        results = [
+            ChainResult(
+                domain="a.invalid",
+                info=_make_info("a.invalid", insights=existing, tokens=("token-1",)),
+                chain_depth=0,
+            ),
+            ChainResult(
+                domain="b.invalid",
+                info=_make_info("b.invalid", tokens=("token-1",)),
+                chain_depth=1,
+            ),
+        ]
+
+        updated = _correlate_site_verification(results)
+        merged = updated[0].info.insights
+
+        assert merged[:3] == existing
+        assert merged[3:] == ("Shares google-site-verification token with b.invalid",)
+
+    def test_correlation_does_not_duplicate_existing_insight(self):
+        insight = "Shares google-site-verification token with b.invalid"
+        results = [
+            ChainResult(
+                domain="a.invalid",
+                info=_make_info("a.invalid", insights=(insight,), tokens=("token-1",)),
+                chain_depth=0,
+            ),
+            ChainResult(
+                domain="b.invalid",
+                info=_make_info("b.invalid", tokens=("token-1",)),
+                chain_depth=1,
+            ),
+        ]
+
+        updated = _correlate_site_verification(results)
+
+        assert updated[0].info.insights == (insight,)

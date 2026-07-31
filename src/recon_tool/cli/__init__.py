@@ -814,7 +814,11 @@ def update(
     err.print(f"==> upgrading via {method}: {' '.join(cmd)}")
     try:
         # cmd is a fixed argv from updater.upgrade_command's install-method
-        # table (pipx/uv/pip), never user input.
+        # table (pipx/uv/pip), never user input, and its program is an absolute
+        # path that upgrade_command already refused to take from the current
+        # directory. Both halves matter: the arguments are not attacker-facing,
+        # and the executable is not resolved by a search that includes the
+        # working directory.
         rc = subprocess.run(cmd, check=False).returncode  # noqa: S603
     except OSError as exc:
         render_error(f"Could not start the upgrade ({exc}). Run manually: {updater.manual_hint(method)}")

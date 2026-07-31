@@ -26,6 +26,110 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Security
+
+- `recon update` now resolves `uv` and `pipx` to an absolute path and refuses a
+  launcher found in the current working directory. Windows resolves a bare
+  program name against the current directory before `PATH`, so running
+  `recon update` from a directory an attacker could write to executed a planted
+  `uv.exe` or `pipx.exe` as the operator. An unresolvable launcher now degrades
+  to the printed manual command, and the manual hint is correct per install
+  method instead of always suggesting pip.
+- The regex safety heuristic now counts `?` as an inner repetition operator, so
+  a nested-quantifier pattern such as `(a?){50}a{50}$` is rejected from operator
+  fingerprint and signal files. Counting only `+`, `*`, and `{` admitted it, and
+  49 subject characters were enough to backtrack past a minute, far below the
+  pattern-length cap that was assumed to bound whatever the heuristic misses.
+  The `?` that opens `(?:`, `(?=`, and `(?i)` is still not a quantifier, so
+  ordinary non-capturing groups stay accepted; all 1,008 catalog patterns remain
+  valid. `docs/security.md` no longer claims the length caps bound this class.
+- The release workflow pins `pip-audit`, the last unpinned software install
+  across the workflows, and the CI text-hygiene step passes event fields through
+  `env` rather than expanding them into the script body.
+
+### Fixed
+
+- GetUserRealm answers HTTP 200 with `NameSpaceType: Unknown` for any domain
+  with no Azure AD tenant. That successful negative answer was accepted as an
+  auth type, so nearly any domain reported a Microsoft 365 detection and
+  persisted an `auth_type` outside the `Federated`/`Managed`/null contract that
+  `recon delta` then rejected. Only tenant-positive values are accepted now.
+- `recon batch -` decoded piped input with the platform default codepage. On
+  Windows a UTF-8 domain list mojibaked into a different registrable domain and
+  was looked up with exit 0. Both the stdin and file paths now decode UTF-8 and
+  strip a leading byte order mark.
+- `--exposure` and `--gaps` wrote CT-degraded (`--no-ct`) and probe-derived
+  (`--direct-probes`) results into the shared default-scope result cache, so a
+  later full lookup could be answered from a degraded entry. They now apply the
+  same scope rule as a standard lookup.
+- `recon cache clear <domain> --all --force` cleared the entire cache: the
+  `--all` branch ran first and ignored the domain. The pair is now refused, as
+  `cache clear` with no arguments now reports to stderr like its siblings.
+- `--include-unclassified` reported an empty catalog on any cache hit. The
+  per-record-type summaries and unclassified observations are now cached
+  alongside the chains, so a cache hit no longer reads as "nothing
+  unclassified" rather than "not measured".
+- `recon batch --md` silently discarded invalid domains: no stdout, no stderr,
+  exit 0. Every output mode now accounts for every input row.
+- `recon delta` could never report `changed_email_security_score`. The score is
+  derived rather than stored, so reading it from the cache export always found
+  nothing; it is now derived from the same projected snapshot the other
+  comparisons use.
+- `recon delta` reported removals a prior run never observed when that run's
+  identity source had failed. Identity markers are source names rather than
+  observation channels, so they escaped the masking gate that channel markers
+  hit.
+- `recon fingerprints new --output <bad path>` reached the crash handler and
+  exited 4 with a crash log. A bad output path is operator input and now exits 2
+  with a clear message, creating missing parent directories like
+  `discover --output` already did.
+- `recon doctor --mcp` and `recon mcp install` printed diagnostics on stdout
+  beside the JSON, so the config could not be piped. Diagnostics now go to
+  stderr.
+- `lookup_tenant`, `explain_dag`, and `chain_lookup` returned error-shaped
+  success payloads on invalid input instead of raising a protocol error, so a
+  connected model could not self-correct through the protocol's own error
+  channel. They now match the contract their sibling tools already followed.
+- `--plain` silently ignored `--explain` and `--posture`, which made the screen
+  reader and grep path the only output mode that could not show evidence.
+- `--depth` outside the documented range of 1 to 3 was silently clamped, so
+  `--depth 99` exited 0 having run a traversal that was never requested.
+- `recon batch --include-ecosystem` built every shared-slug pair before
+  truncating to the output cap, which is quadratic in domains: 4,000 domains
+  produced 3.5 million intermediate edges and 929 MiB. The candidate scan is now
+  bounded, and the bucketed builders iterate in sorted order so their selection
+  is unchanged.
+- `--chain` alphabetized each domain's insight list, demoting the deliberately
+  first "Conflicting tenant IDs detected" warning. Correlation lines are now
+  appended instead.
+
+### Changed
+
+- An MTA-STS policy fetched with RFC 8461 `mode: none` no longer counts as a
+  present control. That mode means the policy is not in effect, so a domain that
+  published and then disabled MTA-STS scored the same as one enforcing it and
+  raised no hardening gap, while `mode: testing` correctly did. It now scores 0,
+  reports `present=False` with a detail saying the policy is not in effect, and
+  raises a medium-severity gap. `mta_sts_mode` still reports `none`, so the
+  observation stays visible. This can lower `email_security_score` by one for
+  affected domains, including across a delta.
+- The README is rebuilt as a front door rather than a specification: install and
+  first lookup, what recon is good for, the command set, the JSON and MCP
+  contracts, limitations, and where to read more. Cache bounds, catalog search
+  semantics, batch scheduling, summary schema versions, packaging internals, and
+  the catalog-round detail now live only in the docs that own them, which also
+  removes a duplicated network-disclosure paragraph and a third copy of the
+  roadmap. A security-reporting section and a link to the stability policy were
+  missing entirely and are now present.
+- `docs/README.md` is grouped by audience, so a visitor sees the using and
+  integrating sections before maintainer planning and research documents.
+- Three documents each claimed a different, stale current catalog size. They now
+  agree with the generated catalog at 860 entries, 683 unique slugs, and 1,070
+  detections, and a test keeps the prose tied to the artifact.
+- `cache.py` and `exposure.py` were split along existing seams into
+  `cache_catalog.py`, `exposure_gaps.py`, and `exposure_copy.py`, lowering the
+  `exposure.py` size ratchet from 858 to 637 lines.
+
 ## [2.7.0] - 2026-07-29
 
 ### Tool Surface Changes
