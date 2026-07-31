@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-07-31
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Fixed
 
 - The MCP doctor read server identity from a top-level `serverInfo` field. The
