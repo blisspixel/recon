@@ -118,9 +118,12 @@ For introspection / hypothesis work:
 
 - Passive only. No active scanning, no credentialed access. Network-facing
   lookup tools have no target-side mutation, but may update internal cache,
-  rate-limit, and diagnostic state. The ephemeral fingerprint tools only mutate
-  in-memory session state for the current server process; they do not write to
-  disk or trigger new network calls on their own. The server has a 120 s TTL
+  rate-limit, and diagnostic state. The ephemeral fingerprint tools mutate
+  in-memory state that is scoped to the whole server process, not to one
+  conversation: every request reaching this process sees every injected
+  fingerprint. Treat injection as changing server configuration and clear it
+  when done. They do not write to disk or trigger new network calls on their
+  own. The server has a 120 s TTL
   cache and per-domain rate limiting; repeated `lookup_tenant` calls for the
   same domain are cheap.
 - Output is hedged. Confidence levels: High (3+ corroborating sources),

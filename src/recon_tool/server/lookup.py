@@ -28,7 +28,7 @@ from recon_tool.formatter.classify import (
     provider_line,
 )
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
-from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
+from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
@@ -120,11 +120,11 @@ def _lookup_tenant_text(info: TenantInfo) -> str:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def lookup_tenant(

@@ -143,6 +143,28 @@ def _indent(text: str, prefix: str) -> str:
     return "\n".join(prefix + line for line in text.splitlines())
 
 
+def _discovered_server_label(discovery_wire: dict[str, Any]) -> str:
+    """Return the server name a `server/discover` result reports.
+
+    MCP 2026-07-28 moved server identity out of a top-level `serverInfo` field
+    and into `_meta` under the reverse-DNS key below. Reading only the old
+    location made the doctor print a bare `?` for a server that was in fact
+    identifying itself correctly. Both spellings are accepted so the check keeps
+    working across the two protocol eras.
+    """
+    candidates: list[Any] = []
+    meta = discovery_wire.get("_meta")
+    if isinstance(meta, dict):
+        candidates.append(meta.get("io.modelcontextprotocol/serverInfo"))
+    candidates.append(discovery_wire.get("serverInfo"))
+    for candidate in candidates:
+        if isinstance(candidate, dict):
+            name = candidate.get("name")
+            if isinstance(name, str) and name:
+                return name
+    return "?"
+
+
 async def _discover_session(
     session: Any,
     checks: list[DoctorCheck],
@@ -154,8 +176,7 @@ async def _discover_session(
         with _protocol_phase("server/discover", checks, progress):
             discovery_result = await cast(Callable[[], Awaitable[Any]], discover)()
             discovery_wire = model_wire_dict(discovery_result)
-            server_info = discovery_wire.get("serverInfo", {})
-            server_name = server_info.get("name", "?") if isinstance(server_info, dict) else "?"
+            server_name = _discovered_server_label(discovery_wire)
             supported = discovery_wire.get("supportedVersions", [])
             protocol = ",".join(str(item) for item in supported) if isinstance(supported, list) else "?"
             checks.append(

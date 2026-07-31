@@ -26,6 +26,41 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- The MCP doctor read server identity from a top-level `serverInfo` field. The
+  2026-07-28 revision moves it into `_meta` under
+  `io.modelcontextprotocol/serverInfo`, so `recon mcp doctor` printed a bare `?`
+  for a server that was identifying itself correctly. Both locations are now
+  accepted.
+- The MCP server set no application version, so under the 2026-07-28 SDK it
+  advertised an empty version string and a client could not tell which recon it
+  was connected to.
+
+### Changed
+
+- The MCP compatibility gate gained five wire-level probes for the 2026-07-28
+  requirements, so they rest on recon's own evidence rather than on SDK release
+  notes: dual-era `initialize` serving, `-32602` for a request missing the
+  required `_meta` envelope, `-32022` with the supported-version list for an
+  unsupported version, `-32602` rather than the retired `-32002` for an unknown
+  resource, and a `server/discover` payload carrying instructions and server
+  identity. All pass on the 2.0.0 SDK; the legacy-era probes report
+  not-applicable on 1.28.1 rather than passing vacuously.
+- Tool annotations are built in one place rather than at each of the 22
+  registrations. The two SDK generations spell the fields differently, and
+  passing the newer spelling to the older one does not raise: it stores an
+  unrelated extra attribute and leaves the real hint unset. Centralizing the
+  spelling that both generations read removes that trap from a future migration.
+- The ephemeral fingerprint tools now state that their state is scoped to the
+  whole server process rather than to one conversation, which is what MCP
+  2026-07-28 assumes when it says a stdio process is not a session.
+- Production stays on the v1 MCP SDK. An adoption review ran the v2 pin end to
+  end: the stdio server is clean on 2026-07-28 and the full matrix passes, but
+  `build_remote_application` refuses any family but v1, so the pin change would
+  disable the optional remote adapter rather than degrade it. The evidence and
+  the remaining steps are recorded in `docs/mcp-2026-07-28-readiness.md`.
+
 ### Security
 
 - `recon update` now resolves `uv` and `pipx` to an absolute path and refuses a

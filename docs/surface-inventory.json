@@ -2612,7 +2612,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Inject a temporary fingerprint for the current session."
+        "summary": "Inject a temporary fingerprint into this server process."
       },
       {
         "annotations": {

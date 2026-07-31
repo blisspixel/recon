@@ -19,7 +19,7 @@ from typing import cast
 from typing_extensions import TypedDict
 
 from recon_tool.catalog_discovery import category_matches
-from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
+from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import MetadataCondition, ReconLookupError
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
@@ -325,11 +325,11 @@ def _dag_collection_prefix(degraded: list[str], masked: list[str], output_format
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=False,
     ),
 )
 async def get_fingerprints(
@@ -409,11 +409,11 @@ def _classify_signal_layer(sig: object) -> int:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=False,
     ),
 )
 async def get_signals(category: str | None = None, layer: int | None = None) -> list[SignalSummary]:
@@ -463,11 +463,11 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def explain_signal(
@@ -591,11 +591,11 @@ def _static_weakening_conditions(sig: object) -> list[str]:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=False,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+    annotations=tool_annotations(
+        read_only=False,
+        destructive=False,
+        idempotent=True,
+        open_world=False,
     ),
 )
 async def reload_data() -> str:
@@ -640,11 +640,11 @@ async def reload_data() -> str:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def discover_fingerprint_candidates(
@@ -772,11 +772,11 @@ async def discover_fingerprint_candidates(
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def get_posteriors(domain: str) -> PosteriorBlockResult:
@@ -878,11 +878,11 @@ async def get_posteriors(domain: str) -> PosteriorBlockResult:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def explain_dag(domain: str, output_format: str = "text") -> str:

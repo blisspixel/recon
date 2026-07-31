@@ -16,7 +16,7 @@ from typing import Literal, cast
 from typing_extensions import TypedDict
 
 from recon_tool.formatter import format_tenant_dict
-from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
+from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.server.app import internal_lookup_error, mcp
 from recon_tool.server.runtime import cache, cache_get, cache_refresh_info
 from recon_tool.validator import validate_domain
@@ -249,11 +249,11 @@ class LookupResult(TypedDict):
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=False,
-        destructiveHint=False,
-        idempotentHint=False,
-        openWorldHint=False,
+    annotations=tool_annotations(
+        read_only=False,
+        destructive=False,
+        idempotent=False,
+        open_world=False,
     ),
 )
 async def inject_ephemeral_fingerprint(
@@ -263,11 +263,18 @@ async def inject_ephemeral_fingerprint(
     confidence: str,
     detections: list[dict[str, str]],
 ) -> EphemeralInjectionResult:
-    """Inject a temporary fingerprint for the current session.
+    """Inject a temporary fingerprint into this server process.
 
     The fingerprint is validated through the same pipeline as built-in
     fingerprints (regex compilation, ReDoS safety, valid detection types).
     It lives in memory only and is discarded when the server process ends.
+
+    Scope: process-wide, not per conversation. MCP 2026-07-28 states that a
+    stdio process is not a session, so every request reaching this process sees
+    every injected fingerprint, including requests from a different conversation
+    with the same server. Treat this as server configuration you are changing
+    rather than as private scratch space, and call
+    `clear_ephemeral_fingerprints()` when the experiment is done.
 
     Args:
         name: Display name for the fingerprint (e.g., "Synthetic Delta Platform").
@@ -343,11 +350,11 @@ async def inject_ephemeral_fingerprint(
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=False,
     ),
 )
 async def list_ephemeral_fingerprints() -> list[EphemeralFingerprintSummary]:
@@ -371,11 +378,11 @@ async def list_ephemeral_fingerprints() -> list[EphemeralFingerprintSummary]:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=False,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=False,
+    annotations=tool_annotations(
+        read_only=False,
+        destructive=False,
+        idempotent=True,
+        open_world=False,
     ),
 )
 async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
@@ -406,11 +413,11 @@ async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=False,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=False,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def reevaluate_domain(domain: str) -> LookupResult:
