@@ -550,6 +550,72 @@ class TestGoogleSourceLookup:
 
         assert result.error is not None
 
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("status_code", [429, 500, 503])
+    async def test_cse_transport_failure_stays_unavailable_not_absent(self, status_code: int):
+        """Prevents a CSE probe failure being reported as "no CSE configured".
+
+        A rate-limited or erroring endpoint is an unobserved channel, not
+        evidence that the domain lacks CSE. Only ``source_unavailable`` reaches
+        the merged record as a degradation marker, so if the unavailable branch
+        collapses into the plain negative return, a transient outage silently
+        becomes a negative observation and the record stops disclosing that the
+        channel was never read.
+        """
+        mock_resp = httpx.Response(
+            status_code=status_code,
+            request=httpx.Request("GET", "https://cse.example.com/.well-known/cse-configuration"),
+        )
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(return_value=mock_resp)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("recon_tool.sources.google.http_client", return_value=mock_client):
+            result = await GoogleSource().lookup("example.com", active_probes=True)
+
+        assert result.source_unavailable is True
+        assert "unavailable" in (result.error or "")
+
+    @pytest.mark.asyncio
+    async def test_cse_timeout_stays_unavailable_not_absent(self):
+        """Prevents a timed-out CSE probe being reported as a clean miss.
+
+        ``test_cse_timeout`` only asserts that some error is set, which the
+        negative "no configuration found" return also satisfies. This pins the
+        distinction that the negative branch must not absorb the failure.
+        """
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=httpx.TimeoutException("timeout"))
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("recon_tool.sources.google.http_client", return_value=mock_client):
+            result = await GoogleSource().lookup("example.com", active_probes=True)
+
+        assert result.source_unavailable is True
+
+    @pytest.mark.asyncio
+    async def test_cse_404_is_a_real_negative_and_not_a_degradation(self):
+        """Counter-case: a served 404 is an observation, so it must stay available.
+
+        Without this the invariant could be "satisfied" by marking every
+        outcome unavailable, which would erase real absence evidence.
+        """
+        mock_resp = httpx.Response(
+            status_code=404,
+            request=httpx.Request("GET", "https://cse.example.com/.well-known/cse-configuration"),
+        )
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(return_value=mock_resp)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+
+        with patch("recon_tool.sources.google.http_client", return_value=mock_client):
+            result = await GoogleSource().lookup("example.com", active_probes=True)
+
+        assert result.source_unavailable is False
+
     def test_source_name(self):
         assert GoogleSource().name == "google_workspace"
 

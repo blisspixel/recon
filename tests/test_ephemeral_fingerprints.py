@@ -33,7 +33,7 @@ from recon_tool.regex_safety import _compile_regex_cached, compile_regex
 
 pytest.importorskip("mcp")
 
-from mcp.server.fastmcp.exceptions import ToolError
+from recon_tool.mcp_client.sdk_compat import ToolError, model_wire_dict
 
 # ── Helpers ───────────────────────────────────────────────────────────
 
@@ -473,7 +473,7 @@ class TestReevaluateDomainMCP:
         tool = mcp._tool_manager.get_tool("reevaluate_domain")
         assert tool is not None
         assert tool.annotations is not None
-        assert tool.annotations.readOnlyHint is False
+        assert model_wire_dict(tool.annotations).get("readOnlyHint") is False
 
     def setup_method(self) -> None:
         from recon_tool.server import _cache_clear  # pyright: ignore[reportPrivateUsage]

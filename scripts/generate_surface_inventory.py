@@ -16,6 +16,8 @@ from typing import Any, cast
 import click
 import typer
 
+from recon_tool.mcp_client.sdk_compat import model_wire_dict, tool_schemas
+
 _ROOT = Path(__file__).resolve().parent.parent
 _DEFAULT_OUTPUT = _ROOT / "docs" / "surface-inventory.json"
 _DEFAULT_PACKAGED_OUTPUT = _ROOT / "src" / "recon_tool" / "data" / "surface-inventory.json"
@@ -267,23 +269,29 @@ async def _mcp_inventory_async() -> dict[str, object]:
     for tool in sorted(tools, key=lambda item: item.name):
         annotations = {}
         if tool.annotations is not None:
-            annotations = tool.annotations.model_dump(mode="json", exclude_none=True)
+            # by_alias keeps the protocol's camelCase spelling. The two SDK
+            # generations name these fields differently, and a bare dump would
+            # silently rewrite the generated inventory to the other spelling.
+            annotations = tool.annotations.model_dump(mode="json", by_alias=True, exclude_none=True)
+        tool_input_schema, tool_output_schema = tool_schemas(tool)
         tool_entries.append(
             {
                 "name": tool.name,
                 "summary": _summary(tool.description),
                 "annotations": annotations,
-                "structured_output": tool.outputSchema is not None,
-                "input_parameters": _schema_parameters(tool.inputSchema),
-                "output_schema": _schema_outline(tool.outputSchema),
+                "structured_output": tool_output_schema is not None,
+                "input_parameters": _schema_parameters(tool_input_schema),
+                "output_schema": _schema_outline(tool_output_schema),
             }
         )
+    # Read through the wire dictionary: the SDK generations spell mimeType and
+    # mime_type differently and only the protocol form exists on both.
     resource_entries = [
         {
             "uri": str(resource.uri),
             "name": resource.name,
             "summary": _summary(resource.description),
-            "mime_type": resource.mimeType,
+            "mime_type": model_wire_dict(resource).get("mimeType"),
         }
         for resource in sorted(resources, key=lambda item: str(item.uri))
     ]

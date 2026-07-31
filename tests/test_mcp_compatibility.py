@@ -29,9 +29,27 @@ def test_model_wire_dict_preserves_protocol_aliases() -> None:
     assert model_wire_dict(_Model()) == {"structuredContent": {"result": []}}
 
 
-def test_stable_sdk_needs_no_generation_specific_server_options() -> None:
-    assert SDK_FAMILY == "v1"
-    assert mcp_application_options() == {}
+def test_server_options_match_the_active_sdk_generation() -> None:
+    """The modern generation needs options the legacy one has no place for.
+
+    v2 requires a caching hint on every cacheable method and reports the
+    application version to clients; v1 has neither concept. Asserting per
+    generation keeps this meaningful on the rollback pin as well.
+    """
+    options = mcp_application_options()
+    if SDK_FAMILY == "v1":
+        assert options == {}
+        return
+    assert set(options) == {"version", "cache_hints"}
+    assert options["version"]
+    assert set(options["cache_hints"]) == {
+        "prompts/list",
+        "resources/list",
+        "resources/read",
+        "resources/templates/list",
+        "server/discover",
+        "tools/list",
+    }
 
 
 @pytest.mark.parametrize("model", [object(), _InvalidModel()])
@@ -77,4 +95,7 @@ def test_production_dependency_uses_characterized_stable_floor() -> None:
     dependencies = tomllib.loads(pyproject.read_text(encoding="utf-8"))["project"]["dependencies"]
     mcp_dependencies = [dependency for dependency in dependencies if dependency.startswith("mcp")]
 
-    assert mcp_dependencies == ["mcp>=1.28.1,<2"]
+    # Production runs the generation that speaks MCP 2026-07-28. 1.28.1 remains
+    # the documented rollback pin and stays blocking in the compatibility
+    # matrix, so both generations keep being exercised.
+    assert mcp_dependencies == ["mcp>=2.0.0,<3"]

@@ -18,7 +18,7 @@ from urllib.parse import urlsplit
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
-from recon_tool.mcp_client.sdk_compat import SDK_FAMILY
+from recon_tool.mcp_client.sdk_compat import annotations_declare_read_only, streamable_http_asgi_app
 from recon_tool.server import mcp as default_mcp
 
 AuthMode = Literal["static-bearer", "trusted-platform"]
@@ -372,29 +372,34 @@ class RemoteSecurityMiddleware:
 
 
 async def prepare_remote_mcp(mcp_app: Any) -> ASGIApp:
-    """Restrict one MCP application to explicit read-only tools and HTTP."""
+    """Restrict one MCP application to explicit read-only tools and HTTP.
+
+    The allow-list is positive: a tool is exposed only when it declares itself
+    read-only, so a newly added tool is withheld until someone annotates it.
+    """
     tools = await mcp_app.list_tools()
     for tool in tools:
         annotations = getattr(tool, "annotations", None)
-        is_explicitly_read_only = getattr(annotations, "readOnlyHint", None) is True
-        if not is_explicitly_read_only or tool.name in _REMOTE_ONLY_USELESS_TOOLS:
+        if not annotations_declare_read_only(annotations) or tool.name in _REMOTE_ONLY_USELESS_TOOLS:
             mcp_app.remove_tool(tool.name)
 
-    mcp_app.settings.host = "0.0.0.0"  # noqa: S104
-    mcp_app.settings.json_response = True
-    mcp_app.settings.stateless_http = True
-    # RemoteSecurityMiddleware owns Host and Origin validation. The SDK's
-    # localhost-only defaults would reject managed-service hostnames.
-    mcp_app.settings.transport_security = None
-    return cast(ASGIApp, mcp_app.streamable_http_app())
+    return cast(
+        ASGIApp,
+        streamable_http_asgi_app(
+            mcp_app,
+            host="0.0.0.0",  # noqa: S104
+            json_response=True,
+            stateless_http=True,
+            # RemoteSecurityMiddleware owns Host and Origin validation. The
+            # SDK's localhost-only defaults would reject managed-service
+            # hostnames.
+            transport_security=None,
+        ),
+    )
 
 
 def build_remote_application(config: RemoteConfig, mcp_app: Any | None = None) -> ASGIApp:
     """Build the optional remote ASGI application in a fresh server process."""
-    if SDK_FAMILY != "v1":
-        raise RemoteConfigurationError(
-            "The optional remote adapter currently requires the supported MCP v1 production SDK"
-        )
     active_mcp = default_mcp if mcp_app is None else mcp_app
     base_app = asyncio.run(prepare_remote_mcp(active_mcp))
     return RemoteSecurityMiddleware(base_app, config)

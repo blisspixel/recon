@@ -1,11 +1,12 @@
 """Narrow compatibility boundary for supported MCP SDK generations.
 
-Production remains on the stable v1 SDK line. The v2 imports exist so the
-exact-pinned compatibility matrix can exercise the same recon server without
-copying registration or domain logic into a second implementation.
+Production runs the v2 SDK line, which is what speaks MCP 2026-07-28. The v1
+imports remain so the exact-pinned compatibility matrix can exercise the same
+recon server on the legacy generation without copying registration or domain
+logic into a second implementation, and so 1.28.1 stays a working rollback pin.
 
 Type checking follows the production generation, so the annotations below
-describe v1. The runtime branch still selects either generation by import, and
+describe v2. The runtime branch still selects either generation by import, and
 anything that differs between them is resolved here rather than at the call
 sites.
 """
@@ -20,11 +21,11 @@ from recon_tool import __version__ as _recon_version
 SDKFamily = Literal["v1", "v2"]
 
 if TYPE_CHECKING:
-    from mcp.server.fastmcp import FastMCP as MCPApplication
-    from mcp.server.fastmcp.exceptions import ToolError
-    from mcp.types import ToolAnnotations
+    from mcp.server import MCPServer as MCPApplication
+    from mcp.server.mcpserver.exceptions import ToolError
+    from mcp_types import ToolAnnotations
 
-    SDK_FAMILY: SDKFamily = "v1"
+    SDK_FAMILY: SDKFamily = "v2"
     _APPLICATION_OPTIONS: dict[str, Any] = {}
 else:
     try:
@@ -121,6 +122,86 @@ def tool_annotations(
             "openWorldHint": open_world,
         }
     )
+
+
+def annotations_declare_read_only(annotations: Any) -> bool:
+    """Whether tool annotations explicitly declare the tool read-only.
+
+    Construction shares one spelling through :func:`tool_annotations`, but
+    *reading* a constructed model cannot: the attribute names are disjoint
+    across generations. v1 exposes ``readOnlyHint`` and v2 exposes
+    ``read_only_hint``, with the camelCase form surviving only as a
+    serialization alias that is not an attribute. Reading a single spelling
+    therefore returns nothing on the other generation, which for the remote
+    adapter's allow-list meant every tool looked non-read-only.
+
+    Absent, false, or unreadable all mean not read-only, so a caller gating
+    exposure on this fails closed.
+    """
+    return any(getattr(annotations, attribute, None) is True for attribute in ("readOnlyHint", "read_only_hint"))
+
+
+def streamable_http_asgi_app(
+    mcp_app: Any,
+    *,
+    host: str,
+    json_response: bool,
+    stateless_http: bool,
+    transport_security: Any,
+) -> Any:
+    """Build the Streamable HTTP ASGI app with this generation's transport options.
+
+    v1 carries these on a mutable ``settings`` object read when the app is
+    built. v2 removed that object and takes the same values as keyword
+    arguments. Both spellings are applied here so the optional remote adapter
+    does not have to branch on the SDK generation.
+    """
+    if SDK_FAMILY == "v1":
+        mcp_app.settings.host = host
+        mcp_app.settings.json_response = json_response
+        mcp_app.settings.stateless_http = stateless_http
+        mcp_app.settings.transport_security = transport_security
+        return mcp_app.streamable_http_app()
+    return mcp_app.streamable_http_app(
+        host=host,
+        json_response=json_response,
+        stateless_http=stateless_http,
+        transport_security=transport_security,
+    )
+
+
+def tool_schemas(tool: Any) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """Return ``(input_schema, output_schema)`` for one registered tool.
+
+    Another disjoint-spelling case: v1 names these ``inputSchema`` and
+    ``outputSchema``, v2 names them ``input_schema`` and ``output_schema``.
+    Reading through the wire dictionary gives the protocol's own camelCase names
+    on both generations, which is also the spelling the schema documents use.
+    """
+    wire = model_wire_dict(tool)
+    input_schema = wire.get("inputSchema")
+    output_schema = wire.get("outputSchema")
+    return (input_schema if isinstance(input_schema, dict) else {}), (
+        output_schema if isinstance(output_schema, dict) else None
+    )
+
+
+def call_tool_parts(result: Any) -> tuple[list[Any], Any]:
+    """Return ``(content, structured_content)`` from a ``call_tool`` result.
+
+    v1 returns that pair as a plain tuple. v2 returns a ``CallToolResult`` model
+    carrying the same two values as fields, so unpacking it raises
+    ``ValueError: too many values to unpack``. Callers that only want the two
+    payloads go through here instead of destructuring.
+    """
+    content = getattr(result, "content", None)
+    if content is not None and not isinstance(result, tuple):
+        structured = getattr(result, "structured_content", None)
+        if structured is None:
+            structured = getattr(result, "structuredContent", None)
+        return list(content), structured
+    content_part, structured_part = result
+    return list(content_part), structured_part
 
 
 def model_wire_dict(model: object) -> dict[str, Any]:

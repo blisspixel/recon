@@ -8,6 +8,7 @@ import pytest
 from starlette.types import Receive, Scope, Send
 
 import recon_tool.remote_server as remote_server
+from recon_tool.mcp_client import sdk_compat
 from recon_tool.remote_server import (
     RemoteConfig,
     RemoteConfigurationError,
@@ -396,7 +397,21 @@ async def test_non_http_scopes_preserve_lifespan_but_reject_websockets() -> None
 
 @dataclass
 class _Annotations:
+    """v1-shaped annotations: the hint is the camelCase attribute itself."""
+
     readOnlyHint: bool | None
+
+
+@dataclass
+class _ModernAnnotations:
+    """v2-shaped annotations: the hint is snake_case and camelCase is only an alias.
+
+    The two generations expose disjoint attribute names, so reading one spelling
+    returns nothing on the other generation. For this allow-list that meant every
+    tool looked non-read-only and the remote surface came up empty.
+    """
+
+    read_only_hint: bool | None
 
 
 @dataclass
@@ -435,8 +450,36 @@ class _FakeMCP:
         return self.application
 
 
+class _ModernFakeMCP:
+    """v2-shaped application: no settings object, transport options are kwargs."""
+
+    def __init__(self) -> None:
+        self.removed: list[str] = []
+        self.application = _echo_app
+        self.transport_kwargs: dict[str, Any] = {}
+        self.tools = [
+            _Tool("lookup_tenant", _ModernAnnotations(True)),
+            _Tool("inject_ephemeral_fingerprint", _ModernAnnotations(False)),
+            _Tool("list_ephemeral_fingerprints", _ModernAnnotations(True)),
+            _Tool("unannotated", None),
+        ]
+
+    async def list_tools(self) -> list[_Tool]:
+        return self.tools
+
+    def remove_tool(self, name: str) -> None:
+        self.removed.append(name)
+
+    def streamable_http_app(self, **kwargs: Any) -> Any:
+        self.transport_kwargs = kwargs
+        return self.application
+
+
 @pytest.mark.asyncio
-async def test_remote_mcp_is_stateless_and_exposes_only_useful_read_only_tools() -> None:
+async def test_remote_mcp_is_stateless_and_exposes_only_useful_read_only_tools(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(sdk_compat, "SDK_FAMILY", "v1")
     fake = _FakeMCP()
 
     application = await prepare_remote_mcp(fake)
@@ -453,16 +496,51 @@ async def test_remote_mcp_is_stateless_and_exposes_only_useful_read_only_tools()
     assert fake.settings.transport_security is None
 
 
-def test_build_remote_application_wraps_the_filtered_mcp() -> None:
+def test_build_remote_application_wraps_the_filtered_mcp(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(sdk_compat, "SDK_FAMILY", "v1")
     application = build_remote_application(_config(), _FakeMCP())
 
     assert isinstance(application, RemoteSecurityMiddleware)
 
 
-def test_build_remote_application_rejects_an_unadopted_sdk_family(
+@pytest.mark.asyncio
+async def test_remote_mcp_reads_read_only_hints_on_the_modern_sdk(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setattr(remote_server, "SDK_FAMILY", "v2")
+    """The allow-list must survive the SDK generation split.
 
-    with pytest.raises(RemoteConfigurationError, match="supported MCP v1"):
-        build_remote_application(_config(), _FakeMCP())
+    v1 exposes `readOnlyHint` and v2 exposes `read_only_hint`, with no attribute
+    under the other spelling. Reading only the v1 name made every tool look
+    non-read-only on v2, so the adapter would have removed all of them and
+    served an empty surface rather than a restricted one.
+    """
+    monkeypatch.setattr(sdk_compat, "SDK_FAMILY", "v2")
+    fake = _ModernFakeMCP()
+
+    application = await prepare_remote_mcp(fake)
+
+    assert application is _echo_app
+    assert fake.removed == [
+        "inject_ephemeral_fingerprint",
+        "list_ephemeral_fingerprints",
+        "unannotated",
+    ]
+    assert "lookup_tenant" not in fake.removed
+
+
+@pytest.mark.asyncio
+async def test_modern_sdk_receives_transport_options_as_arguments(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """v2 removed the mutable settings object these values used to be set on."""
+    monkeypatch.setattr(sdk_compat, "SDK_FAMILY", "v2")
+    fake = _ModernFakeMCP()
+
+    await prepare_remote_mcp(fake)
+
+    assert fake.transport_kwargs == {
+        "host": "0.0.0.0",  # noqa: S104
+        "json_response": True,
+        "stateless_http": True,
+        "transport_security": None,
+    }

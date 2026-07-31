@@ -398,24 +398,21 @@ class TestScale:
 
 class TestMCPErrorPaths:
     def test_get_posteriors_invalid_domain(self) -> None:
-        from mcp.server.fastmcp.exceptions import ToolError
-
+        from recon_tool.mcp_client.sdk_compat import ToolError
         from recon_tool.server import get_posteriors
 
         with pytest.raises(ToolError):
             asyncio.run(get_posteriors("not a valid domain!"))
 
     def test_explain_dag_invalid_domain(self) -> None:
-        from mcp.server.fastmcp.exceptions import ToolError
-
+        from recon_tool.mcp_client.sdk_compat import ToolError
         from recon_tool.server import explain_dag
 
         with pytest.raises(ToolError, match="Invalid domain format"):
             asyncio.run(explain_dag("not.a.valid_domain_with_underscores"))
 
     def test_explain_dag_invalid_format(self) -> None:
-        from mcp.server.fastmcp.exceptions import ToolError
-
+        from recon_tool.mcp_client.sdk_compat import ToolError
         from recon_tool.server import explain_dag
 
         with pytest.raises(ToolError, match="output_format"):
