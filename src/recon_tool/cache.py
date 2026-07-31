@@ -15,6 +15,12 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from recon_tool.cache_catalog import (
+    catalog_discovery_to_cache_dict,
+    dns_catalog_summaries_from_dict,
+    unclassified_chains_from_dict,
+    unclassified_dns_observations_from_dict,
+)
 from recon_tool.cache_contract import DEFAULT_TTL, MAX_RESULT_CACHE_FILE_BYTES, RESULT_CACHE_VERSION
 from recon_tool.cache_paths import (
     resolve_cache_directory,
@@ -56,7 +62,6 @@ from recon_tool.models import (
     PosteriorObservation,
     SurfaceAttribution,
     TenantInfo,
-    UnclassifiedCnameChain,
     serialize_conflicts,
 )
 from recon_tool.validator import validate_domain
@@ -225,9 +230,7 @@ def cert_summary_to_cache_dict(cert_summary: CertSummary | None) -> dict[str, An
         "newest_cert_age_days": cert_summary.newest_cert_age_days,
         "oldest_cert_age_days": cert_summary.oldest_cert_age_days,
         "top_issuers": list(cert_summary.top_issuers),
-        "wildcard_sibling_clusters": [
-            {"names": list(cluster)} for cluster in cert_summary.wildcard_sibling_clusters
-        ],
+        "wildcard_sibling_clusters": [{"names": list(cluster)} for cluster in cert_summary.wildcard_sibling_clusters],
         "deployment_bursts": [
             {
                 "window_start": burst.window_start,
@@ -418,12 +421,8 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
     # InfrastructureClusterReport → nested dict or None.
     d["infrastructure_clusters"] = infrastructure_clusters_to_cache_dict(info.infrastructure_clusters)
 
-    # UnclassifiedCnameChain tuple → list of dicts. Always cached so
-    # subsequent runs of validation/find_gaps.py can read from cache
-    # without re-resolving DNS.
-    d["unclassified_cname_chains"] = [
-        {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
-    ]
+    # Every catalog-discovery collection travels together; see cache_catalog.
+    d.update(catalog_discovery_to_cache_dict(info))
 
     # ChainMotifObservation tuple → list of dicts. These were being
     # dropped on cache write, so a cached lookup served motif_count = 0
@@ -452,9 +451,7 @@ def _parse_conflict_provenance(entry: dict[str, Any]) -> tuple[NodeConflict, ...
             raise ValueError("Cache conflict_provenance.sources must be an array of strings")
         conflicts.append(
             NodeConflict(
-                field=cache_string(
-                    raw_conflict.get("field"), "conflict_provenance.field", nonempty=True
-                ),
+                field=cache_string(raw_conflict.get("field"), "conflict_provenance.field", nonempty=True),
                 sources=cache_string_tuple(sources_raw, "conflict_provenance.sources"),
                 magnitude=_cache_float(
                     raw_conflict.get("magnitude"),
@@ -468,9 +465,7 @@ def _parse_conflict_provenance(entry: dict[str, Any]) -> tuple[NodeConflict, ...
 
 def _parse_ranked_evidence(entry: dict[str, Any]) -> tuple[NodeEvidence, ...]:
     ranked: list[NodeEvidence] = []
-    for raw_ranked in cache_object_tuple(
-        entry.get("evidence_ranked", []), "posterior_observations.evidence_ranked"
-    ):
+    for raw_ranked in cache_object_tuple(entry.get("evidence_ranked", []), "posterior_observations.evidence_ranked"):
         ranked.append(
             NodeEvidence(
                 kind=cache_string(raw_ranked.get("kind"), "evidence_ranked.kind", nonempty=True),
@@ -494,15 +489,9 @@ def _parse_unit_counterfactuals(entry: dict[str, Any]) -> tuple[NodeUnitCounterf
     ):
         counterfactuals.append(
             NodeUnitCounterfactual(
-                unit=cache_string(
-                    raw_counterfactual.get("unit"), "unit_counterfactuals.unit", nonempty=True
-                ),
-                kind=cache_string(
-                    raw_counterfactual.get("kind"), "unit_counterfactuals.kind", nonempty=True
-                ),
-                observed=cache_string(
-                    raw_counterfactual.get("observed"), "unit_counterfactuals.observed"
-                ),
+                unit=cache_string(raw_counterfactual.get("unit"), "unit_counterfactuals.unit", nonempty=True),
+                kind=cache_string(raw_counterfactual.get("kind"), "unit_counterfactuals.kind", nonempty=True),
+                observed=cache_string(raw_counterfactual.get("observed"), "unit_counterfactuals.observed"),
                 posterior_without=required_cache_float(
                     raw_counterfactual.get("posterior_without"),
                     "unit_counterfactuals.posterior_without",
@@ -538,21 +527,14 @@ def _posterior_observation_from_cache(entry: dict[str, Any]) -> PosteriorObserva
             entry.get("interval_high"), "posterior_observations.interval_high", minimum=0.0, maximum=1.0
         )
         if not interval_low <= posterior <= interval_high:
-            raise ValueError(
-                "Cache posterior interval must satisfy interval_low <= posterior <= interval_high"
-            )
+            raise ValueError("Cache posterior interval must satisfy interval_low <= posterior <= interval_high")
         return PosteriorObservation(
             name=name,
-            description=_optional_cache_string(
-                entry.get("description"), "posterior_observations.description"
-            )
-            or "",
+            description=_optional_cache_string(entry.get("description"), "posterior_observations.description") or "",
             posterior=posterior,
             interval_low=interval_low,
             interval_high=interval_high,
-            evidence_used=cache_string_tuple(
-                entry.get("evidence_used", []), "posterior_observations.evidence_used"
-            ),
+            evidence_used=cache_string_tuple(entry.get("evidence_used", []), "posterior_observations.evidence_used"),
             n_eff=_cache_float(entry.get("n_eff"), "posterior_observations.n_eff", minimum=0.0),
             sparse=_cache_bool(entry.get("sparse"), "posterior_observations.sparse"),
             conflict_provenance=conflicts,
@@ -755,28 +737,6 @@ def infrastructure_clusters_from_cache_dict(data: dict[str, Any]) -> Infrastruct
     )
 
 
-def _unclassified_chains_from_dict(data: dict[str, Any]) -> tuple[UnclassifiedCnameChain, ...]:
-    """Deserialize the ``unclassified_cname_chains`` list."""
-    unclass_list = data.get("unclassified_cname_chains", [])
-    if not isinstance(unclass_list, list):
-        return ()
-    uc_records: list[UnclassifiedCnameChain] = []
-    for item in unclass_list:
-        if not isinstance(item, dict):
-            continue
-        subdomain = item.get("subdomain")
-        chain_raw = item.get("chain", [])
-        if not subdomain or not isinstance(chain_raw, list):
-            continue
-        uc_records.append(
-            UnclassifiedCnameChain(
-                subdomain=str(subdomain),
-                chain=tuple(str(h) for h in chain_raw),
-            )
-        )
-    return tuple(uc_records)
-
-
 def _chain_motifs_from_dict(data: dict[str, Any]) -> tuple[ChainMotifObservation, ...]:
     """Deserialize the ``chain_motifs`` list."""
     motifs_list = data.get("chain_motifs", [])
@@ -821,9 +781,7 @@ def _read_slug_confidences(raw: object) -> tuple[tuple[str, float], ...]:
         for entry in raw:
             if not isinstance(entry, list | tuple) or len(entry) != 2 or not isinstance(entry[0], str):
                 raise ValueError("Legacy cache field 'slug_confidences' must contain string-number pairs")
-            parsed.append(
-                (entry[0], _cache_float(entry[1], f"slug_confidences.{entry[0]}", minimum=0.0, maximum=1.0))
-            )
+            parsed.append((entry[0], _cache_float(entry[1], f"slug_confidences.{entry[0]}", minimum=0.0, maximum=1.0)))
         return tuple(parsed)
     raise ValueError("Cache field 'slug_confidences' must be an object or pair array")
 
@@ -923,7 +881,9 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     # this function stays a flat sequence of field reads.
     surface_attributions = _surface_attributions_from_dict(data)
     infrastructure_clusters = infrastructure_clusters_from_cache_dict(data)
-    unclassified_cname_chains = _unclassified_chains_from_dict(data)
+    unclassified_cname_chains = unclassified_chains_from_dict(data)
+    dns_catalog_summaries = dns_catalog_summaries_from_dict(data)
+    unclassified_dns_observations = unclassified_dns_observations_from_dict(data)
     chain_motifs = _chain_motifs_from_dict(data)
 
     return TenantInfo(
@@ -956,9 +916,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         mta_sts_mode=_optional_cache_string(data.get("mta_sts_mode"), "mta_sts_mode"),
         google_auth_type=_optional_cache_string(data.get("google_auth_type"), "google_auth_type"),
         google_idp_name=_optional_cache_string(data.get("google_idp_name"), "google_idp_name"),
-        primary_email_provider=_optional_cache_string(
-            data.get("primary_email_provider"), "primary_email_provider"
-        ),
+        primary_email_provider=_optional_cache_string(data.get("primary_email_provider"), "primary_email_provider"),
         email_gateway=_optional_cache_string(data.get("email_gateway"), "email_gateway"),
         dmarc_pct=_optional_cache_count(data.get("dmarc_pct"), "dmarc_pct", maximum=100),
         dmarc_testing=_cache_bool(data.get("dmarc_testing"), "dmarc_testing"),
@@ -973,13 +931,13 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         slug_confidences=_read_slug_confidences(data.get("slug_confidences")),
         posterior_observations=_parse_posterior_observations(data),
         cloud_instance=_optional_cache_string(data.get("cloud_instance"), "cloud_instance"),
-        tenant_region_sub_scope=_optional_cache_string(
-            data.get("tenant_region_sub_scope"), "tenant_region_sub_scope"
-        ),
+        tenant_region_sub_scope=_optional_cache_string(data.get("tenant_region_sub_scope"), "tenant_region_sub_scope"),
         msgraph_host=_optional_cache_string(data.get("msgraph_host"), "msgraph_host"),
         lexical_observations=cache_string_tuple(data.get("lexical_observations", []), "lexical_observations"),
         surface_attributions=surface_attributions,
         unclassified_cname_chains=unclassified_cname_chains,
+        dns_catalog_summaries=dns_catalog_summaries,
+        unclassified_dns_observations=unclassified_dns_observations,
         chain_motifs=chain_motifs,
         infrastructure_clusters=infrastructure_clusters,
         resolved_at=_optional_cache_string(data.get("resolved_at"), "resolved_at"),

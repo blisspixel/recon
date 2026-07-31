@@ -139,8 +139,14 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
   prefix, so the earlier literal-only comparison admitted them even though
   they cost roughly twice as much per added input character. Disjoint
   alternation such as `(foo|bar)+` and branches beginning with an escaped
-  literal such as `\.` remain accepted. This is a heuristic guardrail, not a
-  formal regex verifier; the input-length caps bound what it does not catch.
+  literal such as `\.` remain accepted. Since v2.7.1 the nested-quantifier scan
+  also counts `?` as an inner repetition operator, so `(a?){50}a{50}$` is
+  rejected; it distinguishes that `?` from the one opening `(?:`, `(?=`, and
+  `(?i)`, which stay accepted. This is a heuristic guardrail, not a formal
+  regex verifier. Do not assume the input-length caps bound what it misses: the
+  pattern above backtracks past a minute on a 49-character subject, three
+  orders of magnitude below the 4096-character cap. The caps bound cost for
+  patterns the heuristic accepts as linear, not for an admitted exponential one.
 - All patterns compile-validated via `re.compile` before use
 - Same checks run on `~/.recon/signals.yaml` via `_validate_signal` in `signals.py`
 - Custom entries are **additive only** - cannot override built-ins (design invariant)

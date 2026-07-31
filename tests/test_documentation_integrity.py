@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import tomllib
@@ -64,10 +65,7 @@ def test_backticked_commit_receipts_exist() -> None:
         text=True,
     )
     if shallow.returncode == 0 and shallow.stdout.strip() == "true":
-        pytest.skip(
-            "historical receipt validation requires full Git history; "
-            "the CI repository-policy job enforces it"
-        )
+        pytest.skip("historical receipt validation requires full Git history; the CI repository-policy job enforces it")
 
     paths = [
         ROOT / "CHANGELOG.md",
@@ -185,6 +183,37 @@ def test_math_docs_distinguish_semantic_baseline_from_current_review() -> None:
         assert f"Reviewed against v{version} on\n{release_date}" in text
 
 
+def test_documented_current_catalog_counts_match_the_generated_catalog() -> None:
+    """Docs that state the catalog's *current* size must agree with the catalog.
+
+    Three documents each carried a different "current" count, all stale, because
+    nothing tied the prose to the artifact. The frozen promotion-gate baseline in
+    docs/roadmap.md is deliberately a fixed reference point and is not checked
+    here; only claims about what the catalog holds today are.
+    """
+    catalog = json.loads(_read("src/recon_tool/data/fingerprints.generated.json"))
+    entries = 0
+    detections = 0
+    slugs: set[str] = set()
+    for source in catalog["sources"]:
+        for fingerprint in source.get("fingerprints", ()):
+            entries += 1
+            slugs.add(fingerprint["slug"])
+            detections += len(fingerprint.get("detections", ()) or ())
+
+    assert entries == catalog["fingerprint_count"]
+    assert detections == catalog["detection_count"]
+
+    assert (
+        f"The catalog currently holds {entries:,} entries across {len(slugs):,} unique slugs, "
+        f"with {detections:,}\ndetections." in _read("docs/roadmap.md")
+    )
+    assert f"The catalog carries {entries:,} entries and {detections:,} detection rules" in _read(
+        "docs/catalog-strategy.md"
+    )
+    assert f"The catalog has {entries:,} entries and {detections:,} detections." in _read("docs/strategic-gap-audit.md")
+
+
 def test_batch_csv_documentation_matches_runtime_contract() -> None:
     operational_contract = _read("docs/operational-contract.md")
     normalized = " ".join(operational_contract.split())
@@ -211,9 +240,7 @@ def test_public_issue_forms_enforce_target_data_boundary() -> None:
         body = raw.get("body")
         assert isinstance(body, list)
         acknowledgement = next(
-            item
-            for item in body
-            if isinstance(item, dict) and item.get("id") == "public_data_acknowledgement"
+            item for item in body if isinstance(item, dict) and item.get("id") == "public_data_acknowledgement"
         )
         options = acknowledgement["attributes"]["options"]
         assert options

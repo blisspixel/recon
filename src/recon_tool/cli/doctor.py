@@ -26,7 +26,7 @@ from recon_tool.exit_codes import (
     EXIT_NO_DATA,
     EXIT_VALIDATION,
 )
-from recon_tool.formatter import get_console
+from recon_tool.formatter import get_console, get_err_console
 
 McpCheck: TypeAlias = tuple[str, bool, str]
 
@@ -183,7 +183,7 @@ def _render_mcp_reference_config() -> None:
     """Render the generic config and safe-installer guidance."""
     from recon_tool.mcp_client.install import build_recon_block, warn_if_fallback
 
-    console = get_console()
+    console = get_err_console()
     recon_block = build_recon_block()
     console.print()
     console.print(
@@ -205,6 +205,8 @@ def _render_mcp_reference_config() -> None:
         "  [dim]# Prefer `recon mcp install --client=<name>` so existing client configuration is merged safely.[/dim]"
     )
     console.print()
+    # The reference config is the command's only stdout payload, so
+    # `recon doctor --mcp > config.json` captures valid JSON.
     typer.echo(json.dumps({"mcpServers": {"recon": recon_block}}, indent=2))
     console.print()
 
@@ -223,7 +225,9 @@ def doctor_mcp() -> None:
     import shutil
     import sys
 
-    console = get_console()
+    # Check rows are diagnostics: keep them on stderr so a redirect or pipe
+    # receives only the machine-readable JSON stanza emitted on stdout.
+    console = get_err_console()
     console.print()
 
     checks: list[McpCheck] = []
@@ -287,7 +291,7 @@ def doctor_mcp() -> None:
 
 def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
     """Render MCP check results with ok/FAIL labels."""
-    console = get_console()
+    console = get_err_console()
     for name, ok, detail in checks:
         mark = "ok" if ok else "FAIL"
         style = "green" if ok else "red"

@@ -71,7 +71,9 @@ def email_security_score(
     policy (``reject``/``quarantine`` after RFC 7489 ``pct=`` and RFC 9989
     ``t=`` downgrades; a ``p=none`` record does not count), any observed DKIM
     label (Exchange Online, Google Workspace, or generic, credited once when
-    multiple labels are observed), strict SPF (``-all``), MTA-STS, and BIMI.
+    multiple labels are observed), strict SPF (``-all``), an in-effect MTA-STS
+    policy (``observed_email_control_services`` withholds the label for a
+    fetched RFC 8461 ``mode: none`` policy), and BIMI.
 
     The JSON ``email_security_score`` field, ``--exposure``, posture statements,
     the MCP signal context, and ``delta`` all route through this function so the

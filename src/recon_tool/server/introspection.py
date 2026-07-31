@@ -915,11 +915,11 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
         validated = validate_domain(domain)
     except ValueError as exc:
         log_validation_failed(request_id)
-        return server_app.invalid_domain_message(exc)
+        raise ToolError(server_app.invalid_domain_message(exc)) from exc
 
     fmt = (output_format or "text").lower()
     if fmt not in ("text", "dot"):
-        return f"Error: output_format must be 'text' or 'dot', got {output_format!r}"
+        raise ToolError(f"Error: output_format must be 'text' or 'dot', got {output_format!r}")
 
     cached = cache_get(validated)
     if cached is not None:

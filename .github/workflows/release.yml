@@ -394,7 +394,10 @@ jobs:
         # virtualenv on this throwaway runner. It never sees dist/
         # because dist/ is on the ``build`` job's filesystem (sealed
         # into GitHub storage at upload time and not retrieved here).
-        run: uv tool install pip-audit
+        # Pinned rather than floating: this was the one unpinned software
+        # install across every workflow, so an upstream compromise could have
+        # shaped SBOM content on a release run.
+        run: uv tool install pip-audit==2.10.1
 
       - name: Generate CycloneDX SBOM
         run: |

@@ -51,6 +51,7 @@ _EMAIL_CONTROL_SLUGS = frozenset(
 def observed_email_control_services(evidence: Iterable[EvidenceRecord]) -> set[str]:
     """Project evidence into only the email controls its record type proves."""
     controls: set[str] = set()
+    mta_sts_not_in_effect = False
     for record in evidence:
         source_type = record.source_type.upper()
         if source_type == "DMARC" and record.slug == "dmarc":
@@ -63,8 +64,17 @@ def observed_email_control_services(evidence: Iterable[EvidenceRecord]) -> set[s
             controls.add(SVC_SPF_SOFTFAIL)
         elif source_type in {"MTA_STS", "MTA_STS_POLICY"}:
             controls.add(SVC_MTA_STS)
+            # dns_email records the fetched policy as ``mode: <mode>``.
+            # RFC 8461 defines mode "none" as "policy not in effect", so a
+            # fetched none-mode policy revokes the credit the TXT record
+            # earned; before this check a declared-off policy scored better
+            # than never deploying MTA-STS at all.
+            if source_type == "MTA_STS_POLICY" and record.raw_value.strip().lower() == "mode: none":
+                mta_sts_not_in_effect = True
         elif source_type == "BIMI":
             controls.add(SVC_BIMI)
+    if mta_sts_not_in_effect:
+        controls.discard(SVC_MTA_STS)
     return controls
 
 
