@@ -18,7 +18,7 @@ from typing import Any, cast
 
 from typing_extensions import TypedDict
 
-from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
+from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import ChainReport, InfrastructureEdge
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
@@ -166,11 +166,11 @@ def _format_compact_chain_json(report: ChainReport, result_limit: int) -> str:
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> str:
@@ -244,11 +244,11 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def cluster_verification_tokens(
@@ -362,11 +362,11 @@ async def cluster_verification_tokens(
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def get_infrastructure_clusters(domain: str, member_limit_per_cluster: int = 0) -> InfrastructureClusterEnvelope:
@@ -454,11 +454,11 @@ async def get_infrastructure_clusters(domain: str, member_limit_per_cluster: int
 
 
 @mcp.tool(
-    annotations=ToolAnnotations(
-        readOnlyHint=True,
-        destructiveHint=False,
-        idempotentHint=True,
-        openWorldHint=True,
+    annotations=tool_annotations(
+        read_only=True,
+        destructive=False,
+        idempotent=True,
+        open_world=True,
     ),
 )
 async def export_graph(domain: str, node_limit: int = 0, edge_limit: int = 0) -> GraphExportEnvelope:

@@ -20,7 +20,8 @@ import subprocess
 import sys
 import tempfile
 import threading
-from collections.abc import Awaitable, Callable
+from collections.abc import AsyncIterator, Awaitable, Callable
+from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from importlib.metadata import PackageNotFoundError
@@ -31,6 +32,16 @@ from typing import Any, Literal, TextIO, cast
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENT_ROOT = REPO_ROOT / ".agent"
 DEFAULT_SDK_VERSIONS = ("1.28.1", "2.0.0")
+
+MODERN_PROTOCOL_VERSION = "2026-07-28"
+LEGACY_PROTOCOL_VERSION = "2025-11-25"
+_META_PROTOCOL_VERSION_KEY = "io.modelcontextprotocol/protocolVersion"
+_META_CLIENT_CAPABILITIES_KEY = "io.modelcontextprotocol/clientCapabilities"
+_META_SERVER_INFO_KEY = "io.modelcontextprotocol/serverInfo"
+
+# One recon tools/list response line is around 64 KiB, right at asyncio's
+# default readline limit, so raw sessions need explicit headroom.
+_RAW_STDIO_LINE_LIMIT = 2**24
 
 ProbeStatus = Literal["pass", "fail", "blocked", "not_applicable"]
 
@@ -164,6 +175,11 @@ def _blocked_recon_checks(reason: str) -> list[ProbeCheck]:
         "recon_stdio_structured_success",
         "recon_stdio_tool_error",
         "recon_complete_result_metadata",
+        "recon_stdio_legacy_initialize",
+        "recon_stdio_discover_payload",
+        "recon_stdio_missing_meta_rejected",
+        "recon_stdio_unsupported_version",
+        "recon_stdio_resource_not_found",
         "recon_live_doctor",
     )
     return [ProbeCheck(name, "blocked", reason) for name in names]
@@ -582,6 +598,321 @@ async def _probe_recon_stdio(family: str) -> list[ProbeCheck]:
     return [discovery_check, listings.check, prompt_check, resource_check, *tool_checks, metadata_check]
 
 
+def _modern_request_meta(protocol_version: str = MODERN_PROTOCOL_VERSION) -> dict[str, Any]:
+    """Return the per-request envelope every 2026-07-28 request must carry.
+
+    The modern protocol has no initialize handshake: protocolVersion and
+    clientCapabilities are required in ``_meta`` on every request.
+    https://modelcontextprotocol.io/specification/2026-07-28/basic
+    """
+    return {
+        _META_PROTOCOL_VERSION_KEY: protocol_version,
+        "io.modelcontextprotocol/clientInfo": {"name": "recon-compat-raw-probe", "version": "0"},
+        _META_CLIENT_CAPABILITIES_KEY: {},
+    }
+
+
+class _RawStdioServer:
+    """Line-framed JSON-RPC exchange with a live recon stdio server process.
+
+    The SDK client session validates outbound frames and pins one era per
+    connection, so spec-conformance evidence about malformed envelopes, bogus
+    protocol versions, and cross-era handshakes has to be written to the wire
+    directly. Both supported SDK generations frame stdio traffic as one JSON
+    object per newline-terminated line.
+    """
+
+    def __init__(self, process: Any) -> None:
+        self._process = process
+        self._next_id = 1
+
+    async def _send(self, frame: dict[str, Any]) -> None:
+        stdin = self._process.stdin
+        if stdin is None:
+            raise RuntimeError("raw stdio server process has no stdin pipe")
+        stdin.write((json.dumps(frame) + "\n").encode("utf-8"))
+        await stdin.drain()
+
+    async def notify(self, method: str) -> None:
+        await self._send({"jsonrpc": "2.0", "method": method})
+
+    async def request(
+        self, method: str, params: dict[str, Any] | None = None, *, timeout: float = 120.0
+    ) -> dict[str, Any]:
+        request_id = self._next_id
+        self._next_id += 1
+        frame: dict[str, Any] = {"jsonrpc": "2.0", "id": request_id, "method": method}
+        if params is not None:
+            frame["params"] = params
+        await self._send(frame)
+        stdout = self._process.stdout
+        if stdout is None:
+            raise RuntimeError("raw stdio server process has no stdout pipe")
+        # Unsolicited notifications are legal on the stream, so read until the
+        # response that answers this request id.
+        while True:
+            line = await asyncio.wait_for(stdout.readline(), timeout=timeout)
+            if not line:
+                raise RuntimeError(f"server closed stdout before answering {method}")
+            message = json.loads(line)
+            if isinstance(message, dict) and message.get("id") == request_id:
+                return message
+
+
+@asynccontextmanager
+async def _raw_stdio_server() -> AsyncIterator[_RawStdioServer]:
+    env = dict(os.environ)
+    env["RECON_MCP_FORCE_STDIO"] = "1"
+    env["PYTHONSAFEPATH"] = "1"
+    scratch = Path(env.get("RECON_AGENT_TMP", AGENT_ROOT))
+    scratch.mkdir(parents=True, exist_ok=True)
+    with (
+        tempfile.TemporaryDirectory(prefix="recon-mcp-raw-", dir=scratch) as safe_cwd,
+        tempfile.TemporaryFile(dir=scratch) as errlog,
+    ):
+        process = await asyncio.create_subprocess_exec(
+            sys.executable,
+            "-m",
+            "recon_tool.server",
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=errlog,
+            env=env,
+            cwd=safe_cwd,
+            limit=_RAW_STDIO_LINE_LIMIT,
+        )
+        try:
+            yield _RawStdioServer(process)
+        finally:
+            if process.stdin is not None:
+                process.stdin.close()
+            try:
+                await asyncio.wait_for(process.wait(), timeout=30)
+            except TimeoutError:
+                process.kill()
+                await process.wait()
+
+
+def _raw_result(response: dict[str, Any], context: str) -> dict[str, Any]:
+    result = response.get("result")
+    if not isinstance(result, dict):
+        raise ValueError(f"{context} failed with {_bounded_text(json.dumps(response.get('error')))}")
+    return result
+
+
+def _raw_error(response: dict[str, Any], context: str) -> dict[str, Any]:
+    error = response.get("error")
+    if not isinstance(error, dict):
+        raise ValueError(f"{context} was answered instead of rejected")
+    return error
+
+
+async def _raw_legacy_initialize(family: str) -> ProbeCheck:
+    """Prove on the wire that a legacy initialize handshake is still served.
+
+    The 2026-07-28 compatibility matrix requires a dual-era server to answer
+    ``initialize`` and then serve the client under the negotiated legacy
+    revision; this is what keeps 2025-11-25 clients working once recon adopts
+    the v2 SDK, and it was previously believed only from release notes.
+    https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning
+    """
+    expected_tools, _ = _canonical_inventory()
+    async with _raw_stdio_server() as server:
+        response = await server.request(
+            "initialize",
+            {
+                "protocolVersion": LEGACY_PROTOCOL_VERSION,
+                "capabilities": {},
+                "clientInfo": {"name": "recon-compat-raw-probe", "version": "0"},
+            },
+        )
+        result = _raw_result(response, "legacy initialize")
+        negotiated = result.get("protocolVersion")
+        server_info = result.get("serverInfo")
+        instructions = result.get("instructions")
+        if not isinstance(negotiated, str) or not negotiated:
+            raise ValueError(f"legacy initialize negotiated protocolVersion={negotiated!r}")
+        if not isinstance(server_info, dict) or not server_info.get("name"):
+            raise ValueError(f"legacy initialize returned serverInfo={server_info!r}")
+        # Instructions are recon's own bar, not a spec MUST: agents on the
+        # legacy era must keep receiving the behavior-constraining guidance.
+        if not isinstance(instructions, str) or not instructions.strip():
+            raise ValueError("legacy initialize result lost the server instructions")
+        await server.notify("notifications/initialized")
+        tools = _raw_result(await server.request("tools/list", {}), "legacy tools/list").get("tools")
+        if not isinstance(tools, list):
+            raise TypeError("legacy tools/list did not return a tool list")
+        names = {str(item.get("name")) for item in tools if isinstance(item, dict)}
+        if names != expected_tools:
+            raise ValueError(f"legacy era served {len(names)} of {len(expected_tools)} canonical tools")
+    era = "dual-era" if family == "v2" else "native legacy era"
+    return ProbeCheck(
+        "recon_stdio_legacy_initialize",
+        "pass",
+        f"{era} protocolVersion={negotiated} tools={len(names)} instructions=present",
+    )
+
+
+def _check_discover_payload(response: dict[str, Any]) -> ProbeCheck:
+    """Verify the discover result carries what a modern client needs.
+
+    ``DiscoverResult`` carries supportedVersions, capabilities, optional
+    instructions, and serverInfo under the reserved ``_meta`` key; recon
+    depends on the instructions to constrain agent behavior, so their absence
+    is a failure here even though the spec marks them optional.
+    https://modelcontextprotocol.io/specification/2026-07-28/server/discover
+    """
+    try:
+        result = _raw_result(response, "server/discover")
+        supported = result.get("supportedVersions")
+        if not isinstance(supported, list) or MODERN_PROTOCOL_VERSION not in supported:
+            raise ValueError(f"discover supportedVersions={supported!r}")
+        instructions = result.get("instructions")
+        if not isinstance(instructions, str) or not instructions.strip():
+            raise ValueError("discover result carries no server instructions")
+        meta = result.get("_meta")
+        server_info = meta.get(_META_SERVER_INFO_KEY) if isinstance(meta, dict) else None
+        if not isinstance(server_info, dict) or not server_info.get("name"):
+            raise ValueError(f"discover result serverInfo={server_info!r}")
+        return ProbeCheck(
+            "recon_stdio_discover_payload",
+            "pass",
+            f"server={server_info.get('name')} supportedVersions={len(supported)} "
+            f"instructions_chars={len(instructions)}",
+        )
+    except Exception as exc:
+        return ProbeCheck("recon_stdio_discover_payload", "fail", _exception_detail(exc))
+
+
+async def _check_missing_meta_rejected(server: _RawStdioServer) -> ProbeCheck:
+    """A request missing a required ``_meta`` field is malformed and the server
+    MUST reject it with JSON-RPC error -32602 (Invalid params).
+    https://modelcontextprotocol.io/specification/2026-07-28/basic
+    """
+    variants: tuple[tuple[str, dict[str, Any]], ...] = (
+        ("absent _meta", {}),
+        ("missing clientCapabilities", {"_meta": {_META_PROTOCOL_VERSION_KEY: MODERN_PROTOCOL_VERSION}}),
+        ("missing protocolVersion", {"_meta": {_META_CLIENT_CAPABILITIES_KEY: {}}}),
+    )
+    try:
+        for label, params in variants:
+            error = _raw_error(await server.request("tools/list", params), f"tools/list with {label}")
+            code = error.get("code")
+            if code != -32602:
+                raise ValueError(f"tools/list with {label} was rejected with code={code!r} instead of -32602")
+        return ProbeCheck("recon_stdio_missing_meta_rejected", "pass", "variants=3 code=-32602")
+    except Exception as exc:
+        return ProbeCheck("recon_stdio_missing_meta_rejected", "fail", _exception_detail(exc))
+
+
+async def _check_unsupported_protocol_version(server: _RawStdioServer) -> ProbeCheck:
+    """A protocolVersion the server does not implement MUST produce
+    UnsupportedProtocolVersionError (-32022) listing the versions the server
+    does support in the error data.
+    https://modelcontextprotocol.io/specification/2026-07-28/basic/versioning
+    """
+    try:
+        response = await server.request("tools/list", {"_meta": _modern_request_meta("1900-01-01")})
+        error = _raw_error(response, "tools/list with protocolVersion=1900-01-01")
+        code = error.get("code")
+        if code != -32022:
+            raise ValueError(f"unsupported version was rejected with code={code!r} instead of -32022")
+        data = error.get("data")
+        supported = data.get("supported") if isinstance(data, dict) else None
+        if not isinstance(supported, list) or MODERN_PROTOCOL_VERSION not in supported:
+            raise ValueError(f"error data does not list the supported versions: {data!r}")
+        return ProbeCheck(
+            "recon_stdio_unsupported_version", "pass", f"code=-32022 supported_listed={len(supported)}"
+        )
+    except Exception as exc:
+        return ProbeCheck("recon_stdio_unsupported_version", "fail", _exception_detail(exc))
+
+
+async def _check_resource_not_found_code(server: _RawStdioServer) -> ProbeCheck:
+    """Reading an unknown resource URI MUST return -32602; -32002 is the retired
+    2025-11-25 code that implementations of this revision MUST NOT emit.
+    https://modelcontextprotocol.io/specification/2026-07-28/server/resources
+    """
+    params = {"uri": "recon://definitely-missing", "_meta": _modern_request_meta()}
+    try:
+        error = _raw_error(await server.request("resources/read", params), "resources/read of an unknown URI")
+        code = error.get("code")
+        if code == -32002:
+            raise ValueError("server emitted retired code -32002; 2026-07-28 requires -32602")
+        if code != -32602:
+            raise ValueError(f"unknown resource was rejected with code={code!r} instead of -32602")
+        return ProbeCheck("recon_stdio_resource_not_found", "pass", "code=-32602 retired -32002 not emitted")
+    except Exception as exc:
+        return ProbeCheck("recon_stdio_resource_not_found", "fail", _exception_detail(exc))
+
+
+async def _raw_modern_conformance() -> list[ProbeCheck]:
+    """Run the modern-era spec probes that need raw wire access, in one session."""
+    async with _raw_stdio_server() as server:
+        # The well-formed discover frame opens the connection in the modern
+        # era, so the malformed frames that follow are judged as modern
+        # requests instead of selecting the legacy handshake path.
+        discover_response = await server.request("server/discover", {"_meta": _modern_request_meta()})
+        return [
+            _check_discover_payload(discover_response),
+            await _check_missing_meta_rejected(server),
+            await _check_unsupported_protocol_version(server),
+            await _check_resource_not_found_code(server),
+        ]
+
+
+def _not_applicable_modern_wire_checks() -> list[ProbeCheck]:
+    return [
+        ProbeCheck(
+            "recon_stdio_discover_payload",
+            "not_applicable",
+            "legacy protocol has no server/discover method",
+        ),
+        ProbeCheck(
+            "recon_stdio_missing_meta_rejected",
+            "not_applicable",
+            "legacy protocol has no required per-request _meta envelope",
+        ),
+        ProbeCheck(
+            "recon_stdio_unsupported_version",
+            "not_applicable",
+            "legacy protocol negotiates versions in initialize, not per request",
+        ),
+        ProbeCheck(
+            "recon_stdio_resource_not_found",
+            "not_applicable",
+            "legacy protocol reports unknown resources with the retired -32002 code",
+        ),
+    ]
+
+
+def _probe_raw_wire_group(family: str) -> list[ProbeCheck]:
+    checks: list[ProbeCheck] = []
+    try:
+        checks.append(asyncio.run(_raw_legacy_initialize(family)))
+    except Exception as exc:
+        checks.append(ProbeCheck("recon_stdio_legacy_initialize", "fail", _exception_detail(exc)))
+    if family != "v2":
+        checks.extend(_not_applicable_modern_wire_checks())
+        return checks
+    try:
+        checks.extend(asyncio.run(_raw_modern_conformance()))
+    except Exception as exc:
+        checks.extend(
+            _failed_group(
+                "recon_stdio_discover_payload",
+                (
+                    "recon_stdio_missing_meta_rejected",
+                    "recon_stdio_unsupported_version",
+                    "recon_stdio_resource_not_found",
+                ),
+                "raw modern wire session failed",
+                exc,
+            )
+        )
+    return checks
+
+
 def _probe_sdk_foundation() -> tuple[list[ProbeCheck], str]:
     checks: list[ProbeCheck] = []
     family = "unknown"
@@ -698,10 +1029,20 @@ def _compatibility_status(checks: list[ProbeCheck], family: str) -> bool:
         "recon_stdio_resource_reads",
         "recon_stdio_structured_success",
         "recon_stdio_tool_error",
+        "recon_stdio_legacy_initialize",
         "recon_live_doctor",
     }
     if family == "v2":
-        required.update({"recon_cache_hint_configuration", "recon_complete_result_metadata"})
+        required.update(
+            {
+                "recon_cache_hint_configuration",
+                "recon_complete_result_metadata",
+                "recon_stdio_discover_payload",
+                "recon_stdio_missing_meta_rejected",
+                "recon_stdio_unsupported_version",
+                "recon_stdio_resource_not_found",
+            }
+        )
     by_name = {check.name: check for check in checks}
     return all(by_name.get(name) is not None and by_name[name].status == "pass" for name in required)
 
@@ -717,6 +1058,7 @@ def probe_current_environment() -> dict[str, Any]:
     else:
         checks.extend(_probe_recon_direct_group(server_module, family))
         checks.extend(_probe_recon_stdio_group(family))
+        checks.extend(_probe_raw_wire_group(family))
         checks.append(_probe_live_doctor())
 
     return {
