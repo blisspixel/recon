@@ -5,6 +5,7 @@ import json
 import re
 from pathlib import Path
 
+from recon_tool.mcp_client.sdk_compat import model_wire_dict, tool_schemas
 from recon_tool.server import mcp
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -53,7 +54,7 @@ def test_stability_mcp_parameter_names_match_registry() -> None:
         if match:
             documented[match.group(1)] = set(re.findall(r"`([a-z_][a-z0-9_]*)`", match.group(2)))
 
-    live = {tool.name: set(tool.inputSchema.get("properties", {})) for tool in asyncio.run(mcp.list_tools())}
+    live = {tool.name: set(tool_schemas(tool)[0].get("properties", {})) for tool in asyncio.run(mcp.list_tools())}
     assert documented == live
 
 
@@ -65,7 +66,7 @@ def test_stability_fingerprint_pagination_types_and_defaults_match_registry() ->
     assert "`offset` (int, default 0; used with `limit`)" in row
 
     tool = next(tool for tool in asyncio.run(mcp.list_tools()) if tool.name == "get_fingerprints")
-    properties = tool.inputSchema["properties"]
+    properties = tool_schemas(tool)[0]["properties"]
     assert {schema.get("type") for schema in properties["category"]["anyOf"]} == {"string", "null"}
     assert {schema.get("type") for schema in properties["limit"]["anyOf"]} == {"integer", "null"}
     assert properties["offset"]["type"] == "integer"
@@ -78,7 +79,7 @@ def test_stability_explain_dag_formats_and_default_match_registry() -> None:
     assert '`output_format` ("text"\\|"dot", default "text")' in row
 
     tool = next(tool for tool in asyncio.run(mcp.list_tools()) if tool.name == "explain_dag")
-    output_format = tool.inputSchema["properties"]["output_format"]
+    output_format = tool_schemas(tool)[0]["properties"]["output_format"]
     assert output_format["type"] == "string"
     assert output_format["default"] == "text"
 
@@ -91,7 +92,10 @@ def test_stability_stateful_tool_list_matches_annotations() -> None:
     live: set[str] = set()
     for tool in asyncio.run(mcp.list_tools()):
         assert tool.annotations is not None
-        assert tool.annotations.readOnlyHint is not None
-        if tool.annotations.readOnlyHint is False:
+        # Read through the wire dictionary: the two SDK generations name this
+        # field differently and only the protocol spelling exists on both.
+        hint = model_wire_dict(tool.annotations).get("readOnlyHint")
+        assert hint is not None
+        if hint is False:
             live.add(tool.name)
     assert documented == live

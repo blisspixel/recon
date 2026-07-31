@@ -20,6 +20,7 @@ import pytest
 
 pytest.importorskip("mcp")
 
+from recon_tool.mcp_client.sdk_compat import call_tool_parts, tool_schemas
 from recon_tool.server import get_fingerprints, get_signals, mcp
 
 # The data tools converted to structured output. Each must advertise an
@@ -51,13 +52,13 @@ STRUCTURED_TOOLS = frozenset(
 def test_structured_tools_advertise_output_schema() -> None:
     """Every converted data tool exposes an outputSchema in tools/list."""
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
-    missing = [name for name in STRUCTURED_TOOLS if name in tools and tools[name].outputSchema is None]
+    missing = [name for name in STRUCTURED_TOOLS if name in tools and tool_schemas(tools[name])[1] is None]
     assert not missing, f"these structured tools have no outputSchema: {missing}"
 
 
 def _array_result_item_schema(tool_name: str) -> dict[str, object]:
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
-    schema = tools[tool_name].outputSchema
+    schema = tool_schemas(tools[tool_name])[1]
     assert isinstance(schema, dict)
     result = schema["properties"]["result"]
     assert isinstance(result, dict)
@@ -71,7 +72,7 @@ def _array_result_item_schema(tool_name: str) -> dict[str, object]:
 
 def _tool_output_schema(tool_name: str) -> dict[str, object]:
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
-    schema = tools[tool_name].outputSchema
+    schema = tool_schemas(tools[tool_name])[1]
     assert isinstance(schema, dict)
     return schema
 
@@ -156,13 +157,13 @@ def test_ephemeral_fingerprint_output_schemas_are_precise() -> None:
     """Session-local ephemeral tools advertise their simple result shapes."""
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
 
-    inject_schema = tools["inject_ephemeral_fingerprint"].outputSchema
+    inject_schema = tool_schemas(tools["inject_ephemeral_fingerprint"])[1]
     assert isinstance(inject_schema, dict)
     assert inject_schema["title"] == "EphemeralInjectionResult"
     assert set(inject_schema["required"]) == {"status", "name", "slug", "detections_accepted"}
     assert inject_schema["properties"]["detections_accepted"]["type"] == "integer"
 
-    clear_schema = tools["clear_ephemeral_fingerprints"].outputSchema
+    clear_schema = tool_schemas(tools["clear_ephemeral_fingerprints"])[1]
     assert isinstance(clear_schema, dict)
     assert clear_schema["title"] == "EphemeralClearResult"
     assert set(clear_schema["required"]) == {"status", "removed"}
@@ -454,7 +455,7 @@ def test_analyze_posture_output_schema_has_precise_variants() -> None:
 def test_get_fingerprints_emits_navigable_structured_content() -> None:
     """call_tool surfaces the list as real structured data (not a JSON-string
     blob) plus a serialized-JSON text block for back-compat."""
-    content, structured = asyncio.run(mcp.call_tool("get_fingerprints", {"limit": 3}))
+    content, structured = call_tool_parts(asyncio.run(mcp.call_tool("get_fingerprints", {"limit": 3})))
 
     # structuredContent is the navigable object, not a stringified blob. FastMCP
     # wraps a top-level list under "result"; the entries are real dicts.

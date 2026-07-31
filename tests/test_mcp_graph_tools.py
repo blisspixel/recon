@@ -14,9 +14,9 @@ import asyncio
 import json
 
 import pytest
-from mcp.server.fastmcp.exceptions import ToolError
 
 from recon_tool import server, server_app
+from recon_tool.mcp_client.sdk_compat import ToolError, call_tool_parts
 from recon_tool.models import (
     ChainReport,
     ChainResult,
@@ -113,6 +113,11 @@ def stub_resolve(monkeypatch: pytest.MonkeyPatch):
     return _make
 
 
+def _allow_any_rate_limit(_domain: str) -> bool:
+    """Rate-limit stand-in that always admits, so depth guards are what is measured."""
+    return True
+
+
 @pytest.fixture
 def stub_chain(monkeypatch: pytest.MonkeyPatch):
     import recon_tool.chain as chain_module
@@ -131,6 +136,52 @@ def stub_chain(monkeypatch: pytest.MonkeyPatch):
     monkeypatch.setattr(chain_module, "chain_resolve", _stub)
     monkeypatch.setattr(server_graph, "rate_limit_try_acquire", _allow_rate_limit)
     return report
+
+
+class TestChainLookupDepthBound:
+    def test_mcp_depth_clamp_agrees_with_max_chain_depth(self, monkeypatch):
+        """Prevents the MCP tool outrunning the recursion cap the CLI enforces.
+
+        ``chain_lookup`` clamps with a hardcoded literal instead of importing
+        ``MAX_CHAIN_DEPTH``, so the two copies of the bound can drift apart
+        silently. MCP arguments are attacker-supplied, and depth also scales
+        the aggregate timeout, so an unclamped value buys an unbounded crawl.
+        The existing chain tests stub ``chain_resolve`` with an assertion that
+        depth is exactly 1, which never exercises an out-of-range request.
+        """
+        import recon_tool.chain as chain_module
+        import recon_tool.server.graph as server_graph
+
+        seen: list[int] = []
+
+        async def _capture(domain: str, depth: int = 1) -> ChainReport:
+            seen.append(depth)
+            return _chain_report()
+
+        monkeypatch.setattr(chain_module, "chain_resolve", _capture)
+        monkeypatch.setattr(server_graph, "rate_limit_try_acquire", _allow_any_rate_limit)
+
+        asyncio.run(server.chain_lookup("example.com", depth=10_000))
+
+        assert seen == [chain_module.MAX_CHAIN_DEPTH]
+
+    def test_mcp_depth_floor_rejects_non_positive_depth(self, monkeypatch):
+        """A zero or negative depth must floor to one rather than skip the walk."""
+        import recon_tool.chain as chain_module
+        import recon_tool.server.graph as server_graph
+
+        seen: list[int] = []
+
+        async def _capture(domain: str, depth: int = 1) -> ChainReport:
+            seen.append(depth)
+            return _chain_report()
+
+        monkeypatch.setattr(chain_module, "chain_resolve", _capture)
+        monkeypatch.setattr(server_graph, "rate_limit_try_acquire", _allow_any_rate_limit)
+
+        asyncio.run(server.chain_lookup("example.com", depth=-5))
+
+        assert seen == [1]
 
 
 class TestChainLookupCompact:
@@ -361,7 +412,9 @@ class TestMcpToolRegistry:
         from recon_tool.server import mcp
 
         stub_resolve(_info_with_clusters())
-        content, structured = asyncio.run(mcp.call_tool("get_infrastructure_clusters", {"domain": "example.com"}))
+        content, structured = call_tool_parts(
+            asyncio.run(mcp.call_tool("get_infrastructure_clusters", {"domain": "example.com"}))
+        )
         assert content, "expected at least one TextContent payload"
         payload = json.loads(content[0].text)
         assert payload["domain"] == "example.com"
@@ -376,7 +429,7 @@ class TestMcpToolRegistry:
         from recon_tool.server import mcp
 
         stub_resolve(_info_with_clusters())
-        content, _ = asyncio.run(mcp.call_tool("export_graph", {"domain": "example.com"}))
+        content, _ = call_tool_parts(asyncio.run(mcp.call_tool("export_graph", {"domain": "example.com"})))
         payload = json.loads(content[0].text)
         assert payload["nodes"], "graph nodes should be non-empty"
         assert payload["edges"], "graph edges should be non-empty"

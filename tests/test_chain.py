@@ -2,7 +2,7 @@
 
 import pytest
 
-from recon_tool.chain import MAX_CHAIN_DOMAINS, _correlate_site_verification, chain_resolve
+from recon_tool.chain import MAX_CHAIN_DEPTH, MAX_CHAIN_DOMAINS, _correlate_site_verification, chain_resolve
 from recon_tool.models import ChainReport, ChainResult, ConfidenceLevel, TenantInfo
 
 
@@ -81,6 +81,30 @@ class TestChainResolve:
         # Depth > MAX should be clamped
         report = await chain_resolve("example.com", depth=10)
         assert isinstance(report, ChainReport)
+
+    @pytest.mark.asyncio
+    async def test_oversized_depth_is_actually_bounded_by_max_chain_depth(self, monkeypatch):
+        """Prevents an out-of-range depth running an unbounded recursive crawl.
+
+        ``test_depth_clamped`` names the rule but its mock returns no related
+        domains, so the walk stops at the seed whether or not the clamp exists
+        and the assertion holds vacuously. This drives a chain that keeps
+        discovering new domains, so an unclamped depth is observable as extra
+        BFS levels and as an aggregate timeout scaled off the raw value.
+        """
+        counter = [0]
+
+        async def mock_resolve(domain, **kwargs):
+            counter[0] += 1
+            return _make_info(domain, related=(f"link{counter[0]}.invalid",)), []
+
+        monkeypatch.setattr("recon_tool.chain.resolve_tenant", mock_resolve)
+
+        report = await chain_resolve("root.invalid", depth=10_000)
+
+        assert report.max_depth_reached <= MAX_CHAIN_DEPTH
+        assert all(result.chain_depth <= MAX_CHAIN_DEPTH for result in report.results)
+        assert len(report.results) <= MAX_CHAIN_DEPTH + 1
 
     @pytest.mark.asyncio
     async def test_domain_cap(self, monkeypatch):

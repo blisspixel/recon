@@ -13,15 +13,15 @@ from __future__ import annotations
 
 import json
 from dataclasses import replace
+from typing import cast
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 pytest.importorskip("mcp")
 
-from mcp.server.fastmcp.exceptions import ToolError
-
 from recon_tool.catalog_discovery import category_matches
+from recon_tool.mcp_client.sdk_compat import ToolError
 from recon_tool.models import (
     CandidateValue,
     ConfidenceLevel,
@@ -551,8 +551,11 @@ class TestAnalyzePostureExplain:
         """explain=True on analyze_posture includes explanations in response."""
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         data = await analyze_posture("alpha.invalid", explain=True)
-        assert "explanations" in data
-        assert isinstance(data["explanations"], list)
+        # The declared return is a union of envelope variants and only the
+        # explained one carries this key, so read it as a plain mapping.
+        payload = cast(dict[str, object], data)
+        assert "explanations" in payload
+        assert isinstance(payload["explanations"], list)
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)

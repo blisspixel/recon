@@ -395,6 +395,71 @@ def test_unavailable_channels_cannot_fire_signal_or_posture_rules() -> None:
     assert "gateway_without_dmarc" not in observation_sources
 
 
+def _mail_info(*, degraded_sources: tuple[str, ...], slugs: tuple[str, ...] = ()) -> TenantInfo:
+    """A mail-bearing domain with no observed email controls."""
+    return TenantInfo(
+        tenant_id=None,
+        display_name="Example",
+        default_domain="example.com",
+        queried_domain="example.com",
+        confidence=ConfidenceLevel.MEDIUM,
+        sources=("dns_records",),
+        services=("SendGrid",) if slugs else (),
+        slugs=slugs,
+        degraded_sources=degraded_sources,
+        evidence=(
+            EvidenceRecord(
+                source_type="MX",
+                raw_value="10 mx1.example.net",
+                rule_name="MX",
+                slug="mx",
+            ),
+        ),
+    )
+
+
+@pytest.mark.parametrize("marker", ["dns:dmarc", "dns:dkim", "dns:apex_txt", "dns:mta_sts", "dns:bimi"])
+def test_degraded_email_channel_cannot_become_a_weak_email_posture_claim(marker: str) -> None:
+    """Prevents a failed email collector being reported as weak email security.
+
+    The email score is a count of observed controls, so any unread channel
+    drags it toward zero. Without the availability gate the posture engine
+    reads that collection gap as "at most one of five control indicators was
+    observed", which converts a source failure into a negative security claim
+    about the domain.
+    """
+    degraded = _mail_info(degraded_sources=(marker,))
+
+    assert "weak_email_security" not in {o.source_name for o in analyze_posture(degraded)}
+
+    # Counter-case: with every channel readable the same domain is genuinely
+    # weak, so the guard must suppress only the unobserved case.
+    observed = _mail_info(degraded_sources=())
+    assert "weak_email_security" in {o.source_name for o in analyze_posture(observed)}
+
+
+@pytest.mark.parametrize("marker", ["dns:dmarc", "dns:mta_sts", "dns:bimi"])
+def test_degraded_email_channel_cannot_become_a_minimal_security_signal(marker: str) -> None:
+    """Signal-side twin of the posture rule, which is a separate copy of it.
+
+    ``email_security_score`` has to enter the signal context's unavailable set
+    on the same five channels the posture engine gates on. If only the posture
+    copy keeps the rule, a degraded collector still fires "Active Email Sending
+    with Minimal Security" and asserts minimal security from an unread channel.
+
+    Only the markers that leave the sender slug observable are exercised:
+    ``dns:dkim`` and ``dns:apex_txt`` also mask the TXT-derived slug, so the
+    rule could not fire on those for a reason unrelated to this guard.
+    """
+    degraded = _mail_info(degraded_sources=(marker,), slugs=("sendgrid",))
+    names = {match.name for match in evaluate_signals(signal_context_from_tenant_info(degraded))}
+    assert "Active Email Sending with Minimal Security" not in names
+
+    observed = _mail_info(degraded_sources=(), slugs=("sendgrid",))
+    observed_names = {match.name for match in evaluate_signals(signal_context_from_tenant_info(observed))}
+    assert "Active Email Sending with Minimal Security" in observed_names
+
+
 def test_unavailable_mx_cannot_support_gateway_posterior() -> None:
     raw = _info(degraded_sources=("dns:mx",))
 
