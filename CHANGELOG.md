@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.9.0] - 2026-07-31
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Changed
 
 - Production now runs the MCP v2 SDK, so recon serves the 2026-07-28 protocol
