@@ -14,11 +14,32 @@ from recon_tool.constants import (
     SVC_DKIM,
     SVC_DKIM_EXCHANGE,
     SVC_DKIM_GOOGLE,
-    SVC_SPF_SOFTFAIL,
     SVC_SPF_STRICT,
 )
 from recon_tool.email_security import observed_email_control_services
 from recon_tool.exposure_comparison import build_metrics
+from recon_tool.exposure_copy import EXPOSURE_DISCOURAGED_COPY_TERMS
+from recon_tool.exposure_copy import build_evidence_refs as _build_evidence_refs
+from recon_tool.exposure_copy import check_neutral_copy as _check_neutral_copy
+from recon_tool.exposure_copy import evidence_slugs as _evidence_slugs
+from recon_tool.exposure_gaps import (
+    EMAIL_GATEWAY_SLUGS as _EMAIL_GATEWAY_SLUGS,
+)
+from recon_tool.exposure_gaps import (
+    GAPS_DISCLAIMER as _GAPS_DISCLAIMER,
+)
+from recon_tool.exposure_gaps import (
+    detect_inconsistencies as _detect_inconsistencies,
+)
+from recon_tool.exposure_gaps import (
+    detect_missing_controls as _detect_missing_controls,
+)
+from recon_tool.exposure_gaps import (
+    detect_weak_configs as _detect_weak_configs,
+)
+from recon_tool.exposure_gaps import (
+    effective_email_dmarc_policy as _effective_email_dmarc_policy,
+)
 from recon_tool.exposure_models import (
     ConsistencyObservation,
     EmailPosture,
@@ -35,21 +56,10 @@ from recon_tool.exposure_models import (
     RelativeAssessment,
 )
 from recon_tool.models import TenantInfo
-from recon_tool.posture import DISCOURAGED_COPY_TERMS
 
 logger = logging.getLogger(__name__)
 
 # ── Neutral-language copy terms ─────────────────────────────────────────
-
-EXPOSURE_DISCOURAGED_COPY_TERMS: frozenset[str] = DISCOURAGED_COPY_TERMS | frozenset(
-    {
-        "target",
-        "attack surface",
-        "vulnerabilities to exploit",
-        "finding",
-        "remediation",
-    }
-)
 
 # Backward-compatible alias for older tests or callers that imported the old internal name.
 EXPOSURE_BANNED_TERMS = EXPOSURE_DISCOURAGED_COPY_TERMS
@@ -93,59 +103,14 @@ _CA_SLUGS: dict[str, str] = {
     "globalsign": "GlobalSign",
 }
 
-_EMAIL_GATEWAY_SLUGS: dict[str, str] = {
-    "proofpoint": "Proofpoint",
-    "mimecast": "Mimecast",
-    "barracuda": "Barracuda",
-    "cisco-ironport": "Cisco IronPort",
-    "cisco-email": "Cisco Secure Email",
-    "trendmicro": "Trend Micro",
-    "symantec": "Symantec/Broadcom",
-    "trellix": "Trellix (FireEye)",
-}
+
 
 # ── Helper functions ───────────────────────────────────────────────────
-
-
-def _check_neutral_copy(text: str) -> str:
-    """Log discouraged generated-copy terms without blocking the output."""
-    lower = text.lower()
-    for term in EXPOSURE_DISCOURAGED_COPY_TERMS:
-        if term in lower:
-            logger.warning("Discouraged copy term '%s' found in generated prose: %s", term, text)
-    return text
-
-
-def _build_evidence_refs(info: TenantInfo, slugs: frozenset[str] | set[str]) -> tuple[EvidenceReference, ...]:
-    """Build EvidenceReference entries from TenantInfo.evidence matching given slugs."""
-    refs: list[EvidenceReference] = []
-    for ev in info.evidence:
-        if ev.slug in slugs:
-            refs.append(
-                EvidenceReference(
-                    source_type=ev.source_type,
-                    raw_value=ev.raw_value,
-                    rule_name=ev.rule_name,
-                    slug=ev.slug,
-                )
-            )
-    return tuple(refs)
-
-
-def _evidence_slugs(info: TenantInfo, source_types: frozenset[str]) -> set[str]:
-    """Return slugs backed by one of the role-bearing evidence types."""
-    return {
-        evidence.slug for evidence in info.evidence if evidence.slug and evidence.source_type.upper() in source_types
-    }
 
 
 def _compute_email_security_score(info: TenantInfo) -> int:
     """Email-security score (0-5); see ``constants.email_security_score`` for the definition."""
     return observability.ObservableEmailState.from_info(info).security_score
-
-
-def _effective_email_dmarc_policy(info: TenantInfo) -> str | None:
-    return observability.ObservableEmailState.from_info(info).effective_dmarc_policy
 
 
 def _compute_email_posture(info: TenantInfo) -> EmailPosture:
@@ -338,16 +303,25 @@ def _compute_hardening_status(info: TenantInfo) -> HardeningStatus:
         )
     )
 
-    # MTA-STS
+    # MTA-STS. RFC 8461 defines mode "none" as "policy not in effect": the
+    # record was observed, but it may not be credited as a present control.
     mta_available = observed.mta_sts_available
-    mta_present = mta_available and info.mta_sts_mode is not None
-    mta_detail = (info.mta_sts_mode or "not configured") if mta_available else "source unavailable"
+    mta_declared_off = mta_available and info.mta_sts_mode == "none"
+    mta_present = mta_available and info.mta_sts_mode is not None and not mta_declared_off
+    if not mta_available:
+        mta_detail = "source unavailable"
+    elif mta_declared_off:
+        mta_detail = "policy published with mode none (not in effect)"
+    else:
+        mta_detail = info.mta_sts_mode or "not configured"
     controls.append(
         HardeningControl(
             name="MTA-STS",
             present=mta_present,
-            detail=mta_detail or "not configured",
-            evidence=_build_evidence_refs(info, {"mta-sts", "mta-sts-enforce"} & slugs_set) if mta_present else (),
+            detail=mta_detail,
+            evidence=_build_evidence_refs(info, {"mta-sts", "mta-sts-enforce"} & slugs_set)
+            if mta_present or mta_declared_off
+            else (),
         )
     )
 
@@ -506,201 +480,6 @@ def assess_exposure_from_info(info: TenantInfo) -> ExposureAssessment:
 
 
 # ── Gap detection helpers ──────────────────────────────────────────────
-
-
-def _detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
-    """Detect absent security controls."""
-    observed = observability.ObservableEmailState.from_info(info)
-    services_set = observed_email_control_services(info.evidence)
-    slugs_set = set(info.slugs)
-    gaps: list[HardeningGap] = []
-    dmarc_effective_policy = _effective_email_dmarc_policy(info)
-
-    # Missing DMARC
-    if observed.dmarc_available and info.dmarc_policy is None:
-        gaps.append(
-            HardeningGap(
-                category="email",
-                severity="high",
-                observation=_check_neutral_copy("No valid DMARC policy record observed for this domain"),
-                recommendation=_check_neutral_copy(
-                    "Consider configuring a DMARC record to protect against email spoofing"
-                ),
-                evidence=(),
-            )
-        )
-
-    # DMARC not effectively enforcing.
-    if observed.dmarc_available and info.dmarc_policy is not None and dmarc_effective_policy == "none":
-        observation = (
-            "DMARC policy is set to 'none' (monitoring only)"
-            if info.dmarc_policy == "none"
-            else "DMARC policy is not effectively enforcing after rollout or testing tags"
-        )
-        gaps.append(
-            HardeningGap(
-                category="email",
-                severity="high",
-                observation=_check_neutral_copy(observation),
-                recommendation=_check_neutral_copy("Consider setting DMARC policy to quarantine or reject"),
-                evidence=_build_evidence_refs(info, {"dmarc"} & slugs_set),
-            )
-        )
-
-    # DMARC quarantine-level enforcement (not reject-level enforcement).
-    if dmarc_effective_policy == "quarantine":
-        gaps.append(
-            HardeningGap(
-                category="email",
-                severity="medium",
-                observation=_check_neutral_copy("Effective DMARC policy is quarantine, not reject"),
-                recommendation=_check_neutral_copy(
-                    "Consider upgrading DMARC policy from quarantine to reject for stronger enforcement"
-                ),
-                evidence=_build_evidence_refs(info, {"dmarc"} & slugs_set),
-            )
-        )
-
-    # Missing DKIM
-    dkim_present = bool(services_set & {SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE})
-    if observed.dkim_available and not dkim_present:
-        gaps.append(
-            HardeningGap(
-                category="email",
-                severity="medium",
-                observation=_check_neutral_copy("No DKIM selectors observed at common names for this domain"),
-                recommendation=_check_neutral_copy(
-                    "Consider verifying DKIM configuration and, if missing, "
-                    "deploying signing with a common selector name"
-                ),
-                evidence=(),
-                # DKIM uses operator-chosen selectors; absence at the common
-                # names recon probes does not establish absence of DKIM.
-                absence_confirmable=False,
-            )
-        )
-
-    # Missing MTA-STS
-    if observed.mta_sts_available and info.mta_sts_mode is None:
-        gaps.append(
-            HardeningGap(
-                category="email",
-                severity="medium",
-                observation=_check_neutral_copy("No MTA-STS policy detected for this domain"),
-                recommendation=_check_neutral_copy("Consider deploying MTA-STS to enforce encrypted email transport"),
-                evidence=(),
-            )
-        )
-
-    # Missing TLS-RPT
-    if observed.tls_rpt_available and "tls-rpt" not in slugs_set:
-        gaps.append(
-            HardeningGap(
-                category="email",
-                severity="low",
-                observation=_check_neutral_copy("No TLS-RPT record detected for this domain"),
-                recommendation=_check_neutral_copy(
-                    "Consider configuring TLS-RPT to receive email transport failure reports"
-                ),
-                evidence=(),
-            )
-        )
-
-    # Missing CAA
-    caa_evidence_slugs = _evidence_slugs(info, frozenset({"CAA"}))
-    if observed.caa_available and not caa_evidence_slugs:
-        gaps.append(
-            HardeningGap(
-                category="infrastructure",
-                severity="low",
-                observation=_check_neutral_copy("No CAA records detected for this domain"),
-                recommendation=_check_neutral_copy(
-                    "Consider adding CAA records to restrict which certificate authorities can issue certificates"
-                ),
-                evidence=(),
-            )
-        )
-
-    return gaps
-
-
-def _detect_weak_configs(info: TenantInfo) -> list[HardeningGap]:
-    """Detect weak but present configurations."""
-    services_set = observed_email_control_services(info.evidence)
-    slugs_set = set(info.slugs)
-    gaps: list[HardeningGap] = []
-
-    observed = observability.ObservableEmailState.from_info(info)
-
-    # SPF softfail (without strict)
-    has_softfail = SVC_SPF_SOFTFAIL in services_set
-    has_strict = SVC_SPF_STRICT in services_set
-    if observed.spf_available and has_softfail and not has_strict:
-        gaps.append(
-            HardeningGap(
-                category="email",
-                severity="medium",
-                observation=_check_neutral_copy("SPF policy uses softfail (~all) instead of hardfail (-all)"),
-                recommendation=_check_neutral_copy(
-                    "Consider changing SPF policy from ~all (softfail) to -all (hardfail)"
-                ),
-                evidence=_build_evidence_refs(info, {"spf-softfail"} & slugs_set),
-            )
-        )
-
-    # MTA-STS testing (not enforce)
-    if observed.mta_sts_available and info.mta_sts_mode == "testing":
-        gaps.append(
-            HardeningGap(
-                category="email",
-                severity="low",
-                observation=_check_neutral_copy("MTA-STS policy is in testing mode, not enforce"),
-                recommendation=_check_neutral_copy("Consider upgrading MTA-STS policy from testing to enforce"),
-                evidence=_build_evidence_refs(info, {"mta-sts", "mta-sts-enforce"} & slugs_set),
-            )
-        )
-
-    return gaps
-
-
-def _detect_inconsistencies(info: TenantInfo) -> list[HardeningGap]:
-    """Detect configuration inconsistencies."""
-    observed = observability.ObservableEmailState.from_info(info)
-    gaps: list[HardeningGap] = []
-
-    # Gateway without DMARC enforcement
-    gateway_slugs = _evidence_slugs(info, frozenset({"MX"})) & set(_EMAIL_GATEWAY_SLUGS)
-    if (
-        gateway_slugs
-        and info.email_gateway is not None
-        and observed.gateway_available
-        and observed.dmarc_available
-        and _effective_email_dmarc_policy(info) != "reject"
-    ):
-        gaps.append(
-            HardeningGap(
-                category="consistency",
-                severity="high",
-                observation=_check_neutral_copy(
-                    f"MX gateway ({info.email_gateway}) observed without DMARC reject enforcement"
-                ),
-                recommendation=_check_neutral_copy(
-                    "Consider enforcing DMARC alongside the email gateway for comprehensive email protection"
-                ),
-                evidence=_build_evidence_refs(info, gateway_slugs),
-            )
-        )
-
-    return gaps
-
-
-# ── Public API: find_gaps_from_info ────────────────────────────────────
-
-_GAPS_DISCLAIMER = (
-    "These observations identify publicly visible configuration gaps that "
-    "the domain owner may wish to review. They are based on industry best "
-    "practices for email security, identity management, and DNS hygiene."
-)
 
 
 def find_gaps_from_info(info: TenantInfo) -> GapReport:

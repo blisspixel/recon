@@ -17,8 +17,10 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from recon_tool.ecosystem import (
+    _MAX_CANDIDATE_HYPEREDGES,
     MAX_HYPEREDGES,
     Hyperedge,
+    _shared_slugs_hyperedges,
     build_ecosystem_hyperedges,
 )
 from recon_tool.models import (
@@ -214,8 +216,7 @@ class TestSharedSlugs:
     def test_unavailable_legacy_caa_slugs_cannot_form_an_overlap_edge(self) -> None:
         stale = ("letsencrypt", "digicert", "sectigo")
         infos = {
-            domain: _info(domain, slugs=stale, degraded_sources=("dns:caa",))
-            for domain in ("a.invalid", "b.invalid")
+            domain: _info(domain, slugs=stale, degraded_sources=("dns:caa",)) for domain in ("a.invalid", "b.invalid")
         }
 
         edges = build_ecosystem_hyperedges(infos)
@@ -250,9 +251,7 @@ class TestSharedSlugs:
         """
         ubiquitous = ("microsoft365", "google-site", "spf-strict")
         infos = {
-            f"d{i}.invalid": _info(
-                f"d{i}.invalid", slugs=(*ubiquitous, f"unique-{i}-1", f"unique-{i}-2")
-            )
+            f"d{i}.invalid": _info(f"d{i}.invalid", slugs=(*ubiquitous, f"unique-{i}-1", f"unique-{i}-2"))
             for i in range(8)
         }
         edges = [e for e in build_ecosystem_hyperedges(infos) if e.edge_type == "shared_slugs"]
@@ -292,6 +291,40 @@ class TestSharedSlugs:
         assert ("a.invalid", "b.invalid") in member_sets
         assert ("b.invalid", "c.invalid") in member_sets
         assert ("a.invalid", "c.invalid") not in member_sets
+
+
+def _dense_pair_batch() -> dict[str, TenantInfo]:
+    """Two clusters of 100 domains, each cluster sharing its own 3-slug set.
+
+    Each cluster slug sits at exactly 50 % batch frequency (at, not above,
+    the baseline strip threshold), so 9,900 pairs qualify.
+    """
+    infos: dict[str, TenantInfo] = {}
+    for cluster, prefix in (("x1", "a"), ("x2", "b")):
+        cluster_slugs = (f"{cluster}-s1", f"{cluster}-s2", f"{cluster}-s3")
+        for i in range(100):
+            domain = f"{prefix}{i:03d}.invalid"
+            infos[domain] = _info(domain, slugs=cluster_slugs)
+    return infos
+
+
+class TestBoundedCandidateScan:
+    def test_shared_slugs_candidate_list_stays_bounded(self):
+        """The pair scan must stop growing once the candidate cap is hit.
+
+        The intermediate list used to hold every qualifying pair, growing
+        O(n^2) with batch size before ``MAX_HYPEREDGES`` truncation ever ran.
+        """
+        edges = _shared_slugs_hyperedges(_dense_pair_batch())
+
+        assert len(edges) <= _MAX_CANDIDATE_HYPEREDGES
+        assert len(edges) >= MAX_HYPEREDGES
+
+    def test_bounded_scan_is_input_order_invariant(self):
+        forward = _dense_pair_batch()
+        reverse = dict(reversed(tuple(forward.items())))
+
+        assert build_ecosystem_hyperedges(forward) == build_ecosystem_hyperedges(reverse)
 
 
 class TestSortingAndCaps:

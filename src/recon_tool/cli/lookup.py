@@ -135,9 +135,17 @@ async def _resolve_cached(
     quiet: bool,
     active_probes: bool = False,
 ) -> Any:
-    """Return a cached TenantInfo if present, else resolve fresh and cache it."""
+    """Return a cached TenantInfo if present, else resolve fresh and cache it.
+
+    Applies the same scope rule as ``_lookup_resolve_standard``: the cache key is
+    the domain alone, so a CT-degraded (``--skip-ct``) or probe-derived
+    (``--direct-probes``) result must never enter or be served from the shared
+    default-scope cache. The exposure and gaps reports reached this helper
+    without that guard, which reopened the sharing defect on a second path.
+    """
     info: Any = None
-    if not no_cache:
+    shareable_scope = not skip_ct and not active_probes
+    if not no_cache and shareable_scope:
         from recon_tool.cache import cache_get
 
         cached = cache_get(validated, ttl=cache_ttl)
@@ -147,7 +155,7 @@ async def _resolve_cached(
         info, _results = await _resolve_with_spinner(
             console, validated, timeout=timeout, skip_ct=skip_ct, quiet=quiet, active_probes=active_probes
         )
-        if not no_cache:
+        if not no_cache and shareable_scope:
             from recon_tool.cache import cache_put
 
             cache_put(validated, info)
@@ -521,11 +529,35 @@ def _lookup_emit_json(
     include_unclassified: bool,
 ) -> None:
     """Emit the tenant dict as JSON, with optional posture and explanation blocks."""
-    from recon_tool.formatter import format_posture_observations, format_tenant_dict
+    from recon_tool.formatter import format_tenant_dict
 
     tenant_dict = format_tenant_dict(info, include_unclassified=include_unclassified)
+    tenant_dict.update(
+        _lookup_optional_sections(info, results, observations, show_posture=show_posture, show_explain=show_explain)
+    )
+    typer.echo(json.dumps(tenant_dict, indent=2))
+
+
+def _lookup_optional_sections(
+    info: Any,
+    results: list[Any],
+    observations: tuple[Any, ...],
+    *,
+    show_posture: bool,
+    show_explain: bool,
+) -> dict[str, Any]:
+    """Build the `--posture` and `--explain` blocks shared by JSON and plain output.
+
+    Extracted so the linear `--plain` view carries the same optional sections.
+    It previously took neither flag, so `--plain --explain` and
+    `--plain --posture` exited 0 having silently dropped the requested content,
+    which made the screen-reader path the only one that could not show evidence.
+    """
+    from recon_tool.formatter import format_posture_observations
+
+    sections: dict[str, Any] = {}
     if show_posture:
-        tenant_dict["posture"] = format_posture_observations(observations)
+        sections["posture"] = format_posture_observations(observations)
     if show_explain:
         from recon_tool.collection_view import collection_observable_evidence
         from recon_tool.explanation import build_explanation_dag
@@ -533,14 +565,14 @@ def _lookup_emit_json(
         from recon_tool.models import serialize_conflicts
 
         explanations = _build_explanations(info, results)
-        tenant_dict["explanations"] = format_explanations_list(explanations)
+        sections["explanations"] = format_explanations_list(explanations)
         # Structured provenance DAG for programmatic consumers. Lives
         # alongside the flat list; both are emitted so existing tooling doesn't
         # break.
-        tenant_dict["explanation_dag"] = build_explanation_dag(explanations, collection_observable_evidence(info))
+        sections["explanation_dag"] = build_explanation_dag(explanations, collection_observable_evidence(info))
         if info.merge_conflicts and info.merge_conflicts.has_conflicts:
-            tenant_dict["conflicts"] = serialize_conflicts(info.merge_conflicts)
-    typer.echo(json.dumps(tenant_dict, indent=2))
+            sections["conflicts"] = serialize_conflicts(info.merge_conflicts)
+    return sections
 
 
 def _lookup_emit_markdown(
@@ -572,11 +604,20 @@ def _lookup_emit_markdown(
     typer.echo(md)
 
 
-def _lookup_emit_plain(info: Any, *, include_unclassified: bool) -> None:
-    """Emit the tenant report as plain, linear, greppable text (no panel)."""
-    from recon_tool.formatter import format_tenant_plain
+def _lookup_emit_plain(info: Any, sections: dict[str, Any], *, include_unclassified: bool) -> None:
+    """Emit the tenant report as plain, linear, greppable text (no panel).
 
-    typer.echo(format_tenant_plain(info, include_unclassified=include_unclassified))
+    Takes the already-built optional sections rather than the flags that select
+    them, so the linear view shares one definition of those blocks with the JSON
+    view without growing another wide flag signature.
+    """
+    from recon_tool.formatter import format_tenant_plain
+    from recon_tool.formatter.serialize import plain_lines
+
+    lines = [format_tenant_plain(info, include_unclassified=include_unclassified)]
+    for key, value in sections.items():
+        lines.extend(plain_lines(value, key, 0))
+    typer.echo("\n".join(lines))
 
 
 def _synthetic_source_results(info: Any) -> list[Any]:
@@ -724,7 +765,17 @@ async def _lookup_standard(
             )
             return
         if options.plain:
-            _lookup_emit_plain(info, include_unclassified=options.include_unclassified)
+            _lookup_emit_plain(
+                info,
+                _lookup_optional_sections(
+                    info,
+                    results,
+                    observations,
+                    show_posture=options.show_posture,
+                    show_explain=options.show_explain,
+                ),
+                include_unclassified=options.include_unclassified,
+            )
             return
 
         _lookup_emit_panel(

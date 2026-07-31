@@ -20,7 +20,7 @@ surface and independently supported precision are.
 
 ## How the catalog grows today
 
-The catalog carries 855 entries and 1,062 detection rules across nine populated
+The catalog carries 860 entries and 1,070 detection rules across nine populated
 types: `cname_target`, `cname`, `txt`, `spf`, `dmarc_rua`, `mx`, `ns`, `caa`,
 and `subdomain_txt`. The grammar and runtime also support `srv`, but the built-in
 catalog currently has no `srv` rules. New rules come from a corpus-mining loop:

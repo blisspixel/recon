@@ -201,7 +201,7 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
         validated = validate_domain(domain)
     except ValueError as exc:
         log_validation_failed(request_id)
-        return server_app.invalid_domain_message(exc)
+        raise ToolError(server_app.invalid_domain_message(exc)) from exc
 
     # Rate limit: chain_lookup is the most expensive tool (up to
     # MAX_CHAIN_DOMAINS resolves per call), so an untrusted MCP caller

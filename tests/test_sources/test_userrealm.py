@@ -130,6 +130,34 @@ class TestUserRealmSourceLookup:
         assert result.display_name is None
 
     @pytest.mark.asyncio
+    async def test_unknown_namespace_type_is_not_a_tenant(self):
+        """GetUserRealm answers 200 with NameSpaceType=Unknown for non-tenant domains.
+
+        That is a successful negative answer, not a detection. Accepting it as an
+        auth type reported Microsoft 365 for any domain and persisted a value
+        outside the ``delta`` snapshot contract of Federated/Managed/null.
+        """
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            if "GetUserRealm" in str(request.url):
+                return httpx.Response(
+                    200,
+                    json={"State": 4, "UserState": 2, "NameSpaceType": "Unknown"},
+                )
+            return httpx.Response(404)
+
+        transport = httpx.MockTransport(handler)
+        async with httpx.AsyncClient(transport=transport) as client:
+            source = UserRealmSource()
+            result = await source.lookup("alpha.invalid", client=client)
+
+        assert result.auth_type is None
+        assert result.m365_detected is False
+        assert result.evidence == ()
+        assert result.error is not None
+        assert result.source_unavailable is False
+
+    @pytest.mark.asyncio
     async def test_invalid_getuserrealm_json_falls_back_to_autodiscover(self):
         def handler(request: httpx.Request) -> httpx.Response:
             if "GetUserRealm" in str(request.url):

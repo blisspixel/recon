@@ -16,6 +16,7 @@ from __future__ import annotations
 import http.client
 import json
 import re
+import shutil
 import sys
 import urllib.error
 import urllib.request
@@ -74,13 +75,42 @@ def detect_install_method() -> str:
     return PIP
 
 
+def _resolve_launcher(name: str) -> str | None:
+    """Absolute path to an upgrade launcher, refusing a current-directory match.
+
+    Windows resolves a bare program name against the current directory before
+    PATH, and ``shutil.which`` mirrors that by searching the current directory
+    first. Spawning bare ``uv`` or ``pipx`` therefore let anyone who could drop
+    ``uv.exe`` into a directory the operator happened to be in run code as the
+    operator during ``recon update``. Resolving to an absolute path removes the
+    search entirely, and rejecting a current-directory hit means a planted
+    binary degrades to the printed manual command instead of being executed.
+    """
+    found = shutil.which(name)
+    if found is None:
+        return None
+    resolved = Path(found).resolve()
+    try:
+        if resolved.parent == Path.cwd().resolve():
+            return None
+    except OSError:
+        # An unresolvable working directory cannot be compared, so refuse.
+        return None
+    return str(resolved)
+
+
 def upgrade_command(method: str) -> list[str] | None:
-    """The argv to upgrade in place, or None when the user must act manually
-    (retired Homebrew installs and editable installs need manual action)."""
+    """The argv to upgrade in place, or None when the user must act manually.
+
+    Returns None for retired Homebrew and editable installs, and also when the
+    detected launcher cannot be resolved to a trusted absolute path.
+    """
     if method == PIPX:
-        return ["pipx", "upgrade", _PACKAGE]
+        launcher = _resolve_launcher("pipx")
+        return None if launcher is None else [launcher, "upgrade", _PACKAGE]
     if method == UV:
-        return ["uv", "tool", "upgrade", _PACKAGE]
+        launcher = _resolve_launcher("uv")
+        return None if launcher is None else [launcher, "tool", "upgrade", _PACKAGE]
     if method == PIP:
         return [sys.executable, "-m", "pip", "install", "-U", _PACKAGE]
     return None
@@ -92,6 +122,10 @@ def manual_hint(method: str) -> str:
         return "Homebrew install is retired; reinstall with `uv tool install recon-tool` or `pipx install recon-tool`"
     if method == EDITABLE:
         return "git pull  (editable install from a source checkout)"
+    if method == PIPX:
+        return "pipx upgrade recon-tool"
+    if method == UV:
+        return "uv tool upgrade recon-tool"
     return "pip install -U recon-tool"
 
 

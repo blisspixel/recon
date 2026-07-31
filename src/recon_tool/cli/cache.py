@@ -361,6 +361,13 @@ def cache_clear(
 
     console = get_console()
 
+    if all_domains and domain:
+        # `cache show` already refuses this pair. Here the stakes are higher: the
+        # --all branch ran first and ignored the domain, so a command that reads
+        # as "clear one domain" silently wiped every cached entry.
+        render_error("--all cannot be combined with a domain.")
+        raise typer.Exit(code=EXIT_VALIDATION) from None
+
     if all_domains:
         if not force:
             try:
@@ -388,5 +395,7 @@ def cache_clear(
         result = result_cache_clear(validated)
         _report_clear_domain(validated, ct_result, result)
     else:
-        console.print("  Specify a domain or use --all.")
+        # A validation failure is a diagnostic, and every sibling in this module
+        # routes one to stderr so stdout stays reserved for data.
+        render_error("Specify a domain or use --all.")
         raise typer.Exit(code=EXIT_VALIDATION)

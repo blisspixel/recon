@@ -332,14 +332,23 @@ jobs:
         # New diff lines must not add attribution markers, em dashes, or
         # pictographic symbols. Historical prose is not part of this check.
         shell: bash
+        # Event fields reach the shell through env rather than by expanding
+        # into the script body. Every field here is a GitHub-supplied SHA, so
+        # this is pattern hygiene rather than a live injection fix, and it keeps
+        # one safe shape for the next step that interpolates something freer.
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            range="${{ github.event.pull_request.base.sha }}..${{ github.sha }}"
-          elif [[ "${{ github.event.before }}" =~ ^0+$ ]]; then
-            range="${{ github.sha }}^!"
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            range="$PR_BASE_SHA..$HEAD_SHA"
+          elif [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
+            range="$HEAD_SHA^!"
           else
-            range="${{ github.event.before }}..${{ github.sha }}"
+            range="$BEFORE_SHA..$HEAD_SHA"
           fi
           uv run python scripts/check_text_hygiene.py --range "$range"
 

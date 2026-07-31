@@ -77,6 +77,17 @@ class TestDoctorMcp:
         launcher = " ".join(config["mcpServers"]["recon"]["args"])
         assert "sys.path[:] = [" in launcher
 
+    def test_doctor_mcp_stdout_carries_only_the_json_config(self) -> None:
+        """`recon doctor --mcp > config.json` must capture valid JSON: check
+        rows and guidance are diagnostics and belong on stderr, leaving the
+        reference config as the sole stdout payload."""
+        result = runner.invoke(app, ["doctor", "--mcp"])
+        assert result.exit_code == 0
+        config = json.loads(result.stdout)
+        assert config == {"mcpServers": {"recon": build_recon_block()}}
+        assert "MCP package" in result.stderr
+        assert "Security note" in result.stderr
+
     def test_doctor_mcp_no_regular_checks(self) -> None:
         """--mcp should only run MCP checks, not the full connectivity suite."""
         result = runner.invoke(app, ["doctor", "--mcp"])
@@ -189,7 +200,7 @@ class TestDoctorMcp:
             )
         )
 
-        with patch("recon_tool.cli.doctor.get_console", return_value=console):
+        with patch("recon_tool.cli.doctor.get_err_console", return_value=console):
             _render_mcp_checks([("Resources enumerated", False, detail)])
 
         lines = output.getvalue().splitlines()
@@ -201,7 +212,7 @@ class TestDoctorMcp:
         output = io.StringIO()
         console = Console(file=output, width=40, color_system=None)
 
-        with patch("recon_tool.cli.doctor.get_console", return_value=console):
+        with patch("recon_tool.cli.doctor.get_err_console", return_value=console):
             _render_mcp_checks([("resources/read recon://surface-inventory", False, "timed out after 30s")])
 
         lines = output.getvalue().splitlines()
@@ -215,7 +226,7 @@ class TestDoctorMcp:
         console = Console(file=output, width=40, color_system=None)
         token = "x" * 100
 
-        with patch("recon_tool.cli.doctor.get_console", return_value=console):
+        with patch("recon_tool.cli.doctor.get_err_console", return_value=console):
             _render_mcp_checks([("Resources enumerated", False, token)])
 
         lines = output.getvalue().splitlines()

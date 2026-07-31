@@ -867,3 +867,56 @@ def test_fingerprints_check_default_catalog_passes_quietly() -> None:
 
     assert result.exit_code == 0
     assert "Validated" in result.output
+
+
+def test_new_output_to_a_directory_is_a_validation_error(tmp_path: Path) -> None:
+    """A bad --output path is operator input, not an internal fault.
+
+    The write was unguarded, so a directory or a read-only path reached the
+    crash handler: exit 4 plus a crash-log file, for a mistake the sibling
+    `discover --output` already reports cleanly as exit 2.
+    """
+    result = runner.invoke(
+        app,
+        [
+            "fingerprints",
+            "new",
+            "cycle31-example-service",
+            "--name",
+            "Cycle 31 Example Service",
+            "--category",
+            _sample_fingerprint().category,
+            "--pattern",
+            "^cycle31-example-verification=",
+            "--output",
+            str(tmp_path),
+        ],
+    )
+
+    assert result.exit_code == 2
+    assert "Cannot write output file" in result.output
+    assert "unexpected error" not in result.output
+
+
+def test_new_output_creates_missing_parent_directories(tmp_path: Path) -> None:
+    output = tmp_path / "nested" / "deeper" / "candidate.yaml"
+
+    result = runner.invoke(
+        app,
+        [
+            "fingerprints",
+            "new",
+            "cycle31-example-service",
+            "--name",
+            "Cycle 31 Example Service",
+            "--category",
+            _sample_fingerprint().category,
+            "--pattern",
+            "^cycle31-example-verification=",
+            "--output",
+            str(output),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "cycle31-example-service" in output.read_text(encoding="utf-8")

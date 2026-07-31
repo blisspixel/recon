@@ -8,7 +8,7 @@ import os
 import time
 from collections.abc import Iterator
 from pathlib import Path
-from unittest.mock import patch
+from unittest.mock import AsyncMock, patch
 
 import pytest
 from rich.console import Console
@@ -408,6 +408,29 @@ class TestCacheClear:
         result = runner.invoke(app, ["cache", "clear"])
         assert result.exit_code == 2
 
+    def test_clear_no_args_reports_on_stderr(self, tmp_cache: Path) -> None:
+        result = runner.invoke(app, ["cache", "clear"])
+        assert result.exit_code == 2
+        assert "Specify a domain" in result.stderr
+        assert "Specify a domain" not in result.stdout
+
+    def test_clear_rejects_a_domain_combined_with_all(self, tmp_cache: Path) -> None:
+        """`--all` beside a domain must not silently wipe every entry.
+
+        The --all branch ran first and ignored the domain, so a command that
+        reads as "clear one domain" removed the whole cache. The read-only
+        sibling `cache show` already refuses this pair.
+        """
+        ct_cache_put("keep-one.invalid", ["x.keep-one.invalid"], None, "crt.sh")
+        ct_cache_put("keep-two.invalid", ["x.keep-two.invalid"], None, "crt.sh")
+
+        result = runner.invoke(app, ["cache", "clear", "keep-one.invalid", "--all", "--force"])
+
+        assert result.exit_code == 2
+        assert "--all cannot be combined with a domain." in result.stderr
+        # Nothing was removed: a follow-up clear still finds both entries.
+        assert runner.invoke(app, ["cache", "clear", "--all", "--force"]).output.count("Cleared 2 CT cache") == 1
+
     def test_clear_rejects_traversal_and_preserves_sibling_json(self, tmp_cache: Path) -> None:
         outside = tmp_cache.parent / "outside.json"
         outside.write_text('{"keep": true}', encoding="utf-8")
@@ -583,3 +606,49 @@ class TestCacheClear:
         assert "CT cache clear failed" in result.output
         assert "result cache clear failed" in result.output
         assert "private unlink detail" not in result.output
+
+
+class TestSharedCacheScope:
+    """The result cache key is the domain alone, so only default-scope runs share it.
+
+    `--skip-ct` yields a CT-degraded result and `--direct-probes` yields one
+    containing opt-in probe data. Sharing either would answer a later full
+    lookup from a degraded entry, or hand probe-derived data to a run that never
+    opted in. The standard lookup path enforced this; the `--exposure` and
+    `--gaps` reports reached the cache through a helper that did not.
+    """
+
+    _INFO = TenantInfo(
+        tenant_id=None,
+        display_name="SCOPE-PROBE",
+        default_domain="scope.invalid",
+        queried_domain="scope.invalid",
+        confidence=ConfidenceLevel.LOW,
+    )
+
+    @pytest.mark.parametrize("report_flag", ["--exposure", "--gaps"])
+    @pytest.mark.parametrize("scope_flag", ["--no-ct", "--direct-probes"])
+    def test_narrow_scope_reports_do_not_populate_the_shared_cache(
+        self, tmp_cache: Path, report_flag: str, scope_flag: str
+    ) -> None:
+        from recon_tool.cache import cache_get
+
+        with patch("recon_tool.resolver.resolve_tenant", new_callable=AsyncMock) as resolve:
+            resolve.return_value = (self._INFO, [])
+            result = runner.invoke(app, ["scope.invalid", report_flag, scope_flag])
+
+        assert result.exit_code == 0, result.output
+        assert cache_get("scope.invalid") is None
+
+    @pytest.mark.parametrize("report_flag", ["--exposure", "--gaps"])
+    def test_default_scope_reports_still_populate_the_shared_cache(self, tmp_cache: Path, report_flag: str) -> None:
+        from recon_tool.cache import cache_get
+
+        with patch("recon_tool.resolver.resolve_tenant", new_callable=AsyncMock) as resolve:
+            resolve.return_value = (self._INFO, [])
+            result = runner.invoke(app, ["scope.invalid", report_flag])
+
+        assert result.exit_code == 0, result.output
+        cached = cache_get("scope.invalid")
+        assert cached is not None
+        assert cached.display_name == "SCOPE-PROBE"

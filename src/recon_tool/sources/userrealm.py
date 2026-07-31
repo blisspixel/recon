@@ -24,6 +24,14 @@ from recon_tool.validator import strip_control_chars
 # (Microsoft-returned, but body-capped) response from inflating the list.
 _MAX_AUTODISCOVER_DOMAINS = 1000
 
+# GetUserRealm answers HTTP 200 for every syntactically valid domain, including
+# domains with no Azure AD tenant at all. Only these two NameSpaceType values
+# are tenant-positive; the endpoint reports "Unknown" (and historically other
+# non-tenant markers) for the negative case. Treating any non-empty string as an
+# auth type turned that negative answer into a Microsoft 365 detection and wrote
+# an auth_type that ``delta`` then rejects as out of contract.
+_TENANT_NAMESPACE_TYPES = frozenset({"Federated", "Managed"})
+
 logger = logging.getLogger("recon")
 
 USERREALM_URL = "https://login.microsoftonline.com/GetUserRealm.srf"
@@ -136,7 +144,7 @@ class UserRealmSource:
                         if brand and isinstance(brand, str) and brand.strip():
                             display_name = brand.strip()
                         ns_type = data.get("NameSpaceType")
-                        if ns_type and isinstance(ns_type, str):
+                        if isinstance(ns_type, str) and ns_type in _TENANT_NAMESPACE_TYPES:
                             auth_type = ns_type
                     else:
                         degraded_sources.add("identity:user_realm")

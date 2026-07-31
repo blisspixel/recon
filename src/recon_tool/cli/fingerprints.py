@@ -37,6 +37,7 @@ class _CorpusTestResult:
     matched: bool
     detail: str = ""
 
+
 _PUBLIC_DETECTION_CONTRACTS: dict[str, str] = {
     "txt": "a public TXT domain-control or account-registration indicator",
     "subdomain_txt": "a public TXT indicator at a named subdomain",
@@ -318,9 +319,7 @@ def _load_fingerprint_corpus(corpus: str | None) -> tuple[list[str], bool]:
 
 @fingerprints_app.command("list", short_help="Summarize fingerprints.")
 def fingerprints_list(
-    category: str | None = typer.Option(
-        None, "--category", "-c", help="Filter by category word prefix or phrase"
-    ),
+    category: str | None = typer.Option(None, "--category", "-c", help="Filter by category word prefix or phrase"),
     detection_type: str | None = typer.Option(
         None,
         "--type",
@@ -614,7 +613,17 @@ def fingerprints_new(
     if output:
         from pathlib import Path as _Path
 
-        _Path(output).write_text(snippet, encoding="utf-8")
+        out = _Path(output)
+        try:
+            out.parent.mkdir(parents=True, exist_ok=True)
+            out.write_text(snippet, encoding="utf-8")
+        except OSError as exc:
+            # A bad --output path (a directory, read-only, or a missing parent)
+            # is operator input, not a recon fault. Unguarded it reached the
+            # crash handler and reported exit 4 with a crash log. `discover
+            # --output` already handles the identical case this way.
+            render_error(f"Cannot write output file {out}: {exc}")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
         console.print(f"  Wrote {output}")
         console.print(
             "  [dim]Next:[/dim]  merge into the matching data/fingerprints/<category>.yaml, "
@@ -726,9 +735,7 @@ def fingerprints_test(
             f"{escape(strip_control_chars(result.detail))}"
         )
     for result in errors:
-        console.print(
-            f"    [red]ERROR[/red]  {escape(strip_control_chars(result.domain))}    {escape(result.detail)}"
-        )
+        console.print(f"    [red]ERROR[/red]  {escape(strip_control_chars(result.domain))}    {escape(result.detail)}")
     console.print()
     error_label = "lookup error" if len(errors) == 1 else "lookup errors"
     console.print(

@@ -173,12 +173,13 @@ class TestExplainDag:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_invalid_format_rejected(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (_info("gamma.invalid"), SAMPLE_RESULTS)
-        result = await explain_dag("gamma.invalid", "svg")
-        assert "output_format must be" in result
+        with pytest.raises(ToolError, match="output_format must be"):
+            await explain_dag("gamma.invalid", "svg")
 
     @pytest.mark.asyncio
     async def test_validation_failure(self) -> None:
-        assert (await explain_dag("not a domain")).startswith("Error:")
+        with pytest.raises(ToolError, match="Invalid domain format"):
+            await explain_dag("not a domain")
 
     @pytest.mark.asyncio
     async def test_rate_limit_message_uses_only_normalized_domain(self, monkeypatch: pytest.MonkeyPatch) -> None:

@@ -37,9 +37,11 @@ from recon_tool.models import (
     BIMIIdentity,
     CertSummary,
     ConfidenceLevel,
+    DnsCatalogSummary,
     EvidenceRecord,
     MergeConflicts,
     TenantInfo,
+    UnclassifiedDnsObservation,
 )
 from tests.cache_path_helpers import self_referencing_directory
 
@@ -737,3 +739,37 @@ class TestChainMotifsRoundTrip:
         burst = restored.cert_summary.deployment_bursts[0]
         assert burst.span_seconds == 30
         assert "c.example.com" in burst.names
+
+
+def test_catalog_discovery_payload_survives_the_cache_round_trip() -> None:
+    """`--include-unclassified` must not report an empty catalog on a cache hit.
+
+    Only `unclassified_cname_chains` was persisted, so after any prior lookup of
+    the domain the discovery path served zero summaries and no unclassified
+    observations for the whole TTL, which reads as "nothing unclassified"
+    rather than "not measured".
+    """
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="example.invalid",
+        default_domain="example.invalid",
+        queried_domain="example.invalid",
+        confidence=ConfidenceLevel.LOW,
+        dns_catalog_summaries=(
+            DnsCatalogSummary(
+                record_type="txt",
+                opportunity_count=9,
+                observed_count=7,
+                classified_count=2,
+                truncated=True,
+            ),
+        ),
+        unclassified_dns_observations=(
+            UnclassifiedDnsObservation(record_type="txt", owner="example.invalid", value="vendor-verify=abc"),
+        ),
+    )
+
+    restored = tenant_info_from_dict(tenant_info_to_dict(info))
+
+    assert restored.dns_catalog_summaries == info.dns_catalog_summaries
+    assert restored.unclassified_dns_observations == info.unclassified_dns_observations

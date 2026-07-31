@@ -8,6 +8,8 @@ disagreed with the canonical ``email_security_score`` used for the JSON field.
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from recon_tool.constants import (
@@ -20,7 +22,11 @@ from recon_tool.constants import (
     effective_dmarc_policy,
     email_security_score,
 )
-from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
+from recon_tool.email_security import (
+    observed_email_control_services,
+    signal_context_from_tenant_info,
+    signal_context_metadata,
+)
 from recon_tool.exposure import _compute_email_security_score
 from recon_tool.formatter_serialize import compute_email_security_score
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
@@ -115,6 +121,45 @@ class TestCanonicalScore:
 
     def test_empty_is_zero(self) -> None:
         assert email_security_score(set(), None) == 0
+
+
+class TestMtaStsModeNone:
+    """RFC 8461 mode "none" means the policy is not in effect.
+
+    Regression coverage: the TXT record alone credited SVC_MTA_STS, so a
+    domain that explicitly disabled MTA-STS scored better than one that
+    never deployed it.
+    """
+
+    _TXT_RECORD = EvidenceRecord("MTA_STS", "v=STSv1; id=1", SVC_MTA_STS, "mta-sts")
+
+    def test_fetched_mode_none_policy_revokes_the_txt_credit(self) -> None:
+        evidence = (
+            self._TXT_RECORD,
+            EvidenceRecord("MTA_STS_POLICY", "mode: none", SVC_MTA_STS, "mta-sts"),
+        )
+        assert SVC_MTA_STS not in observed_email_control_services(evidence)
+
+    def test_in_effect_modes_keep_the_credit(self) -> None:
+        for mode, slug in (("enforce", "mta-sts-enforce"), ("testing", "mta-sts")):
+            evidence = (
+                self._TXT_RECORD,
+                EvidenceRecord("MTA_STS_POLICY", f"mode: {mode}", SVC_MTA_STS, slug),
+            )
+            assert SVC_MTA_STS in observed_email_control_services(evidence)
+
+    def test_unfetched_policy_keeps_the_txt_credit(self) -> None:
+        assert SVC_MTA_STS in observed_email_control_services((self._TXT_RECORD,))
+
+    def test_mode_none_scores_zero_across_surfaces(self) -> None:
+        info = replace(_info({SVC_MTA_STS}, None), mta_sts_mode="none")
+        assert compute_email_security_score(info) == 0
+        assert _compute_email_security_score(info) == 0
+
+    def test_mode_none_scores_no_better_than_absent(self) -> None:
+        declared_off = replace(_info({SVC_MTA_STS}, None), mta_sts_mode="none")
+        absent = _info(set(), None)
+        assert compute_email_security_score(declared_off) == compute_email_security_score(absent)
 
 
 class TestAllSurfacesAgree:

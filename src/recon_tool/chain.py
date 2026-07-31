@@ -211,7 +211,11 @@ def _correlate_site_verification(
     for r in results:
         new_insights = domain_insights.get(r.domain)
         if new_insights:
-            merged = tuple(sorted(set(r.info.insights) | new_insights))
+            # merger.py deliberately inserts conflict warnings at index 0, so
+            # a whole-list sort here demoted them; keep the existing order and
+            # append only novel correlation lines, sorted among themselves.
+            additions = sorted(new_insights.difference(r.info.insights))
+            merged = (*r.info.insights, *additions)
             updated_info = replace(r.info, insights=merged)
             updated.append(
                 ChainResult(

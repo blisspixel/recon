@@ -10,6 +10,7 @@ import pytest
 
 pytest.importorskip("mcp")
 
+from recon_tool.mcp_client.sdk_compat import ToolError
 from recon_tool.models import (
     ConfidenceLevel,
     EvidenceRecord,
@@ -308,18 +309,18 @@ class TestErrors:
 
     @pytest.mark.asyncio
     async def test_empty_domain(self) -> None:
-        result = await lookup_tenant("   ")
-        assert "error" in result.lower()
+        with pytest.raises(ToolError, match="domain"):
+            await lookup_tenant("   ")
 
     @pytest.mark.asyncio
     async def test_invalid_domain(self) -> None:
-        result = await lookup_tenant("not a domain")
-        assert "error" in result.lower()
+        with pytest.raises(ToolError, match="Invalid domain format"):
+            await lookup_tenant("not a domain")
 
     @pytest.mark.asyncio
     async def test_invalid_format(self) -> None:
-        result = await lookup_tenant("example.com", format="xml")
-        assert "invalid format" in result.lower()
+        with pytest.raises(ToolError, match="invalid format"):
+            await lookup_tenant("example.com", format="xml")
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)

@@ -13,7 +13,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from recon_tool.collection_view import claim_contract_insights, collection_observable_info
+from recon_tool.collection_view import (
+    _IDENTITY_SOURCE_MARKERS,  # pyright: ignore[reportPrivateUsage]
+    claim_contract_insights,
+    collection_observable_info,
+)
 from recon_tool.email_security import compute_email_security_score
 from recon_tool.json_limits import exceeds_json_nesting_limit
 from recon_tool.models import DeltaComparisonIncomplete, DeltaReport, TenantInfo
@@ -176,7 +180,12 @@ def _previous_collection_view(
     """
     visible = dict(previous_json)
     visible["insights"] = list(claim_contract_insights(_string_list_field(previous_json, "insights")))
-    if not status.unavailable_channels:
+    # Identity markers are source names, not ObservationChannels, so they leave
+    # ``unavailable_channels`` empty. Gating on channels alone let a snapshot
+    # whose identity source had failed keep its retained raw slugs, and the next
+    # run then reported those as removals the prior run never actually observed.
+    # ``collection_observable_result`` uses exactly this pair of conditions.
+    if not status.unavailable_channels and status.degraded_sources.isdisjoint(_IDENTITY_SOURCE_MARKERS):
         from recon_tool.cache import tenant_info_from_dict
 
         try:
@@ -397,8 +406,7 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
         observable_current.dmarc_policy,
         suppressed_fields,
         comparable=not (
-            previous_source_status.channel_unavailable("dmarc")
-            or current_source_status.channel_unavailable("dmarc")
+            previous_source_status.channel_unavailable("dmarc") or current_source_status.channel_unavailable("dmarc")
         ),
     )
 
@@ -417,6 +425,13 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
     # Email security score comparison
     changed_email_security_score: tuple[int | None, int | None] | None = None
     prev_score = _optional_int_field(previous_json, "email_security_score", minimum=0, maximum=5)
+    if prev_score is None and previous_info is not None:
+        # The score is derived, not stored, so the cache export has no such key
+        # and only the `--compare` export shape carries one. Reading the key
+        # alone made this field permanently null for `recon delta`, which the
+        # command's own help promises to report. Derive it from the same
+        # projected snapshot the other comparisons use.
+        prev_score = compute_email_security_score(previous_info)
     curr_score = compute_email_security_score(observable_current)
     if any(
         previous_source_status.channel_unavailable(channel) or current_source_status.channel_unavailable(channel)

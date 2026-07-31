@@ -273,8 +273,17 @@ def test_ci_workflow_runs_fast_local_core_guards() -> None:
         "uv run python scripts/check_plr_ratchet.py",
     ):
         assert command in commands
-    assert "github.event.before" in commands
-    assert "github.event.pull_request.base.sha" in commands
+    # The hygiene range must still be derived from the push or pull-request
+    # event rather than a fixed HEAD^..HEAD, but the event fields reach the
+    # shell through env instead of expanding into the script body. Every field
+    # is a GitHub-supplied SHA, so this is pattern hygiene rather than a live
+    # injection fix; pinning it here keeps the safe shape from drifting back.
+    hygiene_env = next(
+        step["env"] for step in validate_job["steps"] if "check_text_hygiene.py" in str(step.get("run", ""))
+    )
+    assert hygiene_env["BEFORE_SHA"] == "${{ github.event.before }}"
+    assert hygiene_env["PR_BASE_SHA"] == "${{ github.event.pull_request.base.sha }}"
+    assert "github.event." not in commands
     assert "HEAD^..HEAD" not in commands
 
 

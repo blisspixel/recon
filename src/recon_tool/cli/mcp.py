@@ -14,7 +14,7 @@ import typer
 from recon_tool.cli.shared import render_diagnostic_status_row as _render_status_row
 from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_INTERNAL, EXIT_VALIDATION
-from recon_tool.formatter import get_console
+from recon_tool.formatter import get_console, get_err_console
 
 mcp_app = typer.Typer(
     help="MCP server commands: start the stdio server, install client config, run a self-check.",
@@ -25,7 +25,7 @@ mcp_app = typer.Typer(
 
 def _render_install_verification(client: str) -> None:
     """Show the ordered checks that complete one client installation."""
-    console = get_console()
+    console = get_err_console()
     console.print("  Restart your MCP client to pick up the new server, then verify in order:")
     steps = (
         ("Static registry", "recon doctor --mcp"),
@@ -106,7 +106,9 @@ def mcp_install_command(
         warn_if_fallback,
     )
 
-    console = get_console()
+    # Plan and result diagnostics are stderr so a redirect or pipe receives
+    # only the client stanza JSON emitted on stdout via typer.echo below.
+    console = get_err_console()
 
     if client not in SUPPORTED_CLIENTS:
         console.print(

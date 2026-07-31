@@ -143,6 +143,11 @@ class LookupOperationOptions:
             return "--gaps and --chain/--compare are mutually exclusive"
         if self.chain_depth > 1 and not self.chain_mode:
             return "--depth requires --chain"
+        if not 1 <= self.chain_depth <= 3:
+            # The help text and the chain engine both say 1 to 3. Out-of-range
+            # values were silently clamped, so --depth 99 reported success for a
+            # traversal the operator did not ask for.
+            return "--depth must be between 1 and 3"
         return None
 
 

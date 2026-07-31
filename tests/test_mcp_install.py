@@ -512,7 +512,7 @@ class TestCLI:
     ) -> None:
         output = io.StringIO()
         console = Console(file=output, width=40, color_system=None)
-        monkeypatch.setattr("recon_tool.cli.mcp.get_console", lambda: console)
+        monkeypatch.setattr("recon_tool.cli.mcp.get_err_console", lambda: console)
 
         _render_install_verification("claude-desktop")
 
@@ -547,6 +547,30 @@ class TestCLI:
         expected = plan_install("cursor", "user", config_path_override=target)
         assert parsed_block == {"mcpServers": {"recon": expected.new_block}}
         assert not target.exists()
+
+    def test_install_dry_run_stdout_carries_only_the_stanza_json(self, tmp_path: Path) -> None:
+        """`recon mcp install --dry-run > stanza.json` must capture valid
+        JSON: the client/scope/path/action plan lines are diagnostics and
+        belong on stderr, leaving the stanza as the sole stdout payload."""
+        target = tmp_path / "mcp.json"
+        result = runner.invoke(
+            app,
+            [
+                "mcp",
+                "install",
+                "--client",
+                "cursor",
+                "--config-path",
+                str(target),
+                "--dry-run",
+            ],
+        )
+        assert result.exit_code == 0
+        parsed = json.loads(result.stdout)
+        expected = plan_install("cursor", "user", config_path_override=target)
+        assert parsed == {"mcpServers": {"recon": expected.new_block}}
+        assert "client" in result.stderr
+        assert "dry-run" in result.stderr.lower()
 
     def test_install_plan_renders_markup_like_path_as_literal(self, tmp_path: Path) -> None:
         target = tmp_path / "[bold]config" / "mcp.json"

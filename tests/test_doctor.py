@@ -249,7 +249,7 @@ class TestDoctorDiagnosticRendering:
         stream = StringIO()
         console = Console(file=stream, force_terminal=False, color_system=None, width=120)
 
-        with patch("recon_tool.cli.doctor.get_console", return_value=console):
+        with patch("recon_tool.cli.doctor.get_err_console", return_value=console):
             _render_mcp_checks([("Tools [name]", False, "[red]forged[/red]\n  ok  forged-row")])
 
         output = stream.getvalue()

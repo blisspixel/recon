@@ -9,6 +9,7 @@ facade. Imports the shared cli helpers / formatter; never imports cli.py.
 from __future__ import annotations
 
 import asyncio
+import io
 import logging
 from collections.abc import Awaitable, Callable, Sequence
 from pathlib import Path
@@ -87,6 +88,29 @@ def read_batch_domains(stream: TextIO) -> list[str]:
                 msg = f"Batch input exceeds maximum of {_MAX_BATCH_DOMAINS} domains"
                 raise _BatchInputError(msg)
     return domains
+
+
+def _read_stdin_domains(stream: Any) -> list[str]:
+    """Read ``recon batch -`` input as UTF-8 regardless of the console codepage.
+
+    ``sys.stdin`` decodes with the platform default, which on Windows is the
+    ANSI codepage. Piping a UTF-8 domain list therefore mojibaked non-ASCII
+    labels into a *different* registrable domain and looked up the wrong target
+    with exit 0, instead of raising the ``UnicodeDecodeError`` the caller
+    already handles. Reading the binary buffer keeps the file and stdin paths on
+    one decoder, and ``utf-8-sig`` drops a leading BOM the same way the file
+    path does. ``detach`` releases the buffer so the wrapper never closes the
+    real stdin on collection.
+    """
+    buffer = getattr(stream, "buffer", None)
+    if buffer is None:
+        # A test harness or embedder supplied an already-decoded text stream.
+        return read_batch_domains(stream)
+    wrapper = io.TextIOWrapper(buffer, encoding="utf-8-sig")
+    try:
+        return read_batch_domains(wrapper)
+    finally:
+        wrapper.detach()
 
 
 async def discover(
@@ -218,13 +242,13 @@ def _batch_load_domains(file: str, console: Any, *, announce_dupes: bool) -> lis
     from_stdin = file == "-"
     try:
         if from_stdin:
-            domain_list = read_batch_domains(sys_mod.stdin)
+            domain_list = _read_stdin_domains(sys_mod.stdin)
         else:
             path = Path(file)
             if not path.exists():
                 render_error(f"File not found: {file}")
                 raise typer.Exit(code=EXIT_VALIDATION)
-            with path.open(encoding="utf-8") as f:
+            with path.open(encoding="utf-8-sig") as f:
                 domain_list = read_batch_domains(f)
     except _BatchInputError as exc:
         render_error(str(exc))
@@ -657,14 +681,16 @@ def _batch_error_result(
     ndjson: bool,
     csv_output: bool,
     markdown: bool,
-    markdown_skips: bool,
     error_prefix: str,
 ) -> object:
     """Shape a per-domain error for the active output mode.
 
-    ``markdown_skips`` distinguishes the validate-error path (markdown yields
-    nothing) from the resolve-error path (markdown falls through to the display
-    sentinel), preserving the pre-refactor behaviour exactly.
+    Every mode reports every failed domain. Markdown used to drop validation
+    errors specifically, so a run over a list with malformed rows exited 0 with
+    nothing on stdout or stderr about them, while the same list under --json,
+    --csv, --ndjson, and the default panel all reported them. The sentinel below
+    is routed to stderr by the markdown renderer, which keeps the report body
+    clean without hiding the failure.
     """
     if json_output or ndjson:
         # SH8: machine-readable error_kind comes from structured control flow,
@@ -673,8 +699,6 @@ def _batch_error_result(
         return {"domain": domain, "error": message, "error_kind": error_kind, "record_type": "error"}
     if csv_output:
         return (domain, None, message)
-    if markdown and markdown_skips:
-        return None
     return f"{error_prefix}{domain}: {message}"
 
 
@@ -738,7 +762,6 @@ async def _batch_process_one(
             ndjson=ndjson,
             csv_output=csv_output,
             markdown=markdown,
-            markdown_skips=True,
             error_prefix=error_prefix,
         )
 
@@ -759,7 +782,6 @@ async def _batch_process_one(
                         ndjson=ndjson,
                         csv_output=csv_output,
                         markdown=markdown,
-                        markdown_skips=False,
                         error_prefix=error_prefix,
                     )
                 if fusion_network is None or fusion_priors_override is None:
@@ -789,7 +811,6 @@ async def _batch_process_one(
                 ndjson=ndjson,
                 csv_output=csv_output,
                 markdown=markdown,
-                markdown_skips=False,
                 error_prefix=error_prefix,
             )
         except Exception as exc:
@@ -802,7 +823,6 @@ async def _batch_process_one(
                 ndjson=ndjson,
                 csv_output=csv_output,
                 markdown=markdown,
-                markdown_skips=False,
                 error_prefix=error_prefix,
             )
 

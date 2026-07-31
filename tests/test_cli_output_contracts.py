@@ -8,13 +8,14 @@ markdown) contaminated by a human notice or an internal error sentinel.
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
-from recon_tool.models import ConfidenceLevel, ReconLookupError, SourceResult, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, ReconLookupError, SourceResult, TenantInfo
 
 runner = CliRunner()
 
@@ -173,3 +174,53 @@ class TestBadInputIsCleanError:
         # is rejected rather than silently dropped.
         result = runner.invoke(app, ["alpha.invalid", "--exposure", "--md"])
         assert result.exit_code == 2
+
+
+def test_markdown_batch_reports_invalid_domains_instead_of_dropping_them(tmp_path) -> None:
+    """Every batch output mode must account for every input row.
+
+    Markdown alone discarded validation errors, so a run over a list with
+    malformed rows produced a report with no trace of them: empty stdout, empty
+    stderr, exit 0. JSON, NDJSON, CSV, and the default panel all reported them.
+    """
+    listing = tmp_path / "domains.txt"
+    listing.write_text("not_a_domain\nalso bad\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["batch", str(listing), "--md"])
+
+    assert result.exit_code == 0
+    assert "not_a_domain" in result.stderr
+    assert "also bad" in result.stderr
+
+
+@patch(RESOLVE_PATH, new_callable=AsyncMock)
+def test_plain_output_carries_requested_explain_and_posture_sections(mock_resolve: AsyncMock) -> None:
+    """`--plain` is the screen-reader path, so it must not be the weakest one.
+
+    It took neither flag, so `--plain --explain` and `--plain --posture` exited
+    0 with the requested content silently dropped while `--json` and `--md`
+    both honored them.
+    """
+    evidenced = replace(
+        _INFO,
+        evidence=(EvidenceRecord("HTTP", "NameSpaceType=Managed", "GetUserRealm", "microsoft365"),),
+    )
+    mock_resolve.return_value = (evidenced, _RESULTS)
+
+    plain = runner.invoke(app, ["alpha.invalid", "--plain"])
+    explained = runner.invoke(app, ["alpha.invalid", "--plain", "--explain"])
+    # A profile is what produces posture observations; without one the block is
+    # legitimately empty and an empty collection renders as no lines at all.
+    posture = runner.invoke(app, ["alpha.invalid", "--plain", "--posture", "--profile", "fintech"])
+
+    assert plain.exit_code == 0
+    assert explained.exit_code == 0
+    assert posture.exit_code == 0
+    assert "explanation_dag" not in plain.stdout
+    assert "posture" not in plain.stdout
+    # The provenance DAG is the part of the --explain block that is always
+    # populated; the flat `explanations` list can legitimately be empty, and an
+    # empty collection renders as no lines at all in the linear view.
+    assert "explanation_dag" in explained.stdout
+    assert "relation: detected-by" in explained.stdout
+    assert "posture" in posture.stdout

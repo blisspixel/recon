@@ -34,8 +34,8 @@ SOFT_CAP = 1000
 # entry gone, every module under SOFT_CAP.
 BASELINE: dict[str, int] = {
     "formatter/panel.py": 1974,
-    "exposure.py": 858,
     "merger.py": 805,
+    "exposure.py": 637,
 }
 
 

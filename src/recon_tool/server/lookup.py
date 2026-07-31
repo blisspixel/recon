@@ -28,7 +28,7 @@ from recon_tool.formatter.classify import (
     provider_line,
 )
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
-from recon_tool.mcp_client.sdk_compat import ToolAnnotations
+from recon_tool.mcp_client.sdk_compat import ToolAnnotations, ToolError
 from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
@@ -152,7 +152,7 @@ async def lookup_tenant(
     """
     output_format = format
     if output_format not in _VALID_FORMATS:
-        return f"Error: invalid format {output_format!r}. Must be one of: {', '.join(sorted(_VALID_FORMATS))}"
+        raise ToolError(f"Error: invalid format {output_format!r}. Must be one of: {', '.join(sorted(_VALID_FORMATS))}")
 
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
@@ -161,7 +161,7 @@ async def lookup_tenant(
         validated = validate_domain(domain)
     except ValueError as exc:
         log_validation_failed(request_id)
-        return server_app.invalid_domain_message(exc)
+        raise ToolError(server_app.invalid_domain_message(exc)) from exc
 
     # Check cache first - avoids hitting upstream endpoints for repeated lookups
     cached = cache_get(validated)

@@ -6,19 +6,17 @@
 [![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](https://github.com/blisspixel/recon/blob/main/LICENSE)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/blisspixel/recon/badge)](https://scorecard.dev/viewer/?uri=github.com/blisspixel/recon)
 
-Passive domain intelligence from public sources. recon reads public DNS,
-certificate transparency, and unauthenticated Microsoft and Google identity
-discovery endpoints to compose typed observations around a domain's public
-technology and identity namespace. A domain is the query coordinate, not proof
-of one organization, owner, account, or deployed product.
+Point recon at a domain and get its public technology and identity footprint:
+email security posture, mail and identity providers, SaaS indicators, and
+certificate-transparency findings. It reads public DNS, certificate
+transparency, and unauthenticated Microsoft and Google identity discovery
+endpoints, and composes what it finds into typed, evidence-backed observations.
 
-It uses no credentials, no API keys, no paid feeds, and no active scanning. It
-ships as a local Python package with a CLI, versioned JSON output, and a stdio
-MCP server.
-The project does not operate a hosted service. Optional draft guidance is
-available for operator-owned remote access, but it is never required for local
-use. recon is not a scheduler, vulnerability scanner, company research tool,
-or firmographic database.
+A domain is the query coordinate, not proof of one organization, owner,
+account, or deployed product. recon uses no credentials, no API keys, no paid
+feeds, and no active scanning. It ships as a local Python package with a CLI,
+versioned JSON output, and a stdio MCP server. It is not a scheduler,
+vulnerability scanner, company research tool, or firmographic database.
 
 > **Defensive use only.** Use recon for legitimate posture review, IT
 > architecture review, vendor diligence, and defensive hardening. See
@@ -34,60 +32,46 @@ uv tool install recon-tool
 pipx install recon-tool
 ```
 
-Python 3.11 through 3.14 is supported. The latest Python 3.14 patch is
-recommended for new installations and development; older supported versions
-retain the same product behavior and output contracts. Current measurements
-and version-specific decisions are in
-[docs/performance.md](https://github.com/blisspixel/recon/blob/main/docs/performance.md).
+Python 3.11 through 3.14, on Windows, macOS, or Linux. Later Python versions
+are not yet part of the compatibility claim.
 
-Optional helpers at `scripts/install.ps1` and `scripts/install.sh` use an
+Optional helpers at `scripts/install.ps1` and `scripts/install.sh` drive an
 existing `uv` or `pipx` installation. Download a
 [release-tag source archive](https://github.com/blisspixel/recon/releases/latest),
-review the local helper, and then run it. Each helper installs the exact version
+review the helper locally, then run it. Each helper installs the exact version
 represented by that tag, preserves a sole existing `uv` or `pipx` owner, and
-refuses ambiguous or unmanaged installations. Review the helper from a newer
-tag before using it to update. Do not pipe mutable branch content directly into
-a shell.
+refuses ambiguous or unmanaged installations. Do not pipe mutable branch
+content into a shell. To verify the exact GitHub and PyPI artifacts, their
+signed evidence, and their byte parity before installing, follow the
+[consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
 
-For a provenance-first path that verifies the exact GitHub and PyPI artifacts,
-their signed evidence, and their byte parity before optional installation, use
-the [cross-platform consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
-The release workflow in this source revision signs the completed SBOM with the
-distributions and validates any existing release's exact identity and
-expected-only inventory before replacing assets during recovery. The published
-v2.6.3 bundle predates the SBOM subject expansion; the quick path binds that
-single historical exception to its exact commit and still validates the SBOM.
-
-Open a new terminal and run an offline verification of the installed command:
+Verify the installed command offline:
 
 ```bash
 recon --version
 ```
 
-Optionally test online connectivity to recon's public data sources:
+Then optionally test online connectivity to recon's public data sources:
 
 ```bash
 recon doctor
 ```
 
-The default diagnostic uses synthetic requests to Microsoft identity endpoints,
-DNS for `example.com`, and crt.sh. It does not query a user-supplied target.
-The `--fix`, `--mcp`, and `--client` modes are local-only.
+`recon doctor` uses synthetic requests and never queries a user-supplied
+target. Its `--fix`, `--mcp`, and `--client` modes are local-only.
 
-Before the first lookup, note that recon makes DNS queries which recursive and
-authoritative DNS infrastructure may observe. Its only default request to a
-target-owned HTTP endpoint is the standards-defined MTA-STS policy fetch at
-`https://mta-sts.<domain>/.well-known/mta-sts.txt`. Google CSE and BIMI direct
-probes run only when `--direct-probes` is explicitly enabled.
+Before the first lookup, know what leaves your machine. recon makes DNS queries
+that recursive and authoritative DNS infrastructure may observe. Its only
+default request to a target-owned endpoint is the standards-defined MTA-STS
+policy fetch at `https://mta-sts.<domain>/.well-known/mta-sts.txt`. Google CSE
+and BIMI certificate probes run only when `--direct-probes` is explicitly
+enabled.
 
 Run the first lookup:
 
 ```bash
 recon example.com
 ```
-
-If a lookup times out or every online source fails, run `recon doctor` to
-check source connectivity, then retry the lookup.
 
 Example output shape:
 
@@ -115,7 +99,7 @@ Examples use IETF reserved namespaces. Tenant IDs, services, and domains in
 this rendered example are fabricated. No real organization is depicted as the
 evaluated target.
 
-For detailed install, update, uninstall, and first-run workflows, read
+Install, update, uninstall, and first-run detail:
 [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
 
 ## What recon Is Good For
@@ -143,60 +127,23 @@ recon example.com --plain                      # linear text for screen readers 
 recon example.com --json                       # structured lookup record
 recon batch domains.txt --json                 # batch JSON array
 recon batch domains.txt --ndjson               # one record per line
-recon batch domains.txt --summary              # aggregate-only cohort summary
 recon delta example.com                        # diff against cached snapshot
 recon cache show                               # bounded payload-free cache overview
-recon cache show --all                         # inspect every completed JSON cache file
-recon cache show mail.example.com --exact      # inspect literal-host result and CT cache metadata
-recon cache clear mail.example.com --exact     # clear literal-host CT and result cache keys
+recon fingerprints list                        # local catalog of public-record matchers
+recon signals list                             # local catalog of derived observations
 recon mcp install --client=cursor              # wire MCP into a client
-recon doctor --mcp                             # static MCP registry check
 recon mcp doctor                               # live MCP tools/resources check
-recon doctor --client=cursor                   # verify the client config
 ```
 
-The default cache overview enumerates filenames but opens at most the
-lexicographically first 100 result files and 100 CT files. It reports exact
-file and uninspected counts; `--all` opts into complete JSON payload
-inspection. Cache-writer-shaped interrupted-write artifacts are counted
-without reading their payload, make the overview exit 4, and are removed by the confirmed
-`recon cache clear --all` workflow.
-
-These list, search, and show catalog commands are local and make no network
-requests:
-
-```bash
-recon fingerprints list                       # summarize public-record matchers
-recon fingerprints search email               # preview matching fingerprint slugs
-recon fingerprints show <slug>                 # show every record and rule for one slug
-recon signals list                             # list derived reportable observations
-recon signals search email                     # search signal definitions
-recon signals show "<signal name>"             # inspect one signal definition
-```
-
-A fingerprint slug is a named public-record indicator. One slug can
-intentionally have multiple catalog records, and `show` preserves every record,
-detection, relationship hint, tier, and verification date. A signal is a
-derived, reportable observation definition built from candidate fingerprint
-slugs and metadata conditions. Human fingerprint search previews at most ten
-unique slugs; `--json` returns every matching catalog record. Category filters
-use the same word-prefix or phrase rule in the CLI and MCP server. Human catalog
-detail output strips terminal controls from locally extended text and visibly
-marks values truncated after 1,024 characters.
-
-At terminal widths below 70 columns, command help automatically switches to a
-complete linear layout so long option names and command summaries remain
-visible without source markup. The no-argument welcome also switches to
-vertical command descriptions whenever an aligned row would not fit, including
-at ordinary widths. `--plain` is the linear view for a standard single-domain
-lookup; batch, delta, chain, compare, exposure, and gaps reports keep their
-mode-specific formats.
-
-Built-in posture profiles: `fintech`, `healthcare`, `saas-b2b`,
-`high-value-target`, `public-sector`, and `higher-ed`. Custom profiles live in
+The catalog and cache commands are local and make no network requests. Built-in
+posture profiles are `fintech`, `healthcare`, `saas-b2b`, `high-value-target`,
+`public-sector`, and `higher-ed`; custom profiles live in
 `~/.recon/profiles/*.yaml`.
 
-Generated command and flag reference:
+Bounded cache inspection, catalog search semantics, corpus testing, and the
+narrow-terminal layout rules are covered in
+[docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
+The generated command and flag reference is
 [docs/cli-surface.md](https://github.com/blisspixel/recon/blob/main/docs/cli-surface.md).
 
 ## How recon Works
@@ -208,25 +155,12 @@ recon reads:
   related-domain hints.
 - Identity discovery: unauthenticated Microsoft and Google endpoints.
 
-Default collection includes bounded DNS queries through the configured
-recursive resolver, so authoritative DNS infrastructure may observe resulting
-resolver traffic. The only default target-owned HTTP or application request is
-the standards-based MTA-STS policy fetch at `mta-sts.<domain>`. Google CSE and
-BIMI VMC direct probes are opt-in behind `--direct-probes`.
-
-The engine then maps observables to fingerprint slugs, derived signals, typed
-topology, provenance paths, per-slug evidence strength, and model-relative
-Bayesian diagnostics. Sparse public evidence stays sparse: the result lowers
-confidence or remains unresolved instead of inventing a clean answer. A source
-failure remains unavailable rather than becoming a negative observation. The
-Bayesian uncertainty band is evidence-responsive, not a demonstrated credible
-or confidence interval.
-
-The reviewed built-in fingerprint source remains split YAML. Release wheels
-load one deterministic generated JSON catalog, while custom and session-scoped
-fingerprints still pass through the runtime validator. This keeps contributor
-review readable and removes repeated YAML parsing from cold CLI startup without
-changing catalog order, matching, or public output.
+It then maps those observables to fingerprint slugs, derived signals, typed
+topology, provenance paths, and per-slug evidence strength. Sparse public
+evidence stays sparse: the result lowers confidence or stays unresolved instead
+of inventing a clean answer, and a source failure remains unavailable rather
+than becoming a negative observation. Reported confidence is model-relative
+rather than a calibrated probability.
 
 Long-form explanation:
 [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md).
@@ -235,21 +169,6 @@ Formal model and robustness research program:
 
 ## JSON and Automation
 
-`recon <domain> --json` emits a stable single-domain lookup object. Batch and
-delta modes emit different shapes, so route by mode or by `record_type`.
-Retained batch modes create at most the requested number of outer batch worker
-tasks while restoring input order. Each admitted lookup may still create its
-own bounded source tasks. `--ndjson` also releases completed records and remains
-the lowest-memory choice for large inputs.
-Batch processing is record-oriented: a valid run keeps exit code 0 when one or
-more domains fail. JSON and NDJSON consumers must inspect `record_type` and
-`error_kind` on every record; CSV consumers must inspect the `error` column.
-`recon batch --summary --json` preserves the separate aggregate-only
-`cohort_summary` 2.1 contract. New consumers can select
-`--summary-schema 2.2` for raw-evidence-bound DMARC rates, corrected missingness,
-and explicit metric kinds. The standalone reducer uses
-`--schema-version 2.2` for the corresponding atemporal compatibility view.
-
 ```bash
 recon example.com --json
 recon batch domains.txt --json
@@ -257,13 +176,23 @@ recon batch domains.txt --ndjson
 recon delta example.com --json
 ```
 
+Single-domain, batch, and delta modes emit different shapes, so route by mode
+or by `record_type`. Batch processing is record-oriented: a valid run keeps exit
+code 0 when individual domains fail, so consumers must inspect `record_type`
+and `error_kind` per record rather than the process exit status. `--ndjson`
+releases completed records as they finish and is the lowest-memory choice for
+large inputs.
+
 Read these before building an integration:
 
 - [docs/schema.md](https://github.com/blisspixel/recon/blob/main/docs/schema.md): stable JSON contract.
 - [docs/recon-schema.json](https://github.com/blisspixel/recon/blob/main/docs/recon-schema.json): machine-readable schema.
-- [docs/automation-examples.md](https://github.com/blisspixel/recon/blob/main/docs/automation-examples.md): parser examples.
+- [docs/stability.md](https://github.com/blisspixel/recon/blob/main/docs/stability.md): what may change, and when.
 - [docs/operational-contract.md](https://github.com/blisspixel/recon/blob/main/docs/operational-contract.md): timeouts,
   bounds, exit codes, cache, and partial-result semantics.
+- [docs/automation-examples.md](https://github.com/blisspixel/recon/blob/main/docs/automation-examples.md): parser examples.
+- [docs/aggregate-state.md](https://github.com/blisspixel/recon/blob/main/docs/aggregate-state.md): cohort summary and
+  reducer schema versions.
 
 `docs/surface-inventory.json`, `docs/cli-surface.md`, and
 `recon://surface-inventory` are generated discovery context and drift guards,
@@ -273,9 +202,9 @@ future stable subset.
 ## MCP Server
 
 The default install includes a local stdio MCP server for MCP-compatible tools.
-Start with manual approvals. Approval syntax is client-specific, and some
-current client schemas do not define `autoApprove`. Treat connected agents as
-untrusted input.
+Start with manual approvals, and treat connected agents as untrusted input.
+Approval syntax is client-specific, and some current client schemas do not
+define `autoApprove`.
 
 ```bash
 recon mcp install --client=claude-desktop
@@ -284,23 +213,22 @@ recon mcp doctor
 recon doctor --client=claude-desktop
 ```
 
-The three checks cover different boundaries in order: static server registry,
-live local stdio discovery plus canonical tool and JSON resource reads, then
-the named client's saved configuration. The live check does not inspect client
-configuration. The installer writes the right per-client config shape and
-preserves sibling MCP servers. Full setup, tool list, read-only versus stateful
-guidance, and troubleshooting live in
-[docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md).
-Per-client scaffolds live in
+Those checks cover three different boundaries in order: the static server
+registry, live local stdio discovery with canonical tool and JSON resource
+reads, and the named client's saved configuration. The installer writes the
+correct per-client config shape and preserves sibling MCP servers. Full setup,
+tool list, read-only versus stateful guidance, and troubleshooting live in
+[docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md);
+per-client scaffolds live in
 [agents/](https://github.com/blisspixel/recon/tree/main/agents).
 
 ## Optional Cloud Access
 
-Local execution remains the default. For teams that want shared remote access,
-the repository includes a draft authenticated container and Cloud Run Terraform
-starting point. The framework is intended to be directionally useful, not a
-validated production deployment. Operators own deployment, identity, data
-handling, cost, and operations.
+Local execution is the default, and the project does not operate a hosted
+service. For teams that want shared remote access, the repository includes a
+draft authenticated container and Cloud Run Terraform starting point. It is
+intended to be directionally useful, not a validated production deployment.
+Operators own deployment, identity, data handling, cost, and operations.
 
 - [Optional cloud architecture and platform plan](https://github.com/blisspixel/recon/blob/main/docs/optional-cloud-deployment-plan.md)
 - [Draft deployment framework](https://github.com/blisspixel/recon/tree/main/deploy)
@@ -316,28 +244,25 @@ The public channel has a ceiling:
 - Fingerprints are rule-based indicators, not proof of active use.
 
 Read [docs/limitations.md](https://github.com/blisspixel/recon/blob/main/docs/limitations.md)
-before using recon output for a high-stakes decision. Read
+before using recon output for a high-stakes decision, and
 [docs/data-handling-policy.md](https://github.com/blisspixel/recon/blob/main/docs/data-handling-policy.md)
 before committing any validation artifact.
+
+## Security
+
+Report a vulnerability through the process in
+[SECURITY.md](https://github.com/blisspixel/recon/blob/main/SECURITY.md). The
+threat model, trust boundaries, and hostile-input handling are described in
+[docs/security.md](https://github.com/blisspixel/recon/blob/main/docs/security.md).
 
 ## Documentation
 
 - [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md): install, update,
   uninstall, and first commands.
 - [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md): readable model overview.
-- [docs/README.md](https://github.com/blisspixel/recon/blob/main/docs/README.md): complete docs index.
-- [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md): current plan, invariants, and scope
-  boundaries.
-- [docs/optional-cloud-deployment-plan.md](https://github.com/blisspixel/recon/blob/main/docs/optional-cloud-deployment-plan.md): optional cloud
-  architecture, maturity, and validation gates.
-- [docs/structural-maintainability.md](https://github.com/blisspixel/recon/blob/main/docs/structural-maintainability.md): measured
-  source, test, compatibility, and facade cleanup plan.
-- [docs/external-writeup-plan.md](https://github.com/blisspixel/recon/blob/main/docs/external-writeup-plan.md): active
-  maintainer plan for external write-up readiness.
-- [docs/submission-freeze-checklist.md](https://github.com/blisspixel/recon/blob/main/docs/submission-freeze-checklist.md):
-  final paper and artifact freeze gate before any external submission package.
-- [docs/c3-ct-validation-plan.md](https://github.com/blisspixel/recon/blob/main/docs/c3-ct-validation-plan.md): closed
-  certificate-transparency validation plan.
+- [docs/README.md](https://github.com/blisspixel/recon/blob/main/docs/README.md): complete docs index, grouped by
+  audience.
+- [ROADMAP.md](https://github.com/blisspixel/recon/blob/main/ROADMAP.md): where the project stands and what is next.
 - [CHANGELOG.md](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md): shipped changes.
 
 ## Roadmap Focus
@@ -345,59 +270,36 @@ before committing any validation artifact.
 recon has a stable baseline, but product quality work remains. The top three
 priorities are:
 
-1. Make every default claim traceable to evidence and remove product-use,
+1. Make every default claim traceable to evidence, and remove product-use,
    cloud-type, or security-maturity conclusions that public metadata cannot
    support.
-2. Keep the exact MCP v1.28.1 and v2.0.0 compatibility matrix green. The
-   stable-v2 compatibility gate passed on 2026-07-28; changing the production
-   dependency remains a separate, deliberate release decision.
+2. Keep the exact MCP v1.28.1 and v2.0.0 compatibility matrix green. Changing
+   the production dependency remains a separate, deliberate release decision.
 3. Establish an aggregate-safe quality baseline for claim precision,
    abstention, provenance, catalog coverage, degradation, latency, CT value,
    and agent context cost before expanding inference or graph machinery.
 
 A fourth, explicitly lower-priority track covers the optional cloud framework.
-It does not change the local default and remains subject to the maturity and
-validation gates in the linked plan.
+Broad catalog growth stays blocked behind independent rank, regional,
+vendor-seed, and drift rounds; real target names never enter this repository.
 
-Catalog coverage work uses deduplicated private rounds across rank, region, and
-domain-class strata. Real target names and per-domain records stay in ignored
-local validation workspaces. GitHub receives only generic provider patterns,
-provider-owned references, reserved synthetic fixtures, and disclosure-safe aggregates.
-The opt-in maintenance path now accounts separately for CNAME chains, apex
-CNAME, non-SPF TXT, SPF targets, MX, NS, CAA, DMARC RUA, bounded owner-qualified
-TXT, and bounded SRV observations. A frozen aggregate baseline and distinct
-sampling rounds are required before the project claims broad catalog coverage.
-The frozen convenience-sample baseline and a 366-namespace unseen vertical
-holdout are complete and public as aggregate counts only; independent rank,
-regional, vendor-seed, and drift rounds remain open.
-
-The dependency order, acceptance evidence, stop rules, and current code-graph
-summary live in
-[docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md).
-The concise execution sequence is the
-[Quality Proof plan](https://github.com/blisspixel/recon/blob/main/docs/strategic-gap-audit.md#quality-proof-execution-plan).
-The implementation plan is
-[docs/engineering-refinement-plan.md](https://github.com/blisspixel/recon/blob/main/docs/engineering-refinement-plan.md), and
-the current step-back review is
+Dependency order, acceptance evidence, and stop rules live in
+[docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md),
+with the current step-back review in
 [docs/strategic-gap-audit.md](https://github.com/blisspixel/recon/blob/main/docs/strategic-gap-audit.md).
-Research publication,
-OpenSSF process, outside replication, and archive work remain separate
-maintainer tracks so they do not displace product truthfulness or measured
-utility.
 
-The most recent completed historical local proof for the separate publication
-track is
+Research publication, OpenSSF process, outside replication, and archive work
+are separate maintainer tracks that do not displace product truthfulness. The
+paper and artifact package is unfrozen after subsequent product and release
+changes, so maintainers must rerun
+[docs/submission-freeze-checklist.md](https://github.com/blisspixel/recon/blob/main/docs/submission-freeze-checklist.md)
+before any external submission; the most recent completed local proof is
 [validation/2026-06-30-submission-freeze-local-proof.md](https://github.com/blisspixel/recon/blob/main/validation/2026-06-30-submission-freeze-local-proof.md).
-The current paper and artifact package is unfrozen after subsequent product,
-documentation, and release changes. Maintainers must rerun the submission gate
-before external submission.
 Its
 [public-label decision](https://github.com/blisspixel/recon/blob/main/docs/public-label-snapshot-decision.md)
-keeps public
-lists as robustness checks rather than population rates, and its
+keeps public lists as robustness checks rather than population rates, and its
 [M365 tenancy decision](https://github.com/blisspixel/recon/blob/main/docs/m365-tenancy-decision.md)
-keeps that evidence as
-corroboration rather than independent calibration.
+keeps that evidence as corroboration rather than independent calibration.
 
 ## Development
 
@@ -408,27 +310,15 @@ uv run python scripts/release_readiness.py --allow-dirty
 uv run python scripts/check.py
 ```
 
-`uv run python scripts/check.py` is the canonical local gate. It runs lint,
-type checks, coverage-gated tests, fingerprint and generated-artifact checks,
-validation and added-line text hygiene, tracked Markdown link and heading-anchor
-validation, workflow and dependency-export guards, interface checks, paper
-claim and figure checks, and size/complexity ratchets. Its full-suite stage uses
-at most four file-grouped test workers while preserving combined branch
-coverage. Focused `pytest` commands stay serial by default. Do not push on
-`--fast` alone. CI and the release workflow pass an explicit Git revision range
-so text hygiene covers every added line in the pushed or release commit range,
-not only the final diff.
-
-Release-shaped package builds use uv 0.11.17 and the exact hashed backend graph
-in `build-constraints.txt`. The build creates the sdist first and constructs the
-wheel from that file; the replay commands and remaining environment limits are
-documented in [docs/supply-chain.md](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md).
+`uv run python scripts/check.py` is the canonical local gate: lint, type
+checks, coverage-gated tests, generated-artifact and catalog checks, text and
+link hygiene, interface and claim checks, and size and complexity ratchets.
+Green locally means green in CI. Do not push on `--fast` alone.
 
 Project hygiene: keep examples reserved and synthetic, keep validation artifacts
-aggregate-only, and run `uv run python scripts/check.py`. The gate rejects the
-retired target-example vocabulary across public text while preserving provider
-definitions and ACME protocol terms; avoid dead code or placeholders.
-Contributor details:
+aggregate-only, and avoid dead code or placeholders. The gate rejects a retired
+target-example vocabulary across public text while preserving provider
+definitions and ACME protocol terms. Contributor details:
 [CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md).
 
 ## License

@@ -23,13 +23,13 @@ async def _call_structured_tool_boundary() -> None:
 
 
 async def _call_lookup_tenant() -> None:
-    result = await lookup_tenant(_REJECTED_INPUT)
-    assert result.startswith("Error: Invalid domain format")
+    with pytest.raises(ToolError, match="Invalid domain format"):
+        await lookup_tenant(_REJECTED_INPUT)
 
 
 async def _call_chain_lookup() -> None:
-    result = await chain_lookup(_REJECTED_INPUT)
-    assert result.startswith("Error: Invalid domain format")
+    with pytest.raises(ToolError, match="Invalid domain format"):
+        await chain_lookup(_REJECTED_INPUT)
 
 
 async def _call_discover() -> None:
@@ -38,8 +38,8 @@ async def _call_discover() -> None:
 
 
 async def _call_explain_dag() -> None:
-    result = await explain_dag(_REJECTED_INPUT)
-    assert result.startswith("Error: Invalid domain format")
+    with pytest.raises(ToolError, match="Invalid domain format"):
+        await explain_dag(_REJECTED_INPUT)
 
 
 @pytest.mark.asyncio
@@ -80,6 +80,31 @@ async def test_rejected_domain_logs_one_target_free_event(
     assert "Invalid domain format" not in caplog.text
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("invoke", "match"),
+    [
+        (lambda: lookup_tenant(_REJECTED_INPUT), "Invalid domain format"),
+        (lambda: lookup_tenant("example.com", format="xml"), "invalid format"),
+        (lambda: chain_lookup(_REJECTED_INPUT), "Invalid domain format"),
+        (lambda: explain_dag(_REJECTED_INPUT), "Invalid domain format"),
+        (lambda: explain_dag("example.com", output_format="png"), "output_format must be"),
+    ],
+    ids=("lookup-domain", "lookup-format", "chain-domain", "dag-domain", "dag-format"),
+)
+async def test_rejected_input_raises_tool_error(
+    invoke: Callable[[], Awaitable[str]],
+    match: str,
+) -> None:
+    """Validation failures must raise ToolError (isError=true), per the
+    resolve_single_for_tool contract in server/app.py. These narrative tools
+    used to return the same text as a success payload, which a consuming
+    model cannot distinguish from a real result. Format rejection happens
+    before any resolve, so no network stub is needed."""
+    with pytest.raises(ToolError, match=match):
+        await invoke()
+
+
 class TestMcpErrorTextIsSanitized:
     """MCP error text must not carry caller bytes or host detail.
 
@@ -97,7 +122,9 @@ class TestMcpErrorTextIsSanitized:
     async def test_rejected_domain_is_stripped_of_control_bytes(self) -> None:
         from recon_tool.server.lookup import lookup_tenant
 
-        rendered = str(await lookup_tenant(self.HOSTILE))
+        with pytest.raises(ToolError) as excinfo:
+            await lookup_tenant(self.HOSTILE)
+        rendered = str(excinfo.value)
 
         for forbidden in ("\x1b", "\x07", "\r", "\n\nSYSTEM"):
             assert forbidden not in rendered
