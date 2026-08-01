@@ -473,6 +473,14 @@ class TestSimulateHardening:
             slugs=("dmarc",),
             dmarc_policy="quarantine",
             dmarc_testing=True,
+            evidence=(
+                EvidenceRecord(
+                    source_type="DMARC",
+                    raw_value="v=DMARC1; p=quarantine; t=y",
+                    rule_name="DMARC",
+                    slug="dmarc",
+                ),
+            ),
         )
         mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
 
@@ -481,6 +489,32 @@ class TestSimulateHardening:
         assert data["current_score"] == 0
         assert data["simulated_score"] == 5
         assert any("not effectively enforcing" in gap["observation"] for gap in data["remaining_gaps"])
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_simulated_controls_replace_proof_and_leave_consistent_gaps(self, mock_resolve: AsyncMock) -> None:
+        info = replace(
+            SAMPLE_INFO,
+            dmarc_policy="none",
+            services=("DMARC",),
+            slugs=("dmarc",),
+            evidence=(EvidenceRecord("DMARC", "v=DMARC1; p=none", "DMARC", "dmarc"),),
+            merge_conflicts=MergeConflicts(
+                dmarc_policy=(
+                    CandidateValue("none", "dns_records", "high"),
+                    CandidateValue("reject", "cached_result", "medium"),
+                )
+            ),
+        )
+        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
+
+        data = await simulate_hardening("alpha.invalid", ["DMARC quarantine", "TLS-RPT"])
+        observations = {gap["observation"] for gap in data["remaining_gaps"]}
+
+        assert "DMARC policy set to quarantine" in data["applied_fixes"]
+        assert "TLS-RPT configured" in data["applied_fixes"]
+        assert "Effective DMARC policy is quarantine, not reject" in observations
+        assert not any("TLS-RPT" in observation for observation in observations)
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)

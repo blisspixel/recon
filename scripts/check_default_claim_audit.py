@@ -234,14 +234,30 @@ def _recommendation_producers() -> frozenset[str]:
     names: set[str] = set()
     for path in (ROOT / "src" / "recon_tool").rglob("*.py"):
         tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
-        for node in tree.body:
-            if not isinstance(node, ast.FunctionDef):
-                continue
+        functions = tuple(node for node in tree.body if isinstance(node, (ast.AsyncFunctionDef, ast.FunctionDef)))
+        producer_names = {
+            node.name
+            for node in functions
             if any(
                 isinstance(child, ast.Call) and isinstance(child.func, ast.Name) and child.func.id == "HardeningGap"
                 for child in ast.walk(node)
-            ):
-                names.add(f"{path.relative_to(ROOT).as_posix()}#{node.name}")
+            )
+        }
+        while True:
+            wrapper_names = {
+                node.name
+                for node in functions
+                if any(
+                    isinstance(child, ast.Call) and isinstance(child.func, ast.Name) and child.func.id in producer_names
+                    for child in ast.walk(node)
+                )
+            }
+            expanded = producer_names | wrapper_names
+            if expanded == producer_names:
+                break
+            producer_names = expanded
+        relative = path.relative_to(ROOT).as_posix()
+        names.update(f"{relative}#{name}" for name in producer_names)
     return frozenset(names)
 
 

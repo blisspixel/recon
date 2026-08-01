@@ -43,12 +43,15 @@ def test_documented_checkpoint_counts_match_the_live_inventory() -> None:
     root_roadmap = " ".join((ROOT / "ROADMAP.md").read_text(encoding="utf-8").split())
     audit_doc = " ".join((ROOT / "docs" / "default-claim-audit.md").read_text(encoding="utf-8").split())
     canonical_roadmap = " ".join((ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8").split())
+    runtime_family_label = f"{incomplete_runtime} material runtime " + (
+        "family" if incomplete_runtime == 1 else "families"
+    )
 
-    assert f"{complete} families are complete. {incomplete_runtime} material runtime families" in root_roadmap
+    assert f"{complete} families are complete. {runtime_family_label}" in root_roadmap
     assert f"{score_fields} score or quantitative fields" in root_roadmap
-    assert f"{complete} families are complete. {incomplete_runtime} material runtime families" in audit_doc
+    assert f"{complete} families are complete. {runtime_family_label}" in audit_doc
     assert f"{score_fields} quantitative or categorical score fields" in audit_doc
-    assert f"{complete} are complete; {incomplete_runtime} material runtime families" in canonical_roadmap
+    assert f"{complete} are complete; {runtime_family_label}" in canonical_roadmap
 
 
 def test_panel_assembly_family_records_exact_runtime_lineage() -> None:
@@ -83,6 +86,22 @@ def test_posture_family_records_exact_generation_time_lineage() -> None:
         inventory["coverage"]["panel_producers"]["src/recon_tool/formatter/panel.py#format_comparison_dict"]
         == "runtime.exposure-index.v1"
     )
+
+
+def test_hardening_family_records_exact_generation_time_lineage() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    family = inventory["claim_families"]["runtime.hardening-guidance.v1"]
+
+    assert family["audit_status"] == "complete"
+    assert family["lineage_status"] == "exact"
+    assert "src/recon_tool/exposure_models.py#HardeningMetadataDependency" in family["evidence_path"]
+    assert "src/recon_tool/exposure_gaps.py#_gap" in family["producer_paths"]
+    assert inventory["coverage"]["recommendation_producers"] == {
+        "src/recon_tool/exposure_gaps.py#_gap": "runtime.hardening-guidance.v1",
+        "src/recon_tool/exposure_gaps.py#detect_inconsistencies": "runtime.hardening-guidance.v1",
+        "src/recon_tool/exposure_gaps.py#detect_missing_controls": "runtime.hardening-guidance.v1",
+        "src/recon_tool/exposure_gaps.py#detect_weak_configs": "runtime.hardening-guidance.v1",
+    }
 
 
 def test_digest_report_is_deterministic_and_matches_the_contract(capsys: pytest.CaptureFixture[str]) -> None:

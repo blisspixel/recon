@@ -58,10 +58,10 @@ rejected.
 
 At the 2026-08-01 checkpoint, the inventory contains 27 families and covers 89
 agent-guidance sections, 16 insight generators, 197 JSON property occurrences,
-167 MCP tool and output surfaces, 31 panel producers, 3 recommendation
-producers, 78 quantitative or categorical score fields, and 8 MCP instruction
-sections. 23 families are complete. 2 material runtime families
-have incomplete lineage: hardening guidance and the exposure index. Service
+167 MCP tool and output surfaces, 31 panel producers, 4 recommendation
+producer, 78 quantitative or categorical score fields, and 8 MCP instruction
+sections. 24 families are complete. 1 material runtime family
+has incomplete lineage: the exposure index. Service
 labels now derive a bounded role from retained,
 collection-observable record evidence and render missing roles as unavailable.
 Posture observations now carry their exact emitter, branch-local retained
@@ -70,6 +70,20 @@ and explanation paths. A metadata-only or profile-relative observation retains
 an exact rule dependency but remains graph-disconnected from raw evidence, and
 profile expectations are withheld whenever collection is degraded. Profiles
 remain explicitly relative lenses, not scores or universal recommendations.
+Hardening prompts now expose their exact generator, explicit observation state,
+typed satisfied predicates, canonical bounded scopes, and branch-local retained
+evidence. Observed weak configurations and compound inconsistencies require raw
+support that agrees with their derived scalar state; bounded absence requires
+successful collection; common-selector DKIM remains explicitly unresolved; and
+unavailable channels emit no absence prompt. DMARC guidance reuses the
+raw-bound policy projection, while MTA-STS distinguishes DNS activation from
+the conditionally attempted HTTP policy request. Hardening simulation replaces
+superseded proof rows with internally consistent hypothetical evidence before
+re-evaluation. Invalid or ambiguous DMARC material remains an evidence-backed
+review prompt with a distinct basis instead of becoming a false absence or
+disappearing.
+Recommendation discovery follows the central constructor through its direct
+generator call sites, so a new prompt cannot bypass audit ownership.
 Explanation records now label
 exact evidence-and-rule associations, exact rule-only associations,
 reconstructed associations, and unsupported associations. The additive

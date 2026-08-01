@@ -26,6 +26,7 @@ from recon_tool.constants import (
     SVC_MTA_STS,
     SVC_SPF_SOFTFAIL,
     SVC_SPF_STRICT,
+    effective_dmarc_policy,
 )
 from recon_tool.exposure import (
     EXPOSURE_DISCOURAGED_COPY_TERMS,
@@ -336,13 +337,16 @@ class TestProperty6GapDetectionCorrectness:
     @given(info=tenant_info_strategy())
     @_PBT_SETTINGS
     def test_missing_dmarc_produces_gap(self, info: TenantInfo) -> None:
-        """If dmarc_policy is None or 'none', a DMARC-related gap is present."""
+        """A bounded absence or evidence-backed monitoring policy produces a gap."""
         result = find_gaps_from_info(info)
         gap_observations = " ".join(g.observation.lower() for g in result.gaps)
+        has_dmarc_evidence = any(
+            record.slug == "dmarc" and record.source_type.upper() == "DMARC" for record in info.evidence
+        )
 
         if info.dmarc_policy is None:
             assert "dmarc" in gap_observations, "Missing DMARC should produce a gap"
-        elif info.dmarc_policy == "none":
+        elif info.dmarc_policy == "none" and has_dmarc_evidence:
             assert "dmarc" in gap_observations, "DMARC 'none' should produce a gap"
 
     @given(info=tenant_info_strategy())
@@ -386,11 +390,21 @@ class TestProperty6GapDetectionCorrectness:
         from recon_tool.exposure import _EMAIL_GATEWAY_SLUGS
 
         mx_slugs = {ev.slug for ev in info.evidence if ev.source_type.upper() == "MX"}
-        gateway_present = info.email_gateway is not None and bool(mx_slugs & set(_EMAIL_GATEWAY_SLUGS))
+        gateway_present = any(
+            slug in _EMAIL_GATEWAY_SLUGS and _EMAIL_GATEWAY_SLUGS[slug] == info.email_gateway for slug in mx_slugs
+        )
+        dmarc_evidence_present = any(
+            record.slug == "dmarc" and record.source_type.upper() == "DMARC" for record in info.evidence
+        )
+        dmarc_basis_available = info.dmarc_policy is None or dmarc_evidence_present
         result = find_gaps_from_info(info)
         gap_observations = " ".join(g.observation.lower() for g in result.gaps)
 
-        if gateway_present and info.dmarc_policy != "reject":
+        if (
+            gateway_present
+            and dmarc_basis_available
+            and effective_dmarc_policy(info.dmarc_policy, info.dmarc_pct, info.dmarc_testing) != "reject"
+        ):
             assert "gateway" in gap_observations, "Gateway without DMARC reject should produce a gap"
 
     def test_dmarc_testing_quarantine_is_reported_as_non_enforcing(self) -> None:
@@ -405,6 +419,7 @@ class TestProperty6GapDetectionCorrectness:
             slugs=("dmarc",),
             dmarc_policy="quarantine",
             dmarc_testing=True,
+            evidence=(EvidenceRecord("DMARC", "v=DMARC1; p=quarantine; t=y", SVC_DMARC, "dmarc"),),
         )
 
         assessment = assess_exposure_from_info(info)
@@ -427,7 +442,10 @@ class TestProperty6GapDetectionCorrectness:
             dmarc_policy="reject",
             dmarc_testing=True,
             email_gateway="Proofpoint",
-            evidence=(EvidenceRecord("MX", "10 mx.example.net", "Proofpoint", "proofpoint"),),
+            evidence=(
+                EvidenceRecord("MX", "10 mx.example.net", "Proofpoint", "proofpoint"),
+                EvidenceRecord("DMARC", "v=DMARC1; p=reject; t=y", SVC_DMARC, "dmarc"),
+            ),
         )
 
         gaps = find_gaps_from_info(info)

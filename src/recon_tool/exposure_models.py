@@ -1,15 +1,49 @@
-"""Result dataclasses for the exposure assessment.
+"""Result models and narrow lineage validation for exposure assessment.
 
-Pure frozen dataclasses (the EmailPosture / IdentityPosture / ExposureAssessment /
-GapReport / PostureComparison family), split out of exposure.py so the analysis
-logic stays under the file-size cap. No logic, no imports beyond the dataclass
-decorator. `recon_tool.exposure` re-exports every name so existing imports are
-unchanged.
+The frozen EmailPosture, IdentityPosture, ExposureAssessment, GapReport, and
+PostureComparison families live here to keep exposure.py below its file-size
+cap. Hardening models also validate their transient proof state at construction.
+Established result names remain re-exported from ``recon_tool.exposure``.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Literal, TypeAlias
+
+HardeningObservationState: TypeAlias = Literal[
+    "observed_weak_configuration",
+    "bounded_non_observation",
+    "unresolved_hideable_state",
+    "observed_configuration_inconsistency",
+]
+HardeningMetadataValue: TypeAlias = str | int | bool | None
+HardeningMetadataOperator: TypeAlias = Literal["eq", "neq", "is_none"]
+
+_HARDENING_OBSERVATION_STATES = frozenset(
+    {
+        "observed_weak_configuration",
+        "bounded_non_observation",
+        "unresolved_hideable_state",
+        "observed_configuration_inconsistency",
+    }
+)
+_HARDENING_METADATA_FIELDS = frozenset(
+    {
+        "dmarc_policy",
+        "effective_dmarc_policy",
+        "dmarc_construction_state",
+        "dkim_observed_at_common_selectors",
+        "mta_sts_mode",
+        "mta_sts_txt_observed",
+        "tls_rpt_record_observed",
+        "caa_record_observed",
+        "spf_softfail_observed",
+        "spf_strict_observed",
+        "gateway_mx_observed",
+        "email_gateway",
+    }
+)
 
 # ── Data models (all frozen) ───────────────────────────────────────────
 
@@ -89,6 +123,34 @@ class HardeningStatus:
 
 
 @dataclass(frozen=True)
+class HardeningMetadataDependency:
+    """One typed scalar predicate captured when a hardening rule fires."""
+
+    field: str
+    operator: HardeningMetadataOperator
+    expected_value: HardeningMetadataValue
+    observed_value: HardeningMetadataValue
+
+    def __post_init__(self) -> None:
+        if self.field not in _HARDENING_METADATA_FIELDS:
+            raise ValueError(f"unsupported hardening metadata dependency field: {self.field}")
+        if self.operator not in {"eq", "neq", "is_none"}:
+            raise ValueError(f"unsupported hardening metadata operator: {self.operator}")
+        if self.operator == "is_none" and self.expected_value is not None:
+            raise ValueError("is_none hardening dependencies must expect null")
+
+
+def hardening_metadata_predicate_satisfied(dependency: HardeningMetadataDependency) -> bool:
+    """Evaluate a captured hardening predicate without consulting live state."""
+    if dependency.operator == "is_none":
+        return dependency.observed_value is None
+    equal = type(dependency.expected_value) is type(dependency.observed_value) and (
+        dependency.expected_value == dependency.observed_value
+    )
+    return equal if dependency.operator == "eq" else not equal
+
+
+@dataclass(frozen=True)
 class ExposureAssessment:
     """Complete exposure assessment for a domain."""
 
@@ -119,7 +181,13 @@ class ExposureAssessment:
 
 @dataclass(frozen=True)
 class HardeningGap:
-    """A single hardening gap with category, severity, and guidance."""
+    """A review prompt with its exact transient generation-time basis.
+
+    The original display fields and ``absence_confirmable`` remain compatible.
+    The additive lineage fields distinguish direct weak observations, bounded
+    non-observations, hideable states, and compound inconsistencies. Formatters
+    expose them so an MCP consumer does not have to infer provenance from prose.
+    """
 
     category: str  # "email", "identity", "infrastructure", "consistency"
     severity: str  # "high", "medium", "low"
@@ -132,6 +200,33 @@ class HardeningGap:
     # may be a false positive — the control could be present but unobservable
     # from the passive channel. Absence is not disproof (the MNAR rule).
     absence_confirmable: bool = True
+    generator_rule_id: str = ""
+    observation_state: HardeningObservationState | None = None
+    metadata_dependencies: tuple[HardeningMetadataDependency, ...] = ()
+    observation_scope: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        lineage_present = bool(
+            self.generator_rule_id or self.observation_state or self.metadata_dependencies or self.observation_scope
+        )
+        if not lineage_present:
+            return
+        if not self.generator_rule_id:
+            raise ValueError("hardening lineage requires a generator rule ID")
+        if self.observation_state is None:
+            raise ValueError("hardening lineage requires an observation state")
+        if self.observation_state not in _HARDENING_OBSERVATION_STATES:
+            raise ValueError(f"unsupported hardening observation state: {self.observation_state}")
+        if not self.metadata_dependencies:
+            raise ValueError("hardening lineage requires at least one metadata dependency")
+        if not self.observation_scope or any(not scope for scope in self.observation_scope):
+            raise ValueError("hardening lineage requires non-empty observation scopes")
+        if not all(hardening_metadata_predicate_satisfied(item) for item in self.metadata_dependencies):
+            raise ValueError("hardening lineage contains an unsatisfied metadata dependency")
+        if self.observation_state == "unresolved_hideable_state" and self.absence_confirmable:
+            raise ValueError("a hideable hardening state cannot confirm absence")
+        if self.observation_state == "bounded_non_observation" and not self.absence_confirmable:
+            raise ValueError("a bounded non-observation must retain its compatibility confirmation flag")
 
 
 @dataclass(frozen=True)

@@ -62,8 +62,8 @@ paths are closed and the family definitions stop moving.
 primary surfaces to 27 claim families and blocks drift across 197 JSON property
 occurrences, 167 MCP tool and output surfaces, 31 panel producers, 89 agent
 guidance sections, 16 insight generators, 78 score or quantitative fields, and
-the remaining governed surfaces. 23 families are complete. 2
-material runtime families still have incomplete lineage, and the two static
+the remaining governed surfaces. 24 families are complete. 1
+material runtime family still has incomplete lineage, and the two static
 guidance families remain open for semantic review. Explanation output now distinguishes
 exact, exact-rule-only, reconstructed, and unsupported terminal lineage and
 adds exact-lineage completeness diagnostics without changing the stable
@@ -74,7 +74,10 @@ now preserve the queried namespace coordinate and exclude unavailable channel
 evidence from derived panel facts. Posture observations now retain the exact
 emitter, branch-local evidence occurrences, and typed metadata dependencies;
 profile-relative expectations fail closed under degraded collection and remain
-lenses rather than scores. The narrower
+lenses rather than scores. Hardening prompts now expose exact generator IDs,
+typed predicates, bounded scopes, retained evidence, and explicit basis states;
+unavailable channels emit no absence prompt and common-selector DKIM remains
+unresolved. The narrower
 `dns.dmarc.valid_policy_is_reject.v1` proof-carrying contract remains the first
 fully modeled claim. See
 [the default-claim audit](docs/default-claim-audit.md).

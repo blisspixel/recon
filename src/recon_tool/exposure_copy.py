@@ -40,8 +40,13 @@ def check_neutral_copy(text: str) -> str:
     return text
 
 
-def build_evidence_refs(info: TenantInfo, slugs: frozenset[str] | set[str]) -> tuple[EvidenceReference, ...]:
-    """Build EvidenceReference entries from TenantInfo.evidence matching given slugs."""
+def build_evidence_refs(
+    info: TenantInfo,
+    slugs: frozenset[str] | set[str],
+    *,
+    source_types: frozenset[str] | None = None,
+) -> tuple[EvidenceReference, ...]:
+    """Build references matching the requested slugs and optional source roles."""
     return tuple(
         EvidenceReference(
             source_type=evidence.source_type,
@@ -51,6 +56,7 @@ def build_evidence_refs(info: TenantInfo, slugs: frozenset[str] | set[str]) -> t
         )
         for evidence in info.evidence
         if evidence.slug in slugs
+        and (source_types is None or evidence.source_type.upper() in source_types)
     )
 
 
