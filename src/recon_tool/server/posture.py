@@ -18,6 +18,11 @@ from typing import Literal, cast
 
 from typing_extensions import TypedDict
 
+from recon_tool.exposure_models import (
+    HardeningMetadataOperator,
+    HardeningMetadataValue,
+    HardeningObservationState,
+)
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import EvidenceRecord, TenantInfo
 from recon_tool.server import app as server_app
@@ -66,6 +71,13 @@ class EvidenceReferenceSummary(TypedDict):
     raw_value: str
     rule_name: str
     slug: str
+
+
+class HardeningMetadataDependencySummary(TypedDict):
+    field: str
+    operator: HardeningMetadataOperator
+    expected_value: HardeningMetadataValue
+    observed_value: HardeningMetadataValue
 
 
 class ObservabilitySummary(TypedDict):
@@ -139,6 +151,10 @@ class HardeningGapSummary(TypedDict):
     severity: str
     observation: str
     recommendation: str
+    generator_rule_id: str
+    observation_state: HardeningObservationState
+    observation_scope: list[str]
+    metadata_dependencies: list[HardeningMetadataDependencySummary]
     absence_confirmable: bool
     evidence: list[EvidenceReferenceSummary]
 
@@ -455,12 +471,13 @@ async def find_hardening_gaps(domain: str) -> GapReportResult:
     This is a defensive review of public observations, not an overall security
     assessment or certification.
 
-    Returns a JSON array of hardening gaps, each with category, severity,
-    observation, suggested action, supporting evidence references, and an
-    ``absence_confirmable`` flag: true when the gap is a confirmed public-records
-    fact (a declarative record is absent or observed-weak), false when it rests
-    on not observing a hideable control and so may be a false positive. Report a
-    false-flagged gap as "not observed", not as a confirmed gap.
+    Returns a JSON array of hardening prompts, each with an exact generator rule,
+    typed metadata predicates, bounded observation scope, supporting evidence,
+    and an ``observation_state``. The state separates observed weak
+    configuration, bounded non-observation, unresolved hideable state, and an
+    observed configuration inconsistency. The compatibility field
+    ``absence_confirmable`` remains present. Report an unresolved hideable state
+    as "not observed within the named scope", never as a confirmed gap.
 
     Args:
         domain: A domain name to analyze (e.g., "gamma.invalid")
@@ -662,6 +679,7 @@ class _SimState:
     dmarc: str | None
     dmarc_pct: int | None
     dmarc_testing: bool
+    dmarc_changed: bool
     mta_sts: str | None
     evidence: list[EvidenceRecord]
 
@@ -672,11 +690,12 @@ def _record_hypothetical_control(
     source_type: str,
     rule_name: str,
     slug: str,
+    raw_value: str = "hypothetical simulation only",
 ) -> None:
     """Add typed simulation evidence without representing a live observation."""
     marker = EvidenceRecord(
         source_type=source_type,
-        raw_value="hypothetical simulation only",
+        raw_value=raw_value,
         rule_name=rule_name,
         slug=slug,
     )
@@ -684,24 +703,42 @@ def _record_hypothetical_control(
         state.evidence.append(marker)
 
 
+def _replace_simulated_evidence(state: _SimState, source_types: frozenset[str]) -> None:
+    """Remove superseded evidence for a control changed by the simulation."""
+    state.evidence[:] = [record for record in state.evidence if record.source_type.upper() not in source_types]
+
+
+def _set_simulated_dmarc(state: _SimState, policy: Literal["quarantine", "reject"]) -> None:
+    """Set one internally consistent hypothetical DMARC policy and proof row."""
+    state.dmarc = policy
+    state.dmarc_pct = None
+    state.dmarc_testing = False
+    state.dmarc_changed = True
+    state.services.add("DMARC")
+    state.slugs.discard("dmarc-invalid")
+    state.slugs.add("dmarc")
+    _replace_simulated_evidence(state, frozenset({"DMARC"}))
+    _record_hypothetical_control(
+        state,
+        source_type="DMARC",
+        rule_name="DMARC",
+        slug="dmarc",
+        raw_value=f"v=DMARC1; p={policy}",
+    )
+
+
 def _apply_dmarc_fix(fix: str, state: _SimState) -> str | None:
     """Apply a DMARC fix; return the applied message, or None when it is a no-op."""
     if "reject" in fix:
-        state.dmarc = "reject"
-        state.dmarc_pct = None
-        state.dmarc_testing = False
+        _set_simulated_dmarc(state, "reject")
         return "DMARC policy set to reject"
     if "quarantine" in fix:
         if state.dmarc != "reject":
-            state.dmarc = "quarantine"
-            state.dmarc_pct = None
-            state.dmarc_testing = False
+            _set_simulated_dmarc(state, "quarantine")
             return "DMARC policy set to quarantine"
         return None
     if state.dmarc is None or state.dmarc == "none":
-        state.dmarc = "reject"
-        state.dmarc_pct = None
-        state.dmarc_testing = False
+        _set_simulated_dmarc(state, "reject")
         return "DMARC policy set to reject"
     return None
 
@@ -715,12 +752,22 @@ def _apply_mta_sts_fix(fix: str, state: _SimState) -> str | None:
     if "enforce" in fix or state.mta_sts is None:
         state.mta_sts = "enforce"
         state.services.add("MTA-STS")
+        state.slugs.add("mta-sts")
         state.slugs.add("mta-sts-enforce")
+        _replace_simulated_evidence(state, frozenset({"MTA_STS", "MTA_STS_POLICY"}))
+        _record_hypothetical_control(
+            state,
+            source_type="MTA_STS",
+            rule_name="MTA-STS",
+            slug="mta-sts",
+            raw_value="v=STSv1; id=simulation1",
+        )
         _record_hypothetical_control(
             state,
             source_type="MTA_STS_POLICY",
             rule_name="MTA-STS",
             slug="mta-sts-enforce",
+            raw_value="mode: enforce",
         )
         return "MTA-STS set to enforce"
     return None
@@ -756,7 +803,16 @@ def _apply_one_fix(fix: str, state: _SimState) -> str | None:
         )
         return "SPF set to strict (-all)"
     if "tls-rpt" in fix or "tlsrpt" in fix:
+        state.services.add("TLS-RPT")
         state.slugs.add("tls-rpt")
+        state.evidence[:] = [record for record in state.evidence if record.slug != "tls-rpt"]
+        _record_hypothetical_control(
+            state,
+            source_type="TXT",
+            rule_name="TLS-RPT",
+            slug="tls-rpt",
+            raw_value="v=TLSRPTv1; rua=mailto:reports@example.invalid",
+        )
         return "TLS-RPT configured"
     if "caa" in fix:
         state.slugs.add("letsencrypt")
@@ -780,6 +836,7 @@ def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str]
         dmarc=info.dmarc_policy,
         dmarc_pct=info.dmarc_pct,
         dmarc_testing=info.dmarc_testing,
+        dmarc_changed=False,
         mta_sts=info.mta_sts_mode,
         evidence=list(info.evidence),
     )
@@ -848,6 +905,11 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
         dmarc_pct=state.dmarc_pct,
         dmarc_testing=state.dmarc_testing,
         evidence=tuple(state.evidence),
+        merge_conflicts=(
+            replace(info.merge_conflicts, dmarc_policy=())
+            if state.dmarc_changed and info.merge_conflicts is not None
+            else info.merge_conflicts
+        ),
         mta_sts_mode=state.mta_sts,
     )
 

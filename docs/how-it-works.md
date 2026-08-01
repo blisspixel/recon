@@ -220,10 +220,12 @@ and graph terminal identifies its lineage as exact, exact-rule-only,
 reconstructed, or unsupported. Simple positive signal and posture rules can
 retain exact slug support; metadata, negative-condition, confidence, legacy
 text, and proxy-matched paths remain qualified when their support is incomplete
-or reconstructed. The first DMARC
+or reconstructed. Hardening prompts separately expose an exact generator ID,
+an explicit observation state, satisfied typed predicates, canonical bounded
+scope, and retained evidence when the claim is positive or compound. The first DMARC
 claim contract separately binds its evaluator atom to the collector-retained raw
-record. Exact lineage for remaining claim families and per-query observation
-timestamps remains open work.
+record. Exact lineage for the exposure index, the static guidance families, and
+per-query observation timestamps remains open work.
 
 Use `recon alpha.invalid --explain-dag` for the separate Bayesian
 evidence-to-network renderer in text, DOT, or Mermaid form. That diagnostic does
@@ -257,6 +259,13 @@ MTA-STS, or MX collection failures mask the affected inference or reporting
 channel as unobserved; a successful empty DNS response remains an observed
 absence. Exposure and cohort output therefore do not turn an unavailable DMARC,
 MTA-STS, or MX channel into a negative control or a missing-configuration gap.
+Hardening guidance treats a missing MTA-STS TXT declaration as a DNS-only
+non-observation. It names the HTTP policy scope only when one valid TXT record
+activated that request and the HTTP observation completed without a valid mode.
+DMARC guidance is emitted only when the retained raw record agrees with the
+policy state used by the rule. Invalid or ambiguous retained DMARC material is
+reported as an evidence-backed review prompt with a distinct basis, not as
+record absence.
 
 Current delta output compares two rendered snapshots. It suppresses additions
 that previous degradation makes unconfirmable, removals that current

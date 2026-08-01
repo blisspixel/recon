@@ -146,7 +146,7 @@ instead of being reflected into an instruction template.
 | `analyze_posture` | Cache first; may resolve | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument: one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
 | `cluster_verification_tokens` | Cache first; may resolve each domain | Report exact TXT site-verification token reuse. Shared administration, copied configuration, managed service, and stale residue remain compatible explanations; reuse does not establish ownership or current use. Optional peer caps report omitted counts for compact agent output. | `domains`: array of domain strings, `peer_limit_per_domain` (0 means raw) |
 | `assess_exposure` | Cache first; may resolve | Model-bound public-evidence index (0-100) with email, identity, and infrastructure sections. It summarizes only collected public observables and is not an overall security score (see [correlation.md](correlation.md) for the inference model). | `domain` |
-| `find_hardening_gaps` | Cache first; may resolve | Categorized public-configuration opportunities with "Consider" recommendations and explicit absence semantics. It is not an overall assessment (see [correlation.md](correlation.md)). | `domain` |
+| `find_hardening_gaps` | Cache first; may resolve | Categorized public-configuration review prompts with exact generator IDs, basis states, typed predicates, bounded scopes, retained evidence, and "Consider" guidance. It is not an overall assessment (see [correlation.md](correlation.md)). | `domain` |
 | `compare_postures` | Cache first; may resolve both domains | Side-by-side comparison of two domains' public configuration evidence, not overall security | `domain_a`, `domain_b` |
 | `chain_lookup` | Yes | Recursive domain discovery via CNAME/CT breadcrumbs. Optional result caps report omitted counts for compact agent output while preserving raw JSON as the default. | `domain`, `depth` (1-3), `result_limit` (0 means raw) |
 | `discover_fingerprint_candidates` | Yes | Mine a domain for new-fingerprint candidates. Resolves with unclassified-CNAME-chain capture, applies already-covered and same-zone/brand-similarity heuristic filters, and returns a ranked candidate list. The heuristic does not establish ownership. Pair with the `/recon-fingerprint-triage` skill to review candidates before proposing YAML. | `domain`, `skip_ct`: bool, `keep_intra_org`: bool, `min_count`: int |
@@ -164,6 +164,22 @@ instead of being reflected into an instruction template.
 | `export_graph` *(v1.8+)* | Cache first; may resolve | Companion to `get_infrastructure_clusters`. Returns the underlying graph as nodes + weighted edges + cluster_assignment for downstream Mermaid / GraphViz / CSV rendering. Optional node and edge caps report omitted counts for compact agent output. | `domain`, `node_limit` (0 means raw), `edge_limit` (0 means raw) |
 | `get_posteriors` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Exposes model-relative Bayesian-network posteriors and evidence-responsive uncertainty bands for the nine high-level claim nodes. Top-level `degraded_sources` and `collection_masked_units` preserve the collection failures that were treated as structurally unobserved rather than negative evidence. Read-only exposure of the inference computed during lookup. See [correlation.md](correlation.md) for the inference model and limits. | `domain` |
 | `explain_dag` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Renders the Bayesian evidence DAG for a domain as plain text or Graphviz DOT text. Pairs with `get_posteriors` for full audit-trail inspection. | `domain`, `output_format`: `text` / `dot` (default `text`) |
+
+For `find_hardening_gaps`, read `observation_state` before the prose.
+`observed_weak_configuration` and `observed_configuration_inconsistency` carry
+retained public-record evidence. `bounded_non_observation` identifies a
+successfully collected named scope. `unresolved_hideable_state` means the
+control may exist outside that scope, such as DKIM at an operator-chosen
+selector. `generator_rule_id`, `metadata_dependencies`, `observation_scope`,
+and `evidence` make the basis replayable. `absence_confirmable` remains for
+compatibility and must not override the explicit state.
+DMARC prompts require the retained record to agree with the derived policy
+state. Invalid or ambiguous retained material produces an evidence-backed
+review prompt with a distinct basis rather than a record-absence claim. A
+missing MTA-STS TXT declaration names only the DNS scope; the HTTP scope appears
+only after a valid declaration activated a completed policy request. Simulated
+fixes replace the affected proof rows with explicit hypothetical records before
+remaining prompts are evaluated.
 
 The lookup and analysis tools are read-only. The ephemeral fingerprint tools
 mutate only in-memory session state for the current server process; they do not

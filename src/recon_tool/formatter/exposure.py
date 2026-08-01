@@ -221,9 +221,18 @@ _SEVERITY_INDICATORS: dict[str, str] = {
     "low": "○",
 }
 
+_GAP_STATE_LABELS: dict[str, str] = {
+    "observed_weak_configuration": "observed weak configuration",
+    "bounded_non_observation": "bounded non-observation",
+    "unresolved_hideable_state": "unresolved; bounded selectors only",
+    "observed_configuration_inconsistency": "observed configuration inconsistency",
+}
+
 
 def format_gaps_dict(report: GapReport) -> dict[str, Any]:
     """Format GapReport as a dict for JSON output."""
+    if any(gap.observation_state is None for gap in report.gaps):
+        raise ValueError("cannot format a hardening gap without complete generation-time lineage")
     return {
         "domain": report.domain,
         "gaps": [
@@ -232,6 +241,18 @@ def format_gaps_dict(report: GapReport) -> dict[str, Any]:
                 "severity": gap.severity,
                 "observation": gap.observation,
                 "recommendation": gap.recommendation,
+                "generator_rule_id": gap.generator_rule_id,
+                "observation_state": gap.observation_state,
+                "observation_scope": list(gap.observation_scope),
+                "metadata_dependencies": [
+                    {
+                        "field": item.field,
+                        "operator": item.operator,
+                        "expected_value": item.expected_value,
+                        "observed_value": item.observed_value,
+                    }
+                    for item in gap.metadata_dependencies
+                ],
                 # False = this gap rests on not observing a hideable control, so
                 # it may be a false positive (the control could be present but
                 # unobservable). True = a confirmed public-records fact.
@@ -289,10 +310,13 @@ def render_gaps_panel(report: GapReport) -> Panel:
             for gap in gaps:
                 indicator = _SEVERITY_INDICATORS.get(gap.severity, "○")
                 color = _SEVERITY_COLORS.get(gap.severity, "dim")
+                state_label = _GAP_STATE_LABELS.get(gap.observation_state or "", "lineage unavailable")
                 text.append(f"    {indicator} ", style=color)
-                text.append(f"[{gap.severity}] ", style=color)
+                text.append(f"[{gap.severity}] [{state_label}] ", style=color)
                 text.append(f"{gap.observation}\n")
                 text.append(f"      → {gap.recommendation}\n", style="dim")
+
+    text.append(f"\n  {report.disclaimer}", style="dim italic")
 
     return Panel(
         text,

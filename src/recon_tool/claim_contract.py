@@ -121,6 +121,37 @@ class DependencyUnit:
 
 
 @dataclass(frozen=True, slots=True)
+class DmarcPolicyProjection:
+    """Raw-bound DMARC policy state for atemporal derived-claim consumers."""
+
+    collection_state: CollectionState
+    construction_state: ConstructionState
+    policy: str | None
+    effective_policy: str | None
+    evidence: tuple[EvidenceRecord, ...]
+
+    @property
+    def exact_value(self) -> bool:
+        """Whether one retained record exactly supports both policy values."""
+        return (
+            self.collection_state is CollectionState.OBSERVED_VALUE
+            and self.construction_state is ConstructionState.COMPLETE
+            and self.policy is not None
+            and self.effective_policy is not None
+        )
+
+    @property
+    def exact_empty(self) -> bool:
+        """Whether the completed DMARC opportunity retained no record."""
+        return (
+            self.collection_state is CollectionState.OBSERVED_EMPTY
+            and self.construction_state is ConstructionState.COMPLETE
+            and self.policy is None
+            and not self.evidence
+        )
+
+
+@dataclass(frozen=True, slots=True)
 class ObservationLedger:
     """Canonical set of dependency units with collision-safe identity."""
 
@@ -698,22 +729,22 @@ def _raw_dmarc_effective_policy(record: EvidenceRecord, domain: str, policy: str
     return effective_dmarc_policy(policy, pct, testing)
 
 
-def dmarc_explicit_policy_projection_from_mapping(
-    record: Mapping[str, Any],
+def _project_explicit_dmarc_policy(
+    *,
+    raw_policy: object,
+    domain: str,
+    evidence: tuple[EvidenceRecord, ...],
+    has_conflict: bool,
 ) -> tuple[ClaimState, str | None]:
-    """Project raw-bound policy state and effective level without a time claim."""
+    """Bind one policy scalar and its effective level to one retained record."""
     unresolved = ClaimState.UNRESOLVED, None
-    raw_policy = record.get("dmarc_policy")
     policy = raw_policy.lower() if isinstance(raw_policy, str) else None
-    if policy not in _DMARC_VALID_POLICIES or _mapping_has_dmarc_conflict(record):
+    if policy not in _DMARC_VALID_POLICIES or has_conflict:
         return unresolved
-
-    ordered = _mapping_dmarc_evidence(record)
-    if ordered is None or any(item.slug == "dmarc-invalid" for item in ordered):
+    if any(item.slug == "dmarc-invalid" for item in evidence):
         return unresolved
-    domain = str(record.get("queried_domain") or "unknown")
     explicit = tuple(
-        (item, _explicit_dmarc_policy_from_raw(item.raw_value, domain)) for item in ordered if item.slug == "dmarc"
+        (item, _explicit_dmarc_policy_from_raw(item.raw_value, domain)) for item in evidence if item.slug == "dmarc"
     )
     if len(explicit) != 1 or explicit[0][1] != policy:
         return unresolved
@@ -722,6 +753,47 @@ def dmarc_explicit_policy_projection_from_mapping(
         return unresolved
     state = ClaimState.SUPPORTED if policy == "reject" else ClaimState.DISCONFIRMED
     return state, effective_policy
+
+
+def dmarc_policy_projection(info: TenantInfo) -> DmarcPolicyProjection:
+    """Return the canonical raw-bound atemporal DMARC projection for ``info``."""
+    unit = _dmarc_unit(info)
+    policy = info.dmarc_policy.lower() if isinstance(info.dmarc_policy, str) else None
+    has_conflict = bool(info.merge_conflicts and info.merge_conflicts.dmarc_policy)
+    state, effective_policy = _project_explicit_dmarc_policy(
+        raw_policy=policy,
+        domain=info.queried_domain.strip().rstrip(".").lower(),
+        evidence=unit.evidence,
+        has_conflict=has_conflict,
+    )
+    if (
+        state is ClaimState.UNRESOLVED
+        or unit.collection_state is not CollectionState.OBSERVED_VALUE
+        or unit.construction_state is not ConstructionState.COMPLETE
+    ):
+        effective_policy = None
+    return DmarcPolicyProjection(
+        collection_state=unit.collection_state,
+        construction_state=unit.construction_state,
+        policy=policy,
+        effective_policy=effective_policy,
+        evidence=unit.evidence,
+    )
+
+
+def dmarc_explicit_policy_projection_from_mapping(
+    record: Mapping[str, Any],
+) -> tuple[ClaimState, str | None]:
+    """Project raw-bound policy state and effective level without a time claim."""
+    ordered = _mapping_dmarc_evidence(record)
+    if ordered is None:
+        return ClaimState.UNRESOLVED, None
+    return _project_explicit_dmarc_policy(
+        raw_policy=record.get("dmarc_policy"),
+        domain=str(record.get("queried_domain") or "unknown"),
+        evidence=ordered,
+        has_conflict=_mapping_has_dmarc_conflict(record),
+    )
 
 
 def dmarc_apex_reject_dossier(

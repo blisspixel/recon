@@ -405,7 +405,29 @@ def test_exposure_report_output_schemas_are_precise() -> None:
     assert gaps_schema["properties"]["unavailable_controls"]["items"]["type"] == "string"
     assert gaps_schema["properties"]["degraded_sources"]["items"]["type"] == "string"
     gap = gaps_schema["$defs"]["HardeningGapSummary"]
+    assert set(gap["required"]) == {
+        "category",
+        "severity",
+        "observation",
+        "recommendation",
+        "generator_rule_id",
+        "observation_state",
+        "observation_scope",
+        "metadata_dependencies",
+        "absence_confirmable",
+        "evidence",
+    }
     assert gap["properties"]["absence_confirmable"]["type"] == "boolean"
+    assert set(gap["properties"]["observation_state"]["enum"]) == {
+        "observed_weak_configuration",
+        "bounded_non_observation",
+        "unresolved_hideable_state",
+        "observed_configuration_inconsistency",
+    }
+    assert gap["properties"]["observation_scope"]["items"]["type"] == "string"
+    assert gap["properties"]["metadata_dependencies"]["items"]["$ref"] == (
+        "#/$defs/HardeningMetadataDependencySummary"
+    )
     assert gap["properties"]["evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
 
     comparison_schema = _tool_output_schema("compare_postures")

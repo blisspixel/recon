@@ -424,21 +424,32 @@
       "subject_scope": "queried public namespace and the projected inputs consumed by one named generator"
     },
     "runtime.hardening-guidance.v1": {
-      "audit_status": "open",
+      "audit_status": "complete",
       "claim_id": "runtime.hardening-guidance.v1",
-      "classification": "bounded_absence",
+      "classification": "documented_derivation",
       "evidence_path": [
+        "src/recon_tool/claim_contract.py#dmarc_policy_projection",
         "src/recon_tool/exposure_copy.py#build_evidence_refs",
-        "src/recon_tool/source_status.py#SourceStatus"
+        "src/recon_tool/exposure_models.py#HardeningGap",
+        "src/recon_tool/exposure_models.py#HardeningMetadataDependency",
+        "src/recon_tool/exposure_gaps.py#hardening_scopes_available",
+        "src/recon_tool/source_status.py#SourceStatus",
+        "src/recon_tool/sources/mta_sts.py#select_mta_sts_record"
       ],
       "limits": [
         "A recommendation is not a vulnerability verdict.",
-        "Empty evidence arrays do not by themselves prove absence."
+        "An empty evidence array proves no absence by itself; bounded non-observations require a named successful observation scope and a satisfied typed predicate.",
+        "DKIM non-observation covers only recon's common-selector set and remains an unresolved hideable state.",
+        "Observed weak configurations and compound inconsistencies are withheld unless their role-bearing public-record evidence is retained and agrees with the derived scalar state.",
+        "Observed invalid or ambiguous DMARC material produces an evidence-backed review prompt with a distinct invalid or ambiguous basis rather than being mislabeled as record absence or silently discarded.",
+        "MTA-STS DNS activation and HTTP policy retrieval are separate observation scopes; the HTTP scope is claimed only after a valid TXT declaration activates that request.",
+        "Simulation replaces affected evidence with internally consistent hypothetical records before re-evaluating guidance."
       ],
-      "lineage_status": "incomplete",
+      "lineage_status": "exact",
       "material": true,
       "producer_paths": [
         "src/recon_tool/exposure.py#find_gaps_from_info",
+        "src/recon_tool/exposure_gaps.py#_gap",
         "src/recon_tool/exposure_gaps.py#detect_missing_controls",
         "src/recon_tool/exposure_gaps.py#detect_weak_configs",
         "src/recon_tool/exposure_gaps.py#detect_inconsistencies"
@@ -446,6 +457,7 @@
       "regression_tests": [
         "tests/test_exposure.py",
         "tests/test_exposure_server.py",
+        "tests/test_hardening_lineage.py",
         "tests/test_hedging_invariants.py"
       ],
       "renderer_obligations": [
@@ -1063,6 +1075,7 @@
       "src/recon_tool/formatter/panel_status.py#render_low_confidence_guidance": "runtime.confidence-summary.v1"
     },
     "recommendation_producers": {
+      "src/recon_tool/exposure_gaps.py#_gap": "runtime.hardening-guidance.v1",
       "src/recon_tool/exposure_gaps.py#detect_inconsistencies": "runtime.hardening-guidance.v1",
       "src/recon_tool/exposure_gaps.py#detect_missing_controls": "runtime.hardening-guidance.v1",
       "src/recon_tool/exposure_gaps.py#detect_weak_configs": "runtime.hardening-guidance.v1"

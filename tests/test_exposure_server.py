@@ -176,10 +176,19 @@ class TestFindHardeningGaps:
         assert "unavailable_controls" in data
         assert "degraded_sources" in data
         assert isinstance(data["gaps"], list)
-        # Every gap carries the confirmability flag so an agent can tell a real
-        # public-records fact from a "could not observe" (possibly false) gap.
+        # Every prompt carries its exact rule, state, dependencies, scope, and
+        # compatibility flag so an agent never has to classify its prose.
         for gap in data["gaps"]:
             assert isinstance(gap["absence_confirmable"], bool)
+            assert gap["generator_rule_id"].startswith("guidance.")
+            assert gap["observation_state"] in {
+                "observed_weak_configuration",
+                "bounded_non_observation",
+                "unresolved_hideable_state",
+                "observed_configuration_inconsistency",
+            }
+            assert gap["observation_scope"]
+            assert gap["metadata_dependencies"]
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -383,7 +392,10 @@ class TestToolDocstrings:
     def test_find_hardening_gaps_docstring_has_disclaimer(self) -> None:
         doc = find_hardening_gaps.__doc__
         assert doc is not None
-        assert "not an overall security assessment" in " ".join(doc.lower().split())
+        normalized = " ".join(doc.lower().split())
+        assert "not an overall security assessment" in normalized
+        assert "unresolved hideable state" in normalized
+        assert "exact generator rule" in normalized
 
     def test_compare_postures_docstring_has_disclaimer(self) -> None:
         doc = compare_postures.__doc__
@@ -396,9 +408,9 @@ class TestExposureReadingGuidance:
 
     An LLM consumer reads a 0-100 score as a grade unless told it is a lower
     bound; the injected server instructions tell it to report the score as a
-    floor (with its ceiling) and to treat an `absence_confirmable=false` gap as
-    "not observed", not a definite weakness. This guards that guidance, the same
-    discipline as the posterior-reading and data-not-instructions sections.
+    floor with its ceiling and to use the explicit hardening observation state.
+    This guards that guidance, the same discipline as the posterior-reading and
+    data-not-instructions sections.
     """
 
     def test_instructions_carry_the_exposure_guidance(self) -> None:
@@ -409,3 +421,6 @@ class TestExposureReadingGuidance:
         assert "lower bound" in collapsed
         assert "score_ceiling" in collapsed
         assert "absence_confirmable" in collapsed
+        assert "observation_state" in collapsed
+        assert "unresolved_hideable_state" in collapsed
+        assert "not observed within the named scope" in collapsed

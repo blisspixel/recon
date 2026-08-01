@@ -22,6 +22,7 @@ from recon_tool.claim_contract import (
     ObservationLedger,
     TimeState,
     dmarc_apex_reject_dossier,
+    dmarc_policy_projection,
     evaluate_claim,
     evidence_origin_ref,
     merge_ledgers,
@@ -116,6 +117,28 @@ def _contract(
 
 
 class TestDmarcApexRejectAdapter:
+    def test_atemporal_projection_distinguishes_exact_value_and_empty(self) -> None:
+        evidence = _dmarc_evidence("quarantine")
+
+        value = dmarc_policy_projection(_info(policy="quarantine", evidence=(evidence,)))
+        empty = dmarc_policy_projection(_info())
+
+        assert value.exact_value
+        assert not value.exact_empty
+        assert value.policy == "quarantine"
+        assert value.effective_policy == "quarantine"
+        assert value.evidence == (evidence,)
+        assert empty.exact_empty
+        assert not empty.exact_value
+        assert empty.effective_policy is None
+
+    def test_atemporal_projection_withholds_mismatched_raw_policy(self) -> None:
+        projection = dmarc_policy_projection(_info(policy="none", evidence=(_dmarc_evidence("reject"),)))
+
+        assert not projection.exact_value
+        assert not projection.exact_empty
+        assert projection.effective_policy is None
+
     def test_valid_reject_is_supported_by_one_raw_rrset_unit(self) -> None:
         evidence = _dmarc_evidence("reject")
 

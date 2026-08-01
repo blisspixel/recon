@@ -189,13 +189,16 @@ whose absence the passive channel cannot confirm - DKIM at non-standard
 selectors, security tooling, an email gateway behind non-MX routing), and
 `score_ceiling`. Report the score as a floor with its ceiling, not as a grade.
 
-On `find_hardening_gaps`, each gap carries `absence_confirmable`. When true, the
-gap is a confirmed public-records fact (a declarative record like DMARC or
-MTA-STS is genuinely absent or weak). When false, the gap rests on *not
-observing* a hideable control and may be a false positive - the control could
-be present but unobservable. Do not report an `absence_confirmable=false` gap as
-a definite weakness; report it as "not observed", consistent with the
-absence-is-not-disproof rule above.
+On `find_hardening_gaps`, use `observation_state` instead of classifying prose or
+an empty evidence array. `observed_weak_configuration` and
+`observed_configuration_inconsistency` retain role-bearing evidence;
+`bounded_non_observation` names the successful observation scope;
+`unresolved_hideable_state` means the control could be present outside that
+scope. The exact `generator_rule_id`, `metadata_dependencies`,
+`observation_scope`, and `evidence` make that basis inspectable.
+`absence_confirmable` remains a compatibility field. Never report an
+`unresolved_hideable_state` as a definite weakness; say "not observed within
+the named scope", consistent with the absence-is-not-disproof rule above.
 
 ## Explaining results
 

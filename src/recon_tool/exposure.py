@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import logging
 
+from recon_tool import exposure_gaps as gap_detection
 from recon_tool import exposure_observability as observability
 from recon_tool.constants import (
     SVC_BIMI,
@@ -22,24 +23,6 @@ from recon_tool.exposure_copy import EXPOSURE_DISCOURAGED_COPY_TERMS
 from recon_tool.exposure_copy import build_evidence_refs as _build_evidence_refs
 from recon_tool.exposure_copy import check_neutral_copy as _check_neutral_copy
 from recon_tool.exposure_copy import evidence_slugs as _evidence_slugs
-from recon_tool.exposure_gaps import (
-    EMAIL_GATEWAY_SLUGS as _EMAIL_GATEWAY_SLUGS,
-)
-from recon_tool.exposure_gaps import (
-    GAPS_DISCLAIMER as _GAPS_DISCLAIMER,
-)
-from recon_tool.exposure_gaps import (
-    detect_inconsistencies as _detect_inconsistencies,
-)
-from recon_tool.exposure_gaps import (
-    detect_missing_controls as _detect_missing_controls,
-)
-from recon_tool.exposure_gaps import (
-    detect_weak_configs as _detect_weak_configs,
-)
-from recon_tool.exposure_gaps import (
-    effective_email_dmarc_policy as _effective_email_dmarc_policy,
-)
 from recon_tool.exposure_models import (
     ConsistencyObservation,
     EmailPosture,
@@ -58,6 +41,9 @@ from recon_tool.exposure_models import (
 from recon_tool.models import TenantInfo
 
 logger = logging.getLogger(__name__)
+
+# Backward-compatible alias for callers that imported the old internal name.
+_EMAIL_GATEWAY_SLUGS = gap_detection.EMAIL_GATEWAY_SLUGS
 
 # ── Neutral-language copy terms ─────────────────────────────────────────
 
@@ -102,7 +88,6 @@ _CA_SLUGS: dict[str, str] = {
     "google-trust": "Google Trust",
     "globalsign": "GlobalSign",
 }
-
 
 
 # ── Helper functions ───────────────────────────────────────────────────
@@ -267,7 +252,7 @@ def _compute_hardening_status(info: TenantInfo) -> HardeningStatus:
     controls: list[HardeningControl] = []
 
     # DMARC enforcement
-    dmarc_effective_policy = _effective_email_dmarc_policy(info)
+    dmarc_effective_policy = gap_detection.effective_email_dmarc_policy(info)
     dmarc_available = observed.dmarc_available
     if not dmarc_available:
         detail = "source unavailable"
@@ -384,7 +369,7 @@ def _compute_posture_score(
     score = 0
 
     # DMARC: reject=20, quarantine=12 (mutually exclusive)
-    dmarc_effective_policy = _effective_email_dmarc_policy(info)
+    dmarc_effective_policy = gap_detection.effective_email_dmarc_policy(info)
     if dmarc_effective_policy == "reject":
         score += observability.SCORE_DMARC
     elif dmarc_effective_policy == "quarantine":
@@ -485,21 +470,22 @@ def assess_exposure_from_info(info: TenantInfo) -> ExposureAssessment:
 def find_gaps_from_info(info: TenantInfo) -> GapReport:
     """Identify hardening opportunities in a domain's public configuration.
 
+    Each detector gates its own named observation scopes against raw retained
+    evidence. A composite reporting projection would incorrectly erase the
+    successful DNS half of a conditionally attempted MTA-STS HTTP request.
     Pure function: TenantInfo in, GapReport out. No I/O.
     """
-    from recon_tool.collection_view import collection_claim_info
-
-    info = collection_claim_info(info)
     gaps: list[HardeningGap] = []
-    gaps.extend(_detect_missing_controls(info))
-    gaps.extend(_detect_weak_configs(info))
-    gaps.extend(_detect_inconsistencies(info))
+    gaps.extend(gap_detection.detect_missing_controls(info))
+    gaps.extend(gap_detection.detect_weak_configs(info))
+    gaps.extend(gap_detection.detect_inconsistencies(info))
+    gap_detection.validate_gap_lineage(gaps, info.degraded_sources)
 
     observed = observability.ObservableEmailState.from_info(info)
     return GapReport(
         domain=info.queried_domain,
         gaps=tuple(gaps),
-        disclaimer=_check_neutral_copy(_GAPS_DISCLAIMER),
+        disclaimer=_check_neutral_copy(gap_detection.GAPS_DISCLAIMER),
         unavailable_controls=observed.unavailable_control_names(),
         degraded_sources=tuple(sorted(set(info.degraded_sources))),
     )

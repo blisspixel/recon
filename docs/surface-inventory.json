@@ -2340,7 +2340,7 @@
         ],
         "name": "find_hardening_gaps",
         "output_schema": {
-          "definition_count": 2,
+          "definition_count": 3,
           "properties": [
             "degraded_sources",
             "disclaimer",
