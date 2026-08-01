@@ -26,6 +26,16 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Changed
+
+- Added a fail-closed default-claim audit that assigns every discovered primary
+  panel, JSON, MCP, generated-guidance, recommendation, and score surface to a
+  machine-readable claim family. The local and CI gates now reject new or stale
+  surfaces, malformed family states, incomplete families marked complete,
+  escaped or role-inappropriate repository references, and unreviewed JSON or
+  MCP surface-set changes. The audit records incomplete lineage explicitly; it
+  does not present the wider evidence-semantic roadmap track as complete.
+
 ## [2.9.0] - 2026-07-31
 
 ### Tool Surface Changes

@@ -376,6 +376,11 @@ jobs:
         # the runtime surface.
         run: uv run python scripts/generate_surface_inventory.py --check
 
+      - name: Enforce default-claim audit coverage
+        # New material panel, JSON, MCP, guidance, recommendation, and score
+        # surfaces must declare a claim family and direct evidence path.
+        run: uv run python scripts/check_default_claim_audit.py
+
       - name: Enforce generated CLI surface reference
         # The Markdown CLI reference is generated from the live Typer command
         # tree and must stay in sync with the generated inventory.

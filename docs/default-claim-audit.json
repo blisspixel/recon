@@ -1,0 +1,1136 @@
+{
+  "claim_families": {
+    "runtime.bimi-observation.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.bimi-observation.v1",
+      "classification": "direct_observation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/collection_view.py#collection_observable_info"
+      ],
+      "limits": [
+        "BIMI certificate retrieval remains opt-in.",
+        "Certificate identity is not an ownership verdict."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/models.py",
+        "src/recon_tool/sources/dns_email.py"
+      ],
+      "regression_tests": [
+        "tests/test_bimi_vmc.py"
+      ],
+      "renderer_obligations": [
+        "Retain opt-in probe scope and never promote certificate identity into legal ownership."
+      ],
+      "subject_scope": "queried public namespace and explicitly fetched BIMI material"
+    },
+    "runtime.catalog-indicator.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.catalog-indicator.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/fingerprints.py#load_fingerprints"
+      ],
+      "limits": [
+        "Catalog matches are probabilistic classifications.",
+        "Per-slug levels are evidence-strength tiers, not truth probabilities."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/fingerprints.py#match_txt_all",
+        "src/recon_tool/signals.py#evaluate_signals",
+        "src/recon_tool/merger.py#compute_detection_scores"
+      ],
+      "regression_tests": [
+        "tests/test_fingerprints.py",
+        "tests/test_signals.py",
+        "tests/test_service_disclosure.py"
+      ],
+      "renderer_obligations": [
+        "Use indicator or observed-record language; never imply current product use, deployment, or control."
+      ],
+      "subject_scope": "queried public namespace and exact public record occurrence"
+    },
+    "runtime.catalog-operation.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.catalog-operation.v1",
+      "classification": "static_product_contract",
+      "evidence_path": [
+        "src/recon_tool/fingerprints.py#validate_ephemeral_input_size",
+        "docs/surface-inventory.json"
+      ],
+      "limits": [
+        "Ephemeral changes are process-local.",
+        "Re-evaluation is cache-only unless reload clears cached lookup results."
+      ],
+      "lineage_status": "static",
+      "material": false,
+      "producer_paths": [
+        "src/recon_tool/fingerprints.py#inject_ephemeral",
+        "src/recon_tool/fingerprints.py#reload_fingerprints",
+        "src/recon_tool/server/ephemeral.py"
+      ],
+      "regression_tests": [
+        "tests/test_ephemeral_fingerprints.py",
+        "tests/test_mcp_introspection.py"
+      ],
+      "renderer_obligations": [
+        "State network and cache behavior exactly; separate local mutation from target observations."
+      ],
+      "subject_scope": "local recon process and operator-owned catalog state"
+    },
+    "runtime.collection-status.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.collection-status.v1",
+      "classification": "unresolved_when_unobservable",
+      "evidence_path": [
+        "src/recon_tool/models.py#SourceResult",
+        "src/recon_tool/models.py#EvidenceRecord"
+      ],
+      "limits": [
+        "Compatibility projections do not retain every per-query observation opportunity.",
+        "No degraded marker does not prove globally complete collection."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/collection_view.py#collection_observable_info",
+        "src/recon_tool/source_status.py#SourceStatus",
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+      ],
+      "regression_tests": [
+        "tests/test_collection_view.py",
+        "tests/test_degraded_sources.py",
+        "tests/test_merger_error_surfacing.py"
+      ],
+      "renderer_obligations": [
+        "Mask unavailable channels, retain degraded markers, and distinguish empty observation from unavailable collection."
+      ],
+      "subject_scope": "one bounded collection attempt for the queried public namespace"
+    },
+    "runtime.confidence-summary.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.confidence-summary.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#SourceResult",
+        "src/recon_tool/confidence.py#inference_confidence_basis"
+      ],
+      "limits": [
+        "Evidence confidence counts distinct useful sources.",
+        "Inference confidence is scoped to the winning canonical claim."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/confidence.py#compute_evidence_confidence",
+        "src/recon_tool/confidence.py#compute_inference_confidence",
+        "src/recon_tool/explanation.py#explain_confidence"
+      ],
+      "regression_tests": [
+        "tests/test_merger.py",
+        "tests/test_explanation_coverage.py"
+      ],
+      "renderer_obligations": [
+        "Call tiers deterministic summaries, not calibrated probabilities or confidence in every field."
+      ],
+      "subject_scope": "merged output and its same-claim contributing source results"
+    },
+    "runtime.cross-domain-overlap.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.cross-domain-overlap.v1",
+      "classification": "direct_observation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+      ],
+      "limits": [
+        "Overlap does not establish ownership, shared control, a business relationship, or current use.",
+        "Absence of an optional public token is non-informative."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/ecosystem.py#build_ecosystem_hyperedges",
+        "src/recon_tool/cli/batch.py",
+        "src/recon_tool/server/graph.py"
+      ],
+      "regression_tests": [
+        "tests/test_ecosystem.py",
+        "tests/test_batch.py"
+      ],
+      "renderer_obligations": [
+        "Name the exact token, tenant-ID, display-label, issuer, provider, or slug overlap and keep alternative explanations open."
+      ],
+      "subject_scope": "operator-supplied public namespace coordinates"
+    },
+    "runtime.ct-observation.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.ct-observation.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/models.py#SourceResult"
+      ],
+      "limits": [
+        "CT can contain stale or historical names.",
+        "Community detection is a heuristic over co-issuance, not an ownership model."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/infra_graph.py#build_infrastructure_clusters",
+        "src/recon_tool/sources/cert_providers.py",
+        "src/recon_tool/server/graph.py"
+      ],
+      "regression_tests": [
+        "tests/test_ct_pipeline_resilience.py",
+        "tests/test_infra_graph.py",
+        "tests/test_clustering.py"
+      ],
+      "renderer_obligations": [
+        "Describe certificate co-issuance and bounded counts; never infer ownership or active hosting."
+      ],
+      "subject_scope": "certificate SANs associated with the queried public namespace under bounded CT collection"
+    },
+    "runtime.delta-report.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.delta-report.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#DeltaReport",
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/source_status.py#SourceStatus"
+      ],
+      "limits": [
+        "A delta compares two snapshots of the same queried namespace and does not explain why a value changed.",
+        "Unavailable collection channels suppress affected comparisons rather than becoming removals."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/delta.py#compute_delta",
+        "src/recon_tool/formatter/delta.py#format_delta_dict",
+        "src/recon_tool/formatter/delta.py#render_delta_panel"
+      ],
+      "regression_tests": [
+        "tests/test_delta.py",
+        "tests/test_delta_cli.py"
+      ],
+      "renderer_obligations": [
+        "Report only observed snapshot differences, surface incomplete comparisons, and make no causal claim."
+      ],
+      "subject_scope": "two time-stamped snapshots of one normalized public namespace coordinate"
+    },
+    "runtime.display-label.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.display-label.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#SourceResult",
+        "src/recon_tool/models.py#EvidenceRecord"
+      ],
+      "limits": [
+        "Federation branding can differ from a legal entity.",
+        "The queried domain is the fallback label."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/merger.py#merge_results",
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+      ],
+      "regression_tests": [
+        "tests/test_merger.py",
+        "tests/test_json_schema_contract.py"
+      ],
+      "renderer_obligations": [
+        "Label it as public display metadata and never as a verified legal organization name."
+      ],
+      "subject_scope": "best public display label returned for the queried namespace"
+    },
+    "runtime.email-control-observation.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.email-control-observation.v1",
+      "classification": "bounded_absence",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/claim_contract.py#ObservationLedger",
+        "src/recon_tool/source_status.py#SourceStatus"
+      ],
+      "limits": [
+        "Empty DNS remains unresolved without authority or authenticated-denial provenance.",
+        "The count is not an overall security score and controls are not equally weighted."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/claim_contract.py#dmarc_apex_reject_dossier",
+        "src/recon_tool/email_security.py#compute_email_security_score",
+        "src/recon_tool/email_security.py#observed_email_control_services",
+        "src/recon_tool/exposure_observability.py#ObservableEmailState",
+        "src/recon_tool/constants.py#email_security_score",
+        "src/recon_tool/sources/dns_email.py"
+      ],
+      "regression_tests": [
+        "tests/test_email_security_score.py",
+        "tests/test_claim_contract.py",
+        "tests/test_dmarc.py",
+        "tests/test_exposure.py",
+        "tests/test_source_status.py"
+      ],
+      "renderer_obligations": [
+        "Describe email_security_score as a count of observable public controls; state bounded selector scope for DKIM and observation scope for empty DNS."
+      ],
+      "subject_scope": "email-control records at the queried apex and documented bounded selectors"
+    },
+    "runtime.email-topology.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.email-topology.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/email_security.py#claim_safe_email_services"
+      ],
+      "limits": [
+        "A provider indicator does not establish mailbox routing.",
+        "A gateway can hide the downstream mailbox provider."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/merger.py#compute_email_topology",
+        "src/recon_tool/formatter/classify.py#provider_line"
+      ],
+      "regression_tests": [
+        "tests/test_email_topology.py",
+        "tests/test_cli_output_contracts.py"
+      ],
+      "renderer_obligations": [
+        "Distinguish MX delivery path, MX gateway, DKIM-supported downstream provider, and weaker non-MX indicators."
+      ],
+      "subject_scope": "public mail routing and provider indicators for the queried apex"
+    },
+    "runtime.explanation-provenance.v1": {
+      "audit_status": "open",
+      "claim_id": "runtime.explanation-provenance.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#ExplanationRecord",
+        "src/recon_tool/models.py#EvidenceRecord"
+      ],
+      "limits": [
+        "Legacy cached insight strings can lack exact generation-time lineage.",
+        "Positive-evidence reachability alone cannot prove exact rule association."
+      ],
+      "lineage_status": "incomplete",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/explanation.py#explain_insights",
+        "src/recon_tool/explanation.py#build_explanation_dag",
+        "src/recon_tool/explanation_dag.py#finalize_dag"
+      ],
+      "regression_tests": [
+        "tests/test_explanation_coverage.py",
+        "tests/test_explanation_dag.py",
+        "tests/test_explanation_engine.py"
+      ],
+      "renderer_obligations": [
+        "Report exact generation-time rule lineage when available and mark every unsupported or reconstructed terminal disconnected."
+      ],
+      "subject_scope": "one rendered signal, insight, posture observation, or confidence terminal"
+    },
+    "runtime.exposure-index.v1": {
+      "audit_status": "open",
+      "claim_id": "runtime.exposure-index.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/exposure_copy.py#build_evidence_refs"
+      ],
+      "limits": [
+        "The index is not overall security, maturity, certification, or a prediction.",
+        "Quiet public channels can produce a low floor."
+      ],
+      "lineage_status": "incomplete",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/exposure.py#assess_exposure_from_info",
+        "src/recon_tool/exposure_observability.py#unconfirmable_absent_points",
+        "src/recon_tool/formatter/exposure.py#format_exposure_dict"
+      ],
+      "regression_tests": [
+        "tests/test_exposure.py",
+        "tests/test_exposure_server.py"
+      ],
+      "renderer_obligations": [
+        "Call the 0-100 value a model-bound public-evidence index and report its floor, ceiling, unavailable controls, and evidence."
+      ],
+      "subject_scope": "controls observable in recon's public-evidence model for one queried namespace"
+    },
+    "runtime.generated-insight.v1": {
+      "audit_status": "open",
+      "claim_id": "runtime.generated-insight.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/source_status.py#SourceStatus"
+      ],
+      "limits": [
+        "Current explanation code reconstructs some generator lineage from rendered text.",
+        "Absence-shaped insights require successful bounded observation opportunities, not inferred global negatives."
+      ],
+      "lineage_status": "incomplete",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/insights.py#generate_insights",
+        "src/recon_tool/merger.py#build_insights_with_signals",
+        "src/recon_tool/collection_view.py#collection_observable_info"
+      ],
+      "regression_tests": [
+        "tests/test_insights.py",
+        "tests/test_insights_unit.py",
+        "tests/test_hedging_invariants.py"
+      ],
+      "renderer_obligations": [
+        "Attach the exact generator rule ID and supporting retained evidence or bounded observation scope to every emitted insight."
+      ],
+      "subject_scope": "queried public namespace and the projected inputs consumed by one named generator"
+    },
+    "runtime.hardening-guidance.v1": {
+      "audit_status": "open",
+      "claim_id": "runtime.hardening-guidance.v1",
+      "classification": "bounded_absence",
+      "evidence_path": [
+        "src/recon_tool/exposure_copy.py#build_evidence_refs",
+        "src/recon_tool/source_status.py#SourceStatus"
+      ],
+      "limits": [
+        "A recommendation is not a vulnerability verdict.",
+        "Empty evidence arrays do not by themselves prove absence."
+      ],
+      "lineage_status": "incomplete",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/exposure.py#find_gaps_from_info",
+        "src/recon_tool/exposure_gaps.py#detect_missing_controls",
+        "src/recon_tool/exposure_gaps.py#detect_weak_configs",
+        "src/recon_tool/exposure_gaps.py#detect_inconsistencies"
+      ],
+      "regression_tests": [
+        "tests/test_exposure.py",
+        "tests/test_exposure_server.py",
+        "tests/test_hedging_invariants.py"
+      ],
+      "renderer_obligations": [
+        "Separate observed weak configuration, successful bounded non-observation, and unresolved hideable state; recommendations remain neutral review prompts."
+      ],
+      "subject_scope": "public configuration observed for one queried namespace"
+    },
+    "runtime.hypothesis-assessment.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.hypothesis-assessment.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/source_status.py#SourceStatus"
+      ],
+      "limits": [
+        "Keyword matching selects relevant evidence families.",
+        "Results do not confirm active use or organizational intent."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/server/posture.py#test_hypothesis",
+        "src/recon_tool/signals.py#evaluate_signals"
+      ],
+      "regression_tests": [
+        "tests/test_bayesian_hypothesis.py",
+        "tests/test_server_agentic.py"
+      ],
+      "renderer_obligations": [
+        "Report supporting and contradicting observations, missing evidence, collection limits, and no causal or organizational conclusion."
+      ],
+      "subject_scope": "operator-supplied theory compared with public evidence for one queried namespace"
+    },
+    "runtime.identity-and-tenant.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.identity-and-tenant.v1",
+      "classification": "direct_observation",
+      "evidence_path": [
+        "src/recon_tool/models.py#SourceResult",
+        "src/recon_tool/models.py#EvidenceRecord"
+      ],
+      "limits": [
+        "Tenant discovery can be incomplete.",
+        "Missing sovereignty metadata stays unknown."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/merger.py#merge_results",
+        "src/recon_tool/sources/azure_metadata.py",
+        "src/recon_tool/sources/google_identity.py",
+        "src/recon_tool/sources/oidc.py",
+        "src/recon_tool/sources/userrealm.py",
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+      ],
+      "regression_tests": [
+        "tests/test_google_identity.py",
+        "tests/test_merger.py",
+        "tests/test_oidc_enrichment.py",
+        "tests/test_sources/test_azure_metadata.py",
+        "tests/test_sources/test_userrealm.py",
+        "tests/test_userrealm_xml.py",
+        "tests/test_collection_view.py"
+      ],
+      "renderer_obligations": [
+        "Treat tenant IDs, auth responses, tenant-domain strings, regions, and cloud metadata as namespace observations, not organization identity or ownership."
+      ],
+      "subject_scope": "identity-discovery response for the queried public namespace"
+    },
+    "runtime.inference-diagnostics.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.inference-diagnostics.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/data/bayesian_network.yaml"
+      ],
+      "limits": [
+        "The network is manually encoded and partly development-corpus-informed.",
+        "Missing hideable evidence remains unresolved rather than a private-state negative."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/fusion.py#compute_slug_posteriors",
+        "src/recon_tool/bayesian.py#infer_from_tenant_info",
+        "src/recon_tool/server/introspection.py#get_posteriors"
+      ],
+      "regression_tests": [
+        "tests/test_bayesian_inference.py",
+        "tests/test_bayesian_collection_missingness.py",
+        "tests/test_posterior_reading_guidance.py"
+      ],
+      "renderer_obligations": [
+        "Call outputs model-relative posteriors and evidence-responsive display bands; never calibrated probabilities, credible intervals, or confidence intervals."
+      ],
+      "subject_scope": "the shipped model and retained evidence units for one queried namespace"
+    },
+    "runtime.lexical-diagnostic.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.lexical-diagnostic.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#SourceResult",
+        "src/recon_tool/lexical.py#classify_subdomains"
+      ],
+      "limits": [
+        "String shape is contextual metadata only.",
+        "Lexical categories do not establish a running application."
+      ],
+      "lineage_status": "exact",
+      "material": false,
+      "producer_paths": [
+        "src/recon_tool/lexical.py#classify_subdomains",
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+      ],
+      "regression_tests": [
+        "tests/test_lexical.py"
+      ],
+      "renderer_obligations": [
+        "Call results lexical observations, not service confirmations or ownership evidence."
+      ],
+      "subject_scope": "lexical shape of public subdomain strings"
+    },
+    "runtime.namespace-coordinate.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.namespace-coordinate.v1",
+      "classification": "direct_observation",
+      "evidence_path": [
+        "src/recon_tool/models.py#TenantInfo",
+        "src/recon_tool/validator.py#validate_domain"
+      ],
+      "limits": [
+        "Default normalization reduces a valid sub-host to the registrable apex.",
+        "Exact mode retains the literal validated host."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/validator.py#validate_domain",
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+      ],
+      "regression_tests": [
+        "tests/test_validator.py"
+      ],
+      "renderer_obligations": [
+        "Call the apex a queried namespace or domain, never a company or legal entity."
+      ],
+      "subject_scope": "validated registrable public namespace coordinate"
+    },
+    "runtime.panel-assembly.v1": {
+      "audit_status": "open",
+      "claim_id": "runtime.panel-assembly.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/collection_view.py#collection_observable_info",
+        "src/recon_tool/models.py#EvidenceRecord"
+      ],
+      "limits": [
+        "The default panel intentionally omits raw evidence detail.",
+        "The explanation surface must expose any unavailable direct path."
+      ],
+      "lineage_status": "incomplete",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/formatter/panel.py#render_tenant_panel",
+        "src/recon_tool/formatter/panel.py#_render_key_facts",
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+      ],
+      "regression_tests": [
+        "tests/test_golden_renders.py",
+        "tests/test_panel_disclosure.py",
+        "tests/test_cli_output_contracts.py"
+      ],
+      "renderer_obligations": [
+        "Every displayed fact must retain the same scope and evidence semantics as its canonical structured field."
+      ],
+      "subject_scope": "default human-readable summary for the queried public namespace"
+    },
+    "runtime.posture-observation.v1": {
+      "audit_status": "open",
+      "claim_id": "runtime.posture-observation.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/data/posture.yaml"
+      ],
+      "limits": [
+        "Current explanation matching can reconstruct a rule by category and salience.",
+        "Metadata-only observations need typed field lineage."
+      ],
+      "lineage_status": "incomplete",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/posture.py#analyze_posture",
+        "src/recon_tool/posture.py#load_posture_rules",
+        "src/recon_tool/explanation.py#explain_observations"
+      ],
+      "regression_tests": [
+        "tests/test_posture.py",
+        "tests/test_explanation_coverage.py",
+        "tests/test_profiles.py"
+      ],
+      "renderer_obligations": [
+        "Attach the exact posture rule and its evidence dependencies; keep profile effects as lenses, not scores."
+      ],
+      "subject_scope": "public evidence evaluated by one named posture rule"
+    },
+    "runtime.related-namespace.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.related-namespace.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/models.py#SurfaceAttribution"
+      ],
+      "limits": [
+        "CT and DNS history can be stale.",
+        "Related names are namespace breadcrumbs, not a corporate graph."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/chain.py",
+        "src/recon_tool/infra_graph.py#build_infrastructure_clusters",
+        "src/recon_tool/formatter/panel.py#_render_related_compact"
+      ],
+      "regression_tests": [
+        "tests/test_chain.py",
+        "tests/test_surface_attribution.py",
+        "tests/test_infra_graph.py"
+      ],
+      "renderer_obligations": [
+        "Name the exact breadcrumb or co-occurrence relation and never promote it into ownership, subsidiary, shared-control, or current-use claims."
+      ],
+      "subject_scope": "public names connected by bounded CNAME, CT, autodiscover, DKIM, or SAN co-occurrence breadcrumbs"
+    },
+    "runtime.service-label.v1": {
+      "audit_status": "open",
+      "claim_id": "runtime.service-label.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/collection_view.py#collection_observable_info"
+      ],
+      "limits": [
+        "Legacy or externally constructed TenantInfo objects can carry service names without retained matching evidence.",
+        "A catalog name alone does not establish a role."
+      ],
+      "lineage_status": "incomplete",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/formatter/classify.py#categorize_services",
+        "src/recon_tool/formatter/classify.py#role_aware_service_label",
+        "src/recon_tool/formatter/panel.py#_render_services"
+      ],
+      "regression_tests": [
+        "tests/test_service_disclosure.py",
+        "tests/test_panel_disclosure.py"
+      ],
+      "renderer_obligations": [
+        "Qualify TXT account indicators, MX delivery paths, CAA authorizations, and endpoint bindings; unknown roles stay unavailable."
+      ],
+      "subject_scope": "one catalog match and the role established by its retained public record type"
+    },
+    "runtime.structured-transport.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.structured-transport.v1",
+      "classification": "non_claim_transport",
+      "evidence_path": [
+        "scripts/generate_schema.py",
+        "scripts/generate_surface_inventory.py#build_inventory"
+      ],
+      "limits": [
+        "Schema presence does not make a field value true.",
+        "The surface inventory is a non-contractual discovery map."
+      ],
+      "lineage_status": "static",
+      "material": false,
+      "producer_paths": [
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict",
+        "docs/recon-schema.json",
+        "docs/surface-inventory.json"
+      ],
+      "regression_tests": [
+        "tests/test_json_schema_contract.py",
+        "tests/test_surface_inventory.py"
+      ],
+      "renderer_obligations": [
+        "Preserve v2 field compatibility and add only versioned, reviewed semantics."
+      ],
+      "subject_scope": "stable JSON and local MCP transport contract"
+    },
+    "static.agent-guidance.v1": {
+      "audit_status": "open",
+      "claim_id": "static.agent-guidance.v1",
+      "classification": "static_product_contract",
+      "evidence_path": [
+        "README.md",
+        "src/recon_tool/server/app.py#SERVER_INSTRUCTIONS",
+        "docs/recon-schema.json"
+      ],
+      "limits": [
+        "Guidance is a consumer contract, not target evidence.",
+        "Client-specific installation details can change independently of runtime semantics."
+      ],
+      "lineage_status": "static",
+      "material": true,
+      "producer_paths": [
+        "AGENTS.md",
+        "agents/claude-code/skills/recon/SKILL.md",
+        "agents/README.md"
+      ],
+      "regression_tests": [
+        "tests/test_documentation_semantic_contracts.py",
+        "tests/test_onboarding_docs.py",
+        "tests/test_surface_inventory.py"
+      ],
+      "renderer_obligations": [
+        "Mirror runtime scope, target-interaction boundaries, output semantics, cache behavior, and abstention rules without stronger claims."
+      ],
+      "subject_scope": "shipped agent guidance and installation documentation"
+    },
+    "static.mcp-contract.v1": {
+      "audit_status": "open",
+      "claim_id": "static.mcp-contract.v1",
+      "classification": "static_product_contract",
+      "evidence_path": [
+        "src/recon_tool/server/app.py#resolve_or_cache",
+        "scripts/generate_surface_inventory.py#build_inventory"
+      ],
+      "limits": [
+        "Tool descriptions describe behavior; returned target claims require their runtime evidence paths.",
+        "The transport is local stdio by default."
+      ],
+      "lineage_status": "static",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/server/app.py#SERVER_INSTRUCTIONS",
+        "src/recon_tool/server/lookup.py#lookup_tenant",
+        "docs/surface-inventory.json"
+      ],
+      "regression_tests": [
+        "tests/test_server_instructions.py",
+        "tests/test_mcp_tool_annotations.py",
+        "tests/test_surface_inventory.py"
+      ],
+      "renderer_obligations": [
+        "Every description states scope, side effects, network behavior, and evidentiary limits accurately."
+      ],
+      "subject_scope": "local stdio MCP tool behavior and agent-facing descriptions"
+    }
+  },
+  "coverage": {
+    "agent_guidance_sections": {
+      "AGENTS.md#AGENTS.md: recon": "static.agent-guidance.v1",
+      "AGENTS.md#Before first invocation": "static.agent-guidance.v1",
+      "AGENTS.md#Cache awareness": "static.agent-guidance.v1",
+      "AGENTS.md#Default mode: panel output": "static.agent-guidance.v1",
+      "AGENTS.md#Detecting whether MCP is connected": "static.agent-guidance.v1",
+      "AGENTS.md#Domain validation before any CLI invocation (mandatory)": "static.agent-guidance.v1",
+      "AGENTS.md#Ephemeral fingerprints": "static.agent-guidance.v1",
+      "AGENTS.md#Explain mode: `--explain`": "static.agent-guidance.v1",
+      "AGENTS.md#Full / structured mode: `--full --json`": "static.agent-guidance.v1",
+      "AGENTS.md#Hard rules": "static.agent-guidance.v1",
+      "AGENTS.md#How to talk about the output": "static.agent-guidance.v1",
+      "AGENTS.md#Picking a profile": "static.agent-guidance.v1",
+      "AGENTS.md#Preferring MCP over CLI": "static.agent-guidance.v1",
+      "AGENTS.md#Sparse results": "static.agent-guidance.v1",
+      "AGENTS.md#Two invocation modes": "static.agent-guidance.v1",
+      "AGENTS.md#What recon is": "static.agent-guidance.v1",
+      "AGENTS.md#When to reach for recon": "static.agent-guidance.v1",
+      "AGENTS.md#Workflow patterns": "static.agent-guidance.v1",
+      "agents/README.md#Agent integrations": "static.agent-guidance.v1",
+      "agents/README.md#Folders": "static.agent-guidance.v1",
+      "agents/README.md#How the pieces fit together": "static.agent-guidance.v1",
+      "agents/README.md#Quickest path: `recon mcp install`": "static.agent-guidance.v1",
+      "agents/README.md#Verifying any install": "static.agent-guidance.v1",
+      "agents/README.md#macOS PATH gotcha (most GUI clients)": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#1. Install the recon CLI": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#2a. (Alternative) Wire MCP without the plugin": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#2b. Install the Claude Code plugin": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#3. Try it": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#Approval policy": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#Choosing the MCP launch command": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#Install": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#Skill vs MCP server: what each adds": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#What this plugin does *not* do": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#What's inside": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#recon - Claude Code plugin": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Category bucketing": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Gotchas": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Inputs you accept": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Output format": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Relationship to the base `recon` skill": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Triage rubric": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#What this skill does NOT do": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#When the slug already exists": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#When to use this": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Worked example": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#YAML schema for new entries": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#recon-fingerprint-triage": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Before first invocation": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Cache awareness": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Default mode - panel output": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Detecting whether MCP is connected": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Domain validation before any CLI invocation (mandatory)": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Ephemeral fingerprints": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Explain mode - `--explain`": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Full / structured mode - `--full --json`": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Gotchas": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Hard rules": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#How to talk about the output": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Picking a profile": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Preferring MCP over CLI": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Sparse results": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Two invocation modes": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#When this is the right tool": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#Workflow patterns": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon/SKILL.md#recon": "static.agent-guidance.v1",
+      "agents/cursor/README.md#1. Install the recon CLI": "static.agent-guidance.v1",
+      "agents/cursor/README.md#2. Wire the MCP server": "static.agent-guidance.v1",
+      "agents/cursor/README.md#3. Wire the agent guidance": "static.agent-guidance.v1",
+      "agents/cursor/README.md#Verifying the install": "static.agent-guidance.v1",
+      "agents/cursor/README.md#What's inside": "static.agent-guidance.v1",
+      "agents/cursor/README.md#recon - Cursor install": "static.agent-guidance.v1",
+      "agents/kiro/README.md#1. Install the recon CLI": "static.agent-guidance.v1",
+      "agents/kiro/README.md#2. Wire the MCP server": "static.agent-guidance.v1",
+      "agents/kiro/README.md#3. Wire the agent guidance": "static.agent-guidance.v1",
+      "agents/kiro/README.md#Verifying the install": "static.agent-guidance.v1",
+      "agents/kiro/README.md#What's inside": "static.agent-guidance.v1",
+      "agents/kiro/README.md#recon - Kiro install": "static.agent-guidance.v1",
+      "agents/vscode/README.md#1. Install the recon CLI": "static.agent-guidance.v1",
+      "agents/vscode/README.md#2. Wire the MCP server": "static.agent-guidance.v1",
+      "agents/vscode/README.md#3. Wire the agent guidance": "static.agent-guidance.v1",
+      "agents/vscode/README.md#Verifying the install": "static.agent-guidance.v1",
+      "agents/vscode/README.md#What's inside": "static.agent-guidance.v1",
+      "agents/vscode/README.md#recon - VS Code (with GitHub Copilot) install": "static.agent-guidance.v1",
+      "agents/windsurf/README.md#1. Install the recon CLI": "static.agent-guidance.v1",
+      "agents/windsurf/README.md#2. Wire the MCP server": "static.agent-guidance.v1",
+      "agents/windsurf/README.md#3. Wire the agent guidance": "static.agent-guidance.v1",
+      "agents/windsurf/README.md#Verifying the install": "static.agent-guidance.v1",
+      "agents/windsurf/README.md#What's inside": "static.agent-guidance.v1",
+      "agents/windsurf/README.md#recon - Windsurf install": "static.agent-guidance.v1"
+    },
+    "insight_generators": {
+      "_auth_insights": "runtime.generated-insight.v1",
+      "_device_management_insights": "runtime.generated-insight.v1",
+      "_email_security_insights": "runtime.generated-insight.v1",
+      "_gateway_insights": "runtime.generated-insight.v1",
+      "_google_auth_insights": "runtime.generated-insight.v1",
+      "_google_modules_insights": "runtime.generated-insight.v1",
+      "_infrastructure_insights": "runtime.generated-insight.v1",
+      "_network_security_insights": "runtime.generated-insight.v1",
+      "_no_email_infrastructure_insights": "runtime.generated-insight.v1",
+      "_null_mx_insights": "runtime.generated-insight.v1",
+      "_pki_insights": "runtime.generated-insight.v1",
+      "_provider_overlap_insights": "runtime.generated-insight.v1",
+      "_security_vendor_insights": "runtime.generated-insight.v1",
+      "_sovereignty_insights": "runtime.generated-insight.v1",
+      "_sparse_signal_insights": "runtime.generated-insight.v1",
+      "_tenant_domain_insights": "runtime.generated-insight.v1"
+    },
+    "json_fields": {
+      "auth_type": "runtime.identity-and-tenant.v1",
+      "bimi_identity": "runtime.bimi-observation.v1",
+      "cert_summary": "runtime.ct-observation.v1",
+      "chain_motifs": "runtime.related-namespace.v1",
+      "cloud_instance": "runtime.identity-and-tenant.v1",
+      "confidence": "runtime.confidence-summary.v1",
+      "ct_attempt_outcome": "runtime.ct-observation.v1",
+      "ct_cache_age_days": "runtime.ct-observation.v1",
+      "ct_provider_used": "runtime.ct-observation.v1",
+      "ct_subdomain_count": "runtime.ct-observation.v1",
+      "default_domain": "runtime.identity-and-tenant.v1",
+      "degraded_sources": "runtime.collection-status.v1",
+      "detection_scores": "runtime.catalog-indicator.v1",
+      "display_name": "runtime.display-label.v1",
+      "dmarc_pct": "runtime.email-control-observation.v1",
+      "dmarc_policy": "runtime.email-control-observation.v1",
+      "domain_count": "runtime.identity-and-tenant.v1",
+      "email_gateway": "runtime.email-topology.v1",
+      "email_security_score": "runtime.email-control-observation.v1",
+      "evidence": "runtime.collection-status.v1",
+      "evidence_confidence": "runtime.confidence-summary.v1",
+      "evidence_conflicts": "runtime.collection-status.v1",
+      "explanation_dag": "runtime.explanation-provenance.v1",
+      "fingerprint_metadata": "runtime.catalog-indicator.v1",
+      "fusion_enabled": "runtime.inference-diagnostics.v1",
+      "google_auth_type": "runtime.identity-and-tenant.v1",
+      "google_idp_name": "runtime.identity-and-tenant.v1",
+      "inference_confidence": "runtime.confidence-summary.v1",
+      "infrastructure_clusters": "runtime.related-namespace.v1",
+      "insights": "runtime.generated-insight.v1",
+      "lexical_observations": "runtime.lexical-diagnostic.v1",
+      "likely_primary_email_provider": "runtime.email-topology.v1",
+      "msgraph_host": "runtime.identity-and-tenant.v1",
+      "mta_sts_mode": "runtime.email-control-observation.v1",
+      "partial": "runtime.collection-status.v1",
+      "posterior_observations": "runtime.inference-diagnostics.v1",
+      "primary_email_provider": "runtime.email-topology.v1",
+      "provider": "runtime.email-topology.v1",
+      "queried_domain": "runtime.namespace-coordinate.v1",
+      "record_type": "runtime.structured-transport.v1",
+      "region": "runtime.identity-and-tenant.v1",
+      "related_domains": "runtime.related-namespace.v1",
+      "schema_version": "runtime.structured-transport.v1",
+      "services": "runtime.catalog-indicator.v1",
+      "shared_display_name": "runtime.cross-domain-overlap.v1",
+      "shared_tenant": "runtime.cross-domain-overlap.v1",
+      "shared_verification_tokens": "runtime.cross-domain-overlap.v1",
+      "site_verification_tokens": "runtime.catalog-indicator.v1",
+      "slug_confidences": "runtime.inference-diagnostics.v1",
+      "slugs": "runtime.catalog-indicator.v1",
+      "sources": "runtime.collection-status.v1",
+      "surface_attributions": "runtime.related-namespace.v1",
+      "tenant_domains": "runtime.identity-and-tenant.v1",
+      "tenant_id": "runtime.identity-and-tenant.v1",
+      "tenant_region_sub_scope": "runtime.identity-and-tenant.v1",
+      "unclassified_cname_chains": "runtime.related-namespace.v1"
+    },
+    "mcp_tools": {
+      "analyze_posture": "runtime.posture-observation.v1",
+      "assess_exposure": "runtime.exposure-index.v1",
+      "chain_lookup": "runtime.related-namespace.v1",
+      "clear_ephemeral_fingerprints": "runtime.catalog-operation.v1",
+      "cluster_verification_tokens": "runtime.cross-domain-overlap.v1",
+      "compare_postures": "runtime.posture-observation.v1",
+      "discover_fingerprint_candidates": "runtime.catalog-indicator.v1",
+      "explain_dag": "runtime.explanation-provenance.v1",
+      "explain_signal": "runtime.catalog-indicator.v1",
+      "export_graph": "runtime.ct-observation.v1",
+      "find_hardening_gaps": "runtime.hardening-guidance.v1",
+      "get_fingerprints": "runtime.catalog-indicator.v1",
+      "get_infrastructure_clusters": "runtime.ct-observation.v1",
+      "get_posteriors": "runtime.inference-diagnostics.v1",
+      "get_signals": "runtime.catalog-indicator.v1",
+      "inject_ephemeral_fingerprint": "runtime.catalog-operation.v1",
+      "list_ephemeral_fingerprints": "runtime.catalog-operation.v1",
+      "lookup_tenant": "runtime.panel-assembly.v1",
+      "reevaluate_domain": "runtime.catalog-operation.v1",
+      "reload_data": "runtime.catalog-operation.v1",
+      "simulate_hardening": "runtime.exposure-index.v1",
+      "test_hypothesis": "runtime.hypothesis-assessment.v1"
+    },
+    "panel_producers": {
+      "src/recon_tool/formatter/delta.py#render_delta_panel": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/exposure.py#render_exposure_panel": "runtime.exposure-index.v1",
+      "src/recon_tool/formatter/exposure.py#render_gaps_panel": "runtime.hardening-guidance.v1",
+      "src/recon_tool/formatter/panel.py#_render_certs": "runtime.ct-observation.v1",
+      "src/recon_tool/formatter/panel.py#_render_degraded_note": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel.py#_render_explain_conflicts": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel.py#_render_external_surface": "runtime.related-namespace.v1",
+      "src/recon_tool/formatter/panel.py#_render_full_related": "runtime.related-namespace.v1",
+      "src/recon_tool/formatter/panel.py#_render_full_tenant_domains": "runtime.related-namespace.v1",
+      "src/recon_tool/formatter/panel.py#_render_insights": "runtime.generated-insight.v1",
+      "src/recon_tool/formatter/panel.py#_render_key_facts": "runtime.panel-assembly.v1",
+      "src/recon_tool/formatter/panel.py#_render_passive_dns_ceiling": "runtime.related-namespace.v1",
+      "src/recon_tool/formatter/panel.py#_render_related_compact": "runtime.related-namespace.v1",
+      "src/recon_tool/formatter/panel.py#_render_services": "runtime.service-label.v1",
+      "src/recon_tool/formatter/panel.py#_render_unclassified_surface": "runtime.related-namespace.v1",
+      "src/recon_tool/formatter/panel.py#_render_verbose_detail": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel.py#format_chain_dict": "runtime.related-namespace.v1",
+      "src/recon_tool/formatter/panel.py#format_comparison_dict": "runtime.posture-observation.v1",
+      "src/recon_tool/formatter/panel.py#format_explanations_list": "runtime.explanation-provenance.v1",
+      "src/recon_tool/formatter/panel.py#format_posture_observations": "runtime.posture-observation.v1",
+      "src/recon_tool/formatter/panel.py#render_chain_panel": "runtime.related-namespace.v1",
+      "src/recon_tool/formatter/panel.py#render_conflict_annotation": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel.py#render_error": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel.py#render_explanations_panel": "runtime.explanation-provenance.v1",
+      "src/recon_tool/formatter/panel.py#render_posture_panel": "runtime.posture-observation.v1",
+      "src/recon_tool/formatter/panel.py#render_source_status_panel": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel.py#render_sources_detail": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel.py#render_tenant_panel": "runtime.panel-assembly.v1",
+      "src/recon_tool/formatter/panel.py#render_verbose_sources": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel.py#render_warning": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel_status.py#render_low_confidence_guidance": "runtime.confidence-summary.v1"
+    },
+    "recommendation_producers": {
+      "src/recon_tool/exposure_gaps.py#detect_inconsistencies": "runtime.hardening-guidance.v1",
+      "src/recon_tool/exposure_gaps.py#detect_missing_controls": "runtime.hardening-guidance.v1",
+      "src/recon_tool/exposure_gaps.py#detect_weak_configs": "runtime.hardening-guidance.v1"
+    },
+    "score_fields": {
+      "docs/recon-schema.json#/$defs/ChainMotif/properties/confidence": "runtime.related-namespace.v1",
+      "docs/recon-schema.json#/$defs/DeltaReport/properties/changed_confidence": "runtime.confidence-summary.v1",
+      "docs/recon-schema.json#/$defs/DeltaReport/properties/changed_email_security_score": "runtime.email-control-observation.v1",
+      "docs/recon-schema.json#/$defs/EvidenceConflict/properties/candidates/items/properties/confidence": "runtime.collection-status.v1",
+      "docs/recon-schema.json#/$defs/InfrastructureClusterReport/properties/modularity": "runtime.ct-observation.v1",
+      "docs/recon-schema.json#/$defs/InfrastructureClusterReport/properties/partition_stability": "runtime.ct-observation.v1",
+      "docs/recon-schema.json#/$defs/InfrastructureClusterReport/properties/stability_runs": "runtime.ct-observation.v1",
+      "docs/recon-schema.json#/$defs/NodeEvidence/properties/influence_pct": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/$defs/NodeEvidence/properties/llr": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/$defs/NodeUnitCounterfactual/properties/delta": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/$defs/NodeUnitCounterfactual/properties/posterior_without": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/$defs/PosteriorObservation/properties/entropy_reduction_nats": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/$defs/PosteriorObservation/properties/interval_high": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/$defs/PosteriorObservation/properties/interval_low": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/$defs/PosteriorObservation/properties/n_eff": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/$defs/PosteriorObservation/properties/posterior": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/properties/confidence": "runtime.confidence-summary.v1",
+      "docs/recon-schema.json#/properties/detection_scores": "runtime.catalog-indicator.v1",
+      "docs/recon-schema.json#/properties/email_security_score": "runtime.email-control-observation.v1",
+      "docs/recon-schema.json#/properties/evidence_confidence": "runtime.confidence-summary.v1",
+      "docs/recon-schema.json#/properties/inference_confidence": "runtime.confidence-summary.v1",
+      "docs/recon-schema.json#/properties/posterior_observations": "runtime.inference-diagnostics.v1",
+      "docs/recon-schema.json#/properties/slug_confidences": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/cli/fingerprints.py#_fingerprint_record_payload.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/cli/fingerprints.py#_fingerprint_summary.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/cli/fingerprints.py#_legacy_fingerprint_payload.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/cli/fingerprints.py#fingerprints_new.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/cli/signals.py#_signal_show_payload.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/cli/signals.py#_signal_summary.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/server/ephemeral.py#EphemeralFingerprintSummary.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/server/ephemeral.py#LookupChainMotifSummary.confidence": "runtime.related-namespace.v1",
+      "src/recon_tool/server/ephemeral.py#LookupConflictCandidate.confidence": "runtime.collection-status.v1",
+      "src/recon_tool/server/ephemeral.py#LookupEvidenceRankSummary.influence_pct": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupEvidenceRankSummary.llr": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupInfrastructureClusterEnvelope.modularity": "runtime.ct-observation.v1",
+      "src/recon_tool/server/ephemeral.py#LookupInfrastructureClusterEnvelope.partition_stability": "runtime.ct-observation.v1",
+      "src/recon_tool/server/ephemeral.py#LookupInfrastructureClusterEnvelope.stability_runs": "runtime.ct-observation.v1",
+      "src/recon_tool/server/ephemeral.py#LookupPosteriorObservationSummary.entropy_reduction_nats": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupPosteriorObservationSummary.interval_high": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupPosteriorObservationSummary.interval_low": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupPosteriorObservationSummary.n_eff": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupPosteriorObservationSummary.posterior": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupResult.confidence": "runtime.confidence-summary.v1",
+      "src/recon_tool/server/ephemeral.py#LookupResult.detection_scores": "runtime.catalog-indicator.v1",
+      "src/recon_tool/server/ephemeral.py#LookupResult.email_security_score": "runtime.email-control-observation.v1",
+      "src/recon_tool/server/ephemeral.py#LookupResult.evidence_confidence": "runtime.confidence-summary.v1",
+      "src/recon_tool/server/ephemeral.py#LookupResult.inference_confidence": "runtime.confidence-summary.v1",
+      "src/recon_tool/server/ephemeral.py#LookupResult.posterior_observations": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupResult.slug_confidences": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupUnitCounterfactualSummary.delta": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/ephemeral.py#LookupUnitCounterfactualSummary.posterior_without": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/graph.py#InfrastructureClusterEnvelope.modularity": "runtime.ct-observation.v1",
+      "src/recon_tool/server/graph.py#InfrastructureClusterEnvelope.partition_stability": "runtime.ct-observation.v1",
+      "src/recon_tool/server/graph.py#InfrastructureClusterEnvelope.stability_runs": "runtime.ct-observation.v1",
+      "src/recon_tool/server/introspection.py#FingerprintSummary.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/server/introspection.py#PosteriorBlockResult.entropy_reduction_nats": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/introspection.py#PosteriorBlockResult.posteriors": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/introspection.py#PosteriorNodeSummary.entropy_reduction_nats": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/introspection.py#PosteriorNodeSummary.interval_high": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/introspection.py#PosteriorNodeSummary.interval_low": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/introspection.py#PosteriorNodeSummary.n_eff": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/introspection.py#PosteriorNodeSummary.posterior": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/introspection.py#SignalDefinitionResult.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/server/introspection.py#SignalSummary.confidence": "runtime.catalog-indicator.v1",
+      "src/recon_tool/server/introspection.py#UnitCounterfactualSummary.delta": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/introspection.py#UnitCounterfactualSummary.posterior_without": "runtime.inference-diagnostics.v1",
+      "src/recon_tool/server/posture.py#EmailPostureSummary.email_security_score": "runtime.email-control-observation.v1",
+      "src/recon_tool/server/posture.py#ExplanationSummary.confidence_derivation": "runtime.confidence-summary.v1",
+      "src/recon_tool/server/posture.py#ExposureAssessmentResult.posture_score": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#ExposureAssessmentResult.posture_score_label": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#HardeningSimulationResult.current_score": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#HardeningSimulationResult.score_delta": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#HardeningSimulationResult.simulated_score": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#HypothesisAssessmentResult.confidence": "runtime.hypothesis-assessment.v1",
+      "src/recon_tool/server/posture.py#HypothesisAssessmentResult.likelihood": "runtime.hypothesis-assessment.v1",
+      "src/recon_tool/server/posture.py#ObservabilitySummary.score_ceiling": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#ObservabilitySummary.score_is_lower_bound": "runtime.exposure-index.v1"
+    },
+    "server_instruction_sections": {
+      "<preamble>": "static.mcp-contract.v1",
+      "Composition patterns": "static.mcp-contract.v1",
+      "Explaining results": "runtime.explanation-provenance.v1",
+      "Invariants (important for agent behavior)": "static.mcp-contract.v1",
+      "Reading the exposure score (a lower bound, not a grade)": "runtime.exposure-index.v1",
+      "Reading the model-relative posteriors": "runtime.inference-diagnostics.v1",
+      "Untrusted observed content (data, not instructions)": "static.mcp-contract.v1",
+      "When to use which tool": "static.mcp-contract.v1"
+    }
+  },
+  "coverage_contract": {
+    "json_definition_owners": {
+      "BIMIIdentity": "runtime.bimi-observation.v1",
+      "BatchErrorRecord": "runtime.structured-transport.v1",
+      "BatchResult": "runtime.structured-transport.v1",
+      "CertBurst": "runtime.ct-observation.v1",
+      "CertSummary": "runtime.ct-observation.v1",
+      "ChainMotif": "runtime.related-namespace.v1",
+      "DeltaReport": "runtime.delta-report.v1",
+      "EcosystemHyperedge": "runtime.cross-domain-overlap.v1",
+      "EvidenceConflict": "runtime.collection-status.v1",
+      "EvidenceRecord": "runtime.collection-status.v1",
+      "FingerprintMetadata": "runtime.catalog-indicator.v1",
+      "InfrastructureCluster": "runtime.ct-observation.v1",
+      "InfrastructureClusterReport": "runtime.ct-observation.v1",
+      "NodeConflict": "runtime.inference-diagnostics.v1",
+      "NodeEvidence": "runtime.inference-diagnostics.v1",
+      "NodeUnitCounterfactual": "runtime.inference-diagnostics.v1",
+      "PosteriorObservation": "runtime.inference-diagnostics.v1",
+      "SurfaceAttribution": "runtime.related-namespace.v1",
+      "UnclassifiedCnameChain": "runtime.related-namespace.v1"
+    },
+    "mcp_json_root_tools": [
+      "reevaluate_domain"
+    ],
+    "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
+    "surface_digests": {
+      "json_fields": "2dfcf87756ecc33fdad6ba4d398ad18b6cfecb203d67a0537939c77a6fed06ed",
+      "mcp_tools": "c59ecbdf8be5a380e6eb6d921641afcce70c48e02e0a71b63e90a4cebff9f8dd"
+    }
+  },
+  "purpose": "Fail-closed taxonomy for every material default panel, JSON, MCP, agent-guidance, recommendation, and score surface. Coverage entries name the claim family that owns each discovered surface; family records state the direct implementation and evidence path, renderer duties, tests, and known limits.",
+  "schema_version": 1,
+  "scope": "Default and primary local product surfaces only. Opt-in experimental validation artifacts are out of scope unless they feed a listed default surface.",
+  "subject_rule": "The subject is a queried public namespace coordinate. No entry may silently promote it into an organization, owner, operator, account holder, or current product user."
+}

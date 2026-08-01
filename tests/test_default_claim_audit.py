@@ -1,0 +1,241 @@
+"""Fail-closed coverage for the material default-claim taxonomy."""
+
+from __future__ import annotations
+
+import json
+from copy import deepcopy
+from pathlib import Path
+
+import pytest
+
+from scripts.check_default_claim_audit import (
+    _expand_mcp_coverage,
+    _reference_path,
+    audit_claim_inventory,
+    discover_surfaces,
+    load_claim_inventory,
+    main,
+)
+
+ROOT = Path(__file__).resolve().parents[1]
+AUDIT_PATH = ROOT / "docs" / "default-claim-audit.json"
+
+
+def test_default_claim_audit_covers_every_discovered_surface() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+
+    assert audit_claim_inventory(inventory, ROOT) == []
+
+
+def test_default_claim_audit_is_canonical_json() -> None:
+    raw = AUDIT_PATH.read_text(encoding="utf-8")
+    parsed = json.loads(raw)
+
+    assert raw == json.dumps(parsed, indent=2, sort_keys=True) + "\n"
+
+
+def test_digest_report_is_deterministic_and_matches_the_contract(capsys: pytest.CaptureFixture[str]) -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+
+    assert main(["--print-digests"]) == 0
+    output = capsys.readouterr().out
+
+    assert json.loads(output) == inventory["coverage_contract"]["surface_digests"]
+    assert output == json.dumps(json.loads(output), indent=2, sort_keys=True) + "\n"
+
+
+def test_guidance_discovery_ignores_heading_shaped_code_examples() -> None:
+    sections = discover_surfaces()["agent_guidance_sections"]
+
+    assert "agents/README.md#supported: claude-desktop, claude-code, cursor, vscode, windsurf, kiro" not in sections
+    assert "agents/windsurf/README.md#Paste the body of AGENTS.md directly." not in sections
+
+
+def test_panel_discovery_covers_every_formatter_renderer_with_qualified_ids() -> None:
+    producers = discover_surfaces()["panel_producers"]
+
+    assert "src/recon_tool/formatter/panel.py#render_tenant_panel" in producers
+    assert "src/recon_tool/formatter/delta.py#render_delta_panel" in producers
+    assert "src/recon_tool/formatter/exposure.py#render_exposure_panel" in producers
+    assert "src/recon_tool/formatter/exposure.py#render_gaps_panel" in producers
+    assert all("#" in producer for producer in producers)
+
+
+def test_score_discovery_preserves_each_schema_and_typed_dict_occurrence() -> None:
+    score_fields = discover_surfaces()["score_fields"]
+
+    assert "docs/recon-schema.json#/properties/confidence" in score_fields
+    assert "docs/recon-schema.json#/$defs/ChainMotif/properties/confidence" in score_fields
+    assert "src/recon_tool/server/posture.py#ExposureAssessmentResult.posture_score" in score_fields
+    assert "src/recon_tool/server/posture.py#HypothesisAssessmentResult.confidence" in score_fields
+    assert "src/recon_tool/cli/fingerprints.py#_fingerprint_summary.confidence" in score_fields
+    assert "src/recon_tool/cli/signals.py#_signal_show_payload.confidence" in score_fields
+    assert "docs/recon-schema.json#/$defs/PosteriorObservation/properties/interval_low" in score_fields
+    assert "docs/recon-schema.json#/$defs/PosteriorObservation/properties/interval_high" in score_fields
+    assert len({field for field in score_fields if field.endswith("/confidence")}) > 1
+
+
+def test_server_instruction_discovery_owns_the_material_preamble() -> None:
+    sections = discover_surfaces()["server_instruction_sections"]
+
+    assert "<preamble>" in sections
+
+
+def test_json_discovery_preserves_every_nested_property_occurrence() -> None:
+    fields = discover_surfaces()["json_fields"]
+
+    assert "docs/recon-schema.json#/properties/tenant_id" in fields
+    assert "docs/recon-schema.json#/$defs/DeltaReport/properties/changed_confidence" in fields
+    assert "docs/recon-schema.json#/$defs/PosteriorObservation/properties/interval_low" in fields
+    assert all(field.startswith("docs/recon-schema.json#/") for field in fields)
+
+
+def test_mcp_discovery_owns_each_tool_and_top_level_output_property() -> None:
+    surfaces = discover_surfaces()["mcp_tools"]
+
+    assert "assess_exposure" in surfaces
+    assert "assess_exposure#posture_score" in surfaces
+    assert "test_hypothesis#likelihood" in surfaces
+    assert "reevaluate_domain#tenant_id" in surfaces
+
+
+def test_default_claim_families_have_direct_paths_and_regression_tests() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+
+    families = inventory["claim_families"]
+    assert isinstance(families, dict)
+    assert families
+    for claim_id, family in families.items():
+        assert claim_id == family["claim_id"]
+        assert family["classification"] in {
+            "direct_observation",
+            "documented_derivation",
+            "bounded_absence",
+            "unresolved_when_unobservable",
+            "static_product_contract",
+            "non_claim_transport",
+        }
+        assert family["subject_scope"]
+        assert family["producer_paths"]
+        assert family["evidence_path"]
+        assert family["renderer_obligations"]
+        assert family["regression_tests"]
+        assert family["lineage_status"] in {"exact", "static", "incomplete"}
+
+
+def test_material_families_cannot_be_marked_complete_with_incomplete_lineage() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+
+    for family in inventory["claim_families"].values():
+        if family["material"]:
+            assert not (family["audit_status"] == "complete" and family["lineage_status"] == "incomplete")
+
+
+def test_claim_family_schema_rejects_malformed_scalar_and_array_values() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    claim_id = "runtime.catalog-indicator.v1"
+    cases = (
+        ("material", "yes", ".material must be boolean"),
+        ("subject_scope", 1, ".subject_scope must be a non-empty string"),
+        ("classification", "guess", ".classification must be one of"),
+        ("lineage_status", "almost", ".lineage_status must be one of"),
+        ("audit_status", "complete-ish", ".audit_status must be one of"),
+        ("limits", [None], ".limits entries must be non-empty strings"),
+        ("renderer_obligations", [None], ".renderer_obligations entries must be non-empty strings"),
+    )
+
+    for field, value, expected in cases:
+        malformed = deepcopy(inventory)
+        malformed["claim_families"][claim_id][field] = value
+
+        assert any(expected in problem for problem in audit_claim_inventory(malformed, ROOT))
+
+
+def test_claim_audit_requires_nonempty_scope_purpose_and_subject_rule() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+
+    for field, value in (("purpose", None), ("scope", ""), ("subject_rule", 1)):
+        malformed = deepcopy(inventory)
+        malformed[field] = value
+
+        assert any(
+            f"{field} must be a non-empty string" in problem for problem in audit_claim_inventory(malformed, ROOT)
+        )
+
+
+def test_compact_surface_ownership_is_bound_to_exact_discovery_digests() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    malformed = deepcopy(inventory)
+    malformed["coverage_contract"]["surface_digests"]["json_fields"] = "0" * 64
+
+    assert any("json_fields digest differs" in problem for problem in audit_claim_inventory(malformed, ROOT))
+
+
+def test_full_mcp_lookup_replay_inherits_json_root_claim_owners() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    problems: list[str] = []
+    expanded = _expand_mcp_coverage(
+        {"reevaluate_domain": "runtime.catalog-operation.v1"},
+        {"tenant_id": "runtime.identity-and-tenant.v1"},
+        frozenset({"reevaluate_domain"}),
+        frozenset({"reevaluate_domain", "reevaluate_domain#tenant_id"}),
+        problems,
+    )
+
+    assert inventory["coverage_contract"]["mcp_json_root_tools"] == ["reevaluate_domain"]
+    assert expanded == {
+        "reevaluate_domain": "runtime.catalog-operation.v1",
+        "reevaluate_domain#tenant_id": "runtime.identity-and-tenant.v1",
+    }
+    assert problems == []
+
+
+def test_family_references_reject_internal_absolute_and_traversal_paths() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    claim_id = "runtime.catalog-indicator.v1"
+    references = (".git/HEAD", "../outside.py", str(ROOT / "README.md"), "src\\recon_tool\\models.py")
+
+    for reference in references:
+        malformed = deepcopy(inventory)
+        malformed["claim_families"][claim_id]["producer_paths"] = [reference]
+
+        assert any("reference path is not allowed" in problem for problem in audit_claim_inventory(malformed, ROOT))
+
+
+def test_family_references_enforce_the_declared_artifact_role() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    claim_id = "runtime.catalog-indicator.v1"
+    cases = (
+        ("regression_tests", "README.md"),
+        ("producer_paths", "tests/test_fingerprints.py"),
+        ("evidence_path", "tests/test_fingerprints.py"),
+    )
+
+    for reference_kind, reference in cases:
+        malformed = deepcopy(inventory)
+        malformed["claim_families"][claim_id][reference_kind] = [reference]
+
+        assert any(
+            f"{reference_kind} reference path is not allowed" in problem
+            for problem in audit_claim_inventory(malformed, ROOT)
+        )
+
+
+def test_family_references_reject_cross_role_and_internal_symlinks(tmp_path: Path) -> None:
+    source = tmp_path / "src" / "recon_tool" / "models.py"
+    source.parent.mkdir(parents=True)
+    source.write_text("class TenantInfo: pass\n", encoding="utf-8")
+    internal = tmp_path / ".git" / "HEAD"
+    internal.parent.mkdir()
+    internal.write_text("ref: refs/heads/main\n", encoding="utf-8")
+    test_link = tmp_path / "tests" / "test_claim.py"
+    test_link.parent.mkdir()
+    evidence_link = source.parent / "evidence.py"
+    try:
+        test_link.symlink_to(source)
+        evidence_link.symlink_to(internal)
+    except OSError as exc:
+        pytest.skip(f"symlinks unavailable: {exc}")
+
+    assert _reference_path("tests/test_claim.py", "regression_tests", tmp_path) is None
+    assert _reference_path("src/recon_tool/evidence.py", "evidence_path", tmp_path) is None

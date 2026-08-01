@@ -30,13 +30,14 @@ gets worked on. Priority 1 is the standing highest priority because output
 truthfulness outranks features. Priority 2 is the most urgent because it is the
 only track with an external clock, and it is bounded work. Schedule priority 2
 now; keep priority 1 as the default work between those tasks. Priority 3 cannot
-start until priority 1 produces a claim taxonomy.
+start until priority 1 closes the incomplete runtime paths and stabilizes the
+new claim taxonomy.
 
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
-| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | One machine-readable claim contract exists, `dns.dmarc.valid_policy_is_reject.v1`. Every other material default claim rests on review and regression tests. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
+| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. Eighteen are complete; seven material runtime families have incomplete lineage and two static guidance families remain open. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-before-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | The exact stable `1.28.1` and `2.0.0` matrix passed 2026-07-28 and CI keeps both pins blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green; treat production v2 adoption as a separate release decision. |
-| [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on the claim taxonomy from priority 1. Measuring claim families before they are defined measures something about to be redefined. | Specified, not started. Extensive process evidence exists; product-outcome evidence does not. | A dated aggregate-safe scorecard with a decision rule written before the run, deciding whether advanced fusion stays primary or becomes an advanced diagnostic. |
+| [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | Specified, not started. Extensive process evidence exists; product-outcome evidence does not. | A dated aggregate-safe scorecard with a decision rule written before the run, deciding whether advanced fusion stays primary or becomes an advanced diagnostic. |
 | [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the three core evidence and compatibility tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
 Everything blocked behind these, and the gate that unblocks each, is in
@@ -103,9 +104,14 @@ inference-confidence path now groups error-free source types and sources by
 canonical claim, so failed or unrelated provider evidence cannot corroborate
 a different claim. Duplicate result objects from one source count once, and
 explanations name the exact winning claim and qualifying evidence.
-The wider default-claim, generated-guidance, and recommendation audit remains
-open. Current sovereignty handling preserves absent metadata as unknown; that
-invariant should remain explicit and tested.
+The fail-closed [default-claim audit](default-claim-audit.md) now inventories
+every discovered primary surface and binds compact JSON and MCP ownership to
+exact digests. This establishes the dependency taxonomy without claiming the
+track is complete. Generated insights, explanations, panel assembly, service
+labels, posture observations, hardening guidance, and the exposure index still
+have incomplete lineage. Static MCP and generated-guidance semantics also
+remain open for review. Current sovereignty handling preserves absent metadata
+as unknown; that invariant should remain explicit and tested.
 
 Work:
 

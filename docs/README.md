@@ -92,6 +92,7 @@ The formal model, its assurance story, and the separate publication track.
 | Audit-ready claim to mechanism to test map | [assurance-case.md](assurance-case.md) |
 | Traceability matrix | [traceability-matrix.md](traceability-matrix.md) |
 | Internal proof-carrying claim contracts | [claim-contracts.md](claim-contracts.md) |
+| Fail-closed material default-claim taxonomy | [default-claim-audit.md](default-claim-audit.md) |
 | Related work and positioning | [related-work.md](related-work.md) |
 | Artifact review guide | [artifact-review.md](artifact-review.md) |
 | Submission freeze checklist | [submission-freeze-checklist.md](submission-freeze-checklist.md) |

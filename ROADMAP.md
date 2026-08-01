@@ -54,13 +54,20 @@ class is still being found one case at a time instead of swept. The most recent
 instance let a queried domain report the email controls that a related domain
 published, contradicting its own null DMARC policy inside the same record, and
 persisted that contradiction to the result cache. A bug hunt found it. The
-audit that exists to prevent it has not been run to completion. Track 3 also
-cannot start until this produces a claim taxonomy.
+audit that exists to prevent it has not been run to completion. The taxonomy
+now exists, but Track 3 stays blocked until the incomplete default runtime
+paths are closed and the family definitions stop moving.
 
-**State:** one machine-readable claim contract exists,
-`dns.dmarc.valid_policy_is_reject.v1`. Every other material default claim is
-governed by review and regression tests rather than by a declared contract with
-scope, alternatives, preconditions, and fixtures.
+**State:** a fail-closed machine-readable audit now assigns all discovered
+primary surfaces to 27 claim families and blocks drift across 185 JSON property
+occurrences, 167 MCP tool and output surfaces, 31 panel producers, 89 agent
+guidance sections, 16 insight generators, 77 score or quantitative fields, and
+the remaining governed surfaces. Eighteen families are complete. Seven
+material runtime families still have incomplete lineage, and the two static
+guidance families remain open for semantic review. The narrower
+`dns.dmarc.valid_policy_is_reject.v1` proof-carrying contract remains the first
+fully modeled claim. See
+[the default-claim audit](docs/default-claim-audit.md).
 
 **Closed when:** every default panel insight, service label, live MCP
 instruction and tool description, generated agent guidance item,
