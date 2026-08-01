@@ -102,7 +102,7 @@ class TestEvidenceSemanticServiceClassification:
             )
         )
 
-        assert parent_service in categorized["Email"]
+        assert f"{parent_service} (MX delivery path)" in categorized["Email"]
         assert unsupported_child not in {service for services in categorized.values() for service in services}
 
     def test_direct_ai_fingerprint_remains_visible(self) -> None:

@@ -48,6 +48,7 @@ from recon_tool.formatter.delta import (  # re-exported: stable import path afte
     format_delta_json,
     render_delta_panel,
 )
+from recon_tool.formatter.email_summary import normalize_email_services
 from recon_tool.formatter.explanations import format_explanations_list, render_explanations_panel
 from recon_tool.formatter.exposure import (  # re-exported: stable import path after the split
     format_exposure_dict,
@@ -74,7 +75,6 @@ from recon_tool.formatter.serialize import (
     format_tenant_plain,
     plain_lines,
 )
-from recon_tool.merger_tables import GATEWAY_SLUGS
 from recon_tool.models import (
     CandidateValue,
     ChainReport,
@@ -330,7 +330,10 @@ _SKIP_COMPACT_PREFIXES = (
 _SKIP_COMPACT_EXACT = frozenset({"(SPF)", "(site verified)"})
 
 _SPARSE_INSIGHT_PREFIXES = (
-    "Sparse public signal:", "Sparse public signal \N{EM DASH}", "Next step:", "Next step \N{EM DASH}"
+    "Sparse public signal:",
+    "Sparse public signal \N{EM DASH}",
+    "Next step:",
+    "Next step \N{EM DASH}",
 )
 
 
@@ -419,75 +422,6 @@ def _wrap_text(text: str, max_width: int) -> list[str]:
     if current:
         lines.append(current)
     return lines or [text]
-
-
-def _append_unique(summary: list[str], value: str | None) -> None:
-    """Append ``value`` to ``summary`` when it is truthy and not already present."""
-    if value and value not in summary:
-        summary.append(value)
-
-
-def _email_summary_providers(info: TenantInfo, service_set: set[str], summary: list[str]) -> None:
-    """Order observed delivery paths before hedged downstream indicators."""
-
-    ordered_services = sorted(service_set)
-
-    def _add_list(value: str | None, *, hedge: bool = False) -> None:
-        for raw_part in (value or "").split(" + "):
-            part = raw_part.strip()
-            if not part:
-                continue
-            label = next((item for item in ordered_services if item == part or item.startswith(f"{part} (")), part)
-            if hedge and label == part and part not in service_set:
-                label = f"{part} (possible downstream indicator)"
-            _append_unique(summary, label)
-
-    if info.primary_email_provider:
-        _add_list(info.primary_email_provider)
-        _add_list(info.email_gateway)
-    else:
-        _add_list(info.email_gateway)
-        _add_list(info.likely_primary_email_provider, hedge=True)
-    if not summary:
-        for provider in ("Microsoft 365", "Google Workspace", "Zoho Mail", "ProtonMail", "AWS SES"):
-            if provider in service_set:
-                _append_unique(summary, provider)
-
-
-def _email_summary_controls(
-    info: TenantInfo, service_set: set[str], email_services: list[str], summary: list[str]
-) -> None:
-    """Append the main email hardening controls (DMARC, DKIM, SPF, MTA-STS,
-    BIMI) to ``summary``."""
-    if info.dmarc_policy:
-        _append_unique(summary, f"DMARC {info.dmarc_policy}")
-    elif "DMARC" in service_set:
-        _append_unique(summary, "DMARC")
-
-    if any(s.startswith("DKIM") for s in email_services):
-        _append_unique(summary, "DKIM")
-
-    if any(s.startswith("SPF: strict") for s in email_services):
-        _append_unique(summary, "SPF strict")
-    elif any(s.startswith("SPF: softfail") for s in email_services):
-        _append_unique(summary, "SPF softfail")
-
-    if info.mta_sts_mode and info.mta_sts_mode != "none":
-        _append_unique(summary, f"MTA-STS {info.mta_sts_mode}")
-    elif "MTA-STS" in service_set:
-        _append_unique(summary, "MTA-STS")
-
-    if "BIMI" in service_set:
-        _append_unique(summary, "BIMI")
-
-
-def _compact_email_summary(info: TenantInfo, email_services: list[str]) -> list[str]:
-    """Build the evidence-scoped Email core retained by every panel mode."""
-    service_set = set(email_services)
-    summary: list[str] = []
-    _email_summary_providers(info, service_set, summary)
-    _email_summary_controls(info, service_set, email_services, summary)
-    return summary
 
 
 # High-signal subdomain prefixes for compact related-domain display.
@@ -757,41 +691,6 @@ def render_tenant_panel(
     return Group(*blocks)
 
 
-def _normalize_email_services(categorized: dict[str, list[str]], info: TenantInfo) -> None:
-    """Lead with compact Email facts, then append remaining indicators."""
-    from recon_tool.collection_view import collection_observable_evidence
-
-    original_email = list(categorized["Email"])
-    _email_noise = {
-        "DKIM",
-        "DKIM (Exchange Online)",
-        "DMARC",
-        "MTA-STS",
-        "BIMI",
-        "TLS-RPT",
-        "Exchange Autodiscover",
-        "Microsoft 365",
-        "Google Workspace",
-        "Exchange-style endpoint indicator",
-        "Custom or unclassified MX",
-        "Null MX (domain does not accept email)",
-    }
-    gateway_names = {
-        record.rule_name
-        for record in collection_observable_evidence(info)
-        if record.source_type.upper() == "MX" and record.slug in GATEWAY_SLUGS
-    }
-    _all_noise = _email_noise | gateway_names
-    remaining = [s for s in categorized["Email"] if s not in _all_noise and not s.startswith("SPF")]
-    email_summary = _compact_email_summary(info, original_email)
-    for service in remaining:
-        _append_unique(email_summary, service)
-    if email_summary:
-        categorized["Email"] = email_summary
-    else:
-        del categorized["Email"]
-
-
 def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: bool, max_width: int) -> None:
     """Default-mode-only line summarising the providers the CNAME-chain
     classifier attributed to subdomains, with per-provider counts so the
@@ -838,7 +737,7 @@ def _render_services(info: TenantInfo, show_domains: bool) -> tuple[Text | None,
     svc_block.append("\n")
     categorized = _categorize_services(info)
     if "Email" in categorized:
-        _normalize_email_services(categorized, info)
+        normalize_email_services(categorized, info)
     # Widen the label column only when a label present in this render needs
     # it, so short-label panels keep their value width and a long label
     # (e.g. "Data & Analytics") still gets one space before its value.

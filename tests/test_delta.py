@@ -144,13 +144,21 @@ class TestComputeDelta:
         prev = _make_previous(services=["ServiceA", "ServiceB"])
         delta = compute_delta(prev, info)
         assert delta.has_changes
-        assert "ServiceC" in delta.added_services
+        assert delta.added_services == ("ServiceC",)
 
     def test_removed_services(self):
         info = _make_info(services=("ServiceA",))
         prev = _make_previous(services=["ServiceA", "ServiceB"])
         delta = compute_delta(prev, info)
-        assert delta.removed_services == ("ServiceB (prior evidence role unavailable)",)
+        assert delta.removed_services == ("ServiceB",)
+
+    def test_removed_self_describing_control_does_not_claim_missing_role(self):
+        info = _make_info(services=("ServiceA",))
+        prev = _make_previous(services=["ServiceA", "DMARC"])
+
+        delta = compute_delta(prev, info)
+
+        assert delta.removed_services == ("DMARC",)
 
     def test_degraded_collection_withholds_removals_but_keeps_additions(self) -> None:
         info = _make_info(
@@ -634,7 +642,7 @@ class TestComputeDelta:
 
         assert delta.removed_signals == ()
 
-    def test_service_addition_uses_retained_evidence_role(self):
+    def test_service_addition_preserves_canonical_name_with_evidence(self):
         info = _make_info(
             services=("ServiceA", "Okta"),
             slugs=("slug-a", "okta"),
@@ -650,9 +658,9 @@ class TestComputeDelta:
 
         delta = compute_delta(_make_previous(services=["ServiceA"], slugs=["slug-a"]), info)
 
-        assert delta.added_services == ("Okta (public TXT account indicator)",)
+        assert delta.added_services == ("Okta",)
 
-    def test_service_removal_uses_retained_prior_evidence_role(self):
+    def test_service_removal_preserves_canonical_name_with_prior_evidence(self):
         previous = _make_info(
             services=("ServiceA", "Okta"),
             slugs=("slug-a", "okta"),
@@ -669,7 +677,37 @@ class TestComputeDelta:
 
         delta = compute_delta(format_tenant_dict(previous), current)
 
-        assert delta.removed_services == ("Okta (public TXT account indicator)",)
+        assert delta.removed_services == ("Okta",)
+
+    def test_service_addition_stays_canonical_with_degraded_mixed_evidence(self):
+        info = _make_info(
+            services=("ServiceA", "Symantec Email Security"),
+            slugs=("slug-a", "symantec"),
+            evidence=(
+                EvidenceRecord("MX", "mx.messagelabs.example", "Symantec Email Security", "symantec"),
+                EvidenceRecord("TXT", "symantec-verification=opaque", "Symantec Email Security", "symantec"),
+            ),
+            degraded_sources=("dns:mx",),
+        )
+
+        delta = compute_delta(_make_previous(services=["ServiceA"], slugs=["slug-a"]), info)
+
+        assert delta.added_services == ("Symantec Email Security",)
+
+    def test_service_removal_stays_canonical_with_degraded_prior_evidence(self):
+        previous = _make_info(
+            services=("ServiceA", "Symantec Email Security"),
+            slugs=("slug-a", "symantec"),
+            evidence=(
+                EvidenceRecord("MX", "mx.messagelabs.example", "Symantec Email Security", "symantec"),
+                EvidenceRecord("TXT", "symantec-verification=opaque", "Symantec Email Security", "symantec"),
+            ),
+            degraded_sources=("dns:mx",),
+        )
+
+        delta = compute_delta(tenant_info_to_dict(previous), _make_info(services=("ServiceA",), slugs=("slug-a",)))
+
+        assert delta.removed_services == ("Symantec Email Security",)
 
     def test_prose_insight_not_treated_as_signal(self):
         # A non-signal insight whose value happens to contain commas must not be

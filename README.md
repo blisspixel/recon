@@ -100,13 +100,14 @@ alpha.invalid
 
 
 Services
-  Email          Microsoft 365, Proofpoint, DMARC reject, DKIM,
+  Email          Microsoft 365 (MX delivery path),
+                 Proofpoint (MX delivery path), DMARC reject, DKIM,
                  SPF strict, MTA-STS enforce
-  Identity       Okta
+  Identity       Okta (CNAME endpoint binding)
   Cloud          Cloudflare (CDN/edge), AWS Route 53 (DNS)
   Security       Wiz Security (public TXT account indicator)
   Collaboration  Slack (public TXT account indicator),
-                 Atlassian (Jira/Confluence)
+                 Atlassian (Jira/Confluence) (CNAME endpoint binding)
 
 
 High-signal related domains

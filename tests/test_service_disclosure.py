@@ -5,9 +5,11 @@ from __future__ import annotations
 import io
 from dataclasses import replace
 
+import pytest
 from rich.console import Console
 
 from recon_tool.formatter import render_tenant_panel
+from recon_tool.formatter.classify import categorize_services, role_aware_service_label
 from recon_tool.models import EvidenceRecord, TenantInfo
 
 
@@ -52,6 +54,127 @@ def _services_block(output: str) -> str:
     return output.split("Services\n", 1)[1].split("\n\n", 1)[0]
 
 
+@pytest.mark.parametrize(
+    ("source_type", "expected_role"),
+    [
+        ("MX", "MX delivery path"),
+        ("CNAME", "CNAME endpoint binding"),
+        ("CNAME_TARGET", "CNAME endpoint binding"),
+        ("SPF", "SPF sender authorization"),
+        ("DMARC_RUA", "DMARC aggregate-report destination"),
+        ("SRV", "SRV service-discovery reference"),
+        ("NS", "authoritative DNS delegation"),
+    ],
+)
+def test_catalog_service_label_states_retained_evidence_role(
+    source_type: str,
+    expected_role: str,
+) -> None:
+    evidence = (EvidenceRecord(source_type, "public-record", "Synthetic Service", "synthetic-service"),)
+
+    assert role_aware_service_label("Synthetic Service", evidence) == f"Synthetic Service ({expected_role})"
+
+
+def test_catalog_service_without_matching_lineage_states_role_unavailable() -> None:
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
+        services=("Synthetic Service",),
+    )
+
+    assert role_aware_service_label("Synthetic Service", ()) == "Synthetic Service (role unavailable)"
+    assert categorize_services(info) == {"Business Apps": ["Synthetic Service (role unavailable)"]}
+
+
+def test_explicit_email_control_label_does_not_require_catalog_lineage() -> None:
+    assert role_aware_service_label("DMARC", ()) == "DMARC"
+    assert role_aware_service_label("DMARC", (EvidenceRecord("DMARC", "v=DMARC1; p=reject", "DMARC", "dmarc"),)) == (
+        "DMARC"
+    )
+
+
+def test_catalog_name_that_begins_with_control_name_still_requires_lineage() -> None:
+    evidence = (EvidenceRecord("DMARC_RUA", "mailto:reports@vendor.invalid", "DMARC Digests", "dmarc-digests"),)
+
+    assert role_aware_service_label("DMARC Digests", evidence) == ("DMARC Digests (DMARC aggregate-report destination)")
+    assert role_aware_service_label("DMARC Digests", ()) == "DMARC Digests (role unavailable)"
+
+
+def test_catalog_role_follows_record_type_not_incompatible_slug_identity() -> None:
+    route53 = TenantInfo(
+        tenant_id=None,
+        display_name="",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
+        services=("AWS Route 53",),
+        slugs=("aws-route53",),
+        evidence=(EvidenceRecord("CNAME", "app.alpha.invalid -> target.invalid", "AWS Route 53", "aws-route53"),),
+    )
+
+    assert categorize_services(route53) == {"Cloud": ["AWS Route 53 (CNAME endpoint binding)"]}
+    assert (
+        role_aware_service_label(
+            "Null MX (domain does not accept email)",
+            (EvidenceRecord("TXT", "unrelated", "Null MX (domain does not accept email)", "null-mx"),),
+        )
+        == "Unclassified observation (role unavailable)"
+    )
+    assert (
+        role_aware_service_label(
+            "Synthetic Null-MX label",
+            (EvidenceRecord("TXT", "unrelated", "Synthetic Null-MX label", "null-mx"),),
+        )
+        == "Unclassified observation (role unavailable)"
+    )
+
+
+@pytest.mark.parametrize(
+    ("service", "source_type"),
+    [
+        ("BIMI", "MX"),
+        ("MTA-STS", "SPF"),
+        ("TLS-RPT", "CNAME"),
+        ("Exchange-style endpoint indicator", "TXT"),
+    ],
+)
+def test_intrinsic_observation_with_incompatible_evidence_fails_closed(
+    service: str,
+    source_type: str,
+) -> None:
+    evidence = (EvidenceRecord(source_type, "incompatible", service, "synthetic"),)
+
+    assert role_aware_service_label(service, evidence) == "Unclassified observation (role unavailable)"
+
+
+@pytest.mark.parametrize(
+    ("service", "slug"),
+    [
+        ("Null MX (domain does not accept email)", "null-mx"),
+        ("Exchange-style endpoint indicator", "exchange-onprem"),
+    ],
+)
+def test_special_slug_with_incompatible_caa_evidence_fails_closed(
+    service: str,
+    slug: str,
+) -> None:
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
+        services=(service,),
+        slugs=(slug,),
+        evidence=(EvidenceRecord("CAA", "0 issue ca.invalid", service, slug),),
+    )
+
+    categorized = categorize_services(info)
+
+    assert categorized["Email"] == ["Unclassified observation (role unavailable)"]
+    assert not any("CAA:" in item for items in categorized.values() for item in items)
+
+
 def test_services_flag_remains_backward_compatible(
     fully_populated_tenant_info: TenantInfo,
 ) -> None:
@@ -69,7 +192,10 @@ def test_detail_modes_retain_compact_and_secondary_email_facts(
         _render(info, verbose=True),
         _render(info, show_services=True, show_domains=True, verbose=True),
     )
-    expected_email = "Email Microsoft 365, Proofpoint, DMARC reject, MTA-STS enforce, SendGrid"
+    expected_email = (
+        "Email Microsoft 365 (MX delivery path), Proofpoint (MX delivery path), "
+        "DMARC reject, MTA-STS enforce, SendGrid (CNAME endpoint binding)"
+    )
 
     for output in outputs:
         collapsed = " ".join(_services_block(output).split())
@@ -114,7 +240,7 @@ def test_gateway_does_not_promote_or_duplicate_txt_only_downstream(
     collapsed = " ".join(_services_block(output).split())
     header = " ".join(output.split("Services\n", 1)[0].split())
 
-    assert "Email Proofpoint, Microsoft 365 (public TXT account indicator)" in collapsed
+    assert "Email Proofpoint (MX delivery path), Microsoft 365 (public TXT account indicator)" in collapsed
     assert collapsed.count("Microsoft 365") == 1
     assert "Microsoft 365 (possible downstream indicator)" in header
 
@@ -126,9 +252,7 @@ def test_gateway_fingerprint_alias_is_not_duplicated(
         fully_populated_tenant_info,
         services=("Symantec Email Security",),
         slugs=("symantec",),
-        evidence=(
-            EvidenceRecord("MX", "mx1.messagelabs.example", "Symantec Email Security", "symantec"),
-        ),
+        evidence=(EvidenceRecord("MX", "mx1.messagelabs.example", "Symantec Email Security", "symantec"),),
         primary_email_provider=None,
         email_gateway="Symantec/Broadcom",
         likely_primary_email_provider=None,
@@ -140,6 +264,8 @@ def test_gateway_fingerprint_alias_is_not_duplicated(
     assert "Email Symantec/Broadcom" in collapsed
     assert collapsed.count("Symantec") == 1
     assert "Symantec Email Security" not in collapsed
+    assert "Symantec/Broadcom (MX delivery path)" in collapsed
+    assert "role unavailable" not in collapsed
 
 
 def test_degraded_mx_preserves_surviving_txt_indicator(

@@ -678,6 +678,10 @@ Stability: stable.
 ```
 
 Each `changed_*` field is either an object with `from` and `to`, or `null`.
+The stable `added_services` and `removed_services` arrays retain canonical raw
+service names for correlation with `TenantInfo.services`. Rich terminal output
+uses those same canonical names; evidence-role qualifiers belong to tenant
+service renderers, which retain the evidence context needed to support them.
 `null` can mean no detected change among comparable values or that the field
 was withheld; consult `incomplete_comparison.suppressed_fields` to distinguish
 those cases. A null `incomplete_comparison` means the current comparator

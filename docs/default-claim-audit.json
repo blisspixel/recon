@@ -698,7 +698,7 @@
       "subject_scope": "public names connected by bounded CNAME, CT, autodiscover, DKIM, or SAN co-occurrence breadcrumbs"
     },
     "runtime.service-label.v1": {
-      "audit_status": "open",
+      "audit_status": "complete",
       "claim_id": "runtime.service-label.v1",
       "classification": "documented_derivation",
       "evidence_path": [
@@ -709,16 +709,21 @@
         "Legacy or externally constructed TenantInfo objects can carry service names without retained matching evidence.",
         "A catalog name alone does not establish a role."
       ],
-      "lineage_status": "incomplete",
+      "lineage_status": "exact",
       "material": true,
       "producer_paths": [
         "src/recon_tool/formatter/classify.py#categorize_services",
+        "src/recon_tool/formatter/classify.py#evidence_role_service_label",
         "src/recon_tool/formatter/classify.py#role_aware_service_label",
+        "src/recon_tool/formatter/email_summary.py#normalize_email_services",
         "src/recon_tool/formatter/panel.py#_render_services"
       ],
       "regression_tests": [
-        "tests/test_service_disclosure.py",
-        "tests/test_panel_disclosure.py"
+        "tests/test_delta.py",
+        "tests/test_formatter_intel_extensions.py",
+        "tests/test_formatter_coverage.py",
+        "tests/test_panel_disclosure.py",
+        "tests/test_service_disclosure.py"
       ],
       "renderer_obligations": [
         "Qualify TXT account indicators, MX delivery paths, CAA authorizations, and endpoint bindings; unknown roles stay unavailable."
