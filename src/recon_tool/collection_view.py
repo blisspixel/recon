@@ -502,6 +502,9 @@ def collection_observable_result(result: SourceResult) -> SourceResult:
         msgraph_host=(None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else result.msgraph_host),
         display_name=(None if not status.degraded_sources.isdisjoint(_USER_REALM_MARKERS) else result.display_name),
         auth_type=(None if not status.degraded_sources.isdisjoint(_USER_REALM_MARKERS) else result.auth_type),
+        default_domain=(
+            None if not status.degraded_sources.isdisjoint(_AUTODISCOVER_MARKERS) else result.default_domain
+        ),
         tenant_domains=(() if not status.degraded_sources.isdisjoint(_AUTODISCOVER_MARKERS) else result.tenant_domains),
         google_auth_type=(
             None if not status.degraded_sources.isdisjoint(_GOOGLE_IDENTITY_MARKERS) else result.google_auth_type
@@ -766,6 +769,11 @@ def collection_observable_info(info: TenantInfo) -> TenantInfo:
             info.queried_domain if not status.degraded_sources.isdisjoint(_USER_REALM_MARKERS) else info.display_name
         ),
         auth_type=(None if not status.degraded_sources.isdisjoint(_USER_REALM_MARKERS) else info.auth_type),
+        default_domain=(
+            info.queried_domain
+            if not status.degraded_sources.isdisjoint(_AUTODISCOVER_MARKERS)
+            else info.default_domain
+        ),
         domain_count=(0 if not status.degraded_sources.isdisjoint(_AUTODISCOVER_MARKERS) else info.domain_count),
         tenant_domains=(() if not status.degraded_sources.isdisjoint(_AUTODISCOVER_MARKERS) else info.tenant_domains),
         google_auth_type=(

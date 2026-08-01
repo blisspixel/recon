@@ -34,6 +34,34 @@ def test_default_claim_audit_is_canonical_json() -> None:
     assert raw == json.dumps(parsed, indent=2, sort_keys=True) + "\n"
 
 
+def test_documented_checkpoint_counts_match_the_live_inventory() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    families = tuple(inventory["claim_families"].values())
+    complete = sum(family["audit_status"] == "complete" for family in families)
+    incomplete_runtime = sum(
+        family["material"] and family["lineage_status"] == "incomplete" for family in families
+    )
+    score_fields = len(discover_surfaces()["score_fields"])
+    root_roadmap = " ".join((ROOT / "ROADMAP.md").read_text(encoding="utf-8").split())
+    audit_doc = " ".join((ROOT / "docs" / "default-claim-audit.md").read_text(encoding="utf-8").split())
+    canonical_roadmap = " ".join((ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8").split())
+
+    assert f"{complete} families are complete. {incomplete_runtime} material runtime families" in root_roadmap
+    assert f"{score_fields} score or quantitative fields" in root_roadmap
+    assert f"{complete} families are complete. {incomplete_runtime} material runtime families" in audit_doc
+    assert f"{score_fields} quantitative or categorical score fields" in audit_doc
+    assert f"{complete} are complete; {incomplete_runtime} material runtime families" in canonical_roadmap
+
+
+def test_panel_assembly_family_records_exact_runtime_lineage() -> None:
+    family = load_claim_inventory(AUDIT_PATH)["claim_families"]["runtime.panel-assembly.v1"]
+
+    assert family["audit_status"] == "complete"
+    assert family["lineage_status"] == "exact"
+    assert "src/recon_tool/collection_view.py#collection_observable_evidence" in family["evidence_path"]
+    assert "src/recon_tool/server/lookup.py#lookup_tenant" in family["producer_paths"]
+
+
 def test_digest_report_is_deterministic_and_matches_the_contract(capsys: pytest.CaptureFixture[str]) -> None:
     inventory = load_claim_inventory(AUDIT_PATH)
 

@@ -56,13 +56,13 @@ rejected.
   runtime observations remain governed by separate claim families.
 - `audit_status: open` means the family still requires implementation or review.
 
-At the 2026-07-31 checkpoint, the inventory contains 27 families and covers 89
+At the 2026-08-01 checkpoint, the inventory contains 27 families and covers 89
 agent-guidance sections, 16 insight generators, 197 JSON property occurrences,
 167 MCP tool and output surfaces, 31 panel producers, 3 recommendation
-producers, 77 quantitative or categorical score fields, and 8 MCP instruction
-sections. Twenty families are complete. Five material runtime families have
-incomplete lineage: panel assembly, service labels, posture observations,
-hardening guidance, and the exposure index. Explanation records now label
+producers, 78 quantitative or categorical score fields, and 8 MCP instruction
+sections. 21 families are complete. 4 material runtime families
+have incomplete lineage: service labels, posture observations, hardening
+guidance, and the exposure index. Explanation records now label
 exact evidence-and-rule associations, exact rule-only associations,
 reconstructed associations, and unsupported associations. The additive
 `exact_provenance_complete` and `lineage_disconnected_terminals` diagnostics
@@ -78,7 +78,11 @@ Autodiscover and OIDC metadata subchannels. Current cache reads and writes also
 reject incomplete or inconsistent generated-insight lineage while preserving
 valid degraded results. Role-specific claims such as an MX gateway attach only
 the occurrences that established that role. The two static guidance families
-remain open for semantic review.
+remain open for semantic review. Rich panel and MCP text assembly now retain
+the queried namespace coordinate, use the same projected values as structured
+output, and exclude raw evidence from unavailable channels when deriving
+panel-only summaries. An unavailable Autodiscover channel also projects a
+cached tenant default domain back to the queried namespace on every format.
 
 ## Update procedure
 

@@ -57,6 +57,7 @@ from recon_tool.formatter.exposure import (  # re-exported: stable import path a
     render_exposure_panel,
     render_gaps_panel,
 )
+from recon_tool.formatter.key_facts import key_facts_auth_line, key_facts_multicloud_line
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.formatter.markdown import (
     format_explanations_markdown,
@@ -557,12 +558,13 @@ def _pick_high_signal_related(
 def _append_field(facts: Text, label: str, value: str, value_style: str = "") -> None:
     """Emit one "  Label    value" row into ``facts``, wrapping the value at the
     panel width with a continuation indent matching the label column."""
-    indent_width = 2 + _LABEL_WIDTH  # "  " + label column
+    label_width = max(_LABEL_WIDTH, len(label) + 1)
+    indent_width = 2 + label_width  # "  " + label column
     max_width = _PANEL_WIDTH - indent_width
     for i, line in enumerate(_wrap_text(value, max_width)):
         if i == 0:
             facts.append("  ")
-            facts.append(label.ljust(_LABEL_WIDTH), style="dim")
+            facts.append(label.ljust(label_width), style="dim")
         else:
             facts.append(" " * indent_width)
         facts.append(line, style=value_style)
@@ -600,67 +602,6 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     facts.append("\n")
 
 
-def _with_idp(base: str, google_idp_name: str | None) -> str:
-    """Append " via <IdP>" to a Google Workspace auth label when an IdP name is
-    known."""
-    return f"{base} via {google_idp_name}" if google_idp_name else base
-
-
-def _key_facts_auth_line(info: TenantInfo) -> str | None:
-    """Combine the M365 and Google Workspace auth labels into one line.
-
-    "Managed (Entra ID + Google Workspace)" reads cleaner than
-    "Managed + Managed (GWS)" when both providers share an auth type.
-    GetUserRealm returns NameSpaceType=Unknown for domains that are not real
-    M365 tenants, so "Unknown" is treated as no auth info here. Returns ``None``
-    when no usable auth info is present.
-    """
-    effective_auth: str | None = info.auth_type
-    if effective_auth and effective_auth.strip().lower() == "unknown":
-        effective_auth = None
-
-    auth_parts: list[str] = []
-    if effective_auth and info.google_auth_type:
-        if effective_auth == info.google_auth_type:
-            # Only claim "Entra ID" when the microsoft365 slug is actually
-            # detected; a dormant tenant_id from OIDC discovery on a
-            # Google-primary domain otherwise yields a confident-wrong claim.
-            ms_label = "Entra ID" if "microsoft365" in info.slugs else "Microsoft"
-            providers = [ms_label, _with_idp("Google Workspace", info.google_idp_name)]
-            auth_parts.append(f"{effective_auth} ({' + '.join(providers)})")
-        else:
-            auth_parts.append(effective_auth)
-            auth_parts.append(f"{_with_idp(info.google_auth_type, info.google_idp_name)} (Google Workspace)")
-    elif effective_auth:
-        auth_parts.append(effective_auth)
-    elif info.google_auth_type:
-        auth_parts.append(f"{_with_idp(info.google_auth_type, info.google_idp_name)} (Google Workspace)")
-    if not auth_parts:
-        return None
-    return " + ".join(auth_parts)
-
-
-def _key_facts_multicloud_line(info: TenantInfo) -> str | None:
-    """At-a-glance multi-cloud indicator.
-
-    The apex slugs and the CNAME-chain subdomain attributions both contribute;
-    ``count_cloud_vendors`` collapses sibling slugs so the count reflects
-    distinct vendors. Returns ``None`` unless the footprint touches >= 2.
-    """
-    surface_slug_stream: list[str] = []
-    for sa in info.surface_attributions:
-        if sa.primary_slug:
-            surface_slug_stream.append(sa.primary_slug)
-        if sa.infra_slug:
-            surface_slug_stream.append(sa.infra_slug)
-    vendor_counts = count_cloud_vendors(info.slugs, surface_slug_stream, apex_evidence=info.evidence)
-    if len(vendor_counts) < 2:
-        return None
-    ranked_vendors = sorted(vendor_counts.items(), key=lambda p: (-p[1], p[0]))
-    vendor_names = [v for v, _ in ranked_vendors]
-    return f"{len(vendor_names)} providers observed ({', '.join(vendor_names)})"
-
-
 def _render_key_facts(info: TenantInfo) -> Text:
     """Build the key-facts block: Provider, Tenant/Region, Auth, Cloud
     (sovereignty), Multi-cloud rollup, Confidence.
@@ -680,7 +621,10 @@ def _render_key_facts(info: TenantInfo) -> Text:
     elif info.region:
         _append_field(facts, "Region", info.region)
 
-    auth_line = _key_facts_auth_line(info)
+    if info.default_domain != info.queried_domain:
+        _append_field(facts, "Tenant domain", info.default_domain)
+
+    auth_line = key_facts_auth_line(info)
     if auth_line is not None:
         _append_field(facts, "Auth", auth_line)
 
@@ -691,7 +635,7 @@ def _render_key_facts(info: TenantInfo) -> Text:
             sov_label += f" ({info.tenant_region_sub_scope})"
         _append_field(facts, "Cloud", sov_label)
 
-    multicloud_line = _key_facts_multicloud_line(info)
+    multicloud_line = key_facts_multicloud_line(info)
     if multicloud_line is not None:
         _append_field(facts, "Multi-cloud", multicloud_line)
 
@@ -755,14 +699,13 @@ def render_tenant_panel(
         blocks.append(Text(""))
 
     # ── Hero header ────────────────────────────────────────────────
-    # When display_name falls back to the raw
-    # domain (no company name extractable), render it once as bold
-    # instead of showing the same string twice.
+    # When display_name falls back to the queried namespace, render it once as
+    # bold instead of showing the same string twice.
     header = Text()
     header.append(info.display_name, style="bold")
-    if info.default_domain and info.default_domain != info.display_name:
+    if info.queried_domain != info.display_name:
         header.append("\n")
-        header.append(info.default_domain, style="dim")
+        header.append(info.queried_domain, style="dim")
     blocks.append(header)
     rule = Text("─" * _PANEL_WIDTH, style="dim")
     blocks.append(rule)

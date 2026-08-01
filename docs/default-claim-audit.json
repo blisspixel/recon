@@ -596,31 +596,46 @@
       "subject_scope": "validated registrable public namespace coordinate"
     },
     "runtime.panel-assembly.v1": {
-      "audit_status": "open",
+      "audit_status": "complete",
       "claim_id": "runtime.panel-assembly.v1",
       "classification": "documented_derivation",
       "evidence_path": [
+        "src/recon_tool/collection_view.py#collection_observable_evidence",
         "src/recon_tool/collection_view.py#collection_observable_info",
-        "src/recon_tool/models.py#EvidenceRecord"
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/models.py#TenantInfo"
       ],
       "limits": [
         "The default panel intentionally omits raw evidence detail.",
-        "The explanation surface must expose any unavailable direct path."
+        "The explanation surface must expose any unavailable direct path.",
+        "The multi-cloud row is a panel-only summary of observable endpoint-binding evidence and attributed public subdomains."
       ],
-      "lineage_status": "incomplete",
+      "lineage_status": "exact",
       "material": true,
       "producer_paths": [
-        "src/recon_tool/formatter/panel.py#render_tenant_panel",
+        "src/recon_tool/formatter/classify.py#provider_line",
+        "src/recon_tool/formatter/key_facts.py#key_facts_auth_line",
+        "src/recon_tool/formatter/key_facts.py#key_facts_multicloud_line",
         "src/recon_tool/formatter/panel.py#_render_key_facts",
-        "src/recon_tool/formatter/serialize.py#format_tenant_dict"
+        "src/recon_tool/formatter/panel.py#render_tenant_panel",
+        "src/recon_tool/formatter/serialize.py#format_tenant_dict",
+        "src/recon_tool/server/lookup.py#_format_lookup_tenant",
+        "src/recon_tool/server/lookup.py#_lookup_tenant_text",
+        "src/recon_tool/server/lookup.py#lookup_tenant"
       ],
       "regression_tests": [
+        "tests/test_cli_output_contracts.py",
+        "tests/test_collection_view.py",
         "tests/test_golden_renders.py",
+        "tests/test_panel_assembly.py",
         "tests/test_panel_disclosure.py",
-        "tests/test_cli_output_contracts.py"
+        "tests/test_server.py"
       ],
       "renderer_obligations": [
-        "Every displayed fact must retain the same scope and evidence semantics as its canonical structured field."
+        "Every displayed fact must retain the same scope and evidence semantics as its canonical structured field.",
+        "Identify the panel subject with queried_domain; label a differing tenant default domain explicitly only on surfaces that show it.",
+        "Never let raw evidence from an unavailable collection channel establish a derived panel fact.",
+        "Project default_domain back to queried_domain whenever Autodiscover collection is unavailable."
       ],
       "subject_scope": "default human-readable summary for the queried public namespace"
     },
