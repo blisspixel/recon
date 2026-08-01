@@ -111,7 +111,8 @@ class TestDeltaRendering:
         )
         d = format_delta_dict(delta)
         assert d["has_changes"] is True
-        assert "New" in d["added_services"]
+        assert d["added_services"] == ["New"]
+        assert d["removed_services"] == ["Old"]
         assert d["changed_dmarc_policy"]["from"] == "none"
 
     def test_format_delta_json(self):
@@ -139,7 +140,7 @@ class TestDeltaRendering:
             removed_signals=(),
         )
         panel = render_delta_panel(delta)
-        assert panel is not None
+        assert "Service: New" in panel.renderable.plain
 
     def test_incomplete_delta_is_machine_readable_and_warned(self) -> None:
         delta = DeltaReport(

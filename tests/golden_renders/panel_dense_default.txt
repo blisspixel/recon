@@ -9,7 +9,9 @@ alpha.invalid
 
 
 Services
-  Email          Microsoft 365, Proofpoint, DMARC reject, MTA-STS enforce
+  Email          Microsoft 365 (MX delivery path),
+                 Proofpoint (MX delivery path), DMARC reject,
+                 MTA-STS enforce
   Collaboration  Slack (public TXT account indicator)
 
 

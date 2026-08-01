@@ -62,7 +62,7 @@ paths are closed and the family definitions stop moving.
 primary surfaces to 27 claim families and blocks drift across 197 JSON property
 occurrences, 167 MCP tool and output surfaces, 31 panel producers, 89 agent
 guidance sections, 16 insight generators, 78 score or quantitative fields, and
-the remaining governed surfaces. 21 families are complete. 4
+the remaining governed surfaces. 22 families are complete. 3
 material runtime families still have incomplete lineage, and the two static
 guidance families remain open for semantic review. Explanation output now distinguishes
 exact, exact-rule-only, reconstructed, and unsupported terminal lineage and

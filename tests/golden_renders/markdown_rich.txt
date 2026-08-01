@@ -11,11 +11,11 @@
 
 ## Microsoft 365 Services
 
-- Microsoft 365
+- Microsoft 365 \(MX delivery path\)
 
 ## Google Workspace Services
 
-- Google Workspace
+- Google Workspace \(CNAME endpoint binding\)
 - Google Workspace CSE configuration indicator
 
 ## Tech Stack

@@ -1,4 +1,4 @@
-<svg class="rich-terminal" role="img" aria-labelledby="recon-demo-accessible-title recon-demo-accessible-description" viewBox="0 0 1019 757.5999999999999" xmlns="http://www.w3.org/2000/svg">
+<svg class="rich-terminal" role="img" aria-labelledby="recon-demo-accessible-title recon-demo-accessible-description" viewBox="0 0 1019 782.0" xmlns="http://www.w3.org/2000/svg">
     <title id="recon-demo-accessible-title">recon synthetic terminal demo</title>
     <desc id="recon-demo-accessible-description">Synthetic output for alpha.invalid showing public email, identity, cloud, security, collaboration, related-domain, and insight observations.</desc>
     <style>
@@ -27,7 +27,7 @@
 
     <defs>
     <clipPath id="recon-demo-clip-terminal">
-      <rect x="0" y="0" width="999.4" height="706.5999999999999" />
+      <rect x="0" y="0" width="999.4" height="731.0" />
     </clipPath>
     <clipPath id="recon-demo-line-0">
     <rect x="0" y="1.5" width="1000.4" height="24.65"/>
@@ -113,9 +113,12 @@
 <clipPath id="recon-demo-line-27">
     <rect x="0" y="660.3" width="1000.4" height="24.65"/>
             </clipPath>
+<clipPath id="recon-demo-line-28">
+    <rect x="0" y="684.7" width="1000.4" height="24.65"/>
+            </clipPath>
     </defs>
 
-    <rect fill="#292929" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1017" height="755.6" rx="8"/><text class="recon-demo-title" fill="#c5c8c6" text-anchor="middle" x="508" y="27">recon&#160;synthetic&#160;demo</text>
+    <rect fill="#292929" stroke="rgba(255,255,255,0.35)" stroke-width="1" x="1" y="1" width="1017" height="780" rx="8"/><text class="recon-demo-title" fill="#c5c8c6" text-anchor="middle" x="508" y="27">recon&#160;synthetic&#160;demo</text>
             <g transform="translate(26,22)">
             <circle cx="0" cy="0" r="7" fill="#ff5f57"/>
             <circle cx="22" cy="0" r="7" fill="#febc2e"/>
@@ -138,22 +141,23 @@
 </text><text class="recon-demo-r4" x="1000.4" y="264" textLength="12.2" clip-path="url(#recon-demo-line-10)">
 </text><text class="recon-demo-r4" x="1000.4" y="288.4" textLength="12.2" clip-path="url(#recon-demo-line-11)">
 </text><text class="recon-demo-r2" x="0" y="312.8" textLength="97.6" clip-path="url(#recon-demo-line-12)">Services</text><text class="recon-demo-r4" x="1000.4" y="312.8" textLength="12.2" clip-path="url(#recon-demo-line-12)">
-</text><text class="recon-demo-r5" x="24.4" y="337.2" textLength="183" clip-path="url(#recon-demo-line-13)">Email&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="337.2" textLength="561.2" clip-path="url(#recon-demo-line-13)">Microsoft&#160;365,&#160;Proofpoint,&#160;DMARC&#160;reject,&#160;DKIM,</text><text class="recon-demo-r4" x="1000.4" y="337.2" textLength="12.2" clip-path="url(#recon-demo-line-13)">
-</text><text class="recon-demo-r4" x="0" y="361.6" textLength="536.8" clip-path="url(#recon-demo-line-14)">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;SPF&#160;strict,&#160;MTA-STS&#160;enforce</text><text class="recon-demo-r4" x="1000.4" y="361.6" textLength="12.2" clip-path="url(#recon-demo-line-14)">
-</text><text class="recon-demo-r5" x="24.4" y="386" textLength="183" clip-path="url(#recon-demo-line-15)">Identity&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="386" textLength="48.8" clip-path="url(#recon-demo-line-15)">Okta</text><text class="recon-demo-r4" x="1000.4" y="386" textLength="12.2" clip-path="url(#recon-demo-line-15)">
-</text><text class="recon-demo-r5" x="24.4" y="410.4" textLength="183" clip-path="url(#recon-demo-line-16)">Cloud&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="410.4" textLength="500.2" clip-path="url(#recon-demo-line-16)">Cloudflare&#160;(CDN/edge),&#160;AWS&#160;Route&#160;53&#160;(DNS)</text><text class="recon-demo-r4" x="1000.4" y="410.4" textLength="12.2" clip-path="url(#recon-demo-line-16)">
-</text><text class="recon-demo-r5" x="24.4" y="434.8" textLength="183" clip-path="url(#recon-demo-line-17)">Security&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="434.8" textLength="524.6" clip-path="url(#recon-demo-line-17)">Wiz&#160;Security&#160;(public&#160;TXT&#160;account&#160;indicator)</text><text class="recon-demo-r4" x="1000.4" y="434.8" textLength="12.2" clip-path="url(#recon-demo-line-17)">
-</text><text class="recon-demo-r5" x="24.4" y="459.2" textLength="183" clip-path="url(#recon-demo-line-18)">Collaboration&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="459.2" textLength="451.4" clip-path="url(#recon-demo-line-18)">Slack&#160;(public&#160;TXT&#160;account&#160;indicator),</text><text class="recon-demo-r4" x="1000.4" y="459.2" textLength="12.2" clip-path="url(#recon-demo-line-18)">
-</text><text class="recon-demo-r4" x="0" y="483.6" textLength="536.8" clip-path="url(#recon-demo-line-19)">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Atlassian&#160;(Jira/Confluence)</text><text class="recon-demo-r4" x="1000.4" y="483.6" textLength="12.2" clip-path="url(#recon-demo-line-19)">
-</text><text class="recon-demo-r4" x="1000.4" y="508" textLength="12.2" clip-path="url(#recon-demo-line-20)">
+</text><text class="recon-demo-r5" x="24.4" y="337.2" textLength="183" clip-path="url(#recon-demo-line-13)">Email&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="337.2" textLength="402.6" clip-path="url(#recon-demo-line-13)">Microsoft&#160;365&#160;(MX&#160;delivery&#160;path),</text><text class="recon-demo-r4" x="1000.4" y="337.2" textLength="12.2" clip-path="url(#recon-demo-line-13)">
+</text><text class="recon-demo-r4" x="0" y="361.6" textLength="817.4" clip-path="url(#recon-demo-line-14)">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Proofpoint&#160;(MX&#160;delivery&#160;path),&#160;DMARC&#160;reject,&#160;DKIM,</text><text class="recon-demo-r4" x="1000.4" y="361.6" textLength="12.2" clip-path="url(#recon-demo-line-14)">
+</text><text class="recon-demo-r4" x="0" y="386" textLength="536.8" clip-path="url(#recon-demo-line-15)">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;SPF&#160;strict,&#160;MTA-STS&#160;enforce</text><text class="recon-demo-r4" x="1000.4" y="386" textLength="12.2" clip-path="url(#recon-demo-line-15)">
+</text><text class="recon-demo-r5" x="24.4" y="410.4" textLength="183" clip-path="url(#recon-demo-line-16)">Identity&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="410.4" textLength="353.8" clip-path="url(#recon-demo-line-16)">Okta&#160;(CNAME&#160;endpoint&#160;binding)</text><text class="recon-demo-r4" x="1000.4" y="410.4" textLength="12.2" clip-path="url(#recon-demo-line-16)">
+</text><text class="recon-demo-r5" x="24.4" y="434.8" textLength="183" clip-path="url(#recon-demo-line-17)">Cloud&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="434.8" textLength="500.2" clip-path="url(#recon-demo-line-17)">Cloudflare&#160;(CDN/edge),&#160;AWS&#160;Route&#160;53&#160;(DNS)</text><text class="recon-demo-r4" x="1000.4" y="434.8" textLength="12.2" clip-path="url(#recon-demo-line-17)">
+</text><text class="recon-demo-r5" x="24.4" y="459.2" textLength="183" clip-path="url(#recon-demo-line-18)">Security&#160;&#160;&#160;&#160;&#160;&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="459.2" textLength="524.6" clip-path="url(#recon-demo-line-18)">Wiz&#160;Security&#160;(public&#160;TXT&#160;account&#160;indicator)</text><text class="recon-demo-r4" x="1000.4" y="459.2" textLength="12.2" clip-path="url(#recon-demo-line-18)">
+</text><text class="recon-demo-r5" x="24.4" y="483.6" textLength="183" clip-path="url(#recon-demo-line-19)">Collaboration&#160;&#160;</text><text class="recon-demo-r4" x="207.4" y="483.6" textLength="451.4" clip-path="url(#recon-demo-line-19)">Slack&#160;(public&#160;TXT&#160;account&#160;indicator),</text><text class="recon-demo-r4" x="1000.4" y="483.6" textLength="12.2" clip-path="url(#recon-demo-line-19)">
+</text><text class="recon-demo-r4" x="0" y="508" textLength="841.8" clip-path="url(#recon-demo-line-20)">&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;&#160;Atlassian&#160;(Jira/Confluence)&#160;(CNAME&#160;endpoint&#160;binding)</text><text class="recon-demo-r4" x="1000.4" y="508" textLength="12.2" clip-path="url(#recon-demo-line-20)">
 </text><text class="recon-demo-r4" x="1000.4" y="532.4" textLength="12.2" clip-path="url(#recon-demo-line-21)">
-</text><text class="recon-demo-r2" x="0" y="556.8" textLength="329.4" clip-path="url(#recon-demo-line-22)">High-signal&#160;related&#160;domains</text><text class="recon-demo-r4" x="1000.4" y="556.8" textLength="12.2" clip-path="url(#recon-demo-line-22)">
-</text><text class="recon-demo-r5" x="24.4" y="581.2" textLength="780.8" clip-path="url(#recon-demo-line-23)">login.alpha.invalid,&#160;status.alpha.invalid,&#160;support.alpha.invalid</text><text class="recon-demo-r4" x="1000.4" y="581.2" textLength="12.2" clip-path="url(#recon-demo-line-23)">
-</text><text class="recon-demo-r4" x="1000.4" y="605.6" textLength="12.2" clip-path="url(#recon-demo-line-24)">
-</text><text class="recon-demo-r2" x="0" y="630" textLength="97.6" clip-path="url(#recon-demo-line-25)">Insights</text><text class="recon-demo-r4" x="1000.4" y="630" textLength="12.2" clip-path="url(#recon-demo-line-25)">
-</text><text class="recon-demo-r5" x="24.4" y="654.4" textLength="744.2" clip-path="url(#recon-demo-line-26)">Federated&#160;identity&#160;observed;&#160;identity-vendor&#160;indicators:&#160;Okta</text><text class="recon-demo-r4" x="1000.4" y="654.4" textLength="12.2" clip-path="url(#recon-demo-line-26)">
-</text><text class="recon-demo-r5" x="24.4" y="678.8" textLength="902.8" clip-path="url(#recon-demo-line-27)">Email&#160;security:&#160;observed&#160;controls:&#160;DMARC&#160;reject,&#160;DKIM,&#160;SPF&#160;strict,&#160;MTA-STS</text><text class="recon-demo-r4" x="1000.4" y="678.8" textLength="12.2" clip-path="url(#recon-demo-line-27)">
-</text><text class="recon-demo-r4" x="1000.4" y="703.2" textLength="12.2" clip-path="url(#recon-demo-line-28)">
+</text><text class="recon-demo-r4" x="1000.4" y="556.8" textLength="12.2" clip-path="url(#recon-demo-line-22)">
+</text><text class="recon-demo-r2" x="0" y="581.2" textLength="329.4" clip-path="url(#recon-demo-line-23)">High-signal&#160;related&#160;domains</text><text class="recon-demo-r4" x="1000.4" y="581.2" textLength="12.2" clip-path="url(#recon-demo-line-23)">
+</text><text class="recon-demo-r5" x="24.4" y="605.6" textLength="780.8" clip-path="url(#recon-demo-line-24)">login.alpha.invalid,&#160;status.alpha.invalid,&#160;support.alpha.invalid</text><text class="recon-demo-r4" x="1000.4" y="605.6" textLength="12.2" clip-path="url(#recon-demo-line-24)">
+</text><text class="recon-demo-r4" x="1000.4" y="630" textLength="12.2" clip-path="url(#recon-demo-line-25)">
+</text><text class="recon-demo-r2" x="0" y="654.4" textLength="97.6" clip-path="url(#recon-demo-line-26)">Insights</text><text class="recon-demo-r4" x="1000.4" y="654.4" textLength="12.2" clip-path="url(#recon-demo-line-26)">
+</text><text class="recon-demo-r5" x="24.4" y="678.8" textLength="744.2" clip-path="url(#recon-demo-line-27)">Federated&#160;identity&#160;observed;&#160;identity-vendor&#160;indicators:&#160;Okta</text><text class="recon-demo-r4" x="1000.4" y="678.8" textLength="12.2" clip-path="url(#recon-demo-line-27)">
+</text><text class="recon-demo-r5" x="24.4" y="703.2" textLength="902.8" clip-path="url(#recon-demo-line-28)">Email&#160;security:&#160;observed&#160;controls:&#160;DMARC&#160;reject,&#160;DKIM,&#160;SPF&#160;strict,&#160;MTA-STS</text><text class="recon-demo-r4" x="1000.4" y="703.2" textLength="12.2" clip-path="url(#recon-demo-line-28)">
+</text><text class="recon-demo-r4" x="1000.4" y="727.6" textLength="12.2" clip-path="url(#recon-demo-line-29)">
 </text>
     </g>
     </g>

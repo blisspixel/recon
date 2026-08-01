@@ -53,6 +53,7 @@ __all__ = [
     "category_for_slug",
     "count_cloud_vendors",
     "detect_provider",
+    "evidence_role_service_label",
     "google_workspace_cse_indicators",
     "google_workspace_module_indicators",
     "is_gws_service",
@@ -69,6 +70,96 @@ _FALLBACK_ACCOUNT_PROVIDER_NAMES = {
     "zoho": "Zoho Mail",
     "protonmail": "ProtonMail",
 }
+_SELF_DESCRIBING_OBSERVATIONS = frozenset(
+    {
+        "DMARC",
+        "DKIM",
+        "DKIM (Exchange Online)",
+        "DKIM (Google Workspace)",
+        "SPF: strict (-all)",
+        "SPF: softfail (~all)",
+        "MTA-STS",
+        "BIMI",
+        "TLS-RPT",
+        "Null MX (domain does not accept email)",
+        "Exchange-style endpoint indicator",
+    }
+)
+_SELF_DESCRIBING_OBSERVATION_TYPES = {
+    "DMARC": frozenset({"DMARC"}),
+    "DKIM": frozenset({"DKIM"}),
+    "DKIM (Exchange Online)": frozenset({"DKIM"}),
+    "DKIM (Google Workspace)": frozenset({"DKIM"}),
+    "SPF: strict (-all)": frozenset({"SPF"}),
+    "SPF: softfail (~all)": frozenset({"SPF"}),
+    "MTA-STS": frozenset({"MTA_STS", "MTA_STS_POLICY"}),
+    "BIMI": frozenset({"BIMI"}),
+    "TLS-RPT": frozenset({"TXT"}),
+    "Null MX (domain does not accept email)": frozenset({"MX"}),
+    "Exchange-style endpoint indicator": frozenset({"A", "CNAME", "CNAME_TARGET"}),
+}
+_SELF_DESCRIBING_OBSERVATION_PREFIXES = (
+    "DNS:",
+    "CDN:",
+    "Hosting:",
+    "WAF:",
+    "SPF complexity:",
+)
+_SELF_DESCRIBING_EVIDENCE_TYPES = {
+    "exchange-onprem": frozenset({"A", "CNAME", "CNAME_TARGET"}),
+    "null-mx": frozenset({"MX"}),
+    "tls-rpt": frozenset({"TXT"}),
+}
+_CNAME_CLOUD_QUALIFIERS = frozenset({"CDN", "WAF", "edge"})
+_UNSUPPORTED_OBSERVATION_LABEL = "Unclassified observation (role unavailable)"
+_EVIDENCE_ROLE_SUFFIXES = (
+    " (role unavailable)",
+    " (public TXT account indicator)",
+    " (MX delivery path)",
+    " (CNAME endpoint binding)",
+    " (SPF sender authorization)",
+    " (DMARC aggregate-report destination)",
+    " (SRV service-discovery reference)",
+    " (authoritative DNS delegation)",
+    " (DKIM selector indicator)",
+    " (address endpoint indicator)",
+)
+_RECORD_ROLE_QUALIFIERS = (
+    ("SPF", "SPF sender authorization"),
+    ("DMARC_RUA", "DMARC aggregate-report destination"),
+    ("SRV", "SRV service-discovery reference"),
+    ("NS", "authoritative DNS delegation"),
+    ("DKIM", "DKIM selector indicator"),
+)
+
+
+def _unqualified_service_name(service: str) -> str:
+    """Remove only evidence-role suffixes emitted by this module."""
+    for suffix in _EVIDENCE_ROLE_SUFFIXES:
+        if service.endswith(suffix):
+            return service.removesuffix(suffix)
+    return service
+
+
+def _is_self_describing_observation(service: str) -> bool:
+    """Return whether a source-derived label already names its bounded role."""
+    return service in _SELF_DESCRIBING_OBSERVATIONS or service.startswith(_SELF_DESCRIBING_OBSERVATION_PREFIXES)
+
+
+def _self_describing_source_types(service: str) -> frozenset[str] | None:
+    """Return the source types compatible with an intrinsic observation label."""
+    exact = _SELF_DESCRIBING_OBSERVATION_TYPES.get(service)
+    if exact is not None:
+        return exact
+    if service.startswith("DNS:"):
+        return frozenset({"NS"})
+    if service.startswith(("CDN:", "WAF:")):
+        return frozenset({"CNAME", "CNAME_TARGET"})
+    if service.startswith("Hosting:"):
+        return frozenset({"A", "PTR"})
+    if service.startswith("SPF complexity:"):
+        return frozenset({"SPF"})
+    return None
 
 
 def _get_slug_provider_groups() -> dict[str, str]:
@@ -109,7 +200,7 @@ def _get_name_to_slug() -> dict[str, str]:
 def _service_provider_group(svc: str) -> str | None:
     """Return the provider_group for a service name, or None if not found."""
     name_to_slug = _get_name_to_slug()
-    slug = name_to_slug.get(svc)
+    slug = name_to_slug.get(_unqualified_service_name(svc))
     if slug is None:
         return None
     return _get_slug_provider_groups().get(slug)
@@ -120,7 +211,7 @@ def is_gws_service(svc: str) -> bool:
     pg = _service_provider_group(svc)
     if pg is not None:
         return pg == "google-workspace"
-    svc_lower = svc.lower()
+    svc_lower = _unqualified_service_name(svc).lower()
     return svc_lower == SVC_DKIM_GOOGLE.lower() or svc_lower.startswith("google workspace")
 
 
@@ -133,13 +224,8 @@ def is_m365_service(svc: str) -> bool:
     pg = _service_provider_group(svc)
     if pg is not None:
         return pg == "microsoft365"
-    svc_lower = svc.lower()
-    if svc_lower in M365_KEYWORDS or svc_lower.startswith("microsoft 365:"):
-        return True
-    for suffix in (" (role unavailable)", " (public txt account indicator)"):
-        if svc_lower.endswith(suffix):
-            return svc_lower.removesuffix(suffix) in M365_KEYWORDS
-    return False
+    svc_lower = _unqualified_service_name(svc).lower()
+    return svc_lower in M365_KEYWORDS or svc_lower.startswith("microsoft 365:")
 
 
 def google_workspace_module_indicators(info: TenantInfo) -> tuple[str, ...]:
@@ -474,6 +560,32 @@ def _is_service_artifact(name: str) -> bool:
     )
 
 
+def _cloud_role_qualifier(slug: str, source_types: frozenset[str]) -> str | None:
+    """Return the bounded Cloud role established by retained DNS evidence."""
+    has_cname = any(source_type.startswith("CNAME") for source_type in source_types)
+    has_ns = "NS" in source_types
+    if slug == "cloudflare" and has_cname:
+        return "DNS + CDN/edge" if has_ns else "CDN/edge"
+    if has_ns:
+        return "DNS"
+    if has_cname:
+        qualifier = CLOUD_SLUG_QUALIFIERS.get(slug)
+        return qualifier if qualifier in _CNAME_CLOUD_QUALIFIERS else "CNAME endpoint binding"
+    if source_types & frozenset({"A", "PTR"}):
+        qualifier = CLOUD_SLUG_QUALIFIERS.get(slug)
+        return qualifier if qualifier == "hosting" else "address endpoint indicator"
+    return None
+
+
+def _record_role_qualifier(source_types: frozenset[str]) -> str | None:
+    """Return the first compact role in deterministic evidence-strength order."""
+    if "MX" in source_types:
+        return "MX delivery path"
+    if any(source_type.startswith("CNAME") for source_type in source_types):
+        return "CNAME endpoint binding"
+    return next((role for source_type, role in _RECORD_ROLE_QUALIFIERS if source_type in source_types), None)
+
+
 def _role_aware_slug_display(
     slug: str,
     name: str,
@@ -488,45 +600,53 @@ def _role_aware_slug_display(
     compute, and CAA records authorize issuers rather than prove certificate
     issuance or a cloud workload.
     """
+    if not source_types:
+        return category, f"{name} (role unavailable)"
+
+    self_describing_types = _SELF_DESCRIBING_EVIDENCE_TYPES.get(slug)
+    if self_describing_types is not None:
+        if source_types <= self_describing_types:
+            return category, name
+        return category, _UNSUPPORTED_OBSERVATION_LABEL
+
     if "CAA" in source_types:
         issuer = _CAA_ISSUER_DISPLAY_OVERRIDES.get(slug, name.removeprefix("CAA: "))
         return "Security", f"CAA: {issuer} authorized"
 
-    if not source_types:
-        return category, f"{name} (role unavailable)"
-
     if source_types and source_types <= frozenset({"TXT", "SUBDOMAIN_TXT"}):
         return category, f"{name} (public TXT account indicator)"
 
-    if category != "Cloud":
-        return category, name
+    qualifier = _cloud_role_qualifier(slug, source_types) if category == "Cloud" else None
+    qualifier = qualifier or _record_role_qualifier(source_types)
 
-    has_cname = any(source_type.startswith("CNAME") for source_type in source_types)
-    has_ns = "NS" in source_types
-    if slug == "cloudflare" and has_cname:
-        qualifier = "DNS + CDN/edge" if has_ns else "CDN/edge"
-    elif has_ns:
-        qualifier = "DNS"
-    elif source_types == frozenset({"TXT"}):
-        qualifier = "public TXT account indicator"
-    else:
-        qualifier = CLOUD_SLUG_QUALIFIERS.get(slug)
-
-    return category, f"{name} ({qualifier})" if qualifier else name
+    return category, f"{name} ({qualifier})" if qualifier else f"{name} (role unavailable)"
 
 
 def role_aware_service_label(service: str, evidence: Iterable[EvidenceRecord]) -> str:
     """Describe one service using the role of its retained evidence.
 
-    Delta output compares stable raw service names first, then calls this
-    helper only for an actual addition or removal. This avoids manufacturing a
-    change when an older snapshot lacks lineage while still preventing a TXT
-    registration or CNAME module alias from reading as generic deployment.
+    Human-facing service summaries call this helper after stable service
+    identity is established. Exact rule-name matching prevents one service
+    from borrowing another service's evidence role.
     """
     supporting = tuple(record for record in evidence if record.rule_name.casefold() == service.casefold())
+    return evidence_role_service_label(service, supporting)
+
+
+def evidence_role_service_label(service: str, supporting: Iterable[EvidenceRecord]) -> str:
+    """Describe ``service`` from an already selected evidence occurrence set.
+
+    This lower-level boundary supports normalized display aliases whose public
+    name intentionally differs from the catalog rule name. Callers must select
+    evidence for exactly one service before invoking it.
+    """
+    supporting = tuple(supporting)
     if not supporting:
-        return service
+        return service if _is_self_describing_observation(service) else f"{service} (role unavailable)"
     source_types = frozenset(record.source_type.upper() for record in supporting)
+    intrinsic_types = _self_describing_source_types(service)
+    if intrinsic_types is not None:
+        return service if source_types <= intrinsic_types else _UNSUPPORTED_OBSERVATION_LABEL
     if service.startswith("Google Workspace: ") and any(
         source_type.startswith("CNAME") for source_type in source_types
     ):
@@ -536,7 +656,7 @@ def role_aware_service_label(service: str, evidence: Iterable[EvidenceRecord]) -
         return "Google Workspace CSE configuration indicator"
     slugs = {record.slug for record in supporting}
     if len(slugs) != 1:
-        return service
+        return f"{service} (role unavailable)"
     slug = next(iter(slugs))
     _category, label = _role_aware_slug_display(
         slug,
@@ -622,7 +742,7 @@ def _dedup_identity_echoes(by_cat: dict[str, list[str]]) -> None:
     Workspace (managed identity)" when the Email row already shows Google
     Workspace and the Auth line already says "Managed (Google Workspace)").
     Entries for a distinct identity provider (Okta, Duo, CyberArk, Ping) stay."""
-    email_provider_names = {n for n in by_cat.get("Email", []) if n}
+    email_provider_names = {_unqualified_service_name(name) for name in by_cat.get("Email", []) if name}
     filtered_identity: list[str] = []
     for ident in by_cat.get("Identity", []):
         ident_core = ident
@@ -630,7 +750,7 @@ def _dedup_identity_echoes(by_cat: dict[str, list[str]]) -> None:
             if ident.endswith(suffix):
                 ident_core = ident[: -len(suffix)]
                 break
-        if ident_core in email_provider_names:
+        if _unqualified_service_name(ident_core) in email_provider_names:
             continue
         filtered_identity.append(ident)
     by_cat["Identity"] = filtered_identity

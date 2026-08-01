@@ -262,7 +262,6 @@ def _confidence_endpoint_available(
 def _collection_deltas(
     previous_json: dict[str, Any],
     current: TenantInfo,
-    previous_info: TenantInfo | None,
     *,
     allow_additions: bool,
     allow_removals: bool,
@@ -274,12 +273,6 @@ def _collection_deltas(
         allow_additions=allow_additions,
         allow_removals=allow_removals,
     )
-    from recon_tool.formatter.classify import role_aware_service_label
-
-    added_services = tuple(
-        sorted(role_aware_service_label(service, current.evidence) for service in added_services_raw)
-    )
-    removed_services = tuple(sorted(_removed_service_label(service, previous_info) for service in removed_services_raw))
     added_slugs, removed_slugs = _set_delta(
         set(_string_list_field(previous_json, "slugs")),
         set(current.slugs),
@@ -293,28 +286,13 @@ def _collection_deltas(
         allow_removals=allow_removals,
     )
     return _CollectionDeltas(
-        added_services=added_services,
-        removed_services=removed_services,
+        added_services=added_services_raw,
+        removed_services=removed_services_raw,
         added_slugs=added_slugs,
         removed_slugs=removed_slugs,
         added_signals=added_signals,
         removed_signals=removed_signals,
     )
-
-
-def _removed_service_label(
-    service: str,
-    previous_info: TenantInfo | None,
-) -> str:
-    """Render a prior service without inventing a role absent prior lineage."""
-    from recon_tool.formatter.classify import role_aware_service_label
-
-    if previous_info is None:
-        return f"{service} (prior evidence role unavailable)"
-    supporting = tuple(record for record in previous_info.evidence if record.rule_name.casefold() == service.casefold())
-    if not supporting:
-        return f"{service} (prior evidence role unavailable)"
-    return role_aware_service_label(service, supporting)
 
 
 def _recorded_scalar_change(
@@ -387,7 +365,6 @@ def compute_delta(previous_json: dict[str, Any], current: TenantInfo) -> DeltaRe
     collection_deltas = _collection_deltas(
         observable_previous,
         observable_current,
-        previous_info,
         allow_additions=not previous_degraded_sources,
         allow_removals=not current_degraded_sources and previous_projection_complete,
     )
