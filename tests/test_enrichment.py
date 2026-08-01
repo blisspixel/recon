@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import pytest
 
+from recon_tool.cache import cache_get, cache_put
+from recon_tool.cache_insights import validate_insight_claim_coverage
 from recon_tool.models import EvidenceRecord, SourceResult, TenantInfo
 from recon_tool.resolver import SourcePool, _enrich_from_related, resolve_tenant
 
@@ -98,6 +100,100 @@ class TestEnrichFromRelated:
         assert "kartra" in enriched.slugs
         assert all(e.slug != "kartra" for e in enriched.evidence)
         assert all(slug != "kartra" for slug, _score in enriched.detection_scores)
+
+    @pytest.mark.asyncio
+    async def test_related_vendor_inventory_does_not_become_an_apex_insight(self, monkeypatch):
+        """A related namespace cannot lend an unscoped positive claim to the apex."""
+
+        async def fake_lightweight_lookup(_domain: str) -> SourceResult:
+            return SourceResult(
+                source_name="dns_records",
+                detected_services=("CrowdStrike",),
+                detected_slugs=("crowdstrike",),
+                evidence=(EvidenceRecord("TXT", "crowdstrike=x", "CrowdStrike", "crowdstrike"),),
+            )
+
+        monkeypatch.setattr("recon_tool.sources.dns.lightweight_subdomain_lookup", fake_lightweight_lookup)
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain="example.com",
+            queried_domain="example.com",
+            evidence=(EvidenceRecord("A", "192.0.2.1", "Apex address", "apex-address"),),
+            related_domains=("vpn.example.com",),
+        )
+
+        enriched, _results = await _enrich_from_related(info, [])
+
+        assert "crowdstrike" in enriched.slugs
+        assert not any("CrowdStrike" in insight for insight in enriched.insights)
+        assert not any("CrowdStrike" in claim.text for claim in enriched.insight_claims)
+
+    @pytest.mark.asyncio
+    async def test_related_vendor_inventory_does_not_trigger_apex_declarative_signal(self, monkeypatch):
+        """Two related-only slugs cannot cross an apex signal threshold."""
+
+        async def fake_lightweight_lookup(_domain: str) -> SourceResult:
+            return SourceResult(
+                source_name="dns_records",
+                detected_services=("CrowdStrike", "Okta"),
+                detected_slugs=("crowdstrike", "okta"),
+                evidence=(
+                    EvidenceRecord("TXT", "crowdstrike=x", "CrowdStrike", "crowdstrike"),
+                    EvidenceRecord("TXT", "okta-domain-verification=x", "Okta", "okta"),
+                ),
+            )
+
+        monkeypatch.setattr("recon_tool.sources.dns.lightweight_subdomain_lookup", fake_lightweight_lookup)
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain="example.com",
+            queried_domain="example.com",
+            evidence=(EvidenceRecord("A", "192.0.2.1", "Apex address", "apex-address"),),
+            related_domains=("vpn.example.com",),
+        )
+
+        enriched, _results = await _enrich_from_related(info, [])
+
+        assert {"crowdstrike", "okta"} <= set(enriched.slugs)
+        assert not any(
+            insight.startswith("Multiple security-vendor indicators observed") for insight in enriched.insights
+        )
+        assert not any("CrowdStrike" in claim.text or "Okta" in claim.text for claim in enriched.insight_claims)
+        validate_insight_claim_coverage(enriched)
+
+    @pytest.mark.asyncio
+    async def test_related_outbound_inventory_does_not_change_apex_email_claims_or_cache(self, monkeypatch):
+        """A related sender-platform slug is inventory, not apex email evidence."""
+
+        async def fake_lightweight_lookup(_domain: str) -> SourceResult:
+            return SourceResult(
+                source_name="dns_records",
+                detected_services=("SendGrid",),
+                detected_slugs=("sendgrid",),
+                evidence=(EvidenceRecord("CNAME", "sendgrid.invalid", "SendGrid", "sendgrid"),),
+            )
+
+        monkeypatch.setattr("recon_tool.sources.dns.lightweight_subdomain_lookup", fake_lightweight_lookup)
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain="example.com",
+            queried_domain="example.com",
+            related_domains=("newsletter.example.com",),
+        )
+
+        enriched, _results = await _enrich_from_related(info, [])
+
+        assert "sendgrid" in enriched.slugs
+        assert not any(insight.startswith("Email security:") for insight in enriched.insights)
+        assert any(insight.startswith("No observable email infrastructure") for insight in enriched.insights)
+        validate_insight_claim_coverage(enriched)
+        cache_put("example.com", enriched)
+        restored = cache_get("example.com")
+        assert restored is not None
+        assert restored.insight_claims == enriched.insight_claims
 
     @pytest.mark.asyncio
     async def test_failed_related_channel_cannot_contribute_partial_inventory(self, monkeypatch):

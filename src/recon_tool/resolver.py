@@ -23,7 +23,7 @@ from typing import Any
 import httpx
 
 from recon_tool.merger import merge_results
-from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
+from recon_tool.models import InsightClaim, ReconLookupError, SourceResult, TenantInfo
 from recon_tool.sources.base import LookupSource
 
 __all__ = [
@@ -292,10 +292,14 @@ async def _enrich_from_related(
     )
     from recon_tool.merger import build_insights_with_signals
 
-    claim_services = claim_safe_email_services(extra_services, info.evidence)
+    inventory_services = claim_safe_email_services(extra_services, info.evidence)
+    inventory_slugs = claim_safe_email_slugs(extra_slugs, info.evidence)
+    apex_claim_services = claim_safe_email_services(set(info.services), info.evidence)
+    apex_claim_slugs = claim_safe_email_slugs(set(info.slugs), info.evidence)
+    enriched_claims: list[InsightClaim] = []
     enriched_insights = build_insights_with_signals(
-        claim_services,
-        extra_slugs,
+        apex_claim_services,
+        apex_claim_slugs,
         info.auth_type,
         info.dmarc_policy,
         info.domain_count,
@@ -323,6 +327,8 @@ async def _enrich_from_related(
         msgraph_host=info.msgraph_host,
         dmarc_effective_policy=effective_dmarc_policy(info.dmarc_policy, info.dmarc_pct, info.dmarc_testing),
         evidence=info.evidence,
+        degraded_sources=info.degraded_sources,
+        insight_claims_out=enriched_claims,
     )
 
     # Build enriched TenantInfo, keeping identity fields and updating
@@ -336,12 +342,12 @@ async def _enrich_from_related(
     # null and its email-control score stayed zero, so one record contradicted
     # itself. The projection was already computed for the insight arguments;
     # the stored tuples must not bypass it.
-    claim_slugs = claim_safe_email_slugs(extra_slugs, info.evidence)
     enriched = replace(
         info,
-        services=tuple(sorted(claim_services)),
-        slugs=tuple(sorted(claim_slugs)),
+        services=tuple(sorted(inventory_services)),
+        slugs=tuple(sorted(inventory_slugs)),
         insights=tuple(enriched_insights),
+        insight_claims=tuple(enriched_claims),
     )
 
     return enriched, all_results + list(related_results)

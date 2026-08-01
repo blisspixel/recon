@@ -35,6 +35,23 @@ operator, corporate group, ownership, or control.
   escaped or role-inappropriate repository references, and unreviewed JSON or
   MCP surface-set changes. The audit records incomplete lineage explicitly; it
   does not present the wider evidence-semantic roadmap track as complete.
+- Built-in generated insights now retain the exact emitting rule and either
+  supporting evidence occurrences or bounded observation scope at generation time.
+  Collection projection and related-domain enrichment regenerate those
+  associations from only reportable evidence, CLI and MCP explanation paths
+  consume them before legacy text reconstruction, and result-cache version 4
+  persists them. Older result-cache versions miss cleanly instead of serving
+  insight strings without their generation-time associations. Positive catalog
+  and service insights now abstain without a retained occurrence, preventing
+  related-domain inventory from becoming an apex claim or declarative signal.
+  Canonical observation scopes fail closed for degraded collection, including
+  Autodiscover and OIDC metadata subchannels; email-control observations cannot
+  coexist with the no-email observation; and cache reads and writes reject
+  missing, duplicate, or inconsistent generated-insight lineage without
+  dropping valid degraded results. Gateway explanations now attach only the MX
+  records that established the gateway role, related sender-platform inventory
+  remains isolated even for an evidence-empty apex, and malformed role labels
+  cannot escape the best-effort cache boundary.
 
 ## [2.9.0] - 2026-07-31
 

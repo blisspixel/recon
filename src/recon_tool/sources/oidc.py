@@ -89,6 +89,29 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
         strip_control_chars(str(msgraph_raw)).strip() or None if msgraph_raw is not None else None
     )
 
+    evidence = [
+        EvidenceRecord(
+            source_type="HTTP",
+            raw_value=f"tenant_id={tenant_id}",
+            rule_name="OIDC Discovery",
+            slug="microsoft365",
+        )
+    ]
+    for field_name, value in (
+        ("cloud_instance_name", cloud_instance),
+        ("tenant_region_sub_scope", tenant_region_sub_scope),
+        ("msgraph_host", msgraph_host),
+    ):
+        if value is not None:
+            evidence.append(
+                EvidenceRecord(
+                    source_type="HTTP",
+                    raw_value=f"{field_name}={value}",
+                    rule_name="OIDC Discovery metadata",
+                    slug="microsoft365",
+                )
+            )
+
     return SourceResult(
         source_name="oidc_discovery",
         tenant_id=tenant_id,
@@ -96,14 +119,7 @@ def parse_tenant_info_from_oidc(response_json: dict[str, Any]) -> SourceResult:
         cloud_instance=cloud_instance,
         tenant_region_sub_scope=tenant_region_sub_scope,
         msgraph_host=msgraph_host,
-        evidence=(
-            EvidenceRecord(
-                source_type="HTTP",
-                raw_value=f"tenant_id={tenant_id}",
-                rule_name="OIDC Discovery",
-                slug="microsoft365",
-            ),
-        ),
+        evidence=tuple(evidence),
     )
 
 

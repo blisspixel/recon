@@ -47,6 +47,7 @@ def _build_explanations(
         explain_observations,
         explain_signals,
     )
+    from recon_tool.insight_explanation import InsightExplanationContext
     from recon_tool.merger import compute_evidence_confidence, compute_inference_confidence
     from recon_tool.models import ExplanationRecord
     from recon_tool.posture import analyze_posture, load_posture_rules
@@ -83,7 +84,7 @@ def _build_explanations(
         frozenset(info.slugs),
         frozenset(info.services),
         observable_evidence,
-        info.detection_scores,
+        InsightExplanationContext(info.detection_scores, info.insight_claims),
     )
     explanations.extend(insight_recs)
 

@@ -19,6 +19,11 @@ def _strip_ansi(s: str) -> str:
     return _ANSI_RE.sub("", s)
 
 
+def _slug_evidence(*slugs: str) -> tuple[EvidenceRecord, ...]:
+    """Build explicit catalog occurrences for string-projection tests."""
+    return tuple(EvidenceRecord("TXT", f"{slug}=token", slug, slug) for slug in slugs)
+
+
 class TestInsightGeneration:
     """Tests for generate_insights(services, slugs, auth_type, dmarc_policy, domain_count)."""
 
@@ -28,7 +33,16 @@ class TestInsightGeneration:
 
     def test_managed_auth(self):
         # "Managed" only shows Entra ID insight when M365 is detected
-        insights = generate_insights(set(), {"microsoft365"}, "Managed", None, 0)
+        insights = generate_insights(
+            set(),
+            {"microsoft365"},
+            "Managed",
+            None,
+            0,
+            evidence=(
+                EvidenceRecord("HTTP", "NameSpaceType=Managed", "GetUserRealm", "microsoft365"),
+            ),
+        )
         assert any("Cloud-managed" in i for i in insights)
 
     def test_managed_auth_without_m365(self):
@@ -100,13 +114,13 @@ class TestInsightGeneration:
 
     def test_google_and_microsoft_provider_indicators_are_co_observed(self):
         slugs = {"google-workspace", "microsoft365"}
-        insights = generate_insights(set(), slugs, None, None, 0)
+        insights = generate_insights(set(), slugs, None, None, 0, evidence=_slug_evidence(*slugs))
         assert "Provider indicators co-observed: Google Workspace, Microsoft 365" in insights
         assert not any("migration" in i.lower() or "coexistence" in i.lower() for i in insights)
 
     def test_provider_overlap_does_not_claim_migration(self):
         slugs = {"microsoft365", "google-workspace"}
-        insights = generate_insights(set(), slugs, None, None, 0)
+        insights = generate_insights(set(), slugs, None, None, 0, evidence=_slug_evidence(*slugs))
         assert "Provider indicators co-observed: Google Workspace, Microsoft 365" in insights
         assert not any("migration" in i.lower() for i in insights)
 
@@ -118,30 +132,44 @@ class TestInsightGeneration:
         assert not any("migration" in i.lower() or "hybrid" in i.lower() for i in insights)
 
     def test_knowbe4_insight(self):
-        insights = generate_insights(set(), {"knowbe4"}, None, None, 0)
+        insights = generate_insights(
+            set(), {"knowbe4"}, None, None, 0, evidence=_slug_evidence("knowbe4")
+        )
         assert any("KnowBe4" in i for i in insights)
 
     def test_crowdstrike_insight(self):
-        insights = generate_insights(set(), {"crowdstrike"}, None, None, 0)
+        insights = generate_insights(
+            set(), {"crowdstrike"}, None, None, 0, evidence=_slug_evidence("crowdstrike")
+        )
         assert any("CrowdStrike" in i for i in insights)
 
     def test_duo_insight(self):
-        insights = generate_insights(set(), {"duo"}, None, None, 0)
+        insights = generate_insights(set(), {"duo"}, None, None, 0, evidence=_slug_evidence("duo"))
         assert any("Duo" in i for i in insights)
 
     def test_okta_insight(self):
-        insights = generate_insights(set(), {"okta"}, None, None, 0)
+        insights = generate_insights(set(), {"okta"}, None, None, 0, evidence=_slug_evidence("okta"))
         assert any("Okta" in i for i in insights)
 
     def test_device_management_vendor_overlap(self):
         services = {"Intune / MDM"}
         slugs = {"microsoft365", "jamf"}
-        insights = generate_insights(services, slugs, None, None, 0)
+        insights = generate_insights(
+            services,
+            slugs,
+            None,
+            None,
+            0,
+            evidence=(
+                EvidenceRecord("TXT", "intune=token", "Intune / MDM", "intune"),
+                *_slug_evidence("jamf", "microsoft365"),
+            ),
+        )
         assert "Device-management vendor indicators observed: Intune, Jamf" in insights
         assert not any("fleet" in i.lower() or "windows" in i.lower() for i in insights)
 
     def test_jamf_only(self):
-        insights = generate_insights(set(), {"jamf"}, None, None, 0)
+        insights = generate_insights(set(), {"jamf"}, None, None, 0, evidence=_slug_evidence("jamf"))
         assert any("Jamf" in i for i in insights)
 
     def test_no_dkim_with_exchange(self):
@@ -151,7 +179,7 @@ class TestInsightGeneration:
         assert any("No DKIM" in i for i in insights)
 
     def test_sophos_insight(self):
-        insights = generate_insights(set(), {"sophos"}, None, None, 0)
+        insights = generate_insights(set(), {"sophos"}, None, None, 0, evidence=_slug_evidence("sophos"))
         assert any("Sophos" in i for i in insights)
 
     def test_barracuda_gateway(self):

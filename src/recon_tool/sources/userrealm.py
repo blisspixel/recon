@@ -200,6 +200,15 @@ class UserRealmSource:
                             slug="microsoft365",
                         )
                     )
+                if tenant_domains:
+                    evidence.append(
+                        EvidenceRecord(
+                            source_type="HTTP",
+                            raw_value=f"tenant_domain_count={len(tenant_domains)}",
+                            rule_name="Autodiscover",
+                            slug="microsoft365",
+                        )
+                    )
                 return SourceResult(
                     source_name="user_realm",
                     display_name=display_name,

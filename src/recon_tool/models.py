@@ -23,6 +23,7 @@ __all__ = [
     "InfrastructureCluster",
     "InfrastructureClusterReport",
     "InfrastructureEdge",
+    "InsightClaim",
     "MergeConflicts",
     "MetadataCondition",
     "NodeUnitCounterfactual",
@@ -67,6 +68,26 @@ class EvidenceRecord:
     raw_value: str  # The actual record value or HTTP response excerpt
     rule_name: str  # Fingerprint/detection rule name that matched
     slug: str  # The fingerprint slug that was detected
+
+
+@dataclass(frozen=True)
+class InsightClaim:
+    """One insight with its exact generation-time provenance association.
+
+    ``generator_rule_id`` is the concrete generator function that emitted the
+    text. ``supporting_evidence`` contains only retained evidence consumed by
+    that generator, while ``observation_scope`` names bounded collection
+    opportunities required by absence-shaped or scalar-derived claims.
+    ``evidence_required`` prevents positive catalog and service claims from
+    degrading into a scope-only association. The object is internal reporting
+    state and is not part of the stable TenantInfo JSON contract.
+    """
+
+    text: str
+    generator_rule_id: str
+    supporting_evidence: tuple[EvidenceRecord, ...] = ()
+    observation_scope: tuple[str, ...] = ()
+    evidence_required: bool = True
 
 
 @dataclass(frozen=True)
@@ -691,6 +712,10 @@ class TenantInfo:
     tenant_domains: tuple[str, ...] = ()  # All domains found
     related_domains: tuple[str, ...] = ()  # Domain names linked by bounded public breadcrumbs
     insights: tuple[str, ...] = ()  # Derived intelligence signals
+    # Exact generator and evidence/scope associations for the subset of
+    # ``insights`` produced by recon_tool.insights. Signal, conflict, and
+    # lexical observations have their own provenance paths.
+    insight_claims: tuple[InsightClaim, ...] = ()
     # Stable source, collector-channel, or detector identifiers unavailable
     # during lookup.
     degraded_sources: tuple[str, ...] = ()

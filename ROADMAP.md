@@ -62,9 +62,11 @@ paths are closed and the family definitions stop moving.
 primary surfaces to 27 claim families and blocks drift across 185 JSON property
 occurrences, 167 MCP tool and output surfaces, 31 panel producers, 89 agent
 guidance sections, 16 insight generators, 77 score or quantitative fields, and
-the remaining governed surfaces. Eighteen families are complete. Seven
-material runtime families still have incomplete lineage, and the two static
-guidance families remain open for semantic review. The narrower
+the remaining governed surfaces. Nineteen families are complete. Six material
+runtime families still have incomplete lineage, and the two static guidance
+families remain open for semantic review. Generated insights now retain the
+exact generation-time rule plus evidence-occurrence or bounded-scope
+associations through result-cache version 4. The narrower
 `dns.dmarc.valid_policy_is_reject.v1` proof-carrying contract remains the first
 fully modeled claim. See
 [the default-claim audit](docs/default-claim-audit.md).

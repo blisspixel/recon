@@ -268,9 +268,11 @@ Best practices:
   provenance-completeness and disconnected-terminal diagnostics. Use the JSON
   form when a specific path matters, and do not assume every terminal has a
   complete canonical path.
-- Some insight and posture generator associations are reconstructed from
-  rendered text or proxy rule matches. `provenance_complete=true` establishes
-  reachability in the emitted graph, not exact generation-time lineage.
+- Built-in generated insights retain exact generation-time associations.
+  Signal-adjacent, conflict, lexical, and posture associations can still be
+  reconstructed from rendered text or proxy rule matches.
+  `provenance_complete=true` establishes reachability in the emitted graph, not
+  exact generation-time lineage for every terminal.
 - `inference_confidence` describes the strongest error-free, same-claim
   corroboration chain. Evidence from failed sources or unrelated provider and
   service claims is not pooled. `--explain` identifies the winning claim and

@@ -35,7 +35,7 @@ new claim taxonomy.
 
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
-| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. Eighteen are complete; seven material runtime families have incomplete lineage and two static guidance families remain open. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
+| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. Nineteen are complete; six material runtime families have incomplete lineage and two static guidance families remain open. Generated insights retain the exact rule plus evidence-occurrence or bounded-scope associations through cache version 4. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-before-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | The exact stable `1.28.1` and `2.0.0` matrix passed 2026-07-28 and CI keeps both pins blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green; treat production v2 adoption as a separate release decision. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | Specified, not started. Extensive process evidence exists; product-outcome evidence does not. | A dated aggregate-safe scorecard with a decision rule written before the run, deciding whether advanced fusion stays primary or becomes an advanced diagnostic. |
 | [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the three core evidence and compatibility tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
@@ -107,11 +107,18 @@ explanations name the exact winning claim and qualifying evidence.
 The fail-closed [default-claim audit](default-claim-audit.md) now inventories
 every discovered primary surface and binds compact JSON and MCP ownership to
 exact digests. This establishes the dependency taxonomy without claiming the
-track is complete. Generated insights, explanations, panel assembly, service
-labels, posture observations, hardening guidance, and the exposure index still
-have incomplete lineage. Static MCP and generated-guidance semantics also
-remain open for review. Current sovereignty handling preserves absent metadata
-as unknown; that invariant should remain explicit and tested.
+track is complete. Generated insights now capture the emitting rule and exact
+retained-evidence or bounded-observation association before rendering, preserve
+that state through collection projection and result-cache version 4, and feed
+it into explanation construction without text classification. Structured
+observation scopes, related-namespace signal isolation, and strict cache
+lineage validation enforce that contract across degraded and enriched results.
+Explanations,
+panel assembly, service labels, posture observations, hardening guidance, and
+the exposure index still have incomplete lineage. Static MCP and
+generated-guidance semantics also remain open for review. Current sovereignty
+handling preserves absent metadata as unknown; that invariant should remain
+explicit and tested.
 
 Work:
 
@@ -131,8 +138,10 @@ Work:
   - Completed in v2.5.0 for
     `dns.dmarc.valid_policy_is_reject.v1`; see
     [claim-contracts.md](claim-contracts.md). Exact evaluator lineage reaches a
-    collector-retained raw record; general generator lineage and per-query time
-    remain open. No tenant field or public dossier was added. The separate
+    collector-retained raw record. The bounded built-in insight generators now
+    retain exact rule and evidence-or-observation-scope associations; posture,
+    signal-adjacent, and per-query time lineage remain open. No tenant field or
+    public dossier was added. The separate
     cohort-summary contract adds 2.2 as an explicit option while 2.1 remains the
     default.
 - Model construction, collection, claim state, and time as orthogonal axes.
