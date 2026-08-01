@@ -224,8 +224,12 @@ or reconstructed. Hardening prompts separately expose an exact generator ID,
 an explicit observation state, satisfied typed predicates, canonical bounded
 scope, and retained evidence when the claim is positive or compound. The first DMARC
 claim contract separately binds its evaluator atom to the collector-retained raw
-record. Exact lineage for the exposure index, the static guidance families, and
-per-query observation timestamps remains open work.
+record. The exposure index now derives its exact-evidence floor and bounded
+ceiling from a complete nine-component ledger. Each component retains its
+generator, basis state, typed predicates, observation scope, point weight, and
+supporting record evidence. Comparisons carry one ledger per namespace;
+simulation-only changes use a distinct hypothetical state. Static guidance
+families and per-query observation timestamps remain open work.
 
 Use `recon alpha.invalid --explain-dag` for the separate Bayesian
 evidence-to-network renderer in text, DOT, or Mermaid form. That diagnostic does

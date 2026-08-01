@@ -45,6 +45,8 @@ __all__ = [
     "detect_weak_configs",
     "effective_email_dmarc_policy",
     "hardening_scopes_available",
+    "mta_sts_mode_evidence",
+    "mta_sts_txt_evidence",
     "validate_gap_lineage",
 ]
 
@@ -89,11 +91,11 @@ def _dependency(
     return HardeningMetadataDependency(field, operator, expected_value, observed_value)
 
 
-def _mta_sts_txt_evidence(info: TenantInfo) -> tuple[EvidenceReference, ...]:
+def mta_sts_txt_evidence(info: TenantInfo) -> tuple[EvidenceReference, ...]:
     """Return one syntactically valid retained MTA-STS TXT declaration."""
-    records = tuple(
+    records = tuple(dict.fromkeys(
         record for record in info.evidence if record.source_type.upper() == "MTA_STS" and record.slug == "mta-sts"
-    )
+    ))
     selected = select_mta_sts_record(record.raw_value for record in records)
     if selected is None:
         return ()
@@ -104,10 +106,12 @@ def _mta_sts_txt_evidence(info: TenantInfo) -> tuple[EvidenceReference, ...]:
     )
 
 
-def _mta_sts_mode_evidence(info: TenantInfo, mode: str) -> tuple[EvidenceReference, ...]:
+def mta_sts_mode_evidence(info: TenantInfo, mode: str) -> tuple[EvidenceReference, ...]:
     """Return one valid TXT declaration and its matching fetched policy mode."""
-    txt_refs = _mta_sts_txt_evidence(info)
-    policy_records = tuple(record for record in info.evidence if record.source_type.upper() == "MTA_STS_POLICY")
+    txt_refs = mta_sts_txt_evidence(info)
+    policy_records = tuple(
+        dict.fromkeys(record for record in info.evidence if record.source_type.upper() == "MTA_STS_POLICY")
+    )
     expected_slug = "mta-sts-enforce" if mode == "enforce" else "mta-sts"
     expected_policy = f"mode: {mode}"
     if (
@@ -344,7 +348,7 @@ def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
 
     # No MTA-STS activation record. Without a valid TXT declaration, the HTTP
     # policy request is intentionally not attempted and is not part of scope.
-    mta_sts_txt_evidence = _mta_sts_txt_evidence(info)
+    mta_sts_txt_refs = mta_sts_txt_evidence(info)
     mta_sts_policy_evidence = tuple(
         record for record in info.evidence if record.source_type.upper() == "MTA_STS_POLICY"
     )
@@ -352,13 +356,13 @@ def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
     mta_sts_policy_scopes_available = hardening_scopes_available(
         ("dns:mta_sts", "http:mta_sts_policy"), info.degraded_sources
     )
-    if dns_mta_sts_available and info.mta_sts_mode is None and not mta_sts_txt_evidence:
+    if dns_mta_sts_available and info.mta_sts_mode is None and not mta_sts_txt_refs:
         gaps.append(
             _gap(
                 rule_id="guidance.email.mta-sts.missing.v1",
                 state="bounded_non_observation",
                 scope=("dns:mta_sts",),
-                dependencies=(_dependency("mta_sts_txt_observed", "eq", False, bool(mta_sts_txt_evidence)),),
+                dependencies=(_dependency("mta_sts_txt_observed", "eq", False, bool(mta_sts_txt_refs)),),
                 category="email",
                 severity="medium",
                 observation="No valid MTA-STS TXT declaration observed for this domain",
@@ -371,7 +375,7 @@ def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
     if (
         mta_sts_policy_scopes_available
         and info.mta_sts_mode is None
-        and mta_sts_txt_evidence
+        and mta_sts_txt_refs
         and not mta_sts_policy_evidence
     ):
         gaps.append(
@@ -380,14 +384,14 @@ def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
                 state="bounded_non_observation",
                 scope=("dns:mta_sts", "http:mta_sts_policy"),
                 dependencies=(
-                    _dependency("mta_sts_txt_observed", "eq", True, bool(mta_sts_txt_evidence)),
+                    _dependency("mta_sts_txt_observed", "eq", True, bool(mta_sts_txt_refs)),
                     _dependency("mta_sts_mode", "is_none", None, info.mta_sts_mode),
                 ),
                 category="email",
                 severity="medium",
                 observation="MTA-STS TXT declaration observed without a valid policy mode",
                 recommendation="Consider reviewing the published MTA-STS policy document",
-                evidence=mta_sts_txt_evidence,
+                evidence=mta_sts_txt_refs,
             )
         )
 
@@ -395,7 +399,7 @@ def detect_missing_controls(info: TenantInfo) -> list[HardeningGap]:
     # policy is not in effect, so the control is off even though a record and
     # policy file are published; without this gap a declared-off policy
     # looked better than never deploying MTA-STS at all.
-    mta_sts_evidence = _mta_sts_mode_evidence(info, "none")
+    mta_sts_evidence = mta_sts_mode_evidence(info, "none")
     has_none_policy_evidence = any(ref.source_type.upper() == "MTA_STS_POLICY" for ref in mta_sts_evidence)
     if mta_sts_policy_scopes_available and info.mta_sts_mode == "none" and has_none_policy_evidence:
         gaps.append(
@@ -486,7 +490,7 @@ def detect_weak_configs(info: TenantInfo) -> list[HardeningGap]:
         )
 
     # MTA-STS testing (not enforce)
-    mta_sts_evidence = _mta_sts_mode_evidence(info, "testing")
+    mta_sts_evidence = mta_sts_mode_evidence(info, "testing")
     has_testing_policy_evidence = any(ref.source_type.upper() == "MTA_STS_POLICY" for ref in mta_sts_evidence)
     if (
         hardening_scopes_available(("dns:mta_sts", "http:mta_sts_policy"), info.degraded_sources)

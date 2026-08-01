@@ -299,11 +299,15 @@ def test_agentic_posture_output_schemas_are_precise() -> None:
         "current_score",
         "simulated_score",
         "score_delta",
+        "current_observability",
+        "simulated_observability",
         "applied_fixes",
         "remaining_gaps",
         "disclaimer",
     }
     simulation_props = simulation_schema["properties"]
+    assert simulation_props["current_observability"]["$ref"] == "#/$defs/ObservabilitySummary"
+    assert simulation_props["simulated_observability"]["$ref"] == "#/$defs/ObservabilitySummary"
     assert simulation_props["remaining_gaps"]["items"]["$ref"] == "#/$defs/SimulatedGapSummary"
     assert simulation_props["applied_fixes"]["items"]["type"] == "string"
 
@@ -390,7 +394,27 @@ def test_exposure_report_output_schemas_are_precise() -> None:
     email = assessment_schema["$defs"]["EmailPostureSummary"]
     assert email["properties"]["email_security_score"]["type"] == "integer"
     observability = assessment_schema["$defs"]["ObservabilitySummary"]
+    assert set(observability["required"]) == {
+        "score_floor",
+        "score_is_lower_bound",
+        "unconfirmable_absent_points",
+        "score_ceiling",
+        "model_maximum_points",
+        "unavailable_controls",
+        "components",
+        "note",
+    }
     assert observability["properties"]["unavailable_controls"]["items"]["type"] == "string"
+    assert observability["properties"]["components"]["items"]["$ref"] == "#/$defs/ExposureIndexComponentSummary"
+    component = assessment_schema["$defs"]["ExposureIndexComponentSummary"]
+    assert component["properties"]["state"]["enum"] == [
+        "observed_value",
+        "observed_empty",
+        "unresolved",
+        "unavailable",
+        "hypothetical_value",
+    ]
+    assert component["properties"]["evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
 
     gaps_schema = _tool_output_schema("find_hardening_gaps")
     assert gaps_schema["title"] == "GapReportResult"
@@ -435,12 +459,16 @@ def test_exposure_report_output_schemas_are_precise() -> None:
     assert set(comparison_schema["required"]) == {
         "domain_a",
         "domain_b",
+        "domain_a_observability",
+        "domain_b_observability",
         "metrics",
         "differences",
         "relative_assessment",
         "disclaimer",
     }
     comparison_props = comparison_schema["properties"]
+    assert comparison_props["domain_a_observability"]["$ref"] == "#/$defs/ObservabilitySummary"
+    assert comparison_props["domain_b_observability"]["$ref"] == "#/$defs/ObservabilitySummary"
     assert comparison_props["metrics"]["items"]["$ref"] == "#/$defs/PostureMetricSummary"
     assert comparison_props["differences"]["items"]["$ref"] == "#/$defs/PostureDifferenceSummary"
     assert comparison_props["relative_assessment"]["items"]["$ref"] == "#/$defs/RelativeAssessmentSummary"

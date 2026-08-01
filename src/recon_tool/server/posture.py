@@ -13,24 +13,26 @@ import logging
 import re
 import time
 import uuid
-from dataclasses import dataclass, replace
+from dataclasses import replace
 from typing import Literal, cast
 
 from typing_extensions import TypedDict
 
 from recon_tool.exposure_models import (
+    ExposureIndexState,
+    ExposureMetadataOperator,
+    ExposureMetadataValue,
     HardeningMetadataOperator,
     HardeningMetadataValue,
     HardeningObservationState,
 )
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
-from recon_tool.models import EvidenceRecord, TenantInfo
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
+from recon_tool.server.posture_simulation import simulate_fixes
 from recon_tool.server.runtime import (
     log_structured,
 )
-from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger("recon")
 
@@ -61,6 +63,8 @@ class HardeningSimulationResult(TypedDict):
     current_score: int
     simulated_score: int
     score_delta: int
+    current_observability: ObservabilitySummary
+    simulated_observability: ObservabilitySummary
     applied_fixes: list[str]
     remaining_gaps: list[SimulatedGapSummary]
     disclaimer: str
@@ -80,11 +84,34 @@ class HardeningMetadataDependencySummary(TypedDict):
     observed_value: HardeningMetadataValue
 
 
+class ExposureMetadataDependencySummary(TypedDict):
+    field: str
+    operator: ExposureMetadataOperator
+    expected_value: ExposureMetadataValue
+    observed_value: ExposureMetadataValue
+
+
+class ExposureIndexComponentSummary(TypedDict):
+    component_id: str
+    control: str
+    state: ExposureIndexState
+    awarded_points: int
+    maximum_points: int
+    unconfirmable_points: int
+    generator_rule_id: str
+    metadata_dependencies: list[ExposureMetadataDependencySummary]
+    observation_scope: list[str]
+    evidence: list[EvidenceReferenceSummary]
+
+
 class ObservabilitySummary(TypedDict):
+    score_floor: int
     score_is_lower_bound: bool
     unconfirmable_absent_points: int
     score_ceiling: int
+    model_maximum_points: int
     unavailable_controls: list[str]
+    components: list[ExposureIndexComponentSummary]
     note: str
 
 
@@ -187,6 +214,8 @@ class RelativeAssessmentSummary(TypedDict):
 class PostureComparisonResult(TypedDict):
     domain_a: str
     domain_b: str
+    domain_a_observability: ObservabilitySummary
+    domain_b_observability: ObservabilitySummary
     metrics: list[PostureMetricSummary]
     differences: list[PostureDifferenceSummary]
     relative_assessment: list[RelativeAssessmentSummary]
@@ -423,11 +452,11 @@ async def assess_exposure(domain: str) -> ExposureAssessmentResult:
     compatibility field ``posture_score`` is a 0-100 index based only on
     publicly observable controls.
 
-    The score counts only observed-present controls, so it is a lower bound: the
-    ``observability`` block carries ``score_is_lower_bound``,
-    ``unconfirmable_absent_points`` (points from controls whose absence the
-    passive channel cannot confirm), and ``score_ceiling``. Report the score as
-    a floor with its ceiling; a low score can mean "quiet", not "weak".
+    The score counts only controls with exact retained evidence, so it is a
+    floor. The ``observability`` block carries the complete weighted component
+    ledger, generation rule, basis state, typed predicates, bounded scope,
+    retained evidence, modeled ceiling, and unavailable controls. Report the
+    floor with its ceiling; a low floor can mean "quiet", not "weak".
 
     Args:
         domain: A domain name to assess (e.g., "gamma.invalid")
@@ -521,8 +550,10 @@ async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonRes
     This is a model-bound comparison of public observations, not an overall
     security comparison or certification.
 
-    Returns a structured comparison with side-by-side metrics,
-    control differences, and relative posture assessment.
+    Returns a structured comparison with side-by-side metrics, control
+    differences, relative observations, and one exact component ledger per
+    namespace. Treat each public-evidence index as a floor and bounded ceiling,
+    never as an overall ranking of the two namespaces.
 
     Args:
         domain_a: First domain to compare (e.g., "gamma.invalid")
@@ -670,184 +701,6 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
     return result
 
 
-@dataclass
-class _SimState:
-    """Mutable simulation state for ``simulate_hardening`` fix application."""
-
-    services: set[str]
-    slugs: set[str]
-    dmarc: str | None
-    dmarc_pct: int | None
-    dmarc_testing: bool
-    dmarc_changed: bool
-    mta_sts: str | None
-    evidence: list[EvidenceRecord]
-
-
-def _record_hypothetical_control(
-    state: _SimState,
-    *,
-    source_type: str,
-    rule_name: str,
-    slug: str,
-    raw_value: str = "hypothetical simulation only",
-) -> None:
-    """Add typed simulation evidence without representing a live observation."""
-    marker = EvidenceRecord(
-        source_type=source_type,
-        raw_value=raw_value,
-        rule_name=rule_name,
-        slug=slug,
-    )
-    if marker not in state.evidence:
-        state.evidence.append(marker)
-
-
-def _replace_simulated_evidence(state: _SimState, source_types: frozenset[str]) -> None:
-    """Remove superseded evidence for a control changed by the simulation."""
-    state.evidence[:] = [record for record in state.evidence if record.source_type.upper() not in source_types]
-
-
-def _set_simulated_dmarc(state: _SimState, policy: Literal["quarantine", "reject"]) -> None:
-    """Set one internally consistent hypothetical DMARC policy and proof row."""
-    state.dmarc = policy
-    state.dmarc_pct = None
-    state.dmarc_testing = False
-    state.dmarc_changed = True
-    state.services.add("DMARC")
-    state.slugs.discard("dmarc-invalid")
-    state.slugs.add("dmarc")
-    _replace_simulated_evidence(state, frozenset({"DMARC"}))
-    _record_hypothetical_control(
-        state,
-        source_type="DMARC",
-        rule_name="DMARC",
-        slug="dmarc",
-        raw_value=f"v=DMARC1; p={policy}",
-    )
-
-
-def _apply_dmarc_fix(fix: str, state: _SimState) -> str | None:
-    """Apply a DMARC fix; return the applied message, or None when it is a no-op."""
-    if "reject" in fix:
-        _set_simulated_dmarc(state, "reject")
-        return "DMARC policy set to reject"
-    if "quarantine" in fix:
-        if state.dmarc != "reject":
-            _set_simulated_dmarc(state, "quarantine")
-            return "DMARC policy set to quarantine"
-        return None
-    if state.dmarc is None or state.dmarc == "none":
-        _set_simulated_dmarc(state, "reject")
-        return "DMARC policy set to reject"
-    return None
-
-
-def _apply_mta_sts_fix(fix: str, state: _SimState) -> str | None:
-    """Apply an MTA-STS fix; return the applied message, or None when already set.
-
-    Mirrors the original: an explicit "enforce" always applies, while a bare
-    "mta-sts" applies only when no mode is currently set.
-    """
-    if "enforce" in fix or state.mta_sts is None:
-        state.mta_sts = "enforce"
-        state.services.add("MTA-STS")
-        state.slugs.add("mta-sts")
-        state.slugs.add("mta-sts-enforce")
-        _replace_simulated_evidence(state, frozenset({"MTA_STS", "MTA_STS_POLICY"}))
-        _record_hypothetical_control(
-            state,
-            source_type="MTA_STS",
-            rule_name="MTA-STS",
-            slug="mta-sts",
-            raw_value="v=STSv1; id=simulation1",
-        )
-        _record_hypothetical_control(
-            state,
-            source_type="MTA_STS_POLICY",
-            rule_name="MTA-STS",
-            slug="mta-sts-enforce",
-            raw_value="mode: enforce",
-        )
-        return "MTA-STS set to enforce"
-    return None
-
-
-def _apply_one_fix(fix: str, state: _SimState) -> str | None:
-    """Apply a single lowercased fix to the simulation state.
-
-    Returns the applied message, or None when the fix is a recognised no-op.
-    Keyword precedence mirrors the original elif chain: the first match wins.
-    """
-    if "dmarc" in fix:
-        return _apply_dmarc_fix(fix, state)
-    if "dkim" in fix:
-        state.services.add("DKIM")
-        state.slugs.add("dkim")
-        _record_hypothetical_control(state, source_type="DKIM", rule_name="DKIM", slug="dkim")
-        return "DKIM configured"
-    if "mta-sts" in fix:
-        return _apply_mta_sts_fix(fix, state)
-    if "bimi" in fix:
-        state.services.add("BIMI")
-        state.slugs.add("bimi")
-        _record_hypothetical_control(state, source_type="BIMI", rule_name="BIMI", slug="bimi")
-        return "BIMI configured"
-    if "spf" in fix and ("strict" in fix or "hardfail" in fix or "-all" in fix):
-        state.services.add("SPF: strict (-all)")
-        _record_hypothetical_control(
-            state,
-            source_type="SPF",
-            rule_name="SPF: strict (-all)",
-            slug="spf-strict",
-        )
-        return "SPF set to strict (-all)"
-    if "tls-rpt" in fix or "tlsrpt" in fix:
-        state.services.add("TLS-RPT")
-        state.slugs.add("tls-rpt")
-        state.evidence[:] = [record for record in state.evidence if record.slug != "tls-rpt"]
-        _record_hypothetical_control(
-            state,
-            source_type="TXT",
-            rule_name="TLS-RPT",
-            slug="tls-rpt",
-            raw_value="v=TLSRPTv1; rua=mailto:reports@example.invalid",
-        )
-        return "TLS-RPT configured"
-    if "caa" in fix:
-        state.slugs.add("letsencrypt")
-        _record_hypothetical_control(
-            state,
-            source_type="CAA",
-            rule_name="CAA: Let's Encrypt",
-            slug="letsencrypt",
-        )
-        return "CAA records configured"
-    # Note the unrecognized fix, but sanitize and bound the caller-supplied
-    # string so it cannot inject control sequences into the response.
-    return f"Unrecognized fix: {strip_control_chars(fix)[:80]}"
-
-
-def _simulate_fixes(fixes_lower: list[str], info: TenantInfo) -> tuple[list[str], _SimState]:
-    """Apply each fix to a fresh simulation state seeded from ``info``."""
-    state = _SimState(
-        services=set(info.services),
-        slugs=set(info.slugs),
-        dmarc=info.dmarc_policy,
-        dmarc_pct=info.dmarc_pct,
-        dmarc_testing=info.dmarc_testing,
-        dmarc_changed=False,
-        mta_sts=info.mta_sts_mode,
-        evidence=list(info.evidence),
-    )
-    applied: list[str] = []
-    for fix in fixes_lower:
-        message = _apply_one_fix(fix, state)
-        if message is not None:
-            applied.append(message)
-    return applied, state
-
-
 @mcp.tool(
     annotations=tool_annotations(
         read_only=True,
@@ -871,8 +724,8 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
         fixes: Array of fix descriptions or gap slugs to hypothetically apply.
 
     Returns:
-        JSON object with current_score, simulated_score, score_delta,
-        applied_fixes, and remaining_gaps.
+        JSON object with current_score, simulated_score, score_delta, both
+        exact component ledgers, applied_fixes, and remaining_gaps.
     """
     # Bound the fix list so a multi-million-element argument cannot drive
     # O(n) work and a proportionally huge response.
@@ -889,7 +742,11 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
     current_score = current_assessment.posture_score
 
     # Parse fixes and simulate by mutating a copy of TenantInfo fields
-    applied, state = _simulate_fixes([f.lower() for f in fixes], info)
+    applied, state = simulate_fixes(
+        [f.lower() for f in fixes],
+        info,
+        current_assessment.index_components,
+    )
 
     # Build the simulated TenantInfo by copying the observed one and
     # overriding only what a fix actually changes. Listing every field by hand
@@ -913,7 +770,10 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
         mta_sts_mode=state.mta_sts,
     )
 
-    sim_assessment = assess_exposure_from_info(sim_info)
+    sim_assessment = assess_exposure_from_info(
+        sim_info,
+        hypothetical_components=frozenset(state.hypothetical_components),
+    )
     simulated_score = sim_assessment.posture_score
 
     # Compute remaining gaps on simulated info
@@ -928,18 +788,20 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
         for gap in sim_gap_report.gaps
     ]
 
+    from recon_tool.formatter.exposure import format_observability_dict
+
     result: HardeningSimulationResult = {
         "domain": info.queried_domain,
         "current_score": current_score,
         "simulated_score": simulated_score,
         "score_delta": simulated_score - current_score,
+        "current_observability": cast(ObservabilitySummary, format_observability_dict(current_assessment)),
+        "simulated_observability": cast(ObservabilitySummary, format_observability_dict(sim_assessment)),
         "applied_fixes": applied,
         "remaining_gaps": remaining_gaps,
         "disclaimer": (
-            "This simulation is based on publicly observable configuration data. "
-            "Consider these results as directional guidance for prioritizing "
-            "hardening actions, not as a prediction or guarantee of overall "
-            "security improvement."
+            "This simulation performs index arithmetic over the listed hypothetical public-control evidence. "
+            "Its delta is not a prediction, priority ranking, guarantee, or measure of overall security change."
         ),
     }
     return result

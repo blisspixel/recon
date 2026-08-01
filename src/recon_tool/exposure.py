@@ -38,6 +38,7 @@ from recon_tool.exposure_models import (
     PostureDifference,
     RelativeAssessment,
 )
+from recon_tool.exposure_scoring import compute_exposure_index
 from recon_tool.models import TenantInfo
 
 logger = logging.getLogger(__name__)
@@ -352,68 +353,6 @@ def _compute_hardening_status(info: TenantInfo) -> HardeningStatus:
     return HardeningStatus(controls=tuple(controls))
 
 
-def _unconfirmable_absent_points(email: EmailPosture, info: TenantInfo) -> int:
-    """Points from absent controls whose absence is not passively confirmable."""
-    return observability.unconfirmable_absent_points(
-        info, dkim_configured=email.dkim_configured, email_gateway=email.email_gateway
-    )
-
-
-def _compute_posture_score(
-    email: EmailPosture,
-    identity: IdentityPosture,
-    hardening: HardeningStatus,
-    info: TenantInfo,
-) -> int:
-    """Compute weighted posture score (0–100) from observable controls."""
-    score = 0
-
-    # DMARC: reject=20, quarantine=12 (mutually exclusive)
-    dmarc_effective_policy = gap_detection.effective_email_dmarc_policy(info)
-    if dmarc_effective_policy == "reject":
-        score += observability.SCORE_DMARC
-    elif dmarc_effective_policy == "quarantine":
-        score += 12
-
-    # DKIM: 15
-    if email.dkim_configured:
-        score += observability.SCORE_DKIM
-
-    # SPF strict: 10
-    if email.spf_strict:
-        score += 10
-
-    # MTA-STS: enforce=15, testing=8 (mutually exclusive)
-    if email.mta_sts_mode == "enforce":
-        score += observability.SCORE_MTA_STS
-    elif email.mta_sts_mode == "testing":
-        score += 8
-
-    # BIMI: 5
-    if email.bimi_configured:
-        score += 5
-
-    # TLS-RPT: 5
-    tls_rpt_control = next((c for c in hardening.controls if c.name == "TLS-RPT"), None)
-    if tls_rpt_control and tls_rpt_control.present:
-        score += 5
-
-    # CAA: 5
-    caa_control = next((c for c in hardening.controls if c.name == "CAA"), None)
-    if caa_control and caa_control.present:
-        score += 5
-
-    # Federated identity
-    if identity.auth_type == "Federated":
-        score += observability.SCORE_FEDERATED_IDENTITY
-
-    # Enterprise email gateway: 5
-    if email.email_gateway is not None:
-        score += observability.SCORE_EMAIL_GATEWAY
-
-    return min(score, 100)
-
-
 # ── Public API: assess_exposure_from_info ──────────────────────────────
 
 _ASSESSMENT_DISCLAIMER = (
@@ -423,20 +362,25 @@ _ASSESSMENT_DISCLAIMER = (
 )
 
 
-def assess_exposure_from_info(info: TenantInfo) -> ExposureAssessment:
+def assess_exposure_from_info(
+    info: TenantInfo,
+    *,
+    hypothetical_components: frozenset[str] = frozenset(),
+) -> ExposureAssessment:
     """Assess a domain's publicly observable security posture.
 
     Pure function: TenantInfo in, ExposureAssessment out. No I/O.
     """
     from recon_tool.collection_view import collection_claim_info
 
-    info = collection_claim_info(info)
+    source_info = info
+    info = collection_claim_info(source_info)
     email = _compute_email_posture(info)
     identity = _compute_identity_posture(info)
     infra = _compute_infrastructure_footprint(info)
     consistency = _compute_consistency_observations(info)
     hardening = _compute_hardening_status(info)
-    score = _compute_posture_score(email, identity, hardening, info)
+    index = compute_exposure_index(source_info, hypothetical_components=hypothetical_components)
 
     # Subsections overlap: DMARC is cited by the email posture and again by its
     # hardening control, CAA by infrastructure and its control. Concatenating made
@@ -455,12 +399,13 @@ def assess_exposure_from_info(info: TenantInfo) -> ExposureAssessment:
         infrastructure_footprint=infra,
         consistency_observations=consistency,
         hardening_status=hardening,
-        posture_score=score,
-        posture_score_label=_check_neutral_copy("based on publicly observable controls"),
+        posture_score=index.score_floor,
+        posture_score_label=_check_neutral_copy("exact-evidence floor in recon's public-control model"),
         disclaimer=_check_neutral_copy(_ASSESSMENT_DISCLAIMER),
         evidence=tuple(all_evidence),
-        unconfirmable_absent_points=_unconfirmable_absent_points(email, info),
-        unavailable_controls=observability.ObservableEmailState.from_info(info).unavailable_control_names(),
+        index_components=index.components,
+        unconfirmable_absent_points=index.unconfirmable_absent_points,
+        unavailable_controls=index.unavailable_controls,
     )
 
 
@@ -613,11 +558,17 @@ def compare_postures_from_infos(info_a: TenantInfo, info_b: TenantInfo) -> Postu
 
     info_a = collection_claim_info(info_a)
     info_b = collection_claim_info(info_b)
+    index_a = compute_exposure_index(info_a)
+    index_b = compute_exposure_index(info_b)
     return PostureComparison(
         domain_a=info_a.queried_domain,
         domain_b=info_b.queried_domain,
-        metrics=build_metrics(info_a, info_b),
+        metrics=build_metrics(info_a, info_b, index_a, index_b),
         differences=_build_differences(info_a, info_b),
         relative_assessment=_build_relative_assessment(info_a, info_b),
+        domain_a_index_components=index_a.components,
+        domain_b_index_components=index_b.components,
+        domain_a_unavailable_controls=index_a.unavailable_controls,
+        domain_b_unavailable_controls=index_b.unavailable_controls,
         disclaimer=_check_neutral_copy(_COMPARISON_DISCLAIMER),
     )

@@ -19,12 +19,6 @@ from recon_tool.email_security import observed_email_control_services
 from recon_tool.models import TenantInfo
 from recon_tool.source_status import SourceStatus
 
-SCORE_DMARC = 20
-SCORE_DKIM = 15
-SCORE_MTA_STS = 15
-SCORE_EMAIL_GATEWAY = 5
-SCORE_FEDERATED_IDENTITY = 10
-
 
 @dataclass(frozen=True, slots=True)
 class ObservableEmailState:
@@ -96,24 +90,6 @@ class ObservableEmailState:
             security_score=score,
         )
 
-    def unconfirmable_points(
-        self,
-        *,
-        dkim_configured: bool,
-        email_gateway: str | None,
-    ) -> int:
-        """Return score points hidden by source or passive-channel limits."""
-        return (
-            (0 if self.dmarc_available else SCORE_DMARC)
-            + (0 if dkim_configured else SCORE_DKIM)
-            + (0 if self.spf_available else 10)
-            + (0 if self.mta_sts_available else SCORE_MTA_STS)
-            + (0 if self.bimi_available else 5)
-            + (0 if self.tls_rpt_available else 5)
-            + (0 if self.caa_available else 5)
-            + (0 if email_gateway is not None else SCORE_EMAIL_GATEWAY)
-        )
-
     def unavailable_control_names(self) -> tuple[str, ...]:
         """Return public controls whose collection channel was unavailable."""
         availability = (
@@ -140,30 +116,3 @@ class ObservableEmailState:
                 self.bimi_available,
             )
         )
-
-
-def unconfirmable_absent_points(
-    info: TenantInfo,
-    *,
-    dkim_configured: bool,
-    email_gateway: str | None,
-) -> int:
-    """Score points hidden by an unavailable channel, across every channel.
-
-    The exposure score reports a floor plus the points a degraded channel
-    could be hiding, so the two together bound the true posture from above.
-    Identity belongs in that total as much as the email channels do: a
-    degraded identity channel masks ``auth_type``, so a federated namespace
-    loses those points from its score, and without a matching term here the
-    ceiling fell below the value the same domain reports when nothing is
-    degraded.
-    """
-    from recon_tool.collection_view import auth_type_channel_unavailable
-
-    points = ObservableEmailState.from_info(info).unconfirmable_points(
-        dkim_configured=dkim_configured,
-        email_gateway=email_gateway,
-    )
-    if auth_type_channel_unavailable(info.degraded_sources):
-        points += SCORE_FEDERATED_IDENTITY
-    return points

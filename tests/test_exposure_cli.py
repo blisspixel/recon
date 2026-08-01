@@ -68,6 +68,9 @@ class TestExposureFlag:
         assert result.exit_code == 0
         normalized = " ".join(result.output.split())
         assert "Public-evidence index:" in normalized
+        assert "Evidence-bound range:" in normalized
+        assert "Current model allocation: 90/100 points" in normalized
+        assert "Index basis:" in normalized
         assert "Posture Score" not in normalized
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -79,6 +82,9 @@ class TestExposureFlag:
         assert "domain" in data
         assert "email_posture" in data
         assert "posture_score" in data
+        assert data["observability"]["score_floor"] == data["posture_score"]
+        assert data["observability"]["model_maximum_points"] == 90
+        assert len(data["observability"]["components"]) == 9
         assert "disclaimer" in data
 
 

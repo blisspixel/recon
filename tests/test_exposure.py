@@ -867,11 +867,11 @@ class TestScoreObservability:
             evidence=evidence,
         )
 
-    def test_bare_domain_floor_is_twenty(self) -> None:
-        # No DKIM (+15) and no MX-backed email gateway (+5). Generic vendor
-        # indicators do not receive active-control credit.
+    def test_bare_domain_unresolved_capacity_is_thirty(self) -> None:
+        # DKIM (+15), identity federation (+10), and an MX-backed gateway (+5)
+        # remain unresolved. Generic vendor indicators receive no control credit.
         result = assess_exposure_from_info(self._info())
-        assert result.unconfirmable_absent_points == 20
+        assert result.unconfirmable_absent_points == 30
 
     def test_observed_dkim_drops_the_floor_by_fifteen(self) -> None:
         from recon_tool.constants import SVC_DKIM
@@ -882,11 +882,11 @@ class TestScoreObservability:
                 evidence=(EvidenceRecord("DKIM", "selector response", SVC_DKIM, "dkim"),),
             )
         )
-        assert result.unconfirmable_absent_points == 5
+        assert result.unconfirmable_absent_points == 15
 
     def test_two_vendor_indicators_do_not_change_the_control_floor(self) -> None:
         result = assess_exposure_from_info(self._info(slugs=("crowdstrike", "okta")))
-        assert result.unconfirmable_absent_points == 20
+        assert result.unconfirmable_absent_points == 30
 
     def test_generic_identity_vendor_slug_does_not_name_the_operating_idp(self) -> None:
         result = assess_exposure_from_info(self._info(slugs=("descope",)))
@@ -1040,11 +1040,13 @@ class TestScoreObservability:
                 EvidenceRecord("DKIM", "v=DKIM1; p=opaque", SVC_DKIM, "dkim"),
                 EvidenceRecord("SPF", "v=spf1 -all", SVC_SPF_STRICT, "spf-strict"),
                 EvidenceRecord("MTA_STS", "v=STSv1; id=1", SVC_MTA_STS, "mta-sts"),
+                EvidenceRecord("MTA_STS_POLICY", "mode: enforce", SVC_MTA_STS, "mta-sts-enforce"),
                 EvidenceRecord("BIMI", "v=BIMI1; l=https://example/logo.svg", SVC_BIMI, "bimi"),
                 EvidenceRecord("TXT", "v=TLSRPTv1; rua=mailto:tls@example.com", "TLS-RPT", "tls-rpt"),
                 EvidenceRecord("CAA", '0 issue "letsencrypt.org"', "CAA record", "caa"),
                 EvidenceRecord("CAA", '0 issue "letsencrypt.org"', "Let's Encrypt", "letsencrypt"),
                 EvidenceRecord("MX", "10 mx.example.net", "Proofpoint", "proofpoint"),
+                EvidenceRecord("HTTP", "NameSpaceType=Federated", "GetUserRealm", "microsoft365"),
             ),
             degraded_sources=degraded_sources,
         )
@@ -1222,9 +1224,16 @@ class TestScoreCeilingSurvivesIdentityDegradation:
         from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
         evidence = (
-            EvidenceRecord(source_type="TXT", raw_value="v=DMARC1; p=reject", rule_name="dmarc", slug="dmarc"),
+            EvidenceRecord(source_type="DMARC", raw_value="v=DMARC1; p=reject", rule_name="DMARC", slug="dmarc"),
             EvidenceRecord(source_type="CAA", raw_value="0 issue letsencrypt.org", rule_name="caa", slug="letsencrypt"),
+            EvidenceRecord(
+                source_type="HTTP",
+                raw_value="NameSpaceType=Federated",
+                rule_name="GetUserRealm",
+                slug="microsoft365",
+            ),
         )
+
         return TenantInfo(
             tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
             display_name="Synthetic Alpha",
@@ -1263,6 +1272,22 @@ class TestScoreCeilingSurvivesIdentityDegradation:
 
         assert degraded.posture_score < undegraded.posture_score
         assert degraded.unconfirmable_absent_points > undegraded.unconfirmable_absent_points
+
+    @given(info=tenant_info_strategy())
+    @_PBT_SETTINGS
+    def test_component_ledger_is_complete_and_self_consistent(self, info: TenantInfo) -> None:
+        assessment = assess_exposure_from_info(info)
+        components = assessment.index_components
+
+        assert len(components) == 9
+        assert len({component.component_id for component in components}) == 9
+        assert sum(component.maximum_points for component in components) == 90
+        assert assessment.posture_score == sum(component.awarded_points for component in components)
+        assert assessment.unconfirmable_absent_points == sum(
+            component.unconfirmable_points for component in components
+        )
+        assert all(component.evidence for component in components if component.awarded_points)
+        assert all(not component.evidence for component in components if component.state == "unavailable")
 
 
 class TestMtaStsModeNoneIsNotInEffect:

@@ -63,9 +63,11 @@ Risk: high product-trust risk, high compatibility sensitivity
 
 Default panel and MCP text assembly now preserve the queried namespace as the
 subject coordinate and derive panel-only workload summaries only from
-collection-observable evidence. Service labels, posture observations, and
-hardening guidance now retain exact generation-time basis. The exposure index
-is the remaining runtime family with incomplete lineage.
+collection-observable evidence. Service labels, posture observations,
+hardening guidance, and every weighted exposure-index component now retain
+exact generation-time basis. Comparisons carry both namespace ledgers, and
+simulations distinguish hypothetical from live component values. No material
+runtime family has incomplete lineage; the two static guidance reviews remain.
 
 ### Scope
 

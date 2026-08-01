@@ -16,51 +16,116 @@ from rich.panel import Panel
 from rich.text import Text
 
 from recon_tool.exposure import ExposureAssessment, GapReport
+from recon_tool.exposure_models import ExposureIndex
 
 
-def format_exposure_dict(assessment: ExposureAssessment) -> dict[str, Any]:
-    """Format ExposureAssessment as a dict for JSON output."""
+def _evidence_list(refs: tuple[Any, ...]) -> list[dict[str, str]]:
+    """Serialize exposure evidence references without changing their order."""
+    return [
+        {
+            "source_type": reference.source_type,
+            "raw_value": reference.raw_value,
+            "rule_name": reference.rule_name,
+            "slug": reference.slug,
+        }
+        for reference in refs
+    ]
 
-    def _evidence_list(refs: tuple[Any, ...]) -> list[dict[str, str]]:
-        return [
+
+def format_index_observability(
+    index: ExposureIndex,
+    unavailable_controls: tuple[str, ...],
+) -> dict[str, Any]:
+    """Serialize one validated index envelope and its exact component ledger."""
+    if unavailable_controls != index.unavailable_controls:
+        raise ValueError("exposure unavailable controls differ from the component ledger")
+    unconfirmable = index.unconfirmable_absent_points
+    hypothetical = any(component.state == "hypothetical_value" for component in index.components)
+    basis_note = (
+        "score_floor is scenario arithmetic over retained live evidence and explicitly labeled hypothetical "
+        "component values."
+        if hypothetical
+        else "score_floor is the exact-evidence total from the component ledger."
+    )
+    resolution_note = (
+        f" Up to {unconfirmable} more modeled point(s) remain unresolved because collection was unavailable, "
+        "the public scope cannot establish the modeled value, or retained inputs are insufficient or "
+        "inconsistent."
+        if unconfirmable
+        else " The public-evidence index is fully resolved within the current component model."
+    )
+    note = (
+        basis_note
+        + resolution_note
+        + " Generic vendor indicators receive no active-control credit. This is not an overall security grade "
+        "or certification."
+    )
+    return {
+        "score_floor": index.score_floor,
+        "score_is_lower_bound": unconfirmable > 0,
+        "unconfirmable_absent_points": unconfirmable,
+        "score_ceiling": index.score_ceiling,
+        "model_maximum_points": index.model_maximum_points,
+        "unavailable_controls": list(unavailable_controls),
+        "components": [
             {
-                "source_type": r.source_type,
-                "raw_value": r.raw_value,
-                "rule_name": r.rule_name,
-                "slug": r.slug,
+                "component_id": component.component_id,
+                "control": component.control,
+                "state": component.state,
+                "awarded_points": component.awarded_points,
+                "maximum_points": component.maximum_points,
+                "unconfirmable_points": component.unconfirmable_points,
+                "generator_rule_id": component.generator_rule_id,
+                "metadata_dependencies": [
+                    {
+                        "field": item.field,
+                        "operator": item.operator,
+                        "expected_value": item.expected_value,
+                        "observed_value": item.observed_value,
+                    }
+                    for item in component.metadata_dependencies
+                ],
+                "observation_scope": list(component.observation_scope),
+                "evidence": _evidence_list(component.evidence),
             }
-            for r in refs
-        ]
+            for component in index.components
+        ],
+        "note": note,
+    }
 
-    ep = assessment.email_posture
-    ip = assessment.identity_posture
-    infra = assessment.infrastructure_footprint
 
-    unconfirmable = assessment.unconfirmable_absent_points
-    d: dict[str, Any] = {
-        "domain": assessment.domain,
-        "posture_score": assessment.posture_score,
-        "posture_score_label": assessment.posture_score_label,
-        # The score counts only observed-present controls, so it is a lower
-        # bound. This envelope tells a consuming agent how much that floor could
-        # understate the true posture: a low score may mean "hardened but quiet",
-        # not "weak". A declarative record counts toward the ceiling only when
-        # its collection channel was unavailable.
-        "observability": {
+def format_observability_dict(assessment: ExposureAssessment) -> dict[str, Any]:
+    """Serialize the validated index envelope from an exposure assessment."""
+    if not assessment.index_components:
+        unconfirmable = assessment.unconfirmable_absent_points
+        return {
             "score_is_lower_bound": unconfirmable > 0,
             "unconfirmable_absent_points": unconfirmable,
             "score_ceiling": min(100, assessment.posture_score + unconfirmable),
             "unavailable_controls": list(assessment.unavailable_controls),
             "note": (
                 "posture_score counts only observed-present controls; up to "
-                f"{unconfirmable} more point(s) come from controls whose absence "
-                "the passive channel cannot confirm (DKIM at non-standard "
-                "selectors, an email gateway behind non-MX routing, or a "
-                "temporarily unavailable declarative channel). Generic vendor "
-                "indicators receive no active-control credit. "
-                "A low score may reflect limited observability, not weak posture."
+                f"{unconfirmable} more point(s) come from unresolved or unavailable control state. "
+                "This compatibility-constructed assessment has no component ledger."
             ),
-        },
+        }
+    return format_index_observability(
+        ExposureIndex(assessment.index_components),
+        assessment.unavailable_controls,
+    )
+
+
+def format_exposure_dict(assessment: ExposureAssessment) -> dict[str, Any]:
+    """Format ExposureAssessment as a dict for JSON output."""
+    ep = assessment.email_posture
+    ip = assessment.identity_posture
+    infra = assessment.infrastructure_footprint
+
+    d: dict[str, Any] = {
+        "domain": assessment.domain,
+        "posture_score": assessment.posture_score,
+        "posture_score_label": assessment.posture_score_label,
+        "observability": format_observability_dict(assessment),
         "email_posture": {
             "dmarc_policy": ep.dmarc_policy,
             "dkim_configured": ep.dkim_configured,
@@ -146,23 +211,54 @@ def _append_email_posture(text: Text, assessment: ExposureAssessment) -> None:
         text.append("    Gateway:   source unavailable\n")
 
 
-def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
-    """Render ExposureAssessment as a Rich panel with categorized sections."""
-    text = Text()
-
-    text.append("  Domain: ", style="dim")
-    text.append(f"{assessment.domain}\n")
+def _append_index_summary(
+    text: Text,
+    assessment: ExposureAssessment,
+    index: ExposureIndex | None,
+) -> None:
+    """Append the compatible score line and exact ledger detail when present."""
     text.append("  Public-evidence index: ", style="dim")
-    score = assessment.posture_score
+    score = index.score_floor if index is not None else assessment.posture_score
     score_style = "#a3d9a5" if score >= 60 else "#7ec8e3" if score >= 30 else "#e07a5f"
     text.append(f"{score}/100", style=score_style)
     text.append(f" ({assessment.posture_score_label})\n", style="dim")
-    if assessment.unconfirmable_absent_points > 0:
-        ceiling = min(100, score + assessment.unconfirmable_absent_points)
-        text.append(
-            f"    (lower bound; up to {ceiling}/100 if unobservable controls are present)\n",
-            style="dim",
-        )
+    if index is None:
+        if assessment.unconfirmable_absent_points:
+            ceiling = min(100, score + assessment.unconfirmable_absent_points)
+            text.append(
+                f"    (lower bound; up to {ceiling}/100 if unresolved controls are present)\n",
+                style="dim",
+            )
+        return
+
+    text.append(f"    Evidence-bound range: {score}-{index.score_ceiling}/100\n", style="dim")
+    text.append(f"    Current model allocation: {index.model_maximum_points}/100 points\n", style="dim")
+    credited = [
+        f"{component.control} +{component.awarded_points}"
+        for component in assessment.index_components
+        if component.awarded_points
+    ]
+    text.append(
+        f"    Index basis: {', '.join(credited) if credited else 'no credited public controls'}\n",
+        style="dim",
+    )
+    unresolved = [
+        component.control
+        for component in assessment.index_components
+        if component.state in {"unavailable", "unresolved"}
+    ]
+    if unresolved:
+        text.append(f"    Unresolved capacity: {', '.join(unresolved)}\n", style="dim")
+
+
+def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
+    """Render ExposureAssessment as a Rich panel with categorized sections."""
+    text = Text()
+    index = ExposureIndex(assessment.index_components) if assessment.index_components else None
+
+    text.append("  Domain: ", style="dim")
+    text.append(f"{assessment.domain}\n")
+    _append_index_summary(text, assessment, index)
 
     _append_email_posture(text, assessment)
 

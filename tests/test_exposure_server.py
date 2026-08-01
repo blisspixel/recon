@@ -248,6 +248,8 @@ class TestComparePostures:
         data = await compare_postures("gamma.invalid", "alpha.invalid")
         assert "domain_a" in data
         assert "domain_b" in data
+        assert data["domain_a_observability"]["score_floor"] >= 0
+        assert data["domain_b_observability"]["score_floor"] >= 0
         assert "metrics" in data
         assert "differences" in data
         assert "relative_assessment" in data

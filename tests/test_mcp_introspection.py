@@ -289,37 +289,6 @@ class TestExplainSignal:
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
-    async def test_no_fixes_reports_no_change(self, mock_resolve: AsyncMock) -> None:
-        """Applying nothing cannot change the index.
-
-        The simulated TenantInfo used to be rebuilt field by field, which
-        dropped every field the list omitted. The scorer reads some of them, so
-        an empty fix list reported a loss and every gateway-fronted simulation
-        understated its gain by the same amount.
-        """
-        info = replace(SAMPLE_INFO, email_gateway="Proofpoint")
-        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
-
-        data = await simulate_hardening("alpha.invalid", [])
-
-        assert data["score_delta"] == 0
-        assert data["simulated_score"] == data["current_score"]
-
-    @pytest.mark.asyncio
-    @patch(SERVER_RESOLVE_OR_CACHE)
-    async def test_observed_fields_survive_simulation(self, mock_resolve: AsyncMock) -> None:
-        """Fields a fix does not touch must carry into the simulated result."""
-        info = replace(SAMPLE_INFO, email_gateway="Proofpoint", dmarc_policy=None)
-        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
-
-        data = await simulate_hardening("alpha.invalid", ["DMARC reject"])
-
-        # The gateway is untouched by a DMARC fix, so its contribution must be
-        # present in both scores and the delta must be a gain.
-        assert data["score_delta"] > 0
-
-    @pytest.mark.asyncio
-    @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_domain_output_uses_resolved_normalized_domain(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
         from recon_tool.signals import reportable_signals
@@ -426,6 +395,97 @@ class TestSimulateHardening:
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_no_fixes_reports_no_change(self, mock_resolve: AsyncMock) -> None:
+        """Applying nothing cannot change the index.
+
+        The simulated TenantInfo used to be rebuilt field by field, which
+        dropped every field the list omitted. The scorer reads some of them, so
+        an empty fix list reported a loss and every gateway-fronted simulation
+        understated its gain by the same amount.
+        """
+        info = replace(SAMPLE_INFO, email_gateway="Proofpoint")
+        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
+
+        data = await simulate_hardening("alpha.invalid", [])
+
+        assert data["score_delta"] == 0
+        assert data["simulated_score"] == data["current_score"]
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_already_satisfied_fix_preserves_live_lineage(self, mock_resolve: AsyncMock) -> None:
+        """An exact live control is not replaced with hypothetical evidence."""
+        live_dkim = EvidenceRecord(
+            source_type="DKIM",
+            raw_value="v=DKIM1; p=retained-live-value",
+            rule_name="DKIM",
+            slug="dkim",
+        )
+        info = replace(
+            SAMPLE_INFO,
+            services=(*SAMPLE_INFO.services, "DKIM"),
+            slugs=(*SAMPLE_INFO.slugs, "dkim"),
+            evidence=(*SAMPLE_INFO.evidence, live_dkim),
+        )
+        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
+
+        data = await simulate_hardening("alpha.invalid", ["DKIM"])
+        component = next(
+            item
+            for item in data["simulated_observability"]["components"]
+            if item["component_id"] == "index.email.dkim.v1"
+        )
+
+        assert data["applied_fixes"] == []
+        assert data["score_delta"] == 0
+        assert component["state"] == "observed_value"
+        assert component["evidence"][0]["raw_value"] == live_dkim.raw_value
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_observed_fields_survive_simulation(self, mock_resolve: AsyncMock) -> None:
+        """Fields a fix does not touch must carry into the simulated result."""
+        info = replace(SAMPLE_INFO, email_gateway="Proofpoint", dmarc_policy=None)
+        mock_resolve.return_value = (info, list(SAMPLE_RESULTS))
+
+        data = await simulate_hardening("alpha.invalid", ["DMARC reject"])
+
+        # The gateway is untouched by a DMARC fix, so its contribution must be
+        # present in both scores and the delta must be a gain.
+        assert data["score_delta"] > 0
+
+    @pytest.mark.parametrize(
+        ("fix", "component_id"),
+        [
+            ("DMARC reject", "index.email.dmarc.v1"),
+            ("DKIM", "index.email.dkim.v1"),
+            ("SPF strict", "index.email.spf-strict.v1"),
+            ("MTA-STS enforce", "index.email.mta-sts.v1"),
+            ("BIMI", "index.email.bimi.v1"),
+            ("TLS-RPT", "index.email.tls-rpt.v1"),
+            ("CAA", "index.infrastructure.caa.v1"),
+        ],
+    )
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_every_supported_scored_fix_is_explicitly_hypothetical(
+        self,
+        mock_resolve: AsyncMock,
+        fix: str,
+        component_id: str,
+    ) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
+
+        data = await simulate_hardening("alpha.invalid", [fix])
+        components = {
+            item["component_id"]: item for item in data["simulated_observability"]["components"]
+        }
+
+        assert components[component_id]["state"] == "hypothetical_value"
+        assert components[component_id]["evidence"]
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_returns_correct_json_structure(self, mock_resolve: AsyncMock) -> None:
         """simulate_hardening returns JSON with score delta and applied fixes."""
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
@@ -436,10 +496,41 @@ class TestSimulateHardening:
         assert isinstance(data["simulated_score"], int)
         assert "score_delta" in data
         assert isinstance(data["score_delta"], int)
+        assert data["current_observability"]["score_floor"] == data["current_score"]
+        assert data["simulated_observability"]["score_floor"] == data["simulated_score"]
+        simulated_components = {
+            component["component_id"]: component
+            for component in data["simulated_observability"]["components"]
+        }
+        assert simulated_components["index.email.dmarc.v1"]["state"] == "hypothetical_value"
+        assert simulated_components["index.email.mta-sts.v1"]["state"] == "hypothetical_value"
         assert "applied_fixes" in data
         assert isinstance(data["applied_fixes"], list)
         assert "remaining_gaps" in data
         assert isinstance(data["remaining_gaps"], list)
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_hypothetical_fix_remains_distinct_when_live_collection_failed(
+        self,
+        mock_resolve: AsyncMock,
+    ) -> None:
+        mock_resolve.return_value = (
+            replace(SAMPLE_INFO, degraded_sources=("dns:dmarc",)),
+            list(SAMPLE_RESULTS),
+        )
+
+        data = await simulate_hardening("alpha.invalid", ["DMARC reject"])
+        current = {
+            item["component_id"]: item for item in data["current_observability"]["components"]
+        }
+        simulated = {
+            item["component_id"]: item for item in data["simulated_observability"]["components"]
+        }
+
+        assert current["index.email.dmarc.v1"]["state"] == "unavailable"
+        assert simulated["index.email.dmarc.v1"]["state"] == "hypothetical_value"
+        assert simulated["index.email.dmarc.v1"]["awarded_points"] == 20
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)

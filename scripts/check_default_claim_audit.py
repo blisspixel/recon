@@ -18,7 +18,8 @@ DEFAULT_AUDIT_PATH = ROOT / "docs" / "default-claim-audit.json"
 _SURFACE_INVENTORY_PATH = ROOT / "docs" / "surface-inventory.json"
 _SCHEMA_PATH = ROOT / "docs" / "recon-schema.json"
 _SCORE_FIELD = re.compile(
-    r"(?:score|confidence|posterior|probability|modularity|n_eff|band|interval|likelihood|llr|influence|entropy|stability|delta)",
+    r"(?:score|confidence|posterior|probability|modularity|n_eff|band|interval|"
+    r"likelihood|llr|influence|entropy|stability|delta|(?:^|_)points?(?:_|$))",
     re.IGNORECASE,
 )
 _AUDIT_STATUSES = frozenset({"complete", "open"})

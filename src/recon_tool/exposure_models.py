@@ -19,6 +19,15 @@ HardeningObservationState: TypeAlias = Literal[
 ]
 HardeningMetadataValue: TypeAlias = str | int | bool | None
 HardeningMetadataOperator: TypeAlias = Literal["eq", "neq", "is_none"]
+ExposureIndexState: TypeAlias = Literal[
+    "observed_value",
+    "observed_empty",
+    "unresolved",
+    "unavailable",
+    "hypothetical_value",
+]
+ExposureMetadataValue: TypeAlias = str | int | bool | None
+ExposureMetadataOperator: TypeAlias = Literal["eq", "neq", "is_none"]
 
 _HARDENING_OBSERVATION_STATES = frozenset(
     {
@@ -44,6 +53,67 @@ _HARDENING_METADATA_FIELDS = frozenset(
         "email_gateway",
     }
 )
+_EXPOSURE_INDEX_STATES = frozenset(
+    {
+        "observed_value",
+        "observed_empty",
+        "unresolved",
+        "unavailable",
+        "hypothetical_value",
+    }
+)
+_EXPOSURE_METADATA_FIELDS = frozenset(
+    {
+        "auth_type",
+        "bimi_record_observed",
+        "caa_record_observed",
+        "dkim_observed_at_common_selectors",
+        "dmarc_construction_state",
+        "dmarc_policy",
+        "effective_dmarc_policy",
+        "email_gateway",
+        "gateway_mx_observed",
+        "mta_sts_mode",
+        "spf_strict_observed",
+        "tls_rpt_record_observed",
+    }
+)
+DMARC_COMPONENT_ID = "index.email.dmarc.v1"
+DKIM_COMPONENT_ID = "index.email.dkim.v1"
+SPF_COMPONENT_ID = "index.email.spf-strict.v1"
+MTA_STS_COMPONENT_ID = "index.email.mta-sts.v1"
+BIMI_COMPONENT_ID = "index.email.bimi.v1"
+TLS_RPT_COMPONENT_ID = "index.email.tls-rpt.v1"
+CAA_COMPONENT_ID = "index.infrastructure.caa.v1"
+FEDERATED_IDENTITY_COMPONENT_ID = "index.identity.federation.v1"
+EMAIL_GATEWAY_COMPONENT_ID = "index.email.gateway.v1"
+DMARC_QUARANTINE_POINTS = 12
+MTA_STS_TESTING_POINTS = 8
+EXPOSURE_COMPONENT_SPECS: tuple[tuple[str, str, int], ...] = (
+    (DMARC_COMPONENT_ID, "DMARC", 20),
+    (DKIM_COMPONENT_ID, "DKIM", 15),
+    (SPF_COMPONENT_ID, "SPF strict policy", 10),
+    (MTA_STS_COMPONENT_ID, "MTA-STS", 15),
+    (BIMI_COMPONENT_ID, "BIMI", 5),
+    (TLS_RPT_COMPONENT_ID, "TLS-RPT", 5),
+    (CAA_COMPONENT_ID, "CAA", 5),
+    (FEDERATED_IDENTITY_COMPONENT_ID, "Federated identity", 10),
+    (EMAIL_GATEWAY_COMPONENT_ID, "Email gateway", 5),
+)
+EXPOSURE_COMPONENT_IDS = frozenset(component_id for component_id, _, _ in EXPOSURE_COMPONENT_SPECS)
+_EXPOSURE_COMPONENT_SPEC_BY_ID = {
+    component_id: (control, maximum_points)
+    for component_id, control, maximum_points in EXPOSURE_COMPONENT_SPECS
+}
+_EXPOSURE_UNAVAILABLE_LABELS = {SPF_COMPONENT_ID: "SPF"}
+
+
+def exposure_component_spec(component_id: str) -> tuple[str, int]:
+    """Return the canonical display name and weight for one index component."""
+    try:
+        return _EXPOSURE_COMPONENT_SPEC_BY_ID[component_id]
+    except KeyError as exc:
+        raise ValueError(f"unsupported exposure-index component ID: {component_id}") from exc
 
 # ── Data models (all frozen) ───────────────────────────────────────────
 
@@ -56,6 +126,136 @@ class EvidenceReference:
     raw_value: str  # The actual record value
     rule_name: str  # Detection rule that matched
     slug: str  # Fingerprint slug
+
+
+@dataclass(frozen=True)
+class ExposureMetadataDependency:
+    """One typed scalar predicate captured when an index rule is evaluated."""
+
+    field: str
+    operator: ExposureMetadataOperator
+    expected_value: ExposureMetadataValue
+    observed_value: ExposureMetadataValue
+
+    def __post_init__(self) -> None:
+        if self.field not in _EXPOSURE_METADATA_FIELDS:
+            raise ValueError(f"unsupported exposure metadata dependency field: {self.field}")
+        if self.operator not in {"eq", "neq", "is_none"}:
+            raise ValueError(f"unsupported exposure metadata operator: {self.operator}")
+        if self.operator == "is_none" and self.expected_value is not None:
+            raise ValueError("is_none exposure dependencies must expect null")
+
+
+def exposure_metadata_predicate_satisfied(dependency: ExposureMetadataDependency) -> bool:
+    """Evaluate a captured exposure predicate without consulting live state."""
+    if dependency.operator == "is_none":
+        return dependency.observed_value is None
+    equal = type(dependency.expected_value) is type(dependency.observed_value) and (
+        dependency.expected_value == dependency.observed_value
+    )
+    return equal if dependency.operator == "eq" else not equal
+
+
+@dataclass(frozen=True)
+class ExposureIndexComponent:
+    """One weighted index rule with its exact generation-time proof state."""
+
+    component_id: str
+    control: str
+    state: ExposureIndexState
+    awarded_points: int
+    maximum_points: int
+    generator_rule_id: str
+    metadata_dependencies: tuple[ExposureMetadataDependency, ...]
+    observation_scope: tuple[str, ...]
+    evidence: tuple[EvidenceReference, ...]
+
+    def __post_init__(self) -> None:
+        if not self.component_id or self.generator_rule_id != self.component_id:
+            raise ValueError("exposure-index component and generator IDs must be the same non-empty value")
+        if self.state not in _EXPOSURE_INDEX_STATES:
+            raise ValueError(f"unsupported exposure-index state: {self.state}")
+        if self.maximum_points <= 0 or not 0 <= self.awarded_points <= self.maximum_points:
+            raise ValueError("exposure-index points must satisfy 0 <= awarded <= positive maximum")
+        if not self.metadata_dependencies:
+            raise ValueError("exposure-index component requires at least one metadata dependency")
+        if not all(exposure_metadata_predicate_satisfied(item) for item in self.metadata_dependencies):
+            raise ValueError("exposure-index component contains an unsatisfied metadata dependency")
+        if not self.observation_scope or any(not scope for scope in self.observation_scope):
+            raise ValueError("exposure-index component requires non-empty observation scopes")
+        if self.awarded_points > 0 and not self.evidence:
+            raise ValueError("positive exposure-index credit requires retained evidence")
+        if self.state in {"observed_value", "hypothetical_value"} and not self.evidence:
+            raise ValueError(f"{self.state} exposure-index component requires retained evidence")
+        if self.state == "unavailable" and self.awarded_points:
+            raise ValueError("unavailable exposure-index component cannot award points")
+        if self.state == "unavailable" and self.evidence:
+            raise ValueError("unavailable exposure-index component cannot retain evidence")
+        if self.state in {"observed_empty", "unresolved"} and self.awarded_points:
+            raise ValueError(f"{self.state} exposure-index component cannot award points")
+        if self.state == "observed_empty" and self.evidence:
+            raise ValueError("observed-empty exposure-index component cannot retain positive evidence")
+
+    @property
+    def unconfirmable_points(self) -> int:
+        """Return capacity not fixed by an exact current component value."""
+        if self.state in {"unavailable", "unresolved"}:
+            return self.maximum_points - self.awarded_points
+        return 0
+
+
+@dataclass(frozen=True)
+class ExposureIndex:
+    """Validated component ledger for one model-bound public-evidence index."""
+
+    components: tuple[ExposureIndexComponent, ...]
+
+    def __post_init__(self) -> None:
+        component_ids = tuple(component.component_id for component in self.components)
+        if not component_ids or len(component_ids) != len(set(component_ids)):
+            raise ValueError("exposure index requires distinct component IDs")
+        if frozenset(component_ids) != EXPOSURE_COMPONENT_IDS:
+            raise ValueError("exposure index requires the complete weighted component set")
+        expected_order = tuple(component_id for component_id, _, _ in EXPOSURE_COMPONENT_SPECS)
+        if component_ids != expected_order:
+            raise ValueError("exposure index requires canonical component order")
+        for component in self.components:
+            expected_control, expected_maximum = exposure_component_spec(component.component_id)
+            if (component.control, component.maximum_points) != (expected_control, expected_maximum):
+                raise ValueError(
+                    f"exposure-index component specification differs from {component.component_id}"
+                )
+        if self.model_maximum_points > 100:
+            raise ValueError("exposure-index component maxima cannot exceed 100 points")
+
+    @property
+    def score_floor(self) -> int:
+        """Return the points supported by exact observed or hypothetical evidence."""
+        return sum(component.awarded_points for component in self.components)
+
+    @property
+    def unconfirmable_absent_points(self) -> int:
+        """Return compatibility capacity from unresolved or unavailable states."""
+        return sum(component.unconfirmable_points for component in self.components)
+
+    @property
+    def score_ceiling(self) -> int:
+        """Return the bounded model ceiling for this observation state."""
+        return min(100, self.score_floor + self.unconfirmable_absent_points)
+
+    @property
+    def model_maximum_points(self) -> int:
+        """Return the maximum points assigned by the current component model."""
+        return sum(component.maximum_points for component in self.components)
+
+    @property
+    def unavailable_controls(self) -> tuple[str, ...]:
+        """Return every component whose observation channel was unavailable."""
+        return tuple(
+            _EXPOSURE_UNAVAILABLE_LABELS.get(component.component_id, component.control)
+            for component in self.components
+            if component.state == "unavailable"
+        )
 
 
 @dataclass(frozen=True)
@@ -164,19 +364,28 @@ class ExposureAssessment:
     posture_score_label: str
     disclaimer: str
     evidence: tuple[EvidenceReference, ...]
-    # The score counts only observed-present controls, so it is a *lower bound*:
-    # this is how many points come from controls whose absence the passive
-    # channel cannot confirm (DKIM at non-standard selectors or an email gateway
-    # hidden behind non-MX routing). Generic vendor indicators receive no control
-    # credit. The true posture may be this much
-    # higher. Declarative-record absence is genuine when collection succeeded;
-    # an unavailable DMARC or MTA-STS channel contributes its full weight to
-    # this ceiling instead. See the "Reading the exposure score" MCP note and
-    # docs/correlation.md.
+    # Compatibility name retained from the original lower-bound envelope. The
+    # value now includes every component whose current value remains unresolved
+    # or unavailable, including narrow public scopes, collection failures, and
+    # inconsistent retained evidence.
     unconfirmable_absent_points: int = 0
     # Names of controls whose collection channel failed. This distinguishes an
     # unobserved value from an observed negative in structured output.
     unavailable_controls: tuple[str, ...] = ()
+    # Appended after the original defaulted fields so positional construction
+    # from earlier 2.x releases keeps its meaning.
+    index_components: tuple[ExposureIndexComponent, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not self.index_components:
+            return
+        index = ExposureIndex(self.index_components)
+        if self.posture_score != index.score_floor:
+            raise ValueError("posture score differs from its exposure-index component ledger")
+        if self.unconfirmable_absent_points != index.unconfirmable_absent_points:
+            raise ValueError("exposure observability total differs from its component ledger")
+        if self.unavailable_controls != index.unavailable_controls:
+            raise ValueError("exposure unavailable controls differ from the component ledger")
 
 
 @dataclass(frozen=True)
@@ -276,3 +485,26 @@ class PostureComparison:
     differences: tuple[PostureDifference, ...]
     relative_assessment: tuple[RelativeAssessment, ...]
     disclaimer: str
+    domain_a_index_components: tuple[ExposureIndexComponent, ...] = ()
+    domain_b_index_components: tuple[ExposureIndexComponent, ...] = ()
+    domain_a_unavailable_controls: tuple[str, ...] = ()
+    domain_b_unavailable_controls: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        if not any(
+            (
+                self.domain_a_index_components,
+                self.domain_b_index_components,
+                self.domain_a_unavailable_controls,
+                self.domain_b_unavailable_controls,
+            )
+        ):
+            return
+        if not self.domain_a_index_components or not self.domain_b_index_components:
+            raise ValueError("posture comparison requires both component ledgers")
+        index_a = ExposureIndex(self.domain_a_index_components)
+        index_b = ExposureIndex(self.domain_b_index_components)
+        if self.domain_a_unavailable_controls != index_a.unavailable_controls:
+            raise ValueError("domain A unavailable controls differ from its component ledger")
+        if self.domain_b_unavailable_controls != index_b.unavailable_controls:
+            raise ValueError("domain B unavailable controls differ from its component ledger")

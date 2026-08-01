@@ -95,6 +95,15 @@ security verdict, ownership claim, or calibrated probability unless an
 independent evaluation establishes that interpretation for the named claim
 family and population.
 
+The shipped exposure index is one such deterministic, model-bound diagnostic.
+Its stable compatibility scale is 0-100, while the current nine weighted
+components assign at most 90 points. The reported floor sums only component
+values that agree with exact retained evidence. Its ceiling adds modeled
+capacity from unavailable, intrinsically narrow, inconsistent, or otherwise insufficient observation paths. Each
+component retains the generation rule, basis state, typed predicates, bounded
+scope, point weight, and record evidence. This ledger makes the arithmetic
+replayable; it does not convert the result into an overall security measure.
+
 ### 1.2 Provenance is part of the result
 
 A claim without a direct evidence path is unsupported even when a heuristic or
