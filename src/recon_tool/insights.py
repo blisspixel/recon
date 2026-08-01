@@ -1,7 +1,8 @@
 """Insight generation engine — derives intelligence signals from collected data.
 
 Decomposes insight generation into focused, testable generators.
-Each generator is a pure function: (context) -> list[str].
+Each generator is a pure function that emits string-compatible values carrying
+the evidence association selected at the branch that rendered the text.
 """
 
 from __future__ import annotations
@@ -21,11 +22,39 @@ from recon_tool.constants import (
     effective_dmarc_policy,
 )
 from recon_tool.email_security import claim_safe_email_services
-from recon_tool.models import EvidenceRecord
-from recon_tool.validator import host_has_suffix
+from recon_tool.insight_claims import (
+    GeneratedInsight as _GeneratedInsight,
+)
+from recon_tool.insight_claims import (
+    claim_text as _claim_text,
+)
+from recon_tool.insight_claims import (
+    claimable_services as _claimable_services,
+)
+from recon_tool.insight_claims import (
+    claimable_slugs as _claimable_slugs,
+)
+from recon_tool.insight_claims import (
+    combine_evidence as _combine_evidence,
+)
+from recon_tool.insight_claims import (
+    evidence_for_rule_names as _evidence_for_rule_names,
+)
+from recon_tool.insight_claims import (
+    evidence_for_slugs as _evidence_for_slugs,
+)
+from recon_tool.insight_claims import (
+    evidence_for_source_types as _evidence_for_source_types,
+)
+from recon_tool.merger_tables import GATEWAY_SLUGS
+from recon_tool.models import EvidenceRecord, InsightClaim
+from recon_tool.sovereignty_insights import sovereignty_insights
+from recon_tool.sparse_insights import sparse_signal_insights
 
 __all__ = [
+    "INSIGHT_GENERATOR_RULE_IDS",
     "InsightContext",
+    "generate_insight_claims",
     "generate_insights",
 ]
 
@@ -64,6 +93,13 @@ class InsightContext:
     # name. Extensible names stay in ``services`` as inventory, but only this
     # subset may drive module, edge, hosting, DNS, or WAF claims.
     role_scoped_services: frozenset[str] = frozenset()
+    # Canonical retained records used to attach exact evidence occurrences to
+    # claims while the generator that emitted them is still known.
+    evidence: tuple[EvidenceRecord, ...] = ()
+    # Runtime merge/projection contexts are evidence-bound even when their
+    # canonical evidence sequence is empty. Direct generator calls keep the
+    # historical convenience behavior for isolated unit use.
+    evidence_bound: bool = False
 
     @classmethod
     def from_sets(
@@ -84,6 +120,7 @@ class InsightContext:
         email_gateway: str | None = None,
         has_mx_records: bool = False,
         evidence: Iterable[EvidenceRecord] = (),
+        evidence_bound: bool = False,
     ) -> InsightContext:
         """Convenience constructor that converts mutable sets to frozensets."""
         evidence = tuple(evidence)
@@ -128,6 +165,8 @@ class InsightContext:
             email_gateway=email_gateway,
             has_mx_records=has_mx_records,
             role_scoped_services=frozenset(role_scoped_services),
+            evidence=evidence,
+            evidence_bound=evidence_bound,
         )
 
 
@@ -179,34 +218,6 @@ _IDENTITY_VENDOR_SLUG_MAP: dict[str, str] = {
     "duo": "Duo",
 }
 
-_SPARSE_NON_SUBSTANTIVE_PREFIXES = ("SPF complexity:",)
-
-_EDGE_SERVICE_PREFIXES = ("DNS:", "CDN:", "WAF:")
-
-_SPARSE_DOC_HINT = (
-    "Next step: see docs/weak-areas.md for passive-only blind spots. "
-    "For an operator-supplied domain set, run `recon batch <candidates.txt>`; "
-    "for bounded related-host discovery, run `recon <domain> --chain --depth 2`."
-)
-
-
-def _substantive_services(ctx: InsightContext) -> list[str]:
-    """Return services that count toward signal richness for sparse heuristics."""
-    return [svc for svc in ctx.services if not svc.startswith(_SPARSE_NON_SUBSTANTIVE_PREFIXES)]
-
-
-def _edge_services(ctx: InsightContext) -> list[str]:
-    """Return distinct edge-layer services visible in the service list."""
-    found: list[str] = []
-    for svc in sorted(ctx.role_scoped_services):
-        if not svc.startswith(_EDGE_SERVICE_PREFIXES):
-            continue
-        _, _, provider = svc.partition(": ")
-        if provider and provider not in found:
-            found.append(provider)
-    return found
-
-
 # ── Individual insight generators ───────────────────────────────────────
 # Each returns a list of insight strings. Pure functions, easy to test.
 #
@@ -220,16 +231,37 @@ def _edge_services(ctx: InsightContext) -> list[str]:
 
 
 def _auth_insights(ctx: InsightContext) -> list[str]:
+    realm_evidence = tuple(
+        record
+        for record in ctx.evidence
+        if record.rule_name == "GetUserRealm" and record.raw_value.casefold().startswith("namespacetype=")
+    )
     if ctx.auth_type == "Federated":
-        vendors = [name for slug, name in _IDENTITY_VENDOR_SLUG_MAP.items() if slug in ctx.slugs]
+        vendor_slugs = _claimable_slugs(ctx, frozenset(_IDENTITY_VENDOR_SLUG_MAP))
+        vendors = [name for slug, name in _IDENTITY_VENDOR_SLUG_MAP.items() if slug in vendor_slugs]
         if vendors:
-            return [f"Federated identity observed; identity-vendor indicators: {', '.join(vendors)}"]
-        return ["Federated identity observed; external IdP not identified"]
+            vendor_evidence = _evidence_for_slugs(ctx, vendor_slugs)
+            return [
+                _claim_text(
+                    f"Federated identity observed; identity-vendor indicators: {', '.join(vendors)}",
+                    evidence=_combine_evidence(ctx, realm_evidence, vendor_evidence),
+                    scope=("identity:user_realm",),
+                )
+            ]
+        return [
+            _claim_text(
+                "Federated identity observed; external IdP not identified",
+                evidence=realm_evidence,
+                scope=("identity:user_realm", "dns:apex_txt", "dns:cname"),
+                allows_scope_only=True,
+            )
+        ]
     if ctx.auth_type == "Managed":
         # Only claim "Entra ID native" when we actually see M365 evidence.
         # GetUserRealm returns "Managed" for non-Microsoft domains too —
         # it just means "not federated" from Microsoft's perspective.
-        has_m365 = bool(ctx.slugs & _EXCHANGE_SLUGS)
+        m365_slugs = _claimable_slugs(ctx, _EXCHANGE_SLUGS)
+        has_m365 = bool(m365_slugs)
         if not has_m365:
             return []
         # Refinement: on dual-provider targets (M365 + Google
@@ -241,7 +273,13 @@ def _auth_insights(ctx: InsightContext) -> list[str]:
         # distinction vs. ADFS federation.
         if ctx.google_auth_type:
             return []
-        return ["Cloud-managed identity indicators (Entra ID native)"]
+        return [
+            _claim_text(
+                "Cloud-managed identity indicators (Entra ID native)",
+                evidence=_combine_evidence(ctx, realm_evidence, _evidence_for_slugs(ctx, m365_slugs)),
+                scope=("identity:user_realm",),
+            )
+        ]
     return []
 
 
@@ -259,16 +297,14 @@ def _has_scoreable_email(ctx: InsightContext) -> bool:
     """
     has_exchange = bool(ctx.slugs & _EXCHANGE_SLUGS)
     has_google = bool(ctx.slugs & _GOOGLE_SLUGS)
+    has_outbound = bool(_claimable_slugs(ctx, _EMAIL_SLUGS))
     has_mx_signal = bool(
-        ctx.primary_email_provider
-        or ctx.likely_primary_email_provider
-        or ctx.dmarc_policy is not None
-        or bool(ctx.slugs & _EMAIL_SLUGS)
+        ctx.primary_email_provider or ctx.likely_primary_email_provider or ctx.dmarc_policy is not None or has_outbound
     )
     return (
         (has_exchange and has_mx_signal)
         or (has_google and has_mx_signal)
-        or bool(ctx.slugs & _EMAIL_SLUGS)
+        or has_outbound
         or bool(ctx.services & {SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE, SVC_SPF_STRICT, SVC_MTA_STS, SVC_BIMI})
         or ctx.has_mx_records
         or ctx.email_gateway is not None
@@ -316,12 +352,61 @@ def _non_scoring_email_summary(ctx: InsightContext) -> str:
     return "no strict controls observed"
 
 
+_EMAIL_OBSERVATION_SCOPE = (
+    "dns:mx",
+    "dns:apex_txt",
+    "dns:dmarc",
+    "dns:dkim_common_selectors",
+    "http:mta_sts_policy",
+    "dns:bimi",
+)
+
+
+def _email_summary_evidence(ctx: InsightContext) -> tuple[EvidenceRecord, ...]:
+    """Return only occurrences read to render or qualify the summary line."""
+    control_services = frozenset(
+        {
+            SVC_DKIM,
+            SVC_DKIM_EXCHANGE,
+            SVC_DKIM_GOOGLE,
+            SVC_SPF_STRICT,
+            SVC_SPF_SOFTFAIL,
+            SVC_MTA_STS,
+            SVC_BIMI,
+        }
+    )
+    controls = _evidence_for_rule_names(ctx, ctx.services & control_services)
+    dmarc = _evidence_for_source_types(ctx, frozenset({"DMARC"})) if ctx.dmarc_policy is not None else ()
+    mx = (
+        _evidence_for_source_types(ctx, frozenset({"MX"}))
+        if (ctx.has_mx_records or ctx.primary_email_provider or ctx.likely_primary_email_provider or ctx.email_gateway)
+        else ()
+    )
+    outbound = _evidence_for_slugs(ctx, ctx.slugs & _EMAIL_SLUGS)
+    return _combine_evidence(ctx, controls, dmarc, mx, outbound)
+
+
 def _email_security_insights(ctx: InsightContext) -> list[str]:
     if not _has_scoreable_email(ctx):
         if ctx.dmarc_policy:
+            dmarc_evidence = _evidence_for_source_types(ctx, frozenset({"DMARC"}))
             if ctx.dmarc_effective_policy and ctx.dmarc_effective_policy != ctx.dmarc_policy:
-                return [f"DMARC: {ctx.dmarc_policy} (effective {ctx.dmarc_effective_policy})"]
-            return [f"DMARC: {ctx.dmarc_policy}"]
+                return [
+                    _claim_text(
+                        f"DMARC: {ctx.dmarc_policy} (effective {ctx.dmarc_effective_policy})",
+                        evidence=dmarc_evidence,
+                        scope=("dns:dmarc",),
+                        allows_scope_only=True,
+                    )
+                ]
+            return [
+                _claim_text(
+                    f"DMARC: {ctx.dmarc_policy}",
+                    evidence=dmarc_evidence,
+                    scope=("dns:dmarc",),
+                    allows_scope_only=True,
+                )
+            ]
         return []
 
     score_parts, has_dkim = _email_score_parts(ctx)
@@ -333,18 +418,52 @@ def _email_security_insights(ctx: InsightContext) -> list[str]:
     # decorative). The machine-readable email_security_score field stays in
     # --json for consumers that need to sort/filter (see docs/schema.md).
     descriptor = "observed controls" if score_parts else "observed configuration"
-    insights: list[str] = [f"Email security: {descriptor}: {parts_str}"]
+    insights: list[str] = [
+        _claim_text(
+            f"Email security: {descriptor}: {parts_str}",
+            evidence=_email_summary_evidence(ctx),
+            scope=_EMAIL_OBSERVATION_SCOPE,
+            allows_scope_only=True,
+        )
+    ]
 
     # Auxiliary notes name the consequence the score line only implies.
     if ctx.dmarc_policy is not None and ctx.dmarc_effective_policy == "none":
         if ctx.dmarc_policy == "none":
-            insights.append("DMARC: none - monitoring mode, not enforced")
+            insights.append(
+                _claim_text(
+                    "DMARC: none - monitoring mode, not enforced",
+                    evidence=_evidence_for_source_types(ctx, frozenset({"DMARC"})),
+                    scope=("dns:dmarc",),
+                    allows_scope_only=True,
+                )
+            )
         else:
-            insights.append("DMARC: effective none after rollout or testing tags")
+            insights.append(
+                _claim_text(
+                    "DMARC: effective none after rollout or testing tags",
+                    evidence=_evidence_for_source_types(ctx, frozenset({"DMARC"})),
+                    scope=("dns:dmarc",),
+                    allows_scope_only=True,
+                )
+            )
     elif ctx.dmarc_policy is None:
-        insights.append("No valid DMARC policy record observed at apex")
+        insights.append(
+            _claim_text(
+                "No valid DMARC policy record observed at apex",
+                evidence=_evidence_for_slugs(ctx, frozenset({"dmarc-invalid"})),
+                scope=("dns:dmarc",),
+                allows_scope_only=True,
+            )
+        )
     if not has_dkim:
-        insights.append("No DKIM at common selectors observed (other selector names may exist)")
+        insights.append(
+            _claim_text(
+                "No DKIM at common selectors observed (other selector names may exist)",
+                scope=("dns:dkim_common_selectors",),
+                allows_scope_only=True,
+            )
+        )
 
     return insights
 
@@ -352,7 +471,14 @@ def _email_security_insights(ctx: InsightContext) -> list[str]:
 def _tenant_domain_insights(ctx: InsightContext) -> list[str]:
     """Report tenant-discovery cardinality without inferring organization size."""
     if ctx.domain_count >= 2:
-        return [f"Microsoft tenant discovery returned {ctx.domain_count} domains"]
+        return [
+            _claim_text(
+                f"Microsoft tenant discovery returned {ctx.domain_count} domains",
+                evidence=_evidence_for_rule_names(ctx, frozenset({"Autodiscover"})),
+                scope=("identity:autodiscover",),
+                allows_scope_only=True,
+            )
+        ]
     return []
 
 
@@ -360,46 +486,94 @@ def _gateway_insights(ctx: InsightContext) -> list[str]:
     """Report a gateway only when MX evidence established the topology field."""
     if ctx.email_gateway is None:
         return []
-    return [f"MX gateway observed: {ctx.email_gateway}"]
+    gateway_slugs = frozenset(
+        record.slug for record in ctx.evidence if record.source_type.upper() == "MX" and record.slug in GATEWAY_SLUGS
+    )
+    return [
+        _claim_text(
+            f"MX gateway observed: {ctx.email_gateway}",
+            evidence=_evidence_for_slugs(ctx, gateway_slugs, source_types=frozenset({"MX"})),
+            scope=("dns:mx",),
+            allows_scope_only=True,
+        )
+    ]
 
 
 def _provider_overlap_insights(ctx: InsightContext) -> list[str]:
     """Report simultaneous provider indicators without assigning a cause."""
-    if bool(ctx.slugs & _GOOGLE_SLUGS) and bool(ctx.slugs & _EXCHANGE_SLUGS):
-        return ["Provider indicators co-observed: Google Workspace, Microsoft 365"]
+    google_slugs = _claimable_slugs(ctx, _GOOGLE_SLUGS)
+    exchange_slugs = _claimable_slugs(ctx, _EXCHANGE_SLUGS)
+    if google_slugs and exchange_slugs:
+        return [
+            _claim_text(
+                "Provider indicators co-observed: Google Workspace, Microsoft 365",
+                evidence=_evidence_for_slugs(ctx, google_slugs | exchange_slugs),
+                scope=(),
+            )
+        ]
     return []
 
 
 def _security_vendor_insights(ctx: InsightContext) -> list[str]:
     """Report public vendor indicators without claiming an active stack."""
-    tools = [desc for slug, desc in _SEC_TOOL_SLUG_MAP.items() if slug in ctx.slugs]
+    active_slugs = _claimable_slugs(ctx, frozenset(_SEC_TOOL_SLUG_MAP))
+    tools = [desc for slug, desc in _SEC_TOOL_SLUG_MAP.items() if slug in active_slugs]
     if tools:
-        return [f"Security-vendor indicators observed: {', '.join(tools)}"]
+        return [
+            _claim_text(
+                f"Security-vendor indicators observed: {', '.join(tools)}",
+                evidence=_evidence_for_slugs(ctx, active_slugs),
+                scope=(),
+            )
+        ]
     return []
 
 
 def _device_management_insights(ctx: InsightContext) -> list[str]:
     """Report device-management vendor indicators without inferring a fleet."""
     providers: list[str] = []
-    if SVC_INTUNE_MDM in ctx.services:
+    intune_services = _claimable_services(ctx, frozenset({SVC_INTUNE_MDM}))
+    device_slugs = _claimable_slugs(ctx, frozenset({"jamf", "kandji"}))
+    if intune_services:
         providers.append("Intune")
-    if "jamf" in ctx.slugs:
+    if "jamf" in device_slugs:
         providers.append("Jamf")
-    if "kandji" in ctx.slugs:
+    if "kandji" in device_slugs:
         providers.append("Kandji")
     if not providers:
         return []
     label = "indicator" if len(providers) == 1 else "indicators"
-    return [f"Device-management vendor {label} observed: {', '.join(providers)}"]
+    return [
+        _claim_text(
+            f"Device-management vendor {label} observed: {', '.join(providers)}",
+            evidence=_combine_evidence(
+                ctx,
+                _evidence_for_rule_names(ctx, intune_services),
+                _evidence_for_slugs(ctx, device_slugs),
+            ),
+            scope=(),
+        )
+    ]
 
 
 def _infrastructure_insights(ctx: InsightContext) -> list[str]:
     cloud = []
     for svc in sorted(ctx.role_scoped_services):
         if svc.startswith(("DNS:", "CDN:", "Hosting:", "WAF:")):
-            cloud.append(svc.split(": ", 1)[1])
+            _role, separator, provider = svc.partition(": ")
+            if separator and provider:
+                cloud.append(provider)
     if cloud:
-        return [f"Infrastructure: {', '.join(cloud)}"]
+        active_services = frozenset(
+            service for service in ctx.role_scoped_services if service.startswith(("DNS:", "CDN:", "Hosting:", "WAF:"))
+        )
+        return [
+            _claim_text(
+                f"Infrastructure: {', '.join(cloud)}",
+                evidence=_evidence_for_rule_names(ctx, active_services),
+                scope=(),
+            )
+        ]
     return []
 
 
@@ -415,11 +589,18 @@ _NETWORK_SECURITY_SLUGS: dict[str, str] = {
 
 def _network_security_insights(ctx: InsightContext) -> list[str]:
     """Report network-security vendor indicators without inferring deployment."""
-    providers = [name for slug, name in _NETWORK_SECURITY_SLUGS.items() if slug in ctx.slugs]
+    active_slugs = _claimable_slugs(ctx, frozenset(_NETWORK_SECURITY_SLUGS))
+    providers = [name for slug, name in _NETWORK_SECURITY_SLUGS.items() if slug in active_slugs]
     if not providers:
         return []
     label = "indicator" if len(providers) == 1 else "indicators"
-    return [f"Network-security vendor {label} observed: {', '.join(providers)}"]
+    return [
+        _claim_text(
+            f"Network-security vendor {label} observed: {', '.join(providers)}",
+            evidence=_evidence_for_slugs(ctx, active_slugs),
+            scope=(),
+        )
+    ]
 
 
 _PKI_SLUG_MAP: dict[str, str] = {
@@ -433,20 +614,47 @@ _PKI_SLUG_MAP: dict[str, str] = {
 
 def _pki_insights(ctx: InsightContext) -> list[str]:
     """Surface certificate issuer authorizations from CAA records."""
-    cas = [name for slug, name in _PKI_SLUG_MAP.items() if slug in ctx.slugs]
+    active_slugs = _claimable_slugs(ctx, frozenset(_PKI_SLUG_MAP))
+    cas = [name for slug, name in _PKI_SLUG_MAP.items() if slug in active_slugs]
     if cas:
-        return [f"CAA issuer authorization observed: {', '.join(cas)}"]
+        return [
+            _claim_text(
+                f"CAA issuer authorization observed: {', '.join(cas)}",
+                evidence=_evidence_for_slugs(ctx, active_slugs, source_types=frozenset({"CAA"})),
+                scope=(),
+            )
+        ]
     return []
 
 
 def _google_auth_insights(ctx: InsightContext) -> list[str]:
     """Surface Google Workspace federated/managed identity insights."""
-    if "google-federated" in ctx.slugs:
+    active_slugs = _claimable_slugs(ctx, frozenset({"google-federated", "google-managed"}))
+    evidence = _evidence_for_slugs(ctx, active_slugs)
+    if "google-federated" in active_slugs:
         if ctx.google_idp_name:
-            return [f"Google Workspace: Federated identity via {ctx.google_idp_name}"]
-        return ["Google Workspace: Federated identity (external IdP)"]
-    if "google-managed" in ctx.slugs:
-        return ["Google Workspace: Managed identity (Google-native)"]
+            return [
+                _claim_text(
+                    f"Google Workspace: Federated identity via {ctx.google_idp_name}",
+                    evidence=evidence,
+                    scope=("identity:google_routing",),
+                )
+            ]
+        return [
+            _claim_text(
+                "Google Workspace: Federated identity (external IdP)",
+                evidence=evidence,
+                scope=("identity:google_routing",),
+            )
+        ]
+    if "google-managed" in active_slugs:
+        return [
+            _claim_text(
+                "Google Workspace: Managed identity (Google-native)",
+                evidence=evidence,
+                scope=("identity:google_routing",),
+            )
+        ]
     return []
 
 
@@ -460,7 +668,16 @@ def _google_modules_insights(ctx: InsightContext) -> list[str]:
         svc[len(_GWS_MODULE_PREFIX) :] for svc in ctx.role_scoped_services if svc.startswith(_GWS_MODULE_PREFIX)
     )
     if modules:
-        return [f"Google Workspace module indicators observed: {', '.join(modules)}"]
+        active_services = frozenset(
+            service for service in ctx.role_scoped_services if service.startswith(_GWS_MODULE_PREFIX)
+        )
+        return [
+            _claim_text(
+                f"Google Workspace module indicators observed: {', '.join(modules)}",
+                evidence=_evidence_for_rule_names(ctx, active_services),
+                scope=(),
+            )
+        ]
     return []
 
 
@@ -487,24 +704,28 @@ def _no_email_infrastructure_insights(ctx: InsightContext) -> list[str]:
     presence, parked domain, staging property, or email handled
     on a different apex. Observation, not a verdict.
     """
-    # Most important check: if MX records exist at all, there IS
-    # email. Don't fire the "no email" insight on custom/self-
-    # hosted mail servers.
-    if ctx.has_mx_records:
+    # Reuse the same typed predicate as the email-control summary. This keeps
+    # the two generators mutually exclusive when a control is observable even
+    # without MX, such as DKIM, MTA-STS, BIMI, or strict SPF.
+    if _has_scoreable_email(ctx):
         return []
     if ctx.primary_email_provider or ctx.likely_primary_email_provider or ctx.email_gateway:
         return []
     if ctx.dmarc_policy is not None:
         return []
-    if ctx.slugs & _EMAIL_SLUGS:
+    if _claimable_slugs(ctx, _EMAIL_SLUGS):
         return []
     if any(s.startswith("SPF") for s in ctx.services):
         return []
     return [
-        "No observable email infrastructure in the bounded checks: no MX, SPF, "
-        "or DMARC record and no DKIM response at the common selectors probed. "
-        "Consistent with a web-only presence, a parked domain, a staging property, "
-        "or email handled on a different domain. Observation, not a verdict."
+        _claim_text(
+            "No observable email infrastructure in the bounded checks: no MX, SPF, "
+            "or DMARC record and no DKIM response at the common selectors probed. "
+            "Consistent with a web-only presence, a parked domain, a staging property, "
+            "or email handled on a different domain. Observation, not a verdict.",
+            scope=("dns:mx", "dns:apex_txt", "dns:dmarc", "dns:dkim_common_selectors"),
+            allows_scope_only=True,
+        )
     ]
 
 
@@ -520,148 +741,26 @@ def _null_mx_insights(ctx: InsightContext) -> list[str]:
     if "null-mx" not in ctx.slugs:
         return []
     return [
-        "Null MX observed at the apex (RFC 7505): the publisher declares that "
-        "this domain accepts no mail. Subdomains and other apexes are out of "
-        "scope for that declaration. Observation, not a verdict."
-    ]
-
-
-def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
-    """Emit a hedged multi-sided observation when a domain's
-    public signal is thin.
-
-    On a parked or dormant domain, a heavily proxied namespace,
-    or an apex with services hosted elsewhere, recon can only report what's observable
-    — and without this explanation a user looking at a panel with
-    three service entries and a low confidence can reasonably
-    think the tool is broken. Saying explicitly "sparse public
-    signal — few observable records" frames the situation
-    honestly: this is what's knowable from passive public sources, and
-    it's not a tool failure.
-
-    The observation is followed by a concrete next-step hint
-    pointing at chain and batch modes, the two
-    workflows that can reveal bounded structure beyond a single
-    apex (CT-driven recursive discovery and cross-batch token or
-    display-name clustering). These workflows still report public
-    relationships; they do not establish organizational ownership.
-
-    Fires only when service count is low. The threshold is
-    deliberately generous — anything above 5 services is rich
-    enough that the user can see the picture on their own.
-    """
-    substantive = _substantive_services(ctx)
-    if len(substantive) >= 5:
-        return []
-    # Suppress on domains where we still got a tenant_id — that's
-    # not really "sparse", it's "M365 tenant only". The existing
-    # auth/provider lines already carry the signal.
-    if ctx.auth_type in ("Federated", "Managed") and any("microsoft 365" in s.lower() for s in ctx.services):
-        return []
-
-    edge = _edge_services(ctx)
-    # A Null MX apex is not sparse or unclassified. RFC 7505 makes it an
-    # explicit publisher declaration that the domain accepts no mail, so the
-    # operator is defined rather than unidentified. Its own observation is
-    # emitted by _null_mx_insights.
-    has_unclassified_mail = (
-        ctx.has_mx_records
-        and "null-mx" not in ctx.slugs
-        and (
-            "self-hosted-mail" in ctx.slugs
-            or "exchange-onprem" in ctx.slugs
-            or (
-                ctx.primary_email_provider is None
-                and ctx.likely_primary_email_provider is None
-                and ctx.email_gateway is None
-            )
+        _claim_text(
+            "Null MX observed at the apex (RFC 7505): the publisher declares that "
+            "this domain accepts no mail. Subdomains and other apexes are out of "
+            "scope for that declaration. Observation, not a verdict.",
+            evidence=_evidence_for_slugs(
+                ctx,
+                frozenset({"null-mx"}),
+                source_types=frozenset({"MX"}),
+            ),
+            scope=(),
         )
-    )
-
-    if has_unclassified_mail:
-        return [
-            "Sparse public signal: custom or unclassified MX. MX records exist, "
-            "but the public evidence does not identify their operator or hosting "
-            "model. Observation, not a verdict.",
-            _SPARSE_DOC_HINT,
-        ]
-
-    if edge and len(substantive) <= 3:
-        visible_edge = ", ".join(edge[:2])
-        if len(edge) > 2:
-            visible_edge = f"{visible_edge}, and other edge services"
-        return [
-            f"Sparse public signal — edge-heavy footprint. {visible_edge} sits "
-            "in front of the apex, which can hide origin and SaaS detail from "
-            "passive public-source collection. Observation, not a verdict.",
-            _SPARSE_DOC_HINT,
-        ]
-
-    if (
-        not ctx.has_mx_records
-        and ctx.auth_type is None
-        and ctx.google_auth_type is None
-        and not edge
-        and len(substantive) <= 2
-    ):
-        return [
-            "Sparse public signal — minimal public DNS footprint. Very little is "
-            "exposed beyond basic records, which is consistent with a "
-            "web-only property, a parked or dormant domain, or services hosted "
-            "on a different apex. Observation, not a verdict.",
-            _SPARSE_DOC_HINT,
-        ]
-
-    return [
-        "Sparse public signal — few observable records beyond MX and "
-        "identity. Consistent with a parked or dormant domain, a heavily "
-        "proxied namespace, or services hosted on a different apex. "
-        "Observation, not a verdict.",
-        _SPARSE_DOC_HINT,
     ]
 
 
 def _sovereignty_insights(ctx: InsightContext) -> list[str]:
-    """Surface Microsoft tenant sovereignty / cloud-instance info.
+    return sovereignty_insights(ctx)
 
-    Distinguishes commercial M365, US Government Community Cloud (GCC),
-    GCC High / DoD, and Azure China 21Vianet tenants based on the
-    OIDC discovery response's cloud_instance_name extension. All
-    insights are hedged with "(observed)" so they don't read as
-    confident verdicts about regulatory regime.
-    """
-    ci = (ctx.cloud_instance or "").lower()
-    sub = (ctx.tenant_region_sub_scope or "").strip()
-    mh = (ctx.msgraph_host or "").lower()
 
-    if not ci and not sub and not mh:
-        return []
-
-    results: list[str] = []
-
-    if host_has_suffix(ci, "microsoftonline.us") or host_has_suffix(mh, "graph.microsoft.us"):
-        if sub and sub.upper() in ("DOD", "GCCH"):
-            results.append(
-                f"Likely US Government GCC High / DoD tenant (observed cloud_instance={ci or 'microsoftonline.us'}, "
-                f"tenant_region_sub_scope={sub})"
-            )
-        else:
-            results.append(
-                f"Likely US Government Community Cloud (GCC) tenant "
-                f"(observed cloud_instance={ci or 'microsoftonline.us'})"
-            )
-    elif host_has_suffix(ci, "partner.microsoftonline.cn") or host_has_suffix(mh, "microsoftgraphchina.cn"):
-        results.append(
-            f"Likely Azure China 21Vianet tenant (observed cloud_instance={ci or 'partner.microsoftonline.cn'})"
-        )
-    elif host_has_suffix(ci, "b2clogin.com"):
-        results.append(f"Azure AD B2C tenant (observed cloud_instance={ci})")
-    elif ci and not host_has_suffix(ci, "microsoftonline.com"):
-        # Non-commercial cloud_instance we don't specifically recognize —
-        # surface it verbatim so users can investigate.
-        results.append(f"Non-commercial Microsoft cloud instance observed: {ci}")
-
-    return results
+def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
+    return sparse_signal_insights(ctx)
 
 
 # ── Ordered pipeline of all generators ──────────────────────────────────
@@ -685,6 +784,42 @@ _INSIGHT_GENERATORS = [
     _sparse_signal_insights,
 ]
 
+INSIGHT_GENERATOR_RULE_IDS = frozenset(generator.__name__ for generator in _INSIGHT_GENERATORS)
+
+
+def generate_insight_claims(ctx: InsightContext) -> list[InsightClaim]:
+    """Derive insights with exact generator and retained-evidence lineage.
+
+    The association is captured inside the ordered generation loop, while the
+    emitting generator is known. This avoids reconstructing lineage later from
+    rendered text. Absence-shaped claims carry the bounded observation scopes
+    whose successful collection makes the negative statement reportable.
+    """
+    claims: list[InsightClaim] = []
+    for generator in _INSIGHT_GENERATORS:
+        generator_rule_id = generator.__name__
+        for generated in generator(ctx):
+            if not isinstance(generated, _GeneratedInsight):
+                msg = f"Insight generator {generator_rule_id} returned an unattributed string"
+                raise RuntimeError(msg)
+            supporting_evidence = generated.supporting_evidence
+            observation_scope = generated.observation_scope
+            if not supporting_evidence and not generated.allows_scope_only:
+                continue
+            if not supporting_evidence and not observation_scope:
+                msg = f"Insight {generator_rule_id} has no evidence or observation scope"
+                raise RuntimeError(msg)
+            claims.append(
+                InsightClaim(
+                    text=str(generated),
+                    generator_rule_id=generator_rule_id,
+                    supporting_evidence=supporting_evidence,
+                    observation_scope=observation_scope,
+                    evidence_required=not generated.allows_scope_only,
+                )
+            )
+    return claims
+
 
 def generate_insights(
     services: set[str],
@@ -704,11 +839,7 @@ def generate_insights(
     dmarc_effective_policy: str | None = None,
     evidence: Iterable[EvidenceRecord] = (),
 ) -> list[str]:
-    """Derive intelligence signals from collected data.
-
-    Runs all insight generators in order and collects results.
-    Each generator is a pure function operating on an immutable context.
-    """
+    """Return the stable string projection of exact generated claims."""
     ctx = InsightContext.from_sets(
         services,
         slugs,
@@ -727,7 +858,4 @@ def generate_insights(
         has_mx_records=has_mx_records,
         evidence=evidence,
     )
-    insights: list[str] = []
-    for generator in _INSIGHT_GENERATORS:
-        insights.extend(generator(ctx))
-    return insights
+    return [claim.text for claim in generate_insight_claims(ctx)]

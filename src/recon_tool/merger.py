@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from typing import Any, NamedTuple
 
-from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
 from recon_tool.confidence import (
     compute_confidence,
     compute_evidence_confidence,
@@ -21,7 +20,7 @@ from recon_tool.constants import (
     email_security_score as _email_security_score,
 )
 from recon_tool.email_security import claim_safe_email_services, observed_email_control_services
-from recon_tool.insights import generate_insights
+from recon_tool.insight_pipeline import build_insights_with_signals
 from recon_tool.lexical import lexical_observations
 from recon_tool.merger_catalog import (
     dedupe_motifs,
@@ -36,13 +35,12 @@ from recon_tool.models import (
     ConfidenceLevel,
     EvidenceRecord,
     InfrastructureClusterReport,
+    InsightClaim,
     MergeConflicts,
     ReconLookupError,
-    SignalContext,
     SourceResult,
     TenantInfo,
 )
-from recon_tool.signals import SignalMatch, evaluate_signals, load_signals, signal_observation_label
 from recon_tool.validator import strip_control_chars
 
 __all__ = [
@@ -61,9 +59,6 @@ from recon_tool.merger_tables import (
     GATEWAY_SLUGS,
     LIKELY_PROVIDER_SLUG_NAMES,
     PROVIDER_INFERENCE_SOURCES,
-    SLUG_ACRONYMS,
-    SLUG_HUMAN_NAMES,
-    VARIANT_SLUG_PARENTS,
 )
 
 _GATEWAY_SLUGS = GATEWAY_SLUGS
@@ -71,52 +66,6 @@ _EMAIL_PROVIDER_SLUG_NAMES = EMAIL_PROVIDER_SLUG_NAMES
 _GATEWAY_SLUG_NAMES = GATEWAY_SLUG_NAMES
 _PROVIDER_INFERENCE_SOURCES = PROVIDER_INFERENCE_SOURCES
 _LIKELY_PROVIDER_SLUG_NAMES = LIKELY_PROVIDER_SLUG_NAMES
-_SLUG_HUMAN_NAMES = SLUG_HUMAN_NAMES
-_SLUG_ACRONYMS = SLUG_ACRONYMS
-_VARIANT_SLUG_PARENTS = VARIANT_SLUG_PARENTS
-
-
-def _humanize_slug(slug: str) -> str:
-    """Map a raw slug to a user-friendly display name."""
-    if slug in _SLUG_HUMAN_NAMES:
-        return _SLUG_HUMAN_NAMES[slug]
-    parts = slug.replace("_", "-").split("-")
-    out: list[str] = []
-    for part in parts:
-        if part.lower() in _SLUG_ACRONYMS:
-            out.append(part.upper())
-        else:
-            out.append(part.capitalize())
-    return " ".join(out)
-
-
-def _dedup_variant_slugs(slugs: tuple[str, ...]) -> tuple[str, ...]:
-    """Drop variant slugs from ``slugs`` when their parent is also
-    present. Preserves input order."""
-    slug_set = set(slugs)
-    out: list[str] = []
-    seen: set[str] = set()
-    for slug in slugs:
-        parent = _VARIANT_SLUG_PARENTS.get(slug)
-        if parent and parent in slug_set:
-            continue
-        if slug in seen:
-            continue
-        out.append(slug)
-        seen.add(slug)
-    return tuple(out)
-
-
-def _render_signal_observation(signal: SignalMatch) -> str | None:
-    """Render one signal without upgrading catalog matches into active use."""
-    label = signal_observation_label(signal.name)
-    if label is None:
-        return None
-    if not signal.matched:
-        return label
-    deduped = _dedup_variant_slugs(signal.matched)
-    matched_names = ", ".join(_humanize_slug(slug) for slug in deduped)
-    return f"{label}: {matched_names}"
 
 
 def compute_email_topology(
@@ -255,90 +204,6 @@ def compute_detection_scores(
         else:
             scores.append((slug, "low"))
     return tuple(scores)
-
-
-def build_insights_with_signals(
-    services: set[str],
-    slugs: set[str],
-    auth_type: str | None,
-    dmarc_policy: str | None,
-    domain_count: int,
-    email_security_score: int | None = None,
-    spf_include_count: int | None = None,
-    issuance_velocity: int | None = None,
-    google_auth_type: str | None = None,
-    google_idp_name: str | None = None,
-    dmarc_pct: int | None = None,
-    primary_email_provider: str | None = None,
-    likely_primary_email_provider: str | None = None,
-    email_gateway: str | None = None,
-    cloud_instance: str | None = None,
-    tenant_region_sub_scope: str | None = None,
-    msgraph_host: str | None = None,
-    has_mx_records: bool = False,
-    dmarc_effective_policy: str | None = None,
-    evidence: tuple[EvidenceRecord, ...] = (),
-) -> list[str]:
-    """Generate insights and append signal intelligence.
-
-    Shared by merge_results (initial merge) and _enrich_from_related
-    (related domain enrichment) to avoid duplicating the insight+signal
-    formatting pipeline.
-    """
-    dmarc_effective_policy = dmarc_effective_policy or _effective_dmarc_policy(dmarc_policy, dmarc_pct)
-    insights = generate_insights(
-        services,
-        slugs,
-        auth_type,
-        dmarc_policy,
-        domain_count,
-        google_auth_type=google_auth_type,
-        google_idp_name=google_idp_name,
-        cloud_instance=cloud_instance,
-        tenant_region_sub_scope=tenant_region_sub_scope,
-        msgraph_host=msgraph_host,
-        primary_email_provider=primary_email_provider,
-        likely_primary_email_provider=likely_primary_email_provider,
-        email_gateway=email_gateway,
-        has_mx_records=has_mx_records,
-        dmarc_effective_policy=dmarc_effective_policy,
-        evidence=evidence,
-    )
-    context = SignalContext(
-        detected_slugs=frozenset(slugs),
-        dmarc_policy=dmarc_policy,
-        dmarc_effective_policy=dmarc_effective_policy,
-        auth_type=auth_type,
-        email_security_score=email_security_score,
-        spf_include_count=spf_include_count,
-        issuance_velocity=issuance_velocity,
-        dmarc_pct=dmarc_pct,
-        primary_email_provider=primary_email_provider,
-        likely_primary_email_provider=likely_primary_email_provider,
-    )
-    active_signals = evaluate_signals(context)
-    for sig in active_signals:
-        observation = _render_signal_observation(sig)
-        if observation is not None and observation not in insights:
-            insights.append(observation)
-
-    # Third pass: absence evaluation (missing counterparts)
-    all_signal_defs = load_signals()
-    absence_signals = evaluate_absence_signals(active_signals, all_signal_defs, context.detected_slugs)
-    for sig in absence_signals:
-        observation = _render_signal_observation(sig)
-        if observation is not None and observation not in insights:
-            insights.append(observation)
-
-    # Positive-when-absent pass for hedged hardening observations.
-    # Runs on the *base* fired set (not including absence signals) so a
-    # hardening observation only fires from a genuine positive signal
-    # match, never from an absence signal firing.
-    positive_observations = evaluate_positive_absence(active_signals, all_signal_defs, context.detected_slugs)
-    for sig in positive_observations:
-        insights.append(f"{sig.name}: {sig.description}")
-
-    return insights
 
 
 # Placeholder tenant display names that are meaningless to a user.
@@ -704,11 +569,10 @@ def merge_results(
     cloud_instance, tenant_region_sub_scope, msgraph_host = _merge_oidc_metadata(usable_results)
 
     primary_email_provider, email_gateway, likely_primary_email_provider = compute_email_topology(observable_evidence)
-    # True if ANY MX evidence exists, regardless of slug match — lets
-    # downstream insights distinguish "no email" from "custom / self-hosted".
     has_mx_records = any(e.source_type == "MX" for e in observable_evidence)
-
+    all_degraded = _collect_degraded(results)
     # Build insights list, then append signal intelligence.
+    insight_claims: list[InsightClaim] = []
     insights = build_insights_with_signals(
         claim_safe_email_services(observable_services, observable_evidence),
         observable_slugs,
@@ -730,6 +594,8 @@ def merge_results(
         has_mx_records=has_mx_records,
         dmarc_effective_policy=dmarc_effective_policy,
         evidence=observable_evidence,
+        degraded_sources=tuple(sorted(all_degraded)),
+        insight_claims_out=insight_claims,
     )
 
     # Surface conflicting tenant IDs — high-value intel that explains why
@@ -738,7 +604,6 @@ def merge_results(
         conflicting = sorted({strip_control_chars(r.tenant_id) for r in usable_results if r.tenant_id is not None})
         insights.insert(0, f"Conflicting tenant IDs detected: {', '.join(conflicting)}")
 
-    all_degraded = _collect_degraded(results)
     confidence, evidence_confidence, inference_confidence = _finalize_confidence(
         base_confidence, observable_results, all_degraded, ct_provider_used
     )
@@ -770,6 +635,7 @@ def merge_results(
         tenant_domains=tenant_domains,
         related_domains=tuple(sorted(all_related)),
         insights=tuple(insights),
+        insight_claims=tuple(insight_claims),
         degraded_sources=tuple(sorted(all_degraded)),
         cert_summary=cert_summary,
         evidence=evidence_tuple,

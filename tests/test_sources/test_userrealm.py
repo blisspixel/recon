@@ -68,6 +68,10 @@ class TestUserRealmSourceLookup:
         assert result.default_domain == "synthetic-alpha.onmicrosoft.com"
         assert result.m365_detected is True
         assert result.error is None
+        assert any(
+            record.rule_name == "Autodiscover" and record.raw_value == "tenant_domain_count=3"
+            for record in result.evidence
+        )
 
     @pytest.mark.asyncio
     async def test_display_name_only_when_autodiscover_fails(self):

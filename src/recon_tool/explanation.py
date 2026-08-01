@@ -28,6 +28,11 @@ from recon_tool.explanation_dag import (
     rule_node_id,
     slug_node_id,
 )
+from recon_tool.insight_explanation import (
+    InsightExplanationContext,
+    normalize_insight_explanation_context,
+    take_exact_insight_explanation,
+)
 from recon_tool.models import (
     ConfidenceLevel,
     EvidenceRecord,
@@ -612,16 +617,22 @@ def explain_insights(
     slugs: frozenset[str],
     services: frozenset[str],
     evidence: tuple[EvidenceRecord, ...],
-    detection_scores: tuple[tuple[str, str], ...],
+    detection_scores: tuple[tuple[str, str], ...] | InsightExplanationContext,
 ) -> list[ExplanationRecord]:
     """Generate ExplanationRecords for all generated insights.
 
-    Maps each insight string back to the generator that likely produced it via
-    keyword matching (see ``_classify_insight``). Approximate by design, since
-    insights are free-form strings.
+    Exact claims captured inside the generation loop take precedence. Legacy,
+    signal-generated, conflict, and lexical strings without that internal
+    record retain the explicitly reconstructed classifier path.
     """
     records: list[ExplanationRecord] = []
+    detection_scores, unmatched_claims = normalize_insight_explanation_context(detection_scores)
     for insight in insights:
+        exact_record = take_exact_insight_explanation(insight, unmatched_claims)
+        if exact_record is not None:
+            records.append(exact_record)
+            continue
+
         relevant_slugs, relevant_evidence, fired_rules, confidence_parts = _classify_insight(insight, slugs, evidence)
 
         for slug in relevant_slugs:

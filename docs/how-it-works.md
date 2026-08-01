@@ -212,12 +212,14 @@ The structured explanation DAG reports `provenance_complete` and
 traceability gap; seeding unrelated evidence does not make its provenance
 complete.
 
-Some insight and posture generator associations are reconstructed from rendered
-text or proxy rule matches. Completeness is reachability in that emitted graph,
-not proof that every reconstructed generator association is exact. The first
-DMARC claim contract instead binds its evaluator atom to the collector-retained
-raw record. General generation-time lineage and per-query observation timestamps
-remain open work.
+Built-in generated insights retain the exact emitting rule plus supporting
+evidence occurrences or bounded observation scope before rendering. Signal,
+conflict, lexical, and posture associations can still be reconstructed from
+rendered text or proxy rule matches. Completeness is reachability in the emitted
+graph, not proof that every reconstructed association is exact. The first DMARC
+claim contract separately binds its evaluator atom to the collector-retained raw
+record. Exact lineage for the remaining terminal families and per-query
+observation timestamps remains open work.
 
 Use `recon alpha.invalid --explain-dag` for the separate Bayesian
 evidence-to-network renderer in text, DOT, or Mermaid form. That diagnostic does

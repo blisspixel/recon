@@ -60,10 +60,20 @@ At the 2026-07-31 checkpoint, the inventory contains 27 families and covers 89
 agent-guidance sections, 16 insight generators, 185 JSON property occurrences,
 167 MCP tool and output surfaces, 31 panel producers, 3 recommendation
 producers, 77 quantitative or categorical score fields, and 8 MCP instruction
-sections. Eighteen families are complete. Seven material runtime families have
-incomplete lineage: generated insights, explanations, panel assembly, service
-labels, posture observations, hardening guidance, and the exposure index. The
-two static guidance families also remain open for semantic review.
+sections. Nineteen families are complete. Six material runtime families have
+incomplete lineage: explanations, panel assembly, service labels, posture
+observations, hardening guidance, and the exposure index. Generated insights
+now retain their exact generator rule plus supporting evidence occurrences or
+bounded observation scope through live, projected, enriched, and cache-served
+results. Positive catalog and service claims require a retained occurrence, so
+related-namespace inventory without subject-qualified evidence cannot become a
+queried-namespace insight or declarative signal. Canonical observation scopes
+fail closed when any required collection opportunity is unavailable, including
+Autodiscover and OIDC metadata subchannels. Current cache reads and writes also
+reject incomplete or inconsistent generated-insight lineage while preserving
+valid degraded results. Role-specific claims such as an MX gateway attach only
+the occurrences that established that role. The two static guidance families
+remain open for semantic review.
 
 ## Update procedure
 

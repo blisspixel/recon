@@ -22,7 +22,8 @@ from recon_tool.constants import (
     SVC_SPF_SOFTFAIL,
     SVC_SPF_STRICT,
 )
-from recon_tool.models import EvidenceRecord, SourceResult, TenantInfo
+from recon_tool.insight_scopes import observation_scopes_available
+from recon_tool.models import EvidenceRecord, InsightClaim, SourceResult, TenantInfo
 from recon_tool.source_status import ObservationChannel, SourceStatus
 
 if TYPE_CHECKING:
@@ -168,6 +169,13 @@ _GOOGLE_IDENTITY_MARKERS = frozenset({"source:google_identity", "google_identity
 _GOOGLE_WORKSPACE_MARKERS = frozenset({"source:google_workspace", "google_workspace"})
 _IDENTITY_SOURCE_MARKERS = (
     _USER_REALM_MARKERS | _AUTODISCOVER_MARKERS | _OIDC_MARKERS | _GOOGLE_IDENTITY_MARKERS | _GOOGLE_WORKSPACE_MARKERS
+)
+_IDENTITY_EVIDENCE_RULES = (
+    (_USER_REALM_MARKERS, frozenset({"GetUserRealm"})),
+    (_AUTODISCOVER_MARKERS, frozenset({"Autodiscover"})),
+    (_OIDC_MARKERS, frozenset({"OIDC Discovery", "OIDC Discovery metadata"})),
+    (_GOOGLE_IDENTITY_MARKERS, frozenset({"Google Identity Routing"})),
+    (_GOOGLE_WORKSPACE_MARKERS, frozenset({"Google Workspace CSE"})),
 )
 
 
@@ -351,13 +359,10 @@ def _observable_evidence(
         apex_txt_slugs = {rule.slug for rule in (*get_txt_patterns(), *get_spf_patterns())}
 
     def observable(evidence: EvidenceRecord) -> bool:
-        if not degraded.isdisjoint(_USER_REALM_MARKERS) and evidence.rule_name == "GetUserRealm":
-            return False
-        if not degraded.isdisjoint(_OIDC_MARKERS) and evidence.rule_name == "OIDC Discovery":
-            return False
-        if not degraded.isdisjoint(_GOOGLE_IDENTITY_MARKERS) and evidence.rule_name == "Google Identity Routing":
-            return False
-        if not degraded.isdisjoint(_GOOGLE_WORKSPACE_MARKERS) and evidence.rule_name == "Google Workspace CSE":
+        if any(
+            not degraded.isdisjoint(markers) and evidence.rule_name in rule_names
+            for markers, rule_names in _IDENTITY_EVIDENCE_RULES
+        ):
             return False
         if status.whole_dns_unavailable and evidence.source_type.upper() in _DNS_EVIDENCE_SOURCE_TYPES:
             return False
@@ -406,7 +411,7 @@ def collection_observable_evidence(info: TenantInfo) -> tuple[EvidenceRecord, ..
 def collection_observable_result(result: SourceResult) -> SourceResult:
     """Return a source result whose derived fields exclude unavailable channels."""
     status = SourceStatus.from_degraded_sources(result.degraded_sources)
-    if not status.unavailable_channels and status.degraded_sources.isdisjoint(_IDENTITY_SOURCE_MARKERS):
+    if not status.degraded_sources:
         return result
 
     services = set(result.detected_services)
@@ -487,6 +492,12 @@ def collection_observable_result(result: SourceResult) -> SourceResult:
         chain_motifs=(() if status.channel_unavailable("cname") else result.chain_motifs),
         infrastructure_clusters=(None if status.whole_dns_unavailable else result.infrastructure_clusters),
         tenant_id=(None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else result.tenant_id),
+        region=(None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else result.region),
+        cloud_instance=(None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else result.cloud_instance),
+        tenant_region_sub_scope=(
+            None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else result.tenant_region_sub_scope
+        ),
+        msgraph_host=(None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else result.msgraph_host),
         display_name=(None if not status.degraded_sources.isdisjoint(_USER_REALM_MARKERS) else result.display_name),
         auth_type=(None if not status.degraded_sources.isdisjoint(_USER_REALM_MARKERS) else result.auth_type),
         tenant_domains=(() if not status.degraded_sources.isdisjoint(_AUTODISCOVER_MARKERS) else result.tenant_domains),
@@ -539,36 +550,39 @@ def _filter_signal_insights(
     return tuple(visible)
 
 
-def _generated_insights(info: TenantInfo, evidence: tuple[EvidenceRecord, ...]) -> set[str]:
-    """Regenerate the bounded base-insight family for one projected state."""
+def _generated_insight_claims(
+    info: TenantInfo,
+    evidence: tuple[EvidenceRecord, ...],
+) -> tuple[InsightClaim, ...]:
+    """Regenerate exact bounded insight claims for one projected state."""
     from recon_tool.constants import effective_dmarc_policy
     from recon_tool.email_security import claim_safe_email_services
-    from recon_tool.insights import generate_insights
+    from recon_tool.insights import InsightContext, generate_insight_claims
 
-    return set(
-        generate_insights(
-            claim_safe_email_services(info.services, evidence),
-            set(info.slugs),
-            info.auth_type,
+    context = InsightContext.from_sets(
+        claim_safe_email_services(info.services, evidence),
+        set(info.slugs),
+        info.auth_type,
+        info.dmarc_policy,
+        info.domain_count,
+        google_auth_type=info.google_auth_type,
+        google_idp_name=info.google_idp_name,
+        cloud_instance=info.cloud_instance,
+        tenant_region_sub_scope=info.tenant_region_sub_scope,
+        msgraph_host=info.msgraph_host,
+        primary_email_provider=info.primary_email_provider,
+        likely_primary_email_provider=info.likely_primary_email_provider,
+        email_gateway=info.email_gateway,
+        has_mx_records=any(item.source_type.upper() == "MX" for item in evidence),
+        dmarc_effective_policy=effective_dmarc_policy(
             info.dmarc_policy,
-            info.domain_count,
-            google_auth_type=info.google_auth_type,
-            google_idp_name=info.google_idp_name,
-            cloud_instance=info.cloud_instance,
-            tenant_region_sub_scope=info.tenant_region_sub_scope,
-            msgraph_host=info.msgraph_host,
-            primary_email_provider=info.primary_email_provider,
-            likely_primary_email_provider=info.likely_primary_email_provider,
-            email_gateway=info.email_gateway,
-            has_mx_records=any(item.source_type.upper() == "MX" for item in evidence),
-            dmarc_effective_policy=effective_dmarc_policy(
-                info.dmarc_policy,
-                info.dmarc_pct,
-                info.dmarc_testing,
-            ),
-            evidence=evidence,
-        )
+            info.dmarc_pct,
+            info.dmarc_testing,
+        ),
+        evidence=evidence,
+        evidence_bound=True,
     )
+    return tuple(generate_insight_claims(context))
 
 
 def _posterior_units_are_current(
@@ -640,13 +654,22 @@ def collection_observable_info(info: TenantInfo) -> TenantInfo:
     """
     visible_insights = claim_contract_insights(info.insights)
     status = SourceStatus.from_degraded_sources(info.degraded_sources)
-    if not status.unavailable_channels and status.degraded_sources.isdisjoint(_IDENTITY_SOURCE_MARKERS):
+    if not status.degraded_sources:
+        generated_claims = tuple(
+            claim for claim in _generated_insight_claims(info, info.evidence) if claim.text in visible_insights
+        )
         posterior_contract_current = _posterior_contract_is_current(info)
-        if visible_insights == info.insights and info.bimi_identity is None and posterior_contract_current:
+        if (
+            visible_insights == info.insights
+            and info.insight_claims == generated_claims
+            and info.bimi_identity is None
+            and posterior_contract_current
+        ):
             return info
         return replace(
             info,
             insights=visible_insights,
+            insight_claims=generated_claims,
             bimi_identity=None,
             posterior_observations=(info.posterior_observations if posterior_contract_current else ()),
             slug_confidences=(info.slug_confidences if posterior_contract_current else ()),
@@ -714,6 +737,7 @@ def collection_observable_info(info: TenantInfo) -> TenantInfo:
         services=tuple(sorted(services)),
         slugs=tuple(sorted(slugs)),
         insights=(),
+        insight_claims=(),
         dmarc_policy=info.dmarc_policy if status.channel_available("dmarc") else None,
         dmarc_pct=info.dmarc_pct if status.channel_available("dmarc") else None,
         dmarc_testing=info.dmarc_testing if status.channel_available("dmarc") else False,
@@ -766,8 +790,14 @@ def collection_observable_info(info: TenantInfo) -> TenantInfo:
         if not _insight_owned_by_unavailable_channel(insight, status)
         and not any(term in insight.lower() for term in unavailable_terms)
     )
-    raw_generated_insights = _generated_insights(info, info.evidence)
-    observable_generated_insights = _generated_insights(provisional, observable_evidence)
+    raw_generated_claims = _generated_insight_claims(info, info.evidence)
+    observable_generated_claims = tuple(
+        claim
+        for claim in _generated_insight_claims(provisional, observable_evidence)
+        if observation_scopes_available(claim.observation_scope, status.degraded_sources)
+    )
+    raw_generated_insights = {claim.text for claim in raw_generated_claims}
+    observable_generated_insights = {claim.text for claim in observable_generated_claims}
     channel_visible_insights = tuple(
         insight
         for insight in channel_visible_insights
@@ -783,6 +813,7 @@ def collection_observable_info(info: TenantInfo) -> TenantInfo:
     return replace(
         provisional,
         insights=insights,
+        insight_claims=tuple(claim for claim in observable_generated_claims if claim.text in insights),
         posterior_observations=info.posterior_observations if posterior_units_current else (),
         slug_confidences=provisional.slug_confidences if posterior_units_current else (),
     )

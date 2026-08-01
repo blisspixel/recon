@@ -22,6 +22,11 @@ from recon_tool.cache_catalog import (
     unclassified_dns_observations_from_dict,
 )
 from recon_tool.cache_contract import DEFAULT_TTL, MAX_RESULT_CACHE_FILE_BYTES, RESULT_CACHE_VERSION
+from recon_tool.cache_insights import (
+    insight_claims_from_cache,
+    insight_claims_to_cache,
+    validate_insight_claim_coverage,
+)
 from recon_tool.cache_paths import (
     resolve_cache_directory,
 )
@@ -120,17 +125,20 @@ def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
         if data.get("_cache_version") != _CACHE_VERSION:
             logger.debug("Cache version mismatch for %s; treating as a miss", domain)
             return None
+        if "insight_claims" not in data:
+            raise ValueError("Current cache payload is missing generated-insight lineage")
         info = tenant_info_from_dict(data)
+        validate_insight_claim_coverage(info)
         if info.queried_domain != expected_domain:
             raise ValueError("Cache payload domain does not match its cache key")
         cached_at = data.get("_cached_at")
         if isinstance(cached_at, str) and cached_at:
             info = dataclasses.replace(info, cached_at=cached_at)
         return info
-    except (OSError, OverflowError, TypeError, ValueError, json.JSONDecodeError, RecursionError):
-        # RecursionError (a RuntimeError, not ValueError) escapes the other
-        # entries; a deeply-nested poisoned cache file must degrade to a clean
-        # miss, not crash the lookup. See the module docstring's "never raises".
+    except Exception:
+        # Cache reads are best-effort by contract. Validation re-evaluates
+        # generated claims, so malformed state and any ordinary decoder or
+        # generator failure must degrade to a clean miss.
         logger.debug("Cache read failed for %s", domain, exc_info=True)
         return None
 
@@ -141,6 +149,7 @@ def cache_put(domain: str, info: TenantInfo) -> None:
         expected_domain = validate_domain(domain, apex=False)
         if info.queried_domain != expected_domain:
             raise ValueError("Cache payload domain does not match its cache key")
+        validate_insight_claim_coverage(info)
         d = resolve_cache_directory(create=True)
         if d is None:
             logger.debug("Cache write rejected redirected cache directory")
@@ -164,7 +173,9 @@ def cache_put(domain: str, info: TenantInfo) -> None:
             with contextlib.suppress(OSError):
                 os.unlink(tmp_name)
             raise
-    except (OSError, TypeError, ValueError, json.JSONDecodeError):
+    except Exception:
+        # Cache persistence must never turn a successful lookup into a caller
+        # failure. The debug record preserves the exception for maintainers.
         logger.debug("Cache write failed for %s", domain, exc_info=True)
 
 
@@ -401,6 +412,11 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         }
         for ev in info.evidence
     ]
+
+    # Internal generation-time lineage is cache state, not stable public JSON.
+    # Persist it with the insight strings so a cache hit never falls back to
+    # heuristic text reconstruction.
+    d["insight_claims"] = insight_claims_to_cache(info.insight_claims)
 
     # detection_scores tuple-of-tuples → dict
     d["detection_scores"] = dict(info.detection_scores)
@@ -849,6 +865,8 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
     # The stable field remains schema-compatible but is intentionally cleared.
     bimi_identity = None
 
+    insights = cache_string_tuple(data.get("insights", []), "insights")
+
     # EvidenceRecord list
     evidence_list = data.get("evidence", [])
     evidence: tuple[EvidenceRecord, ...] = ()
@@ -865,6 +883,12 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
                     )
                 )
         evidence = tuple(records)
+
+    insight_claims = insight_claims_from_cache(
+        data.get("insight_claims"),
+        insights=insights,
+        evidence=evidence,
+    )
 
     # detection_scores dict → tuple of tuples
     ds_data = data.get("detection_scores", {})
@@ -901,7 +925,8 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         domain_count=_cache_count(data.get("domain_count"), "domain_count"),
         tenant_domains=cache_string_tuple(data.get("tenant_domains", []), "tenant_domains"),
         related_domains=cache_string_tuple(data.get("related_domains", []), "related_domains"),
-        insights=cache_string_tuple(data.get("insights", []), "insights"),
+        insights=insights,
+        insight_claims=insight_claims,
         degraded_sources=_parse_degraded_sources(data),
         merge_conflicts=_parse_merge_conflicts(data.get("merge_conflicts")),
         cert_summary=cert_summary,

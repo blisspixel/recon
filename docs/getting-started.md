@@ -211,8 +211,10 @@ observations. `--services` remains accepted for compatibility; new
 workflows do not need it.
 
 Use `--explain` when a claim matters. It shows the evidence chain behind the
-result. Some insight and posture associations are reconstructed, so graph
-reachability is not exact generation-time lineage.
+result. Built-in generated insights retain their exact emitting rule and
+evidence-or-observation-scope association. Signal-adjacent, conflict, lexical,
+and posture associations can still be reconstructed, so graph reachability is
+not exact generation-time lineage for every terminal.
 
 Use `--plain` for screen readers, grep, and other linear-text workflows. It
 removes color and layout while preserving the observation content.

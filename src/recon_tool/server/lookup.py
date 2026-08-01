@@ -258,6 +258,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
         explain_signals,
         serialize_explanation,
     )
+    from recon_tool.insight_explanation import InsightExplanationContext
     from recon_tool.models import serialize_conflicts
     from recon_tool.signals import evaluate_signals, load_signals
 
@@ -294,7 +295,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
         frozenset(info.slugs),
         frozenset(info.services),
         observable_evidence,
-        info.detection_scores,
+        InsightExplanationContext(info.detection_scores, info.insight_claims),
     )
     all_explanations.extend(serialize_explanation(r) for r in insight_recs)
 

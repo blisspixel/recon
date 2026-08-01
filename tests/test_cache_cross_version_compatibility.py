@@ -1,37 +1,33 @@
-"""Cache compatibility with pre-v1.9.9 serialized data.
+"""Historical shape compatibility and the current disk-cache boundary.
 
-The v1.9.9 release adds two renderer-side panel surfaces (Multi-cloud
-rollup, Passive-DNS ceiling) but **introduces no new fields** in the
-``TenantInfo`` dataclass or its serialized cache form. The cache
-schema version (``_CACHE_VERSION`` in ``recon_tool/cache.py``) is
-unchanged between v1.9.8 and v1.9.9.
-
-The implication for operators: a cache written by v1.9.8 must (a)
-load without error under v1.9.9, and (b) render through the v1.9.9
-panel with the same operator-facing data plus the new v1.9.9
-surfaces, derived from the existing cache fields. No data migration
-is required; the new surfaces are pure functions of existing fields.
-
-These tests pin both halves of that contract:
-
-  * A synthesized v1.9.8-shape cache loads into v1.9.9 without error.
-  * The same cache rendered through v1.9.9 surfaces the new Multi-
-    cloud row when the cached data indicates multiple cloud vendors,
-    and the new ceiling footer when the cached data is sparse on a
-    multi-domain apex.
-
-A future patch that introduces a real cache-schema change would need
-to bump ``_CACHE_VERSION`` and update this test deliberately.
+The permissive dataclass decoder continues to accept older serialized field
+shapes for fixture and import compatibility. Disk reads are intentionally
+stricter: cache version 4 adds exact generated-insight lineage, so ``cache_get``
+must miss every pre-v4 entry rather than serve an insight without its
+generation-time association. Current-version disk round trips must preserve
+that lineage exactly.
 """
 
 from __future__ import annotations
 
 import json
+from copy import deepcopy
+from dataclasses import replace
 
+import pytest
 from rich.console import Console
 
-from recon_tool.cache import _CACHE_VERSION, tenant_info_from_dict
+from recon_tool.cache import (
+    _CACHE_VERSION,
+    cache_dir,
+    cache_get,
+    cache_put,
+    tenant_info_from_dict,
+    tenant_info_to_dict,
+)
 from recon_tool.formatter import render_tenant_panel
+from recon_tool.merger import merge_results
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, InsightClaim, SourceResult, TenantInfo
 
 
 def _render(info, **kwargs) -> str:
@@ -157,15 +153,180 @@ class TestCacheVersionConstantPinning:
     commit time. To intentionally bump, update both this constant
     and the synthesized fixtures above."""
 
-    _EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING = 3
+    _EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE = 4
 
     def test_cache_version_constant_matches_pinned_value(self):
         # The actual constant in cache.py may evolve. This test
         # exists to prevent silent bumps; if you intentionally
-        # changed _CACHE_VERSION, update _EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING
+        # changed _CACHE_VERSION, update _EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE
         # and document the change in the CHANGELOG.
-        assert _CACHE_VERSION == self._EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING, (
-            f"_CACHE_VERSION changed from {self._EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING} to {_CACHE_VERSION}. "
-            f"If this was intentional: update _EXPECTED_CACHE_VERSION_AFTER_DMARC_TESTING above, document the bump "
+        assert _CACHE_VERSION == self._EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE, (
+            f"_CACHE_VERSION changed from {self._EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE} to {_CACHE_VERSION}. "
+            f"If this was intentional: update _EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE above, document the bump "
             f"in CHANGELOG.md, and ensure the v1.9.9 compat fixtures above reflect the new schema."
         )
+
+    def test_pre_v4_disk_entry_is_a_cache_miss(self) -> None:
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain="example.invalid",
+            queried_domain="example.invalid",
+            confidence=ConfidenceLevel.LOW,
+        )
+        payload = tenant_info_to_dict(info)
+        payload["_cache_version"] = 3
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        (cache_dir() / "example.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
+
+        assert cache_get("example.invalid") is None
+
+    def test_v4_disk_round_trip_preserves_exact_insight_lineage(self) -> None:
+        evidence = EvidenceRecord("MX", "10 mx.proofpoint.invalid", "Proofpoint", "proofpoint")
+        claim = InsightClaim(
+            text="MX gateway observed: Proofpoint",
+            generator_rule_id="_gateway_insights",
+            supporting_evidence=(evidence,),
+            observation_scope=("dns:mx",),
+            evidence_required=False,
+        )
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain="example.invalid",
+            queried_domain="example.invalid",
+            confidence=ConfidenceLevel.MEDIUM,
+            services=("Proofpoint",),
+            slugs=("proofpoint",),
+            insights=(claim.text,),
+            insight_claims=(claim,),
+            evidence=(evidence,),
+            email_gateway="Proofpoint",
+        )
+
+        cache_put("example.invalid", info)
+        restored = cache_get("example.invalid")
+
+        assert restored is not None
+        assert restored.insight_claims == (claim,)
+
+    @pytest.mark.parametrize("corruption", ["missing", "empty", "duplicate", "mismatched"])
+    def test_v4_disk_entry_rejects_incomplete_or_inconsistent_lineage(self, corruption: str) -> None:
+        evidence = EvidenceRecord("MX", "10 mx.proofpoint.invalid", "Proofpoint", "proofpoint")
+        claim = InsightClaim(
+            text="MX gateway observed: Proofpoint",
+            generator_rule_id="_gateway_insights",
+            supporting_evidence=(evidence,),
+            observation_scope=("dns:mx",),
+            evidence_required=False,
+        )
+        domain = f"lineage-{corruption}.invalid"
+        payload = tenant_info_to_dict(
+            TenantInfo(
+                tenant_id=None,
+                display_name="Example",
+                default_domain=domain,
+                queried_domain=domain,
+                confidence=ConfidenceLevel.MEDIUM,
+                services=("Proofpoint",),
+                slugs=("proofpoint",),
+                insights=(claim.text,),
+                insight_claims=(claim,),
+                evidence=(evidence,),
+                email_gateway="Proofpoint",
+            )
+        )
+        corrupted = deepcopy(payload)
+        if corruption == "missing":
+            corrupted.pop("insight_claims")
+        elif corruption == "empty":
+            corrupted["insight_claims"] = []
+        elif corruption == "duplicate":
+            corrupted["insight_claims"].append(deepcopy(corrupted["insight_claims"][0]))
+        else:
+            corrupted["insight_claims"][0]["generator_rule_id"] = "_security_vendor_insights"
+        cache_dir().mkdir(parents=True, exist_ok=True)
+        (cache_dir() / f"{domain}.json").write_text(json.dumps(corrupted), encoding="utf-8")
+
+        assert cache_get(domain) is None
+
+    def test_v4_cache_write_rejects_missing_generated_lineage(self) -> None:
+        evidence = EvidenceRecord("MX", "10 mx.proofpoint.invalid", "Proofpoint", "proofpoint")
+        domain = "invalid-write-lineage.invalid"
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain=domain,
+            queried_domain=domain,
+            confidence=ConfidenceLevel.MEDIUM,
+            services=("Proofpoint",),
+            slugs=("proofpoint",),
+            insights=("MX gateway observed: Proofpoint",),
+            evidence=(evidence,),
+            email_gateway="Proofpoint",
+        )
+
+        cache_put(domain, info)
+
+        assert not (cache_dir() / f"{domain}.json").exists()
+
+    @pytest.mark.parametrize("marker", ["crt.sh", "dns:mx"])
+    def test_v4_round_trip_preserves_valid_degraded_resolution(self, marker: str) -> None:
+        domain = f"degraded-{marker.replace(':', '-')}.invalid"
+        info = merge_results(
+            [
+                SourceResult(
+                    source_name="dns_records",
+                    display_name="Example",
+                    default_domain=domain,
+                    evidence=(EvidenceRecord("A", "192.0.2.1", "Apex address", "apex-address"),),
+                    degraded_sources=(marker,),
+                )
+            ],
+            queried_domain=domain,
+        )
+
+        cache_put(domain, info)
+        restored = cache_get(domain)
+
+        assert restored is not None
+        assert restored.degraded_sources == (marker,)
+        assert restored.insight_claims == info.insight_claims
+
+    def test_cache_boundaries_isolate_claim_regeneration_errors(self, monkeypatch) -> None:
+        domain = "claim-regeneration.invalid"
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain=domain,
+            queried_domain=domain,
+            confidence=ConfidenceLevel.LOW,
+        )
+        cache_put(domain, info)
+
+        def fail_projection(_info: TenantInfo) -> TenantInfo:
+            raise IndexError("synthetic generator failure")
+
+        monkeypatch.setattr("recon_tool.collection_view.collection_observable_info", fail_projection)
+
+        assert cache_get(domain) is None
+        second_domain = "claim-write-regeneration.invalid"
+        cache_put(second_domain, replace(info, default_domain=second_domain, queried_domain=second_domain))
+        assert not (cache_dir() / f"{second_domain}.json").exists()
+
+    def test_v4_round_trip_ignores_malformed_role_label(self) -> None:
+        domain = "malformed-role.invalid"
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Example",
+            default_domain=domain,
+            queried_domain=domain,
+            confidence=ConfidenceLevel.LOW,
+            services=("DNS:",),
+            slugs=("malformed-dns",),
+            evidence=(EvidenceRecord("NS", "ns.example.invalid", "DNS:", "malformed-dns"),),
+        )
+
+        cache_put(domain, info)
+
+        assert cache_get(domain) is not None

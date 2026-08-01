@@ -60,6 +60,12 @@ class TestOIDCParsing:
         assert result.cloud_instance == "microsoftonline.us"
         assert result.tenant_region_sub_scope == "GCC"
         assert result.msgraph_host == "graph.microsoft.us"
+        metadata = [record for record in result.evidence if record.rule_name == "OIDC Discovery metadata"]
+        assert {record.raw_value for record in metadata} == {
+            "cloud_instance_name=microsoftonline.us",
+            "tenant_region_sub_scope=GCC",
+            "msgraph_host=graph.microsoft.us",
+        }
 
     def test_gcch_dod_tenant(self):
         resp = {

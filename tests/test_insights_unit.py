@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from typing import Any, cast
 
+import pytest
+
 from recon_tool.constants import SVC_BIMI, SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE, SVC_MTA_STS, SVC_SPF_STRICT
 from recon_tool.insights import (
     InsightContext,
@@ -14,6 +16,7 @@ from recon_tool.insights import (
     _google_modules_insights,
     _infrastructure_insights,
     _network_security_insights,
+    _no_email_infrastructure_insights,
     _pki_insights,
     _provider_overlap_insights,
     _security_vendor_insights,
@@ -86,6 +89,13 @@ class TestEmailSecurityInsights:
 
     def test_no_email_no_insights(self):
         assert _email_security_insights(_ctx()) == []
+
+    @pytest.mark.parametrize("control", [SVC_DKIM, SVC_MTA_STS, SVC_BIMI, SVC_SPF_STRICT])
+    def test_observed_control_suppresses_no_email_claim(self, control: str):
+        ctx = _ctx(services={control})
+
+        assert _email_security_insights(ctx)
+        assert _no_email_infrastructure_insights(ctx) == []
 
     def test_dmarc_none_warns(self):
         ctx = _ctx(slugs={"microsoft365"}, dmarc_policy="none")
@@ -271,6 +281,14 @@ class TestInfrastructureInsights:
 
         assert _infrastructure_insights(ctx) == ["Infrastructure: Fastly"]
 
+    def test_malformed_role_label_is_ignored_without_raising(self):
+        ctx = _ctx(
+            services={"DNS:"},
+            evidence=(EvidenceRecord("NS", "ns.example.invalid", "DNS:", "malformed-dns"),),
+        )
+
+        assert _infrastructure_insights(ctx) == []
+
 
 class TestSparseSignalInsights:
     def test_edge_heavy_sparse_domain_gets_specific_diagnosis(self):
@@ -308,6 +326,10 @@ class TestSparseSignalInsights:
             },
             slugs={"microsoft365", "okta"},
             auth_type="Federated",
+            evidence=tuple(
+                EvidenceRecord("TXT", f"evidence-{index}", service, f"service-{index}")
+                for index, service in enumerate(("Exchange Online", "Slack", "Atlassian", "Okta", "DNS: Cloudflare"))
+            ),
         )
         assert _sparse_signal_insights(ctx) == []
 
@@ -320,6 +342,13 @@ class TestGenerateInsightsIntegration:
             auth_type="Federated",
             dmarc_policy="reject",
             domain_count=25,
+            evidence=(
+                EvidenceRecord("HTTP", "NameSpaceType=Federated", "GetUserRealm", "microsoft365"),
+                EvidenceRecord("DKIM", "selector response", "DKIM (Exchange Online)", "microsoft365"),
+                EvidenceRecord("DMARC", "v=DMARC1; p=reject", "DMARC", "dmarc"),
+                EvidenceRecord("TXT", "crowdstrike=x", "CrowdStrike", "crowdstrike"),
+                EvidenceRecord("TXT", "intune=x", "Intune / MDM", "intune"),
+            ),
         )
         assert any(insight == "Microsoft tenant discovery returned 25 domains" for insight in insights)
         assert any(insight == "MX gateway observed: Proofpoint" for insight in insights) is False
@@ -381,9 +410,7 @@ class TestGoogleModuleInsights:
         """
         ctx = _ctx(
             services={"Google Workspace: Drive"},
-            evidence=(
-                EvidenceRecord("TXT", "google-site-verification=abc", "Google Workspace: Drive", "gws-drive"),
-            ),
+            evidence=(EvidenceRecord("TXT", "google-site-verification=abc", "Google Workspace: Drive", "gws-drive"),),
         )
 
         assert _google_modules_insights(ctx) == []

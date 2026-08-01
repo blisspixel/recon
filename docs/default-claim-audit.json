@@ -373,28 +373,43 @@
       "subject_scope": "controls observable in recon's public-evidence model for one queried namespace"
     },
     "runtime.generated-insight.v1": {
-      "audit_status": "open",
+      "audit_status": "complete",
       "claim_id": "runtime.generated-insight.v1",
       "classification": "documented_derivation",
       "evidence_path": [
+        "src/recon_tool/models.py#InsightClaim",
+        "src/recon_tool/insight_claims.py#GeneratedInsight",
+        "src/recon_tool/insights.py#generate_insight_claims",
+        "src/recon_tool/insight_scopes.py#observation_scopes_available",
+        "src/recon_tool/cache_insights.py#insight_claims_from_cache",
+        "src/recon_tool/collection_view.py#collection_observable_info",
         "src/recon_tool/models.py#EvidenceRecord",
         "src/recon_tool/source_status.py#SourceStatus"
       ],
       "limits": [
-        "Current explanation code reconstructs some generator lineage from rendered text.",
-        "Absence-shaped insights require successful bounded observation opportunities, not inferred global negatives."
+        "Exact lineage covers the bounded insight-generator family, not signal, conflict, lexical, or posture text produced elsewhere.",
+        "Absence-shaped insights record canonical bounded observation scopes; unknown scopes and every declared unavailable opportunity fail closed during collection projection.",
+        "Positive catalog and service claims require a retained, role-specific supporting occurrence; unscoped related-namespace inventory is withheld even when the queried namespace retained no evidence.",
+        "Related-namespace inventory is excluded from queried-namespace declarative-signal and sparse-result inputs.",
+        "Degraded results persist only the claims whose declared scopes remained observable, including when CT enrichment was incomplete.",
+        "Result-cache versions before v4 are invalidated, and v4 reads and writes reject missing, duplicate, or inconsistent generated-insight associations without allowing cache failures to escape."
       ],
-      "lineage_status": "incomplete",
+      "lineage_status": "exact",
       "material": true,
       "producer_paths": [
         "src/recon_tool/insights.py#generate_insights",
-        "src/recon_tool/merger.py#build_insights_with_signals",
+        "src/recon_tool/sparse_insights.py#sparse_signal_insights",
+        "src/recon_tool/sovereignty_insights.py#sovereignty_insights",
+        "src/recon_tool/insight_pipeline.py#build_insights_with_signals",
         "src/recon_tool/collection_view.py#collection_observable_info"
       ],
       "regression_tests": [
+        "tests/test_insight_lineage.py",
+        "tests/test_enrichment.py",
         "tests/test_insights.py",
         "tests/test_insights_unit.py",
-        "tests/test_hedging_invariants.py"
+        "tests/test_hedging_invariants.py",
+        "tests/test_cache_cross_version_compatibility.py"
       ],
       "renderer_obligations": [
         "Attach the exact generator rule ID and supporting retained evidence or bounded observation scope to every emitted insight."
