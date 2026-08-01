@@ -61,6 +61,11 @@ internal claim contract is implemented for exact apex DMARC `p=reject`
 Dependencies: none
 Risk: high product-trust risk, high compatibility sensitivity
 
+Default panel and MCP text assembly now preserve the queried namespace as the
+subject coordinate and derive panel-only workload summaries only from
+collection-observable evidence. The remaining runtime families are service
+labels, posture observations, hardening guidance, and the exposure index.
+
 ### Scope
 
 1. Inventory material claims emitted by the default panel and primary MCP

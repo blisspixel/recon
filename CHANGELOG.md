@@ -66,6 +66,15 @@ operator, corporate group, ownership, or control.
   `origin/main`, so a local repair supersedes the corresponding unpushed line
   instead of producing a stale historical violation. The explanation refactor
   also lowers the enforced excessive-branch ceiling from 10 to 8.
+- Default Rich panel assembly now uses the queried namespace as its subject
+  coordinate instead of substituting a differing tenant default domain; an
+  observable differing value remains available as an explicit `Tenant domain`
+  fact. Failed Autodiscover collection now masks a stale cached default domain
+  back to the queried namespace across Rich, MCP text, JSON, and Markdown.
+  Multi-cloud summaries consume only collection-observable endpoint-binding
+  evidence, so a failed CNAME channel cannot create a workload-provider claim
+  from retained raw provenance. The panel and MCP text assemblers now have
+  explicit producer, evidence, and regression paths in the default-claim audit.
 
 ### Security
 

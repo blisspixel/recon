@@ -35,7 +35,7 @@ new claim taxonomy.
 
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
-| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. Twenty are complete; five material runtime families have incomplete lineage and two static guidance families remain open. Explanations expose exact-lineage completeness while preserving schema-version-1 reachability, and generated insights retain the exact rule plus evidence-occurrence or bounded-scope associations through cache version 4. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
+| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 21 are complete; 4 material runtime families have incomplete lineage and two static guidance families remain open. Explanations expose exact-lineage completeness while preserving schema-version-1 reachability, generated insights retain exact rule and evidence-or-scope associations through cache version 4, and default panel assembly preserves the queried namespace plus collection availability. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-before-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | The exact stable `1.28.1` and `2.0.0` matrix passed 2026-07-28 and CI keeps both pins blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green; treat production v2 adoption as a separate release decision. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | Specified, not started. Extensive process evidence exists; product-outcome evidence does not. | A dated aggregate-safe scorecard with a decision rule written before the run, deciding whether advanced fusion stays primary or becomes an advanced diagnostic. |
 | [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the three core evidence and compatibility tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
@@ -116,9 +116,11 @@ lineage validation enforce that contract across degraded and enriched results.
 Explanation terminals now carry explicit exact, exact-rule-only, reconstructed,
 or unsupported lineage status. The additive exact-lineage diagnostics list
 every terminal without a retained evidence-to-rule association while the
-schema-version-1 reachability fields keep their stable meaning. Panel assembly,
-service labels, posture observations, hardening guidance, and the exposure
-index still have incomplete lineage. Static MCP and
+schema-version-1 reachability fields keep their stable meaning. Default panel
+assembly now uses the queried namespace coordinate, shares canonical projected
+field semantics, and excludes unavailable channel evidence from derived
+summaries. Service labels, posture observations, hardening guidance, and the
+exposure index still have incomplete lineage. Static MCP and
 generated-guidance semantics also remain open for review. Current sovereignty
 handling preserves absent metadata as unknown; that invariant should remain
 explicit and tested.
