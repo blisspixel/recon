@@ -45,13 +45,14 @@ def test_generated_top_level_fields_are_code_owned() -> None:
         "ct_cache_age_days",
         "ct_attempt_outcome",
         "evidence",
+        "explanations",
         "explanation_dag",
         "shared_display_name",
         "shared_tenant",
         "shared_verification_tokens",
         "unclassified_cname_chains",
     )
-    assert len(fields) == 56
+    assert len(fields) == 57
     assert len(fields) == len(set(fields))
 
 
@@ -67,6 +68,35 @@ def test_explanation_dag_fragment_describes_emitted_shape() -> None:
     assert fragment["properties"]["schema_version"] == {"const": 1}
     assert fragment["properties"]["provenance_complete"]["type"] == "boolean"
     assert fragment["properties"]["disconnected_terminals"]["items"] == {"type": "string"}
+    assert fragment["properties"]["exact_provenance_complete"]["type"] == "boolean"
+    assert fragment["properties"]["lineage_disconnected_terminals"]["items"] == {"type": "string"}
+
+
+def test_flat_explanation_fragment_describes_legacy_and_lineage_fields() -> None:
+    schema = GENERATOR.load_schema(GENERATOR._DOCS_SCHEMA)
+    fragment = schema["properties"]["explanations"]
+    record = schema["$defs"]["ExplanationRecord"]
+
+    assert fragment["items"] == {"$ref": "#/$defs/ExplanationRecord"}
+    assert set(record["required"]) == {
+        "item_name",
+        "item_type",
+        "matched_evidence",
+        "fired_rules",
+        "confidence_derivation",
+        "weakening_conditions",
+        "curated_explanation",
+    }
+    assert record["properties"]["matched_evidence"]["items"] == {"$ref": "#/$defs/EvidenceRecord"}
+    assert record["properties"]["lineage_status"]["enum"] == [
+        "exact",
+        "exact_rule_only",
+        "reconstructed",
+        "unsupported",
+    ]
+    assert record["properties"]["lineage_rule_ids"]["maxItems"] == 1
+    assert "lineage_status" not in record["required"]
+    assert "lineage_rule_ids" not in record["required"]
 
 
 def test_build_schema_rejects_missing_property_fragment() -> None:

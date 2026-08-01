@@ -1578,11 +1578,11 @@ Acceptance:
 ## 10. Reading current output
 
 - Default facts and deterministic deductions are the primary product surface.
-- `explanation_dag.provenance_complete` states whether every terminal claim is
-  reachable from canonical evidence in the emitted reconstructed graph;
-  `disconnected_terminals` names gaps. Reachability does not establish exact
-  generation-time lineage for insight or posture associations reconstructed
-  from rendered text or proxy rule matches.
+- `explanation_dag.provenance_complete` retains the schema-version-1 graph
+  reachability contract, and `disconnected_terminals` names physical graph
+  gaps. `exact_provenance_complete` applies the stronger generation-time
+  evidence-to-rule requirement, while `lineage_disconnected_terminals` names
+  every terminal that does not satisfy it.
 - `slug_confidences` are evidence-strength scores, not validated probabilities.
 - `posterior_observations[*].posterior` is exact for the committed Bayesian
   network and model-relative in the world.

@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 from io import StringIO
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 from rich.console import Console
@@ -148,6 +149,25 @@ class TestCLIExplainJSON:
         assert "explanations" in data
         assert isinstance(data["explanations"], list)
         assert len(data["explanations"]) > 0
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_explain_json_matches_published_flat_explanation_fragment(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain", "--json", "--no-cache"])
+        schema = json.loads(
+            (Path(__file__).resolve().parents[1] / "docs" / "recon-schema.json").read_text(encoding="utf-8")
+        )
+        fragment = schema["$defs"]["ExplanationRecord"]
+
+        assert result.exit_code == 0
+        explanations = json.loads(result.output)["explanations"]
+        assert explanations
+        for explanation in explanations:
+            assert set(fragment["required"]) <= set(explanation)
+            assert explanation["item_type"] in fragment["properties"]["item_type"]["enum"]
+            assert explanation["lineage_status"] in fragment["properties"]["lineage_status"]["enum"]
+            assert len(explanation["lineage_rule_ids"]) <= fragment["properties"]["lineage_rule_ids"]["maxItems"]
+            assert all(isinstance(item, str) for item in explanation["lineage_rule_ids"])
 
 
 class TestCLIExplainMarkdown:

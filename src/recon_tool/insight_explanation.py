@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from recon_tool.models import ExplanationRecord, InsightClaim
+from recon_tool.models import ExplanationLineageStatus, ExplanationRecord, InsightClaim
 
 DetectionScores = tuple[tuple[str, str], ...]
 
@@ -46,6 +46,11 @@ def take_exact_insight_explanation(
     claim = unmatched_claims.pop(exact_index)
     scope = ", ".join(claim.observation_scope) or "none"
     evidence_count = len(claim.supporting_evidence)
+    lineage_status = (
+        ExplanationLineageStatus.EXACT
+        if claim.supporting_evidence and claim.evidence_required
+        else ExplanationLineageStatus.EXACT_RULE_ONLY
+    )
     return ExplanationRecord(
         item_name=insight,
         item_type="insight",
@@ -57,7 +62,8 @@ def take_exact_insight_explanation(
             f"bounded observation scope: {scope}"
         ),
         weakening_conditions=tuple(
-            f"Claim must be withheld when observation scope is unavailable: {item}"
-            for item in claim.observation_scope
+            f"Claim must be withheld when observation scope is unavailable: {item}" for item in claim.observation_scope
         ),
+        lineage_status=lineage_status,
+        lineage_rule_ids=(claim.generator_rule_id,),
     )

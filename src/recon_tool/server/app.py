@@ -202,8 +202,10 @@ absence-is-not-disproof rule above.
 Use `lookup_tenant(domain, format="json", explain=True)` when the user asks
 "why" or "how do you know". In that JSON object's `explanation_dag`, evidence
 occurrences link to matching slug and rule nodes, which link to explanation
-terminals. Read `provenance_complete` and `disconnected_terminals` before
-treating the graph as a complete trace. `analyze_posture(domain, explain=True)`
+terminals. Read `exact_provenance_complete` and
+`lineage_disconnected_terminals` before treating the graph as an exact trace.
+The schema-version-1 `provenance_complete` field retains its broader
+graph-reachability meaning. `analyze_posture(domain, explain=True)`
 returns flat explanations for its observations, not an `explanation_dag`.
 """
 

@@ -41,6 +41,7 @@ CONDITIONAL_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "ct_cache_age_days",
     "ct_attempt_outcome",
     "evidence",
+    "explanations",
     "explanation_dag",
     "shared_display_name",
     "shared_tenant",

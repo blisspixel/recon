@@ -20,7 +20,10 @@ __all__ = [
     "summarize_batch_results",
 ]
 
-_SPARSE_PREFIX = "Sparse public signal —"
+_SPARSE_PREFIXES = (
+    "Sparse public signal:",
+    "Sparse public signal \N{EM DASH}",
+)
 _SEVERITY_ORDER = {"critical": 3, "high": 2, "medium": 1, "low": 0}
 _CONFIDENCE_ORDER = {"low": 0, "medium": 1, "high": 2}
 
@@ -87,7 +90,7 @@ def _first_sparse_insight(entry: dict[str, Any]) -> str | None:
     """Return the first sparse-signal diagnosis insight from a result entry."""
     for insight in entry.get("insights") or []:
         text = str(insight)
-        if text.startswith(_SPARSE_PREFIX):
+        if text.startswith(_SPARSE_PREFIXES):
             return text
     return None
 

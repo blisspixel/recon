@@ -200,26 +200,30 @@ explanation records:
 recon alpha.invalid --explain
 ```
 
-Use `--json --explain` when automation needs the reconstructed structured
-terminal-provenance DAG:
+Use `--json --explain` when automation needs the structured terminal-provenance
+DAG:
 
 ```bash
 recon alpha.invalid --json --explain
 ```
 
-The structured explanation DAG reports `provenance_complete` and
-`disconnected_terminals`. A disconnected terminal remains an identified
-traceability gap; seeding unrelated evidence does not make its provenance
-complete.
+The structured explanation DAG preserves the stable schema-version-1
+`provenance_complete` and `disconnected_terminals` reachability diagnostics. It
+also reports `exact_provenance_complete` and
+`lineage_disconnected_terminals`. The stronger pair requires an explicit
+evidence to exact rule to terminal path. Seeding unrelated evidence cannot
+complete that path.
 
 Built-in generated insights retain the exact emitting rule plus supporting
-evidence occurrences or bounded observation scope before rendering. Signal,
-conflict, lexical, and posture associations can still be reconstructed from
-rendered text or proxy rule matches. Completeness is reachability in the emitted
-graph, not proof that every reconstructed association is exact. The first DMARC
+evidence occurrences or bounded observation scope before rendering. Each flat
+and graph terminal identifies its lineage as exact, exact-rule-only,
+reconstructed, or unsupported. Simple positive signal and posture rules can
+retain exact slug support; metadata, negative-condition, confidence, legacy
+text, and proxy-matched paths remain qualified when their support is incomplete
+or reconstructed. The first DMARC
 claim contract separately binds its evaluator atom to the collector-retained raw
-record. Exact lineage for the remaining terminal families and per-query
-observation timestamps remains open work.
+record. Exact lineage for remaining claim families and per-query observation
+timestamps remains open work.
 
 Use `recon alpha.invalid --explain-dag` for the separate Bayesian
 evidence-to-network renderer in text, DOT, or Mermaid form. That diagnostic does

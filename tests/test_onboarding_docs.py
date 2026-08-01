@@ -95,7 +95,9 @@ def test_agent_guides_share_collection_delta_and_provenance_contracts() -> None:
         assert 'reports "No cached snapshot,"' in compact
         assert "exits with code 3 without emitting a delta" in compact
         assert "returns an empty diff" not in compact
-        assert "reachability does not prove exact generation-time lineage" in compact
+        assert "`exact_provenance_complete`" in compact
+        assert "`lineage_disconnected_terminals`" in compact
+        assert "broader graph-reachability meaning" in compact
 
 
 def test_agent_client_mcp_links_resolve_to_real_headings() -> None:
@@ -159,7 +161,7 @@ def test_agent_guidance_distinguishes_flat_explain_from_both_dags() -> None:
         guidance = path.read_text(encoding="utf-8")
         normalized = " ".join(guidance.split())
         assert "Plain `recon <domain> --explain` emits the panel, per-source status, and flat" in normalized
-        assert "`recon <domain> --json --explain` adds the reconstructed provenance graph" in normalized
+        assert "`recon <domain> --json --explain` adds the structured provenance graph" in normalized
         assert "`--explain-dag` flag renders the Bayesian inference DAG" in normalized
 
 

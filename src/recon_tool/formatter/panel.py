@@ -48,6 +48,7 @@ from recon_tool.formatter.delta import (  # re-exported: stable import path afte
     format_delta_json,
     render_delta_panel,
 )
+from recon_tool.formatter.explanations import format_explanations_list, render_explanations_panel
 from recon_tool.formatter.exposure import (  # re-exported: stable import path after the split
     format_exposure_dict,
     format_exposure_json,
@@ -77,7 +78,6 @@ from recon_tool.models import (
     CandidateValue,
     ChainReport,
     ConfidenceLevel,
-    ExplanationRecord,
     MergeConflicts,
     Observation,
     PosteriorObservation,
@@ -329,8 +329,7 @@ _SKIP_COMPACT_PREFIXES = (
 _SKIP_COMPACT_EXACT = frozenset({"(SPF)", "(site verified)"})
 
 _SPARSE_INSIGHT_PREFIXES = (
-    "Sparse public signal —",
-    "Next step — see docs/weak-areas.md",
+    "Sparse public signal:", "Sparse public signal \N{EM DASH}", "Next step:", "Next step \N{EM DASH}"
 )
 
 
@@ -1888,60 +1887,6 @@ def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
         padding=(1, 2),
         border_style="dim",
     )
-
-
-def render_explanations_panel(explanations: list[ExplanationRecord]) -> Panel:
-    """Render explanation records as a Rich panel for CLI --explain output."""
-    text = Text()
-
-    for i, rec in enumerate(explanations):
-        if i > 0:
-            text.append("\n\n")
-
-        # Header: item type + name
-        type_label = rec.item_type.capitalize()
-        text.append(f"  [{type_label}] ", style="bold")
-        text.append(f"{rec.item_name}\n")
-
-        # Curated explanation (from YAML explain field)
-        if rec.curated_explanation:
-            text.append(f"    {rec.curated_explanation}\n", style="dim italic")
-
-        # Fired rules
-        if rec.fired_rules:
-            text.append("    Rules: ", style="dim")
-            text.append(", ".join(rec.fired_rules))
-            text.append("\n")
-
-        # Confidence derivation
-        if rec.confidence_derivation:
-            text.append("    Confidence: ", style="dim")
-            text.append(f"{rec.confidence_derivation}\n")
-
-        # Evidence summary
-        if rec.matched_evidence:
-            text.append(f"    Evidence: {len(rec.matched_evidence)} record(s)\n", style="dim")
-
-        # Weakening conditions
-        if rec.weakening_conditions:
-            text.append("    Weakening:\n", style="dim")
-            for cond in rec.weakening_conditions:
-                text.append(f"      • {cond}\n", style="dim")
-
-    return Panel(
-        text,
-        title="Explanations",
-        width=80,
-        padding=(1, 2),
-        border_style="dim",
-    )
-
-
-def format_explanations_list(explanations: list[ExplanationRecord]) -> list[dict[str, Any]]:
-    """Serialize explanation records for JSON output."""
-    from recon_tool.explanation import serialize_explanation
-
-    return [serialize_explanation(rec) for rec in explanations]
 
 
 def render_conflict_annotation(

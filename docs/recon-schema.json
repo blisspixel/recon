@@ -454,6 +454,13 @@
         "$ref": "#/$defs/EvidenceRecord"
       }
     },
+    "explanations": {
+      "description": "Conditional. Present only with explained JSON through the CLI or lookup_tenant MCP tool, absent otherwise. Flat per-terminal explanations retained alongside explanation_dag for compatibility. Current output always includes lineage_status and lineage_rule_ids; those additive fields remain optional here so earlier v2 explained payloads stay valid.",
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/ExplanationRecord"
+      }
+    },
     "explanation_dag": {
       "description": "Conditional. Present only with --explain through the CLI or lookup_tenant MCP tool, absent otherwise; consumers should not treat it as always present. Occurrence-aware provenance graph with additive completeness diagnostics.",
       "type": "object",
@@ -480,11 +487,22 @@
         },
         "provenance_complete": {
           "type": "boolean",
-          "description": "True exactly when every signal, insight, observation, and confidence terminal is reachable from at least one evidence node in the emitted reconstructed graph. Reachability does not prove exact generation-time lineage for associations reconstructed from text or proxy matches."
+          "description": "Schema-version-1 compatibility diagnostic. True exactly when every signal, insight, observation, and confidence terminal is reachable from at least one evidence node in the emitted graph. Use exact_provenance_complete for exact generation-time evidence-to-rule lineage."
         },
         "disconnected_terminals": {
           "type": "array",
           "description": "Sorted terminal node ids that are not reachable from any evidence node.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "exact_provenance_complete": {
+          "type": "boolean",
+          "description": "True exactly when every terminal has an explicit exact generation-time evidence-to-rule-to-terminal path."
+        },
+        "lineage_disconnected_terminals": {
+          "type": "array",
+          "description": "Sorted terminal node ids without an explicit exact evidence-to-rule path, including exact-rule-only, reconstructed, unsupported, and evidence-empty terminals.",
           "items": {
             "type": "string"
           }
@@ -723,6 +741,74 @@
         },
         "slug": {
           "type": "string"
+        }
+      }
+    },
+    "ExplanationRecord": {
+      "description": "One flat explanation terminal. The seven required fields are the stable pre-lineage shape; lineage_status and lineage_rule_ids are additive diagnostics emitted by current versions.",
+      "type": "object",
+      "required": [
+        "item_name",
+        "item_type",
+        "matched_evidence",
+        "fired_rules",
+        "confidence_derivation",
+        "weakening_conditions",
+        "curated_explanation"
+      ],
+      "properties": {
+        "item_name": {
+          "type": "string"
+        },
+        "item_type": {
+          "type": "string",
+          "enum": [
+            "insight",
+            "signal",
+            "observation",
+            "confidence"
+          ]
+        },
+        "matched_evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceRecord"
+          }
+        },
+        "fired_rules": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "confidence_derivation": {
+          "type": "string"
+        },
+        "weakening_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "curated_explanation": {
+          "type": "string"
+        },
+        "lineage_status": {
+          "type": "string",
+          "enum": [
+            "exact",
+            "exact_rule_only",
+            "reconstructed",
+            "unsupported"
+          ]
+        },
+        "lineage_rule_ids": {
+          "type": "array",
+          "maxItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

@@ -126,7 +126,7 @@ def sparse_signal_insights(ctx: SparseInsightContext) -> list[str]:
         edge_evidence = evidence_for_rule_names(ctx, edge_services)
         return [
             claim_text(
-                f"Sparse public signal — edge-heavy footprint. {visible_edge} sits "
+                f"Sparse public signal: edge-heavy footprint. {visible_edge} sits "
                 "in front of the apex, which can hide origin and SaaS detail from "
                 "passive public-source collection. Observation, not a verdict.",
                 evidence=edge_evidence,
@@ -144,7 +144,7 @@ def sparse_signal_insights(ctx: SparseInsightContext) -> list[str]:
     ):
         return [
             claim_text(
-                "Sparse public signal — minimal public DNS footprint. Very little is "
+                "Sparse public signal: minimal public DNS footprint. Very little is "
                 "exposed beyond basic records, which is consistent with a "
                 "web-only property, a parked or dormant domain, or services hosted "
                 "on a different apex. Observation, not a verdict.",
@@ -156,7 +156,7 @@ def sparse_signal_insights(ctx: SparseInsightContext) -> list[str]:
 
     return [
         claim_text(
-            "Sparse public signal — few observable records beyond MX and "
+            "Sparse public signal: few observable records beyond MX and "
             "identity. Consistent with a parked or dormant domain, a heavily "
             "proxied namespace, or services hosted on a different apex. "
             "Observation, not a verdict.",

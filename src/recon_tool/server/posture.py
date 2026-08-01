@@ -192,6 +192,8 @@ class ExplanationSummary(TypedDict):
     confidence_derivation: str
     weakening_conditions: list[str]
     curated_explanation: str
+    lineage_status: Literal["exact", "exact_rule_only", "reconstructed", "unsupported"]
+    lineage_rule_ids: list[str]
 
 
 class PostureAnalysisEnvelope(TypedDict):

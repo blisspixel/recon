@@ -316,31 +316,36 @@
       "subject_scope": "public mail routing and provider indicators for the queried apex"
     },
     "runtime.explanation-provenance.v1": {
-      "audit_status": "open",
+      "audit_status": "complete",
       "claim_id": "runtime.explanation-provenance.v1",
       "classification": "documented_derivation",
       "evidence_path": [
+        "src/recon_tool/models.py#ExplanationLineageStatus",
         "src/recon_tool/models.py#ExplanationRecord",
-        "src/recon_tool/models.py#EvidenceRecord"
+        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/models.py#InsightClaim"
       ],
       "limits": [
-        "Legacy cached insight strings can lack exact generation-time lineage.",
-        "Positive-evidence reachability alone cannot prove exact rule association."
+        "Schema-version-1 provenance_complete retains its stable graph-reachability meaning; exact_provenance_complete is the stronger exact-lineage diagnostic.",
+        "An exact_rule_only terminal retains its emitting rule but remains lineage-disconnected because raw support is absent or incomplete.",
+        "Exact lineage records currently retain exactly one emitter ID; multiple rule IDs are rejected because the record does not encode a per-rule evidence partition.",
+        "Legacy caller-supplied insight strings and proxy-matched posture observations remain explicitly reconstructed and lineage-disconnected."
       ],
-      "lineage_status": "incomplete",
+      "lineage_status": "exact",
       "material": true,
       "producer_paths": [
-        "src/recon_tool/explanation.py#explain_insights",
+        "src/recon_tool/explanation_insights.py#explain_insights",
         "src/recon_tool/explanation.py#build_explanation_dag",
         "src/recon_tool/explanation_dag.py#finalize_dag"
       ],
       "regression_tests": [
+        "tests/test_explanation_lineage.py",
         "tests/test_explanation_coverage.py",
         "tests/test_explanation_dag.py",
         "tests/test_explanation_engine.py"
       ],
       "renderer_obligations": [
-        "Report exact generation-time rule lineage when available and mark every unsupported or reconstructed terminal disconnected."
+        "Report each terminal as exact, exact-rule-only, reconstructed, or unsupported; preserve schema-version-1 reachability fields; and list every terminal without an exact evidence-to-rule path in lineage_disconnected_terminals."
       ],
       "subject_scope": "one rendered signal, insight, posture observation, or confidence terminal"
     },
@@ -927,6 +932,7 @@
       "evidence_confidence": "runtime.confidence-summary.v1",
       "evidence_conflicts": "runtime.collection-status.v1",
       "explanation_dag": "runtime.explanation-provenance.v1",
+      "explanations": "runtime.explanation-provenance.v1",
       "fingerprint_metadata": "runtime.catalog-indicator.v1",
       "fusion_enabled": "runtime.inference-diagnostics.v1",
       "google_auth_type": "runtime.identity-and-tenant.v1",
@@ -987,6 +993,8 @@
     },
     "panel_producers": {
       "src/recon_tool/formatter/delta.py#render_delta_panel": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/explanations.py#format_explanations_list": "runtime.explanation-provenance.v1",
+      "src/recon_tool/formatter/explanations.py#render_explanations_panel": "runtime.explanation-provenance.v1",
       "src/recon_tool/formatter/exposure.py#render_exposure_panel": "runtime.exposure-index.v1",
       "src/recon_tool/formatter/exposure.py#render_gaps_panel": "runtime.hardening-guidance.v1",
       "src/recon_tool/formatter/panel.py#_render_certs": "runtime.ct-observation.v1",
@@ -1004,12 +1012,10 @@
       "src/recon_tool/formatter/panel.py#_render_verbose_detail": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel.py#format_chain_dict": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#format_comparison_dict": "runtime.posture-observation.v1",
-      "src/recon_tool/formatter/panel.py#format_explanations_list": "runtime.explanation-provenance.v1",
       "src/recon_tool/formatter/panel.py#format_posture_observations": "runtime.posture-observation.v1",
       "src/recon_tool/formatter/panel.py#render_chain_panel": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#render_conflict_annotation": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel.py#render_error": "runtime.collection-status.v1",
-      "src/recon_tool/formatter/panel.py#render_explanations_panel": "runtime.explanation-provenance.v1",
       "src/recon_tool/formatter/panel.py#render_posture_panel": "runtime.posture-observation.v1",
       "src/recon_tool/formatter/panel.py#render_source_status_panel": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel.py#render_sources_detail": "runtime.collection-status.v1",
@@ -1028,6 +1034,7 @@
       "docs/recon-schema.json#/$defs/DeltaReport/properties/changed_confidence": "runtime.confidence-summary.v1",
       "docs/recon-schema.json#/$defs/DeltaReport/properties/changed_email_security_score": "runtime.email-control-observation.v1",
       "docs/recon-schema.json#/$defs/EvidenceConflict/properties/candidates/items/properties/confidence": "runtime.collection-status.v1",
+      "docs/recon-schema.json#/$defs/ExplanationRecord/properties/confidence_derivation": "runtime.confidence-summary.v1",
       "docs/recon-schema.json#/$defs/InfrastructureClusterReport/properties/modularity": "runtime.ct-observation.v1",
       "docs/recon-schema.json#/$defs/InfrastructureClusterReport/properties/partition_stability": "runtime.ct-observation.v1",
       "docs/recon-schema.json#/$defs/InfrastructureClusterReport/properties/stability_runs": "runtime.ct-observation.v1",
@@ -1125,6 +1132,7 @@
       "EcosystemHyperedge": "runtime.cross-domain-overlap.v1",
       "EvidenceConflict": "runtime.collection-status.v1",
       "EvidenceRecord": "runtime.collection-status.v1",
+      "ExplanationRecord": "runtime.explanation-provenance.v1",
       "FingerprintMetadata": "runtime.catalog-indicator.v1",
       "InfrastructureCluster": "runtime.ct-observation.v1",
       "InfrastructureClusterReport": "runtime.ct-observation.v1",
@@ -1140,7 +1148,7 @@
     ],
     "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
     "surface_digests": {
-      "json_fields": "2dfcf87756ecc33fdad6ba4d398ad18b6cfecb203d67a0537939c77a6fed06ed",
+      "json_fields": "81b985e5d9444fab6a4e5dfc716b03e2b3fcb1ff5eaa11c4f1b41a5e03aae2cf",
       "mcp_tools": "c59ecbdf8be5a380e6eb6d921641afcce70c48e02e0a71b63e90a4cebff9f8dd"
     }
   },

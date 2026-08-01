@@ -81,6 +81,58 @@ def test_audit_added_lines_allows_clean_text() -> None:
     assert CHECKER.audit_added_lines(lines) == []
 
 
+def test_collect_added_lines_audits_effective_tree_when_branch_is_ahead(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    diff = "\n".join(
+        [
+            "diff --git a/note.txt b/note.txt",
+            "+++ b/note.txt",
+            "@@ -1 +1 @@",
+            "-superseded committed line",
+            "+clean effective line",
+        ]
+    )
+    calls: list[list[str]] = []
+
+    def fake_diff(args: list[str]) -> str:
+        calls.append(args)
+        return diff
+
+    monkeypatch.setattr(CHECKER, "_branch_status", lambda: "## main...origin/main [ahead 2]")
+    monkeypatch.setattr(CHECKER, "_diff_or_error", fake_diff)
+    monkeypatch.setattr(CHECKER, "_untracked_added_lines", list)
+
+    lines = CHECKER.collect_added_lines([])
+
+    assert calls == [["diff", "--no-ext-diff", "-U0", "origin/main"]]
+    assert [(line.source, line.text) for line in lines] == [("origin/main effective tree", "clean effective line")]
+
+
+def test_collect_added_lines_audits_untracked_text(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    import subprocess
+
+    def _git(*args: str) -> None:
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)  # noqa: S603, S607
+
+    _git("init", "-q")
+    _git("config", "user.email", "test@example.com")
+    _git("config", "user.name", "test")
+    baseline = tmp_path / "baseline.txt"
+    baseline.write_text("baseline\n", encoding="utf-8")
+    _git("add", "baseline.txt")
+    _git("commit", "-qm", "init")
+    untracked = tmp_path / "new-note.txt"
+    untracked.write_text(f"forbidden {chr(0x2014)} marker\n", encoding="utf-8")
+
+    monkeypatch.setattr(CHECKER, "ROOT", tmp_path)
+    violations = CHECKER.audit_added_lines(CHECKER.collect_added_lines([]))
+
+    assert [(item.source, item.path, item.line_number, item.marker) for item in violations] == [
+        ("untracked", "new-note.txt", 1, "em dash")
+    ]
+
+
 def test_collect_added_lines_decodes_utf8_em_dash(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Git diff output must be decoded as UTF-8, not the platform locale, so an
     em dash (U+2014) in an added line is caught on Windows the same as in CI.

@@ -44,7 +44,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--md` | Stable | Markdown H2 section structure is stable; prose is not. |
 | `--full` / `-f` | Stable | Expanded evidence + all domains + posture; retains the default Services summary. |
 | `--verbose` / `-v` | Stable | Expanded evidence, confidence and detection detail, plus per-source status on stderr. |
-| `--explain` | Stable | Panel, source status, and flat evidence explanations; `--json --explain` additionally emits the reconstructed `explanation_dag`. |
+| `--explain` | Stable | Panel, source status, and flat evidence explanations; `--json --explain` additionally emits the structured, lineage-qualified `explanation_dag`. |
 | `--services` / `-s` | Stable | Retained for compatibility; Services are shown by default. |
 | `--domains` / `-d` | Stable | Shows all tenant and related domains. |
 | `--sources` | Stable | Per-source resolution status table. |
@@ -141,7 +141,7 @@ The full top-level JSON contract is in [`schema.md`](schema.md) and the
 machine-readable schema is [`recon-schema.json`](recon-schema.json). Summary of
 stability tags:
 
-- **56 top-level properties, 47 required on single-domain success output**,
+- **57 top-level properties, 47 required on single-domain success output**,
   covering identity, provider, sources, services, domains, email security, CT
   metadata, sovereignty, and nested `cert_summary` / `bimi_identity` objects.
 - **Bayesian fusion fields** (`slug_confidences`,

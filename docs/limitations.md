@@ -263,16 +263,16 @@ Best practices:
 - Treat outputs marked **Confidence: Low** or supported by only one qualifying
   source as investigation leads, not conclusions. Under the current merged
   confidence rule, a one-source result cannot receive the overall High tier.
-- `--explain` shows flat retained-evidence explanations. `--json --explain`
-  additionally emits the reconstructed `explanation_dag`, including
-  provenance-completeness and disconnected-terminal diagnostics. Use the JSON
-  form when a specific path matters, and do not assume every terminal has a
-  complete canonical path.
+- `--explain` shows flat retained-evidence explanations with an explicit
+  `exact`, `exact_rule_only`, `reconstructed`, or `unsupported` lineage label.
+  `--json --explain` additionally emits `explanation_dag`. Use
+  `exact_provenance_complete` and `lineage_disconnected_terminals` when an exact
+  evidence-to-rule path matters.
 - Built-in generated insights retain exact generation-time associations.
-  Signal-adjacent, conflict, lexical, and posture associations can still be
-  reconstructed from rendered text or proxy rule matches.
-  `provenance_complete=true` establishes reachability in the emitted graph, not
-  exact generation-time lineage for every terminal.
+  Confidence, legacy insight, and proxy-matched posture associations can still
+  be reconstructed. Schema-version-1 `provenance_complete=true` establishes
+  reachability in the emitted graph, not exact generation-time lineage for
+  every terminal.
 - `inference_confidence` describes the strongest error-free, same-claim
   corroboration chain. Evidence from failed sources or unrelated provider and
   service claims is not pooled. `--explain` identifies the winning claim and

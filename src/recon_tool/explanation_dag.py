@@ -42,6 +42,8 @@ def record_sort_key(record: ExplanationRecord) -> tuple[Any, ...]:
         tuple(sorted(record.fired_rules)),
         tuple(sorted(record.weakening_conditions)),
         record.curated_explanation,
+        record.lineage_status.value,
+        tuple(sorted(record.lineage_rule_ids)),
         tuple(sorted(evidence_sort_key(evidence) for evidence in record.matched_evidence)),
     )
 
@@ -68,14 +70,16 @@ def add_evidence_node(
     edges.append({"source": evidence_id, "target": slug_id, "relation": "detected-by"})
 
 
-def disconnected_terminals(
+def _disconnected_terminals(
     nodes: dict[str, dict[str, Any]],
     edges: list[dict[str, Any]],
+    relations: frozenset[str] | None,
 ) -> list[str]:
-    """Return sorted terminal ids that no evidence occurrence can reach."""
+    """Return terminals unreachable through all or selected edge relations."""
     adjacency: dict[str, list[str]] = {}
     for edge in edges:
-        adjacency.setdefault(edge["source"], []).append(edge["target"])
+        if relations is None or edge["relation"] in relations:
+            adjacency.setdefault(edge["source"], []).append(edge["target"])
     reachable = {node_id for node_id, node in nodes.items() if node["type"] == "evidence"}
     frontier = list(reachable)
     while frontier:
@@ -89,15 +93,34 @@ def disconnected_terminals(
     )
 
 
+def disconnected_terminals(
+    nodes: dict[str, dict[str, Any]],
+    edges: list[dict[str, Any]],
+) -> list[str]:
+    """Return sorted terminal ids that no evidence occurrence can reach."""
+    return _disconnected_terminals(nodes, edges, None)
+
+
+def lineage_disconnected_terminals(
+    nodes: dict[str, dict[str, Any]],
+    edges: list[dict[str, Any]],
+) -> list[str]:
+    """Return terminals without an explicit exact evidence-to-rule path."""
+    return _disconnected_terminals(nodes, edges, frozenset({"supports-rule", "fired"}))
+
+
 def finalize_dag(nodes: dict[str, dict[str, Any]], edges: list[dict[str, Any]]) -> dict[str, Any]:
     """Deduplicate and canonicalize edges, then attach reachability diagnostics."""
     unique = {(edge["source"], edge["target"], edge["relation"]): edge for edge in edges}
     canonical_edges = [unique[key] for key in sorted(unique)]
     disconnected = disconnected_terminals(nodes, canonical_edges)
+    lineage_disconnected = lineage_disconnected_terminals(nodes, canonical_edges)
     return {
         "nodes": list(nodes.values()),
         "edges": canonical_edges,
         "schema_version": 1,
         "provenance_complete": not disconnected,
         "disconnected_terminals": disconnected,
+        "exact_provenance_complete": not lineage_disconnected,
+        "lineage_disconnected_terminals": lineage_disconnected,
     }

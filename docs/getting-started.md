@@ -213,8 +213,11 @@ workflows do not need it.
 Use `--explain` when a claim matters. It shows the evidence chain behind the
 result. Built-in generated insights retain their exact emitting rule and
 evidence-or-observation-scope association. Signal-adjacent, conflict, lexical,
-and posture associations can still be reconstructed, so graph reachability is
-not exact generation-time lineage for every terminal.
+confidence, and legacy posture associations can still be reconstructed. Flat
+explanations label that distinction. In explained JSON,
+`exact_provenance_complete` and `lineage_disconnected_terminals` answer the
+exact-lineage question; schema-version-1 `provenance_complete` retains its
+broader graph-reachability meaning.
 
 Use `--plain` for screen readers, grep, and other linear-text workflows. It
 removes color and layout while preserving the observation content.
