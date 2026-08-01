@@ -21,7 +21,7 @@ covering the v1.9.9 surfaces, run a focused subset:
 # Set AGENTIC_UX_PROVIDER and AGENTIC_UX_MODEL to a currently available
 # low-cost instruction-following model before running.
 # One persona against the dense compatibility fixture
-python -m validation.agentic_ux.run \
+uv run --group agentic-validation python -m validation.agentic_ux.run \
     --provider "$AGENTIC_UX_PROVIDER" \
     --model "$AGENTIC_UX_MODEL" \
     --personas analyst \
@@ -65,7 +65,7 @@ When explicit paid-validation approval is available, expand to:
 ```bash
 # All three personas, both fixtures, both modes: full v1.9.2
 # methodology re-run on v1.9.9 panels.
-python -m validation.agentic_ux.run \
+uv run --group agentic-validation python -m validation.agentic_ux.run \
     --provider "$AGENTIC_UX_PROVIDER" \
     --model "$AGENTIC_UX_MODEL" \
     --output validation/agentic_ux/local/v1.9.9-full.md

@@ -15,7 +15,7 @@ into:
 
 Usage::
 
-    python validation/triage_llm.py \\
+    uv run --group agentic-validation python validation/triage_llm.py \\
         --candidates validation/runs-private/<stamp>/candidates.json \\
         --report     validation/runs-private/<stamp>/triage-llm.md \\
         --yaml       validation/runs-private/<stamp>/proposed-stanzas.yaml \\
@@ -227,6 +227,13 @@ def _format_report(entries: list[dict[str, Any]], candidates: list[dict[str, Any
 
 
 def main(argv: list[str] | None = None) -> int:
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if any(argument == "--api-key" or argument.startswith("--api-key=") for argument in arguments):
+        print(
+            "error: --api-key is not supported; set ANTHROPIC_API_KEY in the environment instead",
+            file=sys.stderr,
+        )
+        return 2
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--candidates", required=True, type=Path)
     parser.add_argument("--report", required=True, type=Path)
@@ -234,15 +241,14 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--raw", type=Path, default=None, help="Optional path to also dump raw LLM JSON.")
     parser.add_argument("--model", default="claude-sonnet-4-6")
     parser.add_argument("--max-tokens", type=int, default=20_000)
-    parser.add_argument("--api-key", default=None)
-    args = parser.parse_args(argv)
+    args = parser.parse_args(arguments)
 
     candidates = json.loads(args.candidates.read_text(encoding="utf-8"))
     print(f"Loaded {len(candidates)} candidates from {args.candidates}", file=sys.stderr)
 
-    api_key = args.api_key or os.environ.get("ANTHROPIC_API_KEY")
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
-        print("error: ANTHROPIC_API_KEY not set and --api-key not given", file=sys.stderr)
+        print("error: ANTHROPIC_API_KEY is not set", file=sys.stderr)
         return 2
 
     existing = _load_existing_slugs()

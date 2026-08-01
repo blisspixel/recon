@@ -472,7 +472,7 @@ def render_report(
     parts.append("## Reproducing this run\n")
     parts.append("```bash")
     parts.append("# Requires ANTHROPIC_API_KEY (or the provider-equivalent env var).")
-    parts.append("python -m validation.agentic_ux.run \\")
+    parts.append("uv run --group agentic-validation python -m validation.agentic_ux.run \\")
     parts.append(f"    --provider {provider} \\")
     parts.append(f"    --model {model} \\")
     parts.append("    --output validation/agentic_ux/local/report.md")
@@ -520,7 +520,6 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument("--provider", default="anthropic", choices=("anthropic", "openai", "xai"))
     parser.add_argument("--model", default="claude-sonnet-4-6")
-    parser.add_argument("--api-key", default=None, help="Override env-var-supplied API key.")
     parser.add_argument("--base-url", default=None, help="Override provider base URL.")
     parser.add_argument("--input-price", type=float, default=None, help="USD per million input tokens.")
     parser.add_argument("--output-price", type=float, default=None, help="USD per million output tokens.")
@@ -539,7 +538,15 @@ def _build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = _build_parser().parse_args(argv)
+    arguments = list(sys.argv[1:] if argv is None else argv)
+    if any(argument == "--api-key" or argument.startswith("--api-key=") for argument in arguments):
+        print(
+            "error: --api-key is not supported; set the provider-specific environment variable instead "
+            "(ANTHROPIC_API_KEY, OPENAI_API_KEY, or XAI_API_KEY)",
+            file=sys.stderr,
+        )
+        return 2
+    args = _build_parser().parse_args(arguments)
     personas = _parse_csv(args.personas, _DEFAULT_PERSONAS)
     fixtures = _parse_csv(args.fixtures, _DEFAULT_FIXTURES)
     try:
@@ -552,8 +559,6 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     provider_kwargs: dict[str, object] = {}
-    if args.api_key is not None:
-        provider_kwargs["api_key"] = args.api_key
     if args.base_url is not None:
         provider_kwargs["base_url"] = args.base_url
     if args.input_price is not None:

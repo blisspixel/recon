@@ -138,13 +138,14 @@ class AnthropicProvider:
             import anthropic  # type: ignore[import-not-found]
         except ImportError as exc:  # pragma: no cover - exercised via mock in tests
             raise ProviderError(
-                "anthropic SDK not installed. `pip install anthropic` to use this provider.",
+                "anthropic SDK not installed. Use the locked agentic-validation dependency group documented in "
+                "validation/agentic_ux/README.md.",
             ) from exc
 
         key = api_key or os.environ.get("ANTHROPIC_API_KEY")
         if not key:
             raise ProviderError(
-                "ANTHROPIC_API_KEY is not set. Export it or pass --api-key.",
+                "ANTHROPIC_API_KEY is not set. Export it in the environment.",
             )
 
         self.model = model
@@ -219,13 +220,14 @@ class _OpenAICompatibleProvider:
             import openai  # type: ignore[import-not-found]
         except ImportError as exc:  # pragma: no cover - exercised via mock in tests
             raise ProviderError(
-                "openai SDK not installed. `pip install openai` to use this provider.",
+                "openai SDK not installed. Use the locked agentic-validation dependency group documented in "
+                "validation/agentic_ux/README.md.",
             ) from exc
 
         key = api_key or os.environ.get(self.api_key_env)
         if not key:
             raise ProviderError(
-                f"{self.api_key_env} is not set. Export it or pass --api-key.",
+                f"{self.api_key_env} is not set. Export it in the environment.",
             )
 
         self.model = model

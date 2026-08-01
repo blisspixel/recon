@@ -75,23 +75,34 @@ def detect_install_method() -> str:
     return PIP
 
 
+def _current_workspace_root(current_directory: Path) -> Path:
+    """Return the nearest Git workspace root, or the current directory."""
+    for candidate in (current_directory, *current_directory.parents):
+        if (candidate / ".git").exists():
+            return candidate
+    return current_directory
+
+
 def _resolve_launcher(name: str) -> str | None:
-    """Absolute path to an upgrade launcher, refusing a current-directory match.
+    """Absolute path to a launcher outside the current workspace tree.
 
     Windows resolves a bare program name against the current directory before
     PATH, and ``shutil.which`` mirrors that by searching the current directory
     first. Spawning bare ``uv`` or ``pipx`` therefore let anyone who could drop
     ``uv.exe`` into a directory the operator happened to be in run code as the
     operator during ``recon update``. Resolving to an absolute path removes the
-    search entirely, and rejecting a current-directory hit means a planted
-    binary degrades to the printed manual command instead of being executed.
+    search entirely. Rejecting any result inside the nearest Git workspace also
+    covers relative PATH entries such as ``./bin`` and ``../bin`` from a nested
+    working directory; a planted binary then degrades to the printed manual
+    command instead of being executed.
     """
     found = shutil.which(name)
     if found is None:
         return None
     resolved = Path(found).resolve()
     try:
-        if resolved.parent == Path.cwd().resolve():
+        current_directory = Path.cwd().resolve()
+        if resolved.is_relative_to(_current_workspace_root(current_directory)):
             return None
     except OSError:
         # An unresolvable working directory cannot be compared, so refuse.
