@@ -83,7 +83,7 @@ def test_posture_family_records_exact_generation_time_lineage() -> None:
     assert "src/recon_tool/profiles.py#compute_baseline_anomalies" in family["producer_paths"]
     assert inventory["coverage"]["mcp_tools"]["compare_postures"] == "runtime.exposure-index.v1"
     assert (
-        inventory["coverage"]["panel_producers"]["src/recon_tool/formatter/panel.py#format_comparison_dict"]
+        inventory["coverage"]["panel_producers"]["src/recon_tool/formatter/comparison.py#format_comparison_dict"]
         == "runtime.exposure-index.v1"
     )
 
@@ -137,6 +137,11 @@ def test_score_discovery_preserves_each_schema_and_typed_dict_occurrence() -> No
     assert "docs/recon-schema.json#/properties/confidence" in score_fields
     assert "docs/recon-schema.json#/$defs/ChainMotif/properties/confidence" in score_fields
     assert "src/recon_tool/server/posture.py#ExposureAssessmentResult.posture_score" in score_fields
+    assert "src/recon_tool/server/posture.py#ExposureIndexComponentSummary.awarded_points" in score_fields
+    assert "src/recon_tool/server/posture.py#ExposureIndexComponentSummary.maximum_points" in score_fields
+    assert "src/recon_tool/server/posture.py#ExposureIndexComponentSummary.unconfirmable_points" in score_fields
+    assert "src/recon_tool/server/posture.py#ObservabilitySummary.model_maximum_points" in score_fields
+    assert "src/recon_tool/server/posture.py#ObservabilitySummary.unconfirmable_absent_points" in score_fields
     assert "src/recon_tool/server/posture.py#HypothesisAssessmentResult.confidence" in score_fields
     assert "src/recon_tool/cli/fingerprints.py#_fingerprint_summary.confidence" in score_fields
     assert "src/recon_tool/cli/signals.py#_signal_show_payload.confidence" in score_fields

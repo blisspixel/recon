@@ -180,14 +180,17 @@ posterior and effective display mass.
 
 ## Reading the exposure score (a lower bound, not a grade)
 
-`assess_exposure` returns a `posture_score` (0–100) that counts only controls
-recon observed as present, so it is a *lower bound*, not a verdict on the
-organization. A low score can mean "hardened but quiet" rather than "weak". The
-`observability` block says how much the floor could understate the truth:
-`score_is_lower_bound`, `unconfirmable_absent_points` (points from controls
-whose absence the passive channel cannot confirm - DKIM at non-standard
-selectors, security tooling, an email gateway behind non-MX routing), and
-`score_ceiling`. Report the score as a floor with its ceiling, not as a grade.
+`assess_exposure` returns a compatibility `posture_score` on a 0-100 scale. It
+counts only weighted controls whose derived value agrees with exact retained
+evidence, so it is an evidence floor, not a verdict on the organization. The
+current component model assigns at most 90 points. A low floor can mean
+"hardened but quiet" rather than "weak". The `observability` block reports
+`score_floor`, `score_ceiling`, unavailable controls, and the complete weighted
+`components` ledger. Each component names its generator, basis state, typed
+predicates, bounded scope, retained evidence, awarded points, and unresolved
+points. `unresolved` and `unavailable` capacity contributes to the ceiling;
+`hypothetical_value` is simulation-only and is not a live observation. Report
+the floor with its ceiling and evidence, never as a grade or overall ranking.
 
 On `find_hardening_gaps`, use `observation_state` instead of classifying prose or
 an empty evidence array. `observed_weak_configuration` and

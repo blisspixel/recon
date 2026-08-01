@@ -30,12 +30,12 @@ gets worked on. Priority 1 is the standing highest priority because output
 truthfulness outranks features. Priority 2 is the most urgent because it is the
 only track with an external clock, and it is bounded work. Schedule priority 2
 now; keep priority 1 as the default work between those tasks. Priority 3 cannot
-start until priority 1 closes the incomplete runtime paths and stabilizes the
-new claim taxonomy.
+start until priority 1 closes the remaining static guidance reviews and
+stabilizes the claim taxonomy.
 
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
-| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 24 are complete; 1 material runtime family has incomplete lineage and two static guidance families remain open. Explanations expose exact-lineage completeness while preserving schema-version-1 reachability, generated insights retain exact rule and evidence-or-scope associations through cache version 4, default panel assembly preserves the queried namespace plus collection availability, service labels expose only evidence-established roles, posture observations retain exact rule, evidence, and typed metadata dependencies, and hardening prompts expose exact rules, basis states, evidence, typed predicates, and bounded scopes. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
+| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 25 are complete; 0 material runtime families have incomplete lineage and two static guidance families remain open. Explanations expose exact-lineage completeness while preserving schema-version-1 reachability, generated insights retain exact rule and evidence-or-scope associations through cache version 4, default panel assembly preserves the queried namespace plus collection availability, service labels expose only evidence-established roles, posture observations retain exact rule, evidence, and typed metadata dependencies, hardening prompts expose exact rules, basis states, evidence, typed predicates, and bounded scopes, and every weighted exposure-index component carries exact generation-time proof state. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-before-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | The exact stable `1.28.1` and `2.0.0` matrix passed 2026-07-28 and CI keeps both pins blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green; treat production v2 adoption as a separate release decision. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | Specified, not started. Extensive process evidence exists; product-outcome evidence does not. | A dated aggregate-safe scorecard with a decision rule written before the run, deciding whether advanced fusion stays primary or becomes an advanced diagnostic. |
 | [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the three core evidence and compatibility tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
@@ -126,8 +126,12 @@ expectations are withheld under degraded collection and remain lenses rather
 than scores. Hardening prompts now distinguish observed weak configuration,
 bounded non-observation, unresolved hideable state, and observed configuration
 inconsistency while retaining exact generator, evidence, predicate, and scope
-lineage. Only the exposure index still has incomplete runtime lineage. Static MCP and
-generated-guidance semantics also remain open for review. Current sovereignty
+lineage. The exposure index now exposes its complete weighted component ledger,
+including exact rule, state, predicate, scope, awarded and unresolved points,
+and retained evidence. Comparison output carries a ledger for each namespace,
+and hardening simulation labels changed components as hypothetical. All
+material runtime families now have exact lineage. Static MCP and generated-guidance
+semantics remain open for review. Current sovereignty
 handling preserves absent metadata as unknown; that invariant should remain
 explicit and tested.
 

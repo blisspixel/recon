@@ -13,9 +13,10 @@ visible in logs without suppressing an observation.
 from __future__ import annotations
 
 import logging
+from collections.abc import Iterable
 
 from recon_tool.exposure_models import EvidenceReference
-from recon_tool.models import TenantInfo
+from recon_tool.models import EvidenceRecord, TenantInfo
 from recon_tool.posture import DISCOURAGED_COPY_TERMS
 
 logger = logging.getLogger(__name__)
@@ -47,17 +48,25 @@ def build_evidence_refs(
     source_types: frozenset[str] | None = None,
 ) -> tuple[EvidenceReference, ...]:
     """Build references matching the requested slugs and optional source roles."""
-    return tuple(
+    return evidence_refs(
+        evidence
+        for evidence in info.evidence
+        if evidence.slug in slugs
+        and (source_types is None or evidence.source_type.upper() in source_types)
+    )
+
+
+def evidence_refs(records: Iterable[EvidenceRecord]) -> tuple[EvidenceReference, ...]:
+    """Project retained records to stable, deduplicated exposure references."""
+    return tuple(dict.fromkeys(
         EvidenceReference(
             source_type=evidence.source_type,
             raw_value=evidence.raw_value,
             rule_name=evidence.rule_name,
             slug=evidence.slug,
         )
-        for evidence in info.evidence
-        if evidence.slug in slugs
-        and (source_types is None or evidence.source_type.upper() in source_types)
-    )
+        for evidence in records
+    ))
 
 
 def evidence_slugs(info: TenantInfo, source_types: frozenset[str]) -> set[str]:

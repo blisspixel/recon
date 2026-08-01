@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from recon_tool.collection_view import collection_observable_info
 from recon_tool.email_security import compute_email_security_score
-from recon_tool.exposure_models import PostureMetric
+from recon_tool.exposure_models import ExposureIndex, PostureMetric
 from recon_tool.exposure_observability import ObservableEmailState
 from recon_tool.models import TenantInfo
 
@@ -23,13 +23,30 @@ def _count_value(count: int, info: TenantInfo) -> str:
     return str(count)
 
 
-def build_metrics(info_a: TenantInfo, info_b: TenantInfo) -> tuple[PostureMetric, ...]:
+def _index_value(index: ExposureIndex) -> str:
+    """Render the exact floor and bounded ceiling without implying a grade."""
+    if index.score_floor == index.score_ceiling:
+        return f"{index.score_floor}/100"
+    return f"{index.score_floor}-{index.score_ceiling}/100"
+
+
+def build_metrics(
+    info_a: TenantInfo,
+    info_b: TenantInfo,
+    index_a: ExposureIndex,
+    index_b: ExposureIndex,
+) -> tuple[PostureMetric, ...]:
     """Build side-by-side metrics without turning failed collection into absence."""
     info_a = collection_observable_info(info_a)
     info_b = collection_observable_info(info_b)
     observed_a = ObservableEmailState.from_info(info_a)
     observed_b = ObservableEmailState.from_info(info_b)
     return (
+        PostureMetric(
+            metric_name="public_evidence_index",
+            domain_a_value=_index_value(index_a),
+            domain_b_value=_index_value(index_b),
+        ),
         PostureMetric(
             metric_name="email_security_score",
             domain_a_value=_score_value(info_a, observed_a),

@@ -18,9 +18,6 @@ from rich.table import Table
 from rich.text import Text
 
 from recon_tool.confidence import is_confidence_contributor
-from recon_tool.exposure import (
-    PostureComparison,
-)
 from recon_tool.formatter.classify import (
     CATEGORY_BY_SLUG,
     CLOUD_SLUG_QUALIFIERS,
@@ -43,6 +40,7 @@ from recon_tool.formatter.classify import (
     provider_line,
     slug_to_relationship_metadata,
 )
+from recon_tool.formatter.comparison import format_comparison_dict, format_comparison_json
 from recon_tool.formatter.delta import (  # re-exported: stable import path after the split
     format_delta_dict,
     format_delta_json,
@@ -1604,46 +1602,6 @@ def render_chain_panel(report: ChainReport) -> Panel:
         padding=(1, 2),
         border_style="dim",
     )
-
-
-# ── Comparison rendering ────────────────────────────────────────────────
-
-
-def format_comparison_dict(comparison: PostureComparison) -> dict[str, Any]:
-    """Format PostureComparison as a dict for JSON output."""
-    return {
-        "domain_a": comparison.domain_a,
-        "domain_b": comparison.domain_b,
-        "metrics": [
-            {
-                "metric_name": m.metric_name,
-                "domain_a_value": m.domain_a_value,
-                "domain_b_value": m.domain_b_value,
-            }
-            for m in comparison.metrics
-        ],
-        "differences": [
-            {
-                "description": d.description,
-                "domain_a_has": d.domain_a_has,
-                "domain_b_has": d.domain_b_has,
-            }
-            for d in comparison.differences
-        ],
-        "relative_assessment": [
-            {
-                "dimension": ra.dimension,
-                "summary": ra.summary,
-            }
-            for ra in comparison.relative_assessment
-        ],
-        "disclaimer": comparison.disclaimer,
-    }
-
-
-def format_comparison_json(comparison: PostureComparison) -> str:
-    """Format PostureComparison as a JSON string."""
-    return json.dumps(format_comparison_dict(comparison), indent=2)
 
 
 # ── Explanation rendering ────────────────────────────────────────────────

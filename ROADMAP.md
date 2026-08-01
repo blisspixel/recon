@@ -61,10 +61,10 @@ paths are closed and the family definitions stop moving.
 **State:** a fail-closed machine-readable audit now assigns all discovered
 primary surfaces to 27 claim families and blocks drift across 197 JSON property
 occurrences, 167 MCP tool and output surfaces, 31 panel producers, 89 agent
-guidance sections, 16 insight generators, 78 score or quantitative fields, and
-the remaining governed surfaces. 24 families are complete. 1
-material runtime family still has incomplete lineage, and the two static
-guidance families remain open for semantic review. Explanation output now distinguishes
+guidance sections, 16 insight generators, 84 score or quantitative fields, and
+the remaining governed surfaces. 25 families are complete. 0
+material runtime families have incomplete lineage, and the two static guidance
+families remain open for semantic review. Explanation output now distinguishes
 exact, exact-rule-only, reconstructed, and unsupported terminal lineage and
 adds exact-lineage completeness diagnostics without changing the stable
 schema-version-1 reachability fields. Generated insights retain the
@@ -77,7 +77,12 @@ profile-relative expectations fail closed under degraded collection and remain
 lenses rather than scores. Hardening prompts now expose exact generator IDs,
 typed predicates, bounded scopes, retained evidence, and explicit basis states;
 unavailable channels emit no absence prompt and common-selector DKIM remains
-unresolved. The narrower
+unresolved. The exposure index now carries a complete nine-component ledger
+with exact generator, state, predicate, scope, points, and retained-evidence
+lineage. Scores fail closed when a positive scalar lacks matching evidence;
+comparisons carry both namespace ledgers, and simulations label changed
+components as hypothetical. The stable 0-100 compatibility scale remains, with
+90 points assigned by the current documented component model. The narrower
 `dns.dmarc.valid_policy_is_reject.v1` proof-carrying contract remains the first
 fully modeled claim. See
 [the default-claim audit](docs/default-claim-audit.md).

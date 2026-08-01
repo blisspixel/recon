@@ -350,32 +350,46 @@
       "subject_scope": "one rendered signal, insight, posture observation, or confidence terminal"
     },
     "runtime.exposure-index.v1": {
-      "audit_status": "open",
+      "audit_status": "complete",
       "claim_id": "runtime.exposure-index.v1",
       "classification": "documented_derivation",
       "evidence_path": [
+        "src/recon_tool/collection_view.py#collection_claim_info",
         "src/recon_tool/evidence_models.py#EvidenceRecord",
-        "src/recon_tool/exposure_copy.py#build_evidence_refs"
+        "src/recon_tool/exposure_copy.py#evidence_refs",
+        "src/recon_tool/exposure_models.py#ExposureIndex",
+        "src/recon_tool/exposure_models.py#ExposureIndexComponent",
+        "src/recon_tool/exposure_models.py#ExposureMetadataDependency"
       ],
       "limits": [
         "The index is not overall security, maturity, certification, or a prediction.",
-        "Quiet public channels can produce a low floor."
+        "Quiet public channels can produce a low floor.",
+        "The compatibility scale is 0-100 while the current documented component model assigns 90 maximum points.",
+        "Hypothetical simulation components are labeled as hypothetical values rather than live observations."
       ],
-      "lineage_status": "incomplete",
+      "lineage_status": "exact",
       "material": true,
       "producer_paths": [
         "src/recon_tool/exposure.py#assess_exposure_from_info",
         "src/recon_tool/exposure.py#compare_postures_from_infos",
         "src/recon_tool/exposure_comparison.py#build_metrics",
-        "src/recon_tool/exposure_observability.py#unconfirmable_absent_points",
-        "src/recon_tool/formatter/exposure.py#format_exposure_dict"
+        "src/recon_tool/exposure_scoring.py#compute_exposure_index",
+        "src/recon_tool/formatter/comparison.py#format_comparison_dict",
+        "src/recon_tool/formatter/exposure.py#format_exposure_dict",
+        "src/recon_tool/formatter/exposure.py#format_index_observability",
+        "src/recon_tool/server/posture.py#simulate_hardening",
+        "src/recon_tool/server/posture_simulation.py#simulate_fixes"
       ],
       "regression_tests": [
         "tests/test_exposure.py",
-        "tests/test_exposure_server.py"
+        "tests/test_exposure_lineage.py",
+        "tests/test_exposure_server.py",
+        "tests/test_mcp_introspection.py",
+        "tests/test_mcp_structured_output.py"
       ],
       "renderer_obligations": [
-        "Call the 0-100 value a model-bound public-evidence index and report its floor, ceiling, unavailable controls, and evidence."
+        "Call the compatibility value a model-bound public-evidence index and report its exact-evidence floor, bounded ceiling, unavailable controls, weighted component ledger, and retained evidence.",
+        "Preserve stable posture_score names while exposing additive component, rule, state, predicate, scope, and evidence fields; label simulation-only values as hypothetical."
       ],
       "subject_scope": "controls observable in recon's public-evidence model for one queried namespace"
     },
@@ -1042,6 +1056,7 @@
       "test_hypothesis": "runtime.hypothesis-assessment.v1"
     },
     "panel_producers": {
+      "src/recon_tool/formatter/comparison.py#format_comparison_dict": "runtime.exposure-index.v1",
       "src/recon_tool/formatter/delta.py#render_delta_panel": "runtime.collection-status.v1",
       "src/recon_tool/formatter/explanations.py#format_explanations_list": "runtime.explanation-provenance.v1",
       "src/recon_tool/formatter/explanations.py#render_explanations_panel": "runtime.explanation-provenance.v1",
@@ -1061,7 +1076,6 @@
       "src/recon_tool/formatter/panel.py#_render_unclassified_surface": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#_render_verbose_detail": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel.py#format_chain_dict": "runtime.related-namespace.v1",
-      "src/recon_tool/formatter/panel.py#format_comparison_dict": "runtime.exposure-index.v1",
       "src/recon_tool/formatter/panel.py#format_posture_observations": "runtime.posture-observation.v1",
       "src/recon_tool/formatter/panel.py#render_chain_panel": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#render_conflict_annotation": "runtime.collection-status.v1",
@@ -1152,13 +1166,19 @@
       "src/recon_tool/server/posture.py#ExplanationSummary.confidence_derivation": "runtime.confidence-summary.v1",
       "src/recon_tool/server/posture.py#ExposureAssessmentResult.posture_score": "runtime.exposure-index.v1",
       "src/recon_tool/server/posture.py#ExposureAssessmentResult.posture_score_label": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#ExposureIndexComponentSummary.awarded_points": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#ExposureIndexComponentSummary.maximum_points": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#ExposureIndexComponentSummary.unconfirmable_points": "runtime.exposure-index.v1",
       "src/recon_tool/server/posture.py#HardeningSimulationResult.current_score": "runtime.exposure-index.v1",
       "src/recon_tool/server/posture.py#HardeningSimulationResult.score_delta": "runtime.exposure-index.v1",
       "src/recon_tool/server/posture.py#HardeningSimulationResult.simulated_score": "runtime.exposure-index.v1",
       "src/recon_tool/server/posture.py#HypothesisAssessmentResult.confidence": "runtime.hypothesis-assessment.v1",
       "src/recon_tool/server/posture.py#HypothesisAssessmentResult.likelihood": "runtime.hypothesis-assessment.v1",
+      "src/recon_tool/server/posture.py#ObservabilitySummary.model_maximum_points": "runtime.exposure-index.v1",
       "src/recon_tool/server/posture.py#ObservabilitySummary.score_ceiling": "runtime.exposure-index.v1",
-      "src/recon_tool/server/posture.py#ObservabilitySummary.score_is_lower_bound": "runtime.exposure-index.v1"
+      "src/recon_tool/server/posture.py#ObservabilitySummary.score_floor": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#ObservabilitySummary.score_is_lower_bound": "runtime.exposure-index.v1",
+      "src/recon_tool/server/posture.py#ObservabilitySummary.unconfirmable_absent_points": "runtime.exposure-index.v1"
     },
     "server_instruction_sections": {
       "<preamble>": "static.mcp-contract.v1",
@@ -1200,7 +1220,7 @@
     "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
     "surface_digests": {
       "json_fields": "81b985e5d9444fab6a4e5dfc716b03e2b3fcb1ff5eaa11c4f1b41a5e03aae2cf",
-      "mcp_tools": "c59ecbdf8be5a380e6eb6d921641afcce70c48e02e0a71b63e90a4cebff9f8dd"
+      "mcp_tools": "29484a9c137753627480d12ada64c9ca86e89ada7f5d94a90d5dd90d29aad273"
     }
   },
   "purpose": "Fail-closed taxonomy for every material default panel, JSON, MCP, agent-guidance, recommendation, and score surface. Coverage entries name the claim family that owns each discovered surface; family records state the direct implementation and evidence path, renderer duties, tests, and known limits.",

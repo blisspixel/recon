@@ -1918,7 +1918,7 @@
         ],
         "name": "assess_exposure",
         "output_schema": {
-          "definition_count": 8,
+          "definition_count": 10,
           "properties": [
             "consistency_observations",
             "disclaimer",
@@ -2095,12 +2095,14 @@
         ],
         "name": "compare_postures",
         "output_schema": {
-          "definition_count": 3,
+          "definition_count": 7,
           "properties": [
             "differences",
             "disclaimer",
             "domain_a",
+            "domain_a_observability",
             "domain_b",
+            "domain_b_observability",
             "metrics",
             "relative_assessment"
           ],
@@ -2108,7 +2110,9 @@
             "differences",
             "disclaimer",
             "domain_a",
+            "domain_a_observability",
             "domain_b",
+            "domain_b_observability",
             "metrics",
             "relative_assessment"
           ],
@@ -2861,23 +2865,27 @@
         ],
         "name": "simulate_hardening",
         "output_schema": {
-          "definition_count": 1,
+          "definition_count": 5,
           "properties": [
             "applied_fixes",
+            "current_observability",
             "current_score",
             "disclaimer",
             "domain",
             "remaining_gaps",
             "score_delta",
+            "simulated_observability",
             "simulated_score"
           ],
           "required": [
             "applied_fixes",
+            "current_observability",
             "current_score",
             "disclaimer",
             "domain",
             "remaining_gaps",
             "score_delta",
+            "simulated_observability",
             "simulated_score"
           ],
           "type": "object"

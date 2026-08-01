@@ -59,9 +59,9 @@ rejected.
 At the 2026-08-01 checkpoint, the inventory contains 27 families and covers 89
 agent-guidance sections, 16 insight generators, 197 JSON property occurrences,
 167 MCP tool and output surfaces, 31 panel producers, 4 recommendation
-producer, 78 quantitative or categorical score fields, and 8 MCP instruction
-sections. 24 families are complete. 1 material runtime family
-has incomplete lineage: the exposure index. Service
+producers, 84 quantitative or categorical score fields, and 8 MCP instruction
+sections. 25 families are complete. 0 material runtime families
+have incomplete lineage. Service
 labels now derive a bounded role from retained,
 collection-observable record evidence and render missing roles as unavailable.
 Posture observations now carry their exact emitter, branch-local retained
@@ -82,6 +82,15 @@ superseded proof rows with internally consistent hypothetical evidence before
 re-evaluation. Invalid or ambiguous DMARC material remains an evidence-backed
 review prompt with a distinct basis instead of becoming a false absence or
 disappearing.
+The model-bound exposure index now uses one validated nine-component ledger as
+the source of its stable score floor, bounded ceiling, and unresolved points.
+Every component carries its exact generator, basis state, typed predicates,
+bounded scope, point weight, and retained evidence. Positive scalars without a
+matching record receive no credit. Comparison output carries the two source
+ledgers without collapsing floor and ceiling into a ranking, and hardening
+simulation marks changed components as hypothetical rather than observed. The
+stable compatibility scale remains 0-100; the current documented component
+model assigns at most 90 points.
 Recommendation discovery follows the central constructor through its direct
 generator call sites, so a new prompt cannot bypass audit ownership.
 Explanation records now label

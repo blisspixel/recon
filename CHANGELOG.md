@@ -61,6 +61,14 @@ operator, corporate group, ownership, or control.
   metadata-dependent, bounded non-observation, legacy text, confidence, and
   proxy-matched paths remain visibly incomplete or reconstructed. Flat JSON,
   Rich, Markdown, CLI, and MCP explanation renderers carry the same status.
+- Exposure assessments now carry a complete nine-component evidence ledger
+  with exact retained evidence, metadata dependencies, observation scope, and
+  explicit observed, unresolved, unavailable, or hypothetical states. The
+  compatible public-evidence score is the ledger's evidence-backed floor;
+  structured and panel output also expose its ceiling, unresolved capacity,
+  current 90-point model maximum, and both ledgers in comparisons. Hardening
+  simulations distinguish hypothetical arithmetic from observed evidence, and
+  contradictory or evidence-empty positive inputs fail closed without credit.
 - Sparse public-signal diagnoses now use colon punctuation consistently. The
   text-hygiene gate compares an ahead branch's effective working tree with
   `origin/main`, so a local repair supersedes the corresponding unpushed line
