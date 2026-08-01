@@ -1,8 +1,9 @@
-"""Resolver orchestration — queries all sources in parallel, merges results.
+"""Resolver orchestration: query sources in parallel and merge results.
 
-When related domains are discovered (via CNAME breadcrumbs like autodiscover
-redirects or DKIM delegation), the resolver automatically runs DNS-only lookups
-on them and merges the additional services/slugs into the primary result.
+When related names are discovered through bounded CT, CNAME, Exchange/identity
+endpoint, autodiscover, or DKIM tenant-domain breadcrumbs, the resolver
+automatically runs bounded DNS-only enrichment and merges claim-safe service
+indicators into the primary result.
 This means `recon gamma.invalid` automatically picks up services configured
 on `gamma-internal.invalid` without the user needing to know about the internal domain.
 
@@ -411,9 +412,10 @@ async def resolve_tenant(
     Individual source failures do NOT abort — every source gets a chance.
     After all sources complete, results are merged via merge_results.
 
-    If related domains are discovered (from CNAME breadcrumbs), the resolver
-    automatically runs DNS-only lookups on them and merges the additional
-    services into the result.
+    If related names are discovered through bounded CT, CNAME,
+    Exchange/identity endpoint, autodiscover, or DKIM tenant-domain
+    breadcrumbs, the resolver automatically runs bounded DNS-only enrichment
+    and merges claim-safe service indicators into the result.
 
     The entire pipeline is wrapped in an aggregate timeout (default 120s)
     to prevent runaway lookups from blocking indefinitely.

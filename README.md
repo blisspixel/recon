@@ -290,17 +290,17 @@ threat model, trust boundaries, and hostile-input handling are described in
 
 ## Roadmap Focus
 
-recon has a stable baseline, but product quality work remains. The top three
-priorities are:
+recon has a stable baseline, but product quality work remains. The evidence
+audit and MCP adoption gates are complete and remain blocking maintenance
+checks. The next three priorities are:
 
-1. Make every default claim traceable to evidence, and remove product-use,
-   cloud-type, or security-maturity conclusions that public metadata cannot
-   support.
-2. Keep the exact MCP v1.28.1 and v2.0.0 compatibility matrix green. Changing
-   the production dependency remains a separate, deliberate release decision.
-3. Establish an aggregate-safe quality baseline for claim precision,
+1. Establish an aggregate-safe quality baseline for claim precision,
    abstention, provenance, catalog coverage, degradation, latency, CT value,
    and agent context cost before expanding inference or graph machinery.
+2. Keep all 27 default-claim families complete and reopen the evidence audit
+   immediately if a new surface lacks its reviewed evidence or static contract.
+3. Keep the exact MCP v1.28.1 rollback and v2.0.0 production compatibility rows
+   green while production remains on `mcp>=2.0.0,<3`.
 
 A fourth, explicitly lower-priority track covers the optional cloud framework.
 Broad catalog growth stays blocked behind independent rank, regional,

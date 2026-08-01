@@ -170,8 +170,9 @@ namespace, an intentionally sparse configuration, or a collection gap. recon
 does not observe enough to choose among those explanations or to decide whether
 an organization operates behind the apex.
 
-What to do: check `related_domains` in `--json` as bounded CNAME, CT, or
-autodiscover breadcrumbs, not as portfolio or ownership facts. When an operator
+What to do: check `related_domains` in `--json` as bounded CT, CNAME,
+Exchange/identity endpoint, autodiscover, or DKIM tenant-domain breadcrumbs,
+not as portfolio or ownership facts. When an operator
 already supplies a related set, `recon batch portfolio.txt --json` can report
 exact shared verification-token strings. Token reuse does not establish that
 the domains are siblings, share an owner, or are currently administered

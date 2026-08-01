@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import tomllib
 from pathlib import Path
 
@@ -143,9 +144,117 @@ def test_ephemeral_docs_name_cache_replay_and_fresh_lookup_boundaries() -> None:
         for fresh_only in ("`cname_target`", "`subdomain_txt`", "`caa`", "`srv`", "`dmarc_rua`"):
             assert fresh_only in text
         assert "call `reload_data`" in text
-        assert "lookup-result cache" in text
+        assert "lookup-result cache" in text or "process lookup cache" in text
         assert "then run `lookup_tenant` again" in text
         assert "normal documented network boundary" in text
+
+
+def test_agent_guidance_preserves_process_scope_and_output_bounds() -> None:
+    """Shipped guidance must not invent an MCP session or a bounded payload size."""
+    guidance_paths = (
+        "AGENTS.md",
+        "agents/claude-code/skills/recon/SKILL.md",
+    )
+
+    for path in guidance_paths:
+        text = " ".join(_read(path).split())
+        assert "server process" in text
+        assert "process-wide" in text
+        assert "current MCP session" not in text
+        assert "session's ephemeral catalog" not in text
+        assert "3-10 KB" not in text
+        assert f"3{chr(0x2013)}10 KB" not in text
+        assert "may grow materially with certificate-transparency and evidence data" in text
+
+
+def test_agent_guidance_preserves_score_and_relationship_semantics() -> None:
+    """Agent-facing summaries must retain current model and namespace limits."""
+    guidance_paths = (
+        "AGENTS.md",
+        "agents/claude-code/skills/recon/SKILL.md",
+    )
+
+    for path in guidance_paths:
+        text = " ".join(_read(path).split())
+        assert "CAA: 3 issuers authorized" in text
+        assert "CAA: 3 issuers restricted" not in text
+        assert "count of publicly observed controls" in text
+        assert "exact-evidence floor" in text
+        assert "bounded ceiling" in text
+        assert "current component model assigns at most 90 points" in text
+        assert "not a prediction of overall security change" in text
+        assert "do not establish ownership or a corporate relationship" in text
+        assert "every `related_domains` observation" in text
+        assert "Each queued name can trigger another full public-metadata lookup" in text
+        for breadcrumb in (
+            "CT",
+            "CNAME",
+            "Exchange/identity endpoint",
+            "autodiscover",
+            "DKIM tenant-domain",
+        ):
+            assert breadcrumb in text
+
+    skill = " ".join(_read("agents/claude-code/skills/recon/SKILL.md").split())
+    assert "an Synthetic Delta Platform" not in skill
+
+
+def test_related_namespace_schema_matches_the_runtime_breadcrumb_contract() -> None:
+    expected = (
+        "Domain names linked by bounded CT, CNAME, Exchange/identity endpoint, "
+        "autodiscover, or DKIM tenant-domain breadcrumbs. The stable field name "
+        "does not imply ownership or an organizational relationship."
+    )
+    for path in ("docs/recon-schema.json", "src/recon_tool/data/recon-schema.json"):
+        schema = json.loads(_read(path))
+        assert schema["properties"]["related_domains"]["description"] == expected
+
+    schema_docs = " ".join(_read("docs/schema.md").split())
+    weak_areas = " ".join(_read("docs/weak-areas.md").split())
+    for text in (schema_docs, weak_areas):
+        for breadcrumb in (
+            "CT",
+            "CNAME",
+            "Exchange/identity endpoint",
+            "autodiscover",
+            "DKIM tenant-domain",
+        ):
+            assert breadcrumb in text
+
+
+def test_claude_plugin_docs_describe_process_wide_mutation() -> None:
+    plugin = " ".join(_read("agents/claude-code/README.md").split())
+
+    assert "process-wide server state" in plugin
+    assert "current process catalog" in plugin
+    assert "local session and catalog mutations" not in plugin
+    assert "current session catalog" not in plugin
+
+
+def test_current_mcp_docs_match_the_adopted_production_dependency() -> None:
+    project = tomllib.loads(_read("pyproject.toml"))["project"]
+    mcp_dependencies = [dependency for dependency in project["dependencies"] if dependency.startswith("mcp")]
+    assert mcp_dependencies == ["mcp>=2.0.0,<3"]
+
+    current_docs = (
+        "README.md",
+        "ROADMAP.md",
+        "docs/engineering-refinement-plan.md",
+        "docs/mcp-2026-07-28-readiness.md",
+        "docs/mcp.md",
+        "docs/optional-cloud-deployment-plan.md",
+        "docs/roadmap.md",
+        "docs/strategic-gap-audit.md",
+    )
+    for path in current_docs:
+        text = " ".join(_read(path).split())
+        assert "mcp>=1.28.1,<2" not in text
+        assert "production adoption remains pending" not in text.lower()
+        assert "production remains on stable v1" not in text.lower()
+
+    readiness = " ".join(_read("docs/mcp-2026-07-28-readiness.md").split())
+    assert "mcp>=2.0.0,<3" in readiness
+    assert "1.28.1 remains the rollback pin" in readiness
 
 
 def test_agent_portfolio_guidance_treats_score_divergence_as_observation() -> None:

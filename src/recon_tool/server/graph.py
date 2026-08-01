@@ -174,10 +174,13 @@ def _format_compact_chain_json(report: ChainReport, result_limit: int) -> str:
     ),
 )
 async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> str:
-    """Recursively resolve a domain and its related domains.
+    """Follow all `related_domains` observations; this does not establish ownership or a corporate relationship.
 
-    Follows CNAME breadcrumbs and certificate transparency discoveries
-    up to the specified depth. Returns intelligence for all discovered domains.
+    Recursively follows every ``related_domains`` observation returned by each
+    ordinary lookup, currently including CT, CNAME, Exchange/identity endpoint,
+    autodiscover, and DKIM tenant-domain breadcrumbs. Each queued name can
+    trigger another full public-metadata lookup. Co-occurrence does not
+    establish common control, company affiliation, or current product use.
 
     Args:
         domain: Starting domain (e.g., "gamma.invalid")

@@ -342,6 +342,8 @@ async def get_fingerprints(
     provider_group, display_group, and the set of detection types used. The MCP
     layer surfaces the list as navigable ``structuredContent`` with an
     ``outputSchema``, alongside the serialized-JSON text block for compatibility.
+    These definitions are not evidence about any queried domain and do not
+    establish product use.
 
     Args:
         category: Optional category filter using a word prefix or phrase.
@@ -425,6 +427,8 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
     explain, and computed layer. The MCP layer surfaces the list as navigable
     ``structuredContent`` with an ``outputSchema``, alongside the serialized-JSON
     text block for compatibility.
+    These definitions are not evidence about any queried domain and do not
+    establish that a signal fired.
 
     Layers: 1=basic, 2=composite (has metadata), 3=consistency, 4=meta (requires_signals).
 
@@ -593,17 +597,18 @@ def _static_weakening_conditions(sig: object) -> list[str]:
 @mcp.tool(
     annotations=tool_annotations(
         read_only=False,
-        destructive=False,
+        destructive=True,
         idempotent=True,
         open_world=False,
     ),
 )
 async def reload_data() -> str:
-    """Reload fingerprint and signal definitions from disk.
+    """Reload fingerprint, signal, and posture definitions for this server process.
 
-    Use this after updating ~/.recon/fingerprints.yaml or the built-in
-    data files. Also clears the lookup cache so subsequent lookups use
-    the new definitions.
+    Use this after updating ~/.recon/fingerprints.yaml or the built-in data
+    files. Clears the process lookup cache so subsequent lookups use the new
+    definitions. Preserves the rate limiter and ephemeral catalog. No network
+    request is made by this tool.
     """
     from recon_tool.fingerprints import reload_fingerprints
     from recon_tool.posture import reload_posture
@@ -653,14 +658,15 @@ async def discover_fingerprint_candidates(
     keep_intra_org: bool = False,
     min_count: int = 1,
 ) -> list[FingerprintCandidate]:
-    """Mine a single domain for new-fingerprint candidates.
+    """Mine unclassified CNAME candidates; each requires independent triage.
 
     Bundles ``recon discover`` into one tool call: resolves the domain with
     unclassified-CNAME-chain capture, applies intra-org and already-covered
-    filters, and returns a ranked candidate list ready for triage. Each
-    surviving entry is a real third-party SaaS or infrastructure pattern
-    that recon does not yet recognize - propose it as a new ``cname_target``
-    fingerprint or an extension of an existing one.
+    filters, and returns a ranked candidate list ready for triage. A surviving
+    unclassified suffix does not establish a third-party service, ownership,
+    current use, or a reusable provider pattern. It may be first-party, shared,
+    unrelated, or noise. Require independent vendor documentation or repeated
+    validation evidence before proposing a new ``cname_target`` fingerprint.
 
     Use after a regular ``lookup_tenant`` call when you notice unclassified
     subdomains in the result, or proactively on any domain where you want
@@ -826,7 +832,7 @@ async def get_posteriors(domain: str) -> PosteriorBlockResult:
         domain: Apex domain to evaluate (e.g. ``alpha.invalid``).
 
     Returns:
-        JSON string with the posterior block for the queried domain.
+        Structured object with the posterior block for the queried domain.
     """
     from recon_tool.bayesian import collection_masked_units, infer_from_tenant_info, load_network
 
@@ -893,10 +899,9 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
     that shaped it. Pair with ``get_posteriors`` when you want both
     the structured posteriors and the prose explanation.
 
-    Stable v2.0+. Output language stays hedged - "the posterior
-    places X at probability ..." rather than "X is true". Sparse-
-    evidence nodes are flagged so the consumer doesn't over-interpret
-    a confident-looking number.
+    Stable v2.0+. Every posterior is a model-relative diagnostic, not a
+    calibrated probability or a truth claim. Sparse-evidence nodes are flagged
+    so the consumer does not over-interpret a confident-looking number.
 
     Args:
         domain: Apex domain to evaluate.

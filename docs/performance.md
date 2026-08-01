@@ -155,7 +155,7 @@ source distribution. The wheel ships one compact, deterministic JSON runtime
 artifact. The generator validates all 847 entries, preserves source-file,
 entry, detection, and repeated-slug order, and emits canonical UTF-8 JSON with
 sorted object keys and one LF terminator. Local, CI, and release gates reject
-any byte drift. Custom and session-scoped fingerprints still use the existing
+any byte drift. Custom and process-scoped ephemeral fingerprints still use the existing
 runtime validation and lifecycle paths.
 
 The network-free harness compared the full canonical YAML parse and validation

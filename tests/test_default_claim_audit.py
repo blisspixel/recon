@@ -206,6 +206,66 @@ def test_material_families_cannot_be_marked_complete_with_incomplete_lineage() -
             assert not (family["audit_status"] == "complete" and family["lineage_status"] == "incomplete")
 
 
+def test_static_mcp_contract_references_every_description_module_and_behavior_basis() -> None:
+    """A complete static MCP audit must own every live tool-description module."""
+    inventory = load_claim_inventory(AUDIT_PATH)
+    family = inventory["claim_families"]["static.mcp-contract.v1"]
+
+    assert family["audit_status"] == "complete"
+    assert {
+        "src/recon_tool/server/app.py#SERVER_INSTRUCTIONS",
+        "src/recon_tool/server/ephemeral.py",
+        "src/recon_tool/server/graph.py",
+        "src/recon_tool/server/introspection.py",
+        "src/recon_tool/server/lookup.py#lookup_tenant",
+        "src/recon_tool/server/posture.py",
+        "docs/mcp.md",
+        "docs/surface-inventory.json",
+    } <= set(family["producer_paths"])
+    assert {
+        "src/recon_tool/server/app.py#resolve_or_cache",
+        "src/recon_tool/chain.py#chain_resolve",
+        "src/recon_tool/mcp_client/sdk_compat.py#tool_annotations",
+        "scripts/generate_surface_inventory.py#build_inventory",
+    } <= set(family["evidence_path"])
+    assert {
+        "tests/test_mcp_graph_tools.py",
+        "tests/test_mcp_structured_output.py",
+        "tests/test_mcp_tool_annotations.py",
+        "tests/test_server_instructions.py",
+        "tests/test_surface_inventory.py",
+    } <= set(family["regression_tests"])
+
+
+def test_related_namespace_contract_owns_every_runtime_breadcrumb_family() -> None:
+    """The related-name family must name every producer behind the stable field."""
+    inventory = load_claim_inventory(AUDIT_PATH)
+    family = inventory["claim_families"]["runtime.related-namespace.v1"]
+
+    assert family["audit_status"] == "complete"
+    assert {
+        "src/recon_tool/chain.py#chain_resolve",
+        "src/recon_tool/merger.py#merge_results",
+        "src/recon_tool/sources/dns.py#_detect_common_subdomains",
+        "src/recon_tool/sources/dns.py#_detect_exchange_endpoints",
+        "src/recon_tool/sources/dns.py#_detect_idp_hub",
+        "src/recon_tool/sources/dns_email.py#_apply_exchange_dkim",
+        "src/recon_tool/sources/dns_infra.py#_add_autodiscover_matches",
+        "src/recon_tool/sources/dns_infra.py#_apply_cached_cert_intel",
+        "src/recon_tool/sources/dns_infra.py#_query_cert_providers",
+    } <= set(family["producer_paths"])
+    assert {
+        "tests/test_chain.py",
+        "tests/test_cname_chain_validation.py",
+        "tests/test_ct_pipeline_resilience.py",
+        "tests/test_dns_subdetectors.py",
+        "tests/test_documentation_semantic_contracts.py",
+        "tests/test_json_schema_file.py",
+    } <= set(family["regression_tests"])
+    assert "Exchange/identity endpoint" in family["subject_scope"]
+    assert "DKIM tenant-domain" in family["subject_scope"]
+
+
 def test_claim_family_schema_rejects_malformed_scalar_and_array_values() -> None:
     inventory = load_claim_inventory(AUDIT_PATH)
     claim_id = "runtime.catalog-indicator.v1"

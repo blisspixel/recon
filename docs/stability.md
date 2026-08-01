@@ -126,10 +126,10 @@ All MCP tools are stability-covered, but not all are read-only.
 **Stateful tools:**
 
 - `reload_data` re-reads local catalogs and clears the lookup cache.
-- `inject_ephemeral_fingerprint` adds a session-only fingerprint.
-- `clear_ephemeral_fingerprints` removes session-only fingerprints.
+- `inject_ephemeral_fingerprint` adds a process-scoped ephemeral fingerprint.
+- `clear_ephemeral_fingerprints` removes process-scoped ephemeral fingerprints.
 - `reevaluate_domain` replaces one cached merged result after applying the
-  current session catalog. It does not make a network request.
+  current process catalog. It does not make a network request.
 
 All other tools are read-only. Read-only domain tools can still make passive
 outbound requests on a cache miss. The FastMCP Server Instructions document

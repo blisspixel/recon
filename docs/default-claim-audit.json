@@ -727,19 +727,32 @@
       "lineage_status": "exact",
       "material": true,
       "producer_paths": [
-        "src/recon_tool/chain.py",
+        "src/recon_tool/chain.py#chain_resolve",
+        "src/recon_tool/merger.py#merge_results",
+        "src/recon_tool/sources/dns.py#_detect_common_subdomains",
+        "src/recon_tool/sources/dns.py#_detect_exchange_endpoints",
+        "src/recon_tool/sources/dns.py#_detect_idp_hub",
+        "src/recon_tool/sources/dns_email.py#_apply_exchange_dkim",
+        "src/recon_tool/sources/dns_infra.py#_add_autodiscover_matches",
+        "src/recon_tool/sources/dns_infra.py#_apply_cached_cert_intel",
+        "src/recon_tool/sources/dns_infra.py#_query_cert_providers",
         "src/recon_tool/infra_graph.py#build_infrastructure_clusters",
         "src/recon_tool/formatter/panel.py#_render_related_compact"
       ],
       "regression_tests": [
         "tests/test_chain.py",
+        "tests/test_cname_chain_validation.py",
+        "tests/test_ct_pipeline_resilience.py",
+        "tests/test_dns_subdetectors.py",
+        "tests/test_documentation_semantic_contracts.py",
+        "tests/test_json_schema_file.py",
         "tests/test_surface_attribution.py",
         "tests/test_infra_graph.py"
       ],
       "renderer_obligations": [
         "Name the exact breadcrumb or co-occurrence relation and never promote it into ownership, subsidiary, shared-control, or current-use claims."
       ],
-      "subject_scope": "public names connected by bounded CNAME, CT, autodiscover, DKIM, or SAN co-occurrence breadcrumbs"
+      "subject_scope": "public names connected by bounded CT, CNAME, Exchange/identity endpoint, autodiscover, DKIM tenant-domain, or SAN co-occurrence breadcrumbs"
     },
     "runtime.service-label.v1": {
       "audit_status": "complete",
@@ -803,7 +816,7 @@
       "subject_scope": "stable JSON and local MCP transport contract"
     },
     "static.agent-guidance.v1": {
-      "audit_status": "open",
+      "audit_status": "complete",
       "claim_id": "static.agent-guidance.v1",
       "classification": "static_product_contract",
       "evidence_path": [
@@ -833,11 +846,13 @@
       "subject_scope": "shipped agent guidance and installation documentation"
     },
     "static.mcp-contract.v1": {
-      "audit_status": "open",
+      "audit_status": "complete",
       "claim_id": "static.mcp-contract.v1",
       "classification": "static_product_contract",
       "evidence_path": [
         "src/recon_tool/server/app.py#resolve_or_cache",
+        "src/recon_tool/chain.py#chain_resolve",
+        "src/recon_tool/mcp_client/sdk_compat.py#tool_annotations",
         "scripts/generate_surface_inventory.py#build_inventory"
       ],
       "limits": [
@@ -848,10 +863,18 @@
       "material": true,
       "producer_paths": [
         "src/recon_tool/server/app.py#SERVER_INSTRUCTIONS",
+        "src/recon_tool/server/ephemeral.py",
+        "src/recon_tool/server/graph.py",
+        "src/recon_tool/server/introspection.py",
         "src/recon_tool/server/lookup.py#lookup_tenant",
+        "src/recon_tool/server/posture.py",
+        "docs/mcp.md",
         "docs/surface-inventory.json"
       ],
       "regression_tests": [
+        "tests/test_default_claim_audit.py",
+        "tests/test_mcp_graph_tools.py",
+        "tests/test_mcp_structured_output.py",
         "tests/test_server_instructions.py",
         "tests/test_mcp_tool_annotations.py",
         "tests/test_surface_inventory.py"

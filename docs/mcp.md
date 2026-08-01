@@ -142,24 +142,24 @@ instead of being reflected into an instruction template.
 
 | Tool | Network calls? | What it does | Parameters |
 |------|----------------|-------------|------------|
-| `lookup_tenant` | Cache first; may resolve | Full domain intelligence: tenant details, email score, SaaS fingerprints, signals. When `format="json"` and `explain=true`, the response includes a JSON-serialisable `explanation_dag`: evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. Schema-version-1 `provenance_complete` and `disconnected_terminals` report graph reachability. `exact_provenance_complete` and `lineage_disconnected_terminals` report whether every terminal has an explicit generation-time evidence-to-rule path. Flat records and terminal nodes carry `lineage_status` (`exact`, `exact_rule_only`, `reconstructed`, or `unsupported`); exact and exact-rule-only records carry one emitter ID in `lineage_rule_ids`. The flat explanations list remains alongside the graph. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
+| `lookup_tenant` | Cache first; may resolve | Compact agent-readable summary by default; `format="json"` returns the detailed record as serialized JSON text. Collection uses public DNS and unauthenticated endpoints: authoritative DNS may observe resolver traffic, MTA-STS is the only default target-owned HTTP request, and Google CSE / BIMI certificate probes require explicit opt-in. When `format="json"` and `explain=true`, the serialized record includes an `explanation_dag`: evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. Schema-version-1 `provenance_complete` and `disconnected_terminals` report graph reachability. `exact_provenance_complete` and `lineage_disconnected_terminals` report whether every terminal has an explicit generation-time evidence-to-rule path. Flat records and terminal nodes carry `lineage_status` (`exact`, `exact_rule_only`, `reconstructed`, or `unsupported`); exact and exact-rule-only records carry one emitter ID in `lineage_rule_ids`. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
 | `analyze_posture` | Cache first; may resolve | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument: one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `~/.recon/profiles/`. | `domain`, `explain`: bool, `profile`: str (optional) |
 | `cluster_verification_tokens` | Cache first; may resolve each domain | Report exact TXT site-verification token reuse. Shared administration, copied configuration, managed service, and stale residue remain compatible explanations; reuse does not establish ownership or current use. Optional peer caps report omitted counts for compact agent output. | `domains`: array of domain strings, `peer_limit_per_domain` (0 means raw) |
 | `assess_exposure` | Cache first; may resolve | Model-bound public-evidence index on a 0-100 compatibility scale, with an exact-evidence floor, bounded ceiling, complete weighted component ledger, and email, identity, and infrastructure sections. The current component model assigns at most 90 points. It summarizes only collected public observables and is not an overall security score (see [correlation.md](correlation.md) for the inference model). | `domain` |
 | `find_hardening_gaps` | Cache first; may resolve | Categorized public-configuration review prompts with exact generator IDs, basis states, typed predicates, bounded scopes, retained evidence, and "Consider" guidance. It is not an overall assessment (see [correlation.md](correlation.md)). | `domain` |
 | `compare_postures` | Cache first; may resolve both domains | Side-by-side comparison of two domains' public configuration evidence, including each namespace's exact exposure-index ledger. Floors and ceilings are not an overall security ranking. | `domain_a`, `domain_b` |
-| `chain_lookup` | Yes | Recursive domain discovery via CNAME/CT breadcrumbs. Optional result caps report omitted counts for compact agent output while preserving raw JSON as the default. | `domain`, `depth` (1-3), `result_limit` (0 means raw) |
-| `discover_fingerprint_candidates` | Yes | Mine a domain for new-fingerprint candidates. Resolves with unclassified-CNAME-chain capture, applies already-covered and same-zone/brand-similarity heuristic filters, and returns a ranked candidate list. The heuristic does not establish ownership. Pair with the `/recon-fingerprint-triage` skill to review candidates before proposing YAML. | `domain`, `skip_ct`: bool, `keep_intra_org`: bool, `min_count`: int |
-| `reload_data` | No | Reload fingerprints, signals, and posture rules from disk, then clear the session lookup-result cache | none |
-| `get_fingerprints` | No | List loaded fingerprints with slugs, categories, and detection types. Use `limit` and `offset` for bounded pages. | `category` (str, optional filter), `limit` (int, optional page size), `offset` (int, default 0; used with `limit`) |
-| `get_signals` | No | List all loaded signals with rules, layers, conditions | `category`, `layer` (optional filters) |
+| `chain_lookup` | Yes | Recursively follows every `related_domains` observation from each ordinary lookup, currently including CT, CNAME, Exchange/identity endpoint, autodiscover, and DKIM tenant-domain breadcrumbs. Each queued name can trigger another full public-metadata lookup. Co-occurrence does not establish ownership or a corporate relationship. Optional result caps report omitted counts for compact agent output while preserving raw JSON as the default. | `domain`, `depth` (1-3), `result_limit` (0 means raw) |
+| `discover_fingerprint_candidates` | Cache first; may resolve | Mine unclassified CNAME suffixes for candidates that require independent triage. Surviving heuristics do not establish a third-party service, ownership, current use, or a reusable provider pattern. Pair with the `/recon-fingerprint-triage` skill and require independent documentation or repeated validation evidence before proposing YAML. | `domain`, `skip_ct`: bool, `keep_intra_org`: bool, `min_count`: int |
+| `reload_data` | No | Reload fingerprint, signal, and posture definitions, clear the process lookup cache, and preserve the rate limiter plus ephemeral catalog | none |
+| `get_fingerprints` | No | List loaded fingerprint definitions with slugs, categories, and detection types. Use `limit` and `offset` for bounded pages. Definitions are capabilities, not target evidence. | `category` (str, optional filter), `limit` (int, optional page size), `offset` (int, default 0; used with `limit`) |
+| `get_signals` | No | List loaded signal definitions with rules, layers, and conditions. Definitions are capabilities, not target evidence. | `category`, `layer` (optional filters) |
 | `explain_signal` | No unless `domain` is provided | Query a signal's trigger conditions and current state for a domain | `signal_name`, `domain` (optional) |
-| `test_hypothesis` | Cache first; may resolve | Test a theory against signals and evidence; returns likelihood + evidence | `domain`, `hypothesis` |
+| `test_hypothesis` | Cache first; may resolve | List observations related to a theory while semantic likelihood remains explicitly unresolved. | `domain`, `hypothesis` |
 | `simulate_hardening` | Cache first; may resolve | What-if: re-compute the model-bound public-evidence index with hypothetical fixes. Current and simulated ledgers are returned separately, and changed components are labeled `hypothetical_value`. This is not a prediction of overall security change (see [correlation.md](correlation.md)). | `domain`, `fixes` (array) |
-| `inject_ephemeral_fingerprint` | No | Inject a temporary fingerprint for the current session | `name`, `slug`, `category`, `confidence`, `detections` (array) |
-| `reevaluate_domain` | No | Re-evaluate retained apex/root TXT, SPF, MX, NS, and CNAME observations against current fingerprints (including ephemeral). Owner-qualified detection types require a fresh lookup. | `domain` |
-| `list_ephemeral_fingerprints` | No | List all currently loaded ephemeral fingerprints | none |
-| `clear_ephemeral_fingerprints` | No | Remove all ephemeral fingerprints from the session | none |
+| `inject_ephemeral_fingerprint` | No | Inject a temporary fingerprint into the current server process; it is process-wide, not conversation-scoped | `name`, `slug`, `category`, `confidence`, `detections` (array) |
+| `reevaluate_domain` | No | Replace one result in the process lookup cache after replaying retained apex/root TXT, SPF, MX, NS, and CNAME observations against current fingerprints. Owner-qualified detection types require a fresh lookup. | `domain` |
+| `list_ephemeral_fingerprints` | No | List all ephemeral fingerprints in the current server process | none |
+| `clear_ephemeral_fingerprints` | No | Remove all ephemeral fingerprints from the current server process | none |
 | `get_infrastructure_clusters` *(v1.8+)* | Cache first; may resolve | Surfaces the CT co-occurrence community-detection report already computed during lookup: algorithm, modularity score, cluster list. Read-only exposure of computed state. Optional member caps report omitted counts for compact agent output. | `domain`, `member_limit_per_cluster` (0 means raw) |
 | `export_graph` *(v1.8+)* | Cache first; may resolve | Companion to `get_infrastructure_clusters`. Returns the underlying graph as nodes + weighted edges + cluster_assignment for downstream Mermaid / GraphViz / CSV rendering. Optional node and edge caps report omitted counts for compact agent output. | `domain`, `node_limit` (0 means raw), `edge_limit` (0 means raw) |
 | `get_posteriors` *(v1.9.0; stable v2.0+)* | Cache first; may resolve | Exposes model-relative Bayesian-network posteriors and evidence-responsive uncertainty bands for the nine high-level claim nodes. Top-level `degraded_sources` and `collection_masked_units` preserve the collection failures that were treated as structurally unobserved rather than negative evidence. Read-only exposure of the inference computed during lookup. See [correlation.md](correlation.md) for the inference model and limits. | `domain` |
@@ -192,13 +192,17 @@ only after a valid declaration activated a completed policy request. Simulated
 fixes replace the affected proof rows with explicit hypothetical records before
 remaining prompts are evaluated.
 
-The lookup and analysis tools are read-only. The ephemeral fingerprint tools
-mutate only in-memory session state for the current server process; they do not
-write to disk and do not trigger new network calls on their own. For
+Exactly four explicit configuration or cache-rewrite tools mutate
+caller-visible state in the current server process:
+`inject_ephemeral_fingerprint`, `clear_ephemeral_fingerprints`, `reload_data`,
+and `reevaluate_domain`. They do not write to disk or trigger new network calls
+on their own. All other lookup and analysis tools are read-only, although a
+cache miss may perform the documented public-metadata collection. For
 `lookup_tenant`, structured provenance requires `format="json"` with
 `explain=true`; `analyze_posture(explain=true)` returns flat observation
 explanations rather than an `explanation_dag`. Catalog tools (`get_fingerprints`,
-`get_signals`, and MCP resources) do not call the network.
+`get_signals`, and MCP resources) do not call the network. Definitions describe
+matching and derivation capabilities, not target evidence.
 Domain-analysis tools are cache-first and may resolve the domain when no fresh
 cache entry exists. The server includes a bounded TTL cache (120s) and
 per-domain rate limiting.
@@ -226,9 +230,9 @@ so an agent can decide whether to request the raw result.
 Compatibility with the final MCP 2026-07-28 release is tracked in
 [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md). The dated isolated
 matrix passes on both stable SDK v1.28.1 and stable SDK v2.0.0 using the same
-local stdio server. Production stays on `mcp>=1.28.1,<2` pending a separate
-adoption review; stable v2 already passes recon's doctor, discovery, schema,
-resource, ordering, and compatibility gates. Under v2, recon explicitly
+local stdio server. Production adopted `mcp>=2.0.0,<3` on 2026-07-31;
+v1.28.1 remains the blocking rollback pin. Stable v2 passes recon's doctor,
+discovery, schema, resource, ordering, and compatibility gates. Under v2, recon explicitly
 uses conservative `ttlMs=0`, `cacheScope=private` hints for all six cacheable
 methods rather than promising freshness it cannot establish.
 
@@ -237,7 +241,7 @@ The no-network catalog list tools started the precise-schema Phase 2:
 `get_signals` advertises `SignalSummary` plus nested `SignalMetadataSummary`.
 `explain_signal` now advertises static-definition and domain-evaluation variants
 with `SignalTriggerConditions` and `SignalEvidenceSummary`. The simple
-ephemeral-fingerprint session tools now advertise
+ephemeral-fingerprint process tools now advertise
 `EphemeralInjectionResult`, `EphemeralFingerprintSummary`, and
 `EphemeralClearResult`. The graph data tools now advertise
 `VerificationTokenClusterResult`, `InfrastructureClusterEnvelope`, and
@@ -280,23 +284,31 @@ absence.
 
 ### Read-only vs stateful annotations
 
-Each tool carries a `readOnlyHint` annotation so a consuming agent can reason
-about what is safe to auto-approve. The split is enforced in code and kept in
-sync with this section by `tests/test_mcp_tool_annotations.py`.
+Each tool carries explicit `readOnlyHint`, `destructiveHint`, `idempotentHint`,
+and `openWorldHint` annotations so a consuming agent can reason about what is
+safe to auto-approve. The complete 22-tool matrix is enforced in code and kept
+in sync with this section by `tests/test_mcp_tool_annotations.py`.
 
-**Stateful tools** change the server's in-memory state for the session and are
-the ones to keep manual (or approve only when you understand the effect):
+**Explicit state-mutation tools** change caller-visible, process-wide in-memory
+state and are the ones to keep manual (or approve only when you understand the
+effect):
 
 - `inject_ephemeral_fingerprint`: adds a temporary fingerprint to the running
-  session's catalog.
+  process catalog.
 - `clear_ephemeral_fingerprints`: removes all ephemeral fingerprints from the
-  session.
+  process catalog and removes their projections from cached results.
 - `reload_data`: re-reads the fingerprint, signal, and posture catalogs from
-  disk into the running server and clears the session lookup-result cache. It
+  disk into the running server and clears the process lookup cache. It
   preserves the rate limiter and current ephemeral catalog.
 - `reevaluate_domain`: replaces the cached merged result for one domain after
-  applying the session's current fingerprint catalog. It makes no network
+  applying the process's current fingerprint catalog. It makes no network
   request, but later tools observe the refreshed cached result.
+
+`clear_ephemeral_fingerprints`, `reload_data`, and `reevaluate_domain` advertise
+`destructiveHint=true` because they remove or replace current process state;
+`inject_ephemeral_fingerprint` is additive and advertises
+`destructiveHint=false`. All four advertise `openWorldHint=false` because none
+interacts with an external entity.
 
 Every other tool is **read-only** (`readOnlyHint=true`): it has no externally
 visible side effect beyond returning observations. The server can still update
@@ -347,7 +359,7 @@ recon exposes five MCP resources so agents can browse "what can this tool detect
 | `recon://schema` | The JSON-output contract as a JSON Schema (the same document as `docs/recon-schema.json`), so an agent can self-describe the shape of `recon <domain> --json` (plus the batch / delta modes in its `$defs`) without an external fetch. The contract version is in the schema's own `description`. |
 | `recon://surface-inventory` | Generated, non-contractual local map of the CLI, MCP tools, MCP resources, JSON schema, agent integration surfaces, and maintainer-loop context packet. It is the same inventory as `docs/surface-inventory.json`. |
 
-The catalog resources return deterministic JSON sourced from the already-loaded YAML catalogs; `recon://schema` returns the bundled schema document; `recon://surface-inventory` returns the bundled generated inventory. No network calls. Changes to custom `~/.recon/fingerprints/` or `~/.recon/signals.yaml` require calling `reload_data` to take effect. The surface inventory is for local discovery and drift checks, not compatibility promises; see [ADR-0007](adr/0007-surface-inventory-discovery-context.md) for the promotion gate.
+The catalog resources return deterministic JSON sourced from the already-loaded YAML catalogs; definitions describe matching and derivation capabilities, not evidence about any target. `recon://schema` returns the bundled schema document; `recon://surface-inventory` returns the bundled generated inventory. No network calls. Changes to custom `~/.recon/fingerprints/` or `~/.recon/signals.yaml` require calling `reload_data` to take effect. The surface inventory is for local discovery and drift checks, not compatibility promises; see [ADR-0007](adr/0007-surface-inventory-discovery-context.md) for the promotion gate.
 
 ### Resource Consumption Examples
 
@@ -413,14 +425,14 @@ Agents can compare the two to decide whether to re-resolve. On a fresh lookup, `
 
 ## Ephemeral Fingerprints
 
-Ephemeral fingerprints let AI agents inject temporary detection patterns at runtime. They live in memory only, are scoped to the current server session, and are validated through the same regex/ReDoS checks as built-in fingerprints.
+Ephemeral fingerprints let AI agents inject temporary detection patterns at runtime. They live in memory only, are process-wide within the current server process rather than conversation-scoped, and are validated through the same regex/ReDoS checks as built-in fingerprints.
 
-To keep long-running MCP sessions available under prompt injection or abusive
+To keep long-running MCP server processes available under prompt injection or abusive
 tool calls, ephemeral storage is quota-bounded: at most 100 ephemeral
 fingerprints, at most 20 detections on a single injected fingerprint, and at
 most 500 total ephemeral detections per process. Oversized injections return a
 MCP tool error (`isError: true`); use `clear_ephemeral_fingerprints` or restart
-the server to reset the session quota.
+the server to reset the process quota.
 
 ### Workflow
 
@@ -435,7 +447,7 @@ replay `txt`, `spf`, `mx`, `ns`, and apex/root `cname` rules from retained DNS
 observations. It cannot replay owner-qualified `cname_target`, `subdomain_txt`,
 `caa`, `srv`, or `dmarc_rua` rules; `reevaluate_domain` returns a tool error when
 any active ephemeral fingerprint uses one of those types. To test such a rule,
-call `reload_data` to clear the session's lookup-result cache while retaining
+call `reload_data` to clear the process lookup cache while retaining
 the ephemeral catalog, then run `lookup_tenant` again. That fresh lookup uses
 the normal documented network boundary and is not a zero-network operation.
 
@@ -471,7 +483,7 @@ Agent: "Now re-evaluate alpha.invalid to see if they use Synthetic Beta Platform
 ← {"status": "ok", "removed": 1}
 ```
 
-Ephemeral fingerprints are deliberately local-only and session-scoped. They
+Ephemeral fingerprints are deliberately local-only and process-scoped. They
 change matching rules for the current process; they do not tune Bayesian priors
 or persist learning. They support cache-only hypothesis checks without writing
 to disk or sharing data and disappear when the server exits.
@@ -579,7 +591,7 @@ start automatically when the plugin is enabled, but their tool calls follow the
 same permission system as user-configured servers. The plugin `.mcp.json`,
 Claude Code config, and VS Code `mcp.json` do not define a generic
 `autoApprove` field. Use the client's documented permission rules when you want
-an allowlist, and keep the four session-state tools listed under
+an allowlist, and keep the four process-state tools listed under
 [Available Tools](#available-tools) subject to deliberate review. Installing
 both the plugin and a user-level server creates two registrations; choose one
 path unless that duplication is intentional. See the

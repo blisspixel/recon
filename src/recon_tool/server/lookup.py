@@ -132,15 +132,21 @@ async def lookup_tenant(
     format: str = "text",
     explain: bool = False,
 ) -> str:
-    """Look up public domain observations including display label, tenant ID,
-    provider indicators, email-control records, and signal correlations.
+    """Return compact text by default; JSON returns a detailed serialized record.
+
+    The default is agent-readable text. Use ``format="json"`` for serialized
+    JSON or ``markdown`` for the full report. Public observations can include
+    display label, tenant ID, provider indicators, email-control records, and
+    signal correlations.
 
     Works for any domain. Returns catalogued public SaaS and infrastructure
     indicators plus claim-safe co-observations. A fingerprint match does not
     establish active use, organizational intent, deployment scope, or maturity.
 
-    Queries only public, unauthenticated endpoints and DNS records.
-    No credentials or API keys required.
+    Queries only public DNS and unauthenticated endpoints. Authoritative DNS
+    may observe resolver traffic. MTA-STS is the only default target-owned HTTP
+    request; Google CSE and BIMI certificate probes require explicit opt-in.
+    No credentials or API keys are required.
 
     Args:
         domain: A domain name to look up (e.g., alpha.invalid, gamma.invalid).

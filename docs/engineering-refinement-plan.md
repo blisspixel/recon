@@ -66,8 +66,9 @@ subject coordinate and derive panel-only workload summaries only from
 collection-observable evidence. Service labels, posture observations,
 hardening guidance, and every weighted exposure-index component now retain
 exact generation-time basis. Comparisons carry both namespace ledgers, and
-simulations distinguish hypothetical from live component values. No material
-runtime family has incomplete lineage; the two static guidance reviews remain.
+simulations distinguish hypothetical from live component values. All 27
+default-claim families are complete. The static agent and MCP reviews now pin
+process scope, collection boundaries, output forms, and abstention semantics.
 
 ### Scope
 
@@ -130,14 +131,13 @@ Correct the smallest evidence-to-claim path first.
 
 ## Track 2: MCP 2026-07-28 Compatibility Matrix
 
-Status: stable compatibility checkpoint complete 2026-07-28; production
-adoption decision pending
+Status: adopted 2026-07-31; stable v1.28.1 remains the tested rollback pin
 Dependencies: none; this stream can proceed independently of Track 1
 Risk: dependency and protocol compatibility
 
 The exact stable v1.28.1 and stable v2.0.0 environments pass the full isolated
-matrix. Production remains on `mcp>=1.28.1,<2`; adopting v2 remains a separate
-release decision.
+matrix. Production uses `mcp>=2.0.0,<3`; both exact pins remain blocking so the
+rollback line is continuously verified.
 
 ### Scope
 

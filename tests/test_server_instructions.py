@@ -79,7 +79,65 @@ class TestServerInstructions:
         """Agents need to interpret High/Medium/Low correctly."""
         from recon_tool.server import mcp
 
-        instructions = mcp.instructions or ""
-        assert "High" in instructions
-        assert "Medium" in instructions
-        assert "Low" in instructions
+        instructions = " ".join((mcp.instructions or "").split())
+        assert "deterministic merged-output summary tier" in instructions
+        assert "same-claim corroboration" in instructions
+        assert "not confidence in every claim or a calibrated probability" in instructions
+        assert "High (3+ corroborating sources)" not in instructions
+        assert "Medium (2 sources, partial)" not in instructions
+
+    def test_instructions_distinguish_default_and_structured_lookup_output(self) -> None:
+        """Default text is compact; only the JSON form carries full structured data."""
+        from recon_tool.server import mcp
+
+        instructions = " ".join((mcp.instructions or "").split())
+        assert "compact agent-readable summary" in instructions
+        assert 'format="json"' in instructions
+        assert "detailed serialized JSON TenantInfo" in instructions
+        assert "Returns the full TenantInfo" not in instructions
+
+    def test_instructions_preserve_related_namespace_limits(self) -> None:
+        """CNAME and CT discovery cannot establish a corporate relationship."""
+        from recon_tool.server import mcp
+
+        instructions = " ".join((mcp.instructions or "").split())
+        assert "does not establish ownership or a corporate relationship" in instructions
+        assert "portfolio / subsidiary" not in instructions
+
+    def test_instructions_describe_untrusted_text_sanitization_precisely(self) -> None:
+        """Printable directive-like data can survive control-character sanitization."""
+        from recon_tool.server import mcp
+
+        instructions = " ".join((mcp.instructions or "").split())
+        assert "C0/C1 and bidirectional control characters" in instructions
+        assert "printable directive-like text can remain" in instructions
+        assert "strips terminal and markdown control sequences" not in instructions
+
+    def test_instructions_bound_cache_only_ephemeral_replay(self) -> None:
+        """The zero-network workflow must name what can and cannot be replayed."""
+        from recon_tool.server import mcp
+
+        instructions = " ".join((mcp.instructions or "").split())
+        for replayable in ("TXT", "SPF", "MX", "NS", "CNAME"):
+            assert replayable in instructions
+        for fresh_only in ("cname_target", "subdomain_txt", "caa", "srv", "dmarc_rua"):
+            assert fresh_only in instructions
+        assert "fresh lookup through the normal documented network boundary" in instructions
+
+    def test_instructions_name_exact_process_wide_mutations(self) -> None:
+        """Server instructions must expose all stateful effects without session fiction."""
+        from recon_tool.server import mcp
+
+        instructions = " ".join((mcp.instructions or "").split())
+        assert "Exactly four explicit configuration or cache-rewrite tools" in instructions
+        for name in (
+            "inject_ephemeral_fingerprint",
+            "clear_ephemeral_fingerprints",
+            "reload_data",
+            "reevaluate_domain",
+        ):
+            assert f"`{name}`" in instructions
+        assert "clears the lookup cache" in instructions
+        assert "preserving the rate limiter and ephemeral catalog" in instructions
+        assert "replaces one cached result without a network request" in instructions
+        assert "current session" not in instructions
