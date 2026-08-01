@@ -101,6 +101,14 @@ def test_default_claim_audit_is_wired_into_local_and_ci_gates() -> None:
     assert "run: uv run python scripts/check_default_claim_audit.py" in workflow
 
 
+def test_terminal_demo_is_wired_into_local_and_ci_gates() -> None:
+    local_stage = next(command for _group, name, command in check._STAGES if name == "terminal-demo")
+    workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert local_stage == [check._PY, "scripts/generate_terminal_demo.py", "--check"]
+    assert "run: uv run python scripts/generate_terminal_demo.py --check" in workflow
+
+
 def test_reproducible_build_smokes_built_wheel_entry_points() -> None:
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
     build_commands = [line.strip() for line in workflow.splitlines() if line.strip().startswith("uv build")]

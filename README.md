@@ -75,29 +75,51 @@ recon example.com
 
 Example output shape:
 
-```text
-Synthetic Example Namespace
-example.com
+![Synthetic terminal showing recon's default output](https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg)
 
-Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)
-Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890
-Auth         Federated
-Confidence   High (4 sources)
+This is the actual default-panel renderer fed by a deterministic, no-network
+fixture. It uses IETF reserved `.invalid` namespaces. Tenant IDs, services,
+and organization details are fabricated. No real organization is depicted as
+the evaluated target.
+
+<!-- terminal-demo-transcript:start -->
+<details>
+<summary>Accessible text transcript</summary>
+
+```text
+$ recon alpha.invalid
+Synthetic Alpha Ltd
+alpha.invalid
+──────────────────────────────────────────────────────────────────────────────
+  Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX
+               delivery path)
+  Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
+  Tenant domain synthetic-alpha.onmicrosoft.invalid
+  Auth         Federated
+  Confidence   ●●● High (4 sources)
+
 
 Services
-  Email       Microsoft 365, Proofpoint, DMARC, DKIM, SPF strict
-  Identity    Okta, Entra ID
-  Cloud       Cloudflare, AWS Route 53
+  Email          Microsoft 365, Proofpoint, DMARC reject, DKIM,
+                 SPF strict, MTA-STS enforce
+  Identity       Okta
+  Cloud          Cloudflare (CDN/edge), AWS Route 53 (DNS)
+  Security       Wiz Security (public TXT account indicator)
+  Collaboration  Slack (public TXT account indicator),
+                 Atlassian (Jira/Confluence)
+
+
+High-signal related domains
+  login.alpha.invalid, status.alpha.invalid, support.alpha.invalid
 
 Insights
   Federated identity observed; identity-vendor indicators: Okta
-  Email security: observed controls: DMARC reject, DKIM, SPF strict, BIMI
-  MX gateway observed: Proofpoint
+  Email security: observed controls: DMARC reject, DKIM, SPF strict, MTA-STS
+
 ```
 
-Examples use IETF reserved namespaces. Tenant IDs, services, and domains in
-this rendered example are fabricated. No real organization is depicted as the
-evaluated target.
+</details>
+<!-- terminal-demo-transcript:end -->
 
 Install, update, uninstall, and first-run detail:
 [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).

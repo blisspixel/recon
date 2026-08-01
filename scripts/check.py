@@ -68,6 +68,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "cost-surface", [_PY, "scripts/check_cost_surface.py"]),
     (_CORE, "text-hygiene", [_PY, "scripts/check_text_hygiene.py"]),
     (_CORE, "markdown-links", [_PY, "scripts/check_markdown_links.py"]),
+    (_CORE, "terminal-demo", [_PY, "scripts/generate_terminal_demo.py", "--check"]),
     (_CORE, "clusterfuzzlite-requirements", [_PY, "scripts/check_clusterfuzzlite_requirements.py"]),
     (_CORE, "schema-sources", [_PY, "scripts/check_schema_sources.py"]),
     (_CORE, "schema-generator", [_PY, "scripts/generate_schema.py", "--check"]),
