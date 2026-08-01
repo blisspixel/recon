@@ -1,8 +1,9 @@
-"""Chain resolver — recursive domain discovery via BFS.
+"""Chain resolver: recursive related-namespace discovery via BFS.
 
-Follows related domains discovered via CNAME breadcrumbs and certificate
-transparency logs up to a configurable depth. Reuses the existing
-resolve_tenant() pipeline for each domain.
+Follows every ``related_domains`` observation returned by the ordinary resolver
+up to a configurable depth. These currently include CT, CNAME,
+Exchange/identity endpoint, autodiscover, and DKIM tenant-domain breadcrumbs.
+Reuses the existing ``resolve_tenant()`` pipeline for each domain.
 
 The chain is BFS (breadth-first): all domains at depth N are resolved
 before moving to depth N+1. This ensures the most closely related

@@ -117,9 +117,10 @@ not change.
 - Stateless mode with JSON responses.
 - Process health at `/health`.
 - No legacy SSE-only deployment.
-- Production MCP SDK remains `mcp>=1.28.1,<2` until the separate stable-v2
-  adoption review changes it. The remote adapter refuses to start on an
-  unadopted SDK family rather than guessing at a production transport.
+- Production uses `mcp>=2.0.0,<3`; the exact v1.28.1 compatibility row remains
+  the tested rollback pin. The remote adapter supports both characterized SDK
+  generations and refuses unrecognized families rather than guessing at a
+  production transport.
 
 Stateless mode fits recon because the meaningful result is derived from each
 tool call plus bounded process cache. recon does not need sampling, elicitation,

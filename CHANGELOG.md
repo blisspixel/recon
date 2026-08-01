@@ -33,8 +33,14 @@ operator, corporate group, ownership, or control.
   machine-readable claim family. The local and CI gates now reject new or stale
   surfaces, malformed family states, incomplete families marked complete,
   escaped or role-inappropriate repository references, and unreviewed JSON or
-  MCP surface-set changes. The audit records incomplete lineage explicitly; it
-  does not present the wider evidence-semantic roadmap track as complete.
+  MCP surface-set changes. All 27 claim families are now complete, with no
+  material runtime family carrying incomplete lineage. The final static review
+  aligns shipped agent guidance, live MCP instructions and tool descriptions,
+  generated surface inventory, and current SDK adoption docs with exact
+  process scope, collection boundaries, output forms, cache behavior, score
+  limits, and abstention rules. Focused contract tests reject stale session
+  semantics, simplistic confidence formulas, invented payload-size bounds,
+  related-namespace ownership claims, and obsolete production dependency text.
 - Built-in generated insights now retain the exact emitting rule and either
   supporting evidence occurrences or bounded observation scope at generation time.
   Collection projection and related-domain enrichment regenerate those
@@ -1268,7 +1274,7 @@ instructions were corrected and made more context-efficient.
 - Prefer bounded fingerprint pages for browsing while requiring an exhaustive
   page walk or full resource read before reporting that the catalog has no
   match. The MCP guide now documents all pagination parameters and all four
-  session-state tools.
+  explicit process-state tools.
 - Recorded a reproducible MCP discovery and result-body characterization. The
   complete stable tool surface remains the default because serialized byte
   reduction alone does not prove an end-to-end client context benefit.
@@ -1442,7 +1448,7 @@ Tool surface changes: no CLI command, flag, JSON, MCP, cache, or import changes.
 - Reused bounded compiled standard-library regular expressions across repeated
   TXT, CNAME, subdomain TXT, PTR-region, and cached-DNS replay matching. The
   cache is capped at 2,048 entries, rejects oversized or invalid patterns, keys
-  by flags, and is cleared on catalog reload or session-catalog mutation.
+  by flags, and is cleared on catalog reload or process-catalog mutation.
   Exact differential output and existing ReDoS admission controls are
   preserved. The checked 1,000-value by 298-rule Python 3.14.4 fixture fell
   from a 348 ms historical median to 115 ms at clean commit `47c5494`.
@@ -1874,7 +1880,7 @@ replaces a cached result.
 - **Bounded certificate-transparency retention.** CertSpotter aggregation now
   enforces one total retained-name ceiling across all admitted certificate
   entries instead of multiplying the per-entry cap across a response page.
-- **Bounded session regex complexity.** Session-injected fingerprint patterns
+- **Bounded process-local regex complexity.** Process-injected fingerprint patterns
   now permit at most one repetition operator in addition to the existing
   length and structural checks. Catalog regex validation moved into a focused
   module without changing built-in matching behavior.
@@ -2741,7 +2747,7 @@ No CLI command or flag changes.
   function-size violations are paid down.
 - **MCP output schema precision.** Added precise `TypedDict` item schemas for
   `get_fingerprints`, `get_signals`, `explain_signal`, the simple
-  ephemeral-fingerprint session tools, the graph data tools, and the compact
+  ephemeral-fingerprint process tools, the graph data tools, and the compact
   agent-facing posture helpers, plus `get_posteriors` and the exposure report
   tools, discovery candidate lists, `analyze_posture`, and `reevaluate_domain`,
   so FastMCP advertises concrete `outputSchema` fields for these MCP surfaces.
@@ -10434,8 +10440,8 @@ artifact have been smoothed in `agents/claude-code/skills/recon/SKILL.md` and
   chain rather than dumping it.
 - Full-mode headline template cites `docs/recon-schema.json` v1.0 so
   future skill editors know where the field-name contract lives.
-- Output-size guidance is concrete ("3-10 KB depending on org size")
-  instead of "several KB".
+- Output-size guidance directs agents to save full JSON instead of dumping
+  potentially large certificate-transparency and evidence data inline.
 
 ## [1.4.7] - 2026-04-29
 
@@ -10571,7 +10577,7 @@ found during review.
 
 ### Fixed
 
-- Ephemeral MCP fingerprints now have per-session, per-fingerprint, and total
+- Ephemeral MCP fingerprints now have per-process, per-fingerprint, and total
   detection caps to prevent unbounded process growth.
 - CSV batch output now neutralizes spreadsheet formula prefixes in exported
   cells.
@@ -10895,8 +10901,8 @@ all three. Downstream consumers rank them however they like.
 **Security patch.** The MCP ``inject_ephemeral_fingerprint`` tool
 validated schema but bypassed the v1.2 specificity gate. A caller
 could inject a pattern like ``cname:\.com$`` and poison every
-subsequent lookup in that session with false positives. Blast radius
-was small (in-memory, per-session, could not persist), but the gate
+subsequent lookup in that server process with false positives. Blast radius
+was bounded to memory in one process and could not persist, but the gate
 is cheap and worth enforcing everywhere the catalog accepts input.
 
 ### Fixed
@@ -12612,7 +12618,7 @@ changing the core architecture.
 - **Primary Email Provider Detection** - MX-based topology computation distinguishes primary email providers from secondary/legacy detections. New `primary_email_provider` and `email_gateway` fields on TenantInfo. Enhanced Provider line formatting shows email delivery path (e.g., "Microsoft 365 (primary email via Proofpoint gateway)"). New "Email Gateway Topology" and "Legacy Provider Residue" signals. New email topology insights.
 - **Negative-Space Analysis** - new `absence.py` module evaluates `expected_counterparts` on signal definitions. When a signal fires but expected companion services are absent, an absence signal is produced with hedged language. 5 built-in signals ship with `expected_counterparts` definitions for out-of-the-box absence detection. Absence signals appear alongside standard signals in all output formats.
 - **DMARC Intelligence Expansion** - `rua=mailto:` extraction identifies paid DMARC report vendors (Agari, Proofpoint EFD, OnDMARC, dmarcian, Valimail, EasyDMARC). `pct=` parsing surfaces phased DMARC rollout. 6 new DMARC vendor fingerprints (detection type `dmarc_rua`). New "DMARC Governance Investment" signal. New `dmarc_phased_rollout` posture observation.
-- **Ephemeral Fingerprints via MCP** - 4 new MCP tools: `inject_ephemeral_fingerprint` (inject temporary detection patterns), `reevaluate_domain` (re-evaluate cached data with zero network calls), `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`. Session-scoped, in-memory, thread-safe. Validated through the same regex/ReDoS pipeline as built-in fingerprints.
+- **Ephemeral Fingerprints via MCP** - 4 new MCP tools: `inject_ephemeral_fingerprint` (inject temporary detection patterns), `reevaluate_domain` (re-evaluate cached data with zero network calls), `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`. Process-scoped, in-memory, thread-safe. Validated through the same regex/ReDoS pipeline as built-in fingerprints.
 - 6 new DMARC vendor fingerprints: Agari, Proofpoint EFD, OnDMARC, dmarcian, Valimail, EasyDMARC. 208 fingerprints total.
 - 3 new signals: Email Gateway Topology, Legacy Provider Residue, DMARC Governance Investment. 44 signals total.
 - 1 new posture observation: `dmarc_phased_rollout`.
@@ -12837,7 +12843,7 @@ changing the core architecture.
 - Metadata-aware signal engine - signals can now match on `dmarc_policy`, `auth_type`, `email_security_score`, `spf_include_count`, and `issuance_velocity` via YAML `metadata` conditions. Supports slug-only, metadata-only, and conjunction signals. 23 → 26 signals (4 layers).
 - Neutral posture analysis - new `--posture` flag and `analyze_posture` MCP tool. Produces factual observations about domain configuration (email, identity, infrastructure, SaaS footprint, certificates, consistency) without attack/defense framing. YAML-driven rules in `data/posture.yaml` with `~/.recon/posture.yaml` additive override.
 - Delta mode - `--compare previous.json` compares a live lookup against a previous JSON export. Surfaces added/removed services, slugs, signals, and scalar field changes (auth type, DMARC, confidence, domain count). Panel output with +/- markers, JSON output with structured diff.
-- Recursive domain chaining - `--chain --depth N` (max 3) follows related domains via CNAME/CT breadcrumbs using BFS. 50-domain cap, visited-set deduplication, aggregate timeout. New `chain_lookup` MCP tool.
+- Recursive domain chaining - `--chain --depth N` (max 3) follows the resolver's bounded related-name observations using BFS. 50-domain cap, visited-set deduplication, aggregate timeout. New `chain_lookup` MCP tool.
 - 3 new metadata-aware signals: Federated Identity with Complex Email Delegation, Active Email Sending with Minimal Security, High Certificate Issuance Activity.
 - 18 posture observation rules across 6 categories.
 - 7 new frozen dataclasses: `CertSummary`, `MetadataCondition`, `SignalContext`, `Observation`, `DeltaReport`, `ChainResult`, `ChainReport`.

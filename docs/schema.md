@@ -179,7 +179,7 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 |---|---|---|---|---|---|
 | `domain_count` | int | no | `0+` | stable | Number of domain strings retained from bounded public tenant-discovery responses. It is not organization size or guaranteed tenant cardinality. |
 | `tenant_domains` | `list[string]` | no | n/a | stable | Domain strings retained from bounded public tenant-discovery responses. The list may be incomplete and does not establish ownership or an exhaustive tenant namespace. |
-| `related_domains` | `list[string]` | no | n/a | stable | Domain names linked by bounded CNAME, CT, or autodiscover breadcrumbs. The stable field name does not imply ownership or an organizational relationship. |
+| `related_domains` | `list[string]` | no | n/a | stable | Domain names linked by bounded CT, CNAME, Exchange/identity endpoint, autodiscover, or DKIM tenant-domain breadcrumbs. The stable field name does not imply ownership or an organizational relationship. |
 | `surface_attributions` | `list[SurfaceAttribution]` | no | n/a | stable | Per-subdomain attribution of each related domain to a SaaS or infrastructure provider, from CNAME-chain classification. Empty when nothing classified. See the [`SurfaceAttribution`](#surfaceattribution) nested object. |
 
 ### Email security

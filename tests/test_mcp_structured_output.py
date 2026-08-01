@@ -154,7 +154,7 @@ def test_explain_signal_output_schema_has_precise_variants() -> None:
 
 
 def test_ephemeral_fingerprint_output_schemas_are_precise() -> None:
-    """Session-local ephemeral tools advertise their simple result shapes."""
+    """Process-local ephemeral tools advertise their simple result shapes."""
     tools = {t.name: t for t in asyncio.run(mcp.list_tools())}
 
     inject_schema = tool_schemas(tools["inject_ephemeral_fingerprint"])[1]

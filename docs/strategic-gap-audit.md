@@ -104,10 +104,9 @@ not outrank product truthfulness or measured user value.
   load correctly, and the first recently researched pattern family is dated.
   The older undated catalog remains an explicit backfill queue.
 - GitHub contributor history and current contributors are maintainer-only.
-- Top-level dependencies are current under the locked resolver state. MCP is
-  intentionally bounded to `>=1.28.1,<2`; the exact isolated matrix passes on
-  stable v1.28.1 and stable v2.0.0, while production v2 adoption remains a
-  separate release decision.
+- Top-level dependencies are current under the locked resolver state. MCP
+  production uses `>=2.0.0,<3`; the exact isolated matrix passes on stable
+  v1.28.1 and stable v2.0.0, with v1.28.1 retained as the rollback pin.
 - Public DMARC references in comments, tests, and validation notes use the
   current RFC 9989 protocol specification and RFC 9990 aggregate-reporting
   split rather than the prior obsolete citation.
@@ -128,8 +127,8 @@ These are not active gaps for the current roadmap:
 
 | Gap | Why it matters | Current state | Next action | Stop rule |
 |---|---|---|---|---|
-| Evidence-semantic integrity | Derived observations and model-bound public-evidence values can be presented more strongly than their evidence supports. | Parent-platform child-product inference, MCP score wording, and cross-renderer provider drift are corrected; remaining default claims still need a complete provenance audit. | Audit every default claim and correct the smallest evidence-to-claim paths while preserving stable JSON. | Do not add new inference semantics while a known default claim lacks direct provenance. |
-| MCP v2 compatibility | The final 2026-07-28 protocol and stable SDK contain breaking changes that must remain characterized. | The exact stable v1.28.1 and v2.0.0 matrix passes; one compatibility boundary, the truthful dependency floor, doctor discovery selection, and conservative cache hints are implemented. | Keep both stable pins blocking and make production adoption a separate release decision. | Do not couple production adoption or remote MCP scope to compatibility maintenance. |
+| Evidence-semantic integrity | Derived observations and model-bound public-evidence values can be presented more strongly than their evidence supports. | The fail-closed audit covers all 27 default-claim families; all are complete, with no material runtime family carrying incomplete lineage. | Keep the audit and its semantic contract tests blocking; reopen this track for any uncovered or stronger claim surface. | Do not add new inference semantics while a known default claim lacks direct provenance. |
+| MCP v2 compatibility | The final 2026-07-28 protocol and stable SDK contain breaking changes that must remain characterized. | Production adopted v2.0.0 on 2026-07-31; the exact stable v1.28.1 and v2.0.0 matrix passes, with one compatibility boundary, doctor discovery selection, and conservative cache hints implemented. | Keep both stable pins blocking and treat any future major-version adoption as a separate release decision. | Do not couple remote MCP scope to compatibility maintenance. |
 | Measured product utility | Green gates and sophisticated models do not establish that the output improves an operator decision. | No unified scorecard covers unsupported claims, abstention, provenance, catalog surface, CT marginal value, latency, degradation, or MCP context cost. | Establish an aggregate-safe baseline and predeclared deterministic-versus-fusion ablation. | Do not expand graph or probabilistic machinery without measured benefit. |
 | Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | The catalog has 860 entries and 1,070 detections. One frozen convenience-sample baseline covers every bounded path, and a 366-namespace unseen vertical holdout exercised every new rule without post-holdout tuning. The legacy date backlog and independent rank and regional strata remain open. | Add rank and regional rounds, backfill dates in reviewed families, and ratchet stale dates and negative fixtures. | No new undated or untested rule. No population claim from the convenience sample and no broad coverage claim while a bounded path or named stratum is unmeasured. |
 | Latency and degradation contract | CT and external providers dominate long tails, while current published measurements are historical single runs. | Timeouts and partial results are bounded, but stage measurements and reproducible p50/p95 budgets are not established. | Run stable-v1 resolver and schema characterization before the product scorecard; apply stable-v2 deltas from the completed MCP matrix. | Move only proven blocking I/O and do not create brittle timing CI. |

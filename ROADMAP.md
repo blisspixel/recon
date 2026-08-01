@@ -25,46 +25,44 @@ digest-bound v2.6.3 historical exception preserves that release's published
 distribution-only bundle while still requiring SBOM structure validation; every
 later release fails if SBOM provenance is absent.
 
-A complete baseline is not a finished product. Three things remain unproven,
-and the plan below is about exactly those three:
-
-- Not every default claim has been traced to the evidence that supports it.
-- Stable MCP v2 compatibility is now characterized, but production adoption
-  remains a separate release decision.
-- Nothing measures whether probabilistic fusion, certificate-transparency
-  enrichment, the fingerprint catalog, or the broad agent surface improves an
-  operator outcome over deterministic evidence plus explicit abstention.
+A complete baseline is not a finished product. The evidence-semantic audit and
+MCP v2 adoption are complete and remain blocking maintenance gates. One primary
+product question remains unproven: nothing measures whether probabilistic
+fusion, certificate-transparency enrichment, the fingerprint catalog, or the
+broad agent surface improves an operator outcome over deterministic evidence
+plus explicit abstention.
 
 ## What Is Next, and Why
 
-Rank and urgency are different axes here, and conflating them is how the wrong
-thing gets worked on. Track 1 is the standing highest priority because
-truthfulness outranks features. Track 2 is the most *urgent* because it is the
-only one with an external clock, and it is small. Schedule track 2 now and keep
-track 1 as the default work; do not let track 2 displace it for longer than the
-protocol work actually takes.
+Rank and urgency are different axes here. Track 1 remains the standing highest
+trust priority because truthfulness outranks features, and its current audit
+closed on 2026-08-01. Track 2 adopted MCP v2 on 2026-07-31 while retaining the
+blocking rollback matrix. Track 3 is now the next dependency-unblocked work;
+new claim-surface drift reopens Track 1 immediately.
 
 Each track below names why it sits where it does, what state it is in now, and
 the evidence that closes it.
 
-### 1. Finish the default-claim evidence audit
+### 1. Default-claim evidence audit (complete 2026-08-01)
 
-**Why first:** output truthfulness outranks every feature, and this defect
-class is still being found one case at a time instead of swept. The most recent
+**Why it was first:** output truthfulness outranks every feature. This defect
+class had been found one case at a time instead of swept. The most recent
 instance let a queried domain report the email controls that a related domain
 published, contradicting its own null DMARC policy inside the same record, and
 persisted that contradiction to the result cache. A bug hunt found it. The
-audit that exists to prevent it has not been run to completion. The taxonomy
-now exists, but Track 3 stays blocked until the incomplete default runtime
-paths are closed and the family definitions stop moving.
+audit existed to prevent it but had not been run to completion. The taxonomy
+and fail-closed audit now cover the complete default surface, which unblocks
+Track 3.
 
 **State:** a fail-closed machine-readable audit now assigns all discovered
 primary surfaces to 27 claim families and blocks drift across 197 JSON property
 occurrences, 167 MCP tool and output surfaces, 31 panel producers, 89 agent
 guidance sections, 16 insight generators, 84 score or quantitative fields, and
-the remaining governed surfaces. 25 families are complete. 0
-material runtime families have incomplete lineage, and the two static guidance
-families remain open for semantic review. Explanation output now distinguishes
+the remaining governed surfaces. 27 families are complete. 0 material runtime
+families carry incomplete lineage. The two static families now
+pin shipped agent guidance and live MCP descriptions to the runtime's process
+scope, collection boundary, output forms, cache behavior, and abstention rules.
+Explanation output distinguishes
 exact, exact-rule-only, reconstructed, and unsupported terminal lineage and
 adds exact-lineage completeness diagnostics without changing the stable
 schema-version-1 reachability fields. Generated insights retain the
@@ -87,7 +85,7 @@ components as hypothetical. The stable 0-100 compatibility scale remains, with
 fully modeled claim. See
 [the default-claim audit](docs/default-claim-audit.md).
 
-**Closed when:** every default panel insight, service label, live MCP
+**Closure evidence:** every default panel insight, service label, live MCP
 instruction and tool description, generated agent guidance item,
 recommendation, and score label has a direct evidence-to-claim path; shared
 administrative tokens, tenant IDs, and certificate overlap never become
@@ -95,7 +93,7 @@ ownership, control, or current-use claims; missing metadata stays unknown; and
 explanation output reports provenance completeness rather than asserting a
 complete path it does not have.
 
-### 2. Keep final MCP v2 compatibility green before adopting it
+### 2. Keep final MCP v2 compatibility green after adoption
 
 **Why second:** the Model Context Protocol 2026-07-28 specification is a
 breaking protocol release, and the official Python SDK moves on its own

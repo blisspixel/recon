@@ -115,7 +115,7 @@ auto-approves tools should still treat all tool output as untrusted data.
 
 **Remaining risks (users must understand):**
 
-- Resource exhaustion is still possible within the configured per-session caps.
+- Resource exhaustion is still possible within the configured per-process caps.
 - Cache poisoning attempts remain possible if multiple untrusted agents share a
   config directory; prefer isolated `RECON_CONFIG_DIR` paths or disposable
   workspaces for agent runs.

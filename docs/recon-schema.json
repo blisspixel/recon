@@ -227,7 +227,7 @@
       }
     },
     "related_domains": {
-      "description": "Domain names linked by bounded CNAME, CT, or autodiscover breadcrumbs. The stable field name does not imply ownership or an organizational relationship.",
+      "description": "Domain names linked by bounded CT, CNAME, Exchange/identity endpoint, autodiscover, or DKIM tenant-domain breadcrumbs. The stable field name does not imply ownership or an organizational relationship.",
       "type": "array",
       "items": {
         "type": "string"

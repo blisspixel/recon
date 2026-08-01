@@ -324,9 +324,9 @@ async def inject_ephemeral_fingerprint(
 
     # Ephemeral injection goes through the same specificity gate
     # as ``recon fingerprints check``. Schema-valid but over-broad
-    # patterns (``cname:\.com$``) would false-positive on every
-    # subsequent lookup in the session. Blast radius is small
-    # (in-memory, per-session) but the gate is cheap and worth enforcing.
+    # patterns (``cname:\.com$``) would false-positive on every subsequent
+    # lookup in this server process. Blast radius is bounded to in-memory
+    # process state, but the gate is cheap and worth enforcing.
     for det in validated.detections:
         verdict = evaluate_pattern(det.pattern, det.type)
         if verdict.threshold_exceeded:
@@ -358,7 +358,7 @@ async def inject_ephemeral_fingerprint(
     ),
 )
 async def list_ephemeral_fingerprints() -> list[EphemeralFingerprintSummary]:
-    """List all ephemeral fingerprints loaded in the current session.
+    """List all ephemeral fingerprints loaded in this server process.
 
     Returns a list of fingerprint summaries (navigable ``structuredContent``
     plus the serialized-JSON text block at the MCP layer).
@@ -380,13 +380,13 @@ async def list_ephemeral_fingerprints() -> list[EphemeralFingerprintSummary]:
 @mcp.tool(
     annotations=tool_annotations(
         read_only=False,
-        destructive=False,
+        destructive=True,
         idempotent=True,
         open_world=False,
     ),
 )
 async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
-    """Remove all ephemeral fingerprints from the current session.
+    """Remove all ephemeral fingerprints from this server process.
 
     Returns confirmation with the count of fingerprints removed.
     """
@@ -415,9 +415,9 @@ async def clear_ephemeral_fingerprints() -> EphemeralClearResult:
 @mcp.tool(
     annotations=tool_annotations(
         read_only=False,
-        destructive=False,
+        destructive=True,
         idempotent=True,
-        open_world=True,
+        open_world=False,
     ),
 )
 async def reevaluate_domain(domain: str) -> LookupResult:
@@ -434,7 +434,7 @@ async def reevaluate_domain(domain: str) -> LookupResult:
 
     Returns:
         Updated domain intelligence as a structured object. Raises ToolError
-        (isError) when the domain is invalid or absent from the session cache.
+        (isError) when the domain is invalid or absent from the process lookup cache.
     """
     try:
         validated = validate_domain(domain)
@@ -467,7 +467,7 @@ async def reevaluate_domain(domain: str) -> LookupResult:
 
     # Replay retained DNS observations through the current fingerprint catalog,
     # then re-run the merge pipeline. The original source results stay in the
-    # cache so clearing session-local fingerprints removes their projection.
+    # cache so clearing process-local fingerprints removes their projection.
     from recon_tool.merger import merge_results
     from recon_tool.sources.dns_replay import replay_cached_dns_fingerprints
 

@@ -181,8 +181,8 @@ def remove_fingerprint_projection(
 ) -> SourceResult:
     """Remove detections contributed by the specified dynamic fingerprints.
 
-    A session fingerprint may already have participated in the live lookup that
-    populated the MCP cache. Clearing the catalog must therefore remove its
+    A process-local fingerprint may already have participated in the live
+    lookup that populated the MCP cache. Clearing the catalog must therefore remove its
     stored projection as well as future replay matches. Raw DNS observations and
     every unrelated evidence occurrence remain unchanged, so the same records
     can be evaluated again after a later injection.

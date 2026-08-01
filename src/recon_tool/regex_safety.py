@@ -158,7 +158,7 @@ def validate_regex(pattern: str, source: str) -> bool:
     """Return whether a pattern compiles and meets the accepted complexity bounds.
 
     The validation rejects empty and oversized patterns, recognized ambiguous
-    backtracking structures, and invalid syntax. Session-injected expressions
+    backtracking structures, and invalid syntax. Process-injected expressions
     use a stricter deterministic subset with at most one repetition operator.
     """
     if not pattern:

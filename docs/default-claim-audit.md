@@ -60,8 +60,8 @@ At the 2026-08-01 checkpoint, the inventory contains 27 families and covers 89
 agent-guidance sections, 16 insight generators, 197 JSON property occurrences,
 167 MCP tool and output surfaces, 31 panel producers, 4 recommendation
 producers, 84 quantitative or categorical score fields, and 8 MCP instruction
-sections. 25 families are complete. 0 material runtime families
-have incomplete lineage. Service
+sections. 27 families are complete. 0 material runtime families have
+incomplete lineage. Service
 labels now derive a bounded role from retained,
 collection-observable record evidence and render missing roles as unavailable.
 Posture observations now carry their exact emitter, branch-local retained
@@ -108,8 +108,12 @@ fail closed when any required collection opportunity is unavailable, including
 Autodiscover and OIDC metadata subchannels. Current cache reads and writes also
 reject incomplete or inconsistent generated-insight lineage while preserving
 valid degraded results. Role-specific claims such as an MX gateway attach only
-the occurrences that established that role. The two static guidance families
-remain open for semantic review. Rich panel and MCP text assembly now retain
+the occurrences that established that role. The two static families now bind
+agent guidance and live MCP descriptions to exact process scope, network
+behavior, output forms, cache behavior, and evidentiary limits. Contract tests
+reject session-scoped ephemeral wording, stale SDK adoption state, unbounded
+payload-size promises, simplistic confidence formulas, and related-namespace
+ownership promotion. Rich panel and MCP text assembly now retain
 the queried namespace coordinate, use the same projected values as structured
 output, and exclude raw evidence from unavailable channels when deriving
 panel-only summaries. An unavailable Autodiscover channel also projects a

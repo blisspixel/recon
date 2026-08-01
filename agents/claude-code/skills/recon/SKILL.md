@@ -99,7 +99,7 @@ Services
   Email          Microsoft 365, Proofpoint, DMARC, DKIM, SPF: strict (-all), BIMI
   Identity       Okta, Entra ID
   Cloud          Cloudflare (CDN), AWS Route 53 (DNS)
-  Security       Wiz, CAA: 3 issuers restricted
+  Security       Wiz, CAA: 3 issuers authorized
   Collaboration  Slack, Atlassian (Jira/Confluence)
 
 Insights
@@ -120,7 +120,9 @@ Trigger this mode when the user explicitly says "full", "max details", "give me 
 recon "<domain>" --full --json
 ```
 
-In this mode, **do not dump the JSON inline.** Output is typically 3-10 KB depending on org size and consumes context for no benefit. Instead:
+In this mode, **do not dump the JSON inline.** Output is often several KB and
+may grow materially with certificate-transparency and evidence data, so inline
+output consumes context for no benefit. Instead:
 
 1. Capture stdout from the Bash call. Use your file-write tool to save it to `recon-<validated-domain>.json` in the current working directory (or a path the user specifies). Never substitute the unvalidated domain into a shell redirect.
 2. Reply with a 3-line headline only (field names per the stable v2.0 contract in [`docs/recon-schema.json`](../../../../docs/recon-schema.json)):
@@ -153,12 +155,12 @@ When the `recon` MCP server is connected, use it instead of shelling out - typed
 
 - `lookup_tenant(domain, format="json", explain=true)` - full domain intelligence with provenance.
 - `analyze_posture(domain, profile=...)` - posture observations, optionally biased by a profile lens.
-- `assess_exposure(domain)` - model-bound public-evidence index (0-100), not an overall security score. Cache first; it may run the ordinary base lookup on a miss, while index computation adds no network calls after resolution.
+- `assess_exposure(domain)` - model-bound public-evidence index on a 0-100 compatibility scale, with an exact-evidence floor, bounded ceiling, and complete component ledger. The current component model assigns at most 90 points. It is not an overall security score. Cache first; it may run the ordinary base lookup on a miss, while index computation adds no network calls after resolution.
 - `find_hardening_gaps(domain)` - categorized gaps with neutral "Consider" notes.
-- `simulate_hardening(domain, fixes=[...])` - what-if scoring with hypothetical fixes applied.
+- `simulate_hardening(domain, fixes=[...])` - what-if index arithmetic with hypothetical fixes applied, not a prediction of overall security change.
 - `compare_postures(domain_a, domain_b)` - side-by-side comparison of public configuration evidence, not overall security.
 - `cluster_verification_tokens(domains=[...])` - report exact administrative TXT token reuse while leaving shared administration, copied configuration, managed service, and stale residue as compatible explanations.
-- `chain_lookup(domain, depth)` - recursive related-domain discovery via CNAME and CT breadcrumbs.
+- `chain_lookup(domain, depth)` - recursively follow every `related_domains` observation from each ordinary lookup, including bounded CT, CNAME, Exchange/identity endpoint, autodiscover, and DKIM tenant-domain breadcrumbs. Each queued name can trigger another full public-metadata lookup. Discovered names do not establish ownership or a corporate relationship.
 
 For quick catalog browsing, start with `get_fingerprints(limit=20, offset=0)`. For an exhaustive no-match check, either read the full `recon://fingerprints` resource or continue 20-item pages until a page has fewer than 20 entries; a first page cannot establish absence. Browse `recon://signals` and `recon://profiles` before guessing what recon can detect. These local calls are free, make no network requests, and return the live catalogs.
 
@@ -176,7 +178,7 @@ Most of the analysis the MCP tools expose is reachable from the CLI too. Reach f
 - `recon <domain> --gaps --json` produces the categorized hardening gaps with neutral "Consider" notes. CLI equivalent of `find_hardening_gaps`.
 - Bayesian fusion is enabled by default; `--no-fusion` skips it. `recon <domain> --explain-dag --explain-dag-format mermaid` renders the separate Bayesian inference DAG inline in chat. These are the CLI equivalents of `get_posteriors` and `explain_dag`.
 
-What stays MCP-only, because it needs cached session state or an iterative loop:
+What stays MCP-only, because it needs cached process state or an iterative loop:
 `simulate_hardening` what-if loops, cache-only ephemeral-fingerprint replay for
 retained apex/root TXT, SPF, MX, NS, and CNAME observations, live two-domain
 `compare_postures`, and `test_hypothesis`. Owner-qualified ephemeral rules need
@@ -249,7 +251,7 @@ recon's voice is **hedged observation**, not verdict. Mirror that voice when rep
 When summarizing a `lookup_tenant` response, lead with what carries signal:
 
 1. Tenant identity (`tenant_id`, `provider`, `auth_type`, `region`, `cloud_instance` if non-default).
-2. Email configuration (`email_security_score`, `dmarc_policy`, `mta_sts_mode`, `email_gateway` if present).
+2. Email configuration (`email_security_score` is a count of publicly observed controls; also report `dmarc_policy`, `mta_sts_mode`, and `email_gateway` when present).
 3. Services grouped by category, not as a flat list.
 4. Related domains only if the user asked for them.
 5. Confidence and any `degraded_sources`.
@@ -270,7 +272,7 @@ Every `TenantInfo` carries `resolved_at` (when the live resolution produced this
 
 ## Ephemeral fingerprints
 
-If the user wants to test a hypothesis about a custom or internal SaaS - "does Synthetic Alpha publish an Synthetic Delta Platform verification token?" - use the ephemeral fingerprint workflow:
+If the user wants to test a hypothesis about a custom or internal SaaS - "does Synthetic Alpha publish a Synthetic Delta Platform verification token?" - use the ephemeral fingerprint workflow:
 
 1. `inject_ephemeral_fingerprint(name, slug, category, confidence, detections=[...])`.
 2. `reevaluate_domain(domain)` - uses cached data, no new network calls.
@@ -280,10 +282,12 @@ Cache-only re-evaluation supports `txt`, `spf`, `mx`, `ns`, and apex/root
 `cname` rules. Owner-qualified `cname_target`, `subdomain_txt`, `caa`, `srv`,
 and `dmarc_rua` rules cannot be reconstructed from retained observations. For
 one of those types, call `reload_data` to clear the lookup-result cache while
-retaining the session's ephemeral catalog, then run `lookup_tenant` again;
+retaining the server process's ephemeral catalog, then run `lookup_tenant` again;
 that fresh lookup uses the normal documented network boundary.
 
-Ephemeral fingerprints live only in the current MCP session and are quota-bounded.
+Ephemeral fingerprints are process-wide within the current MCP server process,
+not conversation-scoped, and are quota-bounded. They disappear when that
+server process exits.
 
 ## Gotchas
 
@@ -292,7 +296,7 @@ the detail for each lives in the section above.
 
 - **`recon delta` on a never-seen domain exits with code 3.** It reports "No cached snapshot" and asks for an ordinary lookup to establish the baseline; it does not emit a delta.
 - **A sub-host is analyzed as its apex unless you pass `--exact`.** `mail.delta.invalid` returns facts for `delta.invalid`; the `queried_domain` field tells you what was actually analyzed. Reporting apex tenancy as the sub-host's is wrong.
-- **`--full --json` is 3-10 KB; never dump it inline.** Save it to a file and reply with the 3-line headline. Inline JSON burns context for no benefit.
+- **`--full --json` can be large; never dump it inline.** Its size depends on collected certificate-transparency and evidence data. Save it to a file and reply with the 3-line headline. Inline JSON burns context for no benefit.
 - **Do not test MCP connectivity by calling a tool.** Read your own tool list for `mcp__recon__*`; a speculative call to "check" is a wasted, confusing round-trip.
 - **`--exposure` / `assess_exposure` is cache first and may resolve on a miss.** The index calculation adds no network calls after the ordinary base lookup. Do not imply that the 0-100 value comes from a separate scan or measures overall security.
 - **Low confidence means sparse public evidence, not a suspicious domain or organization.** Sparse output marks limited evidence for the queried namespace, not a finding or calibrated uncertainty level. Do not manufacture confidence or insinuation.

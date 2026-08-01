@@ -2,7 +2,7 @@
 
 ## Status
 
-Accepted
+Accepted; amended 2026-07-31
 
 ## Context
 
@@ -110,3 +110,13 @@ stdio framing, resource reads, the live doctor, and complete-result cache
 metadata. This closes the final compatibility target. It does not widen the
 production dependency or add remote transport; those remain separate release
 and architecture decisions under this ADR.
+
+## Production Adoption Amendment
+
+On 2026-07-31, the separate adoption review widened the production dependency
+to `mcp>=2.0.0,<3` after the local stdio server, optional remote adapter,
+doctor, wire-level protocol probes, schemas, deterministic registration, and
+complete repository gate passed on stable v2. Exact v1.28.1 remains a blocking
+compatibility row and the documented rollback pin. This amendment changes the
+SDK generation, not the transport decision: local stdio remains the supported
+default, and remote deployment, OAuth, Apps, and Tasks remain separate scope.

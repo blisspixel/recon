@@ -130,11 +130,11 @@ Use the absolute path to your `recon` or `uvx` binary if neither is on PATH for 
 Enabling the plugin starts its bundled MCP server automatically; it does not
 auto-approve every tool call. Plugin and user-configured MCP tools follow Claude
 Code's permission rules, and the plugin `.mcp.json` schema has no `autoApprove`
-field. recon marks four local session and catalog mutations with
+field. recon marks four process-wide server state and catalog mutations with
 `readOnlyHint: false`:
 `inject_ephemeral_fingerprint`, `clear_ephemeral_fingerprints`, `reload_data`,
 and `reevaluate_domain`. The last replaces one cached merged result after
-applying the current session catalog without making a network request. It can
+applying the current process catalog without making a network request. It can
 replay only retained apex/root TXT, SPF, MX, NS, and CNAME observations;
 owner-qualified rule types return a tool error and need the documented fresh-
 lookup workflow. All other MCP tools are annotated read-only. These annotations

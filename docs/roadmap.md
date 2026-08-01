@@ -25,18 +25,16 @@ tracked separately from product work.
 
 ## What Is Next, and Why
 
-Rank and urgency are different axes, and conflating them is how the wrong thing
-gets worked on. Priority 1 is the standing highest priority because output
-truthfulness outranks features. Priority 2 is the most urgent because it is the
-only track with an external clock, and it is bounded work. Schedule priority 2
-now; keep priority 1 as the default work between those tasks. Priority 3 cannot
-start until priority 1 closes the remaining static guidance reviews and
-stabilizes the claim taxonomy.
+Rank and urgency are different axes. Priority 1 remains the standing highest
+trust priority because output truthfulness outranks features; its current
+27-family audit closed on 2026-08-01. Priority 2 adopted MCP v2 on 2026-07-31
+and retains both exact compatibility pins as blocking checks. Priority 3 is now
+the next dependency-unblocked work. New claim-surface drift reopens priority 1.
 
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
-| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class is still surfacing one case at a time rather than being swept. The most recent instance let a queried domain report a related domain's email controls while its own DMARC policy stayed null in the same record. | The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 25 are complete; 0 material runtime families have incomplete lineage and two static guidance families remain open. Explanations expose exact-lineage completeness while preserving schema-version-1 reachability, generated insights retain exact rule and evidence-or-scope associations through cache version 4, default panel assembly preserves the queried namespace plus collection availability, service labels expose only evidence-established roles, posture observations retain exact rule, evidence, and typed metadata dependencies, hardening prompts expose exact rules, basis states, evidence, typed predicates, and bounded scopes, and every weighted exposure-index component carries exact generation-time proof state. | Every default insight, label, MCP description, recommendation, and score has a direct evidence-to-claim path, and explanations report provenance completeness instead of implying it. |
-| [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-before-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | The exact stable `1.28.1` and `2.0.0` matrix passed 2026-07-28 and CI keeps both pins blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green; treat production v2 adoption as a separate release decision. |
+| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete on 2026-08-01. The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 27 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
+| [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | Specified, not started. Extensive process evidence exists; product-outcome evidence does not. | A dated aggregate-safe scorecard with a decision rule written before the run, deciding whether advanced fusion stays primary or becomes an advanced diagnostic. |
 | [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the three core evidence and compatibility tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
@@ -87,9 +85,9 @@ current debt without turning every refinement into feature work.
 
 ### 1. Restore evidence-semantic integrity
 
-Status: active, highest trust priority. The live MCP instruction,
-score-description, parent-platform child-product, and cross-renderer provider
-summary corrections ship in v2.4.0.
+Status: complete on 2026-08-01; fail-closed drift monitoring remains active.
+The live MCP instruction, score-description, parent-platform child-product,
+and cross-renderer provider summary corrections began shipping in v2.4.0.
 
 Why first: output truthfulness is more valuable than another feature. The
 roadmap review found a sparse-output fixture that inferred Copilot use from a
@@ -106,8 +104,7 @@ a different claim. Duplicate result objects from one source count once, and
 explanations name the exact winning claim and qualifying evidence.
 The fail-closed [default-claim audit](default-claim-audit.md) now inventories
 every discovered primary surface and binds compact JSON and MCP ownership to
-exact digests. This establishes the dependency taxonomy without claiming the
-track is complete. Generated insights now capture the emitting rule and exact
+exact digests. All 27 families are complete. Generated insights capture the emitting rule and exact
 retained-evidence or bounded-observation association before rendering, preserve
 that state through collection projection and result-cache version 4, and feed
 it into explanation construction without text classification. Structured
@@ -131,7 +128,8 @@ including exact rule, state, predicate, scope, awarded and unresolved points,
 and retained evidence. Comparison output carries a ledger for each namespace,
 and hardening simulation labels changed components as hypothetical. All
 material runtime families now have exact lineage. Static MCP and generated-guidance
-semantics remain open for review. Current sovereignty
+semantics now have dedicated process-scope, network-boundary, output-form,
+cache-behavior, and abstention guards. Current sovereignty
 handling preserves absent metadata as unknown; that invariant should remain
 explicit and tested.
 
@@ -154,8 +152,9 @@ Work:
     `dns.dmarc.valid_policy_is_reject.v1`; see
     [claim-contracts.md](claim-contracts.md). Exact evaluator lineage reaches a
     collector-retained raw record. The bounded built-in insight generators now
-    retain exact rule and evidence-or-observation-scope associations; posture,
-    signal-adjacent, and per-query time lineage remain open. No tenant field or
+    retain exact rule and evidence-or-observation-scope associations. Posture,
+    hardening, exposure-index, and time observations now retain their reviewed
+    exact generation path or explicit bounded scope. No tenant field or
     public dossier was added. The separate
     cohort-summary contract adds 2.2 as an explicit option while 2.1 remains the
     default.
@@ -223,19 +222,18 @@ Acceptance evidence:
 Stop rule: do not add new inference or scoring semantics while a known default
 claim lacks adequate evidence.
 
-### 2. Keep final MCP v2 compatibility green before adoption
+### 2. Keep final MCP v2 compatibility green after adoption
 
-Status: stable compatibility checkpoint complete on 2026-07-28. The exact
-v1.28.1 and v2.0.0 matrix passes; production adoption remains a separate
-release decision.
+Status: production adoption complete on 2026-07-31. The exact v1.28.1 rollback
+and v2.0.0 production rows remain blocking.
 
 The matrix pin lives in `.github/workflows/ci.yml` and the probe is
 `scripts/check_mcp_compatibility.py`. It exercises both stable SDK generations
 without changing `pyproject.toml`, `uv.lock`, or the active environment.
 
 Why second: the final MCP 2026-07-28 specification and stable Python SDK are
-external compatibility boundaries. Production remains on the stable v1 SDK
-line until an explicit adoption review changes that decision.
+external compatibility boundaries. Production now runs on the stable v2 SDK;
+the v1.28.1 row continuously verifies the rollback path.
 
 Completed checkpoints:
 
@@ -255,8 +253,9 @@ resource templates, one prompt, 44 schema documents, representative structured
 success and error results, concurrent catalog reloads, real stdio calls, and
 the live doctor on both supported exact pins. Stable v2 additionally proves
 `server/discover`, worker-thread synchronous handlers, and conservative
-complete-result metadata on every cacheable method. Production remains on
-`mcp>=1.28.1,<2` until a separate adoption review changes it.
+complete-result metadata on every cacheable method. Production uses
+`mcp>=2.0.0,<3`, adopted after the remote adapter and compatibility boundary
+passed the same gate.
 
 Acceptance evidence:
 
@@ -268,7 +267,7 @@ Acceptance evidence:
   resource-read result carries valid `ttlMs` and `cacheScope` hints as required
   by the final caching specification.
 - The local stdio workflow remains intact.
-- Production stays on `<2` until a separate adoption review changes it.
+- Production stays on v2 while the exact v1.28.1 rollback row remains green.
 - The optional remote HTTP need now has a separate architecture and security
   review. It does not imply OAuth, Roots, Sampling, Apps, Tasks, protocol
   logging, or production SDK v2 adoption.

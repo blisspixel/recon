@@ -1,4 +1,4 @@
-"""Ephemeral fingerprint injection tests (in-memory, session-scoped).
+"""Ephemeral fingerprint injection tests (in-memory, process-scoped).
 
 Validates:
 - inject_ephemeral(), get_ephemeral(), clear_ephemeral() core logic (18.1)
@@ -312,7 +312,7 @@ class TestInjectEphemeralFingerprintMCP:
     @pytest.mark.asyncio
     @pytest.mark.parametrize("detection_type", ["txt", "cname", "subdomain_txt"])
     async def test_multiple_unbounded_quantifiers_return_error(self, detection_type: str) -> None:
-        """Session-injected regexes allow at most one unbounded repetition."""
+        """Process-injected regexes allow at most one unbounded repetition."""
         from recon_tool.server import inject_ephemeral_fingerprint
 
         pattern = "_proof:^a*a*a*a*a*b$" if detection_type == "subdomain_txt" else "^a*a*a*a*a*b$"
@@ -714,7 +714,7 @@ class TestReevaluateDomainMCP:
 
     @pytest.mark.asyncio
     async def test_clear_removes_ephemeral_projection_collected_before_cache(self) -> None:
-        """Clearing removes a session fingerprint that participated in lookup."""
+        """Clearing removes a process fingerprint that participated in lookup."""
         from recon_tool.models import EvidenceRecord, SourceResult
         from recon_tool.server import (  # pyright: ignore[reportPrivateUsage]
             _cache_get,

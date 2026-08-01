@@ -91,6 +91,21 @@ def test_surface_inventory_has_expected_mcp_surface() -> None:
     assert lookup_inputs["domain"]["required"] is True
     assert lookup_inputs["domain"]["types"] == ["string"]
     assert lookup["output_schema"]["properties"] == ["result"]
+    assert "compact text by default" in lookup["summary"]
+    assert "JSON returns a detailed serialized record" in lookup["summary"]
+    assert "does not establish ownership or a corporate relationship" in tools["chain_lookup"]["summary"]
+    assert "all `related_domains` observations" in tools["chain_lookup"]["summary"]
+    assert "requires independent triage" in tools["discover_fingerprint_candidates"]["summary"]
+    assert "server process" in tools["inject_ephemeral_fingerprint"]["summary"]
+
+    assert tools["clear_ephemeral_fingerprints"]["annotations"]["destructiveHint"] is True
+    assert tools["reload_data"]["annotations"]["destructiveHint"] is True
+    assert tools["reevaluate_domain"]["annotations"] == {
+        "destructiveHint": True,
+        "idempotentHint": True,
+        "openWorldHint": False,
+        "readOnlyHint": False,
+    }
 
     assert tools["inject_ephemeral_fingerprint"]["annotations"]["readOnlyHint"] is False
     assert resources["recon://surface-inventory"]["mime_type"] == "application/json"

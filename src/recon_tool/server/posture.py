@@ -365,8 +365,10 @@ async def analyze_posture(
             degraded.
 
     Returns:
-        JSON array of observations, each with category, salience, statement,
-        and related_slugs. When explain is true, includes explanation data.
+        A list of observation objects by default. Profile mode returns an
+        envelope with ``observations`` and ``profile_note``. Explain mode
+        returns an envelope with ``observations`` and ``explanations``, plus
+        ``profile_note`` when a profile supplies one.
     """
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
@@ -500,13 +502,14 @@ async def find_hardening_gaps(domain: str) -> GapReportResult:
     This is a defensive review of public observations, not an overall security
     assessment or certification.
 
-    Returns a JSON array of hardening prompts, each with an exact generator rule,
-    typed metadata predicates, bounded observation scope, supporting evidence,
-    and an ``observation_state``. The state separates observed weak
-    configuration, bounded non-observation, unresolved hideable state, and an
-    observed configuration inconsistency. The compatibility field
-    ``absence_confirmable`` remains present. Report an unresolved hideable state
-    as "not observed within the named scope", never as a confirmed gap.
+    Returns a gap-report object whose ``gaps`` array contains hardening prompts
+    with an exact generator rule, typed metadata predicates, bounded observation
+    scope, supporting evidence, and an ``observation_state``. The state
+    separates observed weak configuration, bounded non-observation, unresolved
+    hideable state, and an observed configuration inconsistency. The
+    compatibility field ``absence_confirmable`` remains present. Report an
+    unresolved hideable state as "not observed within the named scope", never
+    as a confirmed gap.
 
     Args:
         domain: A domain name to analyze (e.g., "gamma.invalid")
@@ -596,9 +599,9 @@ async def compare_postures(domain_a: str, domain_b: str) -> PostureComparisonRes
 async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentResult:
     """Test a theory about a domain against signals and evidence.
 
-    Proposes a theory and receives related public observations plus explicit
-    unresolved status. Passive catalog matches cannot validate active use,
-    organizational intent, topology, or causal explanations.
+    Proposes a theory and receives related public observations; semantic
+    likelihood remains explicitly unresolved. Passive catalog matches cannot
+    validate active use, organizational intent, topology, or causal explanations.
 
     Operates purely on cached pipeline data - zero additional network calls
     beyond the initial domain resolution.

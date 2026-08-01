@@ -6,9 +6,10 @@ Review date: 2026-07-28
 
 The Model Context Protocol 2026-07-28 specification and official Python SDK
 `2.0.0` were published on 2026-07-28. This is a breaking protocol release.
-recon completed the isolated final characterization without widening the
-production dependency or implementing unused surface area. The earlier
-candidate result remains documented below as migration history.
+recon first completed the isolated final characterization without widening the
+production dependency or implementing unused surface area, then adopted v2
+after the 2026-07-31 production review. The earlier candidate result remains
+documented below as migration history.
 
 Sources:
 
@@ -29,12 +30,12 @@ boundary:
 - Structured-output contract tests: `tests/test_mcp_structured_output.py`
 - Live doctor tests: `tests/test_mcp_doctor.py`
 
-The declared dependency range is `mcp>=1.28.1,<2`, and the lock resolves to
-stable v1.28.1. The live doctor uses that SDK's
-`ClientSession.initialize()` and `tools/list` flow. Stable SDK v2.0.0 instead
-uses `server/discover`, `MCPServer`, `mcp_types`, snake-case Python
-attributes, wire aliases, and worker threads for synchronous handlers. The
-same server registration and domain logic now passes on both generations.
+The declared production dependency is `mcp>=2.0.0,<3`, and the lock resolves to
+stable v2.0.0. Stable v2 uses `server/discover`, `MCPServer`, `mcp_types`,
+snake-case Python attributes, wire aliases, and worker threads for synchronous
+handlers. Exact v1.28.1 remains the tested rollback pin and uses
+`ClientSession.initialize()` plus `tools/list`. The same server registration
+and domain logic pass on both generations.
 
 recon does not currently operate a remote Streamable HTTP MCP server, does not
 implement MCP OAuth flows, and does not use Roots, Sampling, or MCP Logging.
@@ -52,9 +53,9 @@ package index; all recon probes after installation were local and network-free.
 | Exact SDK | Result | Discovery | Sync handler execution | Disposition |
 |---|---|---|---|---|
 | 1.0.0 | incompatible | unavailable | unavailable | Unsupported. It exposes neither server API recon requires, so the former dependency floor was not truthful. |
-| 1.28.1 | pass | `initialize` | event-loop thread | Production floor and rollback line. Sixteen required checks passed; three v2-only checks were not applicable. |
+| 1.28.1 | pass | `initialize` | event-loop thread | Tested rollback line. Seventeen checks pass; seven v2-only checks are correctly not applicable. |
 | 2.0.0b1 | pass | `server/discover` | AnyIO worker thread | Historical candidate checkpoint from 2026-07-13. |
-| 2.0.0 | pass | `server/discover` | AnyIO worker thread | Final stable compatibility checkpoint from 2026-07-28; production remains below v2 pending a separate adoption review. |
+| 2.0.0 | pass | `server/discover` | AnyIO worker thread | Production line adopted 2026-07-31. All 24 compatibility checks pass. |
 
 The passing rows proved the same deterministic inventory of 22 tools, five
 resources, zero resource templates, and one `domain_report` prompt. The matrix
@@ -66,11 +67,12 @@ cacheable results carried valid
 `ttlMs`, `cacheScope`, and `resultType` metadata, and both tested tool results
 carried `resultType=complete`.
 
-The production decision is therefore `mcp>=1.28.1,<2`. The v2 compatibility
+The production decision is `mcp>=2.0.0,<3`, with exact v1.28.1 retained as the
+rollback pin. The v2 compatibility
 boundary explicitly configures all six cacheable methods with the conservative
 `ttlMs=0`, `cacheScope=private` policy. This means immediately stale and scoped
 to one authorization context. It avoids claiming reusable freshness for
-catalogs that can change through session reload or local configuration. A
+catalogs that can change through process-wide reload or local configuration. A
 longer TTL requires separate freshness evidence.
 
 Reproduce both supported rows with:
@@ -79,7 +81,8 @@ Reproduce both supported rows with:
 uv run python scripts/check_mcp_compatibility.py --sdk-version 1.0.0 --sdk-version 1.28.1 --sdk-version 2.0.0 --require-compatible 1.28.1 --require-compatible 2.0.0
 ```
 
-This is a compatibility result, not a production dependency change.
+The matrix itself is compatibility evidence. The later adoption review below
+is the production dependency decision.
 
 ## RC Changes That Matter to recon
 
@@ -125,8 +128,8 @@ This is a compatibility result, not a production dependency change.
    readiness track.
 3. Keep the exact-pinned stable v1.28.1 and v2.0.0 compatibility matrix
    blocking in CI.
-4. Keep production on stable v1 and `<2` until a separate adoption review
-   approves a dependency-range change.
+4. Run production on stable v2 after the adoption gate; retain exact v1.28.1 as
+   the blocking rollback row.
 5. Build compatibility around the doctor, tool/resource discovery, schemas,
    wire aliases, and worker-thread behavior using observed SDK behavior rather
    than a speculative adapter.
@@ -192,8 +195,8 @@ is stale. Raising it is a measured optimization, not a default.
 
 ### Phase 0: Stable-v1 Safety Rails
 
-Status: complete and maintained. Production remains on stable v1; the
-dependency floor is corrected to the first fully characterized release.
+Status: complete and maintained. Production runs on stable v2; exact v1.28.1
+remains the first fully characterized rollback release.
 
 - Keep this readiness plan linked from the roadmap and MCP docs.
 - Keep `recon mcp doctor` truthful about the currently installed SDK behavior.
@@ -214,8 +217,8 @@ Status: complete for exact stable SDKs 1.28.1 and 2.0.0 on 2026-07-28.
 
 Work:
 
-- Keep a clean compatibility environment exact-pinned to `mcp==2.0.0`.
-  Production metadata and the lock stay on stable v1.
+- Keep clean compatibility environments exact-pinned to `mcp==1.28.1` and
+  `mcp==2.0.0` without mutating production metadata or the active lock.
 - Keep server import, stdio startup, doctor, representative tool calls,
   resource reads, errors, schemas, structured output, and deterministic order
   green against stable v1.28.1 and stable v2.0.0.
@@ -246,8 +249,8 @@ Exit criteria:
 
 ### Phase 2: Schema, Cache, and Compact Output
 
-Status: final stable-v2 schema and cache requirements characterized;
-production adoption remains pending.
+Status: complete; final stable-v2 schema and cache requirements are
+characterized and production adoption landed on 2026-07-31.
 
 Trigger: Phase 1 records a viable compatibility path. The stable SDK
 exposes cache-hint support; lack of an integration point is a compatibility
@@ -267,8 +270,8 @@ Work:
   `server/discover`, `tools/list`, `resources/list`,
   `resources/templates/list`, and `resources/read`. Record the disposition of
   `prompts/list`; recon registers the `domain_report` prompt.
-- Retain `ttlMs=0`, `cacheScope=private` until per-surface freshness and session
-  mutation semantics justify a longer duration.
+- Retain `ttlMs=0`, `cacheScope=private` until per-surface freshness and
+  process-mutation semantics justify a longer duration.
 - Add compact detail modes for high-volume agent tools only where raw output
   remains available.
 
@@ -325,9 +328,8 @@ The compatibility matrix covers tests for:
 - `docs/mcp.md`: describe the protocol version the current doctor validates.
 - `docs/roadmap.md`: keep this readiness track listed under near-term
   hardening.
-- `docs/adr/0009-mcp-2026-readiness.md`: record why recon keeps stable v1 in
-  production after stable-v2 compatibility is proven, while preserving stdio
-  as the supported MCP surface.
+- `docs/adr/0009-mcp-2026-readiness.md`: preserve stdio as the supported MCP
+  surface, record the v2 adoption, and retain v1.28.1 as the rollback pin.
 - `CHANGELOG.md`: mention the compatibility result when code, dependency
   metadata, or user-facing behavior changes.
 
@@ -343,8 +345,8 @@ The compatibility matrix covers tests for:
 
 ## Final Readiness Gate
 
-Status: compatibility gate passed on 2026-07-28. Before changing the
-production dependency:
+Status: compatibility gate passed on 2026-07-28 and production adoption passed
+on 2026-07-31. Before any future major dependency change:
 
 - Local tests pass.
 - `uv run python scripts/check.py` passes.

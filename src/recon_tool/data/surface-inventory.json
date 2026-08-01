@@ -1994,11 +1994,11 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Recursively resolve a domain and its related domains."
+        "summary": "Follow all `related_domains` observations; this does not establish ownership or a corporate relationship."
       },
       {
         "annotations": {
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false,
           "readOnlyHint": false
@@ -2018,7 +2018,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Remove all ephemeral fingerprints from the current session."
+        "summary": "Remove all ephemeral fingerprints from this server process."
       },
       {
         "annotations": {
@@ -2173,7 +2173,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Mine a single domain for new-fingerprint candidates."
+        "summary": "Mine unclassified CNAME candidates; each requires independent triage."
       },
       {
         "annotations": {
@@ -2640,7 +2640,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "List all ephemeral fingerprints loaded in the current session."
+        "summary": "List all ephemeral fingerprints loaded in this server process."
       },
       {
         "annotations": {
@@ -2686,13 +2686,13 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Look up public domain observations including display label, tenant ID,"
+        "summary": "Return compact text by default; JSON returns a detailed serialized record."
       },
       {
         "annotations": {
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
-          "openWorldHint": true,
+          "openWorldHint": false,
           "readOnlyHint": false
         },
         "input_parameters": [
@@ -2820,7 +2820,7 @@
       },
       {
         "annotations": {
-          "destructiveHint": false,
+          "destructiveHint": true,
           "idempotentHint": true,
           "openWorldHint": false,
           "readOnlyHint": false
@@ -2838,7 +2838,7 @@
           "type": "object"
         },
         "structured_output": true,
-        "summary": "Reload fingerprint and signal definitions from disk."
+        "summary": "Reload fingerprint, signal, and posture definitions for this server process."
       },
       {
         "annotations": {

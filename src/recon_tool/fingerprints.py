@@ -1,7 +1,7 @@
-"""Load and match built-in, custom, and session fingerprint patterns.
+"""Load and match built-in, custom, and process-local fingerprint patterns.
 
 Built-ins use deterministic generated package data. Additive custom YAML under
-``~/.recon`` and session entries pass through the canonical validator.
+``~/.recon`` and ephemeral process entries pass through the canonical validator.
 """
 
 from __future__ import annotations
@@ -401,7 +401,7 @@ def _load_from_path(path: Path) -> list[Fingerprint]:
 
 
 # ── Ephemeral fingerprint storage ───────────────────────────────────────
-# Session-scoped, in-memory only. Protected by a re-entrant lock so the
+# Process-scoped, in-memory only. Protected by a re-entrant lock so the
 # cached catalog views and ephemeral collection stay coherent across
 # inject/clear/load operations, including when callers use asyncio.to_thread().
 
@@ -420,11 +420,11 @@ class _FingerprintCacheState:
 
 _cache_state = _FingerprintCacheState()
 
-# Hard caps on session-scoped ephemeral fingerprints. Without these,
+# Hard caps on process-scoped ephemeral fingerprints. Without these,
 # a long-running MCP server exposing ``inject_ephemeral_fingerprint``
 # could be driven into unbounded memory growth or lookup slowdown by a
 # malicious or prompt-injected client calling the tool in a loop. The
-# caps are intentionally generous for legitimate session extension
+# caps are intentionally generous for legitimate process-local extension
 # (users typically inject a handful of custom rules) while keeping
 # memory and per-lookup pattern work bounded.
 _MAX_EPHEMERAL_FINGERPRINTS: int = 100
