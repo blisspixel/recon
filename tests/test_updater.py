@@ -110,8 +110,44 @@ class TestUpgradeCommand:
         planted = tmp_path / ("uv.exe" if sys.platform == "win32" else "uv")
         planted.write_text("", encoding="utf-8")
         monkeypatch.chdir(tmp_path)
+
         def _planted(name: str) -> str:
             return str(tmp_path / name)
+
+        monkeypatch.setattr(updater.shutil, "which", _planted)
+
+        assert updater.upgrade_command(updater.UV) is None
+        assert updater.upgrade_command(updater.PIPX) is None
+
+    def test_launcher_below_the_working_directory_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        planted_dir = tmp_path / "attacker-controlled-bin"
+        planted_dir.mkdir()
+        planted = planted_dir / ("uv.exe" if sys.platform == "win32" else "uv")
+        planted.write_text("", encoding="utf-8")
+        monkeypatch.chdir(tmp_path)
+
+        def _planted(_name: str) -> str:
+            return str(planted)
+
+        monkeypatch.setattr(updater.shutil, "which", _planted)
+
+        assert updater.upgrade_command(updater.UV) is None
+        assert updater.upgrade_command(updater.PIPX) is None
+
+    def test_launcher_below_parent_workspace_is_refused(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        (tmp_path / ".git").mkdir()
+        working_directory = tmp_path / "nested" / "checkout"
+        working_directory.mkdir(parents=True)
+        planted_dir = tmp_path / "attacker-controlled-bin"
+        planted_dir.mkdir()
+        planted = planted_dir / ("uv.exe" if sys.platform == "win32" else "uv")
+        planted.write_text("", encoding="utf-8")
+        monkeypatch.chdir(working_directory)
+
+        def _planted(_name: str) -> str:
+            return str(planted)
 
         monkeypatch.setattr(updater.shutil, "which", _planted)
 

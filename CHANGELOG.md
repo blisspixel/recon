@@ -67,6 +67,22 @@ operator, corporate group, ownership, or control.
   instead of producing a stale historical violation. The explanation refactor
   also lowers the enforced excessive-branch ceiling from 10 to 8.
 
+### Security
+
+- MTA-STS collection now follows the exact RFC 8461 boundary. Only one
+  syntactically eligible `_mta-sts` record can trigger the policy request, the
+  request never follows redirects, and only a direct HTTP 200 `text/plain`
+  response with a complete bounded policy can produce a mode. Invalid UTF-8,
+  oversized bodies, missing required fields, malformed MX patterns, ambiguous
+  declarations, and unrelated redirected content now fail closed.
+- `recon update` now refuses `uv` or `pipx` resolved anywhere below the current
+  workspace, closing the nested relative-PATH variant of the existing
+  current-directory launcher guard.
+- Maintainer-only paid-provider validation now uses an optional exact-root,
+  lockfile-hashed dependency group. Its CLIs accept credentials only from
+  provider-specific environment variables and safely refuse `--api-key`
+  without echoing a supplied value into diagnostics.
+
 ## [2.9.0] - 2026-07-31
 
 ### Tool Surface Changes

@@ -382,6 +382,7 @@ def test_render_report_contains_required_sections(tmp_path: Path) -> None:
     assert "## Transcripts" in body
     assert "fusion=on" in body
     assert "fusion=off" in body
+    assert "uv run --group agentic-validation python -m validation.agentic_ux.run" in body
     # Cost line uses 4-decimal precision so a $0.001 fake call is visible.
     assert "$0.0120" in body  # 12 sessions x $0.001 fake cost
     out = tmp_path / "out.md"
@@ -443,6 +444,26 @@ def test_main_returns_nonzero_on_provider_error(monkeypatch: pytest.MonkeyPatch,
         ],
     )
     assert rc == 2
+
+
+@pytest.mark.parametrize(
+    "arguments",
+    [
+        ["--api-key", "super-secret-cli-value"],
+        ["--api-key=super-secret-cli-value"],
+    ],
+)
+def test_main_rejects_cli_api_key_without_echoing_secret(
+    arguments: list[str],
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    rc = run.main(arguments)
+
+    assert rc == 2
+    stderr = capsys.readouterr().err
+    assert "--api-key is not supported" in stderr
+    assert "ANTHROPIC_API_KEY" in stderr
+    assert "super-secret-cli-value" not in stderr
 
 
 @pytest.mark.parametrize(

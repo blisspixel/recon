@@ -30,6 +30,7 @@ certificate requests are explicit opt-in direct probes.
 | Custom YAML at `~/.recon/fingerprints.yaml` and friends | Validated by `_validate_fingerprint`, `_validate_signal`, `_validate_profile` - regex compilation + ReDoS heuristic + required-field checks. Additive-only (cannot override built-ins). |
 | CT provider response bodies | Size-capped, filtered for wildcards and malformed entries in `sources/cert_providers.py` |
 | Malicious HTTP redirect targets / private-IP redirects | `src/recon_tool/http.py` `_SSRFSafeTransport` validates every hop |
+| Queried-namespace MTA-STS declarations and policy responses | Exact TXT admission plus bounded RFC 8461 parsing in `src/recon_tool/sources/mta_sts.py`; the policy request never follows redirects |
 
 ---
 
@@ -171,6 +172,56 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 change the answer between those operations may still rebind the request. Failing
 closed on unresolved destinations removes the prior fail-open path but does not
 eliminate this time-of-check/time-of-use residual.
+
+### MTA-STS declaration and policy integrity
+
+**Surface:** A queried namespace controls both its `_mta-sts` TXT record and
+the HTTPS response from `mta-sts.<domain>`. Loose record matching, redirect
+following, or partial body parsing could turn an invalid declaration or an
+unrelated redirected response into an observed email-control mode.
+
+**Mitigation:** [`src/recon_tool/sources/mta_sts.py`](../src/recon_tool/sources/mta_sts.py)
+and [`src/recon_tool/sources/dns_email.py`](../src/recon_tool/sources/dns_email.py):
+
+- Policy fetching starts only when exactly one record begins with the
+  case-sensitive `v=STSv1;` marker and carries a 1 to 32 byte alphanumeric ID.
+- The request disables redirects even though the shared HTTP client normally
+  follows SSRF-validated hops. RFC 8461 permits only a direct HTTP 200 policy
+  response at this endpoint.
+- The response must declare `text/plain`. The parser accepts only valid UTF-8,
+  refuses policy bodies above 64 KiB, and requires the exact version, mode, and
+  bounded `max_age` fields.
+- Enforcing and testing policies require at least one validated ASCII MX
+  pattern. Unknown extension fields, including valid UTF-8 values, remain
+  forward-compatible, while malformed required fields make the policy
+  unavailable rather than partially trusted.
+- The shared transport independently limits wire responses to 10 MiB, requests
+  identity encoding, refuses compressed responses, validates the public
+  destination, and applies a five-second policy timeout.
+
+An invalid policy does not become an observed mode. Transport failures and
+transient HTTP responses retain the existing degraded-source signal; a valid
+TXT declaration can remain visible without fabricating a policy-mode claim.
+
+### Local launcher and validation credential boundaries
+
+**Surface:** `recon update` executes the package manager that owns the current
+installation. Maintainer-only validation helpers can import paid-provider SDKs
+and read API credentials.
+
+**Mitigation:**
+
+- [`src/recon_tool/updater.py`](../src/recon_tool/updater.py) resolves `uv` and
+  `pipx` to absolute paths and refuses any launcher inside the resolved current
+  workspace tree, including launchers reached through relative nested PATH
+  entries. A refused or missing launcher degrades to a manual command.
+- Paid-provider SDKs are absent from the runtime and default development
+  dependency graphs. The optional `agentic-validation` group has exact roots in
+  `pyproject.toml` and artifact hashes in `uv.lock`.
+- Validation CLIs accept credentials only from provider-specific environment
+  variables. They explicitly refuse `--api-key` and never echo a supplied
+  value, preventing supported invocations from placing credentials in process
+  arguments or generated reports.
 
 ### Path traversal in local caches
 

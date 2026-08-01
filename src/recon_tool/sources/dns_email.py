@@ -47,11 +47,14 @@ from recon_tool.sources.dns_tables import (
     is_public_dns_name,
     spf_targets,
 )
+from recon_tool.sources.mta_sts import is_plain_text_policy, parse_mta_sts_policy, select_mta_sts_record
 from recon_tool.validator import host_has_suffix, is_domain_shaped, strip_control_chars
 
 logger = logging.getLogger("recon")
 
 _REPORTING_DOMAIN_LABEL_RE = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", re.ASCII)
+
+
 def _record_spf_targets(
     ctx: dns_base.DetectionCtx,
     spf_text: str,
@@ -544,19 +547,14 @@ async def _fetch_mta_sts_policy(domain: str, degraded_sources: set[str] | None =
     url = f"https://mta-sts.{domain}/.well-known/mta-sts.txt"
     try:
         async with _http_client(timeout=5.0) as client:
-            resp = await client.get(url)
+            resp = await client.get(url, follow_redirects=False)
             if resp.status_code in (408, 429) or 500 <= resp.status_code <= 599:
                 if degraded_sources is not None:
                     degraded_sources.add("http:mta_sts_policy")
                 logger.debug("MTA-STS policy fetch returned transient HTTP %d for %s", resp.status_code, domain)
                 return None
-            if resp.status_code == 200:
-                for line in resp.text.splitlines():
-                    stripped = line.strip().lower()
-                    if stripped.startswith("mode:"):
-                        mode = stripped.split(":", 1)[1].strip()
-                        if mode in ("enforce", "testing", "none"):
-                            return mode
+            if resp.status_code == 200 and is_plain_text_policy(resp.headers.get("content-type")):
+                return parse_mta_sts_policy(resp.content)
     except Exception as exc:
         if degraded_sources is not None:
             degraded_sources.add("http:mta_sts_policy")
@@ -902,11 +900,10 @@ async def _apply_bimi(ctx: dns_base.DetectionCtx, bimi_results: list[str], domai
 
 async def _apply_mta_sts(ctx: dns_base.DetectionCtx, mta_sts_results: list[str], domain: str) -> None:
     """Record MTA-STS presence and, when the TXT fires, fetch the policy mode."""
-    mta_sts_detected = any("v=stsv1" in txt.lower() for txt in mta_sts_results)
-    if not mta_sts_detected:
+    mta_sts_txt = select_mta_sts_record(mta_sts_results)
+    if mta_sts_txt is None:
         return
     ctx.services.add(SVC_MTA_STS)
-    mta_sts_txt = next(txt for txt in mta_sts_results if "v=stsv1" in txt.lower())
     ctx.evidence.append(EvidenceRecord("MTA_STS", mta_sts_txt, SVC_MTA_STS, "mta-sts"))
     policy_mode = await _fetch_mta_sts_policy(domain, ctx.degraded_sources)
     if policy_mode:

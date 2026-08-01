@@ -326,6 +326,7 @@ class TestFetchMtaStsPolicy:
         mock_resp = httpx.Response(
             status_code=200,
             request=httpx.Request("GET", "https://mta-sts.example.com/.well-known/mta-sts.txt"),
+            headers={"content-type": "text/plain"},
             content=policy_body.encode(),
         )
         mock_client = AsyncMock()
@@ -349,10 +350,11 @@ class TestFetchMtaStsPolicy:
                 "_mta-sts.example.com/TXT": ["v=STSv1; id=20240101"],
             }
         )
-        policy_body = "version: STSv1\nmode: testing\nmax_age: 86400\n"
+        policy_body = "version: STSv1\nmode: testing\nmax_age: 86400\nmx: *.example.com\n"
         mock_resp = httpx.Response(
             status_code=200,
             request=httpx.Request("GET", "https://mta-sts.example.com/.well-known/mta-sts.txt"),
+            headers={"content-type": "text/plain"},
             content=policy_body.encode(),
         )
         mock_client = AsyncMock()

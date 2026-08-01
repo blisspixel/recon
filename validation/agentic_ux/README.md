@@ -55,13 +55,10 @@ are falsifiable.
 
 ## What you need
 
-1. The optional SDK for whichever provider you want:
-   ```bash
-   pip install anthropic   # for --provider anthropic (default)
-   pip install openai      # for --provider openai or xai
-   ```
-   These are NOT runtime dependencies of recon; they are dev
-   dependencies of this harness only.
+1. Use the repository's locked `agentic-validation` dependency group. It pins
+   `anthropic==0.120.2` and `openai==2.52.0` in `pyproject.toml`, with artifact
+   hashes captured in `uv.lock`. These are not runtime dependencies of recon
+   and are installed only when the group is selected.
 2. The matching API key in your environment:
    - `ANTHROPIC_API_KEY` for Anthropic
    - `OPENAI_API_KEY` for OpenAI
@@ -72,19 +69,19 @@ are falsifiable.
 
 ```bash
 # Default provider and model, with provider charges
-python -m validation.agentic_ux.run
+uv run --group agentic-validation python -m validation.agentic_ux.run
 
 # Lower-cost model option
-python -m validation.agentic_ux.run --model claude-haiku-4-5
+uv run --group agentic-validation python -m validation.agentic_ux.run --model claude-haiku-4-5
 
 # OpenAI
-python -m validation.agentic_ux.run --provider openai --model gpt-5
+uv run --group agentic-validation python -m validation.agentic_ux.run --provider openai --model gpt-5
 
 # xAI Grok
-python -m validation.agentic_ux.run --provider xai --model grok-4
+uv run --group agentic-validation python -m validation.agentic_ux.run --provider xai --model grok-4
 
 # Subset of personas / fixtures
-python -m validation.agentic_ux.run --personas analyst,ops --fixtures synthetic-dense
+uv run --group agentic-validation python -m validation.agentic_ux.run --personas analyst,ops --fixtures synthetic-dense
 ```
 
 The runner writes the report to
@@ -104,9 +101,9 @@ Policy):
   `.invalid` namespace.
 - Persona prompts and neutral fixtures are committed. Transcripts,
   provider metadata, and raw run records stay local and gitignored.
-- API keys never get committed. The harness reads them from env or
-  from a `--api-key` argument; it does not log them and does not
-  embed them in the report.
+- API keys never get committed or passed on the command line. The harness reads
+  only provider-specific environment variables and does not log or embed them
+  in the report.
 - Keep every run output under `validation/agentic_ux/runs/` or
   `validation/agentic_ux/local/`, both of which are gitignored.
 

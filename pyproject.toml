@@ -104,6 +104,13 @@ build = [
     # build-constraints.txt. This group is not installed by default.
     "hatchling==1.31.0",
 ]
+# Provider SDKs are confined to the optional, maintainer-invoked validation
+# harness. Exact roots plus uv.lock make those paid-network tools reproducible
+# without adding either SDK to recon's runtime or default development graph.
+agentic-validation = [
+    "anthropic==0.120.2",
+    "openai==2.52.0",
+]
 dev = [
     "hypothesis>=6.0",
     # The Markdown gate wraps v4 inline rules to retain exact source offsets.
