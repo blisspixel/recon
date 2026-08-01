@@ -170,6 +170,22 @@ class TestRuleValidation:
         )
         assert result is None
 
+    @pytest.mark.parametrize("name", ["profile:strict:expected-category:Security", "PROFILE:reserved"])
+    def test_rejects_profile_expectation_rule_namespace(self, name: str) -> None:
+        result = _validate_and_build_rule(
+            {
+                "name": name,
+                "category": "identity",
+                "template": "Ambiguous custom rule",
+                "condition": {
+                    "metadata": [{"field": "auth_type", "operator": "eq", "value": "Managed"}],
+                },
+            },
+            0,
+        )
+
+        assert result is None
+
     def test_rejects_metadata_with_missing_value(self) -> None:
         result = _validate_and_build_rule(
             {
@@ -278,6 +294,41 @@ class TestCustomRuleLoading:
         rules = load_posture_rules()
         rule_names = {r.name for r in rules}
         assert "custom_cdn_rule" in rule_names
+
+    def test_duplicate_rule_names_are_skipped_with_built_in_precedence(self, caplog: pytest.LogCaptureFixture) -> None:
+        custom = {
+            "observations": [
+                {
+                    "name": "managed_identity",
+                    "category": "identity",
+                    "template": "Shadowed built-in",
+                    "condition": {"metadata": [{"field": "auth_type", "operator": "eq", "value": "Managed"}]},
+                },
+                {
+                    "name": "custom_unique",
+                    "category": "identity",
+                    "template": "First custom definition",
+                    "condition": {"metadata": [{"field": "auth_type", "operator": "eq", "value": "Managed"}]},
+                },
+                {
+                    "name": "custom_unique",
+                    "category": "identity",
+                    "template": "Shadowed custom definition",
+                    "condition": {"metadata": [{"field": "auth_type", "operator": "eq", "value": "Managed"}]},
+                },
+            ]
+        }
+        config_dir = Path(os.environ["RECON_CONFIG_DIR"])
+        (config_dir / "posture.yaml").write_text(yaml.safe_dump(custom), encoding="utf-8")
+
+        reload_posture()
+        rules = load_posture_rules()
+        names = [rule.name for rule in rules]
+
+        assert len(names) == len(set(names))
+        assert next(rule.template for rule in rules if rule.name == "managed_identity") != "Shadowed built-in"
+        assert next(rule.template for rule in rules if rule.name == "custom_unique") == "First custom definition"
+        assert caplog.text.count("Skipping duplicate posture rule name") == 2
 
     def test_malformed_yaml_falls_back_to_builtins_only(self) -> None:
         config_dir = Path(os.environ["RECON_CONFIG_DIR"])

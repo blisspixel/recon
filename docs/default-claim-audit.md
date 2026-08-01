@@ -60,10 +60,16 @@ At the 2026-08-01 checkpoint, the inventory contains 27 families and covers 89
 agent-guidance sections, 16 insight generators, 197 JSON property occurrences,
 167 MCP tool and output surfaces, 31 panel producers, 3 recommendation
 producers, 78 quantitative or categorical score fields, and 8 MCP instruction
-sections. 22 families are complete. 3 material runtime families
-have incomplete lineage: posture observations, hardening guidance, and the
-exposure index. Service labels now derive a bounded role from retained,
+sections. 23 families are complete. 2 material runtime families
+have incomplete lineage: hardening guidance and the exposure index. Service
+labels now derive a bounded role from retained,
 collection-observable record evidence and render missing roles as unavailable.
+Posture observations now carry their exact emitter, branch-local retained
+evidence occurrences, and typed metadata predicates through CLI, MCP, profile,
+and explanation paths. A metadata-only or profile-relative observation retains
+an exact rule dependency but remains graph-disconnected from raw evidence, and
+profile expectations are withheld whenever collection is degraded. Profiles
+remain explicitly relative lenses, not scores or universal recommendations.
 Explanation records now label
 exact evidence-and-rule associations, exact rule-only associations,
 reconstructed associations, and unsupported associations. The additive

@@ -26,3 +26,12 @@ def test_explanation_module_hints_resolve() -> None:
 
     # Evaluates every module-level annotation; raised NameError before the fix.
     typing.get_type_hints(explanation)
+
+
+def test_posture_observation_hints_resolve() -> None:
+    """The split posture model must retain resolvable evidence annotations."""
+    from recon_tool.models import EvidenceRecord, Observation
+
+    hints = typing.get_type_hints(Observation)
+
+    assert hints["supporting_evidence"] == tuple[EvidenceRecord, ...]

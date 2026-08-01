@@ -3,12 +3,12 @@ for a specific audience lens.
 
 A profile is a YAML file in either the built-in ``data/profiles/``
 directory or in ``~/.recon/profiles/`` (override via
-``RECON_CONFIG_DIR``). Profiles do NOT add new intelligence — they
-reweight, reorder, and filter the observations and signals that the
-existing pipeline already produces. The point is composition, not
-extension: a CISO of a fintech organisation wants different framing
-than a CISO of a healthcare provider, even though both are looking
-at the same underlying evidence.
+``RECON_CONFIG_DIR``). Profiles do not collect new intelligence.
+``apply_profile`` reweights, reorders, and filters existing observations;
+the optional vertical baseline adds explicitly profile-relative absence
+observations derived only from the already collected catalog and motif sets.
+The point is composition: different audiences may want different framing
+while looking at the same underlying evidence.
 
 Schema
     A profile YAML file has this shape::
@@ -36,8 +36,9 @@ Schema
     ``name`` is valid and acts as a no-op.
 
 Invariants
-    * Profiles are ADDITIVE ONLY — they cannot introduce new
-      observations, only reweight existing ones.
+    * ``apply_profile`` cannot introduce observations. Vertical-baseline
+      expectations are a separate, explicit derivation and do not run when
+      collection is degraded.
     * A profile with ``focus_categories`` filters observations to
       those categories, but any observation from an uncategorized
       source (e.g. consistency checks without a category tag) is
@@ -61,7 +62,7 @@ from typing import Any
 
 import yaml
 
-from recon_tool.models import Observation
+from recon_tool.models import Observation, PostureMetadataDependency
 
 logger = logging.getLogger("recon")
 
@@ -392,6 +393,16 @@ def compute_baseline_anomalies(
                     f"is observable, not a verdict)."
                 ),
                 related_slugs=(),
+                source_name=f"profile:{profile.name}:expected-category:{expected_cat}",
+                metadata_dependencies=(
+                    PostureMetadataDependency(
+                        "observed_fingerprint_categories",
+                        "not_contains",
+                        expected_cat,
+                        tuple(sorted(detected_categories)),
+                    ),
+                ),
+                observation_scope=(f"profile:{profile.name}:expected_categories",),
             )
         )
     for expected_motif in profile.expected_motifs:
@@ -407,6 +418,16 @@ def compute_baseline_anomalies(
                     f"subdomain (absence is observable, not a verdict)."
                 ),
                 related_slugs=(),
+                source_name=f"profile:{profile.name}:expected-motif:{expected_motif}",
+                metadata_dependencies=(
+                    PostureMetadataDependency(
+                        "observed_chain_motifs",
+                        "not_contains",
+                        expected_motif,
+                        tuple(sorted(detected_motifs)),
+                    ),
+                ),
+                observation_scope=(f"profile:{profile.name}:expected_motifs",),
             )
         )
     return tuple(out)

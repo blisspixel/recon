@@ -17,6 +17,8 @@ from pathlib import Path
 
 import pytest
 
+from recon_tool.cli.lookup import _build_explanations, _lookup_compute_observations
+from recon_tool.models import ConfidenceLevel, ExplanationLineageStatus, TenantInfo
 from recon_tool.profiles import (
     Profile,
     compute_baseline_anomalies,
@@ -101,6 +103,20 @@ class TestComputeBaselineAnomalies:
         p = Profile(name="empty")
         assert compute_baseline_anomalies(p, ("microsoft365",), ()) == ()
 
+    def test_cli_skips_profile_absence_when_collection_is_degraded(self) -> None:
+        info = TenantInfo(
+            tenant_id=None,
+            display_name="Synthetic",
+            default_domain="alpha.invalid",
+            queried_domain="alpha.invalid",
+            confidence=ConfidenceLevel.LOW,
+            degraded_sources=("dns_records",),
+        )
+
+        observations = _lookup_compute_observations(info, "high-value-target", True)
+
+        assert not any(item.source_name.startswith("profile:") for item in observations)
+
     def test_missing_expected_category_fires(self):
         p = Profile(name="strict", expected_categories=("Security",))
         anomalies = compute_baseline_anomalies(p, ("microsoft365",), ())
@@ -109,6 +125,22 @@ class TestComputeBaselineAnomalies:
         assert anomalies[0].salience == "medium"
         assert "Security" in anomalies[0].statement
         assert "absence is observable" in anomalies[0].statement
+        assert anomalies[0].source_name == "profile:strict:expected-category:Security"
+        assert len(anomalies[0].metadata_dependencies) == 1
+        assert anomalies[0].metadata_dependencies[0].field == "observed_fingerprint_categories"
+
+        record = _build_explanations(
+            TenantInfo(
+                tenant_id=None,
+                display_name="Synthetic",
+                default_domain="alpha.invalid",
+                queried_domain="alpha.invalid",
+            ),
+            [],
+            anomalies,
+        )[0]
+        assert record.lineage_status is ExplanationLineageStatus.EXACT_RULE_ONLY
+        assert record.lineage_rule_ids == (anomalies[0].source_name,)
 
     def test_present_category_suppresses_anomaly(self):
         # microsoft365 lives in "Email & Communication" category.
@@ -122,6 +154,9 @@ class TestComputeBaselineAnomalies:
         assert len(anomalies) == 1
         assert "cloudflare_to_aws" in anomalies[0].statement
         assert "absence is observable" in anomalies[0].statement
+        assert anomalies[0].source_name == "profile:strict:expected-motif:cloudflare_to_aws"
+        assert len(anomalies[0].metadata_dependencies) == 1
+        assert anomalies[0].metadata_dependencies[0].field == "observed_chain_motifs"
 
     def test_present_motif_suppresses_anomaly(self):
         p = Profile(name="strict", expected_motifs=("cloudflare_to_aws",))

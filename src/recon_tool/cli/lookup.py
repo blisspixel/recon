@@ -29,6 +29,7 @@ _CHAIN_STATUS_MESSAGE = "Following related-domain evidence..."
 def _build_explanations(
     info: Any,
     results: list[Any],
+    observations: tuple[Any, ...] | None = None,
 ) -> list[Any]:
     """Build ExplanationRecords for a TenantInfo using the explanation engine.
 
@@ -97,7 +98,7 @@ def _build_explanations(
         explanations.append(conf_rec)
 
     # Observation explanations
-    observations = analyze_posture(info)
+    observations = analyze_posture(info) if observations is None else observations
     posture_rules = load_posture_rules()
     obs_recs = explain_observations(observations, posture_rules, observable_evidence, info.detection_scores)
     explanations.extend(obs_recs)
@@ -466,17 +467,23 @@ def _lookup_compute_observations(info: Any, profile_name: str | None, show_postu
 
     observations: tuple[Any, ...] = ()
     if show_posture:
+        from recon_tool.collection_view import collection_claim_info
         from recon_tool.posture import analyze_posture
         from recon_tool.profiles import apply_profile, compute_baseline_anomalies
 
-        raw_observations = analyze_posture(info)
+        claim_info = collection_claim_info(info)
+        raw_observations = analyze_posture(claim_info)
         # Append vertical-baseline anomalies before profile reweighting so
         # profile boosts apply uniformly. Empty tuple when no profile or when the
         # profile has no expectations.
-        anomalies = compute_baseline_anomalies(
-            profile,
-            info.slugs,
-            tuple(cm.motif_name for cm in info.chain_motifs),
+        anomalies = (
+            ()
+            if claim_info.degraded_sources
+            else compute_baseline_anomalies(
+                profile,
+                claim_info.slugs,
+                tuple(motif.motif_name for motif in claim_info.chain_motifs),
+            )
         )
         combined_obs = tuple(raw_observations) + anomalies
         observations = apply_profile(combined_obs, profile)
@@ -565,7 +572,7 @@ def _lookup_optional_sections(
         from recon_tool.formatter import format_explanations_list
         from recon_tool.models import serialize_conflicts
 
-        explanations = _build_explanations(info, results)
+        explanations = _build_explanations(info, results, observations)
         sections["explanations"] = format_explanations_list(explanations)
         # Structured provenance DAG for programmatic consumers. Lives
         # alongside the flat list; both are emitted so existing tooling doesn't
@@ -600,7 +607,7 @@ def _lookup_emit_markdown(
     if show_explain:
         from recon_tool.formatter import format_explanations_markdown
 
-        explanations = _build_explanations(info, results)
+        explanations = _build_explanations(info, results, observations)
         md += "\n" + format_explanations_markdown(explanations)
     typer.echo(md)
 
@@ -711,7 +718,7 @@ def _lookup_emit_panel(
         if status_panel:
             console.print(status_panel)
 
-        explanations = _build_explanations(info, visible_results)
+        explanations = _build_explanations(info, visible_results, observations)
         if explanations:
             console.print(render_explanations_panel(explanations))
 
@@ -741,7 +748,11 @@ async def _lookup_standard(
                 console=get_err_console(),
             )
 
-        observations = _lookup_compute_observations(info, options.profile_name, options.show_posture)
+        observations = _lookup_compute_observations(
+            info,
+            options.profile_name,
+            options.show_posture or options.show_explain,
+        )
 
         if options.explain_dag:
             _lookup_emit_explain_dag(validated, info, options.explain_dag_format)

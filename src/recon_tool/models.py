@@ -6,6 +6,9 @@ from dataclasses import dataclass, fields
 from enum import StrEnum
 from typing import Any
 
+from recon_tool.evidence_models import EvidenceRecord
+from recon_tool.posture_models import Observation, PostureMetadataDependency
+
 __all__ = [
     "BIMIIdentity",
     "CandidateValue",
@@ -29,6 +32,7 @@ __all__ = [
     "MetadataCondition",
     "NodeUnitCounterfactual",
     "Observation",
+    "PostureMetadataDependency",
     "ReconLookupError",
     "SignalContext",
     "SourceResult",
@@ -71,20 +75,6 @@ class ExplanationLineageStatus(StrEnum):
     EXACT_RULE_ONLY = "exact_rule_only"
     RECONSTRUCTED = "reconstructed"
     UNSUPPORTED = "unsupported"
-
-
-@dataclass(frozen=True)
-class EvidenceRecord:
-    """A single piece of evidence linking a detection to its source record.
-
-    Created at detection time and propagated through the merge pipeline
-    from SourceResult to TenantInfo without loss.
-    """
-
-    source_type: str  # "TXT", "MX", "CNAME", "HTTP", "SPF", "NS", "CAA", "SRV"
-    raw_value: str  # The actual record value or HTTP response excerpt
-    rule_name: str  # Fingerprint/detection rule name that matched
-    slug: str  # The fingerprint slug that was detected
 
 
 @dataclass(frozen=True)
@@ -214,17 +204,6 @@ class SignalContext:
     # Metadata fields whose collection channel was unavailable. Conditions on
     # these fields remain unresolved instead of treating None as not equal.
     unavailable_metadata_fields: frozenset[str] = frozenset()
-
-
-@dataclass(frozen=True)
-class Observation:
-    """A neutral factual observation about a domain's configuration."""
-
-    category: str  # identity, email, infrastructure, saas_footprint, certificate, consistency
-    salience: str  # high, medium, low
-    statement: str
-    related_slugs: tuple[str, ...]
-    source_name: str = ""  # originating posture rule name (data/posture.yaml); "" when not rule-derived
 
 
 @dataclass(frozen=True)

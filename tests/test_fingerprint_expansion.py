@@ -351,7 +351,7 @@ class TestNewPostureRules:
     def _observation_statements(self, slugs: tuple[str, ...], **kwargs: object) -> set[str]:
         from dataclasses import replace
 
-        from recon_tool.models import ConfidenceLevel, TenantInfo
+        from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
         info = TenantInfo(
             tenant_id=None,
@@ -360,6 +360,7 @@ class TestNewPostureRules:
             queried_domain="alpha.invalid",
             confidence=ConfidenceLevel.MEDIUM,
             slugs=slugs,
+            evidence=tuple(EvidenceRecord("TXT", f"{slug}=synthetic", slug, slug) for slug in slugs),
         )
         if kwargs:
             info = replace(info, **kwargs)

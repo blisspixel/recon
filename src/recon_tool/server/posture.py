@@ -314,8 +314,10 @@ async def analyze_posture(
         explain: When true, include explanation data for each posture observation.
         profile: Optional profile name (e.g. "fintech", "healthcare",
             "saas-b2b", "high-value-target", "public-sector"). Reweights
-            and filters observations to the profile's lens without
-            adding new intelligence.
+            and filters observations to the profile's lens. It may add
+            explicitly profile-relative expectations from already collected
+            evidence, but withholds those expectations when collection is
+            degraded.
 
     Returns:
         JSON array of observations, each with category, salience, statement,
@@ -329,7 +331,7 @@ async def analyze_posture(
     from recon_tool.collection_view import collection_claim_info
     from recon_tool.formatter import format_posture_observations
     from recon_tool.posture import analyze_posture as _analyze_posture
-    from recon_tool.profiles import apply_profile, list_profiles, load_profile
+    from recon_tool.profiles import apply_profile, compute_baseline_anomalies, list_profiles, load_profile
 
     info = collection_claim_info(info)
     observations = _analyze_posture(info)
@@ -346,7 +348,16 @@ async def analyze_posture(
         if prof is None:
             available = ", ".join(p.name for p in list_profiles()) or "(none)"
             raise ToolError(f"Unknown profile {profile!r}. Available profiles: {available}")
-        observations = apply_profile(tuple(observations), prof)
+        anomalies = (
+            ()
+            if info.degraded_sources
+            else compute_baseline_anomalies(
+                prof,
+                info.slugs,
+                tuple(motif.motif_name for motif in info.chain_motifs),
+            )
+        )
+        observations = apply_profile(tuple(observations) + anomalies, prof)
         profile_note = prof.prepend_note or prof.description
 
     elapsed = time.monotonic() - start_time

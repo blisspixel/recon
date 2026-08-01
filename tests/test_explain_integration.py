@@ -156,6 +156,7 @@ class TestCLIExplainFlag:
         assert "explanations" in data
         assert isinstance(data["explanations"], list)
         assert len(data["explanations"]) > 0
+        assert any(item["item_type"] == "observation" for item in data["explanations"])
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_explain_md_output(self, mock_resolve: AsyncMock) -> None:
@@ -500,6 +501,27 @@ class TestAnalyzePostureExplain:
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         data = await analyze_posture("alpha.invalid")
         assert isinstance(data, list)
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_profile_expectations_use_the_same_mcp_observation_path(self, mock_resolve: AsyncMock) -> None:
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+
+        data = cast(dict[str, object], await analyze_posture("alpha.invalid", profile="high-value-target"))
+        observations = cast(list[dict[str, object]], data["observations"])
+
+        assert any("profile expects fingerprint category" in str(item["statement"]) for item in observations)
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_profile_expectations_fail_closed_when_collection_is_degraded(self, mock_resolve: AsyncMock) -> None:
+        degraded = replace(SAMPLE_INFO, degraded_sources=("dns_records",))
+        mock_resolve.return_value = (degraded, SAMPLE_RESULTS)
+
+        data = cast(dict[str, object], await analyze_posture("alpha.invalid", profile="high-value-target"))
+        observations = cast(list[dict[str, object]], data["observations"])
+
+        assert not any("profile expects" in str(item["statement"]) for item in observations)
 
 
 # ── 11.6 Conflict annotations in Rich panel ─────────────────────────────
