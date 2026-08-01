@@ -5,7 +5,7 @@
       "claim_id": "runtime.bimi-observation.v1",
       "classification": "direct_observation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/collection_view.py#collection_observable_info"
       ],
       "limits": [
@@ -31,7 +31,7 @@
       "claim_id": "runtime.catalog-indicator.v1",
       "classification": "documented_derivation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/fingerprints.py#load_fingerprints"
       ],
       "limits": [
@@ -89,7 +89,7 @@
       "classification": "unresolved_when_unobservable",
       "evidence_path": [
         "src/recon_tool/models.py#SourceResult",
-        "src/recon_tool/models.py#EvidenceRecord"
+        "src/recon_tool/evidence_models.py#EvidenceRecord"
       ],
       "limits": [
         "Compatibility projections do not retain every per-query observation opportunity.",
@@ -145,7 +145,7 @@
       "claim_id": "runtime.cross-domain-overlap.v1",
       "classification": "direct_observation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/formatter/serialize.py#format_tenant_dict"
       ],
       "limits": [
@@ -173,7 +173,7 @@
       "claim_id": "runtime.ct-observation.v1",
       "classification": "documented_derivation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/models.py#SourceResult"
       ],
       "limits": [
@@ -203,7 +203,7 @@
       "classification": "documented_derivation",
       "evidence_path": [
         "src/recon_tool/models.py#DeltaReport",
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/source_status.py#SourceStatus"
       ],
       "limits": [
@@ -232,7 +232,7 @@
       "classification": "documented_derivation",
       "evidence_path": [
         "src/recon_tool/models.py#SourceResult",
-        "src/recon_tool/models.py#EvidenceRecord"
+        "src/recon_tool/evidence_models.py#EvidenceRecord"
       ],
       "limits": [
         "Federation branding can differ from a legal entity.",
@@ -258,7 +258,7 @@
       "claim_id": "runtime.email-control-observation.v1",
       "classification": "bounded_absence",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/claim_contract.py#ObservationLedger",
         "src/recon_tool/source_status.py#SourceStatus"
       ],
@@ -293,7 +293,7 @@
       "claim_id": "runtime.email-topology.v1",
       "classification": "documented_derivation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/email_security.py#claim_safe_email_services"
       ],
       "limits": [
@@ -322,7 +322,7 @@
       "evidence_path": [
         "src/recon_tool/models.py#ExplanationLineageStatus",
         "src/recon_tool/models.py#ExplanationRecord",
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/models.py#InsightClaim"
       ],
       "limits": [
@@ -354,7 +354,7 @@
       "claim_id": "runtime.exposure-index.v1",
       "classification": "documented_derivation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/exposure_copy.py#build_evidence_refs"
       ],
       "limits": [
@@ -365,6 +365,8 @@
       "material": true,
       "producer_paths": [
         "src/recon_tool/exposure.py#assess_exposure_from_info",
+        "src/recon_tool/exposure.py#compare_postures_from_infos",
+        "src/recon_tool/exposure_comparison.py#build_metrics",
         "src/recon_tool/exposure_observability.py#unconfirmable_absent_points",
         "src/recon_tool/formatter/exposure.py#format_exposure_dict"
       ],
@@ -388,7 +390,7 @@
         "src/recon_tool/insight_scopes.py#observation_scopes_available",
         "src/recon_tool/cache_insights.py#insight_claims_from_cache",
         "src/recon_tool/collection_view.py#collection_observable_info",
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/source_status.py#SourceStatus"
       ],
       "limits": [
@@ -456,7 +458,7 @@
       "claim_id": "runtime.hypothesis-assessment.v1",
       "classification": "documented_derivation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/source_status.py#SourceStatus"
       ],
       "limits": [
@@ -484,7 +486,7 @@
       "classification": "direct_observation",
       "evidence_path": [
         "src/recon_tool/models.py#SourceResult",
-        "src/recon_tool/models.py#EvidenceRecord"
+        "src/recon_tool/evidence_models.py#EvidenceRecord"
       ],
       "limits": [
         "Tenant discovery can be incomplete.",
@@ -519,7 +521,7 @@
       "claim_id": "runtime.inference-diagnostics.v1",
       "classification": "documented_derivation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/data/bayesian_network.yaml"
       ],
       "limits": [
@@ -602,7 +604,7 @@
       "evidence_path": [
         "src/recon_tool/collection_view.py#collection_observable_evidence",
         "src/recon_tool/collection_view.py#collection_observable_info",
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/models.py#TenantInfo"
       ],
       "limits": [
@@ -640,31 +642,47 @@
       "subject_scope": "default human-readable summary for the queried public namespace"
     },
     "runtime.posture-observation.v1": {
-      "audit_status": "open",
+      "audit_status": "complete",
       "claim_id": "runtime.posture-observation.v1",
       "classification": "documented_derivation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/collection_view.py#collection_claim_info",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
+        "src/recon_tool/posture_models.py#Observation",
+        "src/recon_tool/posture_models.py#PostureMetadataDependency",
         "src/recon_tool/data/posture.yaml"
       ],
       "limits": [
-        "Current explanation matching can reconstruct a rule by category and salience.",
-        "Metadata-only observations need typed field lineage."
+        "Metadata-only and profile-relative observations retain exact typed dependencies but remain exact-rule-only in the explanation graph because no raw evidence occurrence exists.",
+        "Legacy observations without an emitter identity remain reconstructed, and sourced observations with incomplete retained support fail closed to exact-rule-only.",
+        "Profile baseline expectations are relative lenses, not scores or universal recommendations, and are withheld when collection is degraded.",
+        "Posture rule names are unique across the combined built-in and custom catalog; the first definition wins, later collisions are skipped, and the synthetic profile namespace is reserved."
       ],
-      "lineage_status": "incomplete",
+      "lineage_status": "exact",
       "material": true,
       "producer_paths": [
+        "src/recon_tool/cli/lookup.py#_lookup_compute_observations",
+        "src/recon_tool/collection_view.py#collection_claim_info",
+        "src/recon_tool/explanation.py#explain_observations",
         "src/recon_tool/posture.py#analyze_posture",
         "src/recon_tool/posture.py#load_posture_rules",
-        "src/recon_tool/explanation.py#explain_observations"
+        "src/recon_tool/profiles.py#apply_profile",
+        "src/recon_tool/profiles.py#compute_baseline_anomalies",
+        "src/recon_tool/server/posture.py#analyze_posture"
       ],
       "regression_tests": [
-        "tests/test_posture.py",
+        "tests/test_baseline_anomalies.py",
+        "tests/test_collection_view.py",
+        "tests/test_explain_integration.py",
         "tests/test_explanation_coverage.py",
+        "tests/test_explanation_lineage.py",
+        "tests/test_posture.py",
+        "tests/test_posture_validation.py",
         "tests/test_profiles.py"
       ],
       "renderer_obligations": [
-        "Attach the exact posture rule and its evidence dependencies; keep profile effects as lenses, not scores."
+        "Attach the exact posture rule and its branch-local retained evidence plus typed metadata dependencies; keep profile effects as lenses, not scores.",
+        "Preserve the stable four-field public posture shape while carrying internal proof state into optional explanations."
       ],
       "subject_scope": "public evidence evaluated by one named posture rule"
     },
@@ -673,7 +691,7 @@
       "claim_id": "runtime.related-namespace.v1",
       "classification": "documented_derivation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/models.py#SurfaceAttribution"
       ],
       "limits": [
@@ -702,7 +720,7 @@
       "claim_id": "runtime.service-label.v1",
       "classification": "documented_derivation",
       "evidence_path": [
-        "src/recon_tool/models.py#EvidenceRecord",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
         "src/recon_tool/collection_view.py#collection_observable_info"
       ],
       "limits": [
@@ -993,7 +1011,7 @@
       "chain_lookup": "runtime.related-namespace.v1",
       "clear_ephemeral_fingerprints": "runtime.catalog-operation.v1",
       "cluster_verification_tokens": "runtime.cross-domain-overlap.v1",
-      "compare_postures": "runtime.posture-observation.v1",
+      "compare_postures": "runtime.exposure-index.v1",
       "discover_fingerprint_candidates": "runtime.catalog-indicator.v1",
       "explain_dag": "runtime.explanation-provenance.v1",
       "explain_signal": "runtime.catalog-indicator.v1",
@@ -1031,7 +1049,7 @@
       "src/recon_tool/formatter/panel.py#_render_unclassified_surface": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#_render_verbose_detail": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel.py#format_chain_dict": "runtime.related-namespace.v1",
-      "src/recon_tool/formatter/panel.py#format_comparison_dict": "runtime.posture-observation.v1",
+      "src/recon_tool/formatter/panel.py#format_comparison_dict": "runtime.exposure-index.v1",
       "src/recon_tool/formatter/panel.py#format_posture_observations": "runtime.posture-observation.v1",
       "src/recon_tool/formatter/panel.py#render_chain_panel": "runtime.related-namespace.v1",
       "src/recon_tool/formatter/panel.py#render_conflict_annotation": "runtime.collection-status.v1",

@@ -23,9 +23,11 @@ from recon_tool.models import (
     ExplanationRecord,
     InsightClaim,
     Observation,
+    PostureMetadataDependency,
     SourceResult,
+    TenantInfo,
 )
-from recon_tool.posture import _PostureRule
+from recon_tool.posture import _MetadataCondition, _PostureRule, analyze_posture, load_posture_rules
 from recon_tool.signals import Signal, SignalMatch
 
 
@@ -402,7 +404,14 @@ def test_posture_lineage_distinguishes_exact_source_name_from_legacy_proxy_match
         slugs_any=("dmarc",),
         slugs_min=1,
     )
-    exact_observation = Observation("email", "high", "DMARC observed", ("dmarc",), source_name=rule.name)
+    exact_observation = Observation(
+        "email",
+        "high",
+        "DMARC observed",
+        ("dmarc",),
+        source_name=rule.name,
+        supporting_evidence=(evidence,),
+    )
     legacy_observation = Observation("email", "high", "Legacy DMARC observation", ("dmarc",))
 
     exact, reconstructed = explain_observations(
@@ -415,6 +424,116 @@ def test_posture_lineage_distinguishes_exact_source_name_from_legacy_proxy_match
     assert exact.lineage_status is ExplanationLineageStatus.EXACT
     assert exact.lineage_rule_ids == (rule.name,)
     assert reconstructed.lineage_status is ExplanationLineageStatus.RECONSTRUCTED
+
+
+def test_posture_explanation_does_not_borrow_global_evidence_for_exact_lineage() -> None:
+    evidence = _evidence("dmarc")
+    rule = _PostureRule(
+        name="dmarc-observed",
+        category="email",
+        salience="high",
+        template="DMARC observed",
+        slugs_any=("dmarc",),
+        slugs_min=1,
+    )
+    observation = Observation("email", "high", "DMARC observed", ("dmarc",), source_name=rule.name)
+
+    record = explain_observations((observation,), (rule,), (evidence,), ())[0]
+
+    assert record.matched_evidence == ()
+    assert record.lineage_status is ExplanationLineageStatus.EXACT_RULE_ONLY
+    assert record.lineage_rule_ids == (rule.name,)
+
+
+def test_metadata_only_posture_explanation_retains_typed_generation_dependency() -> None:
+    condition = _MetadataCondition("auth_type", "eq", "Federated")
+    rule = _PostureRule(
+        name="federated-identity",
+        category="identity",
+        salience="medium",
+        template="Federated",
+        metadata=(condition,),
+    )
+    observation = Observation(
+        "identity",
+        "medium",
+        "Federated",
+        (),
+        source_name=rule.name,
+        metadata_dependencies=(PostureMetadataDependency("auth_type", "eq", "Federated", "Federated"),),
+    )
+
+    record = explain_observations((observation,), (rule,), (), ())[0]
+
+    assert record.lineage_status is ExplanationLineageStatus.EXACT_RULE_ONLY
+    assert record.lineage_rule_ids == (rule.name,)
+    assert "Metadata dependency 'auth_type': observed 'Federated'; rule requires eq 'Federated'" in (
+        record.confidence_derivation
+    )
+
+
+def test_generated_hybrid_posture_observation_has_exact_evidence_and_metadata_lineage() -> None:
+    evidence = EvidenceRecord(
+        source_type="MX",
+        raw_value="mx1.synthetic-proofpoint.invalid",
+        rule_name="Synthetic Proofpoint MX",
+        slug="proofpoint",
+    )
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="Synthetic Example",
+        default_domain="example.invalid",
+        queried_domain="example.invalid",
+        confidence=ConfidenceLevel.MEDIUM,
+        slugs=("proofpoint",),
+        services=("Proofpoint",),
+        dmarc_policy="none",
+        evidence=(evidence,),
+    )
+
+    observations = analyze_posture(info)
+    target = next(
+        observation
+        for observation in observations
+        if observation.source_name == "gateway_without_dmarc_enforcement"
+    )
+    record = explain_observations((target,), load_posture_rules(), info.evidence, ())[0]
+
+    assert record.lineage_status is ExplanationLineageStatus.EXACT
+    assert record.lineage_rule_ids == ("gateway_without_dmarc_enforcement",)
+    assert record.matched_evidence == (evidence,)
+    assert "Metadata dependency 'dmarc_effective_policy': observed 'none'; rule requires neq 'reject'" in (
+        record.confidence_derivation
+    )
+
+
+def test_profile_expectation_does_not_proxy_match_an_unrelated_posture_rule() -> None:
+    rule = _PostureRule(
+        name="unrelated",
+        category="consistency",
+        salience="medium",
+        template="Unrelated",
+        slugs_any=("okta",),
+        slugs_min=1,
+    )
+    source_name = "profile:strict:expected-category:Security"
+    observation = Observation(
+        "consistency",
+        "medium",
+        "Security category not observed",
+        (),
+        source_name=source_name,
+        metadata_dependencies=(
+            PostureMetadataDependency("observed_fingerprint_categories", "not_contains", "Security", ("Email",)),
+        ),
+        observation_scope=("profile:strict:expected_categories",),
+    )
+
+    record = explain_observations((observation,), (rule,), (), ())[0]
+
+    assert record.lineage_status is ExplanationLineageStatus.EXACT_RULE_ONLY
+    assert record.lineage_rule_ids == (source_name,)
+    assert record.fired_rules == (f"Profile expectation: {source_name}",)
 
 
 def test_confidence_reconstruction_does_not_claim_exact_terminal_lineage() -> None:

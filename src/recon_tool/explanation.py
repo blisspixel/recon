@@ -10,6 +10,7 @@ All generated text uses defensive, hedged language.
 
 from __future__ import annotations
 
+from collections import Counter
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
@@ -35,8 +36,10 @@ from recon_tool.models import (
     ExplanationLineageStatus,
     ExplanationRecord,
     Observation,
+    PostureMetadataDependency,
     SourceResult,
 )
+from recon_tool.posture_models import metadata_predicate_satisfied
 from recon_tool.signals import (
     Signal,
     SignalMatch,
@@ -510,6 +513,56 @@ def _posture_rule_description(rule: _PostureRule | None) -> str:
     return "; ".join(parts)
 
 
+def _retained_observation_evidence(
+    observation: Observation,
+    retained_evidence: tuple[EvidenceRecord, ...],
+) -> tuple[EvidenceRecord, ...]:
+    """Return claimed occurrences only when the retained multiset contains them."""
+    available = Counter(retained_evidence)
+    for item in observation.supporting_evidence:
+        if available[item] == 0:
+            return ()
+        available[item] -= 1
+    return observation.supporting_evidence
+
+
+def _metadata_dependency_satisfies(dependency: PostureMetadataDependency) -> bool:
+    """Validate one captured metadata predicate without re-reading live state."""
+    return metadata_predicate_satisfied(
+        dependency.operator,
+        dependency.expected_value,
+        dependency.observed_value,
+    )
+
+
+def _posture_dependencies_complete(
+    observation: Observation,
+    rule: _PostureRule,
+    matched_evidence: tuple[EvidenceRecord, ...],
+) -> bool:
+    """Validate the generation-time dependency bundle against its named rule."""
+    related = observation.related_slugs
+    related_set = set(related)
+    evidence_slugs = {item.slug for item in matched_evidence}
+    maximum_valid = rule.slugs_max is None or len(related) <= rule.slugs_max
+    slug_dependencies_valid = (
+        len(related) == len(related_set)
+        and related_set.issubset(rule.slugs_any)
+        and len(related) >= rule.slugs_min
+        and maximum_valid
+        and evidence_slugs == related_set
+    )
+    dependencies = observation.metadata_dependencies
+    metadata_dependencies_valid = len(dependencies) == len(rule.metadata) and all(
+        dependency.field == condition.field
+        and dependency.operator == condition.operator
+        and dependency.expected_value == condition.value
+        and _metadata_dependency_satisfies(dependency)
+        for dependency, condition in zip(dependencies, rule.metadata, strict=True)
+    )
+    return slug_dependencies_valid and metadata_dependencies_valid
+
+
 def _posture_lineage(
     observation: Observation,
     exact_rule: _PostureRule | None,
@@ -518,6 +571,13 @@ def _posture_lineage(
 ) -> tuple[ExplanationLineageStatus, tuple[str, ...]]:
     """Qualify a posture association against retained generation-time state."""
     if exact_rule is None:
+        if (
+            observation.source_name.startswith("profile:")
+            and observation.metadata_dependencies
+            and observation.observation_scope
+            and all(_metadata_dependency_satisfies(item) for item in observation.metadata_dependencies)
+        ):
+            return ExplanationLineageStatus.EXACT_RULE_ONLY, (observation.source_name,)
         status = (
             ExplanationLineageStatus.RECONSTRUCTED
             if matched_rule is not None and not observation.source_name
@@ -525,12 +585,12 @@ def _posture_lineage(
         )
         return status, ()
 
-    evidence_slugs = {item.slug for item in evidence}
-    exact_evidence = bool(observation.related_slugs) and all(
-        slug in evidence_slugs for slug in observation.related_slugs
+    complete_dependencies = _posture_dependencies_complete(observation, exact_rule, evidence)
+    status = (
+        ExplanationLineageStatus.EXACT
+        if complete_dependencies and bool(evidence)
+        else ExplanationLineageStatus.EXACT_RULE_ONLY
     )
-    complete_positive_rule = exact_evidence and not exact_rule.metadata and exact_rule.slugs_max is None
-    status = ExplanationLineageStatus.EXACT if complete_positive_rule else ExplanationLineageStatus.EXACT_RULE_ONLY
     return status, (exact_rule.name,)
 
 
@@ -552,12 +612,18 @@ def explain_observations(
     for obs in observations:
         exact_source_rule, matched_rule = _match_posture_rule(obs, posture_rules, rules_by_name)
 
-        # Collect evidence for related slugs
-        obs_evidence: list[EvidenceRecord] = []
+        # Exact observations carry their own branch-local occurrences. Legacy
+        # observations without a source rule retain the old reconstruction path.
+        if obs.source_name:
+            obs_evidence = list(_retained_observation_evidence(obs, evidence))
+        else:
+            obs_evidence = []
+            for slug in obs.related_slugs:
+                obs_evidence.extend(_evidence_for_slug(slug, evidence))
+
         slug_details: list[str] = []
         for slug in obs.related_slugs:
-            slug_ev = _evidence_for_slug(slug, evidence)
-            obs_evidence.extend(slug_ev)
+            slug_ev = tuple(item for item in obs_evidence if item.slug == slug)
             score = _score_for_slug(slug, detection_scores)
             slug_details.append(f"Slug '{slug}': {len(slug_ev)} evidence record(s), score '{score}'")
 
@@ -567,6 +633,14 @@ def explain_observations(
             derivation_parts.extend(slug_details)
         if not slug_details and not obs.related_slugs:
             derivation_parts.append("Metadata-only observation (no slug evidence)")
+        derivation_parts.extend(
+            (
+                f"Metadata dependency '{dependency.field}': observed {dependency.observed_value!r}; "
+                f"rule requires {dependency.operator} {dependency.expected_value!r}"
+            )
+            for dependency in obs.metadata_dependencies
+        )
+        derivation_parts.extend(f"Observation scope: {scope}" for scope in obs.observation_scope)
 
         curated = matched_rule.explain if matched_rule is not None else ""
         lineage_status, lineage_rule_ids = _posture_lineage(
@@ -581,7 +655,13 @@ def explain_observations(
                 item_name=obs.statement,
                 item_type="observation",
                 matched_evidence=tuple(obs_evidence),
-                fired_rules=(_posture_rule_description(matched_rule),),
+                fired_rules=(
+                    (
+                        f"Profile expectation: {obs.source_name}"
+                        if matched_rule is None and obs.source_name.startswith("profile:")
+                        else _posture_rule_description(matched_rule)
+                    ),
+                ),
                 confidence_derivation=". ".join(derivation_parts),
                 weakening_conditions=(),
                 curated_explanation=curated,

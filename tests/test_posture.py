@@ -1,7 +1,40 @@
 """Tests for the posture analyzer."""
 
-from recon_tool.models import CertSummary, ConfidenceLevel, EvidenceRecord, TenantInfo
+import pytest
+
+from recon_tool.models import (
+    CertSummary,
+    ConfidenceLevel,
+    EvidenceRecord,
+    Observation,
+    PostureMetadataDependency,
+    TenantInfo,
+)
 from recon_tool.posture import DISCOURAGED_COPY_TERMS, analyze_posture
+from recon_tool.posture_models import metadata_predicate_satisfied
+
+
+def test_posture_lineage_models_reject_incomplete_identity_and_scope() -> None:
+    with pytest.raises(ValueError, match="field must not be empty"):
+        PostureMetadataDependency("", "eq", "expected", "observed")
+    with pytest.raises(ValueError, match="operator must not be empty"):
+        PostureMetadataDependency("auth_type", "", "expected", "observed")
+    with pytest.raises(ValueError, match="non-empty source name"):
+        Observation("identity", "low", "Synthetic", (), observation_scope=("profile:synthetic",))
+    with pytest.raises(ValueError, match="scopes must not be empty"):
+        Observation("identity", "low", "Synthetic", (), source_name="synthetic", observation_scope=("",))
+
+
+def test_posture_metadata_predicate_handles_all_typed_operators_fail_closed() -> None:
+    assert metadata_predicate_satisfied("gte", 2, "3")
+    assert metadata_predicate_satisfied("lte", 3, 2)
+    assert not metadata_predicate_satisfied("gte", 2, ("3",))
+    assert not metadata_predicate_satisfied("lte", 2, "not-a-number")
+    assert metadata_predicate_satisfied("eq", "Federated", "federated")
+    assert metadata_predicate_satisfied("neq", "Managed", "Federated")
+    assert metadata_predicate_satisfied("not_contains", "Security", ("Email", "Identity"))
+    assert not metadata_predicate_satisfied("not_contains", "Security", "Email")
+    assert not metadata_predicate_satisfied("unsupported", "expected", "observed")
 
 
 def _make_info(**overrides) -> TenantInfo:
@@ -13,6 +46,10 @@ def _make_info(**overrides) -> TenantInfo:
         "confidence": ConfidenceLevel.MEDIUM,
     }
     defaults.update(overrides)
+    if "slugs" in overrides and "evidence" not in overrides:
+        defaults["evidence"] = tuple(
+            EvidenceRecord("TXT", f"{slug}=synthetic", slug, slug) for slug in overrides["slugs"]
+        )
     return TenantInfo(**defaults)
 
 
@@ -167,3 +204,50 @@ class TestAnalyzePosture:
         names = {observation.source_name for observation in analyze_posture(info)}
 
         assert "weak_email_security" in names
+
+    def test_slug_rule_requires_retained_matching_evidence(self) -> None:
+        info = _make_info(
+            services=("Anthropic",),
+            slugs=("anthropic",),
+            evidence=(),
+        )
+
+        names = {observation.source_name for observation in analyze_posture(info)}
+
+        assert "ai_tooling_detected" not in names
+
+    def test_hybrid_rule_carries_exact_generation_dependencies(self) -> None:
+        proofpoint = EvidenceRecord(
+            "MX",
+            "10 mx.synthetic.invalid",
+            "Proofpoint",
+            "proofpoint",
+        )
+        info = _make_info(
+            slugs=("proofpoint",),
+            services=("Proofpoint",),
+            dmarc_policy="none",
+            evidence=(proofpoint,),
+        )
+
+        observation = next(
+            item for item in analyze_posture(info) if item.source_name == "gateway_without_dmarc_enforcement"
+        )
+
+        assert observation.supporting_evidence == (proofpoint,)
+        assert observation.metadata_dependencies == (
+            PostureMetadataDependency("dmarc_effective_policy", "neq", "reject", "none"),
+            PostureMetadataDependency("dmarc_effective_policy", "neq", "quarantine", "none"),
+        )
+
+    def test_metadata_only_rule_carries_typed_observed_value(self) -> None:
+        observation = next(
+            item
+            for item in analyze_posture(_make_info(auth_type="Federated"))
+            if item.source_name == "federated_identity"
+        )
+
+        assert observation.supporting_evidence == ()
+        assert observation.metadata_dependencies == (
+            PostureMetadataDependency("auth_type", "eq", "Federated", "Federated"),
+        )

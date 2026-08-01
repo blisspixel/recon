@@ -70,6 +70,21 @@ def test_service_label_family_records_exact_runtime_lineage() -> None:
     assert "src/recon_tool/formatter/classify.py#role_aware_service_label" in family["producer_paths"]
 
 
+def test_posture_family_records_exact_generation_time_lineage() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    family = inventory["claim_families"]["runtime.posture-observation.v1"]
+
+    assert family["audit_status"] == "complete"
+    assert family["lineage_status"] == "exact"
+    assert "src/recon_tool/posture_models.py#PostureMetadataDependency" in family["evidence_path"]
+    assert "src/recon_tool/profiles.py#compute_baseline_anomalies" in family["producer_paths"]
+    assert inventory["coverage"]["mcp_tools"]["compare_postures"] == "runtime.exposure-index.v1"
+    assert (
+        inventory["coverage"]["panel_producers"]["src/recon_tool/formatter/panel.py#format_comparison_dict"]
+        == "runtime.exposure-index.v1"
+    )
+
+
 def test_digest_report_is_deterministic_and_matches_the_contract(capsys: pytest.CaptureFixture[str]) -> None:
     inventory = load_claim_inventory(AUDIT_PATH)
 

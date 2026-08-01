@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from recon_tool.models import Observation
+from recon_tool.models import EvidenceRecord, Observation, PostureMetadataDependency
 from recon_tool.profiles import (
     Profile,
     apply_profile,
@@ -217,6 +217,26 @@ class TestApplyProfile:
         obs = (_obs("other", "low", "boosted", source_name="strong_email_security"),)
         out = apply_profile(obs, profile)
         assert out[0].salience == "high"
+
+    def test_reweighting_preserves_generation_time_lineage(self) -> None:
+        evidence = EvidenceRecord("TXT", "okta-verification=synthetic", "Okta", "okta")
+        dependency = PostureMetadataDependency("auth_type", "eq", "Federated", "Federated")
+        observation = Observation(
+            "identity",
+            "low",
+            "Observed",
+            ("okta",),
+            source_name="identity_provider_detected",
+            supporting_evidence=(evidence,),
+            metadata_dependencies=(dependency,),
+        )
+        profile = Profile(name="boost", category_boost=(("identity", 3.0),))
+
+        reweighted = apply_profile((observation,), profile)[0]
+
+        assert reweighted.salience == "high"
+        assert reweighted.supporting_evidence == (evidence,)
+        assert reweighted.metadata_dependencies == (dependency,)
 
     def test_signal_boost_keys_on_source_name_not_statement(self):
         """The boost matches the rule name, not the rendered statement."""

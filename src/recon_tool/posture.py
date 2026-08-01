@@ -20,7 +20,8 @@ from typing import Any
 import yaml
 
 from recon_tool.constants import effective_dmarc_policy, email_security_score
-from recon_tool.models import Observation, TenantInfo
+from recon_tool.models import Observation, PostureMetadataDependency, TenantInfo
+from recon_tool.posture_models import metadata_predicate_satisfied
 
 logger = logging.getLogger("recon")
 
@@ -164,8 +165,8 @@ def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule |
         return None
 
     name = rule.get("name")
-    if not name or not isinstance(name, str):
-        logger.warning("Posture rule at index %d missing 'name' — skipped", index)
+    if not isinstance(name, str) or not name or name.casefold().startswith("profile:"):
+        logger.warning("Posture rule at index %d has an invalid or reserved 'name'; skipped", index)
         return None
 
     category = rule.get("category", "")
@@ -263,8 +264,14 @@ def load_posture_rules() -> tuple[_PostureRule, ...]:
     custom_path = config_dir() / "posture.yaml"
 
     entries: list[_PostureRule] = []
-    entries.extend(_load_from_path(data_path))
-    entries.extend(_load_from_path(custom_path))
+    seen_names: set[str] = set()
+    for path in (data_path, custom_path):
+        for rule in _load_from_path(path):
+            if rule.name in seen_names:
+                logger.warning("Skipping duplicate posture rule name %r from %s", rule.name, path)
+                continue
+            seen_names.add(rule.name)
+            entries.append(rule)
     return tuple(entries)
 
 
@@ -321,8 +328,19 @@ def _compute_metadata_value(field: str, info: TenantInfo) -> str | int | None:
     return None
 
 
-def _evaluate_metadata_condition(condition: _MetadataCondition, info: TenantInfo) -> bool:
+def _evaluate_metadata_condition(  # pyright: ignore[reportUnusedFunction]
+    condition: _MetadataCondition,
+    info: TenantInfo,
+) -> bool:
     """Evaluate a single metadata condition against TenantInfo."""
+    return _matched_metadata_dependency(condition, info) is not None
+
+
+def _matched_metadata_dependency(
+    condition: _MetadataCondition,
+    info: TenantInfo,
+) -> PostureMetadataDependency | None:
+    """Return the exact typed predicate state when a condition matches."""
     from recon_tool.source_status import ObservationChannel, SourceStatus
 
     status = SourceStatus.from_degraded_sources(info.degraded_sources)
@@ -335,39 +353,32 @@ def _evaluate_metadata_condition(condition: _MetadataCondition, info: TenantInfo
     }
     channel = channel_by_field.get(condition.field)
     if channel is not None and status.channel_unavailable(channel):
-        return False
+        return None
     if condition.field == "email_security_score" and any(
         status.channel_unavailable(name) for name in ("dmarc", "dkim", "apex_txt", "mta_sts", "bimi")
     ):
-        return False
+        return None
     field_value = _compute_metadata_value(condition.field, info)
-
-    op = condition.operator
-    target = condition.value
 
     # Unknown is not evidence for equality or inequality.
     if field_value is None:
-        return False
+        return None
+    if not metadata_predicate_satisfied(condition.operator, condition.value, field_value):
+        return None
+    return PostureMetadataDependency(condition.field, condition.operator, condition.value, field_value)
 
-    # For numeric operators, try numeric comparison
-    if op in ("gte", "lte"):
-        try:
-            numeric_field = int(field_value) if not isinstance(field_value, int) else field_value
-            numeric_target = int(target) if not isinstance(target, int) else target
-            if op == "gte":
-                return numeric_field >= numeric_target
-            return numeric_field <= numeric_target
-        except (ValueError, TypeError):
-            return False
 
-    # String comparison for eq/neq
-    str_field = str(field_value).lower()
-    str_target = str(target).lower()
-    if op == "eq":
-        return str_field == str_target
-    if op == "neq":
-        return str_field != str_target
-    return False
+def _matched_metadata_dependencies(
+    conditions: tuple[_MetadataCondition, ...],
+    info: TenantInfo,
+) -> tuple[PostureMetadataDependency, ...] | None:
+    """Capture every condition dependency, or fail closed as one bundle."""
+    dependencies = tuple(
+        dependency
+        for condition in conditions
+        if (dependency := _matched_metadata_dependency(condition, info)) is not None
+    )
+    return dependencies if len(dependencies) == len(conditions) else None
 
 
 def _find_discouraged_copy_terms(text: str) -> tuple[str, ...]:
@@ -383,10 +394,11 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
     The neutral-language term list is advisory: it logs copy drift but never
     blocks user-supplied data or drops observations at runtime.
     """
-    from recon_tool.collection_view import collection_observable_info
+    from recon_tool.collection_view import collection_claim_info
 
-    info = collection_observable_info(info)
-    slugs_set = set(info.slugs)
+    info = collection_claim_info(info)
+    evidence_slugs = {record.slug for record in info.evidence}
+    slugs_set = set(info.slugs) & evidence_slugs
     results: list[Observation] = []
 
     for rule in load_posture_rules():
@@ -400,10 +412,9 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
                 continue
 
         # Evaluate metadata conditions
-        if rule.metadata:
-            all_met = all(_evaluate_metadata_condition(cond, info) for cond in rule.metadata)
-            if not all_met:
-                continue
+        metadata_dependencies = _matched_metadata_dependencies(rule.metadata, info)
+        if metadata_dependencies is None:
+            continue
 
         # Render template
         statement = rule.template
@@ -429,6 +440,8 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
                 ", ".join(discouraged_terms),
             )
 
+        matched_slug_set = frozenset(matched_slugs)
+        supporting_evidence = tuple(record for record in info.evidence if record.slug in matched_slug_set)
         results.append(
             Observation(
                 category=rule.category,
@@ -436,6 +449,8 @@ def analyze_posture(info: TenantInfo) -> tuple[Observation, ...]:
                 statement=statement,
                 related_slugs=tuple(matched_slugs),
                 source_name=rule.name,
+                supporting_evidence=supporting_evidence,
+                metadata_dependencies=metadata_dependencies,
             )
         )
 

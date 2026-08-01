@@ -640,7 +640,12 @@ records carry one emitter ID in `lineage_rule_ids`; the current record shape
 rejects multiple rule IDs because it cannot represent a separate evidence set
 for each rule without inventing cross-product edges. Legacy caller-supplied
 insight strings, confidence explanations, and legacy posture proxies remain
-explicitly reconstructed. `provenance_complete=true` retains its stable
+explicitly reconstructed. Current built-in posture observations retain their
+exact emitter, branch-local evidence occurrences, and typed metadata
+dependencies. Evidence-backed posture rules can therefore form an exact path;
+metadata-only and profile-relative observations remain exact-rule-only because
+recon does not fabricate a raw record for scalar or bounded-set state.
+`provenance_complete=true` retains its stable
 schema-version-1 graph-reachability meaning; it does not prove exact lineage.
 Use `exact_provenance_complete` and `lineage_disconnected_terminals` for that
 stronger question. The first internal DMARC
