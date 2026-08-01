@@ -135,6 +135,8 @@ _CHANNEL_INSIGHT_PREFIXES: dict[ObservationChannel, tuple[str, ...]] = {
         "email delivery path:",
         "no observable email infrastructure",
         "sparse public signal: custom or unclassified mx",
+        "sparse public signal: minimal public dns footprint",
+        "sparse public signal: few observable records beyond mx and identity",
         # Retain old cached copy only so a degraded MX channel cannot leak a
         # superseded self-hosting claim into a current view.
         "sparse public signal \N{EM DASH} custom or self-hosted mail infrastructure",

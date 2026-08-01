@@ -136,12 +136,13 @@ If the user later asks for a structured summary of the JSON, follow the output-v
 Use when the user asks "why", "how do you know", or "show your reasoning".
 Plain `recon <domain> --explain` emits the panel, per-source status, and flat
 evidence and explanation sections. `recon <domain> --json --explain` adds the
-reconstructed provenance graph as `explanation_dag`; the MCP equivalent is
-`lookup_tenant(domain, format="json", explain=true)`. Evidence occurrences link
-to matching slug and rule nodes, which link to signal, insight, observation, or
-confidence terminals. Some insight and posture associations are reconstructed
-from rendered text or proxy rule matches, so reachability does not prove exact
-generation-time lineage. The separate `--explain-dag` flag renders the Bayesian
+structured provenance graph as `explanation_dag`; the MCP equivalent is
+`lookup_tenant(domain, format="json", explain=true)`. Each flat and graph
+terminal reports `exact`, `exact_rule_only`, `reconstructed`, or `unsupported`
+lineage. Read `exact_provenance_complete` and
+`lineage_disconnected_terminals` for exact evidence-to-rule coverage.
+Schema-version-1 `provenance_complete` retains its broader graph-reachability
+meaning. The separate `--explain-dag` flag renders the Bayesian
 inference DAG and is not the same graph.
 
 Surface the *summary* of the chain - which evidence drove which insight - rather than dumping the full DAG. Offer the full DAG on follow-up.
@@ -165,7 +166,7 @@ CLI fallbacks when the MCP server is not connected:
 
 - `recon <domain> --json` - structured output.
 - `recon <domain> --explain` - panel, source status, and flat retained-evidence explanations.
-- `recon <domain> --json --explain` - structured lookup plus the reconstructed provenance graph.
+- `recon <domain> --json --explain` - structured lookup plus the lineage-qualified provenance graph.
 - `recon batch <file> --json` - list of domains with cross-domain token clustering.
 - `recon delta <domain>` - diff against the last cached snapshot. Relay verbatim like the default panel.
 

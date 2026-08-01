@@ -52,6 +52,20 @@ operator, corporate group, ownership, or control.
   records that established the gateway role, related sender-platform inventory
   remains isolated even for an evidence-empty apex, and malformed role labels
   cannot escape the best-effort cache boundary.
+- Explanation terminals now report whether their rule association is exact,
+  exact-rule-only, reconstructed, or unsupported. Explained JSON adds
+  `exact_provenance_complete` and `lineage_disconnected_terminals`, which
+  require an explicit evidence-to-rule path, while preserving the stable
+  schema-version-1 reachability diagnostics. Exact generated insights and
+  simple positive signal or posture rules expose retained rule identity;
+  metadata-dependent, bounded non-observation, legacy text, confidence, and
+  proxy-matched paths remain visibly incomplete or reconstructed. Flat JSON,
+  Rich, Markdown, CLI, and MCP explanation renderers carry the same status.
+- Sparse public-signal diagnoses now use colon punctuation consistently. The
+  text-hygiene gate compares an ahead branch's effective working tree with
+  `origin/main`, so a local repair supersedes the corresponding unpushed line
+  instead of producing a stale historical violation. The explanation refactor
+  also lowers the enforced excessive-branch ceiling from 10 to 8.
 
 ## [2.9.0] - 2026-07-31
 

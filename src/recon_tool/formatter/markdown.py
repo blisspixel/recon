@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import string
 
+from recon_tool.explanation_lineage import explanation_lineage_label
 from recon_tool.formatter.classify import (
     categorize_services,
     google_workspace_cse_indicators,
@@ -227,6 +228,8 @@ def format_explanations_markdown(explanations: list[ExplanationRecord]) -> str:
         if rec.curated_explanation:
             lines.append(f"*{markdown_escape(rec.curated_explanation)}*")
             lines.append("")
+
+        lines.append(f"**Lineage:** {explanation_lineage_label(rec.lineage_status)}{MARKDOWN_HARD_BREAK}")
 
         if rec.fired_rules:
             lines.append(

@@ -45,6 +45,8 @@ class TestShape:
             "schema_version": 1,
             "provenance_complete": True,
             "disconnected_terminals": [],
+            "exact_provenance_complete": True,
+            "lineage_disconnected_terminals": [],
         }
 
     def test_returns_exact_top_level_shape(self):
@@ -55,6 +57,8 @@ class TestShape:
             "schema_version",
             "provenance_complete",
             "disconnected_terminals",
+            "exact_provenance_complete",
+            "lineage_disconnected_terminals",
         }
 
     def test_schema_version_is_1(self):

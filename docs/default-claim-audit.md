@@ -57,12 +57,17 @@ rejected.
 - `audit_status: open` means the family still requires implementation or review.
 
 At the 2026-07-31 checkpoint, the inventory contains 27 families and covers 89
-agent-guidance sections, 16 insight generators, 185 JSON property occurrences,
+agent-guidance sections, 16 insight generators, 197 JSON property occurrences,
 167 MCP tool and output surfaces, 31 panel producers, 3 recommendation
 producers, 77 quantitative or categorical score fields, and 8 MCP instruction
-sections. Nineteen families are complete. Six material runtime families have
-incomplete lineage: explanations, panel assembly, service labels, posture
-observations, hardening guidance, and the exposure index. Generated insights
+sections. Twenty families are complete. Five material runtime families have
+incomplete lineage: panel assembly, service labels, posture observations,
+hardening guidance, and the exposure index. Explanation records now label
+exact evidence-and-rule associations, exact rule-only associations,
+reconstructed associations, and unsupported associations. The additive
+`exact_provenance_complete` and `lineage_disconnected_terminals` diagnostics
+require an explicit evidence-to-rule path while preserving the stable
+schema-version-1 reachability fields. Generated insights
 now retain their exact generator rule plus supporting evidence occurrences or
 bounded observation scope through live, projected, enriched, and cache-served
 results. Positive catalog and service claims require a retained occurrence, so

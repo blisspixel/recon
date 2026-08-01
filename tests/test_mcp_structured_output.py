@@ -447,6 +447,14 @@ def test_analyze_posture_output_schema_has_precise_variants() -> None:
     assert set(explained["required"]) == {"observations", "explanations"}
     explanation = schema["$defs"]["ExplanationSummary"]
     assert explanation["properties"]["matched_evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
+    assert {"lineage_status", "lineage_rule_ids"}.issubset(explanation["required"])
+    assert set(explanation["properties"]["lineage_status"]["enum"]) == {
+        "exact",
+        "exact_rule_only",
+        "reconstructed",
+        "unsupported",
+    }
+    assert explanation["properties"]["lineage_rule_ids"]["items"] == {"type": "string"}
 
     profiled = schema["$defs"]["ProfiledExplainedPostureAnalysisEnvelope"]
     assert "profile_note" in profiled["required"]

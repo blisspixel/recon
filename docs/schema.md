@@ -549,8 +549,8 @@ When a structured lookup uses `--json` together with `--verbose`, `--full`, or
 `--explain`, additional structured arrays can appear. These fields are
 conditional, so a consumer should treat their presence as optional and never
 infer "always present". They are intentionally omitted from the schema's
-`required` list for the same reason. The conditional fields are `evidence`
-(`--json --explain`), `explanation_dag` (`--json --explain`, or
+`required` list for the same reason. The conditional fields are `evidence` and
+`explanations` (`--json --explain`), `explanation_dag` (`--json --explain`, or
 `lookup_tenant(format="json", explain=true)` through MCP), and
 `unclassified_cname_chains` (`--include-unclassified` in structured output).
 The same private catalog-maintenance option also adds
@@ -583,6 +583,20 @@ Stability: **stable** within the `--json --explain` contract; the fields inside
 each record (`source_type`, `raw_value`, `rule_name`, `slug`) will not change
 shape.
 
+### `explanations` (present with explained JSON through CLI or MCP)
+
+Each flat record contains `item_name`, `item_type`, `matched_evidence`,
+`fired_rules`, `confidence_derivation`, `weakening_conditions`, and
+`curated_explanation`. Current versions also emit `lineage_status` and
+`lineage_rule_ids`. Those two lineage fields are additive and optional in the
+schema so explained v2 payloads captured before their introduction remain
+valid. `lineage_rule_ids` contains at most one exact emitter ID with the current
+record shape.
+
+Stability: **stable** within the explained JSON contract. Consumers should use
+`lineage_status` to distinguish exact generation-time lineage from reconstructed
+or unsupported explanations.
+
 ### `explanation_dag` (present with explained JSON through CLI or MCP)
 
 Stability: **stable, schema version 1**. The exact top-level keys are:
@@ -594,6 +608,8 @@ Stability: **stable, schema version 1**. The exact top-level keys are:
 - `edges`: directed `{source, target, relation}` records. Current relations are
   `detected-by` (evidence to slug), `matched-rule` (evidence to rule only when
   the retained `EvidenceRecord.rule_name` exactly equals the fired-rule label),
+  `supports-rule` (evidence to a rule when the generation-time association was
+  retained),
   `contributes-to` (slug to explanation terminal), and `fired` (rule to
   explanation terminal). When that exact rule association was not retained,
   evidence reaches the terminal through its slug and recon does not invent a
@@ -604,18 +620,30 @@ Stability: **stable, schema version 1**. The exact top-level keys are:
   node.
 - `disconnected_terminals`: sorted terminal node IDs that are not reachable
   from evidence. An empty list accompanies `provenance_complete=true`.
+- `exact_provenance_complete`: `true` exactly when every terminal has a
+  retained evidence to exact rule to terminal path.
+- `lineage_disconnected_terminals`: sorted terminal node IDs without that
+  stronger exact path. Every reconstructed, unsupported, exact-rule-only, or
+  evidence-empty terminal appears here.
 
 The completeness fields are additive and optional in schema version 1 so
 previously captured DAG objects remain valid; current recon versions always
-emit both. They diagnose the graph actually emitted. They do not
+emit all four diagnostics. They describe the graph actually emitted. They do not
 manufacture an evidence link for a conclusion whose generator did not retain
 one. The flat `explanations` list remains available alongside this additive
 graph.
 
-Current insight and posture explanations reconstruct some generator lineage
-from human-facing text or rule proxies. `provenance_complete=true` therefore
-means every terminal is reachable in the emitted reconstructed graph; it does
-not prove that every generator association is exact. The first internal DMARC
+Every terminal node and flat explanation carries a `lineage_status` of `exact`,
+`exact_rule_only`, `reconstructed`, or `unsupported`. Current built-in insight
+claims retain exact generation-time associations. Exact and exact-rule-only
+records carry one emitter ID in `lineage_rule_ids`; the current record shape
+rejects multiple rule IDs because it cannot represent a separate evidence set
+for each rule without inventing cross-product edges. Legacy caller-supplied
+insight strings, confidence explanations, and legacy posture proxies remain
+explicitly reconstructed. `provenance_complete=true` retains its stable
+schema-version-1 graph-reachability meaning; it does not prove exact lineage.
+Use `exact_provenance_complete` and `lineage_disconnected_terminals` for that
+stronger question. The first internal DMARC
 claim contract retains exact evaluator lineage from a collector-retained raw
 record to its signed atom. It operates after resolution and uses whole-resolution
 completion time because a per-query timestamp is not retained. Its dossier is

@@ -42,7 +42,7 @@ def _sample_results() -> list[dict[str, object]]:
             "slugs": ["microsoft365", "dmarc"],
             "insights": [
                 "Email security: DMARC quarantine",
-                "Sparse public signal — minimal public DNS footprint.",
+                "Sparse public signal: minimal public DNS footprint.",
             ],
             "degraded_sources": [],
             "partial": False,
@@ -55,7 +55,7 @@ def _sample_results() -> list[dict[str, object]]:
             "slugs": ["google-workspace"],
             "insights": [
                 "Google-native identity indicators",
-                "Sparse public signal — edge-heavy footprint.",
+                "Sparse public signal: edge-heavy footprint.",
             ],
             "degraded_sources": ["crt.sh"],
             "partial": True,
@@ -79,9 +79,17 @@ def test_summarize_batch_results_counts_and_top_lists() -> None:
     assert summary["error_domains"] == ["gamma.invalid"]
     assert summary["partial_domains"] == ["beta.invalid"]
     assert summary["top_sparse_diagnoses"] == [
-        ("Sparse public signal — minimal public DNS footprint.", 1),
-        ("Sparse public signal — edge-heavy footprint.", 1),
+        ("Sparse public signal: minimal public DNS footprint.", 1),
+        ("Sparse public signal: edge-heavy footprint.", 1),
     ]
+
+
+def test_summarize_batch_results_preserves_legacy_sparse_diagnosis() -> None:
+    legacy = "Sparse public signal \N{EM DASH} minimal public DNS footprint."
+
+    summary = summarize_batch_results([{"queried_domain": "legacy.invalid", "insights": [legacy]}])
+
+    assert summary["top_sparse_diagnoses"] == [(legacy, 1)]
 
 
 def test_compare_batch_summaries_returns_deltas() -> None:
@@ -107,7 +115,7 @@ def test_compare_batch_results_reports_semantic_domain_changes() -> None:
             "confidence": "high",
             "services": ["Microsoft 365", "DMARC"],
             "slugs": ["microsoft365", "dmarc"],
-            "insights": ["Sparse public signal — minimal public DNS footprint."],
+            "insights": ["Sparse public signal: minimal public DNS footprint."],
             "degraded_sources": [],
             "partial": False,
         },
@@ -129,7 +137,7 @@ def test_compare_batch_results_reports_semantic_domain_changes() -> None:
             "confidence": "medium",
             "services": ["Microsoft 365", "DMARC", "Cloudflare"],
             "slugs": ["microsoft365", "dmarc", "cloudflare"],
-            "insights": ["Sparse public signal — edge-heavy footprint."],
+            "insights": ["Sparse public signal: edge-heavy footprint."],
             "degraded_sources": ["crt.sh"],
             "partial": True,
         },
@@ -180,8 +188,8 @@ def test_compare_batch_results_reports_semantic_domain_changes() -> None:
     assert changed["added_services"] == ["Cloudflare"]
     assert changed["added_slugs"] == ["cloudflare"]
     assert changed["sparse_diagnosis_change"] == {
-        "from": "Sparse public signal — minimal public DNS footprint.",
-        "to": "Sparse public signal — edge-heavy footprint.",
+        "from": "Sparse public signal: minimal public DNS footprint.",
+        "to": "Sparse public signal: edge-heavy footprint.",
     }
 
 
@@ -243,8 +251,8 @@ def test_render_summary_markdown_includes_regression_detail() -> None:
                 "added_slugs": ["google-workspace"],
                 "removed_slugs": ["microsoft365"],
                 "sparse_diagnosis_change": {
-                    "from": "Sparse public signal — minimal public DNS footprint.",
-                    "to": "Sparse public signal — edge-heavy footprint.",
+                    "from": "Sparse public signal: minimal public DNS footprint.",
+                    "to": "Sparse public signal: edge-heavy footprint.",
                 },
             }
         ],

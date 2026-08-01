@@ -749,7 +749,7 @@ class TestEmailSecurityExplanationIsDeterministic:
     """
 
     def test_matched_slugs_are_sorted(self) -> None:
-        from recon_tool.explanation import _classify_insight
+        from recon_tool.explanation_insights import _classify_insight
         from recon_tool.models import EvidenceRecord
 
         slugs = frozenset({"dmarc", "dkim", "bimi", "mta-sts", "spf"})

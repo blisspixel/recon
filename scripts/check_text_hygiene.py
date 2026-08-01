@@ -56,6 +56,7 @@ class TextHygieneViolation:
             location = f"{location}:{self.line_number}"
         return f"{self.source}: {location}: {self.marker}: {self.text}"
 
+
 def _has_pictograph(text: str) -> bool:
     return any(start <= ord(char) <= end for char in text for start, end in PICTOGRAPH_RANGES)
 
@@ -144,6 +145,35 @@ def _branch_status() -> str:
     return result.stdout.splitlines()[0] if result.stdout.splitlines() else ""
 
 
+def _untracked_added_lines() -> list[AddedLine]:
+    """Return every text line in untracked, non-ignored files as newly added."""
+    output = _diff_or_error(["ls-files", "--others", "--exclude-standard", "-z"])
+    lines: list[AddedLine] = []
+    root = ROOT.resolve()
+    for relative in (item for item in output.split("\0") if item):
+        candidate = ROOT / relative
+        try:
+            if candidate.is_symlink():
+                text = str(candidate.readlink())
+            else:
+                resolved = candidate.resolve()
+                resolved.relative_to(root)
+                if not resolved.is_file():
+                    continue
+                raw = resolved.read_bytes()
+                if b"\0" in raw:
+                    continue
+                text = raw.decode("utf-8", errors="replace")
+        except (OSError, ValueError) as exc:
+            raise RuntimeError(f"cannot audit untracked path {relative!r}: {exc}") from exc
+        normalized_path = Path(relative).as_posix()
+        lines.extend(
+            AddedLine("untracked", normalized_path, line_number, line)
+            for line_number, line in enumerate(text.splitlines(), start=1)
+        )
+    return lines
+
+
 def collect_added_lines(ranges: Iterable[str]) -> list[AddedLine]:
     collected: list[AddedLine] = []
     explicit_ranges = list(ranges)
@@ -153,6 +183,13 @@ def collect_added_lines(ranges: Iterable[str]) -> list[AddedLine]:
             collected.extend(added_lines_from_diff(diff, source=commit_range))
         return collected
 
+    status = _branch_status()
+    if "origin/main" in status and "[ahead " in status:
+        diff = _diff_or_error(["diff", "--no-ext-diff", "-U0", "origin/main"])
+        collected.extend(added_lines_from_diff(diff, source="origin/main effective tree"))
+        collected.extend(_untracked_added_lines())
+        return collected
+
     for label, args in (
         ("staged", ["diff", "--cached", "--no-ext-diff", "-U0"]),
         ("unstaged", ["diff", "--no-ext-diff", "-U0"]),
@@ -160,10 +197,7 @@ def collect_added_lines(ranges: Iterable[str]) -> list[AddedLine]:
         diff = _diff_or_error(args)
         collected.extend(added_lines_from_diff(diff, source=label))
 
-    status = _branch_status()
-    if "origin/main" in status and "[ahead " in status:
-        diff = _diff_or_error(["diff", "--no-ext-diff", "-U0", "origin/main..HEAD"])
-        collected.extend(added_lines_from_diff(diff, source="origin/main..HEAD"))
+    collected.extend(_untracked_added_lines())
     return collected
 
 

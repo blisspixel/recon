@@ -12,6 +12,10 @@ import types
 from typing import Any
 
 from recon_tool.formatter import panel as _panel
+from recon_tool.formatter.explanations import (
+    format_explanations_list,
+    render_explanations_panel,
+)
 from recon_tool.formatter.panel import (
     _CATEGORY_BY_SLUG,
     _CATEGORY_WIDTH,
@@ -47,7 +51,6 @@ from recon_tool.formatter.panel import (
     format_comparison_json,
     format_delta_dict,
     format_delta_json,
-    format_explanations_list,
     format_explanations_markdown,
     format_exposure_dict,
     format_exposure_json,
@@ -65,7 +68,6 @@ from recon_tool.formatter.panel import (
     render_conflict_annotation,
     render_delta_panel,
     render_error,
-    render_explanations_panel,
     render_exposure_panel,
     render_gaps_panel,
     render_posture_panel,

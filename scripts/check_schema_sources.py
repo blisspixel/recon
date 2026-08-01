@@ -18,6 +18,7 @@ _SCHEMA_PATH = _ROOT / "docs" / "recon-schema.json"
 SPECIAL_SCHEMA_SOURCES: Mapping[str, str] = {
     "email_security_score": "formatter-derived email control count",
     "evidence_conflicts": "formatter serialization of TenantInfo.merge_conflicts",
+    "explanations": "explain-mode flat explanation extension",
     "explanation_dag": "explain-mode extension",
     "fingerprint_metadata": "formatter-derived relationship metadata from detected slugs",
     "fusion_enabled": "formatter-derived posterior-observation envelope flag",

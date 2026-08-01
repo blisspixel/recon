@@ -59,12 +59,15 @@ now exists, but Track 3 stays blocked until the incomplete default runtime
 paths are closed and the family definitions stop moving.
 
 **State:** a fail-closed machine-readable audit now assigns all discovered
-primary surfaces to 27 claim families and blocks drift across 185 JSON property
+primary surfaces to 27 claim families and blocks drift across 197 JSON property
 occurrences, 167 MCP tool and output surfaces, 31 panel producers, 89 agent
 guidance sections, 16 insight generators, 77 score or quantitative fields, and
-the remaining governed surfaces. Nineteen families are complete. Six material
+the remaining governed surfaces. Twenty families are complete. Five material
 runtime families still have incomplete lineage, and the two static guidance
-families remain open for semantic review. Generated insights now retain the
+families remain open for semantic review. Explanation output now distinguishes
+exact, exact-rule-only, reconstructed, and unsupported terminal lineage and
+adds exact-lineage completeness diagnostics without changing the stable
+schema-version-1 reachability fields. Generated insights retain the
 exact generation-time rule plus evidence-occurrence or bounded-scope
 associations through result-cache version 4. The narrower
 `dns.dmarc.valid_policy_is_reject.v1` proof-carrying contract remains the first

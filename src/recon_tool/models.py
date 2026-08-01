@@ -19,6 +19,7 @@ __all__ = [
     "DeltaReport",
     "DnsCatalogSummary",
     "EvidenceRecord",
+    "ExplanationLineageStatus",
     "ExplanationRecord",
     "InfrastructureCluster",
     "InfrastructureClusterReport",
@@ -54,6 +55,22 @@ class ConfidenceLevel(StrEnum):
     HIGH = "high"
     MEDIUM = "medium"
     LOW = "low"
+
+
+class ExplanationLineageStatus(StrEnum):
+    """How an explanation terminal is associated with its emitting rule.
+    ``EXACT`` requires both the generation-time rule identifier and the exact
+    retained evidence occurrences consumed by it. ``EXACT_RULE_ONLY`` retains
+    the emitting rule but not a complete raw-evidence path, as with a bounded
+    non-observation or an unretained metadata scalar. ``RECONSTRUCTED`` is a
+    post-generation text or proxy match. ``UNSUPPORTED`` has no defensible rule
+    association. Only ``EXACT`` can complete an evidence-to-rule path.
+    """
+
+    EXACT = "exact"
+    EXACT_RULE_ONLY = "exact_rule_only"
+    RECONSTRUCTED = "reconstructed"
+    UNSUPPORTED = "unsupported"
 
 
 @dataclass(frozen=True)
@@ -558,6 +575,23 @@ class ExplanationRecord:
     confidence_derivation: str
     weakening_conditions: tuple[str, ...]
     curated_explanation: str = ""
+    lineage_status: ExplanationLineageStatus = ExplanationLineageStatus.UNSUPPORTED
+    lineage_rule_ids: tuple[str, ...] = ()
+
+    def __post_init__(self) -> None:
+        """Reject contradictory lineage metadata instead of overclaiming it."""
+        exact_rule_statuses = {ExplanationLineageStatus.EXACT, ExplanationLineageStatus.EXACT_RULE_ONLY}
+        has_exact_rule = self.lineage_status in exact_rule_statuses
+        if has_exact_rule != bool(self.lineage_rule_ids):
+            raise ValueError("exact lineage statuses require rule ids, and other statuses forbid them")
+        if self.lineage_status is ExplanationLineageStatus.EXACT and not self.matched_evidence:
+            raise ValueError("exact explanation lineage requires supporting evidence")
+        if any(not rule_id.strip() for rule_id in self.lineage_rule_ids):
+            raise ValueError("lineage rule ids must not be empty")
+        if len(set(self.lineage_rule_ids)) != len(self.lineage_rule_ids):
+            raise ValueError("lineage rule ids must be unique")
+        if has_exact_rule and len(self.lineage_rule_ids) != 1:
+            raise ValueError("exact lineage currently requires exactly one rule id")
 
 
 @dataclass(frozen=True)
