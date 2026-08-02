@@ -481,9 +481,7 @@ class TestCacheDiskOperations:
         cache_dir().mkdir(parents=True, exist_ok=True)
         payload = tenant_info_to_dict(_complete_info())
         observation = _posterior_payload()
-        observation.update(
-            {"interval_low": interval_low, "posterior": posterior, "interval_high": interval_high}
-        )
+        observation.update({"interval_low": interval_low, "posterior": posterior, "interval_high": interval_high})
         payload["posterior_observations"] = [observation]
         (cache_dir() / "bad.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
 

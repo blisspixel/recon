@@ -162,8 +162,7 @@ def test_paper_claim_audit_rejects_overclaim_across_markdown_wrap(tmp_path: Path
     _copy_paper_docs(tmp_path)
     draft = tmp_path / "docs" / "paper-draft.md"
     draft.write_text(
-        f"{draft.read_text(encoding='utf-8')}\nEvery empirical claim is\n"
-        "reproducible from the artifact.\n",
+        f"{draft.read_text(encoding='utf-8')}\nEvery empirical claim is\nreproducible from the artifact.\n",
         encoding="utf-8",
     )
 

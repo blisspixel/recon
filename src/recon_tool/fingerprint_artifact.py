@@ -113,9 +113,7 @@ def load_artifact_sources(path: Path) -> tuple[ArtifactSource, ...]:
         raise FingerprintArtifactError("artifact.semantic_sha256 does not match its sources")
     fingerprint_count = sum(len(source.fingerprints) for source in sources)
     if fingerprint_count > MAX_ARTIFACT_FINGERPRINTS:
-        raise FingerprintArtifactError(
-            f"artifact exceeds the {MAX_ARTIFACT_FINGERPRINTS}-fingerprint limit"
-        )
+        raise FingerprintArtifactError(f"artifact exceeds the {MAX_ARTIFACT_FINGERPRINTS}-fingerprint limit")
     if _require_count(raw["fingerprint_count"], "artifact.fingerprint_count") != fingerprint_count:
         raise FingerprintArtifactError("artifact.fingerprint_count does not match its sources")
     detection_count = sum(

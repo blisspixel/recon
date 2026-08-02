@@ -102,9 +102,7 @@ def test_ve_matches_reference_tricky_nodes_exhaustive(network):
         ref = reference_posteriors(network, slugs, signals, joint=joint)
         for name, ref_p in ref.items():
             gap = abs(ve[name] - ref_p)
-            assert gap <= _TOL, (
-                f"{name}: gap={gap:.2e} slugs={sorted(slugs)} signals={sorted(signals)}"
-            )
+            assert gap <= _TOL, f"{name}: gap={gap:.2e} slugs={sorted(slugs)} signals={sorted(signals)}"
         checked += 1
     assert checked > 0
 
@@ -128,20 +126,14 @@ def test_ve_matches_reference_sampled_full_sweep(network):
         for name, ref_p in ref.items():
             gap = abs(ve[name] - ref_p)
             worst = max(worst, gap)
-            assert gap <= _TOL, (
-                f"{name}: gap={gap:.2e} slugs={sorted(slugs)} signals={sorted(signals)}"
-            )
+            assert gap <= _TOL, f"{name}: gap={gap:.2e} slugs={sorted(slugs)} signals={sorted(signals)}"
     # Sanity: the only gap should be the engine's 4-dp rounding, never structural.
     assert worst <= 5.05e-5
 
 
 def test_structured_sweep_is_smaller_than_full_evidence_power_set(network):
     """Guard the report wording: the harness verifies swept configurations."""
-    binding_keys = {
-        (evidence.kind, evidence.name)
-        for node in network.nodes
-        for evidence in node.evidence
-    }
+    binding_keys = {(evidence.kind, evidence.name) for node in network.nodes for evidence in node.evidence}
     assert structured_config_count(network) < 2 ** len(binding_keys)
 
 

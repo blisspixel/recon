@@ -291,9 +291,7 @@ _TRAILER = (
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Dependent conformal re-split diagnostics against the DMARC record."
-    )
+    parser = argparse.ArgumentParser(description="Dependent conformal re-split diagnostics against the DMARC record.")
     parser.add_argument("domains", type=Path, help="File with one apex per line (gitignored; local).")
     parser.add_argument("--alpha", type=float, default=0.1, help="Miscoverage level; target is 1-alpha (default 0.1).")
     parser.add_argument("--trials", type=int, default=20, help="Dependent re-splits to summarize (default 20).")

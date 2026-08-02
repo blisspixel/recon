@@ -36,6 +36,7 @@ _CORE = "core"
 _TEST = "test"
 _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "ruff", [_PY, "-m", "ruff", "check", "--no-cache", "."]),
+    (_CORE, "ruff-format", [_PY, "-m", "ruff", "format", "--check", "."]),
     (_CORE, "pyright", [_PY, "-m", "pyright"]),
     (
         _TEST,

@@ -11,6 +11,7 @@ import pytest
 from scripts import check_validation_hygiene, release_readiness
 
 _RELEASE_SHA = "a" * 40
+_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _cp(cmd: list[str], returncode: int = 0, stdout: str = "", stderr: str = "") -> subprocess.CompletedProcess[str]:
@@ -96,7 +97,7 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
                 "recon example.com",
                 "recon batch domains.txt --json",
                 "recon mcp install --client=",
-                "Examples use IETF reserved namespaces",
+                "IETF reserved `.invalid` namespaces",
                 "python scripts/check.py",
                 "Project hygiene: keep examples reserved and synthetic",
                 "keep validation artifacts",
@@ -221,6 +222,12 @@ def test_readme_usage_rejects_non_reserved_recon_examples_without_echo(
     assert check.status == "fail"
     assert "non-reserved recon domain" in check.detail
     assert "target.localhost" not in check.detail
+
+
+def test_repository_readme_satisfies_release_usage_contract() -> None:
+    check = release_readiness._check_readme_usage(_ROOT)
+
+    assert check.status == "pass", check.detail
 
 
 def test_coverage_gate_rejects_stale_src_layout_target(tmp_path: Path) -> None:

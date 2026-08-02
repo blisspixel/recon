@@ -179,8 +179,8 @@ def test_codeql_workflow_covers_main_prs_pushes_and_schedule_with_least_privileg
     assert triggers["push"] == {"branches": ["main"]}
     assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
     assert job["permissions"] == _ALLOWED_ELEVATED_JOB_PERMISSIONS[".github/workflows/codeql.yml"]["analyze"]
-    assert "github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e" in step_text
-    assert "github/codeql-action/analyze@8aad20d150bbac5944a9f9d289da16a4b0d87c1e" in step_text
+    assert "github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81" in step_text
+    assert "github/codeql-action/analyze@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81" in step_text
 
 
 def test_provider_drift_workflow_runs_scheduled_live_integration_smoke() -> None:
@@ -227,10 +227,10 @@ def test_workflow_actions_are_pinned_with_readable_version_comments() -> None:
         path.read_text(encoding="utf-8") for path in sorted((_ROOT / ".github" / "workflows").glob("*.yml"))
     )
 
-    assert "uses: github/codeql-action/init@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4" in workflow_text
-    assert "uses: github/codeql-action/upload-sarif@8aad20d150bbac5944a9f9d289da16a4b0d87c1e # v4" in workflow_text
+    assert "uses: github/codeql-action/init@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4" in workflow_text
+    assert "uses: github/codeql-action/upload-sarif@e4fba868fa4b1b91e1fdab776edc8cfbe6e9fb81 # v4" in workflow_text
     assert "github/codeql-action/upload-sarif@dd903d2e4f5405488e5ef1422510ee31c8b32357" not in workflow_text
-    assert "uses: actions/checkout@df4cb1c069e1874edd31b4311f1884172cec0e10 # v6" in workflow_text
+    assert "uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6" in workflow_text
     for line in workflow_text.splitlines():
         stripped = line.strip()
         if stripped.startswith("uses: ") and not stripped.startswith("uses: ./"):
@@ -245,9 +245,7 @@ def test_ci_workflow_runs_fast_local_core_guards() -> None:
     checkout_step = validate_job["steps"][0]
     commands = "\n".join(str(step.get("run", "")) for step in validate_job["steps"])
     receipt_step = next(
-        step
-        for step in validate_job["steps"]
-        if step.get("name") == "Validate documentation commit receipts"
+        step for step in validate_job["steps"] if step.get("name") == "Validate documentation commit receipts"
     )
     receipt_command = str(receipt_step["run"])
 
@@ -256,13 +254,12 @@ def test_ci_workflow_runs_fast_local_core_guards() -> None:
     assert '"$(git rev-parse --is-shallow-repository)" != "false"' in receipt_command
     assert "exit 1" in receipt_command
     assert (
-        "uv run pytest "
-        "tests/test_documentation_integrity.py::test_backticked_commit_receipts_exist"
+        "uv run pytest tests/test_documentation_integrity.py::test_backticked_commit_receipts_exist"
     ) in receipt_command
     for command in (
         "uv run python scripts/check_workflow_pins.py",
         "uv run python scripts/generate_fingerprint_catalog.py --check",
-        "uv run python scripts/check_text_hygiene.py --range \"$range\"",
+        'uv run python scripts/check_text_hygiene.py --range "$range"',
         "uv run python scripts/check_markdown_links.py",
         "uv run python scripts/check_clusterfuzzlite_requirements.py",
         "uv run python scripts/check_schema_sources.py",
@@ -567,7 +564,7 @@ def test_openssf_badge_readiness_blocks_fake_process_progress() -> None:
         "not a public claim that answers were submitted",
         "Do not claim a mandatory reviewed-PR process",
         "Do not imply organization diversity",
-        "No claim that a badge is \"in progress\"",
+        'No claim that a badge is "in progress"',
         "No artificial contributors or manufactured review history",
         "no recurring third-party audit is claimed",
         "no LTS branch is promised",

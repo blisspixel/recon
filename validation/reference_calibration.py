@@ -317,9 +317,7 @@ def stratified_summary(
     return {"strata": out_strata, "pooled": calibration_summary(pooled, bins=bins), "min_cell": min_cell}
 
 
-async def _collect_one(
-    domain: str, *, timeout: float, skip_ct: bool, sem: asyncio.Semaphore
-) -> CalibrationPair | None:
+async def _collect_one(domain: str, *, timeout: float, skip_ct: bool, sem: asyncio.Semaphore) -> CalibrationPair | None:
     """Resolve one domain, infer, and pair both posteriors with the
     reference label. Returns None when the DMARC observation failed or its
     nonempty parsed policy is unrecognized.
@@ -340,9 +338,7 @@ async def _collect_one(
     )
     if label is None:
         return None
-    posteriors = {
-        p.name: p for p in infer_from_tenant_info(info, priors_override={}).posteriors
-    }
+    posteriors = {p.name: p for p in infer_from_tenant_info(info, priors_override={}).posteriors}
     node = posteriors.get(_POLICY_NODE)
     if node is None:
         return None
@@ -482,9 +478,7 @@ def _run_stratified(
         return 0
     _print_strata_table(full_result, min_cell=min_cell, title="Per-stratum email-policy calibration (full posterior)")
     _print_summary(full_result["pooled"], "Descriptive pool across strata (full score)")  # type: ignore[arg-type]
-    _print_strata_table(
-        held_out_result, min_cell=min_cell, title="Per-stratum held-out residual (dmarc_policy masked)"
-    )
+    _print_strata_table(held_out_result, min_cell=min_cell, title="Per-stratum held-out residual (dmarc_policy masked)")
     _print_summary(held_out_result["pooled"], "Descriptive pool across strata (predictor-disjoint residual)")  # type: ignore[arg-type]
     print(_TRAILER)
     return 0

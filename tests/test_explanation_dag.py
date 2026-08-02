@@ -448,8 +448,6 @@ class TestDeterminism:
         assert len({node["id"] for node in terminals}) == 2
         for terminal in terminals:
             inbound_rules = [
-                edge
-                for edge in out["edges"]
-                if edge["target"] == terminal["id"] and edge["relation"] == "fired"
+                edge for edge in out["edges"] if edge["target"] == terminal["id"] and edge["relation"] == "fired"
             ]
             assert len(inbound_rules) == 1

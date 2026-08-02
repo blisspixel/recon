@@ -71,9 +71,7 @@ def _record_match(
             # ``vendor.com.attacker-controlled.test`` to the vendor, which the
             # live path documents as the reason it uses suffix matching.
             pattern = detection.pattern.lower().rstrip(".")
-            matched = (
-                host_has_suffix(target, pattern) if is_domain_shaped(pattern) else pattern in candidate
-            )
+            matched = host_has_suffix(target, pattern) if is_domain_shaped(pattern) else pattern in candidate
         if not matched:
             continue
         ctx.add(

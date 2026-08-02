@@ -64,6 +64,9 @@ def test_surface_inventory_has_expected_cli_surface() -> None:
     lookup_params = {param["name"]: param for param in commands[("lookup",)]["parameters"]}
     assert lookup_params["domain"]["kind"] == "argument"
     assert lookup_params["domain"]["required"] is True
+    assert lookup_params["domain"]["type"] == "text"
+    assert lookup_params["cache_ttl"]["type"] == "integer"
+    assert lookup_params["plain"]["type"] == "boolean"
     assert lookup_params["fusion"]["tokens"] == ["--fusion", "--no-fusion"]
     assert lookup_params["exact"]["tokens"] == ["--exact"]
 

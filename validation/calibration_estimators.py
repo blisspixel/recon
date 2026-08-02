@@ -66,9 +66,7 @@ def _validate_inputs(predicted: list[float], outcome: list[int], bins: int) -> N
             raise ValueError("outcomes must be binary 0 or 1")
 
 
-def equal_mass_reliability_bins(
-    predicted: list[float], outcome: list[int], bins: int = 10
-) -> list[EqualMassBin]:
+def equal_mass_reliability_bins(predicted: list[float], outcome: list[int], bins: int = 10) -> list[EqualMassBin]:
     """Return tie-preserving reliability bins with near-equal counts.
 
     Records are sorted by posterior, but equal posterior values are indivisible:

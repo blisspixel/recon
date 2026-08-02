@@ -73,8 +73,7 @@ def main() -> int:
         path = PKG / module_name
         if path.exists():
             failures.append(
-                f"legacy interface implementation module is not allowed: "
-                f"{path.relative_to(ROOT).as_posix()}"
+                f"legacy interface implementation module is not allowed: {path.relative_to(ROOT).as_posix()}"
             )
 
     for path in sorted(PKG.glob("*.py")):

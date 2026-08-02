@@ -69,7 +69,7 @@ def test_partial_release_recovery_is_exact_and_evidence_preserving() -> None:
         "Never manually rebuild or replace evidence",
         "before `gh release upload --clobber` can execute",
         "git branch --show-current",
-        'git status --porcelain --untracked-files=normal',
+        "git status --porcelain --untracked-files=normal",
         "--json databaseId,headSha",
         '"${RUN_HEAD_SHA}" = "${HEAD_SHA}"',
         "remote tag against the original workflow SHA",

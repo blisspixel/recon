@@ -51,22 +51,23 @@ def build_evidence_refs(
     return evidence_refs(
         evidence
         for evidence in info.evidence
-        if evidence.slug in slugs
-        and (source_types is None or evidence.source_type.upper() in source_types)
+        if evidence.slug in slugs and (source_types is None or evidence.source_type.upper() in source_types)
     )
 
 
 def evidence_refs(records: Iterable[EvidenceRecord]) -> tuple[EvidenceReference, ...]:
     """Project retained records to stable, deduplicated exposure references."""
-    return tuple(dict.fromkeys(
-        EvidenceReference(
-            source_type=evidence.source_type,
-            raw_value=evidence.raw_value,
-            rule_name=evidence.rule_name,
-            slug=evidence.slug,
+    return tuple(
+        dict.fromkeys(
+            EvidenceReference(
+                source_type=evidence.source_type,
+                raw_value=evidence.raw_value,
+                rule_name=evidence.rule_name,
+                slug=evidence.slug,
+            )
+            for evidence in records
         )
-        for evidence in records
-    ))
+    )
 
 
 def evidence_slugs(info: TenantInfo, source_types: frozenset[str]) -> set[str]:

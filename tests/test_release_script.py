@@ -49,9 +49,7 @@ def test_release_push_failure_preserves_validated_local_release(monkeypatch: pyt
         assert default_no
         return True
 
-    def failed_run(
-        cmd: list[str], check: bool = True, capture: bool = True
-    ) -> subprocess.CompletedProcess[str]:
+    def failed_run(cmd: list[str], check: bool = True, capture: bool = True) -> subprocess.CompletedProcess[str]:
         assert cmd == release._release_push_command("2.5.9")
         assert not check
         assert not capture
@@ -121,8 +119,7 @@ def test_release_surface_generation_updates_installers_and_artifacts(
     supply_chain.write_text(
         "\n".join(
             (
-                "git clone --branch v2.6.3 --single-branch "
-                "https://github.com/blisspixel/recon.git recon-2.6.3",
+                "git clone --branch v2.6.3 --single-branch https://github.com/blisspixel/recon.git recon-2.6.3",
                 "cd recon-2.6.3",
                 "VERSION=2.6.3",
                 '$Version = "2.6.3"',

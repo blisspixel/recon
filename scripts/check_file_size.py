@@ -62,8 +62,11 @@ def _enforce() -> int:
             violations.append(f"  {rel}: {n} lines {kind} ({ceiling})")
     # A baselined file that shrank below its ceiling should have its ceiling
     # lowered — surface it as a (non-failing) nudge so the ratchet keeps tightening.
-    nudges = [f"  {rel}: now {sizes.get(rel, 0)} lines, baseline {b} — run --update to lock it in"
-              for rel, b in BASELINE.items() if rel in sizes and sizes[rel] < b]
+    nudges = [
+        f"  {rel}: now {sizes.get(rel, 0)} lines, baseline {b}; run --update to lock it in"
+        for rel, b in BASELINE.items()
+        if rel in sizes and sizes[rel] < b
+    ]
     if violations:
         print("FAIL: file-size ratchet violated:")
         print("\n".join(violations))

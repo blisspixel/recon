@@ -136,9 +136,7 @@ def entropy_by_posture(records: list[DomainRecord]) -> dict[str, Any]:
     out: dict[str, Any] = {
         "n": len(records),
         "overall_quartiles": quantiles(overall),
-        "buckets": {
-            name: {"n": len(vals), "quartiles": quantiles(vals)} for name, vals in sorted(buckets.items())
-        },
+        "buckets": {name: {"n": len(vals), "quartiles": quantiles(vals)} for name, vals in sorted(buckets.items())},
     }
     return out
 

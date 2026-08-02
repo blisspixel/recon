@@ -353,9 +353,7 @@ def test_classify_chain_picks_application_over_infrastructure() -> None:
     )
     # A real chain is a list of hops: the Auth0 subdomain then the Cloudflare
     # edge it fronts through. Label-aware matching attributes each correctly.
-    application, infrastructure = _classify_chain(
-        ["auth0-ingress.us.auth0.com", "edge.cdn.cloudflare.net"], rules
-    )
+    application, infrastructure = _classify_chain(["auth0-ingress.us.auth0.com", "edge.cdn.cloudflare.net"], rules)
     assert application is not None
     assert application.slug == "auth0"
     assert infrastructure is not None
@@ -693,9 +691,7 @@ def test_looks_intra_org_brand_catches_stem_abbreviation() -> None:
             "terminal": "user-api.awsma.syn.example",
         }
     ]
-    assert looks_intra_org_brand(
-        "synthetic-corporation.invalid", "awsma.syn.example", samples
-    ) is True
+    assert looks_intra_org_brand("synthetic-corporation.invalid", "awsma.syn.example", samples) is True
 
     # Generic 3-letter sequences inside the suffix do NOT match — must be a
     # standalone label. "fab" is inside "beta-aws.invalid" but not a label.

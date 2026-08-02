@@ -187,9 +187,7 @@ def _write_summary(
     ]
     for result in results:
         status = "pass" if result.returncode == 0 else f"fail ({result.returncode})"
-        lines.append(
-            f"| `{result.name}` | {status} | {result.duration_seconds:.2f} | `{result.stdout_path.name}` |"
-        )
+        lines.append(f"| `{result.name}` | {status} | {result.duration_seconds:.2f} | `{result.stdout_path.name}` |")
     lines.extend(
         [
             "",

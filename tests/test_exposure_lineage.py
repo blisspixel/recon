@@ -159,9 +159,7 @@ class TestExposureIndexLineage:
         services = (*info.services, "CAA: Let's Encrypt")
         slugs = tuple("letsencrypt" if slug == "caa" else slug for slug in info.slugs)
 
-        assessment = assess_exposure_from_info(
-            replace(info, evidence=evidence, services=services, slugs=slugs)
-        )
+        assessment = assess_exposure_from_info(replace(info, evidence=evidence, services=services, slugs=slugs))
         caa = next(item for item in assessment.index_components if item.component_id == "index.infrastructure.caa.v1")
 
         assert caa.state == "unresolved"

@@ -26,8 +26,8 @@ def test_committed_terminal_demo_matches_the_real_renderer() -> None:
     assert "Generated with Rich" not in svg
     assert "cdnjs.cloudflare.com" not in svg
     assert 'role="img"' in svg
-    assert "<title id=\"recon-demo-accessible-title\">" in svg
-    assert "<desc id=\"recon-demo-accessible-description\">" in svg
+    assert '<title id="recon-demo-accessible-title">' in svg
+    assert '<desc id="recon-demo-accessible-description">' in svg
     assert demo_tenant_info().queried_domain.endswith(".invalid")
     assert main(["--check"]) == 0
 

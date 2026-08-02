@@ -93,9 +93,11 @@ def _dependency(
 
 def mta_sts_txt_evidence(info: TenantInfo) -> tuple[EvidenceReference, ...]:
     """Return one syntactically valid retained MTA-STS TXT declaration."""
-    records = tuple(dict.fromkeys(
-        record for record in info.evidence if record.source_type.upper() == "MTA_STS" and record.slug == "mta-sts"
-    ))
+    records = tuple(
+        dict.fromkeys(
+            record for record in info.evidence if record.source_type.upper() == "MTA_STS" and record.slug == "mta-sts"
+        )
+    )
     selected = select_mta_sts_record(record.raw_value for record in records)
     if selected is None:
         return ()

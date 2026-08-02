@@ -165,9 +165,7 @@ class TestUserConfigAdditive:
             "  - name: oversized\n"
             "    display_name: oversized\n"
             "    confidence: medium\n"
-            "    description: "
-            + "x" * _MAX_MOTIF_YAML_BYTES
-            + "\n    chain: [{name: a, match: [example.com]}]\n"
+            "    description: " + "x" * _MAX_MOTIF_YAML_BYTES + "\n    chain: [{name: a, match: [example.com]}]\n"
         )
         (tmp_path / "motifs.yaml").write_text(payload, encoding="utf-8")
 

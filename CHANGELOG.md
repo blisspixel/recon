@@ -128,6 +128,13 @@ operator, corporate group, ownership, or control.
   renderer from a deterministic reserved-namespace fixture. The self-contained
   SVG contains no external font request or real organization data, and local
   plus CI drift checks keep it synchronized with renderer behavior.
+- Refreshed the locked runtime and development stack, migrated the repository
+  to its current Ruff formatter, enforced formatting in local and CI gates,
+  and advanced every Dependabot-proposed GitHub Actions pin to its reviewed
+  full commit. Typer 0.27 narrow help remains within 40-column terminals,
+  surface inventory keeps stable dependency-independent type names, and the
+  frozen ClusterFuzzLite runtime export is synchronized with the lock through
+  a platform-canonical command header.
 
 ### Security
 

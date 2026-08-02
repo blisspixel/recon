@@ -178,11 +178,7 @@ def dns_only_tenancy_posteriors(
     from recon_tool.bayesian import infer_from_tenant_info
     from recon_tool.merger import merge_results
 
-    dns = [
-        r
-        for r in results
-        if getattr(r, "source_name", "") == _DNS_SOURCE and getattr(r, "error", None) is None
-    ]
+    dns = [r for r in results if getattr(r, "source_name", "") == _DNS_SOURCE and getattr(r, "error", None) is None]
     if not dns:
         return None
     try:
@@ -267,9 +263,7 @@ class TenancyCounts:
     gws_attested: int = 0
 
 
-async def _collect_one(
-    domain: str, *, timeout: float, skip_ct: bool, sem: asyncio.Semaphore
-) -> TenancyRecord | None:
+async def _collect_one(domain: str, *, timeout: float, skip_ct: bool, sem: asyncio.Semaphore) -> TenancyRecord | None:
     """Resolve one domain and derive its tenancy record.
 
     The apex is used only to resolve; it is never returned or logged.
@@ -301,10 +295,7 @@ async def _collect_one(
     attested = gws_attested_federated(getattr(gid, "google_auth_type", None) if gid is not None else None)
 
     dns_pair = dns_only_tenancy_posteriors(list(results), domain)
-    full = {
-        p.name: float(p.posterior)
-        for p in infer_from_tenant_info(info, priors_override={}).posteriors
-    }
+    full = {p.name: float(p.posterior) for p in infer_from_tenant_info(info, priors_override={}).posteriors}
 
     return TenancyRecord(
         m365_disposition=disposition,
@@ -388,8 +379,7 @@ def _print_summary(summary: dict[str, object], header: str) -> None:
 def _print_counts(counts: TenancyCounts) -> None:
     print("\nDispositions (aggregate):")
     print(
-        f"  resolved {counts.resolved}, resolve-failed {counts.resolve_failed}, "
-        f"no-DNS-channel {counts.no_dns_channel}"
+        f"  resolved {counts.resolved}, resolve-failed {counts.resolve_failed}, no-DNS-channel {counts.no_dns_channel}"
     )
     print(
         f"  M365 label: positive {counts.m365_positive}, negative {counts.m365_negative}, "

@@ -123,9 +123,7 @@ class NodeAblation:
     brier_strongest_fired: float
 
 
-def run_bayesian_ablation(
-    network: BayesianNetwork, samples: int, seed: int
-) -> list[NodeAblation]:
+def run_bayesian_ablation(network: BayesianNetwork, samples: int, seed: int) -> list[NodeAblation]:
     """Score full posterior vs the two slug-matching baselines per node."""
     rng = random.Random(seed)
     by_node_pred: dict[str, dict[str, list[float]]] = {
@@ -158,9 +156,7 @@ def run_bayesian_ablation(
             by_node_fired[name].append(bool(fired_here))
             by_node_pred[name]["full"].append(posterior[name])
             by_node_pred[name]["any"].append(any_fired_prediction(ev_names, fired))
-            by_node_pred[name]["strongest"].append(
-                strongest_only_prediction(prior, [llrs[f] for f in fired_here])
-            )
+            by_node_pred[name]["strongest"].append(strongest_only_prediction(prior, [llrs[f] for f in fired_here]))
 
     def _acc(preds: list[float], outcomes: list[int]) -> float:
         if not preds:

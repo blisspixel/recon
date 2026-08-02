@@ -449,9 +449,7 @@ def test_exposure_report_output_schemas_are_precise() -> None:
         "observed_configuration_inconsistency",
     }
     assert gap["properties"]["observation_scope"]["items"]["type"] == "string"
-    assert gap["properties"]["metadata_dependencies"]["items"]["$ref"] == (
-        "#/$defs/HardeningMetadataDependencySummary"
-    )
+    assert gap["properties"]["metadata_dependencies"]["items"]["$ref"] == ("#/$defs/HardeningMetadataDependencySummary")
     assert gap["properties"]["evidence"]["items"]["$ref"] == "#/$defs/EvidenceReferenceSummary"
 
     comparison_schema = _tool_output_schema("compare_postures")

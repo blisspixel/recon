@@ -209,10 +209,7 @@ strips `""` and `"."` entries from `sys.path` BEFORE any
 ```python
 # recon_tool/mcp_install.py - build_recon_block() (v1.9.9)
 _FALLBACK_LAUNCH_CODE = (
-    "import sys; "
-    "sys.path[:] = [p for p in sys.path if p not in ('', '.')]; "
-    "from recon_tool.server import main; "
-    "main()"
+    "import sys; sys.path[:] = [p for p in sys.path if p not in ('', '.')]; from recon_tool.server import main; main()"
 )
 
 return {

@@ -213,9 +213,7 @@ def is_closed_pipe(exc: BaseException | None) -> bool:
 
     if isinstance(exc, BrokenPipeError):
         return True
-    return isinstance(exc, OSError) and (
-        exc.errno == errno.EPIPE or (os.name == "nt" and exc.errno == errno.EINVAL)
-    )
+    return isinstance(exc, OSError) and (exc.errno == errno.EPIPE or (os.name == "nt" and exc.errno == errno.EINVAL))
 
 
 def silence_closed_standard_streams() -> None:

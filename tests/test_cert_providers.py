@@ -893,9 +893,7 @@ class TestCertSpotterAggregateBounds:
         )
 
         retained_entry_names = sum(
-            len(names)
-            for entry in cert_entries
-            if isinstance((names := entry.get("dns_names")), list)
+            len(names) for entry in cert_entries if isinstance((names := entry.get("dns_names")), list)
         )
         assert len(raw_names) == _MAX_CRTSH_RAW_NAMES
         assert retained_entry_names == _MAX_CRTSH_RAW_NAMES

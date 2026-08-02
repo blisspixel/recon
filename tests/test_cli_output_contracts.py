@@ -142,9 +142,7 @@ class TestBatchMachineOutputClean:
     def test_markdown_error_does_not_leak_sentinel(self, mock_resolve, tmp_path) -> None:
         """A resolve failure in --md mode must not echo the internal NUL error
         sentinel into stdout."""
-        mock_resolve.side_effect = ReconLookupError(
-            domain="broken.example", message="no data", error_type="no_data"
-        )
+        mock_resolve.side_effect = ReconLookupError(domain="broken.example", message="no data", error_type="no_data")
         domain_file = tmp_path / "domains.txt"
         domain_file.write_text("broken.example\n", encoding="utf-8")
 

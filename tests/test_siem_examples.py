@@ -269,9 +269,9 @@ class TestElasticExample:
         assert "index_patterns" in data
         assert "template" in data
 
-        conflict_properties = data["template"]["mappings"]["properties"]["recon"]["properties"][
-            "evidence_conflicts"
-        ]["properties"]
+        conflict_properties = data["template"]["mappings"]["properties"]["recon"]["properties"]["evidence_conflicts"][
+            "properties"
+        ]
         assert set(conflict_properties) == {"field", "candidates"}
         assert set(conflict_properties["candidates"]["properties"]) == {
             "value",
@@ -362,9 +362,7 @@ class TestInterpretationSemantics:
         pipeline = json.loads(
             (_ELASTIC_DIR / "ingest-pipeline.json").read_text(encoding="utf-8"),
         )
-        set_fields = {
-            processor["set"]["field"] for processor in pipeline["processors"] if "set" in processor
-        }
+        set_fields = {processor["set"]["field"] for processor in pipeline["processors"] if "set" in processor}
         assert "event.severity" not in set_fields
 
     def test_splunk_config_does_not_reference_unknown_timestamp_flag(self):

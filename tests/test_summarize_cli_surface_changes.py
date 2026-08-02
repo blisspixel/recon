@@ -86,8 +86,7 @@ def test_summarize_cli_surface_changes_uses_plural_flag_grammar() -> None:
     )
 
     assert summarize_cli_surface_changes(diff) == (
-        "Tool surface changes: added flags `--exact` to `recon lookup`, "
-        "`--plain` to `recon lookup`."
+        "Tool surface changes: added flags `--exact` to `recon lookup`, `--plain` to `recon lookup`."
     )
 
 

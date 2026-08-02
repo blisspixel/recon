@@ -239,8 +239,7 @@ def _spf_component(
     other_records = _records(info, source_types=frozenset({"SPF"}), rule_names=frozenset({SVC_SPF_SOFTFAIL}))
     strict = bool(strict_records)
     declared = bool(
-        {SVC_SPF_STRICT, SVC_SPF_SOFTFAIL} & set(info.services)
-        or {"spf-strict", "spf-softfail"} & set(info.slugs)
+        {SVC_SPF_STRICT, SVC_SPF_SOFTFAIL} & set(info.services) or {"spf-strict", "spf-softfail"} & set(info.slugs)
     )
     if not observed.spf_available:
         state: ExposureIndexState = "unavailable"

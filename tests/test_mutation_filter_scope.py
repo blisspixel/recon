@@ -39,17 +39,11 @@ def test_no_mutate_pragmas_cover_only_postponed_annotation_unions() -> None:
         for node in tree.body
     )
     annotation_nodes = _annotation_nodes(tree)
-    bit_or_nodes = {
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr)
-    }
+    bit_or_nodes = {node for node in ast.walk(tree) if isinstance(node, ast.BinOp) and isinstance(node.op, ast.BitOr)}
     annotation_lines = {node.lineno for node in bit_or_nodes if node in annotation_nodes}
     runtime_lines = {node.lineno for node in bit_or_nodes if node not in annotation_nodes}
     pragma_lines = {
-        line_number
-        for line_number, line in enumerate(source.splitlines(), start=1)
-        if "# pragma: no mutate" in line
+        line_number for line_number, line in enumerate(source.splitlines(), start=1) if "# pragma: no mutate" in line
     }
 
     assert future_annotations

@@ -467,7 +467,7 @@ def _check_readme_usage(root: Path) -> CheckResult:
         "recon example.com",
         "recon batch domains.txt --json",
         "recon mcp install --client=",
-        "Examples use IETF reserved namespaces",
+        "IETF reserved `.invalid` namespaces",
         "python scripts/check.py",
         "Project hygiene: keep examples reserved and synthetic",
         "keep validation artifacts",

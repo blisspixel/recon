@@ -14,9 +14,7 @@ async def _value(x: int) -> int:
 
 def test_returns_results_in_input_order() -> None:
     out = io.StringIO()
-    results = asyncio.run(
-        gather_with_progress([_value(i) for i in range(5)], label="x", stream=out, min_interval=0.0)
-    )
+    results = asyncio.run(gather_with_progress([_value(i) for i in range(5)], label="x", stream=out, min_interval=0.0))
     assert results == [0, 1, 2, 3, 4]
 
 
@@ -29,9 +27,7 @@ def test_empty_returns_empty_and_emits_nothing() -> None:
 
 def test_final_line_reports_full_count_and_no_per_item_data() -> None:
     out = io.StringIO()
-    asyncio.run(
-        gather_with_progress([_value(i) for i in range(3)], label="resolving", stream=out, min_interval=0.0)
-    )
+    asyncio.run(gather_with_progress([_value(i) for i in range(3)], label="resolving", stream=out, min_interval=0.0))
     text = out.getvalue()
     assert "resolving: 3/3 (100%)" in text
     # Counts only: a domain-like token must never reach the progress stream.
@@ -40,9 +36,7 @@ def test_final_line_reports_full_count_and_no_per_item_data() -> None:
 
 def test_large_interval_emits_only_the_completion_line() -> None:
     out = io.StringIO()
-    asyncio.run(
-        gather_with_progress([_value(i) for i in range(10)], label="x", stream=out, min_interval=1e9)
-    )
+    asyncio.run(gather_with_progress([_value(i) for i in range(10)], label="x", stream=out, min_interval=1e9))
     lines = [line for line in out.getvalue().splitlines() if line.strip()]
     assert len(lines) == 1
     assert "x: 10/10 (100%)" in lines[0]
