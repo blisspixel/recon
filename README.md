@@ -42,21 +42,21 @@ policy fetch. Opt-in direct probes and the full network boundary:
 
 ![Synthetic terminal showing recon's default output](https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg)
 
-This is a deterministic, no-network fixture for Contoso Ltd using IETF reserved `.invalid` namespaces (`contoso.invalid`). No real organization is depicted.
+This is a deterministic, no-network fixture for Globex Ltd using IETF reserved `.invalid` namespaces (`globex.invalid`). No real organization is depicted.
 
 <!-- terminal-demo-transcript:start -->
 <details>
 <summary>Accessible text transcript</summary>
 
 ```text
-$ recon contoso.invalid
-Contoso Ltd
-contoso.invalid
+$ recon globex.invalid
+Globex Ltd
+globex.invalid
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX
                delivery path)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
-  Tenant domain contoso.onmicrosoft.invalid
+  Tenant domain globex.onmicrosoft.invalid
   Auth         Federated
   Confidence   ●●● High (4 sources)
 
@@ -73,7 +73,7 @@ Services
 
 
 High-signal related domains
-  login.contoso.invalid, status.contoso.invalid, support.contoso.invalid
+  login.globex.invalid, status.globex.invalid, support.globex.invalid
 
 Insights
   Federated identity observed; identity-vendor indicators: Okta
@@ -105,17 +105,17 @@ Then ask in natural language, for example:
 
 | You say | What the agent should do |
 |---|---|
-| "Recon contoso.invalid" | Call `lookup_tenant` (or `recon contoso.invalid`) and return the panel-style summary |
-| "What does contoso.invalid run for email and identity?" | Same lookup; lead with MX/IdP/tenant facts and confidence |
+| "Recon globex.invalid" | Call `lookup_tenant` (or `recon globex.invalid`) and return the panel-style summary |
+| "What does globex.invalid run for email and identity?" | Same lookup; lead with MX/IdP/tenant facts and confidence |
 | "Why do you think that?" | Re-run with explain / provenance (`--explain` or `explain=true`) |
-| "Compare contoso.invalid and fabrikam.invalid" | `compare_postures` or two lookups side by side |
+| "Compare globex.invalid and beta.invalid" | `compare_postures` or two lookups side by side |
 | "Any public hardening gaps?" | `find_hardening_gaps` after a lookup - hedged "Consider" notes only |
 
-**Example chat (Contoso demo shape):**
+**Example chat (Globex demo shape):**
 
-> **You:** Recon contoso.invalid and tell me what you observe.
+> **You:** Recon globex.invalid and tell me what you observe.
 >
-> **Agent:** Public evidence for `contoso.invalid` (fictional demo):
+> **Agent:** Public evidence for `globex.invalid` (fictional demo):
 > - **Mail:** Microsoft 365 delivery path plus Proofpoint gateway; DMARC
 >   `p=reject`, SPF strict, MTA-STS enforce.
 > - **Identity:** Federated; Okta indicator via CNAME.

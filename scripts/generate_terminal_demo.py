@@ -27,15 +27,15 @@ _TRANSCRIPT_END = "<!-- terminal-demo-transcript:end -->"
 def demo_tenant_info() -> TenantInfo:
     """Return a realistic public-output fixture using only reserved names.
 
-    Contoso is the classic obviously-fictional demo company; the queried
-    coordinate stays under the IETF reserved ``.invalid`` namespace so the
-    fixture never names a real registrable domain.
+    Globex is an obviously fictional demo company (not a real customer).
+    The queried coordinate stays under the IETF reserved ``.invalid``
+    namespace so the fixture never names a real registrable domain.
     """
     return TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Contoso Ltd",
-        default_domain="contoso.onmicrosoft.invalid",
-        queried_domain="contoso.invalid",
+        display_name="Globex Ltd",
+        default_domain="globex.onmicrosoft.invalid",
+        queried_domain="globex.invalid",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
         sources=("dns_records", "oidc_discovery", "userrealm", "cert_transparency"),
@@ -71,14 +71,14 @@ def demo_tenant_info() -> TenantInfo:
         dmarc_policy="reject",
         domain_count=3,
         tenant_domains=(
-            "contoso.invalid",
-            "contoso.onmicrosoft.invalid",
-            "contoso-mail.invalid",
+            "globex.invalid",
+            "globex.onmicrosoft.invalid",
+            "globex-mail.invalid",
         ),
         related_domains=(
-            "login.contoso.invalid",
-            "status.contoso.invalid",
-            "support.contoso.invalid",
+            "login.globex.invalid",
+            "status.globex.invalid",
+            "support.globex.invalid",
         ),
         insights=(
             "Federated identity observed; identity-vendor indicators: Okta",
@@ -88,7 +88,7 @@ def demo_tenant_info() -> TenantInfo:
         evidence=(
             EvidenceRecord(
                 "MX",
-                "10 contoso-invalid.mail.protection.outlook.invalid",
+                "10 globex-invalid.mail.protection.outlook.invalid",
                 "Microsoft 365",
                 "microsoft365",
             ),
@@ -96,23 +96,23 @@ def demo_tenant_info() -> TenantInfo:
             EvidenceRecord("DMARC", "v=DMARC1; p=reject; pct=100", SVC_DMARC, "dmarc"),
             EvidenceRecord(
                 "DKIM",
-                "selector1._domainkey.contoso.invalid",
+                "selector1._domainkey.globex.invalid",
                 SVC_DKIM,
                 "dkim",
             ),
             EvidenceRecord("SPF", "v=spf1 include:mail.invalid -all", SVC_SPF_STRICT, "spf-strict"),
             EvidenceRecord("MTA_STS_POLICY", "mode: enforce", SVC_MTA_STS, "mta-sts-enforce"),
-            EvidenceRecord("CNAME", "login.contoso.invalid -> login.vendor.invalid", "Okta", "okta"),
+            EvidenceRecord("CNAME", "login.globex.invalid -> login.vendor.invalid", "Okta", "okta"),
             EvidenceRecord("TXT", "slack-domain-verification=synthetic", "Slack", "slack"),
             EvidenceRecord(
                 "CNAME",
-                "status.contoso.invalid -> status.vendor.invalid",
+                "status.globex.invalid -> status.vendor.invalid",
                 "Atlassian (Jira/Confluence)",
                 "atlassian",
             ),
             EvidenceRecord(
                 "CNAME",
-                "support.contoso.invalid -> edge.vendor.invalid",
+                "support.globex.invalid -> edge.vendor.invalid",
                 "Cloudflare",
                 "cloudflare",
             ),
@@ -140,7 +140,7 @@ def _render_demo(console: Console) -> None:
     """Write the fixed command and real default panel to one console."""
     prompt = Text("$ ", style="bold green")
     prompt.append("recon ", style="bold white")
-    prompt.append("contoso.invalid", style="bold cyan")
+    prompt.append("globex.invalid", style="bold cyan")
     console.print(prompt)
     console.print(render_tenant_panel(demo_tenant_info()))
 
@@ -181,8 +181,8 @@ def render_terminal_demo_svg() -> str:
     svg = svg.replace(
         "    <style>\n",
         '    <title id="recon-demo-accessible-title">recon synthetic terminal demo</title>\n'
-        '    <desc id="recon-demo-accessible-description">Synthetic output for Contoso Ltd '
-        "(contoso.invalid) showing public email, identity, cloud, security, collaboration, "
+        '    <desc id="recon-demo-accessible-description">Synthetic output for Globex Ltd '
+        "(globex.invalid) showing public email, identity, cloud, security, collaboration, "
         "related-domain, and insight observations.</desc>\n"
         "    <style>\n",
         1,
