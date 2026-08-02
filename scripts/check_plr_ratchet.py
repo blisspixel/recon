@@ -33,19 +33,11 @@ def parse_statistics(output: str) -> dict[str, int]:
 
 
 def find_regressions(counts: dict[str, int]) -> dict[str, tuple[int, int]]:
-    return {
-        rule: (count, MAX_COUNTS[rule])
-        for rule, count in counts.items()
-        if count > MAX_COUNTS[rule]
-    }
+    return {rule: (count, MAX_COUNTS[rule]) for rule, count in counts.items() if count > MAX_COUNTS[rule]}
 
 
 def find_improvements(counts: dict[str, int]) -> dict[str, tuple[int, int]]:
-    return {
-        rule: (count, MAX_COUNTS[rule])
-        for rule, count in counts.items()
-        if count < MAX_COUNTS[rule]
-    }
+    return {rule: (count, MAX_COUNTS[rule]) for rule, count in counts.items() if count < MAX_COUNTS[rule]}
 
 
 def _run_ruff() -> subprocess.CompletedProcess[str]:

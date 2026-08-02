@@ -223,9 +223,9 @@ opentelemetry-api==1.44.0 \
     --hash=sha256:67647e5e9566edcf421166fdf022b3537f818635daa852b289e34604dc6fb33a \
     --hash=sha256:94b98c893a91b88657eaac1e3ba89618cdb85be6918196705354f34728b2cdef
     # via mcp
-publicsuffixlist==1.0.2.20260625 \
-    --hash=sha256:4cb45166fcb328a2894dfed949534e698f3a00f27f08a8d083ff7e05e6baf110 \
-    --hash=sha256:8123f244bb7f2163f2cc4ce42bad56218e6b65f23efffbab5dcd5b36fcc3ada1
+publicsuffixlist==1.0.2.20260726 \
+    --hash=sha256:52b88aae7fbd991a491f73e2ef9c31901748cfb08959cf3a2a304e86383344a5 \
+    --hash=sha256:6abd9eace2fa7a8734fdae9c8b32403a8c6b22c5872dad59367f19bc83d990ea
     # via recon-tool
 pycparser==3.0 ; implementation_name != 'PyPy' and platform_python_implementation != 'PyPy' \
     --hash=sha256:600f49d217304a5902ac3c37e1281c9fe94e4d0489de643a9504c5cdfdfc6b29 \
@@ -578,9 +578,9 @@ truststore==0.10.4 \
     # via
     #   httpcore2
     #   httpx2
-typer==0.26.8 \
-    --hash=sha256:3512ca79ac5c11113414b36e80281b872884477722440691c89d1112e321a49c \
-    --hash=sha256:c244a6bd558886fe3f8780efb6bdd28bb9aff005a94eedebaa5cb32926fe2f7e
+typer==0.27.0 \
+    --hash=sha256:629bd12ea5d13a17148125d9a264f949eb171fb3f120f9b04d85873cab054fa5 \
+    --hash=sha256:6f4b27631e47f077871b7dc30e933ec0131c1390fbe0e387ea5574b5bac9ccf1
     # via recon-tool
 typing-extensions==4.15.0 \
     --hash=sha256:0cea48d173cc12fa28ecabc3b837ea3cf6f38c6d1136f85cbaaf598984861466 \

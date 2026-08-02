@@ -461,10 +461,7 @@ def _synthesize_ct_retry_corpus(retry_from: Path, output_root: Path) -> Path:
     synth = retry_inputs_dir / f"ct-retry-{datetime.now(UTC).strftime('%Y%m%d-%H%M%SZ')}.txt"
     synth.parent.mkdir(parents=True, exist_ok=True)
     synth.write_text("\n".join(degraded_domains) + "\n", encoding="utf-8")
-    print(
-        f"--ct-retry-from {retry_from}: re-running CT for "
-        f"{len(degraded_domains)} degraded domains via {synth}"
-    )
+    print(f"--ct-retry-from {retry_from}: re-running CT for {len(degraded_domains)} degraded domains via {synth}")
     return synth
 
 
@@ -732,10 +729,7 @@ def main() -> None:
     corpus_stats = _corpus_stats(corpus)
     domain_count = corpus_stats.scheduled_domains
     if corpus_stats.duplicate_rows_removed:
-        print(
-            f"Input preflight: {corpus_stats.duplicate_rows_removed} duplicate row(s) "
-            "removed by batch normalization"
-        )
+        print(f"Input preflight: {corpus_stats.duplicate_rows_removed} duplicate row(s) removed by batch normalization")
     if corpus_stats.invalid_rows:
         print(f"Input preflight: {corpus_stats.invalid_rows} malformed row(s) will produce validation errors")
     if args.finalize_existing is not None:

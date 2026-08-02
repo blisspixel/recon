@@ -89,11 +89,7 @@ def test_local_tool_artifact_roots_are_gitignored_and_untracked() -> None:
     tracked = set(_tracked_files())
 
     for root_name, probe in LOCAL_TOOL_ARTIFACT_PROBES.items():
-        tracked_under_root = [
-            path
-            for path in tracked
-            if path == root_name or path.startswith(f"{root_name}/")
-        ]
+        tracked_under_root = [path for path in tracked if path == root_name or path.startswith(f"{root_name}/")]
         assert _git_ignores(probe), root_name
         assert tracked_under_root == []
 
@@ -128,9 +124,7 @@ def test_documentation_index_lists_every_top_level_markdown_page() -> None:
     docs_root = ROOT / "docs"
     index = (docs_root / "README.md").read_text(encoding="utf-8")
     missing = sorted(
-        path.name
-        for path in docs_root.glob("*.md")
-        if path.name != "README.md" and f"({path.name})" not in index
+        path.name for path in docs_root.glob("*.md") if path.name != "README.md" and f"({path.name})" not in index
     )
 
     assert missing == []

@@ -1283,9 +1283,7 @@ class TestScoreCeilingSurvivesIdentityDegradation:
         assert len({component.component_id for component in components}) == 9
         assert sum(component.maximum_points for component in components) == 90
         assert assessment.posture_score == sum(component.awarded_points for component in components)
-        assert assessment.unconfirmable_absent_points == sum(
-            component.unconfirmable_points for component in components
-        )
+        assert assessment.unconfirmable_absent_points == sum(component.unconfirmable_points for component in components)
         assert all(component.evidence for component in components if component.awarded_points)
         assert all(not component.evidence for component in components if component.state == "unavailable")
 

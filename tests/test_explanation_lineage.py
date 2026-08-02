@@ -493,9 +493,7 @@ def test_generated_hybrid_posture_observation_has_exact_evidence_and_metadata_li
 
     observations = analyze_posture(info)
     target = next(
-        observation
-        for observation in observations
-        if observation.source_name == "gateway_without_dmarc_enforcement"
+        observation for observation in observations if observation.source_name == "gateway_without_dmarc_enforcement"
     )
     record = explain_observations((target,), load_posture_rules(), info.evidence, ())[0]
 

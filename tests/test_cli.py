@@ -74,7 +74,7 @@ class TestHelp:
         assert "authoritative DNS may observe the resulting traffic" in collapsed
         assert "MTA-STS policy fetch is the only default target-owned HTTP/application request" in collapsed
         assert "High confidence with at least three sources" in collapsed
-        assert "underlying evidence, validation, and confidence are unchanged" in collapsed
+        assert "Evidence and validation remain unchanged, as do confidence values" in collapsed
 
     def test_doctor_help_distinguishes_online_connectivity(self) -> None:
         result = runner.invoke(app, ["doctor", "--help"])

@@ -87,12 +87,10 @@ class TestVersionAndDebug:
             assert first_counts == [2, 2]
             assert [len(logger.handlers) for logger in loggers] == first_counts
             assert all(
-                sum(handler.get_name() == "recon-cli-debug" for handler in logger.handlers) == 1
-                for logger in loggers
+                sum(handler.get_name() == "recon-cli-debug" for handler in logger.handlers) == 1 for logger in loggers
             )
             assert all(
-                host_handler in logger.handlers
-                for logger, host_handler in zip(loggers, host_handlers, strict=True)
+                host_handler in logger.handlers for logger, host_handler in zip(loggers, host_handlers, strict=True)
             )
 
             logging.getLogger("recon").debug("core diagnostic")

@@ -452,9 +452,7 @@ def plan_install(
             # change, so they can decide whether they actually want
             # those refreshed.
             diffs = sorted(
-                field
-                for field in _canonical_keys(client)
-                if existing_recon.get(field) != target_block.get(field)
+                field for field in _canonical_keys(client) if existing_recon.get(field) != target_block.get(field)
             )
             diff_blurb = ", ".join(diffs) if diffs else "fields"
             raise InstallError(

@@ -153,8 +153,7 @@ def _validated_absence_parent(
     ]
     if (
         len(parent_matches) != 1
-        or _signal_lineage_status(parent, parent_matches[0], detected_slugs, ())
-        is ExplanationLineageStatus.UNSUPPORTED
+        or _signal_lineage_status(parent, parent_matches[0], detected_slugs, ()) is ExplanationLineageStatus.UNSUPPORTED
     ):
         return None
     if evaluator == "evaluate_absence_signals":

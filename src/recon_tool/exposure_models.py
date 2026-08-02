@@ -102,8 +102,7 @@ EXPOSURE_COMPONENT_SPECS: tuple[tuple[str, str, int], ...] = (
 )
 EXPOSURE_COMPONENT_IDS = frozenset(component_id for component_id, _, _ in EXPOSURE_COMPONENT_SPECS)
 _EXPOSURE_COMPONENT_SPEC_BY_ID = {
-    component_id: (control, maximum_points)
-    for component_id, control, maximum_points in EXPOSURE_COMPONENT_SPECS
+    component_id: (control, maximum_points) for component_id, control, maximum_points in EXPOSURE_COMPONENT_SPECS
 }
 _EXPOSURE_UNAVAILABLE_LABELS = {SPF_COMPONENT_ID: "SPF"}
 
@@ -114,6 +113,7 @@ def exposure_component_spec(component_id: str) -> tuple[str, int]:
         return _EXPOSURE_COMPONENT_SPEC_BY_ID[component_id]
     except KeyError as exc:
         raise ValueError(f"unsupported exposure-index component ID: {component_id}") from exc
+
 
 # ── Data models (all frozen) ───────────────────────────────────────────
 
@@ -222,9 +222,7 @@ class ExposureIndex:
         for component in self.components:
             expected_control, expected_maximum = exposure_component_spec(component.component_id)
             if (component.control, component.maximum_points) != (expected_control, expected_maximum):
-                raise ValueError(
-                    f"exposure-index component specification differs from {component.component_id}"
-                )
+                raise ValueError(f"exposure-index component specification differs from {component.component_id}")
         if self.model_maximum_points > 100:
             raise ValueError("exposure-index component maxima cannot exceed 100 points")
 

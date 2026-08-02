@@ -477,9 +477,7 @@ class TestSimulateHardening:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
 
         data = await simulate_hardening("alpha.invalid", [fix])
-        components = {
-            item["component_id"]: item for item in data["simulated_observability"]["components"]
-        }
+        components = {item["component_id"]: item for item in data["simulated_observability"]["components"]}
 
         assert components[component_id]["state"] == "hypothetical_value"
         assert components[component_id]["evidence"]
@@ -499,8 +497,7 @@ class TestSimulateHardening:
         assert data["current_observability"]["score_floor"] == data["current_score"]
         assert data["simulated_observability"]["score_floor"] == data["simulated_score"]
         simulated_components = {
-            component["component_id"]: component
-            for component in data["simulated_observability"]["components"]
+            component["component_id"]: component for component in data["simulated_observability"]["components"]
         }
         assert simulated_components["index.email.dmarc.v1"]["state"] == "hypothetical_value"
         assert simulated_components["index.email.mta-sts.v1"]["state"] == "hypothetical_value"
@@ -521,12 +518,8 @@ class TestSimulateHardening:
         )
 
         data = await simulate_hardening("alpha.invalid", ["DMARC reject"])
-        current = {
-            item["component_id"]: item for item in data["current_observability"]["components"]
-        }
-        simulated = {
-            item["component_id"]: item for item in data["simulated_observability"]["components"]
-        }
+        current = {item["component_id"]: item for item in data["current_observability"]["components"]}
+        simulated = {item["component_id"]: item for item in data["simulated_observability"]["components"]}
 
         assert current["index.email.dmarc.v1"]["state"] == "unavailable"
         assert simulated["index.email.dmarc.v1"]["state"] == "hypothetical_value"

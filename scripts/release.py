@@ -265,10 +265,7 @@ def _replace_required(path: Path, old: str, new: str) -> None:
     content = path.read_text(encoding="utf-8")
     observed = content.count(old)
     if observed != 1:
-        raise ReleaseError(
-            f"Expected exactly one occurrence of {old!r} in "
-            f"{path.relative_to(ROOT)}, found {observed}"
-        )
+        raise ReleaseError(f"Expected exactly one occurrence of {old!r} in {path.relative_to(ROOT)}, found {observed}")
     path.write_text(content.replace(old, new, 1), encoding="utf-8")
 
 
@@ -276,8 +273,7 @@ def _bump_supply_chain_recipe(current: str, new: str) -> None:
     content = _SUPPLY_CHAIN_DOC.read_text(encoding="utf-8")
     replacements = (
         (
-            f"git clone --branch v{current} --single-branch "
-            f"https://github.com/blisspixel/recon.git recon-{current}",
+            f"git clone --branch v{current} --single-branch https://github.com/blisspixel/recon.git recon-{current}",
             f"git clone --branch v{new} --single-branch https://github.com/blisspixel/recon.git recon-{new}",
             1,
         ),
@@ -322,7 +318,7 @@ def _bump_release_surfaces(current: str, new: str, release_date: str) -> None:
     citation = CITATION.read_text(encoding="utf-8")
     citation, version_count = re.subn(r"^version:\s*.+$", f"version: {new}", citation, count=1, flags=re.MULTILINE)
     citation, date_count = re.subn(
-        r'^date-released:\s*.+$',
+        r"^date-released:\s*.+$",
         f'date-released: "{release_date}"',
         citation,
         count=1,

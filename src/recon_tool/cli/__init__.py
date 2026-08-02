@@ -402,8 +402,8 @@ def lookup(
         callback=_confidence_mode_callback,
         help=(
             "Wording style: 'hedged' (default) or 'strict'. Strict removes qualifiers from panel "
-            "insights only on results at High confidence with at least three sources; underlying evidence, "
-            "validation, and confidence are unchanged."
+            "insights only on results at High confidence with at least three sources. Evidence and validation "
+            "remain unchanged, as do confidence values."
         ),
         rich_help_panel=_REPORT_HELP_PANEL,
     ),
@@ -455,7 +455,7 @@ def lookup(
         False,
         "--no-ct",
         help=(
-            "Skip cert-transparency providers (crt.sh, CertSpotter). "
+            "Skip CT providers (crt.sh and CertSpotter). "
             "Discovery falls back to common-subdomain probes + apex CNAME "
             "walks. Use for high-volume validation runs where you want "
             "zero load on public CT services."

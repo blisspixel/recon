@@ -71,9 +71,7 @@ def test_key_facts_retain_the_canonical_structured_values() -> None:
     assert f"Provider     {structured['provider']}" in rendered
     assert f"Tenant       {structured['tenant_id']} • {structured['region']}" in rendered
     assert f"Auth         {structured['auth_type']}" in rendered
-    assert (
-        f"Cloud        {structured['cloud_instance']} ({structured['tenant_region_sub_scope']})" in rendered
-    )
+    assert f"Cloud        {structured['cloud_instance']} ({structured['tenant_region_sub_scope']})" in rendered
     assert f"Confidence   ●●● {structured['confidence'].capitalize()} (3 sources)" in rendered
 
 

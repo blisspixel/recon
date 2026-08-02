@@ -174,10 +174,7 @@ def _load_diff(args: argparse.Namespace) -> str:
 
 def _format_result(result: DiffCoverageResult) -> str:
     if result.percent is None:
-        return (
-            "No changed executable Python lines found. "
-            f"Skipped changed lines: {result.skipped_changed_lines}."
-        )
+        return f"No changed executable Python lines found. Skipped changed lines: {result.skipped_changed_lines}."
     lines = [
         (
             "Diff coverage: "

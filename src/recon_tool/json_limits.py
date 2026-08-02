@@ -68,9 +68,7 @@ def load_bounded_json_file(
         raise ValueError("maximum_bytes must be positive")
     if not math.isfinite(future_mtime_tolerance_seconds) or future_mtime_tolerance_seconds < 0:
         raise ValueError("future_mtime_tolerance_seconds must be finite and non-negative")
-    if maximum_age_seconds is not None and (
-        not math.isfinite(maximum_age_seconds) or maximum_age_seconds < 0
-    ):
+    if maximum_age_seconds is not None and (not math.isfinite(maximum_age_seconds) or maximum_age_seconds < 0):
         raise ValueError("maximum_age_seconds must be finite and non-negative")
     if path.is_symlink():
         raise ValueError("JSON file must not be a symbolic link")

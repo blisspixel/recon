@@ -72,7 +72,7 @@ else:
                     "tools/list",
                 ),
                 conservative_hint,
-            )
+            ),
         }
 
 SDK_VERSION = version("mcp")

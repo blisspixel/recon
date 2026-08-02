@@ -115,12 +115,12 @@ def _fake_manager(path: Path, manager: str) -> None:
         "\n".join(
             [
                 "#!/usr/bin/env bash",
-                'printf \'%s %s\\n\' "' + manager + '" "$*" >> "$INSTALLER_LOG"',
+                "printf '%s %s\\n' \"" + manager + '" "$*" >> "$INSTALLER_LOG"',
                 f"if [ {list_command} ]; then",
-                f'  printf \'%s\\n\' "${{FAKE_{prefix}_LIST:-}}"',
+                f"  printf '%s\\n' \"${{FAKE_{prefix}_LIST:-}}\"",
                 f'  exit "${{FAKE_{prefix}_LIST_STATUS:-0}}"',
                 "fi",
-                f'printf \'%s\\n\' "${{FAKE_{prefix}_INSTALL_OUTPUT:-{manager} install output}}" >&2',
+                f"printf '%s\\n' \"${{FAKE_{prefix}_INSTALL_OUTPUT:-{manager} install output}}\" >&2",
                 f'exit "${{FAKE_{prefix}_INSTALL_STATUS:-0}}"',
                 "",
             ]
@@ -230,9 +230,7 @@ def test_powershell_installer_parses() -> None:
 
 
 def _fake_windows_manager(path: Path, manager: str) -> None:
-    list_condition = (
-        'if /I "%~1 %~2"=="tool list"' if manager == "uv" else 'if /I "%~1"=="list"'
-    )
+    list_condition = 'if /I "%~1 %~2"=="tool list"' if manager == "uv" else 'if /I "%~1"=="list"'
     prefix = manager.upper()
     path.write_text(
         "\r\n".join(

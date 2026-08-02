@@ -291,7 +291,7 @@ class TestSbomJobIsIsolated:
         text = "\n".join(_step_text(step) for step in _steps(workflow["jobs"]["sbom"]))
 
         assert "shopt -s nullglob dotglob" in text
-        assert 'sbom_entries=(sbom/*)' in text
+        assert "sbom_entries=(sbom/*)" in text
         assert '"${#sbom_entries[@]}" -ne 1' in text
         assert '"${sbom_entries[0]}" != "$expected_sbom"' in text
         assert '[ -L "$expected_sbom" ]' in text
@@ -516,11 +516,7 @@ class TestPublishedChannelParity:
     def test_parity_job_checks_out_safely_and_downloads_sealed_dist(self, workflow):
         steps = _steps(workflow["jobs"]["verify-pypi-parity"])
         checkout = next(step for step in steps if str(step.get("uses", "")).startswith("actions/checkout@"))
-        downloads = [
-            step
-            for step in steps
-            if str(step.get("uses", "")).startswith("actions/download-artifact@")
-        ]
+        downloads = [step for step in steps if str(step.get("uses", "")).startswith("actions/download-artifact@")]
 
         assert checkout["with"]["persist-credentials"] is False
         assert len(downloads) == 1

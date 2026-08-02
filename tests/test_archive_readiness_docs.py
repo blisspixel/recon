@@ -11,11 +11,7 @@ def _read(path: Path) -> str:
 
 
 def _active_citation_lines() -> list[str]:
-    return [
-        line.strip()
-        for line in _read(ROOT / "CITATION.cff").splitlines()
-        if not line.lstrip().startswith("#")
-    ]
+    return [line.strip() for line in _read(ROOT / "CITATION.cff").splitlines() if not line.lstrip().startswith("#")]
 
 
 def test_archive_readiness_is_linked_from_current_research_docs() -> None:

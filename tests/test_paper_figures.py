@@ -35,7 +35,7 @@ def test_paper_figure_assets_match_generator() -> None:
         path = ASSET_DIR / name
         assert path.read_text(encoding="utf-8") == content
         assert "<svg" in content
-        assert "role=\"img\"" in content
+        assert 'role="img"' in content
 
 
 def test_paper_figure_package_is_linked_from_research_docs() -> None:

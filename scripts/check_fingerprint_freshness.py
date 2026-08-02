@@ -51,10 +51,7 @@ class FreshnessViolation:
     reason: str
 
     def render(self) -> str:
-        return (
-            f"{self.key.source}: {self.key.slug} "
-            f"[{self.key.detection_type}] {self.key.pattern!r}: {self.reason}"
-        )
+        return f"{self.key.source}: {self.key.slug} [{self.key.detection_type}] {self.key.pattern!r}: {self.reason}"
 
 
 def _catalog_entries(raw: Any, source: str) -> list[Any]:

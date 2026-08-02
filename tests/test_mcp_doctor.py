@@ -62,7 +62,6 @@ def _expected_prefix_through_resources_list() -> list[str]:
     return ["server spawn", "initialize handshake", "tools/list", "resources/list"]
 
 
-
 class TestLiveHandshake:
     """End-to-end: actually spawn the server and walk the protocol.
 

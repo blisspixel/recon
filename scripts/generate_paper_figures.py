@@ -144,8 +144,8 @@ def _svg(width: int, height: int, body: list[str], *, title: str) -> str:
     return (
         f'<svg xmlns="http://www.w3.org/2000/svg" width="{width}" height="{height}" '
         f'viewBox="0 0 {width} {height}" role="img" aria-labelledby="title desc">\n'
-        f"  <title id=\"title\">{escape(title)}</title>\n"
-        "  <desc id=\"desc\">Aggregate-safe paper figure generated from committed recon artifacts.</desc>\n"
+        f'  <title id="title">{escape(title)}</title>\n'
+        '  <desc id="desc">Aggregate-safe paper figure generated from committed recon artifacts.</desc>\n'
         f"  {_rect((0, 0), (width, height), COLORS['white'], COLORS['white'])}\n"
         f"  {body_text}\n"
         "</svg>\n"

@@ -218,9 +218,7 @@ async def test_webflow_cname_and_owner_qualified_txt(
         ("QuoVadis=00000000-0000-4000-8000-000000000000", "quovadis"),
     ],
 )
-async def test_promoted_verification_tokens_match(
-    monkeypatch: pytest.MonkeyPatch, value: str, slug: str
-) -> None:
+async def test_promoted_verification_tokens_match(monkeypatch: pytest.MonkeyPatch, value: str, slug: str) -> None:
     """Vendor-named apex verification TXT records promoted from a private round."""
     monkeypatch.setattr(
         dns_base,

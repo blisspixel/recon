@@ -87,9 +87,7 @@ def test_load_bounded_json_file_rejects_stable_symlink(tmp_path: Path) -> None:
         load_bounded_json_file(link, maximum_bytes=1024)
 
 
-def test_load_bounded_json_file_rejects_change_during_read(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_load_bounded_json_file_rejects_change_during_read(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     path = tmp_path / "state.json"
     path.write_text("{}", encoding="utf-8")
     original_fstat = os.fstat

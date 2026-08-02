@@ -214,8 +214,7 @@ def suppression_violations(network: BayesianNetwork, tol: float = _TOL) -> list[
                 p = post[key]
                 if not (baseline - tol <= p <= full + tol):
                     out.append(
-                        f"{node.name} [ext {ctx}]: subset {sorted(key)} posterior {p} "
-                        f"outside [{baseline}, {full}]"
+                        f"{node.name} [ext {ctx}]: subset {sorted(key)} posterior {p} outside [{baseline}, {full}]"
                     )
                 for e in subset:
                     p_hidden = post[key - {e.name}]

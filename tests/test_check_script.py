@@ -87,6 +87,14 @@ def test_ruff_scope_and_cache_policy_match_ci() -> None:
     assert "run: uv run ruff check --no-cache .\n" in workflow
 
 
+def test_ruff_format_scope_matches_ci() -> None:
+    local_stage = next(command for _group, name, command in check._STAGES if name == "ruff-format")
+    workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert local_stage == [check._PY, "-m", "ruff", "format", "--check", "."]
+    assert "run: uv run ruff format --check .\n" in workflow
+
+
 def test_ci_runs_the_interface_layout_guard() -> None:
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
 

@@ -71,8 +71,7 @@ def run(
             return 0
         if retryable and attempt < _MAX_ATTEMPTS:
             print(
-                "dependency audit: recognized transport failure; retrying once in "
-                f"{_RETRY_DELAY_SECONDS:g} seconds",
+                f"dependency audit: recognized transport failure; retrying once in {_RETRY_DELAY_SECONDS:g} seconds",
                 file=sys.stderr,
                 flush=True,
             )

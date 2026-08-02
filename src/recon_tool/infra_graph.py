@@ -238,9 +238,7 @@ def _build_graph(
             continue
 
         if pending_occurrences:
-            _apply_repeated_san_group(
-                g, tallies, pending_sans, pending_issuer, pending_occurrences
-            )
+            _apply_repeated_san_group(g, tallies, pending_sans, pending_issuer, pending_occurrences)
         pending_sans = canonical_sans
         pending_issuer = issuer
         pending_occurrences = 1

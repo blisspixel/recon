@@ -70,9 +70,7 @@ def _count_domains(path: Path) -> int:
     if not path.exists():
         return 0
     return sum(
-        1
-        for line in path.read_text(encoding="utf-8").splitlines()
-        if line.strip() and not line.strip().startswith("#")
+        1 for line in path.read_text(encoding="utf-8").splitlines() if line.strip() and not line.strip().startswith("#")
     )
 
 

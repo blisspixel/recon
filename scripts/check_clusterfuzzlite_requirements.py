@@ -51,7 +51,9 @@ def normalize_export(text: str) -> str:
 
 
 def audit_requirements(committed_text: str, exported_text: str) -> RequirementsAudit:
-    committed = normalize_export(committed_text)
+    committed = committed_text.replace("\r\n", "\n")
+    if not committed.endswith("\n"):
+        committed += "\n"
     exported = normalize_export(exported_text)
     diff: tuple[str, ...] = ()
     if committed != exported:

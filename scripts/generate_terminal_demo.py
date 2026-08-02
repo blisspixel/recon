@@ -171,8 +171,8 @@ def render_terminal_demo_svg() -> str:
     )
     svg = svg.replace(
         "    <style>\n",
-        "    <title id=\"recon-demo-accessible-title\">recon synthetic terminal demo</title>\n"
-        "    <desc id=\"recon-demo-accessible-description\">Synthetic output for alpha.invalid showing "
+        '    <title id="recon-demo-accessible-title">recon synthetic terminal demo</title>\n'
+        '    <desc id="recon-demo-accessible-description">Synthetic output for alpha.invalid showing '
         "public email, identity, cloud, security, collaboration, related-domain, and insight observations.</desc>\n"
         "    <style>\n",
         1,

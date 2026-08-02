@@ -821,9 +821,7 @@ async def _check_unsupported_protocol_version(server: _RawStdioServer) -> ProbeC
         supported = data.get("supported") if isinstance(data, dict) else None
         if not isinstance(supported, list) or MODERN_PROTOCOL_VERSION not in supported:
             raise ValueError(f"error data does not list the supported versions: {data!r}")
-        return ProbeCheck(
-            "recon_stdio_unsupported_version", "pass", f"code=-32022 supported_listed={len(supported)}"
-        )
+        return ProbeCheck("recon_stdio_unsupported_version", "pass", f"code=-32022 supported_listed={len(supported)}")
     except Exception as exc:
         return ProbeCheck("recon_stdio_unsupported_version", "fail", _exception_detail(exc))
 

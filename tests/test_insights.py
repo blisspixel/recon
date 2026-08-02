@@ -39,9 +39,7 @@ class TestInsightGeneration:
             "Managed",
             None,
             0,
-            evidence=(
-                EvidenceRecord("HTTP", "NameSpaceType=Managed", "GetUserRealm", "microsoft365"),
-            ),
+            evidence=(EvidenceRecord("HTTP", "NameSpaceType=Managed", "GetUserRealm", "microsoft365"),),
         )
         assert any("Cloud-managed" in i for i in insights)
 
@@ -132,15 +130,11 @@ class TestInsightGeneration:
         assert not any("migration" in i.lower() or "hybrid" in i.lower() for i in insights)
 
     def test_knowbe4_insight(self):
-        insights = generate_insights(
-            set(), {"knowbe4"}, None, None, 0, evidence=_slug_evidence("knowbe4")
-        )
+        insights = generate_insights(set(), {"knowbe4"}, None, None, 0, evidence=_slug_evidence("knowbe4"))
         assert any("KnowBe4" in i for i in insights)
 
     def test_crowdstrike_insight(self):
-        insights = generate_insights(
-            set(), {"crowdstrike"}, None, None, 0, evidence=_slug_evidence("crowdstrike")
-        )
+        insights = generate_insights(set(), {"crowdstrike"}, None, None, 0, evidence=_slug_evidence("crowdstrike"))
         assert any("CrowdStrike" in i for i in insights)
 
     def test_duo_insight(self):

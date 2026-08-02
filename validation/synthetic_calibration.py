@@ -170,9 +170,7 @@ def main() -> int:
     # ``fired`` records whether at least one binding fired for this
     # node on this sample. The selected subset remains model-internal and does
     # not acquire a calibration guarantee through selection.
-    by_node: dict[str, tuple[list[float], list[int], list[bool]]] = {
-        n.name: ([], [], []) for n in net.nodes
-    }
+    by_node: dict[str, tuple[list[float], list[int], list[bool]]] = {n.name: ([], [], []) for n in net.nodes}
     fired_names_per_node: dict[str, set[str]] = {n.name: {ev.name for ev in n.evidence} for n in net.nodes}
 
     print(f"Simulating {args.samples} independent-Bernoulli misspecification worlds...")

@@ -210,9 +210,7 @@ class TestRenderDagDotTop3:
     def test_dot_includes_top_influences_phrase_when_evidence_fires(self, network):
         result = infer(network, [], ["dmarc_reject", "spf_strict"], priors_override={})
         out = render_dag_dot(network, result, domain="x")
-        policy_lines = [
-            line for line in out.splitlines() if '"email_security_policy_enforcing" [label=' in line
-        ]
+        policy_lines = [line for line in out.splitlines() if '"email_security_policy_enforcing" [label=' in line]
         assert len(policy_lines) == 1
         assert "top influences:" in policy_lines[0]
         assert "dmarc_reject" in policy_lines[0]

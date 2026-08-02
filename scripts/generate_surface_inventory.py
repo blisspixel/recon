@@ -107,6 +107,23 @@ def _safe_json_value(value: object) -> object:
     return str(value)
 
 
+_CLI_TYPE_ALIASES = {
+    "bool": "boolean",
+    "boolean": "boolean",
+    "int": "integer",
+    "integer": "integer",
+    "str": "text",
+    "string": "text",
+    "text": "text",
+}
+
+
+def _cli_type_name(param_type: object) -> str:
+    """Return a dependency-independent label for a Click parameter type."""
+    observed = str(getattr(param_type, "name", param_type))
+    return _CLI_TYPE_ALIASES.get(observed, observed)
+
+
 def _frontmatter_fields(text: str) -> dict[str, str]:
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
@@ -214,7 +231,7 @@ def _parameter_entry(param: click.Parameter) -> dict[str, object]:
         "kind": kind,
         "tokens": names,
         "required": bool(param.required),
-        "type": getattr(param.type, "name", str(param.type)),
+        "type": _cli_type_name(param.type),
     }
     default = getattr(param, "default", None)
     if default is not None:
