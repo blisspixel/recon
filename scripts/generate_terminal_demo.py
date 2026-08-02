@@ -25,12 +25,17 @@ _TRANSCRIPT_END = "<!-- terminal-demo-transcript:end -->"
 
 
 def demo_tenant_info() -> TenantInfo:
-    """Return a realistic public-output fixture using only reserved names."""
+    """Return a realistic public-output fixture using only reserved names.
+
+    Contoso is the classic obviously-fictional demo company; the queried
+    coordinate stays under the IETF reserved ``.invalid`` namespace so the
+    fixture never names a real registrable domain.
+    """
     return TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Synthetic Alpha Ltd",
-        default_domain="synthetic-alpha.onmicrosoft.invalid",
-        queried_domain="alpha.invalid",
+        display_name="Contoso Ltd",
+        default_domain="contoso.onmicrosoft.invalid",
+        queried_domain="contoso.invalid",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
         sources=("dns_records", "oidc_discovery", "userrealm", "cert_transparency"),
@@ -66,11 +71,15 @@ def demo_tenant_info() -> TenantInfo:
         dmarc_policy="reject",
         domain_count=3,
         tenant_domains=(
-            "alpha.invalid",
-            "synthetic-alpha.onmicrosoft.invalid",
-            "alpha-mail.invalid",
+            "contoso.invalid",
+            "contoso.onmicrosoft.invalid",
+            "contoso-mail.invalid",
         ),
-        related_domains=("login.alpha.invalid", "status.alpha.invalid", "support.alpha.invalid"),
+        related_domains=(
+            "login.contoso.invalid",
+            "status.contoso.invalid",
+            "support.contoso.invalid",
+        ),
         insights=(
             "Federated identity observed; identity-vendor indicators: Okta",
             "Email security: observed controls: DMARC reject, DKIM, SPF strict, MTA-STS",
@@ -79,7 +88,7 @@ def demo_tenant_info() -> TenantInfo:
         evidence=(
             EvidenceRecord(
                 "MX",
-                "10 alpha-invalid.mail.protection.outlook.invalid",
+                "10 contoso-invalid.mail.protection.outlook.invalid",
                 "Microsoft 365",
                 "microsoft365",
             ),
@@ -87,23 +96,23 @@ def demo_tenant_info() -> TenantInfo:
             EvidenceRecord("DMARC", "v=DMARC1; p=reject; pct=100", SVC_DMARC, "dmarc"),
             EvidenceRecord(
                 "DKIM",
-                "selector1._domainkey.alpha.invalid",
+                "selector1._domainkey.contoso.invalid",
                 SVC_DKIM,
                 "dkim",
             ),
             EvidenceRecord("SPF", "v=spf1 include:mail.invalid -all", SVC_SPF_STRICT, "spf-strict"),
             EvidenceRecord("MTA_STS_POLICY", "mode: enforce", SVC_MTA_STS, "mta-sts-enforce"),
-            EvidenceRecord("CNAME", "login.alpha.invalid -> login.vendor.invalid", "Okta", "okta"),
+            EvidenceRecord("CNAME", "login.contoso.invalid -> login.vendor.invalid", "Okta", "okta"),
             EvidenceRecord("TXT", "slack-domain-verification=synthetic", "Slack", "slack"),
             EvidenceRecord(
                 "CNAME",
-                "status.alpha.invalid -> status.vendor.invalid",
+                "status.contoso.invalid -> status.vendor.invalid",
                 "Atlassian (Jira/Confluence)",
                 "atlassian",
             ),
             EvidenceRecord(
                 "CNAME",
-                "support.alpha.invalid -> edge.vendor.invalid",
+                "support.contoso.invalid -> edge.vendor.invalid",
                 "Cloudflare",
                 "cloudflare",
             ),
@@ -131,7 +140,7 @@ def _render_demo(console: Console) -> None:
     """Write the fixed command and real default panel to one console."""
     prompt = Text("$ ", style="bold green")
     prompt.append("recon ", style="bold white")
-    prompt.append("alpha.invalid", style="bold cyan")
+    prompt.append("contoso.invalid", style="bold cyan")
     console.print(prompt)
     console.print(render_tenant_panel(demo_tenant_info()))
 
@@ -172,8 +181,9 @@ def render_terminal_demo_svg() -> str:
     svg = svg.replace(
         "    <style>\n",
         '    <title id="recon-demo-accessible-title">recon synthetic terminal demo</title>\n'
-        '    <desc id="recon-demo-accessible-description">Synthetic output for alpha.invalid showing '
-        "public email, identity, cloud, security, collaboration, related-domain, and insight observations.</desc>\n"
+        '    <desc id="recon-demo-accessible-description">Synthetic output for Contoso Ltd '
+        "(contoso.invalid) showing public email, identity, cloud, security, collaboration, "
+        "related-domain, and insight observations.</desc>\n"
         "    <style>\n",
         1,
     )
