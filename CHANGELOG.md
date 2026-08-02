@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.10.0] - 2026-08-01
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Changed
 
 - Added a fail-closed default-claim audit that assigns every discovered primary
