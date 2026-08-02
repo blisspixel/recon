@@ -19,24 +19,49 @@ Observations, not verdicts.
 > review. See
 > [docs/legal.md](https://github.com/blisspixel/recon/blob/main/docs/legal.md).
 
-## Quick start
+## Quick Start
+
+Install with `uv` or `pipx`:
 
 ```bash
-uv tool install recon-tool   # or: pipx install recon-tool
-recon --version
-recon doctor                 # optional online connectivity check
-recon example.com
+uv tool install recon-tool
+# or
+pipx install recon-tool
 ```
 
-Python 3.11-3.14 on Windows, macOS, or Linux. Install helpers, update/uninstall,
-and supply-chain verification:
-[docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md),
-[docs/supply-chain.md](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md).
+Python 3.11 through 3.14, on Windows, macOS, or Linux.
 
-Default collection is public metadata only. DNS may be visible to resolvers;
-the only default target-owned HTTP request is the standards-defined MTA-STS
-policy fetch. Opt-in direct probes and the full network boundary:
+Optional helpers at `scripts/install.ps1` and `scripts/install.sh` drive an
+existing `uv` or `pipx` installation. Download a
+[release-tag source archive](https://github.com/blisspixel/recon/releases/latest),
+review the helper locally, then run it. Each helper installs the exact version
+represented by that tag, preserves a sole existing `uv` or `pipx` owner, and
+refuses ambiguous or unmanaged installations. Do not pipe mutable branch
+content into a shell. To verify published artifacts before installing, follow the
+[consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
+
+Verify the installed command offline:
+
+```bash
+recon --version
+```
+
+Then optionally test online connectivity to recon's public data sources:
+
+```bash
+recon doctor
+```
+
+Before the first lookup, know what leaves your machine. recon makes DNS queries
+that recursive and authoritative DNS infrastructure may observe. Its only
+default request to a target-owned endpoint is the standards-defined MTA-STS
+policy fetch. Google CSE and BIMI certificate probes run only when
+`--direct-probes` is explicitly enabled. Full boundary:
 [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md).
+
+```bash
+recon example.com
+```
 
 ### Example output
 
@@ -84,6 +109,43 @@ Insights
 </details>
 <!-- terminal-demo-transcript:end -->
 
+Install, update, uninstall, and first-run detail:
+[docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
+
+## What recon Is Good For
+
+| Need | Use recon for | Use something else when |
+|---|---|---|
+| Fast external stack context | Passive DNS, identity-endpoint, CT, SaaS, and posture indicators | You need authenticated tenant inventory or asset-management truth |
+| Defensive review or vendor diligence | Hedged observations and evidence traces you can verify | You need vulnerability scanning, exploit checks, or host-level facts |
+| Automation-friendly output | Stable JSON, batch mode, delta mode, and local MCP tools | You need dashboards, scheduling, or report generation built in |
+
+recon reports observations, not verdicts. Public channel ceiling:
+[docs/limitations.md](https://github.com/blisspixel/recon/blob/main/docs/limitations.md).
+
+## Common Commands
+
+```bash
+recon example.com                              # default panel
+recon example.com --explain                    # evidence trail
+recon example.com --plain                      # linear text for screen readers and grep
+recon example.com --json                       # structured record
+recon batch domains.txt --json                 # batch JSON array
+recon delta example.com                        # diff vs local cache
+recon mcp install --client=cursor              # wire MCP into a client
+```
+
+More flags:
+[docs/cli-surface.md](https://github.com/blisspixel/recon/blob/main/docs/cli-surface.md).
+JSON contracts:
+[schema](https://github.com/blisspixel/recon/blob/main/docs/schema.md) ·
+[stability](https://github.com/blisspixel/recon/blob/main/docs/stability.md) ·
+[operational contract](https://github.com/blisspixel/recon/blob/main/docs/operational-contract.md).
+
+`docs/surface-inventory.json`, `docs/cli-surface.md`, and
+`recon://surface-inventory` are generated discovery context and drift guards,
+not stable runtime API contracts. ADR-0007 records the promotion gate.
+
 ## Use with an AI agent (MCP / skill)
 
 Wire recon into Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Kiro,
@@ -96,12 +158,10 @@ recon mcp doctor
 ```
 
 Start with manual tool approvals. Treat agents as untrusted input.
-Full setup and tool catalog:
+Full setup:
 [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md).
 Per-client scaffolds and skills:
 [agents/](https://github.com/blisspixel/recon/tree/main/agents).
-
-Then ask in natural language, for example:
 
 | You say | What the agent should do |
 |---|---|
@@ -126,42 +186,20 @@ Then ask in natural language, for example:
 > These are public-record observations, not a security grade or proof of
 > active product use. Say if you want evidence detail or a gap review.
 
-Guidance files for skill-style clients live under
-[agents/claude-code/skills/recon/](https://github.com/blisspixel/recon/tree/main/agents/claude-code/skills/recon/)
-and root
+Guidance:
+[agents/claude-code/skills/recon/](https://github.com/blisspixel/recon/tree/main/agents/claude-code/skills/recon/),
 [AGENTS.md](https://github.com/blisspixel/recon/blob/main/AGENTS.md).
 
-## Common commands
+## Optional Cloud Access
 
-```bash
-recon example.com                              # default panel
-recon example.com --explain                    # evidence trail
-recon example.com --json                       # structured record
-recon batch domains.txt --json                 # batch JSON array
-recon delta example.com                        # diff vs local cache
-recon mcp install --client=cursor              # wire MCP into a client
-```
+Local execution is the default, and the project does not operate a hosted
+service. For teams that want shared remote access, the repository includes a
+draft authenticated container and Cloud Run Terraform starting point. It is
+intended to be directionally useful, not a validated production deployment.
+Operators own deployment, identity, data handling, cost, and operations.
 
-More flags and modes:
-[docs/cli-surface.md](https://github.com/blisspixel/recon/blob/main/docs/cli-surface.md),
-[docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
-
-JSON/automation contracts:
-[schema](https://github.com/blisspixel/recon/blob/main/docs/schema.md) ·
-[stability](https://github.com/blisspixel/recon/blob/main/docs/stability.md) ·
-[operational contract](https://github.com/blisspixel/recon/blob/main/docs/operational-contract.md) ·
-[automation examples](https://github.com/blisspixel/recon/blob/main/docs/automation-examples.md).
-
-## When to use it
-
-| Need | recon | Not recon |
-|---|---|---|
-| External stack / email / identity signals | Yes - passive public metadata | Authenticated inventory or CMDB truth |
-| Vendor diligence or defensive review | Yes - hedged, evidence-linked | Vuln scanning, exploits, host facts |
-| Agent or pipeline automation | Yes - CLI, JSON, MCP | Hosted SaaS, dashboards, firmographics |
-
-Public channel ceiling (sparse SaaS, gateway-hidden mailboxes, CT limits):
-[docs/limitations.md](https://github.com/blisspixel/recon/blob/main/docs/limitations.md).
+- [Optional cloud plan](https://github.com/blisspixel/recon/blob/main/docs/optional-cloud-deployment-plan.md)
+- [Draft deployment framework](https://github.com/blisspixel/recon/tree/main/deploy)
 
 ## Docs
 
@@ -171,10 +209,16 @@ Public channel ceiling (sparse SaaS, gateway-hidden mailboxes, CT limits):
 | How it works | [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md) |
 | MCP and agents | [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md), [agents/](https://github.com/blisspixel/recon/tree/main/agents) |
 | Full docs index | [docs/README.md](https://github.com/blisspixel/recon/blob/main/docs/README.md) |
-| Roadmap | [ROADMAP.md](https://github.com/blisspixel/recon/blob/main/ROADMAP.md) · [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md) |
+| Roadmap | [ROADMAP.md](https://github.com/blisspixel/recon/blob/main/ROADMAP.md) · [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md) · [docs/strategic-gap-audit.md](https://github.com/blisspixel/recon/blob/main/docs/strategic-gap-audit.md) |
 | Changelog | [CHANGELOG.md](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md) |
-| Security reporting | [SECURITY.md](https://github.com/blisspixel/recon/blob/main/SECURITY.md) · [docs/security.md](https://github.com/blisspixel/recon/blob/main/docs/security.md) |
-| Optional remote MCP draft | [docs/optional-cloud-deployment-plan.md](https://github.com/blisspixel/recon/blob/main/docs/optional-cloud-deployment-plan.md) |
+| Security | [SECURITY.md](https://github.com/blisspixel/recon/blob/main/SECURITY.md) · [docs/security.md](https://github.com/blisspixel/recon/blob/main/docs/security.md) |
+
+Research and publication pointers (maintainer track, not the product core):
+[docs/submission-freeze-checklist.md](https://github.com/blisspixel/recon/blob/main/docs/submission-freeze-checklist.md),
+[validation/2026-06-30-submission-freeze-local-proof.md](https://github.com/blisspixel/recon/blob/main/validation/2026-06-30-submission-freeze-local-proof.md),
+[docs/public-label-snapshot-decision.md](https://github.com/blisspixel/recon/blob/main/docs/public-label-snapshot-decision.md)
+(public lists as robustness checks rather than population rates), and
+[docs/m365-tenancy-decision.md](https://github.com/blisspixel/recon/blob/main/docs/m365-tenancy-decision.md).
 
 ## Development
 
@@ -185,8 +229,10 @@ uv run python scripts/release_readiness.py --allow-dirty
 uv run python scripts/check.py
 ```
 
-`python scripts/check.py` is the canonical local gate (lint, types, coverage,
-artifacts, hygiene). Green locally means green in CI.
+`uv run python scripts/check.py` is the canonical local gate: lint, type
+checks, coverage-gated tests, generated-artifact and catalog checks, text and
+link hygiene, interface and claim checks, and size and complexity ratchets.
+Green locally means green in CI.
 
 Project hygiene: keep examples reserved and synthetic, keep validation artifacts
 aggregate-only, and avoid dead code or placeholders. See
