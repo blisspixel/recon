@@ -26,6 +26,21 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Security
+
+- Upgraded locked transitive dependencies that Scorecard and `pip-audit`
+  reported as vulnerable: `cryptography` 49.0.0 to 50.0.0 (via MCP / PyJWT),
+  `gitpython` 3.1.54 to 3.1.57 and `aiohttp` 3.14.1 to 3.14.3 (via the
+  mutation-group Cosmic Ray stack). Refreshed the ClusterFuzzLite frozen
+  requirements export to match.
+
+### Changed
+
+- Tightened the README around install, the Globex Ltd / `globex.invalid`
+  terminal demo, and MCP or skill agent usage examples, while restoring the
+  documentation contract anchors for onboarding, install helpers, surface
+  inventory policy, and research decision links.
+
 ## [2.10.0] - 2026-08-01
 
 ### Tool Surface Changes
