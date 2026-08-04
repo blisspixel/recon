@@ -41,8 +41,6 @@ operator, corporate group, ownership, or control.
   domain lists.
 - Default batch panel mode prints a completion footer (`ok · failed · total`)
   while keeping the record-oriented exit-code contract.
-- Default panel rule width follows the terminal within the established layout
-  cap so narrow panes no longer draw an 78-column rule past the edge.
 
 ### Changed
 
