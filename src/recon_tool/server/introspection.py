@@ -933,9 +933,7 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
         if not rate_limit_try_acquire(validated):
             cached = cache_get(validated)
             if cached is None:
-                raise ToolError(
-                    f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
-                )
+                raise ToolError(f"Rate limited: {validated} was looked up recently. Try again in a few seconds.")
             info, _results = cached
         else:
             try:
@@ -955,9 +953,7 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
                     request_id,
                 )
                 raise ToolError(
-                    server_app.internal_lookup_error(
-                        validated, request_id, exc, action="rendering DAG for"
-                    )
+                    server_app.internal_lookup_error(validated, request_id, exc, action="rendering DAG for")
                 ) from exc
             cache_set(validated, info, list(results))
 

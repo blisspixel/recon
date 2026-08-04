@@ -981,11 +981,7 @@ async def batch(
     # Human panel mode keeps exit code 0 for mixed results (record-oriented
     # contract) but prints a completion footer so operators need not recount.
     if not summary and not json_output and not markdown and not csv_output and not ndjson:
-        error_count = sum(
-            1
-            for item in results
-            if isinstance(item, str) and item.startswith(_ERROR_PREFIX)
-        )
+        error_count = sum(1 for item in results if isinstance(item, str) and item.startswith(_ERROR_PREFIX))
         ok_count = len(results) - error_count
         get_err_console().print(
             f"  Batch complete: {ok_count} ok · {error_count} failed · {len(results)} total",
