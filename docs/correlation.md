@@ -150,6 +150,26 @@ of one observation remain one support unit.
 
 ## 2. Current correlation layers
 
+Three layers share the same collected public observations. Only Layer 1 is
+authoritative for "did we observe X?" Layer 2 is always emitted as descriptive
+structure. Layer 3 is model-relative fusion that runs by default unless the
+operator passes `--no-fusion`.
+
+```mermaid
+flowchart LR
+  obs["O = (O_DNS, O_CT, O_ID)"]
+  obs --> rules["Layer 1: deterministic rules<br/>slugs and signals"]
+  rules --> panel["Default panel and JSON"]
+  obs --> graphL["Layer 2: CT co-occurrence graph<br/>communities and motifs"]
+  graphL --> panel
+  rules -. "evidence chain" .-> bn["Layer 3: Bayesian network<br/>posteriors and bands"]
+  bn -. "fusion path" .-> panel
+
+  style rules fill:#eef
+  style graphL fill:#efe
+  style bn fill:#fee
+```
+
 ### 2.1 Deterministic evidence and rule correlation
 
 The deterministic layer maps observed records to evidence records, fingerprint
@@ -236,6 +256,35 @@ acyclic graph. It runs by default for single-domain CLI lookups unless the
 operator uses `--no-fusion`; batch fusion is also enabled by default and can be
 disabled explicitly.
 The layer is deterministic for fixed inputs, priors, and model data.
+
+```mermaid
+flowchart LR
+  m365["m365_tenant<br/>prior 0.30"] --> fed["federated_identity"]
+  gws["google_workspace_tenant<br/>prior 0.25"] --> fed
+  fed --> okta["okta_idp"]
+  m365 --> emp["email_security_modern_provider"]
+  gws --> emp
+  egw["email_gateway_present<br/>prior 0.18"] --> emp
+  pol["email_security_policy_enforcing<br/>prior 0.25"]
+  cdn["cdn_fronting<br/>prior 0.45"]
+  aws["aws_hosting<br/>prior 0.40"]
+
+  style m365 fill:#eef
+  style gws fill:#eef
+  style egw fill:#eef
+  style cdn fill:#eef
+  style aws fill:#eef
+  style pol fill:#eef
+  style fed fill:#fff
+  style okta fill:#fff
+  style emp fill:#fff
+```
+
+Nine nodes total. Five roots carry priors only; four children use CPTs.
+`email_security_modern_provider` has three parents because M365, Google
+Workspace, and gateway presence contribute differently to the
+provider-presence claim. `email_security_policy_enforcing` is a separate root
+because policy enforcement is not the same claim as provider presence.
 
 Let \(X_1,\ldots,X_n\) be claim nodes and let `pa(i)` be the parents of node
 \(i\). The committed model factorizes as
@@ -396,6 +445,27 @@ model-relative evidence-strength display parameterized by and required to
 contain (p). The stable JSON
 fields are `interval_low` and `interval_high`; documentation calls them an
 **evidence-responsive uncertainty band**.
+
+The same point posterior mean can therefore produce different band widths as
+effective mass changes:
+
+```mermaid
+flowchart TB
+  subgraph sparse["n_eff = 4 (sparse public channel)"]
+    sl["0.18"] --- sm["0.5"] --- sh["0.82"]
+  end
+  subgraph mid["n_eff = 8"]
+    ml["0.27"] --- mm["0.5"] --- mh["0.73"]
+  end
+  subgraph dense["n_eff = 14 (dense corroborating units)"]
+    dl["0.33"] --- dm["0.5"] --- dh["0.67"]
+  end
+```
+
+At \(n_{\mathrm{eff}} = 4\) (the display floor) a mid-mean band is wide: the
+public channel barely constrains the claim. At \(n_{\mathrm{eff}} = 14\) the
+same mid-mean is a tighter model-relative band. Neither width is a calibrated
+coverage probability.
 
 Four is a minimum display mass, not a passive-observation ceiling. More
 counted units can increase the mass without bound under the current formula.
