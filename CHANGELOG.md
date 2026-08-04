@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.10.2] - 2026-08-04
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Fixed
 
 - MCP text tools (`lookup_tenant`, `chain_lookup`, `explain_dag`) now raise
