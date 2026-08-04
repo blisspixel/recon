@@ -354,8 +354,7 @@ _LABEL_WIDTH = 13  # columns for Provider/Tenant/Auth/Confidence labels
 
 def _panel_width() -> int:
     """Return a terminal-aware panel width capped at the default layout."""
-    console = get_console()
-    terminal_width = console.width if console is not None and console.width else _PANEL_WIDTH_DEFAULT
+    terminal_width = get_console().width or _PANEL_WIDTH_DEFAULT
     return max(_PANEL_WIDTH_MIN, min(_PANEL_WIDTH_DEFAULT, int(terminal_width) - 1))
 
 
