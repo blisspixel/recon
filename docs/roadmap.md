@@ -6,15 +6,15 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.10.1 is current. The stable baseline is complete: recon ships a
-> local Python package and CLI, versioned JSON contract, local stdio MCP
-> server, bounded public-metadata collectors, generated-artifact guards, and a verified
-> release path. The product is not "finished." The active work is to make every
-> default claim evidence-tight, prove that advanced inference adds user value,
-> characterize MCP v2 compatibility, and make latency, degradation, catalog
-> quality, and agent context cost measurable. A separate fourth track provides
-> optional operator-hosted access and bounded scale-out without changing the
-> local default or creating a project-operated service.
+> **Status:** v2.10.1 is current. The stable baseline is complete: CLI, versioned
+> JSON, local stdio MCP, bounded collectors, claim-audit gates, MCP dual-SDK
+> matrix, and a verified release path. Tracks 1–2 (evidence integrity, MCP v2)
+> are complete maintenance. **Next build priority is track 3 / v2.11:** a
+> reproducible product-quality baseline that decides whether advanced fusion
+> stays primary. The ordered version path through v3.0 is summarized in
+> [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
+> hosting remains a lower-priority side track and does not change the local
+> default.
 >
 > **Code-graph orientation:** refresh the ignored
 > `.agent/codegraph/manifest.json` after each tracked milestone and read it for
@@ -29,7 +29,9 @@ Rank and urgency are different axes. Priority 1 remains the standing highest
 trust priority because output truthfulness outranks features; its current
 27-family audit closed on 2026-08-01. Priority 2 adopted MCP v2 on 2026-07-31
 and retains both exact compatibility pins as blocking checks. Priority 3 is now
-the next dependency-unblocked work. New claim-surface drift reopens priority 1.
+the next dependency-unblocked work and maps to **v2.11.0**. New claim-surface
+drift reopens priority 1. Version milestones through v3.0:
+[ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
 
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|

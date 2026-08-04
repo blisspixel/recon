@@ -26,6 +26,30 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- MCP text tools (`lookup_tenant`, `chain_lookup`, `explain_dag`) now raise
+  `ToolError` on rate-limit and lookup failures so FastMCP marks `isError`
+  instead of returning error prose as successful tool content.
+- CertSpotter partial pages cut short by HTTP 429 retain partial CT data and
+  mark the provider degraded via `CertProviderPartialRateLimit` instead of
+  looking like a complete CT success.
+- Soft-empty CT provider responses add the provider to `degraded_sources`
+  rather than reading as observed-empty certificate history.
+- BIMI VMC probe transport failures mark `http:bimi_vmc` degraded; Autodiscover
+  XML parse failures mark `identity:autodiscover` degraded instead of empty
+  domain lists.
+- Default batch panel mode prints a completion footer (`ok · failed · total`)
+  while keeping the record-oriented exit-code contract.
+- Default panel rule width follows the terminal within the established layout
+  cap so narrow panes no longer draw an 78-column rule past the edge.
+
+### Changed
+
+- Root roadmap now states a clear version path from the v2.10.x maintenance
+  line through v2.11 quality baseline, later 2.x application stages, and v3.0
+  contract maturity, without calendar estimates.
+
 ## [2.10.1] - 2026-08-04
 
 ### Tool Surface Changes

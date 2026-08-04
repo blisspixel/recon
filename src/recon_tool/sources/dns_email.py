@@ -502,6 +502,10 @@ async def _parse_bimi_vmc(ctx: dns_base.DetectionCtx, bimi_txt: str) -> None:
         async with _http_client(timeout=5.0) as client:
             resp = await client.get(a_url, follow_redirects=False)
             if resp.status_code != 200:
+                # Transient transport failures are unavailable probes, not
+                # observed absence of a VMC. Stable 404 remains observed-empty.
+                if resp.status_code in (408, 429) or 500 <= resp.status_code <= 599:
+                    ctx.degraded_sources.add("http:bimi_vmc")
                 return
             pem_data = resp.text
 
@@ -517,6 +521,7 @@ async def _parse_bimi_vmc(ctx: dns_base.DetectionCtx, bimi_txt: str) -> None:
             )
         )
     except Exception as exc:
+        ctx.degraded_sources.add("http:bimi_vmc")
         logger.debug("BIMI VMC parsing failed: %s", exc)
 
 

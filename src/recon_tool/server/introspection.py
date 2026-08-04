@@ -933,7 +933,9 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
         if not rate_limit_try_acquire(validated):
             cached = cache_get(validated)
             if cached is None:
-                return f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
+                raise ToolError(
+                    f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
+                )
             info, _results = cached
         else:
             try:
@@ -943,7 +945,7 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
                 # resolver addresses, proxy URLs, and TLS detail from the host
                 # environment. Report the outcome through the shared mapper so
                 # this tool matches the others and preserves error_type.
-                return server_app.lookup_failure_message(validated, exc)
+                raise ToolError(server_app.lookup_failure_message(validated, exc)) from exc
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
@@ -952,7 +954,11 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
                     validated,
                     request_id,
                 )
-                return server_app.internal_lookup_error(validated, request_id, exc, action="rendering DAG for")
+                raise ToolError(
+                    server_app.internal_lookup_error(
+                        validated, request_id, exc, action="rendering DAG for"
+                    )
+                ) from exc
             cache_set(validated, info, list(results))
 
     network = load_network()

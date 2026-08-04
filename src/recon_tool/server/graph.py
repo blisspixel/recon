@@ -212,7 +212,9 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
     # same per-domain limiter the single-domain tools use. Retain the cooldown
     # after every started attempt, including failures and cancellation.
     if not rate_limit_try_acquire(validated):
-        return f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
+        raise ToolError(
+            f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
+        )
 
     try:
         from recon_tool.chain import chain_resolve
@@ -227,7 +229,9 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
             validated,
             request_id,
         )
-        return server_app.internal_lookup_error(validated, request_id, exc)
+        raise ToolError(
+            server_app.internal_lookup_error(validated, request_id, exc)
+        ) from exc
 
     elapsed = time.monotonic() - start_time
     log_structured(

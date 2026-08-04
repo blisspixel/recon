@@ -184,7 +184,11 @@ async def lookup_tenant(
         if not rate_limit_try_acquire(validated):
             cached = cache_get(validated)
             if cached is None:
-                return f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
+                # ToolError so FastMCP marks isError=true; a success-shaped
+                # rate-limit string looks like content to untrusted agents.
+                raise ToolError(
+                    f"Rate limited: {validated} was looked up recently. Try again in a few seconds."
+                )
             info, results = cached
         else:
             try:
@@ -200,7 +204,7 @@ async def lookup_tenant(
                     elapsed_s=round(elapsed, 2),
                     error=exc.message,
                 )
-                return server_app.lookup_failure_message(validated, exc)
+                raise ToolError(server_app.lookup_failure_message(validated, exc)) from exc
             except asyncio.CancelledError:
                 raise
             except Exception as exc:
@@ -209,7 +213,9 @@ async def lookup_tenant(
                     validated,
                     request_id,
                 )
-                return server_app.internal_lookup_error(validated, request_id, exc)
+                raise ToolError(
+                    server_app.internal_lookup_error(validated, request_id, exc)
+                ) from exc
 
             cache_set(validated, info, results)
 
