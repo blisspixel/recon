@@ -85,9 +85,10 @@ class TestCertSpotterRateLimitedRaises:
 
     @pytest.mark.asyncio
     async def test_429_after_partial_pages_returns_partial(self) -> None:
-        """When 429 fires AFTER at least one page succeeded, return the
-        partial data instead of raising. The caller (dns.py) sees a
-        successful (partial) result and counts the provider as fired."""
+        """When 429 fires AFTER at least one page succeeded, raise a partial
+        rate-limit signal so the caller retains data and marks degraded."""
+        from recon_tool.sources.cert_providers import CertProviderPartialRateLimit
+
         provider = CertSpotterProvider()
 
         # First page: valid issuance
@@ -110,13 +111,18 @@ class TestCertSpotterRateLimitedRaises:
         second_resp.status_code = 429
         second_resp.headers = {}
 
-        with patch.object(provider, "_fetch_page", new=AsyncMock(side_effect=[first_resp, second_resp])):
-            subdomains, cert_summary, _ = await provider.query("example.com")
+        with (
+            patch.object(provider, "_fetch_page", new=AsyncMock(side_effect=[first_resp, second_resp])),
+            pytest.raises(CertProviderPartialRateLimit) as exc_info,
+        ):
+            await provider.query("example.com")
 
-        assert "app.example.com" in subdomains, (
-            f"Expected partial data from page 1 to survive the page-2 rate limit; got subdomains={subdomains}"
+        assert "app.example.com" in exc_info.value.subdomains, (
+            "Expected partial data from page 1 to survive the page-2 rate limit; "
+            f"got subdomains={exc_info.value.subdomains}"
         )
-        assert cert_summary is not None
+        assert exc_info.value.cert_summary is not None
+        assert exc_info.value.provider_name == "certspotter"
 
 
 class TestAdaptiveRateLimiter:
