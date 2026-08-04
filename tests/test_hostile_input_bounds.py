@@ -16,6 +16,7 @@ SPF redirect depth bound; and the DMARC rua extraction under a mailto flood.
 
 from __future__ import annotations
 
+import xml.etree.ElementTree as ET
 from collections.abc import Awaitable, Callable
 from types import SimpleNamespace
 from typing import Any
@@ -23,6 +24,7 @@ from unittest.mock import patch
 
 import httpx
 import pytest
+from defusedxml.common import DefusedXmlException
 from hypothesis import given
 from hypothesis import strategies as st
 
@@ -80,8 +82,9 @@ class TestAutodiscoverBounds:
             "]>"
             "<Response><Domain>&lol3;</Domain></Response>"
         )
-        # defusedxml refuses entity expansion; the parser degrades to empty.
-        assert _parse_autodiscover_domains(bomb) == ([], None)
+        # defusedxml refuses entity expansion; callers mark the channel degraded.
+        with pytest.raises((ET.ParseError, DefusedXmlException)):
+            _parse_autodiscover_domains(bomb)
 
     def test_external_entity_xxe_is_refused(self) -> None:
         xxe = (
@@ -89,14 +92,20 @@ class TestAutodiscoverBounds:
             '<!DOCTYPE r [<!ENTITY ext SYSTEM "file:///etc/passwd">]>'
             "<Response><Domain>&ext;</Domain></Response>"
         )
-        assert _parse_autodiscover_domains(xxe) == ([], None)
+        with pytest.raises((ET.ParseError, DefusedXmlException)):
+            _parse_autodiscover_domains(xxe)
 
     def test_malformed_xml_degrades(self) -> None:
-        assert _parse_autodiscover_domains("<Response><Domain>not closed") == ([], None)
+        with pytest.raises(ET.ParseError):
+            _parse_autodiscover_domains("<Response><Domain>not closed")
 
     @given(st.text(max_size=4000))
     def test_never_raises_on_arbitrary_text(self, text: str) -> None:
-        domains, default = _parse_autodiscover_domains(text)
+        # Parser may raise on garbage; the lookup path degrades the channel.
+        try:
+            domains, default = _parse_autodiscover_domains(text)
+        except (ET.ParseError, DefusedXmlException):
+            return
         assert isinstance(domains, list)
         assert default is None or isinstance(default, str)
 

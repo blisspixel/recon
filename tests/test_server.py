@@ -267,8 +267,9 @@ class TestErrors:
             message="No data",
             error_type="no_data",
         )
-        result = await lookup_tenant("unknown.invalid")
-        assert "No information found for unknown.invalid" in result
+        with pytest.raises(ToolError) as exc_info:
+            await lookup_tenant("unknown.invalid")
+        assert "No information found for unknown.invalid" in str(exc_info.value)
 
     @pytest.mark.asyncio
     @pytest.mark.parametrize(
@@ -290,7 +291,9 @@ class TestErrors:
             message="collection failed",
             error_type=error_type,
         )
-        result = await lookup_tenant("unknown.invalid")
+        with pytest.raises(ToolError) as exc_info:
+            await lookup_tenant("unknown.invalid")
+        result = str(exc_info.value)
         assert expected in result
         assert "No information found" not in result
 
@@ -302,7 +305,9 @@ class TestErrors:
             message="collection failed",
             error_type="all_sources_failed",
         )
-        result = await lookup_tenant("https://example.com/path")
+        with pytest.raises(ToolError) as exc_info:
+            await lookup_tenant("https://example.com/path")
+        result = str(exc_info.value)
         assert "Lookup failed for example.com" in result
         assert "https://" not in result
         assert "/path" not in result
@@ -326,7 +331,9 @@ class TestErrors:
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_unexpected_error(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.side_effect = RuntimeError("timeout")
-        result = await lookup_tenant("example.com")
+        with pytest.raises(ToolError) as exc_info:
+            await lookup_tenant("example.com")
+        result = str(exc_info.value)
         assert "Error looking up example.com" in result
         assert "internal error" in result
         # The early-pipeline error is debuggable from the client: it carries a
@@ -363,13 +370,14 @@ class TestErrors:
         with patch(RESOLVE_PATH, side_effect=fake_resolve):
             first = asyncio.create_task(lookup_tenant("alpha.invalid"))
             await started.wait()
-            second = await lookup_tenant("alpha.invalid")
+            with pytest.raises(ToolError) as rate_info:
+                await lookup_tenant("alpha.invalid")
             release.set()
             first_result = await first
 
         assert calls == 1
         assert "Display name: Synthetic Alpha Ltd" in first_result
-        assert "Rate limited:" in second
+        assert "Rate limited:" in str(rate_info.value)
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -380,11 +388,13 @@ class TestErrors:
             error_type="all_sources_failed",
         )
 
-        first = await lookup_tenant("unknown.invalid")
-        second = await lookup_tenant("unknown.invalid")
+        with pytest.raises(ToolError) as first_info:
+            await lookup_tenant("unknown.invalid")
+        with pytest.raises(ToolError) as second_info:
+            await lookup_tenant("unknown.invalid")
 
-        assert "Lookup failed for unknown.invalid" in first
-        assert "Rate limited" in second
+        assert "Lookup failed for unknown.invalid" in str(first_info.value)
+        assert "Rate limited" in str(second_info.value)
         assert mock_resolve.await_count == 1
 
 
