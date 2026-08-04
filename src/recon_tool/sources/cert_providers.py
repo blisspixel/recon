@@ -244,6 +244,27 @@ def _parse_retry_after(resp: httpx.Response) -> float | None:
 # ── Protocol ────────────────────────────────────────────────────────────
 
 
+class CertProviderPartialRateLimit(Exception):
+    """Partial CT page data collected before a provider rate limit.
+
+    Carries usable subdomain and summary data so the orchestrator can retain
+    the partial observation while still marking the provider degraded.
+    """
+
+    def __init__(
+        self,
+        subdomains: list[str],
+        cert_summary: CertSummary | None,
+        infrastructure_clusters: InfrastructureClusterReport | None,
+        provider_name: str,
+    ) -> None:
+        self.subdomains = subdomains
+        self.cert_summary = cert_summary
+        self.infrastructure_clusters = infrastructure_clusters
+        self.provider_name = provider_name
+        super().__init__(f"{provider_name} rate-limited after partial CT pages")
+
+
 @runtime_checkable
 class CertIntelProvider(Protocol):
     """Protocol for certificate transparency intelligence providers."""
@@ -269,6 +290,9 @@ class CertIntelProvider(Protocol):
         Raises:
             Exception on failure (timeout, HTTP error, etc.) so the
             fallback chain can proceed to the next provider.
+            CertProviderPartialRateLimit when a rate limit truncates paging
+            after at least one successful page; callers must retain the
+            payload and mark the provider degraded.
         """
         ...
 
@@ -935,4 +959,12 @@ class CertSpotterProvider:
         now = datetime.now(UTC)
         cert_summary = build_cert_summary(all_cert_entries, now)
         cluster_report = build_infrastructure_clusters(list(all_cert_entries)) if all_cert_entries else None
+        if rate_limited:
+            # Partial pages under 429 must not look like a complete CT view.
+            raise CertProviderPartialRateLimit(
+                subdomains,
+                cert_summary,
+                cluster_report,
+                self.name,
+            )
         return subdomains, cert_summary, cluster_report

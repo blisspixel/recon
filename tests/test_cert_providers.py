@@ -715,7 +715,9 @@ class TestCertSpotterPagination:
 
     @pytest.mark.asyncio
     async def test_429_stops_pagination_returns_partial_data(self, monkeypatch: pytest.MonkeyPatch):
-        """A 429 response stops pagination and returns what's been collected."""
+        """A 429 response stops pagination and surfaces partial data as degraded."""
+        from recon_tool.sources.cert_providers import CertProviderPartialRateLimit
+
         provider = CertSpotterProvider()
         page1 = [_issuance(i, f"host{i}.example.com") for i in range(4)]
         page2_rate_limited = httpx.Response(
@@ -737,15 +739,19 @@ class TestCertSpotterPagination:
         client = AsyncMock()
         client.get = AsyncMock(side_effect=responses)
 
-        with patch(
-            "recon_tool.sources.cert_providers.http_client",
-            return_value=_mock_http_context(client),
+        with (
+            patch(
+                "recon_tool.sources.cert_providers.http_client",
+                return_value=_mock_http_context(client),
+            ),
+            pytest.raises(CertProviderPartialRateLimit) as exc_info,
         ):
-            subs, _summary, _clusters = await provider.query("example.com")
+            await provider.query("example.com")
 
-        # Pagination stopped at 429, but page 1 data is still returned
+        # Pagination stopped at 429; page 1 data is retained for degraded use
         assert client.get.call_count == 2
-        assert len(subs) == 4  # from page 1
+        assert len(exc_info.value.subdomains) == 4  # from page 1
+        assert exc_info.value.provider_name == "certspotter"
         assert retry_delays == [1.0]
 
     @pytest.mark.asyncio

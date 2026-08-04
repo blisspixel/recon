@@ -76,10 +76,10 @@ def _parse_autodiscover_domains(xml_text: str) -> tuple[list[str], str | None]:
     except (DefusedET.ParseError, DefusedXmlException) as exc:
         # ParseError is malformed XML; DefusedXmlException is defusedxml
         # blocking an entity-expansion (billion-laughs) or external-entity
-        # (XXE) payload. Either way degrade to an empty result rather than let
-        # the security exception propagate out of this parser.
+        # (XXE) payload. Signal parse failure so the caller can mark the
+        # channel degraded instead of treating it as "no domains."
         logger.debug("Failed to parse Autodiscover XML: %s", exc)
-        return [], None
+        raise
 
     # Find all <Domain> elements regardless of namespace.
     # The Autodiscover response uses multiple namespaces, so we search
@@ -103,6 +103,20 @@ def _parse_autodiscover_domains(xml_text: str) -> tuple[list[str], str | None]:
                 break
 
     return sorted(set(all_domains)), default_domain
+
+
+def _autodiscover_domains_or_degrade(
+    xml_text: str,
+    domain: str,
+    degraded_sources: set[str],
+) -> tuple[list[str], str | None]:
+    """Parse Autodiscover XML; mark the channel degraded on parse failure."""
+    try:
+        return _parse_autodiscover_domains(xml_text)
+    except (DefusedET.ParseError, DefusedXmlException) as exc:
+        degraded_sources.add("identity:autodiscover")
+        logger.debug("Autodiscover XML parse failed for %s: %s", domain, exc)
+        return [], None
 
 
 class UserRealmSource:
@@ -172,7 +186,9 @@ class UserRealmSource:
                     },
                 )
                 if resp.status_code == 200:
-                    tenant_domains, default_domain = _parse_autodiscover_domains(resp.text)
+                    tenant_domains, default_domain = _autodiscover_domains_or_degrade(
+                        resp.text, domain, degraded_sources
+                    )
                 elif resp.status_code == 429 or resp.status_code >= 500:
                     degraded_sources.add("identity:autodiscover")
             except httpx.HTTPError as exc:

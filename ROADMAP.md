@@ -1,241 +1,112 @@
 # Roadmap
 
 The canonical plan is [docs/roadmap.md](docs/roadmap.md). This file is the short
-version: where the project stands, what happens next and why, and the
-boundaries that do not move. Shipped work lives in
-[CHANGELOG.md](CHANGELOG.md); this file does not repeat it.
+version: where the project stands, the ordered path to v3.0, and the boundaries
+that do not move. Shipped work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Status
 
-recon v2.10.1 has a complete, production-ready baseline. Shipped and now under
-maintenance rather than active development: the CLI, the versioned JSON
-contract, the local stdio MCP server, bounded public-metadata collectors,
-generated-artifact guards, the validation gates, and a release path with
-reproducible builds, provenance, SBOM, and cross-channel byte parity.
+recon **v2.10.1** is the current production baseline: CLI, versioned JSON,
+local stdio MCP, bounded public-metadata collectors, fail-closed claim audit
+gates, MCP dual-SDK matrix, and a release path with provenance, SBOM, and
+channel parity.
 
-An optional authenticated remote container and draft Google Cloud Run IaC
-framework now exist as low-priority accessibility and scale polish. This draft
-is intended to be directionally useful, not a validated production deployment.
-It does not change the local default, and the project does not operate a hosted
-endpoint.
+The evidence-semantic audit (27 claim families) and MCP v2 adoption are
+**complete and remain blocking maintenance**. The open product question is
+still unproven: nothing yet measures whether fusion, CT enrichment, catalog
+size, or the broad agent surface improves operator decisions over deterministic
+evidence plus abstention.
 
-Release verification binds every published artifact to its exact tag, workflow,
-signer, and commit digest, and requires SBOM provenance. One
-digest-bound v2.6.3 historical exception preserves that release's published
-distribution-only bundle while still requiring SBOM structure validation; every
-later release fails if SBOM provenance is absent.
+## Version path (order of operations)
 
-A complete baseline is not a finished product. The evidence-semantic audit and
-MCP v2 adoption are complete and remain blocking maintenance gates. One primary
-product question remains unproven: nothing measures whether probabilistic
-fusion, certificate-transparency enrichment, the fingerprint catalog, or the
-broad agent surface improves an operator outcome over deterministic evidence
-plus explicit abstention.
+No calendar estimates. Each row unlocks the next. Patch releases (2.x.y) stay
+available for security, silent-failure, and contract-preserving fixes at any
+point.
 
-## What Is Next, and Why
+| Version | Theme | Why this order | Done when |
+|---|---|---|---|
+| **v2.10.x** | Maintenance line | Protect truthfulness and supply chain while larger work proceeds | Evidence audit green; MCP 1.28.1 + 2.0.0 pins green; no known silent fail-open on default paths |
+| **v2.11.0** | Product-quality baseline | Track 3. Cannot promote or retire fusion without a predeclared scorecard | Aggregate-safe scorecard + predeclared ablation rule + dated memo; fusion path kept or demoted to advanced diagnostic by result |
+| **v2.12.0** | Apply quality decision | Uses v2.11 evidence; avoids more graph work without benefit | Primary path matches scorecard outcome; docs and defaults updated; negative result accepted without reinterpretation |
+| **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions under degraded sources |
+| **v2.14.0** | Catalog quality loop | Independent of fusion promotion; blocked only by disclosure-safe rounds | Rank / regional / vendor-seed / drift rounds complete with fixtures; broad catalog growth remains gated by those rounds |
+| **v2.15.0** | Agent surface cost | After quality baseline so tool cuts do not hide weak models | Measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
+| **v3.0.0** | Contract maturity | Major only if an additive path cannot carry the claim model | Versioned claim / observation envelope (or explicit decision that v2 stays forever); migration notes; no silent semantic change under a minor |
 
-Rank and urgency are different axes here. Track 1 remains the standing highest
-trust priority because truthfulness outranks features, and its current audit
-closed on 2026-08-01. Track 2 adopted MCP v2 on 2026-07-31 while retaining the
-blocking rollback matrix. Track 3 is now the next dependency-unblocked work;
-new claim-surface drift reopens Track 1 immediately.
-
-Each track below names why it sits where it does, what state it is in now, and
-the evidence that closes it.
-
-### 1. Default-claim evidence audit (complete 2026-08-01)
-
-**Why it was first:** output truthfulness outranks every feature. This defect
-class had been found one case at a time instead of swept. The most recent
-instance let a queried domain report the email controls that a related domain
-published, contradicting its own null DMARC policy inside the same record, and
-persisted that contradiction to the result cache. A bug hunt found it. The
-audit existed to prevent it but had not been run to completion. The taxonomy
-and fail-closed audit now cover the complete default surface, which unblocks
-Track 3.
-
-**State:** a fail-closed machine-readable audit now assigns all discovered
-primary surfaces to 27 claim families and blocks drift across 197 JSON property
-occurrences, 167 MCP tool and output surfaces, 31 panel producers, 89 agent
-guidance sections, 16 insight generators, 84 score or quantitative fields, and
-the remaining governed surfaces. 27 families are complete. 0 material runtime
-families carry incomplete lineage. The two static families now
-pin shipped agent guidance and live MCP descriptions to the runtime's process
-scope, collection boundary, output forms, cache behavior, and abstention rules.
-Explanation output distinguishes
-exact, exact-rule-only, reconstructed, and unsupported terminal lineage and
-adds exact-lineage completeness diagnostics without changing the stable
-schema-version-1 reachability fields. Generated insights retain the
-exact generation-time rule plus evidence-occurrence or bounded-scope
-associations through result-cache version 4. Default Rich and MCP text assembly
-now preserve the queried namespace coordinate and exclude unavailable channel
-evidence from derived panel facts. Posture observations now retain the exact
-emitter, branch-local evidence occurrences, and typed metadata dependencies;
-profile-relative expectations fail closed under degraded collection and remain
-lenses rather than scores. Hardening prompts now expose exact generator IDs,
-typed predicates, bounded scopes, retained evidence, and explicit basis states;
-unavailable channels emit no absence prompt and common-selector DKIM remains
-unresolved. The exposure index now carries a complete nine-component ledger
-with exact generator, state, predicate, scope, points, and retained-evidence
-lineage. Scores fail closed when a positive scalar lacks matching evidence;
-comparisons carry both namespace ledgers, and simulations label changed
-components as hypothetical. The stable 0-100 compatibility scale remains, with
-90 points assigned by the current documented component model. The narrower
-`dns.dmarc.valid_policy_is_reject.v1` proof-carrying contract remains the first
-fully modeled claim. See
-[the default-claim audit](docs/default-claim-audit.md).
-
-**Closure evidence:** every default panel insight, service label, live MCP
-instruction and tool description, generated agent guidance item,
-recommendation, and score label has a direct evidence-to-claim path; shared
-administrative tokens, tenant IDs, and certificate overlap never become
-ownership, control, or current-use claims; missing metadata stays unknown; and
-explanation output reports provenance completeness rather than asserting a
-complete path it does not have.
-
-### 2. Keep final MCP v2 compatibility green after adoption
-
-**Why second:** the Model Context Protocol 2026-07-28 specification is a
-breaking protocol release, and the official Python SDK moves on its own
-schedule regardless of recon. The compatibility work is bounded and remains
-blocking in CI without displacing track 1.
-
-**State:** adopted on 2026-07-31. Production serves 2026-07-28 on the v2 SDK,
-and CI keeps both pins blocking. The same registration and domain logic passes
-legacy initialization and final stateless `server/discover` behavior, and the
-optional remote adapter now runs on either generation.
-
-**Closed when:** the stable matrix stays green; tool and resource order stays
-deterministic; declared output schemas and structured results conform on both
-generations; and the local stdio workflow remains intact. Production runs
-`mcp>=2.0.0,<3`; `1.28.1` remains the documented rollback pin. The named
-optional remote-access need and its separate architecture review now live in
-[the cloud deployment plan](docs/optional-cloud-deployment-plan.md); that work
-does not imply production v2 adoption, OAuth, Roots, Sampling, Apps, or Tasks.
-
-### 3. Freeze a product-quality baseline, then promote or retire
-
-**Why third, and not sooner:** it depends on the claim taxonomy from track 1.
-Measuring claim families before they are defined means measuring something that
-is about to be redefined. The project has extensive process evidence and no
-product-outcome evidence. Green gates, a large catalog, and a broad tool
-surface are supporting facts, not proof that the output improves a decision.
-
-**Closed when:** a dated, aggregate-safe scorecard exists with reproduction
-commands, environment, and revision digests; the ablation decision rule is
-written before the run rather than after reading it; and the result decides
-whether advanced fusion stays in the primary path or becomes an explicitly
-advanced diagnostic. An inconclusive or negative result is a valid outcome and
-is not reinterpreted into a promotion.
-
-### 4. Optional operator-hosted access and scale-out
-
-**Why fourth:** making recon easier to reach from different AI systems is useful
-polish for some operators, but it does not outrank output truthfulness,
-protocol compatibility, or evidence that the product improves an operator
+Optional cloud operator hosting stays a **side track** (any 2.x after local
+default stays complete). It never unblocks product-quality work and never
+creates a project-operated multi-tenant service without a separate product
 decision.
 
-**State:** draft shared runtime, non-root OCI container, Cloud Run Terraform,
-authentication boundaries, and CI structural checks exist. They pass local
-artifact checks but are not yet provider-validated or production-ready. Local
-CLI and stdio MCP remain the complete default. AWS AgentCore, Azure Container
-Apps, Cloudflare, Kubernetes, and per-user OAuth are research directions with
-explicit stop rules rather than unvalidated placeholder IaC.
+Publication, OpenSSF questionnaire, outside replication, and archive/DOI are
+**maintainer tracks** on external events. They do not displace the version
+path above.
 
-**Closed when:** one external operator has validated the chosen reference with
-a real MCP client, bounded load and cost evidence, credential rotation, log
-retention, and image rollback. Expansion to another provider requires named
-demand and that provider's validation context.
+## Active tracks (why, state, close)
 
-Full architecture, research, provider choices, and sequencing:
+### 1. Evidence-semantic integrity - maintenance (highest trust rank)
+
+Complete for the 27-family default surface. New claim surfaces reopen this
+track immediately. Detail: [docs/default-claim-audit.md](docs/default-claim-audit.md).
+
+### 2. MCP v2 compatibility - maintenance
+
+Production on `mcp>=2.0.0,<3` with blocking 1.28.1 rollback and 2.0.0 production
+rows. Detail: [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.md).
+
+### 3. Product-quality baseline - **next build priority: v2.11**
+
+Specified, not started. Process evidence is rich; product-outcome evidence is
+not. Acceptance and stop rules live in
+[docs/roadmap.md](docs/roadmap.md#3-establish-a-reproducible-product-quality-baseline)
+and the
+[Quality Proof execution plan](docs/strategic-gap-audit.md#quality-proof-execution-plan).
+
+### 4. Optional operator-hosted access - lower priority side track
+
+Draft container + Cloud Run IaC only. Local CLI and stdio MCP remain complete.
 [docs/optional-cloud-deployment-plan.md](docs/optional-cloud-deployment-plan.md).
 
 ## What Is Deliberately Not Next
 
-Each of these is real work that is blocked on purpose, not forgotten.
-
 | Work | Gate that unblocks it |
 |---|---|
-| Broad catalog growth | The independent rank, regional, vendor-seed, and drift rounds. A repeated list is a drift round, not new coverage. |
-| More graph or probabilistic machinery | Measured benefit to a named user outcome, from track 3. |
-| A core-versus-advanced MCP tool profile | A representative client proving material context benefit. Payload size alone is not the trigger. |
-| More optional cloud provider IaC | A named operator, provider-specific identity and region context, and the acceptance gate in the optional cloud plan. |
-| A project-operated public or multi-tenant service | A separate product, governance, privacy, abuse, support, and funding decision. The current plan provides operator-owned references only. |
-| Promoting generated discovery artifacts to a stable contract | A named external consumer, under [ADR-0007](docs/adr/0007-surface-inventory-discovery-context.md). |
-| Native acceleration in Rust, Go, or Mojo | The evidence gates in [ADR-0010](docs/adr/0010-evidence-gated-native-acceleration.md), measured on a real stage rather than a microbenchmark. |
-| Dimensioned email posture scoring | An ADR plus the RFC 9989 completion audit, keeping the current stable field as a compatibility view. |
-| Publication, OpenSSF questionnaire, outside replication, archive | Their own external events. These are legitimate maintainer tracks, and they do not outrank product truthfulness or measured utility. |
+| Broad catalog growth | Independent rank, regional, vendor-seed, and drift rounds |
+| More graph or probabilistic machinery | Measured benefit from the v2.11 scorecard |
+| Core-versus-advanced MCP profile | Representative client proves material context benefit |
+| More optional cloud provider IaC | Named operator + provider validation |
+| Project-operated public multi-tenant service | Separate product, governance, and funding decision |
+| Promoting surface-inventory to a stable API | Named external consumer under [ADR-0007](docs/adr/0007-surface-inventory-discovery-context.md) |
+| Native acceleration (Rust/Go/Mojo) | [ADR-0010](docs/adr/0010-evidence-gated-native-acceleration.md) evidence gates |
+| Dimensioned email posture scoring | ADR + RFC 9989 completion audit |
+| Publication / OpenSSF / archive | Their own external events; not a substitute for product proof |
 
 ## Invariants
 
-These hold across every track above and change only through an ADR. They are
-what recon refuses to do, and most of the plan exists to keep them true.
+Change only through an ADR.
 
-**Collection boundary**
+**Collection boundary** - public metadata only; MTA-STS is the sole default
+target-owned HTTP request; CSE/BIMI opt-in only; no credentials, scanning, or
+exploit checks.
 
-- Public metadata only: DNS, certificate transparency, unauthenticated identity
-  discovery, and the standards-defined MTA-STS policy fetch.
-- Google CSE and BIMI certificate fetches are explicit opt-in direct probes,
-  never part of a default lookup.
-- No credentials, API keys, paid feeds, port scanning, exploit checks, or
-  target application crawling.
+**Claim discipline** - domain is a query coordinate; sparse stays sparse;
+source failure is unavailable, never negative; parent platform is not
+child-product use; public-evidence index is not overall security maturity.
 
-**Claim discipline**
+**Data handling** - no committed real-target corpus; synthetic / reserved
+examples; aggregate-only public validation artifacts.
 
-- A domain is a query coordinate. It is not an organization, owner, account, or
-  deployed product.
-- Sparse evidence stays sparse. Lower confidence and abstention are correct
-  answers; inventing a clean one is not.
-- A source failure is an unavailable channel, never a negative observation.
-- Parent-platform presence never becomes a child-product use or deployment
-  claim, and missing metadata stays unknown rather than defaulting.
-- A public-evidence index is never presented as overall security maturity.
-
-**Data handling**
-
-- No runtime aggregate database, no committed real-target corpus, and no
-  per-domain rows in public artifacts.
-- Public prose, examples, fixtures, and snapshots use reserved synthetic
-  identities; public validation artifacts are aggregate-only.
-- Maintainer-local validation data stays in the permanently ignored workspaces
-  defined by [docs/data-handling-policy.md](docs/data-handling-policy.md).
-
-**Surface stability**
-
-- The CLI, JSON, MCP, cache, and import surfaces change only through the
-  compatibility discipline in [docs/stability.md](docs/stability.md).
-- Network, parser, cache, schema, and output behavior stays bounded.
-- Clean repository root, canonical docs in `docs/`, source in `src/`, logs in
-  ignored `logs/`, and agent work in ignored `.agent/`.
-
-## Publication and Process Track
-
-The external write-up, claim freeze, OpenSSF Best Practices questionnaire,
-outside replication, and archive or DOI decision are legitimate maintainer
-projects that run on their own external events. They do not outrank output
-truthfulness, measured utility, or compatibility work, and they are not a
-substitute for product-quality evidence. Their final gate is
-[docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md).
-
-The paper and artifact package is currently unfrozen: wording, packaging,
-validation, and release changes have landed since the last freeze, so
-maintainers must rerun the gate before any external submission or submission
-packaging. The most recent completed historical public claim audit is
-[validation/2026-06-29-scorecard-gate-claim-audit.md](validation/2026-06-29-scorecard-gate-claim-audit.md),
-and the most recent completed historical local submission-freeze proof is
-[validation/2026-06-30-submission-freeze-local-proof.md](validation/2026-06-30-submission-freeze-local-proof.md).
+**Surface stability** - CLI, JSON, MCP, cache, and import changes follow
+[docs/stability.md](docs/stability.md).
 
 ## Where To Read More
 
 | Question | Document |
 |---|---|
-| The full plan, acceptance evidence, and stop rules | [docs/roadmap.md](docs/roadmap.md) |
-| What already shipped | [CHANGELOG.md](CHANGELOG.md) |
-| The current step-back audit and phased execution plan | [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md) |
-| How the next tracks get implemented | [docs/engineering-refinement-plan.md](docs/engineering-refinement-plan.md) |
-| Source, test, and facade cleanup | [docs/structural-maintainability.md](docs/structural-maintainability.md) |
-| MCP timeline, gate, and rollback criteria | [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.md) and [ADR-0009](docs/adr/0009-mcp-2026-readiness.md) |
-| Optional remote MCP, cloud hosting, authentication, and scale-out | [docs/optional-cloud-deployment-plan.md](docs/optional-cloud-deployment-plan.md) |
-| Catalog rounds and the promotion gate | [docs/catalog-strategy.md](docs/catalog-strategy.md) |
-| The publication freeze gate | [docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md) |
-| Earlier plans and superseded framing | [docs/roadmap-history.md](docs/roadmap-history.md) |
+| Full plan, acceptance evidence, stop rules | [docs/roadmap.md](docs/roadmap.md) |
+| Shipped changes | [CHANGELOG.md](CHANGELOG.md) |
+| Quality-proof execution | [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md) |
+| Engineering tracks | [docs/engineering-refinement-plan.md](docs/engineering-refinement-plan.md) |
+| Catalog rounds | [docs/catalog-strategy.md](docs/catalog-strategy.md) |
+| Publication freeze | [docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md) |
+| Earlier plans | [docs/roadmap-history.md](docs/roadmap-history.md) |

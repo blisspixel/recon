@@ -666,6 +666,7 @@ async def _query_cert_providers(ctx: dns_base.DetectionCtx, domain: str) -> tupl
     can still attribute the panel correctly.
     """
     from recon_tool.ct_cache import ct_cache_put
+    from recon_tool.sources.cert_providers import CertProviderPartialRateLimit
 
     providers: list[CertIntelProvider] = [CrtshProvider(), CertSpotterProvider()]
     failures = {"breaker": 0, "rate_limit": 0, "other": 0}
@@ -673,6 +674,32 @@ async def _query_cert_providers(ctx: dns_base.DetectionCtx, domain: str) -> tupl
     for provider in providers:
         try:
             subdomains, cert_summary, infrastructure_clusters = await provider.query(domain)
+        except CertProviderPartialRateLimit as partial:
+            # Keep partial CT names/summary while recording that paging was cut short.
+            failures["rate_limit"] += 1
+            ctx.degraded_sources.add(provider.name)
+            ctx.related_domains.update(partial.subdomains)
+            if partial.cert_summary is not None:
+                ctx.cert_summary = partial.cert_summary
+            if partial.infrastructure_clusters is not None:
+                ctx.infrastructure_clusters = partial.infrastructure_clusters
+            ctx.ct_provider_used = provider.name
+            ctx.ct_subdomain_count = len(partial.subdomains)
+            ctx.ct_attempt_outcome = "live_success"
+            logger.debug(
+                "cert intel from %s for %s: partial %d subdomains after rate limit",
+                provider.name,
+                domain,
+                len(partial.subdomains),
+            )
+            ct_cache_put(
+                domain,
+                partial.subdomains,
+                partial.cert_summary,
+                provider.name,
+                infrastructure_clusters=partial.infrastructure_clusters,
+            )
+            return True, None, failures
         except Exception as exc:
             failures[classify_ct_failure(exc)] += 1
             logger.debug("cert intel provider %s failed for %s: %s", provider.name, domain, exc)
@@ -680,11 +707,14 @@ async def _query_cert_providers(ctx: dns_base.DetectionCtx, domain: str) -> tupl
             continue
 
         if not subdomains and cert_summary is None and infrastructure_clusters is None:
+            # Soft-empty is not observed-empty: mark the channel unavailable so
+            # consumers cannot treat it as "no CT names published."
             logger.debug(
                 "cert intel provider %s returned empty for %s - treating as soft failure",
                 provider.name,
                 domain,
             )
+            ctx.degraded_sources.add(provider.name)
             if soft_provider is None:
                 soft_provider = provider.name
             continue

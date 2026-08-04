@@ -222,6 +222,7 @@ class TestChainLookupCompact:
 
     def test_rate_limit_message_uses_only_normalized_domain(self, monkeypatch: pytest.MonkeyPatch):
         import recon_tool.server.graph as server_graph
+        from recon_tool.mcp_client.sdk_compat import ToolError
 
         acquired: list[str] = []
 
@@ -232,12 +233,14 @@ class TestChainLookupCompact:
         monkeypatch.setattr(server_graph, "rate_limit_try_acquire", deny)
         raw = "https://www.example.com/private/path?token=secret"
 
-        result = asyncio.run(server.chain_lookup(raw))
+        with pytest.raises(ToolError) as exc_info:
+            asyncio.run(server.chain_lookup(raw))
 
+        message = str(exc_info.value)
         assert acquired == ["example.com"]
-        assert "Rate limited: example.com" in result
-        assert raw not in result
-        assert "/private/path" not in result
+        assert "Rate limited: example.com" in message
+        assert raw not in message
+        assert "/private/path" not in message
 
     def test_internal_error_and_log_use_only_normalized_domain(
         self,
@@ -246,6 +249,7 @@ class TestChainLookupCompact:
     ):
         import recon_tool.chain as chain_module
         import recon_tool.server.graph as server_graph
+        from recon_tool.mcp_client.sdk_compat import ToolError
 
         async def fail(domain: str, depth: int = 1) -> ChainReport:
             assert domain == "example.com"
@@ -259,12 +263,13 @@ class TestChainLookupCompact:
         monkeypatch.setattr(server_graph, "rate_limit_try_acquire", allow)
         raw = "https://www.example.com/private/path?token=secret"
 
-        with caplog.at_level("ERROR", logger="recon"):
-            result = asyncio.run(server.chain_lookup(raw))
+        with caplog.at_level("ERROR", logger="recon"), pytest.raises(ToolError) as exc_info:
+            asyncio.run(server.chain_lookup(raw))
 
-        assert "Error looking up example.com" in result
-        assert raw not in result
-        assert "/private/path" not in result
+        message = str(exc_info.value)
+        assert "Error looking up example.com" in message
+        assert raw not in message
+        assert "/private/path" not in message
         assert "chain lookup for example.com" in caplog.text
         assert raw not in caplog.text
         assert "/private/path" not in caplog.text
