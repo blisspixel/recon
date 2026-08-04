@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.10.1] - 2026-08-04
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Security
 
 - Upgraded locked transitive dependencies that Scorecard and `pip-audit`
