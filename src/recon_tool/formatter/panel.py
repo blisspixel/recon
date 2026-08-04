@@ -342,20 +342,11 @@ def _is_sparse_insight(line: str) -> bool:
 
 # ── Panel constants ─────────────────────────────────────────────
 
-# Default panel width: one char narrower than an 80-col terminal to avoid
-# wrap-to-next-line artefacts when the last cell is filled. The layout has
-# no border, so the effective content width equals the panel width.
-_PANEL_WIDTH_DEFAULT = 78
-_PANEL_WIDTH_MIN = 40
-# Back-compat alias for modules and tests that read the layout constant.
-_PANEL_WIDTH = _PANEL_WIDTH_DEFAULT
+_PANEL_WIDTH = 78  # One char narrower than an 80-col terminal to avoid
+# wrap-to-next-line artefacts when the last cell is
+# filled. The layout has no border, so the
+# effective content width equals the panel width.
 _LABEL_WIDTH = 13  # columns for Provider/Tenant/Auth/Confidence labels
-
-
-def _panel_width() -> int:
-    """Return a terminal-aware panel width capped at the default layout."""
-    terminal_width = get_console().width or _PANEL_WIDTH_DEFAULT
-    return max(_PANEL_WIDTH_MIN, min(_PANEL_WIDTH_DEFAULT, int(terminal_width) - 1))
 
 
 # Minimum columns for the Services sub-category labels. The effective
@@ -648,7 +639,7 @@ def render_tenant_panel(
         header.append("\n")
         header.append(info.queried_domain, style="dim")
     blocks.append(header)
-    rule = Text("─" * _panel_width(), style="dim")
+    rule = Text("─" * _PANEL_WIDTH, style="dim")
     blocks.append(rule)
 
     # ── Key facts block ────────────────────────────────────────────
