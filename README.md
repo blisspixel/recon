@@ -56,8 +56,10 @@ Before the first lookup, know what leaves your machine. recon makes DNS queries
 that recursive and authoritative DNS infrastructure may observe. Its only
 default request to a target-owned endpoint is the standards-defined MTA-STS
 policy fetch. Google CSE and BIMI certificate probes run only when
-`--direct-probes` is explicitly enabled. Full boundary:
+`--direct-probes` is explicitly enabled. Readable overview:
 [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md).
+Formal correlation model (layers, Bayesian DAG, robustness research):
+[docs/correlation.md](https://github.com/blisspixel/recon/blob/main/docs/correlation.md).
 
 ```bash
 recon example.com
@@ -207,6 +209,7 @@ Operators own deployment, identity, data handling, cost, and operations.
 |---|---|
 | Install and first commands | [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md) |
 | How it works | [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md) |
+| Correlation model | [docs/correlation.md](https://github.com/blisspixel/recon/blob/main/docs/correlation.md) |
 | MCP and agents | [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md), [agents/](https://github.com/blisspixel/recon/tree/main/agents) |
 | Full docs index | [docs/README.md](https://github.com/blisspixel/recon/blob/main/docs/README.md) |
 | Roadmap | [ROADMAP.md](https://github.com/blisspixel/recon/blob/main/ROADMAP.md) · [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md) · [docs/strategic-gap-audit.md](https://github.com/blisspixel/recon/blob/main/docs/strategic-gap-audit.md) |
