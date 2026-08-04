@@ -9,13 +9,29 @@ that do not move. Shipped work lives in [CHANGELOG.md](CHANGELOG.md).
 recon **v2.10.1** is the current production baseline: CLI, versioned JSON,
 local stdio MCP, bounded public-metadata collectors, fail-closed claim audit
 gates, MCP dual-SDK matrix, and a release path with provenance, SBOM, and
-channel parity.
+channel parity. Local execution is the default, and the project does not operate
+a hosted service. Optional cloud draft materials are directionally useful, not a
+validated production deployment.
 
-The evidence-semantic audit (27 claim families) and MCP v2 adoption are
-**complete and remain blocking maintenance**. The open product question is
+Release verification binds every published artifact to its exact tag, workflow,
+signer, and commit digest, and requires SBOM provenance. One
+digest-bound v2.6.3 historical exception preserves that release's published
+distribution-only bundle while still requiring SBOM structure validation; every
+later release fails if SBOM provenance is absent.
+
+The evidence-semantic audit is complete: 27 families are complete. 0 material
+runtime families carry incomplete lineage. Fail-closed inventory spans 84 score
+or quantitative fields among other governed surfaces. MCP v2 adoption is
+complete and both remain blocking maintenance. The open product question is
 still unproven: nothing yet measures whether fusion, CT enrichment, catalog
 size, or the broad agent surface improves operator decisions over deterministic
 evidence plus abstention.
+
+Publication maintainers must rerun
+[docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md)
+before any external submission. The most recent completed historical local
+submission-freeze proof is
+[validation/2026-06-30-submission-freeze-local-proof.md](validation/2026-06-30-submission-freeze-local-proof.md).
 
 ## Version path (order of operations)
 

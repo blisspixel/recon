@@ -194,12 +194,14 @@ class TestExplainDag:
         monkeypatch.setattr(server_introspection, "rate_limit_try_acquire", deny)
         raw = "https://www.gamma.invalid/private/path?token=secret"
 
-        result = await explain_dag(raw)
+        with pytest.raises(ToolError) as exc_info:
+            await explain_dag(raw)
 
+        message = str(exc_info.value)
         assert acquired == ["gamma.invalid"]
-        assert "Rate limited: gamma.invalid" in result
-        assert raw not in result
-        assert "/private/path" not in result
+        assert "Rate limited: gamma.invalid" in message
+        assert raw not in message
+        assert "/private/path" not in message
 
     @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
@@ -211,12 +213,13 @@ class TestExplainDag:
         mock_resolve.side_effect = RuntimeError("boom")
         raw = "https://www.gamma.invalid/private/path?token=secret"
 
-        with caplog.at_level("ERROR", logger="recon"):
-            result = await explain_dag(raw)
+        with caplog.at_level("ERROR", logger="recon"), pytest.raises(ToolError) as exc_info:
+            await explain_dag(raw)
 
-        assert "Error rendering DAG for gamma.invalid" in result
-        assert raw not in result
-        assert "/private/path" not in result
+        message = str(exc_info.value)
+        assert "Error rendering DAG for gamma.invalid" in message
+        assert raw not in message
+        assert "/private/path" not in message
         assert "explain_dag for gamma.invalid" in caplog.text
         assert raw not in caplog.text
         assert "/private/path" not in caplog.text
