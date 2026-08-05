@@ -72,6 +72,7 @@ actually shipped.
 | Canonical plan, acceptance evidence, and stop rules | [roadmap.md](roadmap.md) |
 | Current step-back audit and phased execution plan | [strategic-gap-audit.md](strategic-gap-audit.md) |
 | Frozen v2.11 product-quality decision rule, written before any run | [quality-baseline-preregistration.md](quality-baseline-preregistration.md) |
+| Aggregate-safe product-quality scorecard harness | `scripts/quality_scorecard.py` |
 | Dependency-ordered implementation plan | [engineering-refinement-plan.md](engineering-refinement-plan.md) |
 | Structural maintainability audit, pinned to the revision it measured | [structural-maintainability.md](structural-maintainability.md) |
 | Completed MCP 2026 compatibility matrix and adoption gate | [mcp-2026-07-28-readiness.md](mcp-2026-07-28-readiness.md) |

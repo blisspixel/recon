@@ -28,6 +28,14 @@ operator, corporate group, ownership, or control.
 
 ### Added
 
+- `scripts/quality_scorecard.py` emits the Phase 1 product-quality baseline as
+  one dated, revision-bound, aggregate-safe artifact. It is network-free and
+  corpus-free, and it is a diagnostic rather than a gate. It measures the one
+  Phase 1 quantity with no existing owner, MCP context cost, names the owner for
+  quantities other harnesses already produce, and records the rest as unmeasured
+  with the reason. The first run reports 22 tools costing 91,876 bytes of
+  session context before any call, 63.9 percent of it output schemas, and 26 of
+  1,070 detection rules carrying a verification date.
 - `docs/quality-baseline-preregistration.md` freezes the v2.11 product-quality
   decision rule before any collection or run: the primary claim family selected
   by elimination, four arms pinned to code paths, the channel-split reference
