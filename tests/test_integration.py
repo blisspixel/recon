@@ -12,7 +12,9 @@ from __future__ import annotations
 
 import pytest
 
+from recon_tool.http import http_client
 from recon_tool.models import SourceResult, TenantInfo
+from recon_tool.sources.userrealm import _TENANT_NAMESPACE_TYPES, USERREALM_URL
 
 pytestmark = pytest.mark.integration
 
@@ -31,7 +33,30 @@ def _source(results: list[SourceResult], name: str) -> SourceResult:
     return matches[0]
 
 
-def _assert_reserved_domain_provider_health(info: TenantInfo, results: list[SourceResult]) -> None:
+async def _observed_realm_namespace(domain: str) -> str:
+    """Read ``NameSpaceType`` straight from the provider, bypassing recon's parser.
+
+    This is the drift gate's ground truth. Asserting the raw response shape
+    here is what catches a GetUserRealm contract change: if Microsoft renames
+    the field or stops returning a JSON object, this fails loudly instead of
+    letting ``UserRealmSource`` silently parse nothing and still look healthy.
+    """
+
+    async with http_client(None) as client:
+        response = await client.get(USERREALM_URL, params={"login": f"user@{domain}", "json": "1"})
+
+    assert response.status_code == 200, f"GetUserRealm answered {response.status_code} for {domain}"
+    payload = response.json()
+    assert isinstance(payload, dict), "GetUserRealm no longer returns a JSON object"
+    assert "NameSpaceType" in payload, "GetUserRealm no longer reports NameSpaceType"
+    namespace = payload["NameSpaceType"]
+    assert isinstance(namespace, str), "GetUserRealm NameSpaceType is no longer a string"
+    return namespace
+
+
+def _assert_reserved_domain_provider_health(
+    info: TenantInfo, results: list[SourceResult], realm_namespace: str
+) -> None:
     """Assert source-level health without asserting ownership or tenant facts."""
 
     dns = _source(results, "dns_records")
@@ -41,8 +66,21 @@ def _assert_reserved_domain_provider_health(info: TenantInfo, results: list[Sour
     assert dns.ct_attempt_outcome in _CT_HEALTHY_OUTCOMES
 
     user_realm = _source(results, "user_realm")
-    assert user_realm.error is None
-    assert "user_realm" in info.sources
+    # Whether a reserved domain carries a third-party M365 tenant is registration
+    # state nobody here controls, and it changes without notice, so tenant
+    # presence is never asserted. Identity drift instead shows up as a transport
+    # failure or as recon disagreeing with the raw provider answer.
+    assert user_realm.source_unavailable is False
+    assert "identity:user_realm" not in user_realm.degraded_sources
+
+    if realm_namespace in _TENANT_NAMESPACE_TYPES:
+        assert user_realm.auth_type == realm_namespace
+        assert "user_realm" in info.sources
+    else:
+        # A stable negative. Per ``SourceResult.source_unavailable``, that case
+        # carries an ``error`` string with the flag false, so absence of a
+        # tenant must not be read as an unhealthy source.
+        assert user_realm.auth_type is None
 
 
 @pytest.mark.asyncio
@@ -59,7 +97,7 @@ async def test_resolve_reserved_domain_pipeline_runs():
 
     info, results = await resolve_tenant("example.com")
     assert info is not None
-    _assert_reserved_domain_provider_health(info, results)
+    _assert_reserved_domain_provider_health(info, results, await _observed_realm_namespace("example.com"))
 
 
 @pytest.mark.asyncio
@@ -75,7 +113,7 @@ async def test_resolve_second_reserved_domain():
 
     info, results = await resolve_tenant("example.org")
     assert info is not None
-    _assert_reserved_domain_provider_health(info, results)
+    _assert_reserved_domain_provider_health(info, results, await _observed_realm_namespace("example.org"))
 
 
 @pytest.mark.asyncio
