@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from typing import Any
 
 import pytest
@@ -157,6 +158,18 @@ def test_markdown_memo_reports_the_measured_numbers(scorecard: dict[str, Any]) -
     assert "## Unmeasured" in memo
     for entry in scorecard["unmeasured"]:
         assert entry["metric"] in memo
+
+
+def test_markdown_memo_never_prints_a_non_commit_hash_as_a_commit_receipt(scorecard: dict[str, Any]) -> None:
+    # test_documentation_integrity resolves every backticked hex string in
+    # validation/*.md as a git commit. The catalog digest is a content hash, so
+    # it must not be emitted bare or a committed memo breaks that gate.
+    memo = _render_markdown(scorecard)
+    receipts = set(re.findall(r"`([0-9a-f]{7,40})`", memo))
+    digest = scorecard["revisions"]["catalog_digest_sha256"] or ""
+
+    assert digest[:12] not in receipts
+    assert f"`sha256:{digest[:12]}`" in memo
 
 
 def test_markdown_memo_tolerates_an_absent_git_revision(scorecard: dict[str, Any]) -> None:
