@@ -419,7 +419,9 @@ def _render_markdown(scorecard: dict[str, Any]) -> str:
     lines = [
         "# Product-quality baseline scorecard",
         "",
-        f"Commit `{commit[:12]}`, catalog `{(revisions['catalog_digest_sha256'] or 'unknown')[:12]}`, "
+        # The catalog digest carries its algorithm prefix so neither a reader nor
+        # the backticked-commit-receipt gate mistakes a content hash for a commit.
+        f"Commit `{commit[:12]}`, catalog `sha256:{(revisions['catalog_digest_sha256'] or 'unknown')[:12]}`, "
         f"Python {scorecard['environment']['python']}.",
         "",
         "Network-free, corpus-free, aggregate-safe. Diagnostic artifact, not a gate.",
