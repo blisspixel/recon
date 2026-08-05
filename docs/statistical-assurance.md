@@ -131,9 +131,9 @@ level and does not guarantee that the posterior is near 0.5.
 
 `entropy_reduction_nats` is
 
-\[
+$$
 H(P_m(X))-H(P_m(X\mid e)).
-\]
+$$
 
 It can be negative. It is a signed marginal entropy change, not realized
 pointwise information gain. Summing it across dependent nodes can double count

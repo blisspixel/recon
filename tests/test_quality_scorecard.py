@@ -13,7 +13,6 @@ from scripts.quality_scorecard import (
     _byte_length,
     _catalog_surface,
     _duplicate_definition_bytes,
-    _mcp_context_cost,
     _render_markdown,
     build_scorecard,
 )
@@ -21,8 +20,20 @@ from scripts.quality_scorecard import (
 
 @pytest.fixture(scope="module")
 def scorecard() -> dict[str, Any]:
-    """Build the scorecard once; it registers the MCP surface and reads the catalog."""
+    """Build the scorecard once; it registers the MCP surface and reads the catalog.
+
+    Module-scoped on purpose. Measuring the MCP surface spins up an asyncio event
+    loop, and on Windows every new loop allocates a socket pair for its self-pipe.
+    Rebuilding per test multiplies that churn across parallel workers for no gain,
+    since the measurement is deterministic for a given revision.
+    """
     return build_scorecard()
+
+
+@pytest.fixture(scope="module")
+def mcp_cost(scorecard: dict[str, Any]) -> dict[str, Any]:
+    """Reuse the scorecard's MCP measurement rather than recomputing it."""
+    return scorecard["measurements"]["mcp_context_cost"]
 
 
 def test_byte_length_measures_the_compact_wire_form() -> None:
@@ -77,28 +88,25 @@ def test_duplicate_definition_accounting_tolerates_a_bare_surface() -> None:
     assert result["most_redundant"] == []
 
 
-def test_mcp_context_cost_reports_the_registered_surface() -> None:
-    cost = _mcp_context_cost()
-
-    assert cost["tool_count"] == len(cost["per_tool"])
-    assert cost["tool_count"] > 0
-    assert cost["session_context_bytes"] == cost["discovery_bytes"] + cost["instruction_preamble_bytes"]
-    assert all(entry["total_bytes"] > 0 for entry in cost["per_tool"])
+def test_mcp_context_cost_reports_the_registered_surface(mcp_cost: dict[str, Any]) -> None:
+    assert mcp_cost["tool_count"] == len(mcp_cost["per_tool"])
+    assert mcp_cost["tool_count"] > 0
+    assert mcp_cost["session_context_bytes"] == mcp_cost["discovery_bytes"] + mcp_cost["instruction_preamble_bytes"]
+    assert all(entry["total_bytes"] > 0 for entry in mcp_cost["per_tool"])
 
 
-def test_mcp_per_tool_costs_are_ranked_largest_first() -> None:
-    sizes = [entry["total_bytes"] for entry in _mcp_context_cost()["per_tool"]]
+def test_mcp_per_tool_costs_are_ranked_largest_first(mcp_cost: dict[str, Any]) -> None:
+    sizes = [entry["total_bytes"] for entry in mcp_cost["per_tool"]]
 
     assert sizes == sorted(sizes, reverse=True)
 
 
-def test_mcp_headroom_bound_is_not_larger_than_the_payload() -> None:
-    cost = _mcp_context_cost()
-    headroom = cost["headroom"]
+def test_mcp_headroom_bound_is_not_larger_than_the_payload(mcp_cost: dict[str, Any]) -> None:
+    headroom = mcp_cost["headroom"]
 
     # Dropping a field can only shrink the payload. A trim that appears to grow
     # it would mean the measurement is not reading the same serialization.
-    assert headroom["discovery_without_output_schema_bytes"] <= cost["discovery_bytes"]
+    assert headroom["discovery_without_output_schema_bytes"] <= mcp_cost["discovery_bytes"]
     assert 0.0 <= headroom["output_schema_share_of_discovery"] <= 1.0
 
 
