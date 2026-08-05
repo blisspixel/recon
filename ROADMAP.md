@@ -85,6 +85,10 @@ before any collection or run. Its power analysis supersedes the nominal
 minimum-evidence floor: the selected margin needs at least 155
 reference-positive and 183 reference-negative labeled units.
 
+`scripts/quality_scorecard.py` emits the public half of the Phase 1 baseline,
+network-free and corpus-free, and names every channel it cannot measure without
+the private corpus or live providers.
+
 ### 4. Optional operator-hosted access - lower priority side track
 
 Draft container + Cloud Run IaC only. Local CLI and stdio MCP remain complete.
