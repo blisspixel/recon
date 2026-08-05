@@ -28,6 +28,12 @@ operator, corporate group, ownership, or control.
 
 ### Added
 
+- `scripts/check_doc_rot.py` is a new blocking gate stage rejecting Markdown
+  that renders silently wrong on github.com: LaTeX `\(` and `\[` delimiters the
+  renderer treats as escaped literal brackets, unclosed `$$` display blocks, and
+  sections hollowed out into pointers that redirect the reader without carrying
+  content. It runs in `scripts/check.py` and CI, and it found one live defect on
+  its first run.
 - `scripts/quality_scorecard.py` emits the Phase 1 product-quality baseline as
   one dated, revision-bound, aggregate-safe artifact. It is network-free and
   corpus-free, and it is a diagnostic rather than a gate. It measures the one
@@ -49,6 +55,11 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- `docs/statistical-assurance.md` rendered its signed marginal entropy formula
+  as literal bracketed LaTeX rather than math, so github.com printed the raw
+  expression between plain brackets. Same defect class as the
+  `docs/correlation.md` repair, in a file that repair did not touch, found by
+  the new doc-rot gate on its first run.
 - The scheduled provider-drift gate no longer asserts that a reserved domain
   carries a third-party Microsoft 365 tenant. `example.org` lost its tenant
   registration, GetUserRealm answered `NameSpaceType: Unknown`, and the gate

@@ -358,6 +358,12 @@ jobs:
       - name: Enforce Markdown links and heading anchors
         run: uv run python scripts/check_markdown_links.py
 
+      - name: Enforce renderable math and non-hollow sections
+        # correlation.md rendered broken math for three weeks because no gate
+        # read the delimiters, and pointer stubs satisfied the section-link
+        # check by resolving to a heading that carried nothing.
+        run: uv run python scripts/check_doc_rot.py
+
       - name: Enforce generated synthetic terminal demo
         # README shows the real default renderer over a reserved no-network
         # fixture. Block stale screenshots when panel behavior changes.
