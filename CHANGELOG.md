@@ -26,6 +26,18 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- The scheduled provider-drift gate no longer asserts that a reserved domain
+  carries a third-party Microsoft 365 tenant. `example.org` lost its tenant
+  registration, GetUserRealm answered `NameSpaceType: Unknown`, and the gate
+  read that stable negative as an unhealthy source. The identity check now
+  compares recon's parse against the raw GetUserRealm response and asserts the
+  provider still returns the `NameSpaceType` field recon depends on, so it
+  catches contract drift without tracking tenant churn. No shipped behavior
+  changed: `SourceResult` already recorded the negative with
+  `source_unavailable` false, and that field is what merge and delta consume.
+
 ## [2.10.2] - 2026-08-04
 
 ### Tool Surface Changes
