@@ -280,10 +280,23 @@ Detailed work and rollback criteria live in
 
 ### 3. Establish a reproducible product-quality baseline
 
-Status: specified, depends on the claim taxonomy from priority 1.
+Status: specified, decision rule frozen, measurement not started. Depends on the
+claim taxonomy from priority 1.
 
 The phase order, promotion evidence, and stop rules are summarized in the
 [Quality Proof execution plan](strategic-gap-audit.md#quality-proof-execution-plan).
+
+Every choice that had to precede results is frozen in
+[quality-baseline-preregistration.md](quality-baseline-preregistration.md),
+dated 2026-08-05. It selects `m365_tenant` under
+`runtime.identity-and-tenant.v1` as the primary family by elimination from the
+[external evidence ledger](statistical-assurance.md#external-evidence-ledger),
+pins the four arms to code paths, fixes the safety margin at 0.02, and records a
+power analysis that supersedes the nominal minimum-evidence floor below: the
+selected margin requires at least 155 reference-positive and 183
+reference-negative labeled units, because at 30 negative units the tightest
+achievable safety bound is 0.1157 even with a flawless result. The evaluation
+frame excludes the existing calibration corpus whole.
 
 Why third: the project has extensive implementation and assurance checks, but
 it does not yet measure whether probabilistic fusion, CT enrichment, a large

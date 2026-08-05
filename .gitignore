@@ -111,6 +111,11 @@ docs/accuracy.md
 # reported one-sided. Pure label/channel-split logic is unit-tested; the
 # orchestration is maintainer-local and prints aggregates only. No target data.
 !/validation/tenancy_reference_calibration.py
+# Power analysis for the frozen product-quality decision rule: pure arithmetic
+# (exact Clopper-Pearson bounds by binomial-CDF bisection), no network, no
+# corpus, no third-party dependency. Reproduces the sample-size tables in
+# docs/quality-baseline-preregistration.md. No target data.
+!/validation/quality_power_analysis.py
 # Layer-ablation harness + memo: fully synthetic (model-sampled worlds, planted
 # partitions, fictional hostnames), deterministic, publishable. No target data.
 !/validation/layer_ablation.py

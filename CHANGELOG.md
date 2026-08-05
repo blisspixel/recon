@@ -26,6 +26,19 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Added
+
+- `docs/quality-baseline-preregistration.md` freezes the v2.11 product-quality
+  decision rule before any collection or run: the primary claim family selected
+  by elimination, four arms pinned to code paths, the channel-split reference
+  label and its named common-cause limit, both estimands, the paired
+  Clopper-Pearson rule with a 0.02 safety margin, and the disclosure boundary.
+- `validation/quality_power_analysis.py` reproduces the preregistration's power
+  analysis with exact Clopper-Pearson bounds and no third-party dependency. It
+  shows the nominal 30-unit negative floor supports no margin tighter than
+  0.1157, and fixes the required sample at 155 reference-positive and 183
+  reference-negative labeled units.
+
 ### Fixed
 
 - The scheduled provider-drift gate no longer asserts that a reserved domain

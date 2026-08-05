@@ -72,11 +72,18 @@ rows. Detail: [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.m
 
 ### 3. Product-quality baseline - **next build priority: v2.11**
 
-Specified, not started. Process evidence is rich; product-outcome evidence is
-not. Acceptance and stop rules live in
+Specified, decision rule frozen, measurement not started. Process evidence is
+rich; product-outcome evidence is not. Acceptance and stop rules live in
 [docs/roadmap.md](docs/roadmap.md#3-establish-a-reproducible-product-quality-baseline)
 and the
 [Quality Proof execution plan](docs/strategic-gap-audit.md#quality-proof-execution-plan).
+
+The primary claim family, the four arms, the reference label, the safety
+margin, and the paired decision rule were frozen on 2026-08-05 in
+[docs/quality-baseline-preregistration.md](docs/quality-baseline-preregistration.md),
+before any collection or run. Its power analysis supersedes the nominal
+minimum-evidence floor: the selected margin needs at least 155
+reference-positive and 183 reference-negative labeled units.
 
 ### 4. Optional operator-hosted access - lower priority side track
 
