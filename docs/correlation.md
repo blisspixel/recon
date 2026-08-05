@@ -55,7 +55,7 @@ target's web infrastructure. Google CSE and BIMI certificate requests are
 opt-in direct probes. recon does not scan ports, authenticate, crawl target
 applications, test exploitability, or infer company ownership.
 
-Let (O) be the observations returned by this bounded collection channel. One
+Let $O$ be the observations returned by this bounded collection channel. One
 lookup is a non-atomic observation window: DNS, CT, identity metadata, and
 MTA-STS can be read at different times, from different providers and vantage
 points. The channel is incomplete and strategic:
@@ -66,8 +66,8 @@ points. The channel is incomplete and strategic:
 - some operator-controlled tokens can be hidden, left stale, or planted;
 - collectors can fail or return partial data.
 
-Therefore (O) does not identify the full private configuration (X). A
-correlation layer may organize or constrain claims about (X), but it must not
+Therefore $O$ does not identify the full private configuration $X$. A
+correlation layer may organize or constrain claims about $X$, but it must not
 manufacture observability.
 
 ### 1.1 Orthogonal output semantics
@@ -165,9 +165,12 @@ flowchart LR
   rules -. "evidence chain" .-> bn["Layer 3: Bayesian network<br/>posteriors and bands"]
   bn -. "fusion path" .-> panel
 
-  style rules fill:#eef
-  style graphL fill:#efe
-  style bn fill:#fee
+  classDef det fill:#dbe5f7,stroke:#3c5a8c,stroke-width:1px,color:#101828
+  classDef graph fill:#d7ecdf,stroke:#3f7d55,stroke-width:1px,color:#101828
+  classDef bayes fill:#f8dedb,stroke:#a04a3f,stroke-width:1px,color:#101828
+  class rules det
+  class graphL graph
+  class bn bayes
 ```
 
 ### 2.1 Deterministic evidence and rule correlation
@@ -196,12 +199,12 @@ organizational control, live product use, or a causal explanation for change.
 slug, it chooses a source-type prior, adds positive weights for observed evidence
 records, leaves the negative mass fixed, and reports the resulting mean.
 
-For prior parameters ((\alpha_0,\beta_0)) and observed positive weights (w_j),
+For prior parameters $(\alpha_0,\beta_0)$ and observed positive weights $w_j$,
 
-\[
+$$
 s = \frac{\alpha_0 + \sum_j w_j}
          {\alpha_0 + \beta_0 + \sum_j w_j}.
-\]
+$$
 
 This is a monotone evidence-strength heuristic. It is not a fitted Bernoulli
 posterior because there is no labeled likelihood model, no negative update, and
@@ -224,16 +227,16 @@ The current graph layer constructs an undirected one-mode projection:
 - bounded or failed cases fall back to connected components as documented by
   the schema.
 
-For a partition (c), weighted modularity is
+For a partition $c$, weighted modularity is
 
-\[
+$$
 Q = \frac{1}{2m}\sum_{ij}
     \left(A_{ij} - \frac{k_i k_j}{2m}\right)
     \mathbf{1}[c_i=c_j].
-\]
+$$
 
-Here \(A_{ij}\) is the observed edge weight,
-\(k_i=\sum_j A_{ij}\), and \(2m=\sum_i k_i\).
+Here $A_{ij}$ is the observed edge weight,
+$k_i=\sum_j A_{ij}$, and $2m=\sum_i k_i$.
 
 `Q` is an objective value relative to the modularity null model. It is not a
 probability, calibrated partition-quality score, ownership confidence, or test
@@ -242,7 +245,7 @@ repeats a partition on one fixed graph. It does not show stability to missing
 CT entries, large multi-tenant certificates, or sampling noise.
 
 The one-mode projection is the deeper limitation. A certificate containing
-(k) retained SANs creates (\binom{k}{2}) pairwise edges. A single 60-SAN
+$k$ retained SANs creates $\binom{k}{2}$ pairwise edges. A single 60-SAN
 certificate can therefore create 1,770 edges. This can turn certificate size
 into apparent community evidence before Louvain sees the graph.
 
@@ -265,46 +268,44 @@ flowchart LR
   m365 --> emp["email_security_modern_provider"]
   gws --> emp
   egw["email_gateway_present<br/>prior 0.18"] --> emp
-  pol["email_security_policy_enforcing<br/>prior 0.25"]
+  pol["email_security_policy_enforcing<br/>prior 0.62"]
   cdn["cdn_fronting<br/>prior 0.45"]
   aws["aws_hosting<br/>prior 0.40"]
 
-  style m365 fill:#eef
-  style gws fill:#eef
-  style egw fill:#eef
-  style cdn fill:#eef
-  style aws fill:#eef
-  style pol fill:#eef
-  style fed fill:#fff
-  style okta fill:#fff
-  style emp fill:#fff
+  classDef root fill:#dbe5f7,stroke:#3c5a8c,stroke-width:1px,color:#101828
+  classDef child fill:#f4f5f7,stroke:#6b7280,stroke-width:1px,color:#101828
+  class m365,gws,egw,cdn,aws,pol root
+  class fed,okta,emp child
 ```
 
-Nine nodes total. Five roots carry priors only; four children use CPTs.
+Nine nodes total. Six roots carry priors only; three children use CPTs.
 `email_security_modern_provider` has three parents because M365, Google
 Workspace, and gateway presence contribute differently to the
 provider-presence claim. `email_security_policy_enforcing` is a separate root
-because policy enforcement is not the same claim as provider presence.
+because policy enforcement is not the same claim as provider presence. Its
+prior is the one corpus-grounded root value in the network: 0.62 reflects the
+share of the 2026-06 development corpus publishing an enforcing DMARC policy
+(CAL12), where the other roots stay hand-set.
 
-Let \(X_1,\ldots,X_n\) be claim nodes and let `pa(i)` be the parents of node
-\(i\). The committed model factorizes as
+Let $X_1,\ldots,X_n$ be claim nodes and let `pa(i)` be the parents of node
+$i$. The committed model factorizes as
 
-\[
+$$
 P(X_1,\ldots,X_n)=\prod_i P(X_i\mid X_{\operatorname{pa}(i)}).
-\]
+$$
 
 Observed slug or signal bindings add virtual-evidence factors
-(\phi_e(X_i)). Exact variable elimination then computes
+$\phi_e(X_i)$. Exact variable elimination then computes
 
-\[
+$$
 P_m(X_i\mid e) =
 \frac{\sum_{X\setminus X_i}\prod_j
       P_m(X_j\mid X_{\operatorname{pa}(j)})\prod_e\phi_e(X)}
      {\sum_X\prod_j
       P_m(X_j\mid X_{\operatorname{pa}(j)})\prod_e\phi_e(X)}.
-\]
+$$
 
-The subscript (m) matters. The value is exact for the committed model, but the
+The subscript $m$ matters. The value is exact for the committed model, but the
 priors, conditional-probability tables, evidence likelihoods, dependency groups,
 and missingness rules are manually encoded. Several parameters were informed by
 a June 2026 development corpus. Exact inference is not evidence that the model
@@ -314,18 +315,18 @@ tracks the world or generalizes beyond that corpus.
 
 ### 3.1 Fired bindings
 
-For a binding (e) on claim node (X), the model stores
+For a binding $e$ on claim node $X$, the model stores
 
-\[
+$$
 \phi_e(X=1)=P(e\mid X=1),\qquad
 \phi_e(X=0)=P(e\mid X=0).
-\]
+$$
 
 The likelihood ratio is
 
-\[
+$$
 LR_e=\frac{P(e\mid X=1)}{P(e\mid X=0)}.
-\]
+$$
 
 Bindings in different declared units are multiplied as conditionally independent
 given the claim. This is a modeling assumption, not an observed property.
@@ -336,9 +337,9 @@ Bindings assigned to the same group are treated as redundant views of one
 evidence unit. When several fire, the implementation keeps the member with the
 largest absolute log likelihood ratio:
 
-\[
+$$
 e_g^*=\arg\max_{e\in g}|\log LR_e|.
-\]
+$$
 
 This prevents a known form of double counting and is operationally useful. It is
 not a general conservative bound on the unknown joint likelihood. Without a
@@ -355,9 +356,9 @@ The implementation has two missingness policies.
 
 For a hideable node, a non-fired binding contributes no factor:
 
-\[
+$$
 LR_{\neg e}=1.
-\]
+$$
 
 This is a conservative product rule: recon declines to treat missing optional
 public evidence as evidence of absence. It is not derived from the statement
@@ -380,10 +381,10 @@ reference checks.
 For a local binary claim with fixed prior odds and only positive independent
 likelihood ratios, deleting a fired unit cannot increase the local odds:
 
-\[
+$$
 O(X=1\mid E)=O(X=1)\prod_{e\in E}LR_e,
 \quad LR_e\ge 1.
-\]
+$$
 
 This is a narrow monotonicity result. It does not prove that deletion moves the
 full network toward 0.5, prevents confident false negatives, neutralizes parent
@@ -392,7 +393,7 @@ require additional assumptions and tests.
 
 ### 3.5 Model-relative posterior
 
-The reported network mean is (P_m(X_i=1\mid e)). It may be called a posterior
+The reported network mean is $P_m(X_i=1\mid e)$. It may be called a posterior
 only with the model-relative qualifier. It must not be called calibrated for a
 claim family unless parameter development is disjoint from evaluation and an
 independent, predictor-input-disjoint label study supports that word for the
@@ -412,13 +413,13 @@ The current evidence shows:
 
 ### 4.1 Evidence-responsive uncertainty band
 
-After exact network inference produces mean (p), the implementation constructs
+After exact network inference produces mean $p$, the implementation constructs
 a separate Beta distribution with
 
-\[
+$$
 \alpha=p n_{\mathrm{eff}},\qquad
 \beta=(1-p)n_{\mathrm{eff}},
-\]
+$$
 
 and reports its central 80 percent quantiles when both shape parameters are at
 least one and those quantiles contain the reported mean. This is the exact
@@ -427,23 +428,23 @@ be read as a strict interior-unimodality test. Other cases, and any central
 interval that misses the mean, use a clamped mean-centered fallback.
 The effective mass is
 
-\[
+$$
 n_{\mathrm{eff}}=\max\left(
 n_{\min},
 n_{\min}+c_e N_e-c_c N_c
 \right),
-\]
+$$
 
-where \(N_e\) is the effective-unit count after dependency grouping, structural
-masking, and non-neutral declarative-absence selection; \(N_c\) is the global
-conflict count. The shipped defaults are \(n_{\min}=4\), evidence contribution
-\(c_e=1\), and conflict penalty \(c_c=1.5\).
+where $N_e$ is the effective-unit count after dependency grouping, structural
+masking, and non-neutral declarative-absence selection; $N_c$ is the global
+conflict count. The shipped defaults are $n_{\min}=4$, evidence contribution
+$c_e=1$, and conflict penalty $c_c=1.5$.
 
 This band is not derived from the Bayesian network's latent-state posterior,
 CPT uncertainty, likelihood uncertainty, or a sampling design. It is a
 model-relative evidence-strength display parameterized by and required to
-contain (p). The stable JSON
-fields are `interval_low` and `interval_high`; documentation calls them an
+contain $p$. The stable JSON fields are `interval_low` and `interval_high`;
+documentation calls them an
 **evidence-responsive uncertainty band**.
 
 The same point posterior mean can therefore produce different band widths as
@@ -462,8 +463,8 @@ flowchart TB
   end
 ```
 
-At \(n_{\mathrm{eff}} = 4\) (the display floor) a mid-mean band is wide: the
-public channel barely constrains the claim. At \(n_{\mathrm{eff}} = 14\) the
+At $n_{\mathrm{eff}} = 4$ (the display floor) a mid-mean band is wide: the
+public channel barely constrains the claim. At $n_{\mathrm{eff}} = 14$ the
 same mid-mean is a tighter model-relative band. Neither width is a calibrated
 coverage probability.
 
@@ -471,8 +472,7 @@ Four is a minimum display mass, not a passive-observation ceiling. More
 counted units can increase the mass without bound under the current formula.
 Conflict can lower display mass and widen the band above the floor; it never
 changes the mean. Band width is not generally monotone in added evidence because
-evidence can change both (p) and
-(n_{\mathrm{eff}}).
+evidence can change both $p$ and $n_{\mathrm{eff}}$.
 
 No ground-truth 80 percent coverage claim is made. A future interval with that
 claim would require a coherent uncertainty model or a reference-label coverage
@@ -482,9 +482,9 @@ study under clearly stated exchangeability or shift assumptions.
 
 For each node the implementation reports
 
-\[
+$$
 \Delta H_i=H(P_m(X_i))-H(P_m(X_i\mid e)).
-\]
+$$
 
 This value can be negative for one observation. It is a signed marginal entropy
 change, not realized pointwise information gain. The expectation of entropy
@@ -494,9 +494,9 @@ dependent claims.
 
 For one realized observation, a nonnegative measure of belief change would be
 
-\[
+$$
 D_{KL}\!\left(P_m(X_i\mid e)\,\|\,P_m(X_i)\right),
-\]
+$$
 
 but even that remains model-relative and does not measure product value.
 
@@ -516,35 +516,369 @@ The relevant distinction is:
 The current network reports the first under one committed parameterization. It
 does not integrate the second and does not compute the third.
 
-### 4.4 Legacy validation-strategy anchor
+### 4.4 CPT sensitivity
 
-Historical changelog and validation records cite the former section 4.4. The
-current validation contract is section 8. Those dated records retain their
-original language; this document's current interpretation governs new claims.
+The network ships hand-encoded priors and CPT entries as data (section 2.4).
+The fair question is how much any reported posterior depends on those exact
+numbers. `tests/test_bayesian_sensitivity.py` answers it mechanically: it
+perturbs every CPT entry and every root prior by $\pm 0.10$ across a fixed set
+of canonical evidence scenarios, and records the largest posterior shift each
+perturbation produces anywhere in the network.
 
-### 4.8 Legacy defensive-value anchor
+On the shipped topology:
 
-Historical planning records cite the former section 4.8. Current defensive value
-is defined by the claim-robustness objective in section 5 and the measurable
-acceptance criteria in sections 8 and 9.
+| Statistic | v1.9.0 | Current (v1.9.3 topology) |
+|---|---|---|
+| Median posterior shift | 0.019 | 0.018 |
+| 95th percentile | 0.109 | 0.100 |
+| Maximum observed | 0.139 | 0.106 |
 
-### 4.9 Legacy definitional-discipline anchor
+Sensitivity tightened at the v1.9.3 split because that change removed the
+most-sensitive node. The retired `email_security_strong` combined three parents
+with five evidence bindings; its replacements each carry one of those burdens
+and not the other (section 4.9). The test itself asserts a deliberately loose
+regression bound rather than these measured values, so ordinary tuning does not
+trip it and a structural regression still does.
 
-Historical calibration records cite the former section 4.9. Current definitions
-are the output classes in section 1.1, Bayesian semantics in section 3, and
-numeric semantics in section 4.
+What this establishes: no single hand-set number carries a typical posterior,
+so the reported values are not artifacts of one lucky parameter choice. What it
+does not establish: that the numbers are jointly right. The analysis perturbs
+one entry at a time against a fixed scenario set. It says nothing about
+correlated misspecification across several entries, and nothing about whether
+the network's structure matches the world. Those are section 8 questions.
 
-### 4.10 Legacy failure-mode anchor
+### 4.5 Prior collapse and the `sparse` flag
 
-Historical review records cite the former section 4.10. Current failure modes
-are incorporated into the evidence-removal and planting model in section 5 and
-the graph limitations in section 6.
+A node with no fired binding does not get a hedged posterior. It gets the
+prior:
 
-### 4.11 Legacy adversarial-threat anchor
+$$P_m(X\mid e)=P_m(X)\quad\text{whenever no binding of }X\text{ fires and no parent moves.}$$
 
-Historical claim records cite the former section 4.11. The current adversarial
-model, including both suppression and planting, is section 5. Pattern labels in
-dated records are historical names, not separate current guarantees.
+This is the same value the network would report before observing anything, and
+reading it as a finding is the single most common misreading of the layer. The
+JSON therefore ships `sparse` alongside the posterior so the distinction is
+machine-readable rather than something an operator must infer from the number.
+
+The consequence worth internalizing is that a posterior near its prior and a
+posterior driven to its prior by balanced evidence are different states that
+can print the same mean. `sparse`, `n_eff`, and `evidence_used` are what
+separate them, which is why the schema treats them as part of the result rather
+than as diagnostics (section 1.2). Every field the layer surfaces exists so an
+operator can ask why a posterior looks the way it does and get the answer from
+the same object, without a separate report.
+
+Note that a moved posterior is not evidence that the private state was
+identified, and an unmoved one is not evidence of absence; section 4.3 states
+that asymmetry, and section 3.3 states the missingness policy that produces it.
+
+### 4.6 Relationship to the per-slug evidence-strength layer
+
+recon carries two numeric layers that are easy to conflate because both emit a
+number in $[0,1]$ per name. They answer different questions:
+
+- **Per-slug evidence strength** (`slug_confidences`, section 2.2). A monotone
+  summary over one slug's own evidence records. It addresses: given this
+  evidence chain, how strongly did the deterministic pipeline attribute slug
+  $s$? It is per-slug, closed-form, and encodes no relationship between slugs.
+- **Network posterior** (`posterior_observations`, section 2.4). A
+  multi-node update over the committed DAG. It addresses: given everything
+  observed, how does the committed model score the high-level claim $X$, after
+  parent propagation, dependency grouping, and conflict accounting?
+
+Neither derives from the other and neither supersedes the other. The per-slug
+value is confidence about an extraction; the network value is a model-relative
+score for a claim that *uses* extractions as evidence. A high slug strength with
+a near-prior posterior is coherent and common: the pipeline is confident about
+what it saw, and the committed model treats what it saw as weakly diagnostic of
+the broader claim. Both fields are independently stable in the schema, and a
+consumer may read either or both.
+
+### 4.7 Two claims the validation must not conflate
+
+The checks in section 8 support two epistemologically separate propositions,
+and most misreadings of this layer come from collapsing them:
+
+1. **The engine is faithful to the committed model.** Exact-inference
+   agreement with independent enumeration, the canonical-network reference
+   test, the sensitivity bound in section 4.4, determinism, and per-node
+   propagation stability all test this. Synthetic calibration belongs here too,
+   and this is the subtle case: the generator samples ground truth from the
+   network's *own* joint distribution, so passing it shows the engine
+   implements the network correctly and shows nothing at all about whether the
+   network describes the world.
+2. **The committed model is a useful description of the world.** Only
+   corpus work speaks to this, and it speaks weakly. Agreement between a
+   high posterior and a high-confidence deterministic classification is close
+   to tautological where both read the same underlying records, which is the
+   usual case. Section 8.2 records the ablation result that the current
+   validation cannot decide the advanced layers' product disposition.
+
+A related caveat applies to calibration error as a metric. Expected calibration
+error and the Brier score reward posteriors that match empirical frequencies.
+The conflict penalty in section 4.1 deliberately optimizes something else, so
+both metrics read slightly worse on recon's posteriors than on a
+penalty-free baseline, and the strictly correct metric would be risk under that
+same engineered loss. Both are therefore read as diagnostics, not targets;
+driving them down would mean dropping the conflict penalty.
+
+The same care applies to any reported calibration figure's regime. A figure
+computed conditional on at least one binding firing describes the regime where
+the model makes a claim. The unconditional figure over all domains mixes in the
+prior-collapse regime of section 4.5, where the layer is miscalibrated against
+the base rate *by construction*. That gap measures the missingness design, not
+a defect, and quoting either number without its regime misrepresents the layer.
+
+### 4.8 What the layer offers a defender
+
+A defender who has hardened their public footprint wants a specific answer: if
+someone ran this against us, what would the public channel actually support?
+
+The layer answers with a band and a provenance trail rather than a grade. On a
+hardened target most nodes come back sparse with wide bands, which is the
+useful negative result: the public channel does not carry the evidence, and the
+hardening is doing its job. On an under-hardened target the bands narrow on
+specific nodes, and `evidence_used` names the exact observable that did it, so
+the finding is actionable rather than atmospheric.
+
+Two limits keep this honest. The output is model-relative, so it describes what
+recon's committed model does with public evidence, not an attacker's ceiling
+against a better model or a better channel. And a wide band is not a safety
+certificate: section 4.11 documents a posture where the layer is confidently
+wrong in the other direction.
+
+### 4.9 Definitional discipline: the v1.9.3 split
+
+The v1.9.0 corpus run surfaced exactly one weak node. `email_security_strong`
+agreed with the deterministic pipeline on 52.6 percent of its high-confidence
+posteriors while every other node sat near 100. The reflex reading is a
+calibration problem: wrong numbers, tune the numbers. The v1.9.3 change came
+from taking the alternative seriously, and it is the worked example this
+project points at when a CPT change is proposed.
+
+**The diagnosis.** The node's CPT was parameterized over modern-mail-provider
+presence, with parents `m365_tenant`, `google_workspace_tenant`, and
+`email_gateway_present`. Its evidence bindings were policy signals: DMARC
+reject and quarantine, MTA-STS enforce, DKIM, strict SPF. Those are different
+claims. An M365 tenant publishing `p=none` is a modern provider with weak
+policy; a self-hosted domain behind a gateway publishing a strict reject is the
+reverse. The node asserted "strong email security" using provider parents and
+policy evidence, so it conflated the two, and no CPT entry can reconcile
+definitions that disagree.
+
+**The fix.** Replace the one node with two:
+
+- `email_security_modern_provider` keeps the provider parents and drops the
+  evidence bindings entirely. Its posterior is pure CPT propagation, because
+  provider presence is already carried by the parent slugs.
+- `email_security_policy_enforcing` becomes a root with no parents and carries
+  the policy bindings. Enforcement is provider-independent: a Zoho, Fastmail,
+  or self-hosted domain publishing reject with DKIM and a strict SPF fires it
+  exactly as an M365 one does.
+
+An operator who wants the conjunction computes it downstream from two clear
+claims, which is more useful than one claim that tried to be both.
+
+The same discipline applied to `federated_identity`, whose CPT parameterized
+federation on `m365_tenant` alone. Federation exists without M365, so the
+single-parent network systematically under-attributed it whenever the path ran
+through anything else; v1.9.3 expanded the parents to include
+`google_workspace_tenant`.
+
+Two later corrections show the discipline is standing rather than historical.
+v1.9.6 removed the `dkim_present` binding from the policy node: DKIM
+publication is deliverability hygiene, and its likelihood ratio was
+overstating what DKIM says about enforcement. The corpus-fitting reflex was to
+lower the ratio until DKIM-only domains cleared 0.5, which would have improved
+the agreement number while making the node a worse predictor of its own name.
+CAL12 later moved the same node's prior from a hand-set 0.25 to 0.62 on
+measured corpus base rates, making it the one corpus-grounded root in the
+network.
+
+**The principle.** A corpus run is a mirror that questions the topology, not a
+fitter that minimizes a disagreement number. When a node disagrees with the
+deterministic pipeline at high posterior, the first hypothesis is that the node
+is conceptually wrong. CPT numbers are re-examined only after the topology is
+clean.
+
+### 4.10 Hardening-posture fingerprints
+
+The v1.9.4 milestone ran the layer against a 50-domain corpus stratified across
+five categories of public-DNS posture; `validation/v1.9.4-calibration.md`
+carries the methodology and the per-node trend table. Each category produces a
+recognizable per-node sparse-rate fingerprint, and this subsection records them
+so a defender can read from the posture they have to what the panel will and
+will not support.
+
+Two scope warnings before the tables. These are sparse rates on one dated
+50-domain sample, so they are shape, not population rates; ten domains per
+category cannot carry a confidence interval worth printing. And the mapping is
+descriptive: it reports what a public surface reveals, never a maturity verdict.
+
+**Pattern A, heavy edge-proxied apexes**
+
+| Node | Sparse rate | What the panel supports |
+|---|---|---|
+| `cdn_fronting` | 50% | Fires on the CDN that *is* the front; the layer names the surface passive DNS can see. |
+| `m365_tenant` | 60% | Partial visibility through MX, SPF, and verification records that bypass the edge. |
+| `email_security_policy_enforcing` | 0% | DMARC policy is a public TXT record; the edge does not hide it. |
+| `email_gateway_present` | 90% | Gateways rarely route through the CDN at MX-resolve time. |
+| `okta_idp` | 90% | Identity probes hidden behind the edge. |
+
+The CDN front is inferable because the CNAME chain terminates there. The stack
+behind it stays hidden when subdomains front through the same edge.
+
+**Pattern B, privacy-focused organizations**
+
+| Node | Sparse rate | What the panel supports |
+|---|---|---|
+| `email_gateway_present` | 100% | Minimal third-party mail surface. |
+| `federated_identity` | 80% | Federation indicators deliberately minimized. |
+| `aws_hosting` | 60% | Some public-facing AWS presence still surfaces. |
+| `google_workspace_tenant` | 40% | Mail-signing records sometimes published. |
+| `email_security_policy_enforcing` | 20% | Enforcing DMARC is near-universal here. |
+
+Strict policy stays publicly inferable, which is the correct posture; identity
+and cloud signals are absent as intended.
+
+**Pattern C, major financial institutions**
+
+| Node | Sparse rate | What the panel supports |
+|---|---|---|
+| `aws_hosting` | 100% | No AWS-specific apex evidence in this sample. |
+| `google_workspace_tenant` | 100% | M365-only in this sample. |
+| `m365_tenant` | 20% | Verification and MX evidence consistently present. |
+| `cdn_fronting` | 10% | CDN-fronted public sites are the norm. |
+| `email_security_policy_enforcing` | 0% | Enforcing DMARC universal in this sample. |
+
+The public fingerprint is M365 plus CDN plus strong DMARC, with everything else
+sparse: a low-disclosure posture around an enterprise stack.
+
+**Pattern D, defense and national-security adjacent**
+
+| Node | Sparse rate | What the panel supports |
+|---|---|---|
+| `okta_idp` | 100% | No Okta-specific evidence in this subset. |
+| `google_workspace_tenant` | 80% | Predominantly AWS, M365, or on-premise. |
+| `aws_hosting` | 80% | Some government-region presence surfaces. |
+| `federated_identity` | 80% | Identity surface suppressed publicly. |
+| `email_security_policy_enforcing` | 20% | Enforcing DMARC mostly published. |
+
+Apex-level cloud footprint is visible; the identity stack behind it is not.
+
+**Pattern E, major government agencies**
+
+| Node | Sparse rate | What the panel supports |
+|---|---|---|
+| `google_workspace_tenant` | 100% | Uniformly absent in this sample. |
+| `okta_idp` | 100% | No Okta surfacing in this subset. |
+| `federated_identity` | 90% | Identity stack hidden. |
+| `aws_hosting` | 90% | Some government-region presence surfaces. |
+| `m365_tenant` | 20% | Heavily M365, reinforced by procurement policy. |
+| `cdn_fronting` | 10% | CDN-fronted public sites are the norm. |
+
+Effectively the same layer-side signature as Pattern C, from a different
+internal stack: public posture converges even where architecture does not.
+
+**Cross-cutting**
+
+- `email_security_modern_provider` is 100 percent sparse on every hardened
+  category, by construction. The v1.9.3 split left it with no evidence
+  bindings, so it is pure propagation; this is the design reporting its own
+  reach, not a defect.
+- `email_security_policy_enforcing` survives hardening at 0.98. DMARC policy is
+  a public record defenders *should* publish, and no posture in the sample
+  hides it.
+- `cdn_fronting` survives at 0.84. The CDN is part of the hardening posture
+  rather than something it conceals.
+- `email_gateway_present` survives at 0.57, the clearest instance of the layer
+  retreating when public DNS stops carrying the evidence.
+
+**Not covered.** Actively deceptive DNS is a different threat model and is
+section 4.11. Vertical long-tail postures beyond these five are unmeasured.
+And internal cloud consumption is invisible by construction: a domain whose
+posture is "we use a third-party cloud for internal workloads only" produces no
+signal here, because none exists in public DNS.
+
+### 4.11 Adversarial deception postures
+
+Section 4.10 catalogues organizations that minimize public exposure. This
+subsection asks the harder question: how does the layer behave against a
+posture that intends to mislead a passive observer? The treatment is
+qualitative. Falsifying it needs an adversarial corpus that does not exist, so
+what follows is a stated commitment about predicted behavior, recorded so a
+future calibration run can confirm or refute it.
+
+**Pattern F, wildcard-certificate rotation.** The apex publishes only
+short-lived wildcards, so CT enumeration returns one SAN per certificate and a
+wildcard probe matches every random subdomain. Related-surface attribution
+collapses to the apex plus explicitly published names, and the mail and policy
+nodes are untouched because they read apex records the rotation does not
+affect. The layer goes sparse where it should and stays accurate where it can:
+narrow, not falsely confident.
+
+**Pattern G, short-TTL decoy CNAME chains.** The apex rotates CNAME targets
+between observation windows so snapshots disagree. The merge surfaces the
+inconsistency as a cross-source conflict, which subtracts from effective
+display mass and widens bands globally (section 4.1). Even where a rotating
+target nominally matches a binding, the conflict penalty keeps the band from
+collapsing onto a confident point. The operator sees populated conflict
+provenance and an explicitly dampened band.
+
+**Pattern H, SAN-stuffing decoys.** The apex publishes certificates whose SAN
+lists name unrelated services it does not run. The defense is upstream of this
+layer: slug classification does not fire on a certificate SAN alone, requiring
+a CNAME target, a verification record, or an MX, SPF, or NS pattern, so a SAN
+claim without corroborating DNS never reaches the network as evidence. The
+graph layer still ingests the stuffed edges, which is the section 2.3 caveat
+about certificate size becoming apparent community structure.
+
+**Pattern I, planted administrative tokens.** The apex publishes verification
+records or SPF includes for vendors it does not use. Each is one static string,
+free to publish, truthful as a DNS fact, and published by the operator itself,
+so nothing about it is anomalous.
+
+This is the one pattern the engine does not handle, and the honest status is a
+known confident-false-positive vector:
+
+- **The targeted node fires at full strength.** These records are exactly what
+  the classifier keys on, so the node receives the binding's full weight and
+  goes confident and non-sparse. The engine applies catalogue weights without
+  regard to whether a detection reflects a functional deployment the
+  organization depends on or a free administrative string, so a planted token
+  is arithmetically identical to a real one.
+- **An obscure token can outrank the headline one.** Group reduction keeps only
+  the strongest fired binding per correlation group, so the most effective
+  single decoy is often not the obvious slug but whichever grouped token
+  carries the largest weight.
+- **On the declarative node, planting also disables the disconfirmer.** A
+  planted enforcing DMARC record adds its positive factor *and* removes the
+  group-absence factor that would otherwise pull the node down (section 3.3),
+  so the swing exceeds what a hideable node would show.
+- **Additions compose through the DAG.** The suppression property in section
+  3.4 is bounded to one node and says nothing about an addition touching
+  several. A planted parent lifts its children without any binding of theirs
+  firing, so this is not a single-node phenomenon.
+- **The other patterns do not catch it.** There is no cross-source conflict, so
+  Pattern G's dampening never engages; no certificate is involved, so Pattern H
+  is irrelevant; and the provenance is genuine, so the explanation surfaces a
+  real record and flags nothing.
+
+The mitigation is to weight a binding by detection provenance, gating an
+administrative-only token behind a functional corroborator the operator cannot
+publish without actually routing through the vendor. That corroborator is
+assumed unforgeable, which is not itself proven: a CNAME to a real vendor edge,
+a nested SPF include, or an NS delegation might pass such a gate. Provenance
+weighting is necessary here, not obviously sufficient. The catalogue files
+already prescribe corroboration discipline; the inference layer does not yet
+honor it, and closing that gap is tracked engine work rather than a shipped
+property. Section 5.6 states the acceptance property a fix must satisfy.
+
+**What this subsection does not establish.** These are predictions from the
+design, not measurements. Testing them needs a controlled adversarial corpus,
+roughly ten domains per pattern and synthetic where the posture must be exact,
+checking that nodes which should hedge do hedge, that evidence-silent nodes
+never go confident, and that conflict provenance populates on every Pattern G
+domain. Until that exists, this section is a commitment, not a result.
 
 ## 5. Claim robustness envelopes
 
@@ -555,23 +889,23 @@ of current output.
 
 Each claim-bearing unit should eventually carry:
 
-\[
+$$
 u=(x,s,n,r,v,[t_0,t_1],d,c,g,a,k),
-\]
+$$
 
 where:
 
-- (x): normalized value plus a raw-response reference or digest;
-- (s): subject the record describes, which may differ from the queried apex;
-- (n): namespace or record owner;
-- (r): source family and any provider attester;
-- (v): resolver, API, or collector vantage;
-- ([t_0,t_1]): observation window and freshness semantics;
-- (d): derivation path;
-- (c): claim family and scope;
-- (g): dependency group and causal origin;
-- (a): observation-opportunity state;
-- (k): manipulation class and assumed cost.
+- $x$: normalized value plus a raw-response reference or digest;
+- $s$: subject the record describes, which may differ from the queried apex;
+- $n$: namespace or record owner;
+- $r$: source family and any provider attester;
+- $v$: resolver, API, or collector vantage;
+- $[t_0,t_1]$: observation window and freshness semantics;
+- $d$: derivation path;
+- $c$: claim family and scope;
+- $g$: dependency group and causal origin;
+- $a$: observation-opportunity state;
+- $k$: manipulation class and assumed cost.
 
 The observation-opportunity state should distinguish `not attempted`,
 `observed value`, `observed empty`, `unavailable`, `not enabled`, and `not
@@ -624,24 +958,24 @@ evidence factors and a max-LLR dependency-group heuristic. Those ingredients
 define a scoring procedure, not a generative observation model.
 
 The first prototype should be Boolean and threshold-free. Use separate reviewed
-predicates \(h^+_{m,C}(z)\) for positive public support and
-\(h^-_{m,C}(z)\) for authoritative public disconfirmation. For each
-\(\sigma\in\{+,-\}\), use the compatibility set defined below and report
+predicates $h^+_{m,C}(z)$ for positive public support and
+$h^-_{m,C}(z)$ for authoritative public disconfirmation. For each
+$\sigma\in\{+,-\}$, use the compatibility set defined below and report
 
-\[
+$$
 \underline h_b^\sigma(C,o)=
 \min_{(m,z)\in\mathcal K_b^T(o)}h^\sigma_{m,C}(z),
 \qquad
 \overline h_b^\sigma(C,o)=
 \max_{(m,z)\in\mathcal K_b^T(o)}h^\sigma_{m,C}(z).
-\]
+$$
 
 Each side has a must/may interval. A zero positive interval means only that no
 compatible state supports the positive predicate; it is not a negative fact.
-For one fixed \((m,z)\), positive support only is **supported**, authoritative
+For one fixed $(m,z)$, positive support only is **supported**, authoritative
 negative support only is **disconfirmed within the admitted public model**,
 both are **conflicted**, and neither is **unresolved**. At every budget,
-including zero when \(\mathcal M\) admits multiple models, the robust summary
+including zero when $\mathcal M$ admits multiple models, the robust summary
 requires positive must-support with negative support impossible, negative
 must-support with positive support impossible, or must on both sides for robust
 conflict. Every other combination remains unresolved and all four interval
@@ -650,83 +984,83 @@ the later singleton-model and exact-observation conditions. These evidence
 states are deterministic and paraconsistent; they are not probabilities.
 
 The score envelope is a secondary generalization for diagnostics that genuinely
-need a graded support functional. Let \(z\) be a claim-relevant **clean
+need a graded support functional. Let $z$ be a claim-relevant **clean
 public-evidence state**: the units that a
 complete successful collection would expose under the admitted model. It is
-still not the target's full private configuration. Each admitted model \(m\)
-must define a nonempty feasible set \(\mathcal Z_m\) and a deterministic support
+still not the target's full private configuration. Each admitted model $m$
+must define a nonempty feasible set $\mathcal Z_m$ and a deterministic support
 functional
 
-\[
+$$
 s_m(C,z)\in[0,1].
-\]
+$$
 
-For the current engine, \(s_m\) can be the replayed model-relative score under
+For the current engine, $s_m$ can be the replayed model-relative score under
 one explicit parameter and grouping configuration. It must not be called a
-probability merely because its range is \([0,1]\). For budget \(b\), admitted
-model \(m\), and reviewed threat model \(T\), define an observation relation
-\(o\in\mathcal H_{b,m}^T(z)\). Indexing the channel by \(m\) makes the admitted
+probability merely because its range is $[0,1]$. For budget $b$, admitted
+model $m$, and reviewed threat model $T$, define an observation relation
+$o\in\mathcal H_{b,m}^T(z)$. Indexing the channel by $m$ makes the admitted
 missingness and dependence assumptions operational rather than leaving them in
-an unused model label. For every fixed \(m\), budgets must be nested:
-\(\mathcal H_{b,m}^T(z)\subseteq\mathcal H_{b',m}^T(z)\) whenever
-\(b\le b'\). The relation may:
+an unused model label. For every fixed $m$, budgets must be nested:
+$\mathcal H_{b,m}^T(z)\subseteq\mathcal H_{b',m}^T(z)$ whenever
+$b\le b'$. The relation may:
 
-- hide units from \(z\);
-- plant units into \(o\);
+- hide units from $z$;
+- plant units into $o$;
 - retain or replace stale administrative units;
 - represent a failed collector as unobserved, never as a clean negative;
 - transform one dependency group as one causal unit;
 - preserve units outside the declared threat model.
 
-Let \(\mathcal M\) be the admitted parameter, dependence, and missingness model
+Let $\mathcal M$ be the admitted parameter, dependence, and missingness model
 class. The observational compatibility set is
 
-\[
+$$
 \mathcal K_b^T(o)=
 \{(m,z):m\in\mathcal M,\ z\in\mathcal Z_m,\
 o\in\mathcal H_{b,m}^T(z)\}.
-\]
+$$
 
 The feasibility condition excludes model-impossible states. A reported envelope
-requires \(\mathcal K_b^T(o)\ne\varnothing\); an empty set means the admitted
+requires $\mathcal K_b^T(o)\ne\varnothing$; an empty set means the admitted
 model and threat assumptions are inconsistent with the observation. For claim
-\(C\), define the robust score envelope
+$C$, define the robust score envelope
 
-\[
+$$
 \underline s_b(C,o)=
 \inf_{(m,z)\in\mathcal K_b^T(o)}s_m(C,z),
-\]
+$$
 
-\[
+$$
 \overline s_b(C,o)=
 \sup_{(m,z)\in\mathcal K_b^T(o)}s_m(C,z).
-\]
+$$
 
 These are pointwise model-and-threat-relative score bounds over an unknown
 compatible clean state. They are not probability bounds or an identification
 region. A probabilistic extension must replace this support-functional model
-with a coherent observation model. Let \(X\) be the full latent target state
-needed by the claim, let \(Z=g(X)\) be its clean public-evidence state, and let
-\(R\) contain observation-process state such as target intent, source
-availability, and collector condition. Every admitted \(m\) must define a
-normalized joint law \(P_m(C,X,R)\) and an observation kernel
-\(q_m(o\mid C,X,R)\). It then defines
+with a coherent observation model. Let $X$ be the full latent target state
+needed by the claim, let $Z=g(X)$ be its clean public-evidence state, and let
+$R$ contain observation-process state such as target intent, source
+availability, and collector condition. Every admitted $m$ must define a
+normalized joint law $P_m(C,X,R)$ and an observation kernel
+$q_m(o\mid C,X,R)$. It then defines
 
-\[
+$$
 P_m(C=1\mid O=o)=
 \frac{\int q_m(o\mid C=1,x,r)\,P_m(C=1,dx,dr)}
 {\sum_{c\in\{0,1\}}\int q_m(o\mid C=c,x,r)\,P_m(C=c,dx,dr)},
-\]
+$$
 
-when the denominator is positive. Omitting \(C\) from the kernel asserts the
-conditional independence \(O\mathbin{\perp\!\!\!\perp}C\mid X,R\), which must be
+when the denominator is positive. Omitting $C$ from the kernel asserts the
+conditional independence $O\mathbin{\perp\!\!\!\perp}C\mid X,R$, which must be
 defended rather than implied. If only marginal constraints are specified, the
 compatible joint laws and observation kernels they admit are themselves the
 model class. Probabilistic partial-identification bounds are the infimum and
 supremum of this conditional over that explicit ambiguity class, not over an
 unspecified extra mixture. An incomplete class can provide an unsupported
 narrow range; a deliberately enlarged class may provide only an outer
-sensitivity bound. If a prototype evaluates forward transformations \(a(o)\)
+sensitivity bound. If a prototype evaluates forward transformations $a(o)$
 alone, it must call the result a **sensitivity envelope**, not an identification
 region.
 
@@ -734,26 +1068,26 @@ region.
 
 The primary Boolean result uses no score threshold:
 
-- robustly supported when \(\underline h_b^+=1\) and
-  \(\overline h_b^-=0\);
+- robustly supported when $\underline h_b^+=1$ and
+  $\overline h_b^-=0$;
 - robustly disconfirmed within the public model when
-  \(\underline h_b^-=1\) and \(\overline h_b^+=0\);
-- robustly conflicted when \(\underline h_b^+=\underline h_b^-=1\);
+  $\underline h_b^-=1$ and $\overline h_b^+=0$;
+- robustly conflicted when $\underline h_b^+=\underline h_b^-=1$;
 - unresolved otherwise, with all four must/may endpoints retained.
 
-The secondary graded diagnostic uses a predeclared support threshold \(\tau\):
+The secondary graded diagnostic uses a predeclared support threshold $\tau$:
 
-\[
+$$
 \text{supported if }\underline s_b\ge\tau,
-\]
+$$
 
-\[
+$$
 \text{not supported across admitted states if }\overline s_b<\tau,
-\]
+$$
 
-\[
+$$
 \text{unresolved otherwise}.
-\]
+$$
 
 The second label deliberately avoids "absent." A public channel can fail to
 support presence without establishing real-world absence.
@@ -781,56 +1115,56 @@ That is more actionable than a narrow heuristic band around 0.93.
 #### 5.3.1 Deterministic provenance-certificate algebra
 
 Before optimizing a score, recon can make its deterministic core
-proof-carrying. Let \(U(o)\) be canonical observed dependency units and let
-\(\operatorname{Atoms}(U)\) be the signed normalized and derived atoms exposed
-by a unit set. Each observed atom \(a\) retains an antichain
-\(\operatorname{Orig}_o(a)\subseteq 2^{U(o)}\) of minimal raw-origin unit
-environments. Alternatives remain separate: if either \(u_1\) or \(u_2\)
-derives \(a\), the environments are \(\{u_1\}\) and \(\{u_2\}\), not
-\(\{u_1,u_2\}\). Lift one atom proof \(E\) to dependency units by distributive
+proof-carrying. Let $U(o)$ be canonical observed dependency units and let
+$\operatorname{Atoms}(U)$ be the signed normalized and derived atoms exposed
+by a unit set. Each observed atom $a$ retains an antichain
+$\operatorname{Orig}_o(a)\subseteq 2^{U(o)}$ of minimal raw-origin unit
+environments. Alternatives remain separate: if either $u_1$ or $u_2$
+derives $a$, the environments are $\{u_1\}$ and $\{u_2\}$, not
+$\{u_1,u_2\}$. Lift one atom proof $E$ to dependency units by distributive
 choice:
 
-\[
+$$
 \Pi_o(E)=\min_{\subseteq}
 \left\{\bigcup_{a\in E}Q_a:
 Q_a\in\operatorname{Orig}_o(a)\ \text{for every }a\in E\right\}.
-\]
+$$
 
-Let \(J\) be a reviewed monotone signed rule system. Write
-\(E\vdash_J^+ C\) and \(E\vdash_J^- C\) for positive and authoritative-negative
+Let $J$ be a reviewed monotone signed rule system. Write
+$E\vdash_J^+ C$ and $E\vdash_J^- C$ for positive and authoritative-negative
 derivability. The relation is paraconsistent by construction: deriving both
 signs records conflict and does not entail an unrelated claim. Let
-\(\operatorname{valid}_J(E)\) mean that \(E\) contains none of the explicit
-minimal nogood environments declared by the contract. Let \(\Omega_C\) be the
+$\operatorname{valid}_J(E)$ mean that $E$ contains none of the explicit
+minimal nogood environments declared by the contract. Let $\Omega_C$ be the
 bounded universe of possible signed atoms under the claim contract, including
-fixed and manipulable atoms. For a narrow public claim \(C\), first define the
+fixed and manipulable atoms. For a narrow public claim $C$, first define the
 model-wide proof templates
 
-\[
+$$
 \widehat{\mathcal P}_C^T=\min_{\subseteq}
 \{E\subseteq\Omega_C:\operatorname{valid}_J(E),\ E\vdash_J^+ C\},
-\]
+$$
 
-\[
+$$
 \widehat{\mathcal N}_C^T=\min_{\subseteq}
 \{E\subseteq\Omega_C:\operatorname{valid}_J(E),\ E\vdash_J^- C\}.
-\]
+$$
 
 The active dependency-unit certificate antichains for the observed snapshot are
 
-\[
+$$
 \mathcal P_C(o)=\min_{\subseteq}
 \{Q:E\subseteq\operatorname{Atoms}(U(o)),\
   \operatorname{valid}_J(E),\ E\vdash_J^+ C,\ Q\in\Pi_o(E)\},
-\]
+$$
 
-\[
+$$
 \mathcal N_C(o)=\min_{\subseteq}
 \{Q:E\subseteq\operatorname{Atoms}(U(o)),\
   \operatorname{valid}_J(E),\ E\vdash_J^- C,\ Q\in\Pi_o(E)\}.
-\]
+$$
 
-An absent optional record never enters \(\mathcal N_C\). A negative atom exists
+An absent optional record never enters $\mathcal N_C$. A negative atom exists
 only when the claim contract identifies an authoritative publication point, its
 observation opportunity completed successfully, and the returned value has the
 documented negative meaning.
@@ -843,30 +1177,30 @@ erase the other side.
 The snapshot reducer has a useful algebra that should be explicit in the first
 claim contract. Encode the state as
 
-\[
+$$
 q_C(o)=(p_C(o),n_C(o))\in\{0,1\}^2,
-\]
+$$
 
 where each coordinate records whether its certificate family is nonempty.
 Order these final states by information, componentwise. Componentwise join
 
-\[
+$$
 (p_1,n_1)\sqcup_k(p_2,n_2)=(p_1\lor p_2,n_1\lor n_2)
-\]
+$$
 
 combines already-derived signed assertions only when no rule can use premises
 split across the two views. It is not the general evidence-view merge. A rule
-such as \(a\land b\vdash_J^+C\) can receive \(a\) from one view and \(b\) from
+such as $a\land b\vdash_J^+C$ can receive $a$ from one view and $b$ from
 another even though both separate state projections are unresolved.
 
-The general merge acts on canonical provenance ledgers. For ledgers \(L_1\)
-and \(L_2\), define
+The general merge acts on canonical provenance ledgers. For ledgers $L_1$
+and $L_2$, define
 
-\[
+$$
 L_1\sqcup_U L_2=\operatorname{dedup}(L_1\cup L_2),
-\]
+$$
 
-then recompute atoms, signed closure, certificate antichains, and \(q_C\) from
+then recompute atoms, signed closure, certificate antichains, and $q_C$ from
 the merged ledger. Canonical ledger union is associative, commutative, and
 idempotent. For the reviewed monotone rule system, its projected claim state is
 monotone in the information order: adding a view can establish either sign or
@@ -878,50 +1212,50 @@ misread as a truth, severity, or quality ranking. In particular, conflicted is
 more informed than either one-sided state, not more true.
 
 This has a compact provenance-semiring interpretation. Give each canonical raw
-unit a symbol \(x_u\); conjunction multiplies symbols, alternative derivations
+unit a symbol $x_u$; conjunction multiplies symbols, alternative derivations
 add terms, and idempotence prevents a duplicate derived view from acquiring new
 weight. The reduced expression
 
-\[
+$$
 \rho_C^+(o)=\bigoplus_{E\in\mathcal P_C(o)}
              \bigotimes_{u\in E}x_u
-\]
+$$
 
 has one minimal monomial per support certificate. It can be implemented with
 bounded antichains of frozen sets, without a new runtime dependency. A minimum
 forward deletion cut is then a transversal that intersects every active
-positive certificate. The earlier Boolean coordinate satisfies \(p_C(o)=1\)
-exactly when \(\rho_C^+(o)\ne 0\); the coordinate and symbolic provenance
+positive certificate. The earlier Boolean coordinate satisfies $p_C(o)=1$
+exactly when $\rho_C^+(o)\ne 0$; the coordinate and symbolic provenance
 polynomial are different types.
 
-A planting completion cannot be obtained from \(\mathcal P_C(o)\), because its
+A planting completion cannot be obtained from $\mathcal P_C(o)$, because its
 members are already-observed dependency units. Let
-\(\mathcal A_{T,\mathrm{atom}}^+(o)\subseteq
-\Omega_C\setminus\operatorname{Atoms}(U(o))\) be the explicitly frozen set of
+$\mathcal A_{T,\mathrm{atom}}^+(o)\subseteq \Omega_C\setminus\operatorname{Atoms}(U(o))$
+be the explicitly frozen set of
 base atoms the threat model permits an operator to assert directly. Let
-\(\Lambda_T^+(o)\) be the finite family of admissible tagged dependency-unit
+$\Lambda_T^+(o)$ be the finite family of admissible tagged dependency-unit
 addition sets whose direct base-atom assertions lie in that set. One action may
-assert several dependent base atoms. Let \(\phi_A(U)\) be the dependency-unit
-state after applying tagged actions \(A\), and let \(\operatorname{Cl}_J(S)\)
-recompute the deterministic signed-rule closure of atom set \(S\). For a
+assert several dependent base atoms. Let $\phi_A(U)$ be the dependency-unit
+state after applying tagged actions $A$, and let $\operatorname{Cl}_J(S)$
+recompute the deterministic signed-rule closure of atom set $S$. For a
 planting-only threat model, the valid completion-action antichain is
 
-\[
+$$
 \mathcal G_{C,+}^T(o)=\min_{\subseteq}
 \{A:E\in\widehat{\mathcal P}_C^T,\
   A\in\Lambda_T^+(o),\
   S_A=\operatorname{Cl}_J(\operatorname{Atoms}(\phi_A(U(o)))),\
   \operatorname{valid}_J(S_A),\ E\subseteq S_A\}.
-\]
+$$
 
 This family deliberately excludes an addition that conflicts with an observed
 mutually exclusive value. For a threat model that permits replacement, let
-\(A=(A^-,A^+)\) contain tagged dependency-unit removals and additions. The
-general forward support-completion family minimizes \(A\) subject to
-\(T\)-admissibility,
-\(\operatorname{valid}_J(S_A)\) for
-\(S_A=\operatorname{Cl}_J(\operatorname{Atoms}(\phi_A(U(o))))\), and the
-existence of some \(E\in\widehat{\mathcal P}_C^T\) with \(E\subseteq S_A\).
+$A=(A^-,A^+)$ contain tagged dependency-unit removals and additions. The
+general forward support-completion family minimizes $A$ subject to
+$T$-admissibility,
+$\operatorname{valid}_J(S_A)$ for
+$S_A=\operatorname{Cl}_J(\operatorname{Atoms}(\phi_A(U(o))))$, and the
+existence of some $E\in\widehat{\mathcal P}_C^T$ with $E\subseteq S_A$.
 Every certificate,
 completion, antichain minimum, and cost therefore maps atom derivations back to
 dependency-unit actions first. Required removal or replacement actions remain
@@ -956,7 +1290,7 @@ monotone positive atoms remain within the algebra when encoded without cycles.
 The same registry can define a narrow implication order over canonical claim
 classes. Logical implication is first a preorder; mutually entailing claims
 must be canonicalized or quotiented into one class. Define
-\([C_1]\preceq[C_2]\) when \(C_2\) entails \(C_1\), so maximal entailed classes
+$[C_1]\preceq[C_2]$ when $C_2$ entails $C_1$, so maximal entailed classes
 are the strongest justified claims. "Administrative Microsoft token
 published," "Exchange Online routing observed," and "Entra tenant namespace
 returned" are distinct and often incomparable; none automatically entails
@@ -967,13 +1301,13 @@ this order.
 
 For a scalar extended-real budget or another explicitly order-complete,
 totally ordered nested budget domain, let
-\(D_b^{\mathrm{bool}}(C,o)\) be the robust Boolean state from section 5.3. Its
+$D_b^{\mathrm{bool}}(C,o)$ be the robust Boolean state from section 5.3. Its
 decision radius is
 
-\[
+$$
 r_T^{\mathrm{bool}}(C,o)=
 \inf\{b:D_b^{\mathrm{bool}}(C,o)\ne D_0^{\mathrm{bool}}(C,o)\}.
-\]
+$$
 
 This definition covers robust support, disconfirmation, and conflict. For
 example, support is lost when positive must-support fails or negative support
@@ -982,21 +1316,21 @@ budget-zero state has no positive robust-decision radius. The infimum is a least
 cost only when a flip witness attains it.
 
 A componentwise Pareto budget is not totally ordered and must not be reduced to
-one infimum. With \(b\preceq b'\) meaning componentwise no greater, let
-\(F_T(C,o)=\{b:D_b^{\mathrm{bool}}(C,o)\ne
-D_0^{\mathrm{bool}}(C,o)\}\). When the flip set has attainable minimal points,
+one infimum. With $b\preceq b'$ meaning componentwise no greater, let
+$F_T(C,o)=\{b:D_b^{\mathrm{bool}}(C,o)\ne D_0^{\mathrm{bool}}(C,o)\}$.
+When the flip set has attainable minimal points,
 report the Pareto-minimal flip frontier
 
-\[
+$$
 \mathcal R_T^{\mathrm{bool}}(C,o)=
 \min_{\preceq}\{b:D_b^{\mathrm{bool}}(C,o)
                     \ne D_0^{\mathrm{bool}}(C,o)\}.
-\]
+$$
 
 Incomparable points remain separate. A finite prototype has such a frontier
 whenever its nonempty budget set is finite. In a continuous or open model,
-\(F_T(C,o)\) may be nonempty without an attainable minimal point. In that case,
-report the minimal boundary of \(\overline{F_T(C,o)}\), label it unattained, and
+$F_T(C,o)$ may be nonempty without an attainable minimal point. In that case,
+report the minimal boundary of $\overline{F_T(C,o)}$, label it unattained, and
 attach declared-tolerance epsilon-Pareto witnesses; do not call it an attained
 frontier or least cost. A lexicographic budget can use the radius form only
 after its priority order is declared and its domain is finite, discrete and
@@ -1005,30 +1339,30 @@ well-ordered, or otherwise shown order-complete. Totality alone is insufficient.
 The graded score radius below is secondary and has the same order-completeness
 requirement.
 
-For a claim with \(\underline s_0\ge\tau\), define the lower-support radius
+For a claim with $\underline s_0\ge\tau$, define the lower-support radius
 
-\[
+$$
 r_T^-(C,o)=\inf\{b:\underline s_b(C,o)<\tau\}.
-\]
+$$
 
-For a claim with \(\overline s_0<\tau\), define the upper-support radius
+For a claim with $\overline s_0<\tau$, define the upper-support radius
 
-\[
+$$
 r_T^+(C,o)=\inf\{b:\overline s_b(C,o)\ge\tau\}.
-\]
+$$
 
-Use \(\inf\varnothing=\infty\). The upper-support radius can be finite because
+Use $\inf\varnothing=\infty$. The upper-support radius can be finite because
 the inverse model admits clean supporting evidence hidden on the path from
-\(z\) to \(o\); it is not a forward planting radius. A lower-support inverse
+$z$ to $o$; it is not a forward planting radius. A lower-support inverse
 witness can instead classify an observed supporting unit as planted, admit a
 clean disconfirming unit hidden from observation, or combine allowed actions.
 All witness directions are stated from clean state to observation.
 
-For a finite cap \(B\), let \(A_T(m,z,o)\) be the set of nonidentity
+For a finite cap $B$, let $A_T(m,z,o)$ be the set of nonidentity
 clean-to-observed manipulation actions used by one compatible witness. For a
-budget-zero Boolean decision \(D\), define an adverse-state predicate
+budget-zero Boolean decision $D$, define an adverse-state predicate
 
-\[
+$$
 \operatorname{bad}_D(m,z)=
 \begin{cases}
 h^+_{m,C}(z)=0\ \text{or}\ h^-_{m,C}(z)=1,
@@ -1038,29 +1372,29 @@ h^-_{m,C}(z)=0\ \text{or}\ h^+_{m,C}(z)=1,
 h^+_{m,C}(z)=0\ \text{or}\ h^-_{m,C}(z)=0,
   &D=\text{conflicted}.
 \end{cases}
-\]
+$$
 
 The primary inverse Boolean flip-certificate antichain is
 
-\[
+$$
 \mathcal W_{B,D}^{\mathrm{bool}}=
 \min_{\subseteq}
 \{A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),
               \operatorname{bad}_D(m,z)\}.
-\]
+$$
 
 It is undefined for an unresolved initial state. The secondary graded
 lowering and raising certificate families are
 
-\[
+$$
 \mathcal W_{B}^{\mathrm{score},-} = \min_{\subseteq}
 \{A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),\ s_m(C,z)<\tau\},
-\]
+$$
 
-\[
+$$
 \mathcal W_{B}^{\mathrm{score},+} = \min_{\subseteq}
 \{A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),\ s_m(C,z)\ge\tau\}.
-\]
+$$
 
 Report only the family relevant to the current decision and diagnostic. First
 enumerate every inclusion-minimal member, then identify radius-attaining members
@@ -1074,9 +1408,9 @@ across claim families with different cost or threat models.
 
 The prototype should enforce these exact invariants:
 
-- nested budgets make each signed \(\underline h_b^\sigma\) and
-  \(\underline s_b\) non-increasing, and each
-  \(\overline h_b^\sigma\) and \(\overline s_b\) non-decreasing;
+- nested budgets make each signed $\underline h_b^\sigma$ and
+  $\underline s_b$ non-increasing, and each
+  $\overline h_b^\sigma$ and $\overline s_b$ non-decreasing;
 - at budget zero, an exact observation relation and singleton model collapse
   both bounds to the current model-relative support;
 - duplicating a derived view inside one dependency unit changes neither bound;
@@ -1093,18 +1427,18 @@ For a finite evidence-unit set, finite parameter grid, strictly positive
 additive costs for nonidentity manipulations, and small budgets,
 enumerate compatible latent states or use branch and bound. Extrema are attained
 in that finite prototype. In a continuous model, extrema are attained when the
-actual nonempty compatibility set \(\mathcal K_b^T(o)\) is compact and the
+actual nonempty compatibility set $\mathcal K_b^T(o)$ is compact and the
 objective is continuous on it; otherwise report epsilon-optimal witnesses rather
 than claiming a minimizer exists. As a separate forward-sensitivity
 subproblem, a local log-odds model with additive unit values
-\(v_u=\log LR_u\) and costs \(k_u\) has the worst-deletion problem
+$v_u=\log LR_u$ and costs $k_u$ has the worst-deletion problem
 
-\[
+$$
 \min_{d_u\in\{0,1\}}
 \left(\log O_0+\sum_u(1-d_u)v_u\right)
 \quad\text{subject to}\quad
 \sum_u k_u d_u\le b.
-\]
+$$
 
 This is a small 0-1 knapsack problem. The simple equal-cost case removes the
 largest positive manipulable unit values first. That result is valid only for
@@ -1132,38 +1466,38 @@ Minimum acceptance properties for a prototype:
 
 ### 5.7 Inverse certificates and forward sensitivity are different objects
 
-The primary \(\mathcal W_{B,D}^{\mathrm{bool}}\) family and secondary
-\(\mathcal W_B^{\mathrm{score},-}\) or
-\(\mathcal W_B^{\mathrm{score},+}\) families solve named inverse compatibility
+The primary $\mathcal W_{B,D}^{\mathrm{bool}}$ family and secondary
+$\mathcal W_B^{\mathrm{score},-}$ or
+$\mathcal W_B^{\mathrm{score},+}$ families solve named inverse compatibility
 problems: which clean states and clean-to-observed actions could explain the
 record recon saw and violate the selected decision condition? A separate
-fixed-model forward analysis starts at \(o\). Let \(D_{m_0}(o)\) be the decision
-under one frozen model, and let \(d_A(o)\) and \(p_A(o)\) apply tagged
-dependency-unit deletion and addition actions in \(A\). Freeze finite families
-\(\mathfrak D_T(o)\) and \(\mathfrak P_T(o)\) of such action sets. A deletion
+fixed-model forward analysis starts at $o$. Let $D_{m_0}(o)$ be the decision
+under one frozen model, and let $d_A(o)$ and $p_A(o)$ apply tagged
+dependency-unit deletion and addition actions in $A$. Freeze finite families
+$\mathfrak D_T(o)$ and $\mathfrak P_T(o)$ of such action sets. A deletion
 action may remove only a present hideable unit. An addition action creates an
 admissible dependency unit and may directly assert only base atoms in the
-frozen \(\mathcal A_{T,\mathrm{atom}}^+(o)\) set from section 5.3.1. The rule
+frozen $\mathcal A_{T,\mathrm{atom}}^+(o)$ set from section 5.3.1. The rule
 system then recomputes deterministic derived closure; those consequences need
 not themselves be plantable and receive no independent planting action. An
 action cannot relabel a nonmanipulable provider base atom as plantable. Let
-\(\operatorname{feasible}_{m_0}(o')\) reject transformed observations that
+$\operatorname{feasible}_{m_0}(o')$ reject transformed observations that
 violate the claim contract's value, nogood, dependency, or source-opportunity
 constraints. The inclusion-minimal forward flip families are
 
-\[
+$$
 \mathcal F_{\mathrm{del}}=
 \min_{\subseteq}\{A\in\mathfrak D_T(o):
 \operatorname{feasible}_{m_0}(d_A(o)),\
 D_{m_0}(d_A(o))\ne D_{m_0}(o)\},
-\]
+$$
 
-\[
+$$
 \mathcal F_{\mathrm{add}}=
 \min_{\subseteq}\{A\in\mathfrak P_T(o):
 \operatorname{feasible}_{m_0}(p_A(o)),\
 D_{m_0}(p_A(o))\ne D_{m_0}(o)\}.
-\]
+$$
 
 These families are antichains in the Boolean lattice. For a monotone Boolean
 decision rule they resemble minimal cut and path sets from reliability theory,
@@ -1176,21 +1510,21 @@ never silently substitute one for the other.
 
 For a currently supported Boolean claim, its inverse adverse-witness antichain
 can create a conditional operator action. Let
-\(\mathcal A=\mathcal W_{B,\mathrm{supported}}^{\mathrm{bool}}\). For each
-\(A\in\mathcal A\), let \(V_{\mathrm{confirm}}(A)\) be the observed units whose
+$\mathcal A=\mathcal W_{B,\mathrm{supported}}^{\mathrm{bool}}$. For each
+$A\in\mathcal A$, let $V_{\mathrm{confirm}}(A)$ be the observed units whose
 plant action would be excluded by the specific verification outcome "confirmed
-genuine." If any \(V_{\mathrm{confirm}}(A)\) is empty,
+genuine." If any $V_{\mathrm{confirm}}(A)$ is empty,
 verifying existing public facts cannot block every inverse lowering certificate,
 and the result must say so. Otherwise assign each verifiable unit a predeclared
-nonnegative verification cost \(w_u\). A minimum-cost conditional inspection
+nonnegative verification cost $w_u$. A minimum-cost conditional inspection
 set is the weighted hitting-set problem
 
-\[
+$$
 \min_H\sum_{u\in H}w_u
 \quad\text{subject to}\quad
 H\cap V_{\mathrm{confirm}}(A)\ne\varnothing
 \qquad\text{for every }A\in\mathcal A.
-\]
+$$
 
 The result answers "which observed public facts should I verify independently
 first, if confirmation excludes their planting explanations?" It is not a
@@ -1205,21 +1539,21 @@ robustness.
 ### 5.8 Resolving evidence and the observation frontier
 
 An unresolved result becomes useful when recon can say what would resolve it.
-For a finite compatible-witness family \(W\) that exhausts every admitted
-witness relevant to the claim, action \(q\), and possible outcome
-\(y\in\mathcal Y_q\), let \(R_{q,y}\subseteq W\) be the witnesses ruled out by
-that outcome. For a fixed nonadaptive batch plan \(Q\) and one jointly feasible
-outcome vector \(y_Q\), the survivors are
+For a finite compatible-witness family $W$ that exhausts every admitted
+witness relevant to the claim, action $q$, and possible outcome
+$y\in\mathcal Y_q$, let $R_{q,y}\subseteq W$ be the witnesses ruled out by
+that outcome. For a fixed nonadaptive batch plan $Q$ and one jointly feasible
+outcome vector $y_Q$, the survivors are
 
-\[
+$$
 W_{Q,y_Q}=W\setminus\bigcup_{q\in Q}R_{q,y_q}.
-\]
+$$
 
 A plan identifies the signed state only when, for every feasible outcome
 vector, the survivor set is nonempty and all survivors have one common pair
-\((h^+,h^-)\). It resolves the claim only when that pair is supported
-\((1,0)\), disconfirmed \((0,1)\), or conflicted \((1,1)\). A common
-\((0,0)\) pair establishes that the admitted public model remains unresolved;
+$(h^+,h^-)$. It resolves the claim only when that pair is supported
+$(1,0)$, disconfirmed $(0,1)$, or conflicted $(1,1)$. A common
+$(0,0)$ pair establishes that the admitted public model remains unresolved;
 it is signed-state identification, not claim resolution. Minimum-cost
 nonadaptive claim resolution minimizes the declared batch action cost under the
 stronger condition. It is not a global adaptive optimum: an outcome-contingent
@@ -1294,12 +1628,12 @@ changing the community algorithm, compare the current clique projection with:
 
 1. a certificate-to-host bipartite graph;
 2. a native hypergraph view;
-3. a normalized projection in which each (k)-SAN certificate contributes a
+3. a normalized projection in which each $k$-SAN certificate contributes a
    fixed total pair weight, for example
 
-\[
+$$
 w_{ij}^{(c)}=\frac{1}{\binom{k_c}{2}},\qquad k_c\ge 2.
-\]
+$$
 
 This prevents a large certificate from contributing quadratically more total
 weight merely because it contains more names. The exact normalization is a
@@ -1348,10 +1682,10 @@ Public configuration change is often more identifiable than private stack
 state. recon already has snapshot delta behavior. A later research path can
 model sequences of directly observed facts:
 
-\[
+$$
 Y_t=(\text{MX RRset},\text{NS RRset},\text{DMARC RRset},
      \text{tenant response},\text{CT entries},\text{source status},\ldots)_t.
-\]
+$$
 
 Derived provider or product labels are interpretation outputs, not components of
 the raw observation sequence.
@@ -1544,8 +1878,7 @@ contract into an ontology broader than the product needs.
 
 The implemented first family is the exact claim that a fresh valid apex DMARC
 record declares `p=reject`. Its bounded internal dossier separates construction,
-collection, claim-state, and time axes; retains minimal positive and explicit-
-disconfirming certificate antichains; declares source role, 24-hour freshness,
+collection, claim-state, and time axes; retains minimal positive and explicit-disconfirming certificate antichains; declares source role, 24-hour freshness,
 and renderer obligations; and drives the opt-in schema 2.2 cohort-summary
 denominator through two transient private projections. Schema 2.1 remains the
 compatibility default. Time uses whole-resolution completion, not the exact DNS
