@@ -193,12 +193,32 @@ Neither fact makes the 2026-06-28 diagnostic rows eligible as primary rows.
 
 ### Frame declaration required before collection
 
-The following must be written down and committed **before any domain is
-collected**, and the evaluation is void without them:
+A preregistration has to fix the frame in advance, and the
+[data-handling policy](data-handling-policy.md) forbids committing the domains
+that frame contains. Both hold at once by separating the frame's **definition**
+from its **membership**.
+
+Committed publicly before any domain is collected. The evaluation is void
+without these:
 
 1. The target population and the eligibility window.
-2. The positive-stratum and negative-stratum sampling frames.
-3. The sampling mechanism and the known inclusion probability for each stratum.
+2. How each stratum's frame is *derived*: the rule that decides eligibility and
+   the source of the sampling universe, stated so an outside reader can judge
+   the design without seeing a single domain.
+3. The sampling mechanism, the known inclusion probability for each stratum, and
+   the random seed.
+4. A **frame commitment digest**: the SHA-256 of the frozen private frame file.
+
+Held privately and never committed: the enumerated frame itself, and every
+apex, organization name, and per-domain row derived from it.
+
+The digest is what makes the split work. Publishing
+`sha256sum <private frame file>` before collection proves the frame was fixed in
+advance and was not adjusted after seeing results, while disclosing nothing
+about its contents. Retain the private file unchanged so the digest can be
+recomputed and re-verified later. A frame that cannot reproduce its committed
+digest is not the frame that was preregistered, and any run against it is
+non-decisional.
 
 ### Stratification consequence
 
@@ -427,10 +447,18 @@ leave that boundary.
 
 Never committed: real apex domains, organization names, tenant IDs, per-domain
 rows, unsuppressed small strata, or any list that would reconstruct the frame.
+This holds for the reference labels too. A label is an observation about a named
+domain, so a label table is a target list wearing a different hat.
 
 Committed: the dated aggregate memo, raw paired counts $b$, $c$, $n$ per
 stratum, the computed bounds, ineligible-row counts, the code and catalog
-revision digests, the environment description, and the reproduction command.
+revision digests, the frame commitment digest from
+[section 6](#6-sampling-frame-and-corpus-disjointness), the environment
+description, and the reproduction command.
+
+Everything in that committed list is a count, a bound, or a digest. None of it
+names a domain, and none of it becomes identifying when combined with the rest,
+which is the property to re-check before adding any new field to a memo.
 
 This matches the existing data-handling boundary in
 [data-handling-policy.md](data-handling-policy.md) and the aggregate-only rule
@@ -451,3 +479,4 @@ The single exception is the margin adjustment described at the end of
 | Date | Change | Rationale | Made before unblinding |
 |---|---|---|---|
 | 2026-08-05 | Initial freeze | Preregistration created before any collection or run | Yes |
+| 2026-08-06 | Split the frame declaration into public definition versus private membership, and added the frame commitment digest | The original wording said the sampling frames must be "committed", which could be read as committing the domain lists and would violate the data-handling policy. The digest fixes the frame in advance without disclosing it. No estimand, arm, margin, or decision rule changed. | Yes: no collection has occurred |
