@@ -58,6 +58,42 @@ pytestmark = pytest.mark.hostile_input
 _DEEPLY_NESTED_JSON = "[" * 100_000 + "]" * 100_000
 
 
+def _parser_exhausts_on_nesting() -> bool:
+    """Report whether this interpreter's JSON parser gives up on the fixture.
+
+    The depth at which the C scanner runs out of stack is not a language
+    guarantee. It is separate from ``sys.setrecursionlimit``, which has not
+    governed the C scanner since 3.12, and it differs between the default and
+    free-threaded builds: CPython 3.14t parses this 100,000-deep payload
+    cleanly, where the GIL build raises.
+
+    Probing deeper to force the error is not an option. Building a payload deep
+    enough to exhaust a free-threaded stack would leave a nested list that
+    CPython can crash while deallocating, so the test suite would trade a
+    skipped assertion for a segfault.
+    """
+    try:
+        json.loads(_DEEPLY_NESTED_JSON)
+    except RecursionError:
+        return True
+    except ValueError:  # pragma: no cover - the fixture is syntactically valid
+        return False
+    return False
+
+
+_PARSER_EXHAUSTS_ON_NESTING = _parser_exhausts_on_nesting()
+
+# Guards that can only fire once the parser itself gives up. Where it does not,
+# the fixture is ordinary valid JSON and there is no RecursionError to catch.
+_REQUIRES_PARSER_EXHAUSTION = pytest.mark.skipif(
+    not _PARSER_EXHAUSTS_ON_NESTING,
+    reason=(
+        "this interpreter parses 100,000-deep JSON without exhausting its C stack, "
+        "so no RecursionError exists to degrade from"
+    ),
+)
+
+
 class _FakeStream(httpx.AsyncByteStream):
     def __init__(self, chunks: list[bytes]) -> None:
         self._chunks = chunks
@@ -173,9 +209,14 @@ def _write_ct_cache(monkeypatch: pytest.MonkeyPatch, tmp_path: Any, content: str
 
 class TestPoisonedCacheDegrades:
     def test_cache_get_deeply_nested_returns_none(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Any) -> None:
-        # Sanity: this payload really does raise RecursionError, not ValueError.
-        with pytest.raises(RecursionError):
-            json.loads(_DEEPLY_NESTED_JSON)
+        # Sanity: where the payload does exhaust the parser, it must do so with
+        # RecursionError rather than ValueError, because that is the wider
+        # except clause the cache loaders needed. Where the parser copes, the
+        # payload is still not a cache record and must still be refused, so the
+        # behavioural assertion below runs on every interpreter.
+        if _PARSER_EXHAUSTS_ON_NESTING:
+            with pytest.raises(RecursionError):
+                json.loads(_DEEPLY_NESTED_JSON)
         _write_cache(monkeypatch, tmp_path, _DEEPLY_NESTED_JSON)
         assert cache_mod.cache_get("alpha.invalid") is None
 
@@ -421,6 +462,15 @@ def _fake_ct_client(body: bytes) -> Any:
 
 
 class TestCtProviderRecursionError:
+    """The provider-local degrade path that a RecursionError must reach.
+
+    These assert the specific failure the audit found: ``resp.json()`` guarded
+    only ValueError, so a deeply-nested CT payload escaped the degrade path.
+    That guard has nothing to catch on an interpreter whose parser absorbs the
+    payload, so these skip there rather than assert a raise that cannot happen.
+    """
+
+    @_REQUIRES_PARSER_EXHAUSTION
     @pytest.mark.asyncio
     async def test_crtsh_degrades_on_deeply_nested_json(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from recon_tool.sources import cert_providers as cp
@@ -429,6 +479,7 @@ class TestCtProviderRecursionError:
         with pytest.raises(httpx.HTTPError):
             await CrtshProvider().query("alpha.invalid")
 
+    @_REQUIRES_PARSER_EXHAUSTION
     @pytest.mark.asyncio
     async def test_certspotter_degrades_on_deeply_nested_json(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from recon_tool.sources import cert_providers as cp
