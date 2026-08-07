@@ -124,7 +124,11 @@ class TestV199SurfacesDeriveFromOlderCache:
         info = tenant_info_from_dict(_v198_shape_multi_cloud_cache())
         out = _render(info)
         assert "Multi-cloud" not in out
-        assert "role unavailable" in out
+        # A pre-v1.9.9 cache carries slugs with no evidence lineage. The
+        # default view omits them and says so; the detail view names the
+        # missing role outright (ADR-0012). Either way no rollup is claimed.
+        assert "unattributed" in out
+        assert "role unavailable" in _render(info, verbose=True)
 
     def test_ceiling_footer_fires_on_v198_sparse_cache(self):
         info = tenant_info_from_dict(_v198_shape_sparse_cache())

@@ -396,21 +396,43 @@ def plain_lines(value: Any, key: str, indent: int) -> list[str]:
     return [f"{pad}{key}: {strip_control_chars(str(value))}"]
 
 
-def format_tenant_plain(info: TenantInfo, *, include_unclassified: bool = False) -> str:
+def format_tenant_plain(info: TenantInfo, *, include_unclassified: bool = False, detailed: bool = False) -> str:
     """Format TenantInfo as plain, linear, greppable text (no Rich panel).
 
     Built from the same dict as the JSON output, so it carries every field the
     structured output does - but as ``key: value`` lines a screen reader reads
     linearly and ``grep``/``awk`` can slice, with no color or box-drawing. This
     is the accessibility / scripting complement to the default panel.
+
+    Because it is the panel's accessibility complement, it tracks the panel's
+    default/detailed split (ADR-0012): ``detailed`` keeps every evidence-role
+    qualifier, and the default compacts them and says so. ``--json`` stays the
+    machine contract and is unaffected either way.
     """
     from recon_tool.collection_view import collection_observable_info
-    from recon_tool.formatter.classify import categorize_services
+    from recon_tool.formatter.classify import (
+        categorize_services,
+        compact_categorized_services,
+        compact_provider_line,
+    )
 
     observable = collection_observable_info(info)
     data = format_tenant_dict(observable, include_unclassified=include_unclassified)
     categorized = categorize_services(observable)
+    compacted_count = 0
+    dropped_count = 0
+    if not detailed:
+        categorized, compacted_count, dropped_count = compact_categorized_services(categorized)
+        data["provider"] = compact_provider_line(str(data["provider"]))
     data["services"] = [service for services in categorized.values() for service in services]
+    notes: list[str] = []
+    if compacted_count:
+        notes.append("roles omitted, use --explain")
+    if dropped_count:
+        noun = "match" if dropped_count == 1 else "matches"
+        notes.append(f"{dropped_count} unattributed {noun} omitted, use --full")
+    if notes:
+        data["evidence_roles"] = "; ".join(notes)
     lines: list[str] = []
     for key, value in data.items():
         lines.extend(plain_lines(value, str(key), 0))

@@ -304,14 +304,16 @@
       "material": true,
       "producer_paths": [
         "src/recon_tool/merger.py#compute_email_topology",
-        "src/recon_tool/formatter/classify.py#provider_line"
+        "src/recon_tool/formatter/classify.py#provider_line",
+        "src/recon_tool/formatter/classify.py#compact_provider_line"
       ],
       "regression_tests": [
         "tests/test_email_topology.py",
         "tests/test_cli_output_contracts.py"
       ],
       "renderer_obligations": [
-        "Distinguish MX delivery path, MX gateway, DKIM-supported downstream provider, and weaker non-MX indicators."
+        "Distinguish MX delivery path, MX gateway, DKIM-supported downstream provider, and weaker non-MX indicators.",
+        "The default view may compact the record role per ADR-0012 but retains the hedges that bound the claim: likely downstream, downstream unobserved, and no supporting record."
       ],
       "subject_scope": "public mail routing and provider indicators for the queried apex"
     },
@@ -764,7 +766,8 @@
       ],
       "limits": [
         "Legacy or externally constructed TenantInfo objects can carry service names without retained matching evidence.",
-        "A catalog name alone does not establish a role."
+        "A catalog name alone does not establish a role.",
+        "The default view omits unattributed matches rather than rendering them bare, so it is not a complete enumeration of catalog matches; --full and the JSON record are."
       ],
       "lineage_status": "exact",
       "material": true,
@@ -773,7 +776,8 @@
         "src/recon_tool/formatter/classify.py#evidence_role_service_label",
         "src/recon_tool/formatter/classify.py#role_aware_service_label",
         "src/recon_tool/formatter/email_summary.py#normalize_email_services",
-        "src/recon_tool/formatter/panel.py#_render_services"
+        "src/recon_tool/formatter/panel.py#_render_services",
+        "src/recon_tool/formatter/classify.py#compact_service_label"
       ],
       "regression_tests": [
         "tests/test_delta.py",
@@ -783,7 +787,8 @@
         "tests/test_service_disclosure.py"
       ],
       "renderer_obligations": [
-        "Qualify TXT account indicators, MX delivery paths, CAA authorizations, and endpoint bindings; unknown roles stay unavailable."
+        "Qualify TXT account indicators, MX delivery paths, CAA authorizations, and endpoint bindings; unknown roles stay unavailable.",
+        "Evidence surfaces (--explain, --verbose, --full, JSON, MCP) carry the full role qualifier; the default view may compact it per ADR-0012, but must never imply a role it did not establish."
       ],
       "subject_scope": "one catalog match and the role established by its retained public record type"
     },

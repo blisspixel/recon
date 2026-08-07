@@ -6,9 +6,7 @@
 **Evidence Confidence:** medium\
 **Inference Confidence:** medium
 
-## Microsoft 365 Services
-
-- Microsoft 365 \(role unavailable\)
+*1 unattributed match omitted; `--full` shows every match.*
 
 ## Insights
 

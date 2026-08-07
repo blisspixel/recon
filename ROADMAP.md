@@ -122,6 +122,9 @@ exploit checks.
 **Claim discipline** - domain is a query coordinate; sparse stays sparse;
 source failure is unavailable, never negative; parent platform is not
 child-product use; public-evidence index is not overall security maturity.
+Evidence roles are qualified on the detail and machine surfaces and may be
+compacted out of the default view, never in a way that upgrades a claim
+([ADR-0012](docs/adr/0012-default-view-evidence-role-visibility.md)).
 
 **Data handling** - no committed real-target corpus; synthetic / reserved
 examples; aggregate-only public validation artifacts.

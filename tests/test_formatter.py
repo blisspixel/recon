@@ -195,10 +195,17 @@ class TestPlainOutput:
             ),
         )
 
-        plain = format_tenant_plain(info)
+        detailed = format_tenant_plain(info, detailed=True)
+        default = format_tenant_plain(info)
         structured = json.loads(format_tenant_json(info))
 
-        assert "  - Okta (public TXT account indicator)" in plain
+        # The role qualifies the label on the detail view and is compacted out
+        # of the default one (ADR-0012); the JSON record carries the bare
+        # service name either way.
+        assert "  - Okta (public TXT account indicator)" in detailed
+        assert "  - Okta\n" in default
+        assert "(public TXT account indicator)" not in default
+        assert "evidence_roles: roles omitted, use --explain" in default
         assert structured["services"] == ["Okta"]
 
 

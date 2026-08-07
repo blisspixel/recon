@@ -360,7 +360,9 @@ class TestMarkdownRendering:
         info = _make_info(
             services=("Exchange Online", "Cloudflare", "Microsoft Teams"),
         )
-        md = format_tenant_markdown(info)
+        # Grouping test, not a role test: this fixture retains no evidence, so
+        # the default view would drop every label (ADR-0012).
+        md = format_tenant_markdown(info, detailed=True)
         assert "Microsoft 365 Services" in md
         assert "Tech Stack" in md
 
@@ -378,7 +380,7 @@ class TestMarkdownRendering:
             ),
         )
 
-        md = format_tenant_markdown(info)
+        md = format_tenant_markdown(info, detailed=True)
         m365_section = md.split("## Microsoft 365 Services", 1)[1].split("##", 1)[0]
         gws_section = md.split("## Google Workspace Services", 1)[1].split("##", 1)[0]
         tech_section = md.split("## Tech Stack", 1)[1].split("##", 1)[0]

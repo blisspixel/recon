@@ -16,7 +16,7 @@ import re
 from rich.console import Console
 
 from recon_tool.formatter import _CATEGORY_WIDTH, _SERVICE_CATEGORIES_ORDER, render_tenant_panel
-from recon_tool.models import ConfidenceLevel, TenantInfo
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
 
 def _panel_text(info: TenantInfo) -> str:
@@ -26,6 +26,14 @@ def _panel_text(info: TenantInfo) -> str:
 
 
 def _info(services: tuple[str, ...], slugs: tuple[str, ...]) -> TenantInfo:
+    # Every service carries a CNAME evidence record. The alignment under test
+    # is only observable on rows that render, and the default view drops
+    # matches with no established role (ADR-0012), so an evidence-free fixture
+    # would leave nothing to measure.
+    evidence = tuple(
+        EvidenceRecord(source_type="CNAME", rule_name=service, slug=slug, raw_value=f"{slug}.example.invalid")
+        for service, slug in zip(services, slugs, strict=True)
+    )
     return TenantInfo(
         tenant_id=None,
         display_name="Synthetic Alpha Ltd",
@@ -36,6 +44,7 @@ def _info(services: tuple[str, ...], slugs: tuple[str, ...]) -> TenantInfo:
         services=services,
         slugs=slugs,
         domain_count=1,
+        evidence=evidence,
     )
 
 

@@ -80,8 +80,7 @@ $ recon globex.invalid
 Globex Ltd
 globex.invalid
 ──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 (MX delivery path) + Proofpoint gateway (MX
-               delivery path)
+  Provider     Microsoft 365 + Proofpoint gateway
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
   Tenant domain globex.onmicrosoft.invalid
   Auth         Federated
@@ -89,14 +88,13 @@ globex.invalid
 
 
 Services
-  Email          Microsoft 365 (MX delivery path),
-                 Proofpoint (MX delivery path), DMARC reject, DKIM,
+  Email          Microsoft 365, Proofpoint, DMARC reject, DKIM,
                  SPF strict, MTA-STS enforce
-  Identity       Okta (CNAME endpoint binding)
+  Identity       Okta
   Cloud          Cloudflare (CDN/edge), AWS Route 53 (DNS)
-  Security       Wiz Security (public TXT account indicator)
-  Collaboration  Slack (public TXT account indicator),
-                 Atlassian (Jira/Confluence) (CNAME endpoint binding)
+  Security       Wiz Security
+  Collaboration  Slack, Atlassian (Jira/Confluence)
+                 Evidence roles: --explain
 
 
 High-signal related domains

@@ -200,8 +200,12 @@ class TestRollupSuppressed:
         out = _render_to_string(info)
 
         assert "Multi-cloud" not in out
-        assert "AWS Route 53 (role unavailable)" in out
-        assert "Cloudflare (role unavailable)" in out
+        # Neither legacy slug has a retained record, so the default view omits
+        # both rather than rendering a bare vendor name that would read as a
+        # cloud claim, and reports the omission (ADR-0012).
+        assert "AWS Route 53" not in out
+        assert "Cloudflare" not in out
+        assert "2 unattributed matches: --full" in out
 
     def test_ns_only_vendors_do_not_create_a_multi_cloud_workload_claim(self):
         info = _tenant(
@@ -232,7 +236,11 @@ class TestRollupSuppressed:
         out = _render_to_string(info)
 
         assert "Multi-cloud" not in out
-        assert "Cloudflare (public TXT account indicator)" in out
+        # The TXT-only Cloudflare match stays a plain vendor mention and never
+        # acquires a CDN/edge or DNS role it did not establish.
+        assert "Cloudflare" in out
+        assert "Cloudflare (CDN/edge)" not in out
+        assert "Cloudflare (DNS)" not in out
 
     def test_caa_authorization_does_not_create_a_multi_cloud_workload_claim(self):
         info = _tenant(

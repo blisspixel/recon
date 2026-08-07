@@ -225,6 +225,12 @@ consumer was relying on the default.
 - **Rich panel visual formatting**: colors, whitespace, row ordering
   within Services categories, box-drawing details. The section structure
   is stable; pixel-level rendering is not.
+- **Evidence-role wording on the human views**: the default panel, `--plain`,
+  and `--md` compact the record-role qualifier out of service and provider
+  labels and omit matches with no established role; `--explain`, `--verbose`,
+  and `--full` keep them. The JSON `provider` field and the MCP payloads are
+  unaffected and stay the machine contract. See
+  [ADR-0012](adr/0012-default-view-evidence-role-visibility.md).
 - **Insight wording**: individual insight text may be refined. The
   insight *types* and their *trigger conditions* are stable (see
   `signals.yaml`); the exact phrasing is not.

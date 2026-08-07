@@ -43,7 +43,10 @@ def test_service_markdown_is_escaped_after_merge() -> None:
     )
     merged = merge_results([result], queried_domain="example.com")
 
-    markdown = format_tenant_markdown(merged)
+    # Detail view: escaping is the invariant under test and is identical in
+    # both views, but this fixture retains no evidence, so the default view
+    # would drop the hostile label before it could be escaped (ADR-0012).
+    markdown = format_tenant_markdown(merged, detailed=True)
 
     assert "[link](https://example.invalid)" not in markdown
     assert "`code`" not in markdown
@@ -59,7 +62,8 @@ def test_service_markdown_cannot_create_block_structure_after_merge() -> None:
     )
     merged = merge_results([result], queried_domain="example.com")
 
-    markdown = format_tenant_markdown(merged)
+    # Detail view, for the same reason as the escaping test above.
+    markdown = format_tenant_markdown(merged, detailed=True)
 
     assert "- \\# forged heading" in markdown
     assert "- \\- nested item" in markdown

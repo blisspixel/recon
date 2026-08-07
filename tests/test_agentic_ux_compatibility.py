@@ -51,9 +51,9 @@ def _load(name: str):
     return tenant_info_from_dict(data)
 
 
-def _render(info) -> str:
+def _render(info, **kwargs) -> str:
     console = Console(no_color=True, record=True, width=120)
-    rendered = render_tenant_panel(info)
+    rendered = render_tenant_panel(info, **kwargs)
     console.print(rendered)
     return console.export_text()
 
@@ -71,7 +71,12 @@ class TestSyntheticDenseCompatibility:
         retained evidence record describing its role."""
         out = _render(_load("synthetic-dense.json"))
         assert "Multi-cloud" not in out
-        assert "Azure DNS (role unavailable)" in out
+        # The cached slug has no retained role, so the default view omits it
+        # and counts it rather than rendering a bare vendor name (ADR-0012);
+        # the detail view still carries the role-qualified label.
+        assert "Azure DNS" not in out
+        assert "unattributed" in out
+        assert "Azure DNS (role unavailable)" in _render(_load("synthetic-dense.json"), verbose=True)
         assert "Akamai" in out
 
     def test_ceiling_does_not_fire_single_domain(self):
@@ -93,8 +98,12 @@ class TestSyntheticDenseCompatibility:
     def test_unresolved_cloud_role_stays_below_key_facts(self):
         """The key-facts block must not elevate an unresolved catalog
         indicator. Its role-qualified detail remains in Services after
-        the deterministic Confidence field."""
-        out = _render(_load("synthetic-dense.json"))
+        the deterministic Confidence field.
+
+        Checked on the detail view, which is where the role-qualified label
+        lives now that the default view omits unattributed matches entirely
+        (ADR-0012) - an even stronger form of the same guarantee."""
+        out = _render(_load("synthetic-dense.json"), verbose=True)
         conf = out.find("Confidence")
         azure = out.find("Azure DNS (role unavailable)")
         assert conf != -1
