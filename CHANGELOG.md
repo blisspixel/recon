@@ -55,6 +55,15 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- `recon mcp doctor` no longer reports a cleanup error in place of the
+  handshake failure that caused it. The server is spawned with an empty
+  tempdir as its cwd, and on Windows that directory stays locked until the
+  child has fully exited, so tearing the transport down after a failed
+  handshake could raise `PermissionError: [WinError 32]` out of the tempdir's
+  own cleanup and overwrite the diagnosis with it. Cleanup of that isolation
+  boundary is now best-effort; the cwd-shadow defense it exists for is
+  unchanged. Seen as an intermittent Windows CI failure in
+  `tests/test_mcp_doctor.py`, with a platform-independent regression test.
 - `docs/statistical-assurance.md` rendered its signed marginal entropy formula
   as literal bracketed LaTeX rather than math, so github.com printed the raw
   expression between plain brackets. Same defect class as the

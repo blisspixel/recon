@@ -72,8 +72,10 @@ rows. Detail: [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.m
 
 ### 3. Product-quality baseline - **next build priority: v2.11**
 
-Specified, decision rule frozen, measurement not started. Process evidence is
-rich; product-outcome evidence is not. Acceptance and stop rules live in
+Specified, decision rule frozen, measurement part-run: the network-free half of
+the Phase 1 baseline is frozen, and the ablation that decides fusion's fate has
+not started. Process evidence is rich; product-outcome evidence is not.
+Acceptance and stop rules live in
 [docs/roadmap.md](docs/roadmap.md#3-establish-a-reproducible-product-quality-baseline)
 and the
 [Quality Proof execution plan](docs/strategic-gap-audit.md#quality-proof-execution-plan).
@@ -87,7 +89,8 @@ reference-positive and 183 reference-negative labeled units.
 
 `scripts/quality_scorecard.py` emits the public half of the Phase 1 baseline,
 network-free and corpus-free, and names every channel it cannot measure without
-the private corpus or live providers.
+the private corpus or live providers. Its first dated run is
+[validation/2026-08-05-quality-baseline-scorecard.md](validation/2026-08-05-quality-baseline-scorecard.md).
 
 ### 4. Optional operator-hosted access - lower priority side track
 
