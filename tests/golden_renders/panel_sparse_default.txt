@@ -1,12 +1,12 @@
 Synthetic Gamma
 gamma.invalid
 ──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 (role unavailable)
+  Provider     Microsoft 365 (no supporting record)
   Confidence   ●○○ Low (1 source)
 
 
 Services
-  Email          Microsoft 365 (role unavailable)
+  1 unattributed match: --full
 
 
 Insights

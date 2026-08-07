@@ -187,17 +187,20 @@ def test_detail_modes_retain_compact_and_secondary_email_facts(
     fully_populated_tenant_info: TenantInfo,
 ) -> None:
     info = _with_secondary_mail_service(fully_populated_tenant_info)
-    outputs = (
-        _render(info),
-        _render(info, verbose=True),
-        _render(info, show_services=True, show_domains=True, verbose=True),
-    )
-    expected_email = (
+    # Every mode keeps the same email facts in the same order; the detail modes
+    # additionally keep the record role inline (ADR-0012).
+    qualified = (
         "Email Microsoft 365 (MX delivery path), Proofpoint (MX delivery path), "
         "DMARC reject, MTA-STS enforce, SendGrid (CNAME endpoint binding)"
     )
+    compact = "Email Microsoft 365, Proofpoint, DMARC reject, MTA-STS enforce, SendGrid"
+    cases = (
+        (_render(info), compact),
+        (_render(info, verbose=True), qualified),
+        (_render(info, show_services=True, show_domains=True, verbose=True), qualified),
+    )
 
-    for output in outputs:
+    for output, expected_email in cases:
         collapsed = " ".join(_services_block(output).split())
         assert expected_email in collapsed
         for fact in ("Microsoft 365", "Proofpoint", "DMARC reject", "MTA-STS enforce", "SendGrid"):
@@ -240,9 +243,12 @@ def test_gateway_does_not_promote_or_duplicate_txt_only_downstream(
     collapsed = " ".join(_services_block(output).split())
     header = " ".join(output.split("Services\n", 1)[0].split())
 
-    assert "Email Proofpoint (MX delivery path), Microsoft 365 (public TXT account indicator)" in collapsed
+    # The TXT-only downstream is listed after the MX gateway and is never
+    # promoted into a delivery path. The default view carries the roles in the
+    # evidence trail but keeps the provider row's downstream hedge (ADR-0012).
+    assert "Email Proofpoint, Microsoft 365" in collapsed
     assert collapsed.count("Microsoft 365") == 1
-    assert "Microsoft 365 (possible downstream indicator)" in header
+    assert "Microsoft 365 (likely downstream)" in header
 
 
 def test_gateway_fingerprint_alias_is_not_duplicated(
@@ -264,8 +270,11 @@ def test_gateway_fingerprint_alias_is_not_duplicated(
     assert "Email Symantec/Broadcom" in collapsed
     assert collapsed.count("Symantec") == 1
     assert "Symantec Email Security" not in collapsed
-    assert "Symantec/Broadcom (MX delivery path)" in collapsed
+    # The MX role is established, so the label is compacted rather than dropped
+    # and no unattributed-match note appears (ADR-0012).
+    assert "Email Symantec/Broadcom" in collapsed
     assert "role unavailable" not in collapsed
+    assert "unattributed" not in collapsed
 
 
 def test_degraded_mx_preserves_surviving_txt_indicator(
@@ -288,5 +297,8 @@ def test_degraded_mx_preserves_surviving_txt_indicator(
     )
     collapsed = " ".join(_services_block(_render(info)).split())
 
-    assert "Email Symantec Email Security (public TXT account indicator)" in collapsed
+    # The TXT indicator survives the degraded MX channel and is not dropped as
+    # unattributed; its role stays available on the detail views (ADR-0012).
+    assert "Email Symantec Email Security" in collapsed
+    assert "unattributed" not in collapsed
     assert "Symantec/Broadcom" not in collapsed

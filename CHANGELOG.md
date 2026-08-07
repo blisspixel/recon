@@ -78,6 +78,26 @@ operator, corporate group, ownership, or control.
   catches contract drift without tracking tenant churn. No shipped behavior
   changed: `SourceResult` already recorded the negative with
   `source_unavailable` false, and that field is what merge and delta consume.
+- The default human views no longer repeat an evidence-role qualifier on every
+  service and provider label. `Slack (public TXT account indicator)`,
+  `Okta (CNAME endpoint binding)`, and `Microsoft 365 (MX delivery path)` now
+  read as `Slack`, `Okta`, and `Microsoft 365` on the default panel, `--plain`,
+  `--md`, and the `--chain` tree, with one dim line naming the flag that
+  restores the detail. `--explain`, `--verbose`, and `--full` are unchanged, as
+  are the `--json` record (including the stable `provider` field), `--csv`, and
+  every MCP payload. A match whose role could not be established is omitted
+  from the default view and counted in that line rather than rendered as a bare
+  vendor name, so removing the qualifier never upgrades a claim; the provider
+  row re-hedges as `(no supporting record)` instead of dropping, and the
+  downstream and unobserved-gateway hedges survive in shortened form. Recorded
+  in [ADR-0012](docs/adr/0012-default-view-evidence-role-visibility.md), which
+  also restates the renderer obligations on the `runtime.service-label.v1` and
+  `runtime.email-topology.v1` claim families.
+- Insight curation moved out of `formatter/panel.py` into
+  `formatter/insight_curation.py`. It is editorial policy over insight strings
+  rather than rendering, it depends on nothing else, and the move ratchets the
+  panel module's file-size ceiling down from 1719 to 1615 lines. No behavior
+  change.
 
 ## [2.10.2] - 2026-08-04
 

@@ -1,7 +1,7 @@
 Synthetic Alpha Ltd
 alpha.invalid
 ──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 (role unavailable)
+  Provider     Microsoft 365 (no supporting record)
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
   Auth         Federated
   Multi-cloud  2 providers observed (Fastly, Cloudflare)
@@ -9,8 +9,7 @@ alpha.invalid
 
 
 Services
-  Email          Microsoft 365 (role unavailable)
-  Collaboration  Slack (role unavailable)
+  2 unattributed matches: --full
 
 
 Related domains

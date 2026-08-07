@@ -13,6 +13,7 @@ from recon_tool.formatter import (
     format_tenant_markdown,
     render_tenant_panel,
 )
+from recon_tool.formatter.classify import compact_provider_line
 from recon_tool.formatter.key_facts import key_facts_auth_line, key_facts_multicloud_line
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, SourceResult, SurfaceAttribution, TenantInfo
 from recon_tool.server.lookup import _format_lookup_tenant
@@ -68,7 +69,10 @@ def test_key_facts_retain_the_canonical_structured_values() -> None:
     rendered = _render(info)
     structured = format_tenant_dict(info)
 
-    assert f"Provider     {structured['provider']}" in rendered
+    # The panel's default view compacts the record role out of the provider
+    # line (ADR-0012) while the JSON record keeps it, so the two agree on the
+    # provider identity rather than on the exact string.
+    assert f"Provider     {compact_provider_line(str(structured['provider']))}" in rendered
     assert f"Tenant       {structured['tenant_id']} • {structured['region']}" in rendered
     assert f"Auth         {structured['auth_type']}" in rendered
     assert f"Cloud        {structured['cloud_instance']} ({structured['tenant_region_sub_scope']})" in rendered
@@ -104,7 +108,11 @@ def test_multicloud_summary_excludes_evidence_from_an_unavailable_channel() -> N
     rendered = _render(info)
 
     assert "Multi-cloud" not in rendered
-    assert "Cloudflare (public TXT account indicator)" in rendered
+    # A TXT-only Cloudflare match still renders, and still does not become a
+    # cloud-workload claim; the default view carries the role in the evidence
+    # trail rather than inline (ADR-0012).
+    assert "Cloudflare" in rendered
+    assert "Cloudflare (CDN/edge)" not in rendered
 
 
 def test_key_fact_producers_project_unavailable_channels_at_their_boundary() -> None:

@@ -16,6 +16,7 @@ import string
 from recon_tool.explanation_lineage import explanation_lineage_label
 from recon_tool.formatter.classify import (
     categorize_services,
+    compact_categorized_services,
     google_workspace_cse_indicators,
     google_workspace_module_indicators,
     is_gws_service,
@@ -69,11 +70,18 @@ def _md_header(info: TenantInfo) -> list[str]:
     return lines
 
 
-def _md_services_split(info: TenantInfo) -> list[str]:
-    """Services grouped into Microsoft 365 / Google Workspace / Tech Stack."""
+def _md_services_split(info: TenantInfo, detailed: bool = False) -> list[str]:
+    """Services grouped into Microsoft 365 / Google Workspace / Tech Stack.
+
+    ``detailed`` is the --explain / --verbose report, which keeps every
+    evidence-role qualifier. The default report compacts them (ADR-0012) and
+    closes the section with one italic pointer at the detailed surfaces.
+    """
     categorized = categorize_services(info)
-    if not categorized:
-        return []
+    compacted_count = 0
+    dropped_count = 0
+    if not detailed:
+        categorized, compacted_count, dropped_count = compact_categorized_services(categorized)
     m365_svcs: list[str] = []
     gws_svcs: list[str] = []
     other_svcs: list[str] = []
@@ -96,6 +104,19 @@ def _md_services_split(info: TenantInfo) -> list[str]:
             for svc in svcs:
                 lines.append(f"- {markdown_escape(svc)}")
             lines.append("")
+    # Emitted even when every service was dropped and no section survives: a
+    # report that silently omits matches reads as a report that found none.
+    # Rendered as a bare italic line rather than a section so the stable H2
+    # structure gains no heading.
+    notes: list[str] = []
+    if compacted_count:
+        notes.append("Evidence roles omitted; run with `--explain` for the evidence trail.")
+    if dropped_count:
+        noun = "match" if dropped_count == 1 else "matches"
+        notes.append(f"{dropped_count} unattributed {noun} omitted; `--full` shows every match.")
+    if notes:
+        lines.append(f"*{' '.join(notes)}*")
+        lines.append("")
     return lines
 
 
@@ -191,11 +212,13 @@ def _md_footer(info: TenantInfo) -> list[str]:
     return lines
 
 
-def format_tenant_markdown(info: TenantInfo) -> str:
+def format_tenant_markdown(info: TenantInfo, *, detailed: bool = False) -> str:
     """Format TenantInfo as a markdown report.
 
     A thin orchestrator over the per-section ``_md_*`` builders, each of which
     returns its lines (or an empty list when the section does not apply).
+    ``detailed`` is the --explain / --verbose report and keeps every
+    evidence-role qualifier; the default report compacts them (ADR-0012).
     Output held byte-identical by ``tests/test_golden_renders.py``
     (``markdown_dense`` / ``markdown_sparse`` / ``markdown_rich``).
     """
@@ -204,7 +227,7 @@ def format_tenant_markdown(info: TenantInfo) -> str:
     info = collection_observable_info(info)
     lines: list[str] = []
     lines.extend(_md_header(info))
-    lines.extend(_md_services_split(info))
+    lines.extend(_md_services_split(info, detailed))
     lines.extend(_md_gws_details(info))
     lines.extend(_md_insights(info))
     lines.extend(_md_cert_intel(info))

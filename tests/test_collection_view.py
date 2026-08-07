@@ -602,8 +602,13 @@ def test_degraded_dkim_cannot_promote_txt_account_to_provider_secondary() -> Non
     assert provider_line(visible) == "Microsoft 365 (MX delivery path)"
     assert data["provider"] == "Microsoft 365 (MX delivery path)"
     assert len(data["evidence"]) == 3
-    assert "Provider     Microsoft 365 (MX delivery path)" in rendered
+    # The JSON record keeps the record role; the default panel compacts it out
+    # (ADR-0012). The claim under test is that a degraded DKIM channel cannot
+    # promote the TXT-only Google Workspace account into a provider, which
+    # holds on both surfaces.
+    assert "Provider     Microsoft 365\n" in rendered
     assert "Google Workspace (secondary)" not in rendered
+    assert "Google Workspace" not in rendered.split("Services", 1)[0]
 
 
 def test_explanation_summary_uses_available_evidence_and_preserves_raw_provenance() -> None:

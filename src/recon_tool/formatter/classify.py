@@ -51,6 +51,9 @@ __all__ = [
     "categorize_service",
     "categorize_services",
     "category_for_slug",
+    "compact_categorized_services",
+    "compact_provider_line",
+    "compact_service_label",
     "count_cloud_vendors",
     "detect_provider",
     "evidence_role_service_label",
@@ -130,6 +133,26 @@ _RECORD_ROLE_QUALIFIERS = (
     ("SRV", "SRV service-discovery reference"),
     ("NS", "authoritative DNS delegation"),
     ("DKIM", "DKIM selector indicator"),
+)
+
+# ── Default-view label compaction (ADR-0012) ──────────────────────────────
+#
+# The qualifiers above answer "how do we know", which is the right answer for
+# the evidence surfaces and the wrong one for the default panel: repeated once
+# per service they bury the answer to "what do they run" under boilerplate the
+# operator did not ask for. The helpers below produce the default-view form.
+# --explain, --verbose, --full, and every machine surface keep the full labels,
+# so no role is lost, only relocated. ADR-0012 records the decision and the two
+# qualifiers that survive compaction because dropping them would convert a
+# hedge into an assertion.
+_ROLE_UNAVAILABLE_SUFFIX = " (role unavailable)"
+_UNATTRIBUTED_PROVIDER_SUFFIX = " (no supporting record)"
+_DOWNSTREAM_INDICATOR_SUFFIX = " (possible downstream indicator)"
+_COMPACT_DOWNSTREAM_SUFFIX = " (likely downstream)"
+_UNOBSERVED_GATEWAY_SUFFIX = " (MX delivery path; downstream unobserved)"
+_COMPACT_UNOBSERVED_GATEWAY_SUFFIX = " (downstream unobserved)"
+_RECORD_ROLE_DISPLAY_SUFFIXES = tuple(
+    suffix for suffix in _EVIDENCE_ROLE_SUFFIXES if suffix != _ROLE_UNAVAILABLE_SUFFIX
 )
 
 
@@ -665,6 +688,86 @@ def evidence_role_service_label(service: str, supporting: Iterable[EvidenceRecor
         source_types,
     )
     return label
+
+
+def compact_service_label(label: str) -> str | None:
+    """Return the default-view form of one service label, or ``None`` to drop it.
+
+    Labels whose only qualifier is the record role that established the match
+    render bare, because the default panel answers "what do they run" and
+    ``--explain`` / ``--full`` answer "how do we know".
+
+    A label with no established role is dropped rather than rendered bare.
+    Stripping ``(role unavailable)`` in place would silently promote an
+    unattributed catalog match into an asserted observation, which is the one
+    thing this compaction must never do; the detailed surfaces still carry it.
+
+    Two qualifiers survive in shortened form because they hedge the claim
+    itself rather than name a record type: a non-MX provider stays marked as a
+    likely downstream, and a gateway with no observed downstream stays marked
+    as such.
+    """
+    if label.endswith(_ROLE_UNAVAILABLE_SUFFIX):
+        return None
+    if label.endswith(_DOWNSTREAM_INDICATOR_SUFFIX):
+        return label.removesuffix(_DOWNSTREAM_INDICATOR_SUFFIX) + _COMPACT_DOWNSTREAM_SUFFIX
+    if label.endswith(_UNOBSERVED_GATEWAY_SUFFIX):
+        return label.removesuffix(_UNOBSERVED_GATEWAY_SUFFIX) + _COMPACT_UNOBSERVED_GATEWAY_SUFFIX
+    for suffix in _RECORD_ROLE_DISPLAY_SUFFIXES:
+        if label.endswith(suffix):
+            return label.removesuffix(suffix)
+    return label
+
+
+def compact_categorized_services(
+    categorized: dict[str, list[str]],
+) -> tuple[dict[str, list[str]], int, int]:
+    """Compact every categorized service label for the default view.
+
+    Returns ``(categories, compacted_count, dropped_count)``. The two counts
+    let a renderer decide whether to point at the detailed surfaces at all: a
+    panel where nothing was compacted must not carry a note about compaction.
+
+    Deduplication happens after compaction because it is only then that two
+    labels can collide - one vendor matched by both an MX record and a TXT
+    account record yields one bare name twice. Categories emptied by dropped
+    labels are omitted rather than rendered as an empty row.
+    """
+    out: dict[str, list[str]] = {}
+    compacted_count = 0
+    dropped_count = 0
+    for category, labels in categorized.items():
+        kept: list[str] = []
+        for label in labels:
+            compacted = compact_service_label(label)
+            if compacted is None:
+                dropped_count += 1
+                continue
+            if compacted != label:
+                compacted_count += 1
+            if compacted not in kept:
+                kept.append(compacted)
+        if kept:
+            out[category] = kept
+    return out, compacted_count, dropped_count
+
+
+def compact_provider_line(provider: str) -> str:
+    """Return the default-view form of the joined provider line.
+
+    Segment-wise counterpart to :func:`compact_service_label`. The provider row
+    is the panel's single answer to "who handles their mail", so an
+    unattributed segment is re-hedged rather than dropped - dropping it would
+    leave the row silent, and rendering it bare would assert a delivery path no
+    retained record supports.
+    """
+    segments = []
+    for segment in provider.split(" + "):
+        if segment.endswith(_ROLE_UNAVAILABLE_SUFFIX):
+            segments.append(segment.removesuffix(_ROLE_UNAVAILABLE_SUFFIX) + _UNATTRIBUTED_PROVIDER_SUFFIX)
+            continue
+        segments.append(compact_service_label(segment) or segment)
+    return " + ".join(segments)
 
 
 def _categorize_pass1_slugs(

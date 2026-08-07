@@ -237,6 +237,14 @@ class TestTieredOutput:
             "services": ("Exchange Online", "Google Workspace", "Slack"),
             "insights": ("Federated identity", "DMARC: reject"),
             "tenant_domains": ("alpha.invalid", "testco.onmicrosoft.com"),
+            # Retained evidence per service, as a real lookup produces. The
+            # default view drops matches with no established role (ADR-0012),
+            # so an evidence-free fixture would render no Services rows at all.
+            "evidence": (
+                EvidenceRecord("MX", "alpha-invalid.mail.protection.outlook.com", "Exchange Online", "microsoft365"),
+                EvidenceRecord("TXT", "google-site-verification=opaque", "Google Workspace", "google-workspace"),
+                EvidenceRecord("TXT", "slack-domain-verification=opaque", "Slack", "slack"),
+            ),
         }
         defaults.update(kwargs)
         return TenantInfo(**defaults)
