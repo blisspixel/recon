@@ -336,7 +336,19 @@ async def _run_handshake(
     #   * an empty tempdir guarantees no Python files exist there,
     #   * it isolates the child filesystem footprint from the doctor's,
     #   * cleanup is automatic via the context manager.
-    with tempfile.TemporaryDirectory(prefix="recon-mcp-doctor-cwd-") as safe_cwd:
+    #
+    # ``ignore_cleanup_errors`` keeps that cleanup from rewriting the
+    # diagnosis. On Windows the directory stays locked until the server
+    # process it was the cwd of has fully exited, so a handshake failure
+    # that tears the transport down can lose the race and surface as
+    # ``PermissionError: [WinError 32]`` - the tempdir's exit exception
+    # replacing the handshake error the doctor exists to report. The
+    # directory is an isolation boundary, not state the report depends
+    # on; a leftover empty tempdir is strictly better than a masked cause.
+    with tempfile.TemporaryDirectory(
+        prefix="recon-mcp-doctor-cwd-",
+        ignore_cleanup_errors=True,
+    ) as safe_cwd:
         params = StdioServerParameters(
             command=sys.executable,
             args=["-m", "recon_tool.server"],

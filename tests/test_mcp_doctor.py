@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+from typing import Any
 
 import pytest
 from typer.testing import CliRunner
@@ -334,6 +335,65 @@ class TestExceptionPath:
 
         report = run_doctor()
 
+        assert [check.name for check in report.checks] == ["server spawn", "client session"]
+        assert report.checks[-1].status == "fail"
+        assert "synthetic client session entry failure" in report.checks[-1].detail
+
+    def test_locked_isolation_cwd_does_not_mask_the_handshake_error(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A cwd that will not delete must not rewrite the diagnosis.
+
+        The handshake spawns the server with an empty tempdir as its cwd.
+        Windows keeps that directory locked until the child has fully
+        exited, so tearing the transport down after a failed handshake can
+        lose the race and raise ``PermissionError: [WinError 32]`` out of
+        the tempdir's cleanup - replacing the very error the doctor exists
+        to report.
+
+        The lock stands in at the context-manager boundary rather than at
+        ``os.rmdir``. Refusing the syscall would exercise ``tempfile``'s
+        internal retry ladder, which differs by version and platform and
+        recurses without bound on 3.11, instead of exercising the doctor.
+        """
+        import tempfile
+
+        from mcp import ClientSession
+
+        real_tempdir = tempfile.TemporaryDirectory
+        locked: list[bool] = []
+
+        class _LockedTemporaryDirectory:
+            """Delete normally, then report the directory as still held."""
+
+            def __init__(self, **kwargs: Any) -> None:
+                self._ignore_errors = bool(kwargs.pop("ignore_cleanup_errors", False))
+                self._is_isolation_cwd = str(kwargs.get("prefix", "")).startswith("recon-mcp-doctor-cwd-")
+                self._inner = real_tempdir(**kwargs)
+
+            def __enter__(self) -> str:
+                return self._inner.__enter__()
+
+            def __exit__(self, *_exc: object) -> None:
+                self._inner.cleanup()
+                if self._is_isolation_cwd:
+                    locked.append(self._ignore_errors)
+                    if not self._ignore_errors:
+                        raise PermissionError(
+                            32,
+                            "The process cannot access the file because it is being used by another process",
+                        )
+
+        async def _fail_entry(_session: ClientSession) -> ClientSession:
+            raise RuntimeError("synthetic client session entry failure")
+
+        monkeypatch.setattr(ClientSession, "__aenter__", _fail_entry)
+        monkeypatch.setattr(tempfile, "TemporaryDirectory", _LockedTemporaryDirectory)
+
+        report = run_doctor()
+
+        assert locked == [True], "the handshake did not ask for best-effort cwd cleanup"
         assert [check.name for check in report.checks] == ["server spawn", "client session"]
         assert report.checks[-1].status == "fail"
         assert "synthetic client session entry failure" in report.checks[-1].detail
