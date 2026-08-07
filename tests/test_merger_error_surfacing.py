@@ -130,7 +130,7 @@ class TestPartialSuccessStillRenders:
         from typer.testing import CliRunner
 
         from recon_tool.cli import app
-        from recon_tool.models import ConfidenceLevel, TenantInfo
+        from recon_tool.models import ConfidenceLevel, EvidenceRecord, TenantInfo
 
         partial_info = TenantInfo(
             tenant_id=None,
@@ -145,6 +145,14 @@ class TestPartialSuccessStillRenders:
             auth_type=None,
             dmarc_policy="reject",
             domain_count=1,
+            # Retained evidence for the surviving source, as a real partial run
+            # produces: without it the default view has no established role for
+            # Cloudflare and omits it (ADR-0012), which would make this test
+            # about label compaction rather than about partial-success rendering.
+            evidence=(
+                EvidenceRecord("CNAME", "example.com.cdn.cloudflare.net", "Cloudflare", "cloudflare"),
+                EvidenceRecord("DMARC", "v=DMARC1; p=reject", "DMARC", "dmarc"),
+            ),
         )
         partial_results = [
             SourceResult(source_name="oidc_discovery", error="HTTP 404"),

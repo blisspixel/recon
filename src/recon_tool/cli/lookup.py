@@ -588,14 +588,21 @@ def _lookup_emit_markdown(
     results: list[Any],
     observations: tuple[Any, ...],
     *,
-    show_posture: bool,
-    show_explain: bool,
+    display: Any,
 ) -> None:
-    """Emit the tenant report as Markdown, with optional posture and explanations."""
+    """Emit the tenant report as Markdown, with optional posture and explanations.
+
+    Takes the display options rather than three booleans off them: the report
+    needs the posture flag, the explain flag, and the evidence-role detail
+    level, and threading each one separately put this function over the
+    argument ratchet for no readability gain.
+    """
     from recon_tool.formatter import format_tenant_markdown
     from recon_tool.formatter.markdown import markdown_escape
 
-    md = format_tenant_markdown(info)
+    show_posture = display.show_posture
+    show_explain = display.show_explain
+    md = format_tenant_markdown(info, detailed=display.verbose or show_explain)
     if show_posture and observations:
         md += "\n## Posture Analysis\n\n"
         for obs in observations:
@@ -612,7 +619,7 @@ def _lookup_emit_markdown(
     typer.echo(md)
 
 
-def _lookup_emit_plain(info: Any, sections: dict[str, Any], *, include_unclassified: bool) -> None:
+def _lookup_emit_plain(info: Any, sections: dict[str, Any], *, include_unclassified: bool, detailed: bool) -> None:
     """Emit the tenant report as plain, linear, greppable text (no panel).
 
     Takes the already-built optional sections rather than the flags that select
@@ -622,7 +629,7 @@ def _lookup_emit_plain(info: Any, sections: dict[str, Any], *, include_unclassif
     from recon_tool.formatter import format_tenant_plain
     from recon_tool.formatter.serialize import plain_lines
 
-    lines = [format_tenant_plain(info, include_unclassified=include_unclassified)]
+    lines = [format_tenant_plain(info, include_unclassified=include_unclassified, detailed=detailed)]
     for key, value in sections.items():
         lines.extend(plain_lines(value, key, 0))
     typer.echo("\n".join(lines))
@@ -767,14 +774,11 @@ async def _lookup_standard(
                 include_unclassified=options.include_unclassified,
             )
             return
+        # The evidence-role detail level tracks the panel's (ADR-0012): the
+        # non-panel human surfaces are the same default view in another shape.
+        detailed_roles = options.verbose or options.show_explain
         if options.markdown:
-            _lookup_emit_markdown(
-                info,
-                results,
-                observations,
-                show_posture=options.show_posture,
-                show_explain=options.show_explain,
-            )
+            _lookup_emit_markdown(info, results, observations, display=options)
             return
         if options.plain:
             _lookup_emit_plain(
@@ -787,6 +791,7 @@ async def _lookup_standard(
                     show_explain=options.show_explain,
                 ),
                 include_unclassified=options.include_unclassified,
+                detailed=detailed_roles,
             )
             return
 

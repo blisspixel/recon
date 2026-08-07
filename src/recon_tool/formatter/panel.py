@@ -33,6 +33,8 @@ from recon_tool.formatter.classify import (
     categorize_service,
     categorize_services,
     category_for_slug,
+    compact_categorized_services,
+    compact_provider_line,
     count_cloud_vendors,
     detect_provider,
     is_gws_service,
@@ -56,6 +58,7 @@ from recon_tool.formatter.exposure import (  # re-exported: stable import path a
     render_exposure_panel,
     render_gaps_panel,
 )
+from recon_tool.formatter.insight_curation import curate_insights
 from recon_tool.formatter.key_facts import key_facts_auth_line, key_facts_multicloud_line
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.formatter.markdown import (
@@ -534,16 +537,21 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     facts.append("\n")
 
 
-def _render_key_facts(info: TenantInfo) -> Text:
+def _render_key_facts(info: TenantInfo, detailed: bool) -> Text:
     """Build the key-facts block: Provider, Tenant/Region, Auth, Cloud
     (sovereignty), Multi-cloud rollup, Confidence.
 
     Extracted from ``render_tenant_panel`` so the panel orchestrator stays
-    a thin sequence of section calls. Behavior is unchanged; the golden
-    renders in ``tests/test_golden_renders.py`` pin the exact output.
+    a thin sequence of section calls. The golden renders in
+    ``tests/test_golden_renders.py`` pin the exact output.
+
+    ``detailed`` is the --explain / --verbose / --full view. The default view
+    compacts the Provider row's record-role qualifiers per ADR-0012; the
+    detailed view keeps them.
     """
     facts = Text()
-    _append_field(facts, "Provider", provider_line(info))
+    provider = provider_line(info)
+    _append_field(facts, "Provider", provider if detailed else compact_provider_line(provider))
 
     if info.tenant_id:
         tenant_line = info.tenant_id
@@ -643,10 +651,15 @@ def render_tenant_panel(
     blocks.append(rule)
 
     # ── Key facts block ────────────────────────────────────────────
-    blocks.append(_render_key_facts(info))
+    # --explain, --verbose, and --full are the "how do we know" views and keep
+    # every evidence-role qualifier. The default view is the "what do they run"
+    # view and compacts them (ADR-0012). --domains is not a detail view: it
+    # widens the domain listing without asking for evidence.
+    detailed = verbose or explain
+    blocks.append(_render_key_facts(info, detailed))
 
     # ── Services section ──────────────────────────────────────────
-    svc_block, ceiling_categorized_count = _render_services(info, show_domains)
+    svc_block, ceiling_categorized_count = _render_services(info, show_domains, detailed)
     if svc_block is not None:
         _spacer()
         blocks.append(svc_block)
@@ -689,7 +702,7 @@ def render_tenant_panel(
     return Group(*blocks)
 
 
-def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: bool, max_width: int) -> None:
+def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: bool, max_width: int) -> bool:
     """Default-mode-only line summarising the providers the CNAME-chain
     classifier attributed to subdomains, with per-provider counts so the
     multi-cloud distribution is visible at a glance (e.g. ``AWS CloudFront (5),
@@ -703,12 +716,15 @@ def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: b
     Cloud line's "what does the apex resolve to". Counts the primary attribution
     per subdomain (the fronting infra tier is the same subdomain, not an extra),
     falling back to the infra tier only when there is no primary.
+
+    Returns whether a summary row was appended, so the caller can keep the
+    Services section alive on a panel whose apex rows were all compacted away.
     """
     if not (info.surface_attributions and not show_domains):
-        return
+        return False
     surface_summary = subdomain_surface_summary_items(info.surface_attributions)
     if not surface_summary:
-        return
+        return False
     budget = _PANEL_WIDTH - (2 + max_width)
     lines = compact_subdomain_summary_lines(surface_summary, budget)
     svc_block.append("  ")
@@ -718,41 +734,93 @@ def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: b
             svc_block.append(" " * (2 + max_width))
         svc_block.append(line)
         svc_block.append("\n")
+    return True
 
 
-def _render_services(info: TenantInfo, show_domains: bool) -> tuple[Text | None, int]:
+def _evidence_role_note(compacted_count: int, dropped_count: int) -> str | None:
+    """Name what the default view left out, or ``None`` when it left out nothing.
+
+    A panel whose every label was already role-free must not carry a note about
+    roles, so this returns ``None`` rather than a generic footer. Dropped
+    matches are counted and point at --full: an operator can infer a compacted
+    label from the label, but cannot infer a hidden row from a row that is not
+    there.
+    """
+    if compacted_count and dropped_count:
+        return f"Evidence roles + {dropped_count} unattributed: --full"
+    if dropped_count:
+        noun = "match" if dropped_count == 1 else "matches"
+        return f"{dropped_count} unattributed {noun}: --full"
+    if compacted_count:
+        return "Evidence roles: --explain"
+    return None
+
+
+def _render_services(info: TenantInfo, show_domains: bool, detailed: bool) -> tuple[Text | None, int]:
     """Render the categorized Services section and return it with the count of
     service categories (used by the passive-DNS ceiling trigger).
 
-    Returns ``(None, 0)`` when there are no services. Output held byte-identical
-    by ``tests/test_golden_renders.py`` (``panel_dense_default`` /
+    Returns ``(None, 0)`` when there are no services. ``detailed`` is the
+    --explain / --verbose / --full view, which keeps every evidence-role
+    qualifier; the default view compacts them per ADR-0012 and points at the
+    detailed surfaces. Compaction can empty the section outright when every
+    match was unattributed, so the emptiness check runs after it, not just on
+    ``info.services``. Output held byte-identical by
+    ``tests/test_golden_renders.py`` (``panel_dense_default`` /
     ``panel_surface_default``).
+
+    The returned count is deliberately the count *before* compaction. It feeds
+    the passive-DNS ceiling, which asks how much signal the collection found,
+    not how many rows this view chose to draw; compacting a label must not move
+    a domain across the sparseness boundary.
     """
     if not info.services:
         return None, 0
-    svc_block = Text()
-    svc_block.append("Services", style="bold")
-    svc_block.append("\n")
     categorized = _categorize_services(info)
     if "Email" in categorized:
         normalize_email_services(categorized, info)
+    collected_category_count = len(categorized)
+    compacted_count = 0
+    dropped_count = 0
+    if not detailed:
+        categorized, compacted_count, dropped_count = compact_categorized_services(categorized)
     # Widen the label column only when a label present in this render needs
     # it, so short-label panels keep their value width and a long label
     # (e.g. "Data & Analytics") still gets one space before its value.
     max_width = max(_CATEGORY_WIDTH, max((len(c) for c in categorized), default=0) + 1)
+    body = Text()
     for cat, svcs in categorized.items():
-        svc_block.append("  ")
-        svc_block.append(cat.ljust(max_width), style="dim")
+        body.append("  ")
+        body.append(cat.ljust(max_width), style="dim")
         wrapped = _wrap_service_list(
             svcs,
             label_width=2 + max_width,
             panel_width=_PANEL_WIDTH,
             panel_pad=0,
         )
-        svc_block.append(wrapped)
-        svc_block.append("\n")
-    _append_subdomain_summary(svc_block, info, show_domains, max_width)
-    return svc_block, len(categorized)
+        body.append(wrapped)
+        body.append("\n")
+    # The subdomain summary is CNAME-chain attribution, not an apex catalog
+    # label, so it survives apex compaction and keeps the section alive on its
+    # own. Without this the section would vanish whole when every apex match
+    # was unattributed, taking an unrelated finding with it.
+    has_subdomain_summary = _append_subdomain_summary(body, info, show_domains, max_width)
+    has_rows = bool(categorized) or has_subdomain_summary
+    note = _evidence_role_note(compacted_count, dropped_count)
+    if not has_rows and note is None:
+        return None, collected_category_count
+    if note is not None:
+        # Align under the value column when rows precede it; fall back to the
+        # section indent when the note is the whole section, which is what a
+        # --domains render looks like once every apex match was unattributed.
+        body.append(" " * (2 + max_width) if has_rows else "  ")
+        body.append(note, style="dim italic")
+        body.append("\n")
+    svc_block = Text()
+    svc_block.append("Services", style="bold")
+    svc_block.append("\n")
+    svc_block.append(body)
+    return svc_block, collected_category_count
 
 
 def _render_passive_dns_ceiling(info: TenantInfo, show_domains: bool, categorized_count: int) -> Text | None:
@@ -1052,7 +1120,7 @@ def _render_insights(info: TenantInfo, verbose: bool, confidence_mode: str) -> T
     """
     if not info.insights:
         return None
-    curated: list[str] = _curate_insights(info.insights)
+    curated: list[str] = curate_insights(info.insights)
     from recon_tool.strict_mode import apply_strict_mode, should_apply_strict
 
     if should_apply_strict(info, confidence_mode):
@@ -1222,181 +1290,6 @@ def _render_explain_conflicts(info: TenantInfo, explain: bool, verbose: bool) ->
         if ann:
             conf_block.append(f"  {field_name}: {ann}\n", style="dim")
     return conf_block
-
-
-def _curate_insights(insights: tuple[str, ...]) -> list[str]:
-    """Filter and deduplicate insights for the default panel.
-
-    Two kinds of cleanup:
-
-    1. **Drop laundry-list dumps.** Prefixes like ``"Security stack:"``,
-       ``"Security-vendor indicators observed:"``, ``"Infrastructure:"``,
-       ``"PKI:"``, and ``"Google Workspace module indicators observed:"``
-       all duplicate information that
-       the Services block already shows in a categorized, deduped
-       form. Low-signal organizational-size hints
-       (``"mid-size organization"``, ``"domains in tenant"``) read as
-       padding and add nothing.
-
-    2. **Collapse overlapping signal families.** Real runs often
-       trigger three or four signals about the same underlying pattern
-       because `signals.yaml` has multiple rules covering it from
-       different angles. On a dual-provider run (M365 tenant + Google
-       Workspace via DKIM) the Insights block used to show:
-
-           Dual provider: Google + Microsoft coexistence
-           Dual Email Provider: microsoft365, google-workspace
-           Dual Email Delivery Path: microsoft365, google-workspace
-           Secondary Email Provider Observed: google-workspace
-
-       Four different wordings of the same fact. The curator collapses
-       these into a single canonical line, keeping the highest-
-       signal wording and dropping the rest.
-
-    The collapse rules are intentionally narrow: only overlapping
-    signals that describe the same underlying pattern. Real distinct
-    signals ("Edge Layering" vs "Zero Trust Pattern Observed") never collapse
-    into each other.
-    """
-    drop_prefixes = (
-        "Security stack:",
-        "Security-vendor indicators observed:",
-        "Network-security vendor indicator",
-        "Device-management vendor indicator",
-        "Infrastructure:",
-        "PKI:",
-        "Google Workspace modules:",  # module list also belongs in Services
-        "Google Workspace module indicators observed:",
-    )
-    # Drop insights that restate what the Services
-    # block or header already shows. These follow a "Label: slug1, slug2"
-    # pattern where the slugs are visible in the categorized Services
-    # section. They add zero interpretation — just a differently-worded
-    # service list. Keep insights that synthesize (scores, topology,
-    # tier inference, migration patterns, security observations).
-    restatement_prefixes = (
-        # These all follow the "Label: slug1, slug2" pattern where the
-        # slugs are already visible in the categorized Services section.
-        # They add zero interpretation — just a differently-worded list.
-        "Multi-Cloud:",
-        "Dev & Engineering Heavy:",
-        "Heavy Outbound Stack:",
-        "Modern Collaboration:",
-        "Google Cloud Investment:",
-        "Google-Native Identity:",
-        "Dual provider:",
-        "Provider indicators co-observed:",
-        "Dual Email Provider:",
-        "Dual Email Delivery Path:",
-        "Google MTA-STS Enforcing:",
-        "AI Platform Diversity:",
-        "AI Adoption:",  # bare form; "Without Governance" variant kept (security context)
-        "Enterprise Security Stack:",
-        "Digital Transformation:",
-        "Email gateway:",  # already in Provider line
-        "MX gateway observed:",
-        "Email Gateway Topology:",
-        "Email delivery path:",
-        "Secondary Email Provider Observed:",
-    )
-    curated: list[str] = []
-    for line in insights:
-        if any(line.startswith(pfx) for pfx in drop_prefixes):
-            continue
-        if any(line.startswith(pfx) for pfx in restatement_prefixes):
-            continue
-        lower = line.lower()
-        if "mid-size organization" in lower or "domains in tenant" in lower:
-            continue
-        curated.append(line)
-
-    # ── Collapse overlapping signal families ──────────────────────────
-
-    # Dual-provider family: four overlapping signals all describing
-    # "both Microsoft 365 and Google Workspace detected". We keep the
-    # most informative wording ("Dual provider: Google + Microsoft
-    # coexistence") and drop the rest.
-    dual_family_prefixes = (
-        "Dual Email Provider:",
-        "Dual Email Delivery Path:",
-        "Secondary Email Provider Observed:",
-    )
-    has_canonical_dual = any(
-        line.startswith("Dual provider:") or "Google + Microsoft coexistence" in line for line in curated
-    )
-    if has_canonical_dual:
-        curated = [line for line in curated if not any(line.startswith(pfx) for pfx in dual_family_prefixes)]
-    else:
-        # No canonical line — keep at most one of the family as a
-        # promoted representative. "Dual Email Delivery Path" is the
-        # most information-dense wording of the three, so prefer it.
-        family_lines = [line for line in curated if any(line.startswith(pfx) for pfx in dual_family_prefixes)]
-        if len(family_lines) >= 2:
-            # Preference order for promotion
-            pref_order = (
-                "Dual Email Delivery Path:",
-                "Dual Email Provider:",
-                "Secondary Email Provider Observed:",
-            )
-            chosen: str | None = None
-            for pfx in pref_order:
-                for line in family_lines:
-                    if line.startswith(pfx):
-                        chosen = line
-                        break
-                if chosen:
-                    break
-            curated = [line for line in curated if line not in family_lines or line == chosen]
-
-    # "Dual Email Provider" signal family overlap with the older
-    # "Dual provider: Google + Microsoft coexistence" insight line:
-    # when BOTH the canonical insight and the newer "Dual Email
-    # Provider" signal fire, keep only the canonical (human-readable)
-    # one. Already handled above via has_canonical_dual; this comment
-    # just documents the precedence for future maintainers.
-
-    # ── Email security aux-note dedup ──────────────────────────────
-    # The score line ("Email security: <inventory>") already
-    # names what's present/absent. The auxiliary "DMARC: none", "No
-    # DMARC record at apex", "No DKIM at common selectors" insights
-    # restate the same observation in prose. Keep the score line on
-    # the default panel; the aux notes stay in the raw `insights`
-    # JSON field for consumers that want them.
-    has_score_line = any(line.startswith("Email security:") for line in curated)
-    if has_score_line:
-        curated = [
-            line
-            for line in curated
-            if not line.startswith("No DMARC record")
-            and not line.startswith("No valid DMARC policy record")
-            and not line.startswith("No DKIM at common selectors")
-            and not line.startswith("No DKIM selectors observed")
-            and not line.startswith("DKIM not observed")
-            and not line.startswith("DMARC: none")
-        ]
-
-    # ── Google Workspace identity echo dedup ───────────────────────
-    # The insight "Google Workspace: Managed identity (Google-native)"
-    # restates the Auth line AND the Identity row in the Services
-    # block. On domains with minimal signal this is the third time
-    # the same fact appears in the panel. Drop it — the Auth line
-    # already says "Managed (Google Workspace)" and the Services
-    # block carries the slug detection.
-    return [
-        line
-        for line in curated
-        if line != "Google Workspace: Managed identity (Google-native)"
-        and not line.startswith("Google Workspace: Managed identity")
-    ]
-
-    # Note on the "Cloud-managed identity indicators" insight: the
-    # dedup for dual-provider targets happens upstream in
-    # insights._auth_insights, which refuses to emit the line when
-    # google_auth_type is set (the Auth line's compound format
-    # "Managed (Entra ID + Google Workspace)" already carries the
-    # same fact). On pure M365 targets the insight DOES fire and
-    # the Auth line just says "Managed", so both surfaces carry
-    # distinct information — no dedup needed here.
 
 
 def render_verbose_sources(results: list[SourceResult], *, console: Console | None = None) -> None:
@@ -1588,7 +1481,10 @@ def render_chain_panel(report: ChainReport) -> Panel:
                 current_depth = r.chain_depth
                 text.append(f"  Depth {current_depth}:\n", style="bold")
             indent = "    " + "  " * r.chain_depth
-            provider = provider_line(r.info)
+            # One compact summary row per resolved domain: this tree is the
+            # densest repetition of the provider line in the tool, so it takes
+            # the default view's compaction (ADR-0012) unconditionally.
+            provider = compact_provider_line(provider_line(r.info))
             text.append(f"{indent}{r.domain}", style="cyan")
             text.append(f" — {r.info.display_name}", style="dim")
             if not provider.startswith("Unknown"):

@@ -127,8 +127,11 @@ use.
 ### Dual-provider organizations
 
 **Current:** A domain with M365 tenant + MX through a Trend Micro gateway and
-M365 DKIM reads as "Trend Micro gateway (MX delivery path) + Microsoft 365
-(possible downstream indicator)". The ordering does not assert priority. If M365
+M365 DKIM reads as "Trend Micro gateway + Microsoft 365 (likely downstream)" on
+the default view, and as "Trend Micro gateway (MX delivery path) + Microsoft 365
+(possible downstream indicator)" under `--explain` / `--full` and in the JSON
+record ([ADR-0012](adr/0012-default-view-evidence-role-visibility.md)). The
+ordering does not assert priority. If M365
 is the only detected slug and Google Workspace fires only from a TXT token
 (no DKIM, no MX), Google Workspace remains an account signal and does not enter
 the provider line. Use `--full` or structured output when account-only
