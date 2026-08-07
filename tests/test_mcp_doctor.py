@@ -13,8 +13,10 @@ to keep them fast and OS-independent.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import io
 import json
+import os
 
 import pytest
 from typer.testing import CliRunner
@@ -334,6 +336,51 @@ class TestExceptionPath:
 
         report = run_doctor()
 
+        assert [check.name for check in report.checks] == ["server spawn", "client session"]
+        assert report.checks[-1].status == "fail"
+        assert "synthetic client session entry failure" in report.checks[-1].detail
+
+    def test_locked_isolation_cwd_does_not_mask_the_handshake_error(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        """A cwd that will not delete must not rewrite the diagnosis.
+
+        The handshake spawns the server with an empty tempdir as its cwd.
+        Windows keeps that directory locked until the child has fully
+        exited, so tearing the transport down after a failed handshake can
+        lose the race and raise ``PermissionError: [WinError 32]`` out of
+        the tempdir's cleanup - replacing the very error the doctor exists
+        to report. Simulate the lock by refusing to remove that directory.
+        """
+        from mcp import ClientSession
+
+        real_rmdir = os.rmdir
+        blocked: list[str] = []
+
+        def _locked_rmdir(path: int | str | os.PathLike[str], *, dir_fd: int | None = None) -> None:
+            if "recon-mcp-doctor-cwd-" in str(path):
+                blocked.append(str(path))
+                raise PermissionError(
+                    32,
+                    "The process cannot access the file because it is being used by another process",
+                )
+            real_rmdir(path, dir_fd=dir_fd)
+
+        async def _fail_entry(_session: ClientSession) -> ClientSession:
+            raise RuntimeError("synthetic client session entry failure")
+
+        monkeypatch.setattr(ClientSession, "__aenter__", _fail_entry)
+        monkeypatch.setattr(os, "rmdir", _locked_rmdir)
+
+        try:
+            report = run_doctor()
+        finally:
+            for path in blocked:
+                with contextlib.suppress(OSError):
+                    real_rmdir(path)
+
+        assert blocked, "the isolation cwd was never cleaned up, so nothing was exercised"
         assert [check.name for check in report.checks] == ["server spawn", "client session"]
         assert report.checks[-1].status == "fail"
         assert "synthetic client session entry failure" in report.checks[-1].detail
