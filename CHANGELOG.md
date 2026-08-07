@@ -26,6 +26,15 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.10.3] - 2026-08-07
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes. The default human views
+render service and provider labels without their evidence-role qualifier and
+omit matches with no established role; `--explain`, `--verbose`, and `--full`
+restore both, and `--json`, `--csv`, and the MCP payloads are unchanged.
+
 ### Added
 
 - `scripts/check_doc_rot.py` is a new blocking gate stage rejecting Markdown
