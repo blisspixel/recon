@@ -36,6 +36,7 @@ _EXPECTED_DATA_FILES = {
     "recon_tool/data/bayesian_network.yaml",
     "recon_tool/data/fingerprints.generated.json",
     "recon_tool/data/motifs.yaml",
+    "recon_tool/data/observation-capsule-schema.json",
     "recon_tool/data/posture.yaml",
     "recon_tool/data/profiles/fintech.yaml",
     "recon_tool/data/profiles/healthcare.yaml",
