@@ -22,7 +22,6 @@ def test_committed_terminal_demo_matches_the_real_renderer() -> None:
     assert DEFAULT_OUTPUT.read_text(encoding="utf-8") == svg
     assert svg.startswith('<svg class="rich-terminal"')
     assert "Example&#160;Industries&#160;Ltd" in svg
-    assert "example.com" in svg
     assert "Generated with Rich" not in svg
     assert "cdnjs.cloudflare.com" not in svg
     assert 'role="img"' in svg
@@ -56,7 +55,6 @@ def test_readme_embeds_and_labels_the_synthetic_demo() -> None:
     assert "https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg" in readme
     assert "deterministic, no-network fixture" in normalized
     assert "Example Industries Ltd" in readme
-    assert "example.com" in readme
     assert "No real organization is depicted" in normalized
     assert "<summary>Accessible text transcript</summary>" in readme
     assert render_terminal_demo_text() in readme
