@@ -309,6 +309,24 @@ accepts at most 10,000 non-comment records before deduplication, 1 KiB of UTF-8
 per logical line, and 10 MiB of UTF-8 in total. The full behavior is documented
 in [operational-contract.md](operational-contract.md).
 
+## Observation Capsules
+
+Capture one caller-owned artifact, replay it without network access, or compare
+two artifacts while keeping observation, collection, time, and interpretation
+changes separate:
+
+```bash
+recon capsule capture example.com --output example-before.json
+recon capsule replay example-before.json
+recon capsule compare example-before.json example-after.json --json
+```
+
+Capture uses the ordinary public collection boundary. Capsule files may retain
+public verification tokens, tenant identifiers, and related domains, so protect
+them and review them before sharing. recon does not upload, schedule, or retain
+them. Full semantics and the separate JSON Schema are in
+[observation-capsules.md](observation-capsules.md).
+
 ## MCP Setup
 
 ```bash

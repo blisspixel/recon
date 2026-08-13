@@ -28,13 +28,14 @@ to A0, A2 collapses to A3, and A3 is structurally dominated by A0. The live
 window was cancelled before target contact. CT enrichment, catalog size, and
 the broad agent surface still lack operator-outcome evidence.
 
-Two emerging interchange formats are now explicit design inputs, not shipped
+Two emerging interchange formats are explicit design inputs, not shipped
 claims: the Agent Plugins v1.0.0 working draft for portable skill and MCP
 packaging, and Open Knowledge Format v0.2 for human- and agent-readable
-knowledge bundles. Neither changes the v2.11 product-quality priority. Agent
-Plugins is a packaging concern distinct from MCP wire compatibility, while OKF
-can only be an additive projection over a stable caller-owned observation
-capsule, never a replacement for recon's versioned JSON contract.
+knowledge bundles. Agent Plugins is a packaging concern distinct from MCP wire
+compatibility. ADR-0014 defers an OKF projection until a named consumer can
+justify its `sources`, `generated`, `verified`, lifecycle, and freshness
+mapping. Any future view remains additive and never replaces recon's versioned
+JSON contract.
 
 Publication maintainers must rerun
 [docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md)
@@ -54,7 +55,7 @@ silent-failure, and contract-preserving fixes at any point.
 | **v2.10.x** | Maintenance line | Protect truthfulness and supply chain while larger work proceeds | Evidence audit green; MCP 1.28.1 + 2.0.0 pins green; no known silent fail-open on default paths |
 | **v2.11.0** | Product-quality baseline | Track 3. A structural preflight must prove the frozen comparison can answer its question before target collection | Aggregate-safe scorecard + dated identifiability memo; void live window recorded; fusion not promoted by the non-identifying design |
 | **v2.12.0** | Apply quality decision compatibly | Uses the v2.11 structural stop without violating the stable v2 default contract | Fusion is classified as an advanced diagnostic; explicit flags are the supported transition path; v2 implicit behavior and stable JSON/MCP contracts remain intact; the default-off change is assigned to v3 |
-| **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions under degraded sources; record an OKF v0.2 projection decision without replacing JSON |
+| **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Implemented on the release candidate: caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions or removals under unavailable source roles; ADR-0014 defers OKF without replacing JSON. Ship after the full and protected-main gates pass. |
 | **v2.14.0** | Catalog quality loop | Independent of fusion promotion; blocked only by disclosure-safe rounds | Rank / regional / vendor-seed / drift rounds complete with fixtures; broad catalog growth remains gated by those rounds |
 | **v2.15.0** | Agent portability and surface cost | Evaluate packaging and tool cuts against representative workflows after the catalog and discovery surface is measured; packaging preparation may start earlier | Agent Plugins conformance is validated against a pinned specification or explicitly deferred while it remains a working draft; measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
 | **v3.0.0** | Contract maturity | The already-deprecated fusion default change requires a major boundary; use the same boundary for any claim-envelope change that cannot remain additive | Fusion omitted-choice defaults off; explicit flags remain stable; versioned claim / observation envelope or explicit decision that v2 stays; migration notes |
@@ -117,8 +118,10 @@ classifies fusion as an advanced diagnostic and begins the explicit-flag
 transition without violating the stable v2 default contract. Interactive
 implicit use receives a notice; redirected output remains silent. The omitted
 choice changes to off only at v3, as recorded in
-[ADR-0013](docs/adr/0013-fusion-non-promotion-and-v3-transition.md). The next
-build milestone is v2.13's caller-held observation capsule and OKF decision. A
+[ADR-0013](docs/adr/0013-fusion-non-promotion-and-v3-transition.md). The v2.13
+release candidate now contains the caller-held observation capsule and
+ADR-0014 OKF deferral. Its remaining work is validation, protected-main CI,
+and release proof. A
 future real-domain fusion study requires a new preregistration whose arms first
 pass executable identifiability and dominance checks.
 
@@ -135,7 +138,7 @@ Draft container + Cloud Run IaC only. Local CLI and stdio MCP remain complete.
 | More graph or probabilistic machinery | Measured benefit from the v2.11 scorecard |
 | Core-versus-advanced MCP profile | Representative client proves material context benefit |
 | Portable Agent Plugins package | Pinned schema validation plus install and launch evidence from representative conformant clients; preserve native client paths |
-| OKF knowledge export | Stable caller-owned observation capsule, named consumer, v0.2 mapping and privacy review; JSON remains authoritative |
+| OKF knowledge export | A named consumer, v0.2 mapping and privacy review; ADR-0014 keeps the shipped caller-owned capsule and JSON authoritative |
 | More optional cloud provider IaC | Named operator + provider validation |
 | Project-operated public multi-tenant service | Separate product, governance, and funding decision |
 | Promoting surface-inventory to a stable API | Named external consumer under [ADR-0007](docs/adr/0007-surface-inventory-discovery-context.md) |

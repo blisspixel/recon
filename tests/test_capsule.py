@@ -1,0 +1,346 @@
+"""Observation-capsule integrity, replay, and comparison tests."""
+
+from __future__ import annotations
+
+import json
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
+
+import pytest
+
+import recon_tool.capsule as capsule_module
+from recon_tool.capsule import (
+    CollectionContext,
+    build_capsule,
+    compare_capsules,
+    load_capsule,
+    replay_capsule,
+    validate_capsule,
+    write_capsule,
+)
+from recon_tool.models import ConfidenceLevel, EvidenceRecord, SourceResult, TenantInfo
+
+_START = datetime(2026, 8, 13, 12, 0, 0, tzinfo=UTC)
+_END = _START + timedelta(seconds=3)
+
+
+def _evidence(value: str = "v=DMARC1; p=reject") -> EvidenceRecord:
+    return EvidenceRecord("TXT", value, "DMARC", "dmarc")
+
+
+def _info(*, evidence: tuple[EvidenceRecord, ...] | None = None, domain: str = "example.com") -> TenantInfo:
+    retained = evidence if evidence is not None else (_evidence(),)
+    return TenantInfo(
+        tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        display_name="Example Industries Ltd",
+        default_domain="example-industries.onmicrosoft.example.com",
+        queried_domain=domain,
+        confidence=ConfidenceLevel.HIGH,
+        sources=("dns_records", "openid_configuration"),
+        services=("DMARC", "Microsoft 365"),
+        slugs=("dmarc", "microsoft365"),
+        dmarc_policy="reject",
+        evidence=retained,
+        insights=("Multiple cloud-vendor catalog indicators co-observed; provider roles and diversity are unresolved",),
+        resolved_at=_END.isoformat(),
+        ct_attempt_outcome="skipped",
+    )
+
+
+def _dns_result(*, evidence: tuple[EvidenceRecord, ...] | None = None, unavailable: bool = False) -> SourceResult:
+    retained = evidence if evidence is not None else (_evidence(),)
+    return SourceResult(
+        source_name="dns_records",
+        dmarc_policy=None if unavailable else "reject",
+        raw_dns_records=() if unavailable else tuple(("TXT", item.raw_value) for item in retained),
+        evidence=() if unavailable else retained,
+        ct_attempt_outcome=None if unavailable else "skipped",
+        source_unavailable=unavailable,
+        error="timeout" if unavailable else None,
+    )
+
+
+def _oidc_result() -> SourceResult:
+    return SourceResult(
+        source_name="openid_configuration",
+        tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+        display_name="Example Industries Ltd",
+        default_domain="example-industries.onmicrosoft.example.com",
+        m365_detected=True,
+    )
+
+
+def _capsule(
+    *,
+    info: TenantInfo | None = None,
+    results: tuple[SourceResult, ...] | None = None,
+    vantage: str = "caller-local",
+) -> dict:
+    return build_capsule(
+        info or _info(),
+        results or (_dns_result(), _oidc_result()),
+        CollectionContext(
+            started_at=_START,
+            ended_at=_END,
+            ct_enabled=False,
+            direct_probes=False,
+            timeout_seconds=30.0,
+            vantage=vantage,
+        ),
+    )
+
+
+def test_capsule_is_deterministic_and_source_order_independent() -> None:
+    first = _capsule()
+    second = _capsule(results=(_oidc_result(), _dns_result()))
+    assert first == second
+    assert first["content_digest"].startswith("sha256:")
+    assert first["interpretation"]["stable_signal_ids"] == ["Multi-Cloud"]
+
+
+def test_capsule_retains_raw_observations_and_opportunity_windows() -> None:
+    capsule = _capsule()
+    retained = [fact for fact in capsule["observations"] if fact["kind"] == "retained_dns_record"]
+    assert retained == [
+        {
+            "fact_id": retained[0]["fact_id"],
+            "source_role": "dns_records",
+            "kind": "retained_dns_record",
+            "key": "TXT",
+            "value": "v=DMARC1; p=reject",
+        }
+    ]
+    dns = next(row for row in capsule["source_opportunities"] if row["source_role"] == "dns_records")
+    assert dns["state"] == "observed_value"
+    assert dns["observation_window"] == {
+        "started_at": _START.isoformat(),
+        "ended_at": _END.isoformat(),
+    }
+
+
+def test_capsule_rejects_opportunity_window_outside_collection() -> None:
+    capsule = _capsule()
+    capsule["source_opportunities"][0]["observation_window"]["ended_at"] = (_END + timedelta(seconds=1)).isoformat()
+    capsule["content_digest"] = capsule_module._sha256(capsule_module._without_digest(capsule))
+    with pytest.raises(ValueError, match="must match collection window"):
+        validate_capsule(capsule)
+
+
+def test_capsule_replay_is_offline_and_deterministic(monkeypatch: pytest.MonkeyPatch) -> None:
+    capsule = _capsule()
+
+    def forbidden_network(*_args: object, **_kwargs: object) -> None:
+        pytest.fail("replay attempted a network call")
+
+    monkeypatch.setattr("recon_tool.resolver.resolve_tenant", forbidden_network)
+    first = replay_capsule(capsule)
+    second = replay_capsule(capsule)
+    assert first == second
+    assert first["replayed_result_digest"] == capsule["interpretation"]["rendered_result_digest"]
+    assert first["time_evaluation_changed"] is False
+    assert first["result"]["queried_domain"] == "example.com"
+
+
+def test_replay_with_explicit_as_of_changes_only_time_metadata() -> None:
+    capsule = _capsule()
+    baseline = replay_capsule(capsule)
+    later = replay_capsule(capsule, as_of="2026-08-14T12:00:03Z")
+    assert later["time_evaluation_changed"] is True
+    assert later["result"] == baseline["result"]
+    assert later["replayed_result_digest"] == baseline["replayed_result_digest"]
+
+
+def test_compare_identical_capsules_has_no_changes() -> None:
+    result = compare_capsules(_capsule(), _capsule())
+    assert result["has_changes"] is False
+    assert result["observation"] == {
+        "changed": False,
+        "added": [],
+        "removed": [],
+        "suppressed_source_roles": [],
+    }
+
+
+def test_compare_reports_observation_delta_with_role_and_windows() -> None:
+    before = _capsule()
+    added_evidence = (_evidence(), EvidenceRecord("TXT", "stripe-verification=abc", "Stripe", "stripe"))
+    after = _capsule(
+        info=_info(evidence=added_evidence),
+        results=(_dns_result(evidence=added_evidence), _oidc_result()),
+    )
+    result = compare_capsules(before, after)
+    added = result["observation"]["added"]
+    assert result["observation"]["changed"] is True
+    assert any(item["key"] == "TXT" and item["value"] == "stripe-verification=abc" for item in added)
+    assert all(item["source_role"] == "dns_records" for item in added)
+    assert all(item["observation_window"]["ended_at"] == _END.isoformat() for item in added)
+
+
+def test_unavailable_current_source_withholds_removals() -> None:
+    before = _capsule()
+    after = _capsule(info=_info(evidence=()), results=(_dns_result(unavailable=True), _oidc_result()))
+    result = compare_capsules(before, after)
+    assert result["observation"]["added"] == []
+    assert result["observation"]["removed"] == []
+    assert result["observation"]["suppressed_source_roles"] == ["dns_records"]
+    assert result["collection_regime"]["changed"] is True
+
+
+def test_unavailable_previous_source_withholds_additions() -> None:
+    before = _capsule(info=_info(evidence=()), results=(_dns_result(unavailable=True), _oidc_result()))
+    after = _capsule()
+    result = compare_capsules(before, after)
+    assert result["observation"]["added"] == []
+    assert result["observation"]["removed"] == []
+    assert result["observation"]["suppressed_source_roles"] == ["dns_records"]
+
+
+def test_compare_classifies_collection_vantage_change() -> None:
+    result = compare_capsules(_capsule(vantage="resolver-a"), _capsule(vantage="resolver-b"))
+    assert result["collection_regime"]["changed"] is True
+    assert result["collection_regime"]["changes"] == [
+        {"field": "vantage", "before": "resolver-a", "after": "resolver-b"}
+    ]
+
+
+def test_compare_classifies_time_evaluation_without_fact_change() -> None:
+    capsule = _capsule()
+    result = compare_capsules(capsule, capsule, after_as_of="2026-08-14T12:00:03+00:00")
+    assert result["time_evaluation"]["changed"] is True
+    assert result["time_evaluation"]["freshness_changes"] == []
+    assert result["observation"]["changed"] is False
+    assert result["interpretation"]["changed"] is False
+
+
+def test_compare_classifies_interpretation_context_only(monkeypatch: pytest.MonkeyPatch) -> None:
+    before = _capsule()
+    changed_context = capsule_module.current_interpretation_context()
+    changed_context["catalog_digest"] = f"sha256:{'1' * 64}"
+    monkeypatch.setattr(capsule_module, "current_interpretation_context", lambda: changed_context)
+    after = _capsule()
+    result = compare_capsules(before, after)
+    assert result["observation"]["changed"] is False
+    assert result["interpretation"] == {
+        "changed": True,
+        "changes": [
+            {
+                "field": "catalog_digest",
+                "before": before["interpretation_context"]["catalog_digest"],
+                "after": changed_context["catalog_digest"],
+            }
+        ],
+    }
+
+
+def test_same_raw_dns_under_different_catalog_rule_is_interpretation_only() -> None:
+    raw_value = "vendor-verification=abc"
+    old_evidence = (EvidenceRecord("TXT", raw_value, "Old vendor rule", "old-vendor"),)
+    new_evidence = (EvidenceRecord("TXT", raw_value, "New vendor rule", "new-vendor"),)
+    before = _capsule(info=_info(evidence=old_evidence), results=(_dns_result(evidence=old_evidence), _oidc_result()))
+    after = _capsule(info=_info(evidence=new_evidence), results=(_dns_result(evidence=new_evidence), _oidc_result()))
+    result = compare_capsules(before, after)
+    assert result["observation"]["changed"] is False
+    assert result["interpretation"]["changed"] is True
+    assert result["interpretation"]["changes"][0]["field"] == "rendered_result"
+
+
+def test_compare_reports_stable_signal_identifier_change() -> None:
+    before = _capsule()
+    after = _capsule()
+    after["interpretation"]["stable_signal_ids"] = ["Different Rule"]
+    after["content_digest"] = capsule_module._sha256(capsule_module._without_digest(after))
+    result = compare_capsules(before, after)
+    assert result["observation"]["changed"] is False
+    assert result["interpretation"]["changes"] == [
+        {
+            "field": "stable_signal_ids",
+            "before": ["Multi-Cloud"],
+            "after": ["Different Rule"],
+        }
+    ]
+
+
+def test_compare_rejects_different_domains() -> None:
+    with pytest.raises(ValueError, match="same queried_domain"):
+        compare_capsules(_capsule(), _capsule(info=_info(domain="example.net")))
+
+
+@pytest.mark.parametrize("as_of", ["not-a-time", "2026-08-14T12:00:03"])
+def test_replay_rejects_invalid_or_naive_as_of(as_of: str) -> None:
+    with pytest.raises(ValueError, match="as_of"):
+        replay_capsule(_capsule(), as_of=as_of)
+
+
+def test_validate_rejects_content_tampering() -> None:
+    capsule = _capsule()
+    capsule["collection"]["vantage"] = "tampered"
+    with pytest.raises(ValueError, match="content_digest"):
+        validate_capsule(capsule)
+
+
+def test_validate_rejects_fact_tampering_before_outer_digest() -> None:
+    capsule = _capsule()
+    capsule["observations"][0]["value"] = "tampered"
+    with pytest.raises(ValueError, match="fact_id"):
+        validate_capsule(capsule)
+
+
+def test_validate_rejects_unknown_fields_and_nonfinite_values() -> None:
+    unknown = _capsule()
+    unknown["unexpected"] = True
+    with pytest.raises(ValueError, match="top-level"):
+        validate_capsule(unknown)
+
+    nonfinite = _capsule()
+    nonfinite["collection"]["options"]["timeout_seconds"] = float("nan")
+    with pytest.raises(ValueError, match="non-finite"):
+        validate_capsule(nonfinite)
+
+
+def test_vantage_rejects_control_characters_and_truncation() -> None:
+    with pytest.raises(ValueError, match="vantage"):
+        _capsule(vantage="resolver\x1b[31m")
+    with pytest.raises(ValueError, match="vantage"):
+        _capsule(vantage="x" * 129)
+
+
+def test_write_load_round_trip_and_no_clobber(tmp_path: Path) -> None:
+    path = tmp_path / "capsule.json"
+    capsule = _capsule()
+    write_capsule(path, capsule)
+    assert load_capsule(path) == capsule
+    with pytest.raises(FileExistsError, match="already exists"):
+        write_capsule(path, capsule)
+
+    replacement = _capsule(vantage="replacement")
+    write_capsule(path, replacement, overwrite=True)
+    assert load_capsule(path) == replacement
+
+
+def test_load_rejects_invalid_root_and_oversized_file(tmp_path: Path) -> None:
+    array_path = tmp_path / "array.json"
+    array_path.write_text("[]", encoding="utf-8")
+    with pytest.raises(ValueError, match="root must be a JSON object"):
+        load_capsule(array_path)
+
+    oversized = tmp_path / "large.json"
+    oversized.write_bytes(b" " * (capsule_module.MAX_CAPSULE_BYTES + 1))
+    with pytest.raises(ValueError, match="exceeds"):
+        load_capsule(oversized)
+
+
+def test_load_rejects_symlink(tmp_path: Path) -> None:
+    target = tmp_path / "target.json"
+    write_capsule(target, _capsule())
+    link = tmp_path / "link.json"
+    try:
+        link.symlink_to(target)
+    except OSError:
+        pytest.skip("symlink creation is unavailable")
+    with pytest.raises(ValueError, match="symbolic link"):
+        load_capsule(link)
+
+
+def test_capsule_serialization_is_strict_json() -> None:
+    encoded = json.dumps(_capsule(), allow_nan=False)
+    assert "NaN" not in encoded

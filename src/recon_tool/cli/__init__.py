@@ -17,9 +17,7 @@ from rich.markup import escape
 from recon_tool.cli import batch as cli_batch
 from recon_tool.cli import doctor as cli_doctor
 from recon_tool.cli import lookup as cli_lookup
-from recon_tool.cli.cache import cache_app
-from recon_tool.cli.fingerprints import fingerprints_app
-from recon_tool.cli.mcp import mcp_app
+from recon_tool.cli.groups import register_command_groups
 from recon_tool.cli.options import (
     LookupDisplayOptions,
     LookupExecutionOptions,
@@ -35,7 +33,6 @@ from recon_tool.cli.shared import positive_finite_float, raise_lookup_error
 from recon_tool.cli.shared import render_usage_rows as _render_usage_rows
 from recon_tool.cli.shared import resolve_fusion_transition as _resolve_fusion_transition
 from recon_tool.cli.shared import silence_closed_standard_streams as _silence_closed_standard_streams
-from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
 
 # Command-implementation re-export facade (see cli_lookup / cli_batch / cli_doctor).
@@ -82,7 +79,19 @@ from recon_tool.exit_codes import (  # noqa: E402
 # so a new command that is not added here fails CI rather than silently
 # mis-routing a dotted first argument.
 _SUBCOMMANDS = frozenset(
-    {"doctor", "update", "batch", "lookup", "mcp", "cache", "delta", "discover", "fingerprints", "signals"}
+    {
+        "doctor",
+        "update",
+        "batch",
+        "lookup",
+        "mcp",
+        "cache",
+        "capsule",
+        "delta",
+        "discover",
+        "fingerprints",
+        "signals",
+    }
 )
 
 _OUTPUT_HELP_PANEL = "Output"
@@ -834,23 +843,7 @@ def update(
     console.print(f"[green]Updated to {latest}. Open a new shell and run `recon --version` to confirm.[/green]")
 
 
-# ── MCP CLI ───────────────────────────────────────────────────────────
-
-app.add_typer(mcp_app, name="mcp", short_help="Run or configure MCP.")
-
-
-# ── Cache CLI ─────────────────────────────────────────────────────────
-
-app.add_typer(cache_app, name="cache", short_help="Manage local caches.")
-
-
-# ── Fingerprints CLI ──────────────────────────────────────────────────
-
-app.add_typer(fingerprints_app, name="fingerprints", short_help="Browse fingerprints.")
-
-# ── Signals CLI ───────────────────────────────────────────────────────
-
-app.add_typer(signals_app, name="signals", short_help="Browse signals.")
+register_command_groups(app)
 
 # ── Delta CLI ─────────────────────────────────────────────────────────
 

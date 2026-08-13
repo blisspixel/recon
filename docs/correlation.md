@@ -1932,7 +1932,7 @@ Acceptance:
 Value: high and immediately operator-visible. Dependency: observation ledger
 and claim contracts. Risk: accidental stable-schema expansion.
 
-Define a local observation-capsule manifest and a pure comparison path. Keep
+v2.13 defines a local observation-capsule manifest and a pure comparison path. Keep
 storage caller-owned. Classify fact, collection-regime, time-evaluation, and
 interpretation changes separately, preserve unavailable comparisons as
 unresolved, and store stable signal identifiers instead of reconstructing them
@@ -2014,9 +2014,10 @@ Acceptance:
 - Sparse, degraded, or manipulable evidence may require an unresolved result.
 - Cohort M365 and Google entries are model support coverage, not prevalence or
   lower bounds on private deployment.
-- Current delta output is a rendered-snapshot comparison with explicit
-  incompleteness under degradation, not yet an observation-capsule semantic
-  diff.
+- Legacy `recon delta` output remains a rendered-snapshot comparison with
+  explicit incompleteness under degradation. The separate `recon capsule
+  compare` path classifies observation, collection-regime, time-evaluation,
+  and interpretation change without changing that stable v2 shape.
 - No correlation output confirms product use, control effectiveness, ownership,
   exploitability, or overall security.
 

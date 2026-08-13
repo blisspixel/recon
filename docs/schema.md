@@ -27,6 +27,9 @@ without guessing.
 | `recon batch <file> --json --include-ecosystem` | a `BatchResult` wrapper object `{domains, ecosystem_hyperedges}` | `domains` elements are success objects or `BatchErrorRecord`; the wrapper remains present even when no domain resolves |
 | `recon batch <file> --ndjson` | one JSON object per line (newline-delimited) | each line is a success object or a `BatchErrorRecord` |
 | `recon delta <domain> --json` / `recon <domain> --compare <file> --json` | a single `DeltaReport` object | n/a |
+| `recon capsule capture <domain> --json` | a write-receipt object; the full capsule is written to the caller-owned file | the capsule file uses its separate schema below |
+| `recon capsule replay <file> --json` | a single `observation_capsule_replay` object | n/a |
+| `recon capsule compare <before> <after> --json` | a single `observation_capsule_delta` object | n/a |
 | `recon batch <file> --summary --json` | a single `cohort_summary` object (`record_type: "cohort_summary"`, `schema_version: "2.1"` by default; select `--summary-schema 2.2` explicitly) | n/a (aggregate-only; no per-domain records) |
 
 The machine-readable form of each shape lives in
@@ -34,6 +37,14 @@ The machine-readable form of each shape lives in
 single-domain success object; `$defs/BatchArray`, `$defs/BatchResult`,
 `$defs/BatchNdjsonRecord`, `$defs/BatchErrorRecord`, and `$defs/DeltaReport`
 cover the rest.
+
+Observation capsules are intentionally outside `recon-schema.json`, so adding
+them does not widen the stable v2 lookup object. Capsule files, offline replay
+records, and classified capsule deltas use the separate Draft 2020-12
+[`observation-capsule-schema.json`](observation-capsule-schema.json). See
+[`observation-capsules.md`](observation-capsules.md) for collection, replay,
+comparison, integrity, privacy, and retention semantics. The small capture
+write receipt is command status, not a retained evidence artifact.
 
 The `cohort_summary` mode (`recon batch --summary`) is a versioned aggregate-only
 document, distinct from the `"2.0"` single-domain record. The released 2.1
@@ -116,6 +127,9 @@ Notes for scripters:
 - A first `recon delta` call with no cached snapshot maps to `3`, performs no
   live resolution, and emits no delta payload. Run the ordinary lookup once to
   establish the baseline.
+- Capsule parse, integrity, domain, timestamp, existing-output, and schema
+  failures map to `2`. A caught live capture pipeline failure maps to `4`.
+  Replay and comparison perform no network calls.
 - On `2`, `3`, and `4` the `--json` modes write no JSON to stdout, so a consumer
   should check the exit code before parsing. On success, `--verbose` diagnostics
   use stderr and do not prefix the JSON payload.

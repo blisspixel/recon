@@ -54,6 +54,7 @@ A representative set; the full list lives in the source constants the
 | Identity | `_MAX_AUTODISCOVER_DOMAINS` = 1000 federated domains |
 | Fingerprint catalog | pattern length 500; `_MAX_CATALOG_ENTRIES_PER_FILE` = 2000; ephemeral (MCP) fingerprints 100 / 20 detections each / 500 total / 200-char fields |
 | Cache files | `_MAX_CACHE_FILE_BYTES` = 5 MB; `_MAX_CT_CACHE_FILE_BYTES` = 5 MB (oversized = miss) |
+| Observation capsule input | `MAX_CAPSULE_BYTES` = 10 MiB; regular files only; symbolic links, mutation during read, excess JSON nesting, non-finite numbers, invalid timestamps, and digest mismatches are rejected |
 | Persisted rate-limiter state | 64 KiB per provider; versioned, provider-bound, finite numeric fields only |
 | PyPI update metadata | 5 MiB response body and 100 JSON nesting levels |
 | Batch input | 10,000 non-comment input records before deduplication; 1 KiB UTF-8 per logical line; 10 MiB UTF-8 total |
@@ -96,6 +97,14 @@ without creating a crash log. Other unexpected runtime and operating-system
 errors caught by the top-level CLI handler retain the exit 4 crash-artifact
 path. Code 1 remains available for explicitly handled general command and
 server failures, and for exceptions that escape before that handler is active.
+
+Capsule capture bypasses the result cache and records CT cache provenance from
+the live resolver result. Capsule writes refuse existing paths unless `--force`
+is explicit, use a same-directory exclusive temporary file, flush it, and
+replace the destination atomically. Replay and comparison do no network work.
+Malformed or integrity-invalid capsule inputs use exit 2; a caught capture
+pipeline failure uses exit 4. The capsule digest is deterministic integrity
+metadata, not authentication.
 
 MCP validation rejections emit one structured warning containing a request ID
 and the stable reason `invalid_domain`. The rejected argument and exception
