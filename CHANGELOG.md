@@ -29,6 +29,13 @@ operator, corporate group, ownership, or control.
 ### Tool Surface Changes
 
 Tool surface changes: no CLI command, flag, MCP tool, resource, or stable JSON
+field changes.
+
+## [2.12.0] - 2026-08-13
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, MCP tool, resource, or stable JSON
 field changes. The v2 implicit fusion behavior remains enabled for
 compatibility, while interactive omission now receives a transition notice;
 explicit `--fusion`, `--no-fusion`, and `--explain-dag` behavior is unchanged.
