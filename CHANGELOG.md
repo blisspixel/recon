@@ -61,6 +61,9 @@ field changes.
   application directly after that decision, and track Agent Plugins v1.0.0 and
   Open Knowledge Format v0.2 as additive future interoperability work without
   claiming current conformance.
+- The locked direct patch set now uses Typer 0.27.1, Hypothesis 6.165.5,
+  pre-commit 4.6.2, and Ruff 0.16.2. No direct runtime or development dependency
+  reports a newer release in the final pre-release inventory.
 
 ### Fixed
 
