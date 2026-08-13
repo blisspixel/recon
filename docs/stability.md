@@ -55,7 +55,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--chain`, `--depth <1-3>` | Stable | Recursive related-domain resolution. |
 | `--no-cache`, `--cache-ttl <sec>` | Stable | Cache control. |
 | `--timeout <sec>` / `-t` | Stable | Pipeline timeout (default 120s). |
-| `--fusion` / `--no-fusion` | Stable (v2.0+) | Bayesian fusion is enabled by default; `--no-fusion` opts out. |
+| `--fusion` / `--no-fusion` | Stable (v2.0+) | Advanced Bayesian diagnostic control. v2 preserves the historical implicit enabled default; v2.12 adds an interactive transition notice when neither flag is supplied. Pass either flag for behavior that is invariant across v3, where the omitted choice changes to off under the major-version policy. |
 | `--explain-dag` | Stable (v2.0+) | v1.9.0. Render Bayesian evidence DAG. |
 
 ### CLI flags (on `recon batch <file>`)
@@ -217,6 +217,11 @@ land in minor releases without breaking existing consumers.
 
 **Default value changes to existing fields** ARE breaking changes if a
 consumer was relying on the default.
+
+That rule also applies to stable CLI defaults. ADR-0013 therefore preserves the
+v2 implicit fusion behavior, adds a v2.12 interactive transition notice, and
+assigns the omitted-choice flip to v3. The explicit `--fusion` and
+`--no-fusion` behaviors do not change.
 
 ---
 

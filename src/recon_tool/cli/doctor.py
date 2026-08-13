@@ -392,10 +392,9 @@ def doctor_fix() -> bool:
 def _doctor_print_header(console: Any) -> None:
     """Print the version line with the schema-stability indicator, plus Python.
 
-    The substring "v2.0 stable schema" (vs "pre-v2.0 schema") lets an
-    operator see at a glance whether Bayesian fusion is opt-in (pre-v2.0) or
-    stable per the schema-lock disposition table; the v2.0 quality bar requires
-    that text.
+    The substring "v2.0 stable schema" (vs "pre-v2.0 schema") reports the
+    schema-lock generation. Fusion execution policy is independent of schema
+    stability and is documented by the CLI flags and ADR-0013.
     """
     from recon_tool import __version__
 

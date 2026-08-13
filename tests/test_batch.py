@@ -307,6 +307,32 @@ class TestBatchCommand:
         override_loader.assert_not_called()
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_implicit_v2_fusion_preserves_output_and_warns(self, mock_resolve, tmp_path):
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("alpha.invalid\n")
+
+        with patch("recon_tool.cli.shared.fusion_transition_notice_enabled", return_value=True):
+            result = runner.invoke(app, ["batch", str(domain_file), "--json"])
+
+        assert result.exit_code == 0
+        assert json.loads(result.stdout)[0]["fusion_enabled"] is True
+        assert "implicit default is deprecated" in result.stderr
+
+    @pytest.mark.parametrize("flag", ["--fusion", "--no-fusion"])
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_explicit_fusion_choice_has_no_transition_notice(self, mock_resolve, tmp_path, flag):
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("alpha.invalid\n")
+
+        with patch("recon_tool.cli.shared.fusion_transition_notice_enabled", return_value=True):
+            result = runner.invoke(app, ["batch", str(domain_file), "--json", flag])
+
+        assert result.exit_code == 0
+        assert "implicit default is deprecated" not in result.stderr
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_fusion_loader_failure_preserves_json_records(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"

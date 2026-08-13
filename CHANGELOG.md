@@ -29,21 +29,32 @@ operator, corporate group, ownership, or control.
 ### Tool Surface Changes
 
 Tool surface changes: no CLI command, flag, MCP tool, resource, or stable JSON
-field changes.
+field changes. The v2 implicit fusion behavior remains enabled for
+compatibility, while interactive omission now receives a transition notice;
+explicit `--fusion`, `--no-fusion`, and `--explain-dag` behavior is unchanged.
 
 ### Added
 
 - A network-free structural-identifiability gate exhaustively checks all 64
   M365 DNS evidence-role states through the shipped scoring, observation, and
   Bayesian paths before any private evaluation can contact targets.
+- ADR-0013 records the fusion non-promotion decision, the v2 compatibility
+  transition, and the v3 major boundary for changing the omitted CLI choice.
 
 ### Changed
 
 - The v2.11 M365 live evaluation is cancelled before target contact. Its frozen
   arms collapse into two decision pairs and A3 is structurally dominated by
   A0, making the preregistered positive-benefit condition unreachable. The
-  dated memo and amendment preserve this negative design result, and v2.12 now
-  applies non-promotion by moving fusion to an explicit advanced diagnostic.
+  dated memo and amendment preserve this negative design result.
+- Fusion is now positioned as an advanced diagnostic. v2 preserves the stable
+  implicit enabled CLI behavior, warns only interactive omitted choices, keeps
+  redirected and machine output silent, and asks operators to pass an explicit
+  flag before v3. Ordinary MCP lookup remains deterministic, while the existing
+  `get_posteriors` and `explain_dag` tools remain the explicit advanced path.
+- The roadmap now assigns the actual default-off switch to v3 instead of
+  violating the documented stable-default policy in v2.12. The next build
+  milestone is the v2.13 observation capsule and OKF v0.2 projection decision.
 
 ## [2.10.4] - 2026-08-13
 

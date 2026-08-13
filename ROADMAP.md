@@ -53,11 +53,11 @@ silent-failure, and contract-preserving fixes at any point.
 |---|---|---|---|
 | **v2.10.x** | Maintenance line | Protect truthfulness and supply chain while larger work proceeds | Evidence audit green; MCP 1.28.1 + 2.0.0 pins green; no known silent fail-open on default paths |
 | **v2.11.0** | Product-quality baseline | Track 3. A structural preflight must prove the frozen comparison can answer its question before target collection | Aggregate-safe scorecard + dated identifiability memo; void live window recorded; fusion not promoted by the non-identifying design |
-| **v2.12.0** | Apply quality decision | Uses the v2.11 structural stop; avoids target collection and more graph work without an identifiable benefit path | Fusion is an explicit advanced diagnostic rather than a default computation; stable JSON and MCP compatibility preserved; docs and defaults updated |
+| **v2.12.0** | Apply quality decision compatibly | Uses the v2.11 structural stop without violating the stable v2 default contract | Fusion is classified as an advanced diagnostic; explicit flags are the supported transition path; v2 implicit behavior and stable JSON/MCP contracts remain intact; the default-off change is assigned to v3 |
 | **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions under degraded sources; record an OKF v0.2 projection decision without replacing JSON |
 | **v2.14.0** | Catalog quality loop | Independent of fusion promotion; blocked only by disclosure-safe rounds | Rank / regional / vendor-seed / drift rounds complete with fixtures; broad catalog growth remains gated by those rounds |
 | **v2.15.0** | Agent portability and surface cost | Evaluate packaging and tool cuts against representative workflows after the catalog and discovery surface is measured; packaging preparation may start earlier | Agent Plugins conformance is validated against a pinned specification or explicitly deferred while it remains a working draft; measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
-| **v3.0.0** | Contract maturity | Major only if an additive path cannot carry the claim model | Versioned claim / observation envelope (or explicit decision that v2 stays forever); migration notes; no silent semantic change under a minor |
+| **v3.0.0** | Contract maturity | The already-deprecated fusion default change requires a major boundary; use the same boundary for any claim-envelope change that cannot remain additive | Fusion omitted-choice defaults off; explicit flags remain stable; versioned claim / observation envelope or explicit decision that v2 stays; migration notes |
 
 Optional cloud operator hosting stays a **side track** (any 2.x after local
 default stays complete). It never unblocks product-quality work and never
@@ -80,7 +80,7 @@ track immediately. Detail: [docs/default-claim-audit.md](docs/default-claim-audi
 Production on `mcp>=2.0.0,<3` with blocking 1.28.1 rollback and 2.0.0 production
 rows. Detail: [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.md).
 
-### 3. Product-quality baseline - **v2.11 decision recorded; v2.12 application next**
+### 3. Product-quality baseline - **v2.11 decision and v2.12 transition complete**
 
 The network-free scorecard and aggregate-only stable-v1 live characterization
 are complete. Before the declared target window, the exhaustive
@@ -112,11 +112,15 @@ warm-cache, and real MCP-result measurements are published in the aggregate-only
 [2026-08-12 live-characterization memo](validation/2026-08-12-stable-v1-live-characterization.md).
 The unused public population and sampling mechanism plus private-frame digest
 remain recorded in the
-[v2.11 frame declaration](docs/quality-evaluation-frame-declaration.md). The
-next executable step is v2.12: make fusion opt-in as an advanced diagnostic
-while preserving stable output contracts. A future real-domain fusion study
-requires a new preregistration whose arms first pass executable identifiability
-and dominance checks.
+[v2.11 frame declaration](docs/quality-evaluation-frame-declaration.md). v2.12
+classifies fusion as an advanced diagnostic and begins the explicit-flag
+transition without violating the stable v2 default contract. Interactive
+implicit use receives a notice; redirected output remains silent. The omitted
+choice changes to off only at v3, as recorded in
+[ADR-0013](docs/adr/0013-fusion-non-promotion-and-v3-transition.md). The next
+build milestone is v2.13's caller-held observation capsule and OKF decision. A
+future real-domain fusion study requires a new preregistration whose arms first
+pass executable identifiability and dominance checks.
 
 ### 4. Optional operator-hosted access - lower priority side track
 

@@ -63,14 +63,16 @@ matches one, generalize it before merging.
 | Substring match where structure matters (`"-all" in spf`, `pattern in hostname`, vendor host inside a URL) | Token-aware, label-aware, or parsed-host match | spf `-all` substring to token match (v2.1.6); `cname_target` substring overmatch (v2.1.4); label-aware chain match so `vendor.com.attacker.tld` no longer matches `vendor.com` (`dns_tables.classify_chain`); Google identity redirect routing checks the parsed URL host |
 | Hard-coded vendor string in code | A catalog entry in `fingerprints.yaml` / `signals.yaml`, additive and vendor-doc-sourced | The whole fingerprint catalog exists so detection grows by data, not code |
 | Treating absence of a signal as proof of absence | Non-fired hideable bindings use the explicit conservative `LR = 1` policy; only reviewed, successfully observed public declarations can disconfirm on absence | The missingness policy in [correlation.md](correlation.md); MNAR itself does not derive `LR = 1` |
-| A confident yes/no verdict from a model score | Keep facts separate from model-relative posteriors and evidence-responsive uncertainty bands; set `sparse=true` at the display-mass floor and remain unresolved when evidence does not identify the claim | The band is not a credible interval or calibrated probability; the benchmark decides whether Bayesian fusion remains primary |
+| A confident yes/no verdict from a model score | Keep facts separate from model-relative posteriors and evidence-responsive uncertainty bands; set `sparse=true` at the display-mass floor and remain unresolved when evidence does not identify the claim | The band is not a credible interval or calibrated probability; the v2.11 identifiability audit did not support promotion, so fusion remains an advanced diagnostic |
 | Co-firing observations multiplied as if independent | Group correlated bindings (one evidence cluster contributes once) | Evidence groups / CAL7 over-confidence treatment |
 | A rule tuned to make the local corpus look right | Treat the corpus as one development sample, do not equate its detection rate with a population prior, justify parameters independently, and never over-fit | The calibration track (CAL6/CAL12) and the no-over-fit discipline |
 
 The through-line: when a rule feels brittle, the answer is usually a more
-general rule plus honest uncertainty, kept deterministic. The Bayesian layer is
-the project's main tool for this. It is what lets recon avoid both brittle
-verdicts and a leap to agent judgment.
+general rule plus honest uncertainty, kept deterministic. Explicit abstention
+is the primary response when the evidence does not identify a claim. The
+Bayesian layer can diagnose model-relative sensitivity when requested, but its
+v2.11 comparison did not identify an incremental-benefit path and it must not
+replace deterministic evidence as the default interpretation.
 
 ## The agentic boundary
 

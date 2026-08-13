@@ -434,8 +434,8 @@ async def _lookup_resolve_standard(
         info = _lookup_apply_fusion(info)
     else:
         # --no-fusion: a cache hit may carry fusion fields written by an earlier
-        # default-on run. Clear them so the opt-out is honored (fusion_enabled is
-        # derived from posterior_observations downstream).
+        # run. Clear them so the opt-out is honored (fusion_enabled is derived
+        # from posterior_observations downstream).
         from dataclasses import replace as _replace
 
         info = _replace(info, slug_confidences={}, posterior_observations=())

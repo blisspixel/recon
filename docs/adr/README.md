@@ -32,3 +32,4 @@ deeper rationale for several lives in [correlation.md](../correlation.md),
 | [0010](0010-evidence-gated-native-acceleration.md) | Keep the default runtime pure Python and evidence-gate any optional native accelerator |
 | [0011](0011-public-metadata-collection-boundary.md) | Define the public-metadata collection boundary and target-visible interactions |
 | [0012](0012-default-view-evidence-role-visibility.md) | Split evidence-role visibility between the default and detailed views |
+| [0013](0013-fusion-non-promotion-and-v3-transition.md) | Apply fusion non-promotion through a compatible v2 transition and flip the implicit default only at v3 |
