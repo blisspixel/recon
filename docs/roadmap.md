@@ -281,15 +281,17 @@ Detailed work and rollback criteria live in
 
 ### 3. Establish a reproducible product-quality baseline
 
-Status: specified, decision rule frozen, measurement part-run. The network-free,
+Status: structural stop recorded before target collection. The network-free,
 corpus-free half of the Phase 1 baseline is frozen in
 [2026-08-05-quality-baseline-scorecard.md](../validation/2026-08-05-quality-baseline-scorecard.md);
 the aggregate-only stable-v1 network characterization is complete in the
 [2026-08-12 live-characterization memo](../validation/2026-08-12-stable-v1-live-characterization.md).
 The population, two-stage sampling mechanism, eligibility window, cluster rule,
 public HMAC contexts, private-key commitment, and private-frame commitment are frozen in the
-[v2.11 frame declaration](quality-evaluation-frame-declaration.md). The private
-labeled evaluation and ablation itself have not started.
+[v2.11 frame declaration](quality-evaluation-frame-declaration.md), but the
+window is cancelled and the frame remains unused. The 2026-08-13
+[arm-identifiability audit](../validation/2026-08-13-quality-arm-identifiability.md)
+stopped the design with zero target requests.
 Depends on the claim taxonomy from priority 1.
 
 The phase order, promotion evidence, and stop rules are summarized in the
@@ -300,12 +302,12 @@ Every choice that had to precede results is frozen in
 dated 2026-08-05. It selects `m365_tenant` under
 `runtime.identity-and-tenant.v1` as the primary family by elimination from the
 [external evidence ledger](statistical-assurance.md#external-evidence-ledger),
-pins the four arms to code paths, fixes the safety margin at 0.02, and records a
-power analysis that supersedes the nominal minimum-evidence floor below: the
-selected margin requires at least 155 reference-positive and 183
-reference-negative labeled units, because at 30 negative units the tightest
-achievable safety bound is 0.1157 even with a flawless result. The evaluation
-frame excludes the existing calibration corpus whole.
+pins the intended arms to code paths, fixes the safety margin at 0.02, and
+records a power analysis. Its dated amendment now records that the arms do not
+form four distinct binary decisions under shipped behavior. A1 equals A0, A2
+equals A3, and A3 never supports when A0 abstains. Consequently the positive
+benefit gate cannot pass for any sample size. The evaluation frame excludes the
+existing calibration corpus whole and remains unused.
 
 Why third: the project has extensive implementation and assurance checks, but
 it does not yet measure whether probabilistic fusion, CT enrichment, a large
@@ -321,10 +323,10 @@ Work:
   classified versus unclassified observable surface, degraded-source rate,
   p50/p95 cold and warm latency, peak allocation, CT marginal signal gain, and
   MCP discovery and result payload bytes.
-- Run a predeclared ablation with four distinct arms: deterministic evidence
-  plus abstention, per-slug evidence strength, the strongest reviewed evidence
-  unit, and the current Bayesian network. Treat a negative result as useful
-  evidence, not as a reason to adjust the decision rule after seeing results.
+- Require an executable structural-identifiability and dominance preflight
+  before any future live ablation. The frozen M365 design failed this check:
+  its arms collapse and its candidate cannot beat its baseline. Treat that stop
+  as useful evidence, not as a reason to invent a threshold or collect anyway.
 - Require each future source, inference, catalog, or graph change to name the
   metric it should improve and the regression budget it must preserve.
 - Keep the completed stable-v1 resolver, allocation, CT-value, and independent
@@ -528,25 +530,24 @@ characterization section appears later in this document:
 1. Keep the completed aggregate-only stable-v1 live characterization and
    independent schema characterization blocking. The dated live memo records
    50 of 50 no-CT and 47 of 50 CT product-contract rows without identifiers.
-2. Keep the completed public sampling-frame definition and private-frame digest
-   immutable. After the declaration is publicly committed and its eligibility
-   window opens, collect the preregistered minimum of 155 reference-positive
-   and 183 reference-negative eligible post-cluster units.
-3. Run the frozen four-arm ablation, publish only the permitted aggregate memo,
-   and close v2.11 with its predeclared decision.
-4. Apply that decision as v2.12 before promoting new interpretation or agent
+2. Keep the unused public sampling-frame definition and private-frame digest
+   immutable as historical preregistration evidence. Do not contact its targets
+   under the voided design.
+3. Keep the dated structural-identifiability memo and its exhaustive CI test
+   blocking. It closes the v2.11 decision without pretending that a
+   non-identifying live run could measure benefit.
+4. Apply the non-promotion decision as v2.12 before promoting new interpretation or agent
    surfaces. Independent catalog-round preparation may continue, but promotion
    waits for its own v2.14 gates.
 
 ### Apply the v2.11 result as v2.12
 
 The fusion decision is not deferred to the final phase of the broader quality
-plan. Immediately after the v2.11 aggregate memo, align the primary path,
-defaults, documentation, and tests with the frozen result. Keep fusion primary
-only if both co-primary bounds and the zero-regression safeguard pass. A
-negative or inconclusive result demotes it to an explicitly advanced diagnostic
-without changing the rule after unblinding. Preserve stable JSON and MCP
-compatibility while making that product-positioning change.
+plan. The v2.11 preflight established before collection that the frozen
+promotion condition is structurally unreachable. Align the primary path,
+defaults, documentation, and tests with non-promotion: fusion becomes an
+explicitly advanced diagnostic. Preserve stable JSON and MCP compatibility
+while making that product-positioning change.
 
 ### Separate observation change from interpretation change
 

@@ -116,6 +116,10 @@ docs/accuracy.md
 # corpus, no third-party dependency. Reproduces the sample-size tables in
 # docs/quality-baseline-preregistration.md. No target data.
 !/validation/quality_power_analysis.py
+# Network-free structural audit for the frozen v2.11 M365 arms. Enumerates
+# abstract evidence-role states only and reads no corpus or target data.
+!/validation/quality_arm_identifiability.py
+!/validation/2026-08-13-quality-arm-identifiability.md
 # Aggregate-only live product-quality characterization. The runner is public;
 # its corpus and generated reports remain under the private roots below.
 !/validation/characterize_live_quality.py

@@ -238,7 +238,7 @@ venvPath = "."
 # pytest puts the repo root on sys.path; mirror that for pyright, plus src/ so
 # `import recon_tool` resolves to the source under the src layout.
 extraPaths = [".", "src"]
-include = ["src/recon_tool", "tests", "validation/corpus_aggregator.py", "validation/drift_check.py"]
+include = ["src/recon_tool", "tests", "validation/corpus_aggregator.py", "validation/drift_check.py", "validation/quality_arm_identifiability.py"]
 # Global reportUnknown* suppressions are needed across multiple files, not just YAML loaders.
 # Root causes: (1) yaml.safe_load returns Any, propagating through fingerprints.py and
 # signals.py; (2) dnspython's type stubs are incomplete (dns.py); (3) urllib.parse.urlparse
