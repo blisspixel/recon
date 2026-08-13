@@ -10,6 +10,7 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 from dataclasses import replace
+from functools import lru_cache
 from typing import TYPE_CHECKING
 
 from recon_tool.constants import (
@@ -590,6 +591,34 @@ def _generated_insight_claims(
     return tuple(generate_insight_claims(context))
 
 
+@lru_cache(maxsize=1)
+def _canonical_scope_only_sparse_claims() -> tuple[InsightClaim, ...]:
+    """Return the exact sparse pair generated for an evidence-bound empty apex."""
+    from recon_tool.insights import InsightContext, generate_insight_claims
+
+    context = InsightContext.from_sets(set(), set(), None, None, 0, evidence=(), evidence_bound=True)
+    return tuple(
+        claim for claim in generate_insight_claims(context) if claim.generator_rule_id == "_sparse_signal_insights"
+    )
+
+
+def _preserve_pre_enrichment_sparse_claims(
+    info: TenantInfo,
+    generated_claims: tuple[InsightClaim, ...],
+    visible_insights: tuple[str, ...],
+) -> tuple[InsightClaim, ...]:
+    """Preserve one exact scope-only sparse pair across related inventory enrichment."""
+    if not info.related_domains or any(claim.text not in visible_insights for claim in info.insight_claims):
+        return generated_claims
+    sparse_rule = "_sparse_signal_insights"
+    actual_sparse = tuple(claim for claim in info.insight_claims if claim.generator_rule_id == sparse_rule)
+    actual_other = tuple(claim for claim in info.insight_claims if claim.generator_rule_id != sparse_rule)
+    generated_other = tuple(claim for claim in generated_claims if claim.generator_rule_id != sparse_rule)
+    if actual_sparse != _canonical_scope_only_sparse_claims() or actual_other != generated_other:
+        return generated_claims
+    return info.insight_claims
+
+
 def _posterior_units_are_current(
     info: TenantInfo,
     visible_slugs: set[str],
@@ -663,6 +692,7 @@ def collection_observable_info(info: TenantInfo) -> TenantInfo:
         generated_claims = tuple(
             claim for claim in _generated_insight_claims(info, info.evidence) if claim.text in visible_insights
         )
+        generated_claims = _preserve_pre_enrichment_sparse_claims(info, generated_claims, visible_insights)
         posterior_contract_current = _posterior_contract_is_current(info)
         if (
             visible_insights == info.insights

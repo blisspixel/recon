@@ -55,7 +55,10 @@ def _evidence_from_cache(raw: dict[str, Any], field: str) -> EvidenceRecord:
         source_type=cache_string(raw.get("source_type"), f"{field}.source_type", nonempty=True),
         raw_value=cache_string(raw.get("raw_value"), f"{field}.raw_value"),
         rule_name=cache_string(raw.get("rule_name"), f"{field}.rule_name", nonempty=True),
-        slug=cache_string(raw.get("slug"), f"{field}.slug", nonempty=True),
+        # EvidenceRecord allows an empty slug for typed observations that do
+        # not originate in the fingerprint catalog. Rule and source remain
+        # mandatory, so exact evidence identity is still preserved.
+        slug=cache_string(raw.get("slug"), f"{field}.slug"),
     )
 
 

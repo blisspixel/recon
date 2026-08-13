@@ -6,6 +6,7 @@ import pytest
 
 from recon_tool.cache import cache_get, cache_put
 from recon_tool.cache_insights import validate_insight_claim_coverage
+from recon_tool.merger import merge_results
 from recon_tool.models import EvidenceRecord, SourceResult, TenantInfo
 from recon_tool.resolver import SourcePool, _enrich_from_related, resolve_tenant
 
@@ -194,6 +195,69 @@ class TestEnrichFromRelated:
         restored = cache_get("example.com")
         assert restored is not None
         assert restored.insight_claims == enriched.insight_claims
+
+    @pytest.mark.asyncio
+    async def test_related_inventory_refreshes_same_text_apex_claim_evidence(self, monkeypatch):
+        """Final claim lineage includes newly relevant evidence already retained at the apex."""
+
+        async def fake_lightweight_lookup(_domain: str) -> SourceResult:
+            return SourceResult(
+                source_name="dns_records",
+                detected_services=("SendGrid",),
+                detected_slugs=("sendgrid",),
+            )
+
+        monkeypatch.setattr("recon_tool.sources.dns.lightweight_subdomain_lookup", fake_lightweight_lookup)
+        apex = SourceResult(
+            source_name="dns_records",
+            related_domains=("newsletter.example.com",),
+            evidence=(
+                EvidenceRecord("MX", "10 mx.example.invalid", "Observed MX", ""),
+                EvidenceRecord("CNAME", "sendgrid.invalid", "SendGrid", "sendgrid"),
+            ),
+        )
+        info = merge_results([apex], "example.com")
+
+        enriched, _results = await _enrich_from_related(info, [apex])
+
+        email_claim = next(
+            claim for claim in enriched.insight_claims if claim.generator_rule_id == "_email_security_insights"
+        )
+        assert {record.source_type for record in email_claim.supporting_evidence} == {"MX", "CNAME"}
+        validate_insight_claim_coverage(enriched)
+
+    @pytest.mark.asyncio
+    async def test_enrichment_reprojects_claims_away_from_degraded_apex_channel(self, monkeypatch):
+        """Raw partial evidence remains retained but cannot support final claims."""
+
+        async def fake_lightweight_lookup(_domain: str) -> SourceResult:
+            return SourceResult(
+                source_name="dns_records",
+                detected_services=("Kartra",),
+                detected_slugs=("kartra",),
+            )
+
+        monkeypatch.setattr("recon_tool.sources.dns.lightweight_subdomain_lookup", fake_lightweight_lookup)
+        apex = SourceResult(
+            source_name="dns_records",
+            related_domains=("learn.example.com",),
+            detected_services=("SendGrid",),
+            detected_slugs=("sendgrid",),
+            evidence=(
+                EvidenceRecord("MX", "10 mx.example.invalid", "Observed MX", ""),
+                EvidenceRecord("CNAME", "sendgrid.invalid", "SendGrid", "sendgrid"),
+            ),
+            degraded_sources=("dns:cname",),
+        )
+        info = merge_results([apex], "example.com")
+
+        enriched, _results = await _enrich_from_related(info, [apex])
+
+        assert any(record.source_type == "CNAME" for record in enriched.evidence)
+        assert all(
+            record.source_type != "CNAME" for claim in enriched.insight_claims for record in claim.supporting_evidence
+        )
+        validate_insight_claim_coverage(enriched)
 
     @pytest.mark.asyncio
     async def test_failed_related_channel_cannot_contribute_partial_inventory(self, monkeypatch):

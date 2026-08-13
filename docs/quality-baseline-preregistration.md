@@ -1,6 +1,7 @@
 # Product-quality baseline preregistration
 
-**Status: frozen 2026-08-05, before any evaluation collection or run.**
+**Status: decision rule frozen 2026-08-05; frame declaration frozen
+2026-08-12; no evaluation collection or run has started.**
 
 This document fixes every choice that must be made before results are visible,
 for the track 3 / v2.11.0 product-quality baseline described in
@@ -122,7 +123,7 @@ the arms.**
 
 | Label class | Condition |
 |---|---|
-| reference-positive | `GetUserRealm` returns `NameSpaceType` in {`Federated`, `Managed`}, or OIDC discovery resolves a tenant for the domain |
+| reference-positive | `GetUserRealm` returns `NameSpaceType` in {`Federated`, `Managed`} **and** OIDC discovery resolves a tenant for the domain |
 | reference-negative | `GetUserRealm` returns a non-tenant `NameSpaceType` **and** OIDC discovery returns `invalid_tenant` |
 | ineligible | The two endpoints disagree, either endpoint is unavailable, or either answer is malformed |
 
@@ -198,6 +199,11 @@ A preregistration has to fix the frame in advance, and the
 that frame contains. Both hold at once by separating the frame's **definition**
 from its **membership**.
 
+The required definition, immutable Tranco source, two-stage probability
+sampling mechanism, eligibility window, cluster rule, public HMAC contexts,
+private-key commitment, and private-frame commitment are frozen in the
+[v2.11 frame declaration](quality-evaluation-frame-declaration.md).
+
 Committed publicly before any domain is collected. The evaluation is void
 without these:
 
@@ -205,19 +211,21 @@ without these:
 2. How each stratum's frame is *derived*: the rule that decides eligibility and
    the source of the sampling universe, stated so an outside reader can judge
    the design without seeing a single domain.
-3. The sampling mechanism, the known inclusion probability for each stratum, and
-   the random seed.
+3. The sampling mechanism, the known inclusion probability for each stratum,
+   and a public commitment to the private random key. Publishing the key itself
+   is prohibited when the public universe would make frame membership
+   reconstructible.
 4. A **frame commitment digest**: the SHA-256 of the frozen private frame file.
 
 Held privately and never committed: the enumerated frame itself, and every
 apex, organization name, and per-domain row derived from it.
 
-The digest is what makes the split work. Publishing
-`sha256sum <private frame file>` before collection proves the frame was fixed in
-advance and was not adjusted after seeing results, while disclosing nothing
-about its contents. Retain the private file unchanged so the digest can be
-recomputed and re-verified later. A frame that cannot reproduce its committed
-digest is not the frame that was preregistered, and any run against it is
+The two commitments make the split work. Publishing the private key's SHA-256
+and `sha256sum <private frame file>` before collection proves that both inputs
+were fixed in advance without making membership reconstructible from the public
+source. Retain the private key and frame unchanged so both commitments can be
+recomputed and re-verified later. A key or frame that cannot reproduce its
+committed digest is not the preregistered design, and any run against it is
 non-decisional.
 
 ### Stratification consequence
@@ -480,3 +488,4 @@ The single exception is the margin adjustment described at the end of
 |---|---|---|---|
 | 2026-08-05 | Initial freeze | Preregistration created before any collection or run | Yes |
 | 2026-08-06 | Split the frame declaration into public definition versus private membership, and added the frame commitment digest | The original wording said the sampling frames must be "committed", which could be read as committing the domain lists and would violate the data-handling policy. The digest fixes the frame in advance without disclosing it. No estimand, arm, margin, or decision rule changed. | Yes: no collection has occurred |
+| 2026-08-12 | Froze Tranco list `26J79`, the 2,500-row first-stage probability sample, eligibility window, known-cluster rule, second-stage stratum sampling, public domain-separation contexts, private HMAC-key commitment, and private-frame SHA-256 | A public universe plus a public seed would reconstruct the target list, so keyed HMAC ranking preserves equal inclusion probability while keeping membership private. This supplies the public definition and commitments required by section 6 without changing the claim family, arms, labels, estimands, margins, bounds, or promotion rule. | Yes: no reference-label, DNS, arm, or outcome collection has occurred |

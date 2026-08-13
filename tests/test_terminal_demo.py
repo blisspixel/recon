@@ -21,15 +21,15 @@ def test_committed_terminal_demo_matches_the_real_renderer() -> None:
     assert DEFAULT_OUTPUT == ROOT / "docs" / "assets" / "terminal-demo.svg"
     assert DEFAULT_OUTPUT.read_text(encoding="utf-8") == svg
     assert svg.startswith('<svg class="rich-terminal"')
-    assert "Globex&#160;Ltd" in svg
-    assert "globex.invalid" in svg
+    assert "Example&#160;Industries&#160;Ltd" in svg
+    assert "example.com" in svg
     assert "Generated with Rich" not in svg
     assert "cdnjs.cloudflare.com" not in svg
     assert 'role="img"' in svg
     assert '<title id="recon-demo-accessible-title">' in svg
     assert '<desc id="recon-demo-accessible-description">' in svg
-    assert "Globex" in svg
-    assert demo_tenant_info().queried_domain.endswith(".invalid")
+    assert "Example Industries" in svg
+    assert demo_tenant_info().queried_domain == "example.com"
     assert main(["--check"]) == 0
 
 
@@ -55,8 +55,8 @@ def test_readme_embeds_and_labels_the_synthetic_demo() -> None:
 
     assert "https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg" in readme
     assert "deterministic, no-network fixture" in normalized
-    assert "Globex Ltd" in readme
-    assert "globex.invalid" in readme
+    assert "Example Industries Ltd" in readme
+    assert "example.com" in readme
     assert "No real organization is depicted" in normalized
     assert "<summary>Accessible text transcript</summary>" in readme
     assert render_terminal_demo_text() in readme

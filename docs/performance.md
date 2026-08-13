@@ -400,18 +400,42 @@ a language boundary.
 
 ## Methodology
 
-The command below remains useful for local characterization, but one timing run
-is not a benchmark. A current baseline must record the commit, Python and OS
-versions, hardware, network class, provider outcomes, cache state, corpus
-shape, repetition count, p50/p95, peak allocation, and degraded-source count.
-Use a newline-delimited list of apex domains stored locally. Public
-performance-validation inputs use only reserved synthetic examples; any real
-corpus remains private under the data policy.
+The deterministic local harness covers catalog load, fingerprint matching,
+inference, graph construction, fusion, and rendering without network access:
 
 ```bash
-recon cache clear --all                                # start cold
-time recon batch path/to/your-corpus.txt --json > /dev/null
+uv run python scripts/characterize_performance.py --repetitions 9
 ```
+
+The live runner complements it with paired CT/no-CT cold resolution, primary
+source timing, merge replay, inference, JSON rendering, peak allocation,
+event-loop lag, degradation, warm disk cache, and the actual warm MCP result
+envelope. It writes aggregate statistics only and requires an explicit network
+acknowledgement:
+
+```bash
+uv run python -m validation.characterize_live_quality \
+  --corpus validation/corpus-private/consolidated.txt \
+  --output validation/runs-private/<stamp>/characterization.json \
+  --network-class wired \
+  --sample-size 50 \
+  --sampling-seed stable-v1-characterization-20260812 \
+  --normalize-source \
+  --exclude-invalid-source \
+  --execute-network
+```
+
+Replace `--execute-network` with `--preflight` to validate the same selection
+and output path without network calls or writes before starting a live run.
+
+One timing run is not a benchmark. A current baseline must record the commit,
+Python and OS versions, hardware, network class, provider outcomes, cache
+state, corpus shape and digest, p50/p95, peak allocation, and degraded-source
+count. The live runner enforces canonical private apexes, a declared row cap,
+sequential execution, isolated caches, and a new output path. Its source-stage
+timings cover the primary concurrent source pool; related-name enrichment is
+included in end-to-end resolver time and is not misreported as a separately
+instrumented source stage.
 
 See [CONTRIBUTING.md](../CONTRIBUTING.md#no-evaluated-target-data) for
 why the project does not commit a real-company corpus. Local corpora
@@ -463,8 +487,10 @@ past ~20 queries/minute.
 
 ## Next measurement gate
 
-The active engineering plan requires a reproducible synthetic characterization
-before performance-driven code changes:
+The active engineering plan requires both reproducible synthetic
+characterization and a disclosure-safe live aggregate before
+performance-driven code changes. The independent JSON Schema portion is now a
+blocking gate, and the live harness is implemented but unrun:
 
 - single, batch, graph, and MCP workflows;
 - cold and warm p50/p95 wall time;

@@ -333,6 +333,93 @@ unpublishable corpus layouts before spending operator time on a live run.
 Review `memo.md` before copying any result into a committed validation memo.
 The renderer is a backstop, not a substitute for review.
 
+### Product-quality live characterization
+
+`characterize_live_quality.py` closes the measurement-tooling gap between the
+network-free component benchmark and the private product-quality scorecard. It
+runs each private apex sequentially in two isolated configurations, alternating
+the CT/no-CT order by row. It measures cold resolver time, primary-source
+stages, merge replay, inference, rendering, allocation, event-loop lag,
+degradation, warm disk cache, and the actual warm `lookup_tenant` MCP result
+envelope. Optional direct Google CSE and BIMI probes remain disabled.
+
+Run the same command with `--preflight` in place of `--execute-network` first.
+Preflight validates the source, deterministic selection, row bounds, and path
+safety, then prints only counts, digests, method, seed, and the declared network
+class. It performs no network calls and creates no directories or files.
+
+```bash
+python -m validation.characterize_live_quality \
+  --corpus validation/corpus-private/consolidated.txt \
+  --output validation/runs-private/<UTC-stamp>/characterization.json \
+  --network-class wired \
+  --sample-size 50 \
+  --sampling-seed stable-v1-characterization-20260812 \
+  --normalize-source \
+  --exclude-invalid-source \
+  --execute-network
+```
+
+The input is one lowercase canonical apex per non-comment line. A file already
+at or below the default 50-row hard cap runs in its declared order. For a larger
+private source, `--sample-size` and a public-safe `--sampling-seed` select rows
+by SHA-256 rank without replacement. The aggregate records the source digest,
+source eligible count, seed, method, and selected-frame digest, so the sample is
+reproducible without publishing its membership. Strict mode rejects duplicate
+or non-canonical rows. The explicit `--normalize-source` mode validates and
+reduces rows with recon's apex normalizer, removes canonical duplicates, and
+records the input, changed, removed, and eligible counts. Malformed rows still
+fail the run unless `--exclude-invalid-source` is also explicit. That legacy
+preparation mode records the exact excluded count and policy in preflight and
+the aggregate. The runner fails instead of silently truncating, uses an empty
+config directory per row and mode, and never replaces an existing output.
+Exactly one of `--preflight` and `--execute-network` is mandatory, so a copied
+command cannot silently start collection.
+
+The JSON output has no field capable of carrying an apex, organization name,
+tenant ID, record value, or per-domain row. It contains only the private file's
+SHA-256 commitment, counts, quantiles, bounded source/degradation markers,
+environment and revision metadata, and the explicit cache and network method.
+Keep the first output under `runs-private/`, inspect it, and copy only a reviewed
+aggregate memo into a public validation artifact. This runner prepares the
+stable-v1 characterization. It does not satisfy the separate preregistered
+evaluation-frame declaration or collect an ablation label.
+
+The first reviewed aggregate is
+[2026-08-12-stable-v1-live-characterization.md](2026-08-12-stable-v1-live-characterization.md).
+It closes the stable-v1 live-characterization prerequisite while leaving the
+private labeled evaluation and frozen ablation explicitly open.
+
+### Product-quality evaluation frame
+
+The next decision-bearing study has a separate, immutable frame. Its public
+population, source, eligibility window, two-stage sampling rule, cluster rule,
+public HMAC contexts, and private key and frame commitments are frozen in
+[docs/quality-evaluation-frame-declaration.md](../docs/quality-evaluation-frame-declaration.md).
+The source and frame files stay under `corpus-private/`; no evaluation target is
+contacted by the preparer.
+
+```bash
+python -m validation.prepare_quality_evaluation_frame generate-key \
+  --output validation/corpus-private/v211-sampling-key-20260812.hex
+
+python -m validation.prepare_quality_evaluation_frame prepare \
+  --ranked-source validation/corpus-private/tranco-26J79-top1m.csv \
+  --exclude-corpus validation/corpus-private/consolidated.txt \
+  --output validation/corpus-private/v211-screening-frame-26J79-hmac-v1.csv \
+  --sampling-key-file validation/corpus-private/v211-sampling-key-20260812.hex \
+  --tranco-list-id 26J79 \
+  --expected-source-rows 1000000 \
+  --sample-size 2500 \
+  --sampling-context v211-screening-frame-20260812-01 \
+  --preflight
+```
+
+Review the identifier-free JSON, then replace only the final flag with
+`--write-private-frame`. The writer never replaces an existing frame. The
+reference-label collector and four-arm evaluator remain separate work; do not
+start them before the declaration's public-commit and eligibility-window gates.
+
 Committed memos from these network runs must follow
 [docs/data-handling-policy.md](../docs/data-handling-policy.md): no apexes, no
 organization names, no tenant IDs, no per-domain output, and no small cells.

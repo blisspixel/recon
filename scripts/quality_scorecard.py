@@ -312,6 +312,14 @@ def _measured_elsewhere() -> list[dict[str, str]]:
             ),
         },
         {
+            "metric": "published JSON Schema interoperability",
+            "owner": "scripts/check_schema_interoperability.py",
+            "reason": (
+                "The blocking network-free gate uses an independent Draft 2020-12 validator, "
+                "local-only references, explicit structure limits, and a production-formatted control record."
+            ),
+        },
+        {
             "metric": "claim lineage and provenance completeness",
             "owner": "scripts/check_default_claim_audit.py",
             "reason": (
@@ -325,9 +333,12 @@ def _measured_elsewhere() -> list[dict[str, str]]:
             "reason": "Requires the private corpus and emits its own aggregate-only artifact.",
         },
         {
-            "metric": "claim-family precision, benefit, and safety",
-            "owner": "docs/quality-baseline-preregistration.md",
-            "reason": "Governed by the frozen decision rule and requires independently labeled units.",
+            "metric": "live single-domain latency, allocation, degradation, CT value, and MCP result bytes",
+            "owner": "validation/2026-08-12-stable-v1-live-characterization.md",
+            "reason": (
+                "The reviewed aggregate-only live memo owns these diagnostic measurements. "
+                "Its convenience frame and degraded CT access do not support population or fusion claims."
+            ),
         },
     ]
 
@@ -349,35 +360,19 @@ def _unmeasured() -> list[dict[str, str]]:
             ),
         },
         {
-            "metric": "CT marginal signal gain relative to latency cost",
-            "blocker": "network and private corpus",
-            "reason": (
-                "Needs live certificate-transparency responses across a real domain sample. "
-                "Synthetic CT entries would predetermine the marginal gain."
-            ),
-        },
-        {
-            "metric": "end-to-end cold and warm p50/p95 for single, batch, graph, and MCP workflows",
+            "metric": "end-to-end cold and warm p50/p95 for batch and graph workflows",
             "blocker": "network",
             "reason": (
-                "Dominated by external DNS and CT providers. A network-free number would "
-                "characterize the fixture layer rather than the workflow an operator runs."
+                "The reviewed live memo covers single-domain resolution and warm MCP. Batch and "
+                "graph remain distinct network-bound workflows and cannot inherit those timings."
             ),
         },
         {
-            "metric": "degraded-source rate and partial-result rate",
-            "blocker": "network and private corpus",
+            "metric": "claim-family precision, benefit, and safety",
+            "blocker": "public declaration, eligibility window, network, and private labels",
             "reason": (
-                "Degradation behavior is covered by the test suite, but its rate is a property "
-                "of live provider availability over a real sample and cannot be synthesized."
-            ),
-        },
-        {
-            "metric": "MCP result payload bytes under real lookups",
-            "blocker": "network",
-            "reason": (
-                "Discovery cost is fully determined by the registered surface and is measured "
-                "above. Result size depends on how much a real domain actually resolves."
+                "The decision rule and frame are frozen, but independently labeled rows and the "
+                "four-arm evaluation cannot begin before the declared public-commit and time gates."
             ),
         },
     ]

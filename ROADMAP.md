@@ -27,6 +27,14 @@ still unproven: nothing yet measures whether fusion, CT enrichment, catalog
 size, or the broad agent surface improves operator decisions over deterministic
 evidence plus abstention.
 
+Two emerging interchange formats are now explicit design inputs, not shipped
+claims: the Agent Plugins v1.0.0 working draft for portable skill and MCP
+packaging, and Open Knowledge Format v0.2 for human- and agent-readable
+knowledge bundles. Neither changes the v2.11 product-quality priority. Agent
+Plugins is a packaging concern distinct from MCP wire compatibility, while OKF
+can only be an additive projection over a stable caller-owned observation
+capsule, never a replacement for recon's versioned JSON contract.
+
 Publication maintainers must rerun
 [docs/submission-freeze-checklist.md](docs/submission-freeze-checklist.md)
 before any external submission. The most recent completed historical local
@@ -35,18 +43,19 @@ submission-freeze proof is
 
 ## Version path (order of operations)
 
-No calendar estimates. Each row unlocks the next. Patch releases (2.x.y) stay
-available for security, silent-failure, and contract-preserving fixes at any
-point.
+No calendar estimates. The rows are release-order priorities: each milestone
+closes before the next version ships, while explicitly independent preparation
+may run in parallel. Patch releases (2.x.y) stay available for security,
+silent-failure, and contract-preserving fixes at any point.
 
 | Version | Theme | Why this order | Done when |
 |---|---|---|---|
 | **v2.10.x** | Maintenance line | Protect truthfulness and supply chain while larger work proceeds | Evidence audit green; MCP 1.28.1 + 2.0.0 pins green; no known silent fail-open on default paths |
 | **v2.11.0** | Product-quality baseline | Track 3. Cannot promote or retire fusion without a predeclared scorecard | Aggregate-safe scorecard + predeclared ablation rule + dated memo; fusion path kept or demoted to advanced diagnostic by result |
 | **v2.12.0** | Apply quality decision | Uses v2.11 evidence; avoids more graph work without benefit | Primary path matches scorecard outcome; docs and defaults updated; negative result accepted without reinterpretation |
-| **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions under degraded sources |
+| **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions under degraded sources; record an OKF v0.2 projection decision without replacing JSON |
 | **v2.14.0** | Catalog quality loop | Independent of fusion promotion; blocked only by disclosure-safe rounds | Rank / regional / vendor-seed / drift rounds complete with fixtures; broad catalog growth remains gated by those rounds |
-| **v2.15.0** | Agent surface cost | After quality baseline so tool cuts do not hide weak models | Measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
+| **v2.15.0** | Agent portability and surface cost | Evaluate packaging and tool cuts against representative workflows after the catalog and discovery surface is measured; packaging preparation may start earlier | Agent Plugins conformance is validated against a pinned specification or explicitly deferred while it remains a working draft; measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
 | **v3.0.0** | Contract maturity | Major only if an additive path cannot carry the claim model | Versioned claim / observation envelope (or explicit decision that v2 stays forever); migration notes; no silent semantic change under a minor |
 
 Optional cloud operator hosting stays a **side track** (any 2.x after local
@@ -72,9 +81,12 @@ rows. Detail: [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.m
 
 ### 3. Product-quality baseline - **next build priority: v2.11**
 
-Specified, decision rule frozen, measurement part-run: the network-free half of
-the Phase 1 baseline is frozen, and the ablation that decides fusion's fate has
-not started. Process evidence is rich; product-outcome evidence is not.
+Specified, decision rule and evaluation frame frozen, measurement part-run: the
+network-free half and aggregate-only stable-v1 live characterization are
+complete, while reference-label collection and the ablation that decides
+fusion's fate have not started. The live run completed all 50 no-CT contract
+rows and 47 of 50 CT rows; the three failures were bounded timeouts. Process
+evidence is rich; product-outcome evidence is not.
 Acceptance and stop rules live in
 [docs/roadmap.md](docs/roadmap.md#3-establish-a-reproducible-product-quality-baseline)
 and the
@@ -91,6 +103,15 @@ reference-positive and 183 reference-negative labeled units.
 network-free and corpus-free, and names every channel it cannot measure without
 the private corpus or live providers. Its first dated run is
 [validation/2026-08-05-quality-baseline-scorecard.md](validation/2026-08-05-quality-baseline-scorecard.md).
+The paired CT/no-CT cold-resolution, allocation, loop-lag, degradation,
+warm-cache, and real MCP-result measurements are published in the aggregate-only
+[2026-08-12 live-characterization memo](validation/2026-08-12-stable-v1-live-characterization.md).
+The public population and sampling mechanism plus private-frame digest are
+frozen in the
+[v2.11 frame declaration](docs/quality-evaluation-frame-declaration.md). The
+next executable step, only after that declaration is publicly committed and its
+eligibility window opens, is reference-label and DNS collection. Then apply the
+frozen cluster and label-stratum selection rules and run the four-arm ablation.
 
 ### 4. Optional operator-hosted access - lower priority side track
 
@@ -104,6 +125,8 @@ Draft container + Cloud Run IaC only. Local CLI and stdio MCP remain complete.
 | Broad catalog growth | Independent rank, regional, vendor-seed, and drift rounds |
 | More graph or probabilistic machinery | Measured benefit from the v2.11 scorecard |
 | Core-versus-advanced MCP profile | Representative client proves material context benefit |
+| Portable Agent Plugins package | Pinned schema validation plus install and launch evidence from representative conformant clients; preserve native client paths |
+| OKF knowledge export | Stable caller-owned observation capsule, named consumer, v0.2 mapping and privacy review; JSON remains authoritative |
 | More optional cloud provider IaC | Named operator + provider validation |
 | Project-operated public multi-tenant service | Separate product, governance, and funding decision |
 | Promoting surface-inventory to a stable API | Named external consumer under [ADR-0007](docs/adr/0007-surface-inventory-discovery-context.md) |
@@ -131,6 +154,8 @@ examples; aggregate-only public validation artifacts.
 
 **Surface stability** - CLI, JSON, MCP, cache, and import changes follow
 [docs/stability.md](docs/stability.md).
+Portable interchange formats remain additive projections. They do not silently
+replace stable JSON, MCP, or client-specific installation contracts.
 
 ## Where To Read More
 

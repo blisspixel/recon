@@ -69,36 +69,37 @@ recon example.com
 
 ![Synthetic terminal showing recon's default output](https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg)
 
-This is a deterministic, no-network fixture for Globex Ltd using IETF reserved `.invalid` namespaces (`globex.invalid`). No real organization is depicted.
+This is a deterministic, no-network fixture for the fictional Example Industries Ltd using reserved `example.com`. No real organization is depicted. Other project fixtures use IETF reserved `.invalid` namespaces.
 
 <!-- terminal-demo-transcript:start -->
 <details>
 <summary>Accessible text transcript</summary>
 
 ```text
-$ recon globex.invalid
-Globex Ltd
-globex.invalid
+$ recon example.com
+Example Industries Ltd
+example.com
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 + Proofpoint gateway
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
-  Tenant domain globex.onmicrosoft.invalid
+  Tenant domain example-industries.onmicrosoft.example.com
   Auth         Federated
   Confidence   ●●● High (4 sources)
 
 
 Services
-  Email          Microsoft 365, Proofpoint, DMARC reject, DKIM,
-                 SPF strict, MTA-STS enforce
-  Identity       Okta
-  Cloud          Cloudflare (CDN/edge), AWS Route 53 (DNS)
-  Security       Wiz Security
-  Collaboration  Slack, Atlassian (Jira/Confluence)
-                 Evidence roles: --explain
+  Email            Microsoft 365, Proofpoint, DMARC reject, DKIM,
+                   SPF strict, MTA-STS enforce
+  Identity         Okta
+  Cloud            Cloudflare (CDN/edge), AWS Route 53 (DNS)
+  Security         Wiz Security
+  Data & Analytics Snowflake, Datadog
+  Collaboration    Slack, Atlassian (Jira/Confluence), GitHub, Zoom
+                   Evidence roles: --explain
 
 
 High-signal related domains
-  login.globex.invalid, status.globex.invalid, support.globex.invalid
+  login.example.com, status.example.com, support.example.com
 
 Insights
   Federated identity observed; identity-vendor indicators: Okta
@@ -142,11 +143,17 @@ JSON contracts:
 [stability](https://github.com/blisspixel/recon/blob/main/docs/stability.md) ·
 [operational contract](https://github.com/blisspixel/recon/blob/main/docs/operational-contract.md).
 
+Versioned JSON remains recon's structured runtime contract. The
+[Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+is tracked as a possible caller-owned knowledge projection for future
+observation capsules. recon does not currently emit OKF, and any future OKF
+view would be additive rather than a replacement for JSON.
+
 `docs/surface-inventory.json`, `docs/cli-surface.md`, and
 `recon://surface-inventory` are generated discovery context and drift guards,
 not stable runtime API contracts. ADR-0007 records the promotion gate.
 
-## Use with an AI agent (MCP / skill)
+## Use with an AI agent (plugin / MCP / skill)
 
 Wire recon into Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Kiro,
 or any MCP-compatible client:
@@ -163,25 +170,33 @@ Full setup:
 Per-client scaffolds and skills:
 [agents/](https://github.com/blisspixel/recon/tree/main/agents).
 
+The current scaffolds use each client's native configuration. In particular,
+the bundled Claude Code plugin uses Claude Code's client-specific layout; it
+does not claim conformance with the portable
+[Agent Plugins v1.0.0 working draft](https://agent-plugins.org/specification).
+A schema-pinned portable package is tracked in the roadmap. Until it is
+validated across representative clients, use the documented client-specific
+install path above.
+
 | You say | What the agent should do |
 |---|---|
-| "Recon globex.invalid" | Call `lookup_tenant` (or `recon globex.invalid`) and return the panel-style summary |
-| "What does globex.invalid run for email and identity?" | Same lookup; lead with MX/IdP/tenant facts and confidence |
+| "Recon example.com" | Call `lookup_tenant` (or `recon example.com`) and return the panel-style summary |
+| "What does example.com run for email and identity?" | Same lookup; lead with MX/IdP/tenant facts and confidence |
 | "Why do you think that?" | Re-run with explain / provenance (`--explain` or `explain=true`) |
-| "Compare globex.invalid and beta.invalid" | `compare_postures` or two lookups side by side |
+| "Compare example.com and example.net" | `compare_postures` or two lookups side by side |
 | "Any public hardening gaps?" | `find_hardening_gaps` after a lookup - hedged "Consider" notes only |
 
-**Example chat (Globex demo shape):**
+**Example chat (Example Industries demo shape):**
 
-> **You:** Recon globex.invalid and tell me what you observe.
+> **You:** Recon example.com and tell me what you observe.
 >
-> **Agent:** Public evidence for `globex.invalid` (fictional demo):
+> **Agent:** Public evidence for `example.com` (fictional demo):
 > - **Mail:** Microsoft 365 delivery path plus Proofpoint gateway; DMARC
 >   `p=reject`, SPF strict, MTA-STS enforce.
 > - **Identity:** Federated; Okta indicator via CNAME.
 > - **Tenant:** GUID present, region NA; confidence high from four sources.
-> - **Also seen:** Cloudflare edge, AWS Route 53 DNS, Slack/Atlassian/Wiz
->   public indicators.
+> - **Also seen:** Cloudflare and Route 53 infrastructure, Wiz, Snowflake,
+>   Datadog, Slack, Atlassian, GitHub, and Zoom public indicators.
 >
 > These are public-record observations, not a security grade or proof of
 > active product use. Say if you want evidence detail or a gap review.

@@ -350,6 +350,20 @@ async def _enrich_from_related(
         insights=tuple(enriched_insights),
         insight_claims=tuple(enriched_claims),
     )
+    # Related inventory is intentionally stored without lending its evidence to
+    # the apex. Reproject the generated-claim fields once against the final
+    # inventory and the apex's collection availability. This drops support from
+    # unavailable channels and refreshes exact evidence when an added inventory
+    # slug was already backed by retained apex evidence. Raw evidence and every
+    # non-claim field remain unchanged.
+    from recon_tool.collection_view import collection_observable_info
+
+    observable_enriched = collection_observable_info(enriched)
+    enriched = replace(
+        enriched,
+        insights=observable_enriched.insights,
+        insight_claims=observable_enriched.insight_claims,
+    )
 
     return enriched, all_results + list(related_results)
 
