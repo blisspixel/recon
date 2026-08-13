@@ -227,6 +227,11 @@ jobs:
         uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
         with:
           version: "0.11.17"
+          # This job intentionally has no source checkout: it executes only
+          # the sealed wheel downloaded below. A project cache would weaken
+          # that boundary and has no dependency manifest to key against.
+          enable-cache: false
+          ignore-empty-workdir: true
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
