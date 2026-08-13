@@ -73,9 +73,10 @@ It does not call the network by default and it is not part of the user-facing
 
 The release workflow independently validates that the tag, package version,
 dated nonempty changelog section, tagged commit, and current `main` ancestry
-agree. It then reruns the exact stable and candidate MCP SDK matrix and the
-complete canonical gate on the tagged tree before a build can be sealed or
-published. A manually pushed tag cannot bypass the controls on `main`.
+agree. It then reruns the exact stable MCP SDK matrix for the v1.28.1 rollback
+and v2.0.0 production pins, plus the complete canonical gate on the tagged tree,
+before a build can be sealed or published. A manually pushed tag cannot bypass
+the controls on `main`.
 
 During active edits, this is useful as a planning report:
 
@@ -206,12 +207,13 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
    validates exact stable tag syntax, package-version agreement, a dated
    nonempty changelog section, the tagged SHA, and containment in current
    `origin/main`.
-2. **test**: after preflight, runs the exact stable and candidate MCP SDK matrix,
-   then delegates to the complete `scripts/check.py` gate with added-line text
-   hygiene covering the full previous-release-to-tag range. A separate
-   hash-pinned runtime requirements export is audited with `pip-audit`. The
-   audit runner resolves the installed auditor under Python isolated mode and
-   retries once only for recognized transport failures; findings, unknown
+2. **test**: after preflight, runs the exact stable v1.28.1 and v2.0.0 MCP SDK
+   matrix, then delegates to the complete `scripts/check.py` gate with
+   added-line text hygiene covering the full previous-release-to-tag range. A
+   separate hash-pinned runtime requirements export is audited with
+   `pip-audit`. The audit runner resolves the installed auditor under Python
+   isolated mode and retries once only for recognized transport failures;
+   findings, unknown
    failures, and a second transport failure remain fatal.
 3. **build**: after `test`, exact uv 0.11.17 uses the hash-locked build graph to
    produce one sdist, constructs one wheel from that exact sdist, and
@@ -349,8 +351,8 @@ Before running `scripts/release.py`:
 - [ ] `docs/schema.md` has been updated if any top-level JSON field changed.
 - [ ] `CHANGELOG.md` includes the generated `### Tool Surface Changes` line.
 - [ ] README examples and docs references still match the shipped CLI behavior.
-- [ ] Exact stable and candidate MCP SDK compatibility passes on the release
-      tree when MCP compatibility code or dependencies changed.
+- [ ] Exact stable v1.28.1 and v2.0.0 MCP SDK compatibility passes on the
+      release tree when MCP compatibility code or dependencies changed.
 - [ ] `docs/supply-chain.md` keeps the consumer verification quick path on the
       current version and release asset names.
 

@@ -55,14 +55,29 @@ field changes.
 
 - The 1,000-row, four-band catalog rank round is closed with an aggregate memo,
   explicit promoted, rejected, deferred, unavailable, and unmeasured outcomes,
-  and a zero-regression counterfactual. Regional evidence is the next v2.14
-  round.
+  and a zero-regression counterfactual. Regional observation and disposition is
+  the next v2.14 operation.
+- The regional round now has a public pre-collection declaration binding its
+  official source archives, exact IANA and UN M49 mapping, independent
+  five-stratum frame, collection options, code and catalog digests, and
+  aggregate-only interpretation boundary. The canonical roadmap, catalog
+  strategy, engineering plan, and validation guide agree on the remaining
+  regional, vendor-seed, and drift order.
 
 ### Fixed
 
 - GitHub now renders every diagram and equation in the correlation guide. The
   documentation gate rejects Mermaid style names that collide with parser
   keywords and math macros that GitHub replaces with visible error panels.
+- The validation guide uses package-safe module entry points for every active
+  catalog preparation command, with a subprocess regression gate that launches
+  each documented preparer from the repository root.
+- Local package-invariant builds and isolated MCP compatibility environments
+  use uv copy mode so cloud-backed or cross-device Windows caches cannot fail
+  on incompatible hardlinks. Artifact contents, compatibility semantics, and
+  release build commands are unchanged.
+- The MCP compatibility harness uses the current asynchronous-generator type
+  annotation required by Python 3.14 static analysis.
 
 ## [2.13.0] - 2026-08-13
 

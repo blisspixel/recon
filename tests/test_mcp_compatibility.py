@@ -9,6 +9,7 @@ import pytest
 
 from recon_tool.mcp_client.doctor import DoctorCheck, _append_cache_metadata_check
 from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, mcp_application_options, model_wire_dict
+from scripts import check_mcp_compatibility
 
 
 class _Model:
@@ -99,3 +100,12 @@ def test_production_dependency_uses_characterized_stable_floor() -> None:
     # the documented rollback pin and stays blocking in the compatibility
     # matrix, so both generations keep being exercised.
     assert mcp_dependencies == ["mcp>=2.0.0,<3"]
+
+
+def test_isolated_uv_operations_use_copy_mode(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("UV_LINK_MODE", "hardlink")
+
+    env = check_mcp_compatibility._uv_environment()
+
+    assert env["UV_LINK_MODE"] == "copy"
+    assert check_mcp_compatibility.os.environ["UV_LINK_MODE"] == "hardlink"

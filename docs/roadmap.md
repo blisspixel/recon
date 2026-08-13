@@ -14,8 +14,9 @@ tracked separately from product work.
 > capsules and the evidence-backed ADR-0014 decision to defer OKF v0.2 until a
 > named consumer exists; its full, protected-main, publication, provenance, and
 > channel-parity gates passed. **The next build priority is v2.14:** the rank
-> round is complete, and the regional contract is next, followed by independent
-> vendor-seed and drift rounds.
+> round is complete, and the regional source and frame contract is frozen
+> before collection. Run and disposition that round next, followed by
+> independent vendor-seed and drift rounds.
 > The ordered version path through v3.0 is summarized in
 > [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
@@ -36,10 +37,10 @@ trust priority because output truthfulness outranks features; its current
 and retains both exact compatibility pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. The dependency-unblocked work now
-maps to **v2.14.0**: preserve the closed rank-round decision, freeze the
-regional contract before collection, then run regional, vendor-seed, and drift
-rounds. New claim-surface drift reopens priority 1. Version milestones through
-v3.0:
+maps to **v2.14.0**: preserve the closed rank-round decision and the frozen
+regional source and frame commitments, then run regional, vendor-seed, and
+drift rounds. New claim-surface drift reopens priority 1. Version milestones
+through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
 
 | Track | Why it sits here | State today | What closes it |
@@ -47,7 +48,7 @@ v3.0:
 | [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete on 2026-08-01. The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 27 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
-| [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts now make independent catalog measurement the next unblocked product work. | Convenience, unseen-vertical, and rank rounds are complete. Independent regional, vendor-seed, and drift evidence remains open. | Freeze each remaining round contract before collection; complete regional, vendor-seed, and drift with aggregate evidence, positive and lookalike-negative fixtures, and explicit promoted, rejected, deferred, unavailable, and unmeasured outcomes. |
+| [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts now make independent catalog measurement the next unblocked product work. | Convenience, unseen-vertical, and rank rounds are complete. The regional source and 1,000-row frame contract is frozen before collection. Vendor-seed and drift evidence remains open. | Run and disposition the frozen regional round; freeze each later round before collection; complete vendor-seed and drift with aggregate evidence, positive and lookalike-negative fixtures, and explicit promoted, rejected, deferred, unavailable, and unmeasured outcomes. |
 | [5. Optional cloud access and scale-out](#5-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the core evidence, compatibility, and catalog-quality tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
 Everything blocked behind these, and the gate that unblocks each, is in
@@ -92,7 +93,7 @@ current debt without turning every refinement into feature work.
 | Security | Unresolved HTTP destinations fail closed; rejected values and unexpected details stay out of default output; persisted inputs, corpus files, local catalog text, and default cache payload work are bounded; empty catalog filters cannot bypass compact defaults; release verification binds artifacts and recovery commands to exact status, workflow, tag, signer, and commit evidence; the installed dependency auditor resolves under Python isolated mode; pull requests and pushes to `main` run CodeQL while weekly and manual main scans remain | Ratchet the remote SAST requirement from its evidence-backed transition floor of 7 to 10 only after the public Scorecard window reports successful supported SAST checks for every sampled merged pull request; do not backfill history for the metric |
 | Accessibility | `--plain` is shipped; help uses complete linear output when needed; welcome alignment is content-aware at ordinary widths; catalog and cache rows preserve labels when narrow; color is never the only status channel | Keep both paths complete; do not replace the parser or hide specialist controls |
 | Documentation accuracy | README, MCP quick starts, stability, operational, security, generated CLI, release, catalog, cache, corpus, agent, schema, example, snapshot, and test surfaces use reserved target identities or disclosure-safe aggregates; the release gate rejects the retired target vocabulary | Keep eventual machine diagnostics separate from human output until versioned contracts are justified; retain manual review for previously unseen organization-shaped prose and preserve provider definitions |
-| Interchange portability | Current agent scaffolds use native client layouts, and versioned JSON is the structured runtime contract. Agent Plugins v1.0.0 remains a working draft. v2.13 adds a separate caller-owned capsule schema; ADR-0014 defers OKF v0.2 because no named consumer justifies its trust and lifecycle mapping. | Validate and release the capsule through protected main. Test a schema-pinned portable plugin during the v2.15 client evaluation. Reopen an additive OKF projection only for a named consumer with a privacy review; never replace JSON or claim conformance before validation. |
+| Interchange portability | Current agent scaffolds use native client layouts, and versioned JSON is the structured runtime contract. Agent Plugins v1.0.0 remains a working draft. v2.13 shipped a separate caller-owned capsule schema; ADR-0014 defers OKF v0.2 because no named consumer justifies its trust and lifecycle mapping. | Keep the shipped capsule and JSON contracts stable. Test a schema-pinned portable plugin during the v2.15 client evaluation. Reopen an additive OKF projection only for a named consumer with a privacy review; never replace JSON or claim conformance before validation. |
 
 ## Priority Order
 
@@ -538,12 +539,13 @@ available from the completed priority 2 matrix.
 The immediate execution slice is therefore explicit even though its detailed
 characterization section appears later in this document:
 
-1. Preserve the closed v2.14 rank-round decision. Freeze the regional contract
-   before collecting its first row, followed by the vendor-seed and drift
-   contracts. Name the independent input stratum, or frozen prior sample for
-   drift, plus eligibility and deduplication rules, observation opportunities,
-   collection options, catalog and code digests, aggregate measures, promotion
-   and regression budgets, and disclosure-safe output.
+1. Preserve the closed v2.14 rank-round decision and the frozen regional source
+   and 1,000-row frame commitments. Run and disposition the regional round,
+   followed by the vendor-seed and drift contracts. Name the independent input
+   stratum, or frozen prior sample for drift, plus eligibility and deduplication
+   rules, observation opportunities, collection options, catalog and code
+   digests, aggregate measures, promotion and regression budgets, and
+   disclosure-safe output.
 2. Execute the remaining frozen rounds in order and record promoted, rejected,
    deferred, unavailable, and unmeasured outcomes. A repeated input is a drift
    round, not independent coverage evidence.
@@ -857,8 +859,11 @@ instrumented. The opt-in maintenance envelope and private reducer now cover
 CNAME chains, apex CNAME, non-SPF TXT, SPF targets, MX, NS, CAA, DMARC RUA,
 bounded owner-qualified TXT, and bounded SRV observations. An empty queue is
 not evidence of completeness. The unseen vertical holdout is complete without
-post-holdout tuning. The independent rank round is complete; regional,
-vendor-seed, and drift rounds remain open. Evaluated apexes, organization names,
+post-holdout tuning. The independent rank round is complete. The regional
+source mapping and 1,000-row five-stratum frame are frozen in the
+[regional declaration](catalog-regional-round-declaration.md), but collection
+and disposition remain open. Vendor-seed and drift rounds also remain open.
+Evaluated apexes, organization names,
 tenant identifiers, target-owned record values, and per-domain rows remain off
 GitHub. Generic provider patterns, provider-owned references, reserved synthetic
 fixtures, and disclosure-safe aggregates are the validation review surface.
@@ -876,9 +881,10 @@ rank round is closed with a membership-bound four-band aggregate, four bounded
 promoted families, explicit dispositions, and a fixed-observation
 zero-regression decision in the aggregate-only
 [rank-round result](../validation/2026-08-13-catalog-rank-round.md). The
-regional contract is next. The convenience baseline and unseen vertical
-holdout remain supporting evidence,
-not substitutes for those independent rounds. Complete v2.14 only when every
+regional source and frame contract is frozen; its observation and disposition
+pass is next. The convenience baseline and unseen vertical holdout remain
+supporting evidence, not substitutes for those independent rounds. Complete
+v2.14 only when every
 frozen round has an aggregate result and every candidate has an explicit
 promoted, rejected, deferred, unavailable, or unmeasured disposition. Broad
 catalog growth remains blocked until that evidence exists.
