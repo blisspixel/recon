@@ -137,7 +137,7 @@ def test_release_surface_generation_updates_installers_and_artifacts(
 
     monkeypatch.setattr(release, "PLUGIN_MANIFEST", plugin)
     monkeypatch.setattr(release, "CITATION", citation)
-    monkeypatch.setattr(release, "_VERSIONED_DOCS", ())
+    monkeypatch.setattr(release, "_VERSIONED_DOC_MARKERS", ())
     monkeypatch.setattr(release, "_SUPPLY_CHAIN_DOC", supply_chain)
     monkeypatch.setattr(release, "_VERSIONED_INSTALLERS", (unix_installer, windows_installer))
     monkeypatch.setattr(release, "_REVIEWED_DOCS", ())
@@ -192,6 +192,27 @@ def test_release_version_replacement_rejects_ambiguous_historical_reference(
         release._replace_required(document, "2.6.4", "2.6.5")
 
     assert document.read_text(encoding="utf-8") == original
+
+
+def test_release_versioned_doc_marker_preserves_historical_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    document = tmp_path / "ROADMAP.md"
+    document.write_text(
+        "recon **v2.6.4** is the current production baseline.\n| **v2.6.4** | Historical milestone |\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(
+        release,
+        "_VERSIONED_DOC_MARKERS",
+        ((document, "recon **v{version}** is the current production baseline"),),
+    )
+
+    release._bump_versioned_docs("2.6.4", "2.6.5")
+
+    assert document.read_text(encoding="utf-8") == (
+        "recon **v2.6.5** is the current production baseline.\n| **v2.6.4** | Historical milestone |\n"
+    )
 
 
 def test_release_transaction_owns_both_installer_helpers() -> None:

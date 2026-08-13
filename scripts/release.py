@@ -36,11 +36,15 @@ PLUGIN_MANIFEST = ROOT / "agents" / "claude-code" / ".claude-plugin" / "plugin.j
 CITATION = ROOT / "CITATION.cff"
 _SUPPLY_CHAIN_DOC = ROOT / "docs" / "supply-chain.md"
 
-_VERSIONED_DOCS = (
-    ROOT / "ROADMAP.md",
-    ROOT / "docs" / "roadmap.md",
-    ROOT / "docs" / "engineering-refinement-plan.md",
+_VERSIONED_DOC_MARKERS = (
+    (ROOT / "ROADMAP.md", "recon **v{version}** is the current production baseline"),
+    (ROOT / "docs" / "roadmap.md", "> **Status:** v{version} is current."),
+    (
+        ROOT / "docs" / "engineering-refinement-plan.md",
+        "- Release metadata is synchronized on v{version}.",
+    ),
 )
+_VERSIONED_DOCS = tuple(path for path, _marker in _VERSIONED_DOC_MARKERS)
 _VERSIONED_INSTALLERS = (
     ROOT / "scripts" / "install.sh",
     ROOT / "scripts" / "install.ps1",
@@ -269,6 +273,16 @@ def _replace_required(path: Path, old: str, new: str) -> None:
     path.write_text(content.replace(old, new, 1), encoding="utf-8")
 
 
+def _bump_versioned_docs(current: str, new: str) -> None:
+    """Update only each document's current-release marker, preserving history."""
+    for path, marker in _VERSIONED_DOC_MARKERS:
+        _replace_required(
+            path,
+            marker.format(version=current),
+            marker.format(version=new),
+        )
+
+
 def _bump_supply_chain_recipe(current: str, new: str) -> None:
     content = _SUPPLY_CHAIN_DOC.read_text(encoding="utf-8")
     replacements = (
@@ -296,8 +310,7 @@ def _bump_release_surfaces(current: str, new: str, release_date: str) -> None:
     """Synchronize every code-owned version surface before validation."""
     _bump_pyproject(new, False)
     _bump_init(new, False)
-    for path in _VERSIONED_DOCS:
-        _replace_required(path, current, new)
+    _bump_versioned_docs(current, new)
     _bump_supply_chain_recipe(current, new)
     for path in _VERSIONED_INSTALLERS:
         _replace_required(path, current, new)
