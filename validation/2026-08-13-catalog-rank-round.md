@@ -118,7 +118,7 @@ and no type exceeded the zero-regression budget. The decision is accepted.
 |---|---|
 | Candidate catalog SHA-256 | `725061f850fb058d2277bf133472bfea6cc1bd606fa72fe6d2aa087a4377e642` |
 | Evaluator SHA-256 | `eceb64058f338edf23787dab1d9c49ca929ff62beb6145a30d3280211873a573` |
-| Clean evaluator revision | `42389c1abbbb69fa6597d49f72f252dca119fa8a` |
+| Canonical main revision with identical evaluator and catalog bytes | `ea289b7010e7774f70ab78cfc8751d04c71791b3` |
 | Counterfactual file SHA-256 | `36d6c187c3ef1ce88b872022dc0f66553fc0e686bed6c35df60b0700b06c6ae7` |
 | Network requests | 0 |
 | Identifiers printed | 0 |
