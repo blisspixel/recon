@@ -3,7 +3,7 @@
 Status: source-backed step-back audit for the current roadmap. This file does
 not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior.
 
-Checked: 2026-08-12.
+Checked: 2026-08-13.
 
 ## Bottom Line
 
@@ -17,13 +17,15 @@ and portability cost. Agent Plugins v1.0.0 and Open Knowledge Format v0.2 are
 explicit interoperability inputs, but they do not displace the product-quality
 order below.
 
-The highest-value next build is not runtime expansion. It is completing the
-live and private channels of the aggregate-safe product-quality baseline and
-running the frozen ablation before adding more inference or graph surface. The
-claim audit and stable MCP matrix remain blocking regression gates. Artifact
-review, OpenSSF process, independent replication, and archive work remain
-worthwhile maintainer tracks, but they do not outrank product truthfulness or
-measured user value.
+The highest-value next build is not runtime expansion. The aggregate-safe
+product-quality baseline found that the frozen M365 ablation failed its
+structural-identifiability preflight before target contact, so collecting
+private labels cannot answer its promotion question. The next operation is to
+apply non-promotion by making fusion an explicit advanced diagnostic. The claim
+audit and stable MCP matrix remain blocking regression gates. Artifact review,
+OpenSSF process, independent replication, and archive work remain worthwhile
+maintainer tracks, but they do not outrank product truthfulness or measured
+user value.
 
 ## Sources Checked
 
@@ -141,7 +143,7 @@ These are not active gaps for the current roadmap:
 |---|---|---|---|---|
 | Evidence-semantic integrity | Derived observations and model-bound public-evidence values can be presented more strongly than their evidence supports. | The fail-closed audit covers all 27 default-claim families; all are complete, with no material runtime family carrying incomplete lineage. | Keep the audit and its semantic contract tests blocking; reopen this track for any uncovered or stronger claim surface. | Do not add new inference semantics while a known default claim lacks direct provenance. |
 | MCP v2 compatibility | The final 2026-07-28 protocol and stable SDK contain breaking changes that must remain characterized. | Production adopted v2.0.0 on 2026-07-31; the exact stable v1.28.1 and v2.0.0 matrix passes, with one compatibility boundary, doctor discovery selection, and conservative cache hints implemented. | Keep both stable pins blocking and treat any future major-version adoption as a separate release decision. | Do not couple remote MCP scope to compatibility maintenance. |
-| Measured product utility | Green gates and sophisticated models do not establish that the output improves an operator decision. | The network-free scorecard, stable-v1 live characterization, and evaluation-frame declaration and private commitment are complete. The private labeled evaluation and ablation have not started. | After the declaration is publicly committed and its eligibility window opens, collect the preregistered private evaluation rows and run the frozen ablation. | Do not expand graph or probabilistic machinery without measured benefit. |
+| Measured product utility | Green gates and sophisticated models do not establish that the output improves an operator decision. | The network-free scorecard and stable-v1 live characterization are complete. The frozen M365 design failed its structural-identifiability preflight before target contact: A1 equals A0, A2 equals A3, and A3 is dominated by A0. The declared live window is cancelled. | Apply non-promotion by making fusion an explicit advanced diagnostic. Require a new candidate and an executable identifiability preflight before any future real-domain fusion study. | Do not expand graph or probabilistic machinery without measured benefit. Do not collect when the promotion condition is structurally unreachable. |
 | Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | The catalog has 860 entries and 1,070 detections. One frozen convenience-sample baseline covers every bounded path, and a 366-namespace unseen vertical holdout exercised every new rule without post-holdout tuning. The legacy date backlog and independent rank and regional strata remain open. | Add rank and regional rounds, backfill dates in reviewed families, and ratchet stale dates and negative fixtures. | No new undated or untested rule. No population claim from the convenience sample and no broad coverage claim while a bounded path or named stratum is unmeasured. |
 | Latency and degradation contract | CT and external providers dominate long tails, while one instrumented convenience-sample run cannot establish product SLOs. | The dated aggregate-only live memo measures paired CT/no-CT resolver latency, primary-source stages, merge replay, inference, rendering, allocation, loop lag, degradation, warm disk, and warm MCP bytes without target rows. It completed 50 of 50 no-CT rows and 47 of 50 CT rows; concurrent CPU contention and heavy CT rate limiting keep p50/p95 values diagnostic. | Run a clean-machine, stage-specific follow-up before setting budgets or moving work to threads; keep the independent schema gate blocking and apply stable-v2 deltas from the completed MCP matrix separately. | Move only proven blocking I/O and do not create brittle timing CI. |
 | OpenSSF Best Practices Badge | Scorecard marks this as absent until a real badge project exists. | Readiness evidence and the manual answer queue are documented in [openssf-posture.md](openssf-posture.md) and [openssf-badge-readiness.md](openssf-badge-readiness.md), but no badge is claimed. | Complete the questionnaire on `bestpractices.dev`, then link the real badge page. | Do not add a placeholder badge or claim a badge before the project exists. |
@@ -175,10 +177,10 @@ release count, and feature count are supporting facts, not outcomes.
 2. Keep the completed MCP v1 and v2 compatibility matrix blocking.
 3. Keep the completed stable-v1 resolver, allocation, degradation, CT-value,
    MCP-result, and independent schema characterizations blocking.
-4. Keep the completed sampling-frame definition and private-frame digest
-   immutable; after its public-commit and eligibility-window gates, complete the
-   private labeled scorecard channels and run the already frozen ablation.
-5. Apply the v2.11 fusion decision as v2.12 before later surface promotion.
+4. Keep the unused sampling-frame definition and private-frame digest immutable
+   as historical evidence. Keep its cancelled design from contacting targets.
+5. Apply the v2.11 structural non-promotion decision as v2.12 before later
+   surface promotion.
 6. Use the baseline to decide dimensioned email observations, catalog
    priorities, and agent-surface simplification; apply stable-v2 SDK
    characterization deltas from the completed MCP matrix.
@@ -190,9 +192,10 @@ release count, and feature count are supporting facts, not outcomes.
 
 ## Decision
 
-The next execution work, after the frame declaration's public-commit and
-eligibility-window gates, is private labeled-row collection, scorecard
-completion, and the frozen v2.11 ablation.
+The next execution work is the v2.12 application of the v2.11 structural stop:
+make fusion an explicit advanced diagnostic while preserving stable JSON and
+MCP compatibility. Private labeled-row collection under the cancelled design
+is prohibited.
 Evidence integrity and MCP compatibility remain maintenance gates, not unfinished
 feature tracks. Runtime expansion, broad catalog growth, stable-surface
 promotion, and public real-data release remain blocked until a concrete

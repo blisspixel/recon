@@ -26,6 +26,25 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, MCP tool, resource, or stable JSON
+field changes.
+
+### Added
+
+- A network-free structural-identifiability gate exhaustively checks all 64
+  M365 DNS evidence-role states through the shipped scoring, observation, and
+  Bayesian paths before any private evaluation can contact targets.
+
+### Changed
+
+- The v2.11 M365 live evaluation is cancelled before target contact. Its frozen
+  arms collapse into two decision pairs and A3 is structurally dominated by
+  A0, making the preregistered positive-benefit condition unreachable. The
+  dated memo and amendment preserve this negative design result, and v2.12 now
+  applies non-promotion by moving fusion to an explicit advanced diagnostic.
+
 ## [2.10.4] - 2026-08-13
 
 ### Tool Surface Changes

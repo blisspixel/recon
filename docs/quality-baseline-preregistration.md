@@ -1,7 +1,8 @@
 # Product-quality baseline preregistration
 
-**Status: decision rule frozen 2026-08-05; frame declaration frozen
-2026-08-12; no evaluation collection or run has started.**
+**Status: stopped 2026-08-13 before collection. The frozen arms fail the
+structural-identifiability preflight, so the declared collection window is
+cancelled and no target was contacted.**
 
 This document fixes every choice that must be made before results are visible,
 for the track 3 / v2.11.0 product-quality baseline described in
@@ -14,6 +15,16 @@ decision rule below is worth something only because it was written before
 anybody saw an outcome. A rule chosen after reading a result is not a decision
 rule, it is a description. Amendments are governed by
 [section 13](#13-amendment-policy).
+
+The dated
+[arm-identifiability audit](../validation/2026-08-13-quality-arm-identifiability.md)
+found before target contact that A1 collapses to A0, A2 collapses to A3, and
+A3 is structurally dominated by A0 for the chosen claim. Consequently
+`b_positive`, the candidate-only positive discordance count required by the
+promotion rule, is always zero and its lower bound cannot clear zero. This
+document remains the historical record of the frozen design; the amendment in
+[section 13](#13-amendment-policy) records why it was stopped rather than
+silently rewriting its arms after the defect was known.
 
 ## What this document freezes
 
@@ -489,3 +500,4 @@ The single exception is the margin adjustment described at the end of
 | 2026-08-05 | Initial freeze | Preregistration created before any collection or run | Yes |
 | 2026-08-06 | Split the frame declaration into public definition versus private membership, and added the frame commitment digest | The original wording said the sampling frames must be "committed", which could be read as committing the domain lists and would violate the data-handling policy. The digest fixes the frame in advance without disclosing it. No estimand, arm, margin, or decision rule changed. | Yes: no collection has occurred |
 | 2026-08-12 | Froze Tranco list `26J79`, the 2,500-row first-stage probability sample, eligibility window, known-cluster rule, second-stage stratum sampling, public domain-separation contexts, private HMAC-key commitment, and private-frame SHA-256 | A public universe plus a public seed would reconstruct the target list, so keyed HMAC ranking preserves equal inclusion probability while keeping membership private. This supplies the public definition and commitments required by section 6 without changing the claim family, arms, labels, estimands, margins, bounds, or promotion rule. | Yes: no reference-label, DNS, arm, or outcome collection has occurred |
+| 2026-08-13 | Cancelled the declared collection and stopped the primary run after the network-free structural-identifiability audit | Across all 64 DNS evidence-role states, A1 equals A0, A2 equals A3, and A3 never supports when A0 abstains. The frozen benefit condition is therefore unreachable. The audit also established that A1 and A2 have no shipped binary emission API and A3 does not govern deterministic claim emission. Selecting replacement adapters after learning this would create a new design. | Yes: no reference label, DNS result, arm output, or per-domain outcome was collected or inspected |

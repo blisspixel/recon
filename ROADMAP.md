@@ -22,10 +22,11 @@ later release fails if SBOM provenance is absent.
 The evidence-semantic audit is complete: 27 families are complete. 0 material
 runtime families carry incomplete lineage. Fail-closed inventory spans 84 score
 or quantitative fields among other governed surfaces. MCP v2 adoption is
-complete and both remain blocking maintenance. The open product question is
-still unproven: nothing yet measures whether fusion, CT enrichment, catalog
-size, or the broad agent surface improves operator decisions over deterministic
-evidence plus abstention.
+complete and both remain blocking maintenance. The v2.11 pre-collection audit
+found that the frozen M365 arms cannot identify a fusion benefit: A1 collapses
+to A0, A2 collapses to A3, and A3 is structurally dominated by A0. The live
+window was cancelled before target contact. CT enrichment, catalog size, and
+the broad agent surface still lack operator-outcome evidence.
 
 Two emerging interchange formats are now explicit design inputs, not shipped
 claims: the Agent Plugins v1.0.0 working draft for portable skill and MCP
@@ -51,8 +52,8 @@ silent-failure, and contract-preserving fixes at any point.
 | Version | Theme | Why this order | Done when |
 |---|---|---|---|
 | **v2.10.x** | Maintenance line | Protect truthfulness and supply chain while larger work proceeds | Evidence audit green; MCP 1.28.1 + 2.0.0 pins green; no known silent fail-open on default paths |
-| **v2.11.0** | Product-quality baseline | Track 3. Cannot promote or retire fusion without a predeclared scorecard | Aggregate-safe scorecard + predeclared ablation rule + dated memo; fusion path kept or demoted to advanced diagnostic by result |
-| **v2.12.0** | Apply quality decision | Uses v2.11 evidence; avoids more graph work without benefit | Primary path matches scorecard outcome; docs and defaults updated; negative result accepted without reinterpretation |
+| **v2.11.0** | Product-quality baseline | Track 3. A structural preflight must prove the frozen comparison can answer its question before target collection | Aggregate-safe scorecard + dated identifiability memo; void live window recorded; fusion not promoted by the non-identifying design |
+| **v2.12.0** | Apply quality decision | Uses the v2.11 structural stop; avoids target collection and more graph work without an identifiable benefit path | Fusion is an explicit advanced diagnostic rather than a default computation; stable JSON and MCP compatibility preserved; docs and defaults updated |
 | **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions under degraded sources; record an OKF v0.2 projection decision without replacing JSON |
 | **v2.14.0** | Catalog quality loop | Independent of fusion promotion; blocked only by disclosure-safe rounds | Rank / regional / vendor-seed / drift rounds complete with fixtures; broad catalog growth remains gated by those rounds |
 | **v2.15.0** | Agent portability and surface cost | Evaluate packaging and tool cuts against representative workflows after the catalog and discovery surface is measured; packaging preparation may start earlier | Agent Plugins conformance is validated against a pinned specification or explicitly deferred while it remains a working draft; measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
@@ -79,25 +80,28 @@ track immediately. Detail: [docs/default-claim-audit.md](docs/default-claim-audi
 Production on `mcp>=2.0.0,<3` with blocking 1.28.1 rollback and 2.0.0 production
 rows. Detail: [docs/mcp-2026-07-28-readiness.md](docs/mcp-2026-07-28-readiness.md).
 
-### 3. Product-quality baseline - **next build priority: v2.11**
+### 3. Product-quality baseline - **v2.11 decision recorded; v2.12 application next**
 
-Specified, decision rule and evaluation frame frozen, measurement part-run: the
-network-free half and aggregate-only stable-v1 live characterization are
-complete, while reference-label collection and the ablation that decides
-fusion's fate have not started. The live run completed all 50 no-CT contract
-rows and 47 of 50 CT rows; the three failures were bounded timeouts. Process
-evidence is rich; product-outcome evidence is not.
+The network-free scorecard and aggregate-only stable-v1 live characterization
+are complete. Before the declared target window, the exhaustive
+[arm-identifiability audit](validation/2026-08-13-quality-arm-identifiability.md)
+enumerated all 64 M365 DNS evidence-role states. It proved that the candidate
+can never create the positive candidate-only discordance required by the
+promotion rule. The collection window was cancelled with zero target requests.
+Process evidence is rich; the stopped design supplies no population-outcome
+claim.
 Acceptance and stop rules live in
 [docs/roadmap.md](docs/roadmap.md#3-establish-a-reproducible-product-quality-baseline)
 and the
 [Quality Proof execution plan](docs/strategic-gap-audit.md#quality-proof-execution-plan).
 
-The primary claim family, the four arms, the reference label, the safety
-margin, and the paired decision rule were frozen on 2026-08-05 in
+The primary claim family, four intended arms, reference label, safety margin,
+and paired decision rule were frozen on 2026-08-05 in
 [docs/quality-baseline-preregistration.md](docs/quality-baseline-preregistration.md),
-before any collection or run. Its power analysis supersedes the nominal
-minimum-evidence floor: the selected margin needs at least 155
-reference-positive and 183 reference-negative labeled units.
+before any collection or run. The 2026-08-13 amendment records that the arms
+collapse under the shipped code and that their claimed binary emission behavior
+was not operationally complete. No replacement threshold was chosen after this
+finding.
 
 `scripts/quality_scorecard.py` emits the public half of the Phase 1 baseline,
 network-free and corpus-free, and names every channel it cannot measure without
@@ -106,12 +110,13 @@ the private corpus or live providers. Its first dated run is
 The paired CT/no-CT cold-resolution, allocation, loop-lag, degradation,
 warm-cache, and real MCP-result measurements are published in the aggregate-only
 [2026-08-12 live-characterization memo](validation/2026-08-12-stable-v1-live-characterization.md).
-The public population and sampling mechanism plus private-frame digest are
-frozen in the
+The unused public population and sampling mechanism plus private-frame digest
+remain recorded in the
 [v2.11 frame declaration](docs/quality-evaluation-frame-declaration.md). The
-next executable step, only after that declaration is publicly committed and its
-eligibility window opens, is reference-label and DNS collection. Then apply the
-frozen cluster and label-stratum selection rules and run the four-arm ablation.
+next executable step is v2.12: make fusion opt-in as an advanced diagnostic
+while preserving stable output contracts. A future real-domain fusion study
+requires a new preregistration whose arms first pass executable identifiability
+and dominance checks.
 
 ### 4. Optional operator-hosted access - lower priority side track
 
