@@ -3749,6 +3749,24 @@ fingerprints:
     description: Alibaba Cloud CDN global server load balancing endpoint; high-volume edges CNAME through ``*.cdngslb.com``.
     reference: https://www.alibabacloud.com/help/en/cdn
 
+- name: Alibaba Cloud Application Load Balancer
+  slug: alibaba-alb
+  category: Infrastructure
+  confidence: high
+  product_family: Alibaba Cloud
+  parent_vendor: Alibaba
+  detections:
+  - type: cname_target
+    pattern: alb.aliyuncsslbintl.com
+    tier: infrastructure
+    verified: 2026-08-13
+    description: >-
+      Customer-facing CNAME chain terminating at Alibaba Cloud's documented
+      international Application Load Balancer endpoint domain. This identifies
+      an ALB endpoint binding without claiming ownership of the workload behind
+      it.
+    reference: https://www.alibabacloud.com/help/en/slb/product-overview/alb-and-nlb-domain-name-upgrade-announcement
+
 - name: Alibaba Cloud (compute / generic)
   slug: alibaba-cloud
   category: Cloud

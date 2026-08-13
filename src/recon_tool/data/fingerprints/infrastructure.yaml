@@ -330,6 +330,23 @@ fingerprints:
       specificity fallback for Cloudflare-product CNAMEs
       that do not match the more-specific patterns
       elsewhere in the catalog.
+- name: Alibaba Cloud DNS
+  slug: alibaba-dns
+  parent_vendor: Alibaba
+  product_family: Alibaba Cloud
+  category: Infrastructure
+  confidence: high
+  display_group: Infrastructure
+  detections:
+  - type: ns
+    pattern: alidns.com
+    reference: https://www.alibabacloud.com/help/en/dns/pubz-modify-dns-server-for-alibaba-cloud-domain-name
+    verified: 2026-08-13
+    description: >-
+      NS terminating at Alibaba Cloud DNS's documented `*.alidns.com`
+      authoritative nameservers, including the `vip1` through `vip4` forms.
+      This shows that Alibaba Cloud DNS is authoritative for the namespace; it
+      does not establish where application workloads run.
 - name: AWS Route 53
   slug: aws-route53
   product_family: AWS
