@@ -51,7 +51,7 @@ Current round status:
 |---|---|
 | Convenience-sample baseline | Complete, aggregate-only memo published |
 | Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
-| Rank bands | Private selection frozen; collection pending |
+| Rank bands | 1,000/1,000 observed; stratified reduction under review |
 | Regional / ccTLD | Pending |
 | Vendor seed | One documented Webflow owner seed exercised; broader round pending |
 | Drift | Pending |
@@ -118,11 +118,12 @@ promotion pass when the highest-frequency survivors lack an independent public
 basis, fail a lookalike negative, or exceed the predeclared precision regression
 budget. Two scans of the same list are a drift check, not two coverage rounds.
 
-The first rank-round selection is frozen in the
+The first rank-round selection and completed observation pass are recorded in the
 [catalog rank-round declaration](catalog-rank-round-declaration.md). Its four
-equal discovery quotas are not population weights. Collection remains blocked
-until the declaration and the implementation-digest gate are on protected
-`main`.
+equal discovery quotas are not population weights. The pooled typed baseline
+does not answer the head-versus-tail question, so candidate review remains
+paused until the membership-bound stratified aggregate passes protected-main
+review.
 
 ## 2. Measurement: coverage, recall, precision
 

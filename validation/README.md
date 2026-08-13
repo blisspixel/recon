@@ -28,6 +28,9 @@ Committed (generic tooling, no company names):
 - `prepare_catalog_rank_frame.py`: derives the exact four private Tranco rank
   strata with secret-keyed sampling and whole-development-corpus exclusion.
   Its console output contains aggregate counts and commitments only.
+- `stratify_catalog_round.py`: reconstructs frozen private membership, assigns
+  every completed result exactly once, and writes ordered per-stratum typed
+  aggregates without exposing stratum labels or namespaces.
 - `triage_candidates.py`: programmatic filter on `gaps.json`: drops
   already-fingerprinted patterns, intra-org chains, and one-off noise. The
   output is the LLM-triage-ready candidate list.
@@ -229,6 +232,29 @@ label, raw input rows, normalized scheduled count, duplicate and malformed-row
 counts, and candidate counts.
 Reading `meta.json` from any run answers "when was this scanned, what was
 found?" without re-running.
+
+A pooled aggregate does not answer a multi-stratum question. After a complete
+rank, regional, or vertical run, bind the original private plan, manifest,
+results, and pooled aggregate into an ordered stratified reduction:
+
+```bash
+python validation/stratify_catalog_round.py \
+    --input validation/runs-private/<run>/results.ndjson \
+    --round-plan validation/corpus-private/<round>-plan.json \
+    --round-manifest validation/corpus-private/<round>-manifest.json \
+    --pooled-aggregate validation/runs-private/<run>/catalog-aggregate.json \
+    --output-dir validation/runs-private/<run>
+```
+
+The reducer rejects source or plan drift, incomplete, duplicate, or out-of-frame
+results, a mismatched pooled aggregate, and existing output artifacts. Its
+public file uses only `stratum_index` in the frozen manifest order, aggregate
+typed counts, and commitments. Labels, membership, and candidate evidence stay
+in the private files. Public stratification also fails closed below 20 rows in
+any stratum; a smaller holdout needs a separately reviewed suppression rule.
+The historical observation execution digest remains
+separate from the later stratified-reducer digest so a new interpretation does
+not masquerade as the code that collected the observations.
 
 For large monthly cadence, keep `--no-ct` on unless CT coverage is the point and
 use modest concurrency. Real-company corpora live entirely under
