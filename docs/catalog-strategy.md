@@ -20,7 +20,7 @@ surface and independently supported precision are.
 
 ## How the catalog grows today
 
-The catalog carries 860 entries and 1,070 detection rules across nine populated
+The catalog carries 864 entries and 1,075 detection rules across nine populated
 types: `cname_target`, `cname`, `txt`, `spf`, `dmarc_rua`, `mx`, `ns`, `caa`,
 and `subdomain_txt`. The grammar and runtime also support `srv`, but the built-in
 catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
@@ -42,8 +42,8 @@ The loop is disciplined and effective, but the available corpus remains a
 convenience sample with selection bias. The first frozen typed baseline is
 recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
-independent rank, regional, vendor-seed, and drift rounds remain open, and most
-legacy detections still lack a freshness date.
+the independent rank round is complete, while regional, vendor-seed, and drift
+rounds remain open, and most legacy detections still lack a freshness date.
 
 Current round status:
 
@@ -51,7 +51,7 @@ Current round status:
 |---|---|
 | Convenience-sample baseline | Complete, aggregate-only memo published |
 | Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
-| Rank bands | 1,000/1,000 observed; stratified reduction under review |
+| Rank bands | Complete; four-band aggregate, dispositions, and zero-regression decision published |
 | Regional / ccTLD | Pending |
 | Vendor seed | One documented Webflow owner seed exercised; broader round pending |
 | Drift | Pending |
@@ -118,12 +118,13 @@ promotion pass when the highest-frequency survivors lack an independent public
 basis, fail a lookalike negative, or exceed the predeclared precision regression
 budget. Two scans of the same list are a drift check, not two coverage rounds.
 
-The first rank-round selection and completed observation pass are recorded in the
-[catalog rank-round declaration](catalog-rank-round-declaration.md). Its four
-equal discovery quotas are not population weights. The pooled typed baseline
-does not answer the head-versus-tail question, so candidate review remains
-paused until the membership-bound stratified aggregate passes protected-main
-review.
+The first rank-round selection and completed observation pass are recorded in
+the [catalog rank-round declaration](catalog-rank-round-declaration.md). Its
+four equal discovery quotas are not population weights. The membership-bound
+stratified aggregate, candidate dispositions, and fixed-observation
+zero-regression decision are published in the aggregate-only
+[rank-round result](../validation/2026-08-13-catalog-rank-round.md). Regional
+strata are next; this rank result does not substitute for them.
 
 ## 2. Measurement: coverage, recall, precision
 
@@ -307,8 +308,8 @@ many vendors they surface.
 7. Keep the opt-in unmatched-observation envelope and private ranking tool
    covered by per-type bounds, reserved synthetic fixtures, and default-output absence
    tests.
-8. Stand up a rank-stratified private corpus and run it once to produce the
-   first comparable multi-record baseline and prioritized growth queues.
+8. Preserve the completed rank-stratified round, its aggregate result, and its
+   explicit dispositions as the first comparable multi-record baseline.
 9. Add regional strata (the largest expected coverage gap) and promote the
    verified regional vendors they surface.
 10. Add vertical rounds without pooling them into population rates.
