@@ -55,8 +55,8 @@ silent-failure, and contract-preserving fixes at any point.
 | **v2.10.x** | Maintenance line | Protect truthfulness and supply chain while larger work proceeds | Evidence audit green; MCP 1.28.1 + 2.0.0 pins green; no known silent fail-open on default paths |
 | **v2.11.0** | Product-quality baseline | Track 3. A structural preflight must prove the frozen comparison can answer its question before target collection | Aggregate-safe scorecard + dated identifiability memo; void live window recorded; fusion not promoted by the non-identifying design |
 | **v2.12.0** | Apply quality decision compatibly | Uses the v2.11 structural stop without violating the stable v2 default contract | Fusion is classified as an advanced diagnostic; explicit flags are the supported transition path; v2 implicit behavior and stable JSON/MCP contracts remain intact; the default-off change is assigned to v3 |
-| **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Implemented on the release candidate: caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions or removals under unavailable source roles; ADR-0014 defers OKF without replacing JSON. Ship after the full and protected-main gates pass. |
-| **v2.14.0** | Catalog quality loop | Independent of fusion promotion; blocked only by disclosure-safe rounds | Rank / regional / vendor-seed / drift rounds complete with fixtures; broad catalog growth remains gated by those rounds |
+| **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Shipped: caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions or removals under unavailable source roles; ADR-0014 defers OKF without replacing JSON; full, protected-main, publication, provenance, and channel-parity gates passed |
+| **v2.14.0** | Catalog quality loop - **next build priority** | Independent of fusion promotion and now unblocked by the shipped v2.13 contract | Freeze each round's question, independent input stratum or frozen prior sample for drift, observation opportunity, catalog and code digests, acceptance budget, and aggregate-only disclosure before collection; complete rank / regional / vendor-seed / drift evidence with fixtures; broad catalog growth remains gated by those rounds |
 | **v2.15.0** | Agent portability and surface cost | Evaluate packaging and tool cuts against representative workflows after the catalog and discovery surface is measured; packaging preparation may start earlier | Agent Plugins conformance is validated against a pinned specification or explicitly deferred while it remains a working draft; measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
 | **v3.0.0** | Contract maturity | The already-deprecated fusion default change requires a major boundary; use the same boundary for any claim-envelope change that cannot remain additive | Fusion omitted-choice defaults off; explicit flags remain stable; versioned claim / observation envelope or explicit decision that v2 stays; migration notes |
 
@@ -118,14 +118,25 @@ classifies fusion as an advanced diagnostic and begins the explicit-flag
 transition without violating the stable v2 default contract. Interactive
 implicit use receives a notice; redirected output remains silent. The omitted
 choice changes to off only at v3, as recorded in
-[ADR-0013](docs/adr/0013-fusion-non-promotion-and-v3-transition.md). The v2.13
-release candidate now contains the caller-held observation capsule and
-ADR-0014 OKF deferral. Its remaining work is validation, protected-main CI,
-and release proof. A
-future real-domain fusion study requires a new preregistration whose arms first
-pass executable identifiability and dominance checks.
+[ADR-0013](docs/adr/0013-fusion-non-promotion-and-v3-transition.md). v2.13
+shipped the caller-held observation capsule and ADR-0014 OKF deferral after the
+full, protected-main, publication, provenance, and channel-parity gates passed.
+A future real-domain fusion study requires a new preregistration whose arms
+first pass executable identifiability and dominance checks.
 
-### 4. Optional operator-hosted access - lower priority side track
+### 4. Catalog quality loop - **next build priority: v2.14**
+
+Freeze the contract for each rank, regional, vendor-seed, and drift round before
+collection. Each contract names its independent input stratum, or frozen prior
+sample for drift, plus eligibility and deduplication rules, observation
+opportunities and collection options, catalog and code digests, aggregate
+measures, promotion and regression budgets, and disclosure-safe output. Then
+run the rounds in that order and preserve rejected, deferred, unavailable, and
+unmeasured outcomes alongside promoted candidates.
+The work measures catalog quality and freshness; it does not authorize broad
+rule growth or population claims. Detail: [docs/catalog-strategy.md](docs/catalog-strategy.md).
+
+### 5. Optional operator-hosted access - lower priority side track
 
 Draft container + Cloud Run IaC only. Local CLI and stdio MCP remain complete.
 [docs/optional-cloud-deployment-plan.md](docs/optional-cloud-deployment-plan.md).

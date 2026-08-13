@@ -1,248 +1,231 @@
 ---
 name: recon-fingerprint-triage
-description: Triage fingerprint-discovery candidates from recon's CNAME-chain classifier. Reads either a single `recon <domain> --json --include-unclassified` payload or a `candidates.json` produced by `validation/triage_candidates.py`, then proposes new `cname_target` fingerprint stanzas for `surface.yaml`. Use when the user asks to "find new fingerprints", "what SaaS are we missing", "discover unclassified CNAME targets", or wants to extend recon's catalog from a fresh lookup or validation corpus run.
-argument-hint: <domain | path/to/candidates.json>
+description: Triage recon fingerprint candidates across the bounded DNS catalog surface. Reads private single-domain discovery output, aggregate catalog baselines, or candidate queues, then classifies candidates as pending, promoted, rejected, or deferred under the v2.14 catalog-quality gates. Use when the user asks to find missing fingerprints, review unclassified DNS observations, or improve catalog coverage.
+argument-hint: <domain | private discovery artifact>
 allowed-tools: Bash(recon:*), Read, Edit, Write
 ---
 
 # recon-fingerprint-triage
 
-The companion skill to `recon`. The base `recon` skill describes observations
-around an apex; this skill examines the long tail of where visible subdomains'
-CNAME chains point and proposes catalog additions when recon does not yet
-recognize those targets.
+This skill reviews the bounded public DNS observations that recon already
+collects and helps maintainers improve the fingerprint catalog. It supports the
+multi-record v2.14 quality loop rather than treating catalog growth as a count
+of new CNAME suffixes.
+
+This is a Claude Code-native skill. Its `argument-hint` field and surrounding
+plugin layout are client-specific. It does not claim portable Agent Skills or
+Agent Plugins conformance. Portable packaging remains a separate v2.15
+decision.
 
 ## When to use this
 
-The user wants to grow the fingerprint catalog by mining real DNS data:
+Use this skill when the user wants to:
 
-- "Find new fingerprints from alpha.invalid"
-- "What service patterns are visible here that we don't fingerprint?"
-- "Triage gaps from my latest validation run"
-- "Is there a fingerprint candidate in this CNAME chain?"
-- "Help me add the missing fingerprint for example.com"
+- review unmatched DNS observations by record type;
+- triage a private catalog baseline or recurrence queue;
+- assess a proposed fingerprint rule;
+- strengthen an existing slug with an independent evidence path;
+- prepare a catalog patch and its required fixtures.
 
-If they just want to look up a domain (not extend the catalog), use the base
-`recon` skill instead. This skill is specifically for the discovery loop.
+For an ordinary domain lookup, use the base `recon` skill. This skill is for
+catalog maintenance, not general domain intelligence.
 
-## Inputs you accept
+## Inputs
 
-The skill works at three different scales - pick whichever the user asks for:
+Choose the narrowest input the user supplied. Treat every real-domain input and
+every per-domain row as private working data.
 
-**A. Single domain (incidental discovery during normal use):**
+### A. Single-domain discovery
+
+Run the ordinary validated-domain workflow described by the base `recon` skill:
+
+```text
+recon <validated-domain> --json --include-unclassified
 ```
-Run recon on <domain> and show me anything you'd want to fingerprint
-```
-You shell out: `recon <domain> --json --include-unclassified`. Read the
-`unclassified_cname_chains` array from the JSON. Each entry is a candidate.
 
-**B. A `gaps.json` from a corpus run:**
-```
-Triage gaps.json
-```
-The user has already run `validation/find_gaps.py` against a corpus. The file
-contains pre-bucketed `{suffix, count, samples}` entries.
+Read all three catalog-discovery collections when present:
 
-**C. A `candidates.json` from `validation/triage_candidates.py`:**
-```
-Triage candidates.json
-```
-Same shape as (B), but pre-filtered: already-fingerprinted patterns dropped,
-same-zone or brand-similar heuristic matches dropped, and low-count noise
-dropped. This is the cleanest input, but every entry still requires judgment.
+- `dns_catalog_summaries` for bounded opportunity and classification counts;
+- `unclassified_dns_observations` for typed unmatched values;
+- `unclassified_cname_chains` for the historical related-host CNAME view.
 
-## Triage rubric
+The payload is a private review aid. Do not copy its queried domain, owner
+names, opaque tokens, target-owned record values, tenant identifiers, or
+per-domain rows into a committed memo, fixture, issue, pull request, or other
+public artifact.
 
-For each candidate (single chain or suffix bucket), classify into one of
-five outcomes:
+### B. Multi-record catalog round
 
-1. **Recognized third-party service pattern** - a target associated with a
-   recognizable product (Auth0, HubSpot, Sentry, etc.) and supported by public
-   vendor documentation or repeated validation evidence. **Action:** propose a
-   `cname_target` fingerprint stanza (see schema below). The result attributes
-   the observed routing chain; it does not establish active product use.
+Use the private outputs produced by `validation/catalog_baseline.py` and the
+round protocol in `docs/catalog-strategy.md`. Keep these dimensions separate:
 
-2. **Generic infrastructure / CDN / cloud** - Akamai, Fastly, CloudFront, or
-   similar. **Action:** if the pattern isn't already in `surface.yaml`,
-   propose an entry with `tier: infrastructure`. Otherwise note "already
-   covered" and skip.
+- `cname_target` related-host chains;
+- apex `cname`;
+- non-SPF `txt`;
+- `spf` include and redirect targets;
+- `mx` and `ns` hosts;
+- `caa` issuer values;
+- `dmarc_rua` destinations;
+- bounded owner-qualified `subdomain_txt`;
+- bounded `srv` observations.
 
-3. **Same-zone or brand-similar heuristic match** - the chain stays under the
-   queried namespace or its target resembles the query's brand label (for
-   example, ``alpha.invalid -> gslb-alpha.invalid`` or
-   ``alpha.invalid -> eglb.alpha.invalid``). This heuristic is a noise filter;
-   it does not establish common ownership, an internal network, or an
-   organizational relationship. **Action:** skip automatic fingerprint
-   proposal unless independent evidence identifies a reusable provider pattern.
-   Note the heuristic skip in the triage summary.
+Do not pool unlike record types into one coverage rate. Preserve the round's
+catalog digest, collection options, source-opportunity counts, unresolved and
+unavailable counts, truncation state, stratum, and frozen regression budget.
 
-4. **Niche or one-off** - count is 1 across the corpus, hostname looks
-   bespoke (e.g., a single customer's vanity vendor relationship).
-   **Action:** record as a "see-once" candidate but do NOT propose a
-   fingerprint. The threshold for inclusion is "would another user ever hit
-   this pattern?" - niche one-offs fail that test.
+### C. Historical CNAME candidate queue
 
-5. **Unclear** - can't tell from the hostname alone whether it's SaaS or
-   private. **Action:** flag for the user with the chain and a question. Do
-   NOT guess and propose a fingerprint without confirmation.
+`gaps.json` or `candidates.json` from `validation/find_gaps.py` and
+`validation/triage_candidates.py` remains accepted for the historical
+`cname_target` path. Its recurrence counts are a prioritization signal, not
+proof that a pattern is correct or promotable.
 
-## YAML schema for new entries
+## Dispositions
 
-A candidate that survives triage as a recognized third-party service pattern or
-generic infrastructure produces a stanza like:
+Every new candidate begins as `pending`. Assign one of these dispositions and
+record the reason:
+
+1. `pending`: plausible, but one or more promotion gates remain open.
+2. `promoted`: all promotion gates passed and the patch plus tests are ready.
+3. `rejected`: the candidate is over-broad, target-specific, unsupported,
+   misleading, or fails an independent negative or regression budget.
+4. `deferred`: the candidate may be useful later, but the record is too rare,
+   the owner space is not enumerable, or no current independent basis exists.
+
+Never describe a candidate as promoted merely because a YAML stanza was
+drafted or a pattern matched the development data.
+
+## Mandatory promotion gates
+
+A candidate remains `pending` until every item below is satisfied:
+
+1. **Exact rule shape.** Name the exact supported record type and the narrowest
+   reusable pattern. State whether matching is exact, prefix, suffix, or the
+   type-specific grammar documented in `docs/fingerprints.md`.
+2. **Independent basis.** Cite a current provider-owned public reference or a
+   disclosure-safe aggregate basis that did not consume the same row as both
+   predictor and label. Repetition alone is not an independent label.
+3. **recon rule review date.** Set `verified: YYYY-MM-DD` to the date the
+   fingerprint pattern was last checked against that basis. This scalar is
+   recon catalog metadata. It is not an Open Knowledge Format `verified` event
+   and does not assert that a target uses the product.
+4. **Positive fixture.** Add a reserved synthetic positive that proves the
+   intended rule fires and preserves its hedged claim boundary.
+5. **Lookalike-negative fixture.** Add a near miss that proves the rule does not
+   broaden into an adjacent vendor, shared parent zone, customer hostname, or
+   unrelated value.
+6. **Sparse-result fixture.** Prove the rule does not turn a thin or degraded
+   observation into a stronger product-use, ownership, or maturity claim.
+7. **Provenance assertions.** Prove the emitted service or insight retains the
+   exact rule, evidence type, observed value scope, and source opportunity
+   required by the claim audit.
+8. **Frozen regression budget.** Run the candidate against the predeclared
+   round budget. Report the aggregate before-and-after result. Reject or leave
+   pending any rule that exceeds it. Do not tune the pattern or budget on an
+   independent holdout after reading its result.
+
+If the public reference documents only a setup flow and not the proposed token
+or hostname, say so. A vendor name or generic documentation homepage does not
+silently become exact support for an opaque pattern.
+
+## Record-specific review
+
+- For `cname_target` and `cname`, prefer the stable provider-controlled product
+  zone. Reject customer-specific hosts and broad shared-cloud roots.
+- For `txt` and `subdomain_txt`, retain only a documented reusable prefix or
+  exact non-secret marker. Never publish an opaque verification token.
+- For `spf`, distinguish includes and redirects and preserve the observed
+  delegation semantics.
+- For `mx` and `ns`, describe routing or delegation. Do not upgrade it to
+  product activity or organizational ownership.
+- For `caa`, describe issuer authorization. Do not claim certificate issuance
+  or deployment.
+- For `dmarc_rua`, describe the published aggregate-report destination. Shared
+  reporting, delegated administration, and stale configuration remain
+  compatible explanations.
+- For `srv`, preserve owner, service, and target semantics. A port or priority
+  value does not establish reachability.
+
+Same-zone and brand-similar targets are noise-filter candidates, not ownership
+facts. An unfamiliar hostname stays pending or deferred until an independent
+provider basis identifies a reusable pattern.
+
+## YAML proposal shape
+
+Use the existing canonical name when extending a slug. Follow the exact
+type-specific grammar in `docs/fingerprints.md`. A typical proposal is:
 
 ```yaml
-- name: <Display Name>
+- name: <canonical display name>
   slug: <lowercase-kebab>
-  category: <Email & Communication | Identity | Infrastructure | Security |
-            Productivity & Collaboration | Marketing | Business Apps |
-            Commerce | AI & Generative>
-  confidence: high
+  category: <catalog category>
+  confidence: <low | medium | high>
   detections:
-  - type: cname_target
-    pattern: <minimal substring that uniquely identifies the service>
-    tier: <application | infrastructure>
-    description: <short, factual; reference if available>
+  - type: <exact supported record type>
+    pattern: <minimal reusable pattern>
+    reference: <current provider-owned URL when available>
+    verified: <YYYY-MM-DD>
+    description: <narrow observable meaning and compatible alternatives>
 ```
 
-Critical rules for the pattern:
+`tier` is valid only where the current fingerprint grammar permits it. If the
+basis is a disclosure-safe aggregate rather than a provider URL, name the dated
+aggregate memo in the review evidence instead of inventing a reference URL.
 
-- **Be specific.** `amazonaws.com` is too broad. `elb.amazonaws.com`,
-  `awsglobalaccelerator.com`, `awsapprunner.com` are right. The pattern is a
-  case-insensitive substring match against every CNAME hop, so an
-  over-broad pattern will fire on anything in that zone.
-- **Prefer the service-specific subzone.** Use the stable provider zone that
-  public vendor documentation or repeated evidence identifies, not an
-  individual customer's hostname. For a documented multi-tenant zone,
-  `myshopify.com` is the reusable pattern; a tenant-specific hostname such as
-  `gymshark.myshopify.com` would be too narrow.
-- **Tier classification.** Application = the SaaS or product (Auth0, Shopify,
-  Zendesk). Infrastructure = the CDN, load balancer, or edge layer (Fastly,
-  CloudFront, Cloudflare). When a chain matches both, application wins as the
-  primary attribution.
-
-## When the slug already exists
-
-If the candidate maps to an existing slug (e.g., `customer.io` extends an
-existing `customerio` entry that was added via TXT detection only), produce
-the YAML stanza using the **same name and slug** as the existing entry. The
-validator's same-slug-same-name check allows extending an apex fingerprint
-with new `cname_target` rules in `surface.yaml`. The validator complains
-when same-slug entries have different display names, so:
-
-- Look up the canonical name in `src/recon_tool/data/fingerprints/*.yaml` first
-  (grep for `slug: <slug>`).
-- Use that exact name in your new stanza.
-
-## Category bucketing
-
-The category determines which `Services` sub-line the slug appears under in
-the panel. Mappings live in
-`src/recon_tool/formatter/classify_tables.py:CATEGORY_BY_SLUG`. If
-you add a new slug, also propose the entry there in your output:
-
-```python
-"<new-slug>": "<Email | Identity | Cloud | Security | AI | Collaboration | Business Apps>",
-```
-
-If you don't add a mapping, the slug falls into "Business Apps" by default,
-which is sometimes wrong (CDN-as-a-service slugs should be Cloud, not
-Business Apps).
+Before proposing a new slug, inspect the existing catalog and
+`src/recon_tool/formatter/classify_tables.py:CATEGORY_BY_SLUG`. Reuse the exact
+canonical name for an existing slug. Add a formatter category mapping only when
+the existing classification path requires one.
 
 ## Output format
 
-Produce a single response in this shape:
+Return these sections:
 
-1. **Summary** - one line per candidate with its triage verdict.
-2. **Proposed surface.yaml additions** - full YAML stanzas, one per fingerprint.
-3. **Proposed formatter category mappings** - Python dict entries.
-4. **Skipped** - list of candidates dropped with the reason (same-zone or
-   brand-similar heuristic, niche one-off, already covered, unclear).
-5. **Verification command** - the exact `recon <domain>` invocation the user
-   should run to confirm the new fingerprint fires correctly.
+1. **Disposition summary.** One row per candidate with record type,
+   pending/promoted/rejected/deferred state, and a short reason.
+2. **Gate ledger.** Show pass, fail, or missing for exact shape, independent
+   basis, recon `verified` date, three fixture classes, provenance, and frozen
+   regression budget.
+3. **Proposed patch.** Include YAML and category changes only for candidates
+   whose evidence is sufficient to review. Label the patch `pending` until all
+   gates and tests pass.
+4. **Fixture and test plan.** Name the reserved synthetic positive,
+   lookalike-negative, sparse-result, provenance, and regression checks.
+5. **Private follow-up.** List missing evidence without reproducing real target
+   values.
 
-Keep the response action-ready. The user should be able to apply your YAML
-diff, run your verification command, and confirm uplift in one pass.
+For a public or committed artifact, include only generic provider patterns,
+provider-owned references, reserved synthetic fixtures, and disclosure-safe
+aggregate counts. Never include evaluated apexes, organization names, tenant
+identifiers, opaque tokens, target-owned owner names or record values,
+per-domain rows, or unsuppressed small strata.
 
-## Worked example
+## Verification
 
-User invokes:
+Use reserved synthetic fixtures for review. Run the relevant focused catalog
+tests, then the freshness and generated-artifact gates. Typical focused tests
+include:
+
+```text
+pytest tests/test_fingerprints.py tests/test_catalog_discovery.py \
+  tests/test_dns_catalog_boundaries.py tests/test_fingerprint_freshness_gate.py
 ```
-Triage runs-private/2026-05-02/candidates.json
-```
 
-You read the file. Suppose it contains:
-```json
-[
-  {"suffix": "stspg-customer.com", "count": 16, "samples": [...status pages...]},
-  {"suffix": "rootly.com", "count": 1, "samples": [{"subdomain": "status.example.com", ...}]},
-  {"suffix": "gslb.example.com", "count": 8, "samples": [...same domain...]}
-]
-```
+Also run the project-prescribed lint, full test, coverage, generated-artifact,
+and CI-equivalent gates before calling the change complete. A live lookup of a
+real target may be useful in the maintainer's private workspace, but it is not a
+public regression fixture or permission to publish the value.
 
-Your response:
+## Hard boundaries
 
-> **Summary**
-> - `stspg-customer.com` (16x): recognized Atlassian Statuspage target pattern. Propose extending the existing `statuspage` slug.
-> - `rootly.com` (1x): recognizable provider target but seen once in this corpus. Flag for revisit; do not fingerprint yet.
-> - `gslb.example.com` (8x): brand-similar heuristic match - skip automatic proposal; ownership and operation remain unresolved.
->
-> **Proposed surface.yaml additions:**
-> ```yaml
-> - name: Statuspage (Atlassian)
->   slug: statuspage
->   category: Productivity & Collaboration
->   confidence: high
->   detections:
->   - type: cname_target
->     pattern: stspg-customer.com
->     tier: application
->     description: Atlassian Statuspage customer CNAME endpoint
-> ```
->
-> **Proposed formatter category mapping:** none - `statuspage` already maps to Collaboration.
->
-> **Skipped:**
-> - `rootly.com` - niche, count 1
-> - `gslb.example.com` - brand-similar heuristic match
->
-> **Verification:** `recon cache clear --all && recon <one-of-the-status-page-domains> --full` should now show the subdomain in the External surface section attributed to "Statuspage (Atlassian)".
-
-## What this skill does NOT do
-
-- Direct probing beyond recon's documented collection boundary. For a single-
-  domain input, the skill invokes recon, whose normal lookup performs its
-  documented public-source requests. For a file input, it reads the supplied
-  artifact without collecting new domain data.
-- Speculative fingerprinting on hostnames you can't recognize. Better to flag
-  as "unclear" and ask the user than to ship a guess.
-- Pattern broadening. Always prefer the most specific pattern that captures
-  the service. Pattern-tightening is harder than pattern-expanding once
-  shipped.
-- Apex-side fingerprints. This skill only writes `cname_target` rules. TXT,
-  MX, SPF, etc. are out of scope - use the broader contributor flow for those.
-
-## Gotchas
-
-The traps that produce a bad fingerprint. Each is a real failure mode, not a
-theoretical one.
-
-- **Over-broad `cname_target` patterns fire on the whole zone.** `amazonaws.com` matches everything in AWS; use `elb.amazonaws.com`, `awsapprunner.com`. The pattern is a case-insensitive substring against every CNAME hop.
-- **Multi-tenant SaaS: drop the customer prefix.** `myshopify.com`, not `<store>.myshopify.com`, or the rule only ever matches that one customer.
-- **A same slug must reuse the canonical display name.** The validator rejects same-slug-different-name; grep `src/recon_tool/data/fingerprints/*.yaml` for the existing name before extending a slug.
-- **A new slug with no `_CATEGORY_BY_SLUG` mapping defaults to "Business Apps."** Often wrong for CDN or cloud slugs; propose the formatter mapping alongside the YAML.
-- **Never ship a guess on an "unclear" candidate.** Flag it with the chain and ask. Tightening a pattern after release is harder than getting it right once.
-- **Same-zone or brand-similar GSLB targets are heuristic skips, not ownership facts.** Exclude them from automatic proposals unless independent evidence identifies a reusable provider pattern, and state that ownership and operation remain unresolved.
-- **count=1 is a see-once, not a fingerprint.** The bar is "would another user ever hit this pattern?" Niche one-offs fail it.
-
-## Relationship to the base `recon` skill
-
-| Goal | Use |
-|---|---|
-| Look up a domain | `recon` skill |
-| Find candidates for new fingerprints | this skill |
-| Verify a new fingerprint fires | `recon` skill (after applying YAML diff) |
-
-You can chain both in one conversation: run base `recon` to triage one
-target, then this skill to mine the unclassified chains and propose
-catalog growth.
+- Do not perform direct probing beyond recon's documented collection boundary.
+- Do not promote a pattern from a vendor name, hostname intuition, or recurrence
+  count alone.
+- Do not use a development row as its own independent precision label.
+- Do not infer active use, ownership, control, plan tier, traffic, or security
+  maturity from a fingerprint.
+- Do not expose real-target data in public review artifacts.
+- Do not map recon rule `verified`, fingerprint `confidence`, or private
+  occurrence counts to OKF `verified`, trust tiers, or `usage_count`.
+- Do not claim this Claude Code-native skill is a portable Agent Plugins
+  package.

@@ -21,10 +21,15 @@ and several OKF fields would be easy to overstate:
 
 - an OKF `verified` event means that an actor confirmed content against its
   source or resource; a successful public lookup is not that confirmation;
+- recon fingerprint `verified` is instead a scalar rule-review date. Fingerprint
+  `confidence` is a domain-specific evidence-strength tier, and aggregate round
+  counts measure catalog coverage. None maps directly to OKF `verified`, a
+  derived OKF trust tier, or `usage_count`;
 - `generated.at` records the last meaningful content change, which is not
   necessarily a collection timestamp;
 - `status: stable` describes knowledge-document lifecycle, not confidence in a
-  public observation;
+  public observation. Omitting `status` is not neutral because OKF v0.2 defines
+  an absent value as `stable`;
 - `stale_after` requires a defensible absolute freshness policy, and recon has
   no universal one for heterogeneous public metadata;
 - each OKF `sources[].resource` should identify a followable artifact or an
@@ -60,8 +65,12 @@ An OKF v0.2 projection is deferred because there is no named consumer. A future
 proposal must identify that consumer, map every populated field without
 upgrading a claim, include a privacy review, keep the capsule and stable recon
 JSON authoritative, and independently validate the resulting OKF bundle.
-`verified`, `status`, and `stale_after` must remain absent unless their exact
-semantics are established. The OKF projection, if later justified, is additive.
+`verified` and `stale_after` must remain absent unless their exact semantics are
+established. The proposal must also establish lifecycle semantics for every
+concept because an omitted OKF `status` defaults to `stable`; omission cannot be
+used to avoid that assertion. It must not translate recon rule-review dates,
+fingerprint confidence, or aggregate occurrence counts into OKF verification,
+trust, or usage. The OKF projection, if later justified, is additive.
 
 Agent Plugins packaging remains the separate v2.15 decision. No capsule command
 or file claims Agent Plugins conformance.

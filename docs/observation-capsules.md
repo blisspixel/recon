@@ -133,6 +133,13 @@ mapping collection success to OKF `verified`, lookup time to `generated.at`, or
 generic TTLs to `stale_after` would overstate those fields. ADR-0014 records the
 deferral and the gate for any future additive projection.
 
+Omitting OKF `status` is not a neutral workaround because v0.2 treats an absent
+value as `stable`. Likewise, recon fingerprint `verified` dates, evidence-
+strength `confidence`, and aggregate catalog counts do not mean OKF verification
+events, derived trust tiers, or `usage_count`. A future named consumer must
+justify those lifecycle and semantic mappings rather than translate field names
+or counts mechanically.
+
 Agent Plugins v1.0.0 remains a Working Draft for portable skill and MCP package
 layout. It does not define this evidence artifact. Capsule support makes no
 Agent Plugins conformance claim and does not alter MCP wire behavior.

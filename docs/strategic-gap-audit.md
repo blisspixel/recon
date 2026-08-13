@@ -21,12 +21,14 @@ The highest-value next build is not inference expansion. The aggregate-safe
 product-quality baseline found that the frozen M365 ablation failed its
 structural-identifiability preflight before target contact, so collecting
 private labels cannot answer its promotion question. v2.12 applies
-non-promotion through the compatible ADR-0013 transition. The next operation is
-the v2.13 caller-held observation capsule and OKF v0.2 projection decision. The
-claim audit and stable MCP matrix remain blocking regression gates. Artifact
-review, OpenSSF process, independent replication, and archive work remain
-worthwhile maintainer tracks, but they do not outrank product truthfulness or
-measured user value.
+non-promotion through the compatible ADR-0013 transition. The v2.13 caller-held
+observation capsule and ADR-0014 OKF v0.2 deferral are shipped. The next
+operation is v2.14: freeze the independent rank, regional, vendor-seed, and
+drift round contracts before collection, then execute them with aggregate-only
+evidence. The claim audit and stable MCP matrix remain blocking regression
+gates. Artifact review, OpenSSF process, independent replication, and archive
+work remain worthwhile maintainer tracks, but they do not outrank product
+truthfulness or measured user value.
 
 ## Sources Checked
 
@@ -57,6 +59,9 @@ measured user value.
 - Agent Plugins v1.0.0 working-draft specification and compatible-client list:
   <https://agent-plugins.org/specification> and
   <https://agent-plugins.org/compatible-clients>
+- Agent Skills specification, which defines the portable `SKILL.md` component
+  used by Agent Plugins:
+  <https://agentskills.io/specification>
 - Open Knowledge Format v0.2 specification, current v0.2 announcement, and the
   original v0.1 announcement:
   <https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md>
@@ -84,18 +89,18 @@ measured user value.
 
 ## Current Evidence
 
-- At the 2026-07-13 refresh, GitHub Releases and PyPI matched the repository's
-  synchronized release version.
-  A later checkout must not describe a version as published until its local and
-  remote release gates pass.
+- On 2026-08-13, remote release readiness verified that GitHub Releases, PyPI,
+  the v2.13.0 tag, and the repository's synchronized release version identify
+  the same commit. A later checkout must not describe a version as published
+  until its local and remote release gates pass.
 - Local release readiness passed for the published source state.
 - Remote release readiness passed for the published main branch and
   verifies required GitHub Actions checks, public Scorecard API freshness and
   code-owned control scores, PyPI wheel and sdist publication, and GitHub
   Release wheel, sdist, SBOM, and attestation export assets; it also verifies
-  PyPI provenance for the release wheel and sdist. The next published release
-  must additionally pass the current GitHub provenance check for the completed
-  SBOM; the historical evidence predates that subject expansion.
+  PyPI provenance for the release wheel and sdist. The current GitHub
+  provenance check for the completed SBOM also passes for v2.13.0. The older
+  historical evidence predates that subject expansion.
 - CI, secrets scan, Scorecard workflows, and the public Scorecard API passed on
   the published main branch. Any in-progress release checkout requires fresh
   local and remote evidence before publication.
@@ -145,7 +150,7 @@ These are not active gaps for the current roadmap:
 | Evidence-semantic integrity | Derived observations and model-bound public-evidence values can be presented more strongly than their evidence supports. | The fail-closed audit covers all 27 default-claim families; all are complete, with no material runtime family carrying incomplete lineage. | Keep the audit and its semantic contract tests blocking; reopen this track for any uncovered or stronger claim surface. | Do not add new inference semantics while a known default claim lacks direct provenance. |
 | MCP v2 compatibility | The final 2026-07-28 protocol and stable SDK contain breaking changes that must remain characterized. | Production adopted v2.0.0 on 2026-07-31; the exact stable v1.28.1 and v2.0.0 matrix passes, with one compatibility boundary, doctor discovery selection, and conservative cache hints implemented. | Keep both stable pins blocking and treat any future major-version adoption as a separate release decision. | Do not couple remote MCP scope to compatibility maintenance. |
 | Measured product utility | Green gates and sophisticated models do not establish that the output improves an operator decision. | The network-free scorecard and stable-v1 live characterization are complete. The frozen M365 design failed its structural-identifiability preflight before target contact: A1 equals A0, A2 equals A3, and A3 is dominated by A0. The declared live window is cancelled. v2.12 records fusion as an advanced diagnostic and begins the compatible explicit-flag transition. | Keep ADR-0013 blocking and require a new candidate plus executable identifiability preflight before any future real-domain fusion study. | Do not expand graph or probabilistic machinery without measured benefit. Do not collect when the promotion condition is structurally unreachable. |
-| Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | The catalog has 860 entries and 1,070 detections. One frozen convenience-sample baseline covers every bounded path, and a 366-namespace unseen vertical holdout exercised every new rule without post-holdout tuning. The legacy date backlog and independent rank and regional strata remain open. | Add rank and regional rounds, backfill dates in reviewed families, and ratchet stale dates and negative fixtures. | No new undated or untested rule. No population claim from the convenience sample and no broad coverage claim while a bounded path or named stratum is unmeasured. |
+| Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | The catalog has 860 entries and 1,070 detections. One frozen convenience-sample baseline covers every bounded path, and a 366-namespace unseen vertical holdout exercised every new rule without post-holdout tuning. The legacy date backlog and independent rank, regional, and vendor-seed strata plus the frozen drift sample remain open. | As the v2.14 priority, freeze each round's question, independent stratum or frozen prior sample for drift, observation opportunities, catalog and code digests, acceptance budget, and aggregate-only disclosure before collection; then run rank, regional, vendor-seed, and drift rounds and backfill dates only in reviewed families. | No new undated or untested rule. No population claim from the convenience sample and no broad coverage claim while a bounded path or named stratum is unmeasured. |
 | Latency and degradation contract | CT and external providers dominate long tails, while one instrumented convenience-sample run cannot establish product SLOs. | The dated aggregate-only live memo measures paired CT/no-CT resolver latency, primary-source stages, merge replay, inference, rendering, allocation, loop lag, degradation, warm disk, and warm MCP bytes without target rows. It completed 50 of 50 no-CT rows and 47 of 50 CT rows; concurrent CPU contention and heavy CT rate limiting keep p50/p95 values diagnostic. | Run a clean-machine, stage-specific follow-up before setting budgets or moving work to threads; keep the independent schema gate blocking and apply stable-v2 deltas from the completed MCP matrix separately. | Move only proven blocking I/O and do not create brittle timing CI. |
 | OpenSSF Best Practices Badge | Scorecard marks this as absent until a real badge project exists. | Readiness evidence and the manual answer queue are documented in [openssf-posture.md](openssf-posture.md) and [openssf-badge-readiness.md](openssf-badge-readiness.md), but no badge is claimed. | Complete the questionnaire on `bestpractices.dev`, then link the real badge page. | Do not add a placeholder badge or claim a badge before the project exists. |
 | Reviewed PR signal | Scorecard cannot credit review history on direct-main work. | CODEOWNERS exists and required checks protect main. | Use reviewed PRs for non-urgent work when another qualified reviewer is available. | Do not manufacture review history or contributor diversity. |
@@ -167,7 +172,7 @@ release count, and feature count are supporting facts, not outcomes.
 |---|---|---|---|
 | 0. Trust foundation | Align public intake with the data policy, correct public product promises, require verification dates on new detections, and align repository metadata with the current neutral product voice. | Required privacy acknowledgements, regression tests, a clean canonical gate, current repository description and topics, and green post-merge CI. | Do not start another broad catalog promotion while public intake asks for target data or a public promise lacks a maintained surface. |
 | 1. Freeze the baseline | Run the stable-v1 latency, allocation, degradation, CT-value, provenance, catalog, and MCP payload measurements on a named catalog and code revision. Record unmeasured channels explicitly. | One dated aggregate-safe scorecard, reproduction commands, environment, revision digests, source-success counts, and no target rows. | Do not tune thresholds after reading the result, and do not publish a population interpretation for a convenience sample. |
-| 2. Run distinct catalog rounds | Execute the baseline, rank-band, regional, vertical, vendor-seed holdout, and drift rounds in [catalog-strategy.md](catalog-strategy.md). Extend private unmatched-observation accounting from CNAME chains to apex CNAME, TXT, SPF, MX, NS, CAA, DMARC RUA, bounded owner-qualified TXT, and bounded SRV opportunities. | Per-round private manifests and aggregate before-and-after reports by record type, with unresolved, unavailable, unmeasured, promoted, rejected, and deferred counts. Every promoted rule has a provider reference or disclosure-safe basis, a date, a fictional positive fixture, a lookalike negative, and a claim boundary. | A repeated list is a drift round, not new coverage. Stop when survivors lack an independent basis, fail a negative fixture, or exceed the frozen regression budget. |
+| 2. Freeze and run distinct catalog rounds - **active v2.14 priority** | Before collection, freeze the question, independent input stratum or frozen prior sample for drift, eligibility and deduplication unit, observation opportunities and options, catalog and code digests, measures, promotion and regression budgets, and disclosure-safe outputs. Then execute rank-band, regional, vendor-seed, and drift rounds in [catalog-strategy.md](catalog-strategy.md). | Per-round immutable contracts, private manifests, and aggregate before-and-after reports by record type, with unresolved, unavailable, unmeasured, promoted, rejected, and deferred counts. Every promoted rule has a provider reference or disclosure-safe basis, a date, a fictional positive fixture, a lookalike negative, and a claim boundary. | A repeated list is a drift round, not new coverage. Stop when survivors lack an independent basis, fail a negative fixture, or exceed the frozen regression budget. |
 | 3. Evaluate agent utility | Use representative tasks for single-domain summary, explanation, posture gaps, comparison, and catalog lookup. Compare the current deterministic 22-tool discovery surface with the smallest task-specific candidate only after freezing success, error, latency, and context-byte measures. Evaluate a schema-pinned Agent Plugins package as a packaging path separate from tool-surface size. | Task completion, unsupported-claim rate, correct tool selection, round trips, discovery bytes, result bytes, failure recovery, and portable-package discovery and launch across representative clients. | Do not add a core profile or hide tools merely because the payload is large. Do not claim Agent Plugins conformance before pinned-schema and client evidence. Simplify only when task outcomes improve without reducing discoverability or compatibility. |
 | 4. External usability proof | Ask an outside user to install from the released package, run the public smoke path, complete one explanation task, and follow the safe contribution path on a clean machine. | Aggregate outcome notes, time-to-first-result, confusing-step count, and fixes reproduced with fictional data. | Do not call maintainer reruns independent replication, and do not publish the user's targets or output. |
 | 5. Consolidate later surface decisions | Fusion is decided in v2.11 and applied in v2.12. Use the later catalog and agent measurements to decide which remaining catalog and MCP presentation changes ship, then batch accepted work into coherent releases. | Decision memos with raw aggregate counts and bounds, preserved stable contracts, current release proof, and an updated roadmap that removes completed work. | An inconclusive result remains inconclusive. Retire complexity that cannot beat the simpler comparator on a named outcome. |
@@ -182,23 +187,31 @@ release count, and feature count are supporting facts, not outcomes.
    as historical evidence. Keep its cancelled design from contacting targets.
 5. Keep the completed v2.12 non-promotion transition and its v3 default-off
    boundary explicit before later surface promotion.
-6. Validate and release the implemented v2.13 caller-held observation capsule
-   and ADR-0014 OKF v0.2 deferral without replacing versioned JSON.
-7. Use the baseline to decide dimensioned email observations, catalog
-   priorities, and agent-surface simplification; apply stable-v2 SDK
+6. Keep the shipped v2.13 caller-held observation capsule, four-way comparison,
+   ADR-0014 OKF v0.2 deferral, and release proof blocking without replacing
+   versioned JSON.
+7. Freeze and execute the v2.14 rank, regional, vendor-seed, and drift contracts
+   with independent strata or the frozen prior sample for drift, aggregate-only
+   outputs, fixtures, and explicit dispositions before broad catalog growth.
+8. Use the resulting catalog evidence to inform later dimensioned email
+   observations and agent-surface simplification; apply stable-v2 SDK
    characterization deltas from the completed MCP matrix.
-8. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
+9. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
    release state and provenance aligned.
-9. Run the paper claim freeze, OpenSSF questionnaire, outside replication, and
+10. Run the paper claim freeze, OpenSSF questionnaire, outside replication, and
    archive decision as separate maintainer work when their external event is
    ready.
 
 ## Decision
 
-The current execution work is the v2.13 release gate. The caller-held
-observation capsule, four-way classified comparison, separate schema, and
-ADR-0014 OKF v0.2 deferral are implemented on the release candidate without
-replacing stable JSON. v2.12 has already applied the v2.11 structural stop
+v2.13 is shipped: the caller-held observation capsule, four-way classified
+comparison, separate schema, and ADR-0014 OKF v0.2 deferral passed full,
+protected-main, publication, provenance, and channel-parity gates without
+replacing stable JSON. The current execution work is the v2.14 catalog quality
+loop, beginning with the round-contract freeze. Each rank, regional,
+vendor-seed, and drift contract must be fixed before collection and must end in
+aggregate evidence plus explicit candidate dispositions. v2.12 has already
+applied the v2.11 structural stop
 through the compatible ADR-0013 transition. Private labeled-row collection
 under the cancelled design is prohibited.
 Evidence integrity and MCP compatibility remain maintenance gates, not unfinished

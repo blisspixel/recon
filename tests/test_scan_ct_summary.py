@@ -15,6 +15,8 @@ from pathlib import Path
 
 import pytest
 
+from validation.prepare_catalog_round import RoundExecutionOptions, canonical_json_digest, digest_bytes
+
 _SCAN_PATH = Path(__file__).resolve().parents[1] / "validation" / "scan.py"
 
 
@@ -115,6 +117,17 @@ def test_private_scan_input_allows_private_repo_path(scan) -> None:
     assert scan._validate_private_scan_input_path(path) == path.resolve(strict=False)
 
 
+def test_private_scan_input_allows_frozen_manifest_in_corpus_workspace(scan) -> None:
+    path = scan.REPO_ROOT / "validation" / "corpus-private" / "rank-manifest.json"
+    assert scan._validate_private_scan_input_path(path) == path.resolve(strict=False)
+
+
+def test_private_run_dir_rejects_corpus_workspace(scan) -> None:
+    path = scan.REPO_ROOT / "validation" / "corpus-private" / "rank-run"
+    with pytest.raises(ValueError, match="runs-private"):
+        scan._validate_private_run_dir(path)
+
+
 def test_ct_retry_corpus_writes_under_output_root_and_deduplicates(scan, tmp_path: Path) -> None:
     output_root = tmp_path / "runs-private"
     prior = output_root / "prior"
@@ -195,6 +208,119 @@ def test_cli_options_reject_finalize_with_ct_retry(scan) -> None:
 
     with pytest.raises(ValueError, match="finalize-existing"):
         scan._validate_cli_options(args)
+
+
+@pytest.mark.parametrize("round_kind", ["rank", "region", "vertical", "vendor-seed", "drift"])
+def test_cli_options_require_frozen_manifest_for_independent_rounds(scan, round_kind: str) -> None:
+    args = argparse.Namespace(
+        finalize_existing=None,
+        ct_retry_from=None,
+        timeout=10.0,
+        max_runtime=None,
+        json_array=False,
+        round_kind=round_kind,
+        round_manifest=None,
+    )
+
+    with pytest.raises(ValueError, match="round-manifest"):
+        scan._validate_cli_options(args)
+
+
+def _round_manifest(corpus: Path, **overrides) -> dict[str, object]:
+    frame_count = len(corpus.read_text(encoding="utf-8").splitlines())
+    manifest: dict[str, object] = {
+        "schema_version": 1,
+        "private": True,
+        "round_id": "rank-2026-08",
+        "round_kind": "rank",
+        "question": "Do rank bands expose distinct recurrent catalog gaps?",
+        "prepared_at": "2026-08-13T12:00:00Z",
+        "source": {"name": "fixture", "revision": "2026-08", "digest_sha256": "a" * 64},
+        "frame": {
+            "path": str(corpus.resolve()),
+            "digest_sha256": digest_bytes(corpus.read_bytes()),
+            "count": frame_count,
+        },
+        "strata": [{"id": "head", "label": "head", "count": frame_count}],
+        "policies": {
+            "exclusions": "Exclude prior development namespaces.",
+            "overlap": "reject",
+        },
+        "collection": {"ct_enabled": False, "direct_probes_enabled": False},
+        "thresholds": {"minimum_occurrences": 3, "minimum_distinct_namespaces": 2},
+        "promotion_budget": {
+            "metric": "classified share by record type",
+            "minimum_improvement": 0.01,
+            "maximum_regression": 0.0,
+            "decision_rule": "Promote only documented rules with no observed regression.",
+        },
+        "plan_digest_sha256": "b" * 64,
+    }
+    manifest.update(overrides)
+    manifest["manifest_digest_sha256"] = canonical_json_digest(manifest)
+    return manifest
+
+
+def test_round_contract_binds_canonical_frame_and_options(scan, tmp_path: Path) -> None:
+    corpus = tmp_path / "rank-frame.txt"
+    corpus.write_text("alpha.invalid\nbeta.invalid\n", encoding="utf-8")
+    path = tmp_path / "rank-manifest.json"
+    path.write_text(json.dumps(_round_manifest(corpus)), encoding="utf-8")
+
+    loaded = scan._load_round_contract(
+        path,
+        corpus=corpus,
+        options=RoundExecutionOptions(round_kind="rank", ct_enabled=False, min_count=3),
+    )
+
+    assert loaded["round_id"] == "rank-2026-08"
+    assert loaded["frame"]["count"] == 2
+
+
+def test_round_contract_rejects_frame_mutation(scan, tmp_path: Path) -> None:
+    corpus = tmp_path / "rank-frame.txt"
+    corpus.write_text("alpha.invalid\n", encoding="utf-8")
+    path = tmp_path / "rank-manifest.json"
+    path.write_text(json.dumps(_round_manifest(corpus)), encoding="utf-8")
+    corpus.write_text("beta.invalid\n", encoding="utf-8")
+
+    with pytest.raises(ValueError, match="frame digest mismatch"):
+        scan._load_round_contract(
+            path,
+            corpus=corpus,
+            options=RoundExecutionOptions(round_kind="rank", ct_enabled=False, min_count=3),
+        )
+
+
+def test_round_contract_rejects_manifest_mutation(scan, tmp_path: Path) -> None:
+    corpus = tmp_path / "rank-frame.txt"
+    corpus.write_text("alpha.invalid\n", encoding="utf-8")
+    manifest = _round_manifest(corpus)
+    manifest["question"] = "Changed after freezing"
+    path = tmp_path / "rank-manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="manifest digest mismatch"):
+        scan._load_round_contract(
+            path,
+            corpus=corpus,
+            options=RoundExecutionOptions(round_kind="rank", ct_enabled=False, min_count=3),
+        )
+
+
+def test_round_contract_rejects_signed_but_noncanonical_frame(scan, tmp_path: Path) -> None:
+    corpus = tmp_path / "rank-frame.txt"
+    corpus.write_text("mail.alpha.invalid\n", encoding="utf-8")
+    manifest = _round_manifest(corpus)
+    path = tmp_path / "rank-manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="exact canonical registrable apexes"):
+        scan._load_round_contract(
+            path,
+            corpus=corpus,
+            options=RoundExecutionOptions(round_kind="rank", ct_enabled=False, min_count=3),
+        )
 
 
 def test_run_batch_passes_timeout_to_recon_batch(scan, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -313,6 +439,8 @@ def test_finalize_scan_writes_partial_meta(scan, tmp_path: Path, monkeypatch: py
             no_compare=False,
             ct=True,
             round_kind="baseline",
+            round_manifest_path=None,
+            round_contract=None,
             label="partial",
             corpus=corpus,
             corpus_input_rows=2,

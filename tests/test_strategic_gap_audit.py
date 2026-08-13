@@ -114,6 +114,7 @@ def test_strategic_gap_audit_cites_current_external_standards() -> None:
         "https://modelcontextprotocol.io/docs/getting-started/intro",
         "https://agent-plugins.org/specification",
         "https://agent-plugins.org/compatible-clients",
+        "https://agentskills.io/specification",
         "https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md",
         "https://cloud.google.com/blog/products/data-analytics/okf-v0-2-adds-trust-signals/",
         "https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/",
