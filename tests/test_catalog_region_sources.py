@@ -56,20 +56,28 @@ class FakeResponse:
         return None
 
 
-def test_documented_module_entrypoint_loads_from_repository_root() -> None:
-    result = subprocess.run(
-        [sys.executable, "-m", "validation.prepare_catalog_region_sources", "--help"],
-        cwd=source_freezer.REPO_ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
+def test_documented_preparation_entrypoints_load_from_repository_root() -> None:
+    modules = (
+        "validation.prepare_catalog_rank_frame",
+        "validation.prepare_catalog_region_frame",
+        "validation.prepare_catalog_region_sources",
+        "validation.prepare_catalog_round",
     )
+    for module in modules:
+        result = subprocess.run(  # noqa: S603 - module is selected from a fixed tuple
+            [sys.executable, "-m", module, "--help"],
+            cwd=source_freezer.REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+        assert result.returncode == 0, f"{module}: {result.stderr}"
 
-    assert result.returncode == 0, result.stderr
-    assert "--output-directory" in result.stdout
     validation_readme = (source_freezer.REPO_ROOT / "validation" / "README.md").read_text(encoding="utf-8")
-    assert "python -m validation.prepare_catalog_region_sources" in validation_readme
-    assert "python validation/prepare_catalog_region_sources.py" not in validation_readme
+    for module in modules:
+        assert f"python -m {module}" in validation_readme
+        direct_script = "python " + module.replace(".", "/") + ".py"
+        assert direct_script not in validation_readme
 
 
 class FakeOpener:
