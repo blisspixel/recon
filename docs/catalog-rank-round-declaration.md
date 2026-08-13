@@ -2,7 +2,7 @@
 
 **Frozen:** 2026-08-13T16:23:43.917496Z
 
-**Collection status:** Complete; stratified reduction under review
+**Collection status:** Complete; rank-round decision closed
 
 **Target-network requests during preparation:** 0
 
@@ -90,11 +90,13 @@ and its execution digest is
 
 The first reducer correctly produced a pooled typed baseline, but pooling
 discarded the four-band comparison. That aggregate remains valid as a pooled
-description and is not accepted as rank-round closure. Candidate review and
-promotion remain paused while the membership-bound stratified reducer is
-reviewed and merged. The reducer requires every frozen result exactly once,
-uses only ordered stratum indexes in public output, and records a new reducer
-digest without rewriting the historical observation-code commitment.
+description and was not accepted as rank-round closure. The subsequently
+merged membership-bound stratified reducer required every frozen result
+exactly once, used only ordered stratum indexes in public output, and recorded
+a new reducer digest without rewriting the historical observation-code
+commitment. Candidate dispositions, the fixed-observation zero-regression
+decision, and the next operation are recorded in the aggregate-only
+[rank-round result](../validation/2026-08-13-catalog-rank-round.md).
 
 The round uses the normal documented DNS and identity-discovery boundary with
 CT disabled and no opt-in direct probes. Public outputs may contain aggregate

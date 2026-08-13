@@ -181,8 +181,10 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "oracle-cloud": "Cloud",
     "ibm-cloud": "Cloud",
     "alibaba-api": "Cloud",
+    "alibaba-alb": "Cloud",
     "alibaba-cdn": "Cloud",
     "alibaba-cloud": "Cloud",
+    "alibaba-dns": "Cloud",
     "replit": "Cloud",
     "glitch": "Cloud",
     # Security
@@ -529,6 +531,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "iberlayer": "Email",
     # DMARC rua batch: DMARC aggregate-report aggregators.
     "cloudflare-email-analytics": "Email",
+    "cloudflare-email-routing": "Email",
     "cisa-dmarc": "Security",
     "sdmarc": "Email",
     "cp-dmarc": "Email",
@@ -541,6 +544,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "inboxmonster": "Email",
     "dmarcinput": "Email",
     "glockapps": "Email",
+    "yandex-360": "Email",
     # NS batch: new DNS-provider slugs (categorized Cloud,
     # added to the rollup exclusions below since they are DNS operators,
     # not multi-cloud hosting vendors).
@@ -758,6 +762,7 @@ CLOUD_VENDOR_BY_SLUG: dict[str, str] = {
     "firebase-realtime": "GCP",
     # Alibaba family
     "alibaba-api": "Alibaba Cloud",
+    "alibaba-alb": "Alibaba Cloud",
     "alibaba-cdn": "Alibaba Cloud",
     "alibaba-cloud": "Alibaba Cloud",
     # Standalone vendors. Each appears once because the slug already
@@ -921,6 +926,7 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "level3",
         "dnspod",
         "google-domains-dns",
+        "alibaba-dns",
         # cname_target batch: Cloud-categorized slugs that are
         # specialty SaaS-hosting / CDN / colo, not general multi-cloud
         # vendors. Same shape as wpengine / kinsta / pagely above.

@@ -81,10 +81,11 @@ def _membership_index(
     return index, records
 
 
-def _partition_records(
+def partition_round_records(
     results_path: Path,
     memberships: Sequence[RoundStratumMembership],
 ) -> tuple[list[list[dict[str, Any]]], list[Path]]:
+    """Partition one complete result set by frozen private membership."""
     membership_by_domain, records_by_stratum = _membership_index(memberships)
     seen: set[str] = set()
     for record in catalog_baseline.iter_result_records(results_path):
@@ -166,7 +167,7 @@ def reduce_strata(
     memberships = load_round_membership(round_plan_path, manifest)
     if any(len(membership.domains) < _MIN_PUBLIC_STRATUM_ROWS for membership in memberships):
         _fail(f"public stratified output requires at least {_MIN_PUBLIC_STRATUM_ROWS} rows in every stratum")
-    records_by_stratum, result_files = _partition_records(results_path, memberships)
+    records_by_stratum, result_files = partition_round_records(results_path, memberships)
     results_digest = catalog_baseline.digest_result_files(result_files)
     records_total = sum(len(records) for records in records_by_stratum)
     pooled, pooled_raw = _read_json_object(pooled_aggregate_path, kind="pooled catalog baseline")

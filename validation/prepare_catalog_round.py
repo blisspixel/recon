@@ -242,6 +242,7 @@ def execution_digest_sha256() -> str:
         for name in (
             "catalog_baseline.py",
             "diff_runs.py",
+            "evaluate_catalog_promotions.py",
             "find_gaps.py",
             "prepare_catalog_round.py",
             "run_path_safety.py",

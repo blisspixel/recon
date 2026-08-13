@@ -256,6 +256,26 @@ The historical observation execution digest remains
 separate from the later stratified-reducer digest so a new interpretation does
 not masquerade as the code that collected the observations.
 
+When a live replay differs because public DNS changed between passes, evaluate
+the additive catalog effect against the exact retained baseline observations:
+
+```bash
+python validation/evaluate_catalog_promotions.py \
+    --input validation/runs-private/<baseline>/results.ndjson \
+    --round-plan validation/corpus-private/<round>-plan.json \
+    --round-manifest validation/corpus-private/<round>-manifest.json \
+    --pooled-aggregate validation/runs-private/<baseline>/catalog-aggregate.json \
+    --candidate-slug <slug> \
+    --output validation/runs-private/<baseline>/catalog-promotion-counterfactual.json
+```
+
+Repeat `--candidate-slug` for a batch. The evaluator accepts only referenced,
+dated DNS-label suffix rules for `mx`, `ns`, `spf`, and `cname_target`. It binds
+the complete frozen membership and baseline result digest, uses the original
+observed denominators, and emits aggregate counts only. Report this causal
+counterfactual separately from the live replay. A later DNS change is neither a
+catalog regression nor catalog uplift.
+
 For large monthly cadence, keep `--no-ct` on unless CT coverage is the point and
 use modest concurrency. Real-company corpora live entirely under
 `validation/corpus-private/` and never leave your machine; only generic patterns

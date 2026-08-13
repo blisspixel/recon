@@ -84,6 +84,48 @@ fingerprints:
       MX and consistent with Google Workspace use. Does not
       distinguish Workspace from consumer Gmail forwarding setups
       on its own; combined with the MX, the read is GWS.
+- name: Cloudflare Email Routing
+  slug: cloudflare-email-routing
+  category: Email & Communication
+  confidence: high
+  display_group: Email & Communication
+  product_family: Cloudflare Email Service
+  parent_vendor: Cloudflare
+  detections:
+  - type: mx
+    pattern: mx.cloudflare.net
+    reference: https://developers.cloudflare.com/email-service/configuration/domains/
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Cloudflare Email Service's documented
+      `*.mx.cloudflare.net` routing hosts. This shows that inbound mail for
+      the queried namespace routes through Cloudflare Email Routing. It does
+      not establish outbound sending or use of Cloudflare's CDN or security
+      products.
+- name: Yandex 360 for Business
+  slug: yandex-360
+  category: Email & Communication
+  confidence: high
+  display_group: Email & Communication
+  product_family: Yandex 360
+  parent_vendor: Yandex
+  detections:
+  - type: mx
+    pattern: mx.yandex.net
+    reference: https://yandex.com/support/yandex-360/business/admin/en/domains/dns/
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Yandex 360 for Business's documented
+      `mx.yandex.net` inbound mail host. This shows that inbound mail for the
+      queried namespace routes to Yandex 360.
+  - type: spf
+    pattern: _spf.yandex.net
+    reference: https://yandex.com/support/yandex-360/business/admin/en/domains/dns/
+    verified: 2026-08-13
+    description: >-
+      SPF include or redirect to Yandex 360 for Business's documented
+      `_spf.yandex.net` policy. This authorizes Yandex to send mail for the
+      queried namespace but does not by itself establish inbound mail routing.
 - name: Zoho Mail
   slug: zoho
   category: Email & Communication

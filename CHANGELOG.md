@@ -31,6 +31,25 @@ operator, corporate group, ownership, or control.
 Tool surface changes: no CLI command, flag, MCP tool, resource, or stable JSON
 field changes.
 
+### Added
+
+- Four provider-documented catalog families from the frozen rank round:
+  Cloudflare Email Routing MX, Alibaba Cloud DNS NS, Alibaba Cloud Application
+  Load Balancer CNAME, and Yandex 360 for Business MX and SPF. Every rule has a
+  current primary reference, review date, claim boundary, positive fixture,
+  lookalike negative, sparse fixture, and provenance assertion.
+- A disclosure-safe fixed-observation evaluator separates additive catalog
+  uplift from public DNS drift between live passes. It binds the frozen round
+  membership, result digest, candidate catalog, and promotion budget and emits
+  aggregate counts only.
+
+### Changed
+
+- The 1,000-row, four-band catalog rank round is closed with an aggregate memo,
+  explicit promoted, rejected, deferred, unavailable, and unmeasured outcomes,
+  and a zero-regression counterfactual. Regional evidence is the next v2.14
+  round.
+
 ## [2.13.0] - 2026-08-13
 
 ### Tool Surface Changes
