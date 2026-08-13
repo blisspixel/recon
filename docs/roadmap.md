@@ -1116,7 +1116,7 @@ generated-artifact drift gates.
 
 ## Current External Basis
 
-Checked through 2026-08-12 against primary sources and recent research:
+Checked through 2026-08-13 against primary sources and recent research:
 
 - [Agent Plugins v1.0.0 working-draft specification](https://agent-plugins.org/specification)
 - [Agent Plugins compatible clients](https://agent-plugins.org/compatible-clients)
@@ -1124,6 +1124,8 @@ Checked through 2026-08-12 against primary sources and recent research:
 - [Open Knowledge Format v0.2 specification](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
 - [Google Cloud OKF v0.2 trust-signals announcement](https://cloud.google.com/blog/products/data-analytics/okf-v0-2-adds-trust-signals/)
 - [Google Cloud OKF announcement, which describes the superseded v0.1 form](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/)
+- [IANA Root Zone Database](https://www.iana.org/domains/root/db)
+- [UN M49 standard country or area and geographic-region codes](https://unstats.un.org/unsd/methodology/m49/overview/)
 - [MCP 2026-07-28 release candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
 - [MCP current documentation](https://modelcontextprotocol.io/docs/getting-started/intro)
 - [MCP Python SDK release history](https://pypi.org/project/mcp/)
