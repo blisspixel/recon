@@ -473,6 +473,7 @@ def _public_round_contract(manifest: dict[str, Any]) -> dict[str, Any]:
         "promotion_budget_digest_sha256": hashlib.sha256(
             json.dumps(budget, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("ascii")
         ).hexdigest(),
+        "implementation": manifest["implementation"],
         "plan_digest_sha256": manifest["plan_digest_sha256"],
         "manifest_digest_sha256": manifest["manifest_digest_sha256"],
     }

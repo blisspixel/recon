@@ -15,7 +15,14 @@ from pathlib import Path
 
 import pytest
 
-from validation.prepare_catalog_round import RoundExecutionOptions, canonical_json_digest, digest_bytes
+from validation.prepare_catalog_round import (
+    SCHEMA_VERSION,
+    RoundExecutionOptions,
+    canonical_json_digest,
+    catalog_digest_sha256,
+    digest_bytes,
+    execution_digest_sha256,
+)
 
 _SCAN_PATH = Path(__file__).resolve().parents[1] / "validation" / "scan.py"
 
@@ -229,7 +236,7 @@ def test_cli_options_require_frozen_manifest_for_independent_rounds(scan, round_
 def _round_manifest(corpus: Path, **overrides) -> dict[str, object]:
     frame_count = len(corpus.read_text(encoding="utf-8").splitlines())
     manifest: dict[str, object] = {
-        "schema_version": 1,
+        "schema_version": SCHEMA_VERSION,
         "private": True,
         "round_id": "rank-2026-08",
         "round_kind": "rank",
@@ -253,6 +260,10 @@ def _round_manifest(corpus: Path, **overrides) -> dict[str, object]:
             "minimum_improvement": 0.01,
             "maximum_regression": 0.0,
             "decision_rule": "Promote only documented rules with no observed regression.",
+        },
+        "implementation": {
+            "catalog_digest_sha256": catalog_digest_sha256(),
+            "execution_digest_sha256": execution_digest_sha256(),
         },
         "plan_digest_sha256": "b" * 64,
     }
@@ -301,6 +312,38 @@ def test_round_contract_rejects_manifest_mutation(scan, tmp_path: Path) -> None:
     path.write_text(json.dumps(manifest), encoding="utf-8")
 
     with pytest.raises(ValueError, match="manifest digest mismatch"):
+        scan._load_round_contract(
+            path,
+            corpus=corpus,
+            options=RoundExecutionOptions(round_kind="rank", ct_enabled=False, min_count=3),
+        )
+
+
+@pytest.mark.parametrize(
+    ("field", "message"),
+    [
+        ("catalog_digest_sha256", "catalog digest does not match"),
+        ("execution_digest_sha256", "execution digest does not match"),
+    ],
+)
+def test_round_contract_rejects_implementation_drift(
+    scan,
+    tmp_path: Path,
+    field: str,
+    message: str,
+) -> None:
+    corpus = tmp_path / "rank-frame.txt"
+    corpus.write_text("alpha.invalid\n", encoding="utf-8")
+    manifest = _round_manifest(corpus)
+    implementation = manifest["implementation"]
+    assert isinstance(implementation, dict)
+    implementation[field] = "0" * 64
+    manifest.pop("manifest_digest_sha256")
+    manifest["manifest_digest_sha256"] = canonical_json_digest(manifest)
+    path = tmp_path / "rank-manifest.json"
+    path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    with pytest.raises(ValueError, match=message):
         scan._load_round_contract(
             path,
             corpus=corpus,

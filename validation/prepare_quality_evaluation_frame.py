@@ -9,11 +9,7 @@ aggregate counts and digests, never frame membership.
 from __future__ import annotations
 
 import argparse
-import csv
-import hashlib
 import heapq
-import hmac
-import io
 import json
 import os
 import re
@@ -22,7 +18,14 @@ from collections.abc import Sequence
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 
-from recon_tool.validator import validate_domain
+from validation.ranked_sampling import (
+    RankedDomain,
+    bounded_stable_read,
+    digest_bytes,
+    keyed_rank,
+    read_exclusions,
+    read_ranked_source,
+)
 from validation.run_path_safety import validate_private_output_root
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -34,19 +37,9 @@ PRIVATE_ROOTS = (
 DEFAULT_SAMPLE_SIZE = 2_500
 DEFAULT_EXPECTED_SOURCE_ROWS = 1_000_000
 DEFAULT_CONTEXT = "v211-screening-frame-20260812-01"
-_MAX_RANKED_SOURCE_BYTES = 128 * 1024 * 1024
-_MAX_EXCLUDED_ROWS = 10_000
 _SAFE_LIST_ID_RE = re.compile(r"^[A-Z0-9]{5}$")
 _SAFE_CONTEXT_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,79}$")
 _PRIVATE_KEY_RE = re.compile(rb"^[0-9a-f]{64}\n$")
-
-
-@dataclass(frozen=True, slots=True)
-class RankedDomain:
-    """One private ranked-source row."""
-
-    rank: int
-    domain: str
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,104 +76,23 @@ class FramePreparationConfig:
 
 
 def _digest(raw: bytes) -> str:
-    return hashlib.sha256(raw).hexdigest()
+    return digest_bytes(raw)
 
 
 def _bounded_read(path: Path, *, maximum_bytes: int, kind: str) -> bytes:
-    size = path.stat().st_size
-    if size <= 0:
-        raise ValueError(f"{kind} is empty")
-    if size > maximum_bytes:
-        raise ValueError(f"{kind} exceeds the {maximum_bytes}-byte limit")
-    return path.read_bytes()
-
-
-def _canonical_domain(value: str) -> str | None:
-    try:
-        return validate_domain(value)
-    except ValueError:
-        return None
+    return bounded_stable_read(path, maximum_bytes=maximum_bytes, kind=kind)
 
 
 def _read_ranked_source(path: Path, *, expected_rows: int) -> tuple[list[RankedDomain], bytes, int, int, int]:
-    raw = _bounded_read(path, maximum_bytes=_MAX_RANKED_SOURCE_BYTES, kind="ranked source")
-    try:
-        text = raw.decode("utf-8-sig")
-    except UnicodeDecodeError as exc:
-        raise ValueError("ranked source is not UTF-8") from exc
-
-    parsed: list[RankedDomain] = []
-    seen: set[str] = set()
-    normalized_count = 0
-    duplicate_count = 0
-    invalid_count = 0
-    source_rows = 0
-    reader = csv.reader(io.StringIO(text, newline=""))
-    for physical_row, row in enumerate(reader, start=1):
-        if not row or all(not cell.strip() for cell in row):
-            continue
-        if physical_row == 1 and [cell.strip().casefold() for cell in row] == ["rank", "domain"]:
-            continue
-        source_rows += 1
-        if len(row) != 2:
-            raise ValueError(f"ranked source row {physical_row} must have exactly two columns")
-        try:
-            rank = int(row[0])
-        except ValueError as exc:
-            raise ValueError(f"ranked source row {physical_row} has an invalid rank") from exc
-        if rank != source_rows:
-            raise ValueError(f"ranked source row {physical_row} breaks contiguous rank order")
-        value = row[1].strip()
-        canonical = _canonical_domain(value)
-        if canonical is None:
-            invalid_count += 1
-            continue
-        normalized_count += int(value != canonical)
-        if canonical in seen:
-            duplicate_count += 1
-            continue
-        seen.add(canonical)
-        parsed.append(RankedDomain(rank=rank, domain=canonical))
-
-    if source_rows != expected_rows:
-        raise ValueError(f"ranked source has {source_rows} rows; expected exactly {expected_rows}")
-    if not parsed:
-        raise ValueError("ranked source has no canonical domains")
-    return parsed, raw, normalized_count, duplicate_count, invalid_count
+    return read_ranked_source(path, expected_rows=expected_rows)
 
 
 def _read_exclusions(path: Path) -> tuple[set[str], bytes, int, int, int, int]:
-    raw = _bounded_read(path, maximum_bytes=8 * 1024 * 1024, kind="development exclusion corpus")
-    try:
-        lines = raw.decode("utf-8").splitlines()
-    except UnicodeDecodeError as exc:
-        raise ValueError("development exclusion corpus is not UTF-8") from exc
-
-    values = [line.strip() for line in lines if line.strip() and not line.lstrip().startswith("#")]
-    if len(values) > _MAX_EXCLUDED_ROWS:
-        raise ValueError(f"development exclusion corpus exceeds {_MAX_EXCLUDED_ROWS} rows")
-    canonical: list[str] = []
-    normalized_count = 0
-    invalid_count = 0
-    for value in values:
-        try:
-            normalized = validate_domain(value)
-        except ValueError:
-            invalid_count += 1
-            continue
-        normalized_count += int(value != normalized)
-        canonical.append(normalized)
-    duplicate_count = len(canonical) - len(set(canonical))
-    unique = set(canonical)
-    if not unique:
-        raise ValueError("development exclusion corpus has no canonical domains")
-    return unique, raw, len(values), normalized_count, duplicate_count, invalid_count
+    return read_exclusions(path)
 
 
 def _sampling_key(key: bytes, context: str, row: RankedDomain) -> tuple[bytes, int, str]:
-    message = context.encode("ascii") + b"\0" + row.domain.encode("ascii")
-    digest = hmac.digest(key, message, "sha256")
-    return digest, row.rank, row.domain
+    return keyed_rank(key, context, row)
 
 
 def _frame_bytes(selected: Sequence[RankedDomain]) -> bytes:

@@ -75,6 +75,7 @@ actually shipped.
 | Current step-back audit and phased execution plan | [strategic-gap-audit.md](strategic-gap-audit.md) |
 | Frozen v2.11 product-quality decision rule, written before any run | [quality-baseline-preregistration.md](quality-baseline-preregistration.md) |
 | Frozen v2.11 evaluation population, sampling design, and private commitments | [quality-evaluation-frame-declaration.md](quality-evaluation-frame-declaration.md) |
+| Frozen v2.14 catalog rank selection and aggregate commitments | [catalog-rank-round-declaration.md](catalog-rank-round-declaration.md) |
 | Aggregate-safe product-quality scorecard harness | `scripts/quality_scorecard.py` |
 | Dependency-ordered implementation plan | [engineering-refinement-plan.md](engineering-refinement-plan.md) |
 | Structural maintainability audit, pinned to the revision it measured | [structural-maintainability.md](structural-maintainability.md) |

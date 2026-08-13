@@ -19,7 +19,7 @@ from recon_tool.models import (
 )
 from recon_tool.sources import dns_base, dns_email, dns_infra
 from validation import catalog_baseline
-from validation.prepare_catalog_round import prepare_catalog_round
+from validation.prepare_catalog_round import SCHEMA_VERSION, prepare_catalog_round
 
 
 def _tenant(**overrides: Any) -> TenantInfo:
@@ -333,7 +333,7 @@ def _frozen_round_fixture(tmp_path: Path) -> tuple[Path, dict[str, Any]]:
     source = tmp_path / "rank-band.txt"
     source.write_text("example.com\n", encoding="utf-8")
     plan = {
-        "schema_version": 1,
+        "schema_version": SCHEMA_VERSION,
         "private": True,
         "round_id": "example.com-private-round",
         "round_kind": "rank",
@@ -380,6 +380,7 @@ def test_public_round_contract_excludes_all_private_descriptive_text(tmp_path: P
     assert public["frame_count"] == 1
     assert public["stratum_counts"] == [1]
     assert public["round_kind"] == "rank"
+    assert public["implementation"] == manifest["implementation"]
 
 
 def test_round_reducer_rejects_results_outside_frozen_frame(tmp_path: Path) -> None:

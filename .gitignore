@@ -61,6 +61,10 @@ docs/accuracy.md
 !/validation/catalog_baseline.py
 # Generic catalog-round frame preparer; no target data is embedded.
 !/validation/prepare_catalog_round.py
+# Generic private rank-band sampler and shared ranked-source primitives. Source,
+# key, selected rows, and manifests remain under the ignored private roots.
+!/validation/prepare_catalog_rank_frame.py
+!/validation/ranked_sampling.py
 !/validation/summarize_ct_sessions.py
 !/validation/corpus-example.txt
 !/validation/README.md
