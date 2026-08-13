@@ -6,7 +6,7 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.12.0 is current. The stable baseline is complete: CLI, versioned
+> **Status:** v2.13.0 is current. The stable baseline is complete: CLI, versioned
 > JSON, local stdio MCP, bounded collectors, claim-audit gates, MCP dual-SDK
 > matrix, and a verified release path. Tracks 1–2 (evidence integrity, MCP v2)
 > are complete maintenance. Track 3's v2.11 structural decision and compatible
