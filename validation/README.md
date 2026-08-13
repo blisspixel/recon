@@ -387,17 +387,20 @@ evaluation-frame declaration or collect an ablation label.
 
 The first reviewed aggregate is
 [2026-08-12-stable-v1-live-characterization.md](2026-08-12-stable-v1-live-characterization.md).
-It closes the stable-v1 live-characterization prerequisite while leaving the
-private labeled evaluation and frozen ablation explicitly open.
+It closes the stable-v1 live-characterization prerequisite. The later
+[structural-identifiability audit](2026-08-13-quality-arm-identifiability.md)
+stopped the frozen private evaluation before target contact.
 
-### Product-quality evaluation frame
+### Product-quality evaluation frame and structural stop
 
-The next decision-bearing study has a separate, immutable frame. Its public
+The stopped decision-bearing study has a separate, immutable frame. Its public
 population, source, eligibility window, two-stage sampling rule, cluster rule,
 public HMAC contexts, and private key and frame commitments are frozen in
 [docs/quality-evaluation-frame-declaration.md](../docs/quality-evaluation-frame-declaration.md).
 The source and frame files stay under `corpus-private/`; no evaluation target is
-contacted by the preparer.
+contacted by the preparer. The commands below reproduce the historical frame
+preparation only. Do not use the frame for target collection under the voided
+design.
 
 ```bash
 python -m validation.prepare_quality_evaluation_frame generate-key \
@@ -415,10 +418,20 @@ python -m validation.prepare_quality_evaluation_frame prepare \
   --preflight
 ```
 
-Review the identifier-free JSON, then replace only the final flag with
-`--write-private-frame`. The writer never replaces an existing frame. The
-reference-label collector and four-arm evaluator remain separate work; do not
-start them before the declaration's public-commit and eligibility-window gates.
+The existing private frame was written once and remains immutable. Do not rerun
+write mode against it. Before any target collection code was built or run, the
+network-free preflight established that the intended arms collapse and A3 can
+never support when A0 abstains:
+
+```bash
+python -m validation.quality_arm_identifiability
+pytest tests/test_quality_arm_identifiability.py -q
+```
+
+The checked-in test exhaustively evaluates all 64 M365 DNS evidence-role
+states. It keeps the stop condition blocking if the model, role adapter, score,
+or display threshold changes. A future candidate requires a new design and new
+commitments after passing this check; it may not reuse the cancelled window.
 
 Committed memos from these network runs must follow
 [docs/data-handling-policy.md](../docs/data-handling-policy.md): no apexes, no

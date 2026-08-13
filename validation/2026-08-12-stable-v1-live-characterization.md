@@ -7,6 +7,11 @@ apex, organization, tenant, record-value, or per-domain row. It is a product
 contract and performance diagnostic, not a population estimate, ablation, or
 fusion decision.
 
+**Historical next-step note:** the 2026-08-13
+[structural-identifiability audit](2026-08-13-quality-arm-identifiability.md)
+subsequently stopped the planned M365 evaluation before target contact. The
+next-step paragraph below records the state on 2026-08-12 and is superseded.
+
 ## Decision summary
 
 - The stable-v1 live-characterization prerequisite is complete. The no-CT path

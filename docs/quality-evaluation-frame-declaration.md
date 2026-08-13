@@ -3,6 +3,14 @@
 **Frozen 2026-08-12, before reference-label collection, DNS collection, arm
 evaluation, or outcome inspection.**
 
+**Unused and cancelled 2026-08-13.** The network-free
+[arm-identifiability audit](../validation/2026-08-13-quality-arm-identifiability.md)
+proved that the frozen candidate cannot produce a candidate-only supported
+decision, so the benefit gate is unreachable. No target was contacted and no
+reference label, DNS result, or arm output was collected. The private frame and
+key remain immutable historical commitments and must not be used for this
+voided design.
+
 This is the public frame definition and private-membership commitment required
 by the
 [product-quality preregistration](quality-baseline-preregistration.md#6-sampling-frame-and-corpus-disjointness).
@@ -84,8 +92,9 @@ identifiers and zero per-domain rows.
 
 ## Eligibility window and collection boundary
 
-The eligibility window is **2026-08-17T00:00:00Z through
-2026-08-23T23:59:59Z**. Each first-stage domain receives one bounded collection
+The now-cancelled eligibility window was **2026-08-17T00:00:00Z through
+2026-08-23T23:59:59Z**. No first-stage domain may be contacted under this
+design. Had the structural preflight passed, each domain would have received one bounded collection
 attempt in that window. All rows use the same software revision, catalog
 revision, options, timeout policy, and empty-cache starting condition, recorded
 in the private run manifest and eventual aggregate memo.
