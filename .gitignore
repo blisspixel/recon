@@ -64,6 +64,9 @@ docs/accuracy.md
 # Generic private rank-band sampler and shared ranked-source primitives. Source,
 # key, selected rows, and manifests remain under the ignored private roots.
 !/validation/prepare_catalog_rank_frame.py
+# Generic private ccTLD-delegation sampler. Official-source mappings, prior
+# exclusions, keys, selected rows, and manifests remain private.
+!/validation/prepare_catalog_region_frame.py
 !/validation/ranked_sampling.py
 !/validation/stratify_catalog_round.py
 !/validation/summarize_ct_sessions.py

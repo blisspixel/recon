@@ -28,6 +28,11 @@ Committed (generic tooling, no company names):
 - `prepare_catalog_rank_frame.py`: derives the exact four private Tranco rank
   strata with secret-keyed sampling and whole-development-corpus exclusion.
   Its console output contains aggregate counts and commitments only.
+- `prepare_catalog_region_frame.py`: derives five private ccTLD-delegation
+  strata from a frozen ranked source and a pinned IANA / UN M49 intersection.
+  It uses equal secret-keyed discovery quotas, excludes every declared prior
+  corpus, performs no network requests, and never treats a ccTLD as evidence of
+  an organization's location.
 - `stratify_catalog_round.py`: reconstructs frozen private membership, assigns
   every completed result exactly once, and writes ordered per-stratum typed
   aggregates without exposing stratum labels or namespaces.
@@ -207,6 +212,36 @@ python validation/scan.py \
     --round-manifest validation/corpus-private/rank-2026-08-manifest.json \
     --concurrency 4
 ```
+
+The regional round uses the same two-stage discipline. First prepare a private
+CSV whose exact columns are `tld,iana_type,iso_alpha2,region_code,region_name`.
+Rows must be the exact ASCII two-letter intersection of IANA `country-code`
+TLDs and UN M49 ISO alpha-2 entries. Pin its source revision and digest in the
+private plan. The preparer chooses the largest eligible ccTLD universes within
+each of the five canonical UN M49 regions, then takes the same secret-keyed
+discovery quota from every selected ccTLD:
+
+```bash
+python validation/prepare_catalog_rank_frame.py generate-key \
+    --output validation/corpus-private/catalog-region-key.hex
+
+python validation/prepare_catalog_region_frame.py \
+    --plan validation/corpus-private/catalog-region-selection-plan.json \
+    --output-directory validation/corpus-private/catalog-region-selection \
+    --preflight
+
+python validation/prepare_catalog_region_frame.py \
+    --plan validation/corpus-private/catalog-region-selection-plan.json \
+    --output-directory validation/corpus-private/catalog-region-selection \
+    --write-private-strata
+```
+
+This is a ccTLD namespace comparison, not geolocation. Equal region and ccTLD
+quotas are discovery budgets, not population weights. Globally marketed ccTLDs
+remain grouped by their IANA delegation and UN M49 area, so the result cannot
+support claims about registrant location, organizational presence, or regional
+Internet prevalence. Commit the aggregate-only selection declaration and merge
+its implementation before any selected namespace is contacted.
 
 Preparation fails closed on malformed rows, undeclared fields, cross-stratum
 overlap contrary to policy, direct-probe requests, or existing output files.
