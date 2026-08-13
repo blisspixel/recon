@@ -20,7 +20,7 @@ import subprocess
 import sys
 import tempfile
 import threading
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, Awaitable, Callable
 from contextlib import asynccontextmanager
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -660,7 +660,7 @@ class _RawStdioServer:
 
 
 @asynccontextmanager
-async def _raw_stdio_server() -> AsyncIterator[_RawStdioServer]:
+async def _raw_stdio_server() -> AsyncGenerator[_RawStdioServer]:
     env = dict(os.environ)
     env["RECON_MCP_FORCE_STDIO"] = "1"
     env["PYTHONSAFEPATH"] = "1"
@@ -1085,6 +1085,13 @@ def _run_command(args: list[str], *, cwd: Path, env: dict[str, str] | None = Non
     return CommandResult(completed.returncode, completed.stdout, completed.stderr)
 
 
+def _uv_environment() -> dict[str, str]:
+    """Return a copy-safe environment for isolated uv operations."""
+    env = dict(os.environ)
+    env["UV_LINK_MODE"] = "copy"
+    return env
+
+
 def _venv_python(environment: Path) -> Path:
     if os.name == "nt":
         return environment / "Scripts" / "python.exe"
@@ -1095,6 +1102,7 @@ def _locked_constraints(uv: str, destination: Path) -> CommandResult:
     result = _run_command(
         [uv, "export", "--locked", "--no-dev", "--no-hashes", "--no-emit-project"],
         cwd=REPO_ROOT,
+        env=_uv_environment(),
     )
     if result.returncode != 0:
         return result
@@ -1112,6 +1120,7 @@ def _probe_pin(uv: str, root: Path, constraints: Path, sdk_version: str) -> dict
     create = _run_command(
         [uv, "venv", os.fspath(environment), "--python", sys.executable, "--clear"],
         cwd=REPO_ROOT,
+        env=_uv_environment(),
     )
     if create.returncode != 0:
         return {
@@ -1136,7 +1145,7 @@ def _probe_pin(uv: str, root: Path, constraints: Path, sdk_version: str) -> dict
     if sdk_version.startswith("2."):
         install_args.extend(["--prerelease", "allow"])
     install_args.extend(["-e", os.fspath(REPO_ROOT)])
-    install = _run_command(install_args, cwd=REPO_ROOT)
+    install = _run_command(install_args, cwd=REPO_ROOT, env=_uv_environment())
     if install.returncode != 0:
         return {
             "sdk_version": sdk_version,

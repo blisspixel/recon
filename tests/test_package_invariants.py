@@ -8,6 +8,7 @@ paid-vendor SDK surfaces.
 
 from __future__ import annotations
 
+import os
 import re
 import shutil
 import subprocess
@@ -123,6 +124,10 @@ _FORBIDDEN_RUNTIME_DEPENDENCIES = {
 def _run_build(out_dir: Path, *build_args: str) -> None:
     uv_exe = shutil.which("uv")
     assert uv_exe is not None, "uv is required to build package artifacts"
+    build_env = os.environ.copy()
+    # Copy mode is deterministic across ordinary, cross-device, and
+    # cloud-backed Windows cache locations. Artifact content is unchanged.
+    build_env["UV_LINK_MODE"] = "copy"
     result = subprocess.run(  # noqa: S603 - fixed dev-tool argv, no shell.
         [
             uv_exe,
@@ -138,6 +143,7 @@ def _run_build(out_dir: Path, *build_args: str) -> None:
         text=True,
         capture_output=True,
         check=False,
+        env=build_env,
     )
     assert result.returncode == 0, result.stdout + result.stderr
 

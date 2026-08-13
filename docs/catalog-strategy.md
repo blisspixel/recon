@@ -1,7 +1,7 @@
 # Catalog Growth and Quality Strategy
 
 Status: measurement-first maintenance plan
-Review date: 2026-07-17
+Review date: 2026-08-13
 
 This document is the plan for growing and maintaining the fingerprint catalog
 (`src/recon_tool/data/fingerprints/*.yaml`) so coverage, precision, and
@@ -42,8 +42,9 @@ The loop is disciplined and effective, but the available corpus remains a
 convenience sample with selection bias. The first frozen typed baseline is
 recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
-the independent rank round is complete, while regional, vendor-seed, and drift
-rounds remain open, and most legacy detections still lack a freshness date.
+the independent rank round is complete, the regional source and frame contract
+is frozen before collection, vendor-seed and drift rounds remain open, and most
+legacy detections still lack a freshness date.
 
 Current round status:
 
@@ -52,7 +53,7 @@ Current round status:
 | Convenience-sample baseline | Complete, aggregate-only memo published |
 | Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
 | Rank bands | Complete; four-band aggregate, dispositions, and zero-regression decision published |
-| Regional / ccTLD | Pending |
+| Regional / ccTLD | Official sources and independent 1,000-row frame frozen before collection |
 | Vendor seed | One documented Webflow owner seed exercised; broader round pending |
 | Drift | Pending |
 
@@ -130,8 +131,10 @@ the [catalog rank-round declaration](catalog-rank-round-declaration.md). Its
 four equal discovery quotas are not population weights. The membership-bound
 stratified aggregate, candidate dispositions, and fixed-observation
 zero-regression decision are published in the aggregate-only
-[rank-round result](../validation/2026-08-13-catalog-rank-round.md). Regional
-strata are next; this rank result does not substitute for them.
+[rank-round result](../validation/2026-08-13-catalog-rank-round.md). The official
+source mapping and independent five-stratum frame are frozen in the
+[regional declaration](catalog-regional-round-declaration.md); collection and
+disposition are next. The rank result does not substitute for them.
 
 ## 2. Measurement: coverage, recall, precision
 
@@ -288,40 +291,42 @@ deferred queue, not the proposal queue.
 
 ## 6. Prioritized backlog
 
-Ordered by cost, not by appetite. Items 1 to 3 need no new network request
-and raise the share of claims that can be corroborated, which is the measured
-weakness; the corpus rounds that follow cannot fix that weakness no matter how
-many vendors they surface.
+The canonical release order controls execution. Runtime evidence-path
+expansion below is a separate feature track because it changes collection,
+claim, schema, or network semantics and cannot silently enter a catalog
+measurement round.
 
-1. Read the records already collected, in this order: the `mx:` lines in the
-   MTA-STS policy body, the TLS-RPT `rua=` destination, then the CAA
-   `accounturi` and `iodef` parameters. Each attaches to slugs that already
-   exist, so each converts single-path attributions into corroborated ones.
-2. Give SRV a catalog-driven path instead of a hardcoded table, and extend the
-   probed owners to the standards-defined mail autoconfiguration set. The
-   record type is already queried and currently carries no rules at all.
-3. Stand up vendor-enumerated discovery per section 5c and run it against the
-   vendors already present in the catalog before extending to new ones, so the
-   first pass strengthens existing slugs.
-4. Re-run a round with certificate transparency enabled before concluding that
-   `cname_target` discovery is exhausted; the last round ran without it.
-5. Freeze the round manifest and record the current classified-surface,
-   observation-opportunity, unresolved, and stale-rule baseline across the
-   implemented typed extractors.
-6. Admit a candidate to the proposal queue only when it has an identifier,
-   exact record type and pattern, source or disclosure-safe aggregate basis,
-   and explicit pending, promoted, rejected, or deferred disposition. A vendor
-   name alone is not an actionable candidate.
-7. Keep the opt-in unmatched-observation envelope and private ranking tool
-   covered by per-type bounds, reserved synthetic fixtures, and default-output absence
-   tests.
-8. Preserve the completed rank-stratified round, its aggregate result, and its
-   explicit dispositions as the first comparable multi-record baseline.
-9. Add regional strata (the largest expected coverage gap) and promote the
-   verified regional vendors they surface.
-10. Add vertical rounds without pooling them into population rates.
-11. Backfill `verified` dates and raise the freshness auditor toward a ratchet.
-12. Measure recall on disjoint vendor-seed holdouts for the top vendors.
+1. Preserve the completed rank-stratified aggregate, candidate dispositions,
+   and fixed-observation zero-regression decision.
+2. Run and disposition the frozen regional frame from the
+   [regional declaration](catalog-regional-round-declaration.md). Keep CT and
+   direct probes off as declared.
+3. Freeze and run disjoint vendor-seed holdouts. Admit a candidate only with an
+   identifier, exact record type and pattern, source or disclosure-safe
+   aggregate basis, and explicit pending, promoted, rejected, or deferred
+   disposition.
+4. Re-observe the frozen prior sample as the drift round. Do not describe a
+   repeated frame as independent coverage.
+5. Backfill `verified` dates only in reviewed families and raise the freshness
+   ratchet only when observed coverage supports a new threshold.
+6. Keep the opt-in unmatched-observation envelope and private ranking tool
+   covered by per-type bounds, reserved synthetic fixtures, and default-output
+   absence tests.
+7. Evaluate vertical rounds only if they answer a question not already covered
+   by the completed unseen-vertical holdout; never pool them into population
+   rates.
+
+Separately gated future feature work, after v2.14 evidence closes:
+
+1. Read already collected MTA-STS `mx:` lines, TLS-RPT `rua=` destinations,
+   and CAA `accounturi` or `iodef` parameters only under a new claim and schema
+   contract.
+2. Replace hardcoded SRV attribution with a catalog-driven path and consider
+   additional standards-defined owners only with an explicit collection and
+   compatibility review.
+3. Reopen CT-enabled catalog discovery only through a separately frozen round;
+   it cannot be compared to the CT-off regional contract as if collection were
+   unchanged.
 
 No promotion is complete without a current public reference or
 disclosure-safe aggregate basis, a `verified` date, a positive fixture, a
