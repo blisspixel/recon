@@ -185,6 +185,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "alibaba-cdn": "Cloud",
     "alibaba-cloud": "Cloud",
     "alibaba-dns": "Cloud",
+    "hostinger-dns": "Cloud",
     "replit": "Cloud",
     "glitch": "Cloud",
     # Security
@@ -359,6 +360,9 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "gatsby-events": "Collaboration",
     "gitbook": "Collaboration",
     "hostinger-email": "Email",
+    "locaweb-email": "Email",
+    "ovhcloud-email": "Email",
+    "titan-mail": "Email",
     "ionos": "Cloud",
     "kinsta": "Cloud",
     "lumen-cdn": "Cloud",
@@ -927,6 +931,7 @@ CLOUD_VENDOR_ROLLUP_EXCLUSIONS: frozenset[str] = frozenset(
         "dnspod",
         "google-domains-dns",
         "alibaba-dns",
+        "hostinger-dns",
         # cname_target batch: Cloud-categorized slugs that are
         # specialty SaaS-hosting / CDN / colo, not general multi-cloud
         # vendors. Same shape as wpengine / kinsta / pagely above.

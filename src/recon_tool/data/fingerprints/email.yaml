@@ -84,7 +84,7 @@ fingerprints:
       MX and consistent with Google Workspace use. Does not
       distinguish Workspace from consumer Gmail forwarding setups
       on its own; combined with the MX, the read is GWS.
-- name: Cloudflare Email Routing
+- name: Cloudflare Email Service
   slug: cloudflare-email-routing
   category: Email & Communication
   confidence: high
@@ -102,6 +102,15 @@ fingerprints:
       the queried namespace routes through Cloudflare Email Routing. It does
       not establish outbound sending or use of Cloudflare's CDN or security
       products.
+  - type: spf
+    pattern: _spf.mx.cloudflare.net
+    reference: https://developers.cloudflare.com/email-service/configuration/domains/
+    verified: 2026-08-13
+    description: >-
+      Apex SPF include or redirect to Cloudflare Email Service's documented
+      `_spf.mx.cloudflare.net` policy. This authorizes Cloudflare to send or
+      forward mail for the queried namespace. It does not by itself establish
+      inbound routing or distinguish Email Sending from Email Routing.
 - name: Yandex 360 for Business
   slug: yandex-360
   category: Email & Communication
@@ -126,6 +135,123 @@ fingerprints:
       SPF include or redirect to Yandex 360 for Business's documented
       `_spf.yandex.net` policy. This authorizes Yandex to send mail for the
       queried namespace but does not by itself establish inbound mail routing.
+- name: Locaweb Email
+  slug: locaweb-email
+  category: Email & Communication
+  confidence: high
+  display_group: Email & Communication
+  product_family: Locaweb Email
+  parent_vendor: Locaweb
+  detections:
+  - type: mx
+    pattern: mx.a.locaweb.com.br
+    reference: https://www.locaweb.com.br/ajuda/wiki/como-configurar-o-mx-e-mail-locaweb/
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Locaweb Email's documented
+      `mx.a.locaweb.com.br` inbound route. This observes inbound mail routing
+      through Locaweb Email, not mailbox activity or broader product use.
+  - type: mx
+    pattern: mx.b.locaweb.com.br
+    reference: https://www.locaweb.com.br/ajuda/wiki/como-configurar-o-mx-e-mail-locaweb/
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Locaweb Email's documented
+      `mx.b.locaweb.com.br` inbound route. This observes inbound mail routing
+      through Locaweb Email, not mailbox activity or broader product use.
+  - type: mx
+    pattern: mx.core.locaweb.com.br
+    reference: https://www.locaweb.com.br/ajuda/wiki/como-configurar-o-mx-e-mail-locaweb/
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Locaweb Email's documented
+      `mx.core.locaweb.com.br` inbound route. This observes inbound mail
+      routing through Locaweb Email, not mailbox activity or broader product
+      use.
+  - type: mx
+    pattern: mx.jk.locaweb.com.br
+    reference: https://www.locaweb.com.br/ajuda/wiki/como-configurar-o-mx-e-mail-locaweb/
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Locaweb Email's documented
+      `mx.jk.locaweb.com.br` inbound route. This observes inbound mail routing
+      through Locaweb Email, not mailbox activity or broader product use.
+  - type: spf
+    pattern: _spf.locaweb.com.br
+    reference: https://www.locaweb.com.br/ajuda/wiki/como-configurar-o-mx-e-mail-locaweb/
+    verified: 2026-08-13
+    description: >-
+      Apex SPF include or redirect to Locaweb Email's documented
+      `_spf.locaweb.com.br` policy. This authorizes Locaweb to send mail for
+      the queried namespace but does not establish inbound routing.
+  - type: cname_target
+    pattern: webmail-seguro.com.br
+    tier: application
+    reference: https://www.locaweb.com.br/ajuda/wiki/como-acessar-o-webmail-email-locaweb/
+    verified: 2026-08-13
+    description: >-
+      A related webmail host terminates at Locaweb's documented
+      `webmail-seguro.com.br` endpoint. This observes a Locaweb-hosted webmail
+      surface for that subdomain. It does not establish mailbox activity,
+      inbound mail routing, organization ownership, or broader Locaweb product
+      use.
+- name: OVHcloud Email
+  slug: ovhcloud-email
+  category: Email & Communication
+  confidence: high
+  display_group: Email & Communication
+  product_family: OVHcloud Email
+  parent_vendor: OVHcloud
+  detections:
+  - type: mx
+    pattern: mail.ovh.net
+    reference: https://docs.ovhcloud.com/en/guides/web-cloud/domains/dns-zone-mx
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating under OVHcloud's documented `mail.ovh.net` inbound
+      routing zone. OVHcloud documents these routes for MX Plan, Email Pro,
+      Exchange, and Zimbra, so this does not distinguish a specific OVHcloud
+      mail product.
+  - type: spf
+    pattern: mx.ovh.com
+    reference: https://docs.ovhcloud.com/en/guides/web-cloud/domains/icloud
+    verified: 2026-08-13
+    description: >-
+      Apex SPF include or redirect to OVHcloud's documented `mx.ovh.com`
+      policy. This authorizes OVHcloud to send mail for the queried namespace
+      but does not establish inbound routing or a specific OVHcloud mail plan.
+- name: Titan Mail
+  slug: titan-mail
+  category: Email & Communication
+  confidence: high
+  display_group: Email & Communication
+  product_family: Titan Mail
+  parent_vendor: Titan
+  detections:
+  - type: mx
+    pattern: mx1.titan.email
+    reference: https://support.titan.email/hc/en-us/articles/360036853934-Setup-Titan-for-your-domain
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Titan Mail's documented primary inbound route,
+      `mx1.titan.email`. This observes inbound mail routing through Titan Mail,
+      not mailbox activity.
+  - type: mx
+    pattern: mx2.titan.email
+    reference: https://support.titan.email/hc/en-us/articles/360036853934-Setup-Titan-for-your-domain
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Titan Mail's documented secondary inbound route,
+      `mx2.titan.email`. This observes inbound mail routing through Titan Mail,
+      not mailbox activity.
+  - type: spf
+    pattern: spf.titan.email
+    reference: https://support.titan.email/hc/en-us/articles/360036853934-Setup-Titan-for-your-domain
+    verified: 2026-08-13
+    description: >-
+      Apex SPF include or redirect to Titan Mail's documented
+      `spf.titan.email` policy. This authorizes Titan to send mail for the
+      queried namespace but does not establish inbound routing.
 - name: Zoho Mail
   slug: zoho
   category: Email & Communication

@@ -33,6 +33,15 @@ field changes.
 
 ### Added
 
+- Six provider-documented regional-round catalog additions across Cloudflare
+  Email Service, Hostinger DNS, Hostinger Email, Locaweb Email, OVHcloud Email,
+  and Titan Mail. The 16 new detections have current primary references, review
+  dates, scoped claim boundaries, positive fixtures, lookalike negatives,
+  sparse fixtures, and provenance assertions.
+- An aggregate-only regional-round interim result records the complete
+  1,000-row baseline, five-stratum classification rates, explicit candidate
+  dispositions, and an accepted fixed-observation zero-regression decision.
+  It keeps the protected-main live replay as a separate remaining gate.
 - Four provider-documented catalog families from the frozen rank round:
   Cloudflare Email Routing MX, Alibaba Cloud DNS NS, Alibaba Cloud Application
   Load Balancer CNAME, and Yandex 360 for Business MX and SPF. Every rule has a
@@ -55,14 +64,13 @@ field changes.
 
 - The 1,000-row, four-band catalog rank round is closed with an aggregate memo,
   explicit promoted, rejected, deferred, unavailable, and unmeasured outcomes,
-  and a zero-regression counterfactual. Regional observation and disposition is
-  the next v2.14 operation.
+  and a zero-regression counterfactual.
 - The regional round now has a public pre-collection declaration binding its
   official source archives, exact IANA and UN M49 mapping, independent
   five-stratum frame, collection options, code and catalog digests, and
-  aggregate-only interpretation boundary. The canonical roadmap, catalog
-  strategy, engineering plan, and validation guide agree on the remaining
-  regional, vendor-seed, and drift order.
+  aggregate-only interpretation boundary. Its baseline, candidate disposition,
+  and fixed-observation decision are complete. The protected-main live replay
+  remains before vendor-seed and drift work.
 
 ### Fixed
 

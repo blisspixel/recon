@@ -14,9 +14,10 @@ tracked separately from product work.
 > capsules and the evidence-backed ADR-0014 decision to defer OKF v0.2 until a
 > named consumer exists; its full, protected-main, publication, provenance, and
 > channel-parity gates passed. **The next build priority is v2.14:** the rank
-> round is complete, and the regional source and frame contract is frozen
-> before collection. Run and disposition that round next, followed by
-> independent vendor-seed and drift rounds.
+> round is complete. The regional baseline and fixed-observation decision are
+> also complete, with six bounded provider-family additions accepted. Replay
+> the same frozen frame from clean protected main next, followed by independent
+> vendor-seed and drift rounds.
 > The ordered version path through v3.0 is summarized in
 > [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
@@ -37,9 +38,10 @@ trust priority because output truthfulness outranks features; its current
 and retains both exact compatibility pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. The dependency-unblocked work now
-maps to **v2.14.0**: preserve the closed rank-round decision and the frozen
-regional source and frame commitments, then run regional, vendor-seed, and
-drift rounds. New claim-surface drift reopens priority 1. Version milestones
+maps to **v2.14.0**: preserve the closed rank-round decision and the regional
+baseline plus fixed-observation decision, replay that frame from clean
+protected main, then run vendor-seed and drift rounds. New claim-surface drift
+reopens priority 1. Version milestones
 through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
 
@@ -48,7 +50,7 @@ through v3.0:
 | [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete on 2026-08-01. The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 27 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
-| [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts now make independent catalog measurement the next unblocked product work. | Convenience, unseen-vertical, and rank rounds are complete. The regional source and 1,000-row frame contract is frozen before collection. Vendor-seed and drift evidence remains open. | Run and disposition the frozen regional round; freeze each later round before collection; complete vendor-seed and drift with aggregate evidence, positive and lookalike-negative fixtures, and explicit promoted, rejected, deferred, unavailable, and unmeasured outcomes. |
+| [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts now make independent catalog measurement the next unblocked product work. | Convenience, unseen-vertical, and rank rounds are complete. The regional baseline and fixed-observation decision are complete; its protected-main live replay remains open. Vendor-seed and drift evidence also remains open. | Replay the exact frozen regional frame from clean protected main; freeze each later round before collection; complete vendor-seed and drift with aggregate evidence, positive and lookalike-negative fixtures, and explicit promoted, rejected, deferred, unavailable, and unmeasured outcomes. |
 | [5. Optional cloud access and scale-out](#5-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the core evidence, compatibility, and catalog-quality tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
 Everything blocked behind these, and the gate that unblocks each, is in
@@ -539,9 +541,10 @@ available from the completed priority 2 matrix.
 The immediate execution slice is therefore explicit even though its detailed
 characterization section appears later in this document:
 
-1. Preserve the closed v2.14 rank-round decision and the frozen regional source
-   and 1,000-row frame commitments. Run and disposition the regional round,
-   followed by the vendor-seed and drift contracts. Name the independent input
+1. Preserve the closed v2.14 rank-round decision and the regional baseline plus
+   accepted fixed-observation decision. Merge the exact catalog through
+   protected main and replay the frozen 1,000-row regional frame, followed by
+   the vendor-seed and drift contracts. Name the independent input
    stratum, or frozen prior sample for drift, plus eligibility and deduplication
    rules, observation opportunities, collection options, catalog and code
    digests, aggregate measures, promotion and regression budgets, and
@@ -840,7 +843,7 @@ known-cluster unit, observation opportunities, CT and direct-probe settings,
 catalog and code digests, aggregate outputs, promotion and regression budgets,
 and disclosure review. A result may not retroactively change those choices.
 
-The catalog currently holds 864 entries across 687 unique slugs, with 1,075
+The catalog currently holds 868 entries across 691 unique slugs, with 1,091
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
@@ -860,9 +863,11 @@ CNAME chains, apex CNAME, non-SPF TXT, SPF targets, MX, NS, CAA, DMARC RUA,
 bounded owner-qualified TXT, and bounded SRV observations. An empty queue is
 not evidence of completeness. The unseen vertical holdout is complete without
 post-holdout tuning. The independent rank round is complete. The regional
-source mapping and 1,000-row five-stratum frame are frozen in the
-[regional declaration](catalog-regional-round-declaration.md), but collection
-and disposition remain open. Vendor-seed and drift rounds also remain open.
+baseline completed all 1,000 rows, and the aggregate-only
+[interim result](../validation/2026-08-13-catalog-regional-round.md) records an
+accepted fixed-observation decision for six documented provider families. Its
+protected-main live replay remains open. Vendor-seed and drift rounds also
+remain open.
 Evaluated apexes, organization names,
 tenant identifiers, target-owned record values, and per-domain rows remain off
 GitHub. Generic provider patterns, provider-owned references, reserved synthetic
@@ -881,8 +886,9 @@ rank round is closed with a membership-bound four-band aggregate, four bounded
 promoted families, explicit dispositions, and a fixed-observation
 zero-regression decision in the aggregate-only
 [rank-round result](../validation/2026-08-13-catalog-rank-round.md). The
-regional source and frame contract is frozen; its observation and disposition
-pass is next. The convenience baseline and unseen vertical holdout remain
+regional baseline and fixed-observation disposition are complete; replaying the
+same frame from clean protected main is next. The convenience baseline and
+unseen vertical holdout remain
 supporting evidence, not substitutes for those independent rounds. Complete
 v2.14 only when every
 frozen round has an aggregate result and every candidate has an explicit

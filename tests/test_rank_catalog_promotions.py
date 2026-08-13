@@ -40,7 +40,10 @@ class HostPromotionCase:
 @pytest.mark.parametrize(
     ("slug", "expected_patterns"),
     [
-        ("cloudflare-email-routing", {("mx", "mx.cloudflare.net")}),
+        (
+            "cloudflare-email-routing",
+            {("mx", "mx.cloudflare.net"), ("spf", "_spf.mx.cloudflare.net")},
+        ),
         ("alibaba-dns", {("ns", "alidns.com")}),
         (
             "alibaba-alb",
@@ -74,7 +77,7 @@ def test_rank_promotions_have_current_reference_and_review_date(
             "10 route1.mx.cloudflare.net.",
             "10 route1.mx.cloudflare.net.example.com.",
             "cloudflare-email-routing",
-            "Cloudflare Email Routing",
+            "Cloudflare Email Service",
             "mx.cloudflare.net",
         ),
         HostPromotionCase(

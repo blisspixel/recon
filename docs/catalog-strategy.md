@@ -20,7 +20,7 @@ surface and independently supported precision are.
 
 ## How the catalog grows today
 
-The catalog carries 864 entries and 1,075 detection rules across nine populated
+The catalog carries 868 entries and 1,091 detection rules across nine populated
 types: `cname_target`, `cname`, `txt`, `spf`, `dmarc_rua`, `mx`, `ns`, `caa`,
 and `subdomain_txt`. The grammar and runtime also support `srv`, but the built-in
 catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
@@ -42,9 +42,10 @@ The loop is disciplined and effective, but the available corpus remains a
 convenience sample with selection bias. The first frozen typed baseline is
 recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
-the independent rank round is complete, the regional source and frame contract
-is frozen before collection, vendor-seed and drift rounds remain open, and most
-legacy detections still lack a freshness date.
+the independent rank round is complete, and the regional baseline plus
+fixed-observation decision are complete. Its protected-main live replay,
+vendor-seed, and drift rounds remain open, and most legacy detections still lack
+a freshness date.
 
 Current round status:
 
@@ -53,7 +54,7 @@ Current round status:
 | Convenience-sample baseline | Complete, aggregate-only memo published |
 | Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
 | Rank bands | Complete; four-band aggregate, dispositions, and zero-regression decision published |
-| Regional / ccTLD | Official sources and independent 1,000-row frame frozen before collection |
+| Regional / ccTLD | Baseline and fixed-observation decision complete; protected-main live replay pending |
 | Vendor seed | One documented Webflow owner seed exercised; broader round pending |
 | Drift | Pending |
 
@@ -133,8 +134,12 @@ stratified aggregate, candidate dispositions, and fixed-observation
 zero-regression decision are published in the aggregate-only
 [rank-round result](../validation/2026-08-13-catalog-rank-round.md). The official
 source mapping and independent five-stratum frame are frozen in the
-[regional declaration](catalog-regional-round-declaration.md); collection and
-disposition are next. The rank result does not substitute for them.
+[regional declaration](catalog-regional-round-declaration.md). The
+aggregate-only
+[interim result](../validation/2026-08-13-catalog-regional-round.md) records the
+complete baseline and accepted fixed-observation decision. A protected-main
+live replay remains before the round closes. The rank result does not
+substitute for it.
 
 ## 2. Measurement: coverage, recall, precision
 
@@ -298,9 +303,10 @@ measurement round.
 
 1. Preserve the completed rank-stratified aggregate, candidate dispositions,
    and fixed-observation zero-regression decision.
-2. Run and disposition the frozen regional frame from the
-   [regional declaration](catalog-regional-round-declaration.md). Keep CT and
-   direct probes off as declared.
+2. Preserve the regional baseline and accepted fixed-observation decision from
+   the [interim result](../validation/2026-08-13-catalog-regional-round.md).
+   Merge the exact catalog through protected main, then replay the frozen frame
+   with CT and direct probes off as declared.
 3. Freeze and run disjoint vendor-seed holdouts. Admit a candidate only with an
    identifier, exact record type and pattern, source or disclosure-safe
    aggregate basis, and explicit pending, promoted, rejected, or deferred

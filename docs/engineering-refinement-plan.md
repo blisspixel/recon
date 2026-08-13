@@ -401,8 +401,8 @@ Risk: concurrency and brittle-benchmark risk
 
 ## Track 6: Catalog Quality and Lifecycle
 
-Status: active v2.14 priority; rank closed, regional frame frozen before
-collection
+Status: active v2.14 priority; rank closed, regional baseline and
+fixed-observation decision complete, protected-main replay pending
 Dependencies: Track 3 measurement definitions
 Risk: false-positive and regional-selection bias
 
@@ -410,8 +410,8 @@ Risk: false-positive and regional-selection bias
   expansion.
 - Ratchet current public references and `verified` dates. New undated rules are
   not accepted.
-- Run and disposition the frozen regional frame before preparing vendor-seed
-  or drift collection.
+- Replay the exact frozen regional frame from clean protected main before
+  preparing vendor-seed or drift collection.
 - Prioritize regional and non-CNAME gaps by aggregate frequency only within the
   declared observation opportunities and recurrence thresholds.
 - Resolve each current candidate as promoted, rejected, or explicitly
@@ -563,8 +563,9 @@ Execute this track in four bounded phases:
    blocking maintenance gates.
 2. Preserve the completed stable-v1 characterization, v2.11 structural stop,
    v2.12 compatibility transition, and shipped v2.13 observation capsules.
-3. Preserve the closed v2.14 rank decision and frozen regional source and frame
-   commitments. Run and disposition the regional round next.
+3. Preserve the closed v2.14 rank decision and regional baseline plus accepted
+   fixed-observation decision. Replay the exact frozen regional frame from
+   clean protected main next.
 4. Freeze and run disjoint vendor-seed holdouts, then re-observe the frozen
    prior sample as the drift round. Keep all public evidence aggregate-only.
 5. Backfill review dates only in families examined through those rounds, and
