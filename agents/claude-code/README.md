@@ -2,6 +2,12 @@
 
 This directory packages recon as a [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins): one install wires up the MCP server and ships a skill that teaches Claude *when* and *how* to use recon.
 
+This is Claude Code's client-specific plugin format. It is not the portable
+root `plugin.json` plus `mcp.json` layout defined by the
+[Agent Plugins v1.0.0 working draft](https://agent-plugins.org/specification).
+The roadmap tracks that format separately so neither compatibility claim is
+ambiguous.
+
 ## What's inside
 
 ```

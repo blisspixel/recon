@@ -10,6 +10,7 @@ from rich.console import Console
 
 from recon_tool.bayesian import infer_from_tenant_info
 from recon_tool.cache import tenant_info_from_dict, tenant_info_to_dict
+from recon_tool.cache_insights import validate_insight_claim_coverage
 from recon_tool.cli.lookup import _build_explanations
 from recon_tool.collection_view import collection_observable_evidence, collection_observable_info
 from recon_tool.constants import SVC_BIMI, SVC_DMARC, SVC_MTA_STS, SVC_SPF_STRICT
@@ -17,7 +18,7 @@ from recon_tool.email_security import signal_context_from_tenant_info
 from recon_tool.explanation import build_explanation_dag
 from recon_tool.formatter import format_tenant_dict, format_tenant_markdown, render_tenant_panel
 from recon_tool.formatter.classify import provider_line
-from recon_tool.insights import generate_insights
+from recon_tool.insights import InsightContext, generate_insight_claims, generate_insights
 from recon_tool.merger import merge_results
 from recon_tool.models import ConfidenceLevel, EvidenceRecord, PosteriorObservation, SourceResult, TenantInfo
 from recon_tool.posture import analyze_posture
@@ -56,6 +57,72 @@ def _info(*, degraded_sources: tuple[str, ...]) -> TenantInfo:
 def _empty_dns_insights() -> tuple[str, ...]:
     """Return the real generator output for a domain with no email evidence."""
     return tuple(generate_insights(set(), set(), None, None, 0))
+
+
+def test_related_inventory_preserves_exact_pre_enrichment_sparse_lineage() -> None:
+    evidence = tuple(
+        EvidenceRecord(
+            source_type="CNAME",
+            raw_value=f"fixture-{index}.invalid",
+            rule_name=f"Synthetic Service {index}",
+            slug=f"synthetic-{index}",
+        )
+        for index in range(3)
+    )
+    before_enrichment = InsightContext.from_sets(
+        set(),
+        set(),
+        None,
+        None,
+        0,
+        evidence=evidence,
+        evidence_bound=True,
+    )
+    claims = tuple(generate_insight_claims(before_enrichment))
+    info = TenantInfo(
+        tenant_id=None,
+        display_name=None,
+        default_domain=None,
+        queried_domain="alpha.invalid",
+        services=tuple(record.rule_name for record in evidence),
+        insights=tuple(claim.text for claim in claims),
+        insight_claims=claims,
+        evidence=evidence,
+        related_domains=("related.invalid",),
+    )
+
+    visible = collection_observable_info(info)
+
+    assert visible.insight_claims == claims
+    validate_insight_claim_coverage(info)
+
+
+def test_scope_only_sparse_exception_requires_related_enrichment() -> None:
+    evidence = tuple(
+        EvidenceRecord(
+            source_type="CNAME",
+            raw_value=f"fixture-{index}.invalid",
+            rule_name=f"Synthetic Service {index}",
+            slug=f"synthetic-{index}",
+        )
+        for index in range(3)
+    )
+    context = InsightContext.from_sets(set(), set(), None, None, 0, evidence=evidence, evidence_bound=True)
+    claims = tuple(generate_insight_claims(context))
+    info = TenantInfo(
+        tenant_id=None,
+        display_name=None,
+        default_domain=None,
+        queried_domain="alpha.invalid",
+        services=tuple(record.rule_name for record in evidence),
+        insights=tuple(claim.text for claim in claims),
+        insight_claims=claims,
+        evidence=evidence,
+    )
+
+    assert collection_observable_info(info).insight_claims != claims
+    with pytest.raises(ValueError, match="incomplete or inconsistent"):
+        validate_insight_claim_coverage(info)
 
 
 _RETIRED_INSIGHTS = (

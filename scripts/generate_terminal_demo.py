@@ -27,20 +27,21 @@ _TRANSCRIPT_END = "<!-- terminal-demo-transcript:end -->"
 def demo_tenant_info() -> TenantInfo:
     """Return a realistic public-output fixture using only reserved names.
 
-    Globex is an obviously fictional demo company (not a real customer).
-    The queried coordinate stays under the IETF reserved ``.invalid``
-    namespace so the fixture never names a real registrable domain.
+    Example Industries is a fictional demo company, not a real customer. The
+    queried coordinate is IANA-reserved ``example.com``, so the fixture reads
+    like a familiar domain without naming a real registrable one.
     """
     return TenantInfo(
         tenant_id="a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-        display_name="Globex Ltd",
-        default_domain="globex.onmicrosoft.invalid",
-        queried_domain="globex.invalid",
+        display_name="Example Industries Ltd",
+        default_domain="example-industries.onmicrosoft.example.com",
+        queried_domain="example.com",
         confidence=ConfidenceLevel.HIGH,
         region="NA",
         sources=("dns_records", "oidc_discovery", "userrealm", "cert_transparency"),
         services=(
             "Microsoft 365",
+            "Google Workspace",
             "Proofpoint",
             SVC_DMARC,
             SVC_DKIM,
@@ -49,12 +50,17 @@ def demo_tenant_info() -> TenantInfo:
             "Okta",
             "Slack",
             "Atlassian (Jira/Confluence)",
+            "GitHub",
+            "Zoom",
             "Cloudflare",
             "AWS Route 53",
             "Wiz",
+            "Snowflake",
+            "Datadog",
         ),
         slugs=(
             "microsoft365",
+            "google-workspace",
             "proofpoint",
             "dmarc",
             "dkim",
@@ -63,24 +69,29 @@ def demo_tenant_info() -> TenantInfo:
             "okta",
             "slack",
             "atlassian",
+            "github",
+            "zoom",
             "cloudflare",
             "aws-route53",
             "wiz",
+            "snowflake",
+            "datadog",
         ),
         auth_type="Federated",
         dmarc_policy="reject",
         domain_count=3,
         tenant_domains=(
-            "globex.invalid",
-            "globex.onmicrosoft.invalid",
-            "globex-mail.invalid",
+            "example.com",
+            "example-industries.onmicrosoft.example.com",
+            "mail.example.com",
         ),
         related_domains=(
-            "login.globex.invalid",
-            "status.globex.invalid",
-            "support.globex.invalid",
+            "login.example.com",
+            "status.example.com",
+            "support.example.com",
         ),
         insights=(
+            "Provider indicators co-observed: Microsoft 365, Google Workspace",
             "Federated identity observed; identity-vendor indicators: Okta",
             "Email security: observed controls: DMARC reject, DKIM, SPF strict, MTA-STS",
             "MX gateway observed: Proofpoint",
@@ -88,36 +99,41 @@ def demo_tenant_info() -> TenantInfo:
         evidence=(
             EvidenceRecord(
                 "MX",
-                "10 globex-invalid.mail.protection.outlook.invalid",
+                "10 synthetic-example.mail.protection.outlook.com",
                 "Microsoft 365",
                 "microsoft365",
             ),
-            EvidenceRecord("MX", "20 mx.proofpoint.invalid", "Proofpoint", "proofpoint"),
+            EvidenceRecord("MX", "20 mx.proofpoint.example", "Proofpoint", "proofpoint"),
             EvidenceRecord("DMARC", "v=DMARC1; p=reject; pct=100", SVC_DMARC, "dmarc"),
             EvidenceRecord(
                 "DKIM",
-                "selector1._domainkey.globex.invalid",
+                "selector1._domainkey.example.com",
                 SVC_DKIM,
                 "dkim",
             ),
-            EvidenceRecord("SPF", "v=spf1 include:mail.invalid -all", SVC_SPF_STRICT, "spf-strict"),
+            EvidenceRecord("SPF", "v=spf1 include:mail.example -all", SVC_SPF_STRICT, "spf-strict"),
             EvidenceRecord("MTA_STS_POLICY", "mode: enforce", SVC_MTA_STS, "mta-sts-enforce"),
-            EvidenceRecord("CNAME", "login.globex.invalid -> login.vendor.invalid", "Okta", "okta"),
+            EvidenceRecord("CNAME", "login.example.com -> login.vendor.example.com", "Okta", "okta"),
+            EvidenceRecord("TXT", "google-site-verification=synthetic", "Google Workspace", "google-workspace"),
             EvidenceRecord("TXT", "slack-domain-verification=synthetic", "Slack", "slack"),
             EvidenceRecord(
                 "CNAME",
-                "status.globex.invalid -> status.vendor.invalid",
+                "status.example.com -> status.vendor.example.com",
                 "Atlassian (Jira/Confluence)",
                 "atlassian",
             ),
+            EvidenceRecord("TXT", "github-challenge-example=synthetic", "GitHub", "github"),
+            EvidenceRecord("TXT", "ZOOM_verify_synthetic", "Zoom", "zoom"),
             EvidenceRecord(
                 "CNAME",
-                "support.globex.invalid -> edge.vendor.invalid",
+                "support.example.com -> edge.vendor.example.com",
                 "Cloudflare",
                 "cloudflare",
             ),
-            EvidenceRecord("NS", "ns-001.dns.invalid", "AWS Route 53", "aws-route53"),
+            EvidenceRecord("NS", "ns-001.dns.example", "AWS Route 53", "aws-route53"),
             EvidenceRecord("TXT", "wiz-domain-verification=synthetic", "Wiz", "wiz"),
+            EvidenceRecord("TXT", "snowflake-verification=synthetic", "Snowflake", "snowflake"),
+            EvidenceRecord("TXT", "datadog-domain-verification=synthetic", "Datadog", "datadog"),
         ),
         evidence_confidence=ConfidenceLevel.HIGH,
         inference_confidence=ConfidenceLevel.HIGH,
@@ -126,6 +142,8 @@ def demo_tenant_info() -> TenantInfo:
             ("proofpoint", "high"),
             ("okta", "medium"),
             ("cloudflare", "medium"),
+            ("google-workspace", "medium"),
+            ("snowflake", "medium"),
         ),
         mta_sts_mode="enforce",
         primary_email_provider="Microsoft 365",
@@ -140,7 +158,7 @@ def _render_demo(console: Console) -> None:
     """Write the fixed command and real default panel to one console."""
     prompt = Text("$ ", style="bold green")
     prompt.append("recon ", style="bold white")
-    prompt.append("globex.invalid", style="bold cyan")
+    prompt.append("example.com", style="bold cyan")
     console.print(prompt)
     console.print(render_tenant_panel(demo_tenant_info()))
 
@@ -181,9 +199,9 @@ def render_terminal_demo_svg() -> str:
     svg = svg.replace(
         "    <style>\n",
         '    <title id="recon-demo-accessible-title">recon synthetic terminal demo</title>\n'
-        '    <desc id="recon-demo-accessible-description">Synthetic output for Globex Ltd '
-        "(globex.invalid) showing public email, identity, cloud, security, collaboration, "
-        "related-domain, and insight observations.</desc>\n"
+        '    <desc id="recon-demo-accessible-description">Synthetic output for Example Industries Ltd '
+        "(example.com) showing public email, identity, cloud, security, data and "
+        "analytics, collaboration, related-domain, and insight observations.</desc>\n"
         "    <style>\n",
         1,
     )

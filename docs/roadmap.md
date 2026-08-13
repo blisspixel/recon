@@ -82,6 +82,7 @@ current debt without turning every refinement into feature work.
 | Security | Unresolved HTTP destinations fail closed; rejected values and unexpected details stay out of default output; persisted inputs, corpus files, local catalog text, and default cache payload work are bounded; empty catalog filters cannot bypass compact defaults; release verification binds artifacts and recovery commands to exact status, workflow, tag, signer, and commit evidence; the installed dependency auditor resolves under Python isolated mode; pull requests and pushes to `main` run CodeQL while weekly and manual main scans remain | Ratchet the remote SAST requirement from its evidence-backed transition floor of 7 to 10 only after the public Scorecard window reports successful supported SAST checks for every sampled merged pull request; do not backfill history for the metric |
 | Accessibility | `--plain` is shipped; help uses complete linear output when needed; welcome alignment is content-aware at ordinary widths; catalog and cache rows preserve labels when narrow; color is never the only status channel | Keep both paths complete; do not replace the parser or hide specialist controls |
 | Documentation accuracy | README, MCP quick starts, stability, operational, security, generated CLI, release, catalog, cache, corpus, agent, schema, example, snapshot, and test surfaces use reserved target identities or disclosure-safe aggregates; the release gate rejects the retired target vocabulary | Keep eventual machine diagnostics separate from human output until versioned contracts are justified; retain manual review for previously unseen organization-shaped prose and preserve provider definitions |
+| Interchange portability | Current agent scaffolds use native client layouts, and versioned JSON is the structured runtime contract. Agent Plugins v1.0.0 remains a working draft; OKF v0.2 is a knowledge format rather than a domain-specific runtime schema. | Test a schema-pinned portable plugin during the v2.15 client evaluation. During v2.13, either defer OKF for lack of a named consumer or define an additive caller-owned projection over stable observation capsules. Do not claim conformance before validation or replace JSON. |
 
 ## Priority Order
 
@@ -283,7 +284,12 @@ Detailed work and rollback criteria live in
 Status: specified, decision rule frozen, measurement part-run. The network-free,
 corpus-free half of the Phase 1 baseline is frozen in
 [2026-08-05-quality-baseline-scorecard.md](../validation/2026-08-05-quality-baseline-scorecard.md);
-the corpus- and network-bound channels and the ablation itself have not started.
+the aggregate-only stable-v1 network characterization is complete in the
+[2026-08-12 live-characterization memo](../validation/2026-08-12-stable-v1-live-characterization.md).
+The population, two-stage sampling mechanism, eligibility window, cluster rule,
+public HMAC contexts, private-key commitment, and private-frame commitment are frozen in the
+[v2.11 frame declaration](quality-evaluation-frame-declaration.md). The private
+labeled evaluation and ablation itself have not started.
 Depends on the claim taxonomy from priority 1.
 
 The phase order, promotion evidence, and stop rules are summarized in the
@@ -321,9 +327,12 @@ Work:
   evidence, not as a reason to adjust the decision rule after seeing results.
 - Require each future source, inference, catalog, or graph change to name the
   metric it should improve and the regression budget it must preserve.
-- Run the stable-v1 resolver, allocation, CT-value, and schema characterization
-  before completing the scorecard. It supplies performance inputs to this
-  priority; apply stable-v2 deltas from the completed MCP matrix separately.
+- Keep the completed stable-v1 resolver, allocation, CT-value, and independent
+  Draft 2020-12 schema characterizations as blocking baseline inputs. The live
+  convenience sample completed 50 of 50 no-CT contract rows and 47 of 50 CT
+  rows, with three bounded timeouts and no product-contract failure. It is
+  performance and degradation evidence, not outcome or population evidence.
+  Apply stable-v2 deltas from the completed MCP matrix separately.
 
 Primary evaluation design:
 
@@ -509,10 +518,35 @@ been validated against a real provider context.
 
 ## Next
 
-These tracks follow the top three in dependency order. The stable-v1 portion of
-the async and schema characterization is a supporting input to priority 3 and
-runs before its scorecard; stable-v2 deltas are available from the completed
-priority 2 matrix.
+These tracks follow the top three in dependency order. The stable-v1 async and
+schema characterizations are completed supporting inputs to priority 3;
+stable-v2 deltas are available from the completed priority 2 matrix.
+
+The immediate execution slice is therefore explicit even though its detailed
+characterization section appears later in this document:
+
+1. Keep the completed aggregate-only stable-v1 live characterization and
+   independent schema characterization blocking. The dated live memo records
+   50 of 50 no-CT and 47 of 50 CT product-contract rows without identifiers.
+2. Keep the completed public sampling-frame definition and private-frame digest
+   immutable. After the declaration is publicly committed and its eligibility
+   window opens, collect the preregistered minimum of 155 reference-positive
+   and 183 reference-negative eligible post-cluster units.
+3. Run the frozen four-arm ablation, publish only the permitted aggregate memo,
+   and close v2.11 with its predeclared decision.
+4. Apply that decision as v2.12 before promoting new interpretation or agent
+   surfaces. Independent catalog-round preparation may continue, but promotion
+   waits for its own v2.14 gates.
+
+### Apply the v2.11 result as v2.12
+
+The fusion decision is not deferred to the final phase of the broader quality
+plan. Immediately after the v2.11 aggregate memo, align the primary path,
+defaults, documentation, and tests with the frozen result. Keep fusion primary
+only if both co-primary bounds and the zero-regression safeguard pass. A
+negative or inconclusive result demotes it to an explicitly advanced diagnostic
+without changing the rule after unblinding. Preserve stable JSON and MCP
+compatibility while making that product-positioning change.
 
 ### Separate observation change from interpretation change
 
@@ -551,7 +585,11 @@ Acceptance evidence:
 - every confirmed fact delta names comparable source roles and observation
   windows;
 - storage remains local and caller-owned; monitoring and longitudinal retention
-  require a separate privacy and architecture review.
+  require a separate privacy and architecture review;
+- a decision memo either defers Open Knowledge Format v0.2 for lack of a named
+  consumer or defines an additive projection whose `sources`, `generated`,
+  `verified`, lifecycle, and freshness fields never upgrade the underlying
+  claim. The structured capsule and recon JSON remain authoritative.
 
 ### Prototype provenance-constrained claim robustness after the baseline
 
@@ -709,7 +747,7 @@ size, and validation time bounded.
 ### Gate native acceleration on product-shaped evidence
 
 Keep the default runtime and distribution pure Python under
-[ADR-0010](adr/0010-evidence-gated-native-acceleration.md). First complete the
+[ADR-0010](adr/0010-evidence-gated-native-acceleration.md). Use the completed
 stable-v1 stage characterization above, then measure Python-side improvements
 to catalog loading, regex dispatch, repeated inference calculations, and any
 other observed local hotspot. Do not infer end-to-end value from a kernel or
@@ -751,8 +789,9 @@ An optional Rust extension may enter an isolated prototype only when a stable,
 deterministic, coarse-grained stage remains above 250 ms p95 on a representative
 warm fixture or at least 20 percent of warm end-to-end p95 after a Python
 optimization pass. These are conservative provisional governance floors, not
-product SLOs; the stable-v1 baseline must replace them with operation-specific
-budgets before a prototype. They exclude microhotspots, require Amdahl-relevant
+product SLOs; a clean-machine, stage-specific follow-up to the stable-v1
+baseline must replace them with operation-specific budgets before a prototype.
+They exclude microhotspots, require Amdahl-relevant
 pressure, and demand enough improvement to repay native release maintenance.
 Promotion requires at least a 3 times stage-p95 improvement
 and also a 20 percent warm end-to-end p95 improvement, 25 percent sustained
@@ -802,6 +841,21 @@ See [catalog-strategy.md](catalog-strategy.md).
 ### Simplify operator and agent discovery using measurements
 
 Separate primary workflows from specialist workflows in documentation now.
+Treat portable packaging as a separate axis from tool-list context cost. The
+existing `agents/claude-code/` bundle uses Claude Code's native
+`.claude-plugin/plugin.json` and `.mcp.json` layout; it is not a portable Agent
+Plugins package.
+
+During the v2.15 client evaluation, pin the Agent Plugins specification version
+before implementation. A conformant v1.0.0 candidate has root `plugin.json` and
+`mcp.json` documents carrying the matching canonical schemas, immediate skill
+children under `skills/`, explicit MCP transport types, and offline schema
+validation. Exercise install, discovery, launch, failure reporting, and update
+behavior in representative listed clients. Preserve the native installers and
+Claude Code bundle until the portable path proves equivalent. Because v1.0.0 is
+a working draft, do not make an unqualified compatibility claim or let draft
+churn change the stable CLI, JSON, or MCP contracts.
+
 The dated CLI measurement is complete. Against the published v2.5.5 baseline,
 native task panels reduce `lookup --help` from 154 to 109 lines at 80 columns
 and from 261 to 180 lines at 60 columns. Every canonical option remains visible
@@ -932,6 +986,9 @@ roadmap tracks at least:
   rate;
 - marginal CT signal gain relative to latency cost;
 - MCP discovery bytes and representative workflow context cost;
+- portable Agent Plugins schema, discovery, and launch conformance, plus
+  client-specific install and update evidence, when that candidate is
+  evaluated;
 - deterministic CLI, JSON, and MCP behavior;
 - the enforced 90.2 percent branch-aware project gate, above the 80 percent user
   bar, with no coverage regression;
@@ -1015,8 +1072,13 @@ generated-artifact drift gates.
 
 ## Current External Basis
 
-Checked through 2026-07-28 against primary sources and recent research:
+Checked through 2026-08-12 against primary sources and recent research:
 
+- [Agent Plugins v1.0.0 working-draft specification](https://agent-plugins.org/specification)
+- [Agent Plugins compatible clients](https://agent-plugins.org/compatible-clients)
+- [Open Knowledge Format v0.2 specification](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+- [Google Cloud OKF v0.2 trust-signals announcement](https://cloud.google.com/blog/products/data-analytics/okf-v0-2-adds-trust-signals/)
+- [Google Cloud OKF announcement, which describes the superseded v0.1 form](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/)
 - [MCP 2026-07-28 release candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
 - [MCP current documentation](https://modelcontextprotocol.io/docs/getting-started/intro)
 - [MCP Python SDK release history](https://pypi.org/project/mcp/)

@@ -479,6 +479,24 @@ def test_cache_round_trip_preserves_exact_insight_claims() -> None:
     assert restored.insight_claims[0].supporting_evidence == (evidence,)
 
 
+def test_cache_round_trip_preserves_claim_evidence_without_catalog_slug() -> None:
+    evidence = EvidenceRecord("HTTP", "NameSpaceType=Federated", "GetUserRealm", "")
+    claim = InsightClaim(
+        text="Federated identity observed",
+        generator_rule_id="_auth_insights",
+        supporting_evidence=(evidence,),
+    )
+    info = _info(
+        insights=(claim.text,),
+        insight_claims=(claim,),
+        evidence=(evidence,),
+    )
+
+    restored = tenant_info_from_dict(tenant_info_to_dict(info))
+
+    assert restored.insight_claims == (claim,)
+
+
 def test_gateway_claim_attaches_only_gateway_mx_evidence() -> None:
     gateway = EvidenceRecord("MX", "10 mx.proofpoint.invalid", "Proofpoint", "proofpoint")
     provider = EvidenceRecord(

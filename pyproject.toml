@@ -113,6 +113,10 @@ agentic-validation = [
 ]
 dev = [
     "hypothesis>=6.0",
+    # Independent Draft 2020-12 validation for the published JSON contract.
+    # Keep this direct even while MCP also pulls it transitively: the schema
+    # gate is a first-class development requirement, not an SDK side effect.
+    "jsonschema>=4.23,<5",
     # The Markdown gate wraps v4 inline rules to retain exact source offsets.
     # Verify that integration before allowing a new parser major version.
     "markdown-it-py>=4.0,<5",
