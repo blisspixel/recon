@@ -54,6 +54,12 @@ field changes.
   and a zero-regression counterfactual. Regional evidence is the next v2.14
   round.
 
+### Fixed
+
+- GitHub now renders every diagram and equation in the correlation guide. The
+  documentation gate rejects Mermaid style names that collide with parser
+  keywords and math macros that GitHub replaces with visible error panels.
+
 ## [2.13.0] - 2026-08-13
 
 ### Tool Surface Changes
