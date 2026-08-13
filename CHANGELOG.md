@@ -46,6 +46,10 @@ field changes.
   quotas across ccTLD-delegation groups, commits source and implementation
   digests, excludes declared prior corpora, and makes the non-geolocation
   interpretation boundary explicit before target contact.
+- A bounded regional-source freezer archives the exact official IANA root-zone
+  and UN M49 English-table responses, derives their ASCII ccTLD intersection,
+  and commits raw-source, mapping, and implementation digests without
+  contacting any sampled namespace.
 
 ### Changed
 
