@@ -33,6 +33,7 @@ from recon_tool.cli.shared import help_markup_mode as _help_markup_mode
 from recon_tool.cli.shared import is_closed_pipe as _is_closed_pipe
 from recon_tool.cli.shared import positive_finite_float, raise_lookup_error
 from recon_tool.cli.shared import render_usage_rows as _render_usage_rows
+from recon_tool.cli.shared import resolve_fusion_transition as _resolve_fusion_transition
 from recon_tool.cli.shared import silence_closed_standard_streams as _silence_closed_standard_streams
 from recon_tool.cli.signals import signals_app
 from recon_tool.formatter import get_console, get_err_console
@@ -274,6 +275,7 @@ def _print_welcome_banner() -> None:
 
 @app.command(short_help="Look up a domain.")
 def lookup(
+    ctx: typer.Context,
     domain: str = typer.Argument(help="Domain to look up"),
     json_output: bool = typer.Option(
         False,
@@ -417,9 +419,10 @@ def lookup(
         True,
         "--fusion/--no-fusion",
         help=(
-            "Compute per-slug evidence strength plus model-relative Bayesian "
-            "posteriors and uncertainty bands (on by default from v2.0; "
-            "--no-fusion to skip)"
+            "Advanced diagnostic: compute per-slug evidence strength plus "
+            "model-relative Bayesian posteriors and uncertainty bands. v2 "
+            "preserves the implicit enabled default with a transition notice; "
+            "pass --fusion or --no-fusion explicitly for v3-ready behavior."
         ),
         rich_help_panel=_EVIDENCE_HELP_PANEL,
     ),
@@ -523,7 +526,7 @@ def lookup(
             show_gaps=gaps,
         ),
         inference=LookupInferenceOptions(
-            fusion=fusion,
+            fusion=_resolve_fusion_transition(ctx, fusion, explain_dag=explain_dag),
             explain_dag=explain_dag,
             explain_dag_format=explain_dag_format,
         ),
@@ -546,6 +549,7 @@ def lookup(
 
 @app.command(short_help="Look up domains in a file.")
 def batch(
+    ctx: typer.Context,
     file: str = typer.Argument(help="File with one domain per line, or - to read domains from stdin"),
     json_output: bool = typer.Option(
         False,
@@ -624,11 +628,12 @@ def batch(
         True,
         "--fusion/--no-fusion",
         help=(
-            "Compute model-relative Bayesian-network posteriors and "
-            "evidence-responsive uncertainty bands "
-            "over high-level claims for every domain. On by default from v2.0; "
-            "--no-fusion skips it. Adds the posterior_observations field to "
-            "each domain's JSON. Pure post-processing, no extra network calls."
+            "Advanced diagnostic: compute model-relative Bayesian-network "
+            "posteriors and evidence-responsive uncertainty bands over "
+            "high-level claims for every domain. v2 preserves the implicit "
+            "enabled default with a transition notice; pass --fusion or "
+            "--no-fusion explicitly for v3-ready behavior. Pure post-processing, "
+            "with no extra network calls."
         ),
         rich_help_panel=_EVIDENCE_HELP_PANEL,
     ),
@@ -677,7 +682,7 @@ def batch(
             skip_ct=no_ct,
             ndjson=ndjson,
             include_ecosystem=include_ecosystem,
-            fusion=fusion,
+            fusion=_resolve_fusion_transition(ctx, fusion),
             summary=summary,
             summary_schema=summary_schema,
         )

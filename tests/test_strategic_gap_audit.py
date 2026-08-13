@@ -25,10 +25,11 @@ def test_strategic_gap_audit_prioritizes_product_quality_without_runtime_expansi
     text = " ".join(_read(AUDIT).split())
 
     for required in (
-        "The highest-value next build is not runtime expansion",
+        "The highest-value next build is not inference expansion",
         "measured utility, catalog quality, latency and degradation evidence",
         "claim audit and stable MCP matrix remain blocking regression gates",
         "aggregate-safe product-quality baseline",
+        "v2.13 caller-held observation capsule",
         "does not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior",
         "Runtime expansion, broad catalog growth, stable-surface promotion, "
         "and public real-data release remain blocked",

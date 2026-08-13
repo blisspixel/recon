@@ -380,7 +380,7 @@
       ]
     },
     "fusion_enabled": {
-      "description": "True when the default-on evidence-strength and Bayesian-network post-processing ran for this lookup. When false, slug_confidences is an empty object and posterior_observations is an empty array. When true, slug_confidences can still be empty if no retained evidence carries a slug, while posterior_observations carries the network's fixed nodes.",
+      "description": "True when the evidence-strength and Bayesian-network post-processing ran for this lookup. v2 preserves the historical implicit enabled CLI default during the ADR-0013 transition; the explicit advanced MCP tools are unchanged. When false, slug_confidences is an empty object and posterior_observations is an empty array. When true, slug_confidences can still be empty if no retained evidence carries a slug, while posterior_observations carries the network's fixed nodes.",
       "type": "boolean"
     },
     "schema_version": {
