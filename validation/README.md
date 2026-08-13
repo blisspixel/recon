@@ -19,9 +19,12 @@ Committed (generic tooling, no company names):
   diagnostics into a
   private evidence queue, a private revision manifest, and a separate
   aggregate-only coverage report. It covers every bounded catalog record path
-  and never writes a queried namespace into the aggregate report. Schema 1.1
+  and never writes a queried namespace into the aggregate report. Schema 1.2
   reports measured inputs separately from validation, timeout, and lookup
   errors.
+- `prepare_catalog_round.py`: validates a private round plan, reduces every
+  input to a unique registrable apex, and exclusively writes an integrity-bound
+  normalized frame plus its frozen manifest. It performs no network requests.
 - `triage_candidates.py`: programmatic filter on `gaps.json`: drops
   already-fingerprinted patterns, intra-org chains, and one-off noise. The
   output is the LLM-triage-ready candidate list.
@@ -151,8 +154,39 @@ python validation/scan.py \
 python validation/scan.py \
     --corpus validation/corpus-private/consolidated.txt \
     --label monthly-2026-06 \
-    --round-kind drift
+    --round-kind drift \
+    --round-manifest validation/corpus-private/drift-2026-06-manifest.json
 ```
+
+Independent rank, region, vertical, vendor-seed, and drift rounds require a
+frozen manifest before collection. Start with a private JSON plan containing a
+round identifier and question, source name and revision, one or more named
+strata with private input paths, exclusion and overlap policies, CT and direct
+probe settings, recurrence thresholds, and a promotion/regression budget. Then
+prepare the exact corpus and manifest without contacting a target:
+
+```bash
+python validation/prepare_catalog_round.py \
+    --plan validation/corpus-private/rank-2026-08-plan.json \
+    --output-corpus validation/corpus-private/rank-2026-08-frame.txt \
+    --output-manifest validation/corpus-private/rank-2026-08-manifest.json
+
+python validation/scan.py \
+    --corpus validation/corpus-private/rank-2026-08-frame.txt \
+    --round-kind rank \
+    --round-manifest validation/corpus-private/rank-2026-08-manifest.json \
+    --concurrency 4
+```
+
+Preparation fails closed on malformed rows, undeclared fields, cross-stratum
+overlap contrary to policy, direct-probe requests, or existing output files.
+Before target contact, `scan.py` revalidates the manifest digest, normalized
+frame digest and count, stratum counts, collection options, and recurrence
+thresholds. The typed reducer repeats the contract checks and binds every result
+row to the frozen frame. The reviewable aggregate contains counts, fixed
+options, and cryptographic commitments only. Descriptive questions, source and
+stratum labels, policies, decision prose, identifiers, and paths remain in the
+private manifest.
 
 Each run directory ends up with `results.ndjson` by default (`results.json`
 with `--json-array`), `gaps.json`, `candidates.json`, `catalog-gaps.json`,

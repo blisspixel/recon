@@ -10,10 +10,12 @@ tracked separately from product work.
 > JSON, local stdio MCP, bounded collectors, claim-audit gates, MCP dual-SDK
 > matrix, and a verified release path. Tracks 1–2 (evidence integrity, MCP v2)
 > are complete maintenance. Track 3's v2.11 structural decision and compatible
-> v2.12 fusion transition are complete. **Current release candidate is v2.13:**
-> caller-held observation capsules and the evidence-backed ADR-0014 decision to
-> defer OKF v0.2 until a named consumer exists. The remaining work is full
-> validation, protected-main CI, and release proof. The ordered version path through v3.0 is summarized in
+> v2.12 fusion transition are complete. v2.13 shipped caller-held observation
+> capsules and the evidence-backed ADR-0014 decision to defer OKF v0.2 until a
+> named consumer exists; its full, protected-main, publication, provenance, and
+> channel-parity gates passed. **The next build priority is v2.14:** freeze and
+> execute independent rank, regional, vendor-seed, and drift catalog rounds.
+> The ordered version path through v3.0 is summarized in
 > [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
 > default.
@@ -31,9 +33,11 @@ Rank and urgency are different axes. Priority 1 remains the standing highest
 trust priority because output truthfulness outranks features; its current
 27-family audit closed on 2026-08-01. Priority 2 adopted MCP v2 on 2026-07-31
 and retains both exact compatibility pins as blocking checks. Priority 3's
-v2.11 decision and v2.12 compatibility transition are complete. The current
-dependency-unblocked release candidate maps to **v2.13.0**. New claim-surface drift reopens
-priority 1. Version milestones through v3.0:
+v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
+capsule and OKF-deferral release is shipped. The dependency-unblocked work now
+maps to **v2.14.0**: freeze the catalog-round contracts before collection, then
+run independent rank, regional, vendor-seed, and drift rounds. New claim-surface
+drift reopens priority 1. Version milestones through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
 
 | Track | Why it sits here | State today | What closes it |
@@ -41,7 +45,8 @@ priority 1. Version milestones through v3.0:
 | [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete on 2026-08-01. The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 27 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
-| [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the three core evidence and compatibility tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
+| [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts now make independent catalog measurement the next unblocked product work. | Convenience and unseen-vertical rounds are complete. Independent rank, regional, vendor-seed, and drift evidence remains open. | Freeze each round contract before collection; complete all four rounds with aggregate evidence, positive and lookalike-negative fixtures, and explicit promoted, rejected, deferred, unavailable, and unmeasured outcomes. |
+| [5. Optional cloud access and scale-out](#5-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the core evidence, compatibility, and catalog-quality tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
 Everything blocked behind these, and the gate that unblocks each, is in
 [ROADMAP.md](../ROADMAP.md#what-is-deliberately-not-next). The phased execution
@@ -457,11 +462,11 @@ Acceptance evidence:
 Stop rule: do not expand graph or probabilistic machinery without measured
 benefit to a named user outcome.
 
-### 4. Optional operator-hosted access and scale-out
+### 5. Optional operator-hosted access and scale-out
 
 Status: draft and not yet provider-validated, lower priority than the three
-core tracks above. It is intended to be directionally useful, not a validated
-production deployment.
+core tracks above and the active v2.14 catalog track. It is intended to be
+directionally useful, not a validated production deployment.
 
 Why fourth: an authenticated remote endpoint can make recon accessible to
 operators who want to use it from several AI products, shared automation, or a
@@ -523,26 +528,30 @@ been validated against a real provider context.
 
 ## Next
 
-These tracks follow the top three in dependency order. The stable-v1 async and
-schema characterizations are completed supporting inputs to priority 3;
-stable-v2 deltas are available from the completed priority 2 matrix.
+These tracks follow the completed evidence, compatibility, quality-decision,
+and capsule milestones in dependency order. The stable-v1 async and schema
+characterizations remain completed supporting evidence; stable-v2 deltas are
+available from the completed priority 2 matrix.
 
 The immediate execution slice is therefore explicit even though its detailed
 characterization section appears later in this document:
 
-1. Keep the completed aggregate-only stable-v1 live characterization and
-   independent schema characterization blocking. The dated live memo records
-   50 of 50 no-CT and 47 of 50 CT product-contract rows without identifiers.
-2. Keep the unused public sampling-frame definition and private-frame digest
-   immutable as historical preregistration evidence. Do not contact its targets
-   under the voided design.
-3. Keep the dated structural-identifiability memo and its exhaustive CI test
-   blocking. It closes the v2.11 decision without pretending that a
-   non-identifying live run could measure benefit.
-4. Keep the v2.12 non-promotion transition blocking: explicit flags preserve
-   intent across v3, interactive implicit use is warned, and machine output is
-   never contaminated. Independent catalog-round preparation may continue, but
-   promotion waits for its own v2.14 gates.
+1. Freeze the v2.14 contract for each rank, regional, vendor-seed, and drift
+   round before collecting its first row. Name the independent input stratum,
+   or frozen prior sample for drift, plus eligibility and deduplication rules,
+   observation opportunities, collection options, catalog and code digests,
+   aggregate measures, promotion and regression budgets, and disclosure-safe
+   output.
+2. Execute the frozen rounds in order and record promoted, rejected, deferred,
+   unavailable, and unmeasured outcomes. A repeated input is a drift round, not
+   independent coverage evidence.
+3. Require every promoted rule to carry a current provider reference or
+   disclosure-safe basis, a `verified` date, a fictional positive fixture, a
+   lookalike negative, scoped wording, and exact provenance tests.
+4. Keep the completed stable-v1 characterization, structural-identifiability
+   memo, v2.12 transition, and v2.13 capsule contracts blocking while this work
+   proceeds. No catalog result reopens the voided fusion design or upgrades an
+   observation into a population claim.
 
 ### Apply the v2.11 result through v2.12 and v3
 
@@ -568,7 +577,7 @@ current channels from becoming confirmed removals, and dependent scalar
 comparisons from proceeding without both observation opportunities. Exact
 temporal semantics require replayable local observation capsules.
 
-The v2.13 release candidate defines a caller-held capsule containing retained
+The shipped v2.13 release defines a caller-held capsule containing retained
 raw DNS observations, normalized facts and snapshots, per-source opportunity
 states, observation windows, a
 frozen evaluation `as_of`, cache and vantage metadata, collection options,
@@ -578,7 +587,7 @@ raw capsules. Classify comparison results as observation, collection-regime,
 time-evaluation, or interpretation deltas. Store stable signal identifiers
 instead of reconstructing them from human-facing insight prose.
 
-Acceptance evidence in the release candidate:
+Shipped acceptance evidence:
 
 - current v2 delta fields remain compatible and incomplete comparisons name the
   degraded sources and withheld changes;
@@ -602,8 +611,8 @@ Acceptance evidence in the release candidate:
 
 ADR-0014 takes the first disposition. The separate Draft 2020-12 capsule
 schema, CLI guide, deterministic and adversarial tests, and local-only
-retention boundary are implemented. Full canonical and protected-main gates
-remain the release boundary.
+retention boundary shipped after the full canonical, protected-main,
+publication, provenance, and channel-parity gates passed.
 
 ### Prototype provenance-constrained claim robustness after the baseline
 
@@ -820,6 +829,13 @@ cross-platform release contract. Neither exists in the current product.
 
 ### Turn catalog quality into the detection-improvement loop
 
+Status: **next build priority for v2.14**. Freeze each round contract before
+collection. The immutable contract names the question, independent input
+stratum or frozen prior sample for drift, eligibility window, deduplication and
+known-cluster unit, observation opportunities, CT and direct-probe settings,
+catalog and code digests, aggregate outputs, promotion and regression budgets,
+and disclosure review. A result may not retroactively change those choices.
+
 The catalog currently holds 860 entries across 683 unique slugs, with 1,070
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
@@ -844,6 +860,13 @@ remain open. Evaluated apexes, organization names, tenant identifiers,
 target-owned record values, and per-domain rows remain off GitHub. Generic
 provider patterns, provider-owned references, reserved synthetic fixtures, and
 disclosure-safe aggregates are the validation review surface.
+
+The v2.14 release order is rank bands, regional, vendor-seed, then drift. The
+convenience baseline and unseen vertical holdout remain supporting evidence,
+not substitutes for those independent rounds. Complete v2.14 only when every
+frozen round has an aggregate result and every candidate has an explicit
+promoted, rejected, deferred, unavailable, or unmeasured disposition. Broad
+catalog growth remains blocked until that evidence exists.
 
 Do not keep vendor-name-only proposals. A catalog candidate enters the backlog
 only with an exact record type and pattern, a source or disclosure-safe
@@ -1090,6 +1113,7 @@ Checked through 2026-08-12 against primary sources and recent research:
 
 - [Agent Plugins v1.0.0 working-draft specification](https://agent-plugins.org/specification)
 - [Agent Plugins compatible clients](https://agent-plugins.org/compatible-clients)
+- [Agent Skills specification](https://agentskills.io/specification)
 - [Open Knowledge Format v0.2 specification](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
 - [Google Cloud OKF v0.2 trust-signals announcement](https://cloud.google.com/blog/products/data-analytics/okf-v0-2-adds-trust-signals/)
 - [Google Cloud OKF announcement, which describes the superseded v0.1 form](https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/)

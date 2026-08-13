@@ -19,6 +19,7 @@ from recon_tool.models import (
 )
 from recon_tool.sources import dns_base, dns_email, dns_infra
 from validation import catalog_baseline
+from validation.prepare_catalog_round import prepare_catalog_round
 
 
 def _tenant(**overrides: Any) -> TenantInfo:
@@ -326,3 +327,71 @@ def test_main_writes_separate_private_and_aggregate_artifacts(
     assert manifest["measured_input_records"] == 1
     assert manifest["error_records"] == 0
     assert manifest["error_kind_counts"] == {}
+
+
+def _frozen_round_fixture(tmp_path: Path) -> tuple[Path, dict[str, Any]]:
+    source = tmp_path / "rank-band.txt"
+    source.write_text("example.com\n", encoding="utf-8")
+    plan = {
+        "schema_version": 1,
+        "private": True,
+        "round_id": "example.com-private-round",
+        "round_kind": "rank",
+        "question": "Does example.com expose a target-specific catalog gap?",
+        "source": {"name": "example.com private source", "revision": "private-example-revision"},
+        "strata": [{"id": "private", "label": "example.com private stratum", "input": source.name}],
+        "policies": {
+            "exclusions": "Exclude example.com rows used during development.",
+            "overlap": "reject",
+        },
+        "collection": {"ct_enabled": False, "direct_probes_enabled": False},
+        "thresholds": {"minimum_occurrences": 3, "minimum_distinct_namespaces": 2},
+        "promotion_budget": {
+            "metric": "example.com private metric",
+            "minimum_improvement": 0.01,
+            "maximum_regression": 0.0,
+            "decision_rule": "Reject any example.com private-label regression.",
+        },
+    }
+    plan_path = tmp_path / "plan.json"
+    plan_path.write_text(json.dumps(plan), encoding="utf-8")
+    frame_path = tmp_path / "frame.txt"
+    frame, manifest = prepare_catalog_round(
+        plan_path,
+        frame_path,
+        prepared_at="2026-08-13T12:00:00Z",
+    )
+    frame_path.write_bytes(frame)
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+    return manifest_path, manifest
+
+
+def test_public_round_contract_excludes_all_private_descriptive_text(tmp_path: Path) -> None:
+    _, manifest = _frozen_round_fixture(tmp_path)
+
+    public = catalog_baseline._public_round_contract(manifest)
+    rendered = json.dumps(public, sort_keys=True)
+
+    assert "example.com" not in rendered
+    assert "private source" not in rendered
+    assert "private stratum" not in rendered
+    assert "private metric" not in rendered
+    assert public["frame_count"] == 1
+    assert public["stratum_counts"] == [1]
+    assert public["round_kind"] == "rank"
+
+
+def test_round_reducer_rejects_results_outside_frozen_frame(tmp_path: Path) -> None:
+    manifest_path, _ = _frozen_round_fixture(tmp_path)
+    results = tmp_path / "results.ndjson"
+    results.write_text('{"queried_domain":"example.net"}\n', encoding="utf-8")
+
+    with pytest.raises(ValueError, match="does not belong to the frozen round frame"):
+        catalog_baseline._load_round_contract(
+            manifest_path,
+            round_kind="rank",
+            results_path=results,
+            min_count=3,
+            min_distinct_namespaces=2,
+        )

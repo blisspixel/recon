@@ -29,13 +29,20 @@ if str(REPO_ROOT) not in sys.path:
 
 from recon_tool.fingerprint_artifact import load_artifact_sources  # noqa: E402
 from recon_tool.validator import caa_issuer_host, host_has_suffix  # noqa: E402
+from validation.prepare_catalog_round import (  # noqa: E402
+    RoundExecutionOptions,
+    load_round_frame_rows,
+    load_round_manifest,
+    validate_round_contract,
+)
 
 PRIVATE_ROOTS = (
     REPO_ROOT / "validation" / "runs-private",
     REPO_ROOT / "validation" / "live_runs",
     REPO_ROOT / "validation" / "local",
 )
-SCHEMA_VERSION = "1.1"
+SCHEMA_VERSION = "1.2"
+ROUND_CONTRACT_KINDS = frozenset({"rank", "region", "vertical", "vendor-seed", "drift"})
 RECORD_TYPES = (
     "cname_target",
     "cname",
@@ -392,6 +399,85 @@ def _assert_aggregate_safe(value: Any, *, path: str = "root") -> None:
             _assert_aggregate_safe(child, path=f"{path}[{index}]")
 
 
+def _load_round_contract(
+    path: Path,
+    *,
+    round_kind: str,
+    results_path: Path,
+    min_count: int,
+    min_distinct_namespaces: int,
+) -> dict[str, Any]:
+    manifest = load_round_manifest(path)
+    thresholds = manifest["thresholds"]
+    if not isinstance(thresholds, dict) or thresholds.get("minimum_distinct_namespaces") != min_distinct_namespaces:
+        raise ValueError("round manifest distinct-namespace threshold does not match the reducer options")
+    collection = manifest["collection"]
+    frame = manifest["frame"]
+    if not isinstance(collection, dict) or not isinstance(frame, dict) or not isinstance(frame.get("path"), str):
+        raise ValueError("round manifest collection or frame is malformed")
+    validate_round_contract(
+        manifest,
+        corpus=Path(frame["path"]),
+        options=RoundExecutionOptions(
+            round_kind=round_kind,
+            ct_enabled=bool(collection["ct_enabled"]),
+            min_count=min_count,
+            min_distinct_namespaces=min_distinct_namespaces,
+        ),
+    )
+    expected = set(load_round_frame_rows(manifest))
+    observed: set[str] = set()
+    for record in _iter_records(results_path):
+        domain = record.get("domain") if record.get("record_type") == "error" else record.get("queried_domain")
+        if not isinstance(domain, str) or domain not in expected:
+            raise ValueError("result record does not belong to the frozen round frame")
+        if domain in observed:
+            raise ValueError("result records contain a duplicate frozen-frame domain")
+        observed.add(domain)
+    return manifest
+
+
+def _public_round_contract(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Retain aggregate counts and commitments, never private descriptive text."""
+    frame = manifest["frame"]
+    source = manifest["source"]
+    budget = manifest["promotion_budget"]
+    return {
+        "round_kind": manifest["round_kind"],
+        "round_id_digest_sha256": hashlib.sha256(manifest["round_id"].encode("utf-8")).hexdigest(),
+        "question_digest_sha256": hashlib.sha256(manifest["question"].encode("utf-8")).hexdigest(),
+        "source_contract_digest_sha256": hashlib.sha256(
+            json.dumps(
+                {"name": source["name"], "revision": source["revision"]},
+                ensure_ascii=True,
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("ascii")
+        ).hexdigest(),
+        "source_digest_sha256": source["digest_sha256"],
+        "frame_digest_sha256": frame["digest_sha256"],
+        "frame_count": frame["count"],
+        "stratum_counts": [row["count"] for row in manifest["strata"]],
+        "strata_contract_digest_sha256": hashlib.sha256(
+            json.dumps(manifest["strata"], ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("ascii")
+        ).hexdigest(),
+        "policies_digest_sha256": hashlib.sha256(
+            json.dumps(manifest["policies"], ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("ascii")
+        ).hexdigest(),
+        "collection": manifest["collection"],
+        "thresholds": manifest["thresholds"],
+        "promotion_budget": {
+            "minimum_improvement": budget["minimum_improvement"],
+            "maximum_regression": budget["maximum_regression"],
+        },
+        "promotion_budget_digest_sha256": hashlib.sha256(
+            json.dumps(budget, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("ascii")
+        ).hexdigest(),
+        "plan_digest_sha256": manifest["plan_digest_sha256"],
+        "manifest_digest_sha256": manifest["manifest_digest_sha256"],
+    }
+
+
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--input", type=Path, required=True, help="Private result file or run directory.")
@@ -409,6 +495,12 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--min-count", type=int, default=2)
     parser.add_argument("--min-distinct-namespaces", type=int, default=2)
     parser.add_argument("--max-samples", type=int, default=3)
+    parser.add_argument(
+        "--round-manifest",
+        type=Path,
+        default=None,
+        help="Frozen private catalog-round manifest produced before collection.",
+    )
     return parser
 
 
@@ -417,6 +509,22 @@ def main(argv: list[str] | None = None) -> int:
     if args.min_count < 1 or args.min_distinct_namespaces < 1 or args.max_samples < 0:
         print("error: count thresholds must be positive and max samples must be non-negative", file=sys.stderr)
         return 2
+    if args.round_kind in ROUND_CONTRACT_KINDS and args.round_manifest is None:
+        print(f"error: --round-manifest is required for {args.round_kind!r} rounds", file=sys.stderr)
+        return 2
+    round_contract: dict[str, Any] | None = None
+    if args.round_manifest is not None:
+        try:
+            round_contract = _load_round_contract(
+                args.round_manifest,
+                round_kind=args.round_kind,
+                results_path=args.input,
+                min_count=args.min_count,
+                min_distinct_namespaces=args.min_distinct_namespaces,
+            )
+        except ValueError as exc:
+            print(f"error: {exc}", file=sys.stderr)
+            return 2
     input_path = _validate_private_path(args.input)
     output_dir = _validate_private_path(args.output_dir or (input_path if input_path.is_dir() else input_path.parent))
     files = _result_files(input_path)
@@ -451,6 +559,8 @@ def main(argv: list[str] | None = None) -> int:
             },
         }
     )
+    if round_contract is not None:
+        aggregate["round_contract"] = _public_round_contract(round_contract)
     _assert_aggregate_safe(aggregate)
 
     manifest = {
@@ -469,6 +579,7 @@ def main(argv: list[str] | None = None) -> int:
         "error_records": aggregate["error_records"],
         "error_kind_counts": aggregate["error_kind_counts"],
         "thresholds": aggregate["candidate_thresholds"],
+        "round_contract": round_contract,
     }
     private_payload = {
         "schema_version": SCHEMA_VERSION,

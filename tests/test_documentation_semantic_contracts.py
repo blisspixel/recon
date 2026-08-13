@@ -309,9 +309,10 @@ def test_contributor_fingerprint_guidance_uses_current_schema_and_claims() -> No
     assert "Real apexes stay local" in contributing
 
 
-def test_claude_integration_docs_preserve_replay_and_ownership_boundaries() -> None:
+def test_claude_integration_docs_preserve_replay_and_catalog_boundaries() -> None:
     plugin = " ".join(_read("agents/claude-code/README.md").split())
     triage = " ".join(_read("agents/claude-code/skills/recon-fingerprint-triage/SKILL.md").split())
+    triage_lower = triage.lower()
 
     for required in (
         "retained apex/root TXT, SPF, MX, NS, and CNAME observations",
@@ -320,21 +321,39 @@ def test_claude_integration_docs_preserve_replay_and_ownership_boundaries() -> N
     ):
         assert required in plugin
 
-    for forbidden in (
-        "what an apex *has*",
-        "the whole domain is owned by the SaaS",
-        "the organization's own brand zone",
-        "inside the org's own brand zone",
-        'survives triage as "real SaaS"',
-    ):
-        assert forbidden not in triage
-
     for required in (
-        "it does not establish common ownership",
-        "ownership and operation remain unresolved",
-        "normal lookup performs its documented public-source requests",
+        "every new candidate begins as `pending`",
+        "exact rule shape",
+        "current provider-owned public reference or a disclosure-safe aggregate basis",
+        "lookalike-negative fixture",
+        "sparse-result fixture",
+        "provenance assertions",
+        "frozen regression budget",
+        "do not pool unlike record types into one coverage rate",
+        "never include evaluated apexes",
+        "does not claim portable agent skills or agent plugins conformance",
     ):
-        assert required in triage
+        assert required in triage_lower
+
+    assert "recon rule review date" in triage_lower
+    assert "not an open knowledge format `verified` event" in triage_lower
+
+
+def test_okf_deferral_does_not_conflate_catalog_metadata_with_okf_trust() -> None:
+    adr = " ".join(_read("docs/adr/0014-caller-owned-capsules-and-okf-deferral.md").split()).lower()
+    capsules = " ".join(_read("docs/observation-capsules.md").split()).lower()
+
+    for text in (adr, capsules):
+        assert "omitted" in text or "omitting" in text
+        assert "`status`" in text
+        assert "`stable`" in text
+        assert "fingerprint `verified`" in text
+        assert "confidence" in text
+        assert "aggregate" in text
+        assert "`usage_count`" in text
+
+    assert "omission cannot be used to avoid that assertion" in adr
+    assert "translate field names or counts mechanically" in capsules
 
 
 def test_explanation_docs_distinguish_panel_from_structured_provenance() -> None:
