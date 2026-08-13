@@ -1,6 +1,7 @@
 # v2.14 Catalog Regional Round Declaration
 
-Status: frozen before selected-namespace collection
+Status: baseline and fixed-observation decision complete; protected-main live
+replay pending
 
 Frozen: 2026-08-13
 
@@ -106,7 +107,7 @@ The implementation was frozen against protected `main` commit
 independently reloaded and validated against the exact frame, catalog,
 implementation, collection settings, recurrence thresholds, and digest chain.
 
-## Collection gate
+## Pre-collection gate
 
 Before this declaration, selected-namespace request count is zero. Collection
 may start only after this declaration and the aligned current-plan updates pass
@@ -114,3 +115,18 @@ the full local documentation gates, merge through protected main, and receive
 green post-merge CI. Results remain private until the aggregate reducer has
 verified complete frame membership and disclosure safety. Every candidate must
 end as promoted, rejected, deferred, unavailable, or unmeasured.
+
+## Post-collection status
+
+The baseline completed all 1,000 frozen rows with zero errors and 45 partial
+rows. The aggregate-only
+[interim result](../validation/2026-08-13-catalog-regional-round.md) records the
+stratified classification rates, explicit dispositions, and an accepted
+fixed-observation zero-regression decision for six documented provider
+families. It publishes no target identifier or per-domain row.
+
+The regional round is not closed yet. The accepted catalog and tests must merge
+through protected main with the full gate green, after which a live operational
+pass must replay this exact frozen frame from clean protected main. Vendor-seed
+preparation follows only after that replay is reduced and the regional round is
+closed.

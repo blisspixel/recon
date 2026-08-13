@@ -4,6 +4,23 @@
 # Custom overrides: ~/.recon/fingerprints.yaml (additive only).
 
 fingerprints:
+- name: Hostinger DNS
+  slug: hostinger-dns
+  category: Infrastructure
+  confidence: high
+  display_group: DNS
+  product_family: Hostinger DNS
+  parent_vendor: Hostinger
+  detections:
+  - type: ns
+    pattern: dns-parking.com
+    reference: https://support.hostinger.com/en/articles/8671230-how-to-look-up-domain-nameservers
+    verified: 2026-08-13
+    description: >-
+      Authoritative nameserver under Hostinger's documented
+      `dns-parking.com` zone. This observes that Hostinger manages the queried
+      namespace's public DNS zone. It does not establish website hosting,
+      email hosting, or domain ownership.
 - name: GitHub
   slug: github
   category: DevTools & Infrastructure
