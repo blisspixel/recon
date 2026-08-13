@@ -25,6 +25,9 @@ Committed (generic tooling, no company names):
 - `prepare_catalog_round.py`: validates a private round plan, reduces every
   input to a unique registrable apex, and exclusively writes an integrity-bound
   normalized frame plus its frozen manifest. It performs no network requests.
+- `prepare_catalog_rank_frame.py`: derives the exact four private Tranco rank
+  strata with secret-keyed sampling and whole-development-corpus exclusion.
+  Its console output contains aggregate counts and commitments only.
 - `triage_candidates.py`: programmatic filter on `gaps.json`: drops
   already-fingerprinted patterns, intra-org chains, and one-off noise. The
   output is the LLM-triage-ready candidate list.
@@ -165,6 +168,30 @@ strata with private input paths, exclusion and overlap policies, CT and direct
 probe settings, recurrence thresholds, and a promotion/regression budget. Then
 prepare the exact corpus and manifest without contacting a target:
 
+For the rank round, first create and freeze the four independent Tranco strata.
+The plan must declare the exact 1-1k, 1k-10k, 10k-100k, and 100k-1M ranges and
+the same explicit discovery quota for every band:
+
+```bash
+python validation/prepare_catalog_rank_frame.py generate-key \
+    --output validation/corpus-private/catalog-rank-key.hex
+
+python validation/prepare_catalog_rank_frame.py prepare \
+    --plan validation/corpus-private/catalog-rank-selection-plan.json \
+    --output-directory validation/corpus-private/catalog-rank-selection \
+    --preflight
+
+python validation/prepare_catalog_rank_frame.py prepare \
+    --plan validation/corpus-private/catalog-rank-selection-plan.json \
+    --output-directory validation/corpus-private/catalog-rank-selection \
+    --write-private-strata
+```
+
+The keyed rule uses a separate domain-separation context for every band. The
+equal quota is a discovery budget, not population weighting or a prevalence
+estimator. Commit the aggregate-only selection declaration before collection.
+Then reference the four private outputs from the ordinary round plan:
+
 ```bash
 python validation/prepare_catalog_round.py \
     --plan validation/corpus-private/rank-2026-08-plan.json \
@@ -182,7 +209,10 @@ Preparation fails closed on malformed rows, undeclared fields, cross-stratum
 overlap contrary to policy, direct-probe requests, or existing output files.
 Before target contact, `scan.py` revalidates the manifest digest, normalized
 frame digest and count, stratum counts, collection options, and recurrence
-thresholds. The typed reducer repeats the contract checks and binds every result
+thresholds. Schema-version-2 contracts also commit the source catalog and a
+digest of the execution code, package data, project metadata, and dependency
+lockfile. `scan.py` rejects catalog or implementation drift before target
+contact. The typed reducer repeats the contract checks and binds every result
 row to the frozen frame. The reviewable aggregate contains counts, fixed
 options, and cryptographic commitments only. Descriptive questions, source and
 stratum labels, policies, decision prose, identifiers, and paths remain in the

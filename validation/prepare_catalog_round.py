@@ -30,7 +30,7 @@ PRIVATE_ROOTS = (
     REPO_ROOT / "validation" / "runs-private",
     REPO_ROOT / "validation" / "local",
 )
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 ROUND_KINDS = frozenset({"baseline", "rank", "region", "vertical", "vendor-seed", "drift"})
 OVERLAP_POLICIES = frozenset({"reject", "first-stratum-wins"})
 _SAFE_ID_RE = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,79}$")
@@ -71,6 +71,7 @@ ROUND_MANIFEST_KEYS = frozenset(
         "collection",
         "thresholds",
         "promotion_budget",
+        "implementation",
         "plan_digest_sha256",
         "manifest_digest_sha256",
     }
@@ -194,6 +195,55 @@ def canonical_json_digest(value: object) -> str:
     return _digest(_canonical_json(value))
 
 
+def _digest_paths(paths: Sequence[Path]) -> str:
+    digest = hashlib.sha256()
+    for path in sorted(paths, key=lambda item: item.relative_to(REPO_ROOT).as_posix()):
+        relative = path.relative_to(REPO_ROOT).as_posix().encode("utf-8")
+        raw = _bounded_read(path, maximum_bytes=32 * 1024 * 1024, name="implementation input")
+        digest.update(len(relative).to_bytes(4, "big"))
+        digest.update(relative)
+        digest.update(len(raw).to_bytes(8, "big"))
+        digest.update(raw)
+    return digest.hexdigest()
+
+
+def catalog_digest_sha256() -> str:
+    """Digest the canonical source fingerprint catalog."""
+    catalog = REPO_ROOT / "src" / "recon_tool" / "data" / "fingerprints"
+    files = sorted(catalog.glob("*.yaml"))
+    if not files:
+        _fail("fingerprint catalog has no source files")
+    digest = hashlib.sha256()
+    for path in files:
+        digest.update(path.name.encode("utf-8"))
+        digest.update(b"\0")
+        digest.update(_bounded_read(path, maximum_bytes=32 * 1024 * 1024, name="fingerprint catalog input"))
+        digest.update(b"\0")
+    return digest.hexdigest()
+
+
+def execution_digest_sha256() -> str:
+    """Digest the code, data, and dependency lock used by a catalog scan."""
+    package_root = REPO_ROOT / "src" / "recon_tool"
+    package_files = [
+        path for path in package_root.rglob("*") if path.is_file() and path.suffix in {".json", ".py", ".yaml"}
+    ]
+    validation_files = [
+        REPO_ROOT / "validation" / name
+        for name in (
+            "catalog_baseline.py",
+            "diff_runs.py",
+            "find_gaps.py",
+            "prepare_catalog_round.py",
+            "run_path_safety.py",
+            "scan.py",
+            "triage_candidates.py",
+        )
+    ]
+    root_files = [REPO_ROOT / "pyproject.toml", REPO_ROOT / "uv.lock"]
+    return _digest_paths([*package_files, *validation_files, *root_files])
+
+
 def _strict_json_object(pairs: list[tuple[str, object]]) -> dict[str, object]:
     value: dict[str, object] = {}
     for key, child in pairs:
@@ -260,6 +310,23 @@ def validate_round_manifest_identity(manifest: dict[str, object], *, round_kind:
     _meaningful_text(source["name"], name="round manifest source.name", minimum=3)
     _meaningful_text(source["revision"], name="round manifest source.revision", minimum=2)
     _sha256(source["digest_sha256"], name="source.digest_sha256")
+    implementation = _strict_object(
+        manifest["implementation"],
+        name="round manifest implementation",
+        keys=frozenset({"catalog_digest_sha256", "execution_digest_sha256"}),
+    )
+    expected_catalog = _sha256(
+        implementation["catalog_digest_sha256"],
+        name="implementation.catalog_digest_sha256",
+    )
+    expected_execution = _sha256(
+        implementation["execution_digest_sha256"],
+        name="implementation.execution_digest_sha256",
+    )
+    if catalog_digest_sha256() != expected_catalog:
+        _fail("round manifest catalog digest does not match the current catalog")
+    if execution_digest_sha256() != expected_execution:
+        _fail("round manifest execution digest does not match the current code or lockfile")
 
 
 def canonical_frame_rows(frame_bytes: bytes) -> tuple[str, ...]:
@@ -675,6 +742,10 @@ def prepare_catalog_round(
         "collection": normalized["collection"],
         "thresholds": normalized["thresholds"],
         "promotion_budget": normalized["promotion_budget"],
+        "implementation": {
+            "catalog_digest_sha256": catalog_digest_sha256(),
+            "execution_digest_sha256": execution_digest_sha256(),
+        },
         "plan_digest_sha256": _digest(plan_raw),
     }
     manifest["manifest_digest_sha256"] = _digest(_canonical_json(manifest))

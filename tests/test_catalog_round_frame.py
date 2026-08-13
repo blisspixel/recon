@@ -19,7 +19,7 @@ def _plan(tmp_path: Path, *, overlap: str = "reject", round_kind: str = "rank") 
     first.write_text("WWW.BETA.CO.UK\nhttps://mail.alpha.example/path\nalpha.example\n", encoding="utf-8")
     second.write_text("zeta.example\nsub.gamma.example\n", encoding="utf-8")
     plan = {
-        "schema_version": 1,
+        "schema_version": round_preparer.SCHEMA_VERSION,
         "private": True,
         "round_id": "rank-2026-08",
         "round_kind": round_kind,
@@ -72,6 +72,7 @@ def test_preparer_normalizes_sorts_deduplicates_and_emits_exact_manifest(tmp_pat
         "collection",
         "thresholds",
         "promotion_budget",
+        "implementation",
         "plan_digest_sha256",
         "manifest_digest_sha256",
     ]
@@ -146,6 +147,7 @@ def test_cross_stratum_overlap_rejects_or_assigns_to_first_stratum(tmp_path: Pat
             0,
             "minimum_improvement must be in",
         ),
+        (("schema_version",), 1, "schema_version must be 2"),
     ],
 )
 def test_strict_plan_rejects_missing_or_nonmeaningful_contracts(
