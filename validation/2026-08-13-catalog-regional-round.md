@@ -1,9 +1,9 @@
-# Catalog Regional-Round Interim Result
+# Catalog Regional-Round Result
 
 **Date:** 2026-08-13
 
-**Decision:** Accept six documented provider-family additions on the frozen
-observations; protected-main live replay remains pending
+**Decision:** Regional round complete; accept six documented provider-family
+additions and move to the vendor-seed round
 
 **Disclosure:** Aggregate only. No selected namespace, record value,
 organization name, tenant identifier, or per-domain row is included.
@@ -115,23 +115,57 @@ is accepted.
 
 | Counterfactual commitment | Value |
 |---|---|
-| Candidate catalog SHA-256 | `0f2696465b890e318c2716469ab9a5e87caa37784ee9c9786ebd96397666ec00` |
+| Candidate catalog SHA-256 | `206ee855ba9f5107634f0876b66ed46306dbecfaaaff6c8a10a089ac4678baa2` |
 | Evaluator SHA-256 | `99fb50eacc760d71cc6a85d7b71f3f94e1c1f78059fa590503678502a1cacf00` |
-| Counterfactual file SHA-256 | `975c6e7b6936afa9f7b00d41854d0af67698cd865c199a72dd6d1d3c4323bc91` |
+| Clean protected-main revision | `d19b888e3f6826df33994be3b46d91751438a7bd` |
+| Counterfactual file SHA-256 | `6c1888fad80508e595da398a1c3139d389146a34dec06356445025673f3abd26` |
 | Network requests | 0 |
 | Identifiers printed | 0 |
 
-## Current gate and next operation
+The evaluator was rerun from the clean protected-main revision after merge. It
+reproduced the same per-family and per-type additions and binds the causal
+decision directly to the catalog digest used by the live replay.
 
-The fixed-observation decision supports these bounded additions. It does not
-close the regional round, support broad catalog growth, or support a population
-coverage claim. The exact catalog and tests must first pass the full gate and
-merge through protected main. A second live pass must then replay the same
-frozen 1,000-row frame from that clean protected-main revision. The reducer
-must verify complete membership and publish only aggregate operational
-differences before the regional round can close.
+## Protected-main live replay
 
-If that replay passes, the next v2.14 operation is to freeze disjoint
+The same frozen 1,000-row frame was replayed from clean protected main with CT
+and direct probes still disabled. It completed all 1,000 rows with zero errors,
+39 partial rows, and no timeout. Partials were distributed 8, 4, 9, 9, and 9
+across the five frozen strata. Every stratum reducer membership check passed.
+
+| Replay commitment | Value |
+|---|---|
+| Protected-main revision | `d19b888e3f6826df33994be3b46d91751438a7bd` |
+| Replay manifest SHA-256 | `c7e0d97c79adc2f8fe56cd6902aa642d4ada54fa0e853551cf1025bbd36b4125` |
+| Replay catalog SHA-256 | `206ee855ba9f5107634f0876b66ed46306dbecfaaaff6c8a10a089ac4678baa2` |
+| Replay execution SHA-256 | `d9b199d0d731b1684af8ec7eb436ba4e73176e1b3cdb350a003f7cc138e152b6` |
+| Replay result SHA-256 | `60e721dfe716894e2f3c878e00dd8cd7663c5d8bfddaa7e55366500b5ee110d8` |
+| Replay pooled aggregate file SHA-256 | `1df34604024031251ef562792d6e5262d8d168cf1041429b506648e0391f79ed` |
+| Replay stratified aggregate file SHA-256 | `083de84830b4ac99c75483de6f80ee2a4a161667fefb5723ed9c34108500f5ad` |
+| Records / errors / partials | 1,000 / 0 / 39 |
+
+The live pass is an operational replay, not the causal comparison, because
+public DNS changed between passes. Its affected-type classified counts moved
+by exactly the fixed-observation additions, while observed denominators also
+changed slightly:
+
+| Record type | Baseline classified / observed | Replay classified / observed | Replay rate |
+|---|---:|---:|---:|
+| `cname_target` | 319 / 504 | 322 / 504 | 0.638889 |
+| `mx` | 956 / 1,522 | 1,019 / 1,525 | 0.668197 |
+| `ns` | 1,438 / 2,661 | 1,476 / 2,666 | 0.553638 |
+| `spf` | 592 / 1,083 | 640 / 1,085 | 0.589862 |
+
+CAA, DMARC RUA, and owner-qualified TXT retained identical classified and
+observed counts. CNAME, TXT, and SRV had small denominator or classified-count
+changes consistent with live public-DNS drift. Those changes do not alter the
+fixed-observation decision.
+
+## Decision and next operation
+
+The regional round is closed. It supports these bounded additions and
+explicitly does not support broad catalog growth, a population coverage claim,
+or a registrant-geography claim. The next v2.14 operation is to freeze disjoint
 vendor-seed recall holdouts before contact. Drift follows against a frozen
 prior sample. Agent Plugins packaging remains v2.15 work, and OKF v0.2 remains
 a future named-consumer, caller-owned projection rather than a replacement for
