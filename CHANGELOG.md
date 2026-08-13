@@ -28,8 +28,27 @@ operator, corporate group, ownership, or control.
 
 ### Tool Surface Changes
 
-Tool surface changes: no CLI command, flag, MCP tool, resource, or stable JSON
-field changes.
+Tool surface changes: adds the `recon capsule capture`, `replay`, and `compare`
+CLI commands plus a separate observation-capsule JSON Schema. No MCP tool,
+resource, or stable lookup JSON field changes.
+
+### Added
+
+- Caller-owned, integrity-bound observation capsules record collection
+  windows, source opportunities, retained normalized facts, collection options,
+  cache and vantage metadata, interpretation-version digests, stable signal
+  identifiers, and a canonical SHA-256 content digest.
+- `recon capsule replay` verifies and re-renders a capsule without network
+  access. `recon capsule compare` separates observation, collection-regime,
+  time-evaluation, and interpretation changes, and withholds fact changes for
+  source roles that were partial or unavailable at either endpoint.
+- A separate Draft 2020-12 capsule schema ships in the documentation and wheel,
+  with independent validation, deterministic replay, degraded-source,
+  integrity, bounded-input, symlink, no-clobber, and CLI regression tests.
+- ADR-0014 defers an Open Knowledge Format v0.2 projection until a named
+  consumer can justify the provenance, trust, lifecycle, freshness, and privacy
+  mapping. Versioned recon JSON remains authoritative, and Agent Plugins
+  packaging remains a separate later decision.
 
 ## [2.12.0] - 2026-08-13
 

@@ -25,6 +25,7 @@ public, but not written for a first-time reader.
 | Expected latency and cost | [performance.md](performance.md) |
 | Legal and query-exposure notes | [legal.md](legal.md) |
 | What leaves your machine | [adr/0011-public-metadata-collection-boundary.md](adr/0011-public-metadata-collection-boundary.md) |
+| Capture, replay, and compare caller-owned observations | [observation-capsules.md](observation-capsules.md) |
 | Upgrade from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
 
 ## Building against recon
@@ -33,6 +34,7 @@ public, but not written for a first-time reader.
 |---|---|
 | JSON output schema | [schema.md](schema.md) |
 | Machine-readable JSON Schema | [recon-schema.json](recon-schema.json) |
+| Observation-capsule JSON Schema | [observation-capsule-schema.json](observation-capsule-schema.json) |
 | Stable surfaces and SemVer policy | [stability.md](stability.md) |
 | Runtime timeouts, caps, cache, and exit codes | [operational-contract.md](operational-contract.md) |
 | Consume JSON safely in scripts | [automation-examples.md](automation-examples.md) |

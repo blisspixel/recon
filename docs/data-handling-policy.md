@@ -74,7 +74,7 @@ is the practical analogue for reviewing statistical outputs before release.
 - Real apex domains or organization names, in any file or message,
   including a "just one example to reproduce" in an issue.
 - Per-domain analysis output (a real `recon <domain> --json`, a real
-  batch result, a real delta), even if the apex is redacted, because
+  batch result, a real delta, or a real observation capsule), even if the apex is redacted, because
   the surrounding detail can re-identify it.
 - Tenant IDs, region strings, or any identifier tied to a real
   organization.
@@ -113,6 +113,12 @@ never in a commit:
 - `validation/corpus-private/`: the curated real-apex corpus.
 - `validation/runs-private/`: per-run outputs (results, gaps, diffs).
 - `validation/local/`: any other scratch space.
+
+Caller-owned observation capsules follow the same rule. Keep real-target
+capsules outside the repository, protect them according to the operator's data
+policy, and review them before sharing. The artifact can contain public DNS
+values, verification tokens, tenant identifiers, related domains, and
+collection metadata. recon provides no upload or retention service.
 
 Private per-run rows are retained only while they are needed to reproduce and
 review the active aggregate memo. Each new private run records its manual local

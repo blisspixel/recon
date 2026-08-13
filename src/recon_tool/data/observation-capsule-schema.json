@@ -1,0 +1,663 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/observation-capsule-schema.json",
+  "title": "recon observation capsule records",
+  "description": "Caller-owned observation capsule, offline replay, and classified delta records. This contract is separate from recon's stable lookup JSON schema.",
+  "oneOf": [
+    {
+      "$ref": "#/$defs/ObservationCapsule"
+    },
+    {
+      "$ref": "#/$defs/ObservationCapsuleReplay"
+    },
+    {
+      "$ref": "#/$defs/ObservationCapsuleDelta"
+    }
+  ],
+  "$defs": {
+    "Digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    },
+    "Timestamp": {
+      "type": "string",
+      "format": "date-time"
+    },
+    "InterpretationContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recon_version",
+        "normalizer_version",
+        "catalog_digest",
+        "model_digest"
+      ],
+      "properties": {
+        "recon_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64
+        },
+        "normalizer_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32
+        },
+        "catalog_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "model_digest": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "ObservationWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_at",
+        "ended_at"
+      ],
+      "properties": {
+        "started_at": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "ended_at": {
+          "$ref": "#/$defs/Timestamp"
+        }
+      }
+    },
+    "SourceOpportunity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_role",
+        "state",
+        "instance_count",
+        "degraded_markers",
+        "observation_window"
+      ],
+      "properties": {
+        "source_role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "state": {
+          "enum": [
+            "observed_value",
+            "observed_empty",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "instance_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "degraded_markers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "observation_window": {
+          "$ref": "#/$defs/ObservationWindow"
+        }
+      }
+    },
+    "ObservationFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_id",
+        "source_role",
+        "kind",
+        "key",
+        "value"
+      ],
+      "properties": {
+        "fact_id": {
+          "$ref": "#/$defs/Digest"
+        },
+        "source_role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "value": true
+      }
+    },
+    "Collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_at",
+        "ended_at",
+        "as_of",
+        "options",
+        "vantage",
+        "cache"
+      ],
+      "properties": {
+        "started_at": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "ended_at": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "as_of": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "options": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ct_enabled",
+            "direct_probes",
+            "timeout_seconds"
+          ],
+          "properties": {
+            "ct_enabled": {
+              "type": "boolean"
+            },
+            "direct_probes": {
+              "type": "boolean"
+            },
+            "timeout_seconds": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            }
+          }
+        },
+        "vantage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "cache": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "result_cache",
+            "ct_provider_used",
+            "ct_cache_age_days",
+            "ct_attempt_outcome"
+          ],
+          "properties": {
+            "result_cache": {
+              "const": "bypassed"
+            },
+            "ct_provider_used": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "ct_cache_age_days": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "ct_attempt_outcome": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "Interpretation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "stable_signal_ids",
+        "rendered_result_digest",
+        "rendered_result"
+      ],
+      "properties": {
+        "stable_signal_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "rendered_result_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "rendered_result": {
+          "type": "object"
+        }
+      }
+    },
+    "NormalizedSnapshot": {
+      "type": "object",
+      "required": [
+        "_cache_version",
+        "resolved_at",
+        "tenant_id",
+        "display_name",
+        "default_domain",
+        "queried_domain",
+        "confidence",
+        "sources",
+        "services",
+        "slugs",
+        "insights",
+        "degraded_sources",
+        "evidence"
+      ],
+      "properties": {
+        "_cache_version": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "resolved_at": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "tenant_id": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_name": {
+          "type": "string"
+        },
+        "default_domain": {
+          "type": "string"
+        },
+        "queried_domain": {
+          "type": "string"
+        },
+        "confidence": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ]
+        },
+        "sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "services": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "slugs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "insights": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "degraded_sources": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "source_type",
+              "raw_value",
+              "rule_name",
+              "slug"
+            ],
+            "properties": {
+              "source_type": {
+                "type": "string"
+              },
+              "raw_value": {
+                "type": "string"
+              },
+              "rule_name": {
+                "type": "string"
+              },
+              "slug": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "ObservationCapsule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capsule_schema_version",
+        "record_type",
+        "queried_domain",
+        "collection",
+        "interpretation_context",
+        "source_opportunities",
+        "observations",
+        "normalized_snapshot",
+        "interpretation",
+        "content_digest"
+      ],
+      "properties": {
+        "capsule_schema_version": {
+          "const": "1.0"
+        },
+        "record_type": {
+          "const": "observation_capsule"
+        },
+        "queried_domain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        },
+        "collection": {
+          "$ref": "#/$defs/Collection"
+        },
+        "interpretation_context": {
+          "$ref": "#/$defs/InterpretationContext"
+        },
+        "source_opportunities": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/SourceOpportunity"
+          }
+        },
+        "observations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ObservationFact"
+          }
+        },
+        "normalized_snapshot": {
+          "$ref": "#/$defs/NormalizedSnapshot"
+        },
+        "interpretation": {
+          "$ref": "#/$defs/Interpretation"
+        },
+        "content_digest": {
+          "$ref": "#/$defs/Digest"
+        }
+      }
+    },
+    "ObservationCapsuleReplay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capsule_schema_version",
+        "record_type",
+        "queried_domain",
+        "capsule_digest",
+        "recorded_as_of",
+        "evaluated_as_of",
+        "time_evaluation_changed",
+        "interpretation_context_match",
+        "recorded_interpretation_context",
+        "current_interpretation_context",
+        "replayed_result_digest",
+        "result"
+      ],
+      "properties": {
+        "capsule_schema_version": {
+          "const": "1.0"
+        },
+        "record_type": {
+          "const": "observation_capsule_replay"
+        },
+        "queried_domain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        },
+        "capsule_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "recorded_as_of": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "evaluated_as_of": {
+          "$ref": "#/$defs/Timestamp"
+        },
+        "time_evaluation_changed": {
+          "type": "boolean"
+        },
+        "interpretation_context_match": {
+          "type": "boolean"
+        },
+        "recorded_interpretation_context": {
+          "$ref": "#/$defs/InterpretationContext"
+        },
+        "current_interpretation_context": {
+          "$ref": "#/$defs/InterpretationContext"
+        },
+        "replayed_result_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "result": {
+          "type": "object"
+        }
+      }
+    },
+    "DeltaFact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fact_id",
+        "source_role",
+        "kind",
+        "key",
+        "value",
+        "observation_window"
+      ],
+      "properties": {
+        "fact_id": {
+          "$ref": "#/$defs/Digest"
+        },
+        "source_role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128
+        },
+        "key": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512
+        },
+        "value": true,
+        "observation_window": {
+          "$ref": "#/$defs/ObservationWindow"
+        }
+      }
+    },
+    "Change": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "before",
+        "after"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1
+        },
+        "before": true,
+        "after": true
+      }
+    },
+    "ObservationCapsuleDelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "capsule_schema_version",
+        "record_type",
+        "queried_domain",
+        "before_capsule_digest",
+        "after_capsule_digest",
+        "observation",
+        "collection_regime",
+        "time_evaluation",
+        "interpretation",
+        "has_changes"
+      ],
+      "properties": {
+        "capsule_schema_version": {
+          "const": "1.0"
+        },
+        "record_type": {
+          "const": "observation_capsule_delta"
+        },
+        "queried_domain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        },
+        "before_capsule_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "after_capsule_digest": {
+          "$ref": "#/$defs/Digest"
+        },
+        "observation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "changed",
+            "added",
+            "removed",
+            "suppressed_source_roles"
+          ],
+          "properties": {
+            "changed": {
+              "type": "boolean"
+            },
+            "added": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/DeltaFact"
+              }
+            },
+            "removed": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/DeltaFact"
+              }
+            },
+            "suppressed_source_roles": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              },
+              "uniqueItems": true
+            }
+          }
+        },
+        "collection_regime": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "changed",
+            "changes"
+          ],
+          "properties": {
+            "changed": {
+              "type": "boolean"
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Change"
+              }
+            }
+          }
+        },
+        "time_evaluation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "changed",
+            "before_as_of",
+            "after_as_of",
+            "freshness_changes"
+          ],
+          "properties": {
+            "changed": {
+              "type": "boolean"
+            },
+            "before_as_of": {
+              "$ref": "#/$defs/Timestamp"
+            },
+            "after_as_of": {
+              "$ref": "#/$defs/Timestamp"
+            },
+            "freshness_changes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Change"
+              }
+            }
+          }
+        },
+        "interpretation": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "changed",
+            "changes"
+          ],
+          "properties": {
+            "changed": {
+              "type": "boolean"
+            },
+            "changes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/Change"
+              }
+            }
+          }
+        },
+        "has_changes": {
+          "type": "boolean"
+        }
+      }
+    }
+  }
+}

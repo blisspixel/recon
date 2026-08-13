@@ -35,6 +35,9 @@ For the JSON output contract in full field-by-field detail, see
 | `recon fingerprints new <slug>` | Stable | v1.2+. Scaffolding wizard: slug / schema / specificity gates then emits YAML. |
 | `recon fingerprints test <slug>` | Stable | v1.2+. Validates, apex-normalizes, and deduplicates a bounded local UTF-8 corpus before live lookup, or uses the fictional format example. JSON rows retain `matched` and `detail` and add the tri-state `status`; human output separates lookup errors from clean misses. A valid invocation retains exit 0 even when lookups fail, so automation must inspect `status`. |
 | `recon signals list` / `search` / `show` | Stable | v1.1+. Ranked search rows carry explicit category and confidence fields; explicit empty category filters are validation errors. |
+| `recon capsule capture <domain>` | Stable (v2.13+) | Writes the separate caller-owned capsule contract. Existing files require explicit `--force`; collection follows the ordinary public-source boundary. |
+| `recon capsule replay <file>` | Stable (v2.13+) | Verifies and replays locally with no network requests. `--as-of` changes only the evaluation context. |
+| `recon capsule compare <before> <after>` | Stable (v2.13+) | Classifies observation, collection-regime, time-evaluation, and interpretation change; `--json` follows the capsule schema. |
 
 ### CLI flags (on `recon <domain>`)
 
@@ -163,6 +166,15 @@ entries are now `{names: [...]}` objects.
 Any `--json` consumer that reads only stable fields will work across
 patch and minor releases without modification.
 
+Observation capsules use the separate
+[`observation-capsule-schema.json`](observation-capsule-schema.json) contract.
+Capsule schema version `1.0`, replay records, and classified delta records are
+stable as of v2.13. Additive optional fields may land in a later minor release.
+Removing or renaming existing fields, changing their types or meanings, or
+changing capsule digest canonicalization requires a new capsule schema version
+and a compatibility path. This guarantee does not make a digest a signature or
+the internal normalized snapshot part of the stable lookup JSON.
+
 ### Config / data files
 
 | Surface | Stable guarantee |
@@ -176,6 +188,7 @@ patch and minor releases without modification.
 | `~/.recon/cache/*.json` (TenantInfo cache) | Stable. Within the current cache version, entries lacking later additive fields remain readable and current writes include current fields. An explicit cache-version mismatch, wrong-shaped, corrupt, oversized, or numerically invalid file degrades to a clean miss. |
 | `~/.recon/ct-cache/*.json` (per-domain CT cache) | Stable. Older entries without certificate-summary or infrastructure-cluster extensions remain readable; current writes preserve those extensions. Wrong-shaped, corrupt, oversized, or numerically invalid files degrade to a clean miss. |
 | `RECON_CONFIG_DIR` environment variable | Stable. |
+| `recon_tool/data/observation-capsule-schema.json` | Byte-identical packaged copy of the documented capsule schema. Stable by its own `capsule_schema_version`, separate from lookup schema version `2.0`. |
 
 ---
 

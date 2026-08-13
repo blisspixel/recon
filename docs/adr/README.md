@@ -33,3 +33,4 @@ deeper rationale for several lives in [correlation.md](../correlation.md),
 | [0011](0011-public-metadata-collection-boundary.md) | Define the public-metadata collection boundary and target-visible interactions |
 | [0012](0012-default-view-evidence-role-visibility.md) | Split evidence-role visibility between the default and detailed views |
 | [0013](0013-fusion-non-promotion-and-v3-transition.md) | Apply fusion non-promotion through a compatible v2 transition and flip the implicit default only at v3 |
+| [0014](0014-caller-owned-capsules-and-okf-deferral.md) | Use caller-owned JSON observation capsules and defer OKF until a named consumer justifies an additive projection |

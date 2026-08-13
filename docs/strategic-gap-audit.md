@@ -182,8 +182,8 @@ release count, and feature count are supporting facts, not outcomes.
    as historical evidence. Keep its cancelled design from contacting targets.
 5. Keep the completed v2.12 non-promotion transition and its v3 default-off
    boundary explicit before later surface promotion.
-6. Build the v2.13 caller-held observation capsule and record the OKF v0.2
-   projection decision without replacing versioned JSON.
+6. Validate and release the implemented v2.13 caller-held observation capsule
+   and ADR-0014 OKF v0.2 deferral without replacing versioned JSON.
 7. Use the baseline to decide dimensioned email observations, catalog
    priorities, and agent-surface simplification; apply stable-v2 SDK
    characterization deltas from the completed MCP matrix.
@@ -195,12 +195,12 @@ release count, and feature count are supporting facts, not outcomes.
 
 ## Decision
 
-The next execution work is v2.13: define a caller-held observation capsule,
-make delta distinguish observation, collection, time, and interpretation
-change, and record an OKF v0.2 projection decision without replacing stable
-JSON. v2.12 has already applied the v2.11 structural stop through the compatible
-ADR-0013 transition. Private labeled-row collection under the cancelled design
-is prohibited.
+The current execution work is the v2.13 release gate. The caller-held
+observation capsule, four-way classified comparison, separate schema, and
+ADR-0014 OKF v0.2 deferral are implemented on the release candidate without
+replacing stable JSON. v2.12 has already applied the v2.11 structural stop
+through the compatible ADR-0013 transition. Private labeled-row collection
+under the cancelled design is prohibited.
 Evidence integrity and MCP compatibility remain maintenance gates, not unfinished
 feature tracks. Runtime expansion, broad catalog growth, stable-surface
 promotion, and public real-data release remain blocked until a concrete

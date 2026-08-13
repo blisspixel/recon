@@ -231,6 +231,7 @@
         "children": [
           "batch",
           "cache",
+          "capsule",
           "delta",
           "discover",
           "doctor",
@@ -1228,6 +1229,231 @@
         ],
         "summary": "Clear both CT subdomain cache and TenantInfo result cache.",
         "usage": "recon cache clear"
+      },
+      {
+        "children": [
+          "capture",
+          "compare",
+          "replay"
+        ],
+        "kind": "group",
+        "parameters": [],
+        "path": [
+          "capsule"
+        ],
+        "summary": "Capture, replay, and compare caller-owned observation capsules.",
+        "usage": "recon capsule"
+      },
+      {
+        "kind": "command",
+        "parameters": [
+          {
+            "kind": "argument",
+            "name": "domain",
+            "required": true,
+            "tokens": [
+              "domain"
+            ],
+            "type": "text"
+          },
+          {
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "output",
+            "required": false,
+            "tokens": [
+              "--output",
+              "-o"
+            ],
+            "type": "path"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "no_ct",
+            "required": false,
+            "tokens": [
+              "--no-ct"
+            ],
+            "type": "boolean"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "direct_probes",
+            "required": false,
+            "tokens": [
+              "--direct-probes"
+            ],
+            "type": "boolean"
+          },
+          {
+            "default": 120.0,
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "timeout",
+            "required": false,
+            "tokens": [
+              "--timeout",
+              "-t"
+            ],
+            "type": "float"
+          },
+          {
+            "default": "caller-local",
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "vantage",
+            "required": false,
+            "tokens": [
+              "--vantage"
+            ],
+            "type": "text"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "force",
+            "required": false,
+            "tokens": [
+              "--force"
+            ],
+            "type": "boolean"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "json_output",
+            "required": false,
+            "tokens": [
+              "--json"
+            ],
+            "type": "boolean"
+          }
+        ],
+        "path": [
+          "capsule",
+          "capture"
+        ],
+        "summary": "Collect a domain and write a versioned, integrity-bound local capsule.",
+        "usage": "recon capsule capture"
+      },
+      {
+        "kind": "command",
+        "parameters": [
+          {
+            "kind": "argument",
+            "name": "path",
+            "required": true,
+            "tokens": [
+              "path"
+            ],
+            "type": "path"
+          },
+          {
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "as_of",
+            "required": false,
+            "tokens": [
+              "--as-of"
+            ],
+            "type": "text"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "json_output",
+            "required": false,
+            "tokens": [
+              "--json"
+            ],
+            "type": "boolean"
+          }
+        ],
+        "path": [
+          "capsule",
+          "replay"
+        ],
+        "summary": "Verify and replay a capsule through the current stable renderer.",
+        "usage": "recon capsule replay"
+      },
+      {
+        "kind": "command",
+        "parameters": [
+          {
+            "kind": "argument",
+            "name": "before",
+            "required": true,
+            "tokens": [
+              "before"
+            ],
+            "type": "path"
+          },
+          {
+            "kind": "argument",
+            "name": "after",
+            "required": true,
+            "tokens": [
+              "after"
+            ],
+            "type": "path"
+          },
+          {
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "before_as_of",
+            "required": false,
+            "tokens": [
+              "--before-as-of"
+            ],
+            "type": "text"
+          },
+          {
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "after_as_of",
+            "required": false,
+            "tokens": [
+              "--after-as-of"
+            ],
+            "type": "text"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "json_output",
+            "required": false,
+            "tokens": [
+              "--json"
+            ],
+            "type": "boolean"
+          }
+        ],
+        "path": [
+          "capsule",
+          "compare"
+        ],
+        "summary": "Separate observation, collection, time, and interpretation changes.",
+        "usage": "recon capsule compare"
       },
       {
         "children": [

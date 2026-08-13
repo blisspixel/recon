@@ -10,9 +10,10 @@ tracked separately from product work.
 > JSON, local stdio MCP, bounded collectors, claim-audit gates, MCP dual-SDK
 > matrix, and a verified release path. Tracks 1–2 (evidence integrity, MCP v2)
 > are complete maintenance. Track 3's v2.11 structural decision and compatible
-> v2.12 fusion transition are complete. **Next build priority is v2.13:** a
-> caller-held observation capsule and an evidence-backed OKF v0.2 projection
-> decision. The ordered version path through v3.0 is summarized in
+> v2.12 fusion transition are complete. **Current release candidate is v2.13:**
+> caller-held observation capsules and the evidence-backed ADR-0014 decision to
+> defer OKF v0.2 until a named consumer exists. The remaining work is full
+> validation, protected-main CI, and release proof. The ordered version path through v3.0 is summarized in
 > [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
 > default.
@@ -30,8 +31,8 @@ Rank and urgency are different axes. Priority 1 remains the standing highest
 trust priority because output truthfulness outranks features; its current
 27-family audit closed on 2026-08-01. Priority 2 adopted MCP v2 on 2026-07-31
 and retains both exact compatibility pins as blocking checks. Priority 3's
-v2.11 decision and v2.12 compatibility transition are complete. The next
-dependency-unblocked build maps to **v2.13.0**. New claim-surface drift reopens
+v2.11 decision and v2.12 compatibility transition are complete. The current
+dependency-unblocked release candidate maps to **v2.13.0**. New claim-surface drift reopens
 priority 1. Version milestones through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
 
@@ -84,7 +85,7 @@ current debt without turning every refinement into feature work.
 | Security | Unresolved HTTP destinations fail closed; rejected values and unexpected details stay out of default output; persisted inputs, corpus files, local catalog text, and default cache payload work are bounded; empty catalog filters cannot bypass compact defaults; release verification binds artifacts and recovery commands to exact status, workflow, tag, signer, and commit evidence; the installed dependency auditor resolves under Python isolated mode; pull requests and pushes to `main` run CodeQL while weekly and manual main scans remain | Ratchet the remote SAST requirement from its evidence-backed transition floor of 7 to 10 only after the public Scorecard window reports successful supported SAST checks for every sampled merged pull request; do not backfill history for the metric |
 | Accessibility | `--plain` is shipped; help uses complete linear output when needed; welcome alignment is content-aware at ordinary widths; catalog and cache rows preserve labels when narrow; color is never the only status channel | Keep both paths complete; do not replace the parser or hide specialist controls |
 | Documentation accuracy | README, MCP quick starts, stability, operational, security, generated CLI, release, catalog, cache, corpus, agent, schema, example, snapshot, and test surfaces use reserved target identities or disclosure-safe aggregates; the release gate rejects the retired target vocabulary | Keep eventual machine diagnostics separate from human output until versioned contracts are justified; retain manual review for previously unseen organization-shaped prose and preserve provider definitions |
-| Interchange portability | Current agent scaffolds use native client layouts, and versioned JSON is the structured runtime contract. Agent Plugins v1.0.0 remains a working draft; OKF v0.2 is a knowledge format rather than a domain-specific runtime schema. | Test a schema-pinned portable plugin during the v2.15 client evaluation. During v2.13, either defer OKF for lack of a named consumer or define an additive caller-owned projection over stable observation capsules. Do not claim conformance before validation or replace JSON. |
+| Interchange portability | Current agent scaffolds use native client layouts, and versioned JSON is the structured runtime contract. Agent Plugins v1.0.0 remains a working draft. v2.13 adds a separate caller-owned capsule schema; ADR-0014 defers OKF v0.2 because no named consumer justifies its trust and lifecycle mapping. | Validate and release the capsule through protected main. Test a schema-pinned portable plugin during the v2.15 client evaluation. Reopen an additive OKF projection only for a named consumer with a privacy review; never replace JSON or claim conformance before validation. |
 
 ## Priority Order
 
@@ -557,7 +558,8 @@ explicit CLI flags, and MCP tools remain unchanged.
 
 ### Separate observation change from interpretation change
 
-The shipped delta path compares rendered snapshot outputs. A catalog, model,
+The legacy delta path compares rendered snapshot outputs. v2.13 adds a separate
+caller-owned capsule path without changing that stable shape. A catalog, model,
 software version, normalizer, evaluation time, collection option, resolver
 vantage, cache state, or source failure can change those outputs without a
 public target-state change. Immediate degradation-aware suppression keeps
@@ -566,9 +568,9 @@ current channels from becoming confirmed removals, and dependent scalar
 comparisons from proceeding without both observation opportunities. Exact
 temporal semantics require replayable local observation capsules.
 
-After the observation ledger and first claim contract are stable, define a
-caller-held capsule containing replayable raw response content or references,
-normalized observations, per-source opportunity states, observation windows, a
+The v2.13 release candidate defines a caller-held capsule containing retained
+raw DNS observations, normalized facts and snapshots, per-source opportunity
+states, observation windows, a
 frozen evaluation `as_of`, cache and vantage metadata, collection options,
 software and normalizer versions, catalog and model digests, and a content
 digest. Compare public observations by applying one frozen normalizer to both
@@ -576,7 +578,7 @@ raw capsules. Classify comparison results as observation, collection-regime,
 time-evaluation, or interpretation deltas. Store stable signal identifiers
 instead of reconstructing them from human-facing insight prose.
 
-Acceptance evidence:
+Acceptance evidence in the release candidate:
 
 - current v2 delta fields remain compatible and incomplete comparisons name the
   degraded sources and withheld changes;
@@ -597,6 +599,11 @@ Acceptance evidence:
   consumer or defines an additive projection whose `sources`, `generated`,
   `verified`, lifecycle, and freshness fields never upgrade the underlying
   claim. The structured capsule and recon JSON remain authoritative.
+
+ADR-0014 takes the first disposition. The separate Draft 2020-12 capsule
+schema, CLI guide, deterministic and adversarial tests, and local-only
+retention boundary are implemented. Full canonical and protected-main gates
+remain the release boundary.
 
 ### Prototype provenance-constrained claim robustness after the baseline
 

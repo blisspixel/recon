@@ -10,6 +10,7 @@ This is a derived maintainer and agent-author reference, not a stable runtime AP
 - [`recon`](#recon)
 - [`recon batch`](#recon-batch)
 - [`recon cache`](#recon-cache)
+- [`recon capsule`](#recon-capsule)
 - [`recon delta`](#recon-delta)
 - [`recon discover`](#recon-discover)
 - [`recon doctor`](#recon-doctor)
@@ -20,6 +21,9 @@ This is a derived maintainer and agent-author reference, not a stable runtime AP
 - [`recon update`](#recon-update)
 - [`recon cache clear`](#recon-cache-clear)
 - [`recon cache show`](#recon-cache-show)
+- [`recon capsule capture`](#recon-capsule-capture)
+- [`recon capsule compare`](#recon-capsule-compare)
+- [`recon capsule replay`](#recon-capsule-replay)
 - [`recon fingerprints check`](#recon-fingerprints-check)
 - [`recon fingerprints list`](#recon-fingerprints-list)
 - [`recon fingerprints new`](#recon-fingerprints-new)
@@ -37,7 +41,7 @@ This is a derived maintainer and agent-author reference, not a stable runtime AP
 
 Kind: group
 Summary: Passive domain intelligence from public sources. Start with recon DOMAIN; run recon with no arguments for examples.
-Children: `batch`, `cache`, `delta`, `discover`, `doctor`, `fingerprints`, `lookup`, `mcp`, `signals`, `update`
+Children: `batch`, `cache`, `capsule`, `delta`, `discover`, `doctor`, `fingerprints`, `lookup`, `mcp`, `signals`, `update`
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|
@@ -75,6 +79,15 @@ Summary: Look up multiple domains from a file.
 Kind: group
 Summary: Manage the CT subdomain cache and TenantInfo result cache.
 Children: `clear`, `show`
+
+No parameters.
+
+<a id="recon-capsule"></a>
+## `recon capsule`
+
+Kind: group
+Summary: Capture, replay, and compare caller-owned observation capsules.
+Children: `capture`, `compare`, `replay`
 
 No parameters.
 
@@ -216,6 +229,49 @@ Summary: Show payload-free metadata for the result and CT cache layers.
 | `domain` | argument | `domain` | no | text |  |  |
 | `exact` | option | `--exact` | no | boolean | false |  |
 | `all_entries` | option | `--all` | no | boolean | false |  |
+
+<a id="recon-capsule-capture"></a>
+## `recon capsule capture`
+
+Kind: command
+Summary: Collect a domain and write a versioned, integrity-bound local capsule.
+
+| Name | Kind | Tokens | Required | Type | Default | Choices |
+|---|---|---|---|---|---|---|
+| `domain` | argument | `domain` | yes | text |  |  |
+| `output` | option | `--output`, `-o` | no | path |  |  |
+| `no_ct` | option | `--no-ct` | no | boolean | false |  |
+| `direct_probes` | option | `--direct-probes` | no | boolean | false |  |
+| `timeout` | option | `--timeout`, `-t` | no | float | 120.0 |  |
+| `vantage` | option | `--vantage` | no | text | caller-local |  |
+| `force` | option | `--force` | no | boolean | false |  |
+| `json_output` | option | `--json` | no | boolean | false |  |
+
+<a id="recon-capsule-compare"></a>
+## `recon capsule compare`
+
+Kind: command
+Summary: Separate observation, collection, time, and interpretation changes.
+
+| Name | Kind | Tokens | Required | Type | Default | Choices |
+|---|---|---|---|---|---|---|
+| `before` | argument | `before` | yes | path |  |  |
+| `after` | argument | `after` | yes | path |  |  |
+| `before_as_of` | option | `--before-as-of` | no | text |  |  |
+| `after_as_of` | option | `--after-as-of` | no | text |  |  |
+| `json_output` | option | `--json` | no | boolean | false |  |
+
+<a id="recon-capsule-replay"></a>
+## `recon capsule replay`
+
+Kind: command
+Summary: Verify and replay a capsule through the current stable renderer.
+
+| Name | Kind | Tokens | Required | Type | Default | Choices |
+|---|---|---|---|---|---|---|
+| `path` | argument | `path` | yes | path |  |  |
+| `as_of` | option | `--as-of` | no | text |  |  |
+| `json_output` | option | `--json` | no | boolean | false |  |
 
 <a id="recon-fingerprints-check"></a>
 ## `recon fingerprints check`

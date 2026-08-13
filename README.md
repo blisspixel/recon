@@ -133,6 +133,7 @@ recon example.com --plain                      # linear text for screen readers 
 recon example.com --json                       # structured record
 recon batch domains.txt --json                 # batch JSON array
 recon delta example.com                        # diff vs local cache
+recon capsule capture example.com -o run.json  # caller-owned replay artifact
 recon mcp install --client=cursor              # wire MCP into a client
 ```
 
@@ -145,9 +146,12 @@ JSON contracts:
 
 Versioned JSON remains recon's structured runtime contract. The
 [Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
-is tracked as a possible caller-owned knowledge projection for future
-observation capsules. recon does not currently emit OKF, and any future OKF
-view would be additive rather than a replacement for JSON.
+projection is deferred until a named consumer justifies the mapping. recon does
+not emit OKF, and any future OKF view would be additive rather than a replacement
+for JSON. Caller-owned JSON observation capsules are documented in
+[docs/observation-capsules.md](https://github.com/blisspixel/recon/blob/main/docs/observation-capsules.md),
+with the decision boundary in
+[ADR-0014](https://github.com/blisspixel/recon/blob/main/docs/adr/0014-caller-owned-capsules-and-okf-deferral.md).
 
 `docs/surface-inventory.json`, `docs/cli-surface.md`, and
 `recon://surface-inventory` are generated discovery context and drift guards,
@@ -222,6 +226,7 @@ Operators own deployment, identity, data handling, cost, and operations.
 |---|---|
 | Install and first commands | [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md) |
 | How it works | [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md) |
+| Observation capsules | [docs/observation-capsules.md](https://github.com/blisspixel/recon/blob/main/docs/observation-capsules.md) |
 | Correlation model | [docs/correlation.md](https://github.com/blisspixel/recon/blob/main/docs/correlation.md) |
 | MCP and agents | [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md), [agents/](https://github.com/blisspixel/recon/tree/main/agents) |
 | Full docs index | [docs/README.md](https://github.com/blisspixel/recon/blob/main/docs/README.md) |

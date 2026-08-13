@@ -31,6 +31,7 @@ certificate requests are explicit opt-in direct probes.
 | CT provider response bodies | Size-capped, filtered for wildcards and malformed entries in `sources/cert_providers.py` |
 | Malicious HTTP redirect targets / private-IP redirects | `src/recon_tool/http.py` `_SSRFSafeTransport` validates every hop |
 | Queried-namespace MTA-STS declarations and policy responses | Exact TXT admission plus bounded RFC 8461 parsing in `src/recon_tool/sources/mta_sts.py`; the policy request never follows redirects |
+| Caller-supplied observation capsules | `src/recon_tool/capsule.py` accepts only bounded, stable regular JSON files; rejects symbolic links, mutation during read, excessive nesting, non-finite values, unknown contract fields, malformed normalized snapshots, and fact or capsule digest mismatch |
 
 ---
 
@@ -96,6 +97,20 @@ only prior check summaries plus bounded spawned-server stderr.
   lists after control-byte stripping
 - JSON output uses `json.dumps` (escapes)
 - No DNS value is interpolated into shell, SQL, or exec contexts anywhere in the codebase
+
+### Malicious observation capsules
+
+**Surface:** A caller replays or compares a capsule file created outside the
+current process.
+
+**Mitigation:** Capsule reads are capped at 10 MiB and bind metadata and content
+to one stable regular-file descriptor. Symbolic links, mutation during read,
+excessive nesting, invalid UTF-8 or JSON, non-finite values, invalid timestamps,
+unknown fields, malformed normalized snapshots, and digest mismatches fail with
+a validation error. Replay does not call the resolver or any network source.
+Writes refuse an existing path unless `--force` is explicit and use a
+same-directory exclusive temporary file plus atomic replacement. SHA-256
+detects modification but provides no signer identity or authenticity guarantee.
 
 ### Malicious CNAME chains (surface-attribution walker)
 
