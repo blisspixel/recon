@@ -28,11 +28,18 @@ That handles **piece 1** of the setup (the MCP server). Per-client folders below
 
 | Agent | Folder | Pieces shipped |
 |---|---|---|
-| **Claude Code** | [`claude-code/`](claude-code/) | Full plugin: MCP registration + skill + plugin manifest. One install wires everything up. |
+| **Claude Code** | [`claude-code/`](claude-code/) | Client-specific Claude Code plugin: MCP registration + skill + manifest. One install wires everything up. |
 | **Kiro** | [`kiro/`](kiro/) | MCP config + instructions for using the canonical SKILL.md as a Kiro skill. |
 | **Cursor** | [`cursor/`](cursor/) | MCP config + instructions for creating `.cursor/rules/recon.md` from `AGENTS.md`. |
 | **Windsurf** | [`windsurf/`](windsurf/) | MCP config + instructions for creating a `.windsurfrules` reference. |
 | **VS Code + Copilot** | [`vscode/`](vscode/) | MCP config + instructions for creating `.github/copilot-instructions.md`. |
+
+These folders are native client scaffolds. The Claude Code directory follows
+Claude Code's `.claude-plugin/plugin.json` and `.mcp.json` conventions; it is
+not the root `plugin.json` plus `mcp.json` package defined by the portable
+[Agent Plugins v1.0.0 working draft](https://agent-plugins.org/specification).
+That portable format is tracked as a separate, schema-pinned interoperability
+target in the roadmap.
 
 For Claude Desktop and other clients without a folder here, `recon mcp install --client=claude-desktop` covers the MCP wiring; see [`docs/mcp.md`](../docs/mcp.md) for full reference.
 

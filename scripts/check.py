@@ -74,6 +74,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "clusterfuzzlite-requirements", [_PY, "scripts/check_clusterfuzzlite_requirements.py"]),
     (_CORE, "schema-sources", [_PY, "scripts/check_schema_sources.py"]),
     (_CORE, "schema-generator", [_PY, "scripts/generate_schema.py", "--check"]),
+    (_CORE, "schema-interoperability", [_PY, "scripts/check_schema_interoperability.py"]),
     (_CORE, "surface-inventory", [_PY, "scripts/generate_surface_inventory.py", "--check"]),
     (_CORE, "default-claim-audit", [_PY, "scripts/check_default_claim_audit.py"]),
     (_CORE, "cli-surface-doc", [_PY, "scripts/generate_surface_inventory.py", "--check-cli-surface"]),

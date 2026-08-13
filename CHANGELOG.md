@@ -26,6 +26,60 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.10.4] - 2026-08-13
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag, MCP tool, resource, or stable JSON
+field changes.
+
+### Added
+
+- A blocking independent Draft 2020-12 interoperability gate now loads both
+  published schema copies, rejects external or unresolved references, enforces
+  explicit structure and time bounds, and validates a production-formatted
+  record plus a required-field negative control with `jsonschema`.
+- `validation/characterize_live_quality.py` measures the real single-domain
+  path, warm disk and MCP paths, allocation, degradation, and paired CT value
+  without emitting identifiers or per-domain rows. The first reviewed
+  aggregate completed 50 of 50 no-CT attempts and 47 of 50 CT attempts and is
+  published with its limits rather than treated as population evidence.
+- The v2.11 evaluation now has a public Tranco-derived frame declaration, a
+  private HMAC-SHA-256 frame commitment, an immutable eligibility window, and a
+  fail-closed preparer that performs no target collection. The reference label
+  requires concordant Microsoft identity endpoints, and collection remains
+  blocked until the declaration is public and the window opens.
+
+### Changed
+
+- The README terminal example now uses the reserved `example.com` namespace and
+  a richer fictional service mix, making the demo immediately recognizable as
+  a domain-intelligence result while preserving deterministic, no-network
+  generation and an accessible text transcript.
+- The roadmap and strategic gap audit now distinguish completed maintenance
+  gates from the next decision-bearing v2.11 work, place the v2.12 fusion
+  application directly after that decision, and track Agent Plugins v1.0.0 and
+  Open Knowledge Format v0.2 as additive future interoperability work without
+  claiming current conformance.
+
+### Fixed
+
+- Related-domain inventory enrichment now reprojects final insight claims
+  against apex collection availability, so retained but degraded evidence
+  cannot support a claim and newly relevant retained apex evidence is attached
+  exactly. The narrow pre-enrichment sparse-scope exception remains preserved.
+- Cached claim evidence now accepts the model's valid empty catalog slug for
+  typed non-catalog observations instead of rejecting an otherwise exact cache
+  round trip.
+
+### Security
+
+- The mutation-testing environment now resolves GitPython 3.1.59 instead of
+  3.1.57, incorporating the upstream option, clone-directory, and configuration
+  parsing hardening that superseded the already-green 3.1.58 Dependabot update.
+  The runtime package surface is unchanged, and the locked environment passes
+  strict dependency audit with no known vulnerabilities.
+
 ## [2.10.3] - 2026-08-07
 
 ### Tool Surface Changes

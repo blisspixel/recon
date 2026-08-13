@@ -116,6 +116,13 @@ docs/accuracy.md
 # corpus, no third-party dependency. Reproduces the sample-size tables in
 # docs/quality-baseline-preregistration.md. No target data.
 !/validation/quality_power_analysis.py
+# Aggregate-only live product-quality characterization. The runner is public;
+# its corpus and generated reports remain under the private roots below.
+!/validation/characterize_live_quality.py
+!/validation/2026-08-12-stable-v1-live-characterization.md
+# Private evaluation-frame preparer. The generic HMAC sampler is public; source,
+# key, membership, and collection outputs remain under the private roots below.
+!/validation/prepare_quality_evaluation_frame.py
 # Layer-ablation harness + memo: fully synthetic (model-sampled worlds, planted
 # partitions, fictional hostnames), deterministic, publishable. No target data.
 !/validation/layer_ablation.py

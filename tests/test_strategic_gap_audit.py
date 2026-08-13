@@ -25,9 +25,9 @@ def test_strategic_gap_audit_prioritizes_product_quality_without_runtime_expansi
     text = " ".join(_read(AUDIT).split())
 
     for required in (
-        "The highest-value work is not runtime expansion",
-        "evidence semantics, measured utility, catalog quality",
-        "completed stable MCP matrix",
+        "The highest-value next build is not runtime expansion",
+        "measured utility, catalog quality, latency and degradation evidence",
+        "claim audit and stable MCP matrix remain blocking regression gates",
         "aggregate-safe product-quality baseline",
         "does not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior",
         "Runtime expansion, broad catalog growth, stable-surface promotion, "
@@ -96,7 +96,7 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
 def test_strategic_gap_audit_cites_current_external_standards() -> None:
     text = _read(AUDIT)
 
-    assert "Checked: 2026-07-28." in text
+    assert "Checked: 2026-08-12." in text
 
     for url in (
         "https://www.acm.org/publications/policies/artifact-review-and-badging-current",
@@ -111,6 +111,11 @@ def test_strategic_gap_audit_cites_current_external_standards() -> None:
         "https://arxiv.org/abs/2605.06508",
         "https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/",
         "https://modelcontextprotocol.io/docs/getting-started/intro",
+        "https://agent-plugins.org/specification",
+        "https://agent-plugins.org/compatible-clients",
+        "https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md",
+        "https://cloud.google.com/blog/products/data-analytics/okf-v0-2-adds-trust-signals/",
+        "https://cloud.google.com/blog/products/data-analytics/how-the-open-knowledge-format-can-improve-data-sharing/",
         "https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/about-issue-and-pull-request-templates",
     ):
         assert url in text
