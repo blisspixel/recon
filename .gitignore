@@ -65,6 +65,7 @@ docs/accuracy.md
 # key, selected rows, and manifests remain under the ignored private roots.
 !/validation/prepare_catalog_rank_frame.py
 !/validation/ranked_sampling.py
+!/validation/stratify_catalog_round.py
 !/validation/summarize_ct_sessions.py
 !/validation/corpus-example.txt
 !/validation/README.md

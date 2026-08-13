@@ -2,7 +2,7 @@
 
 **Frozen:** 2026-08-13T16:23:43.917496Z
 
-**Collection status:** Not started
+**Collection status:** Complete; stratified reduction under review
 
 **Target-network requests during preparation:** 0
 
@@ -71,13 +71,30 @@ it exactly.
 
 ## Collection gate
 
-Selection is complete, but collection remains blocked until this declaration
-is merged to protected `main`. After merge, the private catalog-round contract
-must be regenerated with schema version 2. That contract commits the combined
+The declaration and implementation-digest gate reached protected `main` before
+collection. The private schema-version-2 round contract committed the combined
 frame, catalog digest, execution-code and lockfile digest, CT-off setting,
 direct-probes-off setting, recurrence thresholds, and promotion and regression
-budget. `scan.py` must revalidate every commitment before its first target
-request. The reducer repeats the checks before it emits an aggregate.
+budget. `scan.py` revalidated every commitment before its first target request.
+
+The bounded pass ran from 2026-08-13T16:56:56Z through
+2026-08-13T17:10:07Z and completed all 1,000 rows. It produced no error records;
+61 rows were partial because at least one source degraded. The result digest is
+`cb3dc327f5d914a537dfb019834fd41045844b1241856ea62344bb460773a35f`.
+The private round-manifest digest is
+`b6aba9c257716a0fc74401fc31acf8c5de21d4fe22c71a90a3021e506c6e99de`.
+Its catalog digest is
+`dd72dda192fb625d0f90c7475ff00f90be53d8da5363075c195b317691ac6ce2`,
+and its execution digest is
+`c66c4dafaa6b6dd837f16c178c584ec5de1eab08683dc2882a0e6a0fa2e5c102`.
+
+The first reducer correctly produced a pooled typed baseline, but pooling
+discarded the four-band comparison. That aggregate remains valid as a pooled
+description and is not accepted as rank-round closure. Candidate review and
+promotion remain paused while the membership-bound stratified reducer is
+reviewed and merged. The reducer requires every frozen result exactly once,
+uses only ordered stratum indexes in public output, and records a new reducer
+digest without rewriting the historical observation-code commitment.
 
 The round uses the normal documented DNS and identity-discovery boundary with
 CT disabled and no opt-in direct probes. Public outputs may contain aggregate

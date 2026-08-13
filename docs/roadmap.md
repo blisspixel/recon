@@ -863,9 +863,11 @@ disclosure-safe aggregates are the validation review surface.
 
 The v2.14 release order is rank bands, regional, vendor-seed, then drift. The
 rank-band private selection and public commitments are frozen in the
-[catalog rank-round declaration](catalog-rank-round-declaration.md); collection
-waits for that declaration and its catalog and execution-digest gate to reach
-protected `main`. The convenience baseline and unseen vertical holdout remain
+[catalog rank-round declaration](catalog-rank-round-declaration.md). The
+1,000-row observation pass is complete, but the pooled reducer discarded the
+four-band comparison. Rank-round closure now waits for the membership-bound
+stratified reducer and explicit candidate dispositions. The convenience
+baseline and unseen vertical holdout remain
 supporting evidence,
 not substitutes for those independent rounds. Complete v2.14 only when every
 frozen round has an aggregate result and every candidate has an explicit
