@@ -41,12 +41,19 @@ from pathlib import Path
 from typing import Any, NamedTuple
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from validation.prepare_catalog_round import RoundExecutionOptions  # noqa: E402
+from validation.prepare_catalog_round import load_round_contract as _load_round_contract  # noqa: E402
 
 _PRIVATE_SCAN_OUTPUT_ROOTS = (
     REPO_ROOT / "validation" / "runs-private",
     REPO_ROOT / "validation" / "live_runs",
     REPO_ROOT / "validation" / "local",
 )
+_PRIVATE_SCAN_INPUT_ROOTS = (*_PRIVATE_SCAN_OUTPUT_ROOTS, REPO_ROOT / "validation" / "corpus-private")
+_ROUND_CONTRACT_KINDS = frozenset({"rank", "region", "vertical", "vendor-seed", "drift"})
 
 
 class BatchRunResult(NamedTuple):
@@ -71,6 +78,8 @@ class FinalizeContext(NamedTuple):
     no_compare: bool
     ct: bool
     round_kind: str
+    round_manifest_path: Path | None
+    round_contract: dict[str, Any] | None
     label: str
     corpus: Path
     corpus_input_rows: int
@@ -121,10 +130,10 @@ def _validate_private_scan_input_path(path: Path) -> Path:
         resolved.relative_to(REPO_ROOT)
     except ValueError:
         return resolved
-    allowed = tuple(root.resolve(strict=False) for root in _PRIVATE_SCAN_OUTPUT_ROOTS)
+    allowed = tuple(root.resolve(strict=False) for root in _PRIVATE_SCAN_INPUT_ROOTS)
     if any(resolved == root or resolved.is_relative_to(root) for root in allowed):
         return resolved
-    allowed_text = ", ".join(str(root.relative_to(REPO_ROOT)) for root in _PRIVATE_SCAN_OUTPUT_ROOTS)
+    allowed_text = ", ".join(str(root.relative_to(REPO_ROOT)) for root in _PRIVATE_SCAN_INPUT_ROOTS)
     raise ValueError(f"private validation input inside this checkout must be under one of: {allowed_text}")
 
 
@@ -156,6 +165,26 @@ def _corpus_stats(corpus: Path) -> CorpusStats:
         duplicate_rows_removed=len(rows) - len(seen),
         invalid_rows=invalid_rows,
     )
+
+
+def _preflight_round_contract(
+    args: argparse.Namespace,
+    *,
+    corpus: Path,
+) -> tuple[Path | None, dict[str, Any] | None]:
+    if args.round_manifest is None:
+        return None, None
+    path = _validate_private_scan_input_path(args.round_manifest)
+    contract = _load_round_contract(
+        path,
+        corpus=corpus,
+        options=RoundExecutionOptions(
+            round_kind=args.round_kind,
+            ct_enabled=bool(args.ct),
+            min_count=args.min_count,
+        ),
+    )
+    return path, contract
 
 
 def _count_result_records(results_path: Path) -> int:
@@ -322,6 +351,15 @@ def _build_parser() -> argparse.ArgumentParser:
         help="Predeclared sampling purpose recorded by the typed catalog baseline.",
     )
     parser.add_argument(
+        "--round-manifest",
+        type=Path,
+        default=None,
+        help=(
+            "Frozen private round manifest produced by prepare_catalog_round.py. "
+            "Required for rank, region, vertical, vendor-seed, and drift rounds."
+        ),
+    )
+    parser.add_argument(
         "--concurrency",
         type=int,
         default=4,
@@ -409,6 +447,12 @@ def _validate_cli_options(args: argparse.Namespace) -> None:
         raise ValueError("--max-runtime must be greater than 0")
     if args.max_runtime is not None and args.json_array:
         raise ValueError("--max-runtime requires streaming NDJSON; remove --json-array")
+    round_kind = getattr(args, "round_kind", "baseline")
+    round_manifest = getattr(args, "round_manifest", None)
+    if round_kind in _ROUND_CONTRACT_KINDS and round_manifest is None:
+        raise ValueError(f"--round-manifest is required for {round_kind!r} rounds")
+    if args.ct_retry_from is not None and round_manifest is not None:
+        raise ValueError("--round-manifest cannot be combined with --ct-retry-from")
 
 
 def _synthesize_ct_retry_corpus(retry_from: Path, output_root: Path) -> Path:
@@ -657,6 +701,8 @@ def _finalize_scan(ctx: FinalizeContext) -> None:
         "concurrency": ctx.concurrency,
         "ct_enabled": bool(ctx.ct),
         "round_kind": ctx.round_kind,
+        "round_id": ctx.round_contract["round_id"] if ctx.round_contract else None,
+        "round_manifest_digest_sha256": (ctx.round_contract["manifest_digest_sha256"] if ctx.round_contract else None),
         "gaps_total": gaps_count,
         "candidates_after_triage": candidates_count,
         "compared_to": str(compare_target) if compare_target else None,
@@ -664,22 +710,22 @@ def _finalize_scan(ctx: FinalizeContext) -> None:
     }
     (ctx.run_dir / "meta.json").write_text(json.dumps(meta, indent=2), encoding="utf-8")
 
-    _run_step(
-        [
-            sys.executable,
-            "-m",
-            "validation.catalog_baseline",
-            "--input",
-            str(ctx.results_path),
-            "--output-dir",
-            str(ctx.run_dir),
-            "--round-kind",
-            ctx.round_kind,
-            "--min-count",
-            str(ctx.min_count),
-        ],
-        "typed catalog baseline",
-    )
+    baseline_cmd = [
+        sys.executable,
+        "-m",
+        "validation.catalog_baseline",
+        "--input",
+        str(ctx.results_path),
+        "--output-dir",
+        str(ctx.run_dir),
+        "--round-kind",
+        ctx.round_kind,
+        "--min-count",
+        str(ctx.min_count),
+    ]
+    if ctx.round_manifest_path is not None:
+        baseline_cmd.extend(("--round-manifest", str(ctx.round_manifest_path)))
+    _run_step(baseline_cmd, "typed catalog baseline")
 
     completion = "complete" if ctx.batch_completed else "partial"
     print()
@@ -725,6 +771,12 @@ def main() -> None:
         print(f"error: corpus file not found: {corpus}", file=sys.stderr)
         raise SystemExit(2)
 
+    try:
+        round_manifest_path, round_contract = _preflight_round_contract(args, corpus=corpus)
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        raise SystemExit(2) from exc
+
     started_utc = datetime.now(UTC).isoformat()
     corpus_stats = _corpus_stats(corpus)
     domain_count = corpus_stats.scheduled_domains
@@ -751,6 +803,8 @@ def main() -> None:
                 no_compare=args.no_compare,
                 ct=args.ct,
                 round_kind=args.round_kind,
+                round_manifest_path=round_manifest_path,
+                round_contract=round_contract,
                 label=args.label,
                 corpus=corpus,
                 corpus_input_rows=corpus_stats.input_rows,
@@ -794,6 +848,8 @@ def main() -> None:
             no_compare=args.no_compare,
             ct=args.ct,
             round_kind=args.round_kind,
+            round_manifest_path=round_manifest_path,
+            round_contract=round_contract,
             label=args.label,
             corpus=corpus,
             corpus_input_rows=corpus_stats.input_rows,

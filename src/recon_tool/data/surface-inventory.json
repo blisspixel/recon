@@ -124,8 +124,8 @@
       {
         "frontmatter": {
           "allowed-tools": "Bash(recon:*), Read, Edit, Write",
-          "argument-hint": "<domain | path/to/candidates.json>",
-          "description": "Triage fingerprint-discovery candidates from recon's CNAME-chain classifier. Reads either a single `recon <domain> --json --include-unclassified` payload or a `candidates.json` produced by `validation/triage_candidates.py`, then proposes new `cname_target` fingerprint stanzas for `surface.yaml`. Use when the user asks to \"find new fingerprints\", \"what SaaS are we missing\", \"discover unclassified CNAME targets\", or wants to extend recon's catalog from a fresh lookup or validation corpus run.",
+          "argument-hint": "<domain | private discovery artifact>",
+          "description": "Triage recon fingerprint candidates across the bounded DNS catalog surface. Reads private single-domain discovery output, aggregate catalog baselines, or candidate queues, then classifies candidates as pending, promoted, rejected, or deferred under the v2.14 catalog-quality gates. Use when the user asks to find missing fingerprints, review unclassified DNS observations, or improve catalog coverage.",
           "name": "recon-fingerprint-triage"
         },
         "kind": "skill",

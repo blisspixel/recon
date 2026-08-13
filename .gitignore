@@ -59,6 +59,8 @@ docs/accuracy.md
 !/validation/triage_candidates.py
 !/validation/scan.py
 !/validation/catalog_baseline.py
+# Generic catalog-round frame preparer; no target data is embedded.
+!/validation/prepare_catalog_round.py
 !/validation/summarize_ct_sessions.py
 !/validation/corpus-example.txt
 !/validation/README.md
