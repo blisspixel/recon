@@ -1,7 +1,7 @@
 # Engineering Refinement Plan
 
-Status: active implementation plan
-Review date: 2026-07-14
+Status: active implementation plan aligned to the v2.14 catalog-quality phase
+Review date: 2026-08-13
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
 engineering tracks. It does not authorize unrelated runtime expansion. Every
@@ -51,7 +51,7 @@ or failing guard.
 
 ## Track 1: Evidence-Semantic Integrity
 
-Status: active; live MCP boundary, score wording, and parent-platform
+Status: complete maintenance gate; live MCP boundary, score wording, and parent-platform
 child-product inference corrected in v2.4.0; provider summaries now share
 one evidence-aware derivation across output surfaces; Markdown service labels
 now cross one escaped output boundary and use mutually exclusive provider
@@ -172,7 +172,7 @@ Detailed phases are in
 
 ## Track 3: Product-Quality Baseline and Ablation
 
-Status: specified
+Status: v2.11 structural stop and v2.12 compatibility transition complete
 Dependencies: Track 1's first machine-enforced claim contract and
 observation-opportunity ledger
 Risk: measurement-design and disclosure risk
@@ -294,7 +294,7 @@ Dependency-ordered work around this decision:
 
 ## Track 4: Dimensioned Email Observations
 
-Status: design after Track 3 baseline
+Status: deferred pending measured evidence after the active catalog phase
 Dependencies: Tracks 1 and 3
 Risk: stable-contract and user-interpretation risk
 
@@ -327,8 +327,8 @@ approved.
 
 ## Track 5: Measured Async and Schema Interoperability
 
-Status: Python optimization checkpoints implemented; product-shaped async and
-v2 deltas remain
+Status: stable-v1 characterization and stable-v2 compatibility deltas complete;
+clean-machine stage budgets remain future evidence
 Dependencies: none for resolver and current-schema baselines; stable-v2 deltas
 are available from the completed Track 2 matrix
 Risk: concurrency and brittle-benchmark risk
@@ -401,7 +401,8 @@ Risk: concurrency and brittle-benchmark risk
 
 ## Track 6: Catalog Quality and Lifecycle
 
-Status: baseline after Track 3
+Status: active v2.14 priority; rank closed, regional frame frozen before
+collection
 Dependencies: Track 3 measurement definitions
 Risk: false-positive and regional-selection bias
 
@@ -409,7 +410,10 @@ Risk: false-positive and regional-selection bias
   expansion.
 - Ratchet current public references and `verified` dates. New undated rules are
   not accepted.
-- Prioritize regional and non-CNAME gaps by aggregate frequency.
+- Run and disposition the frozen regional frame before preparing vendor-seed
+  or drift collection.
+- Prioritize regional and non-CNAME gaps by aggregate frequency only within the
+  declared observation opportunities and recurrence thresholds.
 - Resolve each current candidate as promoted, rejected, or explicitly
   deferred.
 - Require positive, lookalike-negative, sparse, and provenance tests for every
@@ -555,23 +559,26 @@ Execute this track in four bounded phases:
 
 ## Execution Order
 
-1. Keep evidence-semantic corrections as the active trust stream and the
-   completed stable MCP v1/v2 matrix as a blocking regression stream. The first
-   machine-enforced claim contract and stable MCP matrix are complete. Freeze
-   the claim contract's unit and label boundaries before benchmark enrollment.
-2. Run the stable-v1 resolver, allocation, CT-value, and schema
-   characterization from Track 5.
-3. Complete the product-quality scorecard and ablation using that artifact.
-4. Separate observation, collection-regime, time-evaluation, and interpretation
-   deltas with caller-held replayable capsules.
-5. Prototype claim-scoped Boolean robustness only under the formal acceptance
-   and retirement rule.
-6. Qualify or demote CT graph correlation before adding graph machinery.
-7. Decide the dimensioned email-observation model from measured evidence.
-8. Apply stable-v2 SDK deltas from Track 2 to the Track 5 characterization.
-9. Baseline and improve catalog quality.
-10. Measure and, only if justified, simplify operator and agent discovery.
-11. Decompose critical interface hotspots without changing behavior.
+1. Keep the completed evidence-semantic audit and stable MCP v1/v2 matrix as
+   blocking maintenance gates.
+2. Preserve the completed stable-v1 characterization, v2.11 structural stop,
+   v2.12 compatibility transition, and shipped v2.13 observation capsules.
+3. Preserve the closed v2.14 rank decision and frozen regional source and frame
+   commitments. Run and disposition the regional round next.
+4. Freeze and run disjoint vendor-seed holdouts, then re-observe the frozen
+   prior sample as the drift round. Keep all public evidence aggregate-only.
+5. Backfill review dates only in families examined through those rounds, and
+   raise the freshness ratchet only when measured coverage supports it.
+6. Measure and, only if justified, simplify operator and agent discovery in
+   v2.15, including a schema-pinned Agent Plugins candidate. Keep the native
+   client paths until representative-client evidence supports portability.
+7. Reopen additive OKF v0.2 projection work only for a named consumer with a
+   privacy and semantic mapping review; versioned JSON remains authoritative.
+8. Treat dimensioned email observations, CT-enabled catalog discovery,
+   robustness prototypes, and new graph machinery as separately gated feature
+   tracks after the active catalog evidence closes.
+9. Decompose critical interface hotspots without changing behavior when the
+   active semantic and catalog work no longer shares their blast radius.
 
 Each step closes only with its named acceptance evidence, full local CI, the 90.2
 percent branch-aware project gate, no regression from the current coverage

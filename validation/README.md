@@ -220,9 +220,8 @@ python validation/scan.py \
 The regional round uses the same two-stage discipline. First freeze the raw
 official pages and derive the private mapping. This step makes two fixed-source
 requests, one to IANA and one to UN M49, but contacts no sampled namespace. It
-fails closed on any redirect, non-HTML or
-oversized responses, table-schema drift, duplicate codes, implausible source
-size, or an existing output artifact:
+fails closed on any redirect, non-HTML or oversized response, table-schema
+drift, duplicate codes, implausible source size, or an existing output artifact:
 
 ```bash
 python -m validation.prepare_catalog_region_sources \
@@ -259,6 +258,13 @@ remain grouped by their IANA delegation and UN M49 area, so the result cannot
 support claims about registrant location, organizational presence, or regional
 Internet prevalence. Commit the aggregate-only selection declaration and merge
 its implementation before any selected namespace is contacted.
+
+The active v2.14 regional contract is frozen in the
+[public declaration](../docs/catalog-regional-round-declaration.md). Its
+official source, mapping, selection, frame, catalog, implementation, collection,
+and decision commitments were published before any selected-namespace request.
+Run and disposition that exact frame before preparing vendor-seed or drift
+collection.
 
 Preparation fails closed on malformed rows, undeclared fields, cross-stratum
 overlap contrary to policy, direct-probe requests, or existing output files.

@@ -33,9 +33,9 @@ Redirected or captured gate output is plain text so CI logs and local evidence
 files remain directly searchable.
 The package-index-dependent MCP SDK matrix is intentionally separate:
 `scripts/check_mcp_compatibility.py` creates isolated exact-pin environments,
-and the `mcp-compatibility` CI job blocks regressions on both supported stable
-v1 and the current v2 candidate without making the ordinary local gate depend
-on network access.
+and the `mcp-compatibility` CI job blocks regressions on the stable v1.28.1
+rollback pin and stable v2.0.0 production pin without making the ordinary local
+gate depend on network access.
 Before pushing a local stack, `uv run python scripts/release_readiness.py` also
 checks every `origin/main..HEAD` commit message for attribution markers, em
 dashes, and pictographic symbols.
@@ -51,6 +51,11 @@ fix, encoded once. The pre-commit hooks and the CI validation job mirror the
 same fast guard family. Derived security artifacts that CI consumes, including
 the ClusterFuzzLite hash-pinned runtime requirements export, are checked here
 and remotely so dependency updates cannot leave stale generated inputs behind.
+Local package-invariant builds and isolated MCP compatibility environments use
+uv copy mode because it behaves consistently across ordinary, cross-device,
+and cloud-backed Windows cache locations without changing archive contents or
+the probed dependency set. Release builds remain isolated and hash-bound by the
+release workflow.
 The same rule applies to product data: split fingerprint YAML is canonical,
 `scripts/generate_fingerprint_catalog.py --check` gates its deterministic JSON
 runtime artifact, and exact differential tests prevent reordered or partial
