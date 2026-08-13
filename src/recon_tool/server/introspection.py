@@ -823,10 +823,11 @@ async def get_posteriors(domain: str) -> PosteriorBlockResult:
     absence. Inspect evidence and report unresolved when the public channel
     does not support the claim.
 
-    Stable v2.0+. The Beta layer (``slug_confidences`` on
-    ``lookup_tenant``) operates on raw evidence weights; this network
-    layer propagates through chained claims and adds the per-node model
-    posterior plus uncertainty band.
+    Stable v2.0+. The CLI ``--fusion`` path can additionally compute a Beta
+    evidence-strength layer named ``slug_confidences`` over raw evidence
+    weights. This explicit MCP tool computes the network layer, which
+    propagates through chained claims and adds the per-node model posterior
+    plus uncertainty band.
 
     Args:
         domain: Apex domain to evaluate (e.g. ``alpha.invalid``).

@@ -89,6 +89,20 @@ matches the disposition table exactly.
 - **`bayesian_network.yaml` topology.** Locked at v2.0; further
   changes require a schema-version bump.
 
+## v2.12 fusion transition
+
+The v2.11 structural-identifiability audit did not support promoting fusion as
+the primary interpretation path. v2.12 therefore documents it as an advanced
+diagnostic and begins the compatibility transition recorded in ADR-0013.
+
+The v2 runtime result does not silently change: omitting both `--fusion` and
+`--no-fusion` still computes fusion. An interactive terminal notice asks the
+operator to choose explicitly. Redirected output remains silent and parseable.
+Pass `--no-fusion` for the deterministic primary path or `--fusion` to retain
+the advanced diagnostic. The omitted choice changes to off only at the v3 major
+boundary. Stable JSON fields and the explicit MCP `get_posteriors` and
+`explain_dag` tools do not change.
+
 ## Downgrade path
 
 If you upgrade to v2.0 and need to roll back to v1.9.x for any

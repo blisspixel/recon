@@ -89,9 +89,12 @@ replacement threshold.
 ## Next operation
 
 The next release operation is the already-planned quality-decision application:
-move fusion from the default path to an explicit advanced diagnostic while
-preserving stable JSON and MCP compatibility. A future fusion candidate may
-earn a new real-domain evaluation only after it has at least two
-non-collapsed evidence units, a binary operator action connected to shipped
-behavior, an executable dominance and identifiability preflight, disjoint
-labels, and a newly frozen design.
+classify fusion as an explicit advanced diagnostic while preserving stable JSON
+and MCP compatibility. The subsequent SemVer review found that flipping the
+stable v2 CLI default in a minor release would violate the stability policy.
+ADR-0013 therefore preserves implicit v2 behavior with an interactive
+explicit-choice notice and assigns the default-off change to v3. A future
+fusion candidate may earn a new real-domain evaluation only after it has at
+least two non-collapsed evidence units, a binary operator action connected to
+shipped behavior, an executable dominance and identifiability preflight,
+disjoint labels, and a newly frozen design.

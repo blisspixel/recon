@@ -9,9 +9,10 @@ tracked separately from product work.
 > **Status:** v2.10.4 is current. The stable baseline is complete: CLI, versioned
 > JSON, local stdio MCP, bounded collectors, claim-audit gates, MCP dual-SDK
 > matrix, and a verified release path. Tracks 1–2 (evidence integrity, MCP v2)
-> are complete maintenance. **Next build priority is track 3 / v2.11:** a
-> reproducible product-quality baseline that decides whether advanced fusion
-> stays primary. The ordered version path through v3.0 is summarized in
+> are complete maintenance. Track 3's v2.11 structural decision and compatible
+> v2.12 fusion transition are complete. **Next build priority is v2.13:** a
+> caller-held observation capsule and an evidence-backed OKF v0.2 projection
+> decision. The ordered version path through v3.0 is summarized in
 > [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
 > default.
@@ -28,16 +29,17 @@ tracked separately from product work.
 Rank and urgency are different axes. Priority 1 remains the standing highest
 trust priority because output truthfulness outranks features; its current
 27-family audit closed on 2026-08-01. Priority 2 adopted MCP v2 on 2026-07-31
-and retains both exact compatibility pins as blocking checks. Priority 3 is now
-the next dependency-unblocked work and maps to **v2.11.0**. New claim-surface
-drift reopens priority 1. Version milestones through v3.0:
+and retains both exact compatibility pins as blocking checks. Priority 3's
+v2.11 decision and v2.12 compatibility transition are complete. The next
+dependency-unblocked build maps to **v2.13.0**. New claim-surface drift reopens
+priority 1. Version milestones through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
 
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
 | [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete on 2026-08-01. The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 27 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
-| [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | Specified, decision rule frozen, Phase 1 part-run. Extensive process evidence exists; product-outcome evidence does not. | A dated aggregate-safe scorecard with a decision rule written before the run, deciding whether advanced fusion stays primary or becomes an advanced diagnostic. |
+| [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
 | [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the three core evidence and compatibility tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
 Everything blocked behind these, and the gate that unblocks each, is in
@@ -536,18 +538,22 @@ characterization section appears later in this document:
 3. Keep the dated structural-identifiability memo and its exhaustive CI test
    blocking. It closes the v2.11 decision without pretending that a
    non-identifying live run could measure benefit.
-4. Apply the non-promotion decision as v2.12 before promoting new interpretation or agent
-   surfaces. Independent catalog-round preparation may continue, but promotion
-   waits for its own v2.14 gates.
+4. Keep the v2.12 non-promotion transition blocking: explicit flags preserve
+   intent across v3, interactive implicit use is warned, and machine output is
+   never contaminated. Independent catalog-round preparation may continue, but
+   promotion waits for its own v2.14 gates.
 
-### Apply the v2.11 result as v2.12
+### Apply the v2.11 result through v2.12 and v3
 
 The fusion decision is not deferred to the final phase of the broader quality
 plan. The v2.11 preflight established before collection that the frozen
-promotion condition is structurally unreachable. Align the primary path,
-defaults, documentation, and tests with non-promotion: fusion becomes an
-explicitly advanced diagnostic. Preserve stable JSON and MCP compatibility
-while making that product-positioning change.
+promotion condition is structurally unreachable. v2.12 aligns product
+positioning, documentation, and tests with non-promotion: fusion is an advanced
+diagnostic and operators are directed to explicit flags. The runtime default
+cannot flip in a minor release because the stability policy classifies that as
+breaking. ADR-0013 therefore preserves implicit v2 behavior with an interactive
+transition notice and assigns the default-off switch to v3. Stable JSON fields,
+explicit CLI flags, and MCP tools remain unchanged.
 
 ### Separate observation change from interpretation change
 
