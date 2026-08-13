@@ -42,6 +42,10 @@ field changes.
   uplift from public DNS drift between live passes. It binds the frozen round
   membership, result digest, candidate catalog, and promotion budget and emits
   aggregate counts only.
+- A no-network regional-frame preparer freezes equal secret-keyed discovery
+  quotas across ccTLD-delegation groups, commits source and implementation
+  digests, excludes declared prior corpora, and makes the non-geolocation
+  interpretation boundary explicit before target contact.
 
 ### Changed
 

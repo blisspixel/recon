@@ -245,6 +245,7 @@ def execution_digest_sha256() -> str:
             "evaluate_catalog_promotions.py",
             "find_gaps.py",
             "prepare_catalog_round.py",
+            "prepare_catalog_region_frame.py",
             "run_path_safety.py",
             "scan.py",
             "stratify_catalog_round.py",

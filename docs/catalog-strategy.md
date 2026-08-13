@@ -71,9 +71,13 @@ purpose-built strata, each curated and stored privately:
   directories are public (the `.gov` zone, accreditation registries, regulator
   member lists).
 - **Regional / ccTLD lists.** The current catalog skews toward US and English
-  vendors; this is the largest blind spot. Per-country sweeps surface regional
-  hosting, email, identity, CDN, and consent vendors that never appear in a US
-  list.
+  vendors; this is the largest blind spot. The first round groups only exact
+  ASCII two-letter IANA country-code TLDs through their matching UN M49
+  ISO-alpha2 entries, then samples equal discovery quotas from several ccTLDs
+  per M49 region. A ccTLD is a namespace attribute, not evidence of registrant
+  location, organizational presence, or service geography. Globally marketed
+  ccTLDs remain in their delegated grouping, so the result is descriptive for
+  the frozen namespace frame and is not a regional prevalence estimate.
 - **Vendor-seed lists (reverse direction).** For a target vendor, collect its
   public customer list (case-study pages, "powered by" searches), observe those
   domains, and both tighten the pattern and measure recall.
