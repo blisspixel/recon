@@ -1,7 +1,6 @@
 # v2.14 Catalog Regional Round Declaration
 
-Status: baseline and fixed-observation decision complete; protected-main live
-replay pending
+Status: complete; protected-main live replay and aggregate disposition passed
 
 Frozen: 2026-08-13
 
@@ -120,13 +119,15 @@ end as promoted, rejected, deferred, unavailable, or unmeasured.
 
 The baseline completed all 1,000 frozen rows with zero errors and 45 partial
 rows. The aggregate-only
-[interim result](../validation/2026-08-13-catalog-regional-round.md) records the
+[result](../validation/2026-08-13-catalog-regional-round.md) records the
 stratified classification rates, explicit dispositions, and an accepted
 fixed-observation zero-regression decision for six documented provider
 families. It publishes no target identifier or per-domain row.
 
-The regional round is not closed yet. The accepted catalog and tests must merge
-through protected main with the full gate green, after which a live operational
-pass must replay this exact frozen frame from clean protected main. Vendor-seed
-preparation follows only after that replay is reduced and the regional round is
-closed.
+The accepted catalog and tests merged through protected main at
+`d19b888e3f6826df33994be3b46d91751438a7bd` after all 27 hosted checks passed.
+A live operational pass then replayed this exact frozen frame with 1,000 of
+1,000 rows, zero errors, and 39 partials. All five membership-bound strata
+reduced completely, and the clean-main counterfactual reproduced the accepted
+fixed-observation result. The regional round is closed; vendor-seed contract
+freeze is next.

@@ -264,10 +264,10 @@ The active v2.14 regional contract is frozen in the
 official source, mapping, selection, frame, catalog, implementation, collection,
 and decision commitments were published before any selected-namespace request.
 The aggregate-only
-[interim result](2026-08-13-catalog-regional-round.md) records the complete
-baseline and accepted fixed-observation decision. Merge the exact catalog
-through protected main, then replay that same frozen frame before preparing
-vendor-seed or drift collection.
+[result](2026-08-13-catalog-regional-round.md) records the complete baseline,
+accepted fixed-observation decision, and clean protected-main replay. The
+regional round is closed. Freeze the disjoint vendor-seed contract before its
+first collection; drift follows against a frozen prior sample.
 
 Preparation fails closed on malformed rows, undeclared fields, cross-stratum
 overlap contrary to policy, direct-probe requests, or existing output files.
