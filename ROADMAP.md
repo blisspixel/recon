@@ -56,7 +56,7 @@ silent-failure, and contract-preserving fixes at any point.
 | **v2.11.0** | Product-quality baseline | Track 3. A structural preflight must prove the frozen comparison can answer its question before target collection | Aggregate-safe scorecard + dated identifiability memo; void live window recorded; fusion not promoted by the non-identifying design |
 | **v2.12.0** | Apply quality decision compatibly | Uses the v2.11 structural stop without violating the stable v2 default contract | Fusion is classified as an advanced diagnostic; explicit flags are the supported transition path; v2 implicit behavior and stable JSON/MCP contracts remain intact; the default-off change is assigned to v3 |
 | **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Shipped: caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions or removals under unavailable source roles; ADR-0014 defers OKF without replacing JSON; full, protected-main, publication, provenance, and channel-parity gates passed |
-| **v2.14.0** | Catalog quality loop - **active build priority** | Independent of fusion promotion; the rank round is closed, and the regional baseline plus fixed-observation decision are complete | Replay the frozen regional frame from clean protected main, then freeze and complete vendor-seed and drift evidence with fixtures; broad catalog growth remains gated by those rounds |
+| **v2.14.0** | Catalog quality loop - **active build priority** | Independent of fusion promotion; the rank and regional rounds are closed with fixed-observation decisions and clean-main replays | Freeze and complete disjoint vendor-seed evidence, then re-observe the frozen prior sample for drift; broad catalog growth remains gated by those rounds |
 | **v2.15.0** | Agent portability and surface cost | Evaluate packaging and tool cuts against representative workflows after the catalog and discovery surface is measured; packaging preparation may start earlier | Agent Plugins conformance is validated against a pinned specification or explicitly deferred while it remains a working draft; measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
 | **v3.0.0** | Contract maturity | The already-deprecated fusion default change requires a major boundary; use the same boundary for any claim-envelope change that cannot remain additive | Fusion omitted-choice defaults off; explicit flags remain stable; versioned claim / observation envelope or explicit decision that v2 stays; migration notes |
 
@@ -128,12 +128,12 @@ first pass executable identifiability and dominance checks.
 
 The rank round is complete with a membership-bound four-band aggregate, four
 bounded promoted families, explicit dispositions, and a fixed-observation
-zero-regression decision. The regional baseline completed all 1,000 frozen
-rows, and its aggregate-only
-[interim result](validation/2026-08-13-catalog-regional-round.md) accepts six
+zero-regression decision. The regional round is also closed: its baseline and
+clean protected-main replay each completed all 1,000 frozen rows, and its
+aggregate-only
+[result](validation/2026-08-13-catalog-regional-round.md) accepts six
 documented provider-family additions under the fixed-observation budget. The
-exact catalog must now pass protected main and replay the same frozen frame
-before the regional round closes. Vendor-seed and drift contracts follow.
+vendor-seed contract is next, followed by drift.
 Each contract names its independent input
 stratum, or frozen prior sample for drift, plus eligibility and deduplication
 rules, observation opportunities and collection options, catalog and code

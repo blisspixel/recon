@@ -38,10 +38,10 @@ field changes.
   and Titan Mail. The 16 new detections have current primary references, review
   dates, scoped claim boundaries, positive fixtures, lookalike negatives,
   sparse fixtures, and provenance assertions.
-- An aggregate-only regional-round interim result records the complete
-  1,000-row baseline, five-stratum classification rates, explicit candidate
-  dispositions, and an accepted fixed-observation zero-regression decision.
-  It keeps the protected-main live replay as a separate remaining gate.
+- An aggregate-only regional-round result records the complete 1,000-row
+  baseline, five-stratum classification rates, explicit candidate
+  dispositions, accepted fixed-observation zero-regression decision, and
+  complete clean protected-main replay.
 - Four provider-documented catalog families from the frozen rank round:
   Cloudflare Email Routing MX, Alibaba Cloud DNS NS, Alibaba Cloud Application
   Load Balancer CNAME, and Yandex 360 for Business MX and SPF. Every rule has a
@@ -69,8 +69,8 @@ field changes.
   official source archives, exact IANA and UN M49 mapping, independent
   five-stratum frame, collection options, code and catalog digests, and
   aggregate-only interpretation boundary. Its baseline, candidate disposition,
-  and fixed-observation decision are complete. The protected-main live replay
-  remains before vendor-seed and drift work.
+  fixed-observation decision, and protected-main replay are complete. The
+  vendor-seed contract is next, followed by drift.
 
 ### Fixed
 
