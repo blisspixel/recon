@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 
 import pytest
 
@@ -23,6 +24,17 @@ def _resolver(
 
 def _fingerprint(slug: str):
     return next(fp for fp in load_fingerprints() if fp.slug == slug)
+
+
+@dataclass(frozen=True, slots=True)
+class HostPromotionCase:
+    detector: Callable[[dns_base.DetectionCtx, str], Awaitable[None]]
+    record_type: str
+    positive: str
+    lookalike: str
+    slug: str
+    rule_name: str
+    pattern: str
 
 
 @pytest.mark.parametrize(
@@ -54,9 +66,9 @@ def test_rank_promotions_have_current_reference_and_review_date(
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
-    ("detector", "record_type", "positive", "lookalike", "slug", "rule_name", "pattern"),
+    "case",
     [
-        (
+        HostPromotionCase(
             dns_email.detect_mx,
             "MX",
             "10 route1.mx.cloudflare.net.",
@@ -65,7 +77,7 @@ def test_rank_promotions_have_current_reference_and_review_date(
             "Cloudflare Email Routing",
             "mx.cloudflare.net",
         ),
-        (
+        HostPromotionCase(
             dns_email.detect_mx,
             "MX",
             "10 mx.yandex.net.",
@@ -74,7 +86,7 @@ def test_rank_promotions_have_current_reference_and_review_date(
             "Yandex 360 for Business",
             "mx.yandex.net",
         ),
-        (
+        HostPromotionCase(
             dns_infra.detect_ns,
             "NS",
             "vip3.alidns.com.",
@@ -87,30 +99,24 @@ def test_rank_promotions_have_current_reference_and_review_date(
 )
 async def test_rank_host_promotions_are_label_bounded_and_traceable(
     monkeypatch: pytest.MonkeyPatch,
-    detector: Callable[[dns_base.DetectionCtx, str], Awaitable[None]],
-    record_type: str,
-    positive: str,
-    lookalike: str,
-    slug: str,
-    rule_name: str,
-    pattern: str,
+    case: HostPromotionCase,
 ) -> None:
-    for value, expected in ((positive, True), (lookalike, False)):
+    for value, expected in ((case.positive, True), (case.lookalike, False)):
         monkeypatch.setattr(
             dns_base,
             "safe_resolve",
-            _resolver({("example.com", record_type): [value]}),
+            _resolver({("example.com", case.record_type): [value]}),
         )
         ctx = dns_base.DetectionCtx()
 
-        await detector(ctx, "example.com")
+        await case.detector(ctx, "example.com")
 
-        assert (slug in ctx.slugs) is expected
-        matching_evidence = [record for record in ctx.evidence if record.slug == slug]
+        assert (case.slug in ctx.slugs) is expected
+        matching_evidence = [record for record in ctx.evidence if record.slug == case.slug]
         if expected:
-            assert matching_evidence == [EvidenceRecord(record_type, value, rule_name, slug)]
-            assert (slug, record_type.lower(), pattern) in ctx._matched_fp_detections
-            summary = next(item for item in ctx.catalog_summaries() if item.record_type == record_type.lower())
+            assert matching_evidence == [EvidenceRecord(case.record_type, value, case.rule_name, case.slug)]
+            assert (case.slug, case.record_type.lower(), case.pattern) in ctx._matched_fp_detections
+            summary = next(item for item in ctx.catalog_summaries() if item.record_type == case.record_type.lower())
             assert summary.classified_count == 1
         else:
             assert matching_evidence == []
