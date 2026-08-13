@@ -225,7 +225,7 @@ oversized responses, table-schema drift, duplicate codes, implausible source
 size, or an existing output artifact:
 
 ```bash
-python validation/prepare_catalog_region_sources.py \
+python -m validation.prepare_catalog_region_sources \
     --output-directory validation/corpus-private/catalog-region-sources
 ```
 

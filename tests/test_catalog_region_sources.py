@@ -6,6 +6,8 @@ import hashlib
 import itertools
 import json
 import string
+import subprocess
+import sys
 import urllib.request
 from email.message import Message
 from pathlib import Path
@@ -52,6 +54,22 @@ class FakeResponse:
         traceback: TracebackType | None,
     ) -> None:
         return None
+
+
+def test_documented_module_entrypoint_loads_from_repository_root() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "validation.prepare_catalog_region_sources", "--help"],
+        cwd=source_freezer.REPO_ROOT,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert "--output-directory" in result.stdout
+    validation_readme = (source_freezer.REPO_ROOT / "validation" / "README.md").read_text(encoding="utf-8")
+    assert "python -m validation.prepare_catalog_region_sources" in validation_readme
+    assert "python validation/prepare_catalog_region_sources.py" not in validation_readme
 
 
 class FakeOpener:
