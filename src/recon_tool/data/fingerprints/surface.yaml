@@ -3168,12 +3168,44 @@ fingerprints:
   slug: hostinger-email
   category: Email & Communication
   confidence: high
+  display_group: Email & Communication
+  product_family: Hostinger Email
+  parent_vendor: Hostinger
   detections:
   - type: cname_target
     pattern: mail.hostinger.com
     tier: application
-    description: Hostinger hosted email service; autodiscover CNAMEs terminate at autodiscover.mail.hostinger.com.
-    reference: https://support.hostinger.com/en/articles/1583227
+    description: >-
+      Hostinger Email's documented automatic-configuration CNAMEs terminate at
+      `autodiscover.mail.hostinger.com` or `autoconfig.mail.hostinger.com`.
+      This observes a Hostinger-hosted mail-configuration surface, not mailbox
+      activity or inbound routing.
+    reference: https://support.hostinger.com/en/articles/4768158-how-to-set-up-hostinger-email-on-mozilla-thunderbird-automatically
+    verified: 2026-08-13
+  - type: mx
+    pattern: mx1.hostinger.com
+    reference: https://support.hostinger.com/en/articles/4407237-hostinger-email-mx-records
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Hostinger Email's documented primary inbound
+      route, `mx1.hostinger.com`. This observes inbound mail routing through
+      Hostinger Email, not mailbox activity or web-hosting use.
+  - type: mx
+    pattern: mx2.hostinger.com
+    reference: https://support.hostinger.com/en/articles/4407237-hostinger-email-mx-records
+    verified: 2026-08-13
+    description: >-
+      Apex MX terminating at Hostinger Email's documented secondary inbound
+      route, `mx2.hostinger.com`. This observes inbound mail routing through
+      Hostinger Email, not mailbox activity or web-hosting use.
+  - type: spf
+    pattern: _spf.mail.hostinger.com
+    reference: https://support.hostinger.com/en/articles/1583673-what-is-the-spf-record-for-hostinger-email
+    verified: 2026-08-13
+    description: >-
+      Apex SPF include or redirect to Hostinger Email's documented
+      `_spf.mail.hostinger.com` policy. This authorizes Hostinger to send mail
+      for the queried namespace but does not establish inbound routing.
 
 - name: IONOS (1&1) Hosting
   slug: ionos

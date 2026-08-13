@@ -263,8 +263,11 @@ The active v2.14 regional contract is frozen in the
 [public declaration](../docs/catalog-regional-round-declaration.md). Its
 official source, mapping, selection, frame, catalog, implementation, collection,
 and decision commitments were published before any selected-namespace request.
-Run and disposition that exact frame before preparing vendor-seed or drift
-collection.
+The aggregate-only
+[interim result](2026-08-13-catalog-regional-round.md) records the complete
+baseline and accepted fixed-observation decision. Merge the exact catalog
+through protected main, then replay that same frozen frame before preparing
+vendor-seed or drift collection.
 
 Preparation fails closed on malformed rows, undeclared fields, cross-stratum
 overlap contrary to policy, direct-probe requests, or existing output files.

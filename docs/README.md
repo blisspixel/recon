@@ -77,6 +77,7 @@ actually shipped.
 | Frozen v2.11 evaluation population, sampling design, and private commitments | [quality-evaluation-frame-declaration.md](quality-evaluation-frame-declaration.md) |
 | Frozen v2.14 catalog rank selection and aggregate commitments | [catalog-rank-round-declaration.md](catalog-rank-round-declaration.md) |
 | Frozen v2.14 regional source, selection, and aggregate commitments | [catalog-regional-round-declaration.md](catalog-regional-round-declaration.md) |
+| Aggregate-only v2.14 regional baseline and fixed-observation decision | [../validation/2026-08-13-catalog-regional-round.md](../validation/2026-08-13-catalog-regional-round.md) |
 | Aggregate-safe product-quality scorecard harness | `scripts/quality_scorecard.py` |
 | Dependency-ordered implementation plan | [engineering-refinement-plan.md](engineering-refinement-plan.md) |
 | Structural maintainability audit, pinned to the revision it measured | [structural-maintainability.md](structural-maintainability.md) |

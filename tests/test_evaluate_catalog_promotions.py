@@ -51,6 +51,7 @@ def test_candidate_rules_are_referenced_dated_and_exact() -> None:
 
     assert {(rule.slug, rule.record_type, rule.pattern) for rule in rules} == {
         ("cloudflare-email-routing", "mx", "mx.cloudflare.net"),
+        ("cloudflare-email-routing", "spf", "_spf.mx.cloudflare.net"),
         ("alibaba-dns", "ns", "alidns.com"),
         ("alibaba-alb", "cname_target", "alb.aliyuncsslbintl.com"),
         ("yandex-360", "mx", "mx.yandex.net"),
