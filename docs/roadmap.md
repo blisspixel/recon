@@ -863,6 +863,14 @@ tenant identifiers, target-owned record values, and per-domain rows remain off
 GitHub. Generic provider patterns, provider-owned references, reserved synthetic
 fixtures, and disclosure-safe aggregates are the validation review surface.
 
+For the regional round, freeze the exact raw IANA root-zone and UN M49 English
+table responses before sampling. The derived mapping admits only exact ASCII
+two-letter IANA country-code TLD and UN ISO-alpha2 matches in the five canonical
+M49 regions; regionless M49 rows are counted and excluded. Publish only source,
+mapping, frame, and implementation commitments before target contact. The
+result remains a ccTLD-namespace comparison, not registrant geolocation or a
+regional prevalence estimate.
+
 The v2.14 release order is rank bands, regional, vendor-seed, then drift. The
 rank round is closed with a membership-bound four-band aggregate, four bounded
 promoted families, explicit dispositions, and a fixed-observation

@@ -33,6 +33,10 @@ Committed (generic tooling, no company names):
   It uses equal secret-keyed discovery quotas, excludes every declared prior
   corpus, performs no network requests, and never treats a ccTLD as evidence of
   an organization's location.
+- `prepare_catalog_region_sources.py`: makes exactly two bounded HTTPS requests
+  to the official IANA and UN M49 pages, archives the raw responses privately,
+  and derives their exact ASCII ccTLD intersection. It contacts no sampled
+  namespace and prints only aggregate counts and cryptographic commitments.
 - `stratify_catalog_round.py`: reconstructs frozen private membership, assigns
   every completed result exactly once, and writes ordered per-stratum typed
   aggregates without exposing stratum labels or namespaces.
@@ -213,13 +217,26 @@ python validation/scan.py \
     --concurrency 4
 ```
 
-The regional round uses the same two-stage discipline. First prepare a private
-CSV whose exact columns are `tld,iana_type,iso_alpha2,region_code,region_name`.
-Rows must be the exact ASCII two-letter intersection of IANA `country-code`
-TLDs and UN M49 ISO alpha-2 entries. Pin its source revision and digest in the
-private plan. The preparer chooses the largest eligible ccTLD universes within
-each of the five canonical UN M49 regions, then takes the same secret-keyed
-discovery quota from every selected ccTLD:
+The regional round uses the same two-stage discipline. First freeze the raw
+official pages and derive the private mapping. This step makes two fixed-source
+requests, one to IANA and one to UN M49, but contacts no sampled namespace. It
+fails closed on any redirect, non-HTML or
+oversized responses, table-schema drift, duplicate codes, implausible source
+size, or an existing output artifact:
+
+```bash
+python validation/prepare_catalog_region_sources.py \
+    --output-directory validation/corpus-private/catalog-region-sources
+```
+
+The generated CSV has the exact columns
+`tld,iana_type,iso_alpha2,region_code,region_name`. Rows are the ASCII
+two-letter intersection of IANA `country-code` TLDs and UN M49 ISO alpha-2
+entries in the five canonical M49 regions. Regionless entries such as
+Antarctica are counted and excluded explicitly. Pin the mapping revision and
+digest from the private source manifest in the selection plan. The frame
+preparer then chooses the largest eligible ccTLD universes within each region
+and takes the same secret-keyed discovery quota from every selected ccTLD:
 
 ```bash
 python validation/prepare_catalog_rank_frame.py generate-key \

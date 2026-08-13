@@ -67,6 +67,7 @@ docs/accuracy.md
 # Generic private ccTLD-delegation sampler. Official-source mappings, prior
 # exclusions, keys, selected rows, and manifests remain private.
 !/validation/prepare_catalog_region_frame.py
+!/validation/prepare_catalog_region_sources.py
 !/validation/ranked_sampling.py
 !/validation/stratify_catalog_round.py
 !/validation/summarize_ct_sessions.py
