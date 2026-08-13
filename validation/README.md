@@ -185,15 +185,15 @@ The plan must declare the exact 1-1k, 1k-10k, 10k-100k, and 100k-1M ranges and
 the same explicit discovery quota for every band:
 
 ```bash
-python validation/prepare_catalog_rank_frame.py generate-key \
+python -m validation.prepare_catalog_rank_frame generate-key \
     --output validation/corpus-private/catalog-rank-key.hex
 
-python validation/prepare_catalog_rank_frame.py prepare \
+python -m validation.prepare_catalog_rank_frame prepare \
     --plan validation/corpus-private/catalog-rank-selection-plan.json \
     --output-directory validation/corpus-private/catalog-rank-selection \
     --preflight
 
-python validation/prepare_catalog_rank_frame.py prepare \
+python -m validation.prepare_catalog_rank_frame prepare \
     --plan validation/corpus-private/catalog-rank-selection-plan.json \
     --output-directory validation/corpus-private/catalog-rank-selection \
     --write-private-strata
@@ -205,7 +205,7 @@ estimator. Commit the aggregate-only selection declaration before collection.
 Then reference the four private outputs from the ordinary round plan:
 
 ```bash
-python validation/prepare_catalog_round.py \
+python -m validation.prepare_catalog_round \
     --plan validation/corpus-private/rank-2026-08-plan.json \
     --output-corpus validation/corpus-private/rank-2026-08-frame.txt \
     --output-manifest validation/corpus-private/rank-2026-08-manifest.json
@@ -239,15 +239,15 @@ preparer then chooses the largest eligible ccTLD universes within each region
 and takes the same secret-keyed discovery quota from every selected ccTLD:
 
 ```bash
-python validation/prepare_catalog_rank_frame.py generate-key \
+python -m validation.prepare_catalog_rank_frame generate-key \
     --output validation/corpus-private/catalog-region-key.hex
 
-python validation/prepare_catalog_region_frame.py \
+python -m validation.prepare_catalog_region_frame \
     --plan validation/corpus-private/catalog-region-selection-plan.json \
     --output-directory validation/corpus-private/catalog-region-selection \
     --preflight
 
-python validation/prepare_catalog_region_frame.py \
+python -m validation.prepare_catalog_region_frame \
     --plan validation/corpus-private/catalog-region-selection-plan.json \
     --output-directory validation/corpus-private/catalog-region-selection \
     --write-private-strata
