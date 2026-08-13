@@ -168,10 +168,10 @@ flowchart LR
   bn -. "fusion path" .-> panel
 
   classDef det fill:#dbe5f7,stroke:#3c5a8c,stroke-width:1px,color:#101828
-  classDef graph fill:#d7ecdf,stroke:#3f7d55,stroke-width:1px,color:#101828
+  classDef cooccurrence fill:#d7ecdf,stroke:#3f7d55,stroke-width:1px,color:#101828
   classDef bayes fill:#f8dedb,stroke:#a04a3f,stroke-width:1px,color:#101828
   class rules det
-  class graphL graph
+  class graphL cooccurrence
   class bn bayes
 ```
 
@@ -295,7 +295,7 @@ Let $X_1,\ldots,X_n$ be claim nodes and let `pa(i)` be the parents of node
 $i$. The committed model factorizes as
 
 $$
-P(X_1,\ldots,X_n)=\prod_i P(X_i\mid X_{\operatorname{pa}(i)}).
+P(X_1,\ldots,X_n)=\prod_i P(X_i\mid X_{\mathrm{pa}(i)}).
 $$
 
 Observed slug or signal bindings add virtual-evidence factors
@@ -304,9 +304,9 @@ $\phi_e(X_i)$. Exact variable elimination then computes
 $$
 P_m(X_i\mid e) =
 \frac{\sum_{X\setminus X_i}\prod_j
-      P_m(X_j\mid X_{\operatorname{pa}(j)})\prod_e\phi_e(X)}
+      P_m(X_j\mid X_{\mathrm{pa}(j)})\prod_e\phi_e(X)}
      {\sum_X\prod_j
-      P_m(X_j\mid X_{\operatorname{pa}(j)})\prod_e\phi_e(X)}.
+      P_m(X_j\mid X_{\mathrm{pa}(j)})\prod_e\phi_e(X)}.
 $$
 
 The subscript $m$ matters. The value is exact for the committed model, but the
@@ -1120,9 +1120,9 @@ That is more actionable than a narrow heuristic band around 0.93.
 
 Before optimizing a score, recon can make its deterministic core
 proof-carrying. Let $U(o)$ be canonical observed dependency units and let
-$\operatorname{Atoms}(U)$ be the signed normalized and derived atoms exposed
+$\mathrm{Atoms}(U)$ be the signed normalized and derived atoms exposed
 by a unit set. Each observed atom $a$ retains an antichain
-$\operatorname{Orig}_o(a)\subseteq 2^{U(o)}$ of minimal raw-origin unit
+$\mathrm{Orig}_o(a)\subseteq 2^{U(o)}$ of minimal raw-origin unit
 environments. Alternatives remain separate: if either $u_1$ or $u_2$
 derives $a$, the environments are $\{u_1\}$ and $\{u_2\}$, not
 $\{u_1,u_2\}$. Lift one atom proof $E$ to dependency units by distributive
@@ -1131,14 +1131,14 @@ choice:
 $$
 \Pi_o(E)=\min_{\subseteq}
 \left\{\bigcup_{a\in E}Q_a:
-Q_a\in\operatorname{Orig}_o(a)\ \text{for every }a\in E\right\}.
+Q_a\in\mathrm{Orig}_o(a)\ \text{for every }a\in E\right\}.
 $$
 
 Let $J$ be a reviewed monotone signed rule system. Write
 $E\vdash_J^+ C$ and $E\vdash_J^- C$ for positive and authoritative-negative
 derivability. The relation is paraconsistent by construction: deriving both
 signs records conflict and does not entail an unrelated claim. Let
-$\operatorname{valid}_J(E)$ mean that $E$ contains none of the explicit
+$\mathrm{valid}_J(E)$ mean that $E$ contains none of the explicit
 minimal nogood environments declared by the contract. Let $\Omega_C$ be the
 bounded universe of possible signed atoms under the claim contract, including
 fixed and manipulable atoms. For a narrow public claim $C$, first define the
@@ -1146,26 +1146,26 @@ model-wide proof templates
 
 $$
 \widehat{\mathcal P}_C^T=\min_{\subseteq}
-\{E\subseteq\Omega_C:\operatorname{valid}_J(E),\ E\vdash_J^+ C\},
+\{E\subseteq\Omega_C:\mathrm{valid}_J(E),\ E\vdash_J^+ C\},
 $$
 
 $$
 \widehat{\mathcal N}_C^T=\min_{\subseteq}
-\{E\subseteq\Omega_C:\operatorname{valid}_J(E),\ E\vdash_J^- C\}.
+\{E\subseteq\Omega_C:\mathrm{valid}_J(E),\ E\vdash_J^- C\}.
 $$
 
 The active dependency-unit certificate antichains for the observed snapshot are
 
 $$
 \mathcal P_C(o)=\min_{\subseteq}
-\{Q:E\subseteq\operatorname{Atoms}(U(o)),\
-  \operatorname{valid}_J(E),\ E\vdash_J^+ C,\ Q\in\Pi_o(E)\},
+\{Q:E\subseteq\mathrm{Atoms}(U(o)),\
+  \mathrm{valid}_J(E),\ E\vdash_J^+ C,\ Q\in\Pi_o(E)\},
 $$
 
 $$
 \mathcal N_C(o)=\min_{\subseteq}
-\{Q:E\subseteq\operatorname{Atoms}(U(o)),\
-  \operatorname{valid}_J(E),\ E\vdash_J^- C,\ Q\in\Pi_o(E)\}.
+\{Q:E\subseteq\mathrm{Atoms}(U(o)),\
+  \mathrm{valid}_J(E),\ E\vdash_J^- C,\ Q\in\Pi_o(E)\}.
 $$
 
 An absent optional record never enters $\mathcal N_C$. A negative atom exists
@@ -1201,7 +1201,7 @@ The general merge acts on canonical provenance ledgers. For ledgers $L_1$
 and $L_2$, define
 
 $$
-L_1\sqcup_U L_2=\operatorname{dedup}(L_1\cup L_2),
+L_1\sqcup_U L_2=\mathrm{dedup}(L_1\cup L_2),
 $$
 
 then recompute atoms, signed closure, certificate antichains, and $q_C$ from
@@ -1234,13 +1234,13 @@ polynomial are different types.
 
 A planting completion cannot be obtained from $\mathcal P_C(o)$, because its
 members are already-observed dependency units. Let
-$\mathcal A_{T,\mathrm{atom}}^+(o)\subseteq \Omega_C\setminus\operatorname{Atoms}(U(o))$
+$\mathcal A_{T,\mathrm{atom}}^+(o)\subseteq \Omega_C\setminus\mathrm{Atoms}(U(o))$
 be the explicitly frozen set of
 base atoms the threat model permits an operator to assert directly. Let
 $\Lambda_T^+(o)$ be the finite family of admissible tagged dependency-unit
 addition sets whose direct base-atom assertions lie in that set. One action may
 assert several dependent base atoms. Let $\phi_A(U)$ be the dependency-unit
-state after applying tagged actions $A$, and let $\operatorname{Cl}_J(S)$
+state after applying tagged actions $A$, and let $\mathrm{Cl}_J(S)$
 recompute the deterministic signed-rule closure of atom set $S$. For a
 planting-only threat model, the valid completion-action antichain is
 
@@ -1248,8 +1248,8 @@ $$
 \mathcal G_{C,+}^T(o)=\min_{\subseteq}
 \{A:E\in\widehat{\mathcal P}_C^T,\
   A\in\Lambda_T^+(o),\
-  S_A=\operatorname{Cl}_J(\operatorname{Atoms}(\phi_A(U(o)))),\
-  \operatorname{valid}_J(S_A),\ E\subseteq S_A\}.
+  S_A=\mathrm{Cl}_J(\mathrm{Atoms}(\phi_A(U(o)))),\
+  \mathrm{valid}_J(S_A),\ E\subseteq S_A\}.
 $$
 
 This family deliberately excludes an addition that conflicts with an observed
@@ -1257,8 +1257,8 @@ mutually exclusive value. For a threat model that permits replacement, let
 $A=(A^-,A^+)$ contain tagged dependency-unit removals and additions. The
 general forward support-completion family minimizes $A$ subject to
 $T$-admissibility,
-$\operatorname{valid}_J(S_A)$ for
-$S_A=\operatorname{Cl}_J(\operatorname{Atoms}(\phi_A(U(o))))$, and the
+$\mathrm{valid}_J(S_A)$ for
+$S_A=\mathrm{Cl}_J(\mathrm{Atoms}(\phi_A(U(o))))$, and the
 existence of some $E\in\widehat{\mathcal P}_C^T$ with $E\subseteq S_A$.
 Every certificate,
 completion, antichain minimum, and cost therefore maps atom derivations back to
@@ -1367,7 +1367,7 @@ clean-to-observed manipulation actions used by one compatible witness. For a
 budget-zero Boolean decision $D$, define an adverse-state predicate
 
 $$
-\operatorname{bad}_D(m,z)=
+\mathrm{bad}_D(m,z)=
 \begin{cases}
 h^+_{m,C}(z)=0\ \text{or}\ h^-_{m,C}(z)=1,
   &D=\text{supported},\\
@@ -1384,7 +1384,7 @@ $$
 \mathcal W_{B,D}^{\mathrm{bool}}=
 \min_{\subseteq}
 \{A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),
-              \operatorname{bad}_D(m,z)\}.
+              \mathrm{bad}_D(m,z)\}.
 $$
 
 It is undefined for an unresolved initial state. The secondary graded
@@ -1485,21 +1485,21 @@ frozen $\mathcal A_{T,\mathrm{atom}}^+(o)$ set from section 5.3.1. The rule
 system then recomputes deterministic derived closure; those consequences need
 not themselves be plantable and receive no independent planting action. An
 action cannot relabel a nonmanipulable provider base atom as plantable. Let
-$\operatorname{feasible}_{m_0}(o')$ reject transformed observations that
+$\mathrm{feasible}_{m_0}(o')$ reject transformed observations that
 violate the claim contract's value, nogood, dependency, or source-opportunity
 constraints. The inclusion-minimal forward flip families are
 
 $$
 \mathcal F_{\mathrm{del}}=
 \min_{\subseteq}\{A\in\mathfrak D_T(o):
-\operatorname{feasible}_{m_0}(d_A(o)),\
+\mathrm{feasible}_{m_0}(d_A(o)),\
 D_{m_0}(d_A(o))\ne D_{m_0}(o)\},
 $$
 
 $$
 \mathcal F_{\mathrm{add}}=
 \min_{\subseteq}\{A\in\mathfrak P_T(o):
-\operatorname{feasible}_{m_0}(p_A(o)),\
+\mathrm{feasible}_{m_0}(p_A(o)),\
 D_{m_0}(p_A(o))\ne D_{m_0}(o)\}.
 $$
 

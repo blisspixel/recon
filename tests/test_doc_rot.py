@@ -86,6 +86,46 @@ def test_unclosed_display_math_is_rejected(tmp_path: Path) -> None:
     assert [finding.check for finding in findings] == ["display-math"]
 
 
+def test_unsupported_math_macro_is_rejected(tmp_path: Path) -> None:
+    doc = _write(tmp_path, "## Heading\n\n$\\operatorname{Atoms}(U)$ is defined.\n")
+
+    findings = check_paths([doc])
+
+    assert [finding.check for finding in findings] == ["math-macro"]
+    assert "supported primitive notation" in findings[0].detail
+
+
+def test_unsupported_math_macro_in_code_is_ignored(tmp_path: Path) -> None:
+    doc = _write(
+        tmp_path,
+        "## Heading\n\nUse `\\operatorname` only when another renderer supports it.\n\n"
+        "```latex\n\\operatorname{Atoms}(U)\n```\n",
+    )
+
+    assert check_paths([doc]) == []
+
+
+def test_mermaid_reserved_class_name_is_rejected(tmp_path: Path) -> None:
+    doc = _write(
+        tmp_path,
+        "## Heading\n\n```mermaid\nflowchart LR\n  A --> B\n  classDef graph fill:#fff\n```\n",
+    )
+
+    findings = check_paths([doc])
+
+    assert [finding.check for finding in findings] == ["mermaid-identifier"]
+    assert "does not render on github.com" in findings[0].detail
+
+
+def test_mermaid_nonreserved_class_name_is_accepted(tmp_path: Path) -> None:
+    doc = _write(
+        tmp_path,
+        "## Heading\n\n```mermaid\nflowchart LR\n  A --> B\n  classDef cooccurrence fill:#fff\n```\n",
+    )
+
+    assert check_paths([doc]) == []
+
+
 def test_pointer_stub_section_is_rejected(tmp_path: Path) -> None:
     # The shape that survived three weeks: a heading kept only so historical
     # cross-references still resolve, carrying no content of its own.

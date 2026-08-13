@@ -359,9 +359,8 @@ jobs:
         run: uv run python scripts/check_markdown_links.py
 
       - name: Enforce renderable math and non-hollow sections
-        # correlation.md rendered broken math for three weeks because no gate
-        # read the delimiters, and pointer stubs satisfied the section-link
-        # check by resolving to a heading that carried nothing.
+        # Guard delimiters, GitHub-rejected macros, Mermaid keyword collisions,
+        # and pointer stubs that resolve as anchors while carrying no content.
         run: uv run python scripts/check_doc_rot.py
 
       - name: Enforce generated synthetic terminal demo

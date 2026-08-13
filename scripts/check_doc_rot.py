@@ -13,7 +13,14 @@ either thing.
    drops the backslash, and prints the raw LaTeX in running prose. The
    ``$``-delimited forms are the ones that render, so the others are rejected.
 
-2. **Pointer stubs.** A section whose body only redirects the reader is not
+2. **Unsupported math macros.** GitHub rejects the observed operator macro
+   rather than rendering it. A visible error panel is not a usable equation, so
+   the known-rejected macro is blocked.
+
+3. **Mermaid reserved identifiers.** Mermaid keywords cannot safely name style
+   classes. GitHub reports a parse error instead of rendering the diagram.
+
+4. **Pointer stubs.** A section whose body only redirects the reader is not
    content. ``check_section_links.py`` verifies that a referenced section number
    resolves, which a stub satisfies perfectly, so a hollowed-out section reads
    as a live cross-reference target while carrying nothing.
@@ -48,6 +55,10 @@ _HEADING = re.compile(r"^(#{2,6})\s+(.*)$")
 # GitHub renders neither of these as math. Matching the opening delimiters is
 # enough; a document never has one without meaning to open a math span.
 _BROKEN_MATH = re.compile(r"\\\(|\\\[")
+_UNSUPPORTED_MATH_MACRO = re.compile(r"\\operatorname\b")
+_FENCE_DETAILS = re.compile(r"^\s*(```|~~~)(.*)$")
+_MERMAID_CLASS_DEF = re.compile(r"^\s*classDef\s+([A-Za-z][A-Za-z0-9_-]*)\b", re.IGNORECASE)
+_MERMAID_RESERVED_IDENTIFIERS = frozenset({"end", "flowchart", "graph", "subgraph"})
 
 # A body under this many words that also redirects the reader is a pointer, not
 # a section. Real short sections exist in this repository (an eight-word "Setup",
@@ -142,6 +153,60 @@ def _check_unbalanced_display_math(path: Path, lines: list[str], mask: list[bool
     return [Finding(path, line, "display-math", "unclosed $$ display-math block") for line in opens]
 
 
+def _check_unsupported_math_macros(path: Path, lines: list[str], mask: list[bool]) -> list[Finding]:
+    """Reject macros that github.com turns into visible math error panels."""
+    findings: list[Finding] = []
+    for index, line in enumerate(lines, start=1):
+        if mask[index - 1]:
+            continue
+        match = _UNSUPPORTED_MATH_MACRO.search(_strip_inline_code(line))
+        if match is None:
+            continue
+        findings.append(
+            Finding(
+                path,
+                index,
+                "math-macro",
+                f"{match.group(0)} is rejected by github.com; use supported primitive notation",
+            )
+        )
+    return findings
+
+
+def _check_mermaid_reserved_class_names(path: Path, lines: list[str]) -> list[Finding]:
+    """Reject Mermaid style names that collide with parser keywords."""
+    active_fence: str | None = None
+    in_mermaid = False
+    findings: list[Finding] = []
+    for index, line in enumerate(lines, start=1):
+        fence = _FENCE_DETAILS.match(line)
+        if fence is not None:
+            marker, info = fence.groups()
+            if active_fence is None:
+                active_fence = marker
+                in_mermaid = info.strip().casefold() == "mermaid"
+            elif marker == active_fence and not info.strip():
+                active_fence = None
+                in_mermaid = False
+            continue
+        if not in_mermaid:
+            continue
+        class_definition = _MERMAID_CLASS_DEF.match(line)
+        if class_definition is None:
+            continue
+        name = class_definition.group(1)
+        if name.casefold() in _MERMAID_RESERVED_IDENTIFIERS:
+            findings.append(
+                Finding(
+                    path,
+                    index,
+                    "mermaid-identifier",
+                    f"classDef name {name!r} is a Mermaid keyword and does not render on github.com",
+                )
+            )
+    return findings
+
+
 def _check_pointer_stubs(path: Path, lines: list[str], mask: list[bool]) -> list[Finding]:
     """Reject sections whose body only redirects the reader elsewhere."""
     headings: list[tuple[int, int, str]] = []
@@ -193,6 +258,8 @@ def check_paths(paths: list[Path]) -> list[Finding]:
         mask = _code_fence_mask(lines)
         findings.extend(_check_math_delimiters(path, lines, mask))
         findings.extend(_check_unbalanced_display_math(path, lines, mask))
+        findings.extend(_check_unsupported_math_macros(path, lines, mask))
+        findings.extend(_check_mermaid_reserved_class_names(path, lines))
         findings.extend(_check_pointer_stubs(path, lines, mask))
     return findings
 
