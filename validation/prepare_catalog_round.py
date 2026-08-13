@@ -88,6 +88,15 @@ class RoundExecutionOptions:
     min_distinct_namespaces: int = 2
 
 
+@dataclass(frozen=True, slots=True)
+class RoundStratumMembership:
+    """One private stratum reconstructed from its frozen source plan."""
+
+    id: str
+    label: str
+    domains: tuple[str, ...]
+
+
 def _fail(message: str) -> NoReturn:
     raise ValueError(message)
 
@@ -237,6 +246,7 @@ def execution_digest_sha256() -> str:
             "prepare_catalog_round.py",
             "run_path_safety.py",
             "scan.py",
+            "stratify_catalog_round.py",
             "triage_candidates.py",
         )
     ]
@@ -670,22 +680,15 @@ def _validate_plan(
     return normalized, strata
 
 
-def prepare_catalog_round(
-    plan_path: Path,
-    frame_path: Path,
+def _materialize_strata(
+    strata_spec: Sequence[tuple[str, str, Path]],
     *,
-    prepared_at: str | None = None,
-) -> tuple[bytes, dict[str, object]]:
-    """Return normalized frame bytes and its canonical private manifest."""
-    resolved_plan = _private_file(plan_path)
-    plan, plan_raw = _load_plan(resolved_plan)
-    normalized, strata_spec = _validate_plan(plan, plan_path=resolved_plan)
-
-    normalized_policies = cast(dict[str, object], normalized["policies"])
-    overlap_policy = str(normalized_policies["overlap"])
+    overlap_policy: str,
+) -> tuple[bytes, str, list[dict[str, object]], tuple[RoundStratumMembership, ...]]:
     assigned: dict[str, str] = {}
     source_parts: list[tuple[str, bytes]] = []
     strata_rows: list[dict[str, object]] = []
+    memberships: list[RoundStratumMembership] = []
     all_domains: set[str] = set()
     total_source_bytes = 0
     for stratum_id, label, input_path in strata_spec:
@@ -708,9 +711,86 @@ def prepare_catalog_round(
                 _fail(f"round frame exceeds the {_MAX_FRAME_ROWS}-domain limit")
         if not accepted:
             _fail(f"stratum {stratum_id} is empty after overlap policy")
-        strata_rows.append({"id": stratum_id, "label": label, "count": len(accepted)})
+        accepted_tuple = tuple(accepted)
+        strata_rows.append({"id": stratum_id, "label": label, "count": len(accepted_tuple)})
+        memberships.append(RoundStratumMembership(id=stratum_id, label=label, domains=accepted_tuple))
 
     rendered = ("\n".join(sorted(all_domains)) + "\n").encode("ascii")
+    return rendered, _source_digest(source_parts), strata_rows, tuple(memberships)
+
+
+def load_round_membership(
+    plan_path: Path,
+    manifest: Mapping[str, object],
+) -> tuple[RoundStratumMembership, ...]:
+    """Reconstruct and verify private stratum membership from a frozen plan.
+
+    This validates the historical contract and its committed source bytes but
+    intentionally does not compare the historical execution digest with the
+    current checkout. A later reducer is a new interpretation of already
+    collected observations and records its own implementation digest.
+    """
+    if manifest.get("schema_version") != SCHEMA_VERSION or manifest.get("private") is not True:
+        _fail(f"round manifest must use private schema version {SCHEMA_VERSION}")
+    supplied_manifest_digest = _sha256(manifest.get("manifest_digest_sha256"), name="manifest_digest_sha256")
+    digest_payload = dict(manifest)
+    del digest_payload["manifest_digest_sha256"]
+    if canonical_json_digest(digest_payload) != supplied_manifest_digest:
+        _fail("round manifest digest mismatch")
+
+    resolved_plan = _private_file(plan_path)
+    plan, plan_raw = _load_plan(resolved_plan)
+    if _digest(plan_raw) != _sha256(manifest.get("plan_digest_sha256"), name="plan_digest_sha256"):
+        _fail("round plan digest does not match the frozen manifest")
+    normalized, strata_spec = _validate_plan(plan, plan_path=resolved_plan)
+    for field in ("round_id", "round_kind", "question", "policies", "collection", "thresholds", "promotion_budget"):
+        if normalized[field] != manifest.get(field):
+            _fail(f"round plan {field} does not match the frozen manifest")
+    normalized_source = cast(dict[str, object], normalized["source"])
+    manifest_source = _strict_object(
+        manifest.get("source"),
+        name="round manifest source",
+        keys=frozenset({"name", "revision", "digest_sha256"}),
+    )
+    if {key: manifest_source[key] for key in ("name", "revision")} != normalized_source:
+        _fail("round plan source identity does not match the frozen manifest")
+
+    policies = cast(dict[str, object], normalized["policies"])
+    rendered, source_digest, strata_rows, memberships = _materialize_strata(
+        strata_spec,
+        overlap_policy=str(policies["overlap"]),
+    )
+    if source_digest != _sha256(manifest_source["digest_sha256"], name="source.digest_sha256"):
+        _fail("round source digest does not match the frozen manifest")
+    if strata_rows != manifest.get("strata"):
+        _fail("round stratum membership does not match the frozen manifest")
+    frame = _strict_object(
+        manifest.get("frame"),
+        name="round manifest frame",
+        keys=frozenset({"path", "digest_sha256", "count"}),
+    )
+    if frame["count"] != len(rendered.splitlines()) or frame["digest_sha256"] != _digest(rendered):
+        _fail("round frame does not match the frozen source membership")
+    return memberships
+
+
+def prepare_catalog_round(
+    plan_path: Path,
+    frame_path: Path,
+    *,
+    prepared_at: str | None = None,
+) -> tuple[bytes, dict[str, object]]:
+    """Return normalized frame bytes and its canonical private manifest."""
+    resolved_plan = _private_file(plan_path)
+    plan, plan_raw = _load_plan(resolved_plan)
+    normalized, strata_spec = _validate_plan(plan, plan_path=resolved_plan)
+
+    normalized_policies = cast(dict[str, object], normalized["policies"])
+    overlap_policy = str(normalized_policies["overlap"])
+    rendered, source_digest, strata_rows, _ = _materialize_strata(
+        strata_spec,
+        overlap_policy=overlap_policy,
+    )
     timestamp = prepared_at or datetime.now(UTC).isoformat().replace("+00:00", "Z")
     try:
         parsed_timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
@@ -730,12 +810,12 @@ def prepare_catalog_round(
         "source": {
             "name": source["name"],
             "revision": source["revision"],
-            "digest_sha256": _source_digest(source_parts),
+            "digest_sha256": source_digest,
         },
         "frame": {
             "path": str(_private_file(frame_path)),
             "digest_sha256": _digest(rendered),
-            "count": len(all_domains),
+            "count": len(rendered.splitlines()),
         },
         "strata": strata_rows,
         "policies": normalized["policies"],

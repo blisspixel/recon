@@ -132,6 +132,16 @@ def _iter_records(path: Path) -> Iterator[dict[str, Any]]:
                 yield item
 
 
+def iter_result_records(path: Path) -> Iterator[dict[str, Any]]:
+    """Yield structured records from one private result file or directory."""
+    yield from _iter_records(path)
+
+
+def result_files(path: Path) -> list[Path]:
+    """Return the bounded result-file set used by the catalog reducer."""
+    return _result_files(path)
+
+
 def _digest_files(files: list[Path], *, relative_to: Path | None = None) -> str:
     digest = hashlib.sha256()
     for path in files:
@@ -141,6 +151,11 @@ def _digest_files(files: list[Path], *, relative_to: Path | None = None) -> str:
         digest.update(path.read_bytes())
         digest.update(b"\0")
     return digest.hexdigest()
+
+
+def digest_result_files(files: list[Path]) -> str:
+    """Digest result files using the catalog reducer's canonical framing."""
+    return _digest_files(files)
 
 
 def _catalog_metadata(catalog_dir: Path) -> dict[str, Any]:
@@ -184,6 +199,11 @@ def _git_revision() -> tuple[str, bool]:
     )
     sha = revision.stdout.strip() if revision.returncode == 0 else "unknown"
     return sha, bool(status.stdout.strip())
+
+
+def repository_revision() -> tuple[str, bool]:
+    """Return the current revision and whether tracked state is dirty."""
+    return _git_revision()
 
 
 def _host_bucket(value: str) -> str | None:
@@ -399,6 +419,11 @@ def _assert_aggregate_safe(value: Any, *, path: str = "root") -> None:
             _assert_aggregate_safe(child, path=f"{path}[{index}]")
 
 
+def assert_aggregate_safe(value: Any) -> None:
+    """Reject target-shaped keys anywhere in an aggregate payload."""
+    _assert_aggregate_safe(value)
+
+
 def _load_round_contract(
     path: Path,
     *,
@@ -477,6 +502,11 @@ def _public_round_contract(manifest: dict[str, Any]) -> dict[str, Any]:
         "plan_digest_sha256": manifest["plan_digest_sha256"],
         "manifest_digest_sha256": manifest["manifest_digest_sha256"],
     }
+
+
+def public_round_contract(manifest: dict[str, Any]) -> dict[str, Any]:
+    """Return the disclosure-safe subset of a private round manifest."""
+    return _public_round_contract(manifest)
 
 
 def _build_parser() -> argparse.ArgumentParser:
