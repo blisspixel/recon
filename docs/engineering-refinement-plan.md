@@ -402,7 +402,8 @@ Risk: concurrency and brittle-benchmark risk
 ## Track 6: Catalog Quality and Lifecycle
 
 Status: active v2.14 priority; rank and regional rounds closed, vendor-seed
-contract next
+measurement protocol and tooling implemented, private source and frame freeze
+next
 Dependencies: Track 3 measurement definitions
 Risk: false-positive and regional-selection bias
 
@@ -410,7 +411,10 @@ Risk: false-positive and regional-selection bias
   expansion.
 - Ratchet current public references and `verified` dates. New undated rules are
   not accepted.
-- Freeze and run disjoint vendor-seed holdouts before drift collection.
+- Freeze the private provider-controlled vendor-seed source dossier and exact
+  disjoint frame, publish commitments before collection, then report
+  provider-level relationship corroboration without treating silence as a
+  false negative. Complete this before drift collection.
 - Prioritize regional and non-CNAME gaps by aggregate frequency only within the
   declared observation opportunities and recurrence thresholds.
 - Resolve each current candidate as promoted, rejected, or explicitly
@@ -563,8 +567,11 @@ Execute this track in four bounded phases:
 2. Preserve the completed stable-v1 characterization, v2.11 structural stop,
    v2.12 compatibility transition, and shipped v2.13 observation capsules.
 3. Preserve the closed v2.14 rank and regional decisions.
-4. Freeze and run disjoint vendor-seed holdouts, then re-observe the frozen
-   prior sample as the drift round. Keep all public evidence aggregate-only.
+4. Preserve the implemented vendor-seed protocol, freeze the private provider
+   source dossier and exact disjoint frame, publish commitments before target
+   contact, and then run and reduce provider-level corroboration. Re-observe
+   the frozen prior sample as the drift round. Keep all public evidence
+   aggregate-only.
 5. Backfill review dates only in families examined through those rounds, and
    raise the freshness ratchet only when measured coverage supports it.
 6. Measure and, only if justified, simplify operator and agent discovery in

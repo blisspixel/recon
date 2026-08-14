@@ -33,6 +33,16 @@ field changes.
 
 ### Added
 
+- A fail-closed vendor-seed contract preparer and aggregate evaluator bind
+  provider-controlled source archives, disjoint private holdout membership,
+  prior-frame exclusions, catalog slugs and record types, scan results, and the
+  pooled catalog aggregate. Public output contains provider-level
+  corroborated, observed-silent, unavailable, unmeasured, and error counts plus
+  Wilson intervals, never target identities.
+- A public vendor-seed protocol declaration fixes the relationship label,
+  denominator, disclosure floor, exclusion rules, and non-recall
+  interpretation before the private provider source dossier or target
+  collection is allowed.
 - Six provider-documented regional-round catalog additions across Cloudflare
   Email Service, Hostinger DNS, Hostinger Email, Locaweb Email, OVHcloud Email,
   and Titan Mail. The 16 new detections have current primary references, review
@@ -70,7 +80,9 @@ field changes.
   five-stratum frame, collection options, code and catalog digests, and
   aggregate-only interpretation boundary. Its baseline, candidate disposition,
   fixed-observation decision, and protected-main replay are complete. The
-  vendor-seed contract is next, followed by drift.
+  vendor-seed measurement protocol and tooling are complete. Freezing its
+  private provider source dossier and exact disjoint frame is next, followed by
+  protected-main commitment publication, collection, and drift.
 
 ### Fixed
 

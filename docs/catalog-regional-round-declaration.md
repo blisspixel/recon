@@ -129,5 +129,6 @@ The accepted catalog and tests merged through protected main at
 A live operational pass then replayed this exact frozen frame with 1,000 of
 1,000 rows, zero errors, and 39 partials. All five membership-bound strata
 reduced completely, and the clean-main counterfactual reproduced the accepted
-fixed-observation result. The regional round is closed; vendor-seed contract
-freeze is next.
+fixed-observation result. The regional round is closed. The vendor-seed
+measurement protocol and tooling are now implemented; freezing its private
+provider source dossier and exact disjoint frame is next.
