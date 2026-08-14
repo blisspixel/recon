@@ -11,6 +11,17 @@ the hash-pinned `uv.lock`. See [docs/supply-chain.md](docs/supply-chain.md).
 
 This file records the license obligations that warrant a human-readable notice.
 
+## Agent Plugins schemas
+
+The exact Agent Plugins v1.0.0 `plugin.json` and `mcp.json` schemas are vendored
+under `vendor/agent-plugins/1.0.0/` for network-free candidate validation.
+They come from the
+[Agent Plugins specification repository](https://github.com/agentplugins/agent-plugins-spec)
+at revision
+[bd383552095128f6effe895b9257cfd580a6d179](https://github.com/agentplugins/agent-plugins-spec/commit/bd383552095128f6effe895b9257cfd580a6d179)
+and are licensed under Apache License 2.0. Their committed response-byte digests
+are checked against the frozen v2.15 evaluation contract.
+
 ## Mozilla Public License 2.0 (MPL-2.0)
 
 The following runtime dependency is licensed under the MPL-2.0:

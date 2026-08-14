@@ -1,6 +1,6 @@
 # Engineering Refinement Plan
 
-Status: active implementation plan; v2.14 shipped and v2.15 frozen evaluation execution active
+Status: active implementation plan; v2.14 shipped and v2.15 client evaluation next
 Review date: 2026-08-14
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
@@ -443,7 +443,8 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ## Track 7: Operator and Agent Surface Simplification
 
-Status: active v2.15 execution; contract frozen, CLI help grouped, MCP discovery measured, profile deferred
+Status: active v2.15 execution; contract frozen, portable candidate
+offline-validated, client evaluation next, profile deferred
 Dependencies: Track 3 context-cost baseline
 Risk: compatibility and discoverability risk
 
@@ -453,9 +454,12 @@ names three clients, five tasks, native and portable package variants, success
 and unsupported-claim measures, discovery and result bytes, client-context
 treatment, install and update behavior, launch and recovery behavior, privacy
 rules, and promotion, deferral, and stop rules. It pins the exact Agent Plugins
-and Agent Skills source revisions and canonical schema digests. Do not build
-the candidate, collect results, or change the stable tool surface until that
-contract first passes protected main.
+and Agent Skills source revisions and canonical schema digests. That contract
+passed protected main before candidate implementation. The generated
+complete-surface candidate now passes network-free schema, package, launch,
+skill, version, and containment checks. That result is not a compatibility
+claim. Do not collect results or change the stable tool surface outside the
+frozen client frame.
 
 Document the three primary workflows separately from specialist graph,
 posterior, hypothesis, simulation, catalog-mutation, and discovery workflows.
@@ -586,11 +590,11 @@ Execute this track in four bounded phases:
    coverage.
 5. Backfill review dates only in families examined through those rounds, and
    raise the freshness ratchet only when measured coverage supports it.
-6. Preserve the frozen v2.15 representative-client evaluation contract. After
-   its protected-main gate, measure and, only if justified, simplify operator
-   and agent discovery, including a schema-pinned Agent Plugins candidate. Keep
-   the native client paths until representative-client evidence supports
-   portability.
+6. Preserve the frozen v2.15 representative-client evaluation contract and the
+   offline-validated complete-surface Agent Plugins candidate. Run the paired
+   client frame and simplify operator or agent discovery only if its frozen
+   outcome gates justify that decision. Keep the native client paths until
+   representative-client evidence supports portability.
 7. Reopen additive OKF v0.2 projection work only for a named consumer with a
    privacy and semantic mapping review; versioned JSON remains authoritative.
 8. Treat dimensioned email observations, CT-enabled catalog discovery,

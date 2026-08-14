@@ -30,7 +30,8 @@ operator, corporate group, ownership, or control.
 
 Tool surface changes: no public recon CLI command, MCP tool, resource, or
 stable JSON field changes. A maintainer-only network-free validator checks the
-frozen v2.15 representative-client evaluation contract.
+frozen v2.15 representative-client evaluation contract and its generated,
+schema-pinned portable packaging candidate.
 
 ### Added
 
@@ -39,6 +40,15 @@ frozen v2.15 representative-client evaluation contract.
   tasks, two complete-surface variants, privacy rules, failure cases, and
   promote-or-defer thresholds before portable-package implementation or client
   collection.
+- A deterministic complete-surface candidate under `agents/agent-plugin/`
+  generates root `plugin.json` and `mcp.json`, two portable skill forms, package
+  documentation, and the Apache-2.0 license from the current native sources.
+- A network-free fail-closed validator checks the candidate against byte-pinned
+  canonical Agent Plugins v1.0.0 schemas, the frozen contract, exact package
+  layout and server launch, portable Agent Skills frontmatter, the 22-tool
+  runtime inventory, version parity, size bounds, path containment, duplicate
+  keys, and qualified Working Draft claim language. CI checks both generation
+  drift and validation before any representative-client collection.
 
 ## [2.14.0] - 2026-08-14
 

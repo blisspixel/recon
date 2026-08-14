@@ -29,9 +29,11 @@ tracked separately from product work.
 > channel-parity checks. **The next release priority is v2.15. Its
 > [representative-client contract](agent-portability-evaluation-declaration.md)
 > is frozen: three required clients, five tasks, two complete-surface variants,
-> exact standards commitments, privacy rules, and fail-closed decisions. After
-> its first protected-main pass, build the schema-pinned portable candidate and
-> run the paired evaluation without changing the stable discovery surface.**
+> exact standards commitments, privacy rules, and fail-closed decisions. Its
+> protected-main prerequisite passed. The deterministic complete-surface
+> candidate now passes offline validation against byte-pinned v1.0.0 schemas
+> and frozen skill rules. Next, run the paired representative-client evaluation
+> without changing the stable discovery surface or claiming compatibility.**
 > The ordered version path through v3.0 is summarized in
 > [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
@@ -55,9 +57,11 @@ capsule and OKF-deferral release is shipped. v2.14 is also shipped with the
 closed rank, regional, vendor-seed, and prior-sample drift decisions plus full
 publication proof. The dependency-unblocked work now maps to **v2.15.0**. The
 representative task, client, measure, privacy, and stop-rule contract is frozen.
-After its protected-main gate, measure the current native path and evaluate a
-schema-pinned Agent Plugins candidate without changing stable CLI, JSON, or MCP
-contracts. New
+Its protected-main prerequisite and the candidate's network-free schema,
+layout, launch, skill, and version validation are complete. Next, measure the
+current native path against that complete-surface Agent Plugins candidate in
+the frozen VS Code, Cursor, and Kiro frame without changing stable CLI, JSON,
+or MCP contracts. New
 claim-surface drift reopens priority 1. Version milestones
 through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
@@ -112,7 +116,7 @@ current debt without turning every refinement into feature work.
 | Security | Unresolved HTTP destinations fail closed; rejected values and unexpected details stay out of default output; persisted inputs, corpus files, local catalog text, and default cache payload work are bounded; empty catalog filters cannot bypass compact defaults; release verification binds artifacts and recovery commands to exact status, workflow, tag, signer, and commit evidence; the installed dependency auditor resolves under Python isolated mode; pull requests and pushes to `main` run CodeQL while weekly and manual main scans remain | Ratchet the remote SAST requirement from its evidence-backed transition floor of 7 to 10 only after the public Scorecard window reports successful supported SAST checks for every sampled merged pull request; do not backfill history for the metric |
 | Accessibility | `--plain` is shipped; help uses complete linear output when needed; welcome alignment is content-aware at ordinary widths; catalog and cache rows preserve labels when narrow; color is never the only status channel | Keep both paths complete; do not replace the parser or hide specialist controls |
 | Documentation accuracy | README, MCP quick starts, stability, operational, security, generated CLI, release, catalog, cache, corpus, agent, schema, example, snapshot, and test surfaces use reserved target identities or disclosure-safe aggregates; the release gate rejects the retired target vocabulary | Keep eventual machine diagnostics separate from human output until versioned contracts are justified; retain manual review for previously unseen organization-shaped prose and preserve provider definitions |
-| Interchange portability | Current agent scaffolds use native client layouts, and versioned JSON is the structured runtime contract. Agent Plugins v1.0.0 remains a working draft. v2.13 shipped a separate caller-owned capsule schema; ADR-0014 defers OKF v0.2 because no named consumer justifies its trust and lifecycle mapping. | Keep the shipped capsule and JSON contracts stable. Test a schema-pinned portable plugin during the v2.15 client evaluation. Reopen an additive OKF projection only for a named consumer with a privacy review; never replace JSON or claim conformance before validation. |
+| Interchange portability | Native client layouts remain the supported install paths. A deterministic complete-surface candidate now passes offline validation against byte-pinned Agent Plugins v1.0.0 Working Draft schemas, but representative-client compatibility is unmeasured. Versioned JSON remains the structured runtime contract. v2.13 shipped a separate caller-owned capsule schema; ADR-0014 defers OKF v0.2 because no named consumer justifies its trust and lifecycle mapping. | Run the frozen native-versus-portable VS Code, Cursor, and Kiro frame. Keep the capsule and JSON contracts stable and native paths supported. Reopen an additive OKF projection only for a named consumer with a privacy review; never replace JSON or turn offline validation into a conformance claim. |
 
 ## Priority Order
 
@@ -565,12 +569,13 @@ characterization section appears later in this document:
    unmeasured, measurement-surface, and non-comparable disposition.
 2. Preserve the frozen v2.15 representative task, client, success, error,
    latency, discovery-byte, context-cost, portability, privacy, and stop-rule
-   [contract](agent-portability-evaluation-declaration.md). Require its first
-   protected-main pass before implementation or evaluation collection.
-3. Measure the current native 22-tool and client-specific packaging baseline,
-   then evaluate a schema-pinned Agent Plugins candidate as a separate
-   packaging axis. Keep portable packaging separate from stable CLI, JSON, MCP
-   wire, and OKF projection decisions.
+   [contract](agent-portability-evaluation-declaration.md). Its protected-main
+   prerequisite and the candidate's offline validation are complete.
+3. Measure the current native 22-tool and client-specific packaging baseline
+   against the generated complete-surface Agent Plugins candidate. Keep client
+   collection private, publish only the frozen aggregates, and keep portable
+   packaging separate from stable CLI, JSON, MCP wire, and OKF projection
+   decisions.
 4. Require every promoted rule to carry a current provider reference or
    disclosure-safe basis, a `verified` date, a fictional positive fixture, a
    lookalike negative, scoped wording, and exact provenance tests.
@@ -944,7 +949,8 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ### Simplify operator and agent discovery using measurements
 
-Status: **active v2.15 execution; evaluation contract frozen**.
+Status: **active v2.15 execution; contract frozen and portable candidate
+offline-validated; representative-client collection next**.
 
 The network-free
 [preregistration](agent-portability-evaluation-declaration.md) freezes three
@@ -952,9 +958,12 @@ listed clients, five representative tasks, native and portable package
 variants, success and unsupported-claim measures, discovery and result bytes,
 client-context treatment, launch and recovery behavior, privacy rules, and
 stop rules. It pins the exact Agent Plugins and Agent Skills source revisions
-and canonical schema digests. Its machine validator is part of the canonical
-gate. Only after the contract's first protected-main pass may the portable
-candidate or evaluation collection begin.
+and canonical schema digests. Its protected-main prerequisite passed. The
+generated `agents/agent-plugin/` candidate preserves all 22 tools and both
+skills, omits client-only and experimental frontmatter, and passes a
+network-free canonical gate over the byte-pinned schemas, exact package layout,
+launch shape, file bounds, path containment, version parity, and Working Draft
+claim wording. This does not establish client compatibility.
 
 Separate primary workflows from specialist workflows in documentation now.
 Treat portable packaging as a separate axis from tool-list context cost. The
@@ -962,15 +971,15 @@ existing `agents/claude-code/` bundle uses Claude Code's native
 `.claude-plugin/plugin.json` and `.mcp.json` layout; it is not a portable Agent
 Plugins package.
 
-During the v2.15 client evaluation, pin the Agent Plugins specification version
-before implementation. A conformant v1.0.0 candidate has root `plugin.json` and
-`mcp.json` documents carrying the matching canonical schemas, immediate skill
-children under `skills/`, explicit MCP transport types, and offline schema
-validation. Exercise install, discovery, launch, failure reporting, and update
-behavior in representative listed clients. Preserve the native installers and
-Claude Code bundle until the portable path proves equivalent. Because v1.0.0 is
-a working draft, do not make an unqualified compatibility claim or let draft
-churn change the stable CLI, JSON, or MCP contracts.
+The implemented candidate has root `plugin.json` and `mcp.json` documents
+carrying the matching canonical schemas, immediate skill children under
+`skills/`, and an explicit stdio transport. Generation from native sources and
+independent offline validation are blocking in local and hosted CI. Next,
+exercise install, discovery, launch, failure reporting, and update behavior in
+the three frozen listed clients. Preserve the native installers and Claude Code
+bundle unless that portable path proves equivalent. Because v1.0.0 is a working
+draft, do not make an unqualified compatibility claim or let draft churn change
+the stable CLI, JSON, or MCP contracts.
 
 The dated CLI measurement is complete. Against the published v2.5.5 baseline,
 native task panels reduce `lookup --help` from 154 to 109 lines at 80 columns
@@ -1102,9 +1111,8 @@ roadmap tracks at least:
   rate;
 - marginal CT signal gain relative to latency cost;
 - MCP discovery bytes and representative workflow context cost;
-- portable Agent Plugins schema, discovery, and launch conformance, plus
-  client-specific install and update evidence, when that candidate is
-  evaluated;
+- portable Agent Plugins offline schema and package validation, followed by
+  client-specific discovery, launch, install, update, and failure evidence;
 - deterministic CLI, JSON, and MCP behavior;
 - the enforced 90.2 percent branch-aware project gate, above the 80 percent user
   bar, with no coverage regression;

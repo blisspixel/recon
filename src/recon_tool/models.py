@@ -809,15 +809,17 @@ class TenantInfo:
     # --- Bayesian fusion (stable v2.0+) ---
     # Per-slug evidence-strength score in [0, 1] from the additive Beta-shaped
     # heuristic. Not an externally calibrated probability.
-    # Populated only when `--fusion` is passed. Empty otherwise.
+    # Populated when fusion runs: either through v2's omitted-flag compatibility
+    # default or an explicit ``--fusion`` choice. Empty with ``--no-fusion``.
     # Shape: ``[(slug, score), ...]``. Stable v2.0.
     slug_confidences: tuple[tuple[str, float], ...] = ()
 
     # --- Bayesian-network posteriors (stable v2.0+) ---
     # Model-relative posterior P(node=present | E) and 80% evidence-responsive
     # uncertainty band for each
-    # node in the v1.9 Bayesian network. Populated only when
-    # ``--fusion`` is passed. Empty otherwise. The Beta layer
+    # node in the v1.9 Bayesian network. Populated when fusion runs through
+    # v2's omitted-flag compatibility default or explicit ``--fusion``. Empty
+    # with ``--no-fusion``. The Beta layer
     # (``slug_confidences``) and the network layer
     # (``posterior_observations``) coexist: Beta operates on raw
     # evidence weights, the network propagates through chained claims.

@@ -54,6 +54,12 @@ _REVIEWED_DOCS = (
     ROOT / "docs" / "statistical-assurance.md",
 )
 _GENERATED_RELEASE_FILES = (
+    ROOT / "agents" / "agent-plugin" / "plugin.json",
+    ROOT / "agents" / "agent-plugin" / "mcp.json",
+    ROOT / "agents" / "agent-plugin" / "README.md",
+    ROOT / "agents" / "agent-plugin" / "LICENSE",
+    ROOT / "agents" / "agent-plugin" / "skills" / "recon" / "SKILL.md",
+    ROOT / "agents" / "agent-plugin" / "skills" / "recon-fingerprint-triage" / "SKILL.md",
     ROOT / "docs" / "surface-inventory.json",
     ROOT / "src" / "recon_tool" / "data" / "surface-inventory.json",
     ROOT / "docs" / "cli-surface.md",
@@ -342,6 +348,15 @@ def _bump_release_surfaces(current: str, new: str, release_date: str) -> None:
     CITATION.write_text(citation, encoding="utf-8")
 
     _bump_lockfile(False)
+    _run(
+        [
+            "uv",
+            "run",
+            "python",
+            "scripts/generate_agent_plugin.py",
+        ],
+        capture=False,
+    )
     _run(
         [
             "uv",

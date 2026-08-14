@@ -15,6 +15,7 @@ from typing import Any, cast
 
 import click
 import typer
+import yaml
 
 from recon_tool.mcp_client.sdk_compat import model_wire_dict, tool_schemas
 
@@ -26,6 +27,7 @@ _SCHEMA_PATH = _ROOT / "docs" / "recon-schema.json"
 _AGENT_GUIDANCE_FILES: tuple[tuple[str, str], ...] = (
     ("AGENTS.md", "portable_agent_guidance"),
     ("agents/README.md", "agent_integration_overview"),
+    ("agents/agent-plugin/README.md", "agent_plugins_candidate_docs"),
     ("agents/claude-code/README.md", "claude_code_plugin_docs"),
     ("agents/cursor/README.md", "cursor_docs"),
     ("agents/kiro/README.md", "kiro_docs"),
@@ -33,8 +35,14 @@ _AGENT_GUIDANCE_FILES: tuple[tuple[str, str], ...] = (
     ("agents/windsurf/README.md", "windsurf_docs"),
     ("agents/claude-code/skills/recon/SKILL.md", "skill"),
     ("agents/claude-code/skills/recon-fingerprint-triage/SKILL.md", "skill"),
+    ("agents/agent-plugin/skills/recon/SKILL.md", "portable_candidate_skill"),
+    (
+        "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md",
+        "portable_candidate_skill",
+    ),
 )
 _AGENT_CLIENT_CONFIGS: tuple[tuple[str, str, str], ...] = (
+    ("agent-plugin-candidate", "agents/agent-plugin/mcp.json", "portable_candidate"),
     ("claude-code", "agents/claude-code/.mcp.json", "plugin_bundle"),
     ("cursor", "agents/cursor/mcp.json", "template"),
     ("kiro", "agents/kiro/mcp.json", "template"),
@@ -52,6 +60,7 @@ _MAINTAINER_CONTEXT_PACKET: tuple[tuple[str, str, bool], ...] = (
     (".agent/SKILLS.md", "local_loop_learnings", True),
 )
 _CLAUDE_PLUGIN_MANIFEST = _ROOT / "agents" / "claude-code" / ".claude-plugin" / "plugin.json"
+_AGENT_PLUGIN_MANIFEST = _ROOT / "agents" / "agent-plugin" / "plugin.json"
 _ITERATIVE_MCP_TOOLS = {
     "chain_lookup",
     "clear_ephemeral_fingerprints",
@@ -124,23 +133,18 @@ def _cli_type_name(param_type: object) -> str:
     return _CLI_TYPE_ALIASES.get(observed, observed)
 
 
-def _frontmatter_fields(text: str) -> dict[str, str]:
+def _frontmatter_fields(text: str) -> dict[str, object]:
     lines = text.splitlines()
     if not lines or lines[0].strip() != "---":
         return {}
-
-    fields: dict[str, str] = {}
-    for line in lines[1:]:
-        stripped = line.strip()
-        if stripped == "---":
-            break
-        if ":" not in stripped:
-            continue
-        key, raw_value = stripped.split(":", 1)
-        value = raw_value.strip()
-        if value:
-            fields[key.strip()] = _normalize_text(value.strip("'\""))
-    return fields
+    try:
+        closing = lines.index("---", 1)
+    except ValueError:
+        return {}
+    payload = yaml.safe_load("\n".join(lines[1:closing]))
+    if not isinstance(payload, Mapping):
+        return {}
+    return {str(key): _safe_json_value(value) for key, value in payload.items()}
 
 
 def _first_heading(text: str) -> str:
@@ -400,6 +404,18 @@ def _claude_plugin_inventory() -> dict[str, object]:
     }
 
 
+def _agent_plugin_candidate_inventory() -> dict[str, object]:
+    manifest = json.loads(_AGENT_PLUGIN_MANIFEST.read_text(encoding="utf-8"))
+    return {
+        "path": _repo_path(_AGENT_PLUGIN_MANIFEST),
+        "schema": manifest.get("$schema"),
+        "name": manifest.get("name"),
+        "version": manifest.get("version"),
+        "status": "offline_schema_validated_candidate",
+        "compatibility_claim": "deferred_pending_frozen_representative_client_evaluation",
+    }
+
+
 def _mcp_approval_inventory(mcp_inventory: Mapping[str, object]) -> dict[str, object]:
     raw_tools = mcp_inventory.get("tools", [])
     read_only_tools: list[str] = []
@@ -457,6 +473,7 @@ def _agent_surfaces_inventory(mcp_inventory: Mapping[str, object]) -> dict[str, 
         "guidance_files": _agent_guidance_inventory(),
         "client_configs": _client_config_inventory(),
         "claude_code_plugin": _claude_plugin_inventory(),
+        "agent_plugins_candidate": _agent_plugin_candidate_inventory(),
         "mcp_approval": _mcp_approval_inventory(mcp_inventory),
         "maintainer_context_packet": _maintainer_context_packet_inventory(),
     }

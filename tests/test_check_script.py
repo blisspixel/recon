@@ -125,6 +125,17 @@ def test_agent_portability_contract_is_wired_into_local_and_ci_gates() -> None:
     assert "run: uv run python -m validation.agent_portability_contract" in workflow
 
 
+def test_agent_plugin_candidate_is_wired_into_local_and_ci_gates() -> None:
+    generated = next(command for _group, name, command in check._STAGES if name == "agent-plugin-generated")
+    validated = next(command for _group, name, command in check._STAGES if name == "agent-plugin-candidate")
+    workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert generated == [check._PY, "scripts/generate_agent_plugin.py", "--check"]
+    assert validated == [check._PY, "scripts/check_agent_plugin.py"]
+    assert "run: uv run python scripts/generate_agent_plugin.py --check" in workflow
+    assert "run: uv run python scripts/check_agent_plugin.py" in workflow
+
+
 def test_reproducible_build_smokes_built_wheel_entry_points() -> None:
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
     build_commands = [line.strip() for line in workflow.splitlines() if line.strip().startswith("uv build")]

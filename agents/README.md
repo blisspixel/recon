@@ -28,18 +28,23 @@ That handles **piece 1** of the setup (the MCP server). Per-client folders below
 
 | Agent | Folder | Pieces shipped |
 |---|---|---|
+| **Agent Plugins candidate** | [`agent-plugin/`](agent-plugin/) | Complete 22-tool portable packaging candidate, generated from the native skills and validated offline against the byte-pinned v1.0.0 Working Draft schemas. Representative-client compatibility remains unclaimed. |
 | **Claude Code** | [`claude-code/`](claude-code/) | Client-specific Claude Code plugin: MCP registration + skill + manifest. One install wires everything up. |
 | **Kiro** | [`kiro/`](kiro/) | MCP config + instructions for using the canonical SKILL.md as a Kiro skill. |
 | **Cursor** | [`cursor/`](cursor/) | MCP config + instructions for creating `.cursor/rules/recon.md` from `AGENTS.md`. |
 | **Windsurf** | [`windsurf/`](windsurf/) | MCP config + instructions for creating a `.windsurfrules` reference. |
 | **VS Code + Copilot** | [`vscode/`](vscode/) | MCP config + instructions for creating `.github/copilot-instructions.md`. |
 
-These folders are native client scaffolds. The Claude Code directory follows
+The client-named folders are native scaffolds. The Claude Code directory follows
 Claude Code's `.claude-plugin/plugin.json` and `.mcp.json` conventions; it is
 not the root `plugin.json` plus `mcp.json` package defined by the portable
 [Agent Plugins v1.0.0 working draft](https://agent-plugins.org/specification).
-That portable format is tracked as a separate, schema-pinned interoperability
-target in the roadmap.
+The separate `agent-plugin/` candidate uses that root layout and omits
+client-only or experimental skill fields. It passes offline pinned-schema
+validation. That result is not a compatibility claim. The package remains an
+evaluation artifact until the frozen VS Code,
+Cursor, and Kiro install-through-failure frame passes. Use the native install
+paths until that decision is published.
 
 For Claude Desktop and other clients without a folder here, `recon mcp install --client=claude-desktop` covers the MCP wiring; see [`docs/mcp.md`](../docs/mcp.md) for full reference.
 

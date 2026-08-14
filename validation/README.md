@@ -26,6 +26,12 @@ Committed (generic tooling, no company names):
   representative-client contract, exact standards commitments, client and task
   frame, privacy boundary, and promote-or-defer thresholds without network
   access.
+- `../scripts/generate_agent_plugin.py`: derives the complete portable
+  candidate deterministically from the native skill sources and package
+  version; `--check` rejects drift.
+- `../scripts/check_agent_plugin.py`: validates the exact candidate file set,
+  byte-pinned v1.0.0 schemas, explicit stdio launch, portable skill fields,
+  package bounds, and qualified claim boundary without network access.
 - `prepare_catalog_round.py`: validates a private round plan, reduces every
   input to a unique registrable apex, and exclusively writes an integrity-bound
   normalized frame plus its frozen manifest. It performs no network requests.
@@ -89,19 +95,24 @@ Gitignored (your private workspace):
 - `agent-portability-local/`: v2.15 client run records and transcripts; never a
   public result source
 
-## Agent-portability preregistration
+## Agent-portability candidate and preregistration
 
-Before building or collecting the v2.15 portable-package candidate, validate
-the frozen public contract:
+The frozen public contract passed protected main before candidate work began.
+The complete-surface candidate is now generated under `agents/agent-plugin/`
+and passes offline validation. Reproduce both boundaries before any client
+collection:
 
 ```bash
 uv run python -m validation.agent_portability_contract
+uv run python scripts/generate_agent_plugin.py --check
+uv run python scripts/check_agent_plugin.py
 ```
 
 The declaration is
 [`docs/agent-portability-evaluation-declaration.md`](../docs/agent-portability-evaluation-declaration.md).
-The validator is network-free and prints only the contract digest and aggregate
-frame counts. Client session records stay under the ignored
+The validators are network-free and print only aggregate package state, the
+contract digest, and frame counts. Offline validation is not a compatibility claim.
+Client session records stay under the ignored
 `validation/agent-portability-local/` workspace. Do not commit transcripts,
 hidden reasoning, credentials, client state, or per-session responses.
 

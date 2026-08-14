@@ -57,7 +57,7 @@ silent-failure, and contract-preserving fixes at any point.
 | **v2.12.0** | Apply quality decision compatibly | Uses the v2.11 structural stop without violating the stable v2 default contract | Fusion is classified as an advanced diagnostic; explicit flags are the supported transition path; v2 implicit behavior and stable JSON/MCP contracts remain intact; the default-off change is assigned to v3 |
 | **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Shipped: caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions or removals under unavailable source roles; ADR-0014 defers OKF without replacing JSON; full, protected-main, publication, provenance, and channel-parity gates passed |
 | **v2.14.0** | Catalog quality loop | Independent of fusion promotion; rank, regional, vendor-seed, and prior-sample drift rounds are closed with aggregate-only results | Shipped: bounded provider-documented additions, frozen round contracts, aggregate-only results, explicit dispositions, and full local, protected-main, PyPI, GitHub Release, SBOM, provenance, and channel-parity proof |
-| **v2.15.0** | Agent portability and surface cost - **active release priority** | Evaluate packaging and tool cuts against representative workflows from the shipped catalog baseline | Freeze tasks, clients, measures, and stop rules before implementation; validate a schema-pinned Agent Plugins candidate or explicitly defer it while the specification remains a working draft; add a core profile only if a representative client proves material benefit without losing specialist access |
+| **v2.15.0** | Agent portability and surface cost - **active release priority** | Evaluate packaging and tool cuts against representative workflows from the shipped catalog baseline | Frozen contract and offline schema validation stay green; run the complete native-versus-portable paired frame or explicitly defer portability while the specification remains a working draft; add a core profile only if representative clients prove material benefit without losing specialist access |
 | **v3.0.0** | Contract maturity | The already-deprecated fusion default change requires a major boundary; use the same boundary for any claim-envelope change that cannot remain additive | Fusion omitted-choice defaults off; explicit flags remain stable; versioned claim / observation envelope or explicit decision that v2 stays; migration notes |
 
 Optional cloud operator hosting stays a **side track** (any 2.x after local
@@ -158,9 +158,12 @@ rule growth or population claims. v2.14.0 passed its full release and remote
 publication gates. The v2.15 representative-client evaluation contract is now
 frozen with an integrity-bound standards snapshot, three required clients,
 five tasks, two full-surface variants, privacy rules, and fail-closed decisions.
-After its first protected-main pass, the next operation is the schema-pinned
-portable candidate and paired evaluation. No stable discovery-surface change is
-authorized. Detail:
+Its protected-main prerequisite passed. The deterministic complete-surface
+candidate under `agents/agent-plugin/` passes network-free validation against
+the byte-pinned Agent Plugins v1.0.0 schemas and frozen Agent Skills field
+rules. The next operation is the paired VS Code, Cursor, and Kiro evaluation.
+No compatibility claim or stable discovery-surface change is authorized.
+Detail:
 [docs/agent-portability-evaluation-declaration.md](docs/agent-portability-evaluation-declaration.md).
 
 ### 5. Optional operator-hosted access - lower priority side track
@@ -175,7 +178,7 @@ Draft container + Cloud Run IaC only. Local CLI and stdio MCP remain complete.
 | Broad catalog growth | Independent rank, regional, vendor-seed, and drift rounds |
 | More graph or probabilistic machinery | Measured benefit from the v2.11 scorecard |
 | Core-versus-advanced MCP profile | Representative client proves material context benefit |
-| Portable Agent Plugins package | Pinned schema validation plus install and launch evidence from representative conformant clients; preserve native client paths |
+| Promote the portable Agent Plugins candidate | Install, discovery, launch, update, and failure evidence from every frozen representative client; preserve native client paths until all gates pass |
 | OKF knowledge export | A named consumer, v0.2 mapping and privacy review; ADR-0014 keeps the shipped caller-owned capsule and JSON authoritative |
 | More optional cloud provider IaC | Named operator + provider validation |
 | Project-operated public multi-tenant service | Separate product, governance, and funding decision |

@@ -1,12 +1,14 @@
 # v2.15 Agent-Portability Evaluation Declaration
 
-Status: frozen on 2026-08-14; collection is prohibited until this declaration,
-its machine-readable contract, validator, and tests pass protected main.
+Status: frozen on 2026-08-14; contract prerequisite passed protected main;
+portable candidate implemented and offline-validated; representative-client
+collection not yet complete.
 
 This is the preregistration for the v2.15 representative-client evaluation.
 It freezes the question, standards snapshot, client and task frame, paired
 variants, measures, privacy boundary, promotion thresholds, and stop rules
-before a portable package is implemented or a client session is collected.
+before the portable candidate was implemented or a client session was
+collected.
 The authoritative machine-readable artifact is
 [`agent-portability-evaluation-contract.json`](agent-portability-evaluation-contract.json).
 Run its network-free validator with:
@@ -28,8 +30,9 @@ model context justifies a smaller discovery profile.
 Packaging and discovery cost are separate axes. Both paired package variants
 retain the complete 22-tool MCP surface. The evaluation does not change the
 stable CLI, versioned JSON, MCP wire behavior, observation-capsule schema,
-cache, or import surface. It does not ship a portable package and does not make
-an Agent Plugins conformance claim.
+cache, or import surface. The tracked candidate is not installed by the PyPI
+runtime wheel and does not make an Agent Plugins compatibility or conformance
+claim.
 
 ## Frozen standards snapshot
 
@@ -158,11 +161,13 @@ response.
 
 ## Execution order
 
-1. Merge this frozen contract, validator, tests, and documentation through the
-   ordinary protected-main gate.
-2. Build the portable candidate without changing stable runtime surfaces.
-3. Validate the candidate offline against the pinned schemas and skills rules.
-4. Record exact client versions, then execute the paired and negative-path
+1. Complete: merge this frozen contract, validator, tests, and documentation
+   through the ordinary protected-main gate.
+2. Complete: build the portable candidate without changing stable runtime
+   surfaces.
+3. Complete: validate the candidate offline against the byte-pinned schemas,
+   exact package layout, launch contract, and portable skill rules.
+4. Next: record exact client versions, then execute the paired and negative-path
    frame without changing its rules.
 5. Publish only disclosure-safe aggregate evidence and apply the frozen
    promote-or-defer decisions.
