@@ -35,6 +35,7 @@ from recon_tool.fingerprints import (
     get_srv_patterns,
     get_subdomain_txt_patterns,
     get_txt_patterns,
+    load_builtin_fingerprints,
     load_fingerprints,
     match_txt,
     match_txt_all,
@@ -64,6 +65,7 @@ def test_generated_builtins_equal_canonical_yaml_exactly() -> None:
     assert len(canonical) == 868
     assert sum(len(fingerprint.detections) for fingerprint in canonical) == 1091
     assert generated == canonical
+    assert load_builtin_fingerprints() == canonical
     repeated_slugs = [fingerprint.slug for fingerprint in generated]
     assert len(repeated_slugs) > len(set(repeated_slugs))
 

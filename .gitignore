@@ -72,6 +72,7 @@ docs/accuracy.md
 !/validation/stratify_catalog_round.py
 # Generic vendor-seed contract and aggregate evaluator. Provider-controlled
 # sources, target membership, and per-domain results remain private.
+!/validation/archive_vendor_seed_sources.py
 !/validation/prepare_vendor_seed_round.py
 !/validation/evaluate_vendor_seed_round.py
 !/validation/summarize_ct_sessions.py

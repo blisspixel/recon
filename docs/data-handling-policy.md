@@ -125,6 +125,16 @@ holdout, even when each source page is individually public. Public validation
 records carry only provider classes, aggregate counts above the disclosure
 floor, source citations, and cryptographic commitments.
 
+Archive provider-source pages with
+`validation/archive_vendor_seed_sources.py`. Its private plan declares the
+allowed provider registrable domains and exact URLs; its immutable receipt
+binds retrieval time, media type, byte count, and digest. The destination-domain
+declaration is a curator assertion, not proof of corporate ownership. The
+freezer makes no selected-namespace request and must finish before customer
+membership is extracted or the vendor-seed frame is frozen. Source plans,
+receipts, archived bytes, and any extracted membership all remain under the
+private roots above.
+
 Caller-owned observation capsules follow the same rule. Keep real-target
 capsules outside the repository, protect them according to the operator's data
 policy, and review them before sharing. The artifact can contain public DNS

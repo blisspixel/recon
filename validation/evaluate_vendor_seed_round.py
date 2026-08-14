@@ -22,7 +22,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, NoReturn, cast
 
-from recon_tool.fingerprints import load_fingerprints
+from recon_tool.fingerprints import load_builtin_fingerprints
 from validation import catalog_baseline
 from validation.prepare_catalog_round import (
     REPO_ROOT,
@@ -80,7 +80,7 @@ def _read_json(path: Path, *, kind: str) -> tuple[dict[str, Any], bytes]:
 
 def _catalog_by_slug() -> dict[str, dict[str, object]]:
     result: dict[str, dict[str, object]] = {}
-    for fingerprint in load_fingerprints():
+    for fingerprint in load_builtin_fingerprints():
         row = result.setdefault(fingerprint.slug, {"names": set(), "record_types": set()})
         cast(set[str], row["names"]).add(fingerprint.name)
         cast(set[str], row["record_types"]).update(rule.type for rule in fingerprint.detections)
@@ -137,8 +137,8 @@ def _validate_source_contract(
     manifest: Mapping[str, object],
     memberships: Sequence[RoundStratumMembership],
 ) -> dict[str, dict[str, object]]:
-    if contract.get("schema_version") != 1 or contract.get("private") is not True:
-        _fail("vendor source contract must use private schema version 1")
+    if contract.get("schema_version") != 2 or contract.get("private") is not True:
+        _fail("vendor source contract must use private schema version 2")
     if contract.get("label_basis") != LABEL_BASIS or contract.get("metric") != METRIC:
         _fail("vendor source contract label basis or metric is unsupported")
     digest = _source_contract_digest(contract)

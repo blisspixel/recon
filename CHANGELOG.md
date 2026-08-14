@@ -33,6 +33,14 @@ field changes.
 
 ### Added
 
+- A bounded vendor-seed source freezer retrieves only exact HTTPS pages under
+  predeclared provider domains. It disables redirects, credentials,
+  compression, and retries; enforces media-type and byte limits; publishes an
+  immutable private receipt atomically; and prints only counts and digests.
+  The vendor-seed preparer now requires that receipt and rejects source
+  metadata or archive substitution before it can freeze a target frame. The
+  measurement admits only release-bound built-in catalog slugs, excluding
+  operator-local custom and process-local ephemeral fingerprints.
 - A fail-closed vendor-seed contract preparer and aggregate evaluator bind
   provider-controlled source archives, disjoint private holdout membership,
   prior-frame exclusions, catalog slugs and record types, scan results, and the
@@ -80,8 +88,9 @@ field changes.
   five-stratum frame, collection options, code and catalog digests, and
   aggregate-only interpretation boundary. Its baseline, candidate disposition,
   fixed-observation decision, and protected-main replay are complete. The
-  vendor-seed measurement protocol and tooling are complete. Freezing its
-  private provider source dossier and exact disjoint frame is next, followed by
+  vendor-seed measurement protocol, bounded source acquisition, receipt
+  binding, preparer, and evaluator are complete. Assembling the private source
+  plan and dossier and freezing the exact disjoint frame is next, followed by
   protected-main commitment publication, collection, and drift.
 
 ### Fixed

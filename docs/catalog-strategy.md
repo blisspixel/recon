@@ -55,7 +55,7 @@ Current round status:
 | Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
 | Rank bands | Complete; four-band aggregate, dispositions, and zero-regression decision published |
 | Regional / ccTLD | Complete; baseline, fixed-observation decision, and clean-main replay published |
-| Vendor seed | Protocol and fail-closed tooling implemented; private provider source dossier and frame pending |
+| Vendor seed | Protocol, bounded source freezer, receipt binding, preparer, and evaluator implemented; private provider source plan, dossier, and frame pending |
 | Drift | Pending |
 
 ## 1. A stratified, reproducible sampling frame
@@ -315,12 +315,14 @@ measurement round.
    decision, and clean-main replay from the
    [regional result](../validation/2026-08-13-catalog-regional-round.md).
 3. Complete the disjoint vendor-seed protocol in the
-   [public declaration](catalog-vendor-seed-round-declaration.md): archive the
-   private provider-controlled source dossier, freeze at least 20 rows per
-   provider plus all prior-frame exclusions, publish commitments before target
-   contact, and report provider-level corroborated, observed-silent,
-   unavailable, unmeasured, and error outcomes. Do not call relationship-label
-   corroboration recall or use holdout outcomes to tune the evaluated rules.
+   [public declaration](catalog-vendor-seed-round-declaration.md): freeze a
+   strict provider-domain source plan, retrieve each bounded source through the
+   no-redirect source freezer, bind the schema-version-2 dossier to its exact
+   immutable receipt, freeze at least 20 rows per provider plus all prior-frame
+   exclusions, publish commitments before target contact, and report
+   provider-level corroborated, observed-silent, unavailable, unmeasured, and
+   error outcomes. Do not call relationship-label corroboration recall or use
+   holdout outcomes to tune the evaluated rules.
 4. Re-observe the frozen prior sample as the drift round. Do not describe a
    repeated frame as independent coverage.
 5. Backfill `verified` dates only in reviewed families and raise the freshness

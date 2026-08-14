@@ -78,7 +78,7 @@ actually shipped.
 | Frozen v2.14 catalog rank selection and aggregate commitments | [catalog-rank-round-declaration.md](catalog-rank-round-declaration.md) |
 | Frozen v2.14 regional source, selection, and aggregate commitments | [catalog-regional-round-declaration.md](catalog-regional-round-declaration.md) |
 | Aggregate-only v2.14 regional result and protected-main replay | [../validation/2026-08-13-catalog-regional-round.md](../validation/2026-08-13-catalog-regional-round.md) |
-| Frozen v2.14 vendor-seed label, denominator, exclusion, and disclosure protocol | [catalog-vendor-seed-round-declaration.md](catalog-vendor-seed-round-declaration.md) |
+| Frozen v2.14 vendor-seed label, denominator, bounded source acquisition, receipt binding, exclusion, and disclosure protocol | [catalog-vendor-seed-round-declaration.md](catalog-vendor-seed-round-declaration.md) |
 | Aggregate-safe product-quality scorecard harness | `scripts/quality_scorecard.py` |
 | Dependency-ordered implementation plan | [engineering-refinement-plan.md](engineering-refinement-plan.md) |
 | Structural maintainability audit, pinned to the revision it measured | [structural-maintainability.md](structural-maintainability.md) |
