@@ -49,8 +49,10 @@ field changes.
   Wilson intervals, never target identities.
 - A public vendor-seed protocol declaration fixes the relationship label,
   denominator, disclosure floor, exclusion rules, and non-recall
-  interpretation before the private provider source dossier or target
-  collection is allowed.
+  interpretation. Its final provider source plan, immutable receipt,
+  17,952-namespace exclusion union, receipt-bound dossier, and 33-row disjoint
+  HubSpot frame are frozen with aggregate pre-collection commitments and zero
+  target requests.
 - Six provider-documented regional-round catalog additions across Cloudflare
   Email Service, Hostinger DNS, Hostinger Email, Locaweb Email, OVHcloud Email,
   and Titan Mail. The 16 new detections have current primary references, review
@@ -89,9 +91,9 @@ field changes.
   aggregate-only interpretation boundary. Its baseline, candidate disposition,
   fixed-observation decision, and protected-main replay are complete. The
   vendor-seed measurement protocol, bounded source acquisition, receipt
-  binding, preparer, and evaluator are complete. Assembling the private source
-  plan and dossier and freezing the exact disjoint frame is next, followed by
-  protected-main commitment publication, collection, and drift.
+  binding, preparer, and evaluator are complete. The exact disjoint frame and
+  its aggregate commitments are frozen. Protected-main commitment publication,
+  exact-frame collection, and drift are next.
 
 ### Fixed
 

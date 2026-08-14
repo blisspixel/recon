@@ -131,6 +131,6 @@ A live operational pass then replayed this exact frozen frame with 1,000 of
 reduced completely, and the clean-main counterfactual reproduced the accepted
 fixed-observation result. The regional round is closed. The vendor-seed
 measurement protocol, bounded source freezer, immutable receipt binding,
-preparer, and evaluator are now implemented. Assembling its private
-provider-domain source plan and freezing the receipt-bound dossier and exact
-disjoint frame is next.
+preparer, and evaluator are now implemented. Its 33-row disjoint HubSpot frame
+and aggregate pre-collection commitments are frozen with zero target requests.
+Protected-main publication and then exact-frame collection are next.

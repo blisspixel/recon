@@ -43,9 +43,10 @@ convenience sample with selection bias. The first frozen typed baseline is
 recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
 the independent rank and regional rounds are complete. The vendor-seed
-measurement protocol and fail-closed tooling are implemented, but its private
-source and frame commitments, collection, and result remain open, followed by
-drift. Most legacy detections still lack a freshness date.
+measurement protocol and 33-row disjoint HubSpot pre-collection contract are
+frozen with aggregate commitments and zero target requests. Protected-main
+commitment publication, collection, result, and drift remain open. Most legacy
+detections still lack a freshness date.
 
 Current round status:
 
@@ -55,7 +56,7 @@ Current round status:
 | Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
 | Rank bands | Complete; four-band aggregate, dispositions, and zero-regression decision published |
 | Regional / ccTLD | Complete; baseline, fixed-observation decision, and clean-main replay published |
-| Vendor seed | Protocol, bounded source freezer, receipt binding, preparer, and evaluator implemented; private provider source plan, dossier, and frame pending |
+| Vendor seed | Protocol and 33-row disjoint HubSpot pre-collection contract frozen; aggregate commitments prepared with zero target requests; protected-main publication and collection pending |
 | Drift | Pending |
 
 ## 1. A stratified, reproducible sampling frame
@@ -314,15 +315,13 @@ measurement round.
 2. Preserve the completed regional baseline, accepted fixed-observation
    decision, and clean-main replay from the
    [regional result](../validation/2026-08-13-catalog-regional-round.md).
-3. Complete the disjoint vendor-seed protocol in the
-   [public declaration](catalog-vendor-seed-round-declaration.md): freeze a
-   strict provider-domain source plan, retrieve each bounded source through the
-   no-redirect source freezer, bind the schema-version-2 dossier to its exact
-   immutable receipt, freeze at least 20 rows per provider plus all prior-frame
-   exclusions, publish commitments before target contact, and report
-   provider-level corroborated, observed-silent, unavailable, unmeasured, and
-   error outcomes. Do not call relationship-label corroboration recall or use
-   holdout outcomes to tune the evaluated rules.
+3. Complete the frozen disjoint vendor-seed contract in the
+   [public declaration](catalog-vendor-seed-round-declaration.md): merge its
+   aggregate source, exclusion, frame, catalog, and execution commitments
+   through protected main before target contact, then run the exact 33-row
+   frame and report provider-level corroborated, observed-silent, unavailable,
+   unmeasured, and error outcomes. Do not call relationship-label corroboration
+   recall or use holdout outcomes to tune the evaluated rules.
 4. Re-observe the frozen prior sample as the drift round. Do not describe a
    repeated frame as independent coverage.
 5. Backfill `verified` dates only in reviewed families and raise the freshness

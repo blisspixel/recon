@@ -168,11 +168,11 @@ explicitly does not support broad catalog growth, a population coverage claim,
 or a registrant-geography claim. The vendor-seed relationship label,
 denominator, exclusions, disclosure protocol, and fail-closed tooling are now
 implemented, along with bounded source acquisition and immutable receipt
-binding. The next v2.14 operation is to assemble the private provider-domain
-source plan and freeze the receipt-bound dossier and exact disjoint frame
-before target contact. The resulting measure is
-relationship corroboration, not recall, because a provider relationship does
-not label publication of a particular DNS record. Drift follows against a
-frozen prior sample. Agent Plugins packaging remains v2.15 work, and OKF v0.2 remains
-a future named-consumer, caller-owned projection rather than a replacement for
-recon's versioned JSON or catalog evidence model.
+binding. The 33-row HubSpot contract
+and aggregate commitments are frozen with zero target requests. Protected-main
+commitment publication and then exact-frame collection are next. The resulting
+measure is relationship corroboration, not recall, because a provider
+relationship does not label publication of a particular DNS record. Drift
+follows against a frozen prior sample. Agent Plugins packaging remains v2.15
+work, and OKF v0.2 remains a future named-consumer, caller-owned projection
+rather than a replacement for recon's versioned JSON or catalog evidence model.

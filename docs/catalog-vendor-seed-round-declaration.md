@@ -1,17 +1,19 @@
 # v2.14 Catalog Vendor-Seed Round Declaration
 
-Status: protocol, bounded source acquisition, receipt binding, preparer, and
-evaluator implementation complete; private source plan, dossier, and frame not
-yet frozen; target collection has not started
+Status: protocol and private pre-collection contract frozen; aggregate source,
+exclusion, frame, catalog, and execution commitments recorded below; target
+collection has not started
 
 Protocol frozen: 2026-08-13
 
 This declaration fixes the vendor-seed label, denominator, exclusions,
 disclosure rules, collection boundary, and interpretation before any selected
-namespace is contacted. The exact provider sources, member rows, frame, catalog
-digest, and execution digest will be added only after a private dossier passes
-the fail-closed preparer and the resulting commitments merge through protected
-main. Until then, this is a protocol declaration, not a completed round.
+namespace is contacted. The private dossier passed the fail-closed preparer
+after bounded source acquisition and with zero target requests. Exact member
+rows and archived source bytes remain
+private; the disclosure-safe commitments below must merge through protected
+main before collection can begin. This is a frozen pre-collection declaration,
+not a completed result.
 
 ## Question
 
@@ -83,6 +85,56 @@ These rules make the holdout disjoint from catalog development and earlier
 measurement. They do not turn a provider relationship into an authoritative
 label for DNS publication.
 
+## Frozen pre-collection contract
+
+The final frame contains one eligible provider stratum. The provider-owned
+[HubSpot case-study index](https://www.hubspot.com/case-studies/all) exposed 459
+case-study routes. The mapping sample was fixed as
+the first 40 unique routes in provider document order. Thirty-three archived
+pages exposed exactly one company-domain link through HubSpot's dedicated
+company-link field and remained disjoint from the complete prior-observation
+union. Seven pages without that exact mapping were excluded before the final
+source plan. The resulting HubSpot stratum contains 33 rows and measures the
+release-bound `cname`, `cname_target`, `spf`, and `txt` paths for the `hubspot`
+slug.
+
+Other researched providers were rejected before collection rather than forced
+into weak strata:
+
+- all 48 deterministically mapped rows from the
+  [Shopify case-study index](https://www.shopify.com/case-studies) overlapped
+  the frozen prior-work union;
+- the [Webflow customer-story index](https://webflow.com/customers) did not
+  expose a deterministic company-domain link on enough archived stories;
+- the [Vercel customer index](https://vercel.com/customers) exposed 13
+  server-rendered story routes; and
+- the [Intercom customer index](https://www.intercom.com/customers) exposed 3
+  server-rendered story routes.
+
+The exclusion union contains 17,952 canonical namespaces derived from 74
+development and prior-frame inputs plus 85 retained prior-result inputs. No
+selected namespace was contacted while source pages, exclusions, membership,
+or the contract were prepared. Certificate transparency and direct probes are
+both disabled for this round. Minimum recurrence remains two occurrences
+across two distinct namespaces, but this holdout cannot tune the evaluated
+catalog.
+
+| Commitment | SHA-256 or count |
+|---|---|
+| Round ID | `catalog-vendor-seed-20260813-hubspot` |
+| Final provider source plan | `40ac18589437e272143e038964a0b508d475bebe44c9810205ed42a9239911b3` |
+| Immutable source receipt | `a7d21625d826ca18157cc883c40f81a599a6ddbea4f02741d988c5da64621207` |
+| Final source archive | 33 pages, 18,691,543 bytes |
+| Private dossier | `c44f8dbab5cf09956b581ebfda58d429861d32c834f346b55848080405e99ad7` |
+| Canonical exclusion union | `1f90120dce54c8efc74797864f75545c27ed03b1126cd0bfcfa9f7324de228e3` |
+| Source contract | `a49f93324437900e4ae1bab2125127c427dfa49abe5fa9f7717ed4992e0b899c` |
+| Source content | `a897e25b22bfaddfa940ab55dbfa3046a27d54ae7db1c5d8a3bbc2b46e0469e7` |
+| Frame and HubSpot member set | `37bb3e9f2609b9f4470d637d60f42077593169522b117af9660ac3058516728b` (33 rows) |
+| Generic round plan | `bbacaf9ec89d5518014288394c187b3afdd3f7659794d857a1c55e7a1ff0e8d0` |
+| Generic round manifest | `74c2bf7989f81a72d853132c74eddf3bd3f061aaf8168836d825fe3f5166eeb3` |
+| Built-in catalog | `206ee855ba9f5107634f0876b66ed46306dbecfaaaff6c8a10a089ac4678baa2` |
+| Execution surface | `dcc4bb3713070559e9248c0382a6ad4f439fddec882362c1e94d0273bc3636b0` |
+
 ## Frozen collection and scoring behavior
 
 The round uses the ordinary documented recon collection boundary. Certificate
@@ -135,9 +187,9 @@ frame preparation and result reduction network-free:
   catalog drift, incomplete results, denominator semantics, and identifier
   absence.
 
-The next operation is to assemble the private provider-domain source plan, run
-the bounded source freezer, extract a source-linked schema-version-2 dossier
-from its immutable receipt, freeze the provider set and exclusion union, run
-the preparer with zero target requests, and add the resulting aggregate
-commitments to this declaration. Collection remains blocked until those
-commitments and the exact implementation pass protected-main CI.
+The next operation is to merge these aggregate commitments with the exact
+implementation through protected-main CI. Only then may the frozen 33-row frame
+run once with its committed collection settings. The reducer must publish the
+HubSpot provider-level outcome with every corroborated, observed-silent,
+unavailable, unmeasured, and error row accounted for. No result may add members,
+change the denominator, or tune a catalog rule.
