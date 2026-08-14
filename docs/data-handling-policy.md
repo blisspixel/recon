@@ -83,6 +83,11 @@ is the practical analogue for reviewing statistical outputs before release.
   `credentials.json`, `secrets.yaml`. recon needs none to run, so none
   belong here.
 - The private validation corpus and its run outputs.
+- Vendor-seed customer membership, member-to-source mappings, archived
+  provider case-study pages used to label the private holdout, and exact
+  exclusion membership. A public result may name the provider class and cite
+  its provider-controlled source, but not the evaluated customer identities or
+  their rows.
 
 ## Private non-security reports
 
@@ -113,6 +118,12 @@ never in a commit:
 - `validation/corpus-private/`: the curated real-apex corpus.
 - `validation/runs-private/`: per-run outputs (results, gaps, diffs).
 - `validation/local/`: any other scratch space.
+
+Vendor-seed dossiers and archived provider-controlled source pages live under
+the same private roots. They are private because they identify the evaluated
+holdout, even when each source page is individually public. Public validation
+records carry only provider classes, aggregate counts above the disclosure
+floor, source citations, and cryptographic commitments.
 
 Caller-owned observation capsules follow the same rule. Keep real-target
 capsules outside the repository, protect them according to the operator's data

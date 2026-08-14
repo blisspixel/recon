@@ -165,8 +165,12 @@ fixed-observation decision.
 
 The regional round is closed. It supports these bounded additions and
 explicitly does not support broad catalog growth, a population coverage claim,
-or a registrant-geography claim. The next v2.14 operation is to freeze disjoint
-vendor-seed recall holdouts before contact. Drift follows against a frozen
-prior sample. Agent Plugins packaging remains v2.15 work, and OKF v0.2 remains
+or a registrant-geography claim. The vendor-seed relationship label,
+denominator, exclusions, disclosure protocol, and fail-closed tooling are now
+implemented. The next v2.14 operation is to freeze the private provider source
+dossier and exact disjoint frame before contact. The resulting measure is
+relationship corroboration, not recall, because a provider relationship does
+not label publication of a particular DNS record. Drift follows against a
+frozen prior sample. Agent Plugins packaging remains v2.15 work, and OKF v0.2 remains
 a future named-consumer, caller-owned projection rather than a replacement for
 recon's versioned JSON or catalog evidence model.

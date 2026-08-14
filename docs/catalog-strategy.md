@@ -42,8 +42,10 @@ The loop is disciplined and effective, but the available corpus remains a
 convenience sample with selection bias. The first frozen typed baseline is
 recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
-the independent rank and regional rounds are complete. Vendor-seed and drift
-rounds remain open, and most legacy detections still lack a freshness date.
+the independent rank and regional rounds are complete. The vendor-seed
+measurement protocol and fail-closed tooling are implemented, but its private
+source and frame commitments, collection, and result remain open, followed by
+drift. Most legacy detections still lack a freshness date.
 
 Current round status:
 
@@ -53,7 +55,7 @@ Current round status:
 | Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
 | Rank bands | Complete; four-band aggregate, dispositions, and zero-regression decision published |
 | Regional / ccTLD | Complete; baseline, fixed-observation decision, and clean-main replay published |
-| Vendor seed | One documented Webflow owner seed exercised; broader round pending |
+| Vendor seed | Protocol and fail-closed tooling implemented; private provider source dossier and frame pending |
 | Drift | Pending |
 
 ## 1. A stratified, reproducible sampling frame
@@ -81,9 +83,11 @@ purpose-built strata, each curated and stored privately:
   Globally marketed ccTLDs remain in their delegated grouping, so the result is
   descriptive for the frozen namespace frame and is not a regional prevalence
   estimate.
-- **Vendor-seed lists (reverse direction).** For a target vendor, collect its
-  public customer list (case-study pages, "powered by" searches), observe those
-  domains, and both tighten the pattern and measure recall.
+- **Vendor-seed lists (reverse direction).** For a target vendor, archive
+  provider-controlled customer evidence, observe a development-disjoint
+  holdout, and measure independent relationship corroboration. Search-result
+  and "powered by" discovery can suggest private development rows, but cannot
+  label the holdout.
 - **TLD-scale mining.** ICANN CZDS zone files are free and give every domain in
   a TLD for aggregate pattern mining. Mine patterns only; never persist
   per-domain data (the no-aggregate-database invariant).
@@ -103,7 +107,7 @@ sampling purpose and a private, frozen input manifest:
 | 1. Rank bands | Independent samples from several popularity bands | Do head and tail namespaces expose different high-frequency gaps? |
 | 2. Region | Country-code and regional samples | Which provider patterns are missing outside the current geographic concentration? |
 | 3. Vertical | Separately sampled public-sector, education, finance, healthcare, retail, legal, and media sets | Which gaps recur within a domain class without being pooled into a population claim? |
-| 4. Vendor seed | Provider-documented customer examples split from development rows | Does a specific verified rule recover its intended public record shape on a holdout set? |
+| 4. Vendor seed | Provider-controlled customer evidence disjoint from development and earlier observation rows | How often does the frozen provider slug independently corroborate the relationship label on measurable rows? |
 | 5. Drift | A frozen prior sample observed again later | Which rules or public record shapes changed, appeared, or disappeared? |
 
 Before collection, normalize each input through the same apex reducer used by
@@ -111,7 +115,8 @@ the product, reject malformed rows, and deduplicate within the round. When
 reporting a pooled descriptive count across overlapping strata, count each apex
 once. Keep stratum membership, source list revisions, and every domain row only
 in the ignored private workspace. A corpus used to develop a rule cannot also
-serve as its independent precision or recall holdout.
+serve as its independent precision or provider-relationship corroboration
+holdout.
 
 Every round records the catalog digest, collection options, source-success
 counts, observation-opportunity counts, unresolved counts, and gap counts by
@@ -138,7 +143,7 @@ aggregate-only
 complete baseline, accepted fixed-observation decision, and clean protected-main
 replay. The rank result does not substitute for it.
 
-## 2. Measurement: coverage, recall, precision
+## 2. Measurement: coverage, relationship corroboration, precision
 
 Growth without measurement cannot tell 40% coverage from 90%. Three metrics
 close the loop:
@@ -150,8 +155,14 @@ close the loop:
   aggregate-only report. Track "share of observed DNS surface classified" by
   type. TXT tokens, mail routes, issuers, and hostnames are never forced into
   one suffix metric.
-- **Recall, via vendor-seed lists.** On a vendor's known customers, do we detect
-  it? Directly measurable per vendor.
+- **Provider-relationship corroboration, via vendor-seed lists.** On a
+  provider-controlled customer holdout, how often does recon independently
+  observe that provider's frozen slug when an eligible catalog path is
+  measurable? Report this separately by provider with unavailable, unmeasured,
+  and error counts. A customer relationship does not guarantee publication of
+  a specific DNS record, so silence is not a false negative and the measure is
+  not recall. The frozen protocol is in the
+  [vendor-seed declaration](catalog-vendor-seed-round-declaration.md).
 - **Precision, only with independent labels.** Measure false attribution only
   where a provider-owned endpoint, standards-defined record, or other
   predeclared authoritative source supplies a label that the matcher did not
@@ -303,10 +314,13 @@ measurement round.
 2. Preserve the completed regional baseline, accepted fixed-observation
    decision, and clean-main replay from the
    [regional result](../validation/2026-08-13-catalog-regional-round.md).
-3. Freeze and run disjoint vendor-seed holdouts. Admit a candidate only with an
-   identifier, exact record type and pattern, source or disclosure-safe
-   aggregate basis, and explicit pending, promoted, rejected, or deferred
-   disposition.
+3. Complete the disjoint vendor-seed protocol in the
+   [public declaration](catalog-vendor-seed-round-declaration.md): archive the
+   private provider-controlled source dossier, freeze at least 20 rows per
+   provider plus all prior-frame exclusions, publish commitments before target
+   contact, and report provider-level corroborated, observed-silent,
+   unavailable, unmeasured, and error outcomes. Do not call relationship-label
+   corroboration recall or use holdout outcomes to tune the evaluated rules.
 4. Re-observe the frozen prior sample as the drift round. Do not describe a
    repeated frame as independent coverage.
 5. Backfill `verified` dates only in reviewed families and raise the freshness

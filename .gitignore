@@ -70,6 +70,10 @@ docs/accuracy.md
 !/validation/prepare_catalog_region_sources.py
 !/validation/ranked_sampling.py
 !/validation/stratify_catalog_round.py
+# Generic vendor-seed contract and aggregate evaluator. Provider-controlled
+# sources, target membership, and per-domain results remain private.
+!/validation/prepare_vendor_seed_round.py
+!/validation/evaluate_vendor_seed_round.py
 !/validation/summarize_ct_sessions.py
 !/validation/corpus-example.txt
 !/validation/README.md

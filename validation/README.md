@@ -40,6 +40,15 @@ Committed (generic tooling, no company names):
 - `stratify_catalog_round.py`: reconstructs frozen private membership, assigns
   every completed result exactly once, and writes ordered per-stratum typed
   aggregates without exposing stratum labels or namespaces.
+- `prepare_vendor_seed_round.py`: validates a private provider-controlled
+  source dossier, excludes every declared prior frame, binds every holdout
+  member to an archived source, and emits a generic vendor-seed round contract
+  without contacting a target or printing an identifier.
+- `evaluate_vendor_seed_round.py`: binds complete scan results to the frozen
+  source, membership, pooled-aggregate, catalog, and implementation contracts,
+  then writes provider-level corroborated, observed-silent, unavailable,
+  unmeasured, and error counts with Wilson intervals. Silence is not scored as
+  a false negative.
 - `triage_candidates.py`: programmatic filter on `gaps.json`: drops
   already-fingerprinted patterns, intra-org chains, and one-off noise. The
   output is the LLM-triage-ready candidate list.
@@ -266,8 +275,54 @@ and decision commitments were published before any selected-namespace request.
 The aggregate-only
 [result](2026-08-13-catalog-regional-round.md) records the complete baseline,
 accepted fixed-observation decision, and clean protected-main replay. The
-regional round is closed. Freeze the disjoint vendor-seed contract before its
-first collection; drift follows against a frozen prior sample.
+regional round is closed. The fail-closed vendor-seed protocol is published in
+the [public declaration](../docs/catalog-vendor-seed-round-declaration.md).
+Freeze its private provider-controlled source dossier and exact frame before
+the first selected-namespace request; drift follows against a frozen prior
+sample.
+
+The vendor-seed dossier uses only provider-controlled HTTPS evidence as its
+relationship label. Each provider is an existing catalog slug, every member is
+bound to an archived source ID, every stratum has at least 20 unique apexes,
+and the exclusion union covers development and every earlier observation or
+case-study frame. Customer identities, archived pages, source mappings, and
+exclusion rows remain private. Prepare the full contract with zero target
+requests:
+
+```bash
+python -m validation.prepare_vendor_seed_round \
+    --dossier validation/corpus-private/vendor-seed/dossier.json \
+    --output-dir validation/corpus-private/vendor-seed/frozen-contract
+```
+
+Copy only aggregate counts and commitments into the public declaration, merge
+that declaration and the exact implementation through protected main, and
+only then run the frozen frame. The dossier decides whether CT is enabled;
+direct CSE and BIMI probes are always off.
+
+```bash
+python validation/scan.py \
+    --corpus validation/corpus-private/vendor-seed/frozen-contract/frame.txt \
+    --round-kind vendor-seed \
+    --round-manifest validation/corpus-private/vendor-seed/frozen-contract/round-manifest.json \
+    --concurrency 2
+
+python -m validation.evaluate_vendor_seed_round \
+    --input validation/runs-private/<run>/results.ndjson \
+    --round-plan validation/corpus-private/vendor-seed/frozen-contract/round-plan.json \
+    --round-manifest validation/corpus-private/vendor-seed/frozen-contract/round-manifest.json \
+    --source-contract validation/corpus-private/vendor-seed/frozen-contract/source-contract.json \
+    --pooled-aggregate validation/runs-private/<run>/catalog-aggregate.json \
+    --output-dir validation/runs-private/<run>/vendor-seed-evaluation
+```
+
+The denominator is `corroborated + observed_silent` within each provider.
+Unavailable, unmeasured, and error rows are reported separately. A
+provider-controlled customer relationship does not guarantee that a particular
+DNS record is published on the queried apex, so this is a relationship
+corroboration rate, not recall, precision, prevalence, or a false-negative
+rate. Do not pool provider strata into a population estimate or tune a rule
+from its holdout outcome.
 
 Preparation fails closed on malformed rows, undeclared fields, cross-stratum
 overlap contrary to policy, direct-probe requests, or existing output files.
