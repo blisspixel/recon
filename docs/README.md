@@ -86,6 +86,7 @@ actually shipped.
 | Exact disclosure-safe v2.14 drift reducer output | [../validation/2026-08-14-catalog-drift-aggregate.json](../validation/2026-08-14-catalog-drift-aggregate.json) |
 | Frozen v2.15 representative-client portability frame, standards snapshot, privacy boundary, and stop rules | [agent-portability-evaluation-declaration.md](agent-portability-evaluation-declaration.md) |
 | Machine-readable v2.15 agent-portability contract | [agent-portability-evaluation-contract.json](agent-portability-evaluation-contract.json) |
+| Disclosure-safe v2.15 local preflight stop and zero-session disposition | [../validation/2026-08-14-agent-portability-preflight.md](../validation/2026-08-14-agent-portability-preflight.md) |
 | Aggregate-safe product-quality scorecard harness | `scripts/quality_scorecard.py` |
 | Dependency-ordered implementation plan | [engineering-refinement-plan.md](engineering-refinement-plan.md) |
 | Structural maintainability audit, pinned to the revision it measured | [structural-maintainability.md](structural-maintainability.md) |

@@ -2,7 +2,9 @@
 
 Status: frozen on 2026-08-14; contract prerequisite passed protected main;
 portable candidate implemented and offline-validated; representative-client
-collection not yet complete.
+collection not yet complete. The first maintainer-local preflight stopped before
+collection because Cursor was unavailable and the selected client-launch recon
+was 2.6.3 rather than the candidate's 2.14.0.
 
 This is the preregistration for the v2.15 representative-client evaluation.
 It freezes the question, standards snapshot, client and task frame, paired
@@ -167,10 +169,17 @@ response.
    surfaces.
 3. Complete: validate the candidate offline against the byte-pinned schemas,
    exact package layout, launch contract, and portable skill rules.
-4. Next: record exact client versions, then execute the paired and negative-path
-   frame without changing its rules.
-5. Publish only disclosure-safe aggregate evidence and apply the frozen
+4. In progress: run the network-free, private preflight with an explicit recon
+   executable path, then record exact client versions. The first local preflight
+   applied the frozen stop rules with zero sessions because one required client
+   was unavailable and the selected runtime version did not match.
+5. Next after a passing preflight: execute the paired and negative-path frame
+   without changing its rules.
+6. Publish only disclosure-safe aggregate evidence and apply the frozen
    promote-or-defer decisions.
+
+The disclosure-safe first-preflight result is
+[`../validation/2026-08-14-agent-portability-preflight.md`](../validation/2026-08-14-agent-portability-preflight.md).
 
 Agent Plugins remains a packaging evaluation, not an MCP protocol change.
 Open Knowledge Format v0.2 remains separately deferred by

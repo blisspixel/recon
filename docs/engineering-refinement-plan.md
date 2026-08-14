@@ -1,6 +1,7 @@
 # Engineering Refinement Plan
 
-Status: active implementation plan; v2.14 shipped and v2.15 client evaluation next
+Status: active implementation plan; v2.14 shipped and v2.15 preflight stopped
+before client evaluation
 Review date: 2026-08-14
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
@@ -444,7 +445,8 @@ See [catalog-strategy.md](catalog-strategy.md).
 ## Track 7: Operator and Agent Surface Simplification
 
 Status: active v2.15 execution; contract frozen, portable candidate
-offline-validated, client evaluation next, profile deferred
+offline-validated, first local preflight stopped before collection, profile
+deferred
 Dependencies: Track 3 context-cost baseline
 Risk: compatibility and discoverability risk
 
@@ -460,6 +462,13 @@ complete-surface candidate now passes network-free schema, package, launch,
 skill, version, and containment checks. That result is not a compatibility
 claim. Do not collect results or change the stable tool surface outside the
 frozen client frame.
+
+The first maintainer-local preflight started no sessions and made no network
+requests. It stopped because Cursor was unavailable and the selected
+client-launch recon was 2.6.3 rather than the 2.14.0 candidate. Preserve that
+result as environment-readiness evidence only. Do not drop Cursor, substitute a
+client, or treat the observed VS Code and Kiro versions as compatibility proof.
+Satisfy both stop conditions and rerun the private preflight before collection.
 
 Document the three primary workflows separately from specialist graph,
 posterior, hypothesis, simulation, catalog-mutation, and discovery workflows.

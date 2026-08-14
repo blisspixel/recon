@@ -63,6 +63,8 @@ docs/accuracy.md
 # validator. Client transcripts, hidden reasoning, and run records remain under
 # the ignored validation/agent-portability-local/ workspace.
 !/validation/agent_portability_contract.py
+!/validation/prepare_agent_portability_evaluation.py
+!/validation/2026-08-14-agent-portability-preflight.md
 # Generic catalog-round frame preparer; no target data is embedded.
 !/validation/prepare_catalog_round.py
 # Prior-sample drift contract and aggregate evaluator. Prior frames, retained
