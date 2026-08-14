@@ -465,6 +465,7 @@ def test_committed_vendor_seed_aggregate_is_safe_and_exact() -> None:
     aggregate = json.loads(raw)
 
     catalog_baseline.assert_aggregate_safe(aggregate)
+    assert b"\r\n" not in raw
     assert hashlib.sha256(raw).hexdigest() == "fd9d5d06fb1068746246a37b12149755ab0d2077be88b2c9b71ff2a577ad8ab8"
     assert aggregate["aggregate_only"] is True
     assert aggregate["records_total"] == 33
