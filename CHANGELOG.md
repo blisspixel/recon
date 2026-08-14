@@ -49,6 +49,12 @@ schema-pinned portable packaging candidate.
   runtime inventory, version parity, size bounds, path containment, duplicate
   keys, and qualified Working Draft claim language. CI checks both generation
   drift and validation before any representative-client collection.
+- A private, network-free representative-client preflight now requires the
+  exact recon executable intended for desktop-client launch, records exact
+  client versions, writes exclusively under the ignored local workspace, and
+  starts no session when a frozen gate fails. The first disclosure-safe local
+  result stopped with zero sessions because Cursor was unavailable and the
+  selected runtime was 2.6.3 rather than 2.14.0.
 
 ## [2.14.0] - 2026-08-14
 

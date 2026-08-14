@@ -950,7 +950,7 @@ See [catalog-strategy.md](catalog-strategy.md).
 ### Simplify operator and agent discovery using measurements
 
 Status: **active v2.15 execution; contract frozen and portable candidate
-offline-validated; representative-client collection next**.
+offline-validated; first local preflight stopped before collection**.
 
 The network-free
 [preregistration](agent-portability-evaluation-declaration.md) freezes three
@@ -965,6 +965,14 @@ network-free canonical gate over the byte-pinned schemas, exact package layout,
 launch shape, file bounds, path containment, version parity, and Working Draft
 claim wording. This does not establish client compatibility.
 
+The first maintainer-local preflight validated those offline gates, then
+stopped with zero sessions and zero network requests. Cursor was unavailable,
+and the explicitly selected client-launch recon was 2.6.3 rather than the
+2.14.0 candidate. This is an environment readiness result only. It neither
+drops Cursor from the frozen frame nor establishes behavior for VS Code or
+Kiro. Satisfy both stop conditions and rerun the exclusive private preflight
+before any task, install, launch, handshake, update, or negative-path session.
+
 Separate primary workflows from specialist workflows in documentation now.
 Treat portable packaging as a separate axis from tool-list context cost. The
 existing `agents/claude-code/` bundle uses Claude Code's native
@@ -974,9 +982,10 @@ Plugins package.
 The implemented candidate has root `plugin.json` and `mcp.json` documents
 carrying the matching canonical schemas, immediate skill children under
 `skills/`, and an explicit stdio transport. Generation from native sources and
-independent offline validation are blocking in local and hosted CI. Next,
-exercise install, discovery, launch, failure reporting, and update behavior in
-the three frozen listed clients. Preserve the native installers and Claude Code
+independent offline validation are blocking in local and hosted CI. After a
+passing three-client and runtime preflight, exercise install, discovery,
+launch, failure reporting, and update behavior in the three frozen listed
+clients. Preserve the native installers and Claude Code
 bundle unless that portable path proves equivalent. Because v1.0.0 is a working
 draft, do not make an unqualified compatibility claim or let draft churn change
 the stable CLI, JSON, or MCP contracts.

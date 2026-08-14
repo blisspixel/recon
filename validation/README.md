@@ -26,6 +26,10 @@ Committed (generic tooling, no company names):
   representative-client contract, exact standards commitments, client and task
   frame, privacy boundary, and promote-or-defer thresholds without network
   access.
+- `prepare_agent_portability_evaluation.py`: validates the frozen contract and
+  current candidate, records exact local client and recon versions privately,
+  and stops before session collection when a required client or runtime gate is
+  unavailable. It makes no network request.
 - `../scripts/generate_agent_plugin.py`: derives the complete portable
   candidate deterministically from the native skill sources and package
   version; `--check` rejects drift.
@@ -115,6 +119,25 @@ contract digest, and frame counts. Offline validation is not a compatibility cla
 Client session records stay under the ignored
 `validation/agent-portability-local/` workspace. Do not commit transcripts,
 hidden reasoning, credentials, client state, or per-session responses.
+
+Before any client session, run the fail-closed preflight with the absolute recon
+executable path that the desktop clients will resolve. Do not pass bare
+`recon` from inside `uv run`: its temporary project environment may differ from
+the desktop-client launch environment.
+
+```bash
+uv run python -m validation.prepare_agent_portability_evaluation \
+  --runtime-command /absolute/path/resolved-by-the-clients/recon \
+  --output validation/agent-portability-local/<unique-run>/preflight.json
+```
+
+The output is exclusive and private. The command starts no client session,
+makes no network request, and prints no executable path. Exit 0 means the
+frozen frame is ready to begin; exit 3 means a stop rule applied. The first
+maintainer-local aggregate result is recorded in
+[`2026-08-14-agent-portability-preflight.md`](2026-08-14-agent-portability-preflight.md):
+Cursor was unavailable and the selected client-launch recon was 2.6.3 rather
+than 2.14.0, so collection correctly stopped with zero sessions.
 
 ## The fingerprint-discovery loop
 
