@@ -357,7 +357,12 @@ def test_public_declaration_pins_frozen_contract_and_active_docs() -> None:
     assert "--drift-prior-contract" in validation_readme
     assert "--compare-to" in validation_readme
     active_text = "\n".join(active_docs)
-    assert "v2.14.0 release" in active_text
+    assert "v2.14" in active_text
+    assert "shipped" in active_text
+    assert "v2.15" in active_text
+    assert any(term in active_text for term in ("representative-client", "representative client"))
+    assert "v2.14 release gate" not in active_text
+    assert "Publish the coherent v2.14" not in active_text
     assert "protected main" in active_text or "protected-main" in active_text
     for document in active_docs:
         assert "5,199" in document

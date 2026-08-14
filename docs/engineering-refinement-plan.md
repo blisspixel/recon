@@ -1,6 +1,6 @@
 # Engineering Refinement Plan
 
-Status: active implementation plan; v2.14 evidence complete and release gate active
+Status: active implementation plan; v2.14 shipped and v2.15 evaluation planning active
 Review date: 2026-08-14
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
@@ -17,8 +17,9 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- Release metadata is synchronized on v2.14.0. The remote release-readiness
-  check is the authority for whether GitHub, PyPI, and CI are aligned.
+- Release metadata is synchronized on v2.14.0. Remote release readiness passed
+  for the exact tag, GitHub Release, PyPI files, attestations, SBOM, CI, and
+  channel hashes.
 - Local release readiness must pass before tagging; remote release readiness
   must pass for the same commit after publication.
 - Meaningful branch-aware coverage is above 90.2 percent, which is now the
@@ -401,7 +402,7 @@ Risk: concurrency and brittle-benchmark risk
 
 ## Track 6: Catalog Quality and Lifecycle
 
-Status: v2.14 evidence complete; release gate active. Rank, regional,
+Status: shipped in v2.14; maintenance gate. Rank, regional,
 vendor-seed, and prior-sample drift rounds are closed with aggregate results
 and explicit dispositions
 Dependencies: Track 3 measurement definitions
@@ -442,9 +443,17 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ## Track 7: Operator and Agent Surface Simplification
 
-Status: CLI help grouped; MCP discovery measured, profile deferred
+Status: active v2.15 planning; CLI help grouped, MCP discovery measured, profile deferred
 Dependencies: Track 3 context-cost baseline
 Risk: compatibility and discoverability risk
+
+Before implementation, freeze a representative-client evaluation contract.
+It names tasks, clients and versions, native and portable package variants,
+success and unsupported-claim measures, discovery and result bytes, client
+context treatment, install and update behavior, launch and recovery behavior,
+and promotion, deferral, and stop rules. Pin the Agent Plugins and Agent Skills
+schemas used by the evaluation. Do not collect results or change the stable
+tool surface until that contract passes protected main.
 
 Document the three primary workflows separately from specialist graph,
 posterior, hypothesis, simulation, catalog-mutation, and discovery workflows.
@@ -567,23 +576,23 @@ Execute this track in four bounded phases:
    blocking maintenance gates.
 2. Preserve the completed stable-v1 characterization, v2.11 structural stop,
    v2.12 compatibility transition, and shipped v2.13 observation capsules.
-3. Preserve the closed v2.14 rank, regional, vendor-seed, and prior-sample
+3. Preserve the shipped v2.14 rank, regional, vendor-seed, and prior-sample
    drift decisions, including their non-promotion, non-comparability, and
    measurement-surface dispositions.
-4. Publish the coherent v2.14.0 release only after full local, protected-main,
-   provenance, artifact, SBOM, attestation, and channel-parity proof. Keep all
-   public evidence aggregate-only and do not present repeated-frame evidence
-   as independent coverage.
+4. Keep the v2.14 release proof reproducible. Keep all public evidence
+   aggregate-only and do not present repeated-frame evidence as independent
+   coverage.
 5. Backfill review dates only in families examined through those rounds, and
    raise the freshness ratchet only when measured coverage supports it.
-6. Measure and, only if justified, simplify operator and agent discovery in
-   v2.15, including a schema-pinned Agent Plugins candidate. Keep the native
-   client paths until representative-client evidence supports portability.
+6. Freeze the v2.15 representative-client evaluation contract, then measure
+   and, only if justified, simplify operator and agent discovery, including a
+   schema-pinned Agent Plugins candidate. Keep the native client paths until
+   representative-client evidence supports portability.
 7. Reopen additive OKF v0.2 projection work only for a named consumer with a
    privacy and semantic mapping review; versioned JSON remains authoritative.
 8. Treat dimensioned email observations, CT-enabled catalog discovery,
    robustness prototypes, and new graph machinery as separately gated feature
-   tracks after the active catalog evidence closes.
+   tracks after the active v2.15 evaluation decision.
 9. Decompose critical interface hotspots without changing behavior when the
    active semantic and catalog work no longer shares their blast radius.
 

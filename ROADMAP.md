@@ -56,8 +56,8 @@ silent-failure, and contract-preserving fixes at any point.
 | **v2.11.0** | Product-quality baseline | Track 3. A structural preflight must prove the frozen comparison can answer its question before target collection | Aggregate-safe scorecard + dated identifiability memo; void live window recorded; fusion not promoted by the non-identifying design |
 | **v2.12.0** | Apply quality decision compatibly | Uses the v2.11 structural stop without violating the stable v2 default contract | Fusion is classified as an advanced diagnostic; explicit flags are the supported transition path; v2 implicit behavior and stable JSON/MCP contracts remain intact; the default-off change is assigned to v3 |
 | **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Shipped: caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions or removals under unavailable source roles; ADR-0014 defers OKF without replacing JSON; full, protected-main, publication, provenance, and channel-parity gates passed |
-| **v2.14.0** | Catalog quality loop - **active release priority** | Independent of fusion promotion; rank, regional, vendor-seed, and prior-sample drift rounds are closed with aggregate-only results | Publish the coherent catalog-quality release after full local, protected-main, provenance, PyPI, GitHub Release, SBOM, attestation, and channel-parity gates pass |
-| **v2.15.0** | Agent portability and surface cost | Evaluate packaging and tool cuts against representative workflows after the catalog and discovery surface is measured; packaging preparation may start earlier | Agent Plugins conformance is validated against a pinned specification or explicitly deferred while it remains a working draft; measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
+| **v2.14.0** | Catalog quality loop | Independent of fusion promotion; rank, regional, vendor-seed, and prior-sample drift rounds are closed with aggregate-only results | Shipped: bounded provider-documented additions, frozen round contracts, aggregate-only results, explicit dispositions, and full local, protected-main, PyPI, GitHub Release, SBOM, provenance, and channel-parity proof |
+| **v2.15.0** | Agent portability and surface cost - **active release priority** | Evaluate packaging and tool cuts against representative workflows from the shipped catalog baseline | Freeze tasks, clients, measures, and stop rules before implementation; validate a schema-pinned Agent Plugins candidate or explicitly defer it while the specification remains a working draft; add a core profile only if a representative client proves material benefit without losing specialist access |
 | **v3.0.0** | Contract maturity | The already-deprecated fusion default change requires a major boundary; use the same boundary for any claim-envelope change that cannot remain additive | Fusion omitted-choice defaults off; explicit flags remain stable; versioned claim / observation envelope or explicit decision that v2 stays; migration notes |
 
 Optional cloud operator hosting stays a **side track** (any 2.x after local
@@ -124,7 +124,7 @@ full, protected-main, publication, provenance, and channel-parity gates passed.
 A future real-domain fusion study requires a new preregistration whose arms
 first pass executable identifiability and dominance checks.
 
-### 4. Catalog quality loop - **evidence complete; v2.14 release gate active**
+### 4. Catalog quality loop - **shipped in v2.14; maintenance gate**
 
 The rank round is complete with a membership-bound four-band aggregate, four
 bounded promoted families, explicit dispositions, and a fixed-observation
@@ -154,8 +154,11 @@ digests, aggregate measures, promotion and regression budgets, and
 disclosure-safe output. Preserve rejected, deferred, unavailable, and
 unmeasured outcomes alongside promoted candidates.
 The work measures catalog quality and freshness; it does not authorize broad
-rule growth or population claims. The next operation is the coherent v2.14.0
-release gate. Detail: [docs/catalog-strategy.md](docs/catalog-strategy.md).
+rule growth or population claims. v2.14.0 passed its full release and remote
+publication gates. The next operation is to freeze the v2.15 representative
+task, client, context-cost, portability, and stop-rule contract before changing
+the portable package or stable discovery surface. Detail:
+[docs/catalog-strategy.md](docs/catalog-strategy.md).
 
 ### 5. Optional operator-hosted access - lower priority side track
 
