@@ -45,6 +45,9 @@ class TestSSRFProtection:
     def test_ipv6_loopback_blocked(self):
         assert _is_private_ip("::1") is True
 
+    def test_deprecated_site_local_ipv6_blocked(self):
+        assert _is_private_ip("fec0::1") is True
+
     def test_public_ip_allowed(self):
         assert _is_private_ip("8.8.8.8") is False
 

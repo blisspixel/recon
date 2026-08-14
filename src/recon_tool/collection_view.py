@@ -33,7 +33,7 @@ if TYPE_CHECKING:
 _CHANNEL_SERVICES: dict[str, frozenset[str]] = {
     "dmarc": frozenset({SVC_DMARC}),
     "dkim": frozenset({SVC_DKIM, SVC_DKIM_EXCHANGE, SVC_DKIM_GOOGLE}),
-    "apex_txt": frozenset({SVC_SPF_STRICT, SVC_SPF_SOFTFAIL}),
+    "apex_txt": frozenset({SVC_SPF_STRICT, SVC_SPF_SOFTFAIL, "SPF record observed"}),
     "mta_sts": frozenset({SVC_MTA_STS}),
     "bimi": frozenset({SVC_BIMI}),
     "tls_rpt": frozenset({"TLS-RPT"}),
@@ -44,7 +44,7 @@ _CHANNEL_SERVICES: dict[str, frozenset[str]] = {
 _CHANNEL_SLUGS: dict[str, frozenset[str]] = {
     "dmarc": frozenset({"dmarc"}),
     "dkim": frozenset({"dkim", "dkim-exchange"}),
-    "apex_txt": frozenset({"spf-strict", "spf-softfail"}),
+    "apex_txt": frozenset({"spf-strict", "spf-softfail", "spf"}),
     "mta_sts": frozenset({"mta-sts", "mta-sts-enforce"}),
     "bimi": frozenset({"bimi", "bimi-vmc"}),
     "tls_rpt": frozenset({"tls-rpt"}),

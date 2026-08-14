@@ -21,6 +21,12 @@ from recon_tool.models import EvidenceRecord, SignalContext, TenantInfo
 _SVC_TLS_RPT = "TLS-RPT"
 _SVC_NULL_MX = "Null MX (domain does not accept email)"
 _SVC_CUSTOM_MX = "Custom or unclassified MX"
+_SVC_SPF_OBSERVED = "SPF record observed"
+_SPF_CONTROL_BY_SLUG = {
+    "spf-strict": SVC_SPF_STRICT,
+    "spf-softfail": SVC_SPF_SOFTFAIL,
+    "spf": _SVC_SPF_OBSERVED,
+}
 
 _EMAIL_CONTROL_SERVICES = frozenset(
     {
@@ -30,6 +36,7 @@ _EMAIL_CONTROL_SERVICES = frozenset(
         SVC_DKIM_GOOGLE,
         SVC_SPF_STRICT,
         SVC_SPF_SOFTFAIL,
+        _SVC_SPF_OBSERVED,
         SVC_MTA_STS,
         SVC_BIMI,
         _SVC_TLS_RPT,
@@ -72,10 +79,8 @@ def observed_email_control_services(evidence: Iterable[EvidenceRecord]) -> set[s
             controls.add(SVC_DMARC)
         elif source_type == "DKIM":
             controls.add(record.rule_name if record.rule_name in _EMAIL_CONTROL_SERVICES else SVC_DKIM)
-        elif source_type == "SPF" and record.slug == "spf-strict":
-            controls.add(SVC_SPF_STRICT)
-        elif source_type == "SPF" and record.slug == "spf-softfail":
-            controls.add(SVC_SPF_SOFTFAIL)
+        elif source_type == "SPF" and record.slug in _SPF_CONTROL_BY_SLUG:
+            controls.add(_SPF_CONTROL_BY_SLUG[record.slug])
         elif source_type in {"MTA_STS", "MTA_STS_POLICY"}:
             controls.add(SVC_MTA_STS)
             # dns_email records the fetched policy as ``mode: <mode>``.

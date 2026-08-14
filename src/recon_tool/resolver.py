@@ -27,6 +27,90 @@ from recon_tool.merger import merge_results
 from recon_tool.models import InsightClaim, ReconLookupError, SourceResult, TenantInfo
 from recon_tool.sources.base import LookupSource
 
+
+def _inventory_only_related_result(result: SourceResult) -> SourceResult:
+    """Keep related-namespace inventory labels; drop apex-scoped observations.
+
+    Related lookups are appended so a later rematch can keep inventory slugs.
+    Their raw DNS, email-control records, identity scalars, and CT payload
+    describe the *related* namespace. Merging them as if they were another
+    apex source lent that namespace's DMARC, SPF, tokens, and certs to the
+    queried domain, and a failed related DNS lookup marked the apex DNS
+    channel unavailable.
+    """
+    from recon_tool.email_security import claim_safe_email_services, claim_safe_email_slugs
+
+    services = {
+        name
+        for name in claim_safe_email_services(result.detected_services, ())
+        if not name.startswith("SPF complexity:")
+    }
+    slugs = claim_safe_email_slugs(result.detected_slugs, ())
+    return replace(
+        result,
+        tenant_id=None,
+        display_name=None,
+        default_domain=None,
+        region=None,
+        m365_detected=False,
+        error=None,
+        detected_services=tuple(sorted(services)),
+        auth_type=None,
+        dmarc_policy=None,
+        tenant_domains=(),
+        detected_slugs=tuple(sorted(slugs)),
+        related_domains=(),
+        degraded_sources=(),
+        cert_summary=None,
+        evidence=(),
+        bimi_identity=None,
+        site_verification_tokens=(),
+        mta_sts_mode=None,
+        google_auth_type=None,
+        google_idp_name=None,
+        dmarc_pct=None,
+        dmarc_testing=False,
+        dmarc_np=None,
+        raw_dns_records=(),
+        spf_include_count=0,
+        ct_provider_used=None,
+        ct_subdomain_count=0,
+        ct_cache_age_days=None,
+        ct_attempt_outcome=None,
+        cloud_instance=None,
+        tenant_region_sub_scope=None,
+        msgraph_host=None,
+        surface_attributions=(),
+        unclassified_cname_chains=(),
+        dns_catalog_summaries=(),
+        unclassified_dns_observations=(),
+        chain_motifs=(),
+        infrastructure_clusters=None,
+        source_unavailable=False,
+    )
+
+
+def _collect_related_inventory(
+    raw_result: SourceResult,
+    extra_services: set[str],
+    extra_slugs: set[str],
+) -> SourceResult | None:
+    """Return a related inventory result that adds new apex-safe labels."""
+    from recon_tool.collection_view import collection_observable_result
+
+    result = collection_observable_result(raw_result)
+    if result.error is not None or result.source_unavailable:
+        return None
+    inventory = _inventory_only_related_result(result)
+    new_services = set(inventory.detected_services) - extra_services
+    new_slugs = set(inventory.detected_slugs) - extra_slugs
+    if not new_services and not new_slugs:
+        return None
+    extra_services.update(inventory.detected_services)
+    extra_slugs.update(inventory.detected_slugs)
+    return inventory
+
+
 __all__ = [
     "RESOLVE_TIMEOUT",
     "SourcePool",
@@ -257,20 +341,17 @@ async def _enrich_from_related(
     # Collect additional services and slugs from related domains
     extra_services: set[str] = set(info.services)
     extra_slugs: set[str] = set(info.slugs)
+    inventory_results: list[SourceResult] = []
     found_new = False
-
-    from recon_tool.collection_view import collection_observable_result
 
     for raw_result in related_results:
         # A related-host subchannel failure limits only that enrichment result.
         # Project it locally, but do not mark the apex channel unavailable.
-        result = collection_observable_result(raw_result)
-        new_services = set(result.detected_services) - extra_services
-        new_slugs = set(result.detected_slugs) - extra_slugs
-        if new_services or new_slugs:
-            found_new = True
-            extra_services.update(result.detected_services)
-            extra_slugs.update(result.detected_slugs)
+        inventory = _collect_related_inventory(raw_result, extra_services, extra_slugs)
+        if inventory is None:
+            continue
+        found_new = True
+        inventory_results.append(inventory)
 
     if not found_new:
         return info, all_results
@@ -365,7 +446,7 @@ async def _enrich_from_related(
         insight_claims=observable_enriched.insight_claims,
     )
 
-    return enriched, all_results + list(related_results)
+    return enriched, all_results + inventory_results
 
 
 async def _resolve_tenant_inner(
