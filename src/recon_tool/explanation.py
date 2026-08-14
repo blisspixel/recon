@@ -18,6 +18,7 @@ from recon_tool.confidence import (
     confidence_source_names,
     inference_confidence_basis,
     is_confidence_contributor,
+    minimum_confidence,
 )
 from recon_tool.explanation_dag import (
     add_evidence_node,
@@ -395,6 +396,8 @@ def explain_confidence(
     evidence_confidence: ConfidenceLevel,
     inference_confidence: ConfidenceLevel,
     final_confidence: ConfidenceLevel,
+    *,
+    identity_conflict: bool = False,
 ) -> ExplanationRecord:
     """Generate an ExplanationRecord for the confidence derivation.
 
@@ -437,9 +440,19 @@ def explain_confidence(
     if basis.sources:
         inference_parts.append(f"Qualifying sources: {', '.join(basis.sources)}")
 
-    # Final confidence
+    # Final confidence. Merger takes min(identity-agreement, evidence, inference)
+    # and then may apply a one-step degraded-collection downgrade. Saying only
+    # "minimum of evidence and inference" contradicted LOW finals after a
+    # tenant-ID conflict.
+    dimensional_floor = minimum_confidence(evidence_confidence, inference_confidence)
+    if identity_conflict and final_confidence != dimensional_floor:
+        final_note = "identity sources disagreed on tenant ID"
+    elif final_confidence == dimensional_floor:
+        final_note = "minimum of evidence and inference dimensions"
+    else:
+        final_note = "combined identity, evidence, and inference dimensions"
     final_parts = [
-        f"Final confidence: {final_confidence.value} (minimum of evidence and inference dimensions)",
+        f"Final confidence: {final_confidence.value} ({final_note})",
     ]
 
     # Degraded sources

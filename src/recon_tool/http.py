@@ -87,6 +87,9 @@ _BLOCKED_NETWORKS = [
 
 def _addr_is_blocked(addr: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     """Return True for any IP that is not globally routable unicast."""
+    mapped = getattr(addr, "ipv4_mapped", None)
+    if mapped is not None:
+        return _addr_is_blocked(mapped)
     return (
         any(addr in net for net in _BLOCKED_NETWORKS)
         or not addr.is_global

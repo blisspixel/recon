@@ -313,6 +313,7 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
         info.evidence_confidence,
         info.inference_confidence,
         info.confidence,
+        identity_conflict=bool(info.merge_conflicts and info.merge_conflicts.tenant_id),
     )
     all_explanations.append(serialize_explanation(conf_rec))
 

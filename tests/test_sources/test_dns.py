@@ -477,6 +477,15 @@ class TestSpfAllMechanismParsing:
         assert spf_all_qualifier("v=spf1 include:_spf.example.com") is None
         assert spf_all_qualifier("v=spf1 redirect=_spf.example.net") is None
 
+    def test_permissive_policy_is_retained_as_spf_evidence(self) -> None:
+        from recon_tool.sources.dns import _DetectionCtx
+        from recon_tool.sources.dns_email import apply_spf_policy_record
+
+        ctx = _DetectionCtx()
+        apply_spf_policy_record(ctx, "v=spf1 +all")
+        assert any(record.source_type == "SPF" and record.slug == "spf" for record in ctx.evidence)
+        assert "SPF: strict (-all)" not in ctx.services
+
 
 class TestEspDkimHintMatching:
     """A domain-shaped ESP hint must match on label boundaries.

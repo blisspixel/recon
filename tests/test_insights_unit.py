@@ -315,6 +315,12 @@ class TestSparseSignalInsights:
         assert any("minimal public DNS footprint" in i for i in insights)
         assert not any("small" in i.lower() or "holding" in i.lower() or "portfolio" in i.lower() for i in insights)
 
+    def test_three_token_web_property_does_not_invent_mx_or_identity(self):
+        ctx = _ctx(services={"Slack", "Okta", "Snowflake"})
+        insights = _sparse_signal_insights(ctx)
+        assert any("few observable public records" in i for i in insights)
+        assert not any("beyond MX and identity" in i for i in insights)
+
     def test_dense_domain_does_not_get_sparse_diagnosis(self):
         ctx = _ctx(
             services={

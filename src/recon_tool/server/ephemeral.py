@@ -17,7 +17,7 @@ from typing_extensions import TypedDict
 
 from recon_tool.formatter import format_tenant_dict
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
-from recon_tool.server.app import internal_lookup_error, mcp
+from recon_tool.server.app import internal_lookup_error, invalid_domain_message, mcp
 from recon_tool.server.runtime import cache, cache_get, cache_refresh_info
 from recon_tool.validator import validate_domain
 
@@ -439,7 +439,7 @@ async def reevaluate_domain(domain: str) -> LookupResult:
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
-        raise ToolError(str(exc)) from exc
+        raise ToolError(invalid_domain_message(exc)) from exc
 
     cached = cache_get(validated)
     if cached is None:

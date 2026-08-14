@@ -139,6 +139,18 @@ class TestChainResolve:
         assert "good.invalid" in domains
         assert "bad.invalid" not in domains
 
+    @pytest.mark.asyncio
+    async def test_seed_lookup_failure_is_raised(self, monkeypatch):
+        from recon_tool.models import ReconLookupError
+
+        async def mock_resolve(domain, **kwargs):
+            raise ReconLookupError(domain=domain, message="timeout", error_type="timeout")
+
+        monkeypatch.setattr("recon_tool.chain.resolve_tenant", mock_resolve)
+
+        with pytest.raises(ReconLookupError, match="timeout"):
+            await chain_resolve("seed.invalid", depth=1)
+
 
 class TestSiteVerificationCorrelation:
     def test_correlation_preserves_existing_insight_order(self):

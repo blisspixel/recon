@@ -292,6 +292,28 @@ class TestSpfRedirectBlocksPrivateTargets:
             "a legitimate public redirect target ending in -all must credit SPF strict"
         )
 
+    @pytest.mark.asyncio
+    async def test_redirect_timeout_does_not_mark_apex_txt_unavailable(self, monkeypatch):
+        async def _timeout_resolve(domain: str, rdtype: str, **kwargs: Any) -> list[str]:
+            degraded = kwargs.get("degraded_sources")
+            name = kwargs.get("degraded_name")
+            if degraded is not None and name is not None:
+                degraded.add(name)
+            return []
+
+        monkeypatch.setattr(dns_base, "safe_resolve", _timeout_resolve)
+        ctx = dns_mod._DetectionCtx()
+        ctx.services.add(dns_email.SVC_SPF_STRICT)
+        await dns_email._follow_spf_redirect(
+            ctx,
+            "v=spf1 redirect=_spf.mail.alpha.example.com",
+            depth=0,
+            max_depth=3,
+        )
+        assert "dns:apex_txt" not in ctx.degraded_sources
+        assert "dns:spf_redirect" in ctx.degraded_sources
+        assert dns_email.SVC_SPF_STRICT in ctx.services
+
 
 # ── Entry-point validation ─────────────────────────────────────────
 

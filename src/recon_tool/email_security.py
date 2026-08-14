@@ -16,6 +16,12 @@ from recon_tool.constants import (
 )
 from recon_tool.models import EvidenceRecord, SignalContext, TenantInfo
 
+# Names that assert this namespace publishes an email-control or mail-routing
+# record. Related-domain enrichment must not lend them to the queried apex.
+_SVC_TLS_RPT = "TLS-RPT"
+_SVC_NULL_MX = "Null MX (domain does not accept email)"
+_SVC_CUSTOM_MX = "Custom or unclassified MX"
+
 _EMAIL_CONTROL_SERVICES = frozenset(
     {
         SVC_DMARC,
@@ -26,21 +32,29 @@ _EMAIL_CONTROL_SERVICES = frozenset(
         SVC_SPF_SOFTFAIL,
         SVC_MTA_STS,
         SVC_BIMI,
+        _SVC_TLS_RPT,
+        _SVC_NULL_MX,
+        _SVC_CUSTOM_MX,
     }
 )
 
-# Slug counterparts of the control services above, plus the reporting and
-# null-delivery slugs the same detectors emit. A control slug states that the
-# queried namespace publishes that record, so it may only survive when the
-# queried namespace's own evidence carries it.
+# Slug counterparts of the control services above, plus parser-owned variants
+# the same detectors emit. A control slug states that the queried namespace
+# publishes that record, so it may only survive when the queried namespace's
+# own evidence carries it.
 _EMAIL_CONTROL_SLUGS = frozenset(
     {
         "bimi",
+        "bimi-vmc",
         "dkim",
+        "dkim-exchange",
         "dmarc",
+        "dmarc-invalid",
         "mta-sts",
         "mta-sts-enforce",
         "null-mx",
+        "self-hosted-mail",
+        "spf",
         "spf-softfail",
         "spf-strict",
         "tls-rpt",
@@ -73,6 +87,12 @@ def observed_email_control_services(evidence: Iterable[EvidenceRecord]) -> set[s
                 mta_sts_not_in_effect = True
         elif source_type == "BIMI":
             controls.add(SVC_BIMI)
+        elif source_type == "TXT" and record.slug == "tls-rpt":
+            controls.add(_SVC_TLS_RPT)
+        elif source_type == "MX" and record.slug == "null-mx":
+            controls.add(_SVC_NULL_MX)
+        elif source_type == "MX" and record.slug == "self-hosted-mail":
+            controls.add(_SVC_CUSTOM_MX)
     if mta_sts_not_in_effect:
         controls.discard(SVC_MTA_STS)
     return controls

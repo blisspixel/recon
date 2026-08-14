@@ -303,6 +303,29 @@ class TestExplainConfidence:
         assert "high corroboration rule" in rec.confidence_derivation
         assert "Winning claim: microsoft365" in rec.confidence_derivation
 
+    def test_identity_conflict_does_not_claim_a_dimensional_minimum(self) -> None:
+        results = [
+            SourceResult(
+                source_name="oidc_discovery",
+                tenant_id="aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee",
+            ),
+            SourceResult(
+                source_name="user_realm",
+                tenant_id="bbbbbbbb-cccc-dddd-eeee-ffffffffffff",
+                display_name="Synthetic Alpha",
+            ),
+        ]
+        rec = explain_confidence(
+            results,
+            evidence_confidence=ConfidenceLevel.HIGH,
+            inference_confidence=ConfidenceLevel.HIGH,
+            final_confidence=ConfidenceLevel.LOW,
+            identity_conflict=True,
+        )
+        assert "Final confidence: low" in rec.confidence_derivation
+        assert "identity sources disagreed on tenant ID" in rec.confidence_derivation
+        assert "minimum of evidence and inference" not in rec.confidence_derivation
+
     def test_low_confidence_no_successful_sources(self) -> None:
         results = [
             SourceResult(source_name="oidc_discovery", error="HTTP 429"),

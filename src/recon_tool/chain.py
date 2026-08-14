@@ -16,7 +16,7 @@ from __future__ import annotations
 import logging
 import time
 from collections import defaultdict
-from dataclasses import replace
+from dataclasses import dataclass, replace
 
 from recon_tool.models import ChainReport, ChainResult, ReconLookupError
 from recon_tool.resolver import RESOLVE_TIMEOUT, SourcePool, resolve_tenant
@@ -35,6 +35,43 @@ MAX_CHAIN_DOMAINS = 50
 # cannot grow it without bound before the dedup + MAX_CHAIN_DOMAINS gate.
 # Generous relative to the resolution cap; only guards memory.
 _MAX_NEXT_LEVEL_QUEUE = MAX_CHAIN_DOMAINS * 20
+
+
+@dataclass(frozen=True, slots=True)
+class _ChainLookup:
+    pool: SourcePool | None
+    skip_ct: bool
+    active_probes: bool
+
+
+async def _resolve_one_chain_domain(
+    domain: str,
+    depth: int,
+    lookup: _ChainLookup,
+    *,
+    seed: str,
+    have_results: bool,
+) -> ChainResult | None:
+    """Resolve one queued name. Seed failure is raised; later names are skipped."""
+    try:
+        info, _ = await resolve_tenant(
+            domain,
+            pool=lookup.pool,
+            timeout=RESOLVE_TIMEOUT,
+            skip_ct=lookup.skip_ct,
+            active_probes=lookup.active_probes,
+        )
+    except ReconLookupError as exc:
+        if domain == seed and not have_results:
+            raise
+        logger.debug("Chain: skipping %s at depth %d: %s", domain, depth, exc)
+        return None
+    except Exception as exc:
+        if domain == seed and not have_results:
+            raise
+        logger.debug("Chain: unexpected error for %s at depth %d: %s", domain, depth, exc)
+        return None
+    return ChainResult(domain=domain, info=info, chain_depth=depth)
 
 
 async def chain_resolve(
@@ -80,7 +117,8 @@ async def chain_resolve(
     max_depth_reached = 0
 
     # BFS queue: current level of domains to resolve
-    current_level: list[str] = [domain.lower()]
+    seed = domain.lower()
+    current_level: list[str] = [seed]
 
     for current_depth in range(depth + 1):
         if not current_level:
@@ -117,47 +155,25 @@ async def chain_resolve(
 
             visited.add(d)
 
-            try:
-                info, _ = await resolve_tenant(
-                    d,
-                    pool=pool,
-                    timeout=RESOLVE_TIMEOUT,
-                    skip_ct=skip_ct,
-                    active_probes=active_probes,
-                )
-                results.append(
-                    ChainResult(
-                        domain=d,
-                        info=info,
-                        chain_depth=current_depth,
-                    )
-                )
-                max_depth_reached = max(max_depth_reached, current_depth)
-
-                # Collect related domains for next level (queue bounded).
-                for related in info.related_domains:
-                    if len(next_level) >= _MAX_NEXT_LEVEL_QUEUE:
-                        break
-                    r_lower = related.lower()
-                    if r_lower not in visited:
-                        next_level.append(r_lower)
-
-            except ReconLookupError as exc:
-                logger.debug(
-                    "Chain: skipping %s at depth %d: %s",
-                    d,
-                    current_depth,
-                    exc,
-                )
+            resolved = await _resolve_one_chain_domain(
+                d,
+                current_depth,
+                _ChainLookup(pool, skip_ct, active_probes),
+                seed=seed,
+                have_results=bool(results),
+            )
+            if resolved is None:
                 continue
-            except Exception as exc:
-                logger.debug(
-                    "Chain: unexpected error for %s at depth %d: %s",
-                    d,
-                    current_depth,
-                    exc,
-                )
-                continue
+            results.append(resolved)
+            max_depth_reached = max(max_depth_reached, current_depth)
+
+            # Collect related domains for next level (queue bounded).
+            for related in resolved.info.related_domains:
+                if len(next_level) >= _MAX_NEXT_LEVEL_QUEUE:
+                    break
+                r_lower = related.lower()
+                if r_lower not in visited:
+                    next_level.append(r_lower)
 
         if truncated:
             break

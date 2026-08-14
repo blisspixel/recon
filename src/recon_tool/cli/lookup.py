@@ -49,7 +49,6 @@ def _build_explanations(
         explain_signals,
     )
     from recon_tool.insight_explanation import InsightExplanationContext
-    from recon_tool.merger import compute_evidence_confidence, compute_inference_confidence
     from recon_tool.models import ExplanationRecord
     from recon_tool.posture import analyze_posture, load_posture_rules
     from recon_tool.signals import evaluate_signals, load_signals
@@ -89,13 +88,19 @@ def _build_explanations(
     )
     explanations.extend(insight_recs)
 
-    # Confidence explanation
-    if results:
-        observable_results = collection_observable_results(results)
-        evidence_conf = compute_evidence_confidence(observable_results)
-        inference_conf = compute_inference_confidence(observable_results)
-        conf_rec = explain_confidence(observable_results, evidence_conf, inference_conf, info.confidence)
-        explanations.append(conf_rec)
+    # Confidence explanation uses the stored dimensions. Recomputing them from
+    # live SourceResults made cache hits omit this record, and a tenant-ID
+    # conflict made the text claim a minimum that was not the stored final.
+    observable_results = collection_observable_results(results) if results else []
+    identity_conflict = bool(info.merge_conflicts and info.merge_conflicts.tenant_id)
+    conf_rec = explain_confidence(
+        observable_results,
+        info.evidence_confidence,
+        info.inference_confidence,
+        info.confidence,
+        identity_conflict=identity_conflict,
+    )
+    explanations.append(conf_rec)
 
     # Observation explanations
     observations = analyze_posture(info) if observations is None else observations
@@ -222,6 +227,7 @@ async def _lookup_chain(
     """Follow related-domain breadcrumbs (`--chain`)."""
     from recon_tool.chain import chain_resolve
     from recon_tool.formatter import format_chain_json, render_chain_panel, render_error
+    from recon_tool.models import ReconLookupError
 
     try:
         if not options.quiet:
@@ -239,6 +245,8 @@ async def _lookup_chain(
                 skip_ct=options.skip_ct,
                 active_probes=options.active_probes,
             )
+    except ReconLookupError as exc:
+        raise_lookup_error(exc, domain=validated)
     except Exception as exc:
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_INTERNAL) from None
@@ -429,6 +437,8 @@ async def _lookup_resolve_standard(
             quiet=options.quiet,
             active_probes=options.active_probes,
         )
+    else:
+        results = _synthetic_source_results(info)
 
     if options.fusion or options.explain_dag:
         info = _lookup_apply_fusion(info)

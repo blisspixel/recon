@@ -9,6 +9,7 @@ import dataclasses
 import io
 import json
 
+import pytest
 from hypothesis import HealthCheck, given, settings
 from hypothesis import strategies as st
 from rich.console import Console
@@ -251,9 +252,11 @@ class TestColorSuppressionContract:
         finally:
             set_color_override(None)
 
-    def test_color_flag_forces_terminal(self) -> None:
+    def test_color_flag_forces_terminal(self, monkeypatch: pytest.MonkeyPatch) -> None:
         from recon_tool.formatter import _make_console, set_color_override
 
+        monkeypatch.delenv("NO_COLOR", raising=False)
+        monkeypatch.delenv("TERM", raising=False)
         try:
             set_color_override(True)
             console = _make_console(stderr=False)

@@ -29,7 +29,7 @@ from recon_tool.cli.options import (
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.cli.shared import help_markup_mode as _help_markup_mode
 from recon_tool.cli.shared import is_closed_pipe as _is_closed_pipe
-from recon_tool.cli.shared import positive_finite_float, raise_lookup_error
+from recon_tool.cli.shared import non_negative_int, positive_finite_float, raise_lookup_error
 from recon_tool.cli.shared import render_usage_rows as _render_usage_rows
 from recon_tool.cli.shared import resolve_fusion_transition as _resolve_fusion_transition
 from recon_tool.cli.shared import silence_closed_standard_streams as _silence_closed_standard_streams
@@ -381,6 +381,7 @@ def lookup(
         86400,
         "--cache-ttl",
         help="Cache TTL in seconds (default: 86400)",
+        callback=non_negative_int,
         rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     exposure: bool = typer.Option(

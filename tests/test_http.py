@@ -48,6 +48,19 @@ class TestSSRFProtection:
     def test_public_ip_allowed(self):
         assert _is_private_ip("8.8.8.8") is False
 
+    @pytest.mark.parametrize(
+        ("addr", "blocked"),
+        [
+            ("::ffff:127.0.0.1", True),
+            ("::ffff:169.254.169.254", True),
+            ("::ffff:10.0.0.1", True),
+            ("::ffff:192.168.1.1", True),
+            ("::ffff:8.8.8.8", False),
+        ],
+    )
+    def test_ipv4_mapped_addresses_follow_the_embedded_v4_policy(self, addr: str, blocked: bool):
+        assert _is_private_ip(addr) is blocked
+
     def test_hostname_allowed(self, monkeypatch: pytest.MonkeyPatch):
         def resolve_public(*_args: object, **_kwargs: object) -> list[tuple[object, ...]]:
             return [(socket.AF_INET, socket.SOCK_STREAM, socket.IPPROTO_TCP, "", ("8.8.8.8", 443))]

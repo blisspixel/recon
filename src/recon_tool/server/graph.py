@@ -19,7 +19,7 @@ from typing import Any, cast
 from typing_extensions import TypedDict
 
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
-from recon_tool.models import ChainReport, InfrastructureEdge
+from recon_tool.models import ChainReport, InfrastructureEdge, ReconLookupError
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import (
@@ -221,6 +221,8 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
         report = await chain_resolve(validated, depth=depth)
     except asyncio.CancelledError:
         raise
+    except ReconLookupError as exc:
+        raise ToolError(server_app.lookup_failure_message(validated, exc)) from exc
     except Exception as exc:
         logger.exception(
             "Unexpected error in chain lookup for %s (request_id=%s)",

@@ -117,6 +117,19 @@ class TestValidateDomain:
     def test_strip_scheme_with_port(self):
         assert validate_domain("https://www.alpha.invalid:443/some/path") == "alpha.invalid"
 
+    @pytest.mark.parametrize(
+        "raw",
+        [
+            "http://user@alpha.invalid",
+            "https://user:pass@alpha.invalid",
+            r"http://alpha.invalid\@beta.invalid",
+            "http://alpha.invalid%5C@beta.invalid",
+        ],
+    )
+    def test_scheme_url_with_userinfo_is_rejected(self, raw: str):
+        with pytest.raises(ValueError, match="Invalid domain format"):
+            validate_domain(raw)
+
     def test_strip_bare_port(self):
         # A bare host with a port normalizes the same way the scheme form does
         # (urlsplit strips the port there); the colon must not fail the format check.

@@ -678,6 +678,27 @@ class TestRenderTenantPanelEdgeCases:
         assert "SPF softfail" in out
         assert "SPF complexity" not in out
 
+    def test_mta_sts_none_is_not_listed_as_a_live_control(self) -> None:
+        from recon_tool.formatter.email_summary import normalize_email_services
+
+        info = _minimal_info(
+            services=("Microsoft 365", "DMARC", "MTA-STS", "SPF: strict (-all)"),
+            slugs=("microsoft365", "dmarc", "mta-sts", "spf-strict"),
+            dmarc_policy="reject",
+            mta_sts_mode="none",
+            primary_email_provider="Microsoft 365",
+            evidence=(
+                EvidenceRecord("MX", "alpha-com.mail.protection.outlook.com", "Microsoft 365", "microsoft365"),
+                EvidenceRecord("DMARC", "v=DMARC1; p=reject", "DMARC", "dmarc"),
+                EvidenceRecord("MTA_STS", "v=STSv1", "MTA-STS", "mta-sts"),
+                EvidenceRecord("MTA_STS_POLICY", "mode: none", "MTA-STS", "mta-sts"),
+                EvidenceRecord("SPF", "v=spf1 -all", "SPF: strict (-all)", "spf-strict"),
+            ),
+        )
+        categorized = {"Email": ["Microsoft 365", "DMARC", "MTA-STS", "SPF: strict (-all)"]}
+        normalize_email_services(categorized, info)
+        assert categorized["Email"] == ["Microsoft 365 (MX delivery path)", "DMARC reject", "SPF strict"]
+
     def test_explain_flag_renders_classification(self) -> None:
         _, buf = _make_console()
         info = _minimal_info(
