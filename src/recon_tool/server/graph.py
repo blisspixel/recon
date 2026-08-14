@@ -248,6 +248,36 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
     return _format_compact_chain_json(report, result_limit)
 
 
+_MAX_CLUSTER_DOMAINS = 100
+
+
+def _admit_cluster_domains(domains: list[str]) -> tuple[list[str], list[DomainToolError]]:
+    """Validate and apex-dedup cluster inputs the same way CLI batch does.
+
+    Whitespace and malformed names become ``errors`` instead of a silent empty
+    success. Distinct spellings of one apex keep the first and record later
+    rows as duplicates so a last-write cannot hide that only one namespace
+    was compared.
+    """
+    seen_apexes: set[str] = set()
+    admitted: list[str] = []
+    errors: list[DomainToolError] = []
+    for raw in domains:
+        try:
+            apex = validate_domain(raw)
+        except ValueError as exc:
+            errors.append({"domain": raw.strip() or raw, "error": server_app.invalid_domain_message(exc)})
+            continue
+        if apex in seen_apexes:
+            errors.append({"domain": raw.strip(), "error": f"Duplicate of {apex}"})
+            continue
+        seen_apexes.add(apex)
+        admitted.append(raw)
+    if len(admitted) > _MAX_CLUSTER_DOMAINS:
+        raise ToolError(f"Too many domains: {len(admitted)} distinct (max {_MAX_CLUSTER_DOMAINS})")
+    return admitted, errors
+
+
 @mcp.tool(
     annotations=tool_annotations(
         read_only=True,
@@ -301,25 +331,14 @@ async def cluster_verification_tokens(
     if not domains:
         raise ToolError("At least one domain is required")
 
-    # Cap and dedup the input, matching the CLI batch path. Without this
-    # the MCP tool lets a caller drive unbounded sequential resolves (each
-    # distinct domain gets its own rate-limit slot, so the per-domain
+    # Cap and apex-dedup the input, matching the CLI batch path. Without
+    # this the MCP tool lets a caller drive unbounded sequential resolves
+    # (each distinct domain gets its own rate-limit slot, so the per-domain
     # limiter does not throttle a many-distinct-domain flood) and build a
     # proportionally large response.
-    _MAX_CLUSTER_DOMAINS = 100
-    seen_keys: set[str] = set()
-    deduped: list[str] = []
-    for raw in domains:
-        key = raw.strip().lower()
-        if key and key not in seen_keys:
-            seen_keys.add(key)
-            deduped.append(raw)
-    if len(deduped) > _MAX_CLUSTER_DOMAINS:
-        raise ToolError(f"Too many domains: {len(deduped)} distinct (max {_MAX_CLUSTER_DOMAINS})")
-    domains = deduped
+    domains, errors = _admit_cluster_domains(domains)
 
     domain_tokens: dict[str, tuple[str, ...]] = {}
-    errors: list[DomainToolError] = []
 
     for raw in domains:
         try:

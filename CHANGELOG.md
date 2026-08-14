@@ -69,6 +69,12 @@ schema-pinned portable packaging candidate.
   the first catalog pattern.
 - Deprecated IPv6 site-local destinations (``fec0::/10``) are refused by the
   HTTP destination check.
+- ``cluster_verification_tokens`` records whitespace and same-apex duplicates
+  in ``errors`` instead of returning empty clusters as if those inputs were
+  compared and found no shared tokens.
+- ``simulate_hardening`` seeds what-if state from the collection-claim view,
+  so a retained DMARC or MTA-STS scalar on an unavailable channel cannot
+  silently no-op a requested fix.
 
 ### Added
 

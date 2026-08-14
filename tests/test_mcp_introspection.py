@@ -527,6 +527,41 @@ class TestSimulateHardening:
 
     @pytest.mark.asyncio
     @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_generic_dmarc_fix_applies_when_live_channel_failed(
+        self,
+        mock_resolve: AsyncMock,
+    ) -> None:
+        mock_resolve.return_value = (
+            replace(SAMPLE_INFO, degraded_sources=("dns:dmarc",)),
+            list(SAMPLE_RESULTS),
+        )
+
+        data = await simulate_hardening("alpha.invalid", ["DMARC"])
+
+        assert any("DMARC" in fix for fix in data["applied_fixes"])
+        simulated = {item["component_id"]: item for item in data["simulated_observability"]["components"]}
+        assert simulated["index.email.dmarc.v1"]["state"] == "hypothetical_value"
+        assert data["score_delta"] > 0
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
+    async def test_generic_mta_sts_fix_applies_when_live_channel_failed(
+        self,
+        mock_resolve: AsyncMock,
+    ) -> None:
+        mock_resolve.return_value = (
+            replace(SAMPLE_INFO, mta_sts_mode="testing", degraded_sources=("dns:mta_sts",)),
+            list(SAMPLE_RESULTS),
+        )
+
+        data = await simulate_hardening("alpha.invalid", ["MTA-STS"])
+
+        assert any("MTA-STS" in fix for fix in data["applied_fixes"])
+        simulated = {item["component_id"]: item for item in data["simulated_observability"]["components"]}
+        assert simulated["index.email.mta-sts.v1"]["state"] == "hypothetical_value"
+
+    @pytest.mark.asyncio
+    @patch(SERVER_RESOLVE_OR_CACHE)
     async def test_domain_output_uses_resolved_normalized_domain(self, mock_resolve: AsyncMock) -> None:
         mock_resolve.return_value = (SAMPLE_INFO, list(SAMPLE_RESULTS))
         raw = "https://www.alpha.invalid/private/path?token=secret"
