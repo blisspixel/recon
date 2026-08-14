@@ -1,5 +1,13 @@
 {
   "agent_surfaces": {
+    "agent_plugins_candidate": {
+      "compatibility_claim": "deferred_pending_frozen_representative_client_evaluation",
+      "name": "recon",
+      "path": "agents/agent-plugin/plugin.json",
+      "schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+      "status": "offline_schema_validated_candidate",
+      "version": "2.14.0"
+    },
     "claude_code_plugin": {
       "description": "Public-metadata domain intelligence for Microsoft 365 / Google Workspace tenant identification, email security observation (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting, certificate-transparency findings, and posture analysis. Bundles the recon MCP server and its usage guidance.",
       "keyword_count": 8,
@@ -8,6 +16,19 @@
       "version": "2.14.0"
     },
     "client_configs": [
+      {
+        "args": [
+          "mcp"
+        ],
+        "auto_approve_declared": false,
+        "client": "agent-plugin-candidate",
+        "command": "recon",
+        "has_recon_server": true,
+        "path": "agents/agent-plugin/mcp.json",
+        "scope": "portable_candidate",
+        "server_key": "mcpServers",
+        "type": "stdio"
+      },
       {
         "args": [
           "mcp"
@@ -86,6 +107,11 @@
         "title": "Agent integrations"
       },
       {
+        "kind": "agent_plugins_candidate_docs",
+        "path": "agents/agent-plugin/README.md",
+        "title": "recon Agent Plugins candidate"
+      },
+      {
         "kind": "claude_code_plugin_docs",
         "path": "agents/claude-code/README.md",
         "title": "recon - Claude Code plugin"
@@ -130,6 +156,36 @@
         },
         "kind": "skill",
         "path": "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md",
+        "title": "recon-fingerprint-triage"
+      },
+      {
+        "frontmatter": {
+          "compatibility": "Requires recon-tool 2.14.0 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.",
+          "description": "Public-metadata domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like \"what does <company> use\", \"tenant\", \"DMARC\", \"email security posture\", \"SaaS stack\", \"fingerprint\", \"passive recon\", or \"vendor diligence\". Passive in scope - never use for active scanning, port scans, credentialed access, or vulnerability checks.",
+          "license": "Apache-2.0",
+          "metadata": {
+            "author": "blisspixel",
+            "version": "2.14.0"
+          },
+          "name": "recon"
+        },
+        "kind": "portable_candidate_skill",
+        "path": "agents/agent-plugin/skills/recon/SKILL.md",
+        "title": "recon"
+      },
+      {
+        "frontmatter": {
+          "compatibility": "Requires recon-tool 2.14.0 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.",
+          "description": "Triage recon fingerprint candidates across the bounded DNS catalog surface. Reads private single-domain discovery output, aggregate catalog baselines, or candidate queues, then classifies candidates as pending, promoted, rejected, or deferred under the v2.14 catalog-quality gates. Use when the user asks to find missing fingerprints, review unclassified DNS observations, or improve catalog coverage.",
+          "license": "Apache-2.0",
+          "metadata": {
+            "author": "blisspixel",
+            "version": "2.14.0"
+          },
+          "name": "recon-fingerprint-triage"
+        },
+        "kind": "portable_candidate_skill",
+        "path": "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md",
         "title": "recon-fingerprint-triage"
       }
     ],

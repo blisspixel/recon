@@ -85,6 +85,7 @@ exclude = ["src/recon_tool/data/fingerprints/*.yaml"]
 [tool.hatch.build.targets.sdist]
 exclude = [
     "/.agent/**",
+    "/validation/agent-portability-local/**",
     "/validation/agentic_ux/local/**",
     "/validation/agentic_ux/runs/**",
     "/validation/corpus-private/**",

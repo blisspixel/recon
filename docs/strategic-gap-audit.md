@@ -40,9 +40,11 @@ decline threshold, catalog classification comparison was withheld, the
 catalog-driven `subdomain_txt` measurement-surface change was disclosed, and
 no rule was promoted. Full local, protected-main, PyPI, GitHub Release, SBOM,
 provenance, and channel-parity checks passed. The v2.15 representative-client
-Agent Plugins and discovery-surface evaluation contract is now frozen. After
-its first protected-main pass, the next operation is the schema-pinned portable
-candidate and paired evaluation without a stable-surface change.
+Agent Plugins and discovery-surface evaluation contract is now frozen and its
+protected-main prerequisite passed. The deterministic complete-surface
+candidate passes network-free validation against the pinned schemas and skill
+rules. The next operation is the paired VS Code, Cursor, and Kiro evaluation
+without a stable-surface change or compatibility claim.
 
 The claim audit and stable MCP matrix remain blocking regression
 gates. Artifact review, OpenSSF process, independent replication, and archive
@@ -192,7 +194,7 @@ release count, and feature count are supporting facts, not outcomes.
 | 0. Trust foundation | Align public intake with the data policy, correct public product promises, require verification dates on new detections, and align repository metadata with the current neutral product voice. | Required privacy acknowledgements, regression tests, a clean canonical gate, current repository description and topics, and green post-merge CI. | Do not start another broad catalog promotion while public intake asks for target data or a public promise lacks a maintained surface. |
 | 1. Freeze the baseline | Run the stable-v1 latency, allocation, degradation, CT-value, provenance, catalog, and MCP payload measurements on a named catalog and code revision. Record unmeasured channels explicitly. | One dated aggregate-safe scorecard, reproduction commands, environment, revision digests, source-success counts, and no target rows. | Do not tune thresholds after reading the result, and do not publish a population interpretation for a convenience sample. |
 | 2. Freeze and run distinct catalog rounds - **complete for v2.14** | Preserve the closed rank, regional, [vendor-seed](../validation/2026-08-14-catalog-vendor-seed-round.md), and [drift](../validation/2026-08-14-catalog-drift-round.md) decisions. | Per-round immutable contracts, private manifests, and aggregate reports with changed, unavailable, unmeasured, no-change, error, and explicit candidate dispositions as applicable. Vendor-seed silence remains silence, not a false negative. Every promoted rule has an independent provider reference or disclosure-safe basis, a date, fictional positive, lookalike-negative and sparse fixtures, and a claim boundary. | A repeated list is a drift round, not new coverage. Stop when survivors lack an independent basis, fail a negative fixture, or exceed the frozen regression budget. |
-| 3. Evaluate agent utility | Use representative tasks for single-domain summary, explanation, posture gaps, comparison, and catalog lookup. Compare the current deterministic 22-tool discovery surface with the smallest task-specific candidate only after freezing success, error, latency, and context-byte measures. Evaluate a schema-pinned Agent Plugins package as a packaging path separate from tool-surface size. | Task completion, unsupported-claim rate, correct tool selection, round trips, discovery bytes, result bytes, failure recovery, and portable-package discovery and launch across representative clients. | Do not add a core profile or hide tools merely because the payload is large. Do not claim Agent Plugins conformance before pinned-schema and client evidence. Simplify only when task outcomes improve without reducing discoverability or compatibility. |
+| 3. Evaluate agent utility - **active v2.15 client frame** | Use representative tasks for single-domain summary, explanation, posture gaps, comparison, and catalog lookup. The frozen contract and complete 22-tool portable candidate have passed their offline gates. Compare native and portable packaging first; consider a smaller task-specific surface only with measured client-visible context. | Task completion, unsupported-claim rate, correct tool selection, round trips, discovery bytes, result bytes, failure recovery, and portable-package discovery and launch across the frozen clients. | Do not add a core profile or hide tools merely because the payload is large. Do not turn pinned-schema validation into Agent Plugins conformance. Simplify only when task outcomes improve without reducing discoverability or compatibility. |
 | 4. External usability proof | Ask an outside user to install from the released package, run the public smoke path, complete one explanation task, and follow the safe contribution path on a clean machine. | Aggregate outcome notes, time-to-first-result, confusing-step count, and fixes reproduced with fictional data. | Do not call maintainer reruns independent replication, and do not publish the user's targets or output. |
 | 5. Consolidate later surface decisions | Fusion is decided in v2.11 and applied in v2.12. Use the later catalog and agent measurements to decide which remaining catalog and MCP presentation changes ship, then batch accepted work into coherent releases. | Decision memos with raw aggregate counts and bounds, preserved stable contracts, current release proof, and an updated roadmap that removes completed work. | An inconclusive result remains inconclusive. Retire complexity that cannot beat the simpler comparator on a named outcome. |
 
@@ -214,10 +216,10 @@ release count, and feature count are supporting facts, not outcomes.
    dispositions and release proof. Keep outputs aggregate-only before broad
    catalog growth.
 8. Preserve the frozen v2.15 representative tasks, clients, measures,
-   variants, privacy boundary, and stop rules. After their protected-main gate,
-   use the native-surface baseline to evaluate Agent Plugins portability and
-   any agent-surface simplification; apply stable-v2 SDK characterization
-   deltas from the completed MCP matrix.
+   variants, privacy boundary, stop rules, and offline-validated candidate. Use
+   the native-surface baseline to evaluate Agent Plugins portability and any
+   agent-surface simplification; apply stable-v2 SDK characterization deltas
+   from the completed MCP matrix.
 9. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
    release state and provenance aligned.
 10. Run the paper claim freeze, OpenSSF questionnaire, outside replication, and
@@ -244,9 +246,10 @@ no threshold breach, one disclosed measurement-surface change, withheld
 classification comparison, and no promotion. The network-free
 [v2.15 representative-client contract](agent-portability-evaluation-declaration.md)
 is frozen with exact standards commitments, three clients, five tasks, two
-complete-surface variants, privacy rules, and fail-closed decisions. After its
-first protected-main pass, the active operation is the schema-pinned Agent
-Plugins candidate and paired evaluation. No discovery-surface change is
+complete-surface variants, privacy rules, and fail-closed decisions. Its
+protected-main prerequisite and the generated candidate's offline validation
+are complete. The active operation is the paired representative-client
+evaluation. No compatibility claim or discovery-surface change is
 authorized by the preregistration. v2.12 has
 already applied the v2.11 structural stop
 through the compatible ADR-0013 transition. Private labeled-row collection

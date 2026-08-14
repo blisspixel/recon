@@ -178,9 +178,12 @@ The current scaffolds use each client's native configuration. In particular,
 the bundled Claude Code plugin uses Claude Code's client-specific layout; it
 does not claim conformance with the portable
 [Agent Plugins v1.0.0 working draft](https://agent-plugins.org/specification).
-A schema-pinned portable package is tracked in the roadmap. Until it is
-validated across representative clients, use the documented client-specific
-install path above.
+A complete-surface portable candidate now lives under
+[`agents/agent-plugin/`](https://github.com/blisspixel/recon/tree/main/agents/agent-plugin)
+and passes network-free validation against the exact pinned v1.0.0 schemas.
+That is not a compatibility or conformance claim. Until the frozen VS Code,
+Cursor, and Kiro evaluation passes, use the documented client-specific install
+path above.
 
 | You say | What the agent should do |
 |---|---|

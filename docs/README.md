@@ -20,6 +20,7 @@ public, but not written for a first-time reader.
 | What recon can and cannot see | [limitations.md](limitations.md) |
 | Known weak areas and conservative wording | [weak-areas.md](weak-areas.md) |
 | Wire recon into an MCP client | [mcp.md](mcp.md) |
+| Inspect the schema-pinned Agent Plugins candidate | [../agents/agent-plugin/README.md](../agents/agent-plugin/README.md) |
 | Rules versus agent judgment when driving recon from an agent | [agentic-balance.md](agentic-balance.md) |
 | Generated CLI command and flag reference | [cli-surface.md](cli-surface.md) |
 | Expected latency and cost | [performance.md](performance.md) |
