@@ -348,8 +348,8 @@ def test_public_declaration_pins_frozen_contract_and_active_docs() -> None:
 
     assert "5,199" in declaration
     assert "39655fc31713302803d37a17345f30f3b2a8253da082e3c47509db25e16db7ed" in declaration
-    assert "75592b94714d418b1512a2ec89cd9d6ac5efbfac51b4704976597d4d9ed81b78" in declaration
-    assert "5e08515cd9a0c36d3dd147b572e84e3eb4a03bfdcbab02a4a1c4da81913708e3" in declaration
+    assert "0bb7c32ea9bb63452f5d800cf93acc5c6d794263c63fe4465709accc92830f53" in declaration
+    assert "0a7b8398cb78bc5244635886591d1e63be1fe5cc79ea2b2779dacc80e73809a1" in declaration
     assert "only when both the catalog and" in declaration
     assert "--drift-prior-contract" in validation_readme
     assert "--compare-to" in validation_readme

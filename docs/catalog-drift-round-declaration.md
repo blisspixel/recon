@@ -84,10 +84,10 @@ unknown owner, certificate, or upstream service was byte-identical.
 | Frozen frame | `d1400df98f3b083dbd0176b1805c95c8204f254c9fa1d2bf2dabe58f61d0b9cd` |
 | Generic source | `3205f04193cdd741f2e5914e8f4173a60d9ec171d664c60d08bbe5925a61783e` |
 | Generic round plan | `689d6a225c212583bba5c92140bc2df15aa770b65c0d84498570eb8823f20bd6` |
-| Generic round manifest | `75592b94714d418b1512a2ec89cd9d6ac5efbfac51b4704976597d4d9ed81b78` |
-| Drift comparison contract | `5e08515cd9a0c36d3dd147b572e84e3eb4a03bfdcbab02a4a1c4da81913708e3` |
+| Generic round manifest | `0bb7c32ea9bb63452f5d800cf93acc5c6d794263c63fe4465709accc92830f53` |
+| Drift comparison contract | `0a7b8398cb78bc5244635886591d1e63be1fe5cc79ea2b2779dacc80e73809a1` |
 | Current built-in catalog | `206ee855ba9f5107634f0876b66ed46306dbecfaaaff6c8a10a089ac4678baa2` |
-| Current execution surface | `b5aadf806526c6390ff55ffd1b2dc473d5e535000372562853d417d74a3681ae` |
+| Current execution surface | `01069211619b8be43f4b28e49856cbf5b42269806c549063e7d2485cf7bef309` |
 | CT / direct probes / concurrency | off / off / 4 |
 | Recurrence threshold | 3 occurrences across 2 namespaces |
 | Observed-count review threshold | decline greater than 1 percent for any bounded record type |
@@ -107,10 +107,10 @@ main, the frozen run shape is:
 
 ```bash
 python validation/scan.py \
-    --corpus validation/corpus-private/catalog-drift-20260814/frame-v2.txt \
+    --corpus validation/corpus-private/catalog-drift-20260814/frame-v3.txt \
     --round-kind drift \
-    --round-manifest validation/corpus-private/catalog-drift-20260814/round-manifest-v2.json \
-    --drift-prior-contract validation/corpus-private/catalog-drift-20260814/prior-contract-v2.json \
+    --round-manifest validation/corpus-private/catalog-drift-20260814/round-manifest-v3.json \
+    --drift-prior-contract validation/corpus-private/catalog-drift-20260814/prior-contract-v3.json \
     --compare-to validation/runs-private/20260717-202753Z \
     --min-count 3 \
     --concurrency 4
