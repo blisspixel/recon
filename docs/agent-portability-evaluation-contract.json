@@ -1,0 +1,244 @@
+{
+  "schema_version": 1,
+  "status": "frozen",
+  "private": false,
+  "round_id": "agent-portability-v2.15-20260814",
+  "frozen_at": "2026-08-14T07:12:14Z",
+  "standards": {
+    "checked_at": "2026-08-14",
+    "agent_plugins": {
+      "version": "1.0.0",
+      "status": "Working Draft",
+      "specification_url": "https://agent-plugins.org/specification",
+      "compatible_clients_url": "https://agent-plugins.org/compatible-clients",
+      "source_revision": "bd383552095128f6effe895b9257cfd580a6d179",
+      "schemas": [
+        {
+          "kind": "plugin",
+          "url": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+          "bytes": 1805,
+          "sha256": "0a4aad95ce337878ad38802ebf0daa3fde76abe3f65400c86bcbb1ec0b3ab883"
+        },
+        {
+          "kind": "mcp",
+          "url": "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json",
+          "bytes": 3408,
+          "sha256": "6539175bfcdf43085855183e86da40ea94b166547a72b47ae9a0a390516d3acb"
+        }
+      ]
+    },
+    "agent_skills": {
+      "specification_url": "https://agentskills.io/specification",
+      "source_revision": "69ef37e9424c0a7ea9dd2293b559e43ec8176379",
+      "allowed_frontmatter_fields": [
+        "name",
+        "description",
+        "license",
+        "compatibility",
+        "metadata",
+        "allowed-tools"
+      ],
+      "allowed_tools_status": "experimental"
+    }
+  },
+  "selection": {
+    "rule": "Use every officially listed client that supports both Agent Skills and MCP stdio and for which recon ships a native scaffold at freeze time.",
+    "required_client_count": 3,
+    "required_task_count": 5,
+    "paired_comparison_count": 15,
+    "total_session_count": 30
+  },
+  "clients": [
+    {
+      "id": "vscode",
+      "name": "Visual Studio Code",
+      "official_components": [
+        "agent-skills",
+        "mcp"
+      ],
+      "mcp_transports": [
+        "stdio"
+      ],
+      "native_scaffold": "agents/vscode/mcp.json",
+      "version_policy": "record-exact-version-at-run",
+      "required": true
+    },
+    {
+      "id": "cursor",
+      "name": "Cursor",
+      "official_components": [
+        "agent-skills",
+        "mcp"
+      ],
+      "mcp_transports": [
+        "stdio"
+      ],
+      "native_scaffold": "agents/cursor/mcp.json",
+      "version_policy": "record-exact-version-at-run",
+      "required": true
+    },
+    {
+      "id": "kiro",
+      "name": "Kiro",
+      "official_components": [
+        "agent-skills",
+        "mcp"
+      ],
+      "mcp_transports": [
+        "stdio"
+      ],
+      "native_scaffold": "agents/kiro/mcp.json",
+      "version_policy": "record-exact-version-at-run",
+      "required": true
+    }
+  ],
+  "tasks": [
+    {
+      "id": "single-domain-summary",
+      "prompt": "Summarize the public configuration observed for scenario.example.invalid.",
+      "surface": "single-domain intelligence",
+      "required_tool": "lookup_tenant",
+      "success_criteria": [
+        "Select lookup_tenant without speculative calls to unrelated tools.",
+        "Use hedged observation language and surface confidence and degraded sources.",
+        "Do not infer ownership, vulnerability, or overall security."
+      ]
+    },
+    {
+      "id": "explanation-provenance",
+      "prompt": "Explain which evidence supports the observations for provenance.example.invalid.",
+      "surface": "evidence provenance",
+      "required_tool": "lookup_tenant",
+      "success_criteria": [
+        "Request structured explanation output through lookup_tenant.",
+        "Summarize evidence-to-observation lineage without exposing hidden reasoning.",
+        "Distinguish exact, reconstructed, and unsupported lineage."
+      ]
+    },
+    {
+      "id": "posture-gaps",
+      "prompt": "Identify public-configuration review candidates for gaps.example.invalid.",
+      "surface": "posture gaps",
+      "required_tool": "find_hardening_gaps",
+      "success_criteria": [
+        "Select find_hardening_gaps for the requested review.",
+        "Describe missing or permissive public configuration as observations, not vulnerabilities.",
+        "Preserve the tool's neutral Consider language."
+      ]
+    },
+    {
+      "id": "posture-comparison",
+      "prompt": "Compare the public configuration evidence for alpha.example.invalid and beta.example.invalid.",
+      "surface": "paired posture comparison",
+      "required_tool": "compare_postures",
+      "success_criteria": [
+        "Select compare_postures with the two supplied reserved domains.",
+        "Report evidence differences without ranking overall security.",
+        "Surface collection degradation before interpreting differences."
+      ]
+    },
+    {
+      "id": "bounded-catalog-absence",
+      "prompt": "Determine whether the local recon fingerprint catalog includes a detection for Synthetic Beta Platform.",
+      "surface": "bounded local catalog lookup",
+      "required_tool": "get_fingerprints",
+      "success_criteria": [
+        "Use only local catalog discovery calls and make no network lookup.",
+        "Page until a short page or use the exhaustive catalog resource before claiming absence.",
+        "Distinguish catalog absence from evidence that a service does not exist."
+      ]
+    }
+  ],
+  "variants": [
+    {
+      "id": "native-control",
+      "packaging": "existing client-native scaffold and native skill layout",
+      "mcp_surface": "complete-22-tool",
+      "skills": "existing native recon skills",
+      "stable_surface_mutation": false
+    },
+    {
+      "id": "portable-full",
+      "packaging": "Agent Plugins v1.0.0 schema-pinned candidate",
+      "mcp_surface": "complete-22-tool",
+      "skills": "portable Agent Skills conforming to the pinned snapshot",
+      "stable_surface_mutation": false
+    }
+  ],
+  "failure_cases": [
+    {
+      "id": "unsupported-spec-version",
+      "expected_behavior": "Reject the package clearly without modifying the working native configuration."
+    },
+    {
+      "id": "invalid-skill",
+      "expected_behavior": "Identify the invalid skill and prevent a false successful-install or conformance result."
+    },
+    {
+      "id": "invalid-server-entry",
+      "expected_behavior": "Reject the invalid MCP entry before launch and preserve unrelated configuration."
+    },
+    {
+      "id": "mcp-handshake-failure",
+      "expected_behavior": "Surface an actionable launch or handshake failure without silent fallback or state loss."
+    },
+    {
+      "id": "update-state-preservation",
+      "expected_behavior": "Update recon-owned fields while preserving unrelated and hand-curated client state."
+    }
+  ],
+  "measures": {
+    "blocking": [
+      "task_success",
+      "unsupported_claim_count",
+      "correct_tool_selection",
+      "install_discovery_launch_handshake_update_failure_pass"
+    ],
+    "diagnostic": [
+      "round_trips",
+      "discovery_bytes",
+      "result_bytes",
+      "client_visible_model_context_bytes_when_instrumented",
+      "failure_recovery_quality"
+    ],
+    "context_rule": "Serialized discovery bytes are not model-context evidence; only instrumented client-visible model context may support a surface-cost decision."
+  },
+  "decisions": {
+    "portable_promotion": {
+      "required_schema_pass": true,
+      "required_client_passes": 3,
+      "maximum_task_success_regressions": 0,
+      "maximum_portable_only_unsupported_claims": 0,
+      "maximum_round_trip_increase_per_task": 1,
+      "claim_wording": "Validated against the pinned Agent Plugins v1.0.0 Working Draft snapshot on the declared representative clients."
+    },
+    "surface_profile": {
+      "minimum_instrumented_clients": 2,
+      "minimum_context_reduction_fraction": 0.3,
+      "maximum_task_success_regressions": 0,
+      "maximum_unsupported_claims": 0,
+      "specialist_access_required": true,
+      "otherwise": "defer"
+    },
+    "stop_rules": [
+      "Stop and defer portable promotion if any required client, task, schema, launch, update, or failure-recovery gate is unavailable or fails.",
+      "Stop and retain the complete surface if model-visible context cannot be measured on at least two clients.",
+      "Stop collection if a prompt, record, or output contains a real target, credential, transcript, or hidden reasoning intended for publication.",
+      "Do not change stable CLI, JSON, MCP, capsule, or OKF boundaries as part of this packaging evaluation."
+    ]
+  },
+  "privacy": {
+    "reserved_domains_only": true,
+    "transcripts_public": false,
+    "hidden_reasoning_public": false,
+    "credentials_allowed": false,
+    "local_output_root": "validation/agent-portability-local",
+    "public_outputs": [
+      "contract",
+      "aggregate decision memo",
+      "client and version matrix",
+      "schema and failure-case results"
+    ]
+  },
+  "contract_digest_sha256": "403a5860dc547ab0fd8961023d196e0b72ec6524ed2c1cb7da4253899628eafe"
+}

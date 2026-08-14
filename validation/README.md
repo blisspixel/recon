@@ -22,6 +22,10 @@ Committed (generic tooling, no company names):
   and never writes a queried namespace into the aggregate report. Schema 1.2
   reports measured inputs separately from validation, timeout, and lookup
   errors.
+- `agent_portability_contract.py`: validates the frozen, disclosure-safe v2.15
+  representative-client contract, exact standards commitments, client and task
+  frame, privacy boundary, and promote-or-defer thresholds without network
+  access.
 - `prepare_catalog_round.py`: validates a private round plan, reduces every
   input to a unique registrable apex, and exclusively writes an integrity-bound
   normalized frame plus its frozen manifest. It performs no network requests.
@@ -82,6 +86,24 @@ Gitignored (your private workspace):
 - `runs-private/`: output dirs from each run (results, gaps, diffs)
 - `live_runs/`: default output from `run_corpus.py`
 - `local/`: any other scratch space (notes, half-finished YAMLs, etc.)
+- `agent-portability-local/`: v2.15 client run records and transcripts; never a
+  public result source
+
+## Agent-portability preregistration
+
+Before building or collecting the v2.15 portable-package candidate, validate
+the frozen public contract:
+
+```bash
+uv run python -m validation.agent_portability_contract
+```
+
+The declaration is
+[`docs/agent-portability-evaluation-declaration.md`](../docs/agent-portability-evaluation-declaration.md).
+The validator is network-free and prints only the contract digest and aggregate
+frame counts. Client session records stay under the ignored
+`validation/agent-portability-local/` workspace. Do not commit transcripts,
+hidden reasoning, credentials, client state, or per-session responses.
 
 ## The fingerprint-discovery loop
 

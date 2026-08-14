@@ -319,6 +319,11 @@ jobs:
         # artifacts before they reach main.
         run: uv run python scripts/check_validation_hygiene.py
 
+      - name: Enforce frozen agent-portability evaluation contract
+        # The v2.15 client frame, pinned standards snapshot, privacy boundary,
+        # and promotion thresholds must pass before portable packaging work.
+        run: uv run python -m validation.agent_portability_contract
+
       - name: Enforce workflow action pins
         # Build and release actions are pinned to immutable SHAs, with version
         # comments kept beside the pins for maintainability.
