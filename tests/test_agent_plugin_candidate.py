@@ -66,7 +66,7 @@ def test_vendored_schema_snapshot_is_exact_and_valid(name: str, size: int, diges
 
 def test_candidate_has_only_the_frozen_complete_package_files() -> None:
     assert candidate._relative_files(candidate.DEFAULT_PLUGIN_ROOT) == candidate.EXPECTED_FILES
-    assert [path.name for path in (candidate.DEFAULT_PLUGIN_ROOT / "skills").iterdir()] == list(
+    assert sorted(path.name for path in (candidate.DEFAULT_PLUGIN_ROOT / "skills").iterdir()) == sorted(
         candidate.EXPECTED_SKILLS
     )
 
