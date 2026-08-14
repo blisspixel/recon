@@ -168,11 +168,11 @@ explicitly does not support broad catalog growth, a population coverage claim,
 or a registrant-geography claim. The vendor-seed relationship label,
 denominator, exclusions, disclosure protocol, and fail-closed tooling are now
 implemented, along with bounded source acquisition and immutable receipt
-binding. The 33-row HubSpot contract
-and aggregate commitments are frozen with zero target requests. Protected-main
-commitment publication and then exact-frame collection are next. The resulting
-measure is relationship corroboration, not recall, because a provider
-relationship does not label publication of a particular DNS record. Drift
-follows against a frozen prior sample. Agent Plugins packaging remains v2.15
+binding. The 33-row HubSpot contract produced the closed aggregate-only
+[vendor-seed result](2026-08-14-catalog-vendor-seed-round.md), with 29
+corroborated and 4 observed-silent rows and no catalog promotion. The measure
+is relationship corroboration, not recall, because a provider relationship
+does not label publication of a particular DNS record. Frozen-sample drift is
+next. Agent Plugins packaging remains v2.15
 work, and OKF v0.2 remains a future named-consumer, caller-owned projection
 rather than a replacement for recon's versioned JSON or catalog evidence model.

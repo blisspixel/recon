@@ -401,10 +401,9 @@ Risk: concurrency and brittle-benchmark risk
 
 ## Track 6: Catalog Quality and Lifecycle
 
-Status: active v2.14 priority; rank and regional rounds closed, vendor-seed
-measurement protocol, bounded source acquisition, receipt binding, preparer,
-and evaluator implemented; 33-row disjoint HubSpot contract frozen with
-aggregate commitments and zero target requests
+Status: active v2.14 priority; rank, regional, and vendor-seed rounds closed;
+vendor-seed 33-row aggregate records 29 corroborated and 4 observed-silent
+rows, no unavailable, unmeasured, or error outcome, and no rule promotion
 Dependencies: Track 3 measurement definitions
 Risk: false-positive and regional-selection bias
 
@@ -412,10 +411,9 @@ Risk: false-positive and regional-selection bias
   expansion.
 - Ratchet current public references and `verified` dates. New undated rules are
   not accepted.
-- Merge the frozen vendor-seed source, exclusion, frame, catalog, and execution
-  commitments through protected main before target collection, then run and
-  report the exact 33-row provider-level relationship corroboration without
-  treating silence as a false negative. Complete this before drift collection.
+- Preserve the closed vendor-seed source, exclusion, frame, catalog, execution,
+  and aggregate result commitments. Do not treat silence as a false negative or
+  tune the evaluated catalog from holdout outcomes. Complete drift next.
 - Prioritize regional and non-CNAME gaps by aggregate frequency only within the
   declared observation opportunities and recurrence thresholds.
 - Resolve each current candidate as promoted, rejected, or explicitly
@@ -567,12 +565,11 @@ Execute this track in four bounded phases:
    blocking maintenance gates.
 2. Preserve the completed stable-v1 characterization, v2.11 structural stop,
    v2.12 compatibility transition, and shipped v2.13 observation capsules.
-3. Preserve the closed v2.14 rank and regional decisions.
-4. Preserve the frozen vendor-seed protocol, bounded source acquisition,
-   receipt binding, and 33-row disjoint HubSpot contract. Merge its aggregate
-   commitments through protected main, then run and reduce the exact frame as
-   provider-level corroboration. Re-observe the frozen prior sample as the
-   drift round. Keep all public evidence aggregate-only.
+3. Preserve the closed v2.14 rank, regional, and vendor-seed decisions,
+   including the vendor-seed non-promotion disposition.
+4. Freeze and re-observe the prior sample as the drift round. Keep all public
+   evidence aggregate-only and do not present repeated-frame evidence as
+   independent coverage.
 5. Backfill review dates only in families examined through those rounds, and
    raise the freshness ratchet only when measured coverage supports it.
 6. Measure and, only if justified, simplify operator and agent discovery in

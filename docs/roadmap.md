@@ -16,14 +16,11 @@ tracked separately from product work.
 > channel-parity gates passed. **The next build priority is v2.14:** the rank
 > and regional rounds are complete. The regional clean-main replay completed
 > all 1,000 frozen rows with zero errors, and six bounded provider-family
-> additions are accepted. The vendor-seed label, denominator, exclusions,
-> disclosure protocol, bounded source acquisition, immutable receipt binding,
-> and fail-closed tooling are implemented. Its provider source plan,
-> receipt-bound dossier, 17,952-namespace exclusion union, and 33-row disjoint
-> HubSpot frame are frozen with aggregate commitments and zero target requests.
-> Merge those commitments through protected main, then run and reduce the exact
-> provider-level holdout without changing membership or denominator.
-> Re-observation of a frozen prior sample for drift follows.
+> additions are accepted. The vendor-seed protocol and exact 33-row HubSpot
+> holdout are also closed: 29 rows corroborated the provider relationship, 4
+> were observed silent, no row was unavailable, unmeasured, or an error, and no
+> catalog rule was promoted from the evaluation holdout. **Frozen-sample drift
+> is the next v2.14 operation.**
 > The ordered version path through v3.0 is summarized in
 > [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
@@ -44,10 +41,8 @@ trust priority because output truthfulness outranks features; its current
 and retains both exact compatibility pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. The dependency-unblocked work now
-maps to **v2.14.0**: preserve the closed rank and regional decisions, merge the
-frozen 33-row vendor-seed commitments through protected main, run and reduce
-that exact frame under the already frozen measurement protocol, then re-observe
-a frozen prior sample for drift. New
+maps to **v2.14.0**: preserve the closed rank, regional, and vendor-seed
+decisions, then freeze and re-observe a prior sample for drift. New
 claim-surface drift reopens priority 1. Version milestones
 through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
@@ -57,7 +52,7 @@ through v3.0:
 | [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete on 2026-08-01. The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 27 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
-| [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts now make independent catalog measurement the next unblocked product work. | Convenience, unseen-vertical, rank, and regional rounds are complete. The regional clean-main replay completed 1,000 of 1,000 rows with zero errors. The vendor-seed protocol and its 33-row disjoint HubSpot pre-collection contract are frozen with aggregate commitments and zero target requests. | Merge the commitments through protected main, complete provider-level relationship corroboration without calling silence a false negative, then complete the frozen-sample drift round with explicit outcomes. |
+| [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts now make independent catalog measurement the next unblocked product work. | Convenience, unseen-vertical, rank, regional, and vendor-seed rounds are complete. The vendor-seed result records 29 corroborated and 4 observed-silent rows with no catalog promotion. | Freeze and complete the prior-sample drift round with explicit changed, unavailable, unmeasured, and no-change outcomes. |
 | [5. Optional cloud access and scale-out](#5-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the core evidence, compatibility, and catalog-quality tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
 Everything blocked behind these, and the gate that unblocks each, is in
@@ -548,12 +543,10 @@ available from the completed priority 2 matrix.
 The immediate execution slice is therefore explicit even though its detailed
 characterization section appears later in this document:
 
-1. Preserve the closed v2.14 rank and regional decisions and the frozen
-   [vendor-seed contract](catalog-vendor-seed-round-declaration.md). Merge its
-   aggregate commitments through protected main, then run and reduce the exact
-   33-row holdout without changing membership, denominator, or collection
-   options. The frozen-sample drift contract follows. Name the independent input
-   stratum, or frozen prior sample for drift, plus eligibility and deduplication
+1. Preserve the closed v2.14 rank, regional, and
+   [vendor-seed](../validation/2026-08-14-catalog-vendor-seed-round.md)
+   decisions. Freeze and re-observe the prior sample for drift. Name the frozen
+   sample plus eligibility and deduplication
    rules, observation opportunities, collection options, catalog and code
    digests, aggregate measures, promotion and regression budgets, and
    disclosure-safe output.
@@ -878,9 +871,10 @@ fixed-observation decision for six documented provider families. The
 [vendor-seed protocol](catalog-vendor-seed-round-declaration.md), bounded source
 freezer, immutable receipt binding, fail-closed preparer, and evaluator are
 implemented. Its provider source plan, receipt-bound dossier,
-17,952-namespace exclusion union, and 33-row HubSpot frame are frozen with zero
-target requests. Protected-main commitment publication, collection, and result
-remain open, followed by drift.
+17,952-namespace exclusion union, and 33-row HubSpot frame produced the closed
+aggregate-only [result](../validation/2026-08-14-catalog-vendor-seed-round.md):
+29 corroborated, 4 observed-silent, no unavailable, unmeasured, or error
+outcome, and no rule promotion. Drift remains open.
 Evaluated apexes, organization names,
 tenant identifiers, target-owned record values, and per-domain rows remain off
 GitHub. Generic provider patterns, provider-owned references, reserved synthetic
@@ -904,13 +898,12 @@ complete in the
 [regional result](../validation/2026-08-13-catalog-regional-round.md). The
 vendor-seed label, denominator, exclusions, disclosure boundary, bounded source
 acquisition, immutable receipt binding, and fail-closed tooling are fixed in
-the [public declaration](catalog-vendor-seed-round-declaration.md). The private
-source plan, receipt-bound dossier, and exact 33-row frame are frozen. Merging
-their aggregate commitments through protected main and then running that exact
-frame is next. A
+the [public declaration](catalog-vendor-seed-round-declaration.md). Its exact
+33-row [result](../validation/2026-08-14-catalog-vendor-seed-round.md) is closed
+with no catalog promotion. A
 provider relationship does not label publication of a particular DNS record,
 so the reported measure is provider-level relationship corroboration, not
-recall or a false-negative rate. The convenience baseline and
+recall or a false-negative rate. Frozen-sample drift is next. The convenience baseline and
 unseen vertical holdout remain
 supporting evidence, not substitutes for those independent rounds. Complete
 v2.14 only when every
@@ -1159,7 +1152,7 @@ generated-artifact drift gates.
 
 ## Current External Basis
 
-Checked through 2026-08-13 against primary sources and recent research:
+Checked through 2026-08-14 UTC against primary sources and recent research:
 
 - [Agent Plugins v1.0.0 working-draft specification](https://agent-plugins.org/specification)
 - [Agent Plugins compatible clients](https://agent-plugins.org/compatible-clients)
