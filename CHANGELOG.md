@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.14.0] - 2026-08-14
+
 ### Tool Surface Changes
 
 Tool surface changes: no public recon CLI command, MCP tool, resource, or
