@@ -339,7 +339,7 @@ measurement round.
    by the completed unseen-vertical holdout; never pool them into population
    rates.
 
-Separately gated future feature work, after v2.14 evidence closes:
+Separately gated future feature work, after the shipped v2.14 evidence baseline:
 
 1. Read already collected MTA-STS `mx:` lines, TLS-RPT `rua=` destinations,
    and CAA `accounturi` or `iodef` parameters only under a new claim and schema
