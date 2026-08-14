@@ -155,10 +155,13 @@ disclosure-safe output. Preserve rejected, deferred, unavailable, and
 unmeasured outcomes alongside promoted candidates.
 The work measures catalog quality and freshness; it does not authorize broad
 rule growth or population claims. v2.14.0 passed its full release and remote
-publication gates. The next operation is to freeze the v2.15 representative
-task, client, context-cost, portability, and stop-rule contract before changing
-the portable package or stable discovery surface. Detail:
-[docs/catalog-strategy.md](docs/catalog-strategy.md).
+publication gates. The v2.15 representative-client evaluation contract is now
+frozen with an integrity-bound standards snapshot, three required clients,
+five tasks, two full-surface variants, privacy rules, and fail-closed decisions.
+After its first protected-main pass, the next operation is the schema-pinned
+portable candidate and paired evaluation. No stable discovery-surface change is
+authorized. Detail:
+[docs/agent-portability-evaluation-declaration.md](docs/agent-portability-evaluation-declaration.md).
 
 ### 5. Optional operator-hosted access - lower priority side track
 

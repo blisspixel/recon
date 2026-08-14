@@ -11,11 +11,12 @@ The project has a strong stable baseline: the CLI, JSON schema, local stdio MCP
 server, bounded collectors, release path, generated-artifact guards, public
 proof bundle, and claim-map gates are shipped. Stable infrastructure is not
 proof that the product is complete. Evidence-semantic integrity and MCP v2
-adoption are complete maintenance gates. The current product gaps are measured
-utility, catalog quality, latency and degradation evidence, and agent context
-and portability cost. Agent Plugins v1.0.0 and Open Knowledge Format v0.2 are
-explicit interoperability inputs, but they do not displace the product-quality
-order below.
+adoption are complete maintenance gates. Catalog quality, latency, and
+degradation now have bounded evidence and remain maintenance concerns. The
+active product gap is representative-client evidence for agent utility,
+context treatment, and packaging portability. Agent Plugins v1.0.0 and Open
+Knowledge Format v0.2 are explicit interoperability inputs, but they do not
+displace the product-quality order below.
 
 The highest-value next build is not inference expansion. The aggregate-safe
 product-quality baseline found that the frozen M365 ablation failed its
@@ -38,9 +39,10 @@ also closed. Every row was measured, no bounded record type crossed the frozen
 decline threshold, catalog classification comparison was withheld, the
 catalog-driven `subdomain_txt` measurement-surface change was disclosed, and
 no rule was promoted. Full local, protected-main, PyPI, GitHub Release, SBOM,
-provenance, and channel-parity checks passed. The next operation is to freeze
-the v2.15 representative-client Agent Plugins and discovery-surface evaluation
-contract before implementation or result collection.
+provenance, and channel-parity checks passed. The v2.15 representative-client
+Agent Plugins and discovery-surface evaluation contract is now frozen. After
+its first protected-main pass, the next operation is the schema-pinned portable
+candidate and paired evaluation without a stable-surface change.
 
 The claim audit and stable MCP matrix remain blocking regression
 gates. Artifact review, OpenSSF process, independent replication, and archive
@@ -211,10 +213,11 @@ release count, and feature count are supporting facts, not outcomes.
    drift decisions, including their non-promotion and measurement-surface
    dispositions and release proof. Keep outputs aggregate-only before broad
    catalog growth.
-8. Freeze the v2.15 representative tasks, clients, measures, variants, and stop
-   rules. Then use the resulting catalog evidence and native-surface baseline
-   to evaluate Agent Plugins portability and any agent-surface simplification;
-   apply stable-v2 SDK characterization deltas from the completed MCP matrix.
+8. Preserve the frozen v2.15 representative tasks, clients, measures,
+   variants, privacy boundary, and stop rules. After their protected-main gate,
+   use the native-surface baseline to evaluate Agent Plugins portability and
+   any agent-surface simplification; apply stable-v2 SDK characterization
+   deltas from the completed MCP matrix.
 9. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
    release state and provenance aligned.
 10. Run the paper claim freeze, OpenSSF questionnaire, outside replication, and
@@ -238,10 +241,13 @@ result records 29 corroborated and 4 observed-silent rows, no unavailable,
 unmeasured, or error outcome, and no catalog promotion. The drift result closes
 the July baseline's 5,199 measured rows with no unavailable or unmeasured row,
 no threshold breach, one disclosed measurement-surface change, withheld
-classification comparison, and no promotion. The active operation is the
-network-free v2.15 representative-client evaluation contract. It must freeze
-tasks, clients, measures, native and portable variants, and stop rules before
-any Agent Plugins implementation or discovery-surface change. v2.12 has
+classification comparison, and no promotion. The network-free
+[v2.15 representative-client contract](agent-portability-evaluation-declaration.md)
+is frozen with exact standards commitments, three clients, five tasks, two
+complete-surface variants, privacy rules, and fail-closed decisions. After its
+first protected-main pass, the active operation is the schema-pinned Agent
+Plugins candidate and paired evaluation. No discovery-surface change is
+authorized by the preregistration. v2.12 has
 already applied the v2.11 structural stop
 through the compatible ADR-0013 transition. Private labeled-row collection
 under the cancelled design is prohibited.

@@ -26,7 +26,8 @@ def test_strategic_gap_audit_prioritizes_product_quality_without_runtime_expansi
 
     for required in (
         "The highest-value next build is not inference expansion",
-        "measured utility, catalog quality, latency and degradation evidence",
+        "active product gap is representative-client evidence for agent utility, "
+        "context treatment, and packaging portability",
         "claim audit and stable MCP matrix remain blocking regression gates",
         "aggregate-safe product-quality baseline",
         "v2.13 caller-held observation capsule",
