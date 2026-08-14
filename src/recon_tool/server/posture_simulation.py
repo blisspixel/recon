@@ -240,15 +240,20 @@ def simulate_fixes(
     current_components: tuple[ExposureIndexComponent, ...] = (),
 ) -> tuple[list[str], SimulationState]:
     """Apply supported fixes to a fresh mutable state seeded from ``info``."""
+    from recon_tool.collection_view import collection_claim_info
+
+    # Seed from the claim view so a retained scalar on an unavailable
+    # channel cannot make a requested fix look already applied.
+    seed = collection_claim_info(info)
     state = SimulationState(
-        services=set(info.services),
-        slugs=set(info.slugs),
-        dmarc=info.dmarc_policy,
-        dmarc_pct=info.dmarc_pct,
-        dmarc_testing=info.dmarc_testing,
+        services=set(seed.services),
+        slugs=set(seed.slugs),
+        dmarc=seed.dmarc_policy,
+        dmarc_pct=seed.dmarc_pct,
+        dmarc_testing=seed.dmarc_testing,
         dmarc_changed=False,
-        mta_sts=info.mta_sts_mode,
-        evidence=list(info.evidence),
+        mta_sts=seed.mta_sts_mode,
+        evidence=list(seed.evidence),
         hypothetical_components=set(),
         observed_components={
             component.component_id for component in current_components if component.state == "observed_value"

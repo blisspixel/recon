@@ -497,6 +497,6 @@ class TestClusterVerificationTokensCap:
         # so a caller cannot drive unbounded sequential resolves.
         from recon_tool.server import cluster_verification_tokens
 
-        domains = [f"d{i}.example.com" for i in range(101)]  # > 100 distinct
+        domains = [f"d{i}.invalid" for i in range(101)]  # > 100 distinct apexes
         with pytest.raises(ToolError, match="max"):
             await cluster_verification_tokens(domains)

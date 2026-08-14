@@ -258,6 +258,26 @@ class TestClusterVerificationTokens:
         assert data["errors"][0]["error"].startswith("Error:")
 
     @pytest.mark.asyncio
+    async def test_whitespace_only_input_is_an_error_not_empty_success(self) -> None:
+        data = await cluster_verification_tokens(["   ", "\t"])
+
+        assert data["clusters"] == {}
+        assert len(data["errors"]) == 2
+        assert all(entry["error"].startswith("Error:") for entry in data["errors"])
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_same_apex_spellings_do_not_overwrite_and_hide_collapse(self, mock_resolve: AsyncMock) -> None:
+        shared = ("google-site-verification=sharedtoken123",)
+        mock_resolve.return_value = (_info("alpha.invalid", tokens=shared), SAMPLE_RESULTS)
+
+        data = await cluster_verification_tokens(["www.alpha.invalid", "mail.alpha.invalid"])
+
+        assert mock_resolve.await_count == 1
+        assert data["clusters"] == {}
+        assert any(entry["error"].startswith("Duplicate of alpha.invalid") for entry in data["errors"])
+
+    @pytest.mark.asyncio
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     async def test_shared_token_clusters_two_domains(self, mock_resolve: AsyncMock) -> None:
         shared = ("google-site-verification=sharedtoken123",)
