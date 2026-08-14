@@ -59,6 +59,10 @@ docs/accuracy.md
 !/validation/triage_candidates.py
 !/validation/scan.py
 !/validation/catalog_baseline.py
+# Frozen, aggregate-only agent-portability preregistration and its network-free
+# validator. Client transcripts, hidden reasoning, and run records remain under
+# the ignored validation/agent-portability-local/ workspace.
+!/validation/agent_portability_contract.py
 # Generic catalog-round frame preparer; no target data is embedded.
 !/validation/prepare_catalog_round.py
 # Prior-sample drift contract and aggregate evaluator. Prior frames, retained

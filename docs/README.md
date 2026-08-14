@@ -83,6 +83,8 @@ actually shipped.
 | Closed v2.14 prior-sample drift commitments and comparison semantics | [catalog-drift-round-declaration.md](catalog-drift-round-declaration.md) |
 | Aggregate-only v2.14 drift result, measurement-surface disposition, and non-promotion decision | [../validation/2026-08-14-catalog-drift-round.md](../validation/2026-08-14-catalog-drift-round.md) |
 | Exact disclosure-safe v2.14 drift reducer output | [../validation/2026-08-14-catalog-drift-aggregate.json](../validation/2026-08-14-catalog-drift-aggregate.json) |
+| Frozen v2.15 representative-client portability frame, standards snapshot, privacy boundary, and stop rules | [agent-portability-evaluation-declaration.md](agent-portability-evaluation-declaration.md) |
+| Machine-readable v2.15 agent-portability contract | [agent-portability-evaluation-contract.json](agent-portability-evaluation-contract.json) |
 | Aggregate-safe product-quality scorecard harness | `scripts/quality_scorecard.py` |
 | Dependency-ordered implementation plan | [engineering-refinement-plan.md](engineering-refinement-plan.md) |
 | Structural maintainability audit, pinned to the revision it measured | [structural-maintainability.md](structural-maintainability.md) |

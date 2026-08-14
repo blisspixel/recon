@@ -26,9 +26,12 @@ tracked separately from product work.
 > catalog digests, the `_webflow` owner-set expansion was disclosed as a
 > measurement-surface change, and no rule was promoted. The release then passed
 > local, protected-main, PyPI, GitHub Release, SBOM, provenance, and exact
-> channel-parity checks. **The next release priority is v2.15. The immediate
-> operation is to freeze its representative tasks, clients, measures, and stop
-> rules before changing portable packaging or the stable discovery surface.**
+> channel-parity checks. **The next release priority is v2.15. Its
+> [representative-client contract](agent-portability-evaluation-declaration.md)
+> is frozen: three required clients, five tasks, two complete-surface variants,
+> exact standards commitments, privacy rules, and fail-closed decisions. After
+> its first protected-main pass, build the schema-pinned portable candidate and
+> run the paired evaluation without changing the stable discovery surface.**
 > The ordered version path through v3.0 is summarized in
 > [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
@@ -50,10 +53,11 @@ and retains both exact compatibility pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. v2.14 is also shipped with the
 closed rank, regional, vendor-seed, and prior-sample drift decisions plus full
-publication proof. The dependency-unblocked work now maps to **v2.15.0**:
-preregister representative tasks, clients, measures, and stop rules; measure
-the current native surface; then evaluate a schema-pinned Agent Plugins
-candidate without changing stable CLI, JSON, or MCP contracts. New
+publication proof. The dependency-unblocked work now maps to **v2.15.0**. The
+representative task, client, measure, privacy, and stop-rule contract is frozen.
+After its protected-main gate, measure the current native path and evaluate a
+schema-pinned Agent Plugins candidate without changing stable CLI, JSON, or MCP
+contracts. New
 claim-surface drift reopens priority 1. Version milestones
 through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
@@ -559,9 +563,10 @@ characterization section appears later in this document:
    [prior-sample drift](../validation/2026-08-14-catalog-drift-round.md)
    decisions, including every promoted, rejected, deferred, unavailable,
    unmeasured, measurement-surface, and non-comparable disposition.
-2. Freeze the v2.15 representative task, client, success, error, latency,
-   discovery-byte, context-cost, portability, and stop-rule contract before
-   implementation or evaluation collection.
+2. Preserve the frozen v2.15 representative task, client, success, error,
+   latency, discovery-byte, context-cost, portability, privacy, and stop-rule
+   [contract](agent-portability-evaluation-declaration.md). Require its first
+   protected-main pass before implementation or evaluation collection.
 3. Measure the current native 22-tool and client-specific packaging baseline,
    then evaluate a schema-pinned Agent Plugins candidate as a separate
    packaging axis. Keep portable packaging separate from stable CLI, JSON, MCP
@@ -939,15 +944,17 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ### Simplify operator and agent discovery using measurements
 
-Status: **active v2.15 planning; evaluation contract not yet frozen**.
+Status: **active v2.15 execution; evaluation contract frozen**.
 
-The immediate slice is a network-free preregistration, not a tool cut. Freeze
-representative tasks, listed clients, native and portable package variants,
-success and unsupported-claim measures, discovery and result bytes, client
-context treatment, launch and recovery behavior, and stop rules. Record client
-versions and pin the Agent Plugins and Agent Skills schemas used by the round.
-Only after that contract passes protected main should evaluation collection or
-a portable candidate begin.
+The network-free
+[preregistration](agent-portability-evaluation-declaration.md) freezes three
+listed clients, five representative tasks, native and portable package
+variants, success and unsupported-claim measures, discovery and result bytes,
+client-context treatment, launch and recovery behavior, privacy rules, and
+stop rules. It pins the exact Agent Plugins and Agent Skills source revisions
+and canonical schema digests. Its machine validator is part of the canonical
+gate. Only after the contract's first protected-main pass may the portable
+candidate or evaluation collection begin.
 
 Separate primary workflows from specialist workflows in documentation now.
 Treat portable packaging as a separate axis from tool-list context cost. The

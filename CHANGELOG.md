@@ -26,6 +26,20 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Tool Surface Changes
+
+Tool surface changes: no public recon CLI command, MCP tool, resource, or
+stable JSON field changes. A maintainer-only network-free validator checks the
+frozen v2.15 representative-client evaluation contract.
+
+### Added
+
+- A digest-bound v2.15 agent-portability preregistration pins the Agent Plugins
+  v1.0.0 and Agent Skills snapshots, three required clients, five synthetic
+  tasks, two complete-surface variants, privacy rules, failure cases, and
+  promote-or-defer thresholds before portable-package implementation or client
+  collection.
+
 ## [2.14.0] - 2026-08-14
 
 ### Tool Surface Changes
