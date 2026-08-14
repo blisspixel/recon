@@ -1,0 +1,20 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "recon",
+  "version": "2.14.0",
+  "description": "Public-metadata domain intelligence through the recon MCP server and portable skills.",
+  "author": {
+    "name": "blisspixel",
+    "url": "https://github.com/blisspixel"
+  },
+  "homepage": "https://github.com/blisspixel/recon",
+  "repository": "https://github.com/blisspixel/recon",
+  "license": "Apache-2.0",
+  "keywords": [
+    "recon",
+    "dns",
+    "domain-intelligence",
+    "mcp",
+    "agent-skills"
+  ]
+}

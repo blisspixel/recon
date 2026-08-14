@@ -6,7 +6,9 @@ This is Claude Code's client-specific plugin format. It is not the portable
 root `plugin.json` plus `mcp.json` layout defined by the
 [Agent Plugins v1.0.0 working draft](https://agent-plugins.org/specification).
 The roadmap tracks that format separately so neither compatibility claim is
-ambiguous.
+ambiguous. The generated candidate is under
+[`../agent-plugin/`](../agent-plugin/); it does not change this native bundle
+and is not promoted until its frozen representative-client evaluation passes.
 
 ## What's inside
 

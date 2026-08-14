@@ -128,15 +128,34 @@ def test_surface_inventory_has_agent_surfaces() -> None:
     agent_surfaces = _inventory()["agent_surfaces"]
     guidance_files = {entry["path"]: entry for entry in agent_surfaces["guidance_files"]}
     client_configs = {entry["client"]: entry for entry in agent_surfaces["client_configs"]}
+    with (ROOT / "pyproject.toml").open("rb") as handle:
+        package_version = tomllib.load(handle)["project"]["version"]
 
     assert "AGENTS.md" in guidance_files
+    assert "agents/agent-plugin/README.md" in guidance_files
+    assert "agents/agent-plugin/skills/recon/SKILL.md" in guidance_files
     assert "agents/claude-code/skills/recon/SKILL.md" in guidance_files
     assert guidance_files["agents/claude-code/skills/recon/SKILL.md"]["frontmatter"]["name"] == "recon"
     assert guidance_files["agents/claude-code/skills/recon-fingerprint-triage/SKILL.md"]["frontmatter"]["name"] == (
         "recon-fingerprint-triage"
     )
+    portable_skill = guidance_files["agents/agent-plugin/skills/recon/SKILL.md"]["frontmatter"]
+    assert portable_skill["metadata"] == {"author": "blisspixel", "version": package_version}
+    assert "allowed-tools" not in portable_skill
+    assert "argument-hint" not in portable_skill
 
     assert client_configs["claude-code"]["server_key"] == "mcpServers"
+    assert client_configs["agent-plugin-candidate"] == {
+        "args": ["mcp"],
+        "auto_approve_declared": False,
+        "client": "agent-plugin-candidate",
+        "command": "recon",
+        "has_recon_server": True,
+        "path": "agents/agent-plugin/mcp.json",
+        "scope": "portable_candidate",
+        "server_key": "mcpServers",
+        "type": "stdio",
+    }
     assert client_configs["vscode"]["server_key"] == "servers"
     assert client_configs["vscode"]["type"] == "stdio"
     assert client_configs["claude-code"]["auto_approve_declared"] is False
@@ -160,9 +179,17 @@ def test_surface_inventory_has_agent_surfaces() -> None:
     plugin = agent_surfaces["claude_code_plugin"]
     assert plugin["path"] == "agents/claude-code/.claude-plugin/plugin.json"
     assert plugin["name"] == "recon"
-    with (ROOT / "pyproject.toml").open("rb") as handle:
-        package_version = tomllib.load(handle)["project"]["version"]
     assert plugin["version"] == package_version
+
+    portable = agent_surfaces["agent_plugins_candidate"]
+    assert portable == {
+        "path": "agents/agent-plugin/plugin.json",
+        "schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+        "name": "recon",
+        "version": package_version,
+        "status": "offline_schema_validated_candidate",
+        "compatibility_claim": "deferred_pending_frozen_representative_client_evaluation",
+    }
 
     context_packet = agent_surfaces["maintainer_context_packet"]
     assert context_packet["source"] == "docs/maintainer-loop-runbook.md shared loop contract"

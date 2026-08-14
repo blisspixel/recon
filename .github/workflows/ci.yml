@@ -324,6 +324,16 @@ jobs:
         # and promotion thresholds must pass before portable packaging work.
         run: uv run python -m validation.agent_portability_contract
 
+      - name: Enforce deterministic Agent Plugins candidate
+        # Native skill sources generate the complete portable package. Drift in
+        # either representation fails before representative-client collection.
+        run: uv run python scripts/generate_agent_plugin.py --check
+
+      - name: Validate schema-pinned Agent Plugins candidate
+        # Uses only the byte-pinned vendored Working Draft schemas and rejects
+        # unsafe launch shapes, client-only skill fields, and package drift.
+        run: uv run python scripts/check_agent_plugin.py
+
       - name: Enforce workflow action pins
         # Build and release actions are pinned to immutable SHAs, with version
         # comments kept beside the pins for maintainability.
