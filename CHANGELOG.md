@@ -57,6 +57,18 @@ schema-pinned portable packaging candidate.
 - A live permissive SPF record (`+all`, `?all`, or no `all`) is retained as an
   observed policy with no strict-SPF credit.
 - Sparse insights no longer mention MX or identity when neither was observed.
+- Related-domain enrichment results are stored as inventory labels only, so a
+  later rematch cannot treat another namespace's DMARC, SPF, tokens, or CT
+  as the queried apex, and a failed related DNS lookup cannot mark the apex
+  DNS channel unavailable.
+- A related namespace's ``SPF record observed`` label is no longer borrowed
+  as an apex email-control claim.
+- The compact Email row reports a live permissive SPF record as
+  ``SPF observed`` instead of omitting it.
+- One TXT record can now contribute every unshadowed vendor match, not only
+  the first catalog pattern.
+- Deprecated IPv6 site-local destinations (``fec0::/10``) are refused by the
+  HTTP destination check.
 
 ### Added
 

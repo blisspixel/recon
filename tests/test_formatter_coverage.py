@@ -699,6 +699,22 @@ class TestRenderTenantPanelEdgeCases:
         normalize_email_services(categorized, info)
         assert categorized["Email"] == ["Microsoft 365 (MX delivery path)", "DMARC reject", "SPF strict"]
 
+    def test_permissive_spf_is_listed_as_observed(self) -> None:
+        from recon_tool.formatter.email_summary import normalize_email_services
+
+        info = _minimal_info(
+            services=("Microsoft 365", "SPF record observed"),
+            slugs=("microsoft365", "spf"),
+            primary_email_provider="Microsoft 365",
+            evidence=(
+                EvidenceRecord("MX", "alpha-com.mail.protection.outlook.com", "Microsoft 365", "microsoft365"),
+                EvidenceRecord("SPF", "v=spf1 +all", "SPF record observed", "spf"),
+            ),
+        )
+        categorized = {"Email": ["Microsoft 365", "SPF record observed"]}
+        normalize_email_services(categorized, info)
+        assert categorized["Email"] == ["Microsoft 365 (MX delivery path)", "SPF observed"]
+
     def test_explain_flag_renders_classification(self) -> None:
         _, buf = _make_console()
         info = _minimal_info(

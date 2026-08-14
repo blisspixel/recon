@@ -68,6 +68,24 @@ def test_cached_cname_replay_is_network_free_and_idempotent(monkeypatch) -> None
     assert replayed_again == replayed
 
 
+def test_one_txt_record_keeps_two_unrelated_vendors(monkeypatch) -> None:
+    txt_rules = (
+        _detection(r"vendor-a-verification=", name="Vendor A", slug="vendor-a"),
+        _detection(r"vendor-b-verification=", name="Vendor B", slug="vendor-b"),
+    )
+    monkeypatch.setattr(dns_replay, "get_txt_patterns", lambda: txt_rules)
+    monkeypatch.setattr(dns_replay, "get_spf_patterns", lambda: ())
+    original = SourceResult(
+        source_name="DNS",
+        raw_dns_records=(("TXT", "vendor-a-verification=aaa vendor-b-verification=bbb"),),
+    )
+
+    replayed = dns_replay.replay_cached_dns_fingerprints(original)
+
+    assert replayed.detected_slugs == ("vendor-a", "vendor-b")
+    assert replayed.detected_services == ("Vendor A", "Vendor B")
+
+
 def test_cached_txt_replay_preserves_txt_and_spf_evidence(monkeypatch) -> None:
     txt_rules = (_detection(r"verification=abc123", name="Verification Service", slug="verification-service"),)
     # Catalog SPF patterns are bare domains compared against parsed include:

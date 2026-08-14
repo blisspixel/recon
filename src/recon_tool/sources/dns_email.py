@@ -139,11 +139,12 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
         if not txt_lower.startswith("v=spf1"):
             ctx.record_catalog_observation("txt", "@", txt, classified=bool(txt_matches))
         if txt_matches:
-            result = txt_matches[0]
-            ctx.add(result.name, result.slug, source_type="TXT", raw_value=txt)
-            for match in txt_matches:
-                if match.slug == result.slug:
-                    ctx.record_fp_match(match.slug, "txt", match.pattern)
+            # One TXT value can carry more than one vendor token. Catalog
+            # order is not specificity, so keep every unshadowed match
+            # instead of the first pattern only.
+            for match in filter_shadowed_matches(txt_matches):
+                ctx.add(match.name, match.slug, source_type="TXT", raw_value=txt)
+                ctx.record_fp_match(match.slug, "txt", match.pattern)
 
         # Extract google-site-verification tokens for relationship mapping.
         # Strip control bytes: the token is attacker-controlled and is

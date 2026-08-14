@@ -88,11 +88,9 @@ def _replay_txt(ctx: DetectionCtx, value: str) -> None:
     """Replay apex TXT and SPF catalog rules with live-detector semantics."""
     matches = match_txt_all(value, get_txt_patterns())
     if matches:
-        first = matches[0]
-        ctx.add(first.name, first.slug, source_type="TXT", raw_value=value)
-        for match in matches:
-            if match.slug == first.slug:
-                ctx.record_fp_match(match.slug, "txt", match.pattern)
+        for match in filter_shadowed_matches(matches):
+            ctx.add(match.name, match.slug, source_type="TXT", raw_value=value)
+            ctx.record_fp_match(match.slug, "txt", match.pattern)
 
     lowered = value.lower()
     if not lowered.startswith("v=spf1"):

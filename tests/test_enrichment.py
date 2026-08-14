@@ -401,6 +401,8 @@ class TestRelatedEnrichmentDoesNotBorrowEmailControls:
                 "DMARC",
                 "DKIM",
                 "SPF: strict (-all)",
+                "SPF record observed",
+                "SPF complexity: 8 includes (large)",
                 "MTA-STS",
                 "BIMI",
                 "TLS-RPT",
@@ -412,6 +414,7 @@ class TestRelatedEnrichmentDoesNotBorrowEmailControls:
                 "dkim",
                 "dkim-exchange",
                 "spf-strict",
+                "spf",
                 "mta-sts",
                 "mta-sts-enforce",
                 "bimi",
@@ -430,6 +433,7 @@ class TestRelatedEnrichmentDoesNotBorrowEmailControls:
             "dkim",
             "dkim-exchange",
             "spf-strict",
+            "spf",
             "mta-sts",
             "mta-sts-enforce",
             "bimi",
@@ -444,6 +448,8 @@ class TestRelatedEnrichmentDoesNotBorrowEmailControls:
         assert "TLS-RPT" not in enriched.services
         assert "Null MX (domain does not accept email)" not in enriched.services
         assert "Custom or unclassified MX" not in enriched.services
+        assert "SPF record observed" not in enriched.services
+        assert not any(service.startswith("SPF complexity:") for service in enriched.services)
         # The apex keeps what its own evidence proves.
         assert "microsoft365" in enriched.slugs
 
@@ -459,3 +465,89 @@ class TestRelatedEnrichmentDoesNotBorrowEmailControls:
 
         assert "snowflake" in enriched.slugs
         assert "dmarc" not in enriched.slugs
+
+    @pytest.mark.asyncio
+    async def test_related_results_cannot_remerge_as_apex_controls(self, monkeypatch) -> None:
+        """A later merge of stored related results must not adopt that namespace."""
+        from recon_tool import resolver
+        from recon_tool.merger import merge_results
+        from recon_tool.models import CertSummary, EvidenceRecord, SourceResult
+
+        async def _lookup(_source, _domain, **_kwargs):
+            return SourceResult(
+                source_name="dns_records",
+                dmarc_policy="reject",
+                mta_sts_mode="enforce",
+                detected_services=(
+                    "DMARC",
+                    "Snowflake",
+                    "SPF record observed",
+                    "SPF complexity: 8 includes (large)",
+                ),
+                detected_slugs=("dmarc", "snowflake", "spf"),
+                evidence=(
+                    EvidenceRecord("DMARC", "v=DMARC1; p=reject", "DMARC", "dmarc"),
+                    EvidenceRecord("SPF", "v=spf1 +all", "SPF record observed", "spf"),
+                ),
+                raw_dns_records=(("TXT", "v=spf1 +all"),),
+                site_verification_tokens=("related-token",),
+                spf_include_count=8,
+                cert_summary=CertSummary(
+                    cert_count=3,
+                    issuer_diversity=1,
+                    issuance_velocity=1,
+                    newest_cert_age_days=1,
+                    oldest_cert_age_days=10,
+                    top_issuers=("Example CA",),
+                ),
+            )
+
+        monkeypatch.setattr(resolver, "_safe_lookup", _lookup)
+        apex = self._apex()
+        apex_result = SourceResult(
+            source_name="dns_records",
+            detected_services=("Microsoft 365",),
+            detected_slugs=("microsoft365",),
+            evidence=apex.evidence,
+        )
+        _enriched, results = await resolver._enrich_from_related(apex, [apex_result], skip_ct=True)
+        rematched = merge_results(list(results), apex.queried_domain)
+
+        assert rematched.dmarc_policy is None
+        assert rematched.mta_sts_mode is None
+        assert rematched.spf_include_count == 0
+        assert rematched.site_verification_tokens == ()
+        assert rematched.cert_summary is None
+        assert not any(record.source_type == "DMARC" for record in rematched.evidence)
+        assert "dmarc" not in rematched.slugs
+        assert "spf" not in rematched.slugs
+        assert "SPF record observed" not in rematched.services
+        assert "snowflake" in rematched.slugs
+        assert "microsoft365" in rematched.slugs
+
+    @pytest.mark.asyncio
+    async def test_failed_related_lookup_does_not_degrade_apex_dns(self, monkeypatch) -> None:
+        from recon_tool import resolver
+        from recon_tool.merger import merge_results
+        from recon_tool.models import SourceResult
+
+        async def _lookup(_source, _domain, **_kwargs):
+            return SourceResult(
+                source_name="dns_records",
+                error="timeout",
+                source_unavailable=True,
+            )
+
+        monkeypatch.setattr(resolver, "_safe_lookup", _lookup)
+        apex = self._apex()
+        apex_result = SourceResult(
+            source_name="dns_records",
+            detected_services=("Microsoft 365",),
+            detected_slugs=("microsoft365",),
+            evidence=apex.evidence,
+        )
+        _enriched, results = await resolver._enrich_from_related(apex, [apex_result], skip_ct=True)
+        rematched = merge_results(list(results), apex.queried_domain)
+
+        assert rematched.degraded_sources == ()
+        assert "microsoft365" in rematched.slugs

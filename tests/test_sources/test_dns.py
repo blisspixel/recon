@@ -508,3 +508,28 @@ class TestEspDkimHintMatching:
 
         assert not is_domain_shaped("domainkey.u")
         assert not is_domain_shaped("mimecast")
+
+
+class TestTxtMultiVendorMatch:
+    @pytest.mark.asyncio
+    async def test_one_txt_value_keeps_every_unshadowed_vendor(self, monkeypatch) -> None:
+        from recon_tool.fingerprints import Detection
+        from recon_tool.sources import dns_base, dns_email
+
+        async def fake_resolve(*_args, **_kwargs):
+            return ["vendor-a-verification=aaa vendor-b-verification=bbb"]
+
+        monkeypatch.setattr(dns_base, "safe_resolve", fake_resolve)
+        monkeypatch.setattr(
+            dns_email,
+            "get_txt_patterns",
+            lambda: (
+                Detection("vendor-a-verification=", "Vendor A", "vendor-a", "cloud", "high"),
+                Detection("vendor-b-verification=", "Vendor B", "vendor-b", "cloud", "high"),
+            ),
+        )
+        monkeypatch.setattr(dns_email, "get_spf_patterns", lambda: ())
+        ctx = dns_base.DetectionCtx()
+        await dns_email.detect_txt(ctx, "alpha.invalid")
+        assert ctx.slugs == {"vendor-a", "vendor-b"}
+        assert ctx.services == {"Vendor A", "Vendor B"}

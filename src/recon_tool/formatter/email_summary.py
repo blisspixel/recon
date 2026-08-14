@@ -93,6 +93,10 @@ def _email_summary_controls(
         _append_unique(summary, "SPF strict")
     elif any(service.startswith("SPF: softfail") for service in email_services):
         _append_unique(summary, "SPF softfail")
+    elif "SPF record observed" in service_set:
+        # A live +all / ?all / no-all policy is not a scored control, but
+        # hiding it made the compact row look like SPF was never collected.
+        _append_unique(summary, "SPF observed")
 
     if info.mta_sts_mode and info.mta_sts_mode != "none":
         _append_unique(summary, f"MTA-STS {info.mta_sts_mode}")

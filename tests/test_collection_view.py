@@ -385,6 +385,21 @@ def test_unavailable_mx_preserves_non_mx_sparse_observation() -> None:
     assert visible.insights == (edge_observation,)
 
 
+def test_failed_apex_txt_masks_observed_spf_label() -> None:
+    raw = replace(
+        _info(degraded_sources=("dns:apex_txt",)),
+        services=("SPF record observed",),
+        slugs=("spf",),
+        evidence=(EvidenceRecord("SPF", "v=spf1 +all", "SPF record observed", "spf"),),
+    )
+
+    visible = collection_observable_info(raw)
+
+    assert "SPF record observed" not in visible.services
+    assert "spf" not in visible.slugs
+    assert collection_observable_evidence(visible) == ()
+
+
 def test_failed_apex_txt_masks_tokens_and_catalog_detections() -> None:
     baseline = _info(degraded_sources=())
     raw = replace(
