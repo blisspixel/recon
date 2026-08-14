@@ -172,7 +172,8 @@ binding. The 33-row HubSpot contract produced the closed aggregate-only
 [vendor-seed result](2026-08-14-catalog-vendor-seed-round.md), with 29
 corroborated and 4 observed-silent rows and no catalog promotion. The measure
 is relationship corroboration, not recall, because a provider relationship
-does not label publication of a particular DNS record. Frozen-sample drift is
-next. Agent Plugins packaging remains v2.15
+does not label publication of a particular DNS record. The later
+[prior-sample drift result](2026-08-14-catalog-drift-round.md) is also closed
+with no threshold breach or catalog promotion. Agent Plugins packaging remains v2.15
 work, and OKF v0.2 remains a future named-consumer, caller-owned projection
 rather than a replacement for recon's versioned JSON or catalog evidence model.

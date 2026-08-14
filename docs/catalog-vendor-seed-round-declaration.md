@@ -205,9 +205,8 @@ frame preparation and result reduction network-free:
   absence.
 
 The vendor-seed round is closed. The later
-[drift declaration](catalog-drift-round-declaration.md) freezes the July
+[drift result](../validation/2026-08-14-catalog-drift-round.md) closes the July
 baseline's 5,199 measured rows, prior result, observation-only comparison
-fields, and current implementation. Its protected-main collection and
-aggregate result are next, and repeated-frame evidence remains drift rather
-than independent coverage. No later result may retroactively add members,
-change this denominator, or tune a catalog rule from this holdout.
+fields, and current implementation. Repeated-frame evidence remains drift
+rather than independent coverage. No later result may retroactively add
+members, change this denominator, or tune a catalog rule from this holdout.
