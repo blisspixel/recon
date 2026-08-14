@@ -51,8 +51,13 @@ field changes.
   denominator, disclosure floor, exclusion rules, and non-recall
   interpretation. Its final provider source plan, immutable receipt,
   17,952-namespace exclusion union, receipt-bound dossier, and 33-row disjoint
-  HubSpot frame are frozen with aggregate pre-collection commitments and zero
-  target requests.
+  HubSpot frame were frozen with aggregate pre-collection commitments before
+  target contact.
+- An aggregate-only vendor-seed result closes the 33-row HubSpot holdout with
+  29 corroborated, 4 observed-silent, and zero unavailable, unmeasured, or
+  error outcomes. It records the 0.878788 relationship-corroboration rate,
+  Wilson interval, exact result and reducer commitments, and explicit decision
+  to promote no rules without publishing target identifiers.
 - Six provider-documented regional-round catalog additions across Cloudflare
   Email Service, Hostinger DNS, Hostinger Email, Locaweb Email, OVHcloud Email,
   and Titan Mail. The 16 new detections have current primary references, review
@@ -91,9 +96,9 @@ field changes.
   aggregate-only interpretation boundary. Its baseline, candidate disposition,
   fixed-observation decision, and protected-main replay are complete. The
   vendor-seed measurement protocol, bounded source acquisition, receipt
-  binding, preparer, and evaluator are complete. The exact disjoint frame and
-  its aggregate commitments are frozen. Protected-main commitment publication,
-  exact-frame collection, and drift are next.
+  binding, preparer, evaluator, exact disjoint frame, protected-main collection,
+  aggregate reduction, and candidate dispositions are complete. Frozen-sample
+  drift is next.
 
 ### Fixed
 
@@ -103,6 +108,9 @@ field changes.
 - The validation guide uses package-safe module entry points for every active
   catalog preparation command, with a subprocess regression gate that launches
   each documented preparer from the repository root.
+- The vendor-seed scan command now passes its frozen minimum-occurrence
+  threshold explicitly, with a semantic regression test that keeps the
+  published invocation aligned with fail-closed manifest preflight.
 - Local package-invariant builds and isolated MCP compatibility environments
   use uv copy mode so cloud-backed or cross-device Windows caches cannot fail
   on incompatible hardlinks. Artifact contents, compatibility semantics, and

@@ -3,7 +3,7 @@
 Status: source-backed step-back audit for the current roadmap. This file does
 not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior.
 
-Checked: 2026-08-13.
+Checked: 2026-08-14 UTC.
 
 ## Bottom Line
 
@@ -30,11 +30,10 @@ closed: its baseline and clean protected-main replay each completed all 1,000
 frozen rows with zero errors, and six bounded provider-family additions are
 accepted. The vendor-seed relationship label, denominator, exclusions,
 disclosure protocol, bounded source acquisition, immutable receipt binding,
-and fail-closed tooling are implemented. Its source plan, receipt-bound dossier,
-17,952-namespace exclusion union, and 33-row disjoint HubSpot frame are frozen
-with aggregate commitments and zero target requests. Merge those commitments
-through protected main, then run provider-level corroboration and the later
-frozen-sample drift round with aggregate-only evidence.
+and fail-closed tooling are implemented. Its exact 33-row HubSpot result is
+closed with 29 corroborated, 4 observed-silent, and no unavailable, unmeasured,
+or error outcome. No catalog rule was promoted from the evaluation holdout.
+Frozen-sample drift is the next aggregate-only operation.
 
 The claim audit and stable MCP matrix remain blocking regression
 gates. Artifact review, OpenSSF process, independent replication, and archive
@@ -161,7 +160,7 @@ These are not active gaps for the current roadmap:
 | Evidence-semantic integrity | Derived observations and model-bound public-evidence values can be presented more strongly than their evidence supports. | The fail-closed audit covers all 27 default-claim families; all are complete, with no material runtime family carrying incomplete lineage. | Keep the audit and its semantic contract tests blocking; reopen this track for any uncovered or stronger claim surface. | Do not add new inference semantics while a known default claim lacks direct provenance. |
 | MCP v2 compatibility | The final 2026-07-28 protocol and stable SDK contain breaking changes that must remain characterized. | Production adopted v2.0.0 on 2026-07-31; the exact stable v1.28.1 and v2.0.0 matrix passes, with one compatibility boundary, doctor discovery selection, and conservative cache hints implemented. | Keep both stable pins blocking and treat any future major-version adoption as a separate release decision. | Do not couple remote MCP scope to compatibility maintenance. |
 | Measured product utility | Green gates and sophisticated models do not establish that the output improves an operator decision. | The network-free scorecard and stable-v1 live characterization are complete. The frozen M365 design failed its structural-identifiability preflight before target contact: A1 equals A0, A2 equals A3, and A3 is dominated by A0. The declared live window is cancelled. v2.12 records fusion as an advanced diagnostic and begins the compatible explicit-flag transition. | Keep ADR-0013 blocking and require a new candidate plus executable identifiability preflight before any future real-domain fusion study. | Do not expand graph or probabilistic machinery without measured benefit. Do not collect when the promotion condition is structurally unreachable. |
-| Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | The catalog has 868 entries and 1,091 detections. One frozen convenience-sample baseline covers every bounded path, a 366-namespace unseen vertical holdout exercised every new rule without post-holdout tuning, and the independent rank and regional rounds are closed with membership-bound aggregates, explicit dispositions, clean-main replays, and zero regression on fixed observations. The vendor-seed protocol and its 33-row disjoint HubSpot pre-collection contract are frozen with aggregate commitments and zero target requests; its result, legacy date backlog, and frozen drift sample remain open. | As the v2.14 priority, merge the commitments through protected main; report provider-level relationship corroboration without calling silence a false negative; then run the frozen-sample drift round and backfill dates only in reviewed families. | No new undated or untested rule. No population claim from the convenience sample and no broad coverage claim while a bounded path or named stratum is unmeasured. |
+| Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | The catalog has 868 entries and 1,091 detections. One frozen convenience-sample baseline covers every bounded path, a 366-namespace unseen vertical holdout exercised every new rule without post-holdout tuning, and the independent rank, regional, and vendor-seed rounds are closed with membership-bound aggregates and explicit dispositions. The 33-row vendor-seed result records 29 corroborated and 4 observed-silent rows, no unavailable, unmeasured, or error outcome, and no catalog promotion. The legacy date backlog and drift sample remain open. | As the v2.14 priority, freeze and run the prior-sample drift round, then backfill dates only in reviewed families. | No new undated or untested rule. No population claim from the convenience sample and no broad coverage claim while a bounded path or named stratum is unmeasured. |
 | Latency and degradation contract | CT and external providers dominate long tails, while one instrumented convenience-sample run cannot establish product SLOs. | The dated aggregate-only live memo measures paired CT/no-CT resolver latency, primary-source stages, merge replay, inference, rendering, allocation, loop lag, degradation, warm disk, and warm MCP bytes without target rows. It completed 50 of 50 no-CT rows and 47 of 50 CT rows; concurrent CPU contention and heavy CT rate limiting keep p50/p95 values diagnostic. | Run a clean-machine, stage-specific follow-up before setting budgets or moving work to threads; keep the independent schema gate blocking and apply stable-v2 deltas from the completed MCP matrix separately. | Move only proven blocking I/O and do not create brittle timing CI. |
 | OpenSSF Best Practices Badge | Scorecard marks this as absent until a real badge project exists. | Readiness evidence and the manual answer queue are documented in [openssf-posture.md](openssf-posture.md) and [openssf-badge-readiness.md](openssf-badge-readiness.md), but no badge is claimed. | Complete the questionnaire on `bestpractices.dev`, then link the real badge page. | Do not add a placeholder badge or claim a badge before the project exists. |
 | Reviewed PR signal | Scorecard cannot credit review history on direct-main work. | CODEOWNERS exists and required checks protect main. | Use reviewed PRs for non-urgent work when another qualified reviewer is available. | Do not manufacture review history or contributor diversity. |
@@ -183,7 +182,7 @@ release count, and feature count are supporting facts, not outcomes.
 |---|---|---|---|
 | 0. Trust foundation | Align public intake with the data policy, correct public product promises, require verification dates on new detections, and align repository metadata with the current neutral product voice. | Required privacy acknowledgements, regression tests, a clean canonical gate, current repository description and topics, and green post-merge CI. | Do not start another broad catalog promotion while public intake asks for target data or a public promise lacks a maintained surface. |
 | 1. Freeze the baseline | Run the stable-v1 latency, allocation, degradation, CT-value, provenance, catalog, and MCP payload measurements on a named catalog and code revision. Record unmeasured channels explicitly. | One dated aggregate-safe scorecard, reproduction commands, environment, revision digests, source-success counts, and no target rows. | Do not tune thresholds after reading the result, and do not publish a population interpretation for a convenience sample. |
-| 2. Freeze and run distinct catalog rounds - **active v2.14 priority** | Preserve the closed rank and regional rounds and the frozen [vendor-seed contract](catalog-vendor-seed-round-declaration.md). Merge its aggregate commitments through protected main, run and reduce the exact 33-row frame, then freeze and run drift in [catalog-strategy.md](catalog-strategy.md). | Per-round immutable contracts, private manifests, and aggregate reports with unavailable, unmeasured, error, and explicit candidate dispositions. Vendor-seed silence remains silence, not a false negative. Every promoted rule has an independent provider reference or disclosure-safe basis, a date, fictional positive, lookalike-negative and sparse fixtures, and a claim boundary. | A repeated list is a drift round, not new coverage. Stop when survivors lack an independent basis, fail a negative fixture, or exceed the frozen regression budget. |
+| 2. Freeze and run distinct catalog rounds - **active v2.14 priority** | Preserve the closed rank, regional, and [vendor-seed](../validation/2026-08-14-catalog-vendor-seed-round.md) rounds, then freeze and run drift in [catalog-strategy.md](catalog-strategy.md). | Per-round immutable contracts, private manifests, and aggregate reports with unavailable, unmeasured, error, and explicit candidate dispositions. Vendor-seed silence remains silence, not a false negative. Every promoted rule has an independent provider reference or disclosure-safe basis, a date, fictional positive, lookalike-negative and sparse fixtures, and a claim boundary. | A repeated list is a drift round, not new coverage. Stop when survivors lack an independent basis, fail a negative fixture, or exceed the frozen regression budget. |
 | 3. Evaluate agent utility | Use representative tasks for single-domain summary, explanation, posture gaps, comparison, and catalog lookup. Compare the current deterministic 22-tool discovery surface with the smallest task-specific candidate only after freezing success, error, latency, and context-byte measures. Evaluate a schema-pinned Agent Plugins package as a packaging path separate from tool-surface size. | Task completion, unsupported-claim rate, correct tool selection, round trips, discovery bytes, result bytes, failure recovery, and portable-package discovery and launch across representative clients. | Do not add a core profile or hide tools merely because the payload is large. Do not claim Agent Plugins conformance before pinned-schema and client evidence. Simplify only when task outcomes improve without reducing discoverability or compatibility. |
 | 4. External usability proof | Ask an outside user to install from the released package, run the public smoke path, complete one explanation task, and follow the safe contribution path on a clean machine. | Aggregate outcome notes, time-to-first-result, confusing-step count, and fixes reproduced with fictional data. | Do not call maintainer reruns independent replication, and do not publish the user's targets or output. |
 | 5. Consolidate later surface decisions | Fusion is decided in v2.11 and applied in v2.12. Use the later catalog and agent measurements to decide which remaining catalog and MCP presentation changes ship, then batch accepted work into coherent releases. | Decision memos with raw aggregate counts and bounds, preserved stable contracts, current release proof, and an updated roadmap that removes completed work. | An inconclusive result remains inconclusive. Retire complexity that cannot beat the simpler comparator on a named outcome. |
@@ -201,12 +200,10 @@ release count, and feature count are supporting facts, not outcomes.
 6. Keep the shipped v2.13 caller-held observation capsule, four-way comparison,
    ADR-0014 OKF v0.2 deferral, and release proof blocking without replacing
    versioned JSON.
-7. Preserve the closed v2.14 rank and regional decisions plus the frozen
-   vendor-seed protocol and 33-row pre-collection contract. Merge its aggregate
-   commitments through protected main, execute provider-level corroboration
-   without changing the frame, and then run drift against the frozen
-   prior sample. Keep outputs aggregate-only with explicit dispositions before
-   broad catalog growth.
+7. Preserve the closed v2.14 rank, regional, and vendor-seed decisions,
+   including the vendor-seed non-promotion disposition. Freeze and run drift
+   against the prior sample. Keep outputs aggregate-only with explicit
+   dispositions before broad catalog growth.
 8. Use the resulting catalog evidence to inform later dimensioned email
    observations and agent-surface simplification; apply stable-v2 SDK
    characterization deltas from the completed MCP matrix.
@@ -227,11 +224,10 @@ explicit candidate dispositions. The regional baseline, fixed-observation
 decision, and protected-main live replay are complete. The vendor-seed contract
 now fixes the relationship label, non-recall denominator, exclusions,
 disclosure floor, bounded provider-source acquisition, immutable receipt
-binding, and fail-closed preparer and evaluator. Its provider source plan,
-receipt-bound dossier, 17,952-namespace exclusion union, and exact 33-row frame
-are frozen with zero target requests. Their aggregate commitments must merge
-through protected main before collection. Provider-level aggregate corroboration
-and the later drift result must close before v2.14. v2.12 has
+binding, and fail-closed preparer and evaluator. Its exact 33-row aggregate
+result records 29 corroborated and 4 observed-silent rows, no unavailable,
+unmeasured, or error outcome, and no catalog promotion. The drift result must
+still close before v2.14. v2.12 has
 already applied the v2.11 structural stop
 through the compatible ADR-0013 transition. Private labeled-row collection
 under the cancelled design is prohibited.

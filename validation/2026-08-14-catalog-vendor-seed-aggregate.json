@@ -1,0 +1,84 @@
+{
+  "aggregate_only": true,
+  "claim_boundary": "Provider-controlled customer evidence labels a relationship, not publication of a specific DNS record. Observed silence is not a false negative; this aggregate is not recall, precision, prevalence, or a population estimate.",
+  "environment": {
+    "implementation": "CPython",
+    "platform": "Windows-11-10.0.26200-SP0",
+    "python": "3.14.4"
+  },
+  "generated_at": "2026-08-14T02:28:58.642304Z",
+  "label_basis": "provider-relationship",
+  "metric": "provider-relationship corroboration rate",
+  "observation_contract": {
+    "collection": {
+      "ct_enabled": false,
+      "direct_probes_enabled": false
+    },
+    "frame_count": 33,
+    "frame_digest_sha256": "37bb3e9f2609b9f4470d637d60f42077593169522b117af9660ac3058516728b",
+    "implementation": {
+      "catalog_digest_sha256": "206ee855ba9f5107634f0876b66ed46306dbecfaaaff6c8a10a089ac4678baa2",
+      "execution_digest_sha256": "dcc4bb3713070559e9248c0382a6ad4f439fddec882362c1e94d0273bc3636b0"
+    },
+    "manifest_digest_sha256": "74c2bf7989f81a72d853132c74eddf3bd3f061aaf8168836d825fe3f5166eeb3",
+    "plan_digest_sha256": "bbacaf9ec89d5518014288394c187b3afdd3f7659794d857a1c55e7a1ff0e8d0",
+    "policies_digest_sha256": "c207ac5150325fd47f043abf81c234c7ca7fcc13d7b16c94b98e3d435025fc97",
+    "promotion_budget": {
+      "maximum_regression": 0.0,
+      "minimum_improvement": 0.01
+    },
+    "promotion_budget_digest_sha256": "5185b88a5881c13b7a802ad813f538c159804bf1daef2cf5bee979c10ce10ef6",
+    "question_digest_sha256": "d9570d45d4efe0e0a853b1363400b94e14564e077ce0e39a10efff5bc976425b",
+    "round_id_digest_sha256": "a6e87d1e5f672875c160757ef4056531db06dfe46bbcd5a3bb18ed7ef743ac26",
+    "round_kind": "vendor-seed",
+    "source_contract_digest_sha256": "5779944786150f90e30d6734b7e8b9932853ad514cc1a50cd5fc5ce28ed5bd54",
+    "source_digest_sha256": "a897e25b22bfaddfa940ab55dbfa3046a27d54ae7db1c5d8a3bbc2b46e0469e7",
+    "strata_contract_digest_sha256": "d5f8090d728fd4548cfe0d2be7335418481dc99542804bbeda663b021fc773a4",
+    "stratum_counts": [
+      33
+    ],
+    "thresholds": {
+      "minimum_distinct_namespaces": 2,
+      "minimum_occurrences": 2
+    }
+  },
+  "pooled_aggregate_sha256": "17bb0c65ed885be1e8f918e1c0f56e37976115697b2571c196bfad2c45131c24",
+  "provider_count": 1,
+  "providers": [
+    {
+      "corroborated": 29,
+      "corroboration_rate": 0.878788,
+      "error": 0,
+      "expected_record_types": [
+        "cname",
+        "cname_target",
+        "spf",
+        "txt"
+      ],
+      "frame_count": 33,
+      "label_basis": "provider-relationship",
+      "measurable_count": 33,
+      "observed_silent": 4,
+      "provider_names": [
+        "HubSpot"
+      ],
+      "provider_slug": "hubspot",
+      "unavailable": 0,
+      "unmeasured": 0,
+      "wilson_95_high": 0.951838,
+      "wilson_95_low": 0.726745
+    }
+  ],
+  "records_total": 33,
+  "reducer": {
+    "code_revision": "d6e7b17aa3686a83cf004e8cd93415aa411ec423",
+    "current_execution_digest_sha256": "dcc4bb3713070559e9248c0382a6ad4f439fddec882362c1e94d0273bc3636b0",
+    "digest_sha256": "56cbcc0298756f74eb42d8f5991b40a71ebe0749ba46ab8e095c57c715d2493e",
+    "network_requests": 0,
+    "working_tree_dirty": false
+  },
+  "results_digest_sha256": "c7bb4d9631d17e05193f606e12554c276e340f993ed4979ddbfe1ca4b3b4e921",
+  "round_kind": "vendor-seed",
+  "schema_version": "1.0",
+  "source_contract_digest_sha256": "a49f93324437900e4ae1bab2125127c427dfa49abe5fa9f7717ed4992e0b899c"
+}

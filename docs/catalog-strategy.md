@@ -1,7 +1,7 @@
 # Catalog Growth and Quality Strategy
 
 Status: measurement-first maintenance plan
-Review date: 2026-08-13
+Review date: 2026-08-14 UTC
 
 This document is the plan for growing and maintaining the fingerprint catalog
 (`src/recon_tool/data/fingerprints/*.yaml`) so coverage, precision, and
@@ -42,11 +42,11 @@ The loop is disciplined and effective, but the available corpus remains a
 convenience sample with selection bias. The first frozen typed baseline is
 recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
-the independent rank and regional rounds are complete. The vendor-seed
-measurement protocol and 33-row disjoint HubSpot pre-collection contract are
-frozen with aggregate commitments and zero target requests. Protected-main
-commitment publication, collection, result, and drift remain open. Most legacy
-detections still lack a freshness date.
+the independent rank, regional, and vendor-seed rounds are complete. The
+vendor-seed result records 29 corroborated and 4 observed-silent HubSpot rows,
+no unavailable, unmeasured, or error outcome, and no catalog promotion from the
+evaluation holdout. Frozen-sample drift remains open. Most legacy detections
+still lack a freshness date.
 
 Current round status:
 
@@ -56,7 +56,7 @@ Current round status:
 | Unseen vertical holdout | Complete, 366 normalized namespaces, no post-holdout tuning |
 | Rank bands | Complete; four-band aggregate, dispositions, and zero-regression decision published |
 | Regional / ccTLD | Complete; baseline, fixed-observation decision, and clean-main replay published |
-| Vendor seed | Protocol and 33-row disjoint HubSpot pre-collection contract frozen; aggregate commitments prepared with zero target requests; protected-main publication and collection pending |
+| Vendor seed | Complete; 33-row HubSpot result published with 29 corroborated, 4 observed-silent, no error or unmeasured outcome, and no rule promotion |
 | Drift | Pending |
 
 ## 1. A stratified, reproducible sampling frame
@@ -315,14 +315,12 @@ measurement round.
 2. Preserve the completed regional baseline, accepted fixed-observation
    decision, and clean-main replay from the
    [regional result](../validation/2026-08-13-catalog-regional-round.md).
-3. Complete the frozen disjoint vendor-seed contract in the
-   [public declaration](catalog-vendor-seed-round-declaration.md): merge its
-   aggregate source, exclusion, frame, catalog, and execution commitments
-   through protected main before target contact, then run the exact 33-row
-   frame and report provider-level corroborated, observed-silent, unavailable,
-   unmeasured, and error outcomes. Do not call relationship-label corroboration
-   recall or use holdout outcomes to tune the evaluated rules.
-4. Re-observe the frozen prior sample as the drift round. Do not describe a
+3. Preserve the closed vendor-seed contract and aggregate-only
+   [result](../validation/2026-08-14-catalog-vendor-seed-round.md): 29 of 33
+   rows corroborated the provider relationship, 4 were observed silent, and no
+   catalog rule was promoted from the evaluation holdout. Do not call this
+   measure recall or use holdout outcomes to tune the evaluated rules.
+4. Freeze and re-observe the prior sample as the drift round. Do not describe a
    repeated frame as independent coverage.
 5. Backfill `verified` dates only in reviewed families and raise the freshness
    ratchet only when observed coverage supports a new threshold.

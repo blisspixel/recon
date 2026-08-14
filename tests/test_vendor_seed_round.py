@@ -437,11 +437,14 @@ def test_current_docs_keep_vendor_seed_boundary_and_next_operation_aligned() -> 
     active = "\n".join((declaration, roadmap, strategy, validation_readme))
 
     assert "bounded source acquisition" in declaration
-    assert "private pre-collection contract frozen" in declaration
-    assert "33-row disjoint HubSpot" in active
-    assert "zero target requests" in active
+    assert "Status: closed" in declaration
+    assert "33-row HubSpot" in active
+    assert "29 corroborated" in active
+    assert "4 observed-silent" in active
     assert "37bb3e9f2609b9f4470d637d60f42077593169522b117af9660ac3058516728b" in declaration
-    assert "target\ncollection has not started" in declaration
+    assert "target\ncollection has not started" not in declaration
+    assert "2026-08-14-catalog-vendor-seed-round.md" in active
+    assert "Frozen-sample drift is next" in active
     assert (
         "--round-manifest validation/corpus-private/vendor-seed/frozen-contract/round-manifest.json \\\n"
         "    --min-count 2 \\\n"
@@ -454,3 +457,34 @@ def test_current_docs_keep_vendor_seed_boundary_and_next_operation_aligned() -> 
     assert "prepare_vendor_seed_round.py" in validation_readme
     assert "evaluate_vendor_seed_round.py" in validation_readme
     assert "catalog-vendor-seed-round-declaration.md" in roadmap
+
+
+def test_committed_vendor_seed_aggregate_is_safe_and_exact() -> None:
+    path = ROOT / "validation" / "2026-08-14-catalog-vendor-seed-aggregate.json"
+    raw = path.read_bytes()
+    aggregate = json.loads(raw)
+
+    catalog_baseline.assert_aggregate_safe(aggregate)
+    assert hashlib.sha256(raw).hexdigest() == "fd9d5d06fb1068746246a37b12149755ab0d2077be88b2c9b71ff2a577ad8ab8"
+    assert aggregate["aggregate_only"] is True
+    assert aggregate["records_total"] == 33
+    assert aggregate["results_digest_sha256"] == ("c7bb4d9631d17e05193f606e12554c276e340f993ed4979ddbfe1ca4b3b4e921")
+    assert aggregate["providers"] == [
+        {
+            "corroborated": 29,
+            "corroboration_rate": 0.878788,
+            "error": 0,
+            "expected_record_types": ["cname", "cname_target", "spf", "txt"],
+            "frame_count": 33,
+            "label_basis": "provider-relationship",
+            "measurable_count": 33,
+            "observed_silent": 4,
+            "provider_names": ["HubSpot"],
+            "provider_slug": "hubspot",
+            "unavailable": 0,
+            "unmeasured": 0,
+            "wilson_95_high": 0.951838,
+            "wilson_95_low": 0.726745,
+        }
+    ]
+    assert "samples" not in raw.decode("utf-8").casefold()
