@@ -275,7 +275,7 @@ support claims about registrant location, organizational presence, or regional
 Internet prevalence. Commit the aggregate-only selection declaration and merge
 its implementation before any selected namespace is contacted.
 
-The active v2.14 regional contract is frozen in the
+The completed v2.14 regional contract is frozen in the
 [public declaration](../docs/catalog-regional-round-declaration.md). Its
 official source, mapping, selection, frame, catalog, implementation, collection,
 and decision commitments were published before any selected-namespace request.
@@ -288,9 +288,12 @@ Its receipt-bound dossier, 17,952-namespace exclusion union, and 33-row
 disjoint HubSpot frame produced the closed aggregate-only
 [result](2026-08-14-catalog-vendor-seed-round.md): 29 corroborated, 4
 observed-silent, no unavailable, unmeasured, or error outcome, and no catalog
-promotion. The next operation is the frozen 5,199-row prior-sample
-[drift contract](../docs/catalog-drift-round-declaration.md), whose exact
-implementation and declaration must pass protected main before collection.
+promotion. The final 5,199-row prior-sample
+[drift result](2026-08-14-catalog-drift-round.md) is also closed: all rows were
+measured, no record type breached the frozen decline threshold, the
+catalog-driven measurement-surface change is explicit, classification
+comparison is withheld, and no rule was promoted. Its exact disclosure-safe
+[aggregate](2026-08-14-catalog-drift-aggregate.json) is committed.
 
 ### Frozen prior-sample drift
 
@@ -323,8 +326,8 @@ python -m validation.prepare_catalog_drift_round \
     --public
 ```
 
-Commit only the identifier-free declaration and implementation, pass protected
-main, and then run the exact contract once:
+For a future round, commit only the identifier-free declaration and
+implementation, pass protected main, and then run the exact contract once:
 
 ```bash
 python validation/scan.py \

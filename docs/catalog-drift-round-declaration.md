@@ -1,7 +1,7 @@
 # v2.14 Catalog Drift Round Declaration
 
-Status: frozen; collection prohibited until this declaration and its exact
-implementation pass protected main
+Status: closed; the exact 5,199-row collection and aggregate reduction
+completed on protected main
 
 Protocol frozen: 2026-08-14T03:29:15.688759Z
 
@@ -10,6 +10,13 @@ request. It binds the complete measured portion of the July 17 typed catalog
 baseline, the retained prior result, the new collection implementation, and an
 aggregate-only comparison rule. The exact frame, prior rows, per-namespace
 results, paths, and detailed differences remain in ignored private storage.
+
+The completed aggregate-only outcome is in the
+[dated result](../validation/2026-08-14-catalog-drift-round.md), with the exact
+[reducer JSON](../validation/2026-08-14-catalog-drift-aggregate.json). The
+result records the six-owner `subdomain_txt` measurement surface explicitly,
+withholds catalog classification comparison, reports no observed-count decline
+beyond the frozen threshold, and promotes no catalog rule.
 
 ## Question
 
@@ -102,8 +109,8 @@ batch process starts.
 
 ## Collection and reduction gate
 
-After this declaration and the exact implementation merge through protected
-main, the frozen run shape is:
+The exact implementation merged through protected main before the completed
+collection. Its frozen run shape was:
 
 ```bash
 python validation/scan.py \

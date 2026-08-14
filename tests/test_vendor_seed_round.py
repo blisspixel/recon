@@ -444,7 +444,8 @@ def test_current_docs_keep_vendor_seed_boundary_and_next_operation_aligned() -> 
     assert "37bb3e9f2609b9f4470d637d60f42077593169522b117af9660ac3058516728b" in declaration
     assert "target\ncollection has not started" not in declaration
     assert "2026-08-14-catalog-vendor-seed-round.md" in active
-    assert "5,199-row prior-sample drift contract is frozen" in active
+    assert "5,199-row prior-sample" in active
+    assert "2026-08-14-catalog-drift-round.md" in active
     assert "protected main" in active
     assert (
         "--round-manifest validation/corpus-private/vendor-seed/frozen-contract/round-manifest.json \\\n"

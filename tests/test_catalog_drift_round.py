@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -351,8 +352,40 @@ def test_public_declaration_pins_frozen_contract_and_active_docs() -> None:
     assert "0bb7c32ea9bb63452f5d800cf93acc5c6d794263c63fe4465709accc92830f53" in declaration
     assert "0a7b8398cb78bc5244635886591d1e63be1fe5cc79ea2b2779dacc80e73809a1" in declaration
     assert "only when both the catalog and" in declaration
+    assert "Status: closed" in declaration
+    assert "2026-08-14-catalog-drift-round.md" in declaration
     assert "--drift-prior-contract" in validation_readme
     assert "--compare-to" in validation_readme
+    active_text = "\n".join(active_docs)
+    assert "v2.14.0 release" in active_text
+    assert "protected main" in active_text or "protected-main" in active_text
     for document in active_docs:
         assert "5,199" in document
-        assert "protected main" in document
+
+
+def test_committed_drift_aggregate_is_safe_and_exact() -> None:
+    path = ROOT / "validation" / "2026-08-14-catalog-drift-aggregate.json"
+    raw = path.read_bytes()
+    aggregate = json.loads(raw)
+    attributes = (ROOT / ".gitattributes").read_text(encoding="utf-8").splitlines()
+
+    assert "validation/2026-08-14-catalog-drift-aggregate.json text eol=lf" in attributes
+    assert hashlib.sha256(raw).hexdigest() == "03c1184b22a6f9d73a64f8bb955a28e7e09e29f22d41349a206ef34b696f907c"
+    catalog_baseline.assert_aggregate_safe(aggregate)
+    assert aggregate["aggregate_only"] is True
+    assert aggregate["results"]["frame_count"] == 5_199
+    assert aggregate["namespace_outcomes"] == {
+        "changed": 5_199,
+        "no_change": 0,
+        "unavailable": 0,
+        "unmeasured": 0,
+    }
+    assert aggregate["record_types"]["subdomain_txt"]["deltas"]["opportunity_count"] == 5_199
+    assert aggregate["record_types"]["subdomain_txt"]["outcomes"]["changed"] == 5_199
+    assert aggregate["classification_comparison"]["status"] == "not_comparable_catalog_changed"
+    assert aggregate["decision"] == {
+        "catalog_promotion_authorized": False,
+        "regression_budget_exceeded": False,
+        "regression_record_type_count": 0,
+        "review_required": True,
+    }

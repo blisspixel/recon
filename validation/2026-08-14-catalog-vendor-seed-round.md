@@ -2,8 +2,8 @@
 
 **Date:** 2026-08-14
 
-**Decision:** Vendor-seed round complete; accept the bounded characterization,
-promote no catalog rules, and move to the frozen-sample drift round
+**Decision:** Vendor-seed round complete; accept the bounded characterization
+and promote no catalog rules. The later frozen-sample drift round is closed.
 
 **Disclosure:** Aggregate only. No selected namespace, record value,
 organization name, tenant identifier, or per-domain row is included.
@@ -93,11 +93,11 @@ The vendor-seed round is closed. It establishes a bounded 87.88% HubSpot
 relationship-corroboration yield for this exact disjoint frame and no broader
 coverage, recall, or population claim. It justifies no catalog promotion.
 
-The later [drift declaration](../docs/catalog-drift-round-declaration.md) now
-freezes the July baseline's 5,199 measured rows, prior result,
-observation-only comparison fields, and current implementation. Its
-protected-main collection must classify every changed, unavailable,
-unmeasured, and no-change path while keeping repeated-frame evidence separate
-from independent coverage evidence. Agent Plugins packaging remains v2.15
-work. OKF v0.2 remains a future named-consumer, caller-owned projection rather
-than a replacement for recon's versioned JSON or catalog evidence model.
+The later [drift result](2026-08-14-catalog-drift-round.md) closes the July
+baseline's 5,199 measured rows with complete measurement, no threshold breach,
+one explicit catalog-driven measurement-surface change, withheld
+classification comparison, and no rule promotion. Repeated-frame evidence
+remains separate from independent coverage evidence. Agent Plugins packaging
+remains v2.15 work. OKF v0.2 remains a future named-consumer, caller-owned
+projection rather than a replacement for recon's versioned JSON or catalog
+evidence model.

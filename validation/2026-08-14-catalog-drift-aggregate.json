@@ -1,0 +1,353 @@
+{
+  "aggregate_only": true,
+  "classification_comparison": {
+    "added_assignments": null,
+    "current_catalog_digest_sha256": "206ee855ba9f5107634f0876b66ed46306dbecfaaaff6c8a10a089ac4678baa2",
+    "current_execution_digest_sha256": "01069211619b8be43f4b28e49856cbf5b42269806c549063e7d2485cf7bef309",
+    "namespace_outcomes": null,
+    "prior_catalog_digest_sha256": "f755f5c4626e9d525510c471b84a6f5633e19a81e5792b8a50cb547b0919cc1f",
+    "prior_execution_digest_sha256": null,
+    "removed_assignments": null,
+    "status": "not_comparable_catalog_changed"
+  },
+  "commitments": {
+    "classification_comparison": "only_when_catalog_and_interpretation_digests_match",
+    "concurrency": 4,
+    "contract_digest_sha256": "0a7b8398cb78bc5244635886591d1e63be1fe5cc79ea2b2779dacc80e73809a1",
+    "ct_enabled": false,
+    "current_catalog_digest_sha256": "206ee855ba9f5107634f0876b66ed46306dbecfaaaff6c8a10a089ac4678baa2",
+    "current_execution_digest_sha256": "01069211619b8be43f4b28e49856cbf5b42269806c549063e7d2485cf7bef309",
+    "excluded_error_records": 3,
+    "frame_count": 5199,
+    "frame_digest_sha256": "d1400df98f3b083dbd0176b1805c95c8204f254c9fa1d2bf2dabe58f61d0b9cd",
+    "observation_fields": [
+      "availability",
+      "opportunity_count",
+      "observed_count",
+      "truncated"
+    ],
+    "outcome_precedence": [
+      "unmeasured",
+      "unavailable",
+      "changed",
+      "no_change"
+    ],
+    "prior_catalog_digest_sha256": "f755f5c4626e9d525510c471b84a6f5633e19a81e5792b8a50cb547b0919cc1f",
+    "prior_code_revision": "1c130ee7c6c6687491e4423e3987587a4f39b571",
+    "prior_collected_at": "2026-07-17T20:27:53.561319+00:00",
+    "prior_execution_digest_sha256": null,
+    "prior_records_total": 5202,
+    "prior_results_digest_sha256": "39655fc31713302803d37a17345f30f3b2a8253da082e3c47509db25e16db7ed",
+    "prior_round_kind": "baseline",
+    "round_manifest_digest_sha256": "0bb7c32ea9bb63452f5d800cf93acc5c6d794263c63fe4465709accc92830f53",
+    "schema_version": 1
+  },
+  "decision": {
+    "catalog_promotion_authorized": false,
+    "regression_budget_exceeded": false,
+    "regression_record_type_count": 0,
+    "review_required": true
+  },
+  "generated_at": "2026-08-14T05:33:42.025152Z",
+  "interpretation_limits": {
+    "causal_attribution": false,
+    "independent_coverage": false,
+    "no_change_scope": "retained per-path observation summaries only",
+    "population_estimate": false
+  },
+  "namespace_outcomes": {
+    "changed": 5199,
+    "no_change": 0,
+    "unavailable": 0,
+    "unmeasured": 0
+  },
+  "record_types": {
+    "caa": {
+      "after": {
+        "observed_count": 7188,
+        "opportunity_count": 5199,
+        "partial": 37,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 7118,
+        "opportunity_count": 5199,
+        "partial": 41,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": 70,
+        "opportunity_count": 0,
+        "partial": -4,
+        "truncated": 0
+      },
+      "observed_count_change_rate": 0.009834,
+      "outcomes": {
+        "changed": 42,
+        "no_change": 5157,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    },
+    "cname": {
+      "after": {
+        "observed_count": 3163,
+        "opportunity_count": 10398,
+        "partial": 355,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 3164,
+        "opportunity_count": 10398,
+        "partial": 361,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": -1,
+        "opportunity_count": 0,
+        "partial": -6,
+        "truncated": 0
+      },
+      "observed_count_change_rate": -0.000316,
+      "outcomes": {
+        "changed": 69,
+        "no_change": 5130,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    },
+    "cname_target": {
+      "after": {
+        "observed_count": 17384,
+        "opportunity_count": 17384,
+        "partial": 355,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 17367,
+        "opportunity_count": 17367,
+        "partial": 361,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": 17,
+        "opportunity_count": 17,
+        "partial": -6,
+        "truncated": 0
+      },
+      "observed_count_change_rate": 0.000979,
+      "outcomes": {
+        "changed": 208,
+        "no_change": 4991,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    },
+    "dmarc_rua": {
+      "after": {
+        "observed_count": 5207,
+        "opportunity_count": 5199,
+        "partial": 37,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 5194,
+        "opportunity_count": 5199,
+        "partial": 38,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": 13,
+        "opportunity_count": 0,
+        "partial": -1,
+        "truncated": 0
+      },
+      "observed_count_change_rate": 0.002503,
+      "outcomes": {
+        "changed": 55,
+        "no_change": 5144,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    },
+    "mx": {
+      "after": {
+        "observed_count": 11738,
+        "opportunity_count": 5199,
+        "partial": 36,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 11786,
+        "opportunity_count": 5199,
+        "partial": 38,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": -48,
+        "opportunity_count": 0,
+        "partial": -2,
+        "truncated": 0
+      },
+      "observed_count_change_rate": -0.004073,
+      "outcomes": {
+        "changed": 43,
+        "no_change": 5156,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    },
+    "ns": {
+      "after": {
+        "observed_count": 18307,
+        "opportunity_count": 5199,
+        "partial": 34,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 18317,
+        "opportunity_count": 5199,
+        "partial": 37,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": -10,
+        "opportunity_count": 0,
+        "partial": -3,
+        "truncated": 0
+      },
+      "observed_count_change_rate": -0.000546,
+      "outcomes": {
+        "changed": 40,
+        "no_change": 5159,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    },
+    "spf": {
+      "after": {
+        "observed_count": 13034,
+        "opportunity_count": 5349,
+        "partial": 40,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 13039,
+        "opportunity_count": 5348,
+        "partial": 38,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": -5,
+        "opportunity_count": 1,
+        "partial": 2,
+        "truncated": 0
+      },
+      "observed_count_change_rate": -0.000383,
+      "outcomes": {
+        "changed": 86,
+        "no_change": 5113,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    },
+    "srv": {
+      "after": {
+        "observed_count": 4295,
+        "opportunity_count": 25995,
+        "partial": 60,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 4304,
+        "opportunity_count": 25995,
+        "partial": 58,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": -9,
+        "opportunity_count": 0,
+        "partial": 2,
+        "truncated": 0
+      },
+      "observed_count_change_rate": -0.002091,
+      "outcomes": {
+        "changed": 28,
+        "no_change": 5171,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    },
+    "subdomain_txt": {
+      "after": {
+        "observed_count": 2964,
+        "opportunity_count": 31194,
+        "partial": 44,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 2439,
+        "opportunity_count": 25995,
+        "partial": 45,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": 525,
+        "opportunity_count": 5199,
+        "partial": -1,
+        "truncated": 0
+      },
+      "observed_count_change_rate": 0.215252,
+      "outcomes": {
+        "changed": 5199,
+        "no_change": 0,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    },
+    "txt": {
+      "after": {
+        "observed_count": 82312,
+        "opportunity_count": 5199,
+        "partial": 40,
+        "truncated": 0
+      },
+      "before": {
+        "observed_count": 81361,
+        "opportunity_count": 5199,
+        "partial": 38,
+        "truncated": 0
+      },
+      "deltas": {
+        "observed_count": 951,
+        "opportunity_count": 0,
+        "partial": 2,
+        "truncated": 0
+      },
+      "observed_count_change_rate": 0.011689,
+      "outcomes": {
+        "changed": 966,
+        "no_change": 4233,
+        "unavailable": 0,
+        "unmeasured": 0
+      },
+      "regression_budget_exceeded": false
+    }
+  },
+  "results": {
+    "current_results_digest_sha256": "3e75953869a88494114f0a1d60b29fb8568cf1224cb3f8ae5fc7bfc91e10936b",
+    "frame_count": 5199,
+    "prior_results_digest_sha256": "39655fc31713302803d37a17345f30f3b2a8253da082e3c47509db25e16db7ed"
+  },
+  "round_kind": "drift",
+  "schema_version": 1
+}

@@ -56,7 +56,7 @@ silent-failure, and contract-preserving fixes at any point.
 | **v2.11.0** | Product-quality baseline | Track 3. A structural preflight must prove the frozen comparison can answer its question before target collection | Aggregate-safe scorecard + dated identifiability memo; void live window recorded; fusion not promoted by the non-identifying design |
 | **v2.12.0** | Apply quality decision compatibly | Uses the v2.11 structural stop without violating the stable v2 default contract | Fusion is classified as an advanced diagnostic; explicit flags are the supported transition path; v2 implicit behavior and stable JSON/MCP contracts remain intact; the default-off change is assigned to v3 |
 | **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Shipped: caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions or removals under unavailable source roles; ADR-0014 defers OKF without replacing JSON; full, protected-main, publication, provenance, and channel-parity gates passed |
-| **v2.14.0** | Catalog quality loop - **active build priority** | Independent of fusion promotion; rank, regional, and vendor-seed rounds are closed, and the 5,199-row prior-sample drift contract is frozen | After the drift declaration and implementation pass protected main, re-observe the exact frame and publish changed, unavailable, unmeasured, and no-change aggregates without treating repeated-frame evidence as independent coverage |
+| **v2.14.0** | Catalog quality loop - **active release priority** | Independent of fusion promotion; rank, regional, vendor-seed, and prior-sample drift rounds are closed with aggregate-only results | Publish the coherent catalog-quality release after full local, protected-main, provenance, PyPI, GitHub Release, SBOM, attestation, and channel-parity gates pass |
 | **v2.15.0** | Agent portability and surface cost | Evaluate packaging and tool cuts against representative workflows after the catalog and discovery surface is measured; packaging preparation may start earlier | Agent Plugins conformance is validated against a pinned specification or explicitly deferred while it remains a working draft; measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
 | **v3.0.0** | Contract maturity | The already-deprecated fusion default change requires a major boundary; use the same boundary for any claim-envelope change that cannot remain additive | Fusion omitted-choice defaults off; explicit flags remain stable; versioned claim / observation envelope or explicit decision that v2 stays; migration notes |
 
@@ -124,7 +124,7 @@ full, protected-main, publication, provenance, and channel-parity gates passed.
 A future real-domain fusion study requires a new preregistration whose arms
 first pass executable identifiability and dominance checks.
 
-### 4. Catalog quality loop - **next build priority: v2.14**
+### 4. Catalog quality loop - **evidence complete; v2.14 release gate active**
 
 The rank round is complete with a membership-bound four-band aggregate, four
 bounded promoted families, explicit dispositions, and a fixed-observation
@@ -140,10 +140,13 @@ corroborated and 4 observed-silent rows, with no unavailable, unmeasured, or
 error outcome. No catalog rule was promoted from the evaluation holdout. This
 measure is not recall because a provider relationship does not label
 publication of a particular DNS record. The July baseline's 5,199 measured
-rows, prior result, observation-only comparison fields, catalog and execution
-digests, and one-percent review threshold are now frozen in the
-[drift declaration](docs/catalog-drift-round-declaration.md). Collection is
-prohibited until that declaration and implementation pass protected main.
+rows were re-observed once from protected main under the frozen
+[drift declaration](docs/catalog-drift-round-declaration.md). Its
+[aggregate-only result](validation/2026-08-14-catalog-drift-round.md) reports
+zero unavailable or unmeasured rows, no record-type decline beyond the
+one-percent review threshold, and no catalog promotion. The result explicitly
+separates the extra `_webflow` `subdomain_txt` opportunity from external DNS
+drift and withholds classification comparison across unequal catalog digests.
 Each contract names its independent input
 stratum, or frozen prior sample for drift, plus eligibility and deduplication
 rules, observation opportunities and collection options, catalog and code
@@ -151,7 +154,8 @@ digests, aggregate measures, promotion and regression budgets, and
 disclosure-safe output. Preserve rejected, deferred, unavailable, and
 unmeasured outcomes alongside promoted candidates.
 The work measures catalog quality and freshness; it does not authorize broad
-rule growth or population claims. Detail: [docs/catalog-strategy.md](docs/catalog-strategy.md).
+rule growth or population claims. The next operation is the coherent v2.14.0
+release gate. Detail: [docs/catalog-strategy.md](docs/catalog-strategy.md).
 
 ### 5. Optional operator-hosted access - lower priority side track
 

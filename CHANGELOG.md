@@ -44,6 +44,11 @@ drift round.
   typed baseline, records the three excluded historical validation errors,
   pins the prior and current digests, and prohibits collection until the
   contract and implementation pass protected main.
+- An aggregate-only prior-sample drift result closes all 5,199 frozen rows with
+  zero unavailable or unmeasured outcomes, no observed-count decline beyond
+  the predeclared threshold, explicit disclosure of the catalog-driven
+  `subdomain_txt` measurement-surface change, withheld classification
+  comparison across unequal catalog digests, and no rule promotion.
 - A bounded vendor-seed source freezer retrieves only exact HTTPS pages under
   predeclared provider domains. It disables redirects, credentials,
   compression, and retries; enforces media-type and byte limits; publishes an
@@ -109,7 +114,8 @@ drift round.
   vendor-seed measurement protocol, bounded source acquisition, receipt
   binding, preparer, evaluator, exact disjoint frame, protected-main collection,
   aggregate reduction, and candidate dispositions are complete. The 5,199-row
-  frozen-sample drift contract is declared and awaits protected-main collection.
+  frozen-sample drift collection, aggregate reduction, measurement-surface
+  disposition, and zero-promotion decision are also complete.
 
 ### Fixed
 
