@@ -240,6 +240,7 @@ def execution_digest_sha256() -> str:
     validation_files = [
         REPO_ROOT / "validation" / name
         for name in (
+            "archive_vendor_seed_sources.py",
             "catalog_baseline.py",
             "diff_runs.py",
             "evaluate_catalog_promotions.py",

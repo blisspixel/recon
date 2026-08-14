@@ -37,6 +37,11 @@ Committed (generic tooling, no company names):
   to the official IANA and UN M49 pages, archives the raw responses privately,
   and derives their exact ASCII ccTLD intersection. It contacts no sampled
   namespace and prints only aggregate counts and cryptographic commitments.
+- `archive_vendor_seed_sources.py`: sequentially archives only exact HTTPS
+  pages under predeclared provider domains. It refuses redirects, credentials,
+  compression, retries, unsafe hosts, unexpected media types, and oversized
+  responses; writes a private receipt atomically; and prints no URL or target
+  identifier.
 - `stratify_catalog_round.py`: reconstructs frozen private membership, assigns
   every completed result exactly once, and writes ordered per-stratum typed
   aggregates without exposing stratum labels or namespaces.
@@ -282,12 +287,67 @@ the first selected-namespace request; drift follows against a frozen prior
 sample.
 
 The vendor-seed dossier uses only provider-controlled HTTPS evidence as its
-relationship label. Each provider is an existing catalog slug, every member is
-bound to an archived source ID, every stratum has at least 20 unique apexes,
-and the exclusion union covers development and every earlier observation or
-case-study frame. Customer identities, archived pages, source mappings, and
-exclusion rows remain private. Prepare the full contract with zero target
-requests:
+relationship label. First create a strict private source plan with
+`schema_version`, `private`, `source_set_id`, a meaningful `purpose`, and one
+or more `providers`. Each provider names an existing release-bound built-in
+catalog `slug`, one or more `allowed_domains`, and exact sources with `id`,
+`url`, and `expected_media_type`. Operator-local custom and process-local
+ephemeral fingerprints are ineligible because the public catalog commitment
+does not bind them. Declaring an allowed registrable domain is a curator
+assertion that it is provider-controlled; the tool enforces host containment
+but cannot establish corporate ownership.
+
+Example source-plan shape using a public provider citation and no customer
+identity:
+
+```json
+{
+  "schema_version": 1,
+  "private": true,
+  "source_set_id": "vendor-seed-sources-2026-08",
+  "purpose": "Archive exact provider-controlled customer evidence before freezing the disjoint vendor-seed frame.",
+  "providers": [
+    {
+      "slug": "shopify",
+      "allowed_domains": ["shopify.com"],
+      "sources": [
+        {
+          "id": "customer-evidence",
+          "url": "https://www.shopify.com/case-studies",
+          "expected_media_type": "text/html"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Archive the plan before extracting any customer membership:
+
+```bash
+python -m validation.archive_vendor_seed_sources \
+    --plan validation/corpus-private/vendor-seed/source-plan.json \
+    --output-dir validation/corpus-private/vendor-seed/frozen-sources
+```
+
+The freezer makes one sequential GET per declared source, with no redirects,
+credentials, compression, or retry. It accepts only the declared HTML, XHTML,
+PDF, text, or JSON media type, caps each response at 10 MiB and the full set at
+128 MiB, and atomically writes the exact `source-plan.json`, `receipt.json`,
+and archived bytes. The loader verifies the plan and implementation digests
+before the dossier can use the receipt. Its console output contains only
+counts and digests. This is provider-source
+collection, not selected-namespace collection; `selected_target_requests`
+remains zero.
+
+Build the private schema-version-2 dossier from that immutable receipt. Its
+`source_receipt` field points to `receipt.json`; every dossier source must match
+the receipt's provider slug, source ID, URL, retrieval time, archive path, byte
+count, and digest exactly. Each member is bound to an archived source ID, every
+stratum has at least 20 unique apexes, and the exclusion union covers
+development and every earlier observation or case-study frame. Customer
+identities, archived pages, source mappings, and exclusion rows remain private.
+Prepare the schema-version-2 contract with zero target requests:
 
 ```bash
 python -m validation.prepare_vendor_seed_round \
