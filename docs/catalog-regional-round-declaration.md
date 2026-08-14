@@ -132,5 +132,7 @@ reduced completely, and the clean-main counterfactual reproduced the accepted
 fixed-observation result. The regional round is closed. The vendor-seed
 measurement protocol, bounded source freezer, immutable receipt binding,
 preparer, and evaluator are now implemented. Its 33-row disjoint HubSpot frame
-and aggregate pre-collection commitments are frozen with zero target requests.
-Protected-main publication and then exact-frame collection are next.
+produced the closed aggregate-only
+[vendor-seed result](../validation/2026-08-14-catalog-vendor-seed-round.md),
+with 29 corroborated and 4 observed-silent rows and no catalog promotion.
+Frozen-sample drift is next.

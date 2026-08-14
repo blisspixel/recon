@@ -283,9 +283,10 @@ accepted fixed-observation decision, and clean protected-main replay. The
 regional round is closed. The fail-closed vendor-seed protocol is published in
 the [public declaration](../docs/catalog-vendor-seed-round-declaration.md).
 Its receipt-bound dossier, 17,952-namespace exclusion union, and 33-row
-disjoint HubSpot frame are frozen with aggregate commitments and zero target
-requests. Merge those commitments through protected main before the first
-selected-namespace request; drift follows against a frozen prior sample.
+disjoint HubSpot frame produced the closed aggregate-only
+[result](2026-08-14-catalog-vendor-seed-round.md): 29 corroborated, 4
+observed-silent, no unavailable, unmeasured, or error outcome, and no catalog
+promotion. Drift follows against a frozen prior sample.
 
 The steps below document the reusable protocol and its reproduction boundary;
 they are not instructions to replace the current frozen contract. A
@@ -360,9 +361,11 @@ python -m validation.prepare_vendor_seed_round \
 
 Copy only aggregate counts and commitments into the public declaration, merge
 that declaration and the exact implementation through protected main, and
-only then run the frozen frame. For the current contract those commitments are
-already recorded in the declaration, CT is disabled, and direct CSE and BIMI
-probes are off.
+only then run the frozen frame. For the completed contract those commitments
+were recorded before collection, CT was disabled, and direct CSE and BIMI
+probes were off. The commands below reproduce the exact invocation shape; a
+later repeated collection is drift evidence, not a second independent
+vendor-seed result.
 
 ```bash
 python validation/scan.py \

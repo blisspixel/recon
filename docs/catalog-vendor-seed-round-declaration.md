@@ -1,19 +1,19 @@
 # v2.14 Catalog Vendor-Seed Round Declaration
 
-Status: protocol and private pre-collection contract frozen; aggregate source,
-exclusion, frame, catalog, and execution commitments recorded below; target
-collection has not started
+Status: closed; frozen 33-row collection and aggregate reduction complete; no
+catalog rule promoted
 
 Protocol frozen: 2026-08-13
+Result recorded: 2026-08-14
 
-This declaration fixes the vendor-seed label, denominator, exclusions,
+This declaration fixed the vendor-seed label, denominator, exclusions,
 disclosure rules, collection boundary, and interpretation before any selected
-namespace is contacted. The private dossier passed the fail-closed preparer
+namespace was contacted. The private dossier passed the fail-closed preparer
 after bounded source acquisition and with zero target requests. Exact member
 rows and archived source bytes remain
-private; the disclosure-safe commitments below must merge through protected
-main before collection can begin. This is a frozen pre-collection declaration,
-not a completed result.
+private. The disclosure-safe commitments below merged through protected main
+before collection began. The completed aggregate result is published in
+[the vendor-seed memo](../validation/2026-08-14-catalog-vendor-seed-round.md).
 
 ## Question
 
@@ -166,6 +166,23 @@ carry the normal current public reference, review date, positive,
 lookalike-negative, sparse, and provenance fixtures, and pass a separate
 fixed-observation zero-regression comparison before promotion.
 
+## Completed aggregate result
+
+The exact frame ran once from clean protected main at
+`d6e7b17aa3686a83cf004e8cd93415aa411ec423`. All 33 rows completed with no
+error. HubSpot was independently corroborated on 29 rows; 4 rows were observed
+silent; and 0 were unavailable, unmeasured, or errors. The resulting
+provider-relationship corroboration rate is 0.878788, with a Wilson 95%
+interval from 0.726745 to 0.951838.
+
+The typed queue contained one recurrent SPF bucket and three recurrent TXT
+buckets. Nine CNAME gaps were singletons below the frozen threshold. No rule is
+promoted because this evaluation holdout cannot tune the catalog and recurrence
+alone is not an independent provider basis. Exact commitments, aggregate
+counts, candidate dispositions, and the non-recall interpretation are in the
+[result memo](../validation/2026-08-14-catalog-vendor-seed-round.md) and its
+[machine-readable aggregate](../validation/2026-08-14-catalog-vendor-seed-aggregate.json).
+
 ## Implementation and next operation
 
 The implementation has one bounded provider-source acquisition step and keeps
@@ -187,9 +204,7 @@ frame preparation and result reduction network-free:
   catalog drift, incomplete results, denominator semantics, and identifier
   absence.
 
-The next operation is to merge these aggregate commitments with the exact
-implementation through protected-main CI. Only then may the frozen 33-row frame
-run once with its committed collection settings. The reducer must publish the
-HubSpot provider-level outcome with every corroborated, observed-silent,
-unavailable, unmeasured, and error row accounted for. No result may add members,
-change the denominator, or tune a catalog rule.
+The vendor-seed round is closed. The next operation is to freeze and re-observe
+a prior sample as the drift round, preserving repeated-frame evidence as drift
+rather than independent coverage. No later result may retroactively add
+members, change this denominator, or tune a catalog rule from this holdout.
