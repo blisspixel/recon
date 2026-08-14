@@ -160,24 +160,9 @@ def compute_detection_scores(
 ) -> tuple[tuple[str, str], ...]:
     """Compute per-slug detection confidence from weighted evidence.
 
-    Groups evidence by slug, computes a weighted sum of distinct source_types
-    per slug using detection weights. Each (slug, source_type) pair contributes
-    its weight once (max weight if duplicated).
-
+    Groups evidence by slug and sums the max weight per distinct source_type.
     Thresholds: weighted_sum >= 2.5 → "high", >= 1.5 → "medium", else "low".
-
-    When all weights are 1.0 (default), the weighted sum equals the count of
-    distinct source types, preserving existing behavior:
-    3+ types (sum >= 3.0 >= 2.5) → "high", 2 types (sum 2.0 >= 1.5) → "medium",
-    1 type (sum 1.0 < 1.5) → "low".
-
-    Args:
-        evidence: Tuple of EvidenceRecord instances.
-        weights: Optional mapping of (slug, source_type) → weight.
-            If None, weights are loaded automatically from fingerprints.
-            Pass an explicit dict to override (useful for testing).
-
-    Returns tuple of (slug, score) pairs sorted by slug.
+    Default weight 1.0 preserves count-of-types scoring (3+ high, 2 medium).
     """
     if not evidence:
         return ()
@@ -188,6 +173,8 @@ def compute_detection_scores(
     # For each slug, track the max weight per distinct source_type
     slug_source_weights: dict[str, dict[str, float]] = {}
     for ev in evidence:
+        if not ev.slug:
+            continue
         per_source = slug_source_weights.setdefault(ev.slug, {})
         w = weights.get((ev.slug, ev.source_type), 1.0)
         # Keep max weight if multiple evidence records share (slug, source_type)

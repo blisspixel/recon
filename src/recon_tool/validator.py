@@ -203,9 +203,16 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
 
     if _SCHEME_RE.match(stripped):
         try:
-            domain = urlsplit(stripped).hostname or ""
+            parsed = urlsplit(stripped)
         except ValueError:
             domain = ""
+        else:
+            # Userinfo is never a legitimate recon target. Accepting it also
+            # turns ``http://example.com\@evil.com`` and ``http://example.com%5C@evil.com``
+            # into a silent lookup of ``evil.com``.
+            if parsed.username is not None or parsed.password is not None or "@" in (parsed.netloc or ""):
+                raise ValueError(f"Invalid domain format: {raw_input}")
+            domain = parsed.hostname or ""
     else:
         # Bare host input may still include a copied query, fragment, or path.
         domain = re.split(r"[/?#]", stripped, maxsplit=1)[0]

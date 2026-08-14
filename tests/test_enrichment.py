@@ -397,15 +397,53 @@ class TestRelatedEnrichmentDoesNotBorrowEmailControls:
 
         self._stub(
             monkeypatch,
-            ("DMARC", "DKIM", "SPF: strict (-all)", "MTA-STS", "BIMI"),
-            ("dmarc", "dkim", "spf-strict", "mta-sts", "mta-sts-enforce", "bimi"),
+            (
+                "DMARC",
+                "DKIM",
+                "SPF: strict (-all)",
+                "MTA-STS",
+                "BIMI",
+                "TLS-RPT",
+                "Null MX (domain does not accept email)",
+                "Custom or unclassified MX",
+            ),
+            (
+                "dmarc",
+                "dkim",
+                "dkim-exchange",
+                "spf-strict",
+                "mta-sts",
+                "mta-sts-enforce",
+                "bimi",
+                "bimi-vmc",
+                "dmarc-invalid",
+                "tls-rpt",
+                "null-mx",
+                "self-hosted-mail",
+            ),
         )
 
         enriched, _results = await resolver._enrich_from_related(self._apex(), [], skip_ct=True)
 
-        borrowed = {"dmarc", "dkim", "spf-strict", "mta-sts", "mta-sts-enforce", "bimi"}
+        borrowed = {
+            "dmarc",
+            "dkim",
+            "dkim-exchange",
+            "spf-strict",
+            "mta-sts",
+            "mta-sts-enforce",
+            "bimi",
+            "bimi-vmc",
+            "dmarc-invalid",
+            "tls-rpt",
+            "null-mx",
+            "self-hosted-mail",
+        }
         assert borrowed.isdisjoint(enriched.slugs)
         assert not borrowed.intersection({s.lower() for s in enriched.services})
+        assert "TLS-RPT" not in enriched.services
+        assert "Null MX (domain does not accept email)" not in enriched.services
+        assert "Custom or unclassified MX" not in enriched.services
         # The apex keeps what its own evidence proves.
         assert "microsoft365" in enriched.slugs
 

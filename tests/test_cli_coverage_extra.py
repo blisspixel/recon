@@ -457,11 +457,17 @@ class TestCliPostureAndExplainFlags:
             assert "Source Status" in result.stdout
             # At least one source from the fake info must be visible
             assert "oidc_discovery" in result.stdout or "user_realm" in result.stdout
+            assert "Final confidence" in result.stdout
         finally:
             if env_orig is None:
                 os.environ.pop("RECON_CONFIG_DIR", None)
             else:
                 os.environ["RECON_CONFIG_DIR"] = env_orig
+
+    def test_cache_ttl_rejects_negative_values(self) -> None:
+        result = runner.invoke(app, ["lookup", "alpha.invalid", "--cache-ttl", "-1"])
+        assert result.exit_code == 2
+        assert "non-negative" in (result.stdout + result.stderr).lower()
 
     def test_explain_flag_basic(self) -> None:
         async def fake_resolve(*args: object, **kwargs: object):

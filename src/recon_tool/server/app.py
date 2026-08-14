@@ -286,7 +286,7 @@ def validate_domain_for_tool(domain: str, request_id: str) -> str:
         return validate_domain(domain)
     except ValueError as exc:
         log_validation_failed(request_id)
-        raise ToolError(str(exc)) from exc
+        raise ToolError(invalid_domain_message(exc)) from exc
 
 
 async def _resolve_validated_domain_for_tool(validated: str, request_id: str) -> TenantInfo:

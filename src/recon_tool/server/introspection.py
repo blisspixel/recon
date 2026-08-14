@@ -700,7 +700,7 @@ async def discover_fingerprint_candidates(
         validated = validate_domain(domain)
     except ValueError as exc:
         log_validation_failed(request_id)
-        raise ToolError(str(exc)) from exc
+        raise ToolError(server_app.invalid_domain_message(exc)) from exc
 
     # Mirror the lookup_tenant cache + per-domain rate-limit pattern so a
     # prompt-injected MCP client cannot force repeated full resolutions

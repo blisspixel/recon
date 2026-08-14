@@ -98,6 +98,25 @@ def spf_all_qualifier(spf_record: str) -> str | None:
     return None
 
 
+def apply_spf_policy_record(ctx: dns_base.DetectionCtx, txt: str) -> None:
+    """Retain the observed SPF policy, including a permissive or missing ``all``.
+
+    Strict and softfail keep their scored labels. ``+all``, ``?all``, and a
+    record with no ``all`` still need a typed SPF occurrence so exposure and
+    explain do not treat a live policy as an empty channel.
+    """
+    qualifier = spf_all_qualifier(txt)
+    if qualifier == "-":
+        ctx.services.add(SVC_SPF_STRICT)
+        ctx.evidence.append(EvidenceRecord("SPF", txt, SVC_SPF_STRICT, "spf-strict"))
+        return
+    if qualifier == "~":
+        ctx.services.add(SVC_SPF_SOFTFAIL)
+        ctx.evidence.append(EvidenceRecord("SPF", txt, SVC_SPF_SOFTFAIL, "spf-softfail"))
+        return
+    ctx.evidence.append(EvidenceRecord("SPF", txt, "SPF record observed", "spf"))
+
+
 async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Scan TXT records for service fingerprints and SPF analysis."""
     txt_patterns = get_txt_patterns()
@@ -155,13 +174,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             for det in filter_shadowed_matches(spf_matches):
                 ctx.add(det.name, det.slug, source_type="SPF", raw_value=txt)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
-            all_qualifier = spf_all_qualifier(txt_lower)
-            if all_qualifier == "-":
-                ctx.services.add(SVC_SPF_STRICT)
-                ctx.evidence.append(EvidenceRecord("SPF", txt, SVC_SPF_STRICT, "spf-strict"))
-            elif all_qualifier == "~":
-                ctx.services.add(SVC_SPF_SOFTFAIL)
-                ctx.evidence.append(EvidenceRecord("SPF", txt, SVC_SPF_SOFTFAIL, "spf-softfail"))
+            apply_spf_policy_record(ctx, txt)
             # Follow SPF redirect= chains. A record like
             # "v=spf1 redirect=_spf.mail.umich.edu" means "use that
             # domain's SPF as mine" - RFC 7208 §6.1. Higher-ed and
@@ -177,7 +190,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # end of the record let ``+all`` and ``?all`` through, so the
             # redirect target's strict policy was credited to a record whose
             # own policy passes everything.
-            if "redirect=" in txt_lower and all_qualifier is None:
+            if "redirect=" in txt_lower and spf_all_qualifier(txt_lower) is None:
                 await _follow_spf_redirect(ctx, txt_lower, depth=0, max_depth=3)
 
     # SPF complexity summary - runs once per domain after the TXT
@@ -234,11 +247,16 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
             )
             return
         ctx.record_catalog_query("spf")
+        # A timeout or nameserver failure on the redirect target is not an
+        # apex TXT observation failure. Marking ``dns:apex_txt`` here stripped
+        # already-collected origin SPF, include counts, and verification
+        # tokens. Use a distinct hop marker so the origin channel stays
+        # available.
         target_records = await dns_base.safe_resolve(
             target,
             "TXT",
             degraded_sources=ctx.degraded_sources,
-            degraded_name="dns:apex_txt",
+            degraded_name="dns:spf_redirect",
         )
         patterns = get_spf_patterns()
         for record in target_records:

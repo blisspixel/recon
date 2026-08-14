@@ -33,6 +33,31 @@ stable JSON field changes. A maintainer-only network-free validator checks the
 frozen v2.15 representative-client evaluation contract and its generated,
 schema-pinned portable packaging candidate.
 
+### Fixed
+
+- Scheme URLs with userinfo, including the `host\@other` paste form, are
+  rejected instead of looking up the host after `@`.
+- Related-domain enrichment no longer lends BIMI VMC, invalid DMARC, TLS-RPT,
+  Null MX, or unclassified MX labels to the queried apex.
+- The default Email row omits MTA-STS when the fetched policy mode is `none`.
+- Unclassified MX evidence no longer emits an empty-string detection score.
+- An SPF `redirect=` hop failure no longer marks the origin apex TXT channel
+  unavailable or hides already collected SPF evidence.
+- IPv4-mapped IPv6 destinations are classified by the embedded IPv4 address.
+- Structured MCP tools sanitize validator errors the same way `lookup_tenant`
+  already did.
+- `--explain` uses stored confidence dimensions and names a tenant-ID conflict
+  instead of claiming a minimum that was not the final value.
+- Cache-hit lookups reconstruct source status so `--verbose`, `--sources`, and
+  `--explain` stay populated.
+- `--cache-ttl` rejects negative values with the validation exit instead of
+  silently treating every entry as a miss.
+- A failed `--chain` or `chain_lookup` seed domain now fails like an ordinary
+  lookup instead of returning an empty success.
+- A live permissive SPF record (`+all`, `?all`, or no `all`) is retained as an
+  observed policy with no strict-SPF credit.
+- Sparse insights no longer mention MX or identity when neither was observed.
+
 ### Added
 
 - A digest-bound v2.15 agent-portability preregistration pins the Agent Plugins

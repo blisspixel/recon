@@ -95,6 +95,13 @@ def positive_finite_float(value: float) -> float:
     return value
 
 
+def non_negative_int(value: int) -> int:
+    """Validate a non-negative integer option such as ``--cache-ttl``."""
+    if isinstance(value, bool) or value < 0:
+        raise typer.BadParameter("must be a non-negative integer")
+    return value
+
+
 def fmt_exc(exc: BaseException) -> str:
     """Render an exception for user display, falling back to the type name.
 

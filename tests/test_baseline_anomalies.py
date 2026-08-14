@@ -129,7 +129,7 @@ class TestComputeBaselineAnomalies:
         assert len(anomalies[0].metadata_dependencies) == 1
         assert anomalies[0].metadata_dependencies[0].field == "observed_fingerprint_categories"
 
-        record = _build_explanations(
+        records = _build_explanations(
             TenantInfo(
                 tenant_id=None,
                 display_name="Synthetic",
@@ -138,7 +138,8 @@ class TestComputeBaselineAnomalies:
             ),
             [],
             anomalies,
-        )[0]
+        )
+        record = next(item for item in records if item.item_type == "observation")
         assert record.lineage_status is ExplanationLineageStatus.EXACT_RULE_ONLY
         assert record.lineage_rule_ids == (anomalies[0].source_name,)
 

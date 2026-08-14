@@ -1068,6 +1068,20 @@ class TestComputeDetectionScores:
     def test_empty_evidence(self):
         assert compute_detection_scores(()) == ()
 
+    def test_empty_slug_unclassified_mx_is_omitted(self):
+        evidence = (
+            EvidenceRecord(
+                source_type="MX",
+                raw_value="10 mail.alpha.invalid",
+                rule_name="Custom or unclassified MX host",
+                slug="",
+            ),
+            EvidenceRecord(source_type="TXT", raw_value="v=spf1", rule_name="SPF", slug="m365"),
+        )
+        scores = compute_detection_scores(evidence)
+        assert scores == (("m365", "low"),)
+        assert all(slug for slug, _score in scores)
+
     def test_sorted_by_slug(self):
         evidence = (
             EvidenceRecord(source_type="TXT", raw_value="x", rule_name="r", slug="zzz"),

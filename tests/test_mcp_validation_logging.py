@@ -139,6 +139,17 @@ class TestMcpErrorTextIsSanitized:
         assert rendered.startswith("Error: ")
 
     @pytest.mark.asyncio
+    async def test_structured_tool_validation_strips_control_bytes(self) -> None:
+        from recon_tool.server.posture import analyze_posture
+
+        with pytest.raises(ToolError) as excinfo:
+            await analyze_posture(self.HOSTILE)
+        rendered = str(excinfo.value)
+        for forbidden in ("\x1b", "\x07", "\r", "\n\nSYSTEM"):
+            assert forbidden not in rendered
+        assert rendered.startswith("Error: ")
+
+    @pytest.mark.asyncio
     async def test_discover_does_not_leak_resolver_internals(self) -> None:
         from unittest.mock import AsyncMock, patch
 

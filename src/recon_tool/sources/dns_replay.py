@@ -109,6 +109,9 @@ def _replay_txt(ctx: DetectionCtx, value: str) -> None:
     for match in filter_shadowed_matches(spf_matches):
         ctx.add(match.name, match.slug, source_type="SPF", raw_value=value)
         ctx.record_fp_match(match.slug, "spf", match.pattern)
+    from recon_tool.sources.dns_email import apply_spf_policy_record
+
+    apply_spf_policy_record(ctx, value)
 
 
 def _replayed_context(result: SourceResult) -> DetectionCtx:

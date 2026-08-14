@@ -110,6 +110,23 @@ class TestExposureIndexLineage:
         assert identity.evidence == ()
         assert assessment.posture_score == 80
 
+    def test_permissive_spf_record_is_observed_value_without_strict_credit(self) -> None:
+        info = replace(
+            _fully_observed_info(),
+            services=tuple(service for service in _fully_observed_info().services if service != SVC_SPF_STRICT),
+            slugs=tuple(slug for slug in _fully_observed_info().slugs if slug != "spf-strict"),
+            evidence=(
+                *(record for record in _fully_observed_info().evidence if record.source_type != "SPF"),
+                EvidenceRecord("SPF", "v=spf1 +all", "SPF record observed", "spf"),
+            ),
+        )
+        assessment = assess_exposure_from_info(info)
+        spf = next(item for item in assessment.index_components if item.component_id == "index.email.spf-strict.v1")
+
+        assert spf.state == "observed_value"
+        assert spf.awarded_points == 0
+        assert spf.evidence
+
     def test_spf_detection_without_matching_record_remains_unresolved(self) -> None:
         info = _fully_observed_info()
         assessment = assess_exposure_from_info(

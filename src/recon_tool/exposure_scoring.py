@@ -236,7 +236,9 @@ def _spf_component(
         rule_names=frozenset({SVC_SPF_STRICT}),
         slugs=frozenset({"spf-strict"}),
     )
-    other_records = _records(info, source_types=frozenset({"SPF"}), rule_names=frozenset({SVC_SPF_SOFTFAIL}))
+    other_records = tuple(
+        record for record in _records(info, source_types=frozenset({"SPF"})) if record not in strict_records
+    )
     strict = bool(strict_records)
     declared = bool(
         {SVC_SPF_STRICT, SVC_SPF_SOFTFAIL} & set(info.services) or {"spf-strict", "spf-softfail"} & set(info.slugs)

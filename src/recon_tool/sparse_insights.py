@@ -154,12 +154,15 @@ def sparse_signal_insights(ctx: SparseInsightContext) -> list[str]:
             _guidance(ctx),
         ]
 
+    has_mx_or_identity = ctx.has_mx_records or ctx.auth_type is not None or ctx.google_auth_type is not None
+    remainder = (
+        "few observable records beyond MX and identity" if has_mx_or_identity else "few observable public records"
+    )
     return [
         claim_text(
-            "Sparse public signal: few observable records beyond MX and "
-            "identity. Consistent with a parked or dormant domain, a heavily "
-            "proxied namespace, or services hosted on a different apex. "
-            "Observation, not a verdict.",
+            f"Sparse public signal: {remainder}. Consistent with a parked or "
+            "dormant domain, a heavily proxied namespace, or services hosted "
+            "on a different apex. Observation, not a verdict.",
             evidence=ctx.evidence,
             scope=("public_metadata:bounded_collection",),
             allows_scope_only=True,

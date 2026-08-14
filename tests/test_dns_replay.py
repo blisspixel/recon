@@ -86,10 +86,11 @@ def test_cached_txt_replay_preserves_txt_and_spf_evidence(monkeypatch) -> None:
 
     replayed = dns_replay.replay_cached_dns_fingerprints(original)
 
-    assert replayed.detected_services == ("Mail Gateway", "Verification Service")
+    assert replayed.detected_services == ("Mail Gateway", "SPF: strict (-all)", "Verification Service")
     assert replayed.detected_slugs == ("mail-gateway", "verification-service")
     assert {(item.slug, item.source_type) for item in replayed.evidence} == {
         ("mail-gateway", "SPF"),
+        ("spf-strict", "SPF"),
         ("verification-service", "TXT"),
     }
 

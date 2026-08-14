@@ -96,7 +96,10 @@ def _email_summary_controls(
 
     if info.mta_sts_mode and info.mta_sts_mode != "none":
         _append_unique(summary, f"MTA-STS {info.mta_sts_mode}")
-    elif "MTA-STS" in service_set:
+    elif "MTA-STS" in service_set and info.mta_sts_mode != "none":
+        # RFC 8461 mode "none" means the policy is not in effect. The TXT
+        # still adds the MTA-STS service label; do not list it as a live
+        # control next to DMARC / SPF when the fetched policy is off.
         _append_unique(summary, "MTA-STS")
 
     if "BIMI" in service_set:

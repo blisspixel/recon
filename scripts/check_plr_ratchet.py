@@ -21,12 +21,14 @@ MAX_COUNTS = {
     "PLR0915": 7,  # too many statements
 }
 
-_STAT_RE = re.compile(r"^\s*(\d+)\s+(PLR\d{4})\s+", re.MULTILINE)
+_ANSI_RE = re.compile(r"\x1b\[[0-9;]*m")
+_STAT_RE = re.compile(r"(\d+)\s+(PLR\d{4})")
 
 
 def parse_statistics(output: str) -> dict[str, int]:
     counts: dict[str, int] = dict.fromkeys(SELECTED_RULES, 0)
-    for count, rule in _STAT_RE.findall(output):
+    cleaned = _ANSI_RE.sub("", output)
+    for count, rule in _STAT_RE.findall(cleaned):
         if rule in counts:
             counts[rule] = int(count)
     return counts
@@ -61,7 +63,7 @@ def _run_ruff() -> subprocess.CompletedProcess[str]:
 
 def main() -> int:
     result = _run_ruff()
-    output = f"{result.stdout}\n{result.stderr}"
+    output = _ANSI_RE.sub("", f"{result.stdout}\n{result.stderr}")
     if result.returncode not in (0, 1):
         print(output.strip() or "ruff failed before producing PLR statistics", file=sys.stderr)
         return result.returncode
