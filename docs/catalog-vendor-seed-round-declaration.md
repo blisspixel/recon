@@ -204,7 +204,10 @@ frame preparation and result reduction network-free:
   catalog drift, incomplete results, denominator semantics, and identifier
   absence.
 
-The vendor-seed round is closed. The next operation is to freeze and re-observe
-a prior sample as the drift round, preserving repeated-frame evidence as drift
-rather than independent coverage. No later result may retroactively add
-members, change this denominator, or tune a catalog rule from this holdout.
+The vendor-seed round is closed. The later
+[drift declaration](catalog-drift-round-declaration.md) freezes the July
+baseline's 5,199 measured rows, prior result, observation-only comparison
+fields, and current implementation. Its protected-main collection and
+aggregate result are next, and repeated-frame evidence remains drift rather
+than independent coverage. No later result may retroactively add members,
+change this denominator, or tune a catalog rule from this holdout.

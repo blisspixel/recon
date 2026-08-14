@@ -413,7 +413,8 @@ Risk: false-positive and regional-selection bias
   not accepted.
 - Preserve the closed vendor-seed source, exclusion, frame, catalog, execution,
   and aggregate result commitments. Do not treat silence as a false negative or
-  tune the evaluated catalog from holdout outcomes. Complete drift next.
+  tune the evaluated catalog from holdout outcomes. Preserve the frozen
+  5,199-row drift contract and complete its protected-main collection next.
 - Prioritize regional and non-CNAME gaps by aggregate frequency only within the
   declared observation opportunities and recurrence thresholds.
 - Resolve each current candidate as promoted, rejected, or explicitly
@@ -567,9 +568,11 @@ Execute this track in four bounded phases:
    v2.12 compatibility transition, and shipped v2.13 observation capsules.
 3. Preserve the closed v2.14 rank, regional, and vendor-seed decisions,
    including the vendor-seed non-promotion disposition.
-4. Freeze and re-observe the prior sample as the drift round. Keep all public
-   evidence aggregate-only and do not present repeated-frame evidence as
-   independent coverage.
+4. Preserve the frozen 5,199-row drift frame, prior-result sidecar, and
+   observation-only comparison semantics. After the declaration and exact
+   implementation pass protected main, re-observe the frame once. Keep all
+   public evidence aggregate-only and do not present repeated-frame evidence
+   as independent coverage.
 5. Backfill review dates only in families examined through those rounds, and
    raise the freshness ratchet only when measured coverage supports it.
 6. Measure and, only if justified, simplify operator and agent discovery in

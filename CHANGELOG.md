@@ -28,11 +28,22 @@ operator, corporate group, ownership, or control.
 
 ### Tool Surface Changes
 
-Tool surface changes: no CLI command, flag, MCP tool, resource, or stable JSON
-field changes.
+Tool surface changes: no public recon CLI command, MCP tool, resource, or
+stable JSON field changes. The maintainer-only `validation/scan.py` command
+adds `--drift-prior-contract` and requires an explicit `--compare-to` for a
+drift round.
 
 ### Added
 
+- A fail-closed prior-sample drift preparer and aggregate evaluator bind the
+  retained prior result, its catalog and collection regime, the exact eligible
+  frame, the current catalog and execution surface, and a four-outcome
+  comparison. The evaluator keeps observation-summary drift separate from
+  catalog interpretation changes and emits no target identifiers.
+- A public drift declaration freezes the 5,199 measured rows from the July 17
+  typed baseline, records the three excluded historical validation errors,
+  pins the prior and current digests, and prohibits collection until the
+  contract and implementation pass protected main.
 - A bounded vendor-seed source freezer retrieves only exact HTTPS pages under
   predeclared provider domains. It disables redirects, credentials,
   compression, and retries; enforces media-type and byte limits; publishes an
@@ -97,8 +108,8 @@ field changes.
   fixed-observation decision, and protected-main replay are complete. The
   vendor-seed measurement protocol, bounded source acquisition, receipt
   binding, preparer, evaluator, exact disjoint frame, protected-main collection,
-  aggregate reduction, and candidate dispositions are complete. Frozen-sample
-  drift is next.
+  aggregate reduction, and candidate dispositions are complete. The 5,199-row
+  frozen-sample drift contract is declared and awaits protected-main collection.
 
 ### Fixed
 

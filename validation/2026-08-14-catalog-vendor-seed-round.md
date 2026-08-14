@@ -93,9 +93,11 @@ The vendor-seed round is closed. It establishes a bounded 87.88% HubSpot
 relationship-corroboration yield for this exact disjoint frame and no broader
 coverage, recall, or population claim. It justifies no catalog promotion.
 
-The next v2.14 operation is to freeze and re-observe a prior sample as the drift
-round, classify every changed, unavailable, and unmeasured path, and keep
-repeated-frame evidence separate from independent coverage evidence. Agent
-Plugins packaging remains v2.15 work. OKF v0.2 remains a future named-consumer,
-caller-owned projection rather than a replacement for recon's versioned JSON
-or catalog evidence model.
+The later [drift declaration](../docs/catalog-drift-round-declaration.md) now
+freezes the July baseline's 5,199 measured rows, prior result,
+observation-only comparison fields, and current implementation. Its
+protected-main collection must classify every changed, unavailable,
+unmeasured, and no-change path while keeping repeated-frame evidence separate
+from independent coverage evidence. Agent Plugins packaging remains v2.15
+work. OKF v0.2 remains a future named-consumer, caller-owned projection rather
+than a replacement for recon's versioned JSON or catalog evidence model.

@@ -61,6 +61,10 @@ docs/accuracy.md
 !/validation/catalog_baseline.py
 # Generic catalog-round frame preparer; no target data is embedded.
 !/validation/prepare_catalog_round.py
+# Prior-sample drift contract and aggregate evaluator. Prior frames, retained
+# results, comparison sidecars, and per-namespace differences remain private.
+!/validation/prepare_catalog_drift_round.py
+!/validation/evaluate_catalog_drift_round.py
 # Generic private rank-band sampler and shared ranked-source primitives. Source,
 # key, selected rows, and manifests remain under the ignored private roots.
 !/validation/prepare_catalog_rank_frame.py

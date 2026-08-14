@@ -135,4 +135,6 @@ preparer, and evaluator are now implemented. Its 33-row disjoint HubSpot frame
 produced the closed aggregate-only
 [vendor-seed result](../validation/2026-08-14-catalog-vendor-seed-round.md),
 with 29 corroborated and 4 observed-silent rows and no catalog promotion.
-Frozen-sample drift is next.
+The later [drift declaration](catalog-drift-round-declaration.md) now freezes
+the July baseline's 5,199 measured rows and comparison semantics; its
+protected-main collection and aggregate result are next.
