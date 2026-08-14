@@ -161,8 +161,13 @@ five tasks, two full-surface variants, privacy rules, and fail-closed decisions.
 Its protected-main prerequisite passed. The deterministic complete-surface
 candidate under `agents/agent-plugin/` passes network-free validation against
 the byte-pinned Agent Plugins v1.0.0 schemas and frozen Agent Skills field
-rules. The next operation is the paired VS Code, Cursor, and Kiro evaluation.
-No compatibility claim or stable discovery-surface change is authorized.
+rules. The first maintainer-local, network-free preflight stopped before
+collection: Cursor was unavailable and the selected client-launch recon was
+2.6.3 rather than the 2.14.0 candidate. Zero sessions and zero network requests
+ran. The next operation is to satisfy that exact three-client and runtime gate,
+rerun the private preflight, and only then execute the paired VS Code, Cursor,
+and Kiro evaluation. No compatibility claim or stable discovery-surface change
+is authorized.
 Detail:
 [docs/agent-portability-evaluation-declaration.md](docs/agent-portability-evaluation-declaration.md).
 
