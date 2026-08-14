@@ -56,7 +56,7 @@ silent-failure, and contract-preserving fixes at any point.
 | **v2.11.0** | Product-quality baseline | Track 3. A structural preflight must prove the frozen comparison can answer its question before target collection | Aggregate-safe scorecard + dated identifiability memo; void live window recorded; fusion not promoted by the non-identifying design |
 | **v2.12.0** | Apply quality decision compatibly | Uses the v2.11 structural stop without violating the stable v2 default contract | Fusion is classified as an advanced diagnostic; explicit flags are the supported transition path; v2 implicit behavior and stable JSON/MCP contracts remain intact; the default-off change is assigned to v3 |
 | **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Shipped: caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions or removals under unavailable source roles; ADR-0014 defers OKF without replacing JSON; full, protected-main, publication, provenance, and channel-parity gates passed |
-| **v2.14.0** | Catalog quality loop - **active build priority** | Independent of fusion promotion; rank and regional are closed, and the vendor-seed label, denominator, exclusion, disclosure, bounded source acquisition, receipt binding, and fail-closed tooling contract are implemented | Assemble and freeze the private provider source plan, receipt-bound dossier, and exact disjoint frame; publish commitments before target collection; complete provider-level corroboration evidence; then re-observe the frozen prior sample for drift; broad catalog growth remains gated by those rounds |
+| **v2.14.0** | Catalog quality loop - **active build priority** | Independent of fusion promotion; rank and regional are closed, and the vendor-seed protocol plus its 33-row disjoint HubSpot pre-collection contract are frozen | Merge the published vendor-seed commitments through protected main; run and reduce that frame without changing membership or denominator; then re-observe the frozen prior sample for drift; broad catalog growth remains gated by those rounds |
 | **v2.15.0** | Agent portability and surface cost | Evaluate packaging and tool cuts against representative workflows after the catalog and discovery surface is measured; packaging preparation may start earlier | Agent Plugins conformance is validated against a pinned specification or explicitly deferred while it remains a working draft; measured MCP context cost; core vs advanced profile only if a real client shows material benefit |
 | **v3.0.0** | Contract maturity | The already-deprecated fusion default change requires a major boundary; use the same boundary for any claim-envelope change that cannot remain additive | Fusion omitted-choice defaults off; explicit flags remain stable; versioned claim / observation envelope or explicit decision that v2 stays; migration notes |
 
@@ -134,10 +134,11 @@ aggregate-only
 [result](validation/2026-08-13-catalog-regional-round.md) accepts six
 documented provider-family additions under the fixed-observation budget. The
 vendor-seed protocol, bounded source freezer, immutable receipt binding,
-fail-closed preparer, and evaluator are implemented. Next, assemble and freeze
-the private provider-domain source plan, receipt-bound dossier, and exact
-disjoint frame; publish their aggregate commitments before target contact;
-then collect and report provider-level relationship corroboration. This
+fail-closed preparer, and evaluator are implemented. Its provider source plan,
+receipt-bound dossier, 17,952-namespace exclusion union, and 33-row disjoint
+HubSpot frame are frozen with aggregate commitments and zero target requests.
+Next, merge those commitments through protected main, then collect and report
+provider-level relationship corroboration without changing membership. This
 measure is not recall because a provider relationship does not label
 publication of a particular DNS record. Drift follows.
 Each contract names its independent input

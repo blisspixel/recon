@@ -403,7 +403,8 @@ Risk: concurrency and brittle-benchmark risk
 
 Status: active v2.14 priority; rank and regional rounds closed, vendor-seed
 measurement protocol, bounded source acquisition, receipt binding, preparer,
-and evaluator implemented; private source and frame freeze next
+and evaluator implemented; 33-row disjoint HubSpot contract frozen with
+aggregate commitments and zero target requests
 Dependencies: Track 3 measurement definitions
 Risk: false-positive and regional-selection bias
 
@@ -411,12 +412,10 @@ Risk: false-positive and regional-selection bias
   expansion.
 - Ratchet current public references and `verified` dates. New undated rules are
   not accepted.
-- Assemble the private provider-domain source plan, archive it through the
-  no-redirect bounded source freezer, bind the schema-version-2 dossier to its
-  immutable receipt, freeze the exact disjoint frame, publish commitments
-  before target collection, then report provider-level relationship
-  corroboration without treating silence as a false negative. Complete this
-  before drift collection.
+- Merge the frozen vendor-seed source, exclusion, frame, catalog, and execution
+  commitments through protected main before target collection, then run and
+  report the exact 33-row provider-level relationship corroboration without
+  treating silence as a false negative. Complete this before drift collection.
 - Prioritize regional and non-CNAME gaps by aggregate frequency only within the
   declared observation opportunities and recurrence thresholds.
 - Resolve each current candidate as promoted, rejected, or explicitly
@@ -569,10 +568,9 @@ Execute this track in four bounded phases:
 2. Preserve the completed stable-v1 characterization, v2.11 structural stop,
    v2.12 compatibility transition, and shipped v2.13 observation capsules.
 3. Preserve the closed v2.14 rank and regional decisions.
-4. Preserve the implemented vendor-seed protocol, bounded source acquisition,
-   and receipt binding. Assemble the private provider-domain source plan,
-   archive it, freeze the receipt-bound dossier and exact disjoint frame,
-   publish commitments before target contact, and then run and reduce
+4. Preserve the frozen vendor-seed protocol, bounded source acquisition,
+   receipt binding, and 33-row disjoint HubSpot contract. Merge its aggregate
+   commitments through protected main, then run and reduce the exact frame as
    provider-level corroboration. Re-observe the frozen prior sample as the
    drift round. Keep all public evidence aggregate-only.
 5. Backfill review dates only in families examined through those rounds, and

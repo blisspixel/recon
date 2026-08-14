@@ -437,7 +437,11 @@ def test_current_docs_keep_vendor_seed_boundary_and_next_operation_aligned() -> 
     active = "\n".join((declaration, roadmap, strategy, validation_readme))
 
     assert "bounded source acquisition" in declaration
-    assert "private source plan, dossier, and frame not\nyet frozen" in declaration
+    assert "private pre-collection contract frozen" in declaration
+    assert "33-row disjoint HubSpot" in active
+    assert "zero target requests" in active
+    assert "37bb3e9f2609b9f4470d637d60f42077593169522b117af9660ac3058516728b" in declaration
+    assert "target\ncollection has not started" in declaration
     assert "provider-relationship corroboration rate" in " ".join(declaration.split())
     assert "not recall" in active
     assert "vendor-seed recall" not in active.casefold()

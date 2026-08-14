@@ -282,12 +282,15 @@ The aggregate-only
 accepted fixed-observation decision, and clean protected-main replay. The
 regional round is closed. The fail-closed vendor-seed protocol is published in
 the [public declaration](../docs/catalog-vendor-seed-round-declaration.md).
-Freeze its private provider-controlled source dossier and exact frame before
-the first selected-namespace request; drift follows against a frozen prior
-sample.
+Its receipt-bound dossier, 17,952-namespace exclusion union, and 33-row
+disjoint HubSpot frame are frozen with aggregate commitments and zero target
+requests. Merge those commitments through protected main before the first
+selected-namespace request; drift follows against a frozen prior sample.
 
-The vendor-seed dossier uses only provider-controlled HTTPS evidence as its
-relationship label. First create a strict private source plan with
+The steps below document the reusable protocol and its reproduction boundary;
+they are not instructions to replace the current frozen contract. A
+vendor-seed dossier uses only provider-controlled HTTPS evidence as its
+relationship label. Create a strict private source plan with
 `schema_version`, `private`, `source_set_id`, a meaningful `purpose`, and one
 or more `providers`. Each provider names an existing release-bound built-in
 catalog `slug`, one or more `allowed_domains`, and exact sources with `id`,
@@ -357,8 +360,9 @@ python -m validation.prepare_vendor_seed_round \
 
 Copy only aggregate counts and commitments into the public declaration, merge
 that declaration and the exact implementation through protected main, and
-only then run the frozen frame. The dossier decides whether CT is enabled;
-direct CSE and BIMI probes are always off.
+only then run the frozen frame. For the current contract those commitments are
+already recorded in the declaration, CT is disabled, and direct CSE and BIMI
+probes are off.
 
 ```bash
 python validation/scan.py \
