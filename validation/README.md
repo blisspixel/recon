@@ -369,6 +369,7 @@ python validation/scan.py \
     --corpus validation/corpus-private/vendor-seed/frozen-contract/frame.txt \
     --round-kind vendor-seed \
     --round-manifest validation/corpus-private/vendor-seed/frozen-contract/round-manifest.json \
+    --min-count 2 \
     --concurrency 2
 
 python -m validation.evaluate_vendor_seed_round \
