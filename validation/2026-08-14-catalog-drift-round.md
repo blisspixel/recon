@@ -131,10 +131,12 @@ explicit candidate dispositions. This result supports no population claim and
 no catalog promotion. It records one measurement-surface change and no
 record-type decline beyond the frozen review threshold.
 
-The next operation is the coherent v2.14.0 release gate: align version and
-release metadata, rerun the complete local and hosted matrices, publish one
-tag-bound GitHub and PyPI release with attestations and SBOM provenance, and
-verify channel parity. Agent Plugins conformance and measured agent-surface
-cost remain v2.15 work. OKF v0.2 remains a future named-consumer,
+At round closure, the next operation was the coherent v2.14.0 release gate. It
+has now passed with aligned version and release metadata, complete local and
+hosted matrices, one tag-bound GitHub and PyPI release, attestations, SBOM
+provenance, and verified channel parity. The active next operation is the
+network-free v2.15 representative-client evaluation contract. Agent Plugins
+conformance and measured agent-surface cost remain v2.15 work. OKF v0.2
+remains a future named-consumer,
 caller-owned projection rather than a replacement for recon's versioned JSON
 or observation capsules.
