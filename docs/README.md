@@ -80,7 +80,9 @@ actually shipped.
 | Aggregate-only v2.14 regional result and protected-main replay | [../validation/2026-08-13-catalog-regional-round.md](../validation/2026-08-13-catalog-regional-round.md) |
 | Closed v2.14 vendor-seed label, denominator, bounded source acquisition, receipt binding, exclusion, and disclosure protocol | [catalog-vendor-seed-round-declaration.md](catalog-vendor-seed-round-declaration.md) |
 | Aggregate-only v2.14 vendor-seed result and non-promotion disposition | [../validation/2026-08-14-catalog-vendor-seed-round.md](../validation/2026-08-14-catalog-vendor-seed-round.md) |
-| Frozen v2.14 prior-sample drift commitments and comparison semantics | [catalog-drift-round-declaration.md](catalog-drift-round-declaration.md) |
+| Closed v2.14 prior-sample drift commitments and comparison semantics | [catalog-drift-round-declaration.md](catalog-drift-round-declaration.md) |
+| Aggregate-only v2.14 drift result, measurement-surface disposition, and non-promotion decision | [../validation/2026-08-14-catalog-drift-round.md](../validation/2026-08-14-catalog-drift-round.md) |
+| Exact disclosure-safe v2.14 drift reducer output | [../validation/2026-08-14-catalog-drift-aggregate.json](../validation/2026-08-14-catalog-drift-aggregate.json) |
 | Aggregate-safe product-quality scorecard harness | `scripts/quality_scorecard.py` |
 | Dependency-ordered implementation plan | [engineering-refinement-plan.md](engineering-refinement-plan.md) |
 | Structural maintainability audit, pinned to the revision it measured | [structural-maintainability.md](structural-maintainability.md) |

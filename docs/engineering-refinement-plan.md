@@ -1,7 +1,7 @@
 # Engineering Refinement Plan
 
-Status: active implementation plan aligned to the v2.14 catalog-quality phase
-Review date: 2026-08-13
+Status: active implementation plan; v2.14 evidence complete and release gate active
+Review date: 2026-08-14
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
 engineering tracks. It does not authorize unrelated runtime expansion. Every
@@ -401,9 +401,9 @@ Risk: concurrency and brittle-benchmark risk
 
 ## Track 6: Catalog Quality and Lifecycle
 
-Status: active v2.14 priority; rank, regional, and vendor-seed rounds closed;
-vendor-seed 33-row aggregate records 29 corroborated and 4 observed-silent
-rows, no unavailable, unmeasured, or error outcome, and no rule promotion
+Status: v2.14 evidence complete; release gate active. Rank, regional,
+vendor-seed, and prior-sample drift rounds are closed with aggregate results
+and explicit dispositions
 Dependencies: Track 3 measurement definitions
 Risk: false-positive and regional-selection bias
 
@@ -413,8 +413,9 @@ Risk: false-positive and regional-selection bias
   not accepted.
 - Preserve the closed vendor-seed source, exclusion, frame, catalog, execution,
   and aggregate result commitments. Do not treat silence as a false negative or
-  tune the evaluated catalog from holdout outcomes. Preserve the frozen
-  5,199-row drift contract and complete its protected-main collection next.
+  tune the evaluated catalog from holdout outcomes. Preserve the completed
+  5,199-row drift result, including its catalog-driven measurement-surface
+  disposition, zero threshold breach, and zero-promotion decision.
 - Prioritize regional and non-CNAME gaps by aggregate frequency only within the
   declared observation opportunities and recurrence thresholds.
 - Resolve each current candidate as promoted, rejected, or explicitly
@@ -566,11 +567,11 @@ Execute this track in four bounded phases:
    blocking maintenance gates.
 2. Preserve the completed stable-v1 characterization, v2.11 structural stop,
    v2.12 compatibility transition, and shipped v2.13 observation capsules.
-3. Preserve the closed v2.14 rank, regional, and vendor-seed decisions,
-   including the vendor-seed non-promotion disposition.
-4. Preserve the frozen 5,199-row drift frame, prior-result sidecar, and
-   observation-only comparison semantics. After the declaration and exact
-   implementation pass protected main, re-observe the frame once. Keep all
+3. Preserve the closed v2.14 rank, regional, vendor-seed, and prior-sample
+   drift decisions, including their non-promotion, non-comparability, and
+   measurement-surface dispositions.
+4. Publish the coherent v2.14.0 release only after full local, protected-main,
+   provenance, artifact, SBOM, attestation, and channel-parity proof. Keep all
    public evidence aggregate-only and do not present repeated-frame evidence
    as independent coverage.
 5. Backfill review dates only in families examined through those rounds, and
