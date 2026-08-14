@@ -19,8 +19,11 @@ tracked separately from product work.
 > additions are accepted. The vendor-seed protocol and exact 33-row HubSpot
 > holdout are also closed: 29 rows corroborated the provider relationship, 4
 > were observed silent, no row was unavailable, unmeasured, or an error, and no
-> catalog rule was promoted from the evaluation holdout. **Frozen-sample drift
-> is the next v2.14 operation.**
+> catalog rule was promoted from the evaluation holdout. The 5,199-row
+> [frozen-sample drift contract](catalog-drift-round-declaration.md) now binds
+> the July baseline, current implementation, observation-only comparison, and
+> disclosure rule. **Its protected-main collection and aggregate result are
+> the next v2.14 operation.**
 > The ordered version path through v3.0 is summarized in
 > [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
@@ -42,7 +45,8 @@ and retains both exact compatibility pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. The dependency-unblocked work now
 maps to **v2.14.0**: preserve the closed rank, regional, and vendor-seed
-decisions, then freeze and re-observe a prior sample for drift. New
+decisions and the frozen 5,199-row prior-sample drift contract, then re-observe
+that frame only after protected-main proof. New
 claim-surface drift reopens priority 1. Version milestones
 through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
@@ -52,7 +56,7 @@ through v3.0:
 | [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete on 2026-08-01. The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 27 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
-| [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts now make independent catalog measurement the next unblocked product work. | Convenience, unseen-vertical, rank, regional, and vendor-seed rounds are complete. The vendor-seed result records 29 corroborated and 4 observed-silent rows with no catalog promotion. | Freeze and complete the prior-sample drift round with explicit changed, unavailable, unmeasured, and no-change outcomes. |
+| [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts now make independent catalog measurement the next unblocked product work. | Convenience, unseen-vertical, rank, regional, and vendor-seed rounds are complete. The vendor-seed result records 29 corroborated and 4 observed-silent rows with no catalog promotion. The 5,199-row prior-sample drift contract is frozen. | Pass the declaration and implementation through protected main, run that exact frame once, and publish explicit changed, unavailable, unmeasured, and no-change outcomes. |
 | [5. Optional cloud access and scale-out](#5-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the core evidence, compatibility, and catalog-quality tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
 Everything blocked behind these, and the gate that unblocks each, is in
@@ -545,8 +549,9 @@ characterization section appears later in this document:
 
 1. Preserve the closed v2.14 rank, regional, and
    [vendor-seed](../validation/2026-08-14-catalog-vendor-seed-round.md)
-   decisions. Freeze and re-observe the prior sample for drift. Name the frozen
-   sample plus eligibility and deduplication
+   decisions and the frozen 5,199-row prior-sample drift contract. After
+   protected-main proof, re-observe that frame once. Preserve its eligibility
+   and deduplication
    rules, observation opportunities, collection options, catalog and code
    digests, aggregate measures, promotion and regression budgets, and
    disclosure-safe output.
@@ -903,7 +908,10 @@ the [public declaration](catalog-vendor-seed-round-declaration.md). Its exact
 with no catalog promotion. A
 provider relationship does not label publication of a particular DNS record,
 so the reported measure is provider-level relationship corroboration, not
-recall or a false-negative rate. Frozen-sample drift is next. The convenience baseline and
+recall or a false-negative rate. The frozen-sample drift declaration now binds
+the July baseline's 5,199 measured rows, prior result, observation-only
+comparison fields, current catalog and execution digests, and disclosure rule;
+its protected-main collection and aggregate result are next. The convenience baseline and
 unseen vertical holdout remain
 supporting evidence, not substitutes for those independent rounds. Complete
 v2.14 only when every

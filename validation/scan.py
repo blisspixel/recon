@@ -184,6 +184,16 @@ def _preflight_round_contract(
             min_count=args.min_count,
         ),
     )
+    if args.round_kind == "drift":
+        from validation.prepare_catalog_drift_round import verify_drift_contract
+
+        drift_contract_path = _validate_private_scan_input_path(args.drift_prior_contract)
+        compare_to = _validate_private_scan_input_path(args.compare_to)
+        verify_drift_contract(
+            drift_contract_path,
+            round_manifest_path=path,
+            compare_to=compare_to,
+        )
     return path, contract
 
 
@@ -360,6 +370,15 @@ def _build_parser() -> argparse.ArgumentParser:
         ),
     )
     parser.add_argument(
+        "--drift-prior-contract",
+        type=Path,
+        default=None,
+        help=(
+            "Frozen private prior-result comparison contract. Required only for drift rounds and verified before "
+            "target contact."
+        ),
+    )
+    parser.add_argument(
         "--concurrency",
         type=int,
         default=4,
@@ -449,8 +468,18 @@ def _validate_cli_options(args: argparse.Namespace) -> None:
         raise ValueError("--max-runtime requires streaming NDJSON; remove --json-array")
     round_kind = getattr(args, "round_kind", "baseline")
     round_manifest = getattr(args, "round_manifest", None)
+    drift_prior_contract = getattr(args, "drift_prior_contract", None)
+    compare_to = getattr(args, "compare_to", None)
+    no_compare = bool(getattr(args, "no_compare", False))
     if round_kind in _ROUND_CONTRACT_KINDS and round_manifest is None:
         raise ValueError(f"--round-manifest is required for {round_kind!r} rounds")
+    if round_kind == "drift":
+        if drift_prior_contract is None:
+            raise ValueError("--drift-prior-contract is required for 'drift' rounds")
+        if compare_to is None or no_compare:
+            raise ValueError("drift rounds require an explicit --compare-to prior run")
+    elif drift_prior_contract is not None:
+        raise ValueError("--drift-prior-contract is accepted only for 'drift' rounds")
     if args.ct_retry_from is not None and round_manifest is not None:
         raise ValueError("--round-manifest cannot be combined with --ct-retry-from")
 

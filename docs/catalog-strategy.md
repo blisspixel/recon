@@ -45,8 +45,12 @@ recorded in
 the independent rank, regional, and vendor-seed rounds are complete. The
 vendor-seed result records 29 corroborated and 4 observed-silent HubSpot rows,
 no unavailable, unmeasured, or error outcome, and no catalog promotion from the
-evaluation holdout. Frozen-sample drift remains open. Most legacy detections
-still lack a freshness date.
+evaluation holdout. The drift contract now freezes all 5,199 measured rows
+from the July 17 baseline and separates retained observation-summary changes
+from non-comparable catalog interpretation changes. Collection remains blocked
+until the [declaration](catalog-drift-round-declaration.md) and exact
+implementation pass protected main. Most legacy detections still lack a
+freshness date.
 
 Current round status:
 
@@ -57,7 +61,7 @@ Current round status:
 | Rank bands | Complete; four-band aggregate, dispositions, and zero-regression decision published |
 | Regional / ccTLD | Complete; baseline, fixed-observation decision, and clean-main replay published |
 | Vendor seed | Complete; 33-row HubSpot result published with 29 corroborated, 4 observed-silent, no error or unmeasured outcome, and no rule promotion |
-| Drift | Pending |
+| Drift | 5,199-row prior frame and comparison contract frozen; collection pending protected main |
 
 ## 1. A stratified, reproducible sampling frame
 
@@ -320,8 +324,11 @@ measurement round.
    rows corroborated the provider relationship, 4 were observed silent, and no
    catalog rule was promoted from the evaluation holdout. Do not call this
    measure recall or use holdout outcomes to tune the evaluated rules.
-4. Freeze and re-observe the prior sample as the drift round. Do not describe a
-   repeated frame as independent coverage.
+4. Preserve the frozen 5,199-row
+   [drift contract](catalog-drift-round-declaration.md). After its declaration
+   and implementation pass protected main, re-observe it once and publish only
+   the aggregate changed, unavailable, unmeasured, and no-change outcomes. Do
+   not describe the repeated frame as independent coverage.
 5. Backfill `verified` dates only in reviewed families and raise the freshness
    ratchet only when observed coverage supports a new threshold.
 6. Keep the opt-in unmatched-observation envelope and private ranking tool

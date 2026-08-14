@@ -179,12 +179,14 @@ python validation/scan.py \
     --round-kind baseline \
     --concurrency 4
 
-# Next month: auto-diffs against the most recent prior scan
+# Next month: compare only against the explicitly frozen prior scan
 python validation/scan.py \
     --corpus validation/corpus-private/consolidated.txt \
     --label monthly-2026-06 \
     --round-kind drift \
-    --round-manifest validation/corpus-private/drift-2026-06-manifest.json
+    --round-manifest validation/corpus-private/drift-2026-06-manifest.json \
+    --drift-prior-contract validation/corpus-private/drift-2026-06-prior-contract.json \
+    --compare-to validation/runs-private/<exact-prior-run>
 ```
 
 Independent rank, region, vertical, vendor-seed, and drift rounds require a
@@ -286,7 +288,70 @@ Its receipt-bound dossier, 17,952-namespace exclusion union, and 33-row
 disjoint HubSpot frame produced the closed aggregate-only
 [result](2026-08-14-catalog-vendor-seed-round.md): 29 corroborated, 4
 observed-silent, no unavailable, unmeasured, or error outcome, and no catalog
-promotion. Drift follows against a frozen prior sample.
+promotion. The next operation is the frozen 5,199-row prior-sample
+[drift contract](../docs/catalog-drift-round-declaration.md), whose exact
+implementation and declaration must pass protected main before collection.
+
+### Frozen prior-sample drift
+
+A drift round has two immutable inputs: the future generic round manifest and
+the exact retained prior result. Extract the previously measured canonical
+rows directly from the prior result without printing identifiers:
+
+```bash
+python -m validation.prepare_catalog_drift_round \
+    --prior-run validation/runs-private/<exact-prior-run> \
+    --output-frame validation/corpus-private/<drift>/prior-frame.txt \
+    --public
+```
+
+Use that generated file as the only stratum in an ordinary schema-version-2
+drift plan, then prepare the current frame and manifest. Finally bind the
+prior result, prior aggregate, prior catalog and collection settings, eligible
+frame, and current manifest into the comparison sidecar:
+
+```bash
+python -m validation.prepare_catalog_round \
+    --plan validation/corpus-private/<drift>/round-plan.json \
+    --output-corpus validation/corpus-private/<drift>/frame.txt \
+    --output-manifest validation/corpus-private/<drift>/round-manifest.json
+
+python -m validation.prepare_catalog_drift_round \
+    --prior-run validation/runs-private/<exact-prior-run> \
+    --round-manifest validation/corpus-private/<drift>/round-manifest.json \
+    --output validation/corpus-private/<drift>/prior-contract.json \
+    --public
+```
+
+Commit only the identifier-free declaration and implementation, pass protected
+main, and then run the exact contract once:
+
+```bash
+python validation/scan.py \
+    --corpus validation/corpus-private/<drift>/frame.txt \
+    --round-kind drift \
+    --round-manifest validation/corpus-private/<drift>/round-manifest.json \
+    --drift-prior-contract validation/corpus-private/<drift>/prior-contract.json \
+    --compare-to validation/runs-private/<exact-prior-run> \
+    --min-count 3 \
+    --concurrency 4
+
+python -m validation.evaluate_catalog_drift_round \
+    --contract validation/corpus-private/<drift>/prior-contract.json \
+    --after validation/runs-private/<new-run> \
+    --output validation/runs-private/<new-run>/drift-aggregate.json
+```
+
+`scan.py` rejects drift without both the sidecar and explicit prior, rejects
+`--no-compare`, and verifies every prior and current commitment before the
+batch process starts. The evaluator requires every frozen row exactly once and
+reports `changed`, `unavailable`, `unmeasured`, and `no_change` by bounded
+record type. It compares only retained `availability`, `opportunity_count`,
+`observed_count`, and `truncated` fields. Classified counts and detected slugs
+are comparable only when both the prior and current catalog and
+interpretation-execution digests match. A `no_change` outcome therefore means
+no retained summary change, not identical DNS, complete zone equality, or
+stable product use.
 
 The steps below document the reusable protocol and its reproduction boundary;
 they are not instructions to replace the current frozen contract. A
