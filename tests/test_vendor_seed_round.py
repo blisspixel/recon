@@ -442,6 +442,11 @@ def test_current_docs_keep_vendor_seed_boundary_and_next_operation_aligned() -> 
     assert "zero target requests" in active
     assert "37bb3e9f2609b9f4470d637d60f42077593169522b117af9660ac3058516728b" in declaration
     assert "target\ncollection has not started" in declaration
+    assert (
+        "--round-manifest validation/corpus-private/vendor-seed/frozen-contract/round-manifest.json \\\n"
+        "    --min-count 2 \\\n"
+        "    --concurrency 2"
+    ) in validation_readme
     assert "provider-relationship corroboration rate" in " ".join(declaration.split())
     assert "not recall" in active
     assert "vendor-seed recall" not in active.casefold()
