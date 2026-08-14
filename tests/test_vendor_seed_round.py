@@ -2,13 +2,19 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any, cast
 
 import pytest
 
-from validation import catalog_baseline, evaluate_vendor_seed_round, prepare_vendor_seed_round
+from validation import (
+    archive_vendor_seed_sources,
+    catalog_baseline,
+    evaluate_vendor_seed_round,
+    prepare_vendor_seed_round,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -19,11 +25,68 @@ def _members(prefix: str, source_id: str, count: int = 20) -> list[dict[str, str
 
 def _dossier(tmp_path: Path, *, provider_rows: int = 20) -> Path:
     tmp_path.mkdir(parents=True, exist_ok=True)
-    (tmp_path / "webflow.html").write_text("frozen provider-controlled Webflow source", encoding="utf-8")
-    (tmp_path / "shopify.html").write_text("frozen provider-controlled Shopify source", encoding="utf-8")
+    webflow_archive = tmp_path / "archives" / "webflow" / "webflow-cases.html"
+    shopify_archive = tmp_path / "archives" / "shopify" / "shopify-cases.html"
+    webflow_archive.parent.mkdir(parents=True)
+    shopify_archive.parent.mkdir(parents=True)
+    webflow_archive.write_text("frozen provider-controlled Webflow source", encoding="utf-8")
+    shopify_archive.write_text("frozen provider-controlled Shopify source", encoding="utf-8")
     (tmp_path / "excluded.txt").write_text("development.invalid\nprior-observation.invalid\n", encoding="utf-8")
-    dossier = {
+    receipt: dict[str, object] = {
         "schema_version": 1,
+        "private": True,
+        "source_set_id": "vendor-seed-source-set-2026-08",
+        "purpose": "Archive exact provider-controlled evidence before freezing the disjoint vendor-seed frame.",
+        "retrieved_at": "2026-08-13T12:00:00Z",
+        "plan_digest_sha256": "1" * 64,
+        "implementation_digest_sha256": "2" * 64,
+        "acquisition_policy": archive_vendor_seed_sources._acquisition_policy(),
+        "providers": [
+            {
+                "slug": "webflow",
+                "allowed_domains": ["webflow.com"],
+                "sources": [
+                    {
+                        "id": "webflow-cases",
+                        "url": "https://webflow.com/customers",
+                        "retrieved_at": "2026-08-13T12:00:00Z",
+                        "media_type": "text/html",
+                        "archive": "archives/webflow/webflow-cases.html",
+                        "archive_bytes": webflow_archive.stat().st_size,
+                        "archive_digest_sha256": hashlib.sha256(webflow_archive.read_bytes()).hexdigest(),
+                    }
+                ],
+            },
+            {
+                "slug": "shopify",
+                "allowed_domains": ["shopify.com"],
+                "sources": [
+                    {
+                        "id": "shopify-cases",
+                        "url": "https://www.shopify.com/case-studies",
+                        "retrieved_at": "2026-08-13T12:00:00Z",
+                        "media_type": "text/html",
+                        "archive": "archives/shopify/shopify-cases.html",
+                        "archive_bytes": shopify_archive.stat().st_size,
+                        "archive_digest_sha256": hashlib.sha256(shopify_archive.read_bytes()).hexdigest(),
+                    }
+                ],
+            },
+        ],
+        "totals": {
+            "provider_count": 2,
+            "source_count": 2,
+            "archive_bytes": webflow_archive.stat().st_size + shopify_archive.stat().st_size,
+            "selected_target_requests": 0,
+        },
+    }
+    (tmp_path / "source-plan.json").write_text("frozen synthetic source plan", encoding="utf-8")
+    receipt["plan_digest_sha256"] = hashlib.sha256((tmp_path / "source-plan.json").read_bytes()).hexdigest()
+    receipt["implementation_digest_sha256"] = archive_vendor_seed_sources._implementation_digest()
+    receipt["receipt_digest_sha256"] = archive_vendor_seed_sources._receipt_digest(receipt)
+    (tmp_path / "source-receipt.json").write_text(json.dumps(receipt), encoding="utf-8")
+    dossier = {
+        "schema_version": 2,
         "private": True,
         "round_id": "vendor-seed-2026-08",
         "question": (
@@ -32,6 +95,7 @@ def _dossier(tmp_path: Path, *, provider_rows: int = 20) -> Path:
         ),
         "source_name": "Provider-controlled customer evidence",
         "source_revision": "retrieved-2026-08-13",
+        "source_receipt": "source-receipt.json",
         "providers": [
             {
                 "slug": "webflow",
@@ -41,7 +105,7 @@ def _dossier(tmp_path: Path, *, provider_rows: int = 20) -> Path:
                         "id": "webflow-cases",
                         "url": "https://webflow.com/customers",
                         "retrieved_at": "2026-08-13T12:00:00Z",
-                        "archive": "webflow.html",
+                        "archive": "archives/webflow/webflow-cases.html",
                     }
                 ],
                 "members": _members("webflow-private", "webflow-cases", provider_rows),
@@ -54,7 +118,7 @@ def _dossier(tmp_path: Path, *, provider_rows: int = 20) -> Path:
                         "id": "shopify-cases",
                         "url": "https://www.shopify.com/case-studies",
                         "retrieved_at": "2026-08-13T12:00:00Z",
-                        "archive": "shopify.html",
+                        "archive": "archives/shopify/shopify-cases.html",
                     }
                 ],
                 "members": _members("shopify-private", "shopify-cases", provider_rows),
@@ -193,13 +257,28 @@ def test_preparer_rejects_overlap_small_strata_and_unsupported_metric(tmp_path: 
 
     duplicate_path = _dossier(tmp_path / "duplicate")
     duplicate_raw = duplicate_path.read_text(encoding="utf-8").replace(
-        '"schema_version": 1,',
-        '"schema_version": 1, "schema_version": 1,',
+        '"schema_version": 2,',
+        '"schema_version": 2, "schema_version": 2,',
         1,
     )
     duplicate_path.write_text(duplicate_raw, encoding="utf-8")
     with pytest.raises(ValueError, match="duplicate field: schema_version"):
         prepare_vendor_seed_round.prepare_vendor_seed_round(duplicate_path, tmp_path / "duplicate-output")
+
+
+def test_preparer_rejects_source_receipt_or_archive_substitution(tmp_path: Path) -> None:
+    dossier_path = _dossier(tmp_path)
+    dossier = cast(dict[str, Any], json.loads(dossier_path.read_text(encoding="utf-8")))
+    dossier["providers"][0]["sources"][0]["url"] = "https://www.webflow.com/customers"
+    dossier_path.write_text(json.dumps(dossier), encoding="utf-8")
+    with pytest.raises(ValueError, match="metadata does not match"):
+        prepare_vendor_seed_round.prepare_vendor_seed_round(dossier_path, tmp_path / "metadata-output")
+
+    dossier_path = _dossier(tmp_path / "archive")
+    archive = tmp_path / "archive" / "archives" / "webflow" / "webflow-cases.html"
+    archive.write_text("substituted source bytes", encoding="utf-8")
+    with pytest.raises(ValueError, match="archive does not match"):
+        prepare_vendor_seed_round.prepare_vendor_seed_round(dossier_path, tmp_path / "archive-output")
 
 
 def test_reducer_reports_corroboration_without_target_identifiers(tmp_path: Path) -> None:
@@ -357,11 +436,12 @@ def test_current_docs_keep_vendor_seed_boundary_and_next_operation_aligned() -> 
     validation_readme = (ROOT / "validation" / "README.md").read_text(encoding="utf-8")
     active = "\n".join((declaration, roadmap, strategy, validation_readme))
 
-    assert "protocol implementation complete" in declaration
-    assert "private source dossier and frame not\nyet frozen" in declaration
+    assert "bounded source acquisition" in declaration
+    assert "private source plan, dossier, and frame not\nyet frozen" in declaration
     assert "provider-relationship corroboration rate" in " ".join(declaration.split())
     assert "not recall" in active
     assert "vendor-seed recall" not in active.casefold()
+    assert "archive_vendor_seed_sources.py" in validation_readme
     assert "prepare_vendor_seed_round.py" in validation_readme
     assert "evaluate_vendor_seed_round.py" in validation_readme
     assert "catalog-vendor-seed-round-declaration.md" in roadmap

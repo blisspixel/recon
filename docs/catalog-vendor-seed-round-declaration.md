@@ -1,6 +1,7 @@
 # v2.14 Catalog Vendor-Seed Round Declaration
 
-Status: protocol implementation complete; private source dossier and frame not
+Status: protocol, bounded source acquisition, receipt binding, preparer, and
+evaluator implementation complete; private source plan, dossier, and frame not
 yet frozen; target collection has not started
 
 Protocol frozen: 2026-08-13
@@ -43,12 +44,29 @@ The private source dossier must satisfy all of these rules before a frame can
 exist:
 
 - Every provider is already represented by a stable fingerprint slug in the
-  frozen catalog. The preparer records every catalog detection type attached to
-  that slug, and the evaluator fails if those types drift before reduction.
+  release-bound built-in catalog. Operator-local custom and process-local
+  ephemeral fingerprints are excluded. The preparer records every built-in
+  detection type attached to that slug, and the evaluator fails if those types
+  drift before reduction.
 - Every member is tied to a specific archived provider-controlled HTTPS source
   that explicitly supplies the relationship label. Search results, technology
   databases, reseller lists, inferred logos, and third-party directories are
   ineligible.
+- Provider source acquisition starts from a strict private plan. For each
+  provider, the curator declares an existing catalog slug, the registrable
+  provider domains that may be contacted, exact HTTPS URLs, and expected media
+  types. The declaration is an explicit curator assertion of provider control,
+  not an automated corporate-ownership finding.
+- The source freezer makes one sequential GET per declared URL with redirects,
+  credentials, compression, and retry disabled. It rejects non-public or
+  out-of-provider hosts, non-200 responses, media-type drift, empty bodies, and
+  responses above 10 MiB each or 128 MiB in aggregate. It contacts no selected
+  namespace and atomically writes the exact source plan, a private receipt, and
+  the archived response bytes. The preparer requires the receipt's source-plan
+  and implementation digests to match before it can freeze a frame.
+- The schema-version-2 dossier must bind every source to that receipt's
+  provider, source ID, URL, retrieval time, archive path, byte count, and
+  SHA-256 digest. A substituted or unused source blocks frame preparation.
 - Every provider stratum contains at least 20 unique registrable apexes. This is
   both the public small-cell disclosure floor and a minimum descriptive sample,
   not a claim of statistical representativeness.
@@ -98,20 +116,28 @@ fixed-observation zero-regression comparison before promotion.
 
 ## Implementation and next operation
 
-The network-free implementation consists of:
+The implementation has one bounded provider-source acquisition step and keeps
+frame preparation and result reduction network-free:
 
+- `validation/archive_vendor_seed_sources.py`, which performs bounded
+  provider-source acquisition, atomically archives the exact response bytes,
+  and emits an integrity-checked private receipt without printing URLs or
+  target identifiers;
 - `validation/prepare_vendor_seed_round.py`, which validates provider sources,
-  exclusions, membership, catalog slugs, minimum stratum size, and the generic
-  round contract;
+  the acquisition receipt, exclusions, membership, catalog slugs, minimum
+  stratum size, and the generic round contract;
 - `validation/evaluate_vendor_seed_round.py`, which reduces a complete result
   set into per-provider disclosure-safe corroboration counts and Wilson
   intervals; and
-- `tests/test_vendor_seed_round.py`, which exercises normalization,
-  exclusivity, source and catalog drift, incomplete results, denominator
-  semantics, and identifier absence.
+- `tests/test_vendor_seed_source_archive.py` and
+  `tests/test_vendor_seed_round.py`, which exercise destination and response
+  policy, atomicity, receipt integrity, normalization, exclusivity, source and
+  catalog drift, incomplete results, denominator semantics, and identifier
+  absence.
 
-The next operation is to assemble and archive the private provider-controlled
-source dossier, freeze the provider set and exclusion union, run the preparer
-with zero target requests, and add the resulting aggregate commitments to this
-declaration. Collection remains blocked until those commitments and the exact
-implementation pass protected-main CI.
+The next operation is to assemble the private provider-domain source plan, run
+the bounded source freezer, extract a source-linked schema-version-2 dossier
+from its immutable receipt, freeze the provider set and exclusion union, run
+the preparer with zero target requests, and add the resulting aggregate
+commitments to this declaration. Collection remains blocked until those
+commitments and the exact implementation pass protected-main CI.

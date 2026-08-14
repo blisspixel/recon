@@ -26,8 +26,9 @@ from pathlib import Path
 from typing import NoReturn, cast
 from urllib.parse import urlsplit
 
-from recon_tool.fingerprints import load_fingerprints
+from recon_tool.fingerprints import load_builtin_fingerprints
 from recon_tool.validator import validate_domain
+from validation.archive_vendor_seed_sources import load_source_receipt
 from validation.prepare_catalog_round import (
     REPO_ROOT,
     canonical_json_digest,
@@ -42,7 +43,7 @@ PRIVATE_ROOTS = (
     REPO_ROOT / "validation" / "runs-private",
     REPO_ROOT / "validation" / "local",
 )
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 LABEL_BASIS = "provider-relationship"
 METRIC = "provider-relationship corroboration rate"
 MIN_PROVIDER_ROWS = 20
@@ -64,6 +65,7 @@ _DOSSIER_KEYS = frozenset(
         "question",
         "source_name",
         "source_revision",
+        "source_receipt",
         "providers",
         "exclusions",
         "collection",
@@ -179,7 +181,7 @@ def _domain(value: object, *, name: str) -> str:
 
 def _catalog_contract() -> dict[str, dict[str, object]]:
     by_slug: dict[str, dict[str, object]] = {}
-    for fingerprint in load_fingerprints():
+    for fingerprint in load_builtin_fingerprints():
         row = by_slug.setdefault(fingerprint.slug, {"names": set(), "record_types": set()})
         cast(set[str], row["names"]).add(fingerprint.name)
         cast(set[str], row["record_types"]).update(rule.type for rule in fingerprint.detections)
@@ -300,13 +302,15 @@ def _provider_sources(
     *,
     slug: str,
     base: Path,
-) -> tuple[list[dict[str, object]], set[str], int]:
+    receipt_sources: Mapping[tuple[str, str], Mapping[str, object]],
+) -> tuple[list[dict[str, object]], set[str], int, set[tuple[str, str]]]:
     raw_sources = provider["sources"]
     if not isinstance(raw_sources, list) or not raw_sources or len(raw_sources) > MAX_SOURCES_PER_PROVIDER:
         _fail(f"provider {slug} must contain 1-{MAX_SOURCES_PER_PROVIDER} sources")
     sources: list[dict[str, object]] = []
     source_ids: set[str] = set()
     source_urls: set[str] = set()
+    used_receipt_sources: set[tuple[str, str]] = set()
     total_archive_bytes = 0
     for source_index, raw_source in enumerate(raw_sources):
         source = _strict_object(
@@ -323,24 +327,41 @@ def _provider_sources(
             _fail(f"provider {slug} has a duplicate source URL")
         source_urls.add(url)
         archive_path = _private_path(base, source["archive"], name=f"provider {slug} source archive")
+        receipt_source = receipt_sources.get((slug, source_id))
+        if receipt_source is None:
+            _fail(f"provider {slug} source is absent from the frozen source receipt")
+        receipt_archive = cast(Path, receipt_source["archive_path"])
+        retrieved_at = _utc_timestamp(
+            source["retrieved_at"], name=f"provider {slug} sources[{source_index}].retrieved_at"
+        )
+        if (
+            url != receipt_source["url"]
+            or retrieved_at != receipt_source["retrieved_at"]
+            or archive_path != receipt_archive
+        ):
+            _fail(f"provider {slug} source metadata does not match the frozen source receipt")
         archive = bounded_stable_read(
             archive_path,
             maximum_bytes=MAX_ARCHIVE_BYTES,
             kind=f"provider {slug} source archive",
         )
+        if (
+            len(archive) != receipt_source["archive_bytes"]
+            or hashlib.sha256(archive).hexdigest() != receipt_source["archive_digest_sha256"]
+        ):
+            _fail(f"provider {slug} source archive does not match the frozen source receipt")
         total_archive_bytes += len(archive)
+        used_receipt_sources.add((slug, source_id))
         sources.append(
             {
                 "id": source_id,
                 "url": url,
-                "retrieved_at": _utc_timestamp(
-                    source["retrieved_at"], name=f"provider {slug} sources[{source_index}].retrieved_at"
-                ),
+                "retrieved_at": retrieved_at,
                 "archive_digest_sha256": hashlib.sha256(archive).hexdigest(),
                 "archive_bytes": len(archive),
             }
         )
-    return sources, source_ids, total_archive_bytes
+    return sources, source_ids, total_archive_bytes, used_receipt_sources
 
 
 def _provider_members(
@@ -382,6 +403,7 @@ def _provider_contracts(
     *,
     base: Path,
     exclusions: set[str],
+    receipt_sources: Mapping[tuple[str, str], Mapping[str, object]],
 ) -> tuple[list[dict[str, object]], tuple[tuple[str, bytes], ...]]:
     raw_providers = dossier["providers"]
     if not isinstance(raw_providers, list) or not raw_providers or len(raw_providers) > MAX_PROVIDERS:
@@ -392,6 +414,7 @@ def _provider_contracts(
     contracts: list[dict[str, object]] = []
     provider_sources: list[tuple[str, bytes]] = []
     total_archive_bytes = 0
+    used_receipt_sources: set[tuple[str, str]] = set()
     for provider_index, raw_provider in enumerate(raw_providers):
         provider = _strict_object(
             raw_provider,
@@ -407,7 +430,13 @@ def _provider_contracts(
             _fail(f"provider slug is absent from the current catalog: {slug}")
         if provider["label_basis"] != LABEL_BASIS:
             _fail(f"provider {slug} label_basis must be {LABEL_BASIS!r}")
-        sources, source_ids, archive_bytes = _provider_sources(provider, slug=slug, base=base)
+        sources, source_ids, archive_bytes, provider_receipt_sources = _provider_sources(
+            provider,
+            slug=slug,
+            base=base,
+            receipt_sources=receipt_sources,
+        )
+        used_receipt_sources.update(provider_receipt_sources)
         total_archive_bytes += archive_bytes
         if total_archive_bytes > MAX_TOTAL_ARCHIVE_BYTES:
             _fail(f"provider source archives exceed the {MAX_TOTAL_ARCHIVE_BYTES}-byte aggregate limit")
@@ -438,7 +467,34 @@ def _provider_contracts(
                 "member_digest_sha256": hashlib.sha256(rendered).hexdigest(),
             }
         )
+    if used_receipt_sources != set(receipt_sources):
+        _fail("vendor-seed dossier must use every source in the frozen source receipt exactly once")
     return contracts, tuple(provider_sources)
+
+
+def _receipt_source_index(
+    receipt: Mapping[str, object],
+    *,
+    receipt_path: Path,
+) -> dict[tuple[str, str], dict[str, object]]:
+    sources: dict[tuple[str, str], dict[str, object]] = {}
+    for raw_provider in cast(list[dict[str, object]], receipt["providers"]):
+        slug = cast(str, raw_provider["slug"])
+        for raw_source in cast(list[dict[str, object]], raw_provider["sources"]):
+            source_id = cast(str, raw_source["id"])
+            archive_path = _private_path(
+                receipt_path.parent,
+                raw_source["archive"],
+                name=f"source receipt archive for {slug}",
+            )
+            sources[(slug, source_id)] = {
+                "url": raw_source["url"],
+                "retrieved_at": raw_source["retrieved_at"],
+                "archive_path": archive_path,
+                "archive_bytes": raw_source["archive_bytes"],
+                "archive_digest_sha256": raw_source["archive_digest_sha256"],
+            }
+    return sources
 
 
 def prepare_vendor_seed_round(
@@ -461,9 +517,22 @@ def prepare_vendor_seed_round(
     question = _text(dossier["question"], name="question", minimum=30)
     source_name = _text(dossier["source_name"], name="source_name", minimum=8)
     source_revision = _text(dossier["source_revision"], name="source_revision", minimum=8)
+    source_receipt_path = _private_path(
+        resolved_dossier.parent,
+        dossier["source_receipt"],
+        name="source_receipt",
+    )
+    source_receipt, source_receipt_raw = load_source_receipt(source_receipt_path)
+    source_receipt_digest = cast(str, source_receipt["receipt_digest_sha256"])
+    receipt_sources = _receipt_source_index(source_receipt, receipt_path=source_receipt_path)
     settings = _generic_settings(dossier)
     exclusions, exclusion_contracts = _exclusion_union(dossier, base=resolved_dossier.parent)
-    providers, provider_sources = _provider_contracts(dossier, base=resolved_dossier.parent, exclusions=exclusions)
+    providers, provider_sources = _provider_contracts(
+        dossier,
+        base=resolved_dossier.parent,
+        exclusions=exclusions,
+        receipt_sources=receipt_sources,
+    )
     exclusion_union_raw = ("\n".join(sorted(exclusions)) + "\n").encode("ascii")
     source_contract: dict[str, object] = {
         "schema_version": SCHEMA_VERSION,
@@ -471,6 +540,9 @@ def prepare_vendor_seed_round(
         "label_basis": LABEL_BASIS,
         "metric": METRIC,
         "dossier_digest_sha256": hashlib.sha256(dossier_raw).hexdigest(),
+        "source_receipt_digest_sha256": source_receipt_digest,
+        "source_receipt_bytes_sha256": hashlib.sha256(source_receipt_raw).hexdigest(),
+        "source_set_id": source_receipt["source_set_id"],
         "source_name": source_name,
         "source_revision": source_revision,
         "exclusions": exclusion_contracts,
@@ -491,7 +563,10 @@ def prepare_vendor_seed_round(
         "question": question,
         "source": {
             "name": source_name,
-            "revision": f"{source_revision}; source-contract-sha256={source_contract_digest}",
+            "revision": (
+                f"{source_revision}; source-receipt-sha256={source_receipt_digest}; "
+                f"source-contract-sha256={source_contract_digest}"
+            ),
         },
         "strata": [
             {

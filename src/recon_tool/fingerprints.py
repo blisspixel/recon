@@ -654,6 +654,17 @@ def _load_builtin_artifact(path: Path) -> list[Fingerprint]:
     return results
 
 
+def load_builtin_fingerprints() -> tuple[Fingerprint, ...]:
+    """Load only the generated, release-bound built-in catalog.
+
+    Maintainer evaluations use this function when their catalog digest must
+    exclude operator-local custom and process-local ephemeral fingerprints.
+    Ordinary runtime lookup continues to use :func:`load_fingerprints`.
+    """
+    artifact_file = Path(__file__).parent / "data" / "fingerprints.generated.json"
+    return tuple(_load_builtin_artifact(artifact_file))
+
+
 def load_fingerprints() -> tuple[Fingerprint, ...]:
     """Load built-in and custom fingerprints.
 
@@ -674,9 +685,6 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
             return _cache_state.fingerprints
 
         if _cache_state.catalog_fingerprints is None:
-            base = Path(__file__).parent / "data"
-            artifact_file = base / "fingerprints.generated.json"
-
             from recon_tool.paths import config_dir
 
             custom_base = config_dir()
@@ -684,7 +692,7 @@ def load_fingerprints() -> tuple[Fingerprint, ...]:
             custom_dir = custom_base / "fingerprints"
 
             catalog: list[Fingerprint] = []
-            catalog.extend(_load_builtin_artifact(artifact_file))
+            catalog.extend(load_builtin_fingerprints())
             # Custom file and directory are both additive catalog sources.
             catalog.extend(_load_from_path(custom_file))
             catalog.extend(_load_from_dir(custom_dir))
