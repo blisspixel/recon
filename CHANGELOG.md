@@ -26,6 +26,15 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.14.1] - 2026-08-15
+
+Front-door and silent-failure patch. A black-box play-test of the published
+2.14.0 package walked the documented first-run path using only published docs,
+`--help`, schemas, and returned output, and found that several published
+descriptions did not match the shipped binary. This release makes the
+descriptions true, corrects the MCP discovery order an agent reads first, and
+closes the fail-open paths found alongside them. No stable contract changes.
+
 ### Tool Surface Changes
 
 Tool surface changes: no public recon CLI command, MCP tool, resource, or
