@@ -138,7 +138,19 @@ class TestPlainOutput:
         assert "tenant_id: aaaa-bbbb" in out
         assert "dmarc_policy: reject" in out
         # Lists render as indented "- item" lines.
-        assert "  - microsoft365" in out
+        assert "  - DMARC" in out
+
+    def test_default_omits_machine_only_fields_that_full_restores(self) -> None:
+        """ADR-0016: default --plain is the panel; --full is the record.
+
+        ``slugs`` is a machine identifier the panel never shows, so it belongs
+        to the full record only. Asserted in both directions so a regression in
+        either mode fails here.
+        """
+        from recon_tool.formatter import format_tenant_plain
+
+        assert "  - microsoft365" not in format_tenant_plain(self._info())
+        assert "  - microsoft365" in format_tenant_plain(self._info(), full=True)
 
     def test_falsy_scalars_are_preserved_not_dropped(self) -> None:
         # A 0 / False field is real data and must survive --plain (the explicit

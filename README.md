@@ -142,7 +142,7 @@ recon reports observations, not verdicts. Public channel ceiling:
 ```bash
 recon example.com                              # default panel
 recon example.com --explain                    # evidence trail
-recon example.com --plain                      # linear full record (screen readers, grep)
+recon example.com --plain                      # panel as linear text (screen readers, grep)
 recon example.com --json                       # structured record
 recon batch domains.txt --json                 # batch JSON array
 recon delta example.com                        # diff vs local cache
