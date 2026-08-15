@@ -214,6 +214,21 @@ def lookup_validate(
         render_error(error)
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
+    # An unknown --profile was only caught after the lookup resolved, so a typo
+    # spent a full collection round against the target before exit 2. recon's
+    # collection boundary is a promise about what leaves the machine, and a
+    # misspelled flag is not consent to contact anyone. Resolving the profile
+    # catalog is a local YAML read, so it belongs here rather than in the pure
+    # option model. `_lookup_compute_observations` keeps its own check for the
+    # paths that do not route through here.
+    if profile_name := options.display.profile_name:
+        from recon_tool.profiles import list_profiles, load_profile
+
+        if load_profile(profile_name) is None:
+            names = ", ".join(p.name for p in list_profiles())
+            render_error(f"Unknown profile {profile_name!r}. Available profiles: {names or '(none)'}")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+
     # Validate the literal host first (apex=False), then decide whether to
     # reduce. --exact keeps the literal host; otherwise we reduce to the
     # registrable apex and tell the operator what was actually analyzed.

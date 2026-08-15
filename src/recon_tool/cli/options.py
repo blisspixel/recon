@@ -11,6 +11,10 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import StrEnum
 
+# Renderers accepted by --explain-dag-format. Kept beside the option model so
+# the pre-collection check and the renderer cannot drift apart.
+_EXPLAIN_DAG_FORMATS = frozenset({"text", "dot", "mermaid"})
+
 
 class LookupOutputMode(StrEnum):
     """Primary renderer selected by output flags."""
@@ -159,6 +163,19 @@ class LookupInferenceOptions:
     explain_dag: bool = False
     explain_dag_format: str = "text"
 
+    def validation_error(self) -> str | None:
+        # The renderer rejected a bad format, but only after the lookup had
+        # already resolved, so a typo cost a full collection round against the
+        # target before exit 2. Checking here keeps a misspelled flag from
+        # reaching the network at all. Validated whenever the value is not a
+        # supported one, even without --explain-dag: silently ignoring an
+        # explicit value reports success for something the caller asked for,
+        # the same defect already fixed for an out-of-range --depth.
+        if self.explain_dag_format.lower() not in _EXPLAIN_DAG_FORMATS:
+            supported = ", ".join(sorted(_EXPLAIN_DAG_FORMATS))
+            return f"--explain-dag-format must be one of {supported}, got {self.explain_dag_format!r}"
+        return None
+
 
 @dataclass(frozen=True)
 class LookupExecutionOptions:
@@ -183,10 +200,13 @@ class LookupOptions:
     execution: LookupExecutionOptions
 
     def validation_error(self) -> str | None:
-        if error := self.output.validation_error():
-            return error
-        if error := self.operation.validation_error():
-            return error
+        # Delegate to each component that validates itself, then check the
+        # cross-component combinations that no single component can see. The
+        # loop keeps adding a component validator free rather than growing one
+        # return per component.
+        for component in (self.output, self.operation, self.inference):
+            if error := component.validation_error():
+                return error
         if self.plain and self.operation.mode is not LookupOperationMode.STANDARD:
             return "--plain cannot be combined with --chain/--compare/--exposure/--gaps"
         if self.markdown and self.operation.mode is not LookupOperationMode.STANDARD:

@@ -309,7 +309,7 @@ def lookup(
     plain: bool = typer.Option(
         False,
         "--plain",
-        help="Plain linear text for grep and screen readers",
+        help="Full record as linear key: value text, for grep and screen readers",
         rich_help_panel=_OUTPUT_HELP_PANEL,
     ),
     services: bool = typer.Option(

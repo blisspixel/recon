@@ -89,7 +89,7 @@ fixtures use IETF reserved `.invalid` namespaces.
 <summary>Accessible text transcript</summary>
 
 ```text
-$ recon example.com
+$ recon example.com    # synthetic fixture, not a captured run
 Example Industries Ltd
 example.com
 ──────────────────────────────────────────────────────────────────────────────

@@ -159,6 +159,11 @@ def _render_demo(console: Console) -> None:
     prompt = Text("$ ", style="bold green")
     prompt.append("recon ", style="bold white")
     prompt.append("example.com", style="bold cyan")
+    # Label the transcript itself, not just the prose beside it. A reader who
+    # skims straight to the panel would otherwise take this line as a captured
+    # run; recon ships no offline demo mode, so a live `recon example.com`
+    # never reproduces the panel below.
+    prompt.append("    # synthetic fixture, not a captured run", style="dim")
     console.print(prompt)
     console.print(render_tenant_panel(demo_tenant_info()))
 
