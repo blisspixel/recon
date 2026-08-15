@@ -368,7 +368,10 @@ class TestSubprocessEntryPoint:
         usage = result.stdout.split("Usage", 1)[1].split("Common examples", 1)[0]
         assert "→" not in usage
         assert "  recon <domain>\n    clean summary (recommended)" in usage
-        assert "    linear output for screen readers" in usage
+        # A description too long for the column wraps, so pin the association
+        # (command line, then an indented description line) rather than the
+        # whole phrase, which would re-break whenever the wording changes.
+        assert "  recon <domain> --plain\n    linear full record" in usage
         assert all(not line.endswith("→") for line in usage.splitlines())
         assert max(len(line) for line in result.stdout.splitlines()) <= columns
 
@@ -393,7 +396,7 @@ class TestSubprocessEntryPoint:
 
         assert result.returncode == 0, result.stderr
         usage = result.stdout.split("Usage", 1)[1].split("Common examples", 1)[0]
-        assert "linear output for screen readers and grep" in " ".join(usage.split())
+        assert "linear full record for screen readers and grep" in " ".join(usage.split())
         assert all(not line or line.startswith("  ") for line in usage.splitlines())
         assert max(len(line) for line in result.stdout.splitlines()) <= columns
 

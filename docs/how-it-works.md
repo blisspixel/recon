@@ -101,8 +101,10 @@ A fingerprint slug is a stable identifier for one observed pattern. Examples:
 - `okta`
 
 Slugs come from YAML catalog entries. Each entry names the observable record
-shape it matches and, when available, links to vendor documentation. Custom local
-entries are additive and live under `~/.recon/`.
+shape it matches and, when available, links to vendor documentation. Custom
+local entries are additive and live in recon's resolved config directory:
+`RECON_CONFIG_DIR`, else an existing legacy `~/.recon/`, else
+`$XDG_CONFIG_HOME/recon`. Run `recon doctor` for the resolved path.
 
 A slug is an observed pattern identifier, not a product-use claim. Different
 patterns with the same vendor label can have different subjects and semantics:

@@ -171,7 +171,26 @@ is authorized.
 Detail:
 [docs/agent-portability-evaluation-declaration.md](docs/agent-portability-evaluation-declaration.md).
 
-### 5. Optional operator-hosted access - lower priority side track
+### 5. Identity-only vendor visibility in the compact view - open, unscheduled
+
+A 2026-08-15 black-box play-test of the published 2.14.0 package found that a
+record can present three defensible surfaces that read as three answers. When a
+vendor is observed only through an identity endpoint, `tenant_id`, `auth_type`,
+`cloud_instance`, `detection_scores`, `slug_confidences`, and `evidence` all
+carry it, while `slugs`, `services`, and the panel Provider row omit it because
+no DNS catalog pattern matched. Each surface is individually correct and now
+documented in [docs/schema.md](docs/schema.md); together they let a reader who
+stops at the Provider row take a mail-path indicator as the primary vendor.
+
+This is a claim-surface question, not a defect to patch: `slugs` is a stable v2
+field, the Provider row is defined as a delivery-path summary, and widening
+either silently would upgrade a claim. Closing it requires an ADR that settles
+whether the compact view names identity-only vendors, withholds a single
+Provider headline when two tenant-class claims are both above threshold, or
+keeps the split and relies on documentation. Feeds the v3 claim-envelope
+boundary; no change ships on the v2 default contract before that decision.
+
+### 6. Optional operator-hosted access - lower priority side track
 
 Draft container + Cloud Run IaC only. Local CLI and stdio MCP remain complete.
 [docs/optional-cloud-deployment-plan.md](docs/optional-cloud-deployment-plan.md).

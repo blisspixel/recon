@@ -58,5 +58,15 @@ def test_readme_embeds_and_labels_the_synthetic_demo() -> None:
     assert "No real organization is depicted" in normalized
     assert "<summary>Accessible text transcript</summary>" in readme
     assert render_terminal_demo_text() in readme
+
+    # The illustration must never read as a capture of `recon example.com`.
+    # recon ships no offline demo mode, so a reader who runs the Quick Start
+    # command gets a live lookup of a reserved domain: sparse, and sometimes
+    # carrying unrelated public residue. A README that implies otherwise sends
+    # every new reader, and every agent following the front door, to narrate a
+    # fixture the binary cannot produce.
+    assert "Every lookup is live." in normalized
+    assert "generated, not captured" in normalized
+    assert "no live lookup of reserved" in normalized
     assert "README.md text eol=lf" in attributes
     assert "docs/assets/terminal-demo.svg text eol=lf" in attributes

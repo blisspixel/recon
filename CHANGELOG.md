@@ -29,9 +29,56 @@ operator, corporate group, ownership, or control.
 ### Tool Surface Changes
 
 Tool surface changes: no public recon CLI command, MCP tool, resource, or
-stable JSON field changes. A maintainer-only network-free validator checks the
-frozen v2.15 representative-client evaluation contract and its generated,
-schema-pinned portable packaging candidate.
+stable JSON field is added, removed, or renamed. The MCP `tools/list` response
+changes *order only*: `lookup_tenant` now leads and the four ephemeral catalog
+mutators are last, so an agent that reads the list top-down meets the
+documented starting tool first. Tool names, schemas, and annotations are
+unchanged. A maintainer-only network-free validator checks the frozen v2.15
+representative-client evaluation contract and its generated, schema-pinned
+portable packaging candidate.
+
+### Changed
+
+- MCP `tools/list` advertises `lookup_tenant` first and the four process-wide
+  ephemeral catalog tools (`inject_ephemeral_fingerprint`,
+  `list_ephemeral_fingerprints`, `clear_ephemeral_fingerprints`,
+  `reevaluate_domain`) last. Registration order previously followed the
+  alphabetised import block, so an agent selecting the first advertised tool
+  met a process-mutating tool while `lookup_tenant` sat sixteenth, the inverse
+  of the stderr banner and `docs/mcp.md`.
+- `recon doctor` reports the signal catalog as loaded total plus reportable
+  subset (`38 signals loaded (36 reportable via \`recon signals list\`)`).
+  Two signals carry no public observation label and never appear in
+  `recon signals list`; the counts were both correct and looked like a
+  discrepancy.
+- The panel's `Model support` row names `the Google Workspace tenant` rather
+  than `the Workspace tenant`, which read ambiguously on a record that also
+  carries a Microsoft tenant GUID.
+- The no-argument welcome banner's examples use reserved `example.com` and
+  state that every lookup is live and that reserved and `.invalid` names
+  publish little or nothing. The previous `.invalid` examples always returned
+  an empty panel when run verbatim.
+- `--plain` is described as a linear rendering of the full structured record
+  rather than of the default panel, which is what it has always emitted.
+
+### Documentation
+
+- The README no longer presents the synthetic Example Industries terminal
+  demonstration as the output of `recon example.com`. The illustration is
+  labelled generated-not-captured, and the Quick Start states that every
+  lookup is live and that reserved names return public residue rather than an
+  organization's stack.
+- `docs/schema.md` records that `evidence` is emitted on any structured lookup
+  that retained evidence, not only under `--json --explain`, and notes that
+  default `--json` therefore carries target-owned public values such as the
+  OIDC `tenant_id` and the GetUserRealm `FederationBrandName`. The code was
+  already the contract; the document described a narrower gate.
+- `docs/fingerprints.md`, `docs/how-it-works.md`, `docs/mcp.md`,
+  `docs/stability.md`, and the `reload_data` tool description describe the
+  config directory as resolved (`RECON_CONFIG_DIR`, else an existing legacy
+  `~/.recon/`, else `$XDG_CONFIG_HOME/recon`) instead of hardcoding
+  `~/.recon/`. A fresh install reads `~/.config/recon/fingerprints.yaml`,
+  which is what `recon doctor` had been reporting all along.
 
 ### Fixed
 

@@ -258,7 +258,7 @@ def _print_welcome_banner() -> None:
         console,
         (
             ("recon <domain>", "clean summary (recommended)"),
-            ("recon <domain> --plain", "linear output for screen readers and grep"),
+            ("recon <domain> --plain", "linear full record for screen readers and grep"),
             ("recon <domain> --json", "structured automation"),
             ("recon <domain> --explain", "evidence and explanation"),
             ("recon batch domains.txt", "process multiple domains"),
@@ -268,10 +268,18 @@ def _print_welcome_banner() -> None:
     )
     console.print()
     console.print("[bold cyan]Common examples[/bold cyan]")
-    console.print("  recon alpha.invalid")
-    console.print("  recon gamma.invalid --verbose")
-    console.print("  recon beta.invalid --full --json")
+    console.print("  recon example.com")
+    console.print("  recon example.com --verbose")
+    console.print("  recon example.com --full --json")
     console.print()
+    # The examples show flag shapes, not a demo. Reserved and .invalid names
+    # publish little or nothing, so a first-time reader who runs one verbatim
+    # gets an empty panel; say that here rather than let it read as a defect.
+    console.print(
+        "[dim]Every lookup is live. These examples use reserved example.com to show flag "
+        "shapes; reserved and .invalid names publish little or nothing, so substitute a "
+        "domain you are authorized to review to see a populated panel.[/dim]"
+    )
     console.print(
         "[dim]Pass a public-suffix domain (for example, example.com). Bare hostnames without a "
         "dot are rejected as invalid domain format.[/dim]"

@@ -16,11 +16,30 @@ from contextlib import contextmanager
 
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_VALIDATION
 from recon_tool.server import app as server_app
-from recon_tool.server import ephemeral as server_ephemeral
-from recon_tool.server import graph as server_graph
-from recon_tool.server import introspection as server_introspection
+
+# Tool-group import order IS `tools/list` order: each module registers its tools
+# on the shared FastMCP instance at import time and FastMCP preserves insertion
+# order. An agent that reads the list top-down must meet the read-only lookup
+# family first and the process-wide ephemeral catalog mutators last, so the
+# machine-readable order matches the stderr banner and the "start with
+# lookup_tenant" guidance in docs/mcp.md. The `isort: split` markers keep the
+# import sorter from re-alphabetising this deliberate order back into one
+# block; `tests/test_mcp_tool_order.py` pins it.
 from recon_tool.server import lookup as server_lookup
+
+# isort: split
 from recon_tool.server import posture as server_posture
+
+# isort: split
+from recon_tool.server import graph as server_graph
+
+# isort: split
+from recon_tool.server import introspection as server_introspection
+
+# isort: split
+from recon_tool.server import ephemeral as server_ephemeral
+
+# isort: split
 from recon_tool.server import runtime as _server_runtime
 from recon_tool.server.app import mcp
 from recon_tool.validator import strip_control_chars, validate_domain

@@ -183,9 +183,23 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 | Field | Type | Nullable | Values | Stability | Description |
 |---|---|---|---|---|---|
 | `services` | `list[string]` | no | n/a | stable | Human-readable labels derived from public fingerprints and reviewed rules; not proof of active product use. |
-| `slugs` | `list[string]` | no | n/a | stable | Stable identifiers for observed fingerprint patterns; not product-use claims. |
-| `detection_scores` | object | no | `{slug: score_level}` | stable | Per-slug evidence-strength level (`"low" \| "medium" \| "high"`), not a probability or truth confidence. |
+| `slugs` | `list[string]` | no | n/a | stable | Stable identifiers for observed **fingerprint-catalog pattern** matches; not product-use claims. Aggregated from per-source detections, so a vendor observed only through an identity endpoint (OIDC discovery, GetUserRealm) is **not** listed here. See the note below. |
+| `detection_scores` | object | no | `{slug: score_level}` | stable | Per-slug evidence-strength level (`"low" \| "medium" \| "high"`), not a probability or truth confidence. Derived from retained `evidence` records, whose slug set is a **superset** of `slugs`. See the note below. |
 | `insights` | `list[string]` | no | n/a | stable | Derived, hedged observations from public evidence. Exact wording may evolve; they are not verified private-state intelligence or proof of product use. |
+
+> **`slugs` is not the full vendor list.** `slugs` answers "which catalog
+> patterns matched", and the catalog matches DNS records. `detection_scores`,
+> `slug_confidences`, and `evidence` answer "which vendors did any source
+> observe", and identity endpoints are sources too. A record can therefore
+> carry `tenant_id`, `auth_type: Federated`, `cloud_instance`, a
+> `microsoft365` entry in `detection_scores`, and `microsoft365` evidence
+> rows, while `slugs` and `services` omit `microsoft365` because no DNS
+> pattern matched. That is the documented behavior, not a dropped detection.
+> A consumer asking "is this an M365 tenant?" should read `tenant_id` and
+> `detection_scores`, never `slugs` alone. Whether the compact panel and
+> `slugs` should surface identity-only vendors is an open claim-surface
+> question tracked in [ROADMAP.md](../ROADMAP.md); it cannot change silently
+> because `slugs` is a stable field.
 
 ### Domains
 
@@ -559,14 +573,23 @@ does not claim live in [`correlation.md`](correlation.md).
 
 ## Structured records in expanded JSON modes
 
-When a structured lookup uses `--json` together with `--verbose`, `--full`, or
-`--explain`, additional structured arrays can appear. These fields are
-conditional, so a consumer should treat their presence as optional and never
-infer "always present". They are intentionally omitted from the schema's
-`required` list for the same reason. The conditional fields are `evidence` and
-`explanations` (`--json --explain`), `explanation_dag` (`--json --explain`, or
-`lookup_tenant(format="json", explain=true)` through MCP), and
-`unclassified_cname_chains` (`--include-unclassified` in structured output).
+Some structured arrays are conditional, so a consumer should treat their
+presence as optional and never infer "always present". They are intentionally
+omitted from the schema's `required` list for the same reason. Two different
+conditions gate them, and the distinction matters for privacy review:
+
+- **Present whenever the data exists, on ordinary `--json`.** `evidence` is
+  emitted by any structured lookup that retained at least one evidence record;
+  no flag turns it on and no flag turns it off. It is absent only when nothing
+  was retained. `--plain` linearises the same field. Because evidence records
+  carry target-owned public values (`raw_value` holds the observed TXT string,
+  the OIDC `tenant_id`, or the GetUserRealm `FederationBrandName`), a pipeline
+  that persists default `--json` persists those values. Treat it as part of the
+  default envelope when writing retention rules.
+- **Present only with an explicit flag.** `explanations` (`--json --explain`),
+  `explanation_dag` (`--json --explain`, or
+  `lookup_tenant(format="json", explain=true)` through MCP), and
+  `unclassified_cname_chains` (`--include-unclassified` in structured output).
 The same private catalog-maintenance option also adds
 `dns_catalog_summary` and `unclassified_dns_observations`. The summary has one
 row for each bounded catalog path with availability, opportunity, observed,
@@ -579,7 +602,7 @@ validation workspace.
 Plain panel `--explain` output renders source status and flat explanations. It
 does not emit the structured `explanation_dag` object.
 
-### `evidence` (present with `--json --explain`)
+### `evidence` (present on any structured lookup that retained evidence)
 
 ```json
 [
@@ -593,9 +616,11 @@ does not emit the structured `explanation_dag` object.
 ]
 ```
 
-Stability: **stable** within the `--json --explain` contract; the fields inside
-each record (`source_type`, `raw_value`, `rule_name`, `slug`) will not change
-shape.
+Stability: **stable**; the fields inside each record (`source_type`,
+`raw_value`, `rule_name`, `slug`) will not change shape. Presence is
+data-conditional, not flag-conditional: the array appears on plain `--json`
+whenever the lookup retained evidence, and `--explain` adds `explanations` and
+`explanation_dag` alongside it without changing these records.
 
 ### `explanations` (present with explained JSON through CLI or MCP)
 

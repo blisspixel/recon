@@ -605,8 +605,12 @@ def _static_weakening_conditions(sig: object) -> list[str]:
 async def reload_data() -> str:
     """Reload fingerprint, signal, and posture definitions for this server process.
 
-    Use this after updating ~/.recon/fingerprints.yaml or the built-in data
-    files. Clears the process lookup cache so subsequent lookups use the new
+    Use this after updating the custom fingerprints.yaml / fingerprints/ or
+    signals.yaml overlay in recon's config directory, or the built-in data
+    files. The config directory is resolved, not fixed: RECON_CONFIG_DIR if
+    set, else an existing legacy ~/.recon/, else $XDG_CONFIG_HOME/recon
+    (default ~/.config/recon). Run `recon doctor` to print the resolved path.
+    Clears the process lookup cache so subsequent lookups use the new
     definitions. Preserves the rate limiter and ephemeral catalog. No network
     request is made by this tool.
     """
