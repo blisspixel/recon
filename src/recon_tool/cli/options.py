@@ -76,6 +76,10 @@ class LookupDisplayOptions:
     show_explain: bool = False
     profile_name: str | None = None
     confidence_mode: str = "hedged"
+    # Retained separately from the flags --full implies, because --plain needs
+    # to know the caller asked for everything (ADR-0016), not merely that the
+    # implied detail flags happen to be set.
+    full: bool = False
 
     @classmethod
     def from_flags(
@@ -99,6 +103,7 @@ class LookupDisplayOptions:
         if profile and not posture:
             posture = True
         return cls(
+            full=full,
             verbose=verbose,
             show_services=services,
             show_domains=domains,

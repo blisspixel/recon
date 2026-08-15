@@ -396,18 +396,86 @@ def plain_lines(value: Any, key: str, indent: int) -> list[str]:
     return [f"{pad}{key}: {strip_control_chars(str(value))}"]
 
 
-def format_tenant_plain(info: TenantInfo, *, include_unclassified: bool = False, detailed: bool = False) -> str:
+_PANEL_KEY_ORDER: tuple[str, ...] = (
+    "queried_domain",
+    "display_name",
+    "provider",
+    "mail",
+    "identity",
+    "tenant_id",
+    "region",
+    "default_domain",
+    "auth_type",
+    "confidence",
+    "source_count",
+    "services",
+    # Email posture the panel folds into its Services/Email row. Keeping these
+    # as their own keys preserves the fact in linear form without reproducing
+    # the panel's prose assembly.
+    "dmarc_policy",
+    "mta_sts_mode",
+    "related_domains",
+    "insights",
+)
+
+
+def _plain_panel_data(data: dict[str, Any], info: TenantInfo, *, detailed: bool) -> dict[str, Any]:
+    """Reduce the full record to the rows the default panel shows.
+
+    ADR-0016. The panel's own claims, in the panel's order, under the stable
+    schema names so a ``grep tenant_id:`` written against the full record still
+    matches. Keys the panel does not show are dropped rather than emptied.
+    """
+    from recon_tool.formatter.classify import compact_provider_line
+    from recon_tool.formatter.roles import role_split_vendors
+
+    panel: dict[str, Any] = {}
+    split = role_split_vendors(info)
+    for key in _PANEL_KEY_ORDER:
+        if key in {"mail", "identity"}:
+            # Only present on a role split; ADR-0015 keeps the single
+            # `provider` key for every other record.
+            if split is not None:
+                mail, identity = split
+                panel[key] = (mail if detailed else compact_provider_line(mail)) if key == "mail" else identity
+            continue
+        if key == "provider" and split is not None:
+            continue
+        if key == "source_count":
+            panel[key] = len(info.sources)
+            continue
+        # The panel prints the tenant's own default domain only when it differs
+        # from the one queried; repeating it otherwise is noise.
+        if key == "default_domain" and data.get("default_domain") == data.get("queried_domain"):
+            continue
+        value = data.get(key)
+        if value in (None, "", [], {}):
+            continue
+        panel[key] = value
+    return panel
+
+
+def format_tenant_plain(
+    info: TenantInfo,
+    *,
+    include_unclassified: bool = False,
+    detailed: bool = False,
+    full: bool = False,
+) -> str:
     """Format TenantInfo as plain, linear, greppable text (no Rich panel).
 
-    Built from the same dict as the JSON output, so it carries every field the
-    structured output does - but as ``key: value`` lines a screen reader reads
-    linearly and ``grep``/``awk`` can slice, with no color or box-drawing. This
-    is the accessibility / scripting complement to the default panel.
+    ADR-0016. By default this renders the **default panel's rows** as
+    ``key: value`` lines a screen reader reads linearly and ``grep``/``awk`` can
+    slice, with no color or box-drawing: the accessibility complement to the
+    panel, rather than a second machine surface.
 
-    Because it is the panel's accessibility complement, it tracks the panel's
-    default/detailed split (ADR-0012): ``detailed`` keeps every evidence-role
-    qualifier, and the default compacts them and says so. ``--json`` stays the
-    machine contract and is unaffected either way.
+    ``full`` restores the complete structured record, which is what this
+    renderer emitted unconditionally before 2.15. That output is unchanged, so
+    a caller that wants every field adds ``--full`` and loses nothing.
+
+    Either way it tracks the panel's default/detailed split (ADR-0012):
+    ``detailed`` keeps every evidence-role qualifier, and the default compacts
+    them and says so. ``--json`` stays the machine contract and is unaffected.
     """
     from recon_tool.collection_view import collection_observable_info
     from recon_tool.formatter.classify import (
@@ -433,6 +501,10 @@ def format_tenant_plain(info: TenantInfo, *, include_unclassified: bool = False,
         notes.append(f"{dropped_count} unattributed {noun} omitted, use --full")
     if notes:
         data["evidence_roles"] = "; ".join(notes)
+    if not full:
+        data = _plain_panel_data(data, observable, detailed=detailed)
+        if notes:
+            data["evidence_roles"] = "; ".join(notes)
     lines: list[str] = []
     for key, value in data.items():
         lines.extend(plain_lines(value, str(key), 0))

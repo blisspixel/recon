@@ -33,6 +33,7 @@ from recon_tool.formatter.classify_tables import (
     SERVICE_CATEGORIES_ORDER,
     SLUG_DISPLAY_OVERRIDES,
 )
+from recon_tool.formatter.roles import identity_role_vendors, role_split_vendors
 from recon_tool.models import EvidenceRecord, TenantInfo
 from recon_tool.source_status import SourceStatus
 
@@ -59,10 +60,12 @@ __all__ = [
     "evidence_role_service_label",
     "google_workspace_cse_indicators",
     "google_workspace_module_indicators",
+    "identity_role_vendors",
     "is_gws_service",
     "is_m365_service",
     "provider_line",
     "role_aware_service_label",
+    "role_split_vendors",
     "slug_to_relationship_metadata",
 ]
 
@@ -128,6 +131,7 @@ _EVIDENCE_ROLE_SUFFIXES = (
     " (authoritative DNS delegation)",
     " (DKIM selector indicator)",
     " (address endpoint indicator)",
+    " (identity endpoint)",
 )
 _RECORD_ROLE_QUALIFIERS = (
     ("SPF", "SPF sender authorization"),
@@ -148,6 +152,7 @@ _RECORD_ROLE_QUALIFIERS = (
 # qualifiers that survive compaction because dropping them would convert a
 # hedge into an assertion.
 _ROLE_UNAVAILABLE_SUFFIX = " (role unavailable)"
+_IDENTITY_ENDPOINT_SUFFIX = " (identity endpoint)"
 _UNATTRIBUTED_PROVIDER_SUFFIX = " (no supporting record)"
 _DOWNSTREAM_INDICATOR_SUFFIX = " (possible downstream indicator)"
 _COMPACT_DOWNSTREAM_SUFFIX = " (likely downstream)"
@@ -861,6 +866,36 @@ def _dedup_identity_echoes(by_cat: dict[str, list[str]]) -> None:
     by_cat["Identity"] = filtered_identity
 
 
+def _file_identity_role_vendors(info: TenantInfo, by_cat: dict[str, list[str]]) -> None:
+    """Move an identity-endpoint vendor out of Email and into Identity.
+
+    ADR-0015. ``CATEGORY_BY_SLUG`` files ``microsoft365`` and
+    ``google-workspace`` under Email because that is what those slugs usually
+    mean. When the only evidence for one of them came from an identity endpoint
+    it has no mail role, so pass 1 files it under Email and the role-aware label
+    marks it ``(role unavailable)``: accurate about mail, silent about the
+    identity role that was actually observed, and then dropped entirely from the
+    default view by ADR-0012.
+
+    Re-file it under the role it does have. Only entries with no mail role move:
+    a vendor that genuinely runs both mail and identity keeps its Email row,
+    because that row is true.
+    """
+    identity_vendors = set(identity_role_vendors(info))
+    if not identity_vendors:
+        return
+    kept_email: list[str] = []
+    for service in by_cat.get("Email", []):
+        core = _unqualified_service_name(service)
+        if core in identity_vendors and service.endswith(_ROLE_UNAVAILABLE_SUFFIX):
+            relabelled = f"{core}{_IDENTITY_ENDPOINT_SUFFIX}"
+            if relabelled not in by_cat.setdefault("Identity", []):
+                by_cat["Identity"].append(relabelled)
+            continue
+        kept_email.append(service)
+    by_cat["Email"] = kept_email
+
+
 def _consolidate_caa_issuers(by_cat: dict[str, list[str]]) -> None:
     """Collapse the per-issuer "CAA: <issuer>" Security entries into one compact
     "CAA: N issuers authorized" line so CAA records do not overwhelm the row or
@@ -909,6 +944,7 @@ def categorize_services(info: TenantInfo) -> dict[str, list[str]]:
 
     seen_services, slugs_filed = _categorize_pass1_slugs(info, slug_to_name, by_cat)
     _categorize_pass2_names(info, name_to_slug, by_cat, seen_services, slugs_filed)
+    _file_identity_role_vendors(info, by_cat)
     _dedup_identity_echoes(by_cat)
     _consolidate_caa_issuers(by_cat)
 

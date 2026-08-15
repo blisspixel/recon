@@ -629,17 +629,27 @@ def _lookup_emit_markdown(
     typer.echo(md)
 
 
-def _lookup_emit_plain(info: Any, sections: dict[str, Any], *, include_unclassified: bool, detailed: bool) -> None:
+def _lookup_emit_plain(
+    info: Any,
+    sections: dict[str, Any],
+    *,
+    include_unclassified: bool,
+    detailed: bool,
+    full: bool = False,
+) -> None:
     """Emit the tenant report as plain, linear, greppable text (no panel).
 
     Takes the already-built optional sections rather than the flags that select
     them, so the linear view shares one definition of those blocks with the JSON
     view without growing another wide flag signature.
+
+    ``full`` selects the complete structured record (ADR-0016); the default is
+    the panel's own rows.
     """
     from recon_tool.formatter import format_tenant_plain
     from recon_tool.formatter.serialize import plain_lines
 
-    lines = [format_tenant_plain(info, include_unclassified=include_unclassified, detailed=detailed)]
+    lines = [format_tenant_plain(info, include_unclassified=include_unclassified, detailed=detailed, full=full)]
     for key, value in sections.items():
         lines.extend(plain_lines(value, key, 0))
     typer.echo("\n".join(lines))
@@ -802,6 +812,7 @@ async def _lookup_standard(
                 ),
                 include_unclassified=options.include_unclassified,
                 detailed=detailed_roles,
+                full=options.display.full,
             )
             return
 
