@@ -31,12 +31,23 @@ def _write_json(path: Path, payload: dict[str, Any]) -> None:
     path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
 
 
+def _project_version() -> str:
+    """The declared package version, read the same way the validator reads it."""
+    return candidate._project_version(candidate.DEFAULT_PROJECT)
+
+
 def test_committed_candidate_is_current_and_valid() -> None:
     assert generator.main(["--check"]) == 0
 
     version, digest = candidate.validate_candidate()
 
-    assert version == "2.14.0"
+    # The candidate is generated from the runtime sources, so its version
+    # tracks the package by construction, and `test_version_drift_fails_closed`
+    # already proves a mismatch fails closed. Asserting that relationship
+    # rather than a snapshot literal keeps every ordinary version bump from
+    # tripping a gate that is not about versions. The frozen thing here is the
+    # contract digest, which is pinned exactly and must never move silently.
+    assert version == _project_version()
     assert digest == "403a5860dc547ab0fd8961023d196e0b72ec6524ed2c1cb7da4253899628eafe"
 
 

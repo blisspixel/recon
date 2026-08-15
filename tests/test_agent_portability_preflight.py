@@ -9,6 +9,7 @@ from typing import Any
 
 import pytest
 
+from scripts import check_agent_plugin
 from validation import prepare_agent_portability_evaluation as preflight
 
 PUBLIC_MEMO = preflight.ROOT / "validation" / "2026-08-14-agent-portability-preflight.md"
@@ -97,7 +98,12 @@ def test_probe_reports_missing_and_timeout_without_paths_in_detail(
 def test_prepare_preflight_is_ready_only_when_every_frozen_gate_passes(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    versions = {"recon": "2.14.0", "code": "1.99.3", "cursor": "2.1.0", "kiro": "0.12.263"}
+    # The frozen gate is "the recon that launches the client must be the exact
+    # candidate under evaluation", so the runtime version is derived from the
+    # candidate rather than pinned to a literal. A literal would make every
+    # ordinary version bump look like a contract breach.
+    candidate_version, _digest = check_agent_plugin.validate_candidate()
+    versions = {"recon": candidate_version, "code": "1.99.3", "cursor": "2.1.0", "kiro": "0.12.263"}
 
     def ready_probe(command: str, *, label: str) -> dict[str, object]:
         del label
