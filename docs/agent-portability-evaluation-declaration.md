@@ -6,6 +6,17 @@ collection not yet complete. The first maintainer-local preflight stopped before
 collection because Cursor was unavailable and the selected client-launch recon
 was 2.6.3 rather than the candidate's 2.14.0.
 
+The candidate's version is not itself a frozen value. The portable candidate is
+generated from the runtime sources, so its version tracks the package and moves
+with any release; the fail-closed generator already rejects a candidate whose
+version disagrees with `pyproject.toml`. What is frozen is the contract digest
+`403a5860dc547ab0fd8961023d196e0b72ec6524ed2c1cb7da4253899628eafe`, the
+standards snapshot, the client and task frame, the paired variants, the
+measures, the privacy boundary, the promotion thresholds, and the stop rules.
+The runtime gate is unchanged and states a relationship rather than a number:
+the recon that launches each client must be the exact candidate under
+evaluation. Record the observed version at collection time.
+
 This is the preregistration for the v2.15 representative-client evaluation.
 It freezes the question, standards snapshot, client and task frame, paired
 variants, measures, privacy boundary, promotion thresholds, and stop rules
