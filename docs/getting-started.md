@@ -219,16 +219,25 @@ explanations label that distinction. In explained JSON,
 exact-lineage question; schema-version-1 `provenance_complete` retains its
 broader graph-reachability meaning.
 
-Use `--plain` for screen readers, grep, and other linear-text workflows. It is
-not a decoration-stripped copy of the default panel: it linearises the same
-record `--json` emits, as indented `key: value` lines with no color or
-box-drawing. Expect the full record, including Bayesian internals such as
-`posterior_observations` and `interval_low`, and expect the panel's rows under
-their schema names: grep for `provider:` and `tenant_id:`, not `Provider`. It
-tracks the panel's default/detailed split ([ADR-0012](adr/0012-default-view-evidence-role-visibility.md)),
-so evidence-role qualifiers are compacted unless you add `--explain`. When you
-want only the panel rows, read the top of the output or select the keys you
-need.
+Use `--plain` for screen readers, grep, and other linear-text workflows. It
+renders the default panel's rows as indented `key: value` lines with no color
+or box-drawing: the same claims the panel shows, in the same order, under the
+stable schema names. Grep for `provider:` and `tenant_id:`, not `Provider`.
+
+Add `--full` for the complete structured record, including Bayesian internals
+such as `posterior_observations` and `interval_low`:
+
+```bash
+recon example.com --plain          # the panel, linearised
+recon example.com --plain --full   # every field the record carries
+```
+
+Before 2.15, plain `--plain` always emitted the full record. If you parse it
+for a field outside the panel, add `--full`;
+[ADR-0016](adr/0016-plain-emits-the-panel-record.md) records the change, and
+`--json` remains the surface recommended for automation. Either mode tracks the
+panel's default/detailed split ([ADR-0012](adr/0012-default-view-evidence-role-visibility.md)),
+so evidence-role qualifiers are compacted unless you add `--explain`.
 This is the linear view for a standard single-domain lookup. Chain, compare,
 exposure, and gaps reports use their own formats; batch and delta have
 mode-specific output.

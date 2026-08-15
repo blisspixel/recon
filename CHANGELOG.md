@@ -26,6 +26,47 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Tool Surface Changes
+
+Tool surface changes: `--plain` default output changes shape. It now renders
+the default panel's rows as linear `key: value` text; the complete structured
+record it emitted through 2.14.x is unchanged and moves behind `--plain
+--full`. Key names are the stable schema names either way, so an existing
+`grep tenant_id:` still matches. The default panel gains role-labelled `Mail`
+and `Identity` rows in place of `Provider`, but only on records where a mail
+vendor and an identity vendor genuinely differ. No JSON field, MCP tool,
+resource, cache, or capsule contract changes.
+
+### Changed
+
+- The default panel names both vendors, with their roles, when a domain's mail
+  vendor and identity vendor differ. Previously the singular `Provider` row
+  named the mail vendor and read as though it named the only vendor, while the
+  identity vendor appeared solely as an unlabelled tenant GUID. `Services`
+  gains an `Identity` row instead of filing the identity observation under
+  `Email` with no mail role, and `Model support` names every above-threshold
+  tenant-class claim rather than one of two. Single-vendor records render
+  exactly as before. The identity role is derived from evidence provenance
+  (`OIDC Discovery`, `GetUserRealm`, `Autodiscover`, `Google Identity
+  Routing`), not from a slug's catalog category, because that category states
+  what a slug usually means rather than what was observed.
+  [ADR-0015](docs/adr/0015-role-split-vendor-claims-in-the-default-view.md).
+- `--plain` renders the panel; `--plain --full` renders the complete record.
+  The accessibility surface previously emitted ~350 lines opening with schema
+  keys, so a screen-reader user heard `interval_low` before they heard which
+  vendor handled mail. Two consecutive external play-tests reported the
+  accessibility path as the hardest path.
+  [ADR-0016](docs/adr/0016-plain-emits-the-panel-record.md).
+- An unknown `--profile` and an invalid `--explain-dag-format` are rejected
+  before collection instead of after it. Both were validated only once the
+  lookup had resolved, so a typo spent a full round of DNS and
+  identity-endpoint requests against the target before exit 2. An invalid
+  `--explain-dag-format` is now also rejected without `--explain-dag`.
+- `recon lookup --help` describes `--plain` consistently with the banner and
+  the guide.
+- The README terminal transcript labels itself a synthetic fixture, so a reader
+  who skims past the surrounding prose cannot take it for a captured run.
+
 ## [2.14.1] - 2026-08-15
 
 Front-door and silent-failure patch. A black-box play-test of the published

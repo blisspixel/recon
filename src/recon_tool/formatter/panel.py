@@ -67,6 +67,13 @@ from recon_tool.formatter.markdown import (
     markdown_escape,
 )
 from recon_tool.formatter.panel_status import confidence_is_high, render_low_confidence_guidance
+from recon_tool.formatter.roles import (
+    POSTERIOR_DECISION_THRESHOLD,
+    model_support_claims,
+    posterior_dot_fill,
+    posterior_support_phrase,
+    role_split_vendors,
+)
 from recon_tool.formatter.serialize import (
     CSV_COLUMNS,
     format_batch_csv,
@@ -82,7 +89,6 @@ from recon_tool.models import (
     ConfidenceLevel,
     MergeConflicts,
     Observation,
-    PosteriorObservation,
     ReconLookupError,
     SourceResult,
     TenantInfo,
@@ -109,6 +115,9 @@ _is_gws_service = is_gws_service
 _is_m365_service = is_m365_service
 _slug_to_relationship_metadata = slug_to_relationship_metadata
 _markdown_escape = markdown_escape
+_posterior_dot_fill = posterior_dot_fill
+_posterior_support_phrase = posterior_support_phrase
+_POSTERIOR_DECISION_THRESHOLD = POSTERIOR_DECISION_THRESHOLD
 _plain_lines = plain_lines
 
 logger = logging.getLogger(__name__)
@@ -249,68 +258,21 @@ CONFIDENCE_COLORS: dict[ConfidenceLevel, str] = {
     ConfidenceLevel.LOW: "#e07a5f",  # warm terracotta
 }
 
+# Glyph and color for the model-support dots. The fill level itself is decided
+# in ``formatter.roles``; these are the rendering half of that decision.
+_DOT_FILL_GLYPH: dict[int, str] = {3: "●●●", 2: "●●○", 1: "●○○"}
+
+_DOT_FILL_COLOR: dict[int, str] = {
+    3: "#a3d9a5",
+    2: "#7ec8e3",
+    1: "#e07a5f",
+}
+
 CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
     ConfidenceLevel.HIGH: "●●●",
     ConfidenceLevel.MEDIUM: "●●○",
     ConfidenceLevel.LOW: "●○○",
 }
-
-# Model-relative display support for the weakest claimed node. This stays
-# distinct from deterministic confidence because the hand-set uncertainty band
-# is not calibrated and its width is not generally evidence-monotone.
-_POSTERIOR_DECISION_THRESHOLD = 0.5
-
-_DOT_FILL_GLYPH: dict[int, str] = {3: "●●●", 2: "●●○", 1: "●○○"}
-
-_DOT_FILL_COLOR: dict[int, str] = {
-    3: CONFIDENCE_COLORS[ConfidenceLevel.HIGH],
-    2: CONFIDENCE_COLORS[ConfidenceLevel.MEDIUM],
-    1: CONFIDENCE_COLORS[ConfidenceLevel.LOW],
-}
-
-
-def _posterior_dot_fill(obs: PosteriorObservation, threshold: float = _POSTERIOR_DECISION_THRESHOLD) -> int:
-    """Solid-dot count (1 to 3) for a positive claim's model display.
-
-    - 3: the whole interval is above the threshold.
-    - 2: the point estimate is on the yes-side but the interval dips below the
-      threshold, so the display straddles the threshold.
-    - 1: the point estimate is on the no-side of the model threshold.
-
-    Pure and monotone in ``interval_low`` then ``posterior``; pinned by a
-    property test so the renderer cannot drift or recalibrate through the UI.
-    """
-    if obs.interval_low >= threshold:
-        return 3
-    if obs.posterior >= threshold:
-        return 2
-    return 1
-
-
-# Human-readable claim name per node for the disagreement clause. Short so the
-# dimmed row stays one line; vendor-qualified so "Workspace" names one vendor.
-_NODE_CLAIM_NAMES: dict[str, str] = {
-    "m365_tenant": "the M365 tenant",
-    "google_workspace_tenant": "the Google Workspace tenant",
-    "federated_identity": "federated identity",
-    "okta_idp": "the Okta IdP",
-    "email_gateway_present": "the email gateway",
-    "email_security_modern_provider": "modern email security",
-    "email_security_policy_enforcing": "the email policy",
-    "cdn_fronting": "the CDN",
-    "aws_hosting": "AWS hosting",
-}
-
-
-def _posterior_support_phrase(obs: PosteriorObservation, fill: int) -> str:
-    """Describe a claimed node's model display without confidence language."""
-    claim = _NODE_CLAIM_NAMES.get(obs.name, f"the {obs.name} call")
-    if fill >= 3:
-        return f"display above threshold for {claim}"
-    if fill == 2:
-        return f"threshold-straddling display for {claim}"
-    return f"model mean below threshold for {claim}"
-
 
 # Services filtered from the compact (default) view because they appear
 # in insights instead. Uses exact prefix matching to avoid false positives
@@ -527,13 +489,12 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     claimed = [o for o in info.posterior_observations if o.evidence_used]
     if not claimed:
         return
-    weakest = min(claimed, key=lambda o: (_posterior_dot_fill(o), o.posterior))
-    fill = _posterior_dot_fill(weakest)
+    named, fill = model_support_claims(claimed)
     facts.append("  ")
     facts.append("Model support".ljust(_LABEL_WIDTH), style="dim")
     facts.append(" ")
     facts.append(_DOT_FILL_GLYPH[fill], style=_DOT_FILL_COLOR[fill])
-    facts.append(f" {_posterior_support_phrase(weakest, fill)}", style="dim")
+    facts.append(f" {posterior_support_phrase(named, fill)}", style="dim")
     facts.append("\n")
 
 
@@ -550,8 +511,18 @@ def _render_key_facts(info: TenantInfo, detailed: bool) -> Text:
     detailed view keeps them.
     """
     facts = Text()
-    provider = provider_line(info)
-    _append_field(facts, "Provider", provider if detailed else compact_provider_line(provider))
+    # ADR-0015: when a vendor observed at an identity endpoint is not the one
+    # the mail summary names, print both with their roles instead of letting a
+    # single unroled "Provider" row read as the answer. Only a real split
+    # branches here; every other panel keeps the historical row byte for byte.
+    split = role_split_vendors(info)
+    if split is not None:
+        mail, identity = split
+        _append_field(facts, "Mail", mail if detailed else compact_provider_line(mail))
+        _append_field(facts, "Identity", identity)
+    else:
+        provider = provider_line(info)
+        _append_field(facts, "Provider", provider if detailed else compact_provider_line(provider))
 
     if info.tenant_id:
         tenant_line = info.tenant_id

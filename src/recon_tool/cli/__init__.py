@@ -258,7 +258,7 @@ def _print_welcome_banner() -> None:
         console,
         (
             ("recon <domain>", "clean summary (recommended)"),
-            ("recon <domain> --plain", "linear full record for screen readers and grep"),
+            ("recon <domain> --plain", "panel as linear text for screen readers and grep"),
             ("recon <domain> --json", "structured automation"),
             ("recon <domain> --explain", "evidence and explanation"),
             ("recon batch domains.txt", "process multiple domains"),
@@ -309,7 +309,7 @@ def lookup(
     plain: bool = typer.Option(
         False,
         "--plain",
-        help="Full record as linear key: value text, for grep and screen readers",
+        help="Panel as linear key: value text, for grep and screen readers (--full for the whole record)",
         rich_help_panel=_OUTPUT_HELP_PANEL,
     ),
     services: bool = typer.Option(

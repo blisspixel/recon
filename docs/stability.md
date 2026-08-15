@@ -45,7 +45,8 @@ For the JSON output contract in full field-by-field detail, see
 |---|---|---|
 | `--json` | Stable | JSON output contract in [`schema.md`](schema.md). |
 | `--md` | Stable | Markdown H2 section structure is stable; prose is not. |
-| `--full` / `-f` | Stable | Expanded evidence + all domains + posture; retains the default Services summary. |
+| `--full` / `-f` | Stable | Expanded evidence + all domains + posture; retains the default Services summary. With `--plain`, selects the complete structured record. |
+| `--plain` | Stable; **default output changed in 2.15** | Renders the default panel's rows as linear `key: value` text. Through 2.14.x it always emitted the complete structured record; that output is unchanged and now behind `--plain --full`. Key names are the stable schema names either way, so an existing `grep tenant_id:` still matches. Migration: add `--full` if you parse a field outside the panel. [ADR-0016](adr/0016-plain-emits-the-panel-record.md). |
 | `--verbose` / `-v` | Stable | Expanded evidence, confidence and detection detail, plus per-source status on stderr. |
 | `--explain` | Stable | Panel, source status, and flat evidence explanations; `--json --explain` additionally emits the structured, lineage-qualified `explanation_dag`. |
 | `--services` / `-s` | Stable | Retained for compatibility; Services are shown by default. |
