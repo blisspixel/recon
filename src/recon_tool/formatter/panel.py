@@ -68,9 +68,9 @@ from recon_tool.formatter.markdown import (
 )
 from recon_tool.formatter.panel_status import confidence_is_high, render_low_confidence_guidance
 from recon_tool.formatter.roles import (
-    POSTERIOR_DECISION_THRESHOLD,
+    DOT_FILL_COLOR,
+    DOT_FILL_GLYPH,
     model_support_claims,
-    posterior_dot_fill,
     posterior_support_phrase,
     role_split_vendors,
 )
@@ -115,9 +115,6 @@ _is_gws_service = is_gws_service
 _is_m365_service = is_m365_service
 _slug_to_relationship_metadata = slug_to_relationship_metadata
 _markdown_escape = markdown_escape
-_posterior_dot_fill = posterior_dot_fill
-_posterior_support_phrase = posterior_support_phrase
-_POSTERIOR_DECISION_THRESHOLD = POSTERIOR_DECISION_THRESHOLD
 _plain_lines = plain_lines
 
 logger = logging.getLogger(__name__)
@@ -256,16 +253,6 @@ CONFIDENCE_COLORS: dict[ConfidenceLevel, str] = {
     ConfidenceLevel.HIGH: "#a3d9a5",  # soft sage green
     ConfidenceLevel.MEDIUM: "#7ec8e3",  # muted sky blue
     ConfidenceLevel.LOW: "#e07a5f",  # warm terracotta
-}
-
-# Glyph and color for the model-support dots. The fill level itself is decided
-# in ``formatter.roles``; these are the rendering half of that decision.
-_DOT_FILL_GLYPH: dict[int, str] = {3: "●●●", 2: "●●○", 1: "●○○"}
-
-_DOT_FILL_COLOR: dict[int, str] = {
-    3: "#a3d9a5",
-    2: "#7ec8e3",
-    1: "#e07a5f",
 }
 
 CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
@@ -490,12 +477,24 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     if not claimed:
         return
     named, fill = model_support_claims(claimed)
-    facts.append("  ")
-    facts.append("Model support".ljust(_LABEL_WIDTH), style="dim")
-    facts.append(" ")
-    facts.append(_DOT_FILL_GLYPH[fill], style=_DOT_FILL_COLOR[fill])
-    facts.append(f" {posterior_support_phrase(named, fill)}", style="dim")
-    facts.append("\n")
+    # Wrap like every other row. This row appended without wrapping, which was
+    # invisible while the phrase named one claim and spilled past the panel
+    # edge once it could name two (ADR-0015). The dots sit in the value column,
+    # so continuation lines indent past them, not just past the label.
+    label = "Model support"
+    label_width = max(_LABEL_WIDTH, len(label) + 1)
+    glyph = DOT_FILL_GLYPH[fill]
+    value_indent = 2 + label_width + len(glyph) + 1
+    for index, line in enumerate(_wrap_text(posterior_support_phrase(named, fill), _PANEL_WIDTH - value_indent)):
+        if index == 0:
+            facts.append("  ")
+            facts.append(label.ljust(label_width), style="dim")
+            facts.append(glyph, style=DOT_FILL_COLOR[fill])
+            facts.append(" ")
+        else:
+            facts.append(" " * value_indent)
+        facts.append(line, style="dim")
+        facts.append("\n")
 
 
 def _render_key_facts(info: TenantInfo, detailed: bool) -> Text:

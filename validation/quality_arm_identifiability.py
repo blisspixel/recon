@@ -25,7 +25,7 @@ from types import SimpleNamespace
 
 from recon_tool.bayesian import infer, load_network
 from recon_tool.bayesian_observations import signals_from_tenant_info
-from recon_tool.formatter.panel import _POSTERIOR_DECISION_THRESHOLD
+from recon_tool.formatter.roles import POSTERIOR_DECISION_THRESHOLD as _POSTERIOR_DECISION_THRESHOLD
 from recon_tool.fusion import compute_slug_posteriors
 from recon_tool.models import EvidenceRecord
 
