@@ -219,8 +219,16 @@ explanations label that distinction. In explained JSON,
 exact-lineage question; schema-version-1 `provenance_complete` retains its
 broader graph-reachability meaning.
 
-Use `--plain` for screen readers, grep, and other linear-text workflows. It
-removes color and layout while preserving the observation content.
+Use `--plain` for screen readers, grep, and other linear-text workflows. It is
+not a decoration-stripped copy of the default panel: it linearises the same
+record `--json` emits, as indented `key: value` lines with no color or
+box-drawing. Expect the full record, including Bayesian internals such as
+`posterior_observations` and `interval_low`, and expect the panel's rows under
+their schema names: grep for `provider:` and `tenant_id:`, not `Provider`. It
+tracks the panel's default/detailed split ([ADR-0012](adr/0012-default-view-evidence-role-visibility.md)),
+so evidence-role qualifiers are compacted unless you add `--explain`. When you
+want only the panel rows, read the top of the output or select the keys you
+need.
 This is the linear view for a standard single-domain lookup. Chain, compare,
 exposure, and gaps reports use their own formats; batch and delta have
 mode-specific output.

@@ -177,6 +177,16 @@ the internal normalized snapshot part of the stable lookup JSON.
 
 ### Config / data files
 
+`~/.recon/` below is shorthand for recon's **resolved** config, cache, and
+state directories, not a literal path. Resolution order: `RECON_CONFIG_DIR` if
+set, else an existing legacy `~/.recon/`, else the XDG bases
+(`$XDG_CONFIG_HOME/recon`, `$XDG_CACHE_HOME/recon`, `$XDG_STATE_HOME/recon`;
+defaults `~/.config/recon`, `~/.cache/recon`, `~/.local/state/recon`). A fresh
+install gets the XDG paths; the legacy branch exists so an existing `~/.recon/`
+is never stranded. `recon doctor` prints the resolved paths, and the rule is
+implemented in [`paths.py`](../src/recon_tool/paths.py). The stability
+guarantee is on each file's schema, not on the directory it resolves to.
+
 | Surface | Stable guarantee |
 |---|---|
 | `data/fingerprints/*.yaml` schema | Stable. Fields: name, slug, category, confidence, detections, match_mode, weight, m365, provider_group, display_group. v1.1 split the monolith into per-category files; file boundaries are a repo-organization detail, not part of the schema contract. |

@@ -287,11 +287,11 @@ def _posterior_dot_fill(obs: PosteriorObservation, threshold: float = _POSTERIOR
     return 1
 
 
-# Human-readable name for each node's claim, for the disagreement clause. Kept
-# short so the dimmed line stays on one row in the panel.
+# Human-readable claim name per node for the disagreement clause. Short so the
+# dimmed row stays one line; vendor-qualified so "Workspace" names one vendor.
 _NODE_CLAIM_NAMES: dict[str, str] = {
     "m365_tenant": "the M365 tenant",
-    "google_workspace_tenant": "the Workspace tenant",
+    "google_workspace_tenant": "the Google Workspace tenant",
     "federated_identity": "federated identity",
     "okta_idp": "the Okta IdP",
     "email_gateway_present": "the email gateway",

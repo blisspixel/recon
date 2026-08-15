@@ -65,11 +65,24 @@ Formal correlation model (layers, Bayesian DAG, robustness research):
 recon example.com
 ```
 
-### Example output
+Every lookup is live. recon ships no offline demo mode, so that command
+collects whatever `example.com` publishes in DNS and at the identity endpoints
+on the day you run it. Reserved and `.invalid` names are safe to query, not
+staged: they publish little or nothing, and what they do publish is public
+residue rather than an organization's stack. Substitute a domain you are
+authorized to review to see a populated panel.
+
+### Illustrated output (synthetic, not a captured run)
 
 ![Synthetic terminal showing recon's default output](https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg)
 
-This is a deterministic, no-network fixture for the fictional Example Industries Ltd using reserved `example.com`. No real organization is depicted. Other project fixtures use IETF reserved `.invalid` namespaces.
+The panel above is **generated, not captured**:
+[`scripts/generate_terminal_demo.py`](https://github.com/blisspixel/recon/blob/main/scripts/generate_terminal_demo.py)
+drives recon's real formatter over a deterministic, no-network fixture for the
+fictional Example Industries Ltd. It shows the *shape* of a full-signal
+result, every row a rich target can fill, and no live lookup of reserved
+`example.com` reproduces it. No real organization is depicted. Other project
+fixtures use IETF reserved `.invalid` namespaces.
 
 <!-- terminal-demo-transcript:start -->
 <details>
@@ -129,7 +142,7 @@ recon reports observations, not verdicts. Public channel ceiling:
 ```bash
 recon example.com                              # default panel
 recon example.com --explain                    # evidence trail
-recon example.com --plain                      # linear text for screen readers and grep
+recon example.com --plain                      # linear full record (screen readers, grep)
 recon example.com --json                       # structured record
 recon batch domains.txt --json                 # batch JSON array
 recon delta example.com                        # diff vs local cache
@@ -193,7 +206,9 @@ path above.
 | "Compare example.com and example.net" | `compare_postures` or two lookups side by side |
 | "Any public hardening gaps?" | `find_hardening_gaps` after a lookup - hedged "Consider" notes only |
 
-**Example chat (Example Industries demo shape):**
+**Example chat.** This transcript uses the same synthetic Example Industries
+fixture as the illustration above, so it shows the shape of a full-signal
+answer rather than what a live `example.com` lookup returns:
 
 > **You:** Recon example.com and tell me what you observe.
 >

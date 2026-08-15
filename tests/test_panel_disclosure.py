@@ -18,6 +18,7 @@ from recon_tool.models import ConfidenceLevel, PosteriorObservation, TenantInfo
 _NETWORK_NODES = {node.name: node for node in load_network().nodes}
 _NODE_BINDING = {
     "m365_tenant": "signal:m365_tenant_observed",
+    "google_workspace_tenant": "signal:google_workspace_tenant_observed",
     "email_gateway_present": "signal:email_gateway_mx_observed",
 }
 
@@ -110,3 +111,14 @@ def test_negative_node_does_not_demote_confidence() -> None:
     out = _panel_text((_obs("m365_tenant", 0.95, 0.88, 0.99), not_enforcing))
     assert "Confidence   ●●● High (4 sources)" in out
     assert "Model support ●●● display above threshold for the M365 tenant" in out
+
+
+def test_google_workspace_claim_name_is_vendor_qualified() -> None:
+    # The Model support row reports the *weakest* claimed node, so it can name
+    # Google while the Tenant row above it shows a Microsoft tenant GUID. A
+    # bare "the Workspace tenant" there reads as either vendor on exactly the
+    # record where the distinction matters most, so the label names its vendor.
+    out = _panel_text((_obs("google_workspace_tenant", 0.95, 0.88, 0.99),))
+
+    assert "Model support ●●● display above threshold for the Google Workspace tenant" in out
+    assert "for the Workspace tenant" not in out
