@@ -26,7 +26,6 @@ from recon_tool.formatter.panel import (
     _FILTERED_SERVICE_PREFIXES,
     _FILTERED_SERVICE_SUFFIXES,
     _M365_KEYWORDS,
-    _POSTERIOR_DECISION_THRESHOLD,
     _SERVICE_CATEGORIES_ORDER,
     _SLUG_DISPLAY_OVERRIDES,
     CONFIDENCE_COLORS,
@@ -38,7 +37,6 @@ from recon_tool.formatter.panel import (
     _make_console,
     _markdown_escape,
     _plain_lines,
-    _posterior_dot_fill,
     _slug_to_relationship_metadata,
     canonical_cloud_vendor,
     category_for_slug,
@@ -80,6 +78,8 @@ from recon_tool.formatter.panel import (
     set_console,
     set_err_console,
 )
+from recon_tool.formatter.roles import POSTERIOR_DECISION_THRESHOLD as _POSTERIOR_DECISION_THRESHOLD
+from recon_tool.formatter.roles import posterior_dot_fill as _posterior_dot_fill
 
 panel = _panel
 _PROXIED_STATE = frozenset({"_console", "_err_console", "_color_override"})
