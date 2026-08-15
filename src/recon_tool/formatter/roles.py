@@ -20,6 +20,8 @@ from __future__ import annotations
 from recon_tool.models import PosteriorObservation, TenantInfo
 
 __all__ = [
+    "DOT_FILL_COLOR",
+    "DOT_FILL_GLYPH",
     "TENANT_CLASS_NODES",
     "identity_role_vendors",
     "model_support_claims",
@@ -110,6 +112,11 @@ def role_split_vendors(info: TenantInfo) -> tuple[str, str] | None:
 # Stays distinct from deterministic confidence because the hand-set uncertainty
 # band is not calibrated and its width is not generally evidence-monotone.
 POSTERIOR_DECISION_THRESHOLD = 0.5
+
+# How a fill level is expressed. Beside the function that computes it so the
+# glyph and the threshold rule cannot drift apart; the panel owns placement.
+DOT_FILL_GLYPH: dict[int, str] = {3: "●●●", 2: "●●○", 1: "●○○"}
+DOT_FILL_COLOR: dict[int, str] = {3: "#a3d9a5", 2: "#7ec8e3", 1: "#e07a5f"}
 
 
 def posterior_dot_fill(obs: PosteriorObservation, threshold: float = POSTERIOR_DECISION_THRESHOLD) -> int:
