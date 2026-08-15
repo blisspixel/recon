@@ -19,14 +19,30 @@ built-ins. Custom YAML remains runtime parsed and validated.
 
 ## Custom fingerprints
 
-Drop `~/.recon/fingerprints.yaml`. Custom entries are validated on
-startup; invalid regex or missing fields are skipped with a warning.
-Custom fingerprints are **additive only:** you cannot override built-in
-slugs from the custom file. Set `RECON_CONFIG_DIR` to override the
-search directory.
+Drop a `fingerprints.yaml` in recon's config directory, or split it across a
+`fingerprints/` directory beside it. Both are read and both are additive.
+
+**The config directory is resolved, not fixed.** In precedence order:
+
+| Condition | Config directory |
+|---|---|
+| `RECON_CONFIG_DIR` is set | that directory |
+| `~/.recon/` already exists (legacy install) | `~/.recon/` |
+| otherwise (fresh install) | `$XDG_CONFIG_HOME/recon`, default `~/.config/recon/` |
+
+A fresh install on Linux or macOS therefore wants
+`~/.config/recon/fingerprints.yaml`, not `~/.recon/fingerprints.yaml`. Do not
+guess: `recon doctor` prints the exact resolved path on its **Custom
+fingerprints** row, whether or not the file exists yet. The rule lives in
+[`paths.py`](../src/recon_tool/paths.py).
+
+Custom entries are validated on startup; invalid regex or missing fields are
+skipped with a warning. Custom fingerprints are **additive only:** you cannot
+override built-in slugs from the custom file. Under the long-running MCP
+server, call `reload_data` after editing so the process picks the change up.
 
 ```yaml
-# ~/.recon/fingerprints.yaml
+# <config dir>/fingerprints.yaml (run `recon doctor` for the resolved path)
 fingerprints:
   - name: Internal SSO Portal
     slug: internal-sso
@@ -120,7 +136,8 @@ violating the hedging or provenance invariants.
 
 Before committing a new fingerprint to the built-in set:
 
-1. Validate: `python scripts/validate_fingerprint.py ~/.recon/fingerprints.yaml`
+1. Validate: `python scripts/validate_fingerprint.py <config dir>/fingerprints.yaml`
+   (`recon doctor` prints the resolved config directory)
 2. Prove the positive path with a minimal reserved synthetic fixture. If live
    validation is needed, keep every real apex and result under the gitignored
    `validation/corpus-private/` and `validation/runs-private/` workspaces.

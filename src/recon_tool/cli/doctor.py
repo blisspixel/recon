@@ -525,13 +525,21 @@ def _doctor_custom_fingerprints_check() -> DoctorCheck:
 
 
 def _doctor_signal_db_check() -> DoctorCheck:
-    """Confirm the built-in signal database loads."""
+    """Confirm the built-in signal database loads.
+
+    Reports the loaded total and the reportable subset separately. ``recon
+    signals list`` renders only signals carrying a public observation label,
+    so the two surfaces legitimately differ; naming the split here keeps an
+    operator verifying their install from reading the gap as a lost catalog.
+    """
     try:
-        from recon_tool.signals import load_signals
+        from recon_tool.signals import load_signals, reportable_signals
 
         sigs = load_signals()
         if sigs:
-            return ("Signal database", "ok", f"{len(sigs)} signals loaded")
+            listed = len(reportable_signals())
+            detail = f"{len(sigs)} signals loaded ({listed} reportable via `recon signals list`)"
+            return ("Signal database", "ok", detail)
         return ("Signal database", "fail", "no signals loaded; signal intelligence will not work")
     except Exception as exc:
         return ("Signal database", "fail", _fmt_exc(exc))
