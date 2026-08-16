@@ -1,6 +1,6 @@
 # recon Agent Plugins candidate
 
-Schema-pinned portable packaging candidate for recon-tool 2.14.1. It
+Schema-pinned portable packaging candidate for recon-tool 2.15.0. It
 contains the complete MCP surface and the two existing recon skills in the
 fixed [Agent Plugins v1.0.0](https://agent-plugins.org/specification)
 locations.
@@ -9,7 +9,7 @@ This directory has passed offline validation against the vendored canonical
 Agent Plugins v1.0.0 schemas. The specification remains a Working Draft.
 Offline validation is not an unqualified compatibility or conformance claim;
 promotion remains blocked on the frozen Visual Studio Code, Cursor, and Kiro
-[representative-client evaluation](https://github.com/blisspixel/recon/blob/v2.14.1/docs/agent-portability-evaluation-declaration.md).
+[representative-client evaluation](https://github.com/blisspixel/recon/blob/v2.15.0/docs/agent-portability-evaluation-declaration.md).
 
 Prerequisites:
 
