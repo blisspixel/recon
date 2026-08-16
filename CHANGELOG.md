@@ -26,6 +26,21 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.15.0] - 2026-08-16
+
+Default-view claim clarity and accessibility. Two independent black-box passes
+of the published package found that recon's compact surfaces, not its data,
+were misreading themselves: the panel named one vendor on a record carrying
+two, and the accessibility flag emitted the least accessible output recon
+produces. Both are now decided by ADR rather than documented around. A typo in
+a flag also no longer reaches the network.
+
+This release renumbers the agent-portability milestone to v2.16. That work is
+blocked on third-party client availability and a runtime match, and unrelated
+shipped work should not queue behind it. The frozen evaluation contract keeps
+its `v2.15` round id, because a preregistration's identity must not move once
+frozen.
+
 ### Tool Surface Changes
 
 Tool surface changes: `--plain` default output changes shape. It now renders

@@ -17,7 +17,11 @@ The runtime gate is unchanged and states a relationship rather than a number:
 the recon that launches each client must be the exact candidate under
 evaluation. Record the observed version at collection time.
 
-This is the preregistration for the v2.15 representative-client evaluation.
+This is the preregistration for the representative-client evaluation. Its
+round id and title stay `v2.15` because a preregistration's identity must not
+move once frozen. The release milestone that will carry the result was
+renumbered to v2.16 when unrelated default-view work shipped as v2.15; that is
+a scheduling change and alters no frozen term.
 It freezes the question, standards snapshot, client and task frame, paired
 variants, measures, privacy boundary, promotion thresholds, and stop rules
 before the portable candidate was implemented or a client session was

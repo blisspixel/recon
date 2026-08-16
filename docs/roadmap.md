@@ -26,7 +26,14 @@ tracked separately from product work.
 > catalog digests, the `_webflow` owner-set expansion was disclosed as a
 > measurement-surface change, and no rule was promoted. The release then passed
 > local, protected-main, PyPI, GitHub Release, SBOM, provenance, and exact
-> channel-parity checks. **The next release priority is v2.15. Its
+> channel-parity checks. **v2.15 shipped default-view claim clarity and
+> accessibility: ADR-0015 role-split vendor claims, ADR-0016 `--plain` as the
+> panel with the full record behind `--full`, and pre-collection flag
+> validation. Both came from independent black-box passes that found the
+> compact surfaces, not the data, were misreading themselves. The next
+> release priority is v2.16, agent portability, renumbered from v2.15 because
+> its preflight is blocked on client availability and a runtime match and
+> unrelated shipped work should not queue behind it. Its
 > [representative-client contract](agent-portability-evaluation-declaration.md)
 > is frozen: three required clients, five tasks, two complete-surface variants,
 > exact standards commitments, privacy rules, and fail-closed decisions. Its
@@ -55,7 +62,9 @@ and retains both exact compatibility pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. v2.14 is also shipped with the
 closed rank, regional, vendor-seed, and prior-sample drift decisions plus full
-publication proof. The dependency-unblocked work now maps to **v2.15.0**. The
+publication proof, and v2.15 shipped the default-view claim-clarity and
+accessibility decisions. The dependency-unblocked portability work now maps to
+**v2.16.0**. The
 representative task, client, measure, privacy, and stop-rule contract is frozen.
 Its protected-main prerequisite and the candidate's network-free schema,
 layout, launch, skill, and version validation are complete. Next, measure the
@@ -491,7 +500,7 @@ benefit to a named user outcome.
 ### 5. Optional operator-hosted access and scale-out
 
 Status: draft and not yet provider-validated, lower priority than the three
-core tracks above and the active v2.15 evaluation. It is intended to be
+core tracks above and the active v2.16 evaluation. It is intended to be
 directionally useful, not a validated production deployment.
 
 Why fourth: an authenticated remote endpoint can make recon accessible to
@@ -567,7 +576,7 @@ characterization section appears later in this document:
    [prior-sample drift](../validation/2026-08-14-catalog-drift-round.md)
    decisions, including every promoted, rejected, deferred, unavailable,
    unmeasured, measurement-surface, and non-comparable disposition.
-2. Preserve the frozen v2.15 representative task, client, success, error,
+2. Preserve the frozen v2.16 representative task, client, success, error,
    latency, discovery-byte, context-cost, portability, privacy, and stop-rule
    [contract](agent-portability-evaluation-declaration.md). Its protected-main
    prerequisite and the candidate's offline validation are complete.
@@ -949,7 +958,7 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ### Simplify operator and agent discovery using measurements
 
-Status: **active v2.15 execution; contract frozen and portable candidate
+Status: **active v2.16 execution; contract frozen and portable candidate
 offline-validated; first local preflight stopped before collection**.
 
 The network-free
