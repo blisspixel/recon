@@ -171,24 +171,39 @@ is authorized.
 Detail:
 [docs/agent-portability-evaluation-declaration.md](docs/agent-portability-evaluation-declaration.md).
 
-### 5. Identity-only vendor visibility in the compact view - open, unscheduled
+### 5. Vendor-role visibility - **panel half decided; `slugs` half open**
 
-A 2026-08-15 black-box play-test of the published 2.14.0 package found that a
-record can present three defensible surfaces that read as three answers. When a
-vendor is observed only through an identity endpoint, `tenant_id`, `auth_type`,
-`cloud_instance`, `detection_scores`, `slug_confidences`, and `evidence` all
-carry it, while `slugs`, `services`, and the panel Provider row omit it because
-no DNS catalog pattern matched. Each surface is individually correct and now
-documented in [docs/schema.md](docs/schema.md); together they let a reader who
-stops at the Provider row take a mail-path indicator as the primary vendor.
+A 2026-08-15 black-box play-test found that a record can present several
+defensible surfaces that read as different answers. When a vendor's evidence
+comes from an identity endpoint, `tenant_id`, `auth_type`, `cloud_instance`,
+`detection_scores`, `slug_confidences`, and `evidence` all carry it, while the
+compact panel named only the mail vendor in a singular, unroled `Provider` row.
+Each surface was individually correct; together they let a reader who stopped at
+that row take a mail-path indicator as the primary vendor.
 
-This is a claim-surface question, not a defect to patch: `slugs` is a stable v2
-field, the Provider row is defined as a delivery-path summary, and widening
-either silently would upgrade a claim. Closing it requires an ADR that settles
-whether the compact view names identity-only vendors, withholds a single
-Provider headline when two tenant-class claims are both above threshold, or
-keeps the split and relies on documentation. Feeds the v3 claim-envelope
-boundary; no change ships on the v2 default contract before that decision.
+The 2.14.1 pass populated the split on an authorized target and retired the
+"document it" position: the record it found had `microsoft365` present in
+`slugs` **and** `services` with the panel still withholding it, so the
+documentation note did not describe the observed case, and a schema document
+does not reach a reader before they read the panel.
+
+[ADR-0015](docs/adr/0015-role-split-vendor-claims-in-the-default-view.md)
+settles the rendering half. The default view names a mail vendor and an identity
+vendor separately, with their roles, when the two differ; `Services` gains an
+`Identity` row; `Model support` names every above-threshold tenant-class claim.
+The identity role is derived from evidence provenance rather than slug category.
+Single-vendor records are unchanged and no claim is upgraded.
+
+Still open: whether `slugs` itself should carry identity-observed vendors.
+`slugs` is a stable v2 field documented as fingerprint-catalog pattern matches,
+so widening it is a contract change, not a rendering choice. It stays against
+the v3 claim-envelope boundary and cannot change silently.
+
+[ADR-0016](docs/adr/0016-plain-emits-the-panel-record.md) resolves the related
+accessibility finding from the same two passes: `--plain` renders the panel's
+rows, and the full structured record moves behind `--plain --full`. That is a
+breaking change to one human-facing renderer, recorded in
+[docs/stability.md](docs/stability.md) with the migration named.
 
 ### 6. Optional operator-hosted access - lower priority side track
 

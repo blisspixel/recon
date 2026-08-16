@@ -196,10 +196,16 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 > rows, while `slugs` and `services` omit `microsoft365` because no DNS
 > pattern matched. That is the documented behavior, not a dropped detection.
 > A consumer asking "is this an M365 tenant?" should read `tenant_id` and
-> `detection_scores`, never `slugs` alone. Whether the compact panel and
-> `slugs` should surface identity-only vendors is an open claim-surface
-> question tracked in [ROADMAP.md](../ROADMAP.md); it cannot change silently
-> because `slugs` is a stable field.
+> `detection_scores`, never `slugs` alone.
+>
+> The **compact panel** half of this is settled:
+> [ADR-0015](adr/0015-role-split-vendor-claims-in-the-default-view.md) makes the
+> default view name a mail vendor and an identity vendor separately, with their
+> roles, when the two differ, so a reader who stops at the panel no longer forms
+> a single wrong primary. That changed the rendering only. Whether `slugs`
+> itself should carry identity-observed vendors remains open and cannot change
+> silently, because `slugs` is a stable field; it is tracked in
+> [ROADMAP.md](../ROADMAP.md) against the v3 claim-envelope boundary.
 
 ### Domains
 
