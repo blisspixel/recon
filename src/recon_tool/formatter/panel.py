@@ -18,6 +18,13 @@ from rich.table import Table
 from rich.text import Text
 
 from recon_tool.confidence import is_confidence_contributor
+from recon_tool.formatter.briefing import (
+    SCALE_GAP_NOTE,
+    briefing_insights,
+    cap_insights,
+    high_signal_related,
+    scales_disagree,
+)
 from recon_tool.formatter.classify import (
     CATEGORY_BY_SLUG,
     CLOUD_SLUG_QUALIFIERS,
@@ -58,7 +65,6 @@ from recon_tool.formatter.exposure import (  # re-exported: stable import path a
     render_exposure_panel,
     render_gaps_panel,
 )
-from recon_tool.formatter.insight_curation import curate_insights
 from recon_tool.formatter.key_facts import key_facts_auth_line, key_facts_multicloud_line
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.formatter.markdown import (
@@ -279,19 +285,6 @@ _SKIP_COMPACT_PREFIXES = (
 # Exact substrings that must appear as standalone tokens in the service name.
 _SKIP_COMPACT_EXACT = frozenset({"(SPF)", "(site verified)"})
 
-_SPARSE_INSIGHT_PREFIXES = (
-    "Sparse public signal:",
-    "Sparse public signal \N{EM DASH}",
-    "Next step:",
-    "Next step \N{EM DASH}",
-)
-
-
-def _is_sparse_insight(line: str) -> bool:
-    """Return True when an insight line is part of sparse-result diagnosis."""
-    return line.startswith(_SPARSE_INSIGHT_PREFIXES)
-
-
 # ── Panel constants ─────────────────────────────────────────────
 
 _PANEL_WIDTH = 78  # One char narrower than an 80-col terminal to avoid
@@ -374,71 +367,6 @@ def _wrap_text(text: str, max_width: int) -> list[str]:
     return lines or [text]
 
 
-# High-signal subdomain prefixes for compact related-domain display.
-# Tuned to match the UI goal: the related line should fit in 1-2
-# lines and show the names a security analyst cares about first.
-_HIGH_SIGNAL_RELATED_PREFIXES: tuple[str, ...] = (
-    "login.",
-    "sso.",
-    "auth.",
-    "idp.",
-    "api.",
-    "admin.",
-    "portal.",
-    "dashboard.",
-    "support.",
-    "status.",
-    "app.",
-    "cdn.",
-)
-
-
-def _pick_high_signal_related(
-    related: tuple[str, ...],
-    limit: int = 8,
-) -> tuple[list[str], int]:
-    """Pick the top ``limit`` high-signal related domains.
-
-    High-signal = matches one of the ``_HIGH_SIGNAL_RELATED_PREFIXES``.
-    Falls back to the first ``limit`` non-wildcard entries when too
-    few high-signal names are present. Returns a tuple of
-    ``(picked, total_count)`` so callers can emit the "N total" footer.
-
-    ``*.onmicrosoft.com`` entries are filtered out.
-    These are Microsoft 365 tenant artefacts — they appear in the
-    related list because the user realm / autodiscover path surfaces
-    them, but they carry no "related brand" signal. A CISO reading
-    "high-signal related domains" doesn't want to see the tenant's
-    own internal domain listed as if it were a separate discovery.
-    """
-
-    def _is_high_signal_candidate(d: str) -> bool:
-        # Filter out tenant artefacts and wildcards
-        if "*" in d:
-            return False
-        # .onmicrosoft.com and .onmicrosoft.us are M365 tenant
-        # artefacts, not brand-related domains worth surfacing.
-        return not d.endswith((".onmicrosoft.com", ".onmicrosoft.us"))
-
-    non_wild = [d for d in related if _is_high_signal_candidate(d)]
-    total = len(non_wild)
-    high: list[str] = []
-    for d in non_wild:
-        first_label = d.split(".", 1)[0] + "."
-        if any(d.startswith(pfx) or first_label == pfx for pfx in _HIGH_SIGNAL_RELATED_PREFIXES):
-            high.append(d)
-        if len(high) >= limit:
-            break
-    if len(high) < limit:
-        for d in non_wild:
-            if d in high:
-                continue
-            high.append(d)
-            if len(high) >= limit:
-                break
-    return high, total
-
-
 def _append_field(facts: Text, label: str, value: str, value_style: str = "") -> None:
     """Emit one "  Label    value" row into ``facts``, wrapping the value at the
     panel width with a continuation indent matching the label column."""
@@ -462,7 +390,8 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     fusion ran and at least one positive claim fired, a separate ``Model
     support`` row shows the weakest claimed node's threshold-relative display.
     Keeping the two rows separate prevents the hand-set uncertainty band from
-    being presented as calibrated confidence.
+    being presented as calibrated confidence, and when the two dot scales sit
+    two steps apart the row says why they can.
     """
     facts.append("  ")
     facts.append("Confidence".ljust(_LABEL_WIDTH), style="dim")
@@ -485,7 +414,14 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     label_width = max(_LABEL_WIDTH, len(label) + 1)
     glyph = DOT_FILL_GLYPH[fill]
     value_indent = 2 + label_width + len(glyph) + 1
-    for index, line in enumerate(_wrap_text(posterior_support_phrase(named, fill), _PANEL_WIDTH - value_indent)):
+    phrase = posterior_support_phrase(named, fill)
+    if scales_disagree(info.confidence, fill):
+        # Two rows, two dot scales, two steps apart: "Low (1 source)" above a
+        # filled model display reads as self-contradiction until you know they
+        # answer different questions. Say so here rather than in a doc the
+        # reader meets after the panel.
+        phrase = f"{phrase}. {SCALE_GAP_NOTE}"
+    for index, line in enumerate(_wrap_text(phrase, _PANEL_WIDTH - value_indent)):
         if index == 0:
             facts.append("  ")
             facts.append(label.ljust(label_width), style="dim")
@@ -838,7 +774,7 @@ def _render_related_compact(info: TenantInfo, show_domains: bool) -> Text | None
     """
     if not (info.related_domains and not show_domains):
         return None
-    picked, total = _pick_high_signal_related(tuple(info.related_domains))
+    picked, total = high_signal_related(tuple(info.related_domains))
     if not picked:
         return None
     rel = Text()
@@ -1078,54 +1014,29 @@ def _append_wrapped_lines(text: Text, content: str, max_width: int, style: str) 
 
 
 def _render_insights(info: TenantInfo, verbose: bool, confidence_mode: str) -> Text | None:
-    """Curated Insights section: the email-security score is promoted to a bold
-    first line, sparse-context insights are ordered ahead of the rest, and the
-    list is capped at five in default mode (--full / --verbose shows all).
+    """Curated Insights section.
 
-    Strict confidence mode drops hedging qualifiers on dense evidence only; the
-    "never overclaim on thin evidence" invariant keeps sparse output untouched.
+    Selection, hedging, and ordering come from ``briefing`` so the linear
+    ``--plain`` view makes the same cut; this function is the Rich rendering of
+    that decision, with the email-security score in bold above the rest.
     Returns ``None`` when there is nothing to show. Output held byte-identical
     by ``tests/test_golden_renders.py`` (``panel_dense_default`` and the strict
     / sparse variants).
     """
     if not info.insights:
         return None
-    curated: list[str] = curate_insights(info.insights)
-    from recon_tool.strict_mode import apply_strict_mode, should_apply_strict
-
-    if should_apply_strict(info, confidence_mode):
-        curated = list(apply_strict_mode(tuple(curated)))
-    if not curated:
+    score_line, ordered_insights = briefing_insights(info, confidence_mode)
+    if score_line is None and not ordered_insights:
         return None
     ins = Text()
     ins.append("Insights", style="bold")
     ins.append("\n")
     max_width = _PANEL_WIDTH - 2
 
-    # Promote the email security score to the first (bold) position; order the
-    # remaining insights sparse-context first.
-    score_line: str | None = None
-    sparse_insights: list[str] = []
-    other_insights: list[str] = []
-    for c in curated:
-        if c.startswith("Email security ") and score_line is None:
-            score_line = c
-        elif _is_sparse_insight(c):
-            sparse_insights.append(c)
-        else:
-            other_insights.append(c)
-
     if score_line is not None:
         _append_wrapped_lines(ins, score_line, max_width, "bold")
 
-    ordered_insights = sparse_insights + other_insights
-
-    # Cap at 5 in default mode; --full / --verbose shows all.
-    display_insights = ordered_insights
-    overflow_count = 0
-    if not verbose and len(ordered_insights) > 5:
-        display_insights = ordered_insights[:5]
-        overflow_count = len(ordered_insights) - 5
+    display_insights, overflow_count = cap_insights(ordered_insights, verbose)
 
     for insight in display_insights:
         _append_wrapped_lines(ins, insight, max_width, "dim")

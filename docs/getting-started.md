@@ -171,6 +171,14 @@ Use explicit synthetic identities under reserved namespaces in examples and
 docs. Public validation work with real apexes stays in gitignored local
 workspaces.
 
+The panel's two dot rows answer different questions, so they can disagree
+without either being wrong. `Confidence` is deterministic: how many independent
+public sources corroborated the record. `Model support` is threshold-relative:
+where a claim's hand-set uncertainty band sits against the model's decision
+threshold. A single-source record can carry a full model display, and the panel
+says so on the row when the two sit two steps apart. Detail:
+[how-it-works.md](how-it-works.md).
+
 ## Input Normalization
 
 Pass a public-suffix domain (for example `example.com`). A bare hostname without
@@ -222,7 +230,17 @@ broader graph-reachability meaning.
 Use `--plain` for screen readers, grep, and other linear-text workflows. It
 renders the default panel's rows as indented `key: value` lines with no color
 or box-drawing: the same claims the panel shows, in the same order, under the
-stable schema names. Grep for `provider:` and `tenant_id:`, not `Provider`.
+stable schema names, and with the same cuts. Grep for `provider:` and
+`tenant_id:`, not `Provider`.
+
+A record whose mail vendor and identity vendor differ leads with `mail:` and
+`identity:` (the role split from
+[ADR-0015](adr/0015-role-split-vendor-claims-in-the-default-view.md)) and still
+emits `provider:` after them, carrying its usual MX-delivery-path summary, so
+one grep works on every record. Long lists are cut the way the panel cuts them:
+`related_domains:` carries the high-signal selection and `related_domains_note:`
+states how many more exist, and `insights:` is capped with an `insights_note:`
+beside it. Add `--full` for the uncut lists.
 
 Add `--full` for the complete structured record, including Bayesian internals
 such as `posterior_observations` and `interval_low`:
