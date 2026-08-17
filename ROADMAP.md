@@ -206,6 +206,14 @@ rows, and the full structured record moves behind `--plain --full`. That is a
 breaking change to one human-facing renderer, recorded in
 [docs/stability.md](docs/stability.md) with the migration named.
 
+A third pass confirmed both decisions on the published package and found the
+`--plain` half shipped half-applied: the rows were the panel's, the *cuts* were
+not, so a populated record still linearized every related domain, and the
+`provider:` key the guide tells a stranger to grep went missing on the record
+class the split exists for. The ADR-0016 amendment records the fix. The panel
+and the linear view now share one definition of what the default briefing shows
+and what it withholds, which is what kept them from drifting apart again.
+
 ### 6. Optional operator-hosted access - lower priority side track
 
 Draft container + Cloud Run IaC only. Local CLI and stdio MCP remain complete.

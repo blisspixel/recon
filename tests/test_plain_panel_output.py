@@ -8,13 +8,21 @@ vendor handled mail, so the accessibility path was the hardest path.
 
 Default `--plain` now renders the panel's own rows. The full record stays
 available, byte-compatible, behind `--full`.
+
+A follow-up pass found the residual these also pin: the rows were the panel's,
+but the *cuts* were not, so a populated record still read the whole
+related-domain list aloud. And `provider:`, the key the guide tells a stranger
+to grep, went missing on exactly the record class the role split exists for.
 """
 
 from __future__ import annotations
 
+from dataclasses import replace
+
 import pytest
 
 from recon_tool.formatter import format_tenant_plain
+from recon_tool.models import TenantInfo
 from tests.test_role_split_panel import single_vendor_info, split_info
 
 # Keys that only ever belonged to the full record. Their presence in the
@@ -63,7 +71,20 @@ def test_plain_carries_the_role_split(  # ADR-0015 reaches the linear surface to
 
     assert "mail: Google Workspace" in rendered
     assert "identity: Microsoft 365" in rendered
-    assert "provider:" not in rendered
+
+
+def test_split_keeps_provider_but_leads_with_the_roles() -> None:
+    """The documented `grep provider:` must not miss the split record.
+
+    `provider` is the MX-delivery-path summary on every other surface, and a
+    reader hearing the file top-down still meets the roles first.
+    """
+    lines = format_tenant_plain(split_info()).splitlines()
+    keys = [line.split(":", 1)[0] for line in lines]
+
+    assert keys.index("mail") < keys.index("provider")
+    assert keys.index("identity") < keys.index("provider")
+    assert "provider: Google Workspace" in lines
 
 
 def test_plain_keeps_provider_for_a_single_vendor_record() -> None:
@@ -80,3 +101,88 @@ def test_plain_tracks_the_panel_role_visibility_split(detailed: bool) -> None:
     rendered = format_tenant_plain(split_info(), detailed=detailed)
 
     assert ("MX delivery path" in rendered) is detailed
+
+
+def _rich_record() -> TenantInfo:
+    """A populated record: the case where the briefing had to stay a briefing."""
+    return replace(
+        split_info(),
+        related_domains=(
+            "login.beta.invalid",
+            "sso.beta.invalid",
+            *(f"host{index}.beta.invalid" for index in range(90)),
+        ),
+        insights=(
+            "Email security: observed controls: DMARC reject, DKIM",
+            "Federated identity observed; external IdP not identified",
+            "Edge Layering observed",
+            "Certificate issuance concentrated at one issuer",
+            "Legacy protocol indicator observed",
+            "Tenant region reported as NA",
+            "CDN fronting observed at the apex",
+        ),
+    )
+
+
+def test_rich_record_keeps_the_panel_related_domain_cut() -> None:
+    """The reported residual: 92 hostnames read aloud before the insights."""
+    rendered = format_tenant_plain(_rich_record())
+
+    assert rendered.count("- host") < 10
+    assert "related_domains_note: 92 total, 84 more, use --full to see all" in rendered
+    # The panel's selection, not the first N: high-signal names lead.
+    assert rendered.index("login.beta.invalid") < rendered.index("host0.beta.invalid")
+
+
+def test_rich_record_caps_insights_and_says_how_many_it_withheld() -> None:
+    rendered = format_tenant_plain(_rich_record())
+
+    assert "insights_note: 2 more, use --full to see all" in rendered
+
+
+def test_full_still_carries_every_related_domain() -> None:
+    """The cut is the briefing's, not the record's."""
+    rendered = format_tenant_plain(_rich_record(), full=True)
+
+    assert "- host89.beta.invalid" in rendered
+    assert "related_domains_note" not in rendered
+
+
+def test_the_two_renderers_name_the_same_related_domains() -> None:
+    """The invariant the shared briefing module exists to hold.
+
+    Drift here is the original defect: the panel cut the list and the linear
+    view did not, so the same record was a briefing on one surface and a roll
+    call on the other.
+    """
+    import io
+
+    from rich.console import Console
+
+    from recon_tool.formatter import render_tenant_panel
+
+    info = _rich_record()
+    console = Console(file=io.StringIO(), width=78, no_color=True, legacy_windows=False)
+    console.print(render_tenant_panel(info))
+    panel = console.file.getvalue()
+
+    listed = [
+        line.strip().removeprefix("- ")
+        for line in format_tenant_plain(info).splitlines()
+        if line.strip().startswith("- ") and line.strip().endswith(".invalid")
+    ]
+
+    assert listed
+    for domain in listed:
+        assert domain in panel
+    assert "host8.beta.invalid" not in panel
+    assert "host8.beta.invalid" not in listed
+
+
+def test_notes_sit_beside_the_list_they_describe() -> None:
+    """A screen reader hears the remainder where the remainder belongs."""
+    lines = format_tenant_plain(_rich_record()).splitlines()
+    keys = [line.split(":", 1)[0].strip() for line in lines]
+
+    assert keys.index("related_domains_note") < keys.index("insights")
+    assert keys.index("insights_note") > keys.index("insights")

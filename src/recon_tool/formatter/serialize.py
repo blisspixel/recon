@@ -399,9 +399,13 @@ def plain_lines(value: Any, key: str, indent: int) -> list[str]:
 _PANEL_KEY_ORDER: tuple[str, ...] = (
     "queried_domain",
     "display_name",
-    "provider",
+    # On a role split the roles lead and `provider` follows as the MX-delivery
+    # summary it has always been, so a reader hears the roles first and a
+    # `grep provider:` written against any other record still matches. On every
+    # other record the role keys are absent and this is the historical order.
     "mail",
     "identity",
+    "provider",
     "tenant_id",
     "region",
     "default_domain",
@@ -415,31 +419,40 @@ _PANEL_KEY_ORDER: tuple[str, ...] = (
     "dmarc_policy",
     "mta_sts_mode",
     "related_domains",
+    "related_domains_note",
     "insights",
+    "insights_note",
 )
 
 
-def _plain_panel_data(data: dict[str, Any], info: TenantInfo, *, detailed: bool) -> dict[str, Any]:
+def _plain_panel_data(
+    data: dict[str, Any],
+    info: TenantInfo,
+    *,
+    detailed: bool,
+    confidence_mode: str,
+) -> dict[str, Any]:
     """Reduce the full record to the rows the default panel shows.
 
     ADR-0016. The panel's own claims, in the panel's order, under the stable
     schema names so a ``grep tenant_id:`` written against the full record still
-    matches. Keys the panel does not show are dropped rather than emptied.
+    matches. Keys the panel does not show are dropped rather than emptied, and
+    the lists the panel cuts are cut here too, with a sibling ``_note`` key
+    naming what was withheld.
     """
     from recon_tool.formatter.classify import compact_provider_line
     from recon_tool.formatter.roles import role_split_vendors
 
     panel: dict[str, Any] = {}
     split = role_split_vendors(info)
+    _apply_briefing_cuts(data, info, confidence_mode=confidence_mode)
     for key in _PANEL_KEY_ORDER:
         if key in {"mail", "identity"}:
-            # Only present on a role split; ADR-0015 keeps the single
-            # `provider` key for every other record.
+            # Only present on a role split; ADR-0015 leaves every other record
+            # with the single `provider` row.
             if split is not None:
                 mail, identity = split
                 panel[key] = (mail if detailed else compact_provider_line(mail)) if key == "mail" else identity
-            continue
-        if key == "provider" and split is not None:
             continue
         if key == "source_count":
             panel[key] = len(info.sources)
@@ -455,12 +468,38 @@ def _plain_panel_data(data: dict[str, Any], info: TenantInfo, *, detailed: bool)
     return panel
 
 
+def _apply_briefing_cuts(data: dict[str, Any], info: TenantInfo, *, confidence_mode: str) -> None:
+    """Cut ``related_domains`` and ``insights`` the way the panel cuts them.
+
+    A rich record carries dozens of related hostnames and a long insight list.
+    Reproducing them in full turned the accessibility surface back into a roll
+    call, so the linear view takes the panel's own selection and states the
+    remainder rather than implying it showed everything. Mutates ``data`` in
+    place so the note lands beside the list it describes.
+    """
+    from recon_tool.formatter.briefing import briefing_insights, cap_insights, high_signal_related
+
+    if data.get("related_domains"):
+        picked, total = high_signal_related(tuple(data["related_domains"]))
+        data["related_domains"] = picked
+        if total > len(picked):
+            data["related_domains_note"] = f"{total} total, {total - len(picked)} more, use --full to see all"
+
+    if data.get("insights"):
+        score_line, ordered = briefing_insights(info, confidence_mode)
+        shown, withheld = cap_insights(ordered, verbose=False)
+        data["insights"] = ([score_line] if score_line is not None else []) + shown
+        if withheld:
+            data["insights_note"] = f"{withheld} more, use --full to see all"
+
+
 def format_tenant_plain(
     info: TenantInfo,
     *,
     include_unclassified: bool = False,
     detailed: bool = False,
     full: bool = False,
+    confidence_mode: str = "hedged",
 ) -> str:
     """Format TenantInfo as plain, linear, greppable text (no Rich panel).
 
@@ -475,7 +514,10 @@ def format_tenant_plain(
 
     Either way it tracks the panel's default/detailed split (ADR-0012):
     ``detailed`` keeps every evidence-role qualifier, and the default compacts
-    them and says so. ``--json`` stays the machine contract and is unaffected.
+    them and says so. ``confidence_mode`` reaches the insight lines for the same
+    reason: the linear view is the panel, so a flag that changes the panel's
+    wording has to change this too. ``--json`` stays the machine contract and is
+    unaffected.
     """
     from recon_tool.collection_view import collection_observable_info
     from recon_tool.formatter.classify import (
@@ -502,7 +544,7 @@ def format_tenant_plain(
     if notes:
         data["evidence_roles"] = "; ".join(notes)
     if not full:
-        data = _plain_panel_data(data, observable, detailed=detailed)
+        data = _plain_panel_data(data, observable, detailed=detailed, confidence_mode=confidence_mode)
         if notes:
             data["evidence_roles"] = "; ".join(notes)
     lines: list[str] = []
