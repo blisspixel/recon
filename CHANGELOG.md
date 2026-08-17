@@ -26,6 +26,42 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- **The `--plain` notes count against the flag they name.** A fourth black-box
+  pass read `related_domains_note:` and `insights_note:` as a scripting contract
+  and found the arithmetic did not close: the remainders were computed from the
+  panel's curated list and printed on the surface that emits the record, so
+  shown plus withheld did not equal what `--plain --full` prints. Two effects,
+  the second worse than the first. The insight remainder counted the display cap
+  only, missing every restatement line the panel drops and the record keeps. And
+  a record whose curated list already fit the cap printed no note at all while
+  lines were still withheld, so silence claimed completeness on any record
+  carrying a dual-provider or gateway restatement, which is the record class the
+  role split exists for. The related-domain total also skipped the wildcard and
+  `*.onmicrosoft.*` names that `--full` prints, on both renderers.
+- **`provider:` says why it repeats the vendor.** On a role split the key
+  restored in 2.15.1 carries the same word `mail:` has already said, so a screen
+  reader hears one vendor twice. It now keeps its evidence role,
+  `provider: Google Workspace (MX delivery path)`, which is the one place the
+  default view does not compact a role (ADR-0012). The key, and the `grep
+  provider:` that depends on it, are unchanged.
+
+### Changed
+
+- Both `--plain` notes now name `--plain --full`, the command the reader of that
+  surface actually types. The panel's `--full` stays curated, so one record can
+  carry two remainders; each note naming its own destination is what keeps two
+  numbers from reading as one contradiction.
+- The panel's related-domain and insight footers use commas rather than
+  em-dashes, matching the house rule the rest of the output already follows.
+
+### Documentation
+
+- ADR-0016 carries a second amendment recording what a note counts against and
+  why the two renderers can state different remainders for one record.
+  `docs/stability.md` and `docs/getting-started.md` state the same rule.
+
 ## [2.15.1] - 2026-08-17
 
 Default-view follow-through. A third black-box pass against the published

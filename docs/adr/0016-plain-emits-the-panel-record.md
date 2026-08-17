@@ -74,6 +74,44 @@ complete it.
 `--plain` also now honors `--confidence-mode`, because a flag that changes the
 panel's insight wording has to change the panel's linear form as well.
 
+## Second amendment, 2026-08-17: a note counts against the flag it names
+
+The fourth pass read the note keys as a scripting contract and found the
+arithmetic did not close. The cause was a basis mismatch: the notes were
+computed from the panel's curated list, then printed on the surface that emits
+the record. Three surfaces exist, not two, and they nest: the record, the
+panel's curation of it, and the default cap.
+
+- **The insight remainder was the cap alone.** The panel also drops restatement
+  lines (`Provider indicators co-observed:`, `MX gateway observed:`) that the
+  record keeps, so `--plain --full` printed more than the note accounted for.
+- **A record under the cap said nothing at all.** Curated list of three,
+  record of five, no note: silence reads as "you have everything", which is the
+  failure the notes exist to prevent, and it fires on any record carrying a
+  dual-provider or gateway restatement, which is the record class ADR-0015 is
+  about.
+- **The related total skipped what `--full` prints.** Wildcards and
+  `*.onmicrosoft.*` names are left out of the selection, and were left out of
+  the total as well, on both renderers.
+
+The rule is now that a note's remainder counts against the output its own text
+names, and that the text names the command the reader has to type. On `--plain`
+that is `--plain --full`, the whole record. The panel's footer counts against
+the panel's `--full`, which stays curated because collapsing four wordings of
+one fact into one line is a claim-inflation guard, not a space saving, and
+`--full` is no place to undo it. So the two remainders can differ for one
+record. Naming the destination is what keeps that from reading as a
+contradiction: two numbers answering one question is a defect, two numbers
+answering two named questions is not. The related-domain total is the list
+length on both, which converges them.
+
+`provider:` on a role split also now keeps its evidence role, `provider: Google
+Workspace (MX delivery path)`. ADR-0012 compacts roles out of the default view;
+this key is the exception because on a split it is the only line that repeats a
+vendor word the reader has already heard, and the role is what makes the second
+hearing a different fact rather than a stutter. The play-test recommended
+keeping the key and tagging the value, over dropping either.
+
 ## Consequences
 
 This is a **breaking change to the `--plain` output contract**, which

@@ -68,6 +68,11 @@ def high_signal_related(
     few high-signal names are present. Returns a tuple of
     ``(picked, total_count)`` so callers can emit the "N total" footer.
 
+    ``total_count`` counts every entry the caller passed in, including the ones
+    the selection skips. Both renderers point at ``--full`` for the remainder
+    and both print the unfiltered list there, so counting only the candidates
+    would state a total the reader cannot reach.
+
     ``*.onmicrosoft.com`` entries are filtered out.
     These are Microsoft 365 tenant artefacts - they appear in the
     related list because the user realm / autodiscover path surfaces
@@ -85,7 +90,7 @@ def high_signal_related(
         return not d.endswith((".onmicrosoft.com", ".onmicrosoft.us"))
 
     non_wild = [d for d in related if _is_high_signal_candidate(d)]
-    total = len(non_wild)
+    total = len(related)
     high: list[str] = []
     for d in non_wild:
         first_label = d.split(".", 1)[0] + "."

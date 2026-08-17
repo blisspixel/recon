@@ -237,10 +237,16 @@ A record whose mail vendor and identity vendor differ leads with `mail:` and
 `identity:` (the role split from
 [ADR-0015](adr/0015-role-split-vendor-claims-in-the-default-view.md)) and still
 emits `provider:` after them, carrying its usual MX-delivery-path summary, so
-one grep works on every record. Long lists are cut the way the panel cuts them:
-`related_domains:` carries the high-signal selection and `related_domains_note:`
-states how many more exist, and `insights:` is capped with an `insights_note:`
-beside it. Add `--full` for the uncut lists.
+one grep works on every record. On a split it prints that role, `provider:
+Google Workspace (MX delivery path)`, because the vendor word is one `mail:`
+just said and the role is the reason it came back. Long lists are cut the way
+the panel cuts them: `related_domains:` carries the high-signal selection and
+`related_domains_note:` states how many more exist, and `insights:` is capped
+with an `insights_note:` beside it. Each note names `--plain --full` and counts
+against it, so what you heard plus what the note states is what that command
+prints. The panel's own footer points at the panel's `--full`, which stays
+curated, so the same record can carry two different remainders: each is exact
+about the output it names.
 
 Add `--full` for the complete structured record, including Bayesian internals
 such as `posterior_observations` and `interval_low`:
