@@ -50,6 +50,30 @@ renders the complete structured record exactly as `--plain` does today.
   (`tenant_id`, `auth_type`), so a `grep tenant_id:` written against today's
   output still matches tomorrow's.
 
+## Amendment, 2026-08-17
+
+The first implementation emitted the panel's *rows* but not the panel's *cuts*,
+and dropped one key it had promised to keep. A third black-box pass against the
+published 2.15.0 package reported both. Neither changes the decision above; they
+complete it.
+
+- **The lists are cut the way the panel cuts them.** Default `--plain` carries
+  the panel's high-signal related-domain selection and its insight cap, each
+  with a sibling `related_domains_note:` / `insights_note:` key stating how many
+  entries were withheld and which flag restores them. The unreduced lists stay
+  behind `--plain --full`. Without this the flag was a briefing on a sparse name
+  and a 144-line hostname roll call on a populated one, which is the reported
+  accessibility cost in its original form.
+- **`provider:` is emitted on role-split records too**, after `mail:` and
+  `identity:` rather than before them. Dropping it made the documented
+  `grep provider:` miss silently on exactly the record class ADR-0015 exists
+  for. It carries the same MX-delivery-path summary it carries everywhere else,
+  and placing it after the role keys keeps a top-down reader meeting the roles
+  first, which was the reason for dropping it from the visual panel.
+
+`--plain` also now honors `--confidence-mode`, because a flag that changes the
+panel's insight wording has to change the panel's linear form as well.
+
 ## Consequences
 
 This is a **breaking change to the `--plain` output contract**, which

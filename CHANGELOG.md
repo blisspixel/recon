@@ -26,6 +26,70 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.15.1] - 2026-08-17
+
+Default-view follow-through. A third black-box pass against the published
+2.15.0 package confirmed the two decisions that release made and found that the
+`--plain` half was implemented only halfway: it emitted the panel's rows but
+not the panel's cuts, so a populated record still read its entire
+related-domain list aloud, and it dropped the one key the guide tells a
+stranger to grep. The panel and the linear view now share one definition of
+what the briefing shows and what it withholds. No stable JSON, MCP, cache, or
+capsule contract changes.
+
+### Tool Surface Changes
+
+Tool surface changes: no command or flag is added, removed, or renamed.
+Default `--plain` output gains two keys, `related_domains_note` and
+`insights_note`, and restores `provider:` on role-split records; its
+`related_domains` and `insights` lists now carry the default panel's selection
+rather than every entry, with `--plain --full` unchanged and still complete.
+`--plain` now honors `--confidence-mode`.
+
+### Fixed
+
+- **`--plain` makes the panel's cuts, not just its rows.** Default `--plain`
+  carries the panel's high-signal related-domain selection and its five-insight
+  cap, each followed by a `related_domains_note:` / `insights_note:` key stating
+  how many entries were withheld and how to see them. A rich record rendered
+  144 lines where the panel rendered 50, so the surface recon documents for
+  screen readers turned back into a hostname roll call on exactly the targets
+  worth reviewing. `--plain --full` is unchanged and still emits every entry.
+- **`provider:` is emitted on role-split records.** ADR-0015 removed the
+  singular `Provider` row from the visual panel for good reason, and the linear
+  view followed it by dropping the key entirely, which made the documented
+  `grep provider:` miss silently on precisely the record class the role split
+  exists for. `provider:` now follows `mail:` and `identity:`, carrying the same
+  MX-delivery-path summary it carries on every other surface: a top-down reader
+  still meets the roles first, and one grep works everywhere.
+- **`--plain` honors `--confidence-mode`.** The linear view is the panel, so a
+  flag that changes the panel's insight wording changes this too. It previously
+  rendered hedged insight text under `--confidence-mode strict`.
+
+### Changed
+
+- The panel says why its two dot rows can disagree. `Confidence` counts
+  corroborating sources and `Model support` is threshold-relative, so a
+  one-source record can carry a full model display; three consecutive external
+  passes read that as a contradiction. When the two scales sit two steps apart,
+  the `Model support` row now adds one dim sentence naming them as different
+  questions. Records where the scales agree, or differ by one step, are
+  unchanged.
+
+### Documentation
+
+- `docs/getting-started.md` names the `--plain` role keys alongside
+  `provider:`, describes the note keys, and explains the `Confidence` versus
+  `Model support` distinction at first contact rather than only in
+  `how-it-works.md`.
+- `docs/mcp.md` states the resolved config and cache directories for custom
+  profiles and `cached_at` instead of the legacy `~/.recon/` shorthand, matching
+  what `recon doctor` prints and what the same document already says for
+  custom fingerprints.
+- [ADR-0016](docs/adr/0016-plain-emits-the-panel-record.md) carries a dated
+  amendment recording the cuts and the retained `provider:` key, and
+  `docs/stability.md` describes the `--plain` contract as shipped.
+
 ## [2.15.0] - 2026-08-16
 
 Default-view claim clarity and accessibility. Two independent black-box passes
