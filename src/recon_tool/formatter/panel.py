@@ -521,7 +521,7 @@ def render_tenant_panel(
           …
 
         High-signal related domains                  (bold cyan header)
-          login.x, sso.x, api.x … (N total — use --full to see all)
+          login.x, sso.x, api.x ... (N total, use --full to see all)
 
         Note: …                                     (yellow only when degraded)
 
@@ -791,7 +791,7 @@ def _render_related_compact(info: TenantInfo, show_domains: bool) -> Text | None
     if total > len(picked):
         remaining = total - len(picked)
         rel.append(
-            f"\n  ({total} total — {remaining} more, use --full to see all)",
+            f"\n  ({total} total, {remaining} more, use --full to see all)",
             style="dim italic",
         )
     return rel
@@ -1043,7 +1043,7 @@ def _render_insights(info: TenantInfo, verbose: bool, confidence_mode: str) -> T
 
     if overflow_count > 0:
         ins.append("  ")
-        ins.append(f"{overflow_count} more — use --full to see all", style="dim italic")
+        ins.append(f"{overflow_count} more, use --full to see all", style="dim italic")
         ins.append("\n")
 
     return ins

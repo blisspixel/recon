@@ -46,7 +46,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--json` | Stable | JSON output contract in [`schema.md`](schema.md). |
 | `--md` | Stable | Markdown H2 section structure is stable; prose is not. |
 | `--full` / `-f` | Stable | Expanded evidence + all domains + posture; retains the default Services summary. With `--plain`, selects the complete structured record. |
-| `--plain` | Stable; **default output changed in 2.15** | Renders the default panel's rows as linear `key: value` text, including the panel's own list cuts: `related_domains:` and `insights:` carry the panel's selection with a sibling `related_domains_note:` / `insights_note:` naming the remainder. Through 2.14.x it always emitted the complete structured record; that output is unchanged and now behind `--plain --full`. Key names are the stable schema names either way, so an existing `grep tenant_id:` still matches, and `provider:` is emitted on every record including a role split. Migration: add `--full` if you parse a field outside the panel or need an uncut list. [ADR-0016](adr/0016-plain-emits-the-panel-record.md). |
+| `--plain` | Stable; **default output changed in 2.15** | Renders the default panel's rows as linear `key: value` text, including the panel's own list cuts: `related_domains:` and `insights:` carry the panel's selection with a sibling `related_domains_note:` / `insights_note:` naming the remainder. Through 2.14.x it always emitted the complete structured record; that output is unchanged and now behind `--plain --full`. Key names are the stable schema names either way, so an existing `grep tenant_id:` still matches, and `provider:` is emitted on every record including a role split. Each note's remainder counts against `--plain --full`, the output the note itself names, so shown plus withheld equals that list; the panel's own footer counts against the panel's `--full`, which drops restatement lines the record keeps, so the two remainders can differ for one record. Migration: add `--full` if you parse a field outside the panel or need an uncut list. [ADR-0016](adr/0016-plain-emits-the-panel-record.md). |
 | `--verbose` / `-v` | Stable | Expanded evidence, confidence and detection detail, plus per-source status on stderr. |
 | `--explain` | Stable | Panel, source status, and flat evidence explanations; `--json --explain` additionally emits the structured, lineage-qualified `explanation_dag`. |
 | `--services` / `-s` | Stable | Retained for compatibility; Services are shown by default. |
@@ -257,7 +257,10 @@ assigns the omitted-choice flip to v3. The explicit `--fusion` and
 - **Evidence-role wording on the human views**: the default panel, `--plain`,
   and `--md` compact the record-role qualifier out of service and provider
   labels and omit matches with no established role; `--explain`, `--verbose`,
-  and `--full` keep them. The JSON `provider` field and the MCP payloads are
+  and `--full` keep them. One exception: `--plain`'s `provider:` key on a
+  role-split record keeps its role, because there it repeats the vendor `mail:`
+  has already named and the role is what makes the repetition a second fact.
+  The JSON `provider` field and the MCP payloads are
   unaffected and stay the machine contract. See
   [ADR-0012](adr/0012-default-view-evidence-role-visibility.md).
 - **Insight wording**: individual insight text may be refined. The

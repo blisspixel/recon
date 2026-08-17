@@ -84,7 +84,22 @@ def test_split_keeps_provider_but_leads_with_the_roles() -> None:
 
     assert keys.index("mail") < keys.index("provider")
     assert keys.index("identity") < keys.index("provider")
-    assert "provider: Google Workspace" in lines
+    assert "provider: Google Workspace (MX delivery path)" in lines
+
+
+def test_split_provider_says_why_it_repeats_the_vendor() -> None:
+    """A screen reader hears the mail vendor twice; the second time has a reason.
+
+    ADR-0012 compacts evidence roles out of the default view. This key is the
+    exception: on a split it repeats the word `mail:` just said, so without the
+    role it is a stutter rather than a second fact.
+    """
+    lines = format_tenant_plain(split_info()).splitlines()
+
+    assert "mail: Google Workspace" in lines
+    assert "provider: Google Workspace (MX delivery path)" in lines
+    # Single-vendor records repeat nothing, so nothing needs explaining.
+    assert "provider: Microsoft 365" in format_tenant_plain(single_vendor_info()).splitlines()
 
 
 def test_plain_keeps_provider_for_a_single_vendor_record() -> None:
@@ -97,10 +112,14 @@ def test_plain_keeps_provider_for_a_single_vendor_record() -> None:
 
 @pytest.mark.parametrize("detailed", [False, True])
 def test_plain_tracks_the_panel_role_visibility_split(detailed: bool) -> None:
-    """ADR-0012 still governs: --explain/--verbose restore role qualifiers."""
-    rendered = format_tenant_plain(split_info(), detailed=detailed)
+    """ADR-0012 still governs the labels: --explain/--verbose restore the roles.
 
-    assert ("MX delivery path" in rendered) is detailed
+    `provider:` on a split is the one exception and is pinned separately.
+    """
+    lines = format_tenant_plain(split_info(), detailed=detailed).splitlines()
+    labels = [line for line in lines if line.startswith(("  - ", "mail:"))]
+
+    assert any("MX delivery path" in line for line in labels) is detailed
 
 
 def _rich_record() -> TenantInfo:
@@ -129,7 +148,7 @@ def test_rich_record_keeps_the_panel_related_domain_cut() -> None:
     rendered = format_tenant_plain(_rich_record())
 
     assert rendered.count("- host") < 10
-    assert "related_domains_note: 92 total, 84 more, use --full to see all" in rendered
+    assert "related_domains_note: 92 total, 84 more, use --plain --full to see all" in rendered
     # The panel's selection, not the first N: high-signal names lead.
     assert rendered.index("login.beta.invalid") < rendered.index("host0.beta.invalid")
 
@@ -137,7 +156,7 @@ def test_rich_record_keeps_the_panel_related_domain_cut() -> None:
 def test_rich_record_caps_insights_and_says_how_many_it_withheld() -> None:
     rendered = format_tenant_plain(_rich_record())
 
-    assert "insights_note: 2 more, use --full to see all" in rendered
+    assert "insights_note: 2 more, use --plain --full to see all" in rendered
 
 
 def test_full_still_carries_every_related_domain() -> None:
@@ -177,6 +196,109 @@ def test_the_two_renderers_name_the_same_related_domains() -> None:
         assert domain in panel
     assert "host8.beta.invalid" not in panel
     assert "host8.beta.invalid" not in listed
+
+
+def _listed(rendered: str, key: str) -> list[str]:
+    """Entries rendered under ``key:`` as a list block."""
+    entries: list[str] = []
+    started = False
+    for line in rendered.splitlines():
+        if line == f"{key}:":
+            started = True
+            continue
+        if started:
+            if line.startswith("  - "):
+                entries.append(line.removeprefix("  - "))
+                continue
+            break
+    return entries
+
+
+def _note_count(rendered: str, key: str) -> int:
+    """The remainder a ``*_note`` states, as a number."""
+    (note,) = (line for line in rendered.splitlines() if line.startswith(f"{key}:"))
+    (more,) = (word for word in note.split() if word.isdigit() and f"{word} more" in note)
+    return int(more)
+
+
+def _curated_record() -> TenantInfo:
+    """A record whose insight list the panel curates, not just caps.
+
+    The reported defect needed exactly this: `Provider indicators co-observed:`
+    and `MX gateway observed:` are restatements the panel drops and the record
+    keeps, so the cap alone never described what `--plain --full` prints. The
+    original fixture could not express it because every one of its insights
+    survived curation.
+    """
+    return replace(
+        split_info(),
+        related_domains=(
+            "login.beta.invalid",
+            "sso.beta.invalid",
+            *(f"host{index}.beta.invalid" for index in range(90)),
+            "*.beta.invalid",
+            "tenant.onmicrosoft.com",
+        ),
+        insights=(
+            "Email security: observed controls: DMARC reject, DKIM",
+            "Federated identity observed; external IdP not identified",
+            "Provider indicators co-observed: Microsoft 365, Google Workspace",
+            "MX gateway observed: Proofpoint",
+            "Certificate issuance concentrated at one issuer",
+            "Legacy protocol indicator observed",
+            "Tenant region reported as NA",
+        ),
+    )
+
+
+@pytest.mark.parametrize("key", ["related_domains", "insights"])
+def test_each_note_reconciles_with_the_flag_it_names(key: str) -> None:
+    """Shown plus withheld equals what `--full` prints on this same renderer.
+
+    The note names one flag, so its arithmetic has to land on that flag's
+    output. Counting the panel's curated set instead understated the insight
+    remainder by every restatement the record keeps.
+    """
+    info = _curated_record()
+    brief = format_tenant_plain(info)
+    full = format_tenant_plain(info, full=True)
+
+    assert len(_listed(brief, key)) + _note_count(brief, f"{key}_note") == len(_listed(full, key))
+
+
+def test_a_curated_line_is_still_a_withheld_line() -> None:
+    """A record under the cap can still be missing lines, and has to say so.
+
+    Silence here reads as "you have everything", which is the failure the notes
+    exist to prevent, and it is the common case: any record carrying a
+    dual-provider or gateway restatement.
+    """
+    info = replace(
+        split_info(),
+        insights=(
+            "Email security: observed controls: DMARC reject, DKIM",
+            "Federated identity observed; external IdP not identified",
+            "Certificate issuance concentrated at one issuer",
+            "Provider indicators co-observed: Microsoft 365, Google Workspace",
+            "MX gateway observed: Proofpoint",
+        ),
+    )
+    brief = format_tenant_plain(info)
+
+    assert len(_listed(brief, "insights")) == 3
+    assert _note_count(brief, "insights_note") == 2
+
+
+def test_related_note_counts_the_names_full_prints() -> None:
+    """Wildcards and tenant artefacts are skipped by the selection, not by `--full`.
+
+    They were left out of the total as well, so the footer stated a count the
+    reader could not reach from the flag it pointed at.
+    """
+    info = _curated_record()
+
+    assert "related_domains_note: 94 total, 86 more, use --plain --full to see all" in format_tenant_plain(info)
+    assert len(_listed(format_tenant_plain(info, full=True), "related_domains")) == 94
 
 
 def test_notes_sit_beside_the_list_they_describe() -> None:

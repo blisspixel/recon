@@ -457,6 +457,13 @@ def _plain_panel_data(
         if key == "source_count":
             panel[key] = len(info.sources)
             continue
+        # On a split this key repeats the vendor `mail:` just named, so a screen
+        # reader hears one word twice. ADR-0012 compacts evidence roles out of
+        # the default view; the role is kept here, and only here, because it is
+        # what makes the second hearing a different fact rather than a stutter.
+        if key == "provider" and split is not None and not detailed and data.get(key):
+            panel[key] = split[0]
+            continue
         # The panel prints the tenant's own default domain only when it differs
         # from the one queried; repeating it otherwise is noise.
         if key == "default_domain" and data.get("default_domain") == data.get("queried_domain"):
@@ -476,21 +483,37 @@ def _apply_briefing_cuts(data: dict[str, Any], info: TenantInfo, *, confidence_m
     call, so the linear view takes the panel's own selection and states the
     remainder rather than implying it showed everything. Mutates ``data`` in
     place so the note lands beside the list it describes.
+
+    Each note counts against ``--plain --full``, which is the command it names
+    and the whole record. The panel's insight cap is not the only thing withheld
+    here: the panel also drops restatement lines the record keeps, so counting
+    the cap alone understated the remainder and, on a record whose curated list
+    fits the cap, printed no note at all while lines were still missing.
+
+    The note names ``--plain --full`` rather than ``--full`` because that is the
+    command this reader has to type, and because the panel's own footer points
+    somewhere else: its ``--full`` stays curated, so one record can carry two
+    different remainders. Naming the destination is what keeps two numbers from
+    reading as a contradiction.
     """
     from recon_tool.formatter.briefing import briefing_insights, cap_insights, high_signal_related
 
-    if data.get("related_domains"):
-        picked, total = high_signal_related(tuple(data["related_domains"]))
+    related = data.get("related_domains")
+    if related:
+        picked, total = high_signal_related(tuple(related))
         data["related_domains"] = picked
         if total > len(picked):
-            data["related_domains_note"] = f"{total} total, {total - len(picked)} more, use --full to see all"
+            data["related_domains_note"] = f"{total} total, {total - len(picked)} more, use --plain --full to see all"
 
-    if data.get("insights"):
+    record_insights = data.get("insights")
+    if record_insights:
         score_line, ordered = briefing_insights(info, confidence_mode)
-        shown, withheld = cap_insights(ordered, verbose=False)
-        data["insights"] = ([score_line] if score_line is not None else []) + shown
-        if withheld:
-            data["insights_note"] = f"{withheld} more, use --full to see all"
+        shown, _ = cap_insights(ordered, verbose=False)
+        displayed = ([score_line] if score_line is not None else []) + shown
+        data["insights"] = displayed
+        withheld = len(record_insights) - len(displayed)
+        if withheld > 0:
+            data["insights_note"] = f"{withheld} more, use --plain --full to see all"
 
 
 def format_tenant_plain(

@@ -542,7 +542,7 @@ class TestRenderTenantPanelEdgeCases:
 
     def test_related_domains_truncation(self) -> None:
         """More than 8 related domains shows a compact
-        '(N total — M more, use --full to see all)' footer."""
+        '(N total, M more, use --full to see all)' footer."""
         _, buf = _make_console()
         info = _minimal_info(
             services=("DMARC",),
