@@ -45,3 +45,5 @@
 
 ---
 *Sources: oidc\_discovery, userrealm, dns\_records*
+
+*Scope: these are public observations from DNS, certificate transparency, and unauthenticated identity endpoints, readable by anyone with `dig` and a browser. They show what a domain publishes, not what an organization licenses, deploys, or uses, and are not a security rating.*

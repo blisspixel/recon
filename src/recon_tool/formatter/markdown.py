@@ -239,8 +239,20 @@ def _md_related_domains(info: TenantInfo, view: BriefingView, full: bool) -> lis
     return lines
 
 
+# The scope line the report carries out of the terminal. `--gaps` closes with a
+# caveat; the report format, the one most likely to land in a deck or a ticket,
+# had none, so the hedge left the terminal stripped off. Static, recon-authored,
+# so it needs no escaping.
+_MD_SCOPE_CAVEAT = (
+    "Scope: these are public observations from DNS, certificate transparency, and "
+    "unauthenticated identity endpoints, readable by anyone with `dig` and a browser. "
+    "They show what a domain publishes, not what an organization licenses, deploys, or "
+    "uses, and are not a security rating."
+)
+
+
 def _md_footer(info: TenantInfo) -> list[str]:
-    """Footer: separator, optional degraded-sources note, and the sources line."""
+    """Footer: separator, optional degraded-sources note, sources, and scope line."""
     lines: list[str] = ["---"]
     if info.degraded_sources:
         sources_list = ", ".join(markdown_escape(source) for source in info.degraded_sources)
@@ -249,6 +261,8 @@ def _md_footer(info: TenantInfo) -> list[str]:
             f"{MARKDOWN_HARD_BREAK}"
         )
     lines.append(f"*Sources: {', '.join(markdown_escape(source) for source in info.sources)}*")
+    lines.append("")
+    lines.append(f"*{_MD_SCOPE_CAVEAT}*")
     lines.append("")
     return lines
 

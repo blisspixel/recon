@@ -90,3 +90,11 @@ def test_confidence_mode_reaches_the_insight_wording() -> None:
     assert hedged != strict
     assert "indicators observed" in hedged
     assert "indicators observed" not in strict
+
+
+def test_report_carries_a_scope_caveat_out_of_the_terminal() -> None:
+    """--md is what lands in a deck; the hedge has to travel with it."""
+    md = format_tenant_markdown(single_vendor_info())
+
+    assert "Scope: these are public observations" in md
+    assert "not a security rating" in md
