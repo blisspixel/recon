@@ -1,8 +1,8 @@
-# Tenant Report: Synthetic Alpha Ltd
+# Tenant Report: alpha\.invalid
 
-**Domain:** alpha\.invalid\
+**Provider:** Microsoft 365 \+ Proofpoint gateway\
+**Display name (unverified):** Synthetic Alpha Ltd\
 **Tenant ID:** `a1b2c3d4-e5f6-7890-abcd-ef1234567890`\
-**Default Domain:** alpha\.invalid\
 **Region:** NA\
 **Auth Type:** Federated\
 **Confidence:** high (3 sources)\

@@ -443,11 +443,13 @@ class TestMarkdownEscaping:
 
         md = format_tenant_markdown(info)
 
-        assert "**Domain:** # forged" not in md
+        # The queried domain is the H1 now, not a Domain line; either way the
+        # forged heading must be escaped, never a live heading.
+        assert "\n# forged" not in md
         assert "<tenant>" not in md
         assert "(# degraded)" not in md
         assert "[source](https://evil.invalid)" not in md
-        assert r"**Domain:** \# forged" in md
+        assert r"# Tenant Report: \# forged" in md
         assert r"\`\<tenant\>\`" in md
         assert r"\# degraded" in md
         assert r"\[source\]\(https\:\/\/evil\.invalid\)" in md

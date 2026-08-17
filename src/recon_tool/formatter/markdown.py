@@ -14,6 +14,7 @@ from __future__ import annotations
 import string
 
 from recon_tool.explanation_lineage import explanation_lineage_label
+from recon_tool.formatter.briefing import BriefingView
 from recon_tool.formatter.classify import (
     categorize_services,
     compact_categorized_services,
@@ -34,7 +35,16 @@ MARKDOWN_HARD_BREAK = "\\"
 
 
 def markdown_escape(value: str) -> str:
-    """Neutralize Markdown structural characters in attacker-derived text."""
+    """Neutralize Markdown structural characters in attacker-derived text.
+
+    The report escapes the full punctuation set on every dynamic field, not a
+    readable subset: service labels and insight text can carry substrings parsed
+    from source records (a hostile ``FederationBrandName``, a crafted TXT value),
+    and ``region``/``auth_type`` come from the identity endpoint. A narrower
+    escape was tried and reverted when the injection tests caught it. The cost is
+    that a domain reads as ``example\\.com`` when the report is pasted raw; the
+    defense is worth more than the polish.
+    """
     cleaned = strip_control_chars(value, max_len=len(value)).strip()
     return cleaned.translate(MARKDOWN_ESCAPE)
 
@@ -46,22 +56,39 @@ def _markdown_identifier(value: str) -> str:
     return markdown_escape(value)
 
 
-def _md_header(info: TenantInfo) -> list[str]:
-    """Title and key-facts block of the markdown report."""
+def _md_header(info: TenantInfo, view: BriefingView, detailed: bool) -> list[str]:
+    """Title and key-facts block of the markdown report.
+
+    The title is the queried domain, not the display name: ``display_name`` is
+    the attacker-controllable ``FederationBrandName`` from the identity endpoint,
+    and promoting it to the document title is the strongest assertion the format
+    can make about an unverified string (the same reasoning the CSV path uses for
+    formula injection). It is carried below, labelled unverified, on the full
+    escape. The block leads with the vendor roles, mirroring the panel and
+    ``--plain`` (ADR-0015), so the report answers who handles mail.
+    """
     lines: list[str] = []
-    source_count = len(info.sources)
-    source_noun = "source" if source_count == 1 else "sources"
-    lines.append(f"# Tenant Report: {markdown_escape(info.display_name)}")
+    source_noun = "source" if view.source_count == 1 else "sources"
+    lines.append(f"# Tenant Report: {markdown_escape(info.queried_domain)}")
     lines.append("")
-    lines.append(f"**Domain:** {markdown_escape(info.queried_domain)}{MARKDOWN_HARD_BREAK}")
+    if view.is_split:
+        lines.append(f"**Mail:** {markdown_escape(view.mail or '')}{MARKDOWN_HARD_BREAK}")
+        lines.append(f"**Identity:** {markdown_escape(view.identity or '')}{MARKDOWN_HARD_BREAK}")
+        lines.append(f"**Provider:** {markdown_escape(view.provider_on_split or '')}{MARKDOWN_HARD_BREAK}")
+    else:
+        provider = view.provider_detailed if detailed else view.provider
+        lines.append(f"**Provider:** {markdown_escape(provider)}{MARKDOWN_HARD_BREAK}")
+    if info.display_name:
+        lines.append(f"**Display name (unverified):** {markdown_escape(info.display_name)}{MARKDOWN_HARD_BREAK}")
     if info.tenant_id:
         lines.append(f"**Tenant ID:** {_markdown_identifier(info.tenant_id)}{MARKDOWN_HARD_BREAK}")
-    lines.append(f"**Default Domain:** {markdown_escape(info.default_domain)}{MARKDOWN_HARD_BREAK}")
+    if info.default_domain and info.default_domain != info.queried_domain:
+        lines.append(f"**Tenant Domain:** {markdown_escape(info.default_domain)}{MARKDOWN_HARD_BREAK}")
     if info.region:
         lines.append(f"**Region:** {markdown_escape(info.region)}{MARKDOWN_HARD_BREAK}")
     if info.auth_type:
         lines.append(f"**Auth Type:** {markdown_escape(info.auth_type)}{MARKDOWN_HARD_BREAK}")
-    lines.append(f"**Confidence:** {info.confidence.value} ({source_count} {source_noun}){MARKDOWN_HARD_BREAK}")
+    lines.append(f"**Confidence:** {view.confidence_tier} ({view.source_count} {source_noun}){MARKDOWN_HARD_BREAK}")
     lines.append(
         f"**Evidence Confidence:** {info.evidence_confidence.value}{MARKDOWN_HARD_BREAK}\n"
         f"**Inference Confidence:** {info.inference_confidence.value}"
@@ -130,10 +157,12 @@ def _md_gws_details(info: TenantInfo) -> list[str]:
     if info.google_auth_type:
         lines.append(f"**Auth Type:** {markdown_escape(info.google_auth_type)}{MARKDOWN_HARD_BREAK}")
     if info.google_idp_name:
+        # The IdP name comes from the identity endpoint, so it keeps the full escape.
         lines.append(f"**Identity Provider:** {markdown_escape(info.google_idp_name)}{MARKDOWN_HARD_BREAK}")
     if gws_modules:
         lines.append(
-            f"**Module Indicators:** {', '.join(markdown_escape(s) for s in gws_modules)}{MARKDOWN_HARD_BREAK}"
+            f"**Module Indicators:** {', '.join(markdown_escape(s) for s in gws_modules)}"
+            f"{MARKDOWN_HARD_BREAK}"
         )
     if cse_indicators:
         lines.append(
@@ -146,15 +175,22 @@ def _md_gws_details(info: TenantInfo) -> list[str]:
     return lines
 
 
-def _md_insights(info: TenantInfo) -> list[str]:
-    """Insights section. Insight text is markdown-escaped as defense in depth so
-    the report's safety does not depend on every current and future insight
-    staying within a safe alphabet."""
-    if not info.insights:
+def _md_insights(info: TenantInfo, view: BriefingView, full: bool) -> list[str]:
+    """Insights section: the briefing's cut by default, every line under --full.
+
+    Insight text is recon-authored controlled vocabulary, so it takes the
+    structural escape (readable when pasted raw) rather than the full one.
+    """
+    insights = info.insights if full else view.insights_display
+    if not insights:
         return []
     lines: list[str] = ["## Insights", ""]
-    for insight in info.insights:
+    for insight in insights:
         lines.append(f"- {markdown_escape(insight)}")
+    if not full:
+        note = view.insights_note("--md --full")
+        if note is not None:
+            lines.append(f"- *{note}*")
     lines.append("")
     return lines
 
@@ -187,13 +223,18 @@ def _md_tenant_domains(info: TenantInfo) -> list[str]:
     return lines
 
 
-def _md_related_domains(info: TenantInfo) -> list[str]:
-    """Related-domains section."""
-    if not info.related_domains:
+def _md_related_domains(info: TenantInfo, view: BriefingView, full: bool) -> list[str]:
+    """Related-domains section: the high-signal cut by default, all under --full."""
+    related = info.related_domains if full else view.related_shown
+    if not related:
         return []
     lines: list[str] = ["## Related Domains", ""]
-    for d in info.related_domains:
+    for d in related:
         lines.append(f"- {markdown_escape(d)}")
+    if not full:
+        note = view.related_note("--md --full")
+        if note is not None:
+            lines.append(f"- *{note}*")
     lines.append("")
     return lines
 
@@ -212,27 +253,37 @@ def _md_footer(info: TenantInfo) -> list[str]:
     return lines
 
 
-def format_tenant_markdown(info: TenantInfo, *, detailed: bool = False) -> str:
+def format_tenant_markdown(
+    info: TenantInfo,
+    *,
+    detailed: bool = False,
+    full: bool = False,
+    confidence_mode: str = "hedged",
+) -> str:
     """Format TenantInfo as a markdown report.
 
     A thin orchestrator over the per-section ``_md_*`` builders, each of which
-    returns its lines (or an empty list when the section does not apply).
-    ``detailed`` is the --explain / --verbose report and keeps every
-    evidence-role qualifier; the default report compacts them (ADR-0012).
-    Output held byte-identical by ``tests/test_golden_renders.py``
-    (``markdown_dense`` / ``markdown_sparse`` / ``markdown_rich``).
+    returns its lines (or an empty list when the section does not apply). The
+    report is the panel in Markdown: it leads with the vendor roles, makes the
+    briefing's cuts on insights and related domains, and honors
+    ``confidence_mode`` (ADR-0017). ``detailed`` is the --explain / --verbose
+    report and keeps every evidence-role qualifier; the default compacts them
+    (ADR-0012). ``full`` restores every insight and related domain, the report's
+    pre-2.16 behavior, named by the ``--md --full`` notes.
     """
     from recon_tool.collection_view import collection_observable_info
+    from recon_tool.formatter.briefing import build_briefing
 
     info = collection_observable_info(info)
+    view = build_briefing(info, confidence_mode=confidence_mode, detailed=detailed)
     lines: list[str] = []
-    lines.extend(_md_header(info))
+    lines.extend(_md_header(info, view, detailed))
     lines.extend(_md_services_split(info, detailed))
     lines.extend(_md_gws_details(info))
-    lines.extend(_md_insights(info))
+    lines.extend(_md_insights(info, view, full))
     lines.extend(_md_cert_intel(info))
     lines.extend(_md_tenant_domains(info))
-    lines.extend(_md_related_domains(info))
+    lines.extend(_md_related_domains(info, view, full))
     lines.extend(_md_footer(info))
     return "\n".join(lines)
 

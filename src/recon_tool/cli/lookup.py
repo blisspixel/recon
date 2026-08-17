@@ -612,7 +612,12 @@ def _lookup_emit_markdown(
 
     show_posture = display.show_posture
     show_explain = display.show_explain
-    md = format_tenant_markdown(info, detailed=display.verbose or show_explain)
+    md = format_tenant_markdown(
+        info,
+        detailed=display.verbose or show_explain,
+        full=display.full,
+        confidence_mode=display.confidence_mode,
+    )
     if show_posture and observations:
         md += "\n## Posture Analysis\n\n"
         for obs in observations:

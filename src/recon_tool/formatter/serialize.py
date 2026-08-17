@@ -510,13 +510,15 @@ def _apply_briefing_cuts(data: dict[str, Any], view: BriefingView) -> None:
     """
     if data.get("related_domains"):
         data["related_domains"] = list(view.related_shown)
-        if view.related_note is not None:
-            data["related_domains_note"] = view.related_note
+        note = view.related_note()
+        if note is not None:
+            data["related_domains_note"] = note
 
     if data.get("insights"):
         data["insights"] = list(view.insights_display)
-        if view.insights_note is not None:
-            data["insights_note"] = view.insights_note
+        note = view.insights_note()
+        if note is not None:
+            data["insights_note"] = note
 
 
 def format_tenant_plain(

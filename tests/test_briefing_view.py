@@ -72,7 +72,7 @@ def test_related_note_reconciles_against_the_record() -> None:
 
     assert len(view.related_shown) == 8
     assert view.related_total == 94  # every entry --full prints, wildcards included
-    assert view.related_note == "94 total, 86 more, use --plain --full to see all"
+    assert view.related_note() == "94 total, 86 more, use --plain --full to see all"
 
 
 def test_insight_note_counts_the_record_not_the_curated_set() -> None:
@@ -81,7 +81,7 @@ def test_insight_note_counts_the_record_not_the_curated_set() -> None:
     # Two of the seven are curated away, so the panel's overflow and the record
     # remainder differ: the note the linear surfaces show counts the record.
     assert view.insights_record_total == 7
-    assert len(view.insights_display) + _note_more(view.insights_note) == 7
+    assert len(view.insights_display) + _note_more(view.insights_note()) == 7
 
 
 def test_a_curated_line_is_still_a_withheld_line() -> None:
@@ -101,14 +101,14 @@ def test_a_curated_line_is_still_a_withheld_line() -> None:
     )
 
     assert len(view.insights_display) == 3
-    assert view.insights_note == "2 more, use --plain --full to see all"
+    assert view.insights_note() == "2 more, use --plain --full to see all"
 
 
 def test_no_note_when_nothing_withheld() -> None:
     view = build_briefing(single_vendor_info(), confidence_mode="hedged", detailed=False)
 
-    assert view.related_note is None
-    assert view.insights_note is None
+    assert view.related_note() is None
+    assert view.insights_note() is None
 
 
 def test_view_is_frozen() -> None:

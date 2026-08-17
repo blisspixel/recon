@@ -61,21 +61,25 @@ class BriefingView:
     confidence_tier: str
     source_count: int
 
-    @property
-    def related_note(self) -> str | None:
-        """Remainder note for a linear surface, naming its own ``--full``."""
+    def related_note(self, full_cmd: str = "--plain --full") -> str | None:
+        """Remainder note for a linear surface, naming its own ``--full`` command.
+
+        The command differs by surface (``--plain --full`` vs ``--md --full``),
+        so each renderer passes the command its reader types. The count is the
+        same on every surface: the list length, wildcards included, which is what
+        that ``--full`` prints.
+        """
         withheld = self.related_total - len(self.related_shown)
         if withheld <= 0:
             return None
-        return f"{self.related_total} total, {withheld} more, use --plain --full to see all"
+        return f"{self.related_total} total, {withheld} more, use {full_cmd} to see all"
 
-    @property
-    def insights_note(self) -> str | None:
+    def insights_note(self, full_cmd: str = "--plain --full") -> str | None:
         """Withheld-insight note for a linear surface, counted against the record."""
         withheld = self.insights_record_total - len(self.insights_display)
         if withheld <= 0:
             return None
-        return f"{withheld} more, use --plain --full to see all"
+        return f"{withheld} more, use {full_cmd} to see all"
 
 
 def build_briefing(info: TenantInfo, *, confidence_mode: str, detailed: bool) -> BriefingView:

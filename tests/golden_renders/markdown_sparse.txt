@@ -1,7 +1,7 @@
-# Tenant Report: Synthetic Gamma
+# Tenant Report: gamma\.invalid
 
-**Domain:** gamma\.invalid\
-**Default Domain:** gamma\.invalid\
+**Provider:** Microsoft 365 \(no supporting record\)\
+**Display name (unverified):** Synthetic Gamma\
 **Confidence:** low (1 source)\
 **Evidence Confidence:** medium\
 **Inference Confidence:** medium
