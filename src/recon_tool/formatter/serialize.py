@@ -476,6 +476,22 @@ def _plain_panel_data(
     return panel
 
 
+def _with_role_keys(data: dict[str, Any], view: BriefingView) -> dict[str, Any]:
+    """Return ``data`` with ``mail``/``identity`` inserted just before ``provider``.
+
+    Additive: no key is removed and ``provider`` keeps its value. The order
+    mirrors the default view, roles first, so the split reads the same on the
+    complete record as it does on the briefing.
+    """
+    out: dict[str, Any] = {}
+    for key, value in data.items():
+        if key == "provider":
+            out["mail"] = view.mail
+            out["identity"] = view.identity
+        out[key] = value
+    return out
+
+
 def _apply_briefing_cuts(data: dict[str, Any], view: BriefingView) -> None:
     """Cut ``related_domains`` and ``insights`` the way the panel cuts them.
 
@@ -557,6 +573,15 @@ def format_tenant_plain(
         data = _plain_panel_data(data, observable, detailed=detailed, confidence_mode=confidence_mode)
         if notes:
             data["evidence_roles"] = "; ".join(notes)
+    else:
+        # The complete record is the surface the docs tell parsers to use, so it
+        # must carry the 2.15 role split too: additively, before `provider`, so a
+        # `grep mail:` written against the default view still matches here.
+        from recon_tool.formatter.briefing import build_briefing
+
+        view = build_briefing(observable, confidence_mode=confidence_mode, detailed=detailed)
+        if view.is_split:
+            data = _with_role_keys(data, view)
     lines: list[str] = []
     for key, value in data.items():
         lines.extend(plain_lines(value, str(key), 0))

@@ -56,6 +56,22 @@ def test_full_restores_every_record_field() -> None:
     assert len(rendered.splitlines()) > len(format_tenant_plain(split_info()).splitlines())
 
 
+def test_full_carries_the_role_split_before_provider() -> None:
+    """The complete record, the surface parsers are told to use, keeps the roles.
+
+    Additive: mail:/identity: appear before provider: without removing any field.
+    """
+    lines = format_tenant_plain(split_info(), full=True).splitlines()
+    keys = [line.split(":", 1)[0] for line in lines if ":" in line]
+
+    assert "mail: Google Workspace" in lines
+    assert "identity: Microsoft 365" in lines
+    assert keys.index("mail") < keys.index("provider")
+    assert keys.index("identity") < keys.index("provider")
+    # Still complete: an envelope field only the full record carries is present.
+    assert any(line.startswith("schema_version:") for line in lines)
+
+
 def test_plain_uses_stable_schema_key_names() -> None:
     """A grep written against the full record must still match the panel."""
     rendered = format_tenant_plain(split_info())
