@@ -18,27 +18,46 @@ tools. About ten seconds per domain.
 
 ## Quick Start
 
-Install, check the version offline, and run your first lookup:
+Install and check the version offline:
 
 ```bash
 uv tool install recon-tool    # or: pipx install recon-tool
 recon --version               # offline check
-recon yourcompany.com         # a domain you operate or are authorized to review
 ```
 
 Python 3.11 through 3.14, on Windows, macOS, or Linux. `recon doctor` tests
 online connectivity to recon's public data sources.
 
+Optional install helpers at `scripts/install.ps1` and `scripts/install.sh` drive
+an existing `uv` or `pipx` installation. Download a
+[release-tag source archive](https://github.com/blisspixel/recon/releases/latest),
+review the helper locally, then run it: each installs the exact version
+represented by that tag, preserves a sole existing owner, and refuses ambiguous
+or unmanaged installations. Do not pipe mutable branch content into a shell. To
+verify published artifacts first, follow the
+[consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
+
+Before the first lookup, know what leaves your machine. recon makes DNS queries
+that recursive and authoritative DNS infrastructure may observe. Its only
+default request to a target-owned endpoint is the standards-defined MTA-STS
+policy fetch; Google CSE and BIMI certificate probes run only when
+`--direct-probes` is explicitly enabled. See
+[ADR-0011](https://github.com/blisspixel/recon/blob/main/docs/adr/0011-public-metadata-collection-boundary.md).
+
+```bash
+recon example.com
+```
+
+Every lookup is live. recon ships no offline demo mode, so reserved names such
+as `example.com` return a panel of stray public residue from unrelated test
+configurations, including a meaningless display name, at High confidence. It
+shows you the shape of the output, not a result about any organization. Point
+recon at a domain you operate or are authorized to review to see a real
+footprint.
+
 A domain is a query coordinate, not proof of one organization or product: recon
 reports observations, not verdicts. That is the caution to keep beside every row
 the panel shows.
-
-**About `example.com`.** Every lookup is live and there is no offline demo mode.
-Reserved names such as `example.com` do return a panel, but the values are stray
-public residue from unrelated test configurations, including a meaningless
-display name, at High confidence. It shows you the shape of the output, not a
-result about any organization. Point recon at a domain you operate to see a real
-footprint.
 
 ### Illustrated output (synthetic, not a captured run)
 
@@ -91,14 +110,7 @@ Insights
 </details>
 <!-- terminal-demo-transcript:end -->
 
-Before the first lookup, know what leaves your machine. recon makes DNS queries
-that recursive and authoritative DNS infrastructure may observe. Its only
-default request to a target-owned endpoint is the standards-defined MTA-STS
-policy fetch; Google CSE and BIMI certificate probes run only when
-`--direct-probes` is explicitly enabled. See
-[ADR-0011](https://github.com/blisspixel/recon/blob/main/docs/adr/0011-public-metadata-collection-boundary.md).
-
-Install detail, signed release archives, and install helpers:
+Install, update, uninstall, and first-run detail:
 [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
 
 ## What recon Is Good For
