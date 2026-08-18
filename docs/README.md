@@ -14,8 +14,10 @@ public, but not written for a first-time reader.
 
 | Need | Read |
 |---|---|
+| Definitions of recon's load-bearing terms | [glossary.md](glossary.md) |
 | First overview | [../README.md](../README.md) |
 | Install, update, uninstall, and first commands | [getting-started.md](getting-started.md) |
+| How to report a result without overstating it | [reporting-observations.md](reporting-observations.md) |
 | Plain-language model overview | [how-it-works.md](how-it-works.md) |
 | What recon can and cannot see | [limitations.md](limitations.md) |
 | Known weak areas and conservative wording | [weak-areas.md](weak-areas.md) |

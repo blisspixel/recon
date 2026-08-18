@@ -172,12 +172,21 @@ docs. Public validation work with real apexes stays in gitignored local
 workspaces.
 
 The panel's two dot rows answer different questions, so they can disagree
-without either being wrong. `Confidence` is deterministic: how many independent
-public sources corroborated the record. `Model support` is threshold-relative:
-where a claim's hand-set uncertainty band sits against the model's decision
-threshold. A single-source record can carry a full model display, and the panel
-says so on the row when the two sit two steps apart. Detail:
+without either being wrong. `Confidence` is a deterministic merged tier over
+source count, same-claim corroboration, and source degradation; a degraded
+source lowers it. It is not a raw source count and not a probability.
+`Model support` is threshold-relative: where a claim's hand-set uncertainty band
+sits against the model's decision threshold. A single-source record can carry a
+full model display, and the panel says so on the row when the two sit two steps
+apart. Definitions: [glossary.md](glossary.md); detail:
 [how-it-works.md](how-it-works.md).
+
+`--confidence-mode strict` (or `--strict`) drops hedging qualifiers like
+`observed` and `indicators` from insight lines, but only on a dense-evidence
+record: High confidence with at least three sources. A thin-evidence record
+keeps its hedges under `strict` by design, because dropping the hedge on sparse
+evidence would overclaim. So the same insight can read one way on a dense record
+and another on a thin one, and identically when neither is dense.
 
 ## Input Normalization
 
@@ -266,6 +275,20 @@ This is the linear view for a standard single-domain lookup. Chain, compare,
 exposure, and gaps reports use their own formats; batch and delta have
 mode-specific output.
 
+## Exit Codes
+
+Every command follows one exit-code contract, so a script can branch on the
+outcome without parsing output. The same table is in
+[schema.md](schema.md) for machine consumers.
+
+| Code | Meaning |
+|---|---|
+| 0 | Success: the command completed and produced output |
+| 1 | General handled error, for example a missing optional dependency or a failed `doctor` check |
+| 2 | Validation: bad input rejected before any work, for example a malformed domain or mutually exclusive flags |
+| 3 | No data: the target resolved but nothing was available to report |
+| 4 | Internal: a caught network or pipeline failure, or the last-resort crash handler |
+
 ## Inspect Local Cache State
 
 `cache show` reads metadata only. The default overview enumerates cache
@@ -277,6 +300,13 @@ worth the additional local work:
 recon cache show
 recon cache show --all
 ```
+
+recon resolves its config, cache, and state directories in one order:
+`RECON_CONFIG_DIR` if set, else an existing legacy `~/.recon/`, else the XDG base
+directories (`$XDG_CONFIG_HOME/recon`, `$XDG_CACHE_HOME/recon`,
+`$XDG_STATE_HOME/recon`). On Windows with none of those set, that resolves to
+`%USERPROFILE%\.config\recon`, `%USERPROFILE%\.cache\recon`, and
+`%USERPROFILE%\.local\state\recon`. `recon doctor` prints the resolved paths.
 
 An interrupted atomic write can leave a cache-writer-shaped temporary file.
 The overview counts that residue without reading or printing its payload,
