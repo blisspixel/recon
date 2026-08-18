@@ -44,13 +44,13 @@ For the JSON output contract in full field-by-field detail, see
 | Flag | Stability | Notes |
 |---|---|---|
 | `--json` | Stable | JSON output contract in [`schema.md`](schema.md). |
-| `--md` | Stable | Markdown H2 section structure is stable; prose is not. |
-| `--full` / `-f` | Stable | Expanded evidence + all domains + posture; retains the default Services summary. With `--plain`, selects the complete structured record. |
+| `--md` | Stable; **default selection changed in 2.16** | Markdown H2 section structure is stable; prose is not. As of 2.16 the report is the default briefing (ADR-0017): it leads with the vendor roles, cuts insights and related domains with an `--md --full` note, honors `--confidence-mode`, and titles the report on the queried domain (the display name is carried below, labelled unverified). `--md --full` restores every entry. |
+| `--full` / `-f` | Stable | Expanded evidence + all domains + posture; retains the default Services summary. With `--plain` or `--md`, selects the complete structured record / uncut report. |
 | `--plain` | Stable; **default output changed in 2.15** | Renders the default panel's rows as linear `key: value` text, including the panel's own list cuts: `related_domains:` and `insights:` carry the panel's selection with a sibling `related_domains_note:` / `insights_note:` naming the remainder. Through 2.14.x it always emitted the complete structured record; that output is unchanged and now behind `--plain --full`. Key names are the stable schema names either way, so an existing `grep tenant_id:` still matches, and `provider:` is emitted on every record including a role split. Each note's remainder counts against `--plain --full`, the output the note itself names, so shown plus withheld equals that list; the panel's own footer counts against the panel's `--full`, which drops restatement lines the record keeps, so the two remainders can differ for one record. Migration: add `--full` if you parse a field outside the panel or need an uncut list. [ADR-0016](adr/0016-plain-emits-the-panel-record.md). |
 | `--verbose` / `-v` | Stable | Expanded evidence, confidence and detection detail, plus per-source status on stderr. |
 | `--explain` | Stable | Panel, source status, and flat evidence explanations; `--json --explain` additionally emits the structured, lineage-qualified `explanation_dag`. |
 | `--services` / `-s` | Stable | Retained for compatibility; Services are shown by default. |
-| `--domains` / `-d` | Stable | Shows all tenant and related domains. |
+| `--domains` / `-d` | Stable | Shows all tenant and related domains in the panel. On `--plain` and `--md`, which render the briefing, use `--full` for the complete list rather than `--domains`. |
 | `--sources` | Stable | Per-source resolution status table. |
 | `--posture` / `-p`, `--exposure`, `--gaps` | Stable | Posture observation modes. |
 | `--profile NAME` | Stable | Built-in profiles: fintech, healthcare, saas-b2b, high-value-target, public-sector, higher-ed. Custom profiles additive. |
@@ -251,6 +251,18 @@ assigns the omitted-choice flip to v3. The explicit `--fusion` and
 
 ## What is NOT in the stability contract
 
+- **Which rows the human views select**: the default panel, `--plain`, `--md`,
+  and the MCP text surface render a curated briefing, and what that briefing
+  includes or withholds (the role rows, the high-signal related-domain
+  selection, the insight cap, the withheld-count notes) may change in a minor
+  release. The flags, their exit codes, and the stable schema key names those
+  surfaces print do not change without this contract's process. `--json` is the
+  surface automation should parse, and `--plain --full` / `--md --full` restore
+  the complete record. ADR-0016 changed the `--plain` default selection in 2.15
+  and ADR-0017 changed the `--md` and MCP text selection in 2.16 under this
+  rule; 2.15 is the named precedent, reasoned rather than a claim that the
+  surface was uncovered. See
+  [ADR-0017](adr/0017-one-briefing-in-every-shape.md).
 - **Rich panel visual formatting**: colors, whitespace, row ordering
   within Services categories, box-drawing details. The section structure
   is stable; pixel-level rendering is not.
