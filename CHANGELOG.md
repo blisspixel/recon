@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.16.0] - 2026-08-17
+
 One record, one briefing, in every shape. Four consecutive black-box rounds
 found defects only in how recon presents a result, never in the data, and always
 the same class: a decision applied to one renderer and not the others. This
