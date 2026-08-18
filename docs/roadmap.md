@@ -624,8 +624,20 @@ positioning, documentation, and tests with non-promotion: fusion is an advanced
 diagnostic and operators are directed to explicit flags. The runtime default
 cannot flip in a minor release because the stability policy classifies that as
 breaking. ADR-0013 therefore preserves implicit v2 behavior with an interactive
-transition notice and assigns the default-off switch to v3. Stable JSON fields,
-explicit CLI flags, and MCP tools remain unchanged.
+transition notice. Stable JSON fields, explicit CLI flags, and MCP tools remain
+unchanged.
+
+The default-off switch is **not itself a scheduled milestone** (ADR-0013
+amendment, 2026-08-18). The flip is claim-neutral: the identifiability finding,
+re-confirmed by the 2026-08-17 adversarial corpus, means fusion adds no supported
+claim the deterministic layer does not already make, so flipping it changes only
+which of three diagnostic fields populate, not any emitted claim, and no shipped
+consumer reads those fields from a default no-flag run. It is therefore deferred,
+optional compatibility debt that rides a genuine contract-maturity major (the
+claim/observation envelope) if one ships, and otherwise stays deferred behind the
+stable flags. v2.16 also made MCP `lookup_tenant` JSON compute fusion
+unconditionally, so a future flip is no longer CLI-only and must reconcile the
+CLI-versus-MCP parity contract; see the ADR-0013 amendment.
 
 ### Separate observation change from interpretation change
 
