@@ -10,10 +10,7 @@ Point recon at a domain and get its **public** technology and identity
 footprint: email security, mail and identity providers, SaaS indicators, and
 certificate-transparency findings. No credentials, no API keys, no active
 scanning. Ships as a CLI, versioned JSON, and a local MCP server for agent
-tools.
-
-A domain is a query coordinate, not proof of one organization or product.
-Observations, not verdicts.
+tools. About ten seconds per domain.
 
 > **Defensive use only.** Posture review, vendor diligence, architecture
 > review. See
@@ -21,56 +18,27 @@ Observations, not verdicts.
 
 ## Quick Start
 
-Install with `uv` or `pipx`:
+Install, check the version offline, and run your first lookup:
 
 ```bash
-uv tool install recon-tool
-# or
-pipx install recon-tool
+uv tool install recon-tool    # or: pipx install recon-tool
+recon --version               # offline check
+recon yourcompany.com         # a domain you operate or are authorized to review
 ```
 
-Python 3.11 through 3.14, on Windows, macOS, or Linux.
+Python 3.11 through 3.14, on Windows, macOS, or Linux. `recon doctor` tests
+online connectivity to recon's public data sources.
 
-Optional helpers at `scripts/install.ps1` and `scripts/install.sh` drive an
-existing `uv` or `pipx` installation. Download a
-[release-tag source archive](https://github.com/blisspixel/recon/releases/latest),
-review the helper locally, then run it. Each helper installs the exact version
-represented by that tag, preserves a sole existing `uv` or `pipx` owner, and
-refuses ambiguous or unmanaged installations. Do not pipe mutable branch
-content into a shell. To verify published artifacts before installing, follow the
-[consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
+A domain is a query coordinate, not proof of one organization or product: recon
+reports observations, not verdicts. That is the caution to keep beside every row
+the panel shows.
 
-Verify the installed command offline:
-
-```bash
-recon --version
-```
-
-Then optionally test online connectivity to recon's public data sources:
-
-```bash
-recon doctor
-```
-
-Before the first lookup, know what leaves your machine. recon makes DNS queries
-that recursive and authoritative DNS infrastructure may observe. Its only
-default request to a target-owned endpoint is the standards-defined MTA-STS
-policy fetch. Google CSE and BIMI certificate probes run only when
-`--direct-probes` is explicitly enabled. Readable overview:
-[docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md).
-Formal correlation model (layers, Bayesian DAG, robustness research):
-[docs/correlation.md](https://github.com/blisspixel/recon/blob/main/docs/correlation.md).
-
-```bash
-recon example.com
-```
-
-Every lookup is live. recon ships no offline demo mode, so that command
-collects whatever `example.com` publishes in DNS and at the identity endpoints
-on the day you run it. Reserved and `.invalid` names are safe to query, not
-staged: they publish little or nothing, and what they do publish is public
-residue rather than an organization's stack. Substitute a domain you are
-authorized to review to see a populated panel.
+**About `example.com`.** Every lookup is live and there is no offline demo mode.
+Reserved names such as `example.com` do return a panel, but the values are stray
+public residue from unrelated test configurations, including a meaningless
+display name, at High confidence. It shows you the shape of the output, not a
+result about any organization. Point recon at a domain you operate to see a real
+footprint.
 
 ### Illustrated output (synthetic, not a captured run)
 
@@ -123,7 +91,14 @@ Insights
 </details>
 <!-- terminal-demo-transcript:end -->
 
-Install, update, uninstall, and first-run detail:
+Before the first lookup, know what leaves your machine. recon makes DNS queries
+that recursive and authoritative DNS infrastructure may observe. Its only
+default request to a target-owned endpoint is the standards-defined MTA-STS
+policy fetch; Google CSE and BIMI certificate probes run only when
+`--direct-probes` is explicitly enabled. See
+[ADR-0011](https://github.com/blisspixel/recon/blob/main/docs/adr/0011-public-metadata-collection-boundary.md).
+
+Install detail, signed release archives, and install helpers:
 [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
 
 ## What recon Is Good For
@@ -136,14 +111,34 @@ Install, update, uninstall, and first-run detail:
 
 recon reports observations, not verdicts. Public channel ceiling:
 [docs/limitations.md](https://github.com/blisspixel/recon/blob/main/docs/limitations.md).
+How to report a result without overstating it:
+[docs/reporting-observations.md](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md).
+
+The last four releases were driven by independent black-box testing: a tester
+installs the published package, never reads the source, and files a report. All
+four found the same class of issue, in how recon presents a result rather than
+in the result itself. Those findings and their fixes are in
+[CHANGELOG.md](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md) and in
+[ADR-0015](https://github.com/blisspixel/recon/blob/main/docs/adr/0015-role-split-vendor-claims-in-the-default-view.md)
+through
+[ADR-0017](https://github.com/blisspixel/recon/blob/main/docs/adr/0017-one-briefing-in-every-shape.md).
+
+Most useful contributions are one YAML file, not code: recon's engine stays lean
+and its fingerprint catalog grows. If recon misses a service you can identify
+from public DNS, adding a detection is a small, reviewable change.
+[CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md)
+has the schema, the validation command, and what is deliberately out of scope.
 
 ## Common Commands
 
 ```bash
 recon example.com                              # default panel
 recon example.com --explain                    # evidence trail
+recon example.com --gaps                       # neutral hardening prompts
 recon example.com --plain                      # panel as linear text (screen readers, grep)
+recon example.com --plain --full               # every field, linear
 recon example.com --json                       # structured record
+recon example.com --explain-dag --explain-dag-format mermaid   # evidence DAG
 recon batch domains.txt --json                 # batch JSON array
 recon delta example.com                        # diff vs local cache
 recon capsule capture example.com -o run.json  # caller-owned replay artifact
@@ -242,8 +237,11 @@ Operators own deployment, identity, data handling, cost, and operations.
 
 | Topic | Link |
 |---|---|
+| Glossary of recon's terms | [docs/glossary.md](https://github.com/blisspixel/recon/blob/main/docs/glossary.md) |
 | Install and first commands | [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md) |
+| Reporting a result without overstating it | [docs/reporting-observations.md](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md) |
 | How it works | [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md) |
+| Known weak areas and conservative wording | [docs/weak-areas.md](https://github.com/blisspixel/recon/blob/main/docs/weak-areas.md) |
 | Observation capsules | [docs/observation-capsules.md](https://github.com/blisspixel/recon/blob/main/docs/observation-capsules.md) |
 | Correlation model | [docs/correlation.md](https://github.com/blisspixel/recon/blob/main/docs/correlation.md) |
 | MCP and agents | [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md), [agents/](https://github.com/blisspixel/recon/tree/main/agents) |
