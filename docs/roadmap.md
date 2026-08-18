@@ -27,22 +27,24 @@ tracked separately from product work.
 > measurement-surface change, and no rule was promoted. The release then passed
 > local, protected-main, PyPI, GitHub Release, SBOM, provenance, and exact
 > channel-parity checks. **v2.15 shipped default-view claim clarity and
-> accessibility: ADR-0015 role-split vendor claims, ADR-0016 `--plain` as the
-> panel with the full record behind `--full`, and pre-collection flag
-> validation. Both came from independent black-box passes that found the
-> compact surfaces, not the data, were misreading themselves. The next
-> release priority is v2.16, agent portability, renumbered from v2.15 because
-> its preflight is blocked on client availability and a runtime match and
-> unrelated shipped work should not queue behind it. Its
+> accessibility (ADR-0015 role-split vendor claims, ADR-0016 `--plain` as the
+> panel with the full record behind `--full`, pre-collection flag validation),
+> and v2.16 shipped renderer parity: one shared briefing (`build_briefing`,
+> ADR-0017) rendered by the panel, `--plain`, `--md`, and the MCP text surface,
+> MCP JSON fusion populated, `--plain --full` role keys, and a gated
+> `surface-parity.md` matrix that fails on cross-surface drift. Both releases
+> came from independent black-box rounds that found the compact surfaces, not
+> the data, were misreading themselves; a fifth round confirmed 2.16. v2.16 is
+> the reopened form of the evidence-integrity track (a miscounting note is a
+> false claim recon emits about itself), closed by the parity gate. Agent
+> portability is a maintainer track on an external event, not a version-path
+> milestone: its
 > [representative-client contract](agent-portability-evaluation-declaration.md)
-> is frozen: three required clients, five tasks, two complete-surface variants,
-> exact standards commitments, privacy rules, and fail-closed decisions. Its
-> protected-main prerequisite passed. The deterministic complete-surface
-> candidate now passes offline validation against byte-pinned v1.0.0 schemas
-> and frozen skill rules. Next, run the paired representative-client evaluation
-> without changing the stable discovery surface or claiming compatibility.**
-> The ordered version path through v3.0 is summarized in
-> [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
+> is frozen and its offline validation passes, but the paired evaluation is
+> blocked on representative-client availability and the project has declined to
+> claim conformance against a working-draft specification, so it does not queue
+> product work behind it.** The ordered version path through v3.0 is summarized
+> in [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
 > default.
 >
@@ -352,6 +354,18 @@ equals A3, and A3 never supports when A0 abstains. Consequently the positive
 benefit gate cannot pass for any sample size. The evaluation frame excludes the
 existing calibration corpus whole and remains unused.
 
+The audit produced a result, not only an absence. Across the enumerated DNS
+evidence-role states, the candidate's supported set is a subset of the
+baseline's: A3 never supports where A0 abstains, and A0 supports where A3
+abstains. Under the shipped emission threshold, the Bayesian fusion layer cannot
+add a supported M365 tenancy claim the deterministic layer does not already
+make. That is exhaustive over the enumerated space rather than sampled, so it is
+a stronger and more general finding than the cancelled 340-domain collection
+could have produced. It is scoped to one claim family, one DNS-only channel, one
+node with one binding, and the shipped 0.5 model-support threshold, and it is
+not a population claim. The evaluation design that follows is preserved as the
+frozen record of what was committed; it is a post-mortem, not a plan.
+
 Why third: the project has extensive implementation and assurance checks, but
 it does not yet measure whether probabilistic fusion, CT enrichment, a large
 fingerprint catalog, or a broad MCP surface materially improves a predeclared
@@ -441,14 +455,17 @@ Primary evaluation design:
   probabilities and frozen design or post-stratification weights for the target
   population. Without them, report stratum-specific or fixed-sample descriptive
   values and make no population rate or calibration claim.
-- Minimum evidence for a decision: at least 100 independently labeled unique
-  primary units, including at least 30 reference-positive and 30
-  reference-negative units. This floor is not a power claim. Before collection,
-  run a power analysis under the exact paired rule, the selected safety margin,
-  and plausible discordance rates, then increase the sample if needed. Report
-  every arm's emission and discordance counts. Selective risk for an arm with
-  fewer than 30 supported-emission unique domains is descriptive only. A corpus
-  that misses either primary label stratum is ineligible for the decision gate.
+- Minimum evidence for a decision: the
+  [preregistration](quality-baseline-preregistration.md) supersedes this
+  roadmap's earlier nominal floor of 100 units with 30 and 30. Under the exact
+  paired rule and the frozen safety margin, the power analysis requires at least
+  155 reference-positive and 183 reference-negative units (roughly 340 after
+  cluster exclusion and ineligible-row removal); at n=30 the tightest achievable
+  safety statement is a margin near 0.12, which is why 30 was never a power
+  claim. Report every arm's emission and discordance counts. Selective risk for
+  an arm with fewer than 30 supported-emission unique domains is descriptive
+  only. A corpus that misses either primary label stratum is ineligible for the
+  decision gate.
 - Boundary-valid paired rule: within each label stratum, count candidate-only
   supported decisions `b`, baseline-only supported decisions `c`, and unique
   domains `n`. Construct a conservative one-sided 95 percent bound on

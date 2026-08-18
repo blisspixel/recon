@@ -54,7 +54,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--sources` | Stable | Per-source resolution status table. |
 | `--posture` / `-p`, `--exposure`, `--gaps` | Stable | Posture observation modes. |
 | `--profile NAME` | Stable | Built-in profiles: fintech, healthcare, saas-b2b, high-value-target, public-sector, higher-ed. Custom profiles additive. |
-| `--confidence-mode {hedged,strict}`, `--strict` | Stable | v0.11. Default `hedged`; `--strict` is a shortcut for `--confidence-mode strict`. |
+| `--confidence-mode {hedged,strict}`, `--strict` | Stable | v0.11. Default `hedged`; `--strict` is a shortcut for `--confidence-mode strict`. `strict` drops hedging qualifiers (`observed`, `likely`, `indicators`) only on a dense-evidence record (High confidence with at least three sources); a thin-evidence record keeps its hedges under `strict` by design, so the same insight can read differently across two records and identically when neither is dense. |
 | `--compare <file>` | Stable | Diff against previous JSON export. |
 | `--chain`, `--depth <1-3>` | Stable | Recursive related-domain resolution. |
 | `--no-cache`, `--cache-ttl <sec>` | Stable | Cache control. |

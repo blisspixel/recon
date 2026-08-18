@@ -58,7 +58,7 @@ silent-failure, and contract-preserving fixes at any point.
 | **v2.13.0** | Observation vs interpretation | Needs stable claim units from earlier tracks | Shipped: caller-held observation capsules; delta classifies observation / collection / time / interpretation; no silent additions or removals under unavailable source roles; ADR-0014 defers OKF without replacing JSON; full, protected-main, publication, provenance, and channel-parity gates passed |
 | **v2.14.0** | Catalog quality loop | Independent of fusion promotion; rank, regional, vendor-seed, and prior-sample drift rounds are closed with aggregate-only results | Shipped: bounded provider-documented additions, frozen round contracts, aggregate-only results, explicit dispositions, and full local, protected-main, PyPI, GitHub Release, SBOM, provenance, and channel-parity proof |
 | **v2.15.0** | Default-view claim clarity and accessibility | Two independent black-box passes found the compact surfaces, not the data, were misreading themselves; the fix could not wait behind a milestone blocked on third-party client availability | Shipped: ADR-0015 role-split vendor claims in the default view; ADR-0016 `--plain` renders the panel with the full record behind `--full`; pre-collection flag validation so a typo cannot reach the network; docs, roadmap, and schema notes reconciled to the shipped behavior |
-| **v2.16.0** | Agent portability and surface cost - **next release priority** | Evaluate packaging and tool cuts against representative workflows from the shipped catalog baseline. Renumbered from v2.15 because its preflight is blocked on client availability and a runtime match, and unrelated shipped work should not queue behind it | Frozen contract and offline schema validation stay green; run the complete native-versus-portable paired frame or explicitly defer portability while the specification remains a working draft; add a core profile only if representative clients prove material benefit without losing specialist access |
+| **v2.16.0** | Renderer parity: one briefing in every shape | A fourth and fifth black-box round confirmed the standing defect class was presentation drift, one decision applied to one renderer and not the others. This is the reopened form of the evidence-integrity track, not a new one: a note that miscounts is a false claim recon emits about itself | Shipped: `build_briefing` shared object rendered by the panel, `--plain`, `--md`, and the MCP text surface; MCP JSON fusion populated; `--plain --full` role keys; the gated `docs/surface-parity.md` matrix that fails on cross-surface drift; ADR-0017 and the `--plain`/`--md` SemVer reconciliation. Round-5 tester pass confirmed |
 | **v3.0.0** | Contract maturity | The already-deprecated fusion default change requires a major boundary; use the same boundary for any claim-envelope change that cannot remain additive | Fusion omitted-choice defaults off; explicit flags remain stable; versioned claim / observation envelope or explicit decision that v2 stays; migration notes |
 
 Optional cloud operator hosting stays a **side track** (any 2.x after local
@@ -66,9 +66,15 @@ default stays complete). It never unblocks product-quality work and never
 creates a project-operated multi-tenant service without a separate product
 decision.
 
-Publication, OpenSSF questionnaire, outside replication, and archive/DOI are
-**maintainer tracks** on external events. They do not displace the version
-path above.
+Agent portability and surface cost is a **maintainer track on an external
+event**, not a version-path milestone: its preflight is blocked on
+representative-client availability and a runtime match, and the specification is
+a working draft the project has declined to make a conformance claim against.
+The frozen contract and offline schema validation stay green; the paired
+native-versus-portable frame runs if and when the clients become available. It
+does not queue product work behind it. Publication, OpenSSF questionnaire,
+outside replication, and archive/DOI are the other maintainer tracks on external
+events. They do not displace the version path above.
 
 ## Active tracks (why, state, close)
 
