@@ -145,6 +145,7 @@ def provider_line_of(info: TenantInfo) -> str:
 
     return provider_line(info)
 
+
 # High-signal subdomain prefixes for compact related-domain display.
 # Tuned to match the UI goal: the related line should fit in 1-2
 # lines and show the names a security analyst cares about first.

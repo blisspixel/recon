@@ -79,6 +79,7 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "schema-generator", [_PY, "scripts/generate_schema.py", "--check"]),
     (_CORE, "schema-interoperability", [_PY, "scripts/check_schema_interoperability.py"]),
     (_CORE, "surface-inventory", [_PY, "scripts/generate_surface_inventory.py", "--check"]),
+    (_CORE, "surface-parity", [_PY, "scripts/generate_surface_parity.py", "--check"]),
     (_CORE, "default-claim-audit", [_PY, "scripts/check_default_claim_audit.py"]),
     (_CORE, "cli-surface-doc", [_PY, "scripts/generate_surface_inventory.py", "--check-cli-surface"]),
     (_CORE, "paper-figures", [_PY, "scripts/generate_paper_figures.py", "--check"]),

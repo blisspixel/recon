@@ -45,6 +45,7 @@ public, but not written for a first-time reader.
 | Security threat model and trust boundaries | [security.md](security.md) |
 | Supply-chain and release integrity, including consumer verification | [supply-chain.md](supply-chain.md) |
 | Generated CLI, MCP, schema, and maintainer context inventory | [surface-inventory.json](surface-inventory.json) |
+| Generated cross-surface parity matrix (one record in every shape) | [surface-parity.md](surface-parity.md) |
 
 `cli-surface.md`, `surface-inventory.json`, and `recon://surface-inventory` are
 generated discovery context, not stable runtime contracts. See

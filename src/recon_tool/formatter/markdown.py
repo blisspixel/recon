@@ -161,8 +161,7 @@ def _md_gws_details(info: TenantInfo) -> list[str]:
         lines.append(f"**Identity Provider:** {markdown_escape(info.google_idp_name)}{MARKDOWN_HARD_BREAK}")
     if gws_modules:
         lines.append(
-            f"**Module Indicators:** {', '.join(markdown_escape(s) for s in gws_modules)}"
-            f"{MARKDOWN_HARD_BREAK}"
+            f"**Module Indicators:** {', '.join(markdown_escape(s) for s in gws_modules)}{MARKDOWN_HARD_BREAK}"
         )
     if cse_indicators:
         lines.append(
