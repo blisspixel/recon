@@ -167,6 +167,13 @@ probes run only when `--direct-probes` is explicitly enabled.
 recon example.com
 ```
 
+Every lookup is live; recon ships no offline demo mode. Reserved names such as
+`example.com` return a real panel of stray public residue from unrelated test
+configurations, including a meaningless display name, at High confidence. It
+shows you the shape of the output, not a result about any organization. Point
+recon at a domain you operate or are authorized to review to see a real
+footprint.
+
 Use explicit synthetic identities under reserved namespaces in examples and
 docs. Public validation work with real apexes stays in gitignored local
 workspaces.

@@ -64,12 +64,17 @@ and retains both exact compatibility pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. v2.14 is also shipped with the
 closed rank, regional, vendor-seed, and prior-sample drift decisions plus full
-publication proof, and v2.15 shipped the default-view claim-clarity and
-accessibility decisions. The dependency-unblocked portability work now maps to
-**v2.16.0**. The
-representative task, client, measure, privacy, and stop-rule contract is frozen.
-Its protected-main prerequisite and the candidate's network-free schema,
-layout, launch, skill, and version validation are complete. Next, measure the
+publication proof, v2.15 shipped the default-view claim-clarity and
+accessibility decisions, and **v2.16.0 shipped renderer parity** (one shared
+briefing across the panel, `--plain`, `--md`, and the MCP text surface, MCP JSON
+fusion, and the gated surface-parity matrix). Agent portability is a maintainer
+track on an external event, not a version-path milestone: its
+representative task, client, measure, privacy, and stop-rule contract is frozen,
+its protected-main prerequisite and the candidate's network-free schema,
+layout, launch, skill, and version validation are complete, but the paired
+evaluation is blocked on representative-client availability and the project has
+declined to claim conformance against a working-draft specification, so it does
+not queue product work behind it. When the clients are available, measure the
 current native path against that complete-surface Agent Plugins candidate in
 the frozen VS Code, Cursor, and Kiro frame without changing stable CLI, JSON,
 or MCP contracts. New
@@ -975,8 +980,10 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ### Simplify operator and agent discovery using measurements
 
-Status: **active v2.16 execution; contract frozen and portable candidate
-offline-validated; first local preflight stopped before collection**.
+Status: **maintainer track on an external event, not a version-path milestone;
+contract frozen and portable candidate offline-validated; first local preflight
+stopped before collection, blocked on representative-client availability**.
+(v2.16.0 shipped renderer parity, not this work.)
 
 The network-free
 [preregistration](agent-portability-evaluation-declaration.md) freezes three
