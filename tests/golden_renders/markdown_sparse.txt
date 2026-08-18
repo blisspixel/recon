@@ -1,7 +1,7 @@
-# Tenant Report: Synthetic Gamma
+# Tenant Report: gamma\.invalid
 
-**Domain:** gamma\.invalid\
-**Default Domain:** gamma\.invalid\
+**Provider:** Microsoft 365 \(no supporting record\)\
+**Display name (unverified):** Synthetic Gamma\
 **Confidence:** low (1 source)\
 **Evidence Confidence:** medium\
 **Inference Confidence:** medium
@@ -14,3 +14,5 @@
 
 ---
 *Sources: dns\_records*
+
+*Scope: these are public observations from DNS, certificate transparency, and unauthenticated identity endpoints, readable by anyone with `dig` and a browser. They show what a domain publishes, not what an organization licenses, deploys, or uses, and are not a security rating.*

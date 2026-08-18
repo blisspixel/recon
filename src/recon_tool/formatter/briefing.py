@@ -13,15 +13,138 @@ no Rich, no rendering, no formatter-facade imports.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
+
 from recon_tool.models import ConfidenceLevel, TenantInfo
 
 __all__ = [
     "SCALE_GAP_NOTE",
+    "BriefingView",
     "briefing_insights",
+    "build_briefing",
     "cap_insights",
     "high_signal_related",
     "scales_disagree",
 ]
+
+
+@dataclass(frozen=True)
+class BriefingView:
+    """The default view as data, so every renderer shows the same briefing.
+
+    The selection helpers below were already shared by the panel and ``--plain``,
+    but ``--md`` and the MCP text surface reached past them and rendered the
+    whole record. This is the single object those surfaces consume, so a renderer
+    cannot show the default view without making the same cuts. It carries data,
+    not formatted lines: each renderer keeps its own wording (the panel counts
+    withheld insights against its curated ``--full``, the linear surfaces count
+    against the record, ADR-0016 second amendment), and reads the numbers here.
+
+    ``mail`` / ``identity`` are present only on a role split (ADR-0015); off a
+    split the caller renders the single ``provider`` row. ``provider_on_split``
+    is the role-tagged provider line the linear surfaces keep after the roles so
+    a ``grep provider:`` still matches and the repeat carries a reason.
+    """
+
+    is_split: bool
+    mail: str | None
+    mail_detailed: str | None
+    identity: str | None
+    provider: str
+    provider_detailed: str
+    provider_on_split: str | None
+    related_shown: tuple[str, ...]
+    related_total: int
+    insights_display: tuple[str, ...]
+    insights_curated_overflow: int
+    insights_record_total: int
+    confidence_tier: str
+    source_count: int
+
+    def related_note(self, full_cmd: str = "--plain --full") -> str | None:
+        """Remainder note for a linear surface, naming its own ``--full`` command.
+
+        The command differs by surface (``--plain --full`` vs ``--md --full``),
+        so each renderer passes the command its reader types. The count is the
+        same on every surface: the list length, wildcards included, which is what
+        that ``--full`` prints.
+        """
+        withheld = self.related_total - len(self.related_shown)
+        if withheld <= 0:
+            return None
+        return f"{self.related_total} total, {withheld} more, use {full_cmd} to see all"
+
+    def insights_note(self, full_cmd: str = "--plain --full") -> str | None:
+        """Withheld-insight note for a linear surface, counted against the record."""
+        withheld = self.insights_record_total - len(self.insights_display)
+        if withheld <= 0:
+            return None
+        return f"{withheld} more, use {full_cmd} to see all"
+
+
+def build_briefing(info: TenantInfo, *, confidence_mode: str, detailed: bool) -> BriefingView:
+    """Compose the shared selection helpers into one default-view object.
+
+    Pure composition of ``role_split_vendors``, ``provider_line``,
+    ``high_signal_related``, ``briefing_insights``, and ``cap_insights``, so the
+    output is identical to the panel and ``--plain`` computing them inline. The
+    classification and role helpers are imported function-locally because they
+    pull in ``classify`` (heavy) and this module stays import-light for the pure
+    helpers above.
+
+    The briefing always caps insights: a briefing is the capped view by
+    definition, and the surfaces that show everything (the panel under
+    ``--verbose``/``--full``, ``--plain --full``) render the full list without
+    this object rather than by asking it not to cut. ``detailed`` controls only
+    the role labels: the expanded linear views (``--plain --verbose`` /
+    ``--explain``) keep the evidence-role qualifiers ADR-0012 compacts out of the
+    default, while still making the same cuts.
+    """
+    from recon_tool.formatter.classify import compact_provider_line
+    from recon_tool.formatter.roles import role_split_vendors
+
+    split = role_split_vendors(info)
+    provider_detailed = split[0] if split is not None else provider_line_of(info)
+    mail_detailed = split[0] if split is not None else None
+    identity = split[1] if split is not None else None
+
+    related_shown, related_total = high_signal_related(tuple(info.related_domains)) if info.related_domains else ((), 0)
+
+    insights_display: tuple[str, ...] = ()
+    curated_overflow = 0
+    record_total = len(info.insights)
+    if info.insights:
+        score_line, ordered = briefing_insights(info, confidence_mode)
+        shown, curated_overflow = cap_insights(ordered, verbose=False)
+        insights_display = tuple(([score_line] if score_line is not None else []) + shown)
+
+    def _label(detailed_form: str) -> str:
+        return detailed_form if detailed else compact_provider_line(detailed_form)
+
+    return BriefingView(
+        is_split=split is not None,
+        mail=_label(mail_detailed) if mail_detailed is not None else None,
+        mail_detailed=mail_detailed,
+        identity=identity,
+        provider=_label(provider_detailed),
+        provider_detailed=provider_detailed,
+        provider_on_split=provider_detailed if split is not None else None,
+        related_shown=tuple(related_shown),
+        related_total=related_total,
+        insights_display=insights_display,
+        insights_curated_overflow=curated_overflow,
+        insights_record_total=record_total,
+        confidence_tier=info.confidence.value,
+        source_count=len(info.sources),
+    )
+
+
+def provider_line_of(info: TenantInfo) -> str:
+    """Local indirection to ``classify.provider_line`` without a module import."""
+    from recon_tool.formatter.classify import provider_line
+
+    return provider_line(info)
+
 
 # High-signal subdomain prefixes for compact related-domain display.
 # Tuned to match the UI goal: the related line should fit in 1-2

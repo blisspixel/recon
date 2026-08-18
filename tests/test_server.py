@@ -229,8 +229,11 @@ class TestLookupText:
 
         result = await lookup_tenant("alpha.invalid")
 
-        assert "Provider: Microsoft 365 (MX delivery path)\n" in result
-        assert "Provider: Microsoft 365 (primary) + Google Workspace" not in result
+        # The default MCP text is the briefing now (ADR-0017), so it compacts the
+        # evidence-role qualifier out of the provider line (ADR-0012). The point
+        # of the test still holds: the TXT-only secondary is omitted.
+        assert "Provider: Microsoft 365\n" in result
+        assert "Google Workspace" not in result.split("Services:")[0]
 
 
 class TestLookupJson:

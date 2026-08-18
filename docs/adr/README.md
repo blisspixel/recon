@@ -34,3 +34,6 @@ deeper rationale for several lives in [correlation.md](../correlation.md),
 | [0012](0012-default-view-evidence-role-visibility.md) | Split evidence-role visibility between the default and detailed views |
 | [0013](0013-fusion-non-promotion-and-v3-transition.md) | Apply fusion non-promotion through a compatible v2 transition and flip the implicit default only at v3 |
 | [0014](0014-caller-owned-capsules-and-okf-deferral.md) | Use caller-owned JSON observation capsules and defer OKF until a named consumer justifies an additive projection |
+| [0015](0015-role-split-vendor-claims-in-the-default-view.md) | Split a mail vendor and a differing identity vendor into roled rows instead of one unroled Provider row |
+| [0016](0016-plain-emits-the-panel-record.md) | Make `--plain` the panel linearised, with the complete record behind `--plain --full` |
+| [0017](0017-one-briefing-in-every-shape.md) | Render one shared briefing on every human surface and gate it with a cross-surface parity matrix |

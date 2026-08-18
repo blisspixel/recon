@@ -264,9 +264,17 @@ The narrative tools render prose or DOT and intentionally return text:
 `explain_dag` (Rich tree or Graphviz DOT), `chain_lookup`, and `reload_data`.
 For `lookup_tenant`, `format="text"` is a compact agent-readable summary and
 now includes a `Subdomain surface:` provider-count line when CNAME-chain
-attributions exist. `format="json"` is the detailed machine path: it carries the
-full `surface_attributions` array, while `reevaluate_domain` exposes the same
-cache-only lookup record with a typed `LookupResult` output schema.
+attributions exist. As of v2.16 it is the same default briefing the panel and
+`--plain` render (ADR-0017): it leads with the vendor roles (`Mail:` /
+`Identity:` on a role split, `Provider:` otherwise), and cuts insights and
+related domains to the high-signal selection with a note pointing at
+`format="json"` for the whole record, rather than joining every entry.
+`format="json"` is the detailed machine path: it carries the full
+`surface_attributions` array and, as of v2.16, the same populated
+`fusion_enabled`, `slug_confidences`, and `posterior_observations` the CLI
+`--json` default carries (previously the JSON payload advertised these fields
+but left them empty). `reevaluate_domain` exposes the same cache-only lookup
+record with a typed `LookupResult` output schema.
 
 Error signaling follows the tool's stable return family. Typed data tools raise
 `ToolError` for request-level validation and lookup failures, which the MCP

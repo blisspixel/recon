@@ -346,62 +346,13 @@ async def _lookup_gaps(
 
 
 def _lookup_apply_fusion(info: Any) -> Any:
-    """Recompute slug posteriors and the Bayesian network marginals onto ``info``.
-
-    Purely deterministic over the existing ``TenantInfo`` (no network calls), so
-    it runs on both cache hits and misses when ``--fusion`` / ``--explain-dag``
-    is set. ``--explain-dag`` implies ``--fusion`` because the DAG renderer needs
-    the posteriors present.
+    """Apply the shared fusion layer. Kept as a thin alias so the ``--explain-dag``
+    call site and any patch target here still resolve; the body moved to
+    ``recon_tool.fusion_apply`` so the MCP JSON path can populate the same fields.
     """
-    from dataclasses import replace
+    from recon_tool.fusion_apply import apply_fusion
 
-    from recon_tool.bayesian import infer_from_tenant_info
-    from recon_tool.collection_view import collection_observable_evidence
-    from recon_tool.fusion import compute_slug_posteriors
-    from recon_tool.models import NodeConflict, NodeEvidence, NodeUnitCounterfactual, PosteriorObservation
-
-    bayesian_result = infer_from_tenant_info(info)
-    bayesian_observations = tuple(
-        PosteriorObservation(
-            name=p.name,
-            description=p.description,
-            posterior=p.posterior,
-            interval_low=p.interval_low,
-            interval_high=p.interval_high,
-            evidence_used=p.evidence_used,
-            n_eff=p.n_eff,
-            sparse=p.sparse,
-            conflict_provenance=tuple(
-                NodeConflict(field=c.field, sources=c.sources, magnitude=c.magnitude) for c in p.conflict_provenance
-            ),
-            evidence_ranked=tuple(
-                NodeEvidence(
-                    kind=e.kind,
-                    name=e.name,
-                    llr=e.llr,
-                    influence_pct=e.influence_pct,
-                )
-                for e in p.evidence_ranked
-            ),
-            entropy_reduction_nats=p.entropy_reduction_nats,
-            unit_counterfactuals=tuple(
-                NodeUnitCounterfactual(
-                    unit=c.unit,
-                    kind=c.kind,
-                    observed=c.observed,
-                    posterior_without=c.posterior_without,
-                    delta=c.delta,
-                )
-                for c in p.unit_counterfactuals
-            ),
-        )
-        for p in bayesian_result.posteriors
-    )
-    return replace(
-        info,
-        slug_confidences=compute_slug_posteriors(collection_observable_evidence(info)),
-        posterior_observations=bayesian_observations,
-    )
+    return apply_fusion(info)
 
 
 async def _lookup_resolve_standard(
@@ -612,7 +563,12 @@ def _lookup_emit_markdown(
 
     show_posture = display.show_posture
     show_explain = display.show_explain
-    md = format_tenant_markdown(info, detailed=display.verbose or show_explain)
+    md = format_tenant_markdown(
+        info,
+        detailed=display.verbose or show_explain,
+        full=display.full,
+        confidence_mode=display.confidence_mode,
+    )
     if show_posture and observations:
         md += "\n## Posture Analysis\n\n"
         for obs in observations:
