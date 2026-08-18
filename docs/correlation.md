@@ -457,7 +457,7 @@ effective mass changes:
 ```mermaid
 flowchart TB
   subgraph sparse["n_eff = 4 (sparse public channel)"]
-    sl["0.18"] --- sm["0.5"] --- sh["0.82"]
+    sl["0.20"] --- sm["0.5"] --- sh["0.80"]
   end
   subgraph mid["n_eff = 8"]
     ml["0.27"] --- mm["0.5"] --- mh["0.73"]
@@ -802,12 +802,14 @@ internal stack: public posture converges even where architecture does not.
     is part of the hardening posture rather than something it conceals), and
     `email_security_policy_enforcing` at 0.98 (DMARC policy is a public record
     defenders should publish, and no posture in the sample hides it).
-  - Above 1.0 on corpus mix: `federated_identity` at 1.16, `aws_hosting` at
-    1.09, and `google_workspace_tenant` at 1.03, where the defense and
-    government strata over-represent federated IdP, AWS, and Workspace-secondary
-    postures. Reporting only the sub-1.0 ratios would be one-directional
-    selection; the memo carries the full table and the CNAME-walker change
-    behind the federated and Workspace figures.
+  - Above 1.0 on corpus mix: `okta_idp` at 1.21 (the largest in the table, but
+    on a 3.3 percent soft base, so it is closer to noise than to a trend),
+    `federated_identity` at 1.16, `aws_hosting` at 1.09, and
+    `google_workspace_tenant` at 1.03, where the defense and government strata
+    over-represent federated IdP, AWS, and Workspace-secondary postures.
+    `m365_tenant` sits just below at 0.90. Reporting only the sub-1.0 ratios
+    would be one-directional selection; the memo carries the full table and the
+    CNAME-walker change behind the federated and Workspace figures.
 
 **Not covered.** Actively deceptive DNS is a different threat model and is
 section 4.11. Vertical long-tail postures beyond these five are unmeasured.
@@ -873,9 +875,9 @@ partly-closed vector with named residual gaps:
   but not the role-typed evidence (a functional MX, DKIM, or role CNAME) the
   gated observations require, so the node stays at its prior. The slug still
   enters inventory; it does not reach the decision. What stays arithmetically
-  identical to a real signal is a genuinely functional record, the corroborator
+  identical to a real signal is a genuinely functional record: the corroborator
   class a passive adversary cannot publish without routing through the vendor,
-  and which the round confirms still supports its node.
+  and the class the round confirms still supports its node.
 - **The declarative node moves on a declared policy, not on impersonation.** A
   published enforcing DMARC record adds its positive factor and removes the
   group-absence disconfirmer (section 3.3), so `email_security_policy_enforcing`
@@ -905,12 +907,17 @@ today, and closing the rest is tracked engine work rather than a shipped
 property. Section 5.6 states the acceptance property a fix must satisfy, and the
 2026-08-17 corpus is its standing gate.
 
-**What this subsection does not establish.** These are predictions from the
-design, not measurements. Testing them needs a controlled adversarial corpus,
-roughly ten domains per pattern and synthetic where the posture must be exact,
-checking that nodes which should hedge do hedge, that evidence-silent nodes
-never go confident, and that conflict provenance populates on every Pattern G
-domain. Until that exists, this section is a commitment, not a result.
+**What this subsection does not establish.** For the certificate-surface and
+rotation patterns (F, G, H), these remain predictions from the design, not
+measurements: falsifying them needs a controlled adversarial corpus at that
+layer, synthetic where the posture must be exact, checking that nodes which
+should hedge do hedge and that evidence-silent nodes never go confident. Those
+patterns stay a commitment. Pattern I is the measured exception: the 2026-08-17
+corpus recorded above tested the record-plantable form end to end and the
+record-role gate held (zero of seven administrative-only plants moved a gated
+node to supported), and the record-layer form of Pattern G populated conflict
+provenance as predicted. Section 5.6 states the acceptance property the
+remaining commitment must satisfy.
 
 ## 5. Claim robustness envelopes
 
