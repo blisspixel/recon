@@ -789,13 +789,25 @@ internal stack: public posture converges even where architecture does not.
   category, by construction. The v1.9.3 split left it with no evidence
   bindings, so it is pure propagation; this is the design reporting its own
   reach, not a defect.
-- `email_security_policy_enforcing` survives hardening at 0.98. DMARC policy is
-  a public record defenders *should* publish, and no posture in the sample
-  hides it.
-- `cdn_fronting` survives at 0.84. The CDN is part of the hardening posture
-  rather than something it conceals.
-- `email_gateway_present` survives at 0.57, the clearest instance of the layer
-  retreating when public DNS stops carrying the evidence.
+- The survival ratio quantifies how much of a node's high-confidence firing
+  survives hardening: the hardened high-confidence rate over the soft
+  high-confidence rate, each a percentage of the same 50-domain corpus
+  ([v1.9.4 calibration](../validation/v1.9.4-calibration.md)). A ratio below 1.0
+  is the layer retreating as public DNS stops carrying the evidence; a ratio
+  above 1.0 is the hardened corpus over-representing organizations whose posture
+  includes that specific service, not a layer regression. Both directions
+  appear, and the shape is what the design predicts either way:
+  - Retreating: `email_gateway_present` at 0.57 (the clearest instance; hardened
+    orgs rarely publish a gateway MX publicly), `cdn_fronting` at 0.84 (the CDN
+    is part of the hardening posture rather than something it conceals), and
+    `email_security_policy_enforcing` at 0.98 (DMARC policy is a public record
+    defenders should publish, and no posture in the sample hides it).
+  - Above 1.0 on corpus mix: `federated_identity` at 1.16, `aws_hosting` at
+    1.09, and `google_workspace_tenant` at 1.03, where the defense and
+    government strata over-represent federated IdP, AWS, and Workspace-secondary
+    postures. Reporting only the sub-1.0 ratios would be one-directional
+    selection; the memo carries the full table and the CNAME-walker change
+    behind the federated and Workspace figures.
 
 **Not covered.** Actively deceptive DNS is a different threat model and is
 section 4.11. Vertical long-tail postures beyond these five are unmeasured.
@@ -807,10 +819,14 @@ signal here, because none exists in public DNS.
 
 Section 4.10 catalogues organizations that minimize public exposure. This
 subsection asks the harder question: how does the layer behave against a
-posture that intends to mislead a passive observer? The treatment is
-qualitative. Falsifying it needs an adversarial corpus that does not exist, so
-what follows is a stated commitment about predicted behavior, recorded so a
-future calibration run can confirm or refute it.
+posture that intends to mislead a passive observer? Pattern I (planted
+administrative tokens) was measured end to end at the DNS-record layer on
+2026-08-17
+([adversarial corpus round](../validation/2026-08-17-adversarial-corpus-round.md)),
+and its result is folded in below. The certificate-surface and rotation patterns
+(F, G, H) remain qualitative: falsifying them needs a corpus that does not exist
+at this layer, so what follows for them is a stated commitment about predicted
+behavior, recorded so a future calibration run can confirm or refute it.
 
 **Pattern F, wildcard-certificate rotation.** The apex publishes only
 short-lived wildcards, so CT enumeration returns one SAN per certificate and a
@@ -841,41 +857,53 @@ records or SPF includes for vendors it does not use. Each is one static string,
 free to publish, truthful as a DNS fact, and published by the operator itself,
 so nothing about it is anomalous.
 
-This is the one pattern the engine does not handle, and the honest status is a
-known confident-false-positive vector:
+Measured end to end at the DNS-record layer on 2026-08-17
+([adversarial corpus round](../validation/2026-08-17-adversarial-corpus-round.md)),
+this is narrower than the earlier blanket "the one pattern the engine does not
+handle." A partial record-role provenance gate already exists in
+`bayesian_observations.signals_from_tenant_info`: the tenant, gateway, CDN, and
+AWS observations fire only from evidence whose record type carries the claimed
+role, so an administrative-only plant that produces the vendor slug does not move
+the decision node. Over the seven gate-path administrative-token fixtures the
+engine moved zero of seven nodes to supported. The status is therefore a
+partly-closed vector with named residual gaps:
 
-- **The targeted node fires at full strength.** These records are exactly what
-  the classifier keys on, so the node receives the binding's full weight and
-  goes confident and non-sparse. The engine applies catalogue weights without
-  regard to whether a detection reflects a functional deployment the
-  organization depends on or a free administrative string, so a planted token
-  is arithmetically identical to a real one.
-- **An obscure token can outrank the headline one.** Group reduction keeps only
-  the strongest fired binding per correlation group, so the most effective
-  single decoy is often not the obvious slug but whichever grouped token
-  carries the largest weight.
-- **On the declarative node, planting also disables the disconfirmer.** A
-  planted enforcing DMARC record adds its positive factor *and* removes the
-  group-absence factor that would otherwise pull the node down (section 3.3),
-  so the swing exceeds what a hideable node would show.
-- **Additions compose through the DAG.** The suppression property in section
-  3.4 is bounded to one node and says nothing about an addition touching
-  several. A planted parent lifts its children without any binding of theirs
-  firing, so this is not a single-node phenomenon.
-- **The other patterns do not catch it.** There is no cross-source conflict, so
-  Pattern G's dampening never engages; no certificate is involved, so Pattern H
-  is irrelevant; and the provenance is genuine, so the explanation surfaces a
-  real record and flags nothing.
+- **The gate blocks the plantable form on the gated nodes.** A planted
+  verification TXT, an NS delegation, or a CAA record produces the vendor slug
+  but not the role-typed evidence (a functional MX, DKIM, or role CNAME) the
+  gated observations require, so the node stays at its prior. The slug still
+  enters inventory; it does not reach the decision. What stays arithmetically
+  identical to a real signal is a genuinely functional record, the corroborator
+  class a passive adversary cannot publish without routing through the vendor,
+  and which the round confirms still supports its node.
+- **The declarative node moves on a declared policy, not on impersonation.** A
+  published enforcing DMARC record adds its positive factor and removes the
+  group-absence disconfirmer (section 3.3), so `email_security_policy_enforcing`
+  goes supported, while a strict SPF record alone leaves it unresolved. But that
+  is publishing your own declared policy, not impersonating a tenant; whether a
+  published policy should count as support for "enforcing" is an open product
+  question, not a false positive. Group reduction still keeps only the strongest
+  fired binding per correlation group, so grouped derivatives of one planted
+  record never stack.
+- **The ungated routes are scalar, not record.** `federated_sso_hub` fires on
+  `auth_type` and `okta_idp_observed` on `google_idp_name` with no record-role
+  gate at all. Injecting those scalars moves federated_identity, m365_tenant,
+  and okta_idp, and a lifted parent composes through the DAG to its children.
+  But those scalars come from OIDC and UserRealm collection, not from DNS, so a
+  pure-DNS adversary cannot set them; the record-role discipline the tenant
+  nodes carry is simply missing on the IdP node, the clearest gap for the
+  mitigation to close.
 
-The mitigation is to weight a binding by detection provenance, gating an
-administrative-only token behind a functional corroborator the operator cannot
-publish without actually routing through the vendor. That corroborator is
-assumed unforgeable, which is not itself proven: a CNAME to a real vendor edge,
-a nested SPF include, or an NS delegation might pass such a gate. Provenance
-weighting is necessary here, not obviously sufficient. The catalogue files
-already prescribe corroboration discipline; the inference layer does not yet
-honor it, and closing that gap is tracked engine work rather than a shipped
-property. Section 5.6 states the acceptance property a fix must satisfy.
+The mitigation is to generalize the existing gate: weight every binding by
+detection provenance, and extend the record-role discipline to the scalar routes
+and the IdP node. The functional corroborator the gate leans on is assumed
+unforgeable, which is not itself proven: a CNAME to a real vendor edge, a nested
+SPF include, or an NS delegation might pass a naive gate, so provenance weighting
+is necessary here but not obviously sufficient. The catalogue files already
+prescribe corroboration discipline; the inference layer honors it partially
+today, and closing the rest is tracked engine work rather than a shipped
+property. Section 5.6 states the acceptance property a fix must satisfy, and the
+2026-08-17 corpus is its standing gate.
 
 **What this subsection does not establish.** These are predictions from the
 design, not measurements. Testing them needs a controlled adversarial corpus,
@@ -1467,6 +1495,15 @@ Minimum acceptance properties for a prototype:
 - grouped derivatives never count as independent units;
 - the explanation identifies the exact perturbation that changes the decision;
 - negative results remain publishable and can terminate the approach.
+
+The 2026-08-17 adversarial DNS-record corpus
+([round memo](../validation/2026-08-17-adversarial-corpus-round.md),
+`validation/adversarial_corpus/`) is the standing baseline for these properties.
+It measures the record-plantable form of forward planting sensitivity against the
+shipped engine (zero of seven administrative-only plants moved a gated node to
+supported), confirms the functional-corroborator lower bound still holds, and
+names the ungated scalar routes a complete gate must still close. A mitigation
+must keep that corpus at its measured floor.
 
 ### 5.7 Inverse certificates and forward sensitivity are different objects
 
