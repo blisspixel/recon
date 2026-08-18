@@ -31,12 +31,12 @@ confidence fields.
 
 **model support** (panel row). A threshold-relative display of a claim's
 hand-set uncertainty band against the model's decision threshold. It answers a
-different question from `Confidence`: `Confidence` counts corroborating sources,
-`model support` is where the band sits relative to a threshold, so a one-source
-record can carry a full model display. The panel says so on the row when the two
-scales sit two steps apart. Not to be confused with the cohort estimand
-"model-support coverage" in [aggregate-state.md](aggregate-state.md), which is a
-fraction over a domain set.
+different question from `Confidence`: `Confidence` is the merged corroboration
+tier defined above, and `model support` is where the band sits relative to a
+threshold, so a record whose tier is Low can still carry a full model display.
+The panel says so on the row when the two scales sit two steps apart. Not to be
+confused with the cohort estimand "model-support coverage" in
+[aggregate-state.md](aggregate-state.md), which is a fraction over a domain set.
 
 **evidence role.** The record shape that established a label: an MX delivery path
 versus an administrative TXT token, an identity endpoint versus a verification
