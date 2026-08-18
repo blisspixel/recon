@@ -262,6 +262,14 @@ docs/accuracy.md
 !/validation/synthetic_corpus/
 !/validation/synthetic_corpus/**
 /validation/synthetic_corpus/**/__pycache__/
+# Adversarial DNS-record corpus (2026-08-17): hand-authored .invalid record sets,
+# the build_source_result helper, the end-to-end runner, and its aggregate-only
+# results. No real target data by construction; every value is a reserved-namespace
+# or documented-vendor-reference record string.
+!/validation/adversarial_corpus/
+!/validation/adversarial_corpus/**
+/validation/adversarial_corpus/**/__pycache__/
+!/validation/2026-08-17-adversarial-corpus-round.md
 # validation/__init__.py: added in v1.9.2 to make ``validation`` a
 # proper package (previously implicit namespace) so static analysis
 # resolves intra-package imports cleanly.

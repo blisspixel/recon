@@ -1,0 +1,545 @@
+{
+  "all_properties_pass": true,
+  "date": "2026-08-17",
+  "fixture_count": 23,
+  "fixtures": [
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "Ia01_m365_ms_verification_txt",
+      "pattern": "Ia",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.5418,
+          "baseline_posterior": 0.3,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "m365_tenant",
+          "planted_band_width": 0.5418,
+          "planted_posterior": 0.3,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "Ia02_gws_google_site_verification_txt",
+      "pattern": "Ia",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.5013,
+          "baseline_posterior": 0.25,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "google_workspace_tenant",
+          "planted_band_width": 0.5013,
+          "planted_posterior": 0.25,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "Ia03_cdn_cloudflare_verify_txt",
+      "pattern": "Ia",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.6044,
+          "baseline_posterior": 0.45,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "cdn_fronting",
+          "planted_band_width": 0.6044,
+          "planted_posterior": 0.45,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "Ia04_cdn_akamai_ns_delegation",
+      "pattern": "Ia",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.6044,
+          "baseline_posterior": 0.45,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "cdn_fronting",
+          "planted_band_width": 0.6044,
+          "planted_posterior": 0.45,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "Ia05_aws_route53_ns_delegation",
+      "pattern": "Ia",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.5923,
+          "baseline_posterior": 0.4,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "aws_hosting",
+          "planted_band_width": 0.5923,
+          "planted_posterior": 0.4,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "Ia06_gateway_proofpoint_verification_txt",
+      "pattern": "Ia",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.4262,
+          "baseline_posterior": 0.18,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "email_gateway_present",
+          "planted_band_width": 0.4262,
+          "planted_posterior": 0.18,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "Ia07_gateway_mimecast_verification_txt",
+      "pattern": "Ia",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.4262,
+          "baseline_posterior": 0.18,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "email_gateway_present",
+          "planted_band_width": 0.4262,
+          "planted_posterior": 0.18,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "support",
+      "gate_class": "gate_path",
+      "id": "N01_cdn_akamai_cname_functional",
+      "pattern": "N",
+      "property": "flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.6044,
+          "baseline_posterior": 0.45,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "cdn_fronting",
+          "planted_band_width": 0.1484,
+          "planted_posterior": 0.9617,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "support",
+      "gate_class": "gate_path",
+      "id": "N02_m365_outlook_mx_functional",
+      "pattern": "N",
+      "property": "flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.5418,
+          "baseline_posterior": 0.3,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "m365_tenant",
+          "planted_band_width": 0.2135,
+          "planted_posterior": 0.9314,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "support",
+      "gate_class": "gate_path",
+      "id": "C01_m365_admin_token_inert_beside_functional_mx",
+      "pattern": "C",
+      "property": "inert_token",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.2135,
+          "baseline_posterior": 0.9314,
+          "baseline_supported": true,
+          "conflict_provenance_count": 0,
+          "node": "m365_tenant",
+          "planted_band_width": 0.2135,
+          "planted_posterior": 0.9314,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "support",
+      "gate_class": "gate_path",
+      "id": "C02_cdn_two_akamai_cnames_no_stacking",
+      "pattern": "C",
+      "property": "inert_token",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.1484,
+          "baseline_posterior": 0.9617,
+          "baseline_supported": true,
+          "conflict_provenance_count": 0,
+          "node": "cdn_fronting",
+          "planted_band_width": 0.1484,
+          "planted_posterior": 0.9617,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "C03_child_modern_provider_holds_on_admin_token",
+      "pattern": "C",
+      "property": "unchanged",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.6034,
+          "baseline_posterior": 0.5563,
+          "baseline_supported": true,
+          "conflict_provenance_count": 0,
+          "node": "email_security_modern_provider",
+          "planted_band_width": 0.6034,
+          "planted_posterior": 0.5563,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "support",
+      "gate_class": "gate_path",
+      "id": "C04_child_modern_provider_supports_on_functional_mx",
+      "pattern": "C",
+      "property": "lifts",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.6034,
+          "baseline_posterior": 0.5563,
+          "baseline_supported": true,
+          "conflict_provenance_count": 0,
+          "node": "email_security_modern_provider",
+          "planted_band_width": 0.2555,
+          "planted_posterior": 0.9192,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "Ib01_policy_spf_strict_record",
+      "pattern": "Ib",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.1662,
+          "baseline_posterior": 0.0554,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "email_security_policy_enforcing",
+          "planted_band_width": 0.3115,
+          "planted_posterior": 0.1517,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "support",
+      "gate_class": "bypass_path",
+      "id": "B01_federated_via_auth_type_scalar",
+      "pattern": "B",
+      "property": "flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.5165,
+          "baseline_posterior": 0.242,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "federated_identity",
+          "planted_band_width": 0.2079,
+          "planted_posterior": 0.9342,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "support",
+      "gate_class": "bypass_path",
+      "id": "B02_m365_via_auth_type_scalar",
+      "pattern": "B",
+      "property": "flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.5418,
+          "baseline_posterior": 0.3,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "m365_tenant",
+          "planted_band_width": 0.1234,
+          "planted_posterior": 0.9717,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "support",
+      "gate_class": "bypass_path",
+      "id": "B03_okta_via_google_idp_name_scalar",
+      "pattern": "B",
+      "property": "flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.2466,
+          "baseline_posterior": 0.0764,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "okta_idp",
+          "planted_band_width": 0.4201,
+          "planted_posterior": 0.7919,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "bypass_path",
+      "id": "G01_conflict_provenance_populates",
+      "pattern": "G",
+      "property": "conflict_provenance_populated",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.6044,
+          "baseline_posterior": 0.45,
+          "baseline_supported": false,
+          "conflict_provenance_count": 1,
+          "node": "cdn_fronting",
+          "planted_band_width": 0.6044,
+          "planted_posterior": 0.45,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "bypass_path",
+      "id": "G02_conflict_widens_band_on_evidenced_node",
+      "pattern": "G",
+      "property": "band_widens",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.1484,
+          "baseline_posterior": 0.9617,
+          "baseline_supported": true,
+          "conflict_provenance_count": 1,
+          "node": "cdn_fronting",
+          "planted_band_width": 0.1614,
+          "planted_posterior": 0.9617,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "support",
+      "gate_class": "bypass_path",
+      "id": "G03_conflict_widens_band_on_m365",
+      "pattern": "G",
+      "property": "band_widens",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.2135,
+          "baseline_posterior": 0.9314,
+          "baseline_supported": true,
+          "conflict_provenance_count": 1,
+          "node": "m365_tenant",
+          "planted_band_width": 0.2306,
+          "planted_posterior": 0.9314,
+          "planted_supported": true
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "H01_stuffed_multivendor_admin_tokens",
+      "pattern": "H",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.5418,
+          "baseline_posterior": 0.3,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "m365_tenant",
+          "planted_band_width": 0.5418,
+          "planted_posterior": 0.3,
+          "planted_supported": false
+        },
+        {
+          "baseline_band_width": 0.5013,
+          "baseline_posterior": 0.25,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "google_workspace_tenant",
+          "planted_band_width": 0.5013,
+          "planted_posterior": 0.25,
+          "planted_supported": false
+        },
+        {
+          "baseline_band_width": 0.6044,
+          "baseline_posterior": 0.45,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "cdn_fronting",
+          "planted_band_width": 0.6044,
+          "planted_posterior": 0.45,
+          "planted_supported": false
+        },
+        {
+          "baseline_band_width": 0.5923,
+          "baseline_posterior": 0.4,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "aws_hosting",
+          "planted_band_width": 0.5923,
+          "planted_posterior": 0.4,
+          "planted_supported": false
+        },
+        {
+          "baseline_band_width": 0.4262,
+          "baseline_posterior": 0.18,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "email_gateway_present",
+          "planted_band_width": 0.4262,
+          "planted_posterior": 0.18,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "H02_stuffed_m365_admin_variants",
+      "pattern": "H",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.5418,
+          "baseline_posterior": 0.3,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "m365_tenant",
+          "planted_band_width": 0.5418,
+          "planted_posterior": 0.3,
+          "planted_supported": false
+        }
+      ]
+    },
+    {
+      "expect": "hold",
+      "gate_class": "gate_path",
+      "id": "H03_stuffed_cdn_admin_two_record_types",
+      "pattern": "H",
+      "property": "no_flip",
+      "property_pass": true,
+      "target_nodes": [
+        {
+          "baseline_band_width": 0.6044,
+          "baseline_posterior": 0.45,
+          "baseline_supported": false,
+          "conflict_provenance_count": 0,
+          "node": "cdn_fronting",
+          "planted_band_width": 0.6044,
+          "planted_posterior": 0.45,
+          "planted_supported": false
+        }
+      ]
+    }
+  ],
+  "fixtures_sha256": "dc7dfef548419e69d0584f917ca766f1ecc657318ef0d8160f02cebf80fe070d",
+  "headline_ia": {
+    "m_fixtures": 7,
+    "n_target_nodes_moved_to_supported": 0
+  },
+  "pattern_summary": {
+    "B": {
+      "fixtures": 3,
+      "properties_pass": 3
+    },
+    "C": {
+      "fixtures": 4,
+      "properties_pass": 4
+    },
+    "G": {
+      "fixtures": 3,
+      "properties_pass": 3
+    },
+    "H": {
+      "fixtures": 3,
+      "properties_pass": 3
+    },
+    "Ia": {
+      "fixtures": 7,
+      "properties_pass": 7
+    },
+    "Ib": {
+      "fixtures": 1,
+      "properties_pass": 1
+    },
+    "N": {
+      "fixtures": 2,
+      "properties_pass": 2
+    }
+  },
+  "posterior_decision_threshold": 0.5,
+  "recon_version": "2.16.0",
+  "round": "adversarial-corpus"
+}

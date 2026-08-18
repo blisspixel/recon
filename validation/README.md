@@ -693,6 +693,12 @@ Synthetic / no-network (runnable by anyone, deterministic):
   against naive full-joint enumeration over the enumerable evidence sweep.
 - `adversarial_properties.py`: the machine-checked local suppression property
   under fixed positive-factor assumptions (correlation.md section 3.4).
+- `adversarial_corpus/`: the record-layer complement to the above. Hand-authored
+  `.invalid` DNS record sets replayed end to end through the shipped record-role
+  gate into inference, measuring the Pattern I planted-administrative-token vector
+  (correlation.md section 4.11). Run and committed (fully offline): 0 of 7
+  administrative-only plants moved a gated node to supported. Memo:
+  `2026-08-17-adversarial-corpus-round.md`.
 - `likelihood_sensitivity.py`: CAL8: posteriors/agreement under ±20%
   likelihood perturbation. Memo: `cal8-likelihood-sensitivity.md`.
 - `drift_check.py`: the PV2 inference drift gate against

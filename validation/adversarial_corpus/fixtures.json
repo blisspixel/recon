@@ -1,0 +1,308 @@
+[
+  {
+    "id": "Ia01_m365_ms_verification_txt",
+    "pattern": "Ia",
+    "gate_class": "gate_path",
+    "target_nodes": ["m365_tenant"],
+    "queried_domain": "synthetic-ia01.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "A Microsoft 365 domain-verification TXT produces the microsoft365 slug through a TXT record; the record-role gate admits only HTTP/MX/DKIM/CNAME/SRV, so the tenant node must not move.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-ia01.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-ia01.invalid"], ["TXT", "ms-domain-verification=synthetic-domain-token-001"]]}]
+  },
+  {
+    "id": "Ia02_gws_google_site_verification_txt",
+    "pattern": "Ia",
+    "gate_class": "gate_path",
+    "target_nodes": ["google_workspace_tenant"],
+    "queried_domain": "synthetic-ia02.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "A google-site-verification TXT is an administrative token; it does not carry the branded MX/DKIM/CNAME role Workspace tenancy requires, so the node must not move.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-ia02.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-ia02.invalid"], ["TXT", "google-site-verification=synthetic-token-002"]]}]
+  },
+  {
+    "id": "Ia03_cdn_cloudflare_verify_txt",
+    "pattern": "Ia",
+    "gate_class": "gate_path",
+    "target_nodes": ["cdn_fronting"],
+    "queried_domain": "synthetic-ia03.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "A cloudflare-verify TXT produces the cloudflare slug through a TXT record; cdn_cname_observed requires a CNAME edge, so the node must not move.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-ia03.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-ia03.invalid"], ["TXT", "cloudflare-verify=synthetic-token-003"]]}]
+  },
+  {
+    "id": "Ia04_cdn_akamai_ns_delegation",
+    "pattern": "Ia",
+    "gate_class": "gate_path",
+    "target_nodes": ["cdn_fronting"],
+    "queried_domain": "synthetic-ia04.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "An Akamai authoritative-DNS delegation produces the akamai slug through an NS record; that is a DNS-hosting role, not a CDN edge, so cdn_fronting must not move.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-ia04.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-ia04.invalid"], ["NS", "synthetic-ns.akamai.net"]]}]
+  },
+  {
+    "id": "Ia05_aws_route53_ns_delegation",
+    "pattern": "Ia",
+    "gate_class": "gate_path",
+    "target_nodes": ["aws_hosting"],
+    "queried_domain": "synthetic-ia05.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "An AWS Route 53 nameserver delegation is authoritative-DNS role, not an AWS service endpoint; aws_endpoint_cname_observed requires an AWS-endpoint CNAME, so aws_hosting must not move.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-ia05.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-ia05.invalid"], ["NS", "ns-1.awsdns-01.synthetic-ia05.invalid"]]}]
+  },
+  {
+    "id": "Ia06_gateway_proofpoint_verification_txt",
+    "pattern": "Ia",
+    "gate_class": "gate_path",
+    "target_nodes": ["email_gateway_present"],
+    "queried_domain": "synthetic-ia06.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "A Proofpoint domain-verification TXT produces the proofpoint slug through a TXT record; the gateway claim requires a gateway MX route, so the node must not move.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-ia06.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-ia06.invalid"], ["TXT", "proofpoint-domain-verification=synthetic-domain-token-006"]]}]
+  },
+  {
+    "id": "Ia07_gateway_mimecast_verification_txt",
+    "pattern": "Ia",
+    "gate_class": "gate_path",
+    "target_nodes": ["email_gateway_present"],
+    "queried_domain": "synthetic-ia07.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "A Mimecast domain-verification TXT produces the mimecast slug through a TXT record; the gateway claim requires a gateway MX route, so the node must not move.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-ia07.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-ia07.invalid"], ["TXT", "mimecast-domain-verification=synthetic-domain-token-007"]]}]
+  },
+  {
+    "id": "N01_cdn_akamai_cname_functional",
+    "pattern": "N",
+    "gate_class": "gate_path",
+    "target_nodes": ["cdn_fronting"],
+    "queried_domain": "synthetic-n01.invalid",
+    "expect": "support",
+    "property": "flip",
+    "rationale": "Negative control: an Akamai edge CNAME is a functional corroborator (traffic routes through the edge); it must be able to support cdn_fronting so a future gate does not erase a useful lower bound.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-n01.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-n01.invalid"], ["CNAME", "synthetic-edge.edgekey.net"]]}]
+  },
+  {
+    "id": "N02_m365_outlook_mx_functional",
+    "pattern": "N",
+    "gate_class": "gate_path",
+    "target_nodes": ["m365_tenant"],
+    "queried_domain": "synthetic-n02.invalid",
+    "expect": "support",
+    "property": "flip",
+    "rationale": "Negative control: an Exchange Online MX is a functional corroborator (inbound mail routes to M365); it must be able to support m365_tenant.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-n02.invalid"]]}],
+    "planted": [{"records": [["MX", "10 synthetic-mx.mail.protection.outlook.com"]]}]
+  },
+  {
+    "id": "C01_m365_admin_token_inert_beside_functional_mx",
+    "pattern": "C",
+    "gate_class": "gate_path",
+    "target_nodes": ["m365_tenant"],
+    "queried_domain": "synthetic-c01.invalid",
+    "expect": "support",
+    "property": "inert_token",
+    "rationale": "Grouped derivative: beside a functional Exchange Online MX, an added administrative TXT for the same vendor is inert; the planted posterior must equal the functional-only posterior.",
+    "baseline": [{"records": [["MX", "10 synthetic-mx.mail.protection.outlook.com"]]}],
+    "planted": [{"records": [["MX", "10 synthetic-mx.mail.protection.outlook.com"], ["TXT", "ms-domain-verification=synthetic-domain-token-010"]]}]
+  },
+  {
+    "id": "C02_cdn_two_akamai_cnames_no_stacking",
+    "pattern": "C",
+    "gate_class": "gate_path",
+    "target_nodes": ["cdn_fronting"],
+    "queried_domain": "synthetic-c02.invalid",
+    "expect": "support",
+    "property": "inert_token",
+    "rationale": "Grouped derivative: two Akamai edge CNAMEs collapse to one cdn_cname_observed; the two-record posterior must equal the one-record posterior.",
+    "baseline": [{"records": [["CNAME", "synthetic-a.edgekey.net"]]}],
+    "planted": [{"records": [["CNAME", "synthetic-a.edgekey.net"], ["CNAME", "synthetic-b.akamaiedge.net"]]}]
+  },
+  {
+    "id": "C03_child_modern_provider_holds_on_admin_token",
+    "pattern": "C",
+    "gate_class": "gate_path",
+    "target_nodes": ["email_security_modern_provider"],
+    "queried_domain": "synthetic-c03.invalid",
+    "expect": "hold",
+    "property": "unchanged",
+    "rationale": "Composition through the DAG: an administrative M365 TXT does not lift the parent m365_tenant, so the child email_security_modern_provider does not move. This child is a pure-propagation node whose baseline already sits on prior parent mass, so the gate's effect is measured as movement, not as a threshold crossing.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-c03.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-c03.invalid"], ["TXT", "ms-domain-verification=synthetic-domain-token-011"]]}]
+  },
+  {
+    "id": "C04_child_modern_provider_supports_on_functional_mx",
+    "pattern": "C",
+    "gate_class": "gate_path",
+    "target_nodes": ["email_security_modern_provider"],
+    "queried_domain": "synthetic-c04.invalid",
+    "expect": "support",
+    "property": "lifts",
+    "rationale": "Composition through the DAG: a functional Exchange Online MX lifts the parent m365_tenant, which propagates to the child email_security_modern_provider with no binding of the child firing. Measured as an upward movement of the child posterior.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-c04.invalid"]]}],
+    "planted": [{"records": [["MX", "10 synthetic-mx.mail.protection.outlook.com"]]}]
+  },
+  {
+    "id": "Ib01_policy_spf_strict_record",
+    "pattern": "Ib",
+    "gate_class": "gate_path",
+    "target_nodes": ["email_security_policy_enforcing"],
+    "queried_domain": "synthetic-ib01.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "Declarative node: a strict SPF record fires spf_strict (a supporting signal) but the observed absence of a DMARC policy group disconfirms; the node stays unresolved. The only flipping signal, an enforcing DMARC policy, is a DMARC-collector scalar and is not reachable through a raw apex record here.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-ib01.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-ib01.invalid"], ["TXT", "v=spf1 -all"]]}]
+  },
+  {
+    "id": "B01_federated_via_auth_type_scalar",
+    "pattern": "B",
+    "gate_class": "bypass_path",
+    "declared_scalars": ["auth_type"],
+    "target_nodes": ["federated_identity"],
+    "queried_domain": "synthetic-b01.invalid",
+    "expect": "support",
+    "property": "flip",
+    "rationale": "Bypass probe: federated_sso_hub fires on auth_type in Federated/Managed with no record-role gate. The scalar originates in OIDC/UserRealm, not DNS, so a pure-DNS adversary cannot set it; the transition is attributable to the injected auth_type, not a record.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-b01.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-b01.invalid"]], "scalar_override": {"auth_type": "Federated"}}]
+  },
+  {
+    "id": "B02_m365_via_auth_type_scalar",
+    "pattern": "B",
+    "gate_class": "bypass_path",
+    "declared_scalars": ["auth_type"],
+    "target_nodes": ["m365_tenant"],
+    "queried_domain": "synthetic-b02.invalid",
+    "expect": "support",
+    "property": "flip",
+    "rationale": "Bypass probe: m365_tenant_observed fires on auth_type in Federated/Managed as a parallel route around the record-role gate. Same non-DNS scalar provenance as B01; recorded as a scalar-path transition, never mixed with the gate-path count.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-b02.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-b02.invalid"]], "scalar_override": {"auth_type": "Federated"}}]
+  },
+  {
+    "id": "B03_okta_via_google_idp_name_scalar",
+    "pattern": "B",
+    "gate_class": "bypass_path",
+    "declared_scalars": ["google_idp_name"],
+    "target_nodes": ["okta_idp"],
+    "queried_domain": "synthetic-b03.invalid",
+    "expect": "support",
+    "property": "flip",
+    "rationale": "Bypass probe and candidate gate hole: okta_idp_observed fires on google_idp_name == okta with NO record-role gate, the clearest asymmetry with the tenant nodes. The scalar is not DNS-settable, so exploitability from pure DNS is weaker than a token plant, but the missing record-role discipline is real.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-b03.invalid"]]}],
+    "planted": [{"records": [["MX", "10 mail.synthetic-b03.invalid"]], "scalar_override": {"google_idp_name": "okta"}}]
+  },
+  {
+    "id": "G01_conflict_provenance_populates",
+    "pattern": "G",
+    "gate_class": "bypass_path",
+    "declared_scalars": ["dmarc_policy"],
+    "target_nodes": ["cdn_fronting"],
+    "queried_domain": "synthetic-g01.invalid",
+    "expect": "hold",
+    "property": "conflict_provenance_populated",
+    "rationale": "Decoy rotation: two observation windows publish conflicting DMARC policies. The merge surfaces the disagreement as a cross-source conflict and populates conflict_provenance on the node. A raw CNAME-target rotation does not reach this mechanism (the conflict comes from the scalar merge, not from raw_dns_records), which is itself a scoping finding.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-g01.invalid"]]}],
+    "planted": [
+      {"records": [["MX", "10 mail.synthetic-g01.invalid"]], "scalar_override": {"dmarc_policy": "reject"}, "source_name": "window-1"},
+      {"records": [["MX", "10 mail.synthetic-g01.invalid"]], "scalar_override": {"dmarc_policy": "quarantine"}, "source_name": "window-2"}
+    ]
+  },
+  {
+    "id": "G02_conflict_widens_band_on_evidenced_node",
+    "pattern": "G",
+    "gate_class": "bypass_path",
+    "declared_scalars": ["dmarc_policy"],
+    "target_nodes": ["cdn_fronting"],
+    "queried_domain": "synthetic-g02.invalid",
+    "expect": "hold",
+    "property": "band_widens",
+    "rationale": "Dampening engages: on a node with fired evidence (an Akamai edge CNAME), a cross-source DMARC conflict subtracts effective display mass and widens the uncertainty band. On an evidence-empty node the band is already at the floor, so widening is visible only where the node carries mass above the floor.",
+    "baseline": [{"records": [["CNAME", "synthetic-edge.edgekey.net"]]}],
+    "planted": [
+      {"records": [["CNAME", "synthetic-edge.edgekey.net"]], "scalar_override": {"dmarc_policy": "reject"}, "source_name": "window-1"},
+      {"records": [["MX", "10 mail.synthetic-g02.invalid"]], "scalar_override": {"dmarc_policy": "quarantine"}, "source_name": "window-2"}
+    ]
+  },
+  {
+    "id": "G03_conflict_widens_band_on_m365",
+    "pattern": "G",
+    "gate_class": "bypass_path",
+    "declared_scalars": ["dmarc_policy"],
+    "target_nodes": ["m365_tenant"],
+    "queried_domain": "synthetic-g03.invalid",
+    "expect": "support",
+    "property": "band_widens",
+    "rationale": "Dampening is not node-specific: on m365_tenant carrying a functional Exchange Online MX, a cross-source DMARC conflict widens the band while the point estimate stays supported. Confirms the conflict penalty engages on any node with evidence mass above the floor, not only the CDN node.",
+    "baseline": [{"records": [["MX", "10 synthetic-mx.mail.protection.outlook.com"]]}],
+    "planted": [
+      {"records": [["MX", "10 synthetic-mx.mail.protection.outlook.com"]], "scalar_override": {"dmarc_policy": "reject"}, "source_name": "window-1"},
+      {"records": [["MX", "10 mail.synthetic-g03.invalid"]], "scalar_override": {"dmarc_policy": "quarantine"}, "source_name": "window-2"}
+    ]
+  },
+  {
+    "id": "H01_stuffed_multivendor_admin_tokens",
+    "pattern": "H",
+    "gate_class": "gate_path",
+    "target_nodes": ["m365_tenant", "google_workspace_tenant", "cdn_fronting", "aws_hosting", "email_gateway_present"],
+    "queried_domain": "synthetic-h01.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "Administrative-token stuffing (the record-layer analogue of SAN stuffing): the apex names four unrelated vendors through verification TXTs plus an Akamai NS delegation. Every produced slug reaches the network, yet no gated decision node moves. The classifier/gate requires a corroborating functional record; naming a vendor is not running it.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-h01.invalid"]]}],
+    "planted": [{"records": [
+      ["MX", "10 mail.synthetic-h01.invalid"],
+      ["TXT", "ms-domain-verification=synthetic-domain-token-020"],
+      ["TXT", "cloudflare-verify=synthetic-token-021"],
+      ["TXT", "proofpoint-domain-verification=synthetic-domain-token-022"],
+      ["TXT", "mimecast-domain-verification=synthetic-domain-token-023"],
+      ["NS", "synthetic-ns.akamai.net"]
+    ]}]
+  },
+  {
+    "id": "H02_stuffed_m365_admin_variants",
+    "pattern": "H",
+    "gate_class": "gate_path",
+    "target_nodes": ["m365_tenant"],
+    "queried_domain": "synthetic-h02.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "Administrative-token stuffing on one vendor: two Microsoft 365 verification TXTs both fire the microsoft365 slug through TXT records. Grouped derivatives do not stack and the record-role gate still holds, so m365_tenant does not move.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-h02.invalid"]]}],
+    "planted": [{"records": [
+      ["MX", "10 mail.synthetic-h02.invalid"],
+      ["TXT", "ms-domain-verification=synthetic-domain-token-024"],
+      ["TXT", "ms-domain-verification=synthetic-domain-token-025"]
+    ]}]
+  },
+  {
+    "id": "H03_stuffed_cdn_admin_two_record_types",
+    "pattern": "H",
+    "gate_class": "gate_path",
+    "target_nodes": ["cdn_fronting"],
+    "queried_domain": "synthetic-h03.invalid",
+    "expect": "hold",
+    "property": "no_flip",
+    "rationale": "Administrative-token stuffing on one node through two record types: a Cloudflare verification TXT and an Akamai NS delegation both name a CDN vendor without a CDN edge CNAME. Two vendors, two non-functional record roles, and cdn_fronting still does not move.",
+    "baseline": [{"records": [["MX", "10 mail.synthetic-h03.invalid"]]}],
+    "planted": [{"records": [
+      ["MX", "10 mail.synthetic-h03.invalid"],
+      ["TXT", "cloudflare-verify=synthetic-token-026"],
+      ["NS", "synthetic-ns.akamai.net"]
+    ]}]
+  }
+]
