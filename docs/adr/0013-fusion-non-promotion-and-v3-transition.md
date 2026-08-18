@@ -63,3 +63,45 @@ but the v2 runtime default is preserved through a compatibility transition.
   `fusion_enabled` rather than infer execution from missing fields.
 - The roadmap must distinguish the completed v2.12 transition from the v3
   default flip. A minor release must not claim the latter has already shipped.
+
+## Amendment, 2026-08-18: the flip is claim-neutral debt, not a required milestone, and v2.16 changed the MCP premise
+
+Two things changed after this ADR was accepted, and a panel review reconciled
+them.
+
+**The "MCP surface has no conflict" premise is now false.** v2.16 ("MCP JSON
+stops hiding fusion") made `lookup_tenant(format="json")` apply the fusion layer
+unconditionally, and `docs/surface-parity.md` now pins fusion present on both
+`--json` and `mcp json`. `lookup_tenant` has no fusion flag, so MCP JSON computes
+fusion by default and always, and an MCP consumer cannot pin fusion-on the way a
+CLI consumer can with `--fusion`; its only protection across any future flip is
+the `fusion_enabled` field. The consequence is that the flip is no longer
+CLI-only: flipping the CLI default off while leaving MCP JSON on would reopen the
+CLI-versus-MCP divergence v2.16 fixed as a bug and the parity gate now guards. A
+future flip must therefore either also change MCP JSON, which touches near-stable
+MCP behavior, or record an explicit fusion-state exception in the parity
+contract. The original claim above that ordinary MCP lookup stays deterministic
+is superseded.
+
+**The flip is claim-neutral, not merely schema-stable.** The v2.11 identifiability
+finding, re-confirmed by the 2026-08-17 adversarial corpus (zero of seven
+administrative-only plants moved a gated node; the record-role gate holds),
+establishes that fusion cannot add a supported claim the deterministic layer does
+not already make. Flipping the default off therefore changes only which of three
+diagnostic fields are populated (`fusion_enabled`, `slug_confidences`,
+`posterior_observations`), not any claim recon emits, and no shipped consumer
+reads those fields from a default no-flag invocation: the canonical sample ships
+generated with `--no-fusion`, and the SIEM and automation examples branch on the
+stable key set.
+
+**Reclassification.** The flip remains breaking under the stability policy (a
+changed stable default), so it may not ship in a minor. But it does not warrant,
+and should not define, a major release. It is reclassified from "the v3 default
+flip" to deferred, optional, claim-neutral compatibility debt that rides a
+genuine contract-maturity major (the claim/observation-envelope decision) if and
+when one ships, and otherwise does not happen: the v2 default stays on behind the
+stable `--fusion` / `--no-fusion` flags. A v3.0 is now conditional on the envelope
+decision, not on this flip. Until a flip is committed to a specific release, the
+interactive deprecation notice should name the advanced-diagnostic positioning
+without promising a v3 flip that may not occur; that notice rewording is a
+runtime change and rides the release that next touches `cli/shared.py`.
