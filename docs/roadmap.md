@@ -48,12 +48,71 @@ tracked separately from product work.
 > hosting remains a lower-priority side track and does not change the local
 > default.
 >
+> **The engine is feature-complete.** The surfaces are closed and mutually
+> consistent (one shared briefing, gated by the surface-parity matrix), the
+> claim contract and its provenance are enforced, the inference model is bounded
+> and evidence-disciplined, the release machinery is complete, and MCP
+> compatibility is characterized rather than expanding. No engine milestone
+> stands between here and done. A v3.0 is conditional, not scheduled (see the
+> version path): it exists only if the claim/observation-envelope decision
+> resolves to a break, and the claim-neutral fusion default flip rides that
+> boundary or stays deferred behind the stable flags. What remains is not version
+> work; it is the standing maintenance loops below, the fingerprint-freshness
+> loop chief among them.
+>
 > **Code-graph orientation:** refresh the ignored
 > `.agent/codegraph/manifest.json` after each tracked milestone and read it for
 > the exact build commit, trust level, checks, and counts. A current high-trust
 > graph with passing integrity checks is required before broad changes. The
 > graph is an implementation aid, not a substitute for source and test
 > verification.
+
+## Standing loops
+
+With the engine feature-complete, the roadmap is mostly not a version path. It
+is a set of loops that never finish because the world they observe keeps
+changing. The recent releases (v2.15, v2.16) were output of the playtest loop;
+the next durable stream is output of the freshness loop. Each loop names its
+trigger, cadence, artifact, and stop or pass condition. A loop is healthy when it
+runs on its cadence and produces its artifact, not when it "completes."
+
+| Loop | Trigger | Cadence | Artifact | Stop / pass |
+|---|---|---|---|---|
+| Fingerprint freshness (the catalog loop) | Monthly, plus a missed-detection report or a known vendor change | Monthly | New/updated YAML fingerprints, regenerated JSON catalog, `verified` dates, aggregate memo | Never complete; a promotion pass stops when a survivor lacks an independent public or disclosure-safe basis, fails its lookalike negative, or would breach the precision budget |
+| Catalog drift round | A frozen prior sample re-observed against the current catalog | Quarterly, or per declared window | Aggregate-only drift memo | No frozen-threshold breach; classification withheld across unequal catalog digests; no promotion from a drift frame |
+| Black-box playtest / renderer parity | A release that touches a human surface; an external test round | Per release | Round memo, `surface-parity.md` movement, ADRs | The `surface-parity` gate stays green; a presentation-only round means the loop is working |
+| Adversarial corpus round | A named defect vector or a new mitigation to gate | On event, then standing | Frozen `.invalid` fixtures, `results.json`, dated memo | The gated vector stays at its committed result (Pattern I at zero of seven); corroborators still support |
+| Dependency and supply-chain audit | A PR or push, an advisory, a Dependabot bump | Weekly, plus on event | Green CodeQL, Scorecard, secrets scan, dependency audit; re-authored bot bumps | Floors green; the SAST ratchet advances only on Scorecard evidence, never by backfill |
+| Upstream provider-endpoint drift | The passive integration cron | Weekly | A live passive smoke of the identity and CT endpoints | Endpoints still behave; a break is an upstream change to characterize |
+| Inference CPT drift gate | An edit to `bayesian_network.yaml` | Per commit | The committed inference baseline plus an explicit `--update` acknowledgement in the diff | No node moves beyond its band without an acknowledged baseline update |
+| MCP dual-SDK matrix | An SDK release or a spec change | On event, plus per CI | A dated compatibility matrix, both pins green | The v1.28.1 rollback and v2.0.0 production rows stay green |
+| Mutation gate | A push or PR to a gated module, plus a weekly sweep | Per change, plus weekly | The mutation score over tested mutants | Genuine survivors killed with per-field pins; the floor is a fraction over tested mutants and is not bumped to pass |
+| Doc-versus-runtime consistency | Each release | Per release | Reconciled roadmap, schema, stability, and CHANGELOG; the parity matrix | The drift gates stay green; no document claims behavior the code lacks |
+| Release readiness and provenance | Each release | Per release | Local and remote readiness, SBOM, provenance, channel parity | The tag, PyPI artifact, and GitHub Release identify one commit; the SBOM and attestations are present |
+
+### The fingerprint-freshness loop, in detail
+
+This is the loop that runs forever, because vendors add, rename, and retire the
+public patterns recon detects. It runs in two directions each month, and both
+carry a public reference or a disclosure-safe basis by construction, so a
+promoted rule never rests on a private observation.
+
+- **Corpus-mining direction:** an opt-in private corpus is scanned, unclassified
+  DNS observations are diagnosed for gaps, the gaps are measured against the
+  frozen classified-surface baseline, and surviving candidates are triaged. This
+  finds patterns recon sees but cannot yet name.
+- **Vendor-documentation direction:** a vendor's own published verification and
+  routing records seed a candidate that carries its reference by construction.
+  This finds patterns before a real target exhibits them.
+
+Each pass answers three questions: what is new (a pattern no rule matches), what
+changed (a rule whose vendor endpoint or selector moved, caught by drift and a
+dead-reference check), and what retired (a rule whose basis no longer resolves,
+caught by the freshness audit). Disclosure safety rests on the permanently
+gitignored private workspaces, the validation-hygiene gate, aggregate-only
+memos, and the mandatory public-reference-or-disclosure-safe-basis rule on every
+promoted fingerprint. Evaluated apexes, organization names, tenant identifiers,
+and per-domain rows never leave the private workspace.
 
 ## What Is Next, and Why
 
@@ -88,7 +147,7 @@ through v3.0:
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
 | [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts make independent catalog measurement interpretable. | Shipped in v2.14. Convenience, unseen-vertical, rank, regional, vendor-seed, and prior-sample drift rounds are complete with aggregate results and explicit dispositions. Drift records no threshold breach, no unavailable or unmeasured row, one disclosed measurement-surface change, and no catalog promotion. | Keep the frozen round contracts and regression gates reproducible; backfill review dates only in independently reviewed families. |
-| [5. Optional cloud access and scale-out](#5-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the core evidence, compatibility, and catalog-quality tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
+| [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the core evidence, compatibility, and catalog-quality tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
 
 Everything blocked behind these, and the gate that unblocks each, is in
 [ROADMAP.md](../ROADMAP.md#what-is-deliberately-not-next). The phased execution
@@ -519,13 +578,13 @@ Acceptance evidence:
 Stop rule: do not expand graph or probabilistic machinery without measured
 benefit to a named user outcome.
 
-### 5. Optional operator-hosted access and scale-out
+### 4. Optional operator-hosted access and scale-out
 
 Status: draft and not yet provider-validated, lower priority than the three
-core tracks above and the active v2.16 evaluation. It is intended to be
+core tracks above. It is intended to be
 directionally useful, not a validated production deployment.
 
-Why fourth: an authenticated remote endpoint can make recon accessible to
+Why last: an authenticated remote endpoint can make recon accessible to
 operators who want to use it from several AI products, shared automation, or a
 cloud environment. That is useful depth and scale polish for some users. It is
 not required to use recon, does not replace the local CLI or stdio MCP server,
@@ -1149,8 +1208,12 @@ The current review and external-event boundaries are in
 
 ## Success Metrics
 
-The product-quality baseline will set dated values and regression budgets. The
-roadmap tracks at least:
+The product-quality baseline that was to set dated values for these was stopped
+before target collection (the arms collapse, so its promotion gate is
+structurally unreachable; see track 3). These therefore remain the metrics a
+future measured study would report, not a scheduled deliverable, and green
+process gates are necessary but are not proof of product utility. The roadmap
+tracks at least:
 
 - unsupported default claim rate;
 - abstention and unresolved rate by claim family;
@@ -1171,8 +1234,6 @@ roadmap tracks at least:
 - the enforced 90.2 percent branch-aware project gate, above the 80 percent user
   bar, with no coverage regression;
 - green local and remote CI, reproducible artifacts, and release provenance.
-
-Green process gates are necessary but are not proof of product utility.
 
 ## Invariants
 
