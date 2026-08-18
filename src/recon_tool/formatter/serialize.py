@@ -14,6 +14,7 @@ import json
 from typing import Any
 
 from recon_tool.email_security import compute_email_security_score
+from recon_tool.formatter.briefing import BriefingView
 from recon_tool.formatter.classify import provider_line, slug_to_relationship_metadata
 from recon_tool.models import TenantInfo, serialize_conflicts_array
 from recon_tool.validator import strip_control_chars
@@ -440,29 +441,29 @@ def _plain_panel_data(
     the lists the panel cuts are cut here too, with a sibling ``_note`` key
     naming what was withheld.
     """
-    from recon_tool.formatter.classify import compact_provider_line
-    from recon_tool.formatter.roles import role_split_vendors
+    from recon_tool.formatter.briefing import build_briefing
 
+    view = build_briefing(info, confidence_mode=confidence_mode, detailed=detailed)
+    _apply_briefing_cuts(data, view)
     panel: dict[str, Any] = {}
-    split = role_split_vendors(info)
-    _apply_briefing_cuts(data, info, confidence_mode=confidence_mode)
     for key in _PANEL_KEY_ORDER:
         if key in {"mail", "identity"}:
             # Only present on a role split; ADR-0015 leaves every other record
-            # with the single `provider` row.
-            if split is not None:
-                mail, identity = split
-                panel[key] = (mail if detailed else compact_provider_line(mail)) if key == "mail" else identity
+            # with the single `provider` row. The view already applies the
+            # default/detailed role-label split (ADR-0012).
+            if view.is_split:
+                panel[key] = view.mail if key == "mail" else view.identity
             continue
         if key == "source_count":
-            panel[key] = len(info.sources)
+            panel[key] = view.source_count
             continue
         # On a split this key repeats the vendor `mail:` just named, so a screen
         # reader hears one word twice. ADR-0012 compacts evidence roles out of
         # the default view; the role is kept here, and only here, because it is
         # what makes the second hearing a different fact rather than a stutter.
-        if key == "provider" and split is not None and not detailed and data.get(key):
-            panel[key] = split[0]
+        # The detailed split falls through to the record's own provider value.
+        if key == "provider" and view.is_split and not detailed and data.get(key):
+            panel[key] = view.provider_on_split
             continue
         # The panel prints the tenant's own default domain only when it differs
         # from the one queried; repeating it otherwise is noise.
@@ -475,7 +476,23 @@ def _plain_panel_data(
     return panel
 
 
-def _apply_briefing_cuts(data: dict[str, Any], info: TenantInfo, *, confidence_mode: str) -> None:
+def _with_role_keys(data: dict[str, Any], view: BriefingView) -> dict[str, Any]:
+    """Return ``data`` with ``mail``/``identity`` inserted just before ``provider``.
+
+    Additive: no key is removed and ``provider`` keeps its value. The order
+    mirrors the default view, roles first, so the split reads the same on the
+    complete record as it does on the briefing.
+    """
+    out: dict[str, Any] = {}
+    for key, value in data.items():
+        if key == "provider":
+            out["mail"] = view.mail
+            out["identity"] = view.identity
+        out[key] = value
+    return out
+
+
+def _apply_briefing_cuts(data: dict[str, Any], view: BriefingView) -> None:
     """Cut ``related_domains`` and ``insights`` the way the panel cuts them.
 
     A rich record carries dozens of related hostnames and a long insight list.
@@ -484,36 +501,24 @@ def _apply_briefing_cuts(data: dict[str, Any], info: TenantInfo, *, confidence_m
     remainder rather than implying it showed everything. Mutates ``data`` in
     place so the note lands beside the list it describes.
 
-    Each note counts against ``--plain --full``, which is the command it names
-    and the whole record. The panel's insight cap is not the only thing withheld
-    here: the panel also drops restatement lines the record keeps, so counting
-    the cap alone understated the remainder and, on a record whose curated list
-    fits the cap, printed no note at all while lines were still missing.
-
-    The note names ``--plain --full`` rather than ``--full`` because that is the
-    command this reader has to type, and because the panel's own footer points
-    somewhere else: its ``--full`` stays curated, so one record can carry two
-    different remainders. Naming the destination is what keeps two numbers from
-    reading as a contradiction.
+    The selection and both note strings come from the shared ``BriefingView``,
+    so ``--md`` and the MCP text surface make exactly the same cut. The note
+    names ``--plain --full``: the command this reader types, and a different
+    destination from the panel's own footer, whose ``--full`` stays curated. One
+    record can carry two remainders; each note naming its own ``--full`` is what
+    keeps that from reading as a contradiction.
     """
-    from recon_tool.formatter.briefing import briefing_insights, cap_insights, high_signal_related
+    if data.get("related_domains"):
+        data["related_domains"] = list(view.related_shown)
+        note = view.related_note()
+        if note is not None:
+            data["related_domains_note"] = note
 
-    related = data.get("related_domains")
-    if related:
-        picked, total = high_signal_related(tuple(related))
-        data["related_domains"] = picked
-        if total > len(picked):
-            data["related_domains_note"] = f"{total} total, {total - len(picked)} more, use --plain --full to see all"
-
-    record_insights = data.get("insights")
-    if record_insights:
-        score_line, ordered = briefing_insights(info, confidence_mode)
-        shown, _ = cap_insights(ordered, verbose=False)
-        displayed = ([score_line] if score_line is not None else []) + shown
-        data["insights"] = displayed
-        withheld = len(record_insights) - len(displayed)
-        if withheld > 0:
-            data["insights_note"] = f"{withheld} more, use --plain --full to see all"
+    if data.get("insights"):
+        data["insights"] = list(view.insights_display)
+        note = view.insights_note()
+        if note is not None:
+            data["insights_note"] = note
 
 
 def format_tenant_plain(
@@ -570,6 +575,15 @@ def format_tenant_plain(
         data = _plain_panel_data(data, observable, detailed=detailed, confidence_mode=confidence_mode)
         if notes:
             data["evidence_roles"] = "; ".join(notes)
+    else:
+        # The complete record is the surface the docs tell parsers to use, so it
+        # must carry the 2.15 role split too: additively, before `provider`, so a
+        # `grep mail:` written against the default view still matches here.
+        from recon_tool.formatter.briefing import build_briefing
+
+        view = build_briefing(observable, confidence_mode=confidence_mode, detailed=detailed)
+        if view.is_split:
+            data = _with_role_keys(data, view)
     lines: list[str] = []
     for key, value in data.items():
         lines.extend(plain_lines(value, str(key), 0))

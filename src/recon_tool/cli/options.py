@@ -289,6 +289,10 @@ class LookupOptions:
         return self.display.confidence_mode
 
     @property
+    def full(self) -> bool:
+        return self.display.full
+
+    @property
     def fusion(self) -> bool:
         return self.inference.fusion
 

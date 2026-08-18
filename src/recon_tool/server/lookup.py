@@ -15,6 +15,10 @@ import logging
 import time
 import uuid
 from collections.abc import Sequence
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from recon_tool.formatter.briefing import BriefingView
 
 from recon_tool.formatter import (
     format_tenant_dict,
@@ -23,9 +27,9 @@ from recon_tool.formatter import (
 )
 from recon_tool.formatter.classify import (
     categorize_services,
+    compact_categorized_services,
     google_workspace_cse_indicators,
     google_workspace_module_indicators,
-    provider_line,
 )
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
@@ -84,39 +88,65 @@ def _lookup_tenant_surface_lines(info: TenantInfo) -> list[str]:
 
 
 def _lookup_tenant_text(info: TenantInfo) -> str:
-    """Render the default human-readable text format for ``lookup_tenant``."""
-    provider = provider_line(info)
-    source_count = len(info.sources)
-    source_noun = "source" if source_count == 1 else "sources"
-    lines = [
-        f"Display name: {info.display_name}",
-        f"Domain: {info.queried_domain}",
-        f"Provider: {provider}",
-    ]
+    """Render the default human-readable text format for ``lookup_tenant``.
+
+    The agent gets the same briefing a human does (ADR-0017): it leads with the
+    vendor roles (ADR-0015), and cuts insights and related domains to the
+    briefing with a note pointing at ``format="json"``, which carries the whole
+    record. The surface was a roll call before, joining every insight and every
+    related host, which is the drift the panel and ``--plain`` had already fixed.
+    """
+    from recon_tool.formatter.briefing import build_briefing
+
+    view = build_briefing(info, confidence_mode="hedged", detailed=False)
+    source_noun = "source" if view.source_count == 1 else "sources"
+    lines = [f"Display name: {info.display_name}", f"Domain: {info.queried_domain}"]
     if info.default_domain != info.queried_domain:
-        lines.insert(2, f"Default domain: {info.default_domain}")
+        lines.append(f"Default domain: {info.default_domain}")
+    lines.extend(_lookup_tenant_role_lines(view))
     if info.tenant_id:
         lines.append(f"Tenant ID: {info.tenant_id}")
     if info.region:
         lines.append(f"Region: {info.region}")
     if info.auth_type:
         lines.append(f"Auth: {info.auth_type}")
-    lines.append(f"Confidence: {info.confidence.value} ({source_count} {source_noun})")
-    categorized = categorize_services(info)
+    lines.append(f"Confidence: {view.confidence_tier} ({view.source_count} {source_noun})")
+    # Compact the evidence-role qualifiers out of the service labels, matching
+    # the default panel and --plain (ADR-0012): the agent gets the briefing.
+    categorized, _, _ = compact_categorized_services(categorize_services(info))
     service_labels = [service for services in categorized.values() for service in services]
     if service_labels:
         lines.append(f"Services: {', '.join(service_labels)}")
-    if info.insights:
-        lines.append(f"Insights: {' | '.join(info.insights)}")
+    lines.extend(
+        _lookup_tenant_cut_lines("Insights", " | ".join(view.insights_display), view.insights_note('format="json"'))
+    )
     if info.domain_count > 0:
         lines.append(f"Domains in tenant: {info.domain_count}")
-    if info.related_domains:
-        lines.append(f"Related domains: {', '.join(info.related_domains)}")
+    lines.extend(
+        _lookup_tenant_cut_lines("Related domains", ", ".join(view.related_shown), view.related_note('format="json"'))
+    )
     lines.extend(_lookup_tenant_surface_lines(info))
     lines.extend(_lookup_tenant_gws_lines(info))
     if info.degraded_sources:
         lines.append(f"Degraded sources: {', '.join(info.degraded_sources)}")
     return "\n".join(lines)
+
+
+def _lookup_tenant_role_lines(view: BriefingView) -> list[str]:
+    """The vendor-role rows: Mail/Identity/Provider on a split, else Provider."""
+    if view.is_split:
+        return [f"Mail: {view.mail}", f"Identity: {view.identity}", f"Provider: {view.provider_on_split}"]
+    return [f"Provider: {view.provider}"]
+
+
+def _lookup_tenant_cut_lines(label: str, joined: str, note: str | None) -> list[str]:
+    """A briefing list line plus its withheld-count note, or nothing when empty."""
+    if not joined:
+        return []
+    lines = [f"{label}: {joined}"]
+    if note is not None:
+        lines.append(f"  ({note})")
+    return lines
 
 
 @mcp.tool(
@@ -241,8 +271,15 @@ def _format_lookup_tenant(
     budget; the format dispatch lives here where it can grow independently.
     """
     from recon_tool.collection_view import collection_observable_info
+    from recon_tool.fusion_apply import apply_fusion
 
     info = collection_observable_info(info)
+    # Apply the fusion layer so the JSON payload carries the posteriors and
+    # slug confidences its schema advertises, matching the CLI's fusion-on
+    # default. Deterministic and network-free, so it is safe on the worker
+    # thread. The text and markdown surfaces do not render posteriors, so this
+    # only changes the JSON payload's populated fields.
+    info = apply_fusion(info)
     if output_format == "json":
         if explain:
             return _lookup_tenant_json_with_explain(info, list(results))

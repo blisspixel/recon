@@ -26,41 +26,93 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+One record, one briefing, in every shape. Four consecutive black-box rounds
+found defects only in how recon presents a result, never in the data, and always
+the same class: a decision applied to one renderer and not the others. This
+release makes the default view a single shared definition every human surface
+renders, adds a gated parity matrix so the next such drift is a failing check
+rather than a fifth report, and reconciles the SemVer contradiction the `--plain`
+change left open in 2.15. No stable JSON, CSV, cache, or capsule contract
+changes.
+
+### Tool Surface Changes
+
+Tool surface changes: no command or flag is added, removed, or renamed. `--md`
+and the MCP `lookup_tenant` text surface now render the default briefing (roles
+first, insights and related domains cut with an `--md --full` / `format="json"`
+note, `--confidence-mode` honored), with the complete report behind `--md
+--full`; this is a breaking change to those two human-facing selections, of the
+same class ADR-0016 made to `--plain`. `--md` titles the report on the queried
+domain and carries the display name as a labelled, unverified field. The MCP
+`lookup_tenant` JSON payload now populates `fusion_enabled`, `slug_confidences`,
+and `posterior_observations` (previously advertised but empty). `--plain --full`
+gains `mail:` / `identity:` keys on a role split. `--md` ends with a scope
+caveat line. `--json` and `--csv` are unchanged.
+
+### Added
+
+- **One shared briefing (ADR-0017).** `build_briefing` returns the default view
+  as data (the role split, the related and insight cuts with their reconciling
+  notes, the confidence scalars), and the panel, `--plain`, `--md`, and the MCP
+  text surface all render it. A renderer can no longer show the default view
+  without making the same cuts.
+- **A gated cross-surface parity matrix.** `docs/surface-parity.md` is generated
+  from one maximal record rendered through all eight surfaces, and the
+  `surface-parity` gate fails when a surface gains or loses a claim, or a cut
+  stops reconciling, without the matrix moving in the same commit. It would have
+  caught the 2.15.1 note-count bug, the `--md` roll call, and the MCP fusion gap
+  as failing cells.
+
 ### Fixed
 
+- **`--md` renders the briefing.** The report had no provider row, so it could
+  not answer who handles mail; it listed every insight and related domain as a
+  roll call; it ignored `--confidence-mode`; and it titled itself on the
+  attacker-controllable `FederationBrandName`. It now leads with the vendor
+  roles, cuts the lists with an `--md --full` note, honors the confidence mode,
+  and titles on the queried domain with the display name labelled unverified.
+- **MCP JSON stops hiding fusion.** The payload advertised `fusion_enabled`,
+  `slug_confidences`, and `posterior_observations` and always emitted them empty,
+  because the fusion layer ran only on the CLI path. An agent comparing a CLI and
+  an MCP lookup of one domain no longer sees the Bayesian layer vanish.
+- **`--plain --full` carries the role split.** The complete record, the surface
+  the docs tell parsers to use, was the one output missing the 2.15 `mail:` /
+  `identity:` keys. They are added additively, before `provider:`.
 - **The `--plain` notes count against the flag they name.** A fourth black-box
-  pass read `related_domains_note:` and `insights_note:` as a scripting contract
-  and found the arithmetic did not close: the remainders were computed from the
-  panel's curated list and printed on the surface that emits the record, so
-  shown plus withheld did not equal what `--plain --full` prints. Two effects,
-  the second worse than the first. The insight remainder counted the display cap
-  only, missing every restatement line the panel drops and the record keeps. And
-  a record whose curated list already fit the cap printed no note at all while
-  lines were still withheld, so silence claimed completeness on any record
-  carrying a dual-provider or gateway restatement, which is the record class the
-  role split exists for. The related-domain total also skipped the wildcard and
-  `*.onmicrosoft.*` names that `--full` prints, on both renderers.
-- **`provider:` says why it repeats the vendor.** On a role split the key
-  restored in 2.15.1 carries the same word `mail:` has already said, so a screen
-  reader hears one vendor twice. It now keeps its evidence role,
-  `provider: Google Workspace (MX delivery path)`, which is the one place the
-  default view does not compact a role (ADR-0012). The key, and the `grep
-  provider:` that depends on it, are unchanged.
+  pass found the remainders were computed from the panel's curated list but
+  printed on the record surface, so shown plus withheld did not equal what
+  `--plain --full` prints; a record whose curated list fit the cap printed no
+  note at all while still withholding lines; and the related total skipped the
+  wildcard and `*.onmicrosoft.*` names that `--full` prints. Each note now counts
+  against, and names, `--plain --full`.
+- **`provider:` says why it repeats the vendor.** On a role split it keeps its
+  `(MX delivery path)` evidence role, the one place the default view does not
+  compact a role (ADR-0012), so a screen reader hears a reason for the second
+  vendor word rather than a stutter.
 
 ### Changed
 
-- Both `--plain` notes now name `--plain --full`, the command the reader of that
-  surface actually types. The panel's `--full` stays curated, so one record can
-  carry two remainders; each note naming its own destination is what keeps two
-  numbers from reading as one contradiction.
-- The panel's related-domain and insight footers use commas rather than
-  em-dashes, matching the house rule the rest of the output already follows.
+- `--md` carries a scope caveat out of the terminal (public observations, not a
+  licensing, deployment, or security-rating claim), the way `--gaps` already
+  does; the report format is the one most likely to land in a deck. `--json` is
+  unchanged: machine consumers already receive the structured hedging.
+- The MCP text surface compacts service labels and the provider role by default
+  (ADR-0012), matching the panel and `--plain`; `format="json"` restores the
+  detail.
+- A narrower, more readable Markdown escape was tried and reverted when the
+  injection tests caught that service labels and insight text carry substrings
+  parsed from source records. The full escape stays; the report reads
+  `example\.com` when pasted raw, and the defense is worth more than the polish.
+- Panel footers use commas rather than em-dashes, matching the house rule.
 
 ### Documentation
 
-- ADR-0016 carries a second amendment recording what a note counts against and
-  why the two renderers can state different remainders for one record.
-  `docs/stability.md` and `docs/getting-started.md` state the same rule.
+- ADR-0017 records the one-briefing decision and the SemVer reconciliation:
+  which rows a human view selects is a curated briefing that may change in a
+  minor release, while the flags, exit codes, and stable schema key names those
+  surfaces print do not. 2.15 is the named precedent. `docs/stability.md` states
+  the same rule and updates the `--md` and `--domains` rows; the ADR index adds
+  0015, 0016, and 0017; ADR-0016 carries a second amendment on the note basis.
 
 ## [2.15.1] - 2026-08-17
 
