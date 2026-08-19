@@ -146,25 +146,50 @@ def provider_line_of(info: TenantInfo) -> str:
     return provider_line(info)
 
 
-# High-signal subdomain prefixes for compact related-domain display.
-# Tuned to match the UI goal: the related line should fit in 1-2
-# lines and show the names a security analyst cares about first.
+# Briefing related-domain cut. Earlier prefixes outrank later ones, then
+# original order. Identity and commerce classes come first so a dense CT
+# surface of cdn./e2e/test hosts cannot crowd sso./shop./workday. out of
+# the eight-name cap. cdn. is not high-signal here; it stays on --full.
+# Hyphen prefixes match first-label startswith (loyalty-app.).
 _HIGH_SIGNAL_RELATED_PREFIXES: tuple[str, ...] = (
-    "login.",
-    "sso.",
     "auth.",
+    "sso.",
     "idp.",
-    "api.",
-    "admin.",
+    "adfs.",
+    "login.",
+    "accounts.",
+    "shop.",
+    "store.",
+    "merch.",
+    "workday.",
+    "loyalty-",
+    "rewards.",
+    "support.",
+    "help.",
     "portal.",
     "dashboard.",
-    "support.",
     "status.",
+    "api.",
+    "admin.",
     "app.",
-    "cdn.",
+    "developer.",
+    "docs.",
 )
 
 _RELATED_DISPLAY_LIMIT = 8
+_ENV_NOISE_LABELS = frozenset(
+    {
+        "e2e",
+        "test",
+        "testing",
+        "staging",
+        "stage",
+        "qa",
+        "dev",
+        "prod",
+        "uat",
+    }
+)
 _INSIGHT_DISPLAY_LIMIT = 5
 
 _SPARSE_INSIGHT_PREFIXES = (
@@ -180,55 +205,106 @@ def _is_sparse_insight(line: str) -> bool:
     return line.startswith(_SPARSE_INSIGHT_PREFIXES)
 
 
+def _matches_related_prefix(host: str, prefix: str) -> bool:
+    """Return whether ``host`` belongs to one briefing prefix."""
+    first_label = host.split(".", 1)[0]
+    if prefix.endswith("-"):
+        return first_label.startswith(prefix)
+    return host.startswith(prefix) or first_label + "." == prefix
+
+
+def _related_prefix_rank(host: str) -> int | None:
+    """Return prefix priority (lower is better) or None when not high-signal."""
+    for index, prefix in enumerate(_HIGH_SIGNAL_RELATED_PREFIXES):
+        if _matches_related_prefix(host, prefix):
+            return index
+    return None
+
+
+def _is_env_noise_host(host: str) -> bool:
+    """Return whether interior labels look like test/e2e/stage residue.
+
+    The briefing cap should not spend slots on those when class-named hosts
+    exist later in the list. --full still prints them.
+    """
+    labels = host.lower().split(".")
+    interior = labels[:-2] if len(labels) > 2 else labels[:1]
+    for label in interior:
+        if label in _ENV_NOISE_LABELS or "e2e" in label:
+            return True
+        if label.startswith("test") or label.endswith("test"):
+            return True
+    return False
+
+
+def _is_low_value_briefing_host(host: str) -> bool:
+    """Return whether a host is CDN or env residue, used only as last-resort fill."""
+    first_label = host.split(".", 1)[0]
+    return first_label == "cdn" or host.startswith("cdn.") or _is_env_noise_host(host)
+
+
 def high_signal_related(
     related: tuple[str, ...],
     limit: int = _RELATED_DISPLAY_LIMIT,
 ) -> tuple[list[str], int]:
     """Pick the top ``limit`` high-signal related domains.
 
-    High-signal = matches one of the ``_HIGH_SIGNAL_RELATED_PREFIXES``.
-    Falls back to the first ``limit`` non-wildcard entries when too
-    few high-signal names are present. Returns a tuple of
-    ``(picked, total_count)`` so callers can emit the "N total" footer.
+    Rank every class-named host, do not stop at the first ``limit`` prefix
+    matches: otherwise a run of ``cdn.`` / ``api.`` names crowds ``sso.`` and
+    ``shop.`` out of the briefing. Environment-like interior labels (e2e,
+    test, staging) are deprioritized and used only to fill. ``cdn.`` is not a
+    briefing class. Falls back to remaining non-wildcard names when too few
+    class-named hosts exist.
 
     ``total_count`` counts every entry the caller passed in, including the ones
     the selection skips. Both renderers point at ``--full`` for the remainder
     and both print the unfiltered list there, so counting only the candidates
     would state a total the reader cannot reach.
 
-    ``*.onmicrosoft.com`` entries are filtered out.
-    These are Microsoft 365 tenant artefacts - they appear in the
-    related list because the user realm / autodiscover path surfaces
-    them, but they carry no "related brand" signal. A CISO reading
-    "high-signal related domains" doesn't want to see the tenant's
-    own internal domain listed as if it were a separate discovery.
+    ``*.onmicrosoft.com`` entries are filtered out of the *pick*, not the
+    total. These are Microsoft 365 tenant artefacts.
     """
 
-    def _is_high_signal_candidate(d: str) -> bool:
-        # Filter out tenant artefacts and wildcards
+    def _is_briefing_candidate(d: str) -> bool:
         if "*" in d:
             return False
-        # .onmicrosoft.com and .onmicrosoft.us are M365 tenant
-        # artefacts, not brand-related domains worth surfacing.
         return not d.endswith((".onmicrosoft.com", ".onmicrosoft.us"))
 
-    non_wild = [d for d in related if _is_high_signal_candidate(d)]
+    non_wild = [d for d in related if _is_briefing_candidate(d)]
     total = len(related)
-    high: list[str] = []
-    for d in non_wild:
-        first_label = d.split(".", 1)[0] + "."
-        if any(d.startswith(pfx) or first_label == pfx for pfx in _HIGH_SIGNAL_RELATED_PREFIXES):
-            high.append(d)
-        if len(high) >= limit:
-            break
-    if len(high) < limit:
-        for d in non_wild:
-            if d in high:
-                continue
-            high.append(d)
-            if len(high) >= limit:
-                break
-    return high, total
+    ranked: list[tuple[int, int, str]] = []
+    for index, host in enumerate(non_wild):
+        rank = _related_prefix_rank(host)
+        if rank is None or _is_low_value_briefing_host(host):
+            continue
+        ranked.append((rank, index, host))
+    ranked.sort()
+    picked = [host for _rank, _index, host in ranked[:limit]]
+    _fill_related_cut(picked, non_wild, limit, skip_low_value=True)
+    _fill_related_cut(picked, non_wild, limit, skip_low_value=False)
+    return picked, total
+
+
+def _fill_related_cut(
+    picked: list[str],
+    candidates: list[str],
+    limit: int,
+    *,
+    skip_low_value: bool,
+) -> None:
+    """Append remaining candidates until ``limit``, optionally skipping CDN/env residue."""
+    if len(picked) >= limit:
+        return
+    seen = set(picked)
+    for host in candidates:
+        if host in seen:
+            continue
+        if skip_low_value and _is_low_value_briefing_host(host):
+            continue
+        picked.append(host)
+        seen.add(host)
+        if len(picked) >= limit:
+            return
 
 
 def briefing_insights(info: TenantInfo, confidence_mode: str) -> tuple[str | None, list[str]]:

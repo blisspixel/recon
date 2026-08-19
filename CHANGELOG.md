@@ -26,6 +26,24 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+The briefing related-domain cut now ranks identity and commerce host classes
+ahead of test/CDN names. ``auth.`` / ``sso.`` / ``shop.`` / ``workday.`` outrank
+``cdn.e2eprod`` residue. The classified host-class list stays on ``--md --full``
+and JSON. Default briefing cuts stay.
+
+### Tool Surface Changes
+
+Tool surface changes: no command or flag is added, removed, or renamed.
+
+### Changed
+
+- **High-signal related-domain cut prefers class-named hosts.** The shared
+  briefing used to keep the first eight prefix matches in list order, so a
+  dense ``cdn.`` / ``api.`` run could hide ``sso.`` and ``shop.``. It now ranks
+  identity and commerce prefixes first, deprioritizes e2e/test/stage labels,
+  and no longer treats ``cdn.`` as a briefing class. ``--full`` still lists
+  every host.
+
 ## [2.17.0] - 2026-08-19
 
 Additive connection map. JSON always emits a grouped `connection_map` of every

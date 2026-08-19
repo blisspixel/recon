@@ -67,6 +67,49 @@ def test_single_vendor_has_no_roles() -> None:
     assert view.provider
 
 
+def test_class_named_hosts_outrank_cdn_and_e2e_test_hosts() -> None:
+    """Company B shape: a cdn/e2e/test run must not hide sso./shop./workday."""
+    from recon_tool.formatter.briefing import high_signal_related
+
+    related = (
+        "api.beta.invalid",
+        "cdn.e2eprod1.beta.invalid",
+        "cdn.e2eprod2.beta.invalid",
+        "cdn.shrm.test.beta.invalid",
+        "cdn.ssocm.corp.beta.invalid",
+        "sso.beta.invalid",
+        "shop.beta.invalid",
+        "workday.beta.invalid",
+        "auth.beta.invalid",
+        "idp.beta.invalid",
+        "accounts.beta.invalid",
+        "random.beta.invalid",
+    )
+    picked, total = high_signal_related(related)
+
+    assert total == 12
+    assert picked[0] == "auth.beta.invalid"
+    assert "sso.beta.invalid" in picked
+    assert "shop.beta.invalid" in picked
+    assert "workday.beta.invalid" in picked
+    assert "idp.beta.invalid" in picked
+    assert "accounts.beta.invalid" in picked
+    assert "api.beta.invalid" in picked
+    assert all("e2eprod" not in name and ".test." not in name for name in picked)
+    assert "cdn.ssocm.corp.beta.invalid" not in picked
+    assert "random.beta.invalid" in picked
+
+
+def test_cdn_hosts_still_fill_when_no_class_named_hosts() -> None:
+    from recon_tool.formatter.briefing import high_signal_related
+
+    related = tuple(f"cdn{i}.beta.invalid" for i in range(12))
+    picked, total = high_signal_related(related)
+
+    assert total == 12
+    assert picked == list(related[:8])
+
+
 def test_related_note_reconciles_against_the_record() -> None:
     view = build_briefing(_rich(), confidence_mode="hedged", detailed=False)
 
