@@ -1,6 +1,6 @@
 # Statistical assurance
 
-Semantic baseline established for recon v2.4.0. Reviewed against v2.17.1 on
+Semantic baseline established for recon v2.4.0. Reviewed against v2.17.2 on
 2026-08-19.
 
 This document records what recon's numerical outputs establish and where their
