@@ -53,6 +53,20 @@ def _extract_entries(raw: Any, path: Path) -> list[Any] | None:
     return entries
 
 
+def _load_yaml_document(path: Path) -> tuple[Any, str | None]:
+    """Parse YAML after rejecting duplicate mapping keys. Error token is the fail name."""
+    try:
+        text = path.read_text(encoding="utf-8")
+        composed = yaml.compose(text)
+        if composed is not None and _mapping_has_duplicate_keys(composed):
+            print(f"error: {path} contains a duplicate mapping key", file=sys.stderr)
+            return None, f"{path} (duplicate mapping key)"
+        return yaml.safe_load(text), None
+    except yaml.YAMLError as exc:
+        print(f"error: invalid YAML in {path}: {exc}", file=sys.stderr)
+        return None, f"{path} (YAML parse)"
+
+
 def _validate_file(
     path: Path,
     *,
@@ -64,16 +78,9 @@ def _validate_file(
     specificity_warnings: list[str],
 ) -> tuple[int, int, list[str]]:
     """Validate one file. Returns (total, passed, failed_names)."""
-    try:
-        text = path.read_text(encoding="utf-8")
-        composed = yaml.compose(text)
-        if composed is not None and _mapping_has_duplicate_keys(composed):
-            print(f"error: {path} contains a duplicate mapping key", file=sys.stderr)
-            return (0, 0, [f"{path} (duplicate mapping key)"])
-        raw = yaml.safe_load(text)
-    except yaml.YAMLError as exc:
-        print(f"error: invalid YAML in {path}: {exc}", file=sys.stderr)
-        return (0, 0, [f"{path} (YAML parse)"])
+    raw, load_fail = _load_yaml_document(path)
+    if load_fail is not None:
+        return (0, 0, [load_fail])
 
     entries = _extract_entries(raw, path)
     if entries is None:
