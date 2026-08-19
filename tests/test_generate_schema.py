@@ -52,7 +52,7 @@ def test_generated_top_level_fields_are_code_owned() -> None:
         "shared_verification_tokens",
         "unclassified_cname_chains",
     )
-    assert len(fields) == 57
+    assert len(fields) == 58
     assert len(fields) == len(set(fields))
 
 

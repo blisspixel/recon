@@ -135,5 +135,187 @@
     "edge_count": 0,
     "clusters": []
   },
-  "fingerprint_metadata": {}
+  "fingerprint_metadata": {},
+  "connection_map": {
+    "lanes": [
+      {
+        "id": "email",
+        "label": "Email",
+        "entries": [
+          {
+            "name": "Microsoft 365",
+            "slug": "microsoft365",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "Microsoft 365 domain-verification TXT (the `MS=ms########` form Microsoft issues during tenant domain claim)."
+          },
+          {
+            "name": "DKIM (Exchange Online)",
+            "slug": null,
+            "role": "observed control",
+            "hosts": []
+          },
+          {
+            "name": "DMARC",
+            "slug": null,
+            "role": "observed control",
+            "hosts": []
+          },
+          {
+            "name": "Exchange Autodiscover",
+            "slug": null,
+            "role": "unavailable",
+            "hosts": []
+          },
+          {
+            "name": "MTA-STS",
+            "slug": null,
+            "role": "observed control",
+            "hosts": []
+          },
+          {
+            "name": "SPF: strict (-all)",
+            "slug": null,
+            "role": "observed control",
+            "hosts": []
+          }
+        ]
+      },
+      {
+        "id": "identity",
+        "label": "Identity",
+        "entries": [
+          {
+            "name": "Okta",
+            "slug": "okta",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "Okta domain-verification TXT (the `_oktaverification=` form)."
+          },
+          {
+            "name": "Intune / MDM",
+            "slug": null,
+            "role": "unavailable",
+            "hosts": []
+          }
+        ]
+      },
+      {
+        "id": "cloud",
+        "label": "Cloud",
+        "entries": []
+      },
+      {
+        "id": "security",
+        "label": "Security",
+        "entries": [
+          {
+            "name": "KnowBe4",
+            "slug": "knowbe4",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "KnowBe4 domain-verification TXT (KnowBe4 is a security- awareness and phishing-simulation training vendor)."
+          }
+        ]
+      },
+      {
+        "id": "ai",
+        "label": "AI",
+        "entries": [
+          {
+            "name": "Anthropic (Claude)",
+            "slug": "anthropic",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "Anthropic domain-verification TXT for Claude for Work / Claude Enterprise tenant claim."
+          }
+        ]
+      },
+      {
+        "id": "data-analytics",
+        "label": "Data & Analytics",
+        "entries": []
+      },
+      {
+        "id": "collaboration",
+        "label": "Collaboration",
+        "entries": [
+          {
+            "name": "Atlassian (Jira/Confluence)",
+            "slug": "atlassian",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "Atlassian sending-domain TXT (`atlassian-sending-domain-verification=`)."
+          },
+          {
+            "name": "Figma",
+            "slug": "figma",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "Figma domain-verification TXT (Figma is a collaborative design platform, currently independent after the blocked Adobe acquisition)."
+          },
+          {
+            "name": "Miro",
+            "slug": "miro",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "Miro domain-verification TXT (Miro is a collaborative whiteboarding platform)."
+          },
+          {
+            "name": "Slack",
+            "slug": "slack",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "Slack workspace domain-verification TXT."
+          },
+          {
+            "name": "Microsoft Teams",
+            "slug": null,
+            "role": "unavailable",
+            "hosts": []
+          }
+        ]
+      },
+      {
+        "id": "business-apps",
+        "label": "Business Apps",
+        "entries": [
+          {
+            "name": "DocuSign",
+            "slug": "docusign",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "DocuSign domain-verification TXT (the bare `docusign=` prefix)."
+          },
+          {
+            "name": "Salesforce",
+            "slug": "salesforce",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "Salesforce domain-verification TXT."
+          },
+          {
+            "name": "Zendesk",
+            "slug": "zendesk",
+            "role": "unavailable",
+            "hosts": [],
+            "summary": "Zendesk domain-verification TXT (`zendeskverification=`)."
+          }
+        ]
+      }
+    ],
+    "related_host_classes": [
+      {
+        "prefix": "other.",
+        "hosts": [
+          "gamma-internal.invalid"
+        ],
+        "primary_slugs": []
+      }
+    ],
+    "explicit_absences": {
+      "email_gateway": null,
+      "mta_sts_mode": "enforce"
+    }
+  }
 }

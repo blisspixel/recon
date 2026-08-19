@@ -1972,6 +1972,9 @@
       "CertBurst",
       "CertSummary",
       "ChainMotif",
+      "ConnectionEntry",
+      "ConnectionLane",
+      "ConnectionMap",
       "DeltaReport",
       "EcosystemHyperedge",
       "EvidenceConflict",
@@ -1984,6 +1987,7 @@
       "NodeEvidence",
       "NodeUnitCounterfactual",
       "PosteriorObservation",
+      "RelatedHostClass",
       "SurfaceAttribution",
       "UnclassifiedCnameChain"
     ],
@@ -2036,7 +2040,8 @@
       "evidence_conflicts",
       "chain_motifs",
       "infrastructure_clusters",
-      "fingerprint_metadata"
+      "fingerprint_metadata",
+      "connection_map"
     ],
     "title": "recon JSON output",
     "top_level_fields": [
@@ -2046,6 +2051,7 @@
       "chain_motifs",
       "cloud_instance",
       "confidence",
+      "connection_map",
       "ct_attempt_outcome",
       "ct_cache_age_days",
       "ct_provider_used",

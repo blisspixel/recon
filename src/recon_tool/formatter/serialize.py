@@ -88,6 +88,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     discovery loop. Off by default to keep the v2.0 schema contract narrow.
     """
     from recon_tool.collection_view import collection_observable_evidence, collection_observable_info
+    from recon_tool.formatter.connection_map import build_connection_map
     from recon_tool.merger import compute_email_topology
 
     info = collection_observable_info(info)
@@ -323,6 +324,7 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
             continue
         fingerprint_metadata[slug] = meta
     d["fingerprint_metadata"] = fingerprint_metadata
+    d["connection_map"] = build_connection_map(info)
     # External surface attributions - per-subdomain SaaS attribution
     # from CNAME chain classification. Always emitted (empty list when none).
     d["surface_attributions"] = [

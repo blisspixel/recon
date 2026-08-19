@@ -51,7 +51,8 @@
     "evidence_conflicts",
     "chain_motifs",
     "infrastructure_clusters",
-    "fingerprint_metadata"
+    "fingerprint_metadata",
+    "connection_map"
   ],
   "properties": {
     "tenant_id": {
@@ -439,6 +440,10 @@
       "additionalProperties": {
         "$ref": "#/$defs/FingerprintMetadata"
       }
+    },
+    "connection_map": {
+      "description": "Derived grouping of observed vendors and related-host classes. Always emitted. Empty lane entries mean no catalog match in that display category; that is unresolved, not proof the product is unused. Does not replace services, slugs, related_domains, or surface_attributions. Additive within 2.x.",
+      "$ref": "#/$defs/ConnectionMap"
     },
     "unclassified_cname_chains": {
       "description": "Conditional. Present only when ``--include-unclassified`` is passed, absent otherwise; consumers should not treat it as always present. CNAME chains the surface classifier resolved but could not attribute to any cname_target fingerprint. Each entry: {subdomain, chain: [hop1, hop2, terminal]}. Wildcard-DNS echoes are filtered out before this list is populated. Feeds the fingerprint-discovery loop in validation/find_gaps.py and the /recon-fingerprint-triage skill.",
@@ -1010,6 +1015,137 @@
             "null"
           ],
           "description": "Exact organization name expected on a BIMI VMC for domains under this product."
+        }
+      }
+    },
+    "ConnectionMap": {
+      "description": "Grouped public-connection view derived at format time. Lanes follow the panel display categories. Related-host classes keep every related_domains name. explicit_absences copies email_gateway and mta_sts_mode so a consumer does not have to reconstruct them from a truncated briefing.",
+      "type": "object",
+      "required": [
+        "lanes",
+        "related_host_classes",
+        "explicit_absences"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "lanes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConnectionLane"
+          }
+        },
+        "related_host_classes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/RelatedHostClass"
+          }
+        },
+        "explicit_absences": {
+          "type": "object",
+          "required": [
+            "email_gateway",
+            "mta_sts_mode"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "email_gateway": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "mta_sts_mode": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        }
+      }
+    },
+    "ConnectionLane": {
+      "description": "One display category in the connection map. entries may be empty.",
+      "type": "object",
+      "required": [
+        "id",
+        "label",
+        "entries"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "entries": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ConnectionEntry"
+          }
+        }
+      }
+    },
+    "ConnectionEntry": {
+      "description": "One observed vendor or email-control row. slug is null for self-describing observations such as DMARC. role is the evidence-role qualifier, unavailable, or observed control. summary is the first sentence of the catalog detection description when present. hosts are related subdomains whose primary attribution matches the slug.",
+      "type": "object",
+      "required": [
+        "name",
+        "slug",
+        "role",
+        "hosts"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "slug": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "role": {
+          "type": "string"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "summary": {
+          "type": "string"
+        }
+      }
+    },
+    "RelatedHostClass": {
+      "description": "Related-domain names sharing one first-label class (auth., shop., other.). primary_slugs lists surface_attributions primary slugs observed on those hosts.",
+      "type": "object",
+      "required": [
+        "prefix",
+        "hosts",
+        "primary_slugs"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "prefix": {
+          "type": "string"
+        },
+        "hosts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "primary_slugs": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
         }
       }
     },

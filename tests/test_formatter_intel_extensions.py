@@ -363,8 +363,11 @@ class TestMarkdownRendering:
         # Grouping test, not a role test: this fixture retains no evidence, so
         # the default view would drop every label (ADR-0012).
         md = format_tenant_markdown(info, detailed=True)
-        assert "Microsoft 365 Services" in md
-        assert "Tech Stack" in md
+        assert "## Cloud" in md
+        assert "## Collaboration" in md
+        assert "## Business Apps" in md
+        assert "Tech Stack" not in md
+        assert "Microsoft 365 Services" not in md
 
     def test_markdown_service_groups_are_mutually_exclusive(self):
         from recon_tool.formatter import format_tenant_markdown
@@ -381,18 +384,16 @@ class TestMarkdownRendering:
         )
 
         md = format_tenant_markdown(info, detailed=True)
-        m365_section = md.split("## Microsoft 365 Services", 1)[1].split("##", 1)[0]
-        gws_section = md.split("## Google Workspace Services", 1)[1].split("##", 1)[0]
-        tech_section = md.split("## Tech Stack", 1)[1].split("##", 1)[0]
-
-        assert "- Microsoft Teams" in m365_section
-        assert r"- Google Workspace\: DKIM" in gws_section
-        assert r"- DKIM \(Google Workspace\)" in gws_section
-        assert "- DKIM\n" not in tech_section
-        assert r"- AutoGen \(Microsoft\)" in tech_section
-        assert r"- Microsoft Edge \(Front Door\)" in tech_section
+        collab = md.split("## Collaboration", 1)[1].split("##", 1)[0]
+        email = md.split("## Email", 1)[1].split("##", 1)[0]
+        assert "- Microsoft Teams" in collab
+        assert r"- Google Workspace\: DKIM" in email
+        assert r"- DKIM \(Google Workspace\)" in email
         assert md.count(r"- Google Workspace\: DKIM") == 1
         assert md.count(r"- DKIM \(Google Workspace\)") == 1
+        assert r"- AutoGen \(Microsoft\)" in md
+        assert r"- Microsoft Edge \(Front Door\)" in md
+        assert "Tech Stack" not in md
 
     def test_markdown_gws_details_require_retained_typed_evidence(self):
         from recon_tool.formatter import format_tenant_markdown

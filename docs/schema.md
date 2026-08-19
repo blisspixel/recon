@@ -186,6 +186,7 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 | `slugs` | `list[string]` | no | n/a | stable | Stable identifiers for observed **fingerprint-catalog pattern** matches; not product-use claims. Aggregated from per-source detections, so a vendor observed only through an identity endpoint (OIDC discovery, GetUserRealm) is **not** listed here. See the note below. |
 | `detection_scores` | object | no | `{slug: score_level}` | stable | Per-slug evidence-strength level (`"low" \| "medium" \| "high"`), not a probability or truth confidence. Derived from retained `evidence` records, whose slug set is a **superset** of `slugs`. See the note below. |
 | `insights` | `list[string]` | no | n/a | stable | Derived, hedged observations from public evidence. Exact wording may evolve; they are not verified private-state intelligence or proof of product use. |
+| `connection_map` | object | no | n/a | stable | Derived grouping of the same observed vendors and related hosts the briefing already collected. Always emitted. `lanes` follow the panel display categories (Email, Identity, Cloud, Security, AI, Data & Analytics, Collaboration, Business Apps); empty `entries` mean no catalog match in that lane (unresolved, not proof the product is unused). `related_host_classes` keeps every `related_domains` name under a first-label class (`auth.`, `shop.`, `other.`). `explicit_absences` copies `email_gateway` and `mta_sts_mode` (null stays null). Does not replace `services`, `slugs`, `related_domains`, or `surface_attributions`. See [`ConnectionMap`](#connectionmap). |
 
 > **`slugs` is not the full vendor list.** `slugs` answers "which catalog
 > patterns matched", and the catalog matches DNS records. `detection_scores`,
@@ -509,6 +510,47 @@ One entry per classified related subdomain, in the top-level
 
 Derived from CNAME-chain classification of `related_domains`; observable
 proxy/origin shape only, never an ownership claim.
+
+### `ConnectionMap`
+
+Derived grouping of observed vendors and related hosts. Always emitted on
+`--json`. Built at format time; not a new collection.
+
+```json
+{
+  "lanes": [
+    {
+      "id": "ai",
+      "label": "AI",
+      "entries": [
+        {
+          "name": "OpenAI Enterprise",
+          "slug": "openai",
+          "role": "public TXT account indicator",
+          "hosts": [],
+          "summary": "OpenAI domain-verification TXT bound to a ChatGPT Team or Enterprise tenant."
+        }
+      ]
+    }
+  ],
+  "related_host_classes": [
+    {
+      "prefix": "auth.",
+      "hosts": ["auth.example.invalid"],
+      "primary_slugs": ["auth0"]
+    }
+  ],
+  "explicit_absences": {
+    "email_gateway": null,
+    "mta_sts_mode": null
+  }
+}
+```
+
+Empty `entries` on a lane mean no catalog match in that category. That is
+unresolved, not proof the product is unused. `summary` is omitted when the
+catalog has no detection description. `role` is `unavailable` for
+unattributed matches, which JSON and `--md --full` keep.
 
 ### `PosteriorObservation` (v2.0+)
 

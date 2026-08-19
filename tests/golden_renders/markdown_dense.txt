@@ -9,11 +9,11 @@
 **Evidence Confidence:** high\
 **Inference Confidence:** high
 
-## Microsoft 365 Services
+## Email
 
 - Microsoft 365
 
-## Tech Stack
+## Collaboration
 
 - Slack
 

@@ -26,6 +26,56 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+Additive connection map. JSON always emits a grouped `connection_map` of every
+observed vendor and related-host class. `--md` uses the same lanes as the
+panel (Email, Identity, AI, ...) instead of a flat Tech Stack list. `--md
+--full` is the downstream face: empty lanes stay visible, evidence roles stay
+on every logo, and related hosts are classified rather than capped. Default
+`--md` remains the briefing: same names, grouped, still capped, still omitting
+unattributed matches. No collection change, and no row is dropped.
+
+### Tool Surface Changes
+
+Tool surface changes: no command or flag is added, removed, or renamed.
+`--json` gains the additive `connection_map` object. `--md` headings change
+from Microsoft 365 / Google Workspace / Tech Stack to the panel lanes; `--md
+--full` adds empty lanes, catalog summaries, and `Related Host Classes`.
+
+### Added
+
+- **`connection_map` on the JSON record.** Derived at format time from the
+  existing services, evidence roles, surface attributions, and related
+  domains. Every display lane is present, including empty AI. Role-unavailable
+  matches stay with `role: unavailable`. Related hosts are grouped by first
+  label (`auth.`, `shop.`, `workday.`, `loyalty-`, `other.`). `explicit_absences`
+  copies `email_gateway` and `mta_sts_mode`.
+- **`--md` lane grouping.** Default `--md` renders Email / Identity / Cloud /
+  Security / AI / Data & Analytics / Collaboration / Business Apps the way the
+  panel already did. `--md --full` keeps every lane, including empty ones as
+  *none observed in public DNS*, prints evidence roles, and classifies related
+  hosts instead of listing a capped briefing cut.
+- **`--full` related hosts are classified on the panel too.** The complete
+  terminal record groups every related host by first-label class (`auth.`,
+  `shop.`, `workday.`, `developer.`, `community-`, ...) instead of one comma
+  list. The default briefing still shows the high-signal cut.
+
+### Fixed
+
+- **Display-override names now keep their slug on the connection map.** Identity
+  hubs such as `Okta SSO hub` are not fingerprint display names. The map
+  previously left `slug` null, so a downstream consumer could not join the row
+  to `surface_attributions`. The reverse display-override lookup restores the
+  slug.
+- **Connection-map summaries follow the evidence role.** A slug that appears in
+  more than one YAML file no longer donates a later CNAME gloss to every row.
+  An MX Microsoft 365 entry uses an MX or TXT description, not the Mira
+  service-zone CNAME.
+
+### Documentation
+
+- schema.md and getting-started name JSON / `--md --full` as the downstream
+  connection map. Default `--md` stays the briefing.
+
 ## [2.16.1] - 2026-08-19
 
 Catalog-gate correctness and published-docs catch-up. `recon fingerprints

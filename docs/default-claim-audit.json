@@ -43,12 +43,14 @@
       "producer_paths": [
         "src/recon_tool/fingerprints.py#match_txt_all",
         "src/recon_tool/signals.py#evaluate_signals",
-        "src/recon_tool/merger.py#compute_detection_scores"
+        "src/recon_tool/merger.py#compute_detection_scores",
+        "src/recon_tool/formatter/connection_map.py#build_connection_map"
       ],
       "regression_tests": [
         "tests/test_fingerprints.py",
         "tests/test_signals.py",
-        "tests/test_service_disclosure.py"
+        "tests/test_service_disclosure.py",
+        "tests/test_connection_map.py"
       ],
       "renderer_obligations": [
         "Use indicator or observed-record language; never imply current product use, deployment, or control."
@@ -1040,6 +1042,7 @@
       "chain_motifs": "runtime.related-namespace.v1",
       "cloud_instance": "runtime.identity-and-tenant.v1",
       "confidence": "runtime.confidence-summary.v1",
+      "connection_map": "runtime.catalog-indicator.v1",
       "ct_attempt_outcome": "runtime.ct-observation.v1",
       "ct_cache_age_days": "runtime.ct-observation.v1",
       "ct_provider_used": "runtime.ct-observation.v1",
@@ -1260,6 +1263,9 @@
       "CertBurst": "runtime.ct-observation.v1",
       "CertSummary": "runtime.ct-observation.v1",
       "ChainMotif": "runtime.related-namespace.v1",
+      "ConnectionEntry": "runtime.catalog-indicator.v1",
+      "ConnectionLane": "runtime.catalog-indicator.v1",
+      "ConnectionMap": "runtime.catalog-indicator.v1",
       "DeltaReport": "runtime.delta-report.v1",
       "EcosystemHyperedge": "runtime.cross-domain-overlap.v1",
       "EvidenceConflict": "runtime.collection-status.v1",
@@ -1272,6 +1278,7 @@
       "NodeEvidence": "runtime.inference-diagnostics.v1",
       "NodeUnitCounterfactual": "runtime.inference-diagnostics.v1",
       "PosteriorObservation": "runtime.inference-diagnostics.v1",
+      "RelatedHostClass": "runtime.related-namespace.v1",
       "SurfaceAttribution": "runtime.related-namespace.v1",
       "UnclassifiedCnameChain": "runtime.related-namespace.v1"
     },
@@ -1280,7 +1287,7 @@
     ],
     "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
     "surface_digests": {
-      "json_fields": "81b985e5d9444fab6a4e5dfc716b03e2b3fcb1ff5eaa11c4f1b41a5e03aae2cf",
+      "json_fields": "c4482963dea3b2a148918d2a9f84c3962faa2841c087256430d1c3c453319f4a",
       "mcp_tools": "29484a9c137753627480d12ada64c9ca86e89ada7f5d94a90d5dd90d29aad273"
     }
   },

@@ -855,18 +855,28 @@ def _render_full_tenant_domains(info: TenantInfo, show_domains: bool) -> Text | 
 
 
 def _render_full_related(info: TenantInfo, show_domains: bool) -> Text | None:
-    """Full related-domains list (--domains / --full only)."""
+    """Classified related-host list (--domains / --full only).
+
+    The default briefing keeps the high-signal comma list. The complete
+    record groups every related host by first-label class so a reader can
+    route on auth. / shop. / workday. without a dump.
+    """
     if not (show_domains and info.related_domains):
         return None
+    from recon_tool.formatter.connection_map import related_host_classes
+
+    classes = related_host_classes(tuple(info.related_domains), info.surface_attributions)
     rel = Text()
-    rel.append("Related domains", style="bold")
+    rel.append("Related host classes", style="bold")
     rel.append("\n")
-    rel.append("  ")
-    joined = ", ".join(info.related_domains)
-    for j, line in enumerate(_wrap_text(joined, _PANEL_WIDTH - 2)):
-        if j > 0:
-            rel.append("\n  ")
-        rel.append(line, style="dim")
+    for item in classes:
+        prefix = str(item["prefix"])
+        slugs = item["primary_slugs"]
+        heading = prefix if not slugs else f"{prefix} ({', '.join(str(s) for s in slugs)})"
+        rel.append(f"  {heading}\n", style="dim")
+        for host in item["hosts"]:
+            rel.append(f"    {host}\n", style="dim")
+    rel.rstrip()
     return rel
 
 

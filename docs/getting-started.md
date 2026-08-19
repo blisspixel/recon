@@ -228,11 +228,17 @@ recon example.com --json
 recon example.com --md
 ```
 
-Services are already present in the compact default panel. `--verbose` keeps
-that summary and adds certificate and evidence detail plus per-source status on
-stderr. `--full` adds the verbose detail, all known domains, and posture
-observations. `--services` remains accepted for compatibility; new
-workflows do not need it.
+Services are already present in the compact default panel, grouped by lane
+(Email, Identity, Cloud, Security, AI, Data & Analytics, Collaboration,
+Business Apps). `--md` uses those same lanes. The default `--md` report is still
+a briefing: it caps insights and related domains and omits unattributed
+matches. `--json` and `--md --full` are the downstream connection map: every
+lane including empty ones, every vendor row with its evidence role, catalog
+summaries, and related hosts classified by first label (`auth.`, `shop.`,
+`workday.`). `--verbose` keeps the panel summary and adds certificate and
+evidence detail plus per-source status on stderr. `--full` adds the verbose
+detail, all known domains, and posture observations. `--services` remains
+accepted for compatibility; new workflows do not need it.
 
 Use `--explain` when a claim matters. It shows the evidence chain behind the
 result. Built-in generated insights retain their exact emitting rule and
