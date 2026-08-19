@@ -26,10 +26,14 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.1] - 2026-08-19
+
 The briefing related-domain cut now ranks identity and commerce host classes
 ahead of test/CDN names. ``auth.`` / ``sso.`` / ``shop.`` / ``workday.`` outrank
 ``cdn.e2eprod`` residue. The classified host-class list stays on ``--md --full``
-and JSON. Default briefing cuts stay.
+and JSON. Default briefing cuts stay. A 2.17.0 playtest on a dense creative-software
+target spent six of eight related names on ``cdn.e2eprod`` / ``test`` hosts while
+``sso.`` and ``shop.`` waited behind ``--full``.
 
 ### Tool Surface Changes
 
