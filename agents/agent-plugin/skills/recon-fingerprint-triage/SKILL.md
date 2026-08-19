@@ -2,10 +2,10 @@
 name: recon-fingerprint-triage
 description: Triage recon fingerprint candidates across the bounded DNS catalog surface. Reads private single-domain discovery output, aggregate catalog baselines, or candidate queues, then classifies candidates as pending, promoted, rejected, or deferred under the v2.14 catalog-quality gates. Use when the user asks to find missing fingerprints, review unclassified DNS observations, or improve catalog coverage.
 license: Apache-2.0
-compatibility: Requires recon-tool 2.17.0 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.
+compatibility: Requires recon-tool 2.17.1 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.
 metadata:
   author: blisspixel
-  version: 2.17.0
+  version: 2.17.1
 ---
 
 # recon-fingerprint-triage
