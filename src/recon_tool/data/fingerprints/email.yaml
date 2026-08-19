@@ -37,15 +37,16 @@ fingerprints:
       imply active email use.
   - type: mx
     pattern: mail.protection.outlook.com
-    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
+    reference: https://learn.microsoft.com/en-us/microsoft-365/enterprise/external-domain-name-system-records
+    verified: 2026-08-19
     description: >-
-      MX record terminating at Microsoft 365's mail-protection
-      cluster (`*.mail.protection.outlook.com`). Indicates active
-      M365 email use: incoming SMTP for the domain routes through
-      Exchange Online Protection. Note that an upstream gateway
-      (Proofpoint, Mimecast, Barracuda) may sit in front of M365
-      even when this MX is published, so "M365 only" is not
-      implied without checking for gateway MX evidence as well.
+      MX terminating at Microsoft 365's documented Exchange Online
+      mail-protection cluster (`*.mail.protection.outlook.com`).
+      Microsoft's current Learn DNS-records page still names this
+      host. Newer accepted domains may instead use `*.mx.microsoft`.
+      This observes inbound SMTP routing through Exchange Online
+      Protection. An upstream gateway may sit in front even when
+      this MX is published.
   - type: spf
     pattern: spf.protection.outlook.com
     reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
@@ -67,14 +68,16 @@ fingerprints:
   detections:
   - type: mx
     pattern: aspmx.l.google.com
-    reference: https://support.google.com/a/answer/7314058
+    reference: https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace
+    verified: 2026-08-19
     description: >-
-      MX terminating at Google Workspace's primary inbound mail
-      cluster (`aspmx.l.google.com` and the `alt1` through `alt4`
-      variants). Indicates active Google Workspace email use. As
-      with M365, an upstream gateway may sit in front of Gmail
-      even when this MX is published; check for gateway MX
-      evidence before concluding "Gmail only."
+      MX terminating at Google Workspace's documented pre-2023
+      inbound hosts (`aspmx.l.google.com` and the `alt1` through
+      `alt4` variants). Google's current MX setup page names
+      `smtp.google.com` as the default and still supports this
+      series. This observes inbound mail routing through Google
+      Workspace. An upstream gateway may sit in front even when
+      this MX is published.
   - type: spf
     pattern: _spf.google.com
     reference: https://support.google.com/a/answer/7314058

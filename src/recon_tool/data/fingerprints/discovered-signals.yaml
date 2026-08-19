@@ -1311,10 +1311,15 @@ fingerprints:
   detections:
   - type: mx
     pattern: smtp.google.com
+    reference: https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace
+    verified: 2026-08-19
     description: >-
-      Google Workspace MX target (`smtp.google.com`). Variant of the
-      legacy `aspmx.l.google.com` series; used by Workspace tenants
-      with the modernized delivery edge.
+      Apex MX terminating at Google Workspace's documented current
+      inbound host (`smtp.google.com`). Google's MX setup page names
+      this as the default. The pre-2023 `aspmx.*` series remains
+      supported. This observes inbound mail routing through Google
+      Workspace, not mailbox activity or the absence of an upstream
+      gateway.
 - name: AWS SES
   slug: aws-ses
   category: Email & Communication
@@ -1353,8 +1358,15 @@ fingerprints:
   detections:
   - type: mx
     pattern: mx.microsoft
+    reference: https://learn.microsoft.com/en-us/exchange/security-and-compliance/how-dane-secures-email
+    verified: 2026-08-19
     description: >-
-      Microsoft 365 modernized MX target (`*.mx.microsoft`).
+      MX terminating at Microsoft 365's documented DNSSEC-capable
+      inbound hosts (`*.mx.microsoft`). Microsoft names this form
+      for SMTP DANE with DNSSEC and for some new accepted domains.
+      `*.mail.protection.outlook.com` remains operational. This
+      observes inbound routing through Exchange Online, not DANE
+      enablement or the absence of an upstream gateway.
   - type: mx
     pattern: msv1.invalid
     description: >-

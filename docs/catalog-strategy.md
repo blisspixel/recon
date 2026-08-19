@@ -1,7 +1,7 @@
 # Catalog Growth and Quality Strategy
 
 Status: measurement-first maintenance plan
-Review date: 2026-08-18 UTC
+Review date: 2026-08-19 UTC
 
 This document is the plan for growing and maintaining the fingerprint catalog
 (`src/recon_tool/data/fingerprints/*.yaml`) so coverage, precision, and
@@ -50,7 +50,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 48 of 1,091 detections currently carry a `verified` date (4.4 percent).
+date: 52 of 1,091 detections currently carry a `verified` date (4.8 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 
@@ -225,32 +225,34 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. As of 2026-08-18 the catalog has 48 dated detections of
-1,091 (4.4 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
+staleness threshold. As of 2026-08-19 the catalog has 52 dated detections of
+1,091 (4.8 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
 gate permits the legacy undated backlog but requires every new detection to
 carry a valid, non-future `verified` date. Backfill only independently reviewed
 families, and only after the vendor's current public page still names the
-pattern. The first such pass is the mail-routing families that already have
+pattern. The first named pass is the mail-routing families that already have
 claim-contract, quality-baseline, or regional-round review: Microsoft 365,
-Google Workspace, Cloudflare, Okta, and Proofpoint. Once coverage is high
-enough, raise the gate to reject dates older than the chosen threshold. A
-dead-reference URL check remains an opt-in local tool, not a CI gate, because
-the committed gates run at zero network and zero paid-API cost.
+Google Workspace, Cloudflare, Okta, and Proofpoint. The 2026-08-19 MX pass
+dated Google Workspace and Microsoft 365. Cloudflare Email Service was already
+dated; Okta and Proofpoint remain in the queue. Once coverage is high enough,
+raise the gate to reject dates older than the chosen threshold. A dead-reference
+URL check remains an opt-in local tool, not a CI gate, because the committed
+gates run at zero network and zero paid-API cost.
 
 A freshness pass can change wording without adding a rule. The 2026-08-18
-vendor-doc check found two of those cases, both already matched:
+vendor-doc check found two of those cases, both already matched, and the
+2026-08-19 pass closed the remaining wording and dates:
 
 - Google's current MX setup page (updated 2026-08-14) names `smtp.google.com`
   as the default and labels the `aspmx.*` series as the still-supported
-  pre-2023 form. The catalog already matches both (the current host lives as a
-  same-slug EXTEND). The remaining work is to stop calling the legacy series
-  the primary inbound cluster, point `reference` at the current page, and date
-  both detections.
+  pre-2023 form. The catalog already matched both (the current host lives as a
+  same-slug EXTEND). The family now calls `aspmx.*` the documented pre-2023
+  series, points `reference` at the current page, and dates both detections.
 - Microsoft's current Learn DNS-records page still names
   `*.mail.protection.outlook.com`. New accepted domains can also be provisioned
-  under `mx.microsoft`, which the catalog already matches as an EXTEND. Date
-  both hosts from their respective public bases; do not retire the older host
-  or promote the newer one as the only current form.
+  under `mx.microsoft`, which the catalog already matches as an EXTEND. Both
+  hosts are dated from their respective public bases. The older host is not
+  retired, and the newer one is not promoted as the only current form.
 
 Neither finding is a missing-pattern promotion. Both are why the freshness
 loop exists: the vendor page moved, and the family prose has to move with it.
