@@ -1,8 +1,9 @@
 # Engineering Refinement Plan
 
-Status: active implementation plan; v2.14 shipped and v2.15 preflight stopped
-before client evaluation
-Review date: 2026-08-14
+Status: active implementation plan; v2.16 shipped, the engine is
+feature-complete, and the standing work is the fingerprint-freshness loop. The
+v2.15 representative-client preflight remains parked on client availability.
+Review date: 2026-08-18
 
 This plan translates the canonical [roadmap](roadmap.md) into bounded
 engineering tracks. It does not authorize unrelated runtime expansion. Every

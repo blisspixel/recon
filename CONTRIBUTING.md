@@ -105,6 +105,7 @@ are welcome:
 | Contribution type | Bar | Examples |
 |---|---|---|
 | **New fingerprints** | Must use documented public metadata only. Specific pattern, not generic substring. Tested against a public record shape expected to match. | "Add Statsig TXT verification", "Add Workspace ONE CNAME" |
+| **Freshness backfill** | Confirm an independently reviewed family against the vendor's current public page. Add or refresh `verified` and `reference`. Relabel a still-supported host as legacy when the vendor now documents a newer default. Do not stamp today's date without that page. | "Date the Microsoft 365 MX family against the current Learn article"; "Relabel Google Workspace `aspmx.*` as the documented pre-2023 series" |
 | **Refined fingerprints** | `match_mode: all` to eliminate false positives, improved regex, broader selector coverage. | Converting ambiguous slug to a chained pattern |
 | **New signals** | Must derive from existing evidence. Hedged language. | "AI tooling indicators observed alongside identity-provider signals" |
 | **New profiles** | Must reweight existing observations; cannot invent new ones. | "Retail / e-commerce" profile |
@@ -114,11 +115,12 @@ are welcome:
 | **Performance improvements** | With before/after measurement. Hot paths: `detect_provider`, `_curate_insights`, DNS query batching. | Reducing average lookup time, eliminating redundant DNS queries |
 | **Test additions** | Sparse-data fixtures, adversarial inputs, corner cases. | Domain with zero MX + no tenant, IDN / punycode, wildcard DNS |
 
-The **engine stays lean; the data grows**. Most contributions should be
-YAML additions or refinements; that is the intended scaling path for the
-tool. Code changes earn their place against the post-1.0 ethos: correctness,
-reliability, explainability, composability, then new features, in that
-order.
+The **engine stays lean; the data grows**. The engine is feature-complete as
+of v2.16; the standing work is keeping fingerprints current. Most
+contributions should be YAML additions, refinements, or dated freshness
+backfills; that is the intended scaling path for the tool. Code changes earn
+their place against the post-1.0 ethos: correctness, reliability,
+explainability, composability, then new features, in that order.
 
 ---
 
@@ -267,7 +269,11 @@ It walks through the stable schema and specificity checks before emitting YAML.
 but preferred when public vendor documentation exists. Every new detection
 needs a valid, non-future `verified` date recording when its provider reference
 or disclosure-safe aggregate basis was checked. The diff-aware catalog gate
-allows the legacy undated backlog but rejects new undated rules. Do not add
+allows the legacy undated backlog but rejects new undated rules. Freshness
+backfill of that backlog is a first-class contribution: re-read the vendor
+page, date only the detections it still names, and relabel a still-supported
+host as legacy when the vendor now documents a newer default. See
+[catalog-strategy.md](docs/catalog-strategy.md#3-freshness). Do not add
 fields that are not in the stable data-file schema unless a separate schema
 change has already been accepted.
 

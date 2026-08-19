@@ -72,9 +72,12 @@ tracked separately from product work.
 With the engine feature-complete, the roadmap is mostly not a version path. It
 is a set of loops that never finish because the world they observe keeps
 changing. The recent releases (v2.15, v2.16) were output of the playtest loop;
-the next durable stream is output of the freshness loop. Each loop names its
-trigger, cadence, artifact, and stop or pass condition. A loop is healthy when it
-runs on its cadence and produces its artifact, not when it "completes."
+the next durable stream is output of the freshness loop. Agent portability
+remains a parked maintainer track on representative-client availability; it
+does not queue product work behind a working-draft specification. Each loop
+names its trigger, cadence, artifact, and stop or pass condition. A loop is
+healthy when it runs on its cadence and produces its artifact, not when it
+"completes."
 
 | Loop | Trigger | Cadence | Artifact | Stop / pass |
 |---|---|---|---|---|
@@ -108,7 +111,10 @@ promoted rule never rests on a private observation.
 Each pass answers three questions: what is new (a pattern no rule matches), what
 changed (a rule whose vendor endpoint or selector moved, caught by drift and a
 dead-reference check), and what retired (a rule whose basis no longer resolves,
-caught by the freshness audit). Disclosure safety rests on the permanently
+caught by the freshness audit). A pass can also change family wording without
+adding a rule: the first 2026-08-18 vendor-doc check found two already-matched
+mail-routing hosts whose primary-family prose still treated a legacy or older
+default as current. Disclosure safety rests on the permanently
 gitignored private workspaces, the validation-hygiene gate, aggregate-only
 memos, and the mandatory public-reference-or-disclosure-safe-basis rule on every
 promoted fingerprint. Evaluated apexes, organization names, tenant identifiers,
@@ -126,19 +132,19 @@ closed rank, regional, vendor-seed, and prior-sample drift decisions plus full
 publication proof, v2.15 shipped the default-view claim-clarity and
 accessibility decisions, and **v2.16.0 shipped renderer parity** (one shared
 briefing across the panel, `--plain`, `--md`, and the MCP text surface, MCP JSON
-fusion, and the gated surface-parity matrix). Agent portability is a maintainer
-track on an external event, not a version-path milestone: its
-representative task, client, measure, privacy, and stop-rule contract is frozen,
-its protected-main prerequisite and the candidate's network-free schema,
-layout, launch, skill, and version validation are complete, but the paired
-evaluation is blocked on representative-client availability and the project has
-declined to claim conformance against a working-draft specification, so it does
-not queue product work behind it. When the clients are available, measure the
-current native path against that complete-surface Agent Plugins candidate in
-the frozen VS Code, Cursor, and Kiro frame without changing stable CLI, JSON,
-or MCP contracts. New
-claim-surface drift reopens priority 1. Version milestones
-through v3.0:
+fusion, and the gated surface-parity matrix). The durable product work after
+that close is the fingerprint-freshness loop, not another version milestone.
+Agent portability is a maintainer track on an external event, not a version-path
+milestone: its representative task, client, measure, privacy, and stop-rule
+contract is frozen, its protected-main prerequisite and the candidate's
+network-free schema, layout, launch, skill, and version validation are complete,
+but the paired evaluation is blocked on representative-client availability and
+the project has declined to claim conformance against a working-draft
+specification, so it does not queue product work behind it. When the clients
+are available, measure the current native path against that complete-surface
+Agent Plugins candidate in the frozen VS Code, Cursor, and Kiro frame without
+changing stable CLI, JSON, or MCP contracts. New claim-surface drift reopens
+priority 1. Version milestones through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
 
 | Track | Why it sits here | State today | What closes it |
@@ -649,30 +655,37 @@ and capsule milestones in dependency order. The stable-v1 async and schema
 characterizations remain completed supporting evidence; stable-v2 deltas are
 available from the completed priority 2 matrix.
 
-The immediate execution slice is therefore explicit even though its detailed
-characterization section appears later in this document:
+The immediate execution slice is the fingerprint-freshness loop. Agent
+portability stays parked on representative-client availability and does not
+appear here as a product milestone:
 
 1. Preserve the shipped v2.14 rank, regional,
    [vendor-seed](../validation/2026-08-14-catalog-vendor-seed-round.md), and
    [prior-sample drift](../validation/2026-08-14-catalog-drift-round.md)
    decisions, including every promoted, rejected, deferred, unavailable,
    unmeasured, measurement-surface, and non-comparable disposition.
-2. Preserve the frozen v2.16 representative task, client, success, error,
-   latency, discovery-byte, context-cost, portability, privacy, and stop-rule
-   [contract](agent-portability-evaluation-declaration.md). Its protected-main
-   prerequisite and the candidate's offline validation are complete.
-3. Measure the current native 22-tool and client-specific packaging baseline
-   against the generated complete-surface Agent Plugins candidate. Keep client
-   collection private, publish only the frozen aggregates, and keep portable
-   packaging separate from stable CLI, JSON, MCP wire, and OKF projection
-   decisions.
-4. Require every promoted rule to carry a current provider reference or
+2. Require every promoted rule to carry a current provider reference or
    disclosure-safe basis, a `verified` date, a fictional positive fixture, a
    lookalike negative, scoped wording, and exact provenance tests.
-5. Keep the completed stable-v1 characterization, structural-identifiability
+3. Backfill `verified` dates only in independently reviewed families after
+   confirming the vendor's current public page. The first 2026-08-18
+   vendor-doc pass found that Google's current documented MX default is
+   `smtp.google.com` (legacy `aspmx.*` still supported) and that Microsoft
+   now provisions some new accepted domains under `mx.microsoft`. The catalog
+   already matches both hosts; the remaining work is family wording, current
+   references, and dated coverage, not a missing-pattern promotion. Detail:
+   [catalog-strategy.md](catalog-strategy.md#3-freshness).
+4. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work
    proceeds. No catalog result reopens the voided fusion design or upgrades an
    observation into a population claim.
+5. Preserve the frozen representative task, client, success, error, latency,
+   discovery-byte, context-cost, portability, privacy, and stop-rule
+   [contract](agent-portability-evaluation-declaration.md). Measure the native
+   22-tool path against the complete-surface Agent Plugins candidate only when
+   the frozen clients are available. That measurement does not queue product
+   work and does not change stable CLI, JSON, MCP wire, or OKF projection
+   decisions.
 
 ### Apply the v2.11 result through v2.12 and v3
 
@@ -1311,7 +1324,7 @@ generated-artifact drift gates.
 
 ## Current External Basis
 
-Checked through 2026-08-14 UTC against primary sources and recent research:
+Checked through 2026-08-18 UTC against primary sources and recent research:
 
 - [Agent Plugins v1.0.0 working-draft specification](https://agent-plugins.org/specification)
 - [Agent Plugins compatible clients](https://agent-plugins.org/compatible-clients)
@@ -1324,6 +1337,8 @@ Checked through 2026-08-14 UTC against primary sources and recent research:
 - [MCP 2026-07-28 release candidate](https://blog.modelcontextprotocol.io/posts/2026-07-28-release-candidate/)
 - [MCP current documentation](https://modelcontextprotocol.io/docs/getting-started/intro)
 - [MCP Python SDK release history](https://pypi.org/project/mcp/)
+- [Google Workspace current MX setup (`smtp.google.com`, legacy `aspmx.*` still supported)](https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace)
+- [Microsoft 365 external DNS records (current Learn page still names `mail.protection.outlook.com`)](https://learn.microsoft.com/en-us/microsoft-365/enterprise/external-domain-name-system-records)
 - [RFC 9989: DMARC](https://www.rfc-editor.org/info/rfc9989/)
 - [RFC 3986: URI generic syntax](https://www.rfc-editor.org/info/rfc3986/)
 - [RFC 2308: DNS negative caching](https://www.rfc-editor.org/rfc/rfc2308)

@@ -26,8 +26,10 @@ def test_strategic_gap_audit_prioritizes_product_quality_without_runtime_expansi
 
     for required in (
         "The highest-value next build is not inference expansion",
-        "active product gap is representative-client evidence for agent utility, "
-        "context treatment, and packaging portability",
+        "The durable product work is the fingerprint-freshness loop",
+        "representative-client evidence for agent utility, "
+        "context treatment, and packaging portability remains a real remaining gap",
+        "does not queue product work",
         "claim audit and stable MCP matrix remain blocking regression gates",
         "aggregate-safe product-quality baseline",
         "v2.13 caller-held observation capsule",
@@ -98,7 +100,7 @@ def test_strategic_gap_audit_preserves_private_data_and_release_boundaries() -> 
 def test_strategic_gap_audit_cites_current_external_standards() -> None:
     text = _read(AUDIT)
 
-    assert "Checked: 2026-08-14 UTC." in text
+    assert "Checked: 2026-08-18 UTC." in text
 
     for url in (
         "https://www.acm.org/publications/policies/artifact-review-and-badging-current",

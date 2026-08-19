@@ -57,6 +57,23 @@ before any external submission. The most recent completed historical local
 submission-freeze proof is
 [validation/2026-06-30-submission-freeze-local-proof.md](validation/2026-06-30-submission-freeze-local-proof.md).
 
+## Next
+
+The fingerprint-freshness loop. It has no version number because it never
+finishes. Monthly, plus on a missed-detection report or a known vendor change:
+confirm independently reviewed families against the vendor's current public page,
+backfill `verified` dates only where that page still names the pattern, and seed
+new rules from vendor documentation before a corpus row exhibits them. Most
+detections still lack a `verified` date; that undated share is the backfill
+queue, not a reason to stamp today's date. Coverage is
+`python -m validation.audit_fingerprints --freshness`. Detail:
+[docs/catalog-strategy.md](docs/catalog-strategy.md#3-freshness).
+
+Agent portability stays a maintainer track on an external event. The frozen
+[representative-client contract](docs/agent-portability-evaluation-declaration.md)
+is green offline; the paired evaluation waits on those clients. It does not
+queue product work.
+
 ## Version path (order of operations)
 
 No calendar estimates. The rows are release-order priorities: each milestone
