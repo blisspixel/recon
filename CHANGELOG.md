@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.0] - 2026-08-19
+
 Additive connection map. JSON always emits a grouped `connection_map` of every
 observed vendor and related-host class. `--md` uses the same lanes as the
 panel (Email, Identity, AI, ...) instead of a flat Tech Stack list. `--md
