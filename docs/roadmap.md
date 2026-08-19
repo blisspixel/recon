@@ -668,12 +668,13 @@ appear here as a product milestone:
    disclosure-safe basis, a `verified` date, a fictional positive fixture, a
    lookalike negative, scoped wording, and exact provenance tests.
 3. Backfill `verified` dates only in independently reviewed families after
-   confirming the vendor's current public page. The first 2026-08-18
-   vendor-doc pass found that Google's current documented MX default is
-   `smtp.google.com` (legacy `aspmx.*` still supported) and that Microsoft
-   now provisions some new accepted domains under `mx.microsoft`. The catalog
-   already matches both hosts; the remaining work is family wording, current
-   references, and dated coverage, not a missing-pattern promotion. Detail:
+   confirming the vendor's current public page. The 2026-08-19 MX pass dated
+   Google Workspace (`smtp.google.com` current default, `aspmx.*` documented
+   pre-2023) and Microsoft 365 (`mail.protection.outlook.com` still named,
+   `mx.microsoft` for DNSSEC/DANE and some new accepted domains) from the
+   current vendor pages. That was family wording and dated coverage, not a
+   missing-pattern promotion. Okta and Proofpoint remain in the named
+   mail-routing queue. Detail:
    [catalog-strategy.md](catalog-strategy.md#3-freshness).
 4. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work

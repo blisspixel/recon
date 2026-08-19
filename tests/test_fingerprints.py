@@ -8,6 +8,7 @@ import pytest
 import yaml
 
 from recon_tool.fingerprints import (
+    DetectionRule,
     _validate_fingerprint,
     _validate_regex,
     get_cname_patterns,
@@ -549,3 +550,41 @@ def test_discovered_txt_verifications_classify():
     for token, slug in expected.items():
         m = match_txt(token, pats)
         assert getattr(m, "slug", None) == slug, f"{token} -> expected {slug}, got {getattr(m, 'slug', None)}"
+
+
+def _mx_rules_for_slug(slug: str) -> dict[str, DetectionRule]:
+    rules: dict[str, DetectionRule] = {}
+    for fingerprint in load_fingerprints():
+        if fingerprint.slug != slug:
+            continue
+        for detection in fingerprint.detections:
+            if detection.type == "mx":
+                rules[detection.pattern] = detection
+    return rules
+
+
+def test_google_workspace_mx_family_matches_current_vendor_page() -> None:
+    rules = _mx_rules_for_slug("google-workspace")
+    aspmx = rules["aspmx.l.google.com"]
+    smtp = rules["smtp.google.com"]
+    assert aspmx.verified == "2026-08-19"
+    assert smtp.verified == "2026-08-19"
+    assert "pre-2023" in aspmx.description
+    assert "primary inbound" not in aspmx.description.lower()
+    assert "smtp.google.com" in aspmx.description
+    assert "default" in smtp.description.lower()
+    assert "aspmx" in smtp.description
+    assert aspmx.reference.startswith("https://knowledge.workspace.google.com/")
+    assert smtp.reference.startswith("https://knowledge.workspace.google.com/")
+
+
+def test_microsoft365_mx_family_matches_current_vendor_pages() -> None:
+    rules = _mx_rules_for_slug("microsoft365")
+    outlook = rules["mail.protection.outlook.com"]
+    mx_microsoft = rules["mx.microsoft"]
+    assert outlook.verified == "2026-08-19"
+    assert mx_microsoft.verified == "2026-08-19"
+    assert "mx.microsoft" in outlook.description
+    assert "mail.protection.outlook.com" in mx_microsoft.description
+    assert "external-domain-name-system-records" in outlook.reference
+    assert "how-dane-secures-email" in mx_microsoft.reference

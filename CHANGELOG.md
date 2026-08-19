@@ -26,6 +26,27 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+The first named fingerprint-freshness pass dates the Google Workspace and
+Microsoft 365 MX families against the current vendor pages. `aspmx.*` is
+the documented pre-2023 series; `smtp.google.com` is the current default.
+`*.mail.protection.outlook.com` remains named on Learn; `*.mx.microsoft` is
+the DNSSEC/DANE form. No pattern was added or retired.
+
+### Tool Surface Changes
+
+Tool surface changes: no command or flag is added, removed, or renamed.
+
+### Changed
+
+- **Google Workspace MX family matches the current setup page.** The
+  `aspmx.*` rule no longer calls that series the primary inbound cluster.
+  Both `aspmx.l.google.com` and `smtp.google.com` now cite the 2026-08-14
+  Workspace MX page and carry `verified: 2026-08-19`.
+- **Microsoft 365 MX family matches the current Learn pages.**
+  `mail.protection.outlook.com` cites the external DNS-records article.
+  `mx.microsoft` cites the SMTP DANE article. Both are dated. The older
+  host is not retired.
+
 ## [2.17.2] - 2026-08-19
 
 The no-args banner and lookup `--help` now name `--md` and `--full` as the
