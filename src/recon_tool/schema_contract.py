@@ -42,6 +42,7 @@ REQUIRED_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "chain_motifs",
     "cloud_instance",
     "confidence",
+    "connection_map",
     "ct_subdomain_count",
     "default_domain",
     "degraded_sources",
@@ -97,7 +98,9 @@ _V2_ERROR_RECORD_KEYS: frozenset[str] = frozenset({"domain", "error", "error_kin
 
 # Fields added to the required set in the v2.0 schema-hardening pass; excluded
 # from the legacy key-set classifier so pre-v2.0 records still classify.
-_V2_ADDED_REQUIRED_FIELDS: frozenset[str] = frozenset({"record_type", "schema_version", "fusion_enabled"})
+_V2_ADDED_REQUIRED_FIELDS: frozenset[str] = frozenset(
+    {"record_type", "schema_version", "fusion_enabled", "connection_map"}
+)
 
 
 def classify_batch_record(record: Mapping[str, object]) -> str:

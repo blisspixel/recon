@@ -141,6 +141,7 @@ _STABLE_FIELDS: dict[str, type | tuple[type, ...]] = {
     "infrastructure_clusters": dict,
     # Per-slug relationship metadata (always emitted, may be empty)
     "fingerprint_metadata": dict,
+    "connection_map": dict,
 }
 
 # Experimental fields — documented but can evolve in minor releases.

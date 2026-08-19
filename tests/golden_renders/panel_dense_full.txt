@@ -21,8 +21,11 @@ Domains (3)
   alpha.example
 
 
-Related domains
-  api.alpha.invalid, login.alpha.invalid
+Related host classes
+  login.
+    login.alpha.invalid
+  api.
+    api.alpha.invalid
 
 Insights
   Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)

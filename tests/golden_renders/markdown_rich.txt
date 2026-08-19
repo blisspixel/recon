@@ -9,16 +9,13 @@
 **Evidence Confidence:** medium\
 **Inference Confidence:** medium
 
-## Microsoft 365 Services
-
-- Microsoft 365
-
-## Google Workspace Services
+## Email
 
 - Google Workspace
+- Microsoft 365
 - Google Workspace CSE configuration indicator
 
-## Tech Stack
+## Collaboration
 
 - Slack
 

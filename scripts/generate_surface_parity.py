@@ -121,6 +121,7 @@ _CLAIMS: tuple[tuple[str, str], ...] = (
     ("related_domains", "login.beta.invalid"),
     ("insights", "Email security"),
     ("fusion", "posterior"),
+    ("connection_map", "connection_map"),
 )
 
 
@@ -135,6 +136,8 @@ def _present_text(claim: str, probe: str, text: str) -> bool:
         return "provider:" in low or "provider " in low
     if claim == "fusion":
         return "posterior_observations" in low
+    if claim == "connection_map":
+        return "## related host classes" in low or "*none observed in public dns*" in low
     return probe.lower() in low
 
 
@@ -149,6 +152,7 @@ def _present_json(claim: str, probe: str, payload: dict[str, object]) -> bool:
         "provider": lambda: "provider" in payload,
         "confidence": lambda: "confidence" in payload,
         "fusion": lambda: bool(payload.get("posterior_observations")),
+        "connection_map": lambda: bool(payload.get("connection_map")),
         "related_domains": lambda: bool(payload.get("related_domains")),
         "insights": lambda: bool(payload.get("insights")),
         "tenant_id": lambda: bool(payload.get("tenant_id")),
@@ -259,7 +263,7 @@ def _render() -> str:
         "| related_domains | "
         + _cut_reconciles(rel_shown_plain, _note_more(plain, "related_domains_note"), rel_full_plain)
         + " | "
-        + _md_reconcile(md, md_full, "Related Domains", "--md --full")
+        + _md_reconcile_related(md, md_full)
         + " |"
     )
     lines.append(
@@ -297,6 +301,13 @@ def _md_section_items(md: str, header: str) -> tuple[int, int | None]:
 def _md_reconcile(md: str, md_full: str, header: str, _cmd: str) -> str:
     shown, note_more = _md_section_items(md, header)
     full, _ = _md_section_items(md_full, header)
+    return _cut_reconciles(shown, note_more, full)
+
+
+def _md_reconcile_related(md: str, md_full: str) -> str:
+    """Default related-domain cut vs the classified full list of the same hosts."""
+    shown, note_more = _md_section_items(md, "Related Domains")
+    full, _ = _md_section_items(md_full, "Related Host Classes")
     return _cut_reconciles(shown, note_more, full)
 
 

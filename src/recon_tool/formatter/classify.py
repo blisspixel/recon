@@ -66,6 +66,7 @@ __all__ = [
     "provider_line",
     "role_aware_service_label",
     "role_split_vendors",
+    "service_label_parts",
     "slug_to_relationship_metadata",
 ]
 
@@ -163,12 +164,21 @@ _RECORD_ROLE_DISPLAY_SUFFIXES = tuple(
 )
 
 
+def service_label_parts(label: str) -> tuple[str, str | None]:
+    """Split a role-aware service label into ``(name, role)``.
+
+    ``role`` is the evidence-role qualifier without surrounding parentheses,
+    or ``None`` when the label carries none (self-describing observations).
+    """
+    for suffix in _EVIDENCE_ROLE_SUFFIXES:
+        if label.endswith(suffix):
+            return label.removesuffix(suffix), suffix[2:-1]
+    return label, None
+
+
 def _unqualified_service_name(service: str) -> str:
     """Remove only evidence-role suffixes emitted by this module."""
-    for suffix in _EVIDENCE_ROLE_SUFFIXES:
-        if service.endswith(suffix):
-            return service.removesuffix(suffix)
-    return service
+    return service_label_parts(service)[0]
 
 
 def _is_self_describing_observation(service: str) -> bool:

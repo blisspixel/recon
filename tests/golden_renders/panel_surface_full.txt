@@ -12,8 +12,11 @@ Services
   2 unattributed matches: --full
 
 
-Related domains
-  api.alpha.invalid, login.alpha.invalid
+Related host classes
+  login.
+    login.alpha.invalid
+  api.
+    api.alpha.invalid
 
 External surface (9)
   login.alpha.invalid       Auth0, Cloudflare

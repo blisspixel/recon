@@ -16,12 +16,11 @@ import string
 from recon_tool.explanation_lineage import explanation_lineage_label
 from recon_tool.formatter.briefing import BriefingView
 from recon_tool.formatter.classify import (
+    SERVICE_CATEGORIES_ORDER,
     categorize_services,
     compact_categorized_services,
     google_workspace_cse_indicators,
     google_workspace_module_indicators,
-    is_gws_service,
-    is_m365_service,
 )
 from recon_tool.models import ExplanationRecord, TenantInfo
 from recon_tool.validator import strip_control_chars
@@ -97,44 +96,52 @@ def _md_header(info: TenantInfo, view: BriefingView, detailed: bool) -> list[str
     return lines
 
 
-def _md_services_split(info: TenantInfo, detailed: bool = False) -> list[str]:
-    """Services grouped into Microsoft 365 / Google Workspace / Tech Stack.
+_EMPTY_LANE_NOTE = "*none observed in public DNS*"
 
-    ``detailed`` is the --explain / --verbose report, which keeps every
-    evidence-role qualifier. The default report compacts them (ADR-0012) and
-    closes the section with one italic pointer at the detailed surfaces.
+
+def _md_services_split(info: TenantInfo, *, detailed: bool, full: bool) -> list[str]:
+    """Services grouped into the same lanes the panel uses.
+
+    ``detailed`` keeps every evidence-role qualifier (ADR-0012). ``full`` is
+    the downstream face: empty lanes stay visible and catalog summaries sit
+    under each logo. The default report omits empty lanes, drops unattributed
+    matches, and closes with one italic pointer at the detailed surfaces.
     """
+    from recon_tool.formatter.connection_map import (
+        entry_role,
+        name_to_slug,
+        slug_for_name,
+        summaries_by_slug,
+        summary_for_role,
+    )
+
     categorized = categorize_services(info)
     compacted_count = 0
     dropped_count = 0
     if not detailed:
         categorized, compacted_count, dropped_count = compact_categorized_services(categorized)
-    m365_svcs: list[str] = []
-    gws_svcs: list[str] = []
-    other_svcs: list[str] = []
-    for service in (service for services in categorized.values() for service in services):
-        if is_gws_service(service):
-            gws_svcs.append(service)
-        elif is_m365_service(service):
-            m365_svcs.append(service)
-        else:
-            other_svcs.append(service)
+    summaries = summaries_by_slug() if full else {}
+    lookup = name_to_slug() if full else {}
     lines: list[str] = []
-    for header, svcs in (
-        ("## Microsoft 365 Services", m365_svcs),
-        ("## Google Workspace Services", gws_svcs),
-        ("## Tech Stack", other_svcs),
-    ):
-        if svcs:
-            lines.append(header)
+    for label in SERVICE_CATEGORIES_ORDER:
+        entries = categorized.get(label, [])
+        if not entries and not full:
+            continue
+        lines.append(f"## {label}")
+        lines.append("")
+        if not entries:
+            lines.append(_EMPTY_LANE_NOTE)
             lines.append("")
-            for svc in svcs:
-                lines.append(f"- {markdown_escape(svc)}")
-            lines.append("")
-    # Emitted even when every service was dropped and no section survives: a
-    # report that silently omits matches reads as a report that found none.
-    # Rendered as a bare italic line rather than a section so the stable H2
-    # structure gains no heading.
+            continue
+        for service in entries:
+            lines.append(f"- {markdown_escape(service)}")
+            if full:
+                name, _role = entry_role(service)
+                slug = slug_for_name(name, lookup)
+                summary = summary_for_role(slug, _role, summaries)
+                if summary:
+                    lines.append(f"  - {markdown_escape(summary)}")
+        lines.append("")
     notes: list[str] = []
     if compacted_count:
         notes.append("Evidence roles omitted; run with `--explain` for the evidence trail.")
@@ -222,18 +229,41 @@ def _md_tenant_domains(info: TenantInfo) -> list[str]:
     return lines
 
 
+def _md_related_host_classes(info: TenantInfo) -> list[str]:
+    """Every related host under its first-label class, the --md --full map."""
+    from recon_tool.formatter.connection_map import related_host_classes
+
+    classes = related_host_classes(info.related_domains, info.surface_attributions)
+    if not classes:
+        return []
+    lines: list[str] = ["## Related Host Classes", ""]
+    for item in classes:
+        prefix = markdown_escape(str(item["prefix"]))
+        slugs = item["primary_slugs"]
+        heading = prefix
+        if slugs:
+            slug_text = ", ".join(markdown_escape(str(slug)) for slug in slugs)
+            heading = f"{prefix} ({slug_text})"
+        lines.append(f"**{heading}**{MARKDOWN_HARD_BREAK}")
+        for host in item["hosts"]:
+            lines.append(f"- {markdown_escape(str(host))}")
+        lines.append("")
+    return lines
+
+
 def _md_related_domains(info: TenantInfo, view: BriefingView, full: bool) -> list[str]:
-    """Related-domains section: the high-signal cut by default, all under --full."""
-    related = info.related_domains if full else view.related_shown
+    """Related-domains section: the high-signal cut by default, classified under --full."""
+    if full:
+        return _md_related_host_classes(info)
+    related = view.related_shown
     if not related:
         return []
     lines: list[str] = ["## Related Domains", ""]
     for d in related:
         lines.append(f"- {markdown_escape(d)}")
-    if not full:
-        note = view.related_note("--md --full")
-        if note is not None:
-            lines.append(f"- *{note}*")
+    note = view.related_note("--md --full")
+    if note is not None:
+        lines.append(f"- *{note}*")
     lines.append("")
     return lines
 
@@ -281,17 +311,19 @@ def format_tenant_markdown(
     briefing's cuts on insights and related domains, and honors
     ``confidence_mode`` (ADR-0017). ``detailed`` is the --explain / --verbose
     report and keeps every evidence-role qualifier; the default compacts them
-    (ADR-0012). ``full`` restores every insight and related domain, the report's
-    pre-2.16 behavior, named by the ``--md --full`` notes.
+    (ADR-0012). ``full`` is the downstream connection map: every lane including
+    empty ones, every insight and related host class, and catalog summaries.
+    ``--md --full`` also keeps evidence-role qualifiers, matching ADR-0012.
     """
     from recon_tool.collection_view import collection_observable_info
     from recon_tool.formatter.briefing import build_briefing
 
     info = collection_observable_info(info)
-    view = build_briefing(info, confidence_mode=confidence_mode, detailed=detailed)
+    show_roles = detailed or full
+    view = build_briefing(info, confidence_mode=confidence_mode, detailed=show_roles)
     lines: list[str] = []
-    lines.extend(_md_header(info, view, detailed))
-    lines.extend(_md_services_split(info, detailed))
+    lines.extend(_md_header(info, view, show_roles))
+    lines.extend(_md_services_split(info, detailed=show_roles, full=full))
     lines.extend(_md_gws_details(info))
     lines.extend(_md_insights(info, view, full))
     lines.extend(_md_cert_intel(info))

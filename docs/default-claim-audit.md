@@ -57,7 +57,7 @@ rejected.
 - `audit_status: open` means the family still requires implementation or review.
 
 At the 2026-08-01 checkpoint, the inventory contains 27 families and covers 89
-agent-guidance sections, 16 insight generators, 197 JSON property occurrences,
+agent-guidance sections, 16 insight generators, 214 JSON property occurrences,
 167 MCP tool and output surfaces, 31 panel producers, 4 recommendation
 producers, 84 quantitative or categorical score fields, and 8 MCP instruction
 sections. 27 families are complete. 0 material runtime families have
