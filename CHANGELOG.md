@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.2] - 2026-08-19
+
 The no-args banner and lookup `--help` now name `--md` and `--full` as the
 connection map. The reserved-name banner matches the README: live lookups of
 `example.com` return stray public residue at High confidence, not an empty
