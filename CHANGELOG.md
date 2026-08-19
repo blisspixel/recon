@@ -26,6 +26,18 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.16.1] - 2026-08-19
+
+Catalog-gate correctness and published-docs catch-up. `recon fingerprints
+check` now rejects duplicate YAML mapping keys that PyYAML was silently
+dropping. The published README and roadmap now name the fingerprint-freshness
+loop as the standing work after the v2.16 engine close. No stable JSON, CSV,
+MCP, cache, or capsule contract changes.
+
+### Tool Surface Changes
+
+Tool surface changes: no command or flag is added, removed, or renamed.
+
 ### Fixed
 
 - **Fingerprint YAML now rejects duplicate mapping keys.** PyYAML keeps the
@@ -38,12 +50,15 @@ operator, corporate group, ownership, or control.
 
 ### Documentation
 
-- README, ROADMAP, catalog-strategy, and the strategic-gap audit now name the
-  fingerprint-freshness loop as the standing work after the v2.16 engine close.
-  Agent portability stays parked on representative-client availability and does
-  not queue product work. The first vendor-doc pass records two already-matched
-  mail-routing hosts whose family wording still treats a legacy or older default
-  as current.
+- README, ROADMAP, catalog-strategy, contributing, and the strategic-gap audit
+  now name the fingerprint-freshness loop as the standing work after the v2.16
+  engine close. Agent portability stays parked on representative-client
+  availability and does not queue product work. The first vendor-doc pass
+  records two already-matched mail-routing hosts whose family wording still
+  treats a legacy or older default as current.
+- This package also publishes the post-2.16.0 reader-facing README rewrite,
+  the standing-loops reframe, the ADR-0013 fusion-as-debt amendment, and the
+  adversarial corpus result, all of which were already on main.
 
 ## [2.16.0] - 2026-08-17
 
