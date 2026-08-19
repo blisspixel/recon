@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.3] - 2026-08-19
+
 The first named fingerprint-freshness pass dates the Google Workspace and
 Microsoft 365 MX families against the current vendor pages. `aspmx.*` is
 the documented pre-2023 series; `smtp.google.com` is the current default.
