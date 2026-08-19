@@ -2893,10 +2893,6 @@ fingerprints:
     reference: https://support.google.com/a/answer/7314058
     tier: application
     description: >-
-      Subdomain CNAMEs into ghs.google.com (alternative
-      Google Hosted Services endpoint). Same hosted-
-      services semantics as the googlehosted.com form.
-    description: >-
       Google Workspace Sites / module CNAME on the newer
       `ghs.google.com` zone (the legacy form is
       `ghs.googlehosted.com`). Indicates the domain delegates a
@@ -3006,7 +3002,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: url-fwd.easydns.com
-    reference: https://kb.easydns.com/
     tier: infrastructure
     description: >-
       easyDNS registrar URL-forwarding-service CNAME (HTTP variant).
@@ -3074,7 +3069,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: fortiwebcloud.net
-    reference: https://docs.fortinet.com/product/fortiweb-cloud/
     tier: application
     description: Fortinet FortiWeb Cloud WAF-as-a-Service; customer CNAMEs route through *.fortiwebcloud.net.
     reference: https://www.fortinet.com/products/web-application-firewall/fortiweb-cloud
@@ -3096,7 +3090,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: sites.framer.app
-    reference: https://www.framer.com/learn/custom-domain-setup/
     tier: application
     description: >-
       Framer no-code website-builder CNAME (custom domains CNAME to
@@ -3112,7 +3105,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: partners.gandi.net
-    reference: https://docs.gandi.net/en/domain_names/
     tier: infrastructure
     description: Gandi registrar web-redirect service; CNAMEs terminate at webredir.partners.gandi.net.
     reference: https://docs.gandi.net/en/domain_names/common_operations/web_forwarding.html
@@ -3291,7 +3283,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: okta-gov.com
-    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
     tier: application
     description: Okta Government Cloud (FedRAMP); federal-agency custom logins CNAME through customdomains.okta-gov.com.
     reference: https://www.okta.com/okta-for-government/
@@ -3312,7 +3303,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: ping.cloud
-    reference: https://docs.pingidentity.com/pingone/main/
     tier: application
     description: Ping Identity PingFederate cloud; enterprise SSO / federation CNAMEs route through *.ping.cloud cluster endpoints.
     reference: https://www.pingidentity.com/en/platform/pingfederate.html
@@ -3456,7 +3446,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: lb.wordpress.com
-    reference: https://wordpress.com/support/domains/
     tier: application
     description: WordPress.com hosted blogs with custom domain mapping; CNAMEs terminate at lb.wordpress.com.
     reference: https://wordpress.com/support/domains/map-subdomain/
@@ -3575,7 +3564,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: amplifyapp.com
-    reference: https://docs.aws.amazon.com/amplify/latest/userguide/custom-domains.html
     tier: infrastructure
     description: AWS Amplify Hosting custom-domain target; frontend / SPA / SSR sites CNAME to ``<branch>.<app-id>.amplifyapp.com``.
     reference: https://docs.aws.amazon.com/amplify/latest/userguide/custom-domains.html
@@ -3674,7 +3662,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: azurewebsites.net
-    reference: https://learn.microsoft.com/en-us/azure/app-service/app-service-web-tutorial-custom-domain
     tier: infrastructure
     description: Azure App Service customer-facing endpoint; web apps with custom domains CNAME to ``<app>.azurewebsites.net`` before App Service serves the response.
     reference: https://learn.microsoft.com/azure/app-service/app-service-web-tutorial-custom-domain
@@ -3823,7 +3810,6 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: up.railway.app
-    reference: https://docs.railway.app/deploy/exposing-your-app
     tier: infrastructure
     description: Railway deployment endpoint; service URLs CNAME to ``<service>.up.railway.app``.
     reference: https://docs.railway.app/guides/public-networking

@@ -28,7 +28,6 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^slack-domain-verification=
-    reference: https://slack.com/help
     description: >-
       Slack workspace domain-verification TXT. Indicates the
       domain is claimed by a Slack workspace, typically as part
