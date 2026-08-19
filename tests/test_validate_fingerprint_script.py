@@ -158,6 +158,35 @@ def test_validate_path_missing_path_returns_validation_code(
     assert "does not exist" in captured.err
 
 
+def test_validate_path_rejects_duplicate_mapping_keys(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = tmp_path / "fingerprints.yaml"
+    path.write_text(
+        (
+            "fingerprints:\n"
+            "  - name: Duped Description\n"
+            "    slug: duped-description\n"
+            "    category: Email\n"
+            "    confidence: high\n"
+            "    detections:\n"
+            "      - type: mx\n"
+            "        pattern: smtp.example.com\n"
+            "        description: first wording\n"
+            "        description: second wording\n"
+        ),
+        encoding="utf-8",
+    )
+
+    code = fingerprint_validator.validate_path(path, quiet=True)
+
+    captured = capsys.readouterr()
+    assert code == 1
+    assert "duplicate mapping key" in captured.err
+    assert "Validated 0 entries: 0 passed, 1 failed" in captured.out
+
+
 def test_validate_path_rejects_invalid_yaml(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],

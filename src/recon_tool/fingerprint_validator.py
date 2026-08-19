@@ -21,6 +21,20 @@ from recon_tool.specificity import evaluate_pattern
 __all__ = ["main", "validate_builtin_artifact", "validate_path"]
 
 
+def _mapping_has_duplicate_keys(node: yaml.Node) -> bool:
+    """True when any mapping in ``node`` repeats a key. PyYAML keeps the last value."""
+    if isinstance(node, yaml.MappingNode):
+        seen: set[str] = set()
+        for key_node, value_node in node.value:
+            key = str(getattr(key_node, "value", ""))
+            if key in seen or _mapping_has_duplicate_keys(value_node):
+                return True
+            seen.add(key)
+    elif isinstance(node, yaml.SequenceNode):
+        return any(_mapping_has_duplicate_keys(item) for item in node.value)
+    return False
+
+
 def _extract_entries(raw: Any, path: Path) -> list[Any] | None:
     """Accept wrapped ``{fingerprints: [...]}`` or bare list. None on shape error."""
     if isinstance(raw, dict) and "fingerprints" in raw:
@@ -51,7 +65,12 @@ def _validate_file(
 ) -> tuple[int, int, list[str]]:
     """Validate one file. Returns (total, passed, failed_names)."""
     try:
-        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
+        text = path.read_text(encoding="utf-8")
+        composed = yaml.compose(text)
+        if composed is not None and _mapping_has_duplicate_keys(composed):
+            print(f"error: {path} contains a duplicate mapping key", file=sys.stderr)
+            return (0, 0, [f"{path} (duplicate mapping key)"])
+        raw = yaml.safe_load(text)
     except yaml.YAMLError as exc:
         print(f"error: invalid YAML in {path}: {exc}", file=sys.stderr)
         return (0, 0, [f"{path} (YAML parse)"])
