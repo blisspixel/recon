@@ -99,7 +99,7 @@ Services
 
 
 High-signal related domains
-  login.example.com, status.example.com, support.example.com
+  login.example.com, support.example.com, status.example.com
 
 Insights
   Federated identity observed; identity-vendor indicators: Okta
