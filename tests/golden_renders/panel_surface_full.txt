@@ -13,7 +13,7 @@ Services
 
 
 Related host classes
-  login.
+  login. (auth0)
     login.alpha.invalid
   api.
     api.alpha.invalid
