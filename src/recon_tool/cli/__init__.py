@@ -259,6 +259,7 @@ def _print_welcome_banner() -> None:
         (
             ("recon <domain>", "clean summary (recommended)"),
             ("recon <domain> --plain", "panel as linear text for screen readers and grep"),
+            ("recon <domain> --md", "grouped Markdown; --full is the connection map"),
             ("recon <domain> --json", "structured automation"),
             ("recon <domain> --explain", "evidence and explanation"),
             ("recon batch domains.txt", "process multiple domains"),
@@ -272,13 +273,12 @@ def _print_welcome_banner() -> None:
     console.print("  recon example.com --verbose")
     console.print("  recon example.com --full --json")
     console.print()
-    # The examples show flag shapes, not a demo. Reserved and .invalid names
-    # publish little or nothing, so a first-time reader who runs one verbatim
-    # gets an empty panel; say that here rather than let it read as a defect.
+    # The examples show flag shapes, not a demo. A live reserved-name lookup
+    # returns stray public residue at High confidence, not an empty panel.
     console.print(
         "[dim]Every lookup is live. These examples use reserved example.com to show flag "
-        "shapes; reserved and .invalid names publish little or nothing, so substitute a "
-        "domain you are authorized to review to see a populated panel.[/dim]"
+        "shapes. Reserved names return stray public residue at High confidence, not a "
+        "company result. Point recon at a domain you operate or are authorized to review.[/dim]"
     )
     console.print(
         "[dim]Pass a public-suffix domain (for example, example.com). Bare hostnames without a "
@@ -303,7 +303,7 @@ def lookup(
     markdown: bool = typer.Option(
         False,
         "--md",
-        help="Markdown report",
+        help="Grouped Markdown report; --full is the connection map",
         rich_help_panel=_OUTPUT_HELP_PANEL,
     ),
     plain: bool = typer.Option(
@@ -330,7 +330,7 @@ def lookup(
         False,
         "--full",
         "-f",
-        help="Expanded evidence, all domains, and posture",
+        help="Expanded evidence, all domains, posture, and host classes",
         rich_help_panel=_REPORT_HELP_PANEL,
     ),
     verbose: bool = typer.Option(
@@ -578,7 +578,7 @@ def batch(
     markdown: bool = typer.Option(
         False,
         "--md",
-        help="Markdown report per domain",
+        help="Grouped Markdown report per domain",
         rich_help_panel=_OUTPUT_HELP_PANEL,
     ),
     csv_output: bool = typer.Option(

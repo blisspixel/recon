@@ -372,6 +372,7 @@ class TestSubprocessEntryPoint:
         # (command line, then an indented description line) rather than the
         # whole phrase, which would re-break whenever the wording changes.
         assert "  recon <domain> --plain\n    panel as linear" in usage
+        assert "  recon <domain> --md\n    grouped Markdown" in usage
         assert all(not line.endswith("→") for line in usage.splitlines())
         assert max(len(line) for line in result.stdout.splitlines()) <= columns
 
@@ -397,6 +398,7 @@ class TestSubprocessEntryPoint:
         assert result.returncode == 0, result.stderr
         usage = result.stdout.split("Usage", 1)[1].split("Common examples", 1)[0]
         assert "for screen readers and grep" in " ".join(usage.split())
+        assert "--full is the connection map" in " ".join(usage.split())
         assert all(not line or line.startswith("  ") for line in usage.splitlines())
         assert max(len(line) for line in result.stdout.splitlines()) <= columns
 

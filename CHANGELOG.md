@@ -26,6 +26,28 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+The no-args banner and lookup `--help` now name `--md` and `--full` as the
+connection map. The reserved-name banner matches the README: live lookups of
+`example.com` return stray public residue at High confidence, not an empty
+panel.
+
+### Tool Surface Changes
+
+Tool surface changes: no command or flag is added, removed, or renamed.
+Lookup `--md` / `--full` help and the no-args usage list name `--full` as
+the connection map. The reserved-name banner now says residue, not emptiness.
+
+### Changed
+
+- **No-args banner names `--md`.** The usage list already had `--plain` and
+  `--json`. A 2.17.0 playtest looking for the connection map from `recon`
+  with no arguments never saw `--md`.
+- **Lookup `--help` names the map.** `--md` is "Grouped Markdown report;
+  `--full` is the connection map". `--full` now also names host classes.
+- **Reserved-name banner matches the README.** The previous "publish little
+  or nothing" line was false on live reserved names: they return stray
+  public residue at High confidence, not a company result.
+
 ## [2.17.1] - 2026-08-19
 
 The briefing related-domain cut now ranks identity and commerce host classes

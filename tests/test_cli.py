@@ -69,7 +69,8 @@ class TestHelp:
         assert "--strict" in plain
         collapsed = " ".join(plain.replace("│", " ").split())
         assert "Services are shown by default; retained for compatibility" in collapsed
-        assert "Expanded evidence, all domains, and posture" in collapsed
+        assert "Grouped Markdown report; --full is the connection map" in collapsed
+        assert "Expanded evidence, all domains, posture, and host classes" in collapsed
         assert "configured recursive resolver" in collapsed
         assert "authoritative DNS may observe the resulting traffic" in collapsed
         assert "MTA-STS policy fetch is the only default target-owned HTTP/application request" in collapsed
@@ -145,6 +146,8 @@ class TestHelp:
         collapsed = " ".join(_strip_ansi(result.output).split())
         assert "--plain" in collapsed
         assert "screen readers and grep" in collapsed
+        assert "--md" in collapsed
+        assert "--full is the connection map" in collapsed
         assert "--json" in collapsed
         assert "structured automation" in collapsed
         assert "--explain → evidence and explanation" in collapsed
@@ -159,6 +162,9 @@ class TestHelp:
         assert "DNS queries" in collapsed
         assert "MTA-STS" in collapsed
         assert "Google CSE and BIMI direct probes run only with --direct-probes" in collapsed
+        assert "stray public residue" in collapsed
+        assert "High confidence" in collapsed
+        assert "publish little or nothing" not in collapsed
 
     def test_version_flag(self) -> None:
         from recon_tool.cli import version_callback
