@@ -3,20 +3,23 @@
 Status: source-backed step-back audit for the current roadmap. This file does
 not add CLI, MCP, JSON, fingerprint, schema, dependency, or network behavior.
 
-Checked: 2026-08-14 UTC.
+Checked: 2026-08-18 UTC.
 
 ## Bottom Line
 
 The project has a strong stable baseline: the CLI, JSON schema, local stdio MCP
 server, bounded collectors, release path, generated-artifact guards, public
-proof bundle, and claim-map gates are shipped. Stable infrastructure is not
-proof that the product is complete. Evidence-semantic integrity and MCP v2
+proof bundle, and claim-map gates are shipped. v2.16 closed the presentation
+surfaces. The engine is feature-complete. Evidence-semantic integrity and MCP v2
 adoption are complete maintenance gates. Catalog quality, latency, and
 degradation now have bounded evidence and remain maintenance concerns. The
-active product gap is representative-client evidence for agent utility,
-context treatment, and packaging portability. Agent Plugins v1.0.0 and Open
-Knowledge Format v0.2 are explicit interoperability inputs, but they do not
-displace the product-quality order below.
+durable product work is the fingerprint-freshness loop: dated coverage is still
+the minority of the catalog, and vendor documentation moves independently of
+any version milestone; representative-client evidence for agent utility,
+context treatment, and packaging portability remains a real remaining gap,
+parked on client availability; it does not queue product work. Agent Plugins
+v1.0.0 and Open Knowledge Format v0.2 are explicit interoperability inputs, but
+they do not displace the product-quality order below.
 
 The highest-value next build is not inference expansion. The aggregate-safe
 product-quality baseline found that the frozen M365 ablation failed its
@@ -39,14 +42,16 @@ also closed. Every row was measured, no bounded record type crossed the frozen
 decline threshold, catalog classification comparison was withheld, the
 catalog-driven `subdomain_txt` measurement-surface change was disclosed, and
 no rule was promoted. Full local, protected-main, PyPI, GitHub Release, SBOM,
-provenance, and channel-parity checks passed. The v2.15 representative-client
-Agent Plugins and discovery-surface evaluation contract is now frozen and its
+provenance, and channel-parity checks passed. v2.15 and v2.16 then closed the
+default-view and renderer-parity class. The v2.15 representative-client
+Agent Plugins and discovery-surface evaluation contract remains frozen and its
 protected-main prerequisite passed. The deterministic complete-surface
 candidate passes network-free validation against the pinned schemas and skill
 rules. The first local preflight stopped before collection because Cursor was
-unavailable and the selected runtime did not match the candidate. Satisfy that
-exact gate and rerun preflight before the paired VS Code, Cursor, and Kiro
-evaluation. No stable-surface change or compatibility claim is authorized.
+unavailable and the selected runtime did not match the candidate. That frame
+stays parked until those clients are available; it does not queue product
+work. The standing product work is the fingerprint-freshness loop. No
+stable-surface change or compatibility claim is authorized.
 
 The claim audit and stable MCP matrix remain blocking regression
 gates. Artifact review, OpenSSF process, independent replication, and archive
@@ -173,7 +178,7 @@ These are not active gaps for the current roadmap:
 | Evidence-semantic integrity | Derived observations and model-bound public-evidence values can be presented more strongly than their evidence supports. | The fail-closed audit covers all 27 default-claim families; all are complete, with no material runtime family carrying incomplete lineage. | Keep the audit and its semantic contract tests blocking; reopen this track for any uncovered or stronger claim surface. | Do not add new inference semantics while a known default claim lacks direct provenance. |
 | MCP v2 compatibility | The final 2026-07-28 protocol and stable SDK contain breaking changes that must remain characterized. | Production adopted v2.0.0 on 2026-07-31; the exact stable v1.28.1 and v2.0.0 matrix passes, with one compatibility boundary, doctor discovery selection, and conservative cache hints implemented. | Keep both stable pins blocking and treat any future major-version adoption as a separate release decision. | Do not couple remote MCP scope to compatibility maintenance. |
 | Measured product utility | Green gates and sophisticated models do not establish that the output improves an operator decision. | The network-free scorecard and stable-v1 live characterization are complete. The frozen M365 design failed its structural-identifiability preflight before target contact: A1 equals A0, A2 equals A3, and A3 is dominated by A0. The declared live window is cancelled. v2.12 records fusion as an advanced diagnostic and begins the compatible explicit-flag transition. | Keep ADR-0013 blocking and require a new candidate plus executable identifiability preflight before any future real-domain fusion study. | Do not expand graph or probabilistic machinery without measured benefit. Do not collect when the promotion condition is structurally unreachable. |
-| Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | Shipped in v2.14. The catalog has 868 entries and 1,091 detections. The convenience, unseen-vertical, rank, regional, vendor-seed, and prior-sample drift rounds are closed with aggregate results and explicit dispositions. Drift measured all 5,199 rows, found no decline beyond the frozen threshold, disclosed one catalog-driven measurement-surface change, withheld classification comparison, and promoted no rule. The legacy date backlog remains open. | Keep the frozen contracts reproducible and backfill dates only in independently reviewed families. | No new undated or untested rule. No population claim from the convenience sample and no broad coverage claim while a bounded path or named stratum is unmeasured. |
+| Catalog quality and freshness | A large catalog can grow coverage and false positives at the same time. | Shipped in v2.14. The catalog has 868 entries and 1,091 detections. The convenience, unseen-vertical, rank, regional, vendor-seed, and prior-sample drift rounds are closed with aggregate results and explicit dispositions. Drift measured all 5,199 rows, found no decline beyond the frozen threshold, disclosed one catalog-driven measurement-surface change, withheld classification comparison, and promoted no rule. The legacy date backlog remains open: 48 of 1,091 detections are dated (4.4 percent). | Keep the frozen contracts reproducible and backfill dates only in independently reviewed families after a current vendor-page confirmation. The first 2026-08-18 pass recorded two already-matched routing hosts whose family wording still treats a legacy or older default as current. | No new undated or untested rule. No population claim from the convenience sample and no broad coverage claim while a bounded path or named stratum is unmeasured. |
 | Latency and degradation contract | CT and external providers dominate long tails, while one instrumented convenience-sample run cannot establish product SLOs. | The dated aggregate-only live memo measures paired CT/no-CT resolver latency, primary-source stages, merge replay, inference, rendering, allocation, loop lag, degradation, warm disk, and warm MCP bytes without target rows. It completed 50 of 50 no-CT rows and 47 of 50 CT rows; concurrent CPU contention and heavy CT rate limiting keep p50/p95 values diagnostic. | Run a clean-machine, stage-specific follow-up before setting budgets or moving work to threads; keep the independent schema gate blocking and apply stable-v2 deltas from the completed MCP matrix separately. | Move only proven blocking I/O and do not create brittle timing CI. |
 | OpenSSF Best Practices Badge | Scorecard marks this as absent until a real badge project exists. | Readiness evidence and the manual answer queue are documented in [openssf-posture.md](openssf-posture.md) and [openssf-badge-readiness.md](openssf-badge-readiness.md), but no badge is claimed. | Complete the questionnaire on `bestpractices.dev`, then link the real badge page. | Do not add a placeholder badge or claim a badge before the project exists. |
 | Reviewed PR signal | Scorecard cannot credit review history on direct-main work. | CODEOWNERS exists and required checks protect main. | Use reviewed PRs for non-urgent work when another qualified reviewer is available. | Do not manufacture review history or contributor diversity. |
@@ -196,7 +201,7 @@ release count, and feature count are supporting facts, not outcomes.
 | 0. Trust foundation | Align public intake with the data policy, correct public product promises, require verification dates on new detections, and align repository metadata with the current neutral product voice. | Required privacy acknowledgements, regression tests, a clean canonical gate, current repository description and topics, and green post-merge CI. | Do not start another broad catalog promotion while public intake asks for target data or a public promise lacks a maintained surface. |
 | 1. Freeze the baseline | Run the stable-v1 latency, allocation, degradation, CT-value, provenance, catalog, and MCP payload measurements on a named catalog and code revision. Record unmeasured channels explicitly. | One dated aggregate-safe scorecard, reproduction commands, environment, revision digests, source-success counts, and no target rows. | Do not tune thresholds after reading the result, and do not publish a population interpretation for a convenience sample. |
 | 2. Freeze and run distinct catalog rounds - **complete for v2.14** | Preserve the closed rank, regional, [vendor-seed](../validation/2026-08-14-catalog-vendor-seed-round.md), and [drift](../validation/2026-08-14-catalog-drift-round.md) decisions. | Per-round immutable contracts, private manifests, and aggregate reports with changed, unavailable, unmeasured, no-change, error, and explicit candidate dispositions as applicable. Vendor-seed silence remains silence, not a false negative. Every promoted rule has an independent provider reference or disclosure-safe basis, a date, fictional positive, lookalike-negative and sparse fixtures, and a claim boundary. | A repeated list is a drift round, not new coverage. Stop when survivors lack an independent basis, fail a negative fixture, or exceed the frozen regression budget. |
-| 3. Evaluate agent utility - **active v2.16 client frame; the frozen contract keeps its v2.15 round id** | Use representative tasks for single-domain summary, explanation, posture gaps, comparison, and catalog lookup. The frozen contract and complete 22-tool portable candidate have passed their offline gates. The first local preflight stopped with zero sessions because Cursor was unavailable and the selected recon runtime was 2.6.3 rather than 2.14.0. Satisfy the exact frame before comparing native and portable packaging; consider a smaller task-specific surface only with measured client-visible context. | A passing three-client and runtime preflight, then task completion, unsupported-claim rate, correct tool selection, round trips, discovery bytes, result bytes, failure recovery, and portable-package discovery and launch across the frozen clients. | Do not drop or substitute a missing client. Do not add a core profile or hide tools merely because the payload is large. Do not turn pinned-schema validation into Agent Plugins conformance. Simplify only when task outcomes improve without reducing discoverability or compatibility. |
+| 3. Evaluate agent utility - **parked on representative-client availability; the frozen contract keeps its v2.15 round id** | Use representative tasks for single-domain summary, explanation, posture gaps, comparison, and catalog lookup. The frozen contract and complete 22-tool portable candidate have passed their offline gates. The first local preflight stopped with zero sessions because Cursor was unavailable and the selected recon runtime was 2.6.3 rather than 2.14.0. This does not queue product work. Satisfy the exact frame before comparing native and portable packaging; consider a smaller task-specific surface only with measured client-visible context. | A passing three-client and runtime preflight, then task completion, unsupported-claim rate, correct tool selection, round trips, discovery bytes, result bytes, failure recovery, and portable-package discovery and launch across the frozen clients. | Do not drop or substitute a missing client. Do not add a core profile or hide tools merely because the payload is large. Do not turn pinned-schema validation into Agent Plugins conformance. Simplify only when task outcomes improve without reducing discoverability or compatibility. |
 | 4. External usability proof | Ask an outside user to install from the released package, run the public smoke path, complete one explanation task, and follow the safe contribution path on a clean machine. | Aggregate outcome notes, time-to-first-result, confusing-step count, and fixes reproduced with fictional data. | Do not call maintainer reruns independent replication, and do not publish the user's targets or output. |
 | 5. Consolidate later surface decisions | Fusion is decided in v2.11 and applied in v2.12. Use the later catalog and agent measurements to decide which remaining catalog and MCP presentation changes ship, then batch accepted work into coherent releases. | Decision memos with raw aggregate counts and bounds, preserved stable contracts, current release proof, and an updated roadmap that removes completed work. | An inconclusive result remains inconclusive. Retire complexity that cannot beat the simpler comparator on a named outcome. |
 
@@ -217,16 +222,22 @@ release count, and feature count are supporting facts, not outcomes.
    drift decisions, including their non-promotion and measurement-surface
    dispositions and release proof. Keep outputs aggregate-only before broad
    catalog growth.
-8. Preserve the frozen v2.15 representative tasks, clients, measures,
+8. Run the standing fingerprint-freshness loop. Backfill `verified` dates only
+   in independently reviewed families after a current vendor-page confirmation.
+   Relabel a still-supported host as legacy when the vendor now documents a
+   newer default. Do not stamp today's date on an unread page, and do not treat
+   the 4.4 percent dated share as coverage.
+9. Preserve the frozen v2.15 representative tasks, clients, measures,
    variants, privacy boundary, stop rules, and offline-validated candidate. Use
    the zero-session local preflight as a stop record, not compatibility evidence.
-   Satisfy its missing-client and runtime-version gates before collection. Use
-   the native-surface baseline to evaluate Agent Plugins portability and any
-   agent-surface simplification; apply stable-v2 SDK characterization deltas
-   from the completed MCP matrix.
-9. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
+   That frame stays parked until the missing-client and runtime-version gates
+   can be satisfied; it does not queue product work. Use the native-surface
+   baseline to evaluate Agent Plugins portability and any agent-surface
+   simplification only after that preflight; apply stable-v2 SDK
+   characterization deltas from the completed MCP matrix separately.
+10. Keep main clean, CI green, release readiness passing, and PyPI and GitHub
    release state and provenance aligned.
-10. Run the paper claim freeze, OpenSSF questionnaire, outside replication, and
+11. Run the paper claim freeze, OpenSSF questionnaire, outside replication, and
    archive decision as separate maintainer work when their external event is
    ready.
 
@@ -253,9 +264,10 @@ is frozen with exact standards commitments, three clients, five tasks, two
 complete-surface variants, privacy rules, and fail-closed decisions. Its
 protected-main prerequisite and the generated candidate's offline validation
 are complete. The first local preflight stopped before collection with Cursor
-unavailable and a 2.6.3 selected runtime against the 2.14.0 candidate. The
-active operation is to satisfy that exact frame and rerun preflight before the
-paired representative-client evaluation. No compatibility claim or
+unavailable and a 2.6.3 selected runtime against the 2.14.0 candidate. That
+frame stays parked until those clients and runtime are available; it does not
+queue product work. The standing product work is the fingerprint-freshness
+loop. No compatibility claim or
 discovery-surface change is authorized by the preregistration. v2.12 has
 already applied the v2.11 structural stop
 through the compatible ADR-0013 transition. Private labeled-row collection

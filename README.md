@@ -126,20 +126,24 @@ recon reports observations, not verdicts. Public channel ceiling:
 How to report a result without overstating it:
 [docs/reporting-observations.md](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md).
 
-The last four releases were driven by independent black-box testing: a tester
-installs the published package, never reads the source, and files a report. All
-four found the same class of issue, in how recon presents a result rather than
-in the result itself. Those findings and their fixes are in
+v2.15 and v2.16 closed a five-round presentation-drift class. Independent
+testers installed the published package, never read the source, and kept finding
+the same issue: a decision applied to one renderer and not the others. The
+engine is feature-complete. Those findings and their fixes are in
 [CHANGELOG.md](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md) and in
 [ADR-0015](https://github.com/blisspixel/recon/blob/main/docs/adr/0015-role-split-vendor-claims-in-the-default-view.md)
 through
 [ADR-0017](https://github.com/blisspixel/recon/blob/main/docs/adr/0017-one-briefing-in-every-shape.md).
 
-Most useful contributions are one YAML file, not code: recon's engine stays lean
-and its fingerprint catalog grows. If recon misses a service you can identify
-from public DNS, adding a detection is a small, reviewable change.
+The living work is the fingerprint catalog. Vendors add, rename, and retire the
+public patterns recon detects, so a rule with no re-check is a slow source of
+false positives and negatives. Most useful contributions are one YAML file, not
+code: a current vendor-documentation page (or a disclosure-safe aggregate
+basis), a `verified` date, a fictional positive, and a lookalike negative.
 [CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md)
 has the schema, the validation command, and what is deliberately out of scope.
+The freshness loop and its coverage floor live in
+[docs/catalog-strategy.md](https://github.com/blisspixel/recon/blob/main/docs/catalog-strategy.md).
 
 ## Common Commands
 
@@ -254,6 +258,7 @@ Operators own deployment, identity, data handling, cost, and operations.
 | Reporting a result without overstating it | [docs/reporting-observations.md](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md) |
 | How it works | [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md) |
 | Known weak areas and conservative wording | [docs/weak-areas.md](https://github.com/blisspixel/recon/blob/main/docs/weak-areas.md) |
+| Catalog growth and freshness loop | [docs/catalog-strategy.md](https://github.com/blisspixel/recon/blob/main/docs/catalog-strategy.md) |
 | Observation capsules | [docs/observation-capsules.md](https://github.com/blisspixel/recon/blob/main/docs/observation-capsules.md) |
 | Correlation model | [docs/correlation.md](https://github.com/blisspixel/recon/blob/main/docs/correlation.md) |
 | MCP and agents | [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md), [agents/](https://github.com/blisspixel/recon/tree/main/agents) |

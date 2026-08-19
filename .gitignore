@@ -43,6 +43,7 @@ docs/accuracy.md
 
 # Agent working files
 /.agent/
+/.grok/
 
 # Local validation sweeps. Evaluated-target names and per-domain JSON output
 # live here during accuracy work; never committed. Anything committed uses

@@ -26,6 +26,25 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- **Fingerprint YAML now rejects duplicate mapping keys.** PyYAML keeps the
+  last value and drops the first, so the catalog gate could not see leftover
+  wording. `recon fingerprints check` now fails that class. The first live
+  find was a second `description` on the Google Workspace `ghs.google.com`
+  detection; the same sweep dropped leftover first `reference` keys on Slack
+  plus ten surface-catalog detections. The generated catalog already used the
+  surviving last value in every case.
+
+### Documentation
+
+- README, ROADMAP, catalog-strategy, and the strategic-gap audit now name the
+  fingerprint-freshness loop as the standing work after the v2.16 engine close.
+  Agent portability stays parked on representative-client availability and does
+  not queue product work. The first vendor-doc pass records two already-matched
+  mail-routing hosts whose family wording still treats a legacy or older default
+  as current.
+
 ## [2.16.0] - 2026-08-17
 
 One record, one briefing, in every shape. Four consecutive black-box rounds

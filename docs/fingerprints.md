@@ -94,7 +94,10 @@ pattern was last confirmed against a public source or disclosure-safe corpus
 observation. It does not affect matching and drives the freshness auditor
 (`python -m validation.audit_fingerprints --freshness`). New detections require
 a valid, non-future date; legacy undated detections remain a reviewed backfill
-queue. See [catalog-strategy.md](catalog-strategy.md).
+queue. A freshness pass can change family wording without adding a rule: if
+the vendor now documents a newer default and still supports the older host,
+keep both patterns, date both, and stop calling the older host current.
+See [catalog-strategy.md](catalog-strategy.md).
 
 Metadata feeds `recon fingerprints show`, MCP catalog resources, explanation
 output, and validation reports. Improving descriptions and references is a
