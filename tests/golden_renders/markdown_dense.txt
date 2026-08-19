@@ -40,8 +40,8 @@
 
 ## Related Domains
 
-- api\.alpha\.invalid
 - login\.alpha\.invalid
+- api\.alpha\.invalid
 
 ---
 *Sources: oidc\_discovery, userrealm, dns\_records*

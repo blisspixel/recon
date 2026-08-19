@@ -14,7 +14,7 @@ Services
 
 
 High-signal related domains
-  api.alpha.invalid, login.alpha.invalid
+  login.alpha.invalid, api.alpha.invalid
 
 Unclassified surface
   3 CNAME chain termini reached, no fingerprint match. We walked them but cannot name them — open a fingerprint PR or 
