@@ -791,7 +791,11 @@ def test_barracuda_gateway_family_matches_current_vendor_page() -> None:
     rua = _rules_for_slug("barracuda", "dmarc_rua")["barracudanetworks.com"]
 
     assert mx.verified == "2026-08-20"
-    assert "ess.barracudanetworks.com" in mx.description
+    assert mx.description == (
+        "MX terminating at Barracuda Email Gateway Defense (`*.ess.barracudanetworks.com`). Barracuda's current "
+        "domain-status page tells operators to verify that MX records point to this suffix. This observes inbound "
+        "mail routing through Barracuda. It does not identify a downstream mailbox provider."
+    )
     assert "2850986" in mx.reference
     assert rua.verified == ""
 
@@ -805,7 +809,12 @@ def test_cisco_cloud_gateway_family_matches_current_vendor_page() -> None:
     assert current.reference == "https://docs.ces.cisco.com/docs/hostnames"
     assert legacy.verified == ""
     assert "stays undated" in legacy.description
-    assert "iphmx.com" in legacy.description
+    assert legacy.description == (
+        "Observed MX suffix associated with Cisco's earlier Email Security Service (`*.ess.cisco.com`). Cisco's "
+        "current Cloud Gateway hostname page names `*.iphmx.com`, not this suffix, so this rule stays undated. A "
+        "match still observes inbound mail routing through a Cisco-associated gateway. It does not identify a "
+        "downstream mailbox provider."
+    )
 
 
 def test_hubspot_exact_current_rules_are_dated_without_family_stamping() -> None:
@@ -821,11 +830,24 @@ def test_hubspot_exact_current_rules_are_dated_without_family_stamping() -> None
 
     assert spf.verified == "2026-08-20"
     assert "manage-email-authentication-in-hubspot" in spf.reference
-    assert "123456.spf03.hubspotemail.net" in spf.description
+    assert spf.description == (
+        "SPF include under hubspotemail.net. HubSpot's current email-authentication guide shows account- and "
+        "pool-qualified values such as 123456.spf03.hubspotemail.net. This authorizes HubSpot email sending; it "
+        "does not establish inbound routing or identify a licensed Hub."
+    )
     for rule in (cname, target):
         assert rule.verified == "2026-08-20"
         assert rule.reference == "https://developers.hubspot.com/docs/api-reference/legacy/cms/domains/guide"
-        assert "8675309.group39.sites.hubspot.net" in rule.description
+    assert cname.description == (
+        "CNAME pointing into hubspot.net. HubSpot's current Domains API guide shows expectedCname values such as "
+        "8675309.group39.sites.hubspot.net for a connected domain. This indicates HubSpot-hosted content under a "
+        "branded hostname, not a specific product tier."
+    )
+    assert target.description == (
+        "Discovered CNAME targets under hubspot.net. HubSpot's current Domains API guide shows expectedCname values "
+        "such as 8675309.group39.sites.hubspot.net for a connected domain. This indicates HubSpot-hosted content "
+        "under a branded hostname, not a specific product tier."
+    )
     assert undated_patterns == {
         "^hubspot-developer-verification=",
         "^hubspot-domain-verification=",
@@ -857,7 +879,11 @@ def test_marketo_exact_current_rules_are_dated_and_broad_rule_is_narrowed() -> N
         )
     assert "include matching mktomail.com" in spf.description
     assert "[MunchkinID].mktoweb.com" in cname.description
-    assert "mkto-a0244.com" in targets[tracking_pattern].description
+    assert targets[tracking_pattern].description == (
+        "Marketo tracking-link CNAME target in Adobe's documented mkto-[letter][four digits].com form, such as "
+        "mkto-a0244.com. This indicates branded email tracking through Marketo, not campaign activity or a "
+        "subscription tier."
+    )
     assert "mkto-" not in targets
     assert undated_patterns == {
         "marketo.com",
