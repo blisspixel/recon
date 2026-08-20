@@ -28,7 +28,7 @@ That handles **piece 1** of the setup (the MCP server). Per-client folders below
 
 | Agent | Folder | Pieces shipped |
 |---|---|---|
-| **Agent Plugins candidate** | [`agent-plugin/`](agent-plugin/) | Complete 22-tool portable packaging candidate, generated from the native skills and validated offline against the byte-pinned v1.0.0 Working Draft schemas. Representative-client compatibility remains unclaimed. |
+| **Agent Plugins candidate** | [`agent-plugin/`](agent-plugin/) | Complete 22-tool portable packaging candidate, generated from the native skills and validated offline against the byte-pinned Published v1.0.0 schemas. Representative-client compatibility remains unclaimed. |
 | **Claude Code** | [`claude-code/`](claude-code/) | Client-specific Claude Code plugin: MCP registration + skill + manifest. One install wires everything up. |
 | **Kiro** | [`kiro/`](kiro/) | MCP config + instructions for using the canonical SKILL.md as a Kiro skill. |
 | **Cursor** | [`cursor/`](cursor/) | MCP config + instructions for creating `.cursor/rules/recon.md` from `AGENTS.md`. |
@@ -38,7 +38,7 @@ That handles **piece 1** of the setup (the MCP server). Per-client folders below
 The client-named folders are native scaffolds. The Claude Code directory follows
 Claude Code's `.claude-plugin/plugin.json` and `.mcp.json` conventions; it is
 not the root `plugin.json` plus `mcp.json` package defined by the portable
-[Agent Plugins v1.0.0 working draft](https://agent-plugins.org/specification).
+[Agent Plugins v1.0.0 specification](https://agent-plugins.org/specification).
 The separate `agent-plugin/` candidate uses that root layout and omits
 client-only or experimental skill fields. It passes offline pinned-schema
 validation. That result is not a compatibility claim. The package remains an

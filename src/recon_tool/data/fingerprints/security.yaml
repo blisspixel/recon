@@ -145,13 +145,15 @@ fingerprints:
   detections:
   - type: mx
     pattern: barracudanetworks.com
-    reference: https://www.barracuda.com/products/email-protection
+    reference: https://documentation.campus.barracuda.com/wiki/spaces/EGD/pages/2850986
+    verified: 2026-08-20
     description: >-
-      MX terminating at Barracuda Networks' email-protection
-      cloud (`*.barracudanetworks.com`). Indicates Barracuda
-      Email Protection sits in front of inbound mail. The
-      downstream mail provider is not deducible from this MX
-      alone.
+      MX terminating at Barracuda Email Gateway Defense
+      (`*.ess.barracudanetworks.com`). Barracuda's current
+      domain-status page tells operators to verify that MX
+      records point to this suffix. This observes inbound mail
+      routing through Barracuda. It does not identify a
+      downstream mailbox provider.
 - name: Trend Micro Email Security
   slug: trendmicro
   category: Security & Compliance
@@ -159,18 +161,125 @@ fingerprints:
   detections:
   - type: mx
     pattern: tmes.trendmicro.com
-    reference: https://www.trendmicro.com/en_us/business/products/user-protection/sps/email-and-collaboration/email-security.html
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-configuring-a-domain
+    verified: 2026-08-20
     description: >-
-      MX terminating at Trend Micro Email Security
-      (`*.tmes.trendmicro.com`). Indicates Trend Micro's
-      cloud email gateway handles inbound mail for the domain.
+      MX terminating at the documented United States TrendAI
+      Email Security gateway (`*.in.tmes.trendmicro.com`). The
+      vendor's current domain-configuration page names the
+      company-specific inbound host. This observes inbound mail
+      routing through Trend Micro. It does not identify a
+      downstream mailbox provider.
   - type: spf
     pattern: spf.tmes.trendmicro.com
-    reference: https://www.trendmicro.com/en_us/business/products/user-protection/sps/email-and-collaboration/email-security.html
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
     description: >-
-      SPF `include:spf.tmes.trendmicro.com` authorizes Trend
-      Micro Email Security to send mail on behalf of the
-      domain. Typically paired with the Trend Micro MX.
+      Legacy shared SPF `include:spf.tmes.trendmicro.com` for
+      TrendAI Email Security. The current vendor page still
+      names it, but recommends replacing it with the serving-
+      site-specific value. It authorizes Trend Micro to send
+      mail for the queried namespace and does not establish
+      inbound MX routing.
+  - type: spf
+    pattern: spf-us.tmes.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current United States TrendAI Email Security SPF include
+      (`spf-us.tmes.trendmicro.com`). It authorizes Trend Micro
+      to send mail for the queried namespace and does not
+      establish inbound MX routing.
+  - type: spf
+    pattern: spf.tmes.trendmicro.eu
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current Germany TrendAI Email Security SPF include
+      (`spf.tmes.trendmicro.eu`). It authorizes Trend Micro to
+      send mail for the queried namespace and does not establish
+      inbound MX routing.
+  - type: spf
+    pattern: spf.tmes-anz.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current Australia TrendAI Email Security SPF include
+      (`spf.tmes-anz.trendmicro.com`). It authorizes Trend Micro
+      to send mail for the queried namespace and does not
+      establish inbound MX routing.
+  - type: spf
+    pattern: spf.tmems-jp.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current Japan TrendAI Email Security SPF include
+      (`spf.tmems-jp.trendmicro.com`). It authorizes Trend Micro
+      to send mail for the queried namespace and does not
+      establish inbound MX routing.
+  - type: spf
+    pattern: spf.tmes-sg.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current Singapore TrendAI Email Security SPF include
+      (`spf.tmes-sg.trendmicro.com`). It authorizes Trend Micro
+      to send mail for the queried namespace and does not
+      establish inbound MX routing.
+  - type: spf
+    pattern: spf.tmes-in.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current India TrendAI Email Security SPF include
+      (`spf.tmes-in.trendmicro.com`). It authorizes Trend Micro
+      to send mail for the queried namespace and does not
+      establish inbound MX routing.
+  - type: spf
+    pattern: spf.tmes-uae.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current United Arab Emirates TrendAI Email Security SPF
+      include (`spf.tmes-uae.trendmicro.com`). It authorizes
+      Trend Micro to send mail for the queried namespace and
+      does not establish inbound MX routing.
+  - type: spf
+    pattern: spf.tmes-uk.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current United Kingdom TrendAI Email Security SPF include
+      (`spf.tmes-uk.trendmicro.com`). It authorizes Trend Micro
+      to send mail for the queried namespace and does not
+      establish inbound MX routing.
+  - type: spf
+    pattern: spf.tmes-ca.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current Canada TrendAI Email Security SPF include
+      (`spf.tmes-ca.trendmicro.com`). It authorizes Trend Micro
+      to send mail for the queried namespace and does not
+      establish inbound MX routing.
+  - type: spf
+    pattern: spf.tmes-za.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current South Africa TrendAI Email Security SPF include
+      (`spf.tmes-za.trendmicro.com`). It authorizes Trend Micro
+      to send mail for the queried namespace and does not
+      establish inbound MX routing.
+  - type: spf
+    pattern: spf.tmes-id.trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records
+    verified: 2026-08-20
+    description: >-
+      Current Indonesia TrendAI Email Security SPF include
+      (`spf.tmes-id.trendmicro.com`). It authorizes Trend Micro
+      to send mail for the queried namespace and does not
+      establish inbound MX routing.
 - name: Sophos
   slug: sophos
   category: Security & Compliance
@@ -437,13 +546,15 @@ fingerprints:
   detections:
   - type: mx
     pattern: iphmx.com
-    reference: https://www.cisco.com/c/en/us/products/security/email-security/index.html
+    reference: https://docs.ces.cisco.com/docs/hostnames
+    verified: 2026-08-20
     description: >-
-      MX terminating at Cisco IronPort Hosted Email Security
-      (`*.iphmx.com`). Indicates Cisco IronPort sits in front
-      of inbound mail. Note: this is the older IronPort
-      hosted-platform domain; new deployments often use the
-      `ess.cisco.com` form covered by the `cisco-email` slug.
+      MX terminating at Cisco Secure Email Cloud Gateway's
+      current customer-allocation hosts (`mx1.*.iphmx.com` and
+      `mx2.*.iphmx.com`). Cisco's current hostname and load-
+      balancer pages name this form across its regional data
+      centers. This observes inbound mail routing through Cisco.
+      It does not identify a downstream mailbox provider.
 - name: Cisco Secure Email
   slug: cisco-email
   category: Security & Compliance
@@ -451,13 +562,14 @@ fingerprints:
   detections:
   - type: mx
     pattern: ess.cisco.com
-    reference: https://www.cisco.com/c/en/us/products/security/email-security/index.html
+    reference: https://docs.ces.cisco.com/docs/hostnames
     description: >-
-      MX terminating at Cisco Secure Email Cloud Gateway
-      (`*.ess.cisco.com`, formerly Email Security Service).
-      Indicates Cisco Secure Email sits in front of inbound
-      mail. This is the current Cisco-branded form of the
-      service formerly sold under the IronPort name.
+      Observed MX suffix associated with Cisco's earlier Email
+      Security Service (`*.ess.cisco.com`). Cisco's current
+      Cloud Gateway hostname page names `*.iphmx.com`, not this
+      suffix, so this rule stays undated. A match still observes
+      inbound mail routing through a Cisco-associated gateway.
+      It does not identify a downstream mailbox provider.
 - name: Cisco Webex
   slug: webex
   category: Security & Compliance

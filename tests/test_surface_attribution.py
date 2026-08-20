@@ -83,9 +83,9 @@ def test_ultradns_web_forwarding_cname_target_loads_and_classifies() -> None:
 def test_marketo_tracking_link_cname_target_loads_and_classifies() -> None:
     """Marketo tracking-link hosts attribute to the Marketo application."""
     rules = get_cname_target_rules()
-    terminal = "mkto-ab390043.com"
+    terminal = "mkto-a0244.com"
 
-    assert any(r.slug == "marketo" and r.pattern == "mkto-" for r in rules)
+    assert any(r.slug == "marketo" and r.pattern == r"^mkto-[a-z][0-9]{4}\.com$" for r in rules)
     application, infrastructure = _classify_chain(["go.alpha.invalid", terminal], rules)
 
     assert application is not None
@@ -182,21 +182,179 @@ def test_edgecast_zetacdn_cname_target_loads_and_classifies() -> None:
     assert attribution.slug == "edgecast"
 
 
-def test_dotless_cname_target_pattern_requires_label_boundary() -> None:
-    """A dot-less fragment pattern (Marketo's ``mkto-``) must match only at a
-    label or hyphen boundary, so a mid-label lookalike cannot spoof it."""
+def test_regex_cname_target_pattern_enforces_the_documented_host_form() -> None:
+    """Marketo tracking targets match the current exact Adobe host form."""
     rules = get_cname_target_rules()
-    assert any(r.slug == "marketo" and r.pattern == "mkto-" for r in rules)
+    pattern = r"^mkto-[a-z][0-9]{4}\.com$"
+    assert any(r.slug == "marketo" and r.pattern == pattern for r in rules)
 
-    # Legitimate Marketo tracking host (fragment at the start of a label) matches.
-    good_app, _ = _classify_chain(["go.alpha.invalid", "mkto-ab390043.com"], rules)
+    good_app, _ = _classify_chain(["go.alpha.invalid", "mkto-a0244.com"], rules)
     assert good_app is not None
     assert good_app.slug == "marketo"
 
-    # A host that merely embeds "mkto-" mid-label must not attribute to Marketo.
-    spoof_app, spoof_infra = _classify_chain(["promkto-analytics.attacker.invalid"], rules)
-    assert not (spoof_app is not None and spoof_app.slug == "marketo")
-    assert not (spoof_infra is not None and spoof_infra.slug == "marketo")
+    for lookalike in (
+        "mkto-ab390043.com",
+        "mkto-a0244.com.attacker.invalid",
+        "promkto-a0244.com",
+        "mkto-a0244.net",
+    ):
+        spoof_app, spoof_infra = _classify_chain([lookalike], rules)
+        assert not (spoof_app is not None and spoof_app.slug == "marketo")
+        assert not (spoof_infra is not None and spoof_infra.slug == "marketo")
+
+
+def test_simple_fragment_cname_target_requires_a_label_or_hyphen_boundary() -> None:
+    """Literal service fragments remain bounded after adding regex rules."""
+    rules = get_cname_target_rules()
+    assert any(r.slug == "aws-s3" and r.pattern == "s3-website" for r in rules)
+
+    application, infrastructure = _classify_chain(
+        ["bucket.s3-website-us-east-1.amazonaws.com"],
+        rules,
+    )
+    lookalike_app, lookalike_infra = _classify_chain(
+        ["bucket.fakes3-website-us-east-1.amazonaws.com"],
+        rules,
+    )
+
+    assert application is None
+    assert infrastructure is not None
+    assert infrastructure.slug == "aws-s3"
+    assert lookalike_app is None
+    assert lookalike_infra is None
+
+
+@pytest.mark.parametrize(
+    "terminal",
+    [
+        "mc.s7.exacttarget.com",
+        "198h8bcs7n8hz798n.pub.sfmc-content.com",
+        "tenant.sfmc-marketing.com",
+        "mc563885gzs27c5t9-63k636ttgm.rest.marketingcloudapis.com",
+        "click.exct.net",
+    ],
+)
+def test_salesforce_marketing_cloud_current_targets_use_label_boundaries(terminal: str) -> None:
+    rules = get_cname_target_rules()
+
+    application, infrastructure = _classify_chain([terminal], rules)
+    lookalike_app, lookalike_infra = _classify_chain([f"{terminal}.evil.example"], rules)
+
+    assert application is not None
+    assert application.slug == "salesforce-mc"
+    assert infrastructure is None
+    assert lookalike_app is None
+    assert lookalike_infra is None
+
+
+@pytest.mark.parametrize(
+    "terminal",
+    [
+        "my-load-balancer-1234567890abcdef.elb.us-east-2.amazonaws.com",
+        "internal-api-0123456789abcdef.elb.eu-central-2.amazonaws.com",
+        "my-load-balancer-1234567890abcdef.elb.us-gov-west-1.amazonaws.com",
+        "my-load-balancer-1234567890abcdef.elb.cn-north-1.amazonaws.com.cn",
+        "us-east-2b.my-load-balancer-1234567890abcdef.elb.us-east-2.amazonaws.com",
+    ],
+)
+def test_aws_elbv2_current_partition_forms_reject_lookalikes(terminal: str) -> None:
+    rules = get_cname_target_rules()
+
+    application, infrastructure = _classify_chain([terminal], rules)
+    lookalike_app, lookalike_infra = _classify_chain([f"{terminal}.evil.example"], rules)
+
+    assert application is None
+    assert infrastructure is not None
+    assert infrastructure.slug == "aws-nlb"
+    assert lookalike_app is None
+    assert lookalike_infra is None
+
+
+def test_aws_classic_elb_form_does_not_claim_the_elbv2_slug() -> None:
+    rules = get_cname_target_rules()
+
+    application, infrastructure = _classify_chain(
+        ["my-load-balancer-1234567890.us-east-2.elb.amazonaws.com"],
+        rules,
+    )
+
+    assert application is None
+    assert infrastructure is not None
+    assert infrastructure.slug == "aws-elb"
+
+
+@pytest.mark.parametrize(
+    "terminal",
+    [
+        "a1b2c3d4e5.execute-api.us-east-2.amazonaws.com",
+        "d-a1b2c3d4e5.execute-api.eu-central-2.amazonaws.com",
+        "a1b2c3d4e5.execute-api.us-gov-east-1.amazonaws.com",
+        "d-a1b2c3d4e5.execute-api.cn-northwest-1.amazonaws.com.cn",
+    ],
+)
+def test_aws_api_gateway_current_partition_forms_reject_lookalikes(terminal: str) -> None:
+    rules = get_cname_target_rules()
+
+    application, infrastructure = _classify_chain([terminal], rules)
+    lookalike_app, lookalike_infra = _classify_chain([f"{terminal}.evil.example"], rules)
+
+    assert application is None
+    assert infrastructure is not None
+    assert infrastructure.slug == "aws-api-gateway"
+    assert lookalike_app is None
+    assert lookalike_infra is None
+
+
+@pytest.mark.parametrize(
+    "terminal",
+    [
+        "d111111abcdef8.cloudfront.net",
+        "vpce-123456-abc000.execute-api.us-east-2.vpce.amazonaws.com",
+        "execute-api.us-east-2.amazonaws.com",
+    ],
+)
+def test_aws_api_gateway_excludes_edge_private_and_bare_service_targets(terminal: str) -> None:
+    rules = get_cname_target_rules()
+
+    _, infrastructure = _classify_chain([terminal], rules)
+
+    assert infrastructure is None or infrastructure.slug != "aws-api-gateway"
+
+
+def test_microsoft365_government_target_uses_a_dns_label_boundary() -> None:
+    rules = get_cname_target_rules()
+
+    application, infrastructure = _classify_chain(["tenant.usgovcloud.microsoft"], rules)
+    lookalike_app, lookalike_infra = _classify_chain(
+        ["tenant.usgovcloud.microsoft.evil.example"],
+        rules,
+    )
+
+    assert application is not None
+    assert application.slug == "microsoft365-gov"
+    assert infrastructure is None
+    assert lookalike_app is None
+    assert lookalike_infra is None
+
+
+@pytest.mark.parametrize(
+    "terminal",
+    [
+        "autodiscover.outlook.com",
+        "tenant.sharepoint.com",
+    ],
+)
+def test_microsoft365_current_application_targets_reject_lookalikes(terminal: str) -> None:
+    rules = get_cname_target_rules()
+
+    application, infrastructure = _classify_chain([terminal], rules)
+    lookalike_app, lookalike_infra = _classify_chain([f"{terminal}.evil.example"], rules)
+
+    assert application is not None
+    assert application.slug == "microsoft365"
+    assert infrastructure is None
+    assert lookalike_app is None
+    assert lookalike_infra is None
 
 
 def test_oci_waf_cname_target_loads_and_classifies_without_generic_oraclecloud_net() -> None:

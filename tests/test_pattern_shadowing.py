@@ -1,7 +1,6 @@
-"""Pattern-shadowing invariants for the substring-matched detection types.
+"""Pattern-shadowing invariants for detection types with broad patterns.
 
-Substring matchers (SPF, MX, NS, dmarc_rua, CAA, cname_target) all walk
-patterns in catalog order and check ``pattern in record``. When a broad
+Provider matchers walk patterns in catalog order. When a broad
 pattern (e.g. ``cisco.com``) is a strict substring of a narrower one
 (e.g. ``ess.cisco.com``) under a *different* slug, both would otherwise
 fire on the same record and double-count the same vendor.
@@ -31,12 +30,10 @@ import collections
 
 from recon_tool.fingerprints import filter_shadowed_matches, load_fingerprints
 
-# Detection types where shadow handling matters (substring-matched).
-# Note: cname is also substring-matched in the engine (sources/dns.py
-# `_detect_cname_infra` uses ``det.pattern in cl``), even though some
-# catalog cname patterns carry regex metacharacters that the substring
-# matcher cannot evaluate. The shadow check still applies; a broad
-# substring pattern would shadow a narrow one under a different slug.
+# Detection types where broader catalog patterns can shadow narrower ones.
+# CNAME and CNAME-target matching use DNS-label suffixes for whole domains and
+# regex search for regex-shaped patterns; either form can still shadow a more
+# specific rule.
 _SUBSTRING_TYPES = {"spf", "mx", "ns", "dmarc_rua", "caa", "cname_target", "cname"}
 
 # Pattern-pair shadows that are accepted because the engine demonstrably
@@ -46,27 +43,6 @@ _SUBSTRING_TYPES = {"spf", "mx", "ns", "dmarc_rua", "caa", "cname_target", "cnam
 # shadow appears that is not on this list.
 _ALLOWED_SHADOWS: frozenset[tuple[str, str, str, str, str]] = frozenset(
     {
-        # cname_target shadows are suppressed by the longest-first sort
-        # in _classify_chain plus the fact that cname_target attribution
-        # does not propagate to ctx.slugs (it lands in SurfaceAttribution
-        # only). aws-region-endpoint is the broad "this is some AWS
-        # region endpoint" fallback; aws-api-gateway and aws-nlb are the
-        # specific service patterns. When the chain terminates at a
-        # specific pattern, only that one fires.
-        (
-            "cname_target",
-            "us-east-1.amazonaws.com",
-            "aws-region-endpoint",
-            "execute-api.us-east-1.amazonaws.com",
-            "aws-api-gateway",
-        ),
-        (
-            "cname_target",
-            "us-east-1.amazonaws.com",
-            "aws-region-endpoint",
-            "elb.us-east-1.amazonaws.com",
-            "aws-nlb",
-        ),
         # oracle-cloud's cname_target is the broad OCI infrastructure
         # marker; oracle-fusion's fa.oraclecloud.com is the SaaS app
         # endpoint. Same suppression: most-specific match per tier.

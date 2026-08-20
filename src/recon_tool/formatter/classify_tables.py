@@ -63,6 +63,7 @@ SERVICE_CATEGORIES_ORDER: tuple[str, ...] = (
 CATEGORY_BY_SLUG: dict[str, str] = {
     # Email providers / gateways / deliverability
     "microsoft365": "Email",
+    "azure-communication-services-email": "Email",
     "google-workspace": "Email",
     "zoho": "Email",
     "protonmail": "Email",

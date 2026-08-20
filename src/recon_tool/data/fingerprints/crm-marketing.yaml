@@ -56,29 +56,31 @@ fingerprints:
   detections:
   - type: cname
     pattern: sfmc-marketing.com
-    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
+    reference: https://help.salesforce.com/s/articleView?id=mktg.mc_es_ip_addresses_for_inclusion.htm&language=en_US&type=5
+    verified: '2026-08-20'
     description: >-
-      CNAME pointing into sfmc-marketing.com, Salesforce
-      Marketing Cloud's link-tracking and click-attribution
-      endpoint. Indicates the domain has at least one tracked
-      subdomain for SFMC sends.
+      CNAME pointing into sfmc-marketing.com. Salesforce's current
+      allowlist identifies this family for Marketing Cloud Engagement
+      view-as-web-page URLs when an SAP domain is not applied. This
+      observes an SFMC-hosted web-view endpoint, not campaign activity.
   - type: cname
     pattern: sfmc-content.com
-    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
+    reference: https://help.salesforce.com/s/articleView?id=000389721&language=en_US&type=1
+    verified: '2026-08-20'
     description: >-
-      CNAME pointing into sfmc-content.com, Salesforce
-      Marketing Cloud's content and image hosting endpoint.
-      Indicates the domain serves SFMC-hosted images and
-      attachments through a branded subdomain.
+      CNAME pointing into sfmc-content.com. Salesforce's current
+      CloudPages transition guide documents tenant-specific public
+      hosts under `*.pub.sfmc-content.com`. This observes SFMC-hosted
+      CloudPages or content, not a product edition or campaign state.
   - type: cname
     pattern: exacttarget.com
-    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
+    reference: https://help.salesforce.com/s/articleView?id=000383566&language=en_US&type=1
+    verified: '2026-08-20'
     description: >-
-      CNAME pointing into exacttarget.com, the legacy domain
-      for Salesforce Marketing Cloud (originally ExactTarget,
-      acquired by Salesforce in 2013). Functionally
-      equivalent to the `sfmc-*.com` patterns; some tenants
-      still use the legacy CNAME.
+      CNAME pointing into exacttarget.com. Salesforce's current stack
+      guide documents Marketing Cloud Engagement application hosts
+      such as `mc.s7.exacttarget.com`. This observes routing to an SFMC
+      application host, not the tenant's API or sending configuration.
 - name: HubSpot
   slug: hubspot
   category: CRM & Marketing
@@ -105,20 +107,24 @@ fingerprints:
       tooling; less indicative of production HubSpot use.
   - type: spf
     pattern: hubspotemail.net
-    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
+    reference: https://knowledge.hubspot.com/marketing-email/manage-email-authentication-in-hubspot
+    verified: '2026-08-20'
     description: >-
-      SPF include matching hubspotemail.net. Authorizes
-      HubSpot to send marketing and transactional emails on
-      behalf of the domain. Typically present alongside the
-      HubSpot domain-verification TXT.
+      SPF include under hubspotemail.net. HubSpot's current
+      email-authentication guide shows account- and pool-qualified
+      values such as 123456.spf03.hubspotemail.net. This authorizes
+      HubSpot email sending; it does not establish inbound routing or
+      identify a licensed Hub.
   - type: cname
     pattern: hubspot.net
-    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
+    reference: https://developers.hubspot.com/docs/api-reference/legacy/cms/domains/guide
+    verified: '2026-08-20'
     description: >-
-      CNAME pointing into hubspot.net, HubSpot's CDN and
-      hosted-page endpoint. Indicates the domain serves at
-      least one page (landing page, blog, or knowledge base)
-      from HubSpot infrastructure under a branded subdomain.
+      CNAME pointing into hubspot.net. HubSpot's current Domains API
+      guide shows expectedCname values such as
+      8675309.group39.sites.hubspot.net for a connected domain. This
+      indicates HubSpot-hosted content under a branded hostname, not a
+      specific product tier.
 - name: Marketo (Adobe)
   slug: marketo
   category: CRM & Marketing
@@ -127,13 +133,13 @@ fingerprints:
   detections:
   - type: spf
     pattern: mktomail.com
-    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
+    reference: https://experienceleague.adobe.com/en/docs/marketo/using/getting-started/initial-setup/configure-protocols-for-marketo
+    verified: '2026-08-20'
     description: >-
-      SPF include matching mktomail.com, Marketo's outbound
-      sending infrastructure (Marketo is now part of Adobe
-      Experience Cloud after the 2018 acquisition).
-      Authorizes Marketo to send marketing email on behalf of
-      the domain.
+      SPF include matching mktomail.com. Adobe's current Marketo
+      protocol guide names this value for outbound authorization. It
+      indicates Marketo can send for the domain; it does not establish
+      inbound routing or campaign activity.
   - type: cname
     pattern: mktosvc.com
     reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
@@ -144,11 +150,13 @@ fingerprints:
       campaigns.
   - type: cname
     pattern: mktoweb.com
-    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
+    reference: https://experienceleague.adobe.com/en/docs/marketo/using/getting-started/initial-setup/configure-protocols-for-marketo
+    verified: '2026-08-20'
     description: >-
-      CNAME pointing into mktoweb.com, Marketo's landing-page
-      hosting endpoint. Indicates the domain hosts Marketo
-      landing pages under a branded subdomain.
+      CNAME pointing to an account-qualified host under mktoweb.com.
+      Adobe's current Marketo protocol guide documents
+      [MunchkinID].mktoweb.com for branded landing pages. It does not
+      identify campaign activity or a subscription tier.
 - name: Klaviyo
   slug: klaviyo
   category: CRM & Marketing
@@ -515,12 +523,10 @@ fingerprints:
     pattern: ^SFMC-
     reference: https://help.salesforce.com/s/articleView?id=sf.mc_overview_marketing_cloud.htm
     description: >-
-      Salesforce Marketing Cloud domain-verification TXT
-      (the `SFMC-` prefix). Indicates the domain is verified
-      to a Salesforce Marketing Cloud account for use as a
-      sending domain. Distinct slug from the broader
-      `salesforce-mc` CNAME-based detections; this is the
-      explicit verification TXT.
+      Earlier observed Salesforce Marketing Cloud TXT prefix. Current
+      first-party pages reviewed in the bounded freshness pass do not
+      name this exact value form or its DNS role, so the rule stays
+      undated. Treat a match as administrative evidence only.
 - name: Emma Email Marketing
   slug: emma
   category: Sales & Marketing

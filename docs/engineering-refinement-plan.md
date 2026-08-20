@@ -445,8 +445,8 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ## Track 7: Operator and Agent Surface Simplification
 
-Status: active v2.15 execution; contract frozen, portable candidate
-offline-validated, first local preflight stopped before collection, profile
+Status: maintainer track; contract frozen, portable candidate offline-validated,
+three-client/runtime preflight passed, paired collection not started, profile
 deferred
 Dependencies: Track 3 context-cost baseline
 Risk: compatibility and discoverability risk
@@ -469,7 +469,10 @@ requests. It stopped because Cursor was unavailable and the selected
 client-launch recon was 2.6.3 rather than the 2.14.0 candidate. Preserve that
 result as environment-readiness evidence only. Do not drop Cursor, substitute a
 client, or treat the observed VS Code and Kiro versions as compatibility proof.
-Satisfy both stop conditions and rerun the private preflight before collection.
+A second network-free preflight on 2026-08-20 passed with recon 2.17.4 and all
+three clients ready, again with zero sessions and zero network requests. That
+clears the environment gate but proves no client behavior. Declare the selected
+models and hard cost ceiling before collection.
 
 Document the three primary workflows separately from specialist graph,
 posterior, hypothesis, simulation, catalog-mutation, and discovery workflows.

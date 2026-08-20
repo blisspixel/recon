@@ -266,7 +266,7 @@ def test_cli_fails_closed_for_missing_package(
 def test_readme_keeps_standards_and_claim_boundaries_separate() -> None:
     readme = (candidate.DEFAULT_PLUGIN_ROOT / "README.md").read_text(encoding="utf-8")
 
-    assert "Working Draft" in readme
+    assert "Version 1.0.0 is Published" in readme
     assert "not an unqualified compatibility or conformance claim" in readme
     assert "Open Knowledge Format v0.2 projection" in readme
     assert "permissions" in readme

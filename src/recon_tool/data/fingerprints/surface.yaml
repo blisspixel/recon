@@ -19,11 +19,12 @@
 #                    application tier matched the chain. Examples: Fastly,
 #                    CloudFront, Cloudflare, Akamai.
 #
-# Dotted patterns match exact hostnames or proper DNS-label suffixes,
-# case-insensitive. Dotless fragments keep substring semantics for service-
-# specific markers such as `mkto-`. Be specific: a generic `amazonaws.com`
-# would mis-attribute every AWS-hosted subdomain. Prefer the zone- or
-# service-specific suffix (`elb.amazonaws.com`, `awsglobalaccelerator.com`).
+# Whole-domain patterns match exact hostnames or proper DNS-label suffixes.
+# Simple fragments require a label or hyphen boundary. Regex-shaped patterns
+# use the catalog's validated regex path. Be specific: a generic
+# `amazonaws.com` would mis-attribute every AWS-hosted subdomain. Prefer the
+# zone- or service-specific suffix (`elb.amazonaws.com`,
+# `awsglobalaccelerator.com`).
 
 fingerprints:
 
@@ -596,12 +597,15 @@ fingerprints:
       (blog, knowledge base, marketing site) on HubSpot CMS.
   - type: cname_target
     pattern: hubspot.net
-    reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
+    reference: https://developers.hubspot.com/docs/api-reference/legacy/cms/domains/guide
+    verified: '2026-08-20'
     tier: application
     description: >-
-      Subdomain CNAMEs into hubspot.net (HubSpot's CDN and
-      hosted-page endpoint). Indicates the domain serves
-      HubSpot-hosted content under a branded subdomain.
+      Discovered CNAME targets under hubspot.net. HubSpot's current
+      Domains API guide shows expectedCname values such as
+      8675309.group39.sites.hubspot.net for a connected domain. This
+      indicates HubSpot-hosted content under a branded hostname, not a
+      specific product tier.
   - type: cname_target
     pattern: hsforms.net
     reference: https://knowledge.hubspot.com/website-pages/connect-a-domain-to-hubspot
@@ -667,12 +671,14 @@ fingerprints:
       a branded subdomain.
   - type: cname_target
     pattern: mktoweb.com
-    reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
+    reference: https://experienceleague.adobe.com/en/docs/marketo/using/getting-started/initial-setup/configure-protocols-for-marketo
+    verified: '2026-08-20'
     tier: application
     description: >-
-      Subdomain CNAMEs into mktoweb.com (Marketo's landing-
-      page hosting endpoint). Indicates the domain hosts
-      Marketo landing pages under a branded subdomain.
+      Discovered CNAME targets under mktoweb.com. Adobe's current
+      Marketo protocol guide documents [MunchkinID].mktoweb.com for
+      branded landing pages. It does not identify campaign activity or
+      a subscription tier.
   - type: cname_target
     pattern: mktossl.com
     reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
@@ -682,13 +688,15 @@ fingerprints:
       enabled landing-page endpoint). Indicates HTTPS-served
       Marketo landing pages under a branded subdomain.
   - type: cname_target
-    pattern: mkto-
+    pattern: '^mkto-[a-z][0-9]{4}\.com$'
     reference: https://experienceleague.adobe.com/en/docs/marketo/using/getting-started/initial-setup/configure-protocols-for-marketo
+    verified: '2026-08-20'
     tier: application
     description: >-
-      Subdomain CNAMEs into Marketo tracking-link hosts such as
-      ``mkto-[...]`` domains. Indicates branded marketing links
-      or landing-page flows served through Adobe Marketo.
+      Marketo tracking-link CNAME target in Adobe's documented
+      mkto-[letter][four digits].com form, such as mkto-a0244.com.
+      This indicates branded email tracking through Marketo, not
+      campaign activity or a subscription tier.
   - type: cname_target
     pattern: mktoapps.com
     reference: https://experienceleague.adobe.com/docs/marketo/using/product-docs/administration/setup-and-login/set-up-your-domain.html
@@ -938,14 +946,14 @@ fingerprints:
       M365 endpoint subdomain.
   - type: cname_target
     pattern: sharepoint.com
-    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
+    reference: https://learn.microsoft.com/en-us/troubleshoot/sharepoint/sites/cannot-access-sites-by-using-a-domain
+    verified: 2026-08-20
     tier: application
     description: >-
-      Subdomain CNAMEs into sharepoint.com (the
-      tenant-name.sharepoint.com pattern is the default
-      domain for SharePoint Online tenants). Indicates the
-      domain delegates a SharePoint-branded subdomain to
-      Microsoft 365.
+      Branded subdomain CNAME target under `<tenant>.sharepoint.com`, the
+      exact form in Microsoft's current SharePoint Online DNS guidance. This
+      observes a SharePoint-hosted application route, not site activity,
+      content visibility, or use of Exchange Online.
 
 - name: WP Engine
   slug: wpengine
@@ -1474,108 +1482,34 @@ fingerprints:
   confidence: high
   detections:
   - type: cname_target
-    pattern: execute-api.us-east-1.amazonaws.com
+    pattern: '\.execute-api\.[a-z0-9-]+\.amazonaws\.com(?:\.cn)?$'
     reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
+    verified: 2026-08-20
     tier: infrastructure
     description: >-
-      Subdomain CNAMEs into AWS API Gateway in us-east-1.
-      Indicates the domain delegates a branded API endpoint
-      to an API Gateway deployment in N. Virginia.
-  - type: cname_target
-    pattern: execute-api.us-west-2.amazonaws.com
-    reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into AWS API Gateway in us-west-2
-      (Oregon). Indicates a branded API endpoint hosted in
-      that region.
-  - type: cname_target
-    pattern: execute-api.eu-west-1.amazonaws.com
-    reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into AWS API Gateway in eu-west-1
-      (Ireland). Indicates a branded API endpoint hosted in
-      that region.
-  - type: cname_target
-    pattern: execute-api.eu-central-1.amazonaws.com
-    reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into AWS API Gateway in eu-central-1
-      (Frankfurt). Indicates a branded API endpoint hosted
-      in that region, common with EU-data-residency setups.
-  - type: cname_target
-    pattern: execute-api.ap-southeast-1.amazonaws.com
-    reference: https://docs.aws.amazon.com/apigateway/latest/developerguide/how-to-custom-domains.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into AWS API Gateway in ap-southeast-1
-      (Singapore). Indicates a branded API endpoint hosted
-      in that region.
+      Subdomain CNAME target ending in the documented regional AWS API
+      Gateway form, including commercial, GovCloud, and China partitions.
+      This covers default API and Regional custom-domain targets. It does
+      not claim edge-optimized CloudFront targets or private VPC endpoint
+      names under ``execute-api.<region>.vpce.amazonaws.com``.
 
-- name: AWS Network Load Balancer
+- name: AWS Application or Network Load Balancer
   slug: aws-nlb
   category: Infrastructure
   confidence: high
   detections:
   - type: cname_target
-    pattern: elb.us-east-1.amazonaws.com
-    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
+    pattern: '\.elb\.[a-z0-9-]+\.amazonaws\.com(?:\.cn)?$'
+    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/network-load-balancers.html
+    verified: '2026-08-20'
     tier: infrastructure
     description: >-
-      Subdomain CNAMEs into a regional AWS ALB or NLB
-      endpoint in us-east-1. The slug uses "nlb" but the
-      underlying ELB hostname covers both Application and
-      Network Load Balancers.
-  - type: cname_target
-    pattern: elb.us-west-2.amazonaws.com
-    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into a regional AWS ALB or NLB endpoint
-      in us-west-2 (Oregon). Does not distinguish ALB from NLB;
-      both produce this chain. Hosting-binding signal only, not
-      a traffic-volume signal.
-  - type: cname_target
-    pattern: elb.eu-west-1.amazonaws.com
-    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into a regional AWS ALB or NLB
-      endpoint in eu-west-1 (Ireland).
-  - type: cname_target
-    pattern: elb.eu-central-1.amazonaws.com
-    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into a regional AWS ALB or NLB
-      endpoint in eu-central-1 (Frankfurt).
-  - type: cname_target
-    pattern: elb.ap-southeast-1.amazonaws.com
-    reference: https://docs.aws.amazon.com/elasticloadbalancing/latest/network/introduction.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into a regional AWS ALB or NLB
-      endpoint in ap-southeast-1 (Singapore).
-  - type: cname_target
-    pattern: elb.us-gov-east-1.amazonaws.com
-    reference: https://docs.aws.amazon.com/govcloud-us/latest/UserGuide/whatis.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into a regional AWS ALB or NLB endpoint in
-      the us-gov-east-1 AWS GovCloud (US-East) region. Suggests the
-      org runs workloads in AWS GovCloud, the partition for US
-      government and regulated workloads. Does not distinguish ALB
-      from NLB, and does not by itself confirm a compliance boundary.
-  - type: cname_target
-    pattern: elb.us-gov-west-1.amazonaws.com
-    reference: https://docs.aws.amazon.com/govcloud-us/latest/UserGuide/whatis.html
-    tier: infrastructure
-    description: >-
-      Subdomain CNAMEs into a regional AWS ALB or NLB endpoint in
-      the us-gov-west-1 AWS GovCloud (US-West) region. Same GovCloud
-      partition as us-gov-east-1. Does not distinguish ALB from NLB.
+      CNAME-chain target using AWS's current regional ELBv2 form,
+      `name-id.elb.region.amazonaws.com`, including GovCloud and the
+      `amazonaws.com.cn` China partition. AWS documents the same form
+      for Application and Network Load Balancers, so DNS cannot
+      distinguish those products. The stable `aws-nlb` slug is retained
+      for compatibility. This is a hosting-binding observation only.
 
 # ── New cname_target rules from the 2026-06 C2 corpus run ─────────────────
 
@@ -2063,24 +1997,24 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: exacttarget.com
-    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
+    reference: https://help.salesforce.com/s/articleView?id=000383566&language=en_US&type=1
+    verified: '2026-08-20'
     tier: application
     description: >-
-      Salesforce Marketing Cloud (SFMC) ExactTarget legacy zone
-      CNAME (s7, s10, s11, and other tenant-instance zones).
-      Indicates the org runs SFMC. Functionally equivalent to direct
-      `marketingcloudapis.com` chains; ExactTarget is the
-      pre-2013-acquisition product name.
+      CNAME-chain target under exacttarget.com. Salesforce's current
+      stack guide documents Marketing Cloud Engagement application
+      hosts such as `mc.s7.exacttarget.com`. This observes an SFMC
+      application endpoint, not API activity or tenant configuration.
   - type: cname_target
     pattern: sfmc-content.com
-    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
+    reference: https://help.salesforce.com/s/articleView?id=000389721&language=en_US&type=1
+    verified: '2026-08-20'
     tier: application
     description: >-
-      SFMC content-delivery zone CNAME (cp-sap and related
-      subzones). Indicates the org runs Marketing Cloud and delivers
-      content through SFMC's CDN layer. Does not distinguish SFMC
-      editions; the chain is shared across Enterprise, Pro, and
-      Corporate tiers.
+      CNAME-chain target under sfmc-content.com. Salesforce's current
+      CloudPages transition guide documents tenant-specific public
+      hosts under `*.pub.sfmc-content.com`. This observes SFMC-hosted
+      CloudPages or content, not a product edition or campaign state.
 
 - name: AWS S3
   slug: aws-s3
@@ -2205,30 +2139,34 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: sfmc-marketing.com
-    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
+    reference: https://help.salesforce.com/s/articleView?id=mktg.mc_es_ip_addresses_for_inclusion.htm&language=en_US&type=5
+    verified: '2026-08-20'
     tier: application
     description: >-
-      Subdomain CNAMEs into sfmc-marketing.com (Salesforce
-      Marketing Cloud link-tracking and click-attribution
-      endpoint). Indicates the domain operates a tracked SFMC
-      subdomain.
+      CNAME-chain target under sfmc-marketing.com. Salesforce's current
+      allowlist identifies this family for Marketing Cloud Engagement
+      view-as-web-page URLs when an SAP domain is not applied. This
+      does not establish campaign activity.
   - type: cname_target
     pattern: marketingcloudapis.com
-    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
+    reference: https://developer.salesforce.com/docs/marketing/marketing-cloud/guide/your-subdomain-tenant-specific-endpoints.html
+    verified: '2026-08-20'
     tier: application
     description: >-
-      Subdomain CNAMEs into marketingcloudapis.com (SFMC's
-      API endpoint domain). Indicates the domain proxies
-      Marketing Cloud API traffic through a branded subdomain.
+      CNAME-chain target under marketingcloudapis.com. Salesforce
+      documents tenant-specific `auth`, `rest`, and `soap` endpoints
+      under this domain. This observes routing to an SFMC API endpoint;
+      it does not establish API activity or credentials.
   - type: cname_target
     pattern: exct.net
-    reference: https://help.salesforce.com/s/articleView?id=sf.mc_es_set_up_custom_domain.htm
+    reference: https://help.salesforce.com/s/articleView?id=mktg.mc_es_ip_addresses_for_inclusion.htm&language=en_US&type=5
+    verified: '2026-08-20'
     tier: application
     description: >-
-      Subdomain CNAMEs into exct.net (a legacy ExactTarget /
-      SFMC tracking-link domain). Functionally equivalent to
-      the sfmc-marketing.com endpoint; some tenants still
-      use the shorter legacy form.
+      CNAME-chain target under exct.net. Salesforce's current
+      allowlist identifies this family for Subscription Center link
+      tracking when an SAP domain is not applied. This does not
+      establish a current campaign or subscription-center state.
 
 - name: Statuspage (Atlassian)
   slug: statuspage
@@ -2744,7 +2682,8 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: akamaiedge.net
-    reference: https://techdocs.akamai.com/property-mgr/docs
+    reference: https://techdocs.akamai.com/property-mgr/reference/modify-property-hostnames
+    verified: '2026-08-20'
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into akamaiedge.net (Akamai edge
@@ -2752,7 +2691,8 @@ fingerprints:
       Akamai's edge for CDN or WAF services.
   - type: cname_target
     pattern: akamaized.net
-    reference: https://techdocs.akamai.com/property-mgr/docs
+    reference: https://techdocs.akamai.com/property-mgr/reference/modify-property-hostnames
+    verified: '2026-08-20'
     tier: infrastructure
     description: >-
       Subdomain CNAMEs into akamaized.net (Akamai's
@@ -2761,19 +2701,21 @@ fingerprints:
       to Akamai.
   - type: cname_target
     pattern: edgekey.net
-    reference: https://techdocs.akamai.com/property-mgr/docs
+    reference: https://techdocs.akamai.com/property-mgr/reference/modify-property-hostnames
+    verified: '2026-08-20'
     tier: infrastructure
     description: >-
-      Subdomain CNAMEs into edgekey.net (Akamai's edge-key
-      product domain). Same edge-proxying semantics as
+      Subdomain CNAMEs into edgekey.net, which current Akamai
+      documentation names for Enhanced TLS edge hostnames. Same semantics as
       akamaiedge.net.
   - type: cname_target
     pattern: edgesuite.net
-    reference: https://techdocs.akamai.com/property-mgr/docs
+    reference: https://techdocs.akamai.com/property-mgr/reference/modify-property-hostnames
+    verified: '2026-08-20'
     tier: infrastructure
     description: >-
-      Subdomain CNAMEs into edgesuite.net (Akamai EdgeSuite
-      CDN and WAF product). Same edge-proxying semantics as
+      Subdomain CNAMEs into edgesuite.net, which current Akamai
+      documentation names for Standard TLS edge hostnames. Same semantics as
       the other Akamai edge domains.
   - type: cname_target
     pattern: akadns.net
@@ -4843,12 +4785,13 @@ fingerprints:
   - type: cname_target
     pattern: usgovcloud.microsoft
     reference: https://learn.microsoft.com/en-us/microsoft-365/enterprise/microsoft-365-u-s-government-gcc-high-endpoints
+    verified: 2026-08-20
     tier: application
     description: >-
-      Autodiscover / service CNAME terminating in the Microsoft 365 US
-      Government cloud (`*.usgovcloud.microsoft`), i.e. GCC High / DoD
-      rather than the commercial cloud. Indicates a government-cloud
-      M365 tenant. Distinct from the commercial microsoft365 slug.
+      CNAME target under Microsoft 365's documented
+      `*.usgovcloud.microsoft` GCC High application domain. This observes a
+      US Government cloud service endpoint, not a specific application,
+      tenant activity, or the broader commercial Microsoft 365 surface.
 
 # ---------------------------------------------------------------------------
 # v1.9.23 expansion: cname_target rules from the 670-domain CNAME discovery
