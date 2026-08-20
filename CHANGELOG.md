@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.4] - 2026-08-20
+
 The Okta custom-domain family is dated from current public pages. Dead
 `help.okta.com` custom-url-domain and preview-orgs links, and a 404
 government marketing URL, now point at the live developer guide and
