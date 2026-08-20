@@ -97,11 +97,10 @@ then separates Azure Communication Services Email's
 commercial Autodiscover and GCC High MX to exact current targets, and dates the
 supported government SPF, government application-domain, and SharePoint roles.
 
-The next operation is publication through a reviewed draft pull request and the
-protected-main checks. That comes before more catalog expansion because this
-batch already changes runtime classification and its value is not delivered
-until the protected branch carries it. After protected main, continue the
-Microsoft residuals one pattern at a time. `tm-3.office.com`,
+v2.17.5 now carries this batch after a reviewed pull request, protected-main
+checks, PyPI and GitHub publication, SBOM provenance, and exact channel-parity
+verification. The next catalog operation is to continue the Microsoft
+residuals one pattern at a time. `tm-3.office.com`,
 `svc.cloud.microsoft`, `svc.sovcloud.cn`, `eo.outlook.com`, and `msv1.invalid`
 remain undated because the current pages reviewed here do not support each exact
 pattern and DNS role. Proofpoint remains blocked for the same evidence reason.
