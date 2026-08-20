@@ -677,9 +677,11 @@ appear here as a product milestone:
    custom-domain family (`_oktaverification`, `okta.com`, `oktapreview.com`,
    `customdomains.okta.com`, `okta-dnssec.com`, `okta-gov.com`) from current
    developer and allowlist pages; `okta-domain-verification` stays undated
-   because the current guide does not name it. Proofpoint gateway MX/SPF
-   stays undated: public product pages do not name those hosts, and the
-   Essentials connection-details article is login-walled. Detail:
+   because the current guide does not name it. The 2026-08-20 Mimecast pass
+   dated inbound MX and `_netblocks` SPF from current support articles.
+   Proofpoint gateway MX/SPF stays undated: public product pages do not name
+   those hosts, and the Essentials connection-details article is login-walled.
+   Detail:
    [catalog-strategy.md](catalog-strategy.md#3-freshness).
 4. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work

@@ -107,29 +107,37 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^mimecast
-    reference: https://community.mimecast.com/
+    reference: https://mimecastsupport.zendesk.com/hc/en-us/articles/34000818734995-Directories-Managing-Internal-Domain-Subdomains
     description: >-
-      Mimecast domain-verification TXT (Mimecast is an email
-      security gateway vendor). Indicates the domain is
-      administratively bound to a Mimecast tenant. Does not
-      prove the gateway is currently in the inbound mail flow;
-      check MX evidence for that.
+      Mimecast domain-verification TXT prefix (`mimecast`).
+      Current Mimecast domain-validation articles tell the
+      operator to publish a registrar-specific verification
+      code at `@`, and do not name this prefix, so it stays
+      undated. Retained as a still-observed administrative
+      claim. It does not prove the gateway is in the inbound
+      mail flow.
   - type: mx
     pattern: mimecast.com
-    reference: https://www.mimecast.com/products/email-security/
+    reference: https://mimecastsupport.zendesk.com/hc/en-us/articles/34000417366675-Account-Settings-Mimecast-Gateway-Configuration
+    verified: 2026-08-20
     description: >-
       MX terminating at Mimecast (`*.mimecast.com` regional
-      variants like `eu-smtp-inbound.mimecast.com`). Indicates
-      Mimecast sits in front of inbound mail. Like Proofpoint,
-      often deployed in front of M365 or Google Workspace; the
-      downstream provider is not deducible from this MX alone.
+      hosts such as `us-smtp-inbound-1.mimecast.com`). Mimecast's
+      current gateway-configuration article names those inbound
+      hostnames. This observes inbound mail routing through
+      Mimecast. An upstream or downstream provider is not
+      deducible from this MX alone.
   - type: spf
     pattern: _netblocks.mimecast.com
-    reference: https://www.mimecast.com/products/email-security/
+    reference: https://mimecastsupport.zendesk.com/hc/en-us/articles/34000792642963-Connect-Application-Implementing-SPF-for-Outbound-Email
+    verified: 2026-08-20
     description: >-
-      SPF `include:_netblocks.mimecast.com` authorizes Mimecast
-      to send mail on behalf of the domain. Typically paired
-      with the Mimecast MX.
+      SPF `include:_netblocks.mimecast.com` (or a regional
+      prefix such as `us._netblocks.mimecast.com`). Mimecast's
+      current outbound-SPF article names the global include and
+      the regional variants. This authorizes Mimecast to send
+      mail for the queried namespace. It does not by itself
+      establish inbound MX routing.
 - name: Barracuda
   slug: barracuda
   category: Security & Compliance
