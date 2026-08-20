@@ -26,6 +26,8 @@ from typing import Any
 
 import yaml
 
+from recon_tool.sources.dns_tables import cname_target_pattern_matches
+
 
 def suffix_for(terminal: str) -> str:
     """Bucket a terminal hostname by its rightmost three labels.
@@ -165,15 +167,11 @@ def already_covered(suffix: str, patterns: set[str]) -> bool:
 def pattern_matches_hostname(value: str, pattern: str) -> bool:
     """Mirror runtime CNAME-target hostname matching for candidate filters.
 
-    Dotted patterns are service domains and must match the exact hostname or a
-    proper DNS-label suffix. Dotless patterns are fragments such as ``mkto-``
-    and intentionally keep substring semantics.
+    Whole domains use DNS-label suffix matching, simple fragments require a
+    label or hyphen boundary, and regex-shaped patterns use the same validated
+    regex behavior as the runtime classifier.
     """
-    hostname = value.lower().strip().rstrip(".")
-    pat = pattern.lower().strip().lstrip(".").rstrip(".")
-    if not hostname or not pat:
-        return False
-    return (hostname == pat or hostname.endswith("." + pat)) if "." in pat else pat in hostname
+    return cname_target_pattern_matches(value, pattern)
 
 
 def find_candidates(

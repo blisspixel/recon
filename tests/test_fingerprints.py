@@ -569,6 +569,7 @@ def _mx_rules_for_slug(slug: str) -> dict[str, DetectionRule]:
 
 def test_google_workspace_mx_family_matches_current_vendor_page() -> None:
     rules = _mx_rules_for_slug("google-workspace")
+    spf = _rules_for_slug("google-workspace", "spf")["_spf.google.com"]
     aspmx = rules["aspmx.l.google.com"]
     smtp = rules["smtp.google.com"]
     assert aspmx.verified == "2026-08-19"
@@ -580,10 +581,15 @@ def test_google_workspace_mx_family_matches_current_vendor_page() -> None:
     assert "aspmx" in smtp.description
     assert aspmx.reference.startswith("https://knowledge.workspace.google.com/")
     assert smtp.reference.startswith("https://knowledge.workspace.google.com/")
+    assert spf.verified == "2026-08-20"
+    assert spf.reference == "https://support.google.com/a/answer/33786"
 
 
 def test_microsoft365_mx_family_matches_current_vendor_pages() -> None:
     rules = _mx_rules_for_slug("microsoft365")
+    spf = _rules_for_slug("microsoft365", "spf")["spf.protection.outlook.com"]
+    txt = _rules_for_slug("microsoft365", "txt")
+    targets = _rules_for_slug("microsoft365", "cname_target")
     outlook = rules["mail.protection.outlook.com"]
     mx_microsoft = rules["mx.microsoft"]
     assert outlook.verified == "2026-08-19"
@@ -592,6 +598,98 @@ def test_microsoft365_mx_family_matches_current_vendor_pages() -> None:
     assert "mail.protection.outlook.com" in mx_microsoft.description
     assert "external-domain-name-system-records" in outlook.reference
     assert "how-dane-secures-email" in mx_microsoft.reference
+    assert spf.verified == "2026-08-20"
+    assert "external-domain-name-system-records" in spf.reference
+    assert txt["^MS=ms"].verified == "2026-08-20"
+    assert "create-dns-records-at-any-dns-hosting-provider" in txt["^MS=ms"].reference
+    assert "^ms-domain-verification=" not in txt
+    assert "outlook.com" not in targets
+    assert targets["autodiscover.outlook.com"].verified == "2026-08-20"
+    assert "create-dns-records-using-windows-based-dns" in targets["autodiscover.outlook.com"].reference
+    assert targets["sharepoint.com"].verified == "2026-08-20"
+    assert "cannot-access-sites-by-using-a-domain" in targets["sharepoint.com"].reference
+
+
+def test_azure_communication_services_email_owns_its_current_verification_token() -> None:
+    rule = _rules_for_slug("azure-communication-services-email", "txt")["^ms-domain-verification="]
+
+    assert rule.verified == "2026-08-20"
+    assert "email-domain-configuration-troubleshooting" in rule.reference
+    assert "Azure Communication Services Email" in rule.description
+    assert "not Microsoft 365 tenant verification" in rule.description
+
+
+def test_microsoft365_government_family_matches_current_vendor_pages() -> None:
+    mx = _rules_for_slug("microsoft365-gov", "mx")
+    spf = _rules_for_slug("microsoft365-gov", "spf")
+    targets = _rules_for_slug("microsoft365-gov", "cname_target")
+
+    assert "office365.us" not in mx
+    assert mx["mail.protection.office365.us"].verified == "2026-08-20"
+    assert "dns-records-for-office-365-gcc-high" in mx["mail.protection.office365.us"].reference
+    assert spf["spf.protection.office365.us"].verified == "2026-08-20"
+    assert "email-authentication-spf-configure" in spf["spf.protection.office365.us"].reference
+    assert targets["usgovcloud.microsoft"].verified == "2026-08-20"
+    assert "microsoft-365-u-s-government-gcc-high-endpoints" in targets["usgovcloud.microsoft"].reference
+
+
+def test_aws_ses_mail_family_matches_current_vendor_pages() -> None:
+    mx = _mx_rules_for_slug("aws-ses")
+    spf = _rules_for_slug("aws-ses", "spf")["amazonses.com"]
+    txt = _rules_for_slug("aws-ses", "txt")["^amazonses:"]
+    regions = {
+        "us-east-1",
+        "us-east-2",
+        "us-west-1",
+        "us-west-2",
+        "af-south-1",
+        "ap-southeast-3",
+        "ap-south-1",
+        "ap-northeast-3",
+        "ap-northeast-2",
+        "ap-southeast-1",
+        "ap-southeast-2",
+        "ap-northeast-1",
+        "ca-central-1",
+        "eu-central-1",
+        "eu-west-1",
+        "eu-west-2",
+        "eu-south-1",
+        "eu-west-3",
+        "eu-north-1",
+        "il-central-1",
+        "me-south-1",
+        "sa-east-1",
+    }
+    expected = {f"inbound-smtp.{region}.amazonaws.com" for region in regions}
+
+    assert expected <= mx.keys()
+    for pattern in expected:
+        assert mx[pattern].verified == "2026-08-20"
+        assert mx[pattern].reference == "https://docs.aws.amazon.com/general/latest/gr/ses.html"
+        assert "email-receiving endpoint" in mx[pattern].description
+
+    assert spf.verified == "2026-08-20"
+    assert spf.reference == "https://docs.aws.amazon.com/ses/latest/dg/mail-from.html"
+    assert "custom MAIL FROM" in spf.description
+    assert txt.verified == ""
+    assert "stays undated" in txt.description
+
+
+def test_akamai_edge_family_matches_current_vendor_page() -> None:
+    cname = _rules_for_slug("akamai", "cname")
+    targets = _rules_for_slug("akamai", "cname_target")
+    current = {"akamaiedge.net", "akamaized.net", "edgekey.net", "edgesuite.net"}
+
+    for pattern in current & cname.keys():
+        assert cname[pattern].verified == "2026-08-20"
+        assert "modify-property-hostnames" in cname[pattern].reference
+    for pattern in current & targets.keys():
+        assert targets[pattern].verified == "2026-08-20"
+        assert "modify-property-hostnames" in targets[pattern].reference
+
+    assert targets["akamaiedge-staging.net"].verified == ""
+    assert targets["akadns.net"].verified == ""
 
 
 def test_okta_custom_domain_family_matches_current_vendor_pages() -> None:
@@ -651,3 +749,222 @@ def test_mimecast_gateway_family_matches_current_vendor_pages() -> None:
     assert txt["^mimecast"].verified == ""
     assert "stays undated" in txt["^mimecast"].description
     assert spf["mim.ec"].verified == ""
+
+
+def test_trendmicro_gateway_family_matches_current_vendor_pages() -> None:
+    mx = _rules_for_slug("trendmicro", "mx")
+    spf = _rules_for_slug("trendmicro", "spf")
+    rua = _rules_for_slug("trendmicro", "dmarc_rua")
+    expected_spf = {
+        "spf.tmes.trendmicro.com",
+        "spf-us.tmes.trendmicro.com",
+        "spf.tmes.trendmicro.eu",
+        "spf.tmes-anz.trendmicro.com",
+        "spf.tmems-jp.trendmicro.com",
+        "spf.tmes-sg.trendmicro.com",
+        "spf.tmes-in.trendmicro.com",
+        "spf.tmes-uae.trendmicro.com",
+        "spf.tmes-uk.trendmicro.com",
+        "spf.tmes-ca.trendmicro.com",
+        "spf.tmes-za.trendmicro.com",
+        "spf.tmes-id.trendmicro.com",
+    }
+
+    assert {"tmes.trendmicro.com", "trendmicro.com", "trendmicro.eu"} <= mx.keys()
+    for pattern in ("tmes.trendmicro.com", "trendmicro.com", "trendmicro.eu"):
+        assert mx[pattern].verified == "2026-08-20"
+        assert "configuring-a-domain" in mx[pattern].reference
+        assert "downstream mailbox provider" in mx[pattern].description
+
+    assert expected_spf <= spf.keys()
+    for pattern in expected_spf:
+        assert spf[pattern].verified == "2026-08-20"
+        assert "adding-spf-records" in spf[pattern].reference
+        assert "does not establish inbound MX routing" in spf[pattern].description
+
+    assert "recommends replacing" in spf["spf.tmes.trendmicro.com"].description
+    assert rua["trendmicro.eu"].verified == ""
+
+
+def test_barracuda_gateway_family_matches_current_vendor_page() -> None:
+    mx = _rules_for_slug("barracuda", "mx")["barracudanetworks.com"]
+    rua = _rules_for_slug("barracuda", "dmarc_rua")["barracudanetworks.com"]
+
+    assert mx.verified == "2026-08-20"
+    assert mx.description == (
+        "MX terminating at Barracuda Email Gateway Defense (`*.ess.barracudanetworks.com`). Barracuda's current "
+        "domain-status page tells operators to verify that MX records point to this suffix. This observes inbound "
+        "mail routing through Barracuda. It does not identify a downstream mailbox provider."
+    )
+    assert "2850986" in mx.reference
+    assert rua.verified == ""
+
+
+def test_cisco_cloud_gateway_family_matches_current_vendor_page() -> None:
+    current = _rules_for_slug("cisco-ironport", "mx")["iphmx.com"]
+    legacy = _rules_for_slug("cisco-email", "mx")["ess.cisco.com"]
+
+    assert current.verified == "2026-08-20"
+    assert "mx1.*.iphmx.com" in current.description
+    assert current.reference == "https://docs.ces.cisco.com/docs/hostnames"
+    assert legacy.verified == ""
+    assert "stays undated" in legacy.description
+    assert legacy.description == (
+        "Observed MX suffix associated with Cisco's earlier Email Security Service (`*.ess.cisco.com`). Cisco's "
+        "current Cloud Gateway hostname page names `*.iphmx.com`, not this suffix, so this rule stays undated. A "
+        "match still observes inbound mail routing through a Cisco-associated gateway. It does not identify a "
+        "downstream mailbox provider."
+    )
+
+
+def test_hubspot_exact_current_rules_are_dated_without_family_stamping() -> None:
+    spf = _rules_for_slug("hubspot", "spf")["hubspotemail.net"]
+    cname = _rules_for_slug("hubspot", "cname")["hubspot.net"]
+    target = _rules_for_slug("hubspot", "cname_target")["hubspot.net"]
+    undated_patterns = {
+        rule.pattern
+        for rule_type in ("txt", "cname_target")
+        for rule in _rules_for_slug("hubspot", rule_type).values()
+        if rule.verified == ""
+    }
+
+    assert spf.verified == "2026-08-20"
+    assert "manage-email-authentication-in-hubspot" in spf.reference
+    assert spf.description == (
+        "SPF include under hubspotemail.net. HubSpot's current email-authentication guide shows account- and "
+        "pool-qualified values such as 123456.spf03.hubspotemail.net. This authorizes HubSpot email sending; it "
+        "does not establish inbound routing or identify a licensed Hub."
+    )
+    for rule in (cname, target):
+        assert rule.verified == "2026-08-20"
+        assert rule.reference == "https://developers.hubspot.com/docs/api-reference/legacy/cms/domains/guide"
+    assert cname.description == (
+        "CNAME pointing into hubspot.net. HubSpot's current Domains API guide shows expectedCname values such as "
+        "8675309.group39.sites.hubspot.net for a connected domain. This indicates HubSpot-hosted content under a "
+        "branded hostname, not a specific product tier."
+    )
+    assert target.description == (
+        "Discovered CNAME targets under hubspot.net. HubSpot's current Domains API guide shows expectedCname values "
+        "such as 8675309.group39.sites.hubspot.net for a connected domain. This indicates HubSpot-hosted content "
+        "under a branded hostname, not a specific product tier."
+    )
+    assert undated_patterns == {
+        "^hubspot-developer-verification=",
+        "^hubspot-domain-verification=",
+        "hscoscdn-eu1.net",
+        "hscoscdn-na2.net",
+        "hs-sites.com",
+        "hsforms.net",
+        "hubspotpagebuilder.com",
+    }
+
+
+def test_marketo_exact_current_rules_are_dated_and_broad_rule_is_narrowed() -> None:
+    spf = _rules_for_slug("marketo", "spf")["mktomail.com"]
+    cname = _rules_for_slug("marketo", "cname")["mktoweb.com"]
+    targets = _rules_for_slug("marketo", "cname_target")
+    tracking_pattern = r"^mkto-[a-z][0-9]{4}\.com$"
+    undated_patterns = {
+        rule.pattern
+        for rule_type in ("cname", "cname_target")
+        for rule in _rules_for_slug("marketo", rule_type).values()
+        if rule.verified == ""
+    }
+
+    for rule in (spf, cname, targets["mktoweb.com"], targets[tracking_pattern]):
+        assert rule.verified == "2026-08-20"
+        assert rule.reference == (
+            "https://experienceleague.adobe.com/en/docs/marketo/using/getting-started/initial-setup/"
+            "configure-protocols-for-marketo"
+        )
+    assert "include matching mktomail.com" in spf.description
+    assert "[MunchkinID].mktoweb.com" in cname.description
+    assert targets[tracking_pattern].description == (
+        "Marketo tracking-link CNAME target in Adobe's documented mkto-[letter][four digits].com form, such as "
+        "mkto-a0244.com. This indicates branded email tracking through Marketo, not campaign activity or a "
+        "subscription tier."
+    )
+    assert "mkto-" not in targets
+    assert undated_patterns == {
+        "marketo.com",
+        "mktoapps.com",
+        "mktoresp.com",
+        "mktosvc.com",
+        "mktossl.com",
+    }
+
+
+def test_salesforce_marketing_cloud_current_rules_are_dated_and_scoped() -> None:
+    cname = _rules_for_slug("salesforce-mc", "cname")
+    targets = _rules_for_slug("salesforce-mc", "cname_target")
+    spf = _rules_for_slug("salesforce-mc", "spf")["exacttarget.com"]
+    txt = _rules_for_slug("sfmc", "txt")["^SFMC-"]
+    allowlist = (
+        "https://help.salesforce.com/s/articleView?id=mktg.mc_es_ip_addresses_for_inclusion.htm&language=en_US&type=5"
+    )
+
+    assert set(cname) == {"exacttarget.com", "sfmc-content.com", "sfmc-marketing.com"}
+    assert set(targets) >= {
+        "exacttarget.com",
+        "exct.net",
+        "marketingcloudapis.com",
+        "sfmc-content.com",
+        "sfmc-marketing.com",
+    }
+    for rule in (
+        *cname.values(),
+        *(
+            targets[pattern]
+            for pattern in (
+                "exacttarget.com",
+                "exct.net",
+                "marketingcloudapis.com",
+                "sfmc-content.com",
+                "sfmc-marketing.com",
+            )
+        ),
+    ):
+        assert rule.verified == "2026-08-20"
+
+    assert cname["exacttarget.com"].reference.endswith("id=000383566&language=en_US&type=1")
+    assert "application host" in cname["exacttarget.com"].description
+    assert cname["sfmc-content.com"].reference.endswith("id=000389721&language=en_US&type=1")
+    assert "CloudPages" in cname["sfmc-content.com"].description
+    assert cname["sfmc-marketing.com"].reference == allowlist
+    assert "view-as-web-page" in cname["sfmc-marketing.com"].description
+    assert targets["marketingcloudapis.com"].reference.startswith("https://developer.salesforce.com/")
+    assert "tenant-specific" in targets["marketingcloudapis.com"].description
+    assert targets["exct.net"].reference == allowlist
+    assert "Subscription Center link" in targets["exct.net"].description
+
+    assert spf.verified == ""
+    assert "stays undated" in spf.description
+    assert txt.verified == ""
+    assert "stays undated" in txt.description
+
+
+def test_aws_elbv2_surface_is_complete_without_claiming_alb_or_nlb() -> None:
+    rules = _rules_for_slug("aws-nlb", "cname_target")
+    pattern = r"\.elb\.[a-z0-9-]+\.amazonaws\.com(?:\.cn)?$"
+
+    assert set(rules) == {pattern}
+    rule = rules[pattern]
+    assert rule.verified == "2026-08-20"
+    assert rule.reference.endswith("network/network-load-balancers.html")
+    assert "Application and Network Load Balancers" in rule.description
+    assert "DNS cannot distinguish" in rule.description
+    assert "stable `aws-nlb` slug" in rule.description
+    assert "amazonaws.com.cn" in rule.description
+
+
+def test_aws_api_gateway_surface_is_partition_aware_and_scoped() -> None:
+    rules = _rules_for_slug("aws-api-gateway", "cname_target")
+    pattern = r"\.execute-api\.[a-z0-9-]+\.amazonaws\.com(?:\.cn)?$"
+
+    assert set(rules) == {pattern}
+    rule = rules[pattern]
+    assert rule.verified == "2026-08-20"
+    assert rule.reference.endswith("how-to-custom-domains.html")
+    assert "commercial, GovCloud, and China partitions" in rule.description
+    assert "edge-optimized CloudFront targets" in rule.description
+    assert "private VPC endpoint" in rule.description

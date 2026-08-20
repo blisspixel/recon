@@ -3,8 +3,9 @@
 Status: frozen on 2026-08-14; contract prerequisite passed protected main;
 portable candidate implemented and offline-validated; representative-client
 collection not yet complete. The first maintainer-local preflight stopped before
-collection because Cursor was unavailable and the selected client-launch recon
-was 2.6.3 rather than the candidate's 2.14.0.
+collection. A second network-free preflight passed on 2026-08-20 with recon
+2.17.4 and all three required clients, while starting zero sessions and making
+zero network requests.
 
 The candidate's version is not itself a frozen value. The portable candidate is
 generated from the runtime sources, so its version tracks the package and moves
@@ -63,6 +64,14 @@ visible instead of silently changing the evaluation basis.
 | Plugin schema | [canonical v1.0.0 schema](https://agent-plugins.org/schemas/1.0.0/plugin.schema.json), 1,805 bytes, SHA-256 `0a4aad95ce337878ad38802ebf0daa3fde76abe3f65400c86bcbb1ec0b3ab883` |
 | MCP schema | [canonical v1.0.0 schema](https://agent-plugins.org/schemas/1.0.0/mcp.schema.json), 3,408 bytes, SHA-256 `6539175bfcdf43085855183e86da40ea94b166547a72b47ae9a0a390516d3acb` |
 | Agent Skills | [official specification](https://agentskills.io/specification), source revision [69ef37e9424c0a7ea9dd2293b559e43ec8176379](https://github.com/agentskills/agentskills/commit/69ef37e9424c0a7ea9dd2293b559e43ec8176379) |
+
+The table preserves the at-freeze standards state. On 2026-08-20, Agent
+Plugins v1.0.0 reports Status: Published, and both canonical schema endpoints
+remain byte-identical to the frozen copies above. That external status change
+does not alter the contract digest, client frame, measures, or thresholds.
+The official compatible-client list has also expanded since the freeze. The
+preregistered three-client frame remains fixed for this round; broader client
+coverage would require a new contract rather than silently extending this one.
 
 The frozen Agent Skills field set is `name`, `description`, `license`,
 `compatibility`, `metadata`, and `allowed-tools`. The specification marks
@@ -153,7 +162,10 @@ Portable packaging may be promoted only when all of these are true:
 
 Any public wording remains qualified: "validated against the pinned Agent
 Plugins v1.0.0 Working Draft snapshot" on the named clients. It must not become
-an unqualified compatibility or future-draft conformance claim.
+an unqualified compatibility or conformance claim. Because v1.0.0 is now
+Published, any result must also state that the pinned schema bytes match the
+Published canonical schemas and that client behavior, not schema status, is
+what the paired evaluation measures.
 
 A smaller discovery profile may be considered only when at least two
 instrumented representative clients show at least a 30 percent reduction in
@@ -184,17 +196,19 @@ response.
    surfaces.
 3. Complete: validate the candidate offline against the byte-pinned schemas,
    exact package layout, launch contract, and portable skill rules.
-4. In progress: run the network-free, private preflight with an explicit recon
+4. Complete: run the network-free, private preflight with an explicit recon
    executable path, then record exact client versions. The first local preflight
-   applied the frozen stop rules with zero sessions because one required client
-   was unavailable and the selected runtime version did not match.
-5. Next after a passing preflight: execute the paired and negative-path frame
-   without changing its rules.
+   applied the frozen stop rules. The 2026-08-20 rerun passed with the matching
+   runtime and all three required clients.
+5. Next: declare the selected client models and hard cost ceiling, then execute
+   the paired and negative-path frame without changing its rules.
 6. Publish only disclosure-safe aggregate evidence and apply the frozen
    promote-or-defer decisions.
 
-The disclosure-safe first-preflight result is
-[`../validation/2026-08-14-agent-portability-preflight.md`](../validation/2026-08-14-agent-portability-preflight.md).
+The disclosure-safe preflight results are
+[`../validation/2026-08-14-agent-portability-preflight.md`](../validation/2026-08-14-agent-portability-preflight.md)
+and
+[`../validation/2026-08-20-agent-portability-preflight.md`](../validation/2026-08-20-agent-portability-preflight.md).
 
 Agent Plugins remains a packaging evaluation, not an MCP protocol change.
 Open Knowledge Format v0.2 remains separately deferred by

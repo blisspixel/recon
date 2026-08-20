@@ -140,6 +140,6 @@ events, derived trust tiers, or `usage_count`. A future named consumer must
 justify those lifecycle and semantic mappings rather than translate field names
 or counts mechanically.
 
-Agent Plugins v1.0.0 remains a Working Draft for portable skill and MCP package
-layout. It does not define this evidence artifact. Capsule support makes no
+Agent Plugins v1.0.0 is Published for portable skill and MCP package layout.
+It does not define this evidence artifact. Capsule support makes no
 Agent Plugins conformance claim and does not alter MCP wire behavior.

@@ -19,6 +19,7 @@ ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT = ROOT / "docs" / "assets" / "terminal-demo.svg"
 DEFAULT_README = ROOT / "README.md"
 _TERMINAL_WIDTH = 82
+_TERMINAL_HEIGHT = 25
 _FONT_FACE = re.compile(r"    @font-face \{.*?    \}\n", re.DOTALL)
 _TRANSCRIPT_START = "<!-- terminal-demo-transcript:start -->"
 _TRANSCRIPT_END = "<!-- terminal-demo-transcript:end -->"
@@ -182,6 +183,7 @@ def render_terminal_demo_svg() -> str:
     console = Console(
         file=stream,
         width=_TERMINAL_WIDTH,
+        height=_TERMINAL_HEIGHT,
         record=True,
         force_terminal=True,
         color_system="truecolor",

@@ -12,7 +12,8 @@ import pytest
 from scripts import check_agent_plugin
 from validation import prepare_agent_portability_evaluation as preflight
 
-PUBLIC_MEMO = preflight.ROOT / "validation" / "2026-08-14-agent-portability-preflight.md"
+STOP_MEMO = preflight.ROOT / "validation" / "2026-08-14-agent-portability-preflight.md"
+READY_MEMO = preflight.ROOT / "validation" / "2026-08-20-agent-portability-preflight.md"
 
 
 def _probe(command: str, *, version: str | None, status: str = "ready") -> dict[str, object]:
@@ -205,10 +206,9 @@ def test_cli_requires_explicit_runtime_command() -> None:
     assert exc.value.code == 2
 
 
-def test_public_stop_memo_is_disclosure_safe_and_matches_the_frozen_result() -> None:
-    text = PUBLIC_MEMO.read_text(encoding="utf-8")
+def test_public_stop_memo_is_disclosure_safe_and_preserves_the_historical_result() -> None:
+    text = STOP_MEMO.read_text(encoding="utf-8")
 
-    assert preflight._implementation_digest() == "e424ec0a9e27e2ee422b63c5fe983a556ee65e78f98cf50adf4e45b59daef1cf"
     assert "403a5860dc547ab0fd8961023d196e0b72ec6524ed2c1cb7da4253899628eafe" in text
     assert "e424ec0a9e27e2ee422b63c5fe983a556ee65e78f98cf50adf4e45b59daef1cf" in text
     assert "b0ab3db1932db421945eee6cee6428109d056c63fa1a4c86409d63dcf3d91eed" in text
@@ -217,6 +217,24 @@ def test_public_stop_memo_is_disclosure_safe_and_matches_the_frozen_result() -> 
     assert "Cursor | not observed" in text
     assert "2.6.3" in text
     assert "2.14.0" in text
+    assert "C:\\" not in text
+    assert "/Users/" not in text
+    assert "compatibility result" in text
+
+
+def test_public_ready_memo_is_disclosure_safe_and_matches_the_current_preflight() -> None:
+    text = READY_MEMO.read_text(encoding="utf-8")
+
+    assert preflight._implementation_digest() == "d428a99fc1845eddbb3948297734d96174e4d81a75f7a9923a0eead8c40c21a2"
+    assert "403a5860dc547ab0fd8961023d196e0b72ec6524ed2c1cb7da4253899628eafe" in text
+    assert "e81a7570478e95ee6d118e7d2fea3009d4956aa9e70f55a89b0a6a803df98b63" in text
+    assert "d428a99fc1845eddbb3948297734d96174e4d81a75f7a9923a0eead8c40c21a2" in text
+    assert "8ae8de2ad52d3d38cecfb38b549339b03ab55d45e110968a1065403325b15f44" in text
+    assert "`ready_for_collection` is `true`" in text
+    assert "Sessions started: 0. Network requests: 0." in text
+    assert "Visual Studio Code | `1.132.0`" in text
+    assert "Cursor | `3.16.29`" in text
+    assert "Kiro | `1.0.309`" in text
     assert "C:\\" not in text
     assert "/Users/" not in text
     assert "compatibility result" in text

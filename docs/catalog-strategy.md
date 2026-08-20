@@ -20,7 +20,7 @@ surface and independently supported precision are.
 
 ## How the catalog grows today
 
-The catalog carries 868 entries and 1,091 detection rules across nine populated
+The catalog carries 869 entries and 1,108 detection rules across nine populated
 types: `cname_target`, `cname`, `txt`, `spf`, `dmarc_rua`, `mx`, `ns`, `caa`,
 and `subdomain_txt`. The grammar and runtime also support `srv`, but the built-in
 catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
@@ -50,7 +50,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 61 of 1,091 detections currently carry a `verified` date (5.6 percent).
+date: 134 of 1,108 detections currently carry a `verified` date (12.1 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 
@@ -225,8 +225,8 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. As of 2026-08-20 the catalog has 61 dated detections of
-1,091 (5.6 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
+staleness threshold. As of 2026-08-20 the catalog has 134 dated detections of
+1,108 (12.1 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
 gate permits the legacy undated backlog but requires every new detection to
 carry a valid, non-future `verified` date. Backfill only independently reviewed
 families, and only after the vendor's current public page still names the
@@ -236,7 +236,13 @@ Microsoft 365, Google Workspace, Cloudflare, Okta, and Proofpoint. The 2026-08-1
 MX pass dated Google Workspace and Microsoft 365. Cloudflare Email Service was
 already dated. The later 2026-08-19 Okta pass dated the custom-domain family
 from current developer and allowlist pages. The 2026-08-20 Mimecast pass dated
-inbound MX and `_netblocks` SPF from current support articles. Proofpoint stays
+inbound MX and `_netblocks` SPF from current support articles. The later
+2026-08-20 pass dated current TrendAI regional MX and SPF values, Barracuda
+inbound MX, Cisco Cloud Gateway `iphmx.com`, all 22 current AWS SES
+email-receiving regions, and current AWS SES, Google Workspace, and Microsoft
+365 SPF values. Current `akamaiedge.net`, `akamaized.net`, `edgekey.net`, and
+`edgesuite.net` CNAME rules are dated from Akamai's Property Manager guide.
+Proofpoint stays
 in the queue: current public product pages do not name `pphosted.com` /
 `ppe-hosted.com` MX or SPF hosts, and the Essentials connection-details article
 is login-walled. Once coverage is high enough, raise the gate to reject dates
@@ -262,7 +268,8 @@ vendor-doc check found two of those cases, both already matched, and the
 Neither finding is a missing-pattern promotion. Both are why the freshness
 loop exists: the vendor page moved, and the family prose has to move with it.
 
-The same loop also retires dead references. The 2026-08-19 Okta pass found
+The same loop also retires dead references and corrects directionality. The
+2026-08-19 Okta pass found
 that `help.okta.com` custom-url-domain and preview-orgs articles 404, and
 that `okta.com/okta-for-government/` 404s. The live bases are the developer
 custom-domain guide (`_oktaverification`, `okta.com`, `oktapreview.com`,
@@ -275,7 +282,82 @@ and `community.mimecast.com/` roots with current support articles that name
 on the current domain-validation article and stays undated. Proofpoint is
 the remaining named queue family: public product pages do not name gateway
 MX/SPF hosts, and the Essentials connection-details article is login-walled,
-so those detections stay undated.
+so those detections stay undated. TrendAI documentation names current regional
+MX and site-specific SPF values while retaining the older shared US SPF value;
+the catalog now represents that distinction and adds the documented regional
+SPF suffixes. Barracuda's current Email Gateway Defense page still names
+`ess.barracudanetworks.com` for inbound MX. Cisco's current hostname page names
+`iphmx.com` for Cloud Gateway allocations, so `iphmx.com` is current and
+`ess.cisco.com` remains an undated earlier observation rather than the current
+default.
+
+AWS's current General Reference names 22 SES email-receiving endpoints. The
+catalog previously carried six; the 2026-08-20 pass dates those six and adds the
+other 16 with exact regional suffixes. The same pass dates
+`include:amazonses.com` from the custom MAIL FROM guide,
+`include:_spf.google.com` from Google Workspace Admin Help, and
+`include:spf.protection.outlook.com` from Microsoft Learn. The earlier observed
+`amazonses:` TXT value remains undated because current AWS identity guidance
+does not name that apex value form.
+
+Akamai's current Property Manager guide names `edgesuite.net` for Standard TLS,
+`edgekey.net` for Enhanced TLS, `akamaized.net` for shared certificates, and
+shows the subsequent `akamaiedge.net` chain. Those exact CNAME and
+`cname_target` rules are dated. The broader Edge DNS NS rules,
+`akamaiedge-staging.net`, and `akadns.net` remain undated until a current public
+page names each exact pattern and role.
+
+The bounded HubSpot review uses its closed v2.14 vendor-seed context and dates
+only three rules named by current first-party pages: the account-qualified
+`hubspotemail.net` SPF suffix plus the `hubspot.net` CNAME and discovered-target
+forms. Its other seven TXT and CNAME-target patterns remain undated because the
+reviewed current pages do not name their exact pattern and role.
+
+The bounded Marketo review dates `include:mktomail.com`, the CNAME and
+discovered-target forms of `[MunchkinID].mktoweb.com`, and the exact
+`mkto-[letter][four digits].com` tracking-link form. The last rule replaces the
+broader `mkto-` fragment and uses the shared validated-regex path in runtime and
+discovery matching. Five other Marketo patterns remain undated because current
+Adobe pages do not name their exact pattern and role.
+
+The bounded Salesforce Marketing Cloud review dates eight CNAME and
+discovered-target rules. Current first-party pages name `exacttarget.com`
+application hosts, `sfmc-content.com` CloudPages and Content Builder assets,
+`sfmc-marketing.com` web-view URLs, `marketingcloudapis.com` tenant-specific API
+endpoints, and `exct.net` Subscription Center link tracking. The
+`exacttarget.com` SPF and `SFMC-` TXT observations remain undated because the
+reviewed pages do not support those exact DNS roles.
+
+The AWS load-balancer correction replaces seven undated, partial regional
+`aws-nlb` CNAME-target rules with one dated validated regex for the current
+ELBv2 form across commercial, GovCloud, and China partitions. The stable slug
+is retained for compatibility, while the display name and description now say
+that the shared DNS form cannot distinguish Application from Network Load
+Balancers. Fictional partition positives, a Classic ELB negative boundary, and
+deceptive suffix lookalikes are blocking tests.
+
+The AWS API Gateway correction replaces five undated, partial regional rules
+with one dated validated regex for documented regional targets across
+commercial, GovCloud, and China partitions. Tests keep edge-optimized
+CloudFront targets, private VPC endpoint names, the bare regional service
+endpoint, and deceptive suffix lookalikes outside the API Gateway claim.
+
+The Microsoft residual pass corrects service and role boundaries before adding
+dates. Microsoft 365 retains the current `MS=ms########` tenant-domain token;
+`ms-domain-verification=` moves to a distinct Azure Communication Services
+Email fingerprint because that is the exact service named by current Microsoft
+documentation. The broad `outlook.com` CNAME target narrows to
+`autodiscover.outlook.com`, GCC High MX narrows from `office365.us` to
+`mail.protection.office365.us`, and supported GCC High SPF,
+`usgovcloud.microsoft`, and SharePoint roles are dated from current first-party
+pages.
+
+The next operation is publication through the protected-main workflow. After
+that, continue the remaining Microsoft rules one pattern at a time:
+`tm-3.office.com`, `svc.cloud.microsoft`, `svc.sovcloud.cn`, `eo.outlook.com`,
+and `msv1.invalid` stay undated until a current first-party page supports each
+exact pattern and DNS role. Proofpoint remains blocked for the same evidence
+reason. Do not stamp either family as a unit.
 
 ## 4. Higher-order signals
 

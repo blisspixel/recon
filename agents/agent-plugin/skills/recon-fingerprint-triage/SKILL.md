@@ -231,4 +231,4 @@ public regression fixture or permission to publish the value.
 - Do not map recon rule `verified`, fingerprint `confidence`, or private
   occurrence counts to OKF `verified`, trust tiers, or `usage_count`.
 - Do not turn offline schema validation into an unqualified Agent Plugins
-  compatibility or future-draft conformance claim.
+  compatibility or conformance claim.

@@ -37,13 +37,15 @@ tracked separately from product work.
 > the data, were misreading themselves; a fifth round confirmed 2.16. v2.16 is
 > the reopened form of the evidence-integrity track (a miscounting note is a
 > false claim recon emits about itself), closed by the parity gate. Agent
-> portability is a maintainer track on an external event, not a version-path
+> portability is a separate maintainer track, not a version-path
 > milestone: its
 > [representative-client contract](agent-portability-evaluation-declaration.md)
 > is frozen and its offline validation passes, but the paired evaluation is
-> blocked on representative-client availability and the project has declined to
-> claim conformance against a working-draft specification, so it does not queue
-> product work behind it.** The ordered version path through v3.0 is summarized
+> not complete. Agent Plugins v1.0.0 is Published, its canonical schema bytes
+> still match the pinned candidate, and the three-client/runtime preflight now
+> passes. Readiness is not compatibility or conformance, so the paired frame
+> still runs only under its frozen rules and a declared cost envelope. It does
+> not queue product work behind it.** The ordered version path through v3.0 is summarized
 > in [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
 > default.
@@ -72,9 +74,9 @@ tracked separately from product work.
 With the engine feature-complete, the roadmap is mostly not a version path. It
 is a set of loops that never finish because the world they observe keeps
 changing. The recent releases (v2.15, v2.16) were output of the playtest loop;
-the next durable stream is output of the freshness loop. Agent portability
-remains a parked maintainer track on representative-client availability; it
-does not queue product work behind a working-draft specification. Each loop
+the next durable stream is output of the freshness loop. Agent portability is
+a separate maintainer track: its preflight passes, while paired collection
+remains unmeasured. It does not queue product work. Each loop
 names its trigger, cadence, artifact, and stop or pass condition. A loop is
 healthy when it runs on its cadence and produces its artifact, not when it
 "completes."
@@ -134,15 +136,16 @@ accessibility decisions, and **v2.16.0 shipped renderer parity** (one shared
 briefing across the panel, `--plain`, `--md`, and the MCP text surface, MCP JSON
 fusion, and the gated surface-parity matrix). The durable product work after
 that close is the fingerprint-freshness loop, not another version milestone.
-Agent portability is a maintainer track on an external event, not a version-path
+Agent portability is a separate maintainer track, not a version-path
 milestone: its representative task, client, measure, privacy, and stop-rule
 contract is frozen, its protected-main prerequisite and the candidate's
 network-free schema, layout, launch, skill, and version validation are complete,
-but the paired evaluation is blocked on representative-client availability and
-the project has declined to claim conformance against a working-draft
-specification, so it does not queue product work behind it. When the clients
-are available, measure the current native path against that complete-surface
-Agent Plugins candidate in the frozen VS Code, Cursor, and Kiro frame without
+and a 2026-08-20 preflight passes with every frozen client and the matching
+runtime. The v1.0.0 specification is Published and its canonical schemas remain
+byte-identical to the pinned copies. The paired evaluation is still unmeasured,
+so the project makes no client compatibility or conformance claim. Measure the
+current native path against the complete-surface candidate in the frozen VS
+Code, Cursor, and Kiro frame only under a declared cost envelope, without
 changing stable CLI, JSON, or MCP contracts. New claim-surface drift reopens
 priority 1. Version milestones through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
@@ -197,7 +200,7 @@ current debt without turning every refinement into feature work.
 | Security | Unresolved HTTP destinations fail closed; rejected values and unexpected details stay out of default output; persisted inputs, corpus files, local catalog text, and default cache payload work are bounded; empty catalog filters cannot bypass compact defaults; release verification binds artifacts and recovery commands to exact status, workflow, tag, signer, and commit evidence; the installed dependency auditor resolves under Python isolated mode; pull requests and pushes to `main` run CodeQL while weekly and manual main scans remain | Ratchet the remote SAST requirement from its evidence-backed transition floor of 7 to 10 only after the public Scorecard window reports successful supported SAST checks for every sampled merged pull request; do not backfill history for the metric |
 | Accessibility | `--plain` is shipped; help uses complete linear output when needed; welcome alignment is content-aware at ordinary widths; catalog and cache rows preserve labels when narrow; color is never the only status channel | Keep both paths complete; do not replace the parser or hide specialist controls |
 | Documentation accuracy | README, MCP quick starts, stability, operational, security, generated CLI, release, catalog, cache, corpus, agent, schema, example, snapshot, and test surfaces use reserved target identities or disclosure-safe aggregates; the release gate rejects the retired target vocabulary | Keep eventual machine diagnostics separate from human output until versioned contracts are justified; retain manual review for previously unseen organization-shaped prose and preserve provider definitions |
-| Interchange portability | Native client layouts remain the supported install paths. A deterministic complete-surface candidate now passes offline validation against byte-pinned Agent Plugins v1.0.0 Working Draft schemas, but representative-client compatibility is unmeasured. Versioned JSON remains the structured runtime contract. v2.13 shipped a separate caller-owned capsule schema; ADR-0014 defers OKF v0.2 because no named consumer justifies its trust and lifecycle mapping. | Run the frozen native-versus-portable VS Code, Cursor, and Kiro frame. Keep the capsule and JSON contracts stable and native paths supported. Reopen an additive OKF projection only for a named consumer with a privacy review; never replace JSON or turn offline validation into a conformance claim. |
+| Interchange portability | Native client layouts remain the supported install paths. A deterministic complete-surface candidate passes offline validation against byte-pinned Agent Plugins v1.0.0 schemas that still match the Published canonical bytes. The frozen three-client/runtime preflight passes, but representative-client compatibility is unmeasured. Versioned JSON remains the structured runtime contract. v2.13 shipped a separate caller-owned capsule schema; ADR-0014 defers OKF v0.2 because no named consumer justifies its trust and lifecycle mapping. | Run the frozen native-versus-portable VS Code, Cursor, and Kiro frame under a declared cost envelope. Keep the capsule and JSON contracts stable and native paths supported. Reopen an additive OKF projection only for a named consumer with a privacy review; never replace JSON or turn offline validation into a conformance claim. |
 
 ## Priority Order
 
@@ -655,9 +658,9 @@ and capsule milestones in dependency order. The stable-v1 async and schema
 characterizations remain completed supporting evidence; stable-v2 deltas are
 available from the completed priority 2 matrix.
 
-The immediate execution slice is the fingerprint-freshness loop. Agent
-portability stays parked on representative-client availability and does not
-appear here as a product milestone:
+The immediate product execution slice is the fingerprint-freshness loop. Agent
+portability remains a separate maintainer track and does not appear here as a
+product milestone:
 
 1. Preserve the shipped v2.14 rank, regional,
    [vendor-seed](../validation/2026-08-14-catalog-vendor-seed-round.md), and
@@ -678,22 +681,56 @@ appear here as a product milestone:
    `customdomains.okta.com`, `okta-dnssec.com`, `okta-gov.com`) from current
    developer and allowlist pages; `okta-domain-verification` stays undated
    because the current guide does not name it. The 2026-08-20 Mimecast pass
-   dated inbound MX and `_netblocks` SPF from current support articles.
+   dated inbound MX and `_netblocks` SPF from current support articles. A later
+   2026-08-20 pass dated current TrendAI regional MX and SPF values, Barracuda
+   inbound MX, and Cisco Cloud Gateway `iphmx.com`. It corrected the Cisco
+   current-versus-earlier direction and left `ess.cisco.com` undated. The same
+   pass completed the 22-region AWS SES receiving table and dated current AWS
+   SES, Google Workspace, and Microsoft 365 SPF values. It also dated current
+   Akamai `akamaiedge.net`, `akamaized.net`, `edgekey.net`, and `edgesuite.net`
+   CNAME rules without stamping the separately unsupported Akamai patterns.
+   The bounded HubSpot review then dated its current `hubspotemail.net` SPF and
+   two `hubspot.net` CNAME rules while leaving seven unsupported patterns
+   undated.
+   The bounded Marketo review then dated `mktomail.com`, both `mktoweb.com`
+   CNAME paths, and the exact documented tracking-link host form. It replaced
+   the broad `mkto-` fragment with a validated regex and left five unsupported
+   patterns undated.
+   The bounded Salesforce Marketing Cloud review then dated eight CNAME and
+   discovered-target rules for documented application, CloudPages/content,
+   web-view, tenant-specific API, and Subscription Center roles. It left the
+   unsupported `exacttarget.com` SPF and `SFMC-` TXT observations undated.
+   The AWS load-balancer correction then consolidated seven partial regional
+   `aws-nlb` rules into one partition-aware ELBv2 regex, retained the stable
+   slug, and made the ALB/NLB ambiguity explicit.
+   The AWS API Gateway correction then consolidated five partial regional rules
+   into one partition-aware regex while excluding edge-optimized CloudFront and
+   private VPC endpoint forms. The Microsoft residual pass separated Azure
+   Communication Services Email's `ms-domain-verification=` token from
+   Microsoft 365's `MS=ms########`, narrowed commercial Autodiscover and GCC
+   High MX, and dated the supported government SPF, government application
+   domain, and SharePoint roles.
    Proofpoint gateway MX/SPF stays undated: public product pages do not name
    those hosts, and the Essentials connection-details article is login-walled.
    Detail:
    [catalog-strategy.md](catalog-strategy.md#3-freshness).
-4. Keep the completed stable-v1 characterization, structural-identifiability
+4. Publish this batch through a reviewed draft pull request and all protected-
+   main checks before expanding the catalog again. Then continue the remaining
+   Microsoft residuals one pattern at a time. `tm-3.office.com`,
+   `svc.cloud.microsoft`, `svc.sovcloud.cn`, `eo.outlook.com`, and
+   `msv1.invalid` remain undated until a current first-party page supports each
+   exact DNS role. Keep Proofpoint blocked for the same evidence reason.
+5. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work
    proceeds. No catalog result reopens the voided fusion design or upgrades an
    observation into a population claim.
-5. Preserve the frozen representative task, client, success, error, latency,
+6. Preserve the frozen representative task, client, success, error, latency,
    discovery-byte, context-cost, portability, privacy, and stop-rule
    [contract](agent-portability-evaluation-declaration.md). Measure the native
-   22-tool path against the complete-surface Agent Plugins candidate only when
-   the frozen clients are available. That measurement does not queue product
-   work and does not change stable CLI, JSON, MCP wire, or OKF projection
-   decisions.
+   22-tool path against the complete-surface Agent Plugins candidate only after
+   the passing preflight and under a declared model and cost envelope. That
+   measurement does not queue product work and does not change stable CLI,
+   JSON, MCP wire, or OKF projection decisions.
 
 ### Apply the v2.11 result through v2.12 and v3
 
@@ -990,7 +1027,7 @@ known-cluster unit, observation opportunities, CT and direct-probe settings,
 catalog and code digests, aggregate outputs, promotion and regression budgets,
 and disclosure review. A result may not retroactively change those choices.
 
-The catalog currently holds 868 entries across 691 unique slugs, with 1,091
+The catalog currently holds 869 entries across 692 unique slugs, with 1,108
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
@@ -1072,9 +1109,9 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 ### Simplify operator and agent discovery using measurements
 
-Status: **maintainer track on an external event, not a version-path milestone;
-contract frozen and portable candidate offline-validated; first local preflight
-stopped before collection, blocked on representative-client availability**.
+Status: **maintainer track, not a version-path milestone; contract frozen,
+portable candidate offline-validated, and three-client/runtime preflight
+passed; paired collection not started**.
 (v2.16.0 shipped renderer parity, not this work.)
 
 The network-free
@@ -1087,16 +1124,17 @@ and canonical schema digests. Its protected-main prerequisite passed. The
 generated `agents/agent-plugin/` candidate preserves all 22 tools and both
 skills, omits client-only and experimental frontmatter, and passes a
 network-free canonical gate over the byte-pinned schemas, exact package layout,
-launch shape, file bounds, path containment, version parity, and Working Draft
-claim wording. This does not establish client compatibility.
+launch shape, file bounds, path containment, version parity, and qualified claim
+wording. Agent Plugins v1.0.0 is now Published; the canonical schema bytes still
+match the pinned copies. This does not establish client compatibility or
+conformance.
 
-The first maintainer-local preflight validated those offline gates, then
-stopped with zero sessions and zero network requests. Cursor was unavailable,
-and the explicitly selected client-launch recon was 2.6.3 rather than the
-2.14.0 candidate. This is an environment readiness result only. It neither
-drops Cursor from the frozen frame nor establishes behavior for VS Code or
-Kiro. Satisfy both stop conditions and rerun the exclusive private preflight
-before any task, install, launch, handshake, update, or negative-path session.
+The first maintainer-local preflight remains historical stop evidence: Cursor
+was unavailable and the selected recon 2.6.3 did not match candidate 2.14.0. A
+second network-free preflight on 2026-08-20 passed with recon 2.17.4 and exact
+versions observed for VS Code, Cursor, and Kiro. Both preflights started zero
+sessions and made zero network requests. The passing result is environment
+readiness only and establishes no client behavior.
 
 Separate primary workflows from specialist workflows in documentation now.
 Treat portable packaging as a separate axis from tool-list context cost. The
@@ -1111,9 +1149,10 @@ independent offline validation are blocking in local and hosted CI. After a
 passing three-client and runtime preflight, exercise install, discovery,
 launch, failure reporting, and update behavior in the three frozen listed
 clients. Preserve the native installers and Claude Code
-bundle unless that portable path proves equivalent. Because v1.0.0 is a working
-draft, do not make an unqualified compatibility claim or let draft churn change
-the stable CLI, JSON, or MCP contracts.
+bundle unless that portable path proves equivalent. Published v1.0.0 does not
+by itself establish client behavior. Do not make an unqualified compatibility
+or conformance claim, and do not let later specification work change the stable
+CLI, JSON, or MCP contracts.
 
 The dated CLI measurement is complete. Against the published v2.5.5 baseline,
 native task panels reduce `lookup --help` from 154 to 109 lines at 80 columns
@@ -1332,9 +1371,9 @@ generated-artifact drift gates.
 
 ## Current External Basis
 
-Checked through 2026-08-18 UTC against primary sources and recent research:
+Checked through 2026-08-20 UTC against primary sources and recent research:
 
-- [Agent Plugins v1.0.0 working-draft specification](https://agent-plugins.org/specification)
+- [Agent Plugins v1.0.0 Published specification](https://agent-plugins.org/specification)
 - [Agent Plugins compatible clients](https://agent-plugins.org/compatible-clients)
 - [Agent Skills specification](https://agentskills.io/specification)
 - [Open Knowledge Format v0.2 specification](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
@@ -1347,6 +1386,26 @@ Checked through 2026-08-18 UTC against primary sources and recent research:
 - [MCP Python SDK release history](https://pypi.org/project/mcp/)
 - [Google Workspace current MX setup (`smtp.google.com`, legacy `aspmx.*` still supported)](https://knowledge.workspace.google.com/admin/domains/set-up-mx-records-for-google-workspace)
 - [Microsoft 365 external DNS records (current Learn page still names `mail.protection.outlook.com`)](https://learn.microsoft.com/en-us/microsoft-365/enterprise/external-domain-name-system-records)
+- [TrendAI Email Security domain configuration](https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-configuring-a-domain)
+- [TrendAI Email Security SPF records](https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-adding-spf-records)
+- [Barracuda Email Gateway Defense MX configuration](https://documentation.campus.barracuda.com/wiki/spaces/EGD/pages/2850986)
+- [Cisco Secure Email Cloud Gateway hostnames](https://docs.ces.cisco.com/docs/hostnames)
+- [Amazon SES endpoints and quotas](https://docs.aws.amazon.com/general/latest/gr/ses.html)
+- [Amazon SES custom MAIL FROM domain](https://docs.aws.amazon.com/ses/latest/dg/mail-from.html)
+- [Google Workspace SPF setup](https://support.google.com/a/answer/33786)
+- [Akamai Property Manager hostname mapping](https://techdocs.akamai.com/property-mgr/reference/modify-property-hostnames)
+- [HubSpot email authentication](https://knowledge.hubspot.com/marketing-email/manage-email-authentication-in-hubspot)
+- [HubSpot Domains API guide](https://developers.hubspot.com/docs/api-reference/legacy/cms/domains/guide)
+- [Adobe Marketo Engage setup steps](https://experienceleague.adobe.com/en/docs/marketo/using/getting-started/initial-setup/setup-steps)
+- [Adobe Marketo Engage protocol configuration](https://experienceleague.adobe.com/en/docs/marketo/using/getting-started/initial-setup/configure-protocols-for-marketo)
+- [Salesforce Marketing Cloud Engagement allowlist endpoints](https://help.salesforce.com/s/articleView?id=mktg.mc_es_ip_addresses_for_inclusion.htm&language=en_US&type=5)
+- [Salesforce Marketing Cloud stack locations](https://help.salesforce.com/s/articleView?id=000383566&language=en_US&type=1)
+- [Salesforce Marketing Cloud tenant-specific endpoints](https://developer.salesforce.com/docs/marketing/marketing-cloud/guide/your-subdomain-tenant-specific-endpoints.html)
+- [Salesforce Marketing Cloud CloudPages endpoint transition](https://help.salesforce.com/s/articleView?id=000389721&language=en_US&type=1)
+- [AWS Network Load Balancer DNS names](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/network-load-balancers.html)
+- [AWS Application Load Balancer DNS names](https://docs.aws.amazon.com/elasticloadbalancing/latest/application/application-load-balancers.html)
+- [AWS Elastic Load Balancing regional endpoints](https://docs.aws.amazon.com/general/latest/gr/elb.html)
+- [AWS China Application Load Balancer DNS names](https://docs.amazonaws.cn/en_us/elasticloadbalancing/latest/application/application-load-balancers.html)
 - [RFC 9989: DMARC](https://www.rfc-editor.org/info/rfc9989/)
 - [RFC 3986: URI generic syntax](https://www.rfc-editor.org/info/rfc3986/)
 - [RFC 2308: DNS negative caching](https://www.rfc-editor.org/rfc/rfc2308)

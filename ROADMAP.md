@@ -42,9 +42,9 @@ to A0, A2 collapses to A3, and A3 is structurally dominated by A0. The live
 window was cancelled before target contact. CT enrichment, catalog size, and
 the broad agent surface still lack operator-outcome evidence.
 
-Two emerging interchange formats are explicit design inputs, not shipped
-claims: the Agent Plugins v1.0.0 working draft for portable skill and MCP
-packaging, and Open Knowledge Format v0.2 for human- and agent-readable
+Two interchange formats are explicit design inputs, not shipped compatibility
+claims: the Published Agent Plugins v1.0.0 specification for portable skill and
+MCP packaging, and Open Knowledge Format v0.2 for human- and agent-readable
 knowledge bundles. Agent Plugins is a packaging concern distinct from MCP wire
 compatibility. ADR-0014 defers an OKF projection until a named consumer can
 justify its `sources`, `generated`, `verified`, lifecycle, and freshness
@@ -69,10 +69,49 @@ queue, not a reason to stamp today's date. Coverage is
 `python -m validation.audit_fingerprints --freshness`. Detail:
 [docs/catalog-strategy.md](docs/catalog-strategy.md#3-freshness).
 
-Agent portability stays a maintainer track on an external event. The frozen
+The 2026-08-20 pass raises dated coverage from 61 of 1,091 detections (5.6
+percent) to 134 of 1,108 (12.1 percent). It confirms current TrendAI regional MX
+and SPF patterns, Barracuda inbound MX, Cisco Cloud Gateway `iphmx.com`, all 22
+AWS SES email-receiving regions, and current Google Workspace, Microsoft 365,
+and AWS SES SPF values. Unverified legacy observations remain undated.
+Current Akamai edge CNAME suffixes are also dated from its Property Manager
+documentation. The bounded HubSpot review dates its current
+`hubspotemail.net` SPF and two `hubspot.net` CNAME rules. Seven HubSpot rules
+remain undated because current first-party pages do not name their exact pattern
+and role. Proofpoint remains blocked because its public pages do not name the
+exact gateway hosts. The bounded Marketo review dates its current
+`mktomail.com` SPF, two `mktoweb.com` CNAME rules, and the exact documented
+tracking-link host form. Five Marketo patterns remain undated without exact
+current first-party support. The bounded Salesforce Marketing Cloud review then
+dates eight CNAME and discovered-target rules for `exacttarget.com`,
+`sfmc-content.com`, `sfmc-marketing.com`, `marketingcloudapis.com`, and
+`exct.net`. Its `exacttarget.com` SPF and `SFMC-` TXT observations remain
+undated without precise current first-party DNS-role support. The AWS
+load-balancer correction then replaces seven partial regional `aws-nlb` rules
+with one partition-aware ELBv2 pattern, retains the stable slug, and makes the
+ALB/NLB ambiguity explicit. The API Gateway correction similarly replaces five
+partial regional rules with one partition-aware pattern and excludes
+edge-optimized CloudFront and private VPC endpoint forms. The Microsoft pass
+then separates Azure Communication Services Email's
+`ms-domain-verification=` token from Microsoft 365's `MS=ms########`, narrows
+commercial Autodiscover and GCC High MX to exact current targets, and dates the
+supported government SPF, government application-domain, and SharePoint roles.
+
+The next operation is publication through a reviewed draft pull request and the
+protected-main checks. That comes before more catalog expansion because this
+batch already changes runtime classification and its value is not delivered
+until the protected branch carries it. After protected main, continue the
+Microsoft residuals one pattern at a time. `tm-3.office.com`,
+`svc.cloud.microsoft`, `svc.sovcloud.cn`, `eo.outlook.com`, and `msv1.invalid`
+remain undated because the current pages reviewed here do not support each exact
+pattern and DNS role. Proofpoint remains blocked for the same evidence reason.
+
+Agent portability stays a maintainer track, not a product milestone. The frozen
 [representative-client contract](docs/agent-portability-evaluation-declaration.md)
-is green offline; the paired evaluation waits on those clients. It does not
-queue product work.
+is green offline, the pinned v1.0.0 schema bytes still match the Published
+canonical schemas, and the three-client/runtime preflight now passes. The next
+operation is the controlled 30-session paired evaluation, after its selected
+models and hard cost ceiling are declared. It does not queue product work.
 
 ## Version path (order of operations)
 
@@ -98,13 +137,12 @@ default stays complete). It never unblocks product-quality work and never
 creates a project-operated multi-tenant service without a separate product
 decision.
 
-Agent portability and surface cost is a **maintainer track on an external
-event**, not a version-path milestone: its preflight is blocked on
-representative-client availability and a runtime match, and the specification is
-a working draft the project has declined to make a conformance claim against.
-The frozen contract and offline schema validation stay green; the paired
-native-versus-portable frame runs if and when the clients become available. It
-does not queue product work behind it. Publication, OpenSSF questionnaire,
+Agent portability and surface cost is a **maintainer track**, not a version-path
+milestone. Published v1.0.0 and its canonical schemas now match the pinned
+candidate basis, and the frozen VS Code, Cursor, Kiro, and recon-runtime
+preflight passes. That readiness evidence is not compatibility or conformance.
+The paired native-versus-portable frame runs only under a declared model and
+cost envelope, and it does not queue product work behind it. Publication, OpenSSF questionnaire,
 outside replication, and archive/DOI are the other maintainer tracks on external
 events. They do not displace the version path above.
 
@@ -200,13 +238,11 @@ five tasks, two full-surface variants, privacy rules, and fail-closed decisions.
 Its protected-main prerequisite passed. The deterministic complete-surface
 candidate under `agents/agent-plugin/` passes network-free validation against
 the byte-pinned Agent Plugins v1.0.0 schemas and frozen Agent Skills field
-rules. The first maintainer-local, network-free preflight stopped before
-collection: Cursor was unavailable and the selected client-launch recon was
-2.6.3 rather than the 2.14.0 candidate. Zero sessions and zero network requests
-ran. The next operation is to satisfy that exact three-client and runtime gate,
-rerun the private preflight, and only then execute the paired VS Code, Cursor,
-and Kiro evaluation. No compatibility claim or stable discovery-surface change
-is authorized.
+rules. A second maintainer-local, network-free preflight on 2026-08-20 passed
+with recon 2.17.4 and all three required clients available. Zero sessions and
+zero network requests ran. The next operation is the paired VS Code, Cursor,
+and Kiro evaluation under the frozen contract and a declared cost envelope. No
+compatibility claim or stable discovery-surface change is authorized.
 Detail:
 [docs/agent-portability-evaluation-declaration.md](docs/agent-portability-evaluation-declaration.md).
 

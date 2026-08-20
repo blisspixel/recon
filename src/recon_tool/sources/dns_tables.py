@@ -15,8 +15,12 @@ import re
 from typing import Any
 
 from recon_tool.rate_limit import RateLimited
+from recon_tool.regex_safety import compile_regex
+from recon_tool.validator import host_has_suffix, is_domain_shaped
 
 logger = logging.getLogger("recon")
+
+_CNAME_TARGET_FRAGMENT_RE = re.compile(r"^[a-z0-9_-]+$", re.ASCII)
 
 
 def parse_rdata(raw: str) -> str:
@@ -201,6 +205,21 @@ def ct_failure_outcome(failures: dict[str, int]) -> str:
     return "cache_miss"
 
 
+def cname_target_pattern_matches(hostname: str, pattern: str) -> bool:
+    """Match a CNAME-chain hop against a suffix, fragment, or safe regex."""
+    host = hostname.lower().strip().rstrip(".")
+    raw_pattern = pattern.lower().strip()
+    domain_pattern = raw_pattern.lstrip(".").rstrip(".")
+    if not host or not domain_pattern:
+        return False
+    if is_domain_shaped(domain_pattern):
+        return host_has_suffix(host, domain_pattern)
+    if _CNAME_TARGET_FRAGMENT_RE.fullmatch(domain_pattern):
+        return re.search(rf"(?:^|[.-]){re.escape(domain_pattern)}", host) is not None
+    compiled = compile_regex(raw_pattern, re.IGNORECASE)
+    return compiled is not None and compiled.search(host) is not None
+
+
 def classify_chain(
     chain: list[str],
     rules: tuple[Any, ...],
@@ -219,21 +238,7 @@ def classify_chain(
     infrastructure: Any | None = None
     for hop in chain:
         for rule in rules:
-            # Label-aware match for domain patterns: the hop must equal the vendor
-            # domain or be a proper subdomain, so an attacker-controlled target like
-            # ``manageengine.com.attacker.tld`` no longer matches ``manageengine.com``.
-            # A leading-dot pattern (``.desk.com``) is the same suffix idiom; a
-            # dot-less fragment (``s3-website``) is a mid-hostname infra marker
-            # matched at a label or hyphen boundary (not a bare substring).
-            pat = rule.pattern.lstrip(".")
-            if "." in pat:
-                matched = hop == pat or hop.endswith("." + pat)
-            else:
-                # Require a label/hyphen boundary before the fragment so a
-                # mid-label substring (e.g. "promkto-analytics" for "mkto-")
-                # cannot spoof the match.
-                matched = re.search(rf"(?:^|[.-]){re.escape(pat)}", hop) is not None
-            if matched:
+            if cname_target_pattern_matches(hop, rule.pattern):
                 if rule.tier == "application" and application is None:
                     application = rule
                 elif rule.tier == "infrastructure" and infrastructure is None:
