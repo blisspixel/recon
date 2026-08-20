@@ -630,3 +630,24 @@ def test_proofpoint_gateway_family_stays_undated_without_public_dns_page() -> No
     assert spf["spf.pphosted.com"].verified == ""
     assert spf["_spf.proofpoint.com"].verified == ""
     assert txt["^proofpoint-domain-verification="].verified == ""
+
+
+def test_mimecast_gateway_family_matches_current_vendor_pages() -> None:
+    mx = _rules_for_slug("mimecast", "mx")
+    spf = _rules_for_slug("mimecast", "spf")
+    txt = _rules_for_slug("mimecast", "txt")
+    inbound = mx["mimecast.com"]
+    za = mx["mimecast.co.za"]
+    netblocks = spf["_netblocks.mimecast.com"]
+    assert inbound.verified == "2026-08-20"
+    assert za.verified == "2026-08-20"
+    assert netblocks.verified == "2026-08-20"
+    assert "us-smtp-inbound-1.mimecast.com" in inbound.description
+    assert "za-smtp-inbound-1.mimecast.co.za" in za.description
+    assert "_netblocks.mimecast.com" in netblocks.description
+    assert "34000417366675" in inbound.reference
+    assert "34000417366675" in za.reference
+    assert "34000792642963" in netblocks.reference
+    assert txt["^mimecast"].verified == ""
+    assert "stays undated" in txt["^mimecast"].description
+    assert spf["mim.ec"].verified == ""

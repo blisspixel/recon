@@ -32,7 +32,10 @@ government marketing URL, now point at the live developer guide and
 allowlist article. `_oktaverification`, `okta.com`, `oktapreview.com`,
 `customdomains.okta.com`, `okta-dnssec.com`, and `okta-gov.com` are
 dated. `okta-domain-verification` stays undated because the current
-guide does not name it. Proofpoint gateway MX/SPF stays undated:
+guide does not name it. Mimecast inbound MX (`mimecast.com`,
+`mimecast.co.za`) and `_netblocks.mimecast.com` SPF are dated from
+current support articles. The generic `^mimecast` TXT prefix and
+`mim.ec` SPF stay undated. Proofpoint gateway MX/SPF stays undated:
 public product pages do not name `pphosted.com` / `ppe-hosted.com`, and
 the Essentials connection-details article is login-walled.
 
@@ -47,6 +50,12 @@ Tool surface changes: no command or flag is added, removed, or renamed.
   Okta-managed certificates use ACME instead. `okta-dnssec.com` is the
   documented DNSSEC custom-domain target. `okta-gov.com` is dated from
   the current IP-allowlist article, not a 404 marketing page.
+- **Mimecast gateway family matches current support articles.**
+  Regional inbound hosts such as `us-smtp-inbound-1.mimecast.com` and
+  `za-smtp-inbound-1.mimecast.co.za` are named on the gateway-
+  configuration article. The outbound-SPF article names
+  `include:_netblocks.mimecast.com`. The `^mimecast` TXT prefix is not
+  named on the current domain-validation article and stays undated.
 - **Proofpoint gateway hosts remain undated.** The named mail-routing
   queue still includes Proofpoint, but no current public vendor page
   names the MX or SPF hosts. Dates are not stamped from login-walled

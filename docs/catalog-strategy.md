@@ -1,7 +1,7 @@
 # Catalog Growth and Quality Strategy
 
 Status: measurement-first maintenance plan
-Review date: 2026-08-19 UTC
+Review date: 2026-08-20 UTC
 
 This document is the plan for growing and maintaining the fingerprint catalog
 (`src/recon_tool/data/fingerprints/*.yaml`) so coverage, precision, and
@@ -50,7 +50,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 58 of 1,091 detections currently carry a `verified` date (5.3 percent).
+date: 61 of 1,091 detections currently carry a `verified` date (5.6 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 
@@ -225,8 +225,8 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. As of 2026-08-19 the catalog has 58 dated detections of
-1,091 (5.3 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
+staleness threshold. As of 2026-08-20 the catalog has 61 dated detections of
+1,091 (5.6 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
 gate permits the legacy undated backlog but requires every new detection to
 carry a valid, non-future `verified` date. Backfill only independently reviewed
 families, and only after the vendor's current public page still names the
@@ -235,10 +235,11 @@ already have claim-contract, quality-baseline, or regional-round review:
 Microsoft 365, Google Workspace, Cloudflare, Okta, and Proofpoint. The 2026-08-19
 MX pass dated Google Workspace and Microsoft 365. Cloudflare Email Service was
 already dated. The later 2026-08-19 Okta pass dated the custom-domain family
-from current developer and allowlist pages. Proofpoint stays in the queue:
-current public product pages do not name `pphosted.com` / `ppe-hosted.com`
-MX or SPF hosts, and the Essentials connection-details article is
-login-walled. Once coverage is high enough, raise the gate to reject dates
+from current developer and allowlist pages. The 2026-08-20 Mimecast pass dated
+inbound MX and `_netblocks` SPF from current support articles. Proofpoint stays
+in the queue: current public product pages do not name `pphosted.com` /
+`ppe-hosted.com` MX or SPF hosts, and the Essentials connection-details article
+is login-walled. Once coverage is high enough, raise the gate to reject dates
 older than the chosen threshold. A dead-reference URL check remains an opt-in
 local tool, not a CI gate, because the committed gates run at zero network and
 zero paid-API cost.
@@ -267,9 +268,14 @@ that `okta.com/okta-for-government/` 404s. The live bases are the developer
 custom-domain guide (`_oktaverification`, `okta.com`, `oktapreview.com`,
 `okta-dnssec.com`) and the IP-allowlist article (`*.okta-gov.com`). The
 current guide does not name `okta-domain-verification`, so that prefix
-stays undated. Proofpoint is the other named queue family: public product
-pages do not name gateway MX/SPF hosts, and the Essentials connection-details
-article is login-walled, so those detections stay undated.
+stays undated. The 2026-08-20 Mimecast pass replaced generic product-page
+and `community.mimecast.com/` roots with current support articles that name
+`us-smtp-inbound-1.mimecast.com`, `za-smtp-inbound-1.mimecast.co.za`, and
+`include:_netblocks.mimecast.com`. The `^mimecast` TXT prefix is not named
+on the current domain-validation article and stays undated. Proofpoint is
+the remaining named queue family: public product pages do not name gateway
+MX/SPF hosts, and the Essentials connection-details article is login-walled,
+so those detections stay undated.
 
 ## 4. Higher-order signals
 

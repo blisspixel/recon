@@ -211,8 +211,16 @@ fingerprints:
   detections:
   - type: mx
     pattern: mimecast.co.za
+    reference: https://mimecastsupport.zendesk.com/hc/en-us/articles/34000417366675-Account-Settings-Mimecast-Gateway-Configuration
+    verified: 2026-08-20
     description: >-
-      Mimecast mail exchanger (`mimecast.co.za`). Indicates Mimecast handles inbound mail for this domain.
+      Apex MX terminating at Mimecast South Africa inbound hosts
+      (`za-smtp-inbound-1.mimecast.co.za` and
+      `za-smtp-inbound-2.mimecast.co.za`). Mimecast's current
+      gateway-configuration article names those hosts. This
+      observes inbound mail routing through Mimecast's ZA
+      region. It does not establish mailbox activity or a
+      downstream provider.
 - name: GoDaddy
   slug: godaddy
   category: Email & Communication
