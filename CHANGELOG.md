@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.5] - 2026-08-20
+
 The standing freshness pass updates provider-documented mail-routing families,
 and the portable Agent Plugins track now reflects Published v1.0.0 plus a
 passing three-client/runtime preflight. The catalog has 869 entries, 692 unique
