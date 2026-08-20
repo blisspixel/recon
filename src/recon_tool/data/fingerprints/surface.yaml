@@ -460,15 +460,18 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: customdomains.okta.com
-    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
+    reference: https://developer.okta.com/docs/guides/custom-url-domain/main/
+    verified: 2026-08-19
     tier: application
     description: >-
-      Okta custom-domain delegation CNAME for hosted-SSO login at
-      a branded subdomain. Indicates Okta is the org's primary or
-      enterprise IdP. Does not distinguish Okta Workforce from
-      Okta Customer Identity (Auth0); the chain is shared. Treat
-      as a load-bearing identity-stack binding signal that is best
-      corroborated by MX and federation metadata.
+      Okta custom-domain CNAME target (`*.customdomains.okta.com`).
+      Okta's current guide documents the preview analog
+      `*.customdomains.oktapreview.com` as the configured-domain
+      answer and names `okta.com` / `okta-dnssec.com` as the
+      default targets. This observes a branded login host
+      delegated to Okta. It does not distinguish Workforce from
+      Customer Identity, and it does not prove Okta is the only
+      IdP.
 
 - name: Mailgun
   slug: mailgun
@@ -3284,17 +3287,25 @@ fingerprints:
   - type: cname_target
     pattern: okta-gov.com
     tier: application
-    description: Okta Government Cloud (FedRAMP); federal-agency custom logins CNAME through customdomains.okta-gov.com.
-    reference: https://www.okta.com/okta-for-government/
+    reference: https://help.okta.com/oie/en-us/content/topics/security/ip-address-allow-listing.htm
+    verified: 2026-08-19
+    description: >-
+      CNAME into Okta Government Cloud (`*.okta-gov.com`). Okta's
+      current IP-allowlist article names `*.okta-gov.com` among
+      required Okta domains. This observes a government-cloud Okta
+      host. It does not prove FedRAMP authorization of the queried
+      namespace or that Okta is the only IdP.
   - type: cname_target
     pattern: okta-dnssec.com
-    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
+    reference: https://developer.okta.com/docs/guides/custom-url-domain/main/
+    verified: 2026-08-19
     tier: application
     description: >-
-      Okta DNSSEC-enabled custom-domain endpoint CNAME. Indicates
-      the org runs Okta with DNSSEC turned on for the custom-domain
-      surface (a hardening choice). Does not by itself indicate the
-      broader DNSSEC posture for the org's apex.
+      Okta DNSSEC custom-domain CNAME target (`*.okta-dnssec.com`).
+      Okta's current custom-domain guide names `example.okta-dnssec.com`
+      as the target for DNSSEC-capable orgs instead of
+      `example.okta.com`. This observes the DNSSEC custom-domain
+      host. It does not prove DNSSEC is enabled on the queried apex.
 
 - name: Ping Identity (PingOne)
   slug: ping-identity
