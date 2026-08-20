@@ -714,9 +714,10 @@ product milestone:
    those hosts, and the Essentials connection-details article is login-walled.
    Detail:
    [catalog-strategy.md](catalog-strategy.md#3-freshness).
-4. Publish this batch through a reviewed draft pull request and all protected-
-   main checks before expanding the catalog again. Then continue the remaining
-   Microsoft residuals one pattern at a time. `tm-3.office.com`,
+4. v2.17.5 published this batch after a reviewed pull request and all protected-
+   main checks, with PyPI and GitHub artifacts, SBOM provenance, and exact
+   channel-parity proof. Continue the remaining Microsoft residuals one pattern
+   at a time. `tm-3.office.com`,
    `svc.cloud.microsoft`, `svc.sovcloud.cn`, `eo.outlook.com`, and
    `msv1.invalid` remain undated until a current first-party page supports each
    exact DNS role. Keep Proofpoint blocked for the same evidence reason.
