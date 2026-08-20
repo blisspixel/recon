@@ -552,15 +552,19 @@ def test_discovered_txt_verifications_classify():
         assert getattr(m, "slug", None) == slug, f"{token} -> expected {slug}, got {getattr(m, 'slug', None)}"
 
 
-def _mx_rules_for_slug(slug: str) -> dict[str, DetectionRule]:
+def _rules_for_slug(slug: str, detection_type: str) -> dict[str, DetectionRule]:
     rules: dict[str, DetectionRule] = {}
     for fingerprint in load_fingerprints():
         if fingerprint.slug != slug:
             continue
         for detection in fingerprint.detections:
-            if detection.type == "mx":
+            if detection.type == detection_type:
                 rules[detection.pattern] = detection
     return rules
+
+
+def _mx_rules_for_slug(slug: str) -> dict[str, DetectionRule]:
+    return _rules_for_slug(slug, "mx")
 
 
 def test_google_workspace_mx_family_matches_current_vendor_page() -> None:
@@ -588,3 +592,41 @@ def test_microsoft365_mx_family_matches_current_vendor_pages() -> None:
     assert "mail.protection.outlook.com" in mx_microsoft.description
     assert "external-domain-name-system-records" in outlook.reference
     assert "how-dane-secures-email" in mx_microsoft.reference
+
+
+def test_okta_custom_domain_family_matches_current_vendor_pages() -> None:
+    txt = _rules_for_slug("okta", "txt")
+    cname = _rules_for_slug("okta", "cname")
+    targets = _rules_for_slug("okta", "cname_target")
+    owned = txt["^_oktaverification="]
+    assert owned.verified == "2026-08-19"
+    assert "_oktaverification" in owned.description
+    assert "developer.okta.com/docs/guides/custom-url-domain" in owned.reference
+    alternate = txt["^okta-domain-verification"]
+    assert alternate.verified == ""
+    assert "stays undated" in alternate.description
+    okta_com = cname["okta.com"]
+    preview = cname["oktapreview.com"]
+    assert okta_com.verified == "2026-08-19"
+    assert preview.verified == "2026-08-19"
+    assert "okta-dnssec.com" in okta_com.description
+    custom = targets["customdomains.okta.com"]
+    dnssec = targets["okta-dnssec.com"]
+    gov = targets["okta-gov.com"]
+    assert custom.verified == "2026-08-19"
+    assert dnssec.verified == "2026-08-19"
+    assert gov.verified == "2026-08-19"
+    assert "okta-dnssec.com" in dnssec.description
+    assert "okta-gov.com" in gov.description
+    assert "okta-for-government" not in gov.reference
+
+
+def test_proofpoint_gateway_family_stays_undated_without_public_dns_page() -> None:
+    mx = _rules_for_slug("proofpoint", "mx")
+    spf = _rules_for_slug("proofpoint", "spf")
+    txt = _rules_for_slug("proofpoint", "txt")
+    assert mx["pphosted.com"].verified == ""
+    assert mx["ppe-hosted.com"].verified == ""
+    assert spf["spf.pphosted.com"].verified == ""
+    assert spf["_spf.proofpoint.com"].verified == ""
+    assert txt["^proofpoint-domain-verification="].verified == ""

@@ -50,7 +50,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 52 of 1,091 detections currently carry a `verified` date (4.8 percent).
+date: 58 of 1,091 detections currently carry a `verified` date (5.3 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 
@@ -225,19 +225,23 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. As of 2026-08-19 the catalog has 52 dated detections of
-1,091 (4.8 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
+staleness threshold. As of 2026-08-19 the catalog has 58 dated detections of
+1,091 (5.3 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
 gate permits the legacy undated backlog but requires every new detection to
 carry a valid, non-future `verified` date. Backfill only independently reviewed
 families, and only after the vendor's current public page still names the
-pattern. The first named pass is the mail-routing families that already have
-claim-contract, quality-baseline, or regional-round review: Microsoft 365,
-Google Workspace, Cloudflare, Okta, and Proofpoint. The 2026-08-19 MX pass
-dated Google Workspace and Microsoft 365. Cloudflare Email Service was already
-dated; Okta and Proofpoint remain in the queue. Once coverage is high enough,
-raise the gate to reject dates older than the chosen threshold. A dead-reference
-URL check remains an opt-in local tool, not a CI gate, because the committed
-gates run at zero network and zero paid-API cost.
+pattern. The first named pass is the mail-routing and identity families that
+already have claim-contract, quality-baseline, or regional-round review:
+Microsoft 365, Google Workspace, Cloudflare, Okta, and Proofpoint. The 2026-08-19
+MX pass dated Google Workspace and Microsoft 365. Cloudflare Email Service was
+already dated. The later 2026-08-19 Okta pass dated the custom-domain family
+from current developer and allowlist pages. Proofpoint stays in the queue:
+current public product pages do not name `pphosted.com` / `ppe-hosted.com`
+MX or SPF hosts, and the Essentials connection-details article is
+login-walled. Once coverage is high enough, raise the gate to reject dates
+older than the chosen threshold. A dead-reference URL check remains an opt-in
+local tool, not a CI gate, because the committed gates run at zero network and
+zero paid-API cost.
 
 A freshness pass can change wording without adding a rule. The 2026-08-18
 vendor-doc check found two of those cases, both already matched, and the
@@ -256,6 +260,16 @@ vendor-doc check found two of those cases, both already matched, and the
 
 Neither finding is a missing-pattern promotion. Both are why the freshness
 loop exists: the vendor page moved, and the family prose has to move with it.
+
+The same loop also retires dead references. The 2026-08-19 Okta pass found
+that `help.okta.com` custom-url-domain and preview-orgs articles 404, and
+that `okta.com/okta-for-government/` 404s. The live bases are the developer
+custom-domain guide (`_oktaverification`, `okta.com`, `oktapreview.com`,
+`okta-dnssec.com`) and the IP-allowlist article (`*.okta-gov.com`). The
+current guide does not name `okta-domain-verification`, so that prefix
+stays undated. Proofpoint is the other named queue family: public product
+pages do not name gateway MX/SPF hosts, and the Essentials connection-details
+article is login-walled, so those detections stay undated.
 
 ## 4. Higher-order signals
 

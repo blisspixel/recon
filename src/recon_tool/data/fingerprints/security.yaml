@@ -281,38 +281,44 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^_oktaverification=
-    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
+    reference: https://developer.okta.com/docs/guides/custom-url-domain/main/
+    verified: 2026-08-19
     description: >-
-      Okta domain-verification TXT (the `_oktaverification=`
-      form). Indicates the domain is registered with an Okta
-      tenant for use as a custom-domain login URL or for SCIM
-      provisioning. Does not by itself indicate Okta is the
-      primary IdP; some domains register with Okta as a
-      secondary verification path.
+      Okta custom-domain ownership TXT (`_oktaverification=`).
+      Okta's current custom-domain guide names this host for the
+      bring-your-own-certificate path. Okta-managed certificates
+      use an ACME `_acme-challenge` record instead. This observes
+      an administrative domain claim, not that Okta is the primary
+      IdP or that a branded login host is live.
   - type: txt
     pattern: ^okta-domain-verification
-    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
+    reference: https://developer.okta.com/docs/guides/custom-url-domain/main/
     description: >-
-      Alternative Okta verification TXT format
-      (`okta-domain-verification`). Same administrative-binding
-      semantics as `_oktaverification=`.
+      Alternative Okta verification TXT prefix
+      (`okta-domain-verification`). Okta's current custom-domain
+      guide names `_oktaverification` and does not name this form,
+      so it stays undated. Retained as a still-observed prefix
+      with the same administrative-binding reading.
   - type: cname
     pattern: okta.com
-    reference: https://help.okta.com/en-us/content/topics/settings/custom-url-domain.htm
+    reference: https://developer.okta.com/docs/guides/custom-url-domain/main/
+    verified: 2026-08-19
     description: >-
-      CNAME pointing into okta.com. Typically a login subdomain
-      (`login.example.com` or `sso.example.com`) delegated to
-      Okta for hosted SSO and MFA pages. Indicates active Okta
-      use for at least one identity flow.
+      CNAME pointing into okta.com. Okta's current custom-domain
+      guide names this as the default custom-domain target
+      (`example.okta.com`). DNSSEC orgs may instead use
+      `okta-dnssec.com`. This observes a branded host delegated
+      to Okta, not that Okta is the only IdP.
   - type: cname
     pattern: oktapreview.com
-    reference: https://help.okta.com/en-us/content/topics/security/preview-orgs.htm
+    reference: https://developer.okta.com/docs/guides/custom-url-domain/main/
+    verified: 2026-08-19
     description: >-
-      CNAME pointing into oktapreview.com (Okta's preview /
-      staging environment). Indicates the domain has a test or
-      pre-production Okta tenant in addition to (or instead of)
-      a production tenant. Common in environments with
-      separate test orgs.
+      CNAME pointing into oktapreview.com. Okta's current
+      custom-domain guide uses `customdomains.oktapreview.com` as
+      the configured-domain example for preview orgs. This
+      observes a preview or staging Okta host, not a production
+      Workforce tenant.
 - name: 1Password
   slug: 1password
   category: Security & Compliance

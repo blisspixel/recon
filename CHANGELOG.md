@@ -26,6 +26,32 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+The Okta custom-domain family is dated from current public pages. Dead
+`help.okta.com` custom-url-domain and preview-orgs links, and a 404
+government marketing URL, now point at the live developer guide and
+allowlist article. `_oktaverification`, `okta.com`, `oktapreview.com`,
+`customdomains.okta.com`, `okta-dnssec.com`, and `okta-gov.com` are
+dated. `okta-domain-verification` stays undated because the current
+guide does not name it. Proofpoint gateway MX/SPF stays undated:
+public product pages do not name `pphosted.com` / `ppe-hosted.com`, and
+the Essentials connection-details article is login-walled.
+
+### Tool Surface Changes
+
+Tool surface changes: no command or flag is added, removed, or renamed.
+
+### Changed
+
+- **Okta custom-domain family matches the current developer guide.**
+  `_oktaverification` is the bring-your-own-certificate ownership TXT;
+  Okta-managed certificates use ACME instead. `okta-dnssec.com` is the
+  documented DNSSEC custom-domain target. `okta-gov.com` is dated from
+  the current IP-allowlist article, not a 404 marketing page.
+- **Proofpoint gateway hosts remain undated.** The named mail-routing
+  queue still includes Proofpoint, but no current public vendor page
+  names the MX or SPF hosts. Dates are not stamped from login-walled
+  or generic product pages.
+
 ## [2.17.3] - 2026-08-19
 
 The first named fingerprint-freshness pass dates the Google Workspace and

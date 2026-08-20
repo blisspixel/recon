@@ -673,8 +673,13 @@ appear here as a product milestone:
    pre-2023) and Microsoft 365 (`mail.protection.outlook.com` still named,
    `mx.microsoft` for DNSSEC/DANE and some new accepted domains) from the
    current vendor pages. That was family wording and dated coverage, not a
-   missing-pattern promotion. Okta and Proofpoint remain in the named
-   mail-routing queue. Detail:
+   missing-pattern promotion. The later 2026-08-19 Okta pass dated the
+   custom-domain family (`_oktaverification`, `okta.com`, `oktapreview.com`,
+   `customdomains.okta.com`, `okta-dnssec.com`, `okta-gov.com`) from current
+   developer and allowlist pages; `okta-domain-verification` stays undated
+   because the current guide does not name it. Proofpoint gateway MX/SPF
+   stays undated: public product pages do not name those hosts, and the
+   Essentials connection-details article is login-walled. Detail:
    [catalog-strategy.md](catalog-strategy.md#3-freshness).
 4. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work
