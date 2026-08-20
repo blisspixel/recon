@@ -137,7 +137,11 @@ frozen frame is ready to begin; exit 3 means a stop rule applied. The first
 maintainer-local aggregate result is recorded in
 [`2026-08-14-agent-portability-preflight.md`](2026-08-14-agent-portability-preflight.md):
 Cursor was unavailable and the selected client-launch recon was 2.6.3 rather
-than 2.14.0, so collection correctly stopped with zero sessions.
+than 2.14.0, so collection correctly stopped with zero sessions. The
+[`2026-08-20 rerun`](2026-08-20-agent-portability-preflight.md) passed with
+recon 2.17.4 and all three clients ready. It also started zero sessions and made
+zero network requests. A passing preflight authorizes no spend by itself;
+declare the client models and hard cost ceiling before paired collection.
 
 ## The fingerprint-discovery loop
 

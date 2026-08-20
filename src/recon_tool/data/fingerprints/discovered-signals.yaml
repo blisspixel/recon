@@ -49,7 +49,10 @@ fingerprints:
   - type: spf
     pattern: exacttarget.com
     description: >-
-      Salesforce Marketing Cloud SPF include (`exacttarget.com`). Indicates the org authorizes Salesforce Marketing Cloud to send email for this domain.
+      Earlier observed SPF include matching `exacttarget.com`. Current
+      first-party pages reviewed in the bounded freshness pass do not
+      document this exact SPF value, so the rule stays undated. A match
+      is outbound-authorization evidence only, not inbound routing.
 - name: Greenhouse
   slug: greenhouse
   category: HR & Operations
@@ -189,8 +192,13 @@ fingerprints:
   detections:
   - type: mx
     pattern: trendmicro.eu
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-configuring-a-domain
+    verified: 2026-08-20
     description: >-
-      Trend Micro Email Security mail exchanger (`trendmicro.eu`). Indicates Trend Micro Email Security handles inbound mail for this domain.
+      MX terminating at TrendAI Email Security's documented
+      Germany hosts under `*.in.tmes.trendmicro.eu`. This
+      observes inbound routing through Trend Micro. It does not
+      identify a downstream mailbox provider.
   - type: txt
     pattern: ^tmes=
     verified: '2026-07-25'
@@ -263,9 +271,14 @@ fingerprints:
   confidence: high
   detections:
   - type: mx
-    pattern: office365.us
+    pattern: mail.protection.office365.us
+    reference: https://learn.microsoft.com/en-us/microsoft-365/enterprise/dns-records-for-office-365-gcc-high
+    verified: 2026-08-20
     description: >-
-      Microsoft 365 (US Government cloud) mail exchanger (`office365.us`). Indicates Microsoft 365 (US Government cloud) handles inbound mail for this domain.
+      Microsoft 365 GCC High mail exchanger matching the documented
+      `tenant.mail.protection.office365.us` form. This observes inbound mail
+      routing through the US Government cloud, not mailbox activity or the
+      absence of an upstream gateway.
 - name: SecureMX
   slug: securemx
   category: Email & Communication
@@ -1300,16 +1313,19 @@ fingerprints:
     description: >-
       GoDaddy hosted-email SPF include (`secureserver.net`). Outbound
       mail dispatched through GoDaddy hosting.
-- name: Microsoft 365
-  slug: microsoft365
+- name: Microsoft 365 (US Government cloud)
+  slug: microsoft365-gov
   category: Email & Communication
   confidence: high
   detections:
   - type: spf
     pattern: spf.protection.office365.us
+    reference: https://learn.microsoft.com/en-us/defender-office-365/email-authentication-spf-configure
+    verified: 2026-08-20
     description: >-
-      Microsoft 365 GCC / GCC-High SPF include
-      (`spf.protection.office365.us`). U.S. government tenants.
+      SPF `include:spf.protection.office365.us` authorizes Microsoft 365 GCC
+      High or DoD to send for the domain. This does not establish inbound
+      routing, mailbox activity, or which government plan is provisioned.
 
 # ── MX EXTENDs ───────────────────────────────────────────────────────
 - name: Google Workspace
@@ -1335,30 +1351,138 @@ fingerprints:
   detections:
   - type: mx
     pattern: inbound-smtp.us-east-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
     description: >-
-      AWS SES inbound MX target in `us-east-1`. Specific region
-      hostname; non-us-east-1 tenants are captured by region-
-      specific siblings below.
+      AWS documents this as the SES email-receiving endpoint for
+      `us-east-1`. Observes regional inbound routing, not outbound
+      sending or the state of any receipt rule.
+  - type: mx
+    pattern: inbound-smtp.us-east-2.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `us-east-2`.
+  - type: mx
+    pattern: inbound-smtp.us-west-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `us-west-1`.
   - type: mx
     pattern: inbound-smtp.us-west-2.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
     description: >-
-      AWS SES inbound MX target in `us-west-2`.
+      AWS-documented SES email-receiving endpoint for `us-west-2`.
   - type: mx
-    pattern: inbound-smtp.eu-west-1.amazonaws.com
+    pattern: inbound-smtp.af-south-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
     description: >-
-      AWS SES inbound MX target in `eu-west-1`.
+      AWS-documented SES email-receiving endpoint for `af-south-1`.
   - type: mx
-    pattern: inbound-smtp.eu-central-1.amazonaws.com
+    pattern: inbound-smtp.ap-southeast-3.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
     description: >-
-      AWS SES inbound MX target in `eu-central-1`.
+      AWS-documented SES email-receiving endpoint for `ap-southeast-3`.
+  - type: mx
+    pattern: inbound-smtp.ap-south-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `ap-south-1`.
+  - type: mx
+    pattern: inbound-smtp.ap-northeast-3.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `ap-northeast-3`.
+  - type: mx
+    pattern: inbound-smtp.ap-northeast-2.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `ap-northeast-2`.
   - type: mx
     pattern: inbound-smtp.ap-southeast-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
     description: >-
-      AWS SES inbound MX target in `ap-southeast-1`.
+      AWS-documented SES email-receiving endpoint for `ap-southeast-1`.
+  - type: mx
+    pattern: inbound-smtp.ap-southeast-2.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `ap-southeast-2`.
   - type: mx
     pattern: inbound-smtp.ap-northeast-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
     description: >-
-      AWS SES inbound MX target in `ap-northeast-1`.
+      AWS-documented SES email-receiving endpoint for `ap-northeast-1`.
+  - type: mx
+    pattern: inbound-smtp.ca-central-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `ca-central-1`.
+  - type: mx
+    pattern: inbound-smtp.eu-central-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `eu-central-1`.
+  - type: mx
+    pattern: inbound-smtp.eu-west-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `eu-west-1`.
+  - type: mx
+    pattern: inbound-smtp.eu-west-2.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `eu-west-2`.
+  - type: mx
+    pattern: inbound-smtp.eu-south-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `eu-south-1`.
+  - type: mx
+    pattern: inbound-smtp.eu-west-3.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `eu-west-3`.
+  - type: mx
+    pattern: inbound-smtp.eu-north-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `eu-north-1`.
+  - type: mx
+    pattern: inbound-smtp.il-central-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `il-central-1`.
+  - type: mx
+    pattern: inbound-smtp.me-south-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `me-south-1`.
+  - type: mx
+    pattern: inbound-smtp.sa-east-1.amazonaws.com
+    reference: https://docs.aws.amazon.com/general/latest/gr/ses.html
+    verified: '2026-08-20'
+    description: >-
+      AWS-documented SES email-receiving endpoint for `sa-east-1`.
 - name: Microsoft 365
   slug: microsoft365
   category: Email & Communication
@@ -1410,9 +1534,15 @@ fingerprints:
   detections:
   - type: mx
     pattern: trendmicro.com
+    reference: https://docs.trendmicro.com/en-us/documentation/article/trend-micro-email-security-online-help-configuring-a-domain
+    verified: 2026-08-20
     description: >-
-      Trend Micro Email Security gateway MX target
-      (`trendmicro.com`).
+      MX terminating at one of TrendAI Email Security's current
+      regional hosts under `trendmicro.com`, including the
+      documented US, Australia, Japan, Singapore, India, UAE,
+      UK, Canada, South Africa, and Indonesia forms. This
+      observes inbound routing through Trend Micro. It does not
+      identify a downstream mailbox provider.
 - name: Alibaba Cloud (compute / generic)
   slug: alibaba-cloud
   category: Cloud
@@ -1571,10 +1701,14 @@ fingerprints:
   confidence: high
   detections:
   - type: cname_target
-    pattern: outlook.com
+    pattern: autodiscover.outlook.com
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/dns/create-dns-records-using-windows-based-dns
+    verified: 2026-08-20
     description: >-
-      Microsoft 365 hybrid / federated mail CNAME target
-      (`outlook.com`). Common on autodiscover / pod hostnames.
+      Microsoft 365 Exchange Online Autodiscover CNAME target. Microsoft's
+      current DNS setup guidance names `autodiscover.outlook.com` for the
+      `autodiscover` owner. This observes client-discovery routing, not inbound
+      MX routing, mailbox activity, or hybrid federation by itself.
 - name: Heroku
   slug: heroku
   category: Infrastructure

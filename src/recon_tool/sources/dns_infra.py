@@ -42,7 +42,7 @@ from recon_tool.sources.dns_tables import (
     ct_failure_outcome,
     is_public_dns_name,
 )
-from recon_tool.validator import caa_issuer_host, host_has_suffix
+from recon_tool.validator import caa_issuer_host, host_has_suffix, is_domain_shaped
 
 if TYPE_CHECKING:
     from recon_tool.ct_cache import CTCacheEntry
@@ -71,6 +71,15 @@ def _ns_pattern_matches(host: str, pattern: str) -> bool:
         label == normalized_pattern or label.startswith(f"{normalized_pattern}-")
         for label in host.lower().rstrip(".").split(".")
     )
+
+
+def _cname_pattern_matches(host: str, pattern: str) -> bool:
+    """Match whole-domain CNAME patterns by labels and regex patterns as regex."""
+    normalized_pattern = pattern.lower().rstrip(".")
+    if is_domain_shaped(normalized_pattern):
+        return host_has_suffix(host, normalized_pattern)
+    compiled = compile_regex(pattern, re.IGNORECASE)
+    return compiled is not None and compiled.search(host) is not None
 
 
 def _dns_target_host(record: str) -> str:
@@ -309,18 +318,17 @@ async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
     # (consistent with MX / NS / CAA / dmarc_rua / cname_target , see
     # filter_shadowed_matches).
     #
-    # cname patterns are regex-validated at load time (the loader compiles
+    # CNAME patterns are regex-validated at load time (the loader compiles
     # them to catch ReDoS-shaped expressions), and
     # nine catalog entries today carry real regex syntax (escaped dots,
     # ``$`` anchors, alternation , see slugs langsmith, fastly, flyio,
     # railway, splunk, cyberark, beyond-identity, workspace-one). The
     # original substring matcher (``det.pattern in cl``) silently
     # never-fired on those nine because no real hostname contains
-    # backslashes or ``$``. Regex search lights them up
-    # while preserving behavior for the 88 plain-string patterns
-    # (regex without metacharacters is equivalent to substring search,
-    # modulo ``.`` matching any single character, which on hostname
-    # patterns like ``hubspot.net`` is the intended forgiving match).
+    # backslashes or ``$``. Regex search lights them up. Plain whole-domain
+    # patterns use DNS-label suffix matching so a target such as
+    # ``vendor.com.evil.example`` cannot match ``vendor.com``. Cached replay
+    # uses the same boundary.
     cname_patterns_sorted = sorted(get_cname_patterns(), key=lambda d: -len(d.pattern))
     for owner, cname_list in (("www", www_results), ("@", root_results)):
         for cname in cname_list:
@@ -333,8 +341,7 @@ async def detect_cname_infra(ctx: dns_base.DetectionCtx, domain: str) -> None:
             cl = cname.lower()[:_MAX_CNAME_MATCH_LEN]
             matched = False
             for det in cname_patterns_sorted:
-                compiled = compile_regex(det.pattern, re.IGNORECASE)
-                if compiled is not None and compiled.search(cl):
+                if _cname_pattern_matches(cl, det.pattern):
                     ctx.add(det.name, det.slug, source_type="CNAME", raw_value=cname)
                     ctx.record_fp_match(det.slug, "cname", det.pattern)
                     matched = True

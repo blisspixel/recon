@@ -31,8 +31,7 @@ candidate. It omits client-only frontmatter and does not depend on experimental
 frozen representative-client evaluation is complete."""
 _TRIAGE_NATIVE_HARD_RULE = "- Do not claim this Claude Code-native skill is a portable Agent Plugins\n  package."
 _TRIAGE_PORTABLE_HARD_RULE = (
-    "- Do not turn offline schema validation into an unqualified Agent Plugins\n"
-    "  compatibility or future-draft conformance claim."
+    "- Do not turn offline schema validation into an unqualified Agent Plugins\n  compatibility or conformance claim."
 )
 
 
@@ -129,7 +128,7 @@ def _readme(version: str) -> bytes:
     locations.
 
     This directory has passed offline validation against the vendored canonical
-    Agent Plugins v1.0.0 schemas. The specification remains a Working Draft.
+    Agent Plugins v1.0.0 schemas. Version 1.0.0 is Published.
     Offline validation is not an unqualified compatibility or conformance claim;
     promotion remains blocked on the frozen Visual Studio Code, Cursor, and Kiro
     [representative-client evaluation]({declaration_url}).

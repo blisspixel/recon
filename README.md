@@ -201,13 +201,14 @@ Per-client scaffolds and skills:
 The current scaffolds use each client's native configuration. In particular,
 the bundled Claude Code plugin uses Claude Code's client-specific layout; it
 does not claim conformance with the portable
-[Agent Plugins v1.0.0 working draft](https://agent-plugins.org/specification).
+[Agent Plugins v1.0.0 specification](https://agent-plugins.org/specification).
 A complete-surface portable candidate now lives under
 [`agents/agent-plugin/`](https://github.com/blisspixel/recon/tree/main/agents/agent-plugin)
-and passes network-free validation against the exact pinned v1.0.0 schemas.
-That is not a compatibility or conformance claim. Until the frozen VS Code,
-Cursor, and Kiro evaluation passes, use the documented client-specific install
-path above.
+and passes network-free validation against the exact pinned v1.0.0 schemas,
+whose bytes still match the Published specification. That is not a client
+compatibility or conformance claim. The frozen VS Code, Cursor, and Kiro
+preflight now passes, but the paired evaluation remains incomplete. Until that
+evaluation passes, use the documented client-specific install path above.
 
 | You say | What the agent should do |
 |---|---|
@@ -275,6 +276,8 @@ Research and publication pointers (maintainer track, not the product core):
 [docs/m365-tenancy-decision.md](https://github.com/blisspixel/recon/blob/main/docs/m365-tenancy-decision.md).
 
 ## Development
+
+The repository requires `uv >=0.11.8,<0.12`; CI currently pins `0.11.17`.
 
 ```bash
 uv sync

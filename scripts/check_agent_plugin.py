@@ -306,7 +306,7 @@ def _validate_semantics(
         raise CandidateError("candidate README must be UTF-8") from exc
     required_phrases = (
         "Agent Plugins v1.0.0 schemas",
-        "Working Draft",
+        "Version 1.0.0 is Published",
         "not an unqualified compatibility or conformance claim",
         "Open Knowledge Format v0.2",
     )

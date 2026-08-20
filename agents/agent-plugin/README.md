@@ -6,7 +6,7 @@ fixed [Agent Plugins v1.0.0](https://agent-plugins.org/specification)
 locations.
 
 This directory has passed offline validation against the vendored canonical
-Agent Plugins v1.0.0 schemas. The specification remains a Working Draft.
+Agent Plugins v1.0.0 schemas. Version 1.0.0 is Published.
 Offline validation is not an unqualified compatibility or conformance claim;
 promotion remains blocked on the frozen Visual Studio Code, Cursor, and Kiro
 [representative-client evaluation](https://github.com/blisspixel/recon/blob/v2.17.4/docs/agent-portability-evaluation-declaration.md).

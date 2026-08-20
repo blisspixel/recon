@@ -464,25 +464,28 @@ fingerprints:
       semantics as the akamai.net form.
   - type: cname
     pattern: akamaiedge.net
-    reference: https://techdocs.akamai.com/property-mgr/docs
+    reference: https://techdocs.akamai.com/property-mgr/reference/modify-property-hostnames
+    verified: '2026-08-20'
     description: >-
       CNAME terminating in akamaiedge.net. Indicates the
       domain or subdomain proxies through Akamai's edge,
       typically for CDN or WAF services.
   - type: cname
     pattern: edgekey.net
-    reference: https://techdocs.akamai.com/property-mgr/docs
+    reference: https://techdocs.akamai.com/property-mgr/reference/modify-property-hostnames
+    verified: '2026-08-20'
     description: >-
-      CNAME terminating in edgekey.net (Akamai's edge-key
-      domain used for some product configurations).
+      CNAME terminating in edgekey.net, which current Akamai
+      documentation names for Enhanced TLS edge hostnames.
       Same edge-proxying semantics as the akamaiedge.net
       form.
   - type: cname
     pattern: edgesuite.net
-    reference: https://techdocs.akamai.com/property-mgr/docs
+    reference: https://techdocs.akamai.com/property-mgr/reference/modify-property-hostnames
+    verified: '2026-08-20'
     description: >-
-      CNAME terminating in edgesuite.net (Akamai's EdgeSuite
-      CDN and WAF product domain). Same edge-proxying
+      CNAME terminating in edgesuite.net, which current Akamai
+      documentation names for Standard TLS edge hostnames. Same edge-proxying
       semantics as the other Akamai edge-CNAME patterns.
 - name: NS1 (IBM)
   slug: ns1

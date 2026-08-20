@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
+import pytest
+
 from scripts.generate_terminal_demo import (
     DEFAULT_OUTPUT,
     demo_tenant_info,
@@ -30,6 +32,17 @@ def test_committed_terminal_demo_matches_the_real_renderer() -> None:
     assert "Example Industries" in svg
     assert demo_tenant_info().queried_domain == "example.com"
     assert main(["--check"]) == 0
+
+
+def test_terminal_demo_width_is_independent_of_dumb_term(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("TERM", "xterm-256color")
+    ordinary = render_terminal_demo_svg()
+
+    monkeypatch.setenv("TERM", "dumb")
+    noninteractive = render_terminal_demo_svg()
+
+    assert noninteractive == ordinary
+    assert 'viewBox="0 0 1019 757.5999999999999"' in noninteractive
 
 
 def test_generator_check_mode_detects_drift(tmp_path: Path) -> None:

@@ -122,6 +122,114 @@ async def test_spf_suffix_lookalike_does_not_match(monkeypatch: pytest.MonkeyPat
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
+    "target",
+    [
+        "spf-us.tmes.trendmicro.com",
+        "spf.tmes.trendmicro.eu",
+        "spf.tmes-anz.trendmicro.com",
+        "spf.tmems-jp.trendmicro.com",
+        "spf.tmes-sg.trendmicro.com",
+        "spf.tmes-in.trendmicro.com",
+        "spf.tmes-uae.trendmicro.com",
+        "spf.tmes-uk.trendmicro.com",
+        "spf.tmes-ca.trendmicro.com",
+        "spf.tmes-za.trendmicro.com",
+        "spf.tmes-id.trendmicro.com",
+    ],
+)
+async def test_trendmicro_current_regional_spf_values_match(
+    monkeypatch: pytest.MonkeyPatch,
+    target: str,
+) -> None:
+    monkeypatch.setattr(
+        dns_base,
+        "safe_resolve",
+        _resolver({("example.com", "TXT"): [f"v=spf1 include:{target} -all"]}),
+    )
+    ctx = dns_base.DetectionCtx()
+
+    await dns_email.detect_txt(ctx, "example.com")
+
+    assert "trendmicro" in ctx.slugs
+
+
+@pytest.mark.asyncio
+async def test_trendmicro_spf_lookalike_does_not_match(monkeypatch: pytest.MonkeyPatch) -> None:
+    target = "spf-us.tmes.trendmicro.com.evil.example"
+    monkeypatch.setattr(
+        dns_base,
+        "safe_resolve",
+        _resolver({("example.com", "TXT"): [f"v=spf1 include:{target} -all"]}),
+    )
+    ctx = dns_base.DetectionCtx()
+
+    await dns_email.detect_txt(ctx, "example.com")
+
+    assert "trendmicro" not in ctx.slugs
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "region",
+    [
+        "us-east-1",
+        "us-east-2",
+        "us-west-1",
+        "us-west-2",
+        "af-south-1",
+        "ap-southeast-3",
+        "ap-south-1",
+        "ap-northeast-3",
+        "ap-northeast-2",
+        "ap-southeast-1",
+        "ap-southeast-2",
+        "ap-northeast-1",
+        "ca-central-1",
+        "eu-central-1",
+        "eu-west-1",
+        "eu-west-2",
+        "eu-south-1",
+        "eu-west-3",
+        "eu-north-1",
+        "il-central-1",
+        "me-south-1",
+        "sa-east-1",
+    ],
+)
+async def test_aws_ses_current_regional_mx_values_match(
+    monkeypatch: pytest.MonkeyPatch,
+    region: str,
+) -> None:
+    target = f"inbound-smtp.{region}.amazonaws.com"
+    monkeypatch.setattr(
+        dns_base,
+        "safe_resolve",
+        _resolver({("example.com", "MX"): [f"10 {target}."]}),
+    )
+    ctx = dns_base.DetectionCtx()
+
+    await dns_email.detect_mx(ctx, "example.com")
+
+    assert "aws-ses" in ctx.slugs
+
+
+@pytest.mark.asyncio
+async def test_aws_ses_mx_lookalike_does_not_match(monkeypatch: pytest.MonkeyPatch) -> None:
+    target = "inbound-smtp.us-east-1.amazonaws.com.evil.example"
+    monkeypatch.setattr(
+        dns_base,
+        "safe_resolve",
+        _resolver({("example.com", "MX"): [f"10 {target}."]}),
+    )
+    ctx = dns_base.DetectionCtx()
+
+    await dns_email.detect_mx(ctx, "example.com")
+
+    assert "aws-ses" not in ctx.slugs
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
     "case",
     [
         (
@@ -130,6 +238,20 @@ async def test_spf_suffix_lookalike_does_not_match(monkeypatch: pytest.MonkeyPat
             "10 tenant.mail.protection.outlook.com.",
             "10 tenant.mail.protection.outlook.com.evil.example.",
             "microsoft365",
+        ),
+        (
+            dns_email.detect_mx,
+            "MX",
+            "10 inbound.ess.barracudanetworks.com.",
+            "10 inbound.ess.barracudanetworks.com.evil.example.",
+            "barracuda",
+        ),
+        (
+            dns_email.detect_mx,
+            "MX",
+            "10 mx1.fictional-allocation.iphmx.com.",
+            "10 mx1.fictional-allocation.iphmx.com.evil.example.",
+            "cisco-ironport",
         ),
         (
             dns_infra.detect_ns,
@@ -347,6 +469,92 @@ async def test_webflow_cname_lookalike_does_not_match(monkeypatch: pytest.Monkey
     await dns_infra.detect_cname_infra(ctx, "example.com")
 
     assert "webflow" not in ctx.slugs
+
+
+@pytest.mark.asyncio
+async def test_hubspot_current_spf_and_cname_values_reject_lookalikes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for record_type, positive, lookalike, detector in (
+        (
+            "TXT",
+            "v=spf1 include:123456.spf03.hubspotemail.net -all",
+            "v=spf1 include:123456.spf03.hubspotemail.net.evil.example -all",
+            dns_email.detect_txt,
+        ),
+        (
+            "CNAME",
+            "8675309.group39.sites.hubspot.net.",
+            "8675309.group39.sites.hubspot.net.evil.example.",
+            dns_infra.detect_cname_infra,
+        ),
+    ):
+        owner = "example.com" if record_type == "TXT" else "www.example.com"
+        for value, expected in ((positive, True), (lookalike, False)):
+            monkeypatch.setattr(
+                dns_base,
+                "safe_resolve",
+                _resolver({(owner, record_type): [value]}),
+            )
+            ctx = dns_base.DetectionCtx()
+            await detector(ctx, "example.com")
+            assert ("hubspot" in ctx.slugs) is expected
+
+
+@pytest.mark.asyncio
+async def test_marketo_current_spf_and_cname_values_reject_lookalikes(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    for record_type, positive, lookalike, detector in (
+        (
+            "TXT",
+            "v=spf1 include:mktomail.com -all",
+            "v=spf1 include:mktomail.com.evil.example -all",
+            dns_email.detect_txt,
+        ),
+        (
+            "CNAME",
+            "123-abc-456.mktoweb.com.",
+            "123-abc-456.mktoweb.com.evil.example.",
+            dns_infra.detect_cname_infra,
+        ),
+    ):
+        owner = "example.com" if record_type == "TXT" else "www.example.com"
+        for value, expected in ((positive, True), (lookalike, False)):
+            monkeypatch.setattr(
+                dns_base,
+                "safe_resolve",
+                _resolver({(owner, record_type): [value]}),
+            )
+            ctx = dns_base.DetectionCtx()
+            await detector(ctx, "example.com")
+            assert ("marketo" in ctx.slugs) is expected
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "target",
+    [
+        "mc.s7.exacttarget.com",
+        "198h8bcs7n8hz798n.pub.sfmc-content.com",
+        "tenant.sfmc-marketing.com",
+    ],
+)
+async def test_salesforce_marketing_cloud_current_cnames_reject_lookalikes(
+    monkeypatch: pytest.MonkeyPatch,
+    target: str,
+) -> None:
+    for value, expected in ((target, True), (f"{target}.evil.example", False)):
+        monkeypatch.setattr(
+            dns_base,
+            "safe_resolve",
+            _resolver({("www.example.com", "CNAME"): [value + "."]}),
+        )
+        ctx = dns_base.DetectionCtx()
+
+        await dns_infra.detect_cname_infra(ctx, "example.com")
+
+        assert ("salesforce-mc" in ctx.slugs) is expected
 
 
 @pytest.mark.asyncio

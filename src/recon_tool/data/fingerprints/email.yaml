@@ -16,25 +16,17 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^MS=ms
-    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
+    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/get-help-with-domains/create-dns-records-at-any-dns-hosting-provider
+    verified: 2026-08-20
     description: >-
-      Microsoft 365 domain-verification TXT (the `MS=ms########`
-      form Microsoft issues during tenant domain claim).
+      Microsoft 365 domain-verification TXT (the current documented
+      `MS=ms########` form Microsoft issues during tenant domain claim).
       Indicates the domain is administratively bound to a
       Microsoft 365 or Entra tenant. Does not prove the tenant
       is actively used for email. Some orgs verify the domain to
       claim the namespace then route mail elsewhere, so
       corroborate with MX evidence before reading this as "they
       run M365 email."
-  - type: txt
-    pattern: ^ms-domain-verification=
-    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
-    description: >-
-      Alternative Microsoft 365 verification TXT format (the
-      `ms-domain-verification=` prefix used for some Entra ID
-      and Microsoft Defender services). Same administrative-
-      binding semantics as `MS=ms########`. Does not by itself
-      imply active email use.
   - type: mx
     pattern: mail.protection.outlook.com
     reference: https://learn.microsoft.com/en-us/microsoft-365/enterprise/external-domain-name-system-records
@@ -49,7 +41,8 @@ fingerprints:
       this MX is published.
   - type: spf
     pattern: spf.protection.outlook.com
-    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
+    reference: https://learn.microsoft.com/en-us/microsoft-365/enterprise/external-domain-name-system-records
+    verified: '2026-08-20'
     description: >-
       SPF `include:spf.protection.outlook.com` authorizes
       Microsoft 365 to send mail on behalf of the domain.
@@ -57,6 +50,24 @@ fingerprints:
       with M365 use. Does not prove M365 is the primary sender;
       many domains include M365 as one of several authorized
       senders.
+- name: Azure Communication Services Email
+  slug: azure-communication-services-email
+  category: Email & Communication
+  confidence: high
+  display_group: Email & Communication
+  product_family: Azure Communication Services Email
+  parent_vendor: Microsoft
+  detections:
+  - type: txt
+    pattern: ^ms-domain-verification=
+    reference: https://learn.microsoft.com/en-us/azure/communication-services/concepts/email/email-domain-configuration-troubleshooting
+    verified: 2026-08-20
+    description: >-
+      Azure Communication Services Email custom-domain ownership token
+      (`ms-domain-verification=<GUID>`). Microsoft documents this exact TXT
+      form for an Email Communication Service resource. It observes an
+      administrative domain binding to that email service, not Microsoft 365
+      tenant verification, message activity, or delivery volume.
 - name: Google Workspace
   slug: google-workspace
   category: Email & Communication
@@ -80,7 +91,8 @@ fingerprints:
       this MX is published.
   - type: spf
     pattern: _spf.google.com
-    reference: https://support.google.com/a/answer/7314058
+    reference: https://support.google.com/a/answer/33786
+    verified: '2026-08-20'
     description: >-
       SPF `include:_spf.google.com` authorizes Google to send
       mail on behalf of the domain. Usually present with the GWS
@@ -305,20 +317,20 @@ fingerprints:
     pattern: '^amazonses:'
     reference: https://docs.aws.amazon.com/ses/latest/dg/send-email-getting-started.html
     description: >-
-      Amazon SES domain-verification TXT (the `amazonses:`
-      prefix). Indicates the domain is verified to send mail
-      through Amazon SES, typically for transactional or
-      application-generated email. SES is rarely the inbound
-      mail provider, so combined with a non-SES MX the more
-      accurate read is "uses SES for outbound application mail."
+      Earlier observed Amazon SES domain-verification TXT value
+      prefix. Current AWS identity documentation instead describes
+      owner-qualified verification and DKIM records and does not
+      name this apex value form, so this rule stays undated. It is
+      administrative evidence only, not inbound-routing evidence.
   - type: spf
     pattern: amazonses.com
-    reference: https://docs.aws.amazon.com/ses/latest/dg/send-email-getting-started.html
+    reference: https://docs.aws.amazon.com/ses/latest/dg/mail-from.html
+    verified: '2026-08-20'
     description: >-
-      SPF `include:amazonses.com` authorizes Amazon SES to send
-      mail on behalf of the domain. Typically a sender-only
-      authorization for transactional mail; not by itself
-      evidence of inbound mail handling on SES.
+      AWS documents SPF `include:amazonses.com` for a custom MAIL
+      FROM domain. It authorizes Amazon SES to send on behalf of
+      that domain and is not by itself evidence of inbound mail
+      handling on SES.
 - name: SendGrid
   slug: sendgrid
   category: Email & Communication

@@ -36,9 +36,10 @@ and several OKF fields would be easy to overstate:
   explicit scope descriptor, while many retained DNS values are observations,
   not resources.
 
-Agent Plugins v1.0.0 remains a Working Draft for packaging skills and MCP
-servers. It does not define a runtime evidence format and does not change the
-capsule decision.
+At this decision's 2026-08-13 acceptance date, Agent Plugins v1.0.0 was a
+Working Draft for packaging skills and MCP servers. It does not define a
+runtime evidence format and does not change the capsule decision. Version
+1.0.0 is now Published, which does not alter this ADR's boundary.
 
 ## Decision
 

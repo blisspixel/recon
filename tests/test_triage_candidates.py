@@ -3,6 +3,8 @@ from __future__ import annotations
 from recon_tool.discovery import find_candidates, pattern_matches_hostname
 from validation.triage_candidates import entry_is_already_covered, triage
 
+_AWS_ELBV2_PATTERN = r"\.elb\.[a-z0-9-]+\.amazonaws\.com(?:\.cn)?$"
+
 
 def test_entry_is_already_covered_checks_sample_terminal() -> None:
     samples = [
@@ -15,7 +17,7 @@ def test_entry_is_already_covered_checks_sample_terminal() -> None:
     assert entry_is_already_covered(
         "us-gov-east-1.amazonaws.com",
         samples,
-        {"elb.us-gov-east-1.amazonaws.com"},
+        {_AWS_ELBV2_PATTERN},
     )
 
 
@@ -37,8 +39,16 @@ def test_existing_pattern_matching_uses_dns_label_boundaries() -> None:
     assert not pattern_matches_hostname("sync-transcend-cdn.com", "transcend-cdn.com")
 
 
-def test_dotless_existing_patterns_keep_substring_semantics() -> None:
-    assert pattern_matches_hostname("mkto-ab390043.com", "mkto-")
+def test_regex_existing_patterns_mirror_runtime_boundaries() -> None:
+    pattern = r"^mkto-[a-z][0-9]{4}\.com$"
+    assert pattern_matches_hostname("mkto-a0244.com", pattern)
+    assert not pattern_matches_hostname("mkto-ab390043.com", pattern)
+    assert not pattern_matches_hostname("mkto-a0244.com.example.org", pattern)
+
+
+def test_simple_fragment_existing_patterns_mirror_runtime_boundaries() -> None:
+    assert pattern_matches_hostname("bucket.s3-website-us-east-1.amazonaws.com", "s3-website")
+    assert not pattern_matches_hostname("bucket.fakes3-website-us-east-1.amazonaws.com", "s3-website")
 
 
 def test_triage_keeps_candidates_not_runtime_covered_by_specific_sample_hostname() -> None:
@@ -75,7 +85,7 @@ def test_triage_drops_candidates_covered_only_by_specific_sample_hostname() -> N
 
     survivors = triage(
         gaps,
-        existing_patterns={"elb.us-gov-east-1.amazonaws.com"},
+        existing_patterns={_AWS_ELBV2_PATTERN},
         min_count=3,
         min_distinct_namespaces=2,
         drop_intra_org=False,

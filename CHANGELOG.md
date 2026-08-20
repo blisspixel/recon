@@ -26,6 +26,119 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+The standing freshness pass updates provider-documented mail-routing families,
+and the portable Agent Plugins track now reflects Published v1.0.0 plus a
+passing three-client/runtime preflight. The catalog has 869 entries, 692 unique
+slugs, and 1,108 detections; 134 detections are dated (12.1 percent), with zero
+currently stale dated rules.
+
+### Tool Surface Changes
+
+Tool surface changes: no command, flag, JSON field, MCP tool, or MCP resource is
+added, removed, or renamed. The fingerprint catalog adds 11 documented regional
+TrendAI SPF values and 16 documented AWS SES receiving regions. The broad
+Marketo `mkto-` CNAME-target fragment is replaced by Adobe's documented
+`mkto-[letter][four digits].com` host form. Seven partial regional `aws-nlb`
+patterns are consolidated into one partition-aware ELBv2 regex while retaining
+the stable slug. Five partial regional `aws-api-gateway` patterns are likewise
+consolidated into one partition-aware regex. The existing
+`ms-domain-verification=` rule moves from the Microsoft 365 slug to the new,
+provider-correct `azure-communication-services-email` slug, and broad Microsoft
+365 government, Autodiscover, and SharePoint patterns are narrowed to current
+documented roles.
+
+### Added
+
+- **Current TrendAI regional SPF coverage.** Exact documented US, Germany,
+  Australia, Japan, Singapore, India, UAE, UK, Canada, South Africa, and
+  Indonesia SPF values now have dated references plus fictional positive and
+  lookalike-negative fixtures.
+- **Complete current AWS SES receiving-region coverage.** The six existing
+  regional MX targets are dated and the other 16 endpoints in AWS's current
+  22-region receiving table are added with exact suffix matching, fictional
+  positives, and deceptive-lookalike negatives.
+- **Passing agent-portability readiness evidence.** A disclosure-safe
+  2026-08-20 memo records the frozen preflight passing with recon 2.17.4 and all
+  three required clients, with zero sessions and zero network requests.
+- **Azure Communication Services Email classification.** The exact
+  `ms-domain-verification=` administrative token now identifies the service
+  Microsoft currently documents for it, with a dated first-party reference and
+  a distinct slug.
+
+### Changed
+
+- **Agent Plugins status matches the current standard.** Active documentation
+  now describes v1.0.0 as Published while preserving the frozen 2026-08-14
+  Working Draft snapshot as historical contract evidence. The canonical plugin
+  and MCP schema bytes remain identical to the pinned copies.
+- **Current mail-gateway references and roles.** TrendAI regional MX, Barracuda
+  Email Gateway Defense inbound MX, and Cisco Secure Email Cloud Gateway
+  `iphmx.com` rules use current provider documentation and dated scoped wording.
+  Earlier or unsupported public patterns remain undated rather than receiving a
+  synthetic freshness date.
+- **Current major-provider SPF references.** AWS SES, Google Workspace, and
+  Microsoft 365 SPF rules now point to provider pages that name the exact
+  include values and carry a 2026-08-20 verification date.
+- **Current Akamai edge-hostname references.** `akamaiedge.net`,
+  `akamaized.net`, `edgekey.net`, and `edgesuite.net` CNAME rules now point to
+  the current Property Manager mapping guide and carry a verification date.
+  Akamai patterns not named by that page remain undated.
+- **Bounded HubSpot freshness review.** Current HubSpot pages support the
+  account-qualified `hubspotemail.net` SPF suffix and `hubspot.net` connected
+  domain CNAMEs, so those three rules are dated and boundary-tested. Seven
+  other HubSpot patterns remain undated because current first-party pages do
+  not name their exact pattern and role.
+- **Bounded Marketo freshness review.** Current Adobe pages support
+  `include:mktomail.com`, account-qualified `mktoweb.com` CNAME targets, and
+  the exact Marketo tracking-link host form. Those four rules are dated and
+  boundary-tested. Five other Marketo patterns remain undated without exact
+  current first-party support.
+- **Bounded Salesforce Marketing Cloud freshness review.** Current Salesforce
+  pages support eight `exacttarget.com`, `sfmc-content.com`,
+  `sfmc-marketing.com`, `marketingcloudapis.com`, and `exct.net` CNAME or
+  discovered-target roles. Those rules are dated, scoped to their documented
+  application, CloudPages/content, web-view, API, and Subscription Center uses,
+  and boundary-tested. The `exacttarget.com` SPF and `SFMC-` TXT observations
+  remain undated without exact current first-party DNS-role support.
+- **AWS ELBv2 surface normalization.** Seven partial regional `aws-nlb` rules
+  are replaced by one validated pattern covering the current commercial,
+  GovCloud, and China `name-id.elb.region.amazonaws.*` forms. The stable slug is
+  retained, but the user-facing name and description now state that DNS cannot
+  distinguish Application from Network Load Balancers. Current partition and
+  deceptive-lookalike fixtures enforce that boundary.
+- **AWS API Gateway surface normalization.** Five partial regional rules are
+  replaced by one validated pattern for commercial, GovCloud, and China
+  regional API targets. Edge-optimized CloudFront targets, private VPC endpoint
+  names, bare service endpoints, and deceptive suffixes remain outside the
+  claim boundary.
+- **Microsoft administrative and endpoint roles corrected.** The current
+  `MS=ms########` token remains Microsoft 365 domain verification, while
+  `ms-domain-verification=` is no longer attributed to that service. GCC High
+  MX is narrowed to `mail.protection.office365.us`; the government SPF and
+  `usgovcloud.microsoft` roles are assigned to the stable government variant;
+  and commercial Autodiscover is narrowed from `outlook.com` to
+  `autodiscover.outlook.com`. The exact SharePoint CNAME role is dated from
+  current Microsoft guidance.
+- **Regex-shaped CNAME-target rules.** Runtime surface attribution and the
+  discovery filter now share one safe matcher for whole-domain suffixes,
+  label-bounded literal fragments, and validated regex patterns.
+
+### Fixed
+
+- **CNAME-target runtime and discovery parity.** The discovery filter now uses
+  the same label, fragment, and regex boundaries as live surface attribution,
+  preventing already-covered decisions from drifting from runtime behavior.
+- **Live CNAME label-boundary matching.** Plain whole-domain catalog patterns
+  now use DNS-label suffix comparison, matching cached replay and preventing a
+  target such as `vendor.example.evil.invalid` from being attributed to
+  `vendor.example`. Regex-shaped CNAME rules retain regex matching.
+- **Cisco gateway directionality.** `iphmx.com` is described as the current
+  Cloud Gateway allocation family; `ess.cisco.com` remains an undated earlier
+  observation instead of being labeled current.
+- **Deterministic terminal-demo generation under `TERM=dumb`.** The renderer
+  now fixes both terminal dimensions, so the committed SVG and canonical local
+  gate do not depend on the invoking shell's terminal classification.
+
 ## [2.17.4] - 2026-08-20
 
 The Okta custom-domain family is dated from current public pages. Dead
