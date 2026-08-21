@@ -26,6 +26,46 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.6] - 2026-08-20
+
+The Microsoft residual review replaces unsupported product-role wording with
+current, bounded descriptions and records a fail-closed portability cost-gate
+disposition. The catalog still has 869 entries, 692 unique slugs, and 1,108
+detections; 138 detections are dated (12.5 percent), with zero currently stale
+dated rules.
+
+### Tool Surface Changes
+
+Tool surface changes: no command, flag, JSON field, MCP tool, or MCP resource is
+added, removed, or renamed. Four existing Microsoft 365 rules gain current
+first-party references and scoped descriptions. The existing `msv1.invalid`
+rule remains undated and now explicitly abstains from inferring mail routing or
+migration state.
+
+### Changed
+
+- **Bounded Microsoft endpoint evidence.** `tm-3.office.com`,
+  `svc.cloud.microsoft`, and `svc.sovcloud.cn` now point to current Microsoft
+  endpoint guidance and describe a Microsoft route without inferring a
+  workload, tenant, active use, location, or subscription. The broad
+  `eo.outlook.com` MX suffix is narrowed to the currently documented
+  `mail.eo.outlook.com` legacy family.
+- **Verification-residue semantics.** `msv1.invalid` remains undated because no
+  current first-party product page documents its role. Its description now
+  states only the observed non-routable domain-verification relationship and
+  explicitly rejects Exchange Online routing and migration-state inferences.
+- **Portability cost gate stopped before collection.** GPT-5.6 Luna is the
+  declared common model for a future resumed run and the hard external-charge
+  ceiling is $5 total. Account-side hard stops and a reproducible driver for
+  the three required desktop clients could not be verified from this
+  environment, so the frozen stop rule applied with zero model sessions and
+  $0 external spend.
+
+### Tests
+
+- Added positive, deceptive-suffix, sparse, metadata, and exact-provenance
+  coverage for all five reviewed Microsoft residual rules.
+
 ## [2.17.5] - 2026-08-20
 
 The standing freshness pass updates provider-documented mail-routing families,

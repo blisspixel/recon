@@ -43,9 +43,11 @@ tracked separately from product work.
 > is frozen and its offline validation passes, but the paired evaluation is
 > not complete. Agent Plugins v1.0.0 is Published, its canonical schema bytes
 > still match the pinned candidate, and the three-client/runtime preflight now
-> passes. Readiness is not compatibility or conformance, so the paired frame
-> still runs only under its frozen rules and a declared cost envelope. It does
-> not queue product work behind it.** The ordered version path through v3.0 is summarized
+> passes. GPT-5.6 Luna and a $5 total external-charge ceiling are declared, but
+> the paired frame stopped before collection because account-side hard stops
+> and a reproducible three-desktop-client driver were not verifiable. Readiness
+> is not compatibility or conformance. Resume only under the frozen rules; this
+> does not queue product work behind it.** The ordered version path through v3.0 is summarized
 > in [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
 > hosting remains a lower-priority side track and does not change the local
 > default.
@@ -75,8 +77,9 @@ With the engine feature-complete, the roadmap is mostly not a version path. It
 is a set of loops that never finish because the world they observe keeps
 changing. The recent releases (v2.15, v2.16) were output of the playtest loop;
 the next durable stream is output of the freshness loop. Agent portability is
-a separate maintainer track: its preflight passes, while paired collection
-remains unmeasured. It does not queue product work. Each loop
+a separate maintainer track: its preflight passes, while paired collection is
+deferred behind enforceable account hard stops and a reproducible driver for
+all three required desktop clients. It does not queue product work. Each loop
 names its trigger, cadence, artifact, and stop or pass condition. A loop is
 healthy when it runs on its cadence and produces its artifact, not when it
 "completes."
@@ -143,10 +146,12 @@ network-free schema, layout, launch, skill, and version validation are complete,
 and a 2026-08-20 preflight passes with every frozen client and the matching
 runtime. The v1.0.0 specification is Published and its canonical schemas remain
 byte-identical to the pinned copies. The paired evaluation is still unmeasured,
-so the project makes no client compatibility or conformance claim. Measure the
-current native path against the complete-surface candidate in the frozen VS
-Code, Cursor, and Kiro frame only under a declared cost envelope, without
-changing stable CLI, JSON, or MCP contracts. New claim-surface drift reopens
+so the project makes no client compatibility or conformance claim. GPT-5.6
+Luna and a $5 total external-charge ceiling are declared. Resume the current
+native path against the complete-surface candidate in the frozen VS Code,
+Cursor, and Kiro frame only when the account hard stops and reproducible client
+driver are verifiable, without changing stable CLI, JSON, or MCP contracts.
+New claim-surface drift reopens
 priority 1. Version milestones through v3.0:
 [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations).
 
@@ -200,7 +205,7 @@ current debt without turning every refinement into feature work.
 | Security | Unresolved HTTP destinations fail closed; rejected values and unexpected details stay out of default output; persisted inputs, corpus files, local catalog text, and default cache payload work are bounded; empty catalog filters cannot bypass compact defaults; release verification binds artifacts and recovery commands to exact status, workflow, tag, signer, and commit evidence; the installed dependency auditor resolves under Python isolated mode; pull requests and pushes to `main` run CodeQL while weekly and manual main scans remain | Ratchet the remote SAST requirement from its evidence-backed transition floor of 7 to 10 only after the public Scorecard window reports successful supported SAST checks for every sampled merged pull request; do not backfill history for the metric |
 | Accessibility | `--plain` is shipped; help uses complete linear output when needed; welcome alignment is content-aware at ordinary widths; catalog and cache rows preserve labels when narrow; color is never the only status channel | Keep both paths complete; do not replace the parser or hide specialist controls |
 | Documentation accuracy | README, MCP quick starts, stability, operational, security, generated CLI, release, catalog, cache, corpus, agent, schema, example, snapshot, and test surfaces use reserved target identities or disclosure-safe aggregates; the release gate rejects the retired target vocabulary | Keep eventual machine diagnostics separate from human output until versioned contracts are justified; retain manual review for previously unseen organization-shaped prose and preserve provider definitions |
-| Interchange portability | Native client layouts remain the supported install paths. A deterministic complete-surface candidate passes offline validation against byte-pinned Agent Plugins v1.0.0 schemas that still match the Published canonical bytes. The frozen three-client/runtime preflight passes, but representative-client compatibility is unmeasured. Versioned JSON remains the structured runtime contract. v2.13 shipped a separate caller-owned capsule schema; ADR-0014 defers OKF v0.2 because no named consumer justifies its trust and lifecycle mapping. | Run the frozen native-versus-portable VS Code, Cursor, and Kiro frame under a declared cost envelope. Keep the capsule and JSON contracts stable and native paths supported. Reopen an additive OKF projection only for a named consumer with a privacy review; never replace JSON or turn offline validation into a conformance claim. |
+| Interchange portability | Native client layouts remain the supported install paths. A deterministic complete-surface candidate passes offline validation against byte-pinned Agent Plugins v1.0.0 schemas that still match the Published canonical bytes. The frozen three-client/runtime preflight passes, GPT-5.6 Luna and a $5 ceiling are declared, but representative-client compatibility is unmeasured. Versioned JSON remains the structured runtime contract. v2.13 shipped a separate caller-owned capsule schema; ADR-0014 defers OKF v0.2 because no named consumer justifies its trust and lifecycle mapping. | Resume the complete frozen native-versus-portable VS Code, Cursor, and Kiro frame only when account hard stops and a reproducible three-desktop-client driver are verifiable. Keep the capsule and JSON contracts stable and native paths supported. Reopen an additive OKF projection only for a named consumer with a privacy review; never replace JSON or turn offline validation into a conformance claim. |
 
 ## Priority Order
 
@@ -716,22 +721,30 @@ product milestone:
    [catalog-strategy.md](catalog-strategy.md#3-freshness).
 4. v2.17.5 published this batch after a reviewed pull request and all protected-
    main checks, with PyPI and GitHub artifacts, SBOM provenance, and exact
-   channel-parity proof. Continue the remaining Microsoft residuals one pattern
-   at a time. `tm-3.office.com`,
-   `svc.cloud.microsoft`, `svc.sovcloud.cn`, `eo.outlook.com`, and
-   `msv1.invalid` remain undated until a current first-party page supports each
-   exact DNS role. Keep Proofpoint blocked for the same evidence reason.
+   channel-parity proof. The follow-up Microsoft review closes the named
+   residual queue. Current endpoint guidance supports bounded
+   `tm-3.office.com`, `svc.cloud.microsoft`, and `svc.sovcloud.cn` route
+   observations; current Exchange guidance supports narrowing the broad
+   `eo.outlook.com` rule to the documented legacy `mail.eo.outlook.com` MX
+   family. `msv1.invalid` remains undated and no longer claims a
+   migration state because no current first-party page documents that role.
+   Keep Proofpoint blocked for the same evidence reason. Detail:
+   [2026-08-20 Microsoft residual review](../validation/2026-08-20-microsoft-residual-review.md).
 5. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work
    proceeds. No catalog result reopens the voided fusion design or upgrades an
    observation into a population claim.
 6. Preserve the frozen representative task, client, success, error, latency,
    discovery-byte, context-cost, portability, privacy, and stop-rule
-   [contract](agent-portability-evaluation-declaration.md). Measure the native
-   22-tool path against the complete-surface Agent Plugins candidate only after
-   the passing preflight and under a declared model and cost envelope. That
-   measurement does not queue product work and does not change stable CLI,
-   JSON, MCP wire, or OKF projection decisions.
+   [contract](agent-portability-evaluation-declaration.md). GPT-5.6 Luna is the
+   declared common model and $5 is the hard total external-charge ceiling.
+   Collection remains deferred because account-side hard stops and a
+   reproducible driver for all three required desktop clients were not
+   verifiable. Resume the complete 30-session frame only when both gates are
+   enforceable; do not shrink or substitute it. This measurement does not queue
+   product work and does not change stable CLI, JSON, MCP wire, or OKF
+   projection decisions. Detail:
+   [2026-08-20 portability cost gate](../validation/2026-08-20-agent-portability-cost-gate.md).
 
 ### Apply the v2.11 result through v2.12 and v3
 
@@ -1112,7 +1125,8 @@ See [catalog-strategy.md](catalog-strategy.md).
 
 Status: **maintainer track, not a version-path milestone; contract frozen,
 portable candidate offline-validated, and three-client/runtime preflight
-passed; paired collection not started**.
+passed; model and cost envelope declared; paired collection deferred by the
+frozen stop rule**.
 (v2.16.0 shipped renderer parity, not this work.)
 
 The network-free
@@ -1133,9 +1147,21 @@ conformance.
 The first maintainer-local preflight remains historical stop evidence: Cursor
 was unavailable and the selected recon 2.6.3 did not match candidate 2.14.0. A
 second network-free preflight on 2026-08-20 passed with recon 2.17.4 and exact
-versions observed for VS Code, Cursor, and Kiro. Both preflights started zero
-sessions and made zero network requests. The passing result is environment
-readiness only and establishes no client behavior.
+versions observed for VS Code, Cursor, and Kiro. A later rerun passed with the
+exact v2.17.5 candidate and the same client versions. Every preflight started
+zero sessions. Passing preflight is environment readiness only and establishes
+no client behavior.
+
+GPT-5.6 Luna is the declared common model and $5 is the hard total
+external-charge ceiling, split into planned $1.50, $1.50, and $2.00 client
+sublimits. The collection stop rule applies because signed-in account hard
+stops and a reproducible driver for all three required desktop clients could
+not be verified from this environment. Published model rates do not establish
+an enforceable cross-account ceiling. Zero model sessions started and external
+spend is $0. The complete 30-session frame may resume only when both gates are
+demonstrably enforceable; no sampling, client substitution, or compatibility
+claim is allowed. Detail:
+[2026-08-20 portability cost gate](../validation/2026-08-20-agent-portability-cost-gate.md).
 
 Separate primary workflows from specialist workflows in documentation now.
 Treat portable packaging as a separate axis from tool-list context cost. The

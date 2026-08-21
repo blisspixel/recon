@@ -4,8 +4,12 @@ Status: frozen on 2026-08-14; contract prerequisite passed protected main;
 portable candidate implemented and offline-validated; representative-client
 collection not yet complete. The first maintainer-local preflight stopped before
 collection. A second network-free preflight passed on 2026-08-20 with recon
-2.17.4 and all three required clients, while starting zero sessions and making
-zero network requests.
+2.17.4 and all three required clients. A later rerun passed with the exact
+v2.17.5 candidate and the same client versions. The model and cost gate then
+declared GPT-5.6 Luna for every client and a $5 total external-charge ceiling,
+but stopped before collection because account hard stops and a reproducible
+three-desktop-client driver could not be verified. Zero model sessions started
+and external spend is $0.
 
 The candidate's version is not itself a frozen value. The portable candidate is
 generated from the runtime sources, so its version tracks the package and moves
@@ -200,8 +204,11 @@ response.
    executable path, then record exact client versions. The first local preflight
    applied the frozen stop rules. The 2026-08-20 rerun passed with the matching
    runtime and all three required clients.
-5. Next: declare the selected client models and hard cost ceiling, then execute
-   the paired and negative-path frame without changing its rules.
+5. Deferred: GPT-5.6 Luna is declared for every client and the hard total
+   external-charge ceiling is $5. Account-side hard stops and a reproducible
+   driver for all three required desktop clients were not verifiable, so the
+   frozen stop rule applied before any model session. Resume the complete
+   paired and negative-path frame only when both gates are enforceable.
 6. Publish only disclosure-safe aggregate evidence and apply the frozen
    promote-or-defer decisions.
 
@@ -209,6 +216,8 @@ The disclosure-safe preflight results are
 [`../validation/2026-08-14-agent-portability-preflight.md`](../validation/2026-08-14-agent-portability-preflight.md)
 and
 [`../validation/2026-08-20-agent-portability-preflight.md`](../validation/2026-08-20-agent-portability-preflight.md).
+The model, cost-envelope, and stop disposition is
+[`../validation/2026-08-20-agent-portability-cost-gate.md`](../validation/2026-08-20-agent-portability-cost-gate.md).
 
 Agent Plugins remains a packaging evaluation, not an MCP protocol change.
 Open Knowledge Format v0.2 remains separately deferred by

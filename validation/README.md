@@ -140,8 +140,13 @@ Cursor was unavailable and the selected client-launch recon was 2.6.3 rather
 than 2.14.0, so collection correctly stopped with zero sessions. The
 [`2026-08-20 rerun`](2026-08-20-agent-portability-preflight.md) passed with
 recon 2.17.4 and all three clients ready. It also started zero sessions and made
-zero network requests. A passing preflight authorizes no spend by itself;
-declare the client models and hard cost ceiling before paired collection.
+zero network requests. A later private rerun passed with the exact v2.17.5
+candidate and the same client versions. The
+[`2026-08-20 model and cost gate`](2026-08-20-agent-portability-cost-gate.md)
+declares GPT-5.6 Luna for every client and a $5 hard total external-charge
+ceiling, then defers collection because account-side hard stops and a
+reproducible three-desktop-client driver were not verifiable. Zero model
+sessions started and external spend is $0.
 
 ## The fingerprint-discovery loop
 

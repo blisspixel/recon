@@ -1502,12 +1502,21 @@ fingerprints:
   - type: mx
     pattern: msv1.invalid
     description: >-
-      Microsoft 365 null-MX placeholder (`msv1.invalid`). Tenants in
-      mid-migration / disabled inbound state.
+      Non-routable Microsoft domain-verification MX target under
+      `msv1.invalid`, observed in the catalog corpus. Because `.invalid`
+      is reserved and cannot deliver mail, this does not evidence Exchange
+      Online inbound routing or distinguish current verification from stale
+      DNS residue. No current first-party product page documents the role.
   - type: mx
-    pattern: eo.outlook.com
+    pattern: mail.eo.outlook.com
+    reference: https://learn.microsoft.com/en-us/exchange/security-and-compliance/how-dane-secures-email
+    verified: 2026-08-20
     description: >-
-      Microsoft 365 Exchange Online MX edge (`*.eo.outlook.com`).
+      Legacy Exchange Online MX target under `*.mail.eo.outlook.com`.
+      Microsoft's current inbound SMTP DANE guidance names this as a
+      legacy MX form to replace during DNSSEC adoption. Its presence
+      observes Exchange Online routing residue or an earlier route, not a
+      current recommended configuration or DANE enablement.
 - name: Trellix (FireEye)
   slug: trellix
   category: Security & Compliance

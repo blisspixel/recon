@@ -207,8 +207,13 @@ A complete-surface portable candidate now lives under
 and passes network-free validation against the exact pinned v1.0.0 schemas,
 whose bytes still match the Published specification. That is not a client
 compatibility or conformance claim. The frozen VS Code, Cursor, and Kiro
-preflight now passes, but the paired evaluation remains incomplete. Until that
-evaluation passes, use the documented client-specific install path above.
+preflight passes, but the paired evaluation remains incomplete. GPT-5.6 Luna
+and a $5 total external-charge ceiling are declared for the frame; collection
+stopped before any model session because account-side hard stops and a
+reproducible driver for all three required desktop clients were not verifiable.
+Until the complete 30-session evaluation passes, use the documented
+client-specific install path above. The aggregate stop disposition is
+[recorded here](https://github.com/blisspixel/recon/blob/main/validation/2026-08-20-agent-portability-cost-gate.md).
 
 | You say | What the agent should do |
 |---|---|

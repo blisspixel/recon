@@ -70,7 +70,7 @@ queue, not a reason to stamp today's date. Coverage is
 [docs/catalog-strategy.md](docs/catalog-strategy.md#3-freshness).
 
 The 2026-08-20 pass raises dated coverage from 61 of 1,091 detections (5.6
-percent) to 134 of 1,108 (12.1 percent). It confirms current TrendAI regional MX
+percent) to 138 of 1,108 (12.5 percent). It confirms current TrendAI regional MX
 and SPF patterns, Barracuda inbound MX, Cisco Cloud Gateway `iphmx.com`, all 22
 AWS SES email-receiving regions, and current Google Workspace, Microsoft 365,
 and AWS SES SPF values. Unverified legacy observations remain undated.
@@ -99,18 +99,28 @@ supported government SPF, government application-domain, and SharePoint roles.
 
 v2.17.5 now carries this batch after a reviewed pull request, protected-main
 checks, PyPI and GitHub publication, SBOM provenance, and exact channel-parity
-verification. The next catalog operation is to continue the Microsoft
-residuals one pattern at a time. `tm-3.office.com`,
-`svc.cloud.microsoft`, `svc.sovcloud.cn`, `eo.outlook.com`, and `msv1.invalid`
-remain undated because the current pages reviewed here do not support each exact
-pattern and DNS role. Proofpoint remains blocked for the same evidence reason.
+verification. A follow-up review closes the named Microsoft residual queue:
+current Microsoft endpoint guidance supports bounded `tm-3.office.com`,
+`svc.cloud.microsoft`, and `svc.sovcloud.cn` routing observations, while
+current Exchange guidance supports narrowing the broad `eo.outlook.com` rule
+to the documented legacy `mail.eo.outlook.com` MX family. All four gain scoped
+wording, current references, and positive plus deceptive suffix fixtures.
+`msv1.invalid` remains undated because no current first-party
+product page documents its exact role; its unsupported migration-state claim is
+removed. Proofpoint remains blocked for the same evidence reason. Detail:
+[2026-08-20 Microsoft residual review](validation/2026-08-20-microsoft-residual-review.md).
 
 Agent portability stays a maintainer track, not a product milestone. The frozen
 [representative-client contract](docs/agent-portability-evaluation-declaration.md)
 is green offline, the pinned v1.0.0 schema bytes still match the Published
-canonical schemas, and the three-client/runtime preflight now passes. The next
-operation is the controlled 30-session paired evaluation, after its selected
-models and hard cost ceiling are declared. It does not queue product work.
+canonical schemas, and the three-client/runtime preflight passes with v2.17.5.
+GPT-5.6 Luna is the declared common model and $5 is the hard total
+external-charge ceiling. Collection is deferred under the frozen stop rule:
+account-side hard stops and a reproducible three-desktop-client driver were not
+verifiable from this environment. No model session started and external spend
+is $0. Resume the complete 30-session frame only when both gates are
+demonstrably enforceable; do not shrink or substitute it. Detail:
+[2026-08-20 portability cost gate](validation/2026-08-20-agent-portability-cost-gate.md).
 
 ## Version path (order of operations)
 
@@ -140,8 +150,10 @@ Agent portability and surface cost is a **maintainer track**, not a version-path
 milestone. Published v1.0.0 and its canonical schemas now match the pinned
 candidate basis, and the frozen VS Code, Cursor, Kiro, and recon-runtime
 preflight passes. That readiness evidence is not compatibility or conformance.
-The paired native-versus-portable frame runs only under a declared model and
-cost envelope, and it does not queue product work behind it. Publication, OpenSSF questionnaire,
+GPT-5.6 Luna and a $5 total external-charge ceiling are declared, but the
+paired frame is deferred until account hard stops and a reproducible
+three-desktop-client driver are verifiable. It does not queue product work
+behind it. Publication, OpenSSF questionnaire,
 outside replication, and archive/DOI are the other maintainer tracks on external
 events. They do not displace the version path above.
 
@@ -238,10 +250,13 @@ Its protected-main prerequisite passed. The deterministic complete-surface
 candidate under `agents/agent-plugin/` passes network-free validation against
 the byte-pinned Agent Plugins v1.0.0 schemas and frozen Agent Skills field
 rules. A second maintainer-local, network-free preflight on 2026-08-20 passed
-with recon 2.17.4 and all three required clients available. Zero sessions and
-zero network requests ran. The next operation is the paired VS Code, Cursor,
-and Kiro evaluation under the frozen contract and a declared cost envelope. No
-compatibility claim or stable discovery-surface change is authorized.
+with recon 2.17.4 and all three required clients available; a later rerun passed
+with the exact v2.17.5 candidate and the same client versions. Zero sessions
+ran. GPT-5.6 Luna is the declared common model and $5 is the hard total
+external-charge ceiling, but collection is deferred because account-side hard
+stops and a reproducible driver for all three desktop clients were not
+verifiable. No compatibility claim or stable discovery-surface change is
+authorized.
 Detail:
 [docs/agent-portability-evaluation-declaration.md](docs/agent-portability-evaluation-declaration.md).
 

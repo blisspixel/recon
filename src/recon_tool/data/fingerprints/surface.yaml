@@ -937,13 +937,15 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: tm-3.office.com
-    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
+    reference: https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges
+    verified: 2026-08-20
     tier: application
     description: >-
-      Subdomain CNAMEs into tm-3.office.com (Microsoft 365
-      traffic-manager office.com zone, used for Autodiscover
-      and Teams routing). Indicates the domain delegates an
-      M365 endpoint subdomain.
+      CNAME target under `tm-3.office.com`, within the `*.office.com`
+      endpoint family in Microsoft's current Microsoft 365 network
+      guidance. This observes a Microsoft 365 route, but the target alone
+      does not identify a workload, tenant, or active use. In particular,
+      do not infer Autodiscover or Teams from this suffix alone.
   - type: cname_target
     pattern: sharepoint.com
     reference: https://learn.microsoft.com/en-us/troubleshoot/sharepoint/sites/cannot-access-sites-by-using-a-domain
@@ -2063,13 +2065,15 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: svc.sovcloud.cn
-    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
+    reference: https://learn.microsoft.com/en-us/microsoft-365/enterprise/urls-and-ip-address-ranges-21vianet
+    verified: 2026-08-20
     tier: application
     description: >-
-      Microsoft 365 China (operated by 21Vianet) sovereign-cloud
-      zone CNAME. Indicates the org runs Microsoft 365 on the
-      21Vianet-operated China sovereign tenant. Distinct from
-      commercial M365; data residency and feature parity differ.
+      CNAME target under `svc.sovcloud.cn`. Microsoft's current endpoint
+      guidance lists `*.sovcloud.cn` as a required Microsoft 365 Common
+      and Office Online destination for Microsoft 365 operated by
+      21Vianet. This observes routing to that endpoint family, not a
+      tenant's location, workload, data residency, or subscription state.
 
 - name: Webflow
   slug: webflow
@@ -2867,14 +2871,15 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: svc.cloud.microsoft
-    reference: https://learn.microsoft.com/en-us/microsoft-365/admin/setup/add-domain
+    reference: https://learn.microsoft.com/en-us/microsoft-365/enterprise/cloud-microsoft-domain
+    verified: 2026-08-20
     tier: application
     description: >-
-      Microsoft 365 cloud autodiscover / service-zone CNAME (the
-      newer Mira service surface). Indicates the org runs Microsoft
-      365 with the modern service-zone endpoints. Functionally
-      equivalent in product binding to the legacy `*.outlook.com`
-      autodiscover form.
+      CNAME target under `svc.cloud.microsoft`, within the Microsoft-only
+      `*.cloud.microsoft` namespace used by Microsoft 365 apps and
+      services. This observes a Microsoft service route, but the shared
+      service zone does not identify a workload, tenant, or active use.
+      Do not treat it as equivalent to an Autodiscover record.
 
 # ── v1.9.2.1 catalog growth ───────────────────────────────────────────────
 # Triaged from the v1.9.2-pre-release corpus scan (4,270 domains).
