@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.8] - 2026-08-21
+
 The development supply-chain lock now excludes the pip versions affected by
 `PYSEC-2026-3721` / `CVE-2026-13346`. The published recon runtime was not
 affected because pip remains outside its dependency graph.
