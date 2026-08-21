@@ -730,6 +730,11 @@ product milestone:
    migration state because no current first-party page documents that role.
    Keep Proofpoint blocked for the same evidence reason. Detail:
    [2026-08-20 Microsoft residual review](../validation/2026-08-20-microsoft-residual-review.md).
+   The 2026-08-21 Statuspage review then replaces a dead shared reference and
+   dates the exact current custom-email TXT, SPF include, and custom-domain
+   CNAME-target family. Four unsupported variants remain undated with narrower
+   claims. Detail:
+   [2026-08-21 Statuspage fingerprint review](../validation/2026-08-21-statuspage-fingerprint-review.md).
 5. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work
    proceeds. No catalog result reopens the voided fusion design or upgrades an

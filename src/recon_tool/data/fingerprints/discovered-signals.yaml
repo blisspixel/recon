@@ -30,8 +30,13 @@ fingerprints:
   detections:
   - type: spf
     pattern: stspg-customer.com
+    reference: https://support.atlassian.com/statuspage/docs/configure-your-dns/
+    verified: '2026-08-21'
     description: >-
-      Statuspage (Atlassian) SPF include (`stspg-customer.com`). Indicates the org authorizes Statuspage (Atlassian) to send email for this domain.
+      SPF include for Statuspage's documented `stspg-customer.com` sender.
+      This authorizes Statuspage notification infrastructure to send for the
+      domain. It does not establish page hosting, subscriber delivery,
+      incident activity, or broader Atlassian product use.
 - name: Mailjet
   slug: mailjet
   category: Email & Communication

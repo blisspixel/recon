@@ -449,19 +449,21 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^statuspage-domain-verification=
-    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
     description: >-
-      Atlassian Statuspage domain-verification TXT. Indicates
-      the domain is registered with a Statuspage account for
-      hosting a public status page under a branded subdomain.
+      Undated catalog variant without the hyphen after `status`. Atlassian's
+      current DNS guide instead documents
+      `status-page-domain-verification=` for a custom notification-sending
+      domain. No current first-party page reviewed on 2026-08-21 names this
+      variant; it is retained as a legacy observation only and does not
+      establish page hosting, SSO, or active use.
   - type: cname
     pattern: statuspage.io
-    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
     description: >-
-      CNAME pointing into statuspage.io. Typically a
-      `status.example.com` subdomain delegated to Atlassian
-      Statuspage for incident communication. Indicates the
-      org operates a public-facing status page.
+      Undated catalog observation of an apex or `www` CNAME into
+      `statuspage.io`. Atlassian currently documents `statuspage.io` for
+      default page hostnames but directs custom-domain CNAMEs to
+      `stspg-customer.com`. This does not establish current page hosting,
+      visibility, ownership, or incident activity.
 - name: Workday
   slug: workday
   category: HR & Operations
