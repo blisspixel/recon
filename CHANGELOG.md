@@ -48,6 +48,10 @@ fingerprint pattern is added, removed, or renamed.
 
 - Added a dependency-policy contract that requires the fixed pip floor and a
   single lock resolution at or above it.
+- The live MCP doctor handshake now runs serially after the parallel suite and
+  appends to its coverage data. This preserves the complete coverage gate while
+  preventing saturated test workers from consuming the SDK's bounded discovery
+  window.
 
 ## [2.17.7] - 2026-08-21
 
