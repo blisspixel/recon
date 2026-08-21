@@ -50,7 +50,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 141 of 1,108 detections currently carry a `verified` date (12.7 percent).
+date: 145 of 1,108 detections currently carry a `verified` date (13.1 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 
@@ -225,8 +225,8 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. As of 2026-08-21 the catalog has 141 dated detections of
-1,108 (12.7 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
+staleness threshold. As of 2026-08-21 the catalog has 145 dated detections of
+1,108 (13.1 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
 gate permits the legacy undated backlog but requires every new detection to
 carry a valid, non-future `verified` date. Backfill only independently reviewed
 families, and only after the vendor's current public page still names the
@@ -375,6 +375,18 @@ no-hyphen TXT variant, `statuspage.io` CNAME forms, and `statuspageio.com`
 CNAME-target form remain undated because current first-party pages do not name
 those exact DNS roles. Detail:
 [the 2026-08-21 Statuspage fingerprint review](../validation/2026-08-21-statuspage-fingerprint-review.md).
+
+The follow-up 2026-08-21 Zendesk review replaces another unusable shared
+reference and checks all six cataloged rules against current Zendesk email and
+host-mapping guidance. The TXT observation moves from an unsupported apex
+`zendeskverification=` value to the documented
+`zendeskverification.<domain>` owner-qualified form. That rule, the exact
+`mail.zendesk.com` SPF include, and both `zendesk.com` CNAME roles gain review
+dates and explicit claim boundaries. The apex
+`zendesk-domain-verification=` value and broad `zendesk.com` SPF family remain
+undated because current first-party pages do not name those exact roles.
+Detail:
+[the 2026-08-21 Zendesk fingerprint review](../validation/2026-08-21-zendesk-fingerprint-review.md).
 
 ## 4. Higher-order signals
 

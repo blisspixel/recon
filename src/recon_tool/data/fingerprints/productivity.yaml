@@ -378,33 +378,40 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^zendesk-domain-verification=
-    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
     description: >-
-      Zendesk domain-verification TXT. Indicates the domain
-      is registered with a Zendesk account, typically for
-      branded help-center subdomains and SSO federation.
+      Legacy apex TXT observation retained undated. Current Zendesk
+      email-domain guidance instead names a TXT owner at
+      `zendeskverification.<domain>` with an account-provided value.
+      Do not treat this prefix as the current email-domain flow or
+      infer help-center hosting, SSO, or active account use.
   - type: spf
     pattern: zendesk.com
-    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
     description: >-
-      SPF include matching zendesk.com. Authorizes Zendesk
-      to send customer-support emails (ticket notifications,
-      help-center signups) on behalf of the domain.
+      Legacy broad SPF observation retained undated. Current Zendesk
+      guidance recommends the specific `mail.zendesk.com` include.
+      A different include below `zendesk.com` is only an observed
+      relationship to a Zendesk-controlled SPF namespace; it does not
+      establish the current recommended configuration or mail delivery.
   - type: spf
     pattern: mail.zendesk.com
-    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
+    reference: https://support.zendesk.com/hc/en-us/articles/4408832543770-Allowing-Zendesk-to-send-email-on-behalf-of-your-email-domain
+    verified: '2026-08-21'
     description: >-
-      Alternative Zendesk mail-sending SPF include
-      (`mail.zendesk.com`). Some Zendesk tenants use this
-      form. Same outbound-authorization semantics.
+      Zendesk's current recommended SPF include,
+      `include:mail.zendesk.com`. It authorizes Zendesk to send using
+      the domain for configured external support addresses. It does
+      not establish inbound routing, successful delivery, ticket
+      activity, or use of a Zendesk help center.
   - type: cname
     pattern: zendesk.com
-    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
+    reference: https://support.zendesk.com/hc/en-us/articles/4408838571930-Host-mapping-Changing-the-URL-of-your-help-center
+    verified: '2026-08-21'
     description: >-
-      CNAME pointing into zendesk.com. Typically a branded
-      help-center subdomain (`help.example.com` or
-      `support.example.com`) hosted by Zendesk. Indicates
-      active Zendesk use for customer support.
+      CNAME target under `zendesk.com`. Zendesk's current host-mapping
+      guide directs a branded help-center subdomain to the account or
+      brand subdomain at `yoursubdomain.zendesk.com`. This observes a
+      route toward Zendesk; it does not prove the help center is
+      activated, reachable, public, or owned by the queried namespace.
 - name: Freshdesk
   slug: freshdesk
   category: Support & Helpdesk
