@@ -50,7 +50,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 134 of 1,108 detections currently carry a `verified` date (12.1 percent).
+date: 138 of 1,108 detections currently carry a `verified` date (12.5 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 
@@ -225,8 +225,8 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. As of 2026-08-20 the catalog has 134 dated detections of
-1,108 (12.1 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
+staleness threshold. As of 2026-08-20 the catalog has 138 dated detections of
+1,108 (12.5 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
 gate permits the legacy undated backlog but requires every new detection to
 carry a valid, non-future `verified` date. Backfill only independently reviewed
 families, and only after the vendor's current public page still names the
@@ -352,12 +352,19 @@ documentation. The broad `outlook.com` CNAME target narrows to
 `usgovcloud.microsoft`, and SharePoint roles are dated from current first-party
 pages.
 
-The next operation is publication through the protected-main workflow. After
-that, continue the remaining Microsoft rules one pattern at a time:
-`tm-3.office.com`, `svc.cloud.microsoft`, `svc.sovcloud.cn`, `eo.outlook.com`,
-and `msv1.invalid` stay undated until a current first-party page supports each
-exact pattern and DNS role. Proofpoint remains blocked for the same evidence
-reason. Do not stamp either family as a unit.
+The follow-up Microsoft residual review closes the named queue without stamping
+the family as a unit. Current Microsoft 365 endpoint guidance supports bounded
+`tm-3.office.com`, `svc.cloud.microsoft`, and `svc.sovcloud.cn` routing
+observations. Current Exchange guidance supports narrowing `eo.outlook.com` to
+the documented legacy `mail.eo.outlook.com` MX family. Those four rules gain
+review dates and explicit abstentions from
+workload, tenant, activity, location, subscription, recommended-state, and DANE
+inferences as applicable. `msv1.invalid` remains undated because no current
+first-party product page documents its exact role; the old migration-state
+claim is removed and the rule now describes non-routable verification residue
+only. Proofpoint remains blocked for the same evidence reason. The detailed
+source and disposition matrix is
+[the 2026-08-20 Microsoft residual review](../validation/2026-08-20-microsoft-residual-review.md).
 
 ## 4. Higher-order signals
 
