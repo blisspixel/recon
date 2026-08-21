@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.7] - 2026-08-21
+
 The bounded Statuspage freshness review replaces a dead shared reference,
 dates only the three exact values in current Atlassian DNS guidance, and narrows
 four retained legacy observations. The catalog still has 869 entries, 692
