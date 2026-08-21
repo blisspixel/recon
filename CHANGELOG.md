@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.10] - 2026-08-21
+
 Tencent EdgeOne CNAME fingerprinting now covers the current documented shard
 0 form and distinguishes four exactly supported shards from two undated legacy
 observations. The catalog has 869 entries, 692 unique slugs, and 1,109
