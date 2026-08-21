@@ -741,6 +741,13 @@ product milestone:
    `mail.zendesk.com` SPF include and both `zendesk.com` CNAME roles, and
    leaves two unsupported broad forms undated with narrower claims. Detail:
    [2026-08-21 Zendesk fingerprint review](../validation/2026-08-21-zendesk-fingerprint-review.md).
+   The next 2026-08-21 Tencent EdgeOne review adds the missing, documented
+   `eo.dnse0.com` shard and dates exact current shard 0, 2, 3, and 5 examples.
+   Shards 1 and 4 remain undated because no reviewed current first-party page
+   names those exact forms. All six descriptions are narrowed to a routing
+   relationship rather than traffic, feature, or configuration-state claims.
+   Detail:
+   [2026-08-21 Tencent EdgeOne fingerprint review](../validation/2026-08-21-tencent-edgeone-fingerprint-review.md).
 5. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work
    proceeds. No catalog result reopens the voided fusion design or upgrades an
@@ -1052,7 +1059,7 @@ known-cluster unit, observation opportunities, CT and direct-probe settings,
 catalog and code digests, aggregate outputs, promotion and regression budgets,
 and disclosure review. A result may not retroactively change those choices.
 
-The catalog currently holds 869 entries across 692 unique slugs, with 1,108
+The catalog currently holds 869 entries across 692 unique slugs, with 1,109
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);

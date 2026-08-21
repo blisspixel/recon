@@ -130,6 +130,15 @@ undated because current first-party pages do not name those exact roles.
 Detail:
 [2026-08-21 Zendesk fingerprint review](validation/2026-08-21-zendesk-fingerprint-review.md).
 
+The next 2026-08-21 pass reviews Tencent EdgeOne's five undated CNAME-target
+rules. Current first-party API examples exactly support shards 0, 2, 3, and 5,
+so the pass adds the missing shard 0 rule and dates those four forms. Shards 1
+and 4 remain undated because the reviewed current pages do not name those exact
+forms. Every description is narrowed to an observed routing relationship and
+does not claim traffic, enabled CDN or WAF features, or current configuration
+state. Detail:
+[2026-08-21 Tencent EdgeOne fingerprint review](validation/2026-08-21-tencent-edgeone-fingerprint-review.md).
+
 Agent portability stays a maintainer track, not a product milestone. The frozen
 [representative-client contract](docs/agent-portability-evaluation-declaration.md)
 is green offline, the pinned v1.0.0 schema bytes still match the Published

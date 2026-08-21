@@ -918,7 +918,8 @@ The current sequence includes the
 and the
 [2026-08-21 Statuspage review](2026-08-21-statuspage-fingerprint-review.md),
 followed by the
-[2026-08-21 Zendesk review](2026-08-21-zendesk-fingerprint-review.md).
+[2026-08-21 Zendesk review](2026-08-21-zendesk-fingerprint-review.md) and the
+[2026-08-21 Tencent EdgeOne review](2026-08-21-tencent-edgeone-fingerprint-review.md).
 
 ## Policy
 
