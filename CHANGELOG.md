@@ -26,6 +26,27 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+The development supply-chain lock now excludes the pip versions affected by
+`PYSEC-2026-3721` / `CVE-2026-13346`. The published recon runtime was not
+affected because pip remains outside its dependency graph.
+
+### Tool Surface Changes
+
+Tool surface changes: no command, flag, JSON field, MCP tool, MCP resource, or
+fingerprint pattern is added, removed, or renamed.
+
+### Security
+
+- **Development installer floor.** The `pip-audit` toolchain now carries an
+  explicit `pip>=26.2` floor, and the lock resolves the current fixed release.
+  This closes the malicious-package-index arbitrary-write advisory for
+  contributor and CI environments without adding pip to the runtime package.
+
+### Tests
+
+- Added a dependency-policy contract that requires the fixed pip floor and a
+  single lock resolution at or above it.
+
 ## [2.17.7] - 2026-08-21
 
 The bounded Statuspage freshness review replaces a dead shared reference,

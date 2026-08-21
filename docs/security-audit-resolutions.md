@@ -18,6 +18,29 @@ notes, see [`docs/security.md`](security.md).
 
 ---
 
+## Closed in v2.17.8: development pip package-index path handling
+
+| Field | Value |
+|---|---|
+| **Severity (as audited)** | High integrity impact with user interaction and a malicious package index |
+| **Source** | OpenSSF Scorecard and `PYSEC-2026-3721` / `CVE-2026-13346` |
+| **Fully closed** | **v2.17.8** |
+| **Pinned by** | `tests/test_build_constraints.py` |
+
+The development dependency graph inherited pip 26.1.2 through `pip-api` and
+`pip-audit`. Versions before 26.2 could mishandle doubly encoded package URLs
+from a malicious package index and write wheel contents outside the intended
+destination. recon does not use untrusted package indexes, and pip is excluded
+from the published runtime graph, but retaining an affected installer in the
+reviewed development lock weakened the repository supply-chain baseline.
+
+The development group now declares `pip>=26.2`, the lock resolves a fixed
+release, and an executable dependency-policy test prevents either the floor or
+the resolved protection from disappearing silently. Runtime dependencies and
+package metadata remain unchanged.
+
+---
+
 ## Closed in v2.6.6: dependency-audit execution identity and advisory timing
 
 | Field | Value |
