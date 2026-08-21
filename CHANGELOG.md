@@ -26,6 +26,38 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.9] - 2026-08-21
+
+Zendesk DNS fingerprinting now follows the provider's current email-domain and
+help-center guidance. The catalog still has 869 entries, 692 unique slugs, and
+1,108 detections; 145 detections are dated (13.1 percent), with zero currently
+stale dated rules.
+
+### Tool Surface Changes
+
+Tool surface changes: no command, flag, JSON field, MCP tool, or MCP resource
+is added, removed, or renamed. One Zendesk fingerprint changes from an
+unsupported apex TXT value to the documented owner-qualified TXT form.
+
+### Changed
+
+- **Zendesk TXT precision.** The unsupported apex
+  `zendeskverification=` observation is replaced by a query for a nonempty TXT
+  value at `zendeskverification.<domain>`, matching Zendesk's current
+  external-email verification guidance.
+- **Current Zendesk DNS roles.** The exact `mail.zendesk.com` SPF include and
+  both `zendesk.com` CNAME roles now cite current first-party guidance, carry
+  review dates, and make narrower claims. Two unsupported legacy variants stay
+  undated and no longer cite an unusable shared page.
+- **README front door.** The synthetic Example Industries terminal demo now
+  uses a current Linux-style presentation, and the README links directly to
+  the correlation and provenance design document.
+
+### Tests
+
+- Added exact metadata, owner-qualified TXT, empty-value, deceptive-suffix,
+  parsed-SPF, CNAME-chain, and provenance coverage for all six Zendesk rules.
+
 ## [2.17.8] - 2026-08-21
 
 The development supply-chain lock now excludes the pip versions affected by
