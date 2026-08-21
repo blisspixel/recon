@@ -128,6 +128,10 @@ dev = [
     "ruff>=0.4",
     "pyright>=1.1",
     "pre-commit>=3.0",
+    # Security floor on development tooling: pip-api pulls in pip, and pip
+    # before 26.2 has PYSEC-2026-3721 / CVE-2026-13346. pip is excluded from
+    # the published runtime graph.
+    "pip>=26.2",
     "pip-audit>=2.7",
 ]
 # Mutation-testing gate (the `mutation-gate` CI workflow). Separate group so
