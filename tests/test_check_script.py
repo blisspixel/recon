@@ -95,6 +95,28 @@ def test_ruff_format_scope_matches_ci() -> None:
     assert "run: uv run ruff format --check .\n" in workflow
 
 
+def test_live_mcp_doctor_is_serial_and_appends_to_parallel_coverage() -> None:
+    stages = {name: command for _group, name, command in check._STAGES}
+    workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+
+    parallel = stages["pytest+cov-parallel"]
+    doctor = stages["pytest+cov-mcp-doctor"]
+
+    assert "--ignore=tests/test_mcp_doctor.py" in parallel
+    assert parallel[parallel.index("-n") + 1] == "auto"
+    assert "--cov-report=" in parallel
+    assert "--cov-fail-under=0" in parallel
+    assert "tests/test_mcp_doctor.py" in doctor
+    assert doctor[doctor.index("-n") + 1] == "0"
+    assert "--cov-append" in doctor
+    assert "--cov-fail-under=90.2" in doctor
+    assert "Test parallel suite with coverage" in workflow
+    assert "uv run pytest tests/ --ignore=tests/test_mcp_doctor.py" in workflow
+    assert "Test live MCP doctor serially and enforce coverage" in workflow
+    assert "uv run pytest tests/test_mcp_doctor.py -n 0" in workflow
+    assert "--cov=src/recon_tool --cov-branch --cov-append" in workflow
+
+
 def test_ci_runs_the_interface_layout_guard() -> None:
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
 

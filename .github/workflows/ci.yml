@@ -212,8 +212,17 @@ jobs:
       - name: Install dependencies
         run: uv sync
 
-      - name: Test with coverage
-        run: uv run pytest tests/ -n auto --maxprocesses=4 --dist=loadfile --cov=src/recon_tool --cov-branch --cov-report=term-missing --cov-fail-under=90.2
+      - name: Test parallel suite with coverage
+        run: >-
+          uv run pytest tests/ --ignore=tests/test_mcp_doctor.py
+          -n auto --maxprocesses=4 --dist=loadfile
+          --cov=src/recon_tool --cov-branch --cov-report= --cov-fail-under=0 -q
+
+      - name: Test live MCP doctor serially and enforce coverage
+        run: >-
+          uv run pytest tests/test_mcp_doctor.py -n 0
+          --cov=src/recon_tool --cov-branch --cov-append
+          --cov-fail-under=90.2 -q
 
   audit:
     runs-on: ubuntu-latest
