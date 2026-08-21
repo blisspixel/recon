@@ -61,7 +61,7 @@ the panel shows.
 
 ### Illustrated output (synthetic, not a captured run)
 
-![Synthetic terminal showing recon's default output](https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg)
+![Synthetic recon output in a modern Linux terminal](https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg)
 
 The panel above is **generated, not captured**:
 [`scripts/generate_terminal_demo.py`](https://github.com/blisspixel/recon/blob/main/scripts/generate_terminal_demo.py)
@@ -76,7 +76,7 @@ fixtures use IETF reserved `.invalid` namespaces.
 <summary>Accessible text transcript</summary>
 
 ```text
-$ recon example.com    # synthetic fixture, not a captured run
+demo@recon:~$ recon example.com    # synthetic fixture, not a captured run
 Example Industries Ltd
 example.com
 ──────────────────────────────────────────────────────────────────────────────
@@ -125,6 +125,17 @@ recon reports observations, not verdicts. Public channel ceiling:
 [docs/limitations.md](https://github.com/blisspixel/recon/blob/main/docs/limitations.md).
 How to report a result without overstating it:
 [docs/reporting-observations.md](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md).
+
+### Correlation without overclaiming
+
+recon is designed around a harder question than record collection: when may
+several incomplete public observations support one claim, and when must the
+result stay unresolved? The
+[correlation model](https://github.com/blisspixel/recon/blob/main/docs/correlation.md)
+is the deeper design contract for that question. It separates observed facts,
+deterministic deductions, and model-relative diagnostics; treats provenance and
+abstention as first-class; and keeps ownership, causation, complete-inventory,
+and unvalidated robustness claims outside the result.
 
 v2.15 and v2.16 closed a five-round presentation-drift class. Independent
 testers installed the published package, never read the source, and kept finding

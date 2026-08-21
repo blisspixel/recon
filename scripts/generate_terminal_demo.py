@@ -5,10 +5,10 @@ from __future__ import annotations
 
 import argparse
 import io
-import re
 from pathlib import Path
 
 from rich.console import Console
+from rich.terminal_theme import TerminalTheme
 from rich.text import Text
 
 from recon_tool.constants import SVC_DKIM, SVC_DMARC, SVC_MTA_STS, SVC_SPF_STRICT
@@ -20,9 +20,92 @@ DEFAULT_OUTPUT = ROOT / "docs" / "assets" / "terminal-demo.svg"
 DEFAULT_README = ROOT / "README.md"
 _TERMINAL_WIDTH = 82
 _TERMINAL_HEIGHT = 25
-_FONT_FACE = re.compile(r"    @font-face \{.*?    \}\n", re.DOTALL)
 _TRANSCRIPT_START = "<!-- terminal-demo-transcript:start -->"
 _TRANSCRIPT_END = "<!-- terminal-demo-transcript:end -->"
+
+_MODERN_TERMINAL_THEME = TerminalTheme(
+    background=(11, 18, 32),
+    foreground=(226, 232, 240),
+    normal=[
+        (15, 23, 42),
+        (248, 113, 113),
+        (74, 222, 128),
+        (250, 204, 21),
+        (96, 165, 250),
+        (196, 181, 253),
+        (34, 211, 238),
+        (203, 213, 225),
+    ],
+    bright=[
+        (71, 85, 105),
+        (252, 165, 165),
+        (134, 239, 172),
+        (253, 224, 71),
+        (147, 197, 253),
+        (221, 214, 254),
+        (103, 232, 249),
+        (248, 250, 252),
+    ],
+)
+
+_MODERN_TERMINAL_SVG = """<svg class="rich-terminal"
+    role="img"
+    aria-labelledby="recon-demo-accessible-title recon-demo-accessible-description"
+    viewBox="0 0 {width} {height}"
+    xmlns="http://www.w3.org/2000/svg">
+    <title id="recon-demo-accessible-title">recon synthetic terminal demo</title>
+    <desc id="recon-demo-accessible-description">
+      Synthetic output for Example Industries Ltd (example.com) showing public email, identity,
+      cloud, security, data and analytics, collaboration, related-domain, and insight observations.
+    </desc>
+    <style>
+    .{unique_id}-matrix {{
+        font-family: "JetBrains Mono", "Cascadia Mono", "DejaVu Sans Mono", "Liberation Mono", monospace;
+        font-size: {char_height}px;
+        line-height: {line_height}px;
+        font-variant-east-asian: full-width;
+        font-feature-settings: "liga" 0;
+    }}
+    .{unique_id}-title {{
+        fill: #f8fafc;
+        font-family: Inter, system-ui, sans-serif;
+        font-size: 15px;
+        font-weight: 650;
+        letter-spacing: 0.2px;
+    }}
+    .{unique_id}-subtitle {{
+        fill: #94a3b8;
+        font-family: Inter, system-ui, sans-serif;
+        font-size: 13px;
+        font-weight: 500;
+        letter-spacing: 0.2px;
+    }}
+    {styles}
+    </style>
+    <defs>
+    <clipPath id="{unique_id}-clip-terminal">
+      <rect x="0" y="0" width="{terminal_width}" height="{terminal_height}" />
+    </clipPath>
+    {lines}
+    </defs>
+    <rect fill="#0b1220" stroke="#334155" stroke-width="1" x="1" y="1" width="1017" height="755.6" rx="14"/>
+    <path fill="#111827" d="M 15 1 H 1003 A 14 14 0 0 1 1017 15 V 41 H 1 V 15 A 14 14 0 0 1 15 1 Z"/>
+    <line x1="1" y1="41" x2="1017" y2="41" stroke="#253247" stroke-width="1"/>
+    <g fill="none" stroke="#67e8f9" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+      <rect x="18" y="14" width="18" height="13" rx="3"/>
+      <path d="M 22 18 L 25 20.5 L 22 23 M 28 23 H 32"/>
+    </g>
+    <text class="{unique_id}-title" x="46" y="26">recon</text>
+    <text class="{unique_id}-subtitle" x="98" y="26">synthetic example.com</text>
+    <text class="{unique_id}-subtitle" text-anchor="end" x="997" y="26">generated fixture</text>
+    <g transform="translate({terminal_x}, {terminal_y})" clip-path="url(#{unique_id}-clip-terminal)">
+    {backgrounds}
+    <g class="{unique_id}-matrix">
+    {matrix}
+    </g>
+    </g>
+</svg>
+"""
 
 
 def demo_tenant_info() -> TenantInfo:
@@ -157,7 +240,9 @@ def demo_tenant_info() -> TenantInfo:
 
 def _render_demo(console: Console) -> None:
     """Write the fixed command and real default panel to one console."""
-    prompt = Text("$ ", style="bold green")
+    prompt = Text("demo@recon", style="bold green")
+    prompt.append(":~", style="bold cyan")
+    prompt.append("$ ", style="bold white")
     prompt.append("recon ", style="bold white")
     prompt.append("example.com", style="bold cyan")
     # Label the transcript itself, not just the prose beside it. A reader who
@@ -190,27 +275,11 @@ def render_terminal_demo_svg() -> str:
         legacy_windows=False,
     )
     _render_demo(console)
-    svg = console.export_svg(title="recon synthetic demo", unique_id="recon-demo")
-    svg = svg.replace("    <!-- Generated with Rich https://www.textualize.io -->\n", "")
-    svg = _FONT_FACE.sub("", svg)
-    svg = svg.replace(
-        "font-family: Fira Code, monospace;",
-        "font-family: ui-monospace, SFMono-Regular, Consolas, Liberation Mono, monospace;",
-    )
-    svg = svg.replace(
-        '<svg class="rich-terminal"',
-        '<svg class="rich-terminal" role="img" '
-        'aria-labelledby="recon-demo-accessible-title recon-demo-accessible-description"',
-        1,
-    )
-    svg = svg.replace(
-        "    <style>\n",
-        '    <title id="recon-demo-accessible-title">recon synthetic terminal demo</title>\n'
-        '    <desc id="recon-demo-accessible-description">Synthetic output for Example Industries Ltd '
-        "(example.com) showing public email, identity, cloud, security, data and "
-        "analytics, collaboration, related-domain, and insight observations.</desc>\n"
-        "    <style>\n",
-        1,
+    svg = console.export_svg(
+        title="",
+        theme=_MODERN_TERMINAL_THEME,
+        code_format=_MODERN_TERMINAL_SVG,
+        unique_id="recon-demo",
     )
     normalized = svg.replace("\r\n", "\n")
     return "\n".join(line.rstrip() for line in normalized.splitlines()) + "\n"
