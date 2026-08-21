@@ -30,6 +30,11 @@ def test_committed_terminal_demo_matches_the_real_renderer() -> None:
     assert '<title id="recon-demo-accessible-title">' in svg
     assert '<desc id="recon-demo-accessible-description">' in svg
     assert "Example Industries" in svg
+    assert "JetBrains Mono" in svg
+    assert 'fill="#0b1220"' in svg
+    assert "synthetic example.com" in svg
+    assert "generated fixture" in svg
+    assert "ff5f57" not in svg
     assert demo_tenant_info().queried_domain == "example.com"
     assert main(["--check"]) == 0
 
@@ -43,6 +48,7 @@ def test_terminal_demo_width_is_independent_of_dumb_term(monkeypatch: pytest.Mon
 
     assert noninteractive == ordinary
     assert 'viewBox="0 0 1019 757.5999999999999"' in noninteractive
+    assert "demo@recon" in render_terminal_demo_text()
 
 
 def test_generator_check_mode_detects_drift(tmp_path: Path) -> None:
