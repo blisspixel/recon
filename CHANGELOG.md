@@ -26,6 +26,33 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+Tencent EdgeOne CNAME fingerprinting now covers the current documented shard
+0 form and distinguishes four exactly supported shards from two undated legacy
+observations. The catalog has 869 entries, 692 unique slugs, and 1,109
+detections; 149 detections are dated (13.4 percent), with zero currently stale
+dated rules.
+
+### Tool Surface Changes
+
+Tool surface changes: no command, flag, JSON field, MCP tool, or MCP resource
+is added, removed, or renamed. One label-bounded `cname_target` fingerprint,
+`eo.dnse0.com`, is added under the existing `tencent-edgeone` slug.
+
+### Changed
+
+- **Tencent EdgeOne shard coverage.** Current first-party API examples support
+  shards 0, 2, 3, and 5, which now carry exact references and review dates.
+  Shards 1 and 4 remain undated because the reviewed current pages do not name
+  those exact forms.
+- **Tencent EdgeOne claim scope.** All six descriptions now report an observed
+  routing relationship without claiming active traffic, enabled CDN or WAF
+  features, or current configuration state.
+
+### Tests
+
+- Added exact metadata, all-shard positive, deceptive-suffix negative, tier,
+  and stable-slug coverage for the Tencent EdgeOne family.
+
 ## [2.17.9] - 2026-08-21
 
 Zendesk DNS fingerprinting now follows the provider's current email-domain and
