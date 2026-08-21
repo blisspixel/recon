@@ -26,6 +26,35 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+The bounded Statuspage freshness review replaces a dead shared reference,
+dates only the three exact values in current Atlassian DNS guidance, and narrows
+four retained legacy observations. The catalog still has 869 entries, 692
+unique slugs, and 1,108 detections; 141 detections are dated (12.7 percent),
+with zero currently stale dated rules.
+
+### Tool Surface Changes
+
+Tool surface changes: no command, flag, JSON field, MCP tool, MCP resource, or
+fingerprint pattern is added, removed, or renamed. Three existing Statuspage
+rules gain current references and scoped descriptions. Four existing rules
+remain undated and no longer cite a dead page or claim current configuration.
+
+### Changed
+
+- **Current Statuspage DNS roles.** The exact
+  `status-page-domain-verification=` TXT, `stspg-customer.com` SPF include, and
+  `<PAGE_CODE>.stspg-customer.com` CNAME-target family now cite Atlassian's
+  current DNS guide and carry `2026-08-21` review dates.
+- **Legacy Statuspage observations.** The no-hyphen TXT variant plus
+  `statuspage.io` and `statuspageio.com` CNAME observations remain undated.
+  Their descriptions now distinguish them from the current custom-domain and
+  notification-email flows and avoid page-activity, SSO, and ownership claims.
+
+### Tests
+
+- Added exact metadata, positive, deceptive-suffix, parsed-SPF, and provenance
+  coverage for all seven Statuspage rules.
+
 ## [2.17.6] - 2026-08-20
 
 The Microsoft residual review replaces unsupported product-role wording with

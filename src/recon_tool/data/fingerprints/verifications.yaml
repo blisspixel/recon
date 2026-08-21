@@ -447,11 +447,14 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^status-page-domain-verification=
+    reference: https://support.atlassian.com/statuspage/docs/configure-your-dns/
+    verified: '2026-08-21'
     description: >-
-      Statuspage (Atlassian) domain-verification TXT (`status-page-domain-verification=`). Indicates the
-      domain is bound to a Statuspage (Atlassian) account or tenant for SSO /
-      provisioning. Account-binding signal only; it does not prove
-      active usage.
+      Statuspage custom-from email-domain verification TXT
+      (`status-page-domain-verification=<ORGANIZATION_CODE>`). Atlassian's
+      current DNS guide uses this exact value to establish control of the
+      notification-sending domain. It does not establish status-page hosting,
+      SSO, provisioning, incident activity, or delivered mail.
 - name: Mixpanel
   slug: mixpanel
   category: Data & Analytics

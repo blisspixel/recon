@@ -911,6 +911,13 @@ The audit is no-network. It reports catalog metadata coverage and classifies
 multi-detection fingerprints as `keep_any`, `review_for_all`, or
 `tighten_patterns` so match-mode changes stay evidence-driven.
 
+Dated family reviews record the exact current source, every supported and
+unsupported pattern disposition, claim boundaries, and regression evidence.
+The current sequence includes the
+[2026-08-20 Microsoft residual review](2026-08-20-microsoft-residual-review.md)
+and the
+[2026-08-21 Statuspage review](2026-08-21-statuspage-fingerprint-review.md).
+
 ## Policy
 
 Real apex domains never get committed here, not as corpus files and

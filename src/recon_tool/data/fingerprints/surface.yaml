@@ -2179,31 +2179,32 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: statuspage.io
-    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
     tier: application
     description: >-
-      Subdomain CNAMEs into statuspage.io (Atlassian
-      Statuspage hosted-status-page endpoint). Indicates the
-      domain operates a public status page under a branded
-      subdomain.
+      Undated catalog observation of a CNAME-chain target under
+      `statuspage.io`. Atlassian currently documents this zone for default
+      page hostnames, but its current custom-domain flow directs CNAMEs to
+      `stspg-customer.com`. Retained as a legacy observation only; it does not
+      establish a current custom-domain configuration or active page.
   - type: cname_target
     pattern: statuspageio.com
-    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
     tier: application
     description: >-
-      Subdomain CNAMEs into statuspageio.com (alternative
-      Atlassian Statuspage endpoint domain). Same hosted-
-      status-page semantics as statuspage.io.
+      Undated catalog observation of a CNAME-chain target under
+      `statuspageio.com`. No current Atlassian page reviewed on 2026-08-21
+      names this host or its role. Retained as a legacy observation only; it
+      does not establish a current custom-domain configuration or active page.
   - type: cname_target
     pattern: stspg-customer.com
-    reference: https://support.atlassian.com/statuspage/docs/customize-your-status-page/
+    reference: https://support.atlassian.com/statuspage/docs/configure-your-dns/
+    verified: '2026-08-21'
     tier: application
     description: >-
-      Subdomain CNAMEs into stspg-customer.com (Atlassian
-      Statuspage customer-CNAME endpoint, used for
-      `status.example.com` delegations). Same hosted-
-      status-page semantics; this is the variant Statuspage
-      directs new customers to use.
+      CNAME-chain target under Atlassian's documented
+      `<PAGE_CODE>.stspg-customer.com` custom-domain route. This observes a
+      domain routed toward a Statuspage page. It does not prove the page is
+      activated, public, current, healthy, or controlled by the queried
+      organization.
 
 - name: Atlassian (Jira/Confluence)
   slug: atlassian

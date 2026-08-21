@@ -50,7 +50,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 138 of 1,108 detections currently carry a `verified` date (12.5 percent).
+date: 141 of 1,108 detections currently carry a `verified` date (12.7 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 
@@ -225,8 +225,8 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. As of 2026-08-20 the catalog has 138 dated detections of
-1,108 (12.5 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
+staleness threshold. As of 2026-08-21 the catalog has 141 dated detections of
+1,108 (12.7 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
 gate permits the legacy undated backlog but requires every new detection to
 carry a valid, non-future `verified` date. Backfill only independently reviewed
 families, and only after the vendor's current public page still names the
@@ -365,6 +365,16 @@ claim is removed and the rule now describes non-routable verification residue
 only. Proofpoint remains blocked for the same evidence reason. The detailed
 source and disposition matrix is
 [the 2026-08-20 Microsoft residual review](../validation/2026-08-20-microsoft-residual-review.md).
+
+The 2026-08-21 Statuspage review replaces a dead shared reference and checks
+all seven cataloged rules against Atlassian's current DNS and custom-domain
+guidance. The exact `status-page-domain-verification=` custom-email TXT,
+`stspg-customer.com` SPF include, and `<PAGE_CODE>.stspg-customer.com`
+CNAME-target family gain review dates and role-specific boundaries. The
+no-hyphen TXT variant, `statuspage.io` CNAME forms, and `statuspageio.com`
+CNAME-target form remain undated because current first-party pages do not name
+those exact DNS roles. Detail:
+[the 2026-08-21 Statuspage fingerprint review](../validation/2026-08-21-statuspage-fingerprint-review.md).
 
 ## 4. Higher-order signals
 
