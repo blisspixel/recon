@@ -1,7 +1,7 @@
 # Catalog Growth and Quality Strategy
 
 Status: measurement-first maintenance plan
-Review date: 2026-08-20 UTC
+Review date: 2026-08-21 UTC
 
 This document is the plan for growing and maintaining the fingerprint catalog
 (`src/recon_tool/data/fingerprints/*.yaml`) so coverage, precision, and
@@ -20,7 +20,7 @@ surface and independently supported precision are.
 
 ## How the catalog grows today
 
-The catalog carries 869 entries and 1,108 detection rules across nine populated
+The catalog carries 869 entries and 1,109 detection rules across nine populated
 types: `cname_target`, `cname`, `txt`, `spf`, `dmarc_rua`, `mx`, `ns`, `caa`,
 and `subdomain_txt`. The grammar and runtime also support `srv`, but the built-in
 catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
@@ -50,7 +50,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 145 of 1,108 detections currently carry a `verified` date (13.1 percent).
+date: 149 of 1,109 detections currently carry a `verified` date (13.4 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 
@@ -225,8 +225,8 @@ python -m validation.audit_fingerprints --freshness
 ```
 
 It reports verified-date coverage and the count of detections older than a
-staleness threshold. As of 2026-08-21 the catalog has 145 dated detections of
-1,108 (13.1 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
+staleness threshold. As of 2026-08-21 the catalog has 149 dated detections of
+1,109 (13.4 percent). The diff-aware `scripts/check_fingerprint_freshness.py`
 gate permits the legacy undated backlog but requires every new detection to
 carry a valid, non-future `verified` date. Backfill only independently reviewed
 families, and only after the vendor's current public page still names the
@@ -387,6 +387,15 @@ dates and explicit claim boundaries. The apex
 undated because current first-party pages do not name those exact roles.
 Detail:
 [the 2026-08-21 Zendesk fingerprint review](../validation/2026-08-21-zendesk-fingerprint-review.md).
+
+The next 2026-08-21 Tencent EdgeOne review checks all five undated
+`eo.dnse*.com` CNAME-target rules. Current first-party API examples exactly
+support shards 0, 2, 3, and 5, so the review adds the missing shard 0 rule and
+dates those four forms. Shards 1 and 4 remain undated because no current page
+reviewed in the pass names those exact forms. The family now reports an
+observed routing relationship without inferring traffic, enabled CDN or WAF
+features, or current configuration state. Detail:
+[the 2026-08-21 Tencent EdgeOne fingerprint review](../validation/2026-08-21-tencent-edgeone-fingerprint-review.md).
 
 ## 4. Higher-order signals
 

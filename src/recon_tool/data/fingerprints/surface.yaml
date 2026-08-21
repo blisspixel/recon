@@ -4210,36 +4210,67 @@ fingerprints:
   parent_vendor: Tencent
   detections:
   - type: cname_target
+    pattern: eo.dnse0.com
+    tier: infrastructure
+    description: >-
+      CNAME-chain target under Tencent EdgeOne's documented
+      `eo.dnse0.com` shard. The current CheckCnameStatus API example shows
+      EdgeOne assigning this form to an access domain. It observes an
+      EdgeOne routing relationship; it does not establish active traffic,
+      enabled CDN or WAF features, or current configuration state.
+    reference: https://www.tencentcloud.com/document/product/1145/56175
+    verified: 2026-08-21
+  - type: cname_target
     pattern: eo.dnse1.com
     tier: infrastructure
     description: >-
-      Tencent EdgeOne (边缘安全加速平台 EO) customer endpoint,
-      shard 1 of the multi-zone CNAME chain. Indicates the org
-      runs Tencent EdgeOne for CDN, WAF, or edge-acceleration
-      workloads. Tencent EdgeOne supersedes Tencent Cloud CDN
-      for new tenants. Sibling shards (dnse2 through dnse5)
-      below.
-    reference: https://www.tencentcloud.com/document/product/1145
+      CNAME-chain target under the cataloged `eo.dnse1.com` EdgeOne
+      family. Retained as an undated legacy observation because no current
+      first-party page reviewed on 2026-08-21 names this exact shard. It
+      does not establish active traffic, enabled CDN or WAF features, or
+      current configuration state.
   - type: cname_target
     pattern: eo.dnse2.com
     tier: infrastructure
-    description: Tencent EdgeOne customer endpoint, shard 2.
-    reference: https://www.tencentcloud.com/document/product/1145
+    description: >-
+      CNAME-chain target under Tencent EdgeOne's documented
+      `eo.dnse2.com` shard. The current ModifyDnsRecords API example uses
+      this form as a CNAME value. It observes an EdgeOne routing
+      relationship; it does not establish active traffic, enabled CDN or
+      WAF features, or current configuration state.
+    reference: https://www.tencentcloud.com/document/product/1145/67541
+    verified: 2026-08-21
   - type: cname_target
     pattern: eo.dnse3.com
     tier: infrastructure
-    description: Tencent EdgeOne customer endpoint, shard 3.
-    reference: https://www.tencentcloud.com/document/product/1145
+    description: >-
+      CNAME-chain target under Tencent EdgeOne's documented
+      `eo.dnse3.com` shard. The current DescribeAccelerationDomains API
+      example returns this form in its Cname field. It observes an EdgeOne
+      routing relationship; it does not establish active traffic, enabled
+      CDN or WAF features, or current configuration state.
+    reference: https://www.tencentcloud.com/document/product/1145/54132
+    verified: 2026-08-21
   - type: cname_target
     pattern: eo.dnse4.com
     tier: infrastructure
-    description: Tencent EdgeOne customer endpoint, shard 4.
-    reference: https://www.tencentcloud.com/document/product/1145
+    description: >-
+      CNAME-chain target under the cataloged `eo.dnse4.com` EdgeOne
+      family. Retained as an undated legacy observation because no current
+      first-party page reviewed on 2026-08-21 names this exact shard. It
+      does not establish active traffic, enabled CDN or WAF features, or
+      current configuration state.
   - type: cname_target
     pattern: eo.dnse5.com
     tier: infrastructure
-    description: Tencent EdgeOne customer endpoint, shard 5.
-    reference: https://www.tencentcloud.com/document/product/1145
+    description: >-
+      CNAME-chain target under Tencent EdgeOne's documented
+      `eo.dnse5.com` shard. The current DescribeL4Proxy API example returns
+      this form for an EdgeOne layer-4 proxy. It observes an EdgeOne routing
+      relationship; it does not establish active traffic, enabled features,
+      or current configuration state.
+    reference: https://www.tencentcloud.com/document/product/1145/59024
+    verified: 2026-08-21
 
 - name: Naver Cloud Platform
   slug: naver-cloud-platform
