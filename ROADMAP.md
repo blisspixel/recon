@@ -110,6 +110,16 @@ product page documents its exact role; its unsupported migration-state claim is
 removed. Proofpoint remains blocked for the same evidence reason. Detail:
 [2026-08-20 Microsoft residual review](validation/2026-08-20-microsoft-residual-review.md).
 
+The 2026-08-21 Statuspage review then checks all seven rules after the shared
+catalog reference began returning HTTP 404. Current Atlassian DNS guidance
+supports the exact `status-page-domain-verification=` custom-email TXT,
+`stspg-customer.com` SPF include, and `<PAGE_CODE>.stspg-customer.com`
+CNAME-target family. Those three gain dates and bounded roles. The no-hyphen
+TXT variant plus `statuspage.io` and `statuspageio.com` CNAME observations stay
+undated because current first-party pages do not document their cataloged DNS
+roles. Detail:
+[2026-08-21 Statuspage fingerprint review](validation/2026-08-21-statuspage-fingerprint-review.md).
+
 Agent portability stays a maintainer track, not a product milestone. The frozen
 [representative-client contract](docs/agent-portability-evaluation-declaration.md)
 is green offline, the pinned v1.0.0 schema bytes still match the Published
