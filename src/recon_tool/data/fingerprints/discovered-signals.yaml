@@ -1159,11 +1159,16 @@ fingerprints:
   category: Support & Helpdesk
   confidence: high
   detections:
-  - type: txt
-    pattern: ^zendeskverification=
+  - type: subdomain_txt
+    pattern: zendeskverification:.
+    reference: https://support.zendesk.com/hc/en-us/articles/4811307516954-How-to-fix-the-email-error-messages-on-forwarding-SPF-DNS-and-TXT-records
+    verified: '2026-08-21'
     description: >-
-      Zendesk domain-verification TXT (`zendeskverification=`).
-      Account-binding signal only.
+      TXT value at `zendeskverification.<domain>`. Zendesk's current
+      external-email guidance names this owner and supplies a unique
+      account value for DNS verification. It does not establish
+      help-center hosting, forwarding success, outbound authorization,
+      ticket activity, or broader Zendesk product use.
 - name: Loom
   slug: loom
   category: Productivity & Collaboration

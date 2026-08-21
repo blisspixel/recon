@@ -916,7 +916,9 @@ unsupported pattern disposition, claim boundaries, and regression evidence.
 The current sequence includes the
 [2026-08-20 Microsoft residual review](2026-08-20-microsoft-residual-review.md)
 and the
-[2026-08-21 Statuspage review](2026-08-21-statuspage-fingerprint-review.md).
+[2026-08-21 Statuspage review](2026-08-21-statuspage-fingerprint-review.md),
+followed by the
+[2026-08-21 Zendesk review](2026-08-21-zendesk-fingerprint-review.md).
 
 ## Policy
 

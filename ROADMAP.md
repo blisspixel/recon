@@ -120,6 +120,16 @@ undated because current first-party pages do not document their cataloged DNS
 roles. Detail:
 [2026-08-21 Statuspage fingerprint review](validation/2026-08-21-statuspage-fingerprint-review.md).
 
+The follow-up 2026-08-21 Zendesk review checks all six rules against current
+Zendesk email-domain and host-mapping guidance. It corrects the TXT observation
+from an unsupported apex `zendeskverification=` value to the documented
+`zendeskverification.<domain>` owner, dates the exact `mail.zendesk.com` SPF
+include and both `zendesk.com` CNAME roles, and narrows every claim. The apex
+`zendesk-domain-verification=` value and broad `zendesk.com` SPF family remain
+undated because current first-party pages do not name those exact roles.
+Detail:
+[2026-08-21 Zendesk fingerprint review](validation/2026-08-21-zendesk-fingerprint-review.md).
+
 Agent portability stays a maintainer track, not a product milestone. The frozen
 [representative-client contract](docs/agent-portability-evaluation-declaration.md)
 is green offline, the pinned v1.0.0 schema bytes still match the Published

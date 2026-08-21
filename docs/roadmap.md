@@ -735,6 +735,12 @@ product milestone:
    CNAME-target family. Four unsupported variants remain undated with narrower
    claims. Detail:
    [2026-08-21 Statuspage fingerprint review](../validation/2026-08-21-statuspage-fingerprint-review.md).
+   The follow-up 2026-08-21 Zendesk review corrects the TXT observation from
+   an unsupported apex `zendeskverification=` value to the documented
+   `zendeskverification.<domain>` owner, dates the exact
+   `mail.zendesk.com` SPF include and both `zendesk.com` CNAME roles, and
+   leaves two unsupported broad forms undated with narrower claims. Detail:
+   [2026-08-21 Zendesk fingerprint review](../validation/2026-08-21-zendesk-fingerprint-review.md).
 5. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work
    proceeds. No catalog result reopens the voided fusion design or upgrades an

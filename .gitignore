@@ -71,6 +71,7 @@ docs/accuracy.md
 !/validation/2026-08-20-agent-portability-cost-gate.md
 !/validation/2026-08-20-microsoft-residual-review.md
 !/validation/2026-08-21-statuspage-fingerprint-review.md
+!/validation/2026-08-21-zendesk-fingerprint-review.md
 # Generic catalog-round frame preparer; no target data is embedded.
 !/validation/prepare_catalog_round.py
 # Prior-sample drift contract and aggregate evaluator. Prior frames, retained

@@ -63,15 +63,16 @@ fingerprints:
   detections:
   - type: cname_target
     pattern: zendesk.com
-    reference: https://support.zendesk.com/hc/en-us/articles/4408822492698
+    reference: https://support.zendesk.com/hc/en-us/articles/4408838571930-Host-mapping-Changing-the-URL-of-your-help-center
+    verified: '2026-08-21'
     tier: application
     description: >-
-      Custom subdomain CNAMEd to a Zendesk help-center portal.
-      Indicates the org runs a Zendesk hosted help center on a
-      branded domain. Does not distinguish Zendesk Suite from
-      Zendesk Sell; both products share the same custom-domain
-      chain. Hosting-binding signal only, not a ticket-volume
-      signal.
+      Related-hostname CNAME chain terminating under `zendesk.com`.
+      Zendesk's current host-mapping guide directs a branded
+      help-center subdomain to an account or brand subdomain at
+      `yoursubdomain.zendesk.com`. This observes the route only; it
+      does not prove activation, reachability, public visibility,
+      ticket activity, product edition, or organizational ownership.
 
 - name: Thinkific
   slug: thinkific
