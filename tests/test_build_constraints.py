@@ -12,6 +12,7 @@ import yaml
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 _PYPROJECT = _REPO_ROOT / "pyproject.toml"
+_UV_LOCK = _REPO_ROOT / "uv.lock"
 _CONSTRAINTS = _REPO_ROOT / "build-constraints.txt"
 _WORKFLOW_DIR = _REPO_ROOT / ".github" / "workflows"
 # The exact uv release that reproduces the shipped build. CI, the release
@@ -82,6 +83,18 @@ def test_build_root_and_uv_are_exactly_selected() -> None:
     required_version = uv_config["required-version"]
     assert not required_version.startswith("=="), required_version
     assert _version_satisfies(_REPRODUCIBLE_UV_VERSION, required_version)
+
+
+def test_development_audit_toolchain_excludes_affected_pip() -> None:
+    config = _project_config()
+    dev_requirements = config["dependency-groups"]["dev"]
+
+    assert "pip>=26.2" in dev_requirements
+
+    lock = tomllib.loads(_UV_LOCK.read_text(encoding="utf-8"))
+    pip_packages = [package for package in lock["package"] if package["name"] == "pip"]
+    assert len(pip_packages) == 1
+    assert _version_tuple(pip_packages[0]["version"]) >= (26, 2)
 
 
 def test_build_constraints_are_exact_complete_and_hashed() -> None:
