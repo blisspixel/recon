@@ -26,6 +26,28 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Changed
+
+- **The `v2.6.7` tag and its GitHub release were removed on 2026-08-26.** That
+  tag was the last reference holding the two pre-rewrite commits whose messages
+  still carried generated-author trailers, and the 2.6.8 release already
+  republishes identical package content from clean, `main`-reachable history.
+  The 2.6.7 distributions stay on PyPI but no longer have a tag or release to
+  verify against; use 2.6.8 for any tag-bound provenance check of that content.
+  No other tag, release, or published artifact changed.
+
+### Tests
+
+- **The provider-drift gate no longer goes red on a dropped identity request.**
+  `user_realm.source_unavailable` is a transport outcome, so one rate-limited
+  request from a shared CI egress address failed the weekly live smoke while
+  GetUserRealm itself kept answering, and the job has no retry. The reserved-
+  domain tests now resolve up to three times while that source is unavailable.
+  A source that stays unavailable across every attempt still fails, the raw
+  provider probe still reads `NameSpaceType` directly, and the failure message
+  now names the provider's own answer so recon disagreeing with a healthy
+  endpoint is distinguishable from an endpoint that is down.
+
 ## [2.17.10] - 2026-08-21
 
 Tencent EdgeOne CNAME fingerprinting now covers the current documented shard
@@ -1839,8 +1861,10 @@ Tool surface changes: no CLI command or flag changes.
   onward. Package content is unchanged from 2.6.7; this release restores the
   invariant that the published release tag and its provenance commit are
   contained in current `main`. The v2.6.7 tag and its published distributions
-  remain available and internally verifiable against their original commit,
-  which is no longer reachable from `main`.
+  remained available and internally verifiable against their original commit,
+  which was no longer reachable from `main`. That tag and its GitHub release
+  were removed on 2026-08-26; see `Unreleased`. The 2.6.7 distributions remain
+  on PyPI, and this release is the tag-bound equivalent of their content.
 
 ## [2.6.7] - 2026-07-24
 
