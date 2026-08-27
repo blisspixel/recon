@@ -10,6 +10,8 @@ organization.
 
 from __future__ import annotations
 
+import asyncio
+
 import pytest
 
 from recon_tool.http import http_client
@@ -20,6 +22,8 @@ pytestmark = pytest.mark.integration
 
 _CT_HEALTHY_OUTCOMES = {"cache_hit", "live_success"}
 _EXPECTED_RESERVED_DNS_SERVICES = {"DMARC", "SPF: strict (-all)"}
+_IDENTITY_ATTEMPTS = 3
+_IDENTITY_BACKOFF_SECONDS = 2.0
 
 
 @pytest.fixture(autouse=True)
@@ -54,6 +58,31 @@ async def _observed_realm_namespace(domain: str) -> str:
     return namespace
 
 
+async def _resolve_past_transient_identity_loss(domain: str) -> tuple[TenantInfo, list[SourceResult]]:
+    """Resolve ``domain``, retrying only while the identity source is transport-unavailable.
+
+    ``source_unavailable`` on ``user_realm`` is a transport outcome, not a
+    provider answer: one rate-limited or dropped request from a shared CI
+    egress address sets it while GetUserRealm itself keeps answering. This gate
+    runs weekly and had no retry, so a single blip left ``main`` red until a
+    human re-ran the job. Retrying a bounded number of times preserves the
+    drift signal, because a source that stays unavailable across every attempt
+    still fails, and ``_observed_realm_namespace`` still reads the provider
+    directly so recon disagreeing with a healthy endpoint is what gets caught.
+    """
+    from recon_tool.resolver import resolve_tenant
+
+    info, results = await resolve_tenant(domain)
+    assert info is not None
+    for _retry in range(_IDENTITY_ATTEMPTS - 1):
+        if not _source(results, "user_realm").source_unavailable:
+            break
+        await asyncio.sleep(_IDENTITY_BACKOFF_SECONDS)
+        info, results = await resolve_tenant(domain)
+        assert info is not None
+    return info, results
+
+
 def _assert_reserved_domain_provider_health(
     info: TenantInfo, results: list[SourceResult], realm_namespace: str
 ) -> None:
@@ -70,7 +99,10 @@ def _assert_reserved_domain_provider_health(
     # state nobody here controls, and it changes without notice, so tenant
     # presence is never asserted. Identity drift instead shows up as a transport
     # failure or as recon disagreeing with the raw provider answer.
-    assert user_realm.source_unavailable is False
+    assert user_realm.source_unavailable is False, (
+        f"user_realm stayed transport-unavailable across {_IDENTITY_ATTEMPTS} attempts "
+        f"while GetUserRealm answered {realm_namespace!r} directly"
+    )
     assert "identity:user_realm" not in user_realm.degraded_sources
 
     if realm_namespace in _TENANT_NAMESPACE_TYPES:
@@ -93,10 +125,7 @@ async def test_resolve_reserved_domain_pipeline_runs():
     third parties have been observed registering M365 tenants against
     example.com, so the state of that specific field is outside our control.
     """
-    from recon_tool.resolver import resolve_tenant
-
-    info, results = await resolve_tenant("example.com")
-    assert info is not None
+    info, results = await _resolve_past_transient_identity_loss("example.com")
     _assert_reserved_domain_provider_health(info, results, await _observed_realm_namespace("example.com"))
 
 
@@ -109,10 +138,7 @@ async def test_resolve_second_reserved_domain():
     or session handlers, and keeps the provider drift check from relying
     on one fixture.
     """
-    from recon_tool.resolver import resolve_tenant
-
-    info, results = await resolve_tenant("example.org")
-    assert info is not None
+    info, results = await _resolve_past_transient_identity_loss("example.org")
     _assert_reserved_domain_provider_health(info, results, await _observed_realm_namespace("example.org"))
 
 
