@@ -524,6 +524,7 @@ class TestHelpOutput:
         monkeypatch.setenv("FORCE_COLOR", "1")
         result = runner.invoke(app, ["batch", "--help"])
         output = click.unstyle(result.output)
+        normalized_output = " ".join(output.replace("│", " ").split())
         assert result.exit_code == 0
         for option in (
             "--json",
@@ -548,6 +549,8 @@ class TestHelpOutput:
         assert "clamped to 1-20" in output
         assert "Per-domain failures are output records" in output
         assert "record_type" in output
+        assert "By default this replaces per-domain records" in normalized_output
+        assert "attach the summary as cohort_summary" in normalized_output
 
     def test_root_help_warns_before_sharing_debug_diagnostics(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FORCE_COLOR", "1")

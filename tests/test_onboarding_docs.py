@@ -46,7 +46,29 @@ def test_readme_routes_primary_audiences_before_the_feature_catalog() -> None:
         "evidence-first review workflow",
     ):
         assert audience_path in workflow
+    assert "--include-ecosystem --summary --summary-schema 2.2" in workflow
+    assert "portfolio evidence bundle" in workflow
     assert "does not\ninfer ownership, control, or a corporate relationship" in workflow
+
+
+def test_getting_started_promotes_the_bounded_portfolio_bundle() -> None:
+    guide = (ROOT / "docs" / "getting-started.md").read_text(encoding="utf-8")
+    batch = guide.split("## Batch and Delta", 1)[1].split("## Observation Capsules", 1)[0]
+
+    assert "--include-ecosystem --summary --summary-schema 2.2" in batch
+    assert "exact\noperator-supplied set" in batch
+    assert "not proof of ownership, control, a corporate relationship, or\nrelative security" in batch
+
+
+def test_roadmaps_close_the_audience_tranche_before_review_bundle() -> None:
+    short = (ROOT / "ROADMAP.md").read_text(encoding="utf-8")
+    canonical = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
+
+    for roadmap in (short, canonical):
+        assert "v2.17.12 shipped" in roadmap
+        assert "prospective **ReviewBundle v1**" in roadmap
+        assert "does not exist yet" in roadmap
+        assert "inferred portfolio membership" in roadmap or "infer portfolio membership" in roadmap
 
 
 def test_getting_started_uses_the_same_first_run_trust_sequence() -> None:
@@ -152,6 +174,22 @@ def test_agent_installer_guidance_describes_the_canonical_launcher() -> None:
         text = readme.read_text(encoding="utf-8")
         assert "writes a sys.path-stripping Python fallback when" not in text
         assert "auto-detects whether `recon` is on PATH" not in text
+
+
+def test_plugin_guidance_matches_the_released_distribution() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    agents = (ROOT / "agents" / "README.md").read_text(encoding="utf-8")
+    claude = (ROOT / "agents" / "claude-code" / "README.md").read_text(encoding="utf-8")
+    mcp = (ROOT / "docs" / "mcp.md").read_text(encoding="utf-8")
+
+    assert "The PyPI package installs the CLI and MCP runtime" in readme
+    assert "source-checkout-only Claude Code plugin" in readme
+    assert "Source-checkout scaffolds" in agents
+    assert "not a PyPI or GitHub Release asset" in agents
+    assert "not currently published in a plugin marketplace" in claude
+    assert "/plugin install recon@<marketplace-name>" not in claude
+    assert "recon mcp install --client=claude-code" in mcp
+    assert "source-checkout-only" in mcp
 
 
 def test_vscode_and_claude_code_use_current_permission_schemas() -> None:

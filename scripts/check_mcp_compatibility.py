@@ -513,8 +513,19 @@ async def _stdio_prompt_get(session: Any) -> ProbeCheck:
     if not isinstance(content, dict):
         raise ValueError("domain_report prompt content is not an object")
     text = content.get("text")
-    if not isinstance(text, str) or "example.com" not in text or "lookup_tenant" not in text:
+    required_text = (
+        "example.com",
+        "lookup_tenant",
+        "find_hardening_gaps",
+        "If and only if that lookup succeeds",
+        "If the lookup fails, stop",
+        "Do not infer globally complete collection from an empty degraded_sources list",
+        "unavailable_controls",
+    )
+    if not isinstance(text, str) or any(item not in text for item in required_text):
         raise ValueError("domain_report prompt content lost its domain or tool instruction")
+    if any(item in text for item in ("source opportunity", "resolved_at", "cached_at")):
+        raise ValueError("domain_report prompt requests collection fields absent from its tool results")
     return ProbeCheck("recon_stdio_prompt_get", "pass", "domain_report messages=1")
 
 

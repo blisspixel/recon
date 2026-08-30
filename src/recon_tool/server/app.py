@@ -100,8 +100,9 @@ probes.
 The `domain_report` prompt uses a bounded defensive-review flow:
 1. `lookup_tenant(domain, format="json", explain=True)` - establish one
    evidence-linked baseline.
-2. `find_hardening_gaps(domain)` - derive categorized review candidates from
-   the cache-first baseline.
+2. Only when that lookup succeeds, `find_hardening_gaps(domain)` derives
+   categorized review candidates from the cache-first baseline. A failed
+   lookup ends the flow without another tool call or inferred gaps.
 
 Use `analyze_posture` only when the user requests a posture lens. Use
 `assess_exposure` only when the user explicitly requests the model-bound index,

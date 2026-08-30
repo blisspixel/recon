@@ -59,22 +59,29 @@ submission-freeze proof is
 
 ## Next
 
-The next product work improves how three audiences reach the existing evidence
-without expanding collection or turning observations into verdicts:
+v2.17.12 shipped the bounded audience-composition tranche without expanding
+collection or turning observations into verdicts:
 
-1. **Admins:** make installation identity explicit, including the running
+1. **Admins:** installation identity is explicit, including the running
    package, interpreter, launcher, and an actionable warning when PATH resolves
    to a different recon version.
-2. **Defenders:** provide one evidence-first review workflow that leads with
+2. **Defenders:** the evidence-first review workflow leads with
    collection validity, preserves unavailable and unresolved states, and ends
    with neutral review candidates.
-3. **Consultants and analysts:** compose the existing batch ecosystem and cohort
-   summary into one backward-compatible JSON bundle for an operator-supplied
-   domain set, without inferring ownership or ranking security.
+3. **Consultants and analysts:** the portfolio evidence bundle composes the
+   existing batch ecosystem and cohort summary into one backward-compatible
+   JSON artifact for an operator-supplied domain set, without inferring
+   ownership or ranking security.
 
-These are workflow and diagnostic improvements inside the stable v2 engine.
-They add no target interaction, active scanning, credentials, hosted service,
-or overall security score.
+The next product contract boundary is a prospective **ReviewBundle v1**: a
+caller-owned, deterministic evidence handoff for one namespace or an explicitly
+operator-supplied set. It does not exist yet. A separate versioned contract must
+first define its scope, generator metadata, collection-validity states, ordered
+results and errors, evidence-linked review candidates, and deterministic
+structured and human renderers. Any implementation must remain local by
+default, add no target interaction, active scanning, credentials, hosted
+service, inferred portfolio membership, overall security score, automatic
+retention, or scheduling.
 
 The fingerprint-freshness loop continues alongside that work. It has no version
 number because it never finishes. Monthly, plus on a missed-detection report or

@@ -5,9 +5,11 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import replace
+from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+from jsonschema import Draft202012Validator, ValidationError
 from typer.testing import CliRunner
 
 from recon_tool import bayesian
@@ -94,6 +96,56 @@ class TestBatchCommand:
         assert summary["observability"]["resolved"] == 1
         assert "alpha.invalid" not in json.dumps(summary)
         assert "not a domain" not in json.dumps(summary)
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_combined_mixed_cli_payload_validates_as_batch_result(self, mock_resolve, tmp_path):
+        async def _resolve(domain: str, **_kwargs):
+            return (
+                replace(
+                    SAMPLE_INFO,
+                    display_name=f"Synthetic {domain}",
+                    default_domain=domain,
+                    queried_domain=domain,
+                ),
+                SAMPLE_RESULTS,
+            )
+
+        mock_resolve.side_effect = _resolve
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("alpha.invalid\nbeta.invalid\nnot a domain\n")
+
+        result = runner.invoke(
+            app,
+            [
+                "batch",
+                str(domain_file),
+                "--json",
+                "--include-ecosystem",
+                "--summary",
+                "--summary-schema",
+                "2.2",
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        payload = json.loads(result.output)
+        schema = json.loads(
+            (Path(__file__).resolve().parents[1] / "docs" / "recon-schema.json").read_text(encoding="utf-8")
+        )
+        validator = Draft202012Validator(schema).evolve(schema=schema["$defs"]["BatchResult"])
+        validator.validate(payload)
+        assert [item.get("queried_domain", item.get("domain")) for item in payload["domains"]] == [
+            "alpha.invalid",
+            "beta.invalid",
+            "not a domain",
+        ]
+        assert payload["ecosystem_hyperedges"]
+        assert payload["cohort_summary"]["schema_version"] == "2.2"
+
+        malformed = json.loads(json.dumps(payload))
+        malformed["domains"][0].pop("tenant_id")
+        with pytest.raises(ValidationError):
+            validator.validate(malformed)
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_json_combined_shape_is_stable_when_every_domain_fails(self, mock_resolve, tmp_path):

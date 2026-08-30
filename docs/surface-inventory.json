@@ -2110,6 +2110,19 @@
     ]
   },
   "mcp": {
+    "prompt_count": 1,
+    "prompts": [
+      {
+        "arguments": [
+          {
+            "name": "domain",
+            "required": true
+          }
+        ],
+        "name": "domain_report",
+        "summary": "Generate an evidence-backed defensive domain briefing."
+      }
+    ],
     "resource_count": 5,
     "resources": [
       {

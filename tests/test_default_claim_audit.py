@@ -174,6 +174,17 @@ def test_mcp_discovery_owns_each_tool_and_top_level_output_property() -> None:
     assert "reevaluate_domain#tenant_id" in surfaces
 
 
+def test_mcp_prompt_discovery_owns_each_prompt_and_argument() -> None:
+    surfaces = discover_surfaces()["mcp_prompts"]
+
+    assert surfaces == {"domain_report", "domain_report#domain"}
+    inventory = load_claim_inventory(AUDIT_PATH)
+    assert inventory["coverage"]["mcp_prompts"] == {
+        "domain_report": "static.mcp-contract.v1",
+        "domain_report#domain": "static.mcp-contract.v1",
+    }
+
+
 def test_default_claim_families_have_direct_paths_and_regression_tests() -> None:
     inventory = load_claim_inventory(AUDIT_PATH)
 
@@ -219,6 +230,7 @@ def test_static_mcp_contract_references_every_description_module_and_behavior_ba
         "src/recon_tool/server/introspection.py",
         "src/recon_tool/server/lookup.py#lookup_tenant",
         "src/recon_tool/server/posture.py",
+        "src/recon_tool/server/__init__.py#domain_report",
         "docs/mcp.md",
         "docs/surface-inventory.json",
     } <= set(family["producer_paths"])
@@ -227,11 +239,13 @@ def test_static_mcp_contract_references_every_description_module_and_behavior_ba
         "src/recon_tool/chain.py#chain_resolve",
         "src/recon_tool/mcp_client/sdk_compat.py#tool_annotations",
         "scripts/generate_surface_inventory.py#build_inventory",
+        "scripts/generate_surface_inventory.py#_mcp_inventory_async",
     } <= set(family["evidence_path"])
     assert {
         "tests/test_mcp_graph_tools.py",
         "tests/test_mcp_structured_output.py",
         "tests/test_mcp_tool_annotations.py",
+        "tests/test_server.py",
         "tests/test_server_instructions.py",
         "tests/test_surface_inventory.py",
     } <= set(family["regression_tests"])

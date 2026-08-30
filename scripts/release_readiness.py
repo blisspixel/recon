@@ -59,6 +59,12 @@ _EXPECTED_COVERAGE_TARGET = "--cov=src/recon_tool"
 _STALE_COVERAGE_TARGET = "--cov=recon_tool"
 _COVERAGE_FLOOR = "--cov-fail-under=90.2"
 _REQUIRED_REMOTE_WORKFLOWS = ("CI", "Secrets scan", "Scorecard supply-chain security")
+_PINNED_UV_VERSION = "0.11.17"
+_UV_VERSION_RE = re.compile(r"^uv\s+(?P<version>[0-9]+\.[0-9]+\.[0-9]+)(?:\s|$)")
+_REQUIRED_BRANCH_CHECKS = frozenset({"ci-gate", "gitleaks", "CodeQL Python analysis"})
+_REQUIRED_BRANCH_RULE_TYPES = frozenset(
+    {"deletion", "non_fast_forward", "required_linear_history", "pull_request", "required_status_checks"}
+)
 _MIN_SCORECARD_SCORE = 8.0
 _REQUIRED_SCORECARD_TENS = (
     "Binary-Artifacts",
@@ -362,6 +368,36 @@ def _check_version_consistency(root: Path) -> CheckResult:
     return _result("version consistency", "pass", project_version)
 
 
+def _check_uv_toolchain(runner: Runner) -> CheckResult:
+    result = runner(["uv", "--version"])
+    if result.returncode != 0:
+        detail = (result.stderr or result.stdout).strip() or "uv --version failed"
+        return _result(
+            "uv toolchain",
+            "fail",
+            detail,
+            f"run uv self update {_PINNED_UV_VERSION}, then confirm uv --version",
+        )
+    output = (result.stdout or result.stderr).strip()
+    match = _UV_VERSION_RE.match(output)
+    if match is None:
+        return _result(
+            "uv toolchain",
+            "fail",
+            f"unrecognized uv --version output: {output[:160] or 'empty output'}",
+            f"run uv self update {_PINNED_UV_VERSION}, then confirm uv --version",
+        )
+    version = match.group("version")
+    if version != _PINNED_UV_VERSION:
+        return _result(
+            "uv toolchain",
+            "fail",
+            f"uv {version} is installed; repository and release tasks pin uv {_PINNED_UV_VERSION}",
+            f"run uv self update {_PINNED_UV_VERSION}, then confirm uv --version",
+        )
+    return _result("uv toolchain", "pass", f"uv {_PINNED_UV_VERSION}")
+
+
 def _check_uv_lock(runner: Runner) -> CheckResult:
     result = runner(["uv", "lock", "--check"])
     if result.returncode == 0:
@@ -641,6 +677,139 @@ def _check_remote_workflows(runner: Runner) -> CheckResult:
     if problems:
         return _result("remote CI", "fail", "; ".join(problems), "wait for GitHub checks or inspect the failing run")
     return _result("remote CI", "pass", "required workflows completed successfully for HEAD")
+
+
+def _ruleset_problems(payload: dict[str, object]) -> list[str]:
+    """Return exact default-branch protection drift for one active ruleset."""
+    problems: list[str] = []
+    if payload.get("enforcement") != "active":
+        problems.append(f"enforcement is {payload.get('enforcement')!r}, expected 'active'")
+
+    conditions = payload.get("conditions")
+    ref_name = conditions.get("ref_name") if isinstance(conditions, dict) else None
+    includes = ref_name.get("include") if isinstance(ref_name, dict) else None
+    if not isinstance(includes, list) or "~DEFAULT_BRANCH" not in includes:
+        problems.append("ruleset does not include ~DEFAULT_BRANCH")
+
+    rules = payload.get("rules")
+    if not isinstance(rules, list):
+        return [*problems, "rules are missing or not a list"]
+    by_type = {rule.get("type"): rule for rule in rules if isinstance(rule, dict) and isinstance(rule.get("type"), str)}
+    missing_types = sorted(_REQUIRED_BRANCH_RULE_TYPES - set(by_type))
+    if missing_types:
+        problems.append("missing rule type(s): " + ", ".join(missing_types))
+
+    status_rule = by_type.get("required_status_checks")
+    parameters = status_rule.get("parameters") if isinstance(status_rule, dict) else None
+    if isinstance(parameters, dict):
+        if parameters.get("strict_required_status_checks_policy") is not True:
+            problems.append("required status checks are not strict")
+        raw_checks = parameters.get("required_status_checks")
+        if isinstance(raw_checks, list):
+            observed = {
+                item.get("context")
+                for item in raw_checks
+                if isinstance(item, dict) and isinstance(item.get("context"), str)
+            }
+            if observed != _REQUIRED_BRANCH_CHECKS:
+                missing = sorted(_REQUIRED_BRANCH_CHECKS - observed)
+                unexpected = sorted(observed - _REQUIRED_BRANCH_CHECKS)
+                if missing:
+                    problems.append("missing required check(s): " + ", ".join(missing))
+                if unexpected:
+                    problems.append("unexpected required check(s): " + ", ".join(unexpected))
+        else:
+            problems.append("required status check list is missing")
+    elif status_rule is not None:
+        problems.append("required status check parameters are missing")
+    return problems
+
+
+def _ruleset_bypass_summary(payload: dict[str, object]) -> str:
+    actors = payload.get("bypass_actors")
+    if not isinstance(actors, list) or not actors:
+        return "none"
+    labels: list[str] = []
+    for actor in actors:
+        if not isinstance(actor, dict):
+            labels.append("unrecognized")
+            continue
+        labels.append(
+            f"{actor.get('actor_type', 'unknown')}#{actor.get('actor_id', 'unknown')}"
+            f"({actor.get('bypass_mode', 'unknown')})"
+        )
+    return ", ".join(labels)
+
+
+def _load_ruleset_summaries(runner: Runner, repo: str) -> list[object] | CheckResult:
+    listing = runner(["gh", "api", f"repos/{repo}/rulesets?per_page=100"])
+    if listing.returncode != 0:
+        detail = (listing.stderr or listing.stdout).strip() or "could not list repository rulesets"
+        return _result("branch ruleset", "fail", detail)
+    try:
+        summaries = json.loads(listing.stdout)
+    except json.JSONDecodeError as exc:
+        return _result("branch ruleset", "fail", f"could not parse ruleset list JSON: {exc}")
+    if not isinstance(summaries, list):
+        return _result("branch ruleset", "fail", "ruleset list JSON was not an array")
+    return summaries
+
+
+def _check_remote_branch_ruleset(runner: Runner) -> CheckResult:
+    repo_result = _read_github_repo(runner, "branch ruleset")
+    if isinstance(repo_result, CheckResult):
+        return repo_result
+    repo = repo_result
+    summaries = _load_ruleset_summaries(runner, repo)
+    if isinstance(summaries, CheckResult):
+        return summaries
+
+    candidates = [
+        item
+        for item in summaries
+        if isinstance(item, dict)
+        and item.get("target") == "branch"
+        and item.get("enforcement") == "active"
+        and isinstance(item.get("id"), int)
+    ]
+    if not candidates:
+        return _result("branch ruleset", "fail", "no active branch ruleset was found")
+
+    candidate_failures: list[str] = []
+    for summary in candidates:
+        ruleset_id = summary["id"]
+        detail_result = runner(["gh", "api", f"repos/{repo}/rulesets/{ruleset_id}"])
+        if detail_result.returncode != 0:
+            candidate_failures.append(
+                f"ruleset {ruleset_id}: "
+                + ((detail_result.stderr or detail_result.stdout).strip() or "detail query failed")
+            )
+            continue
+        try:
+            payload = json.loads(detail_result.stdout)
+        except json.JSONDecodeError as exc:
+            candidate_failures.append(f"ruleset {ruleset_id}: invalid JSON ({exc})")
+            continue
+        if not isinstance(payload, dict):
+            candidate_failures.append(f"ruleset {ruleset_id}: detail JSON was not an object")
+            continue
+        problems = _ruleset_problems(payload)
+        if not problems:
+            name = payload.get("name", ruleset_id)
+            bypass = _ruleset_bypass_summary(payload)
+            checks = ", ".join(sorted(_REQUIRED_BRANCH_CHECKS))
+            return _result(
+                "branch ruleset",
+                "pass",
+                f"{name}: strict [{checks}]; bypass actors: {bypass}",
+            )
+        candidate_failures.append(f"ruleset {ruleset_id}: " + "; ".join(problems))
+    return _result(
+        "branch ruleset",
+        "fail",
+        " | ".join(candidate_failures),
+        "restore the active strict default-branch protection contract",
+    )
 
 
 def _check_scorecard_api(runner: Runner) -> CheckResult:
@@ -1073,12 +1242,19 @@ def collect_checks(
     remote: bool = False,
 ) -> list[CheckResult]:
     actual_runner = runner or _make_runner(root)
+    uv_toolchain = _check_uv_toolchain(actual_runner)
+    uv_lock = (
+        _check_uv_lock(actual_runner)
+        if uv_toolchain.status == "pass"
+        else _result("uv.lock", "skip", "not checked until the pinned uv toolchain is active")
+    )
     checks = [
         _check_git_branch(actual_runner, allow_non_main),
         _check_worktree(actual_runner, allow_dirty),
         _check_upstream_state(actual_runner),
         _check_version_consistency(root),
-        _check_uv_lock(actual_runner),
+        uv_toolchain,
+        uv_lock,
         _check_coverage_targets(root),
         _check_roadmap_version(root),
         _check_citation_metadata(root),
@@ -1090,6 +1266,7 @@ def collect_checks(
     if remote:
         checks.append(_check_release_tag_binding(root, actual_runner))
         checks.append(_check_remote_workflows(actual_runner))
+        checks.append(_check_remote_branch_ruleset(actual_runner))
         checks.append(_check_scorecard_api(actual_runner))
         checks.append(_check_pypi_release(root, actual_runner))
         checks.append(_check_pypi_attestations(root, actual_runner))
@@ -1099,6 +1276,7 @@ def collect_checks(
     else:
         checks.append(_result("release tag binding", "skip", _REMOTE_RELEASE_HINT))
         checks.append(_result("remote CI", "skip", _REMOTE_RELEASE_HINT))
+        checks.append(_result("branch ruleset", "skip", _REMOTE_RELEASE_HINT))
         checks.append(_result("Scorecard API", "skip", _REMOTE_RELEASE_HINT))
         checks.append(_result("PyPI release", "skip", _REMOTE_RELEASE_HINT))
         checks.append(_result("PyPI attestations", "skip", _REMOTE_RELEASE_HINT))

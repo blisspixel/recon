@@ -286,6 +286,7 @@ async def _mcp_inventory_async() -> dict[str, object]:
 
     tools = await mcp.list_tools()
     resources = await mcp.list_resources()
+    prompts = await mcp.list_prompts()
     tool_entries: list[dict[str, object]] = []
     for tool in sorted(tools, key=lambda item: item.name):
         annotations = {}
@@ -316,12 +317,38 @@ async def _mcp_inventory_async() -> dict[str, object]:
         }
         for resource in sorted(resources, key=lambda item: str(item.uri))
     ]
+    prompt_entries: list[dict[str, object]] = []
+    for prompt in sorted(prompts, key=lambda item: item.name):
+        wire = model_wire_dict(prompt)
+        raw_arguments = wire.get("arguments", [])
+        arguments: list[dict[str, object]] = []
+        if isinstance(raw_arguments, Sequence) and not isinstance(raw_arguments, str | bytes | bytearray):
+            for raw_argument in raw_arguments:
+                if not isinstance(raw_argument, Mapping) or not isinstance(raw_argument.get("name"), str):
+                    continue
+                argument: dict[str, object] = {
+                    "name": raw_argument["name"],
+                    "required": raw_argument.get("required") is True,
+                }
+                description = raw_argument.get("description")
+                if isinstance(description, str) and description.strip():
+                    argument["summary"] = _summary(description)
+                arguments.append(argument)
+        prompt_entries.append(
+            {
+                "name": prompt.name,
+                "summary": _summary(prompt.description),
+                "arguments": arguments,
+            }
+        )
     return {
         "transport": "stdio",
         "tool_count": len(tool_entries),
         "tools": tool_entries,
         "resource_count": len(resource_entries),
         "resources": resource_entries,
+        "prompt_count": len(prompt_entries),
+        "prompts": prompt_entries,
     }
 
 

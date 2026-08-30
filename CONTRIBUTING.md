@@ -71,6 +71,8 @@ still fixing the reproducible build path to 0.11.17 in every workflow.
 ```bash
 git clone https://github.com/blisspixel/recon.git
 cd recon
+uv self update 0.11.17      # select the repository's reproducible uv release
+uv --version                # must report uv 0.11.17
 uv sync                    # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
 uv run pre-commit install              # activate pre-commit hooks
 uv run python scripts/release_readiness.py --allow-dirty

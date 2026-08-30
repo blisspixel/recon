@@ -888,6 +888,7 @@
         "src/recon_tool/server/app.py#resolve_or_cache",
         "src/recon_tool/chain.py#chain_resolve",
         "src/recon_tool/mcp_client/sdk_compat.py#tool_annotations",
+        "scripts/generate_surface_inventory.py#_mcp_inventory_async",
         "scripts/generate_surface_inventory.py#build_inventory"
       ],
       "limits": [
@@ -903,6 +904,7 @@
         "src/recon_tool/server/introspection.py",
         "src/recon_tool/server/lookup.py#lookup_tenant",
         "src/recon_tool/server/posture.py",
+        "src/recon_tool/server/__init__.py#domain_report",
         "docs/mcp.md",
         "docs/surface-inventory.json"
       ],
@@ -910,6 +912,7 @@
         "tests/test_default_claim_audit.py",
         "tests/test_mcp_graph_tools.py",
         "tests/test_mcp_structured_output.py",
+        "tests/test_server.py",
         "tests/test_server_instructions.py",
         "tests/test_mcp_tool_annotations.py",
         "tests/test_surface_inventory.py"
@@ -980,7 +983,7 @@
       "agents/agent-plugin/skills/recon/SKILL.md#recon": "static.agent-guidance.v1",
       "agents/claude-code/README.md#1. Install the recon CLI": "static.agent-guidance.v1",
       "agents/claude-code/README.md#2a. (Alternative) Wire MCP without the plugin": "static.agent-guidance.v1",
-      "agents/claude-code/README.md#2b. Install the Claude Code plugin": "static.agent-guidance.v1",
+      "agents/claude-code/README.md#2b. Load the source-checkout Claude Code plugin": "static.agent-guidance.v1",
       "agents/claude-code/README.md#3. Try it": "static.agent-guidance.v1",
       "agents/claude-code/README.md#Approval policy": "static.agent-guidance.v1",
       "agents/claude-code/README.md#Choosing the MCP launch command": "static.agent-guidance.v1",
@@ -1122,6 +1125,10 @@
       "tenant_id": "runtime.identity-and-tenant.v1",
       "tenant_region_sub_scope": "runtime.identity-and-tenant.v1",
       "unclassified_cname_chains": "runtime.related-namespace.v1"
+    },
+    "mcp_prompts": {
+      "domain_report": "static.mcp-contract.v1",
+      "domain_report#domain": "static.mcp-contract.v1"
     },
     "mcp_tools": {
       "analyze_posture": "runtime.posture-observation.v1",

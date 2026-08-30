@@ -121,6 +121,14 @@ def _fake_manager(path: Path, manager: str) -> None:
                 f'  exit "${{FAKE_{prefix}_LIST_STATUS:-0}}"',
                 "fi",
                 f"printf '%s\\n' \"${{FAKE_{prefix}_INSTALL_OUTPUT:-{manager} install output}}\" >&2",
+                f'if [ "${{FAKE_{prefix}_INSTALL_STATUS:-0}}" -eq 0 ] && [ "${{FAKE_CREATE_RECON:-1}}" = "1" ]; then',
+                "  cat > \"$FAKE_RECON_PATH\" <<'RECON_EOF'",
+                "#!/usr/bin/env bash",
+                "printf '%s\\n' \"${FAKE_RECON_VERSION_OUTPUT:-}\"",
+                'exit "${FAKE_RECON_VERSION_STATUS:-0}"',
+                "RECON_EOF",
+                '  chmod +x "$FAKE_RECON_PATH"',
+                "fi",
                 f'exit "${{FAKE_{prefix}_INSTALL_STATUS:-0}}"',
                 "",
             ]
@@ -133,9 +141,9 @@ def _fake_manager(path: Path, manager: str) -> None:
 def _run_unix_installer(
     tmp_path: Path,
     *,
-    uv: bool = True,
     pipx: bool = True,
     recon: bool = False,
+    stale_recon_output: str | None = None,
     extra_env: dict[str, str] | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], str]:
     if os.name == "nt":
@@ -145,20 +153,35 @@ def _run_unix_installer(
         pytest.skip("bash is not available")
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
-    if uv:
-        _fake_manager(fake_bin / "uv", "uv")
+    _fake_manager(fake_bin / "uv", "uv")
     if pipx:
         _fake_manager(fake_bin / "pipx", "pipx")
     if recon:
         command = fake_bin / "recon"
         command.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
         command.chmod(0o755)
+    path_entries: list[str] = []
+    if stale_recon_output is not None:
+        stale_bin = tmp_path / "stale-bin"
+        stale_bin.mkdir()
+        stale = stale_bin / "recon"
+        stale.write_text(
+            f"#!/usr/bin/env bash\nprintf '%s\\n' '{stale_recon_output}'\n",
+            encoding="utf-8",
+        )
+        stale.chmod(0o755)
+        path_entries.append(str(stale_bin))
+    path_entries.extend((str(fake_bin), "/usr/bin", "/bin"))
     log = tmp_path / "manager.log"
     env = os.environ.copy()
     env.update(
         {
-            "PATH": os.pathsep.join((str(fake_bin), "/usr/bin", "/bin")),
+            "PATH": os.pathsep.join(path_entries),
             "INSTALLER_LOG": str(log),
+            "FAKE_CREATE_RECON": "1",
+            "FAKE_RECON_PATH": str(fake_bin / "recon"),
+            "FAKE_RECON_VERSION_OUTPUT": f"recon {_VERSION}",
+            "FAKE_RECON_VERSION_STATUS": "0",
         }
     )
     if extra_env:
@@ -183,6 +206,9 @@ def test_unix_installer_preserves_existing_pipx_owner(tmp_path: Path) -> None:
     assert result.returncode == 0, result.stdout + result.stderr
     assert f"pipx install --force recon-tool=={_VERSION}" in log
     assert "uv tool install" not in log
+    assert f"reports recon {_VERSION}" in result.stdout
+    assert 'recon "<domain-you-want-to-review>"' in result.stdout
+    assert "Syntax-only reserved example" in result.stdout
 
 
 def test_unix_installer_refuses_ambiguous_dual_ownership(tmp_path: Path) -> None:
@@ -217,6 +243,50 @@ def test_unix_installer_surfaces_native_install_failure(tmp_path: Path) -> None:
     assert f"uv tool install --force recon-tool=={_VERSION}" in log
 
 
+def test_unix_installer_rejects_stale_first_launcher_and_lists_candidates(tmp_path: Path) -> None:
+    result, log = _run_unix_installer(
+        tmp_path,
+        stale_recon_output="recon 2.6.3",
+        extra_env={"FAKE_UV_LIST": "recon-tool 2.15.0", "FAKE_PIPX_LIST": ""},
+    )
+
+    assert result.returncode == 1
+    assert f"uv tool install --force recon-tool=={_VERSION}" in log
+    assert "reported recon\\ 2.6.3" in result.stderr
+    assert f"expected recon\\ {_VERSION}" in result.stderr
+    assert f"Resolved launcher: {tmp_path / 'stale-bin' / 'recon'}" in result.stderr
+    assert "Discovered candidates:" in result.stderr
+    assert str(tmp_path / "stale-bin" / "recon") in result.stderr
+    assert str(tmp_path / "bin" / "recon") in result.stderr
+    assert "==> Done." not in result.stdout
+
+
+def test_unix_installer_rejects_missing_postinstall_launcher(tmp_path: Path) -> None:
+    result, _log = _run_unix_installer(
+        tmp_path,
+        extra_env={"FAKE_CREATE_RECON": "0"},
+    )
+
+    assert result.returncode == 1
+    assert "no 'recon' launcher resolves on PATH" in result.stderr
+    assert "Resolved launcher: (not found)" in result.stderr
+    assert "Discovered candidates:" in result.stderr
+    assert "  (none)" in result.stderr
+
+
+@pytest.mark.parametrize("version_output", ["unexpected output", f"recon {_VERSION} "])
+def test_unix_installer_rejects_malformed_version_output(tmp_path: Path, version_output: str) -> None:
+    result, _log = _run_unix_installer(
+        tmp_path,
+        extra_env={"FAKE_RECON_VERSION_OUTPUT": version_output},
+    )
+
+    assert result.returncode == 1
+    assert "returned malformed output" in result.stderr
+    assert f"Resolved launcher: {tmp_path / 'bin' / 'recon'}" in result.stderr
+    assert str(tmp_path / "bin" / "recon") in result.stderr
+
+
 def test_powershell_installer_parses() -> None:
     if os.name != "nt":
         pytest.skip("Windows PowerShell parser is available on Windows CI")
@@ -242,6 +312,11 @@ def _fake_windows_manager(path: Path, manager: str) -> None:
                 f"  exit /b %FAKE_{prefix}_LIST_STATUS%",
                 ")",
                 f"1>&2 echo(%FAKE_{prefix}_INSTALL_OUTPUT%",
+                f'if "%FAKE_{prefix}_INSTALL_STATUS%"=="0" if "%FAKE_CREATE_RECON%"=="1" (',
+                '>"%FAKE_RECON_PATH%" echo @echo off',
+                '>>"%FAKE_RECON_PATH%" echo echo(%%FAKE_RECON_VERSION_OUTPUT%%',
+                '>>"%FAKE_RECON_PATH%" echo exit /b %%FAKE_RECON_VERSION_STATUS%%',
+                ")",
                 f"exit /b %FAKE_{prefix}_INSTALL_STATUS%",
                 "",
             ]
@@ -253,9 +328,9 @@ def _fake_windows_manager(path: Path, manager: str) -> None:
 def _run_windows_installer(
     tmp_path: Path,
     *,
-    uv: bool = True,
     pipx: bool = True,
     recon: bool = False,
+    stale_recon_output: str | None = None,
     extra_env: dict[str, str] | None = None,
 ) -> tuple[subprocess.CompletedProcess[str], str]:
     if os.name != "nt":
@@ -265,20 +340,33 @@ def _run_windows_installer(
         pytest.skip("Windows PowerShell is not available")
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
-    if uv:
-        _fake_windows_manager(fake_bin / "uv.cmd", "uv")
+    _fake_windows_manager(fake_bin / "uv.cmd", "uv")
     if pipx:
         _fake_windows_manager(fake_bin / "pipx.cmd", "pipx")
     if recon:
         (fake_bin / "recon.cmd").write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
-    log = tmp_path / "manager.log"
     system_root = Path(os.environ.get("SYSTEMROOT", r"C:\Windows"))
+    path_entries: list[str] = []
+    if stale_recon_output is not None:
+        stale_bin = tmp_path / "stale-bin"
+        stale_bin.mkdir()
+        (stale_bin / "recon.cmd").write_text(
+            f"@echo off\r\necho {stale_recon_output}\r\nexit /b 0\r\n",
+            encoding="utf-8",
+        )
+        path_entries.append(str(stale_bin))
+    path_entries.extend((str(fake_bin), str(system_root / "System32"), str(system_root)))
+    log = tmp_path / "manager.log"
     env = os.environ.copy()
     env.update(
         {
-            "PATH": os.pathsep.join((str(fake_bin), str(system_root / "System32"), str(system_root))),
+            "PATH": os.pathsep.join(path_entries),
             "PATHEXT": ".COM;.EXE;.BAT;.CMD",
             "INSTALLER_LOG": str(log),
+            "FAKE_CREATE_RECON": "1",
+            "FAKE_RECON_PATH": str(fake_bin / "recon.cmd"),
+            "FAKE_RECON_VERSION_OUTPUT": f"recon {_VERSION}",
+            "FAKE_RECON_VERSION_STATUS": "0",
             "FAKE_UV_LIST": "",
             "FAKE_UV_LIST_STATUS": "0",
             "FAKE_UV_INSTALL_OUTPUT": "uv install output",
@@ -311,6 +399,9 @@ def test_powershell_installer_preserves_existing_pipx_owner(tmp_path: Path) -> N
     assert result.returncode == 0, result.stdout + result.stderr
     assert f"pipx install --force recon-tool=={_VERSION}" in log
     assert "uv tool install" not in log
+    assert f"reports recon {_VERSION}" in result.stdout
+    assert 'recon "<domain-you-want-to-review>"' in result.stdout
+    assert "Syntax-only reserved example" in result.stdout
 
 
 def test_powershell_installer_refuses_ambiguous_dual_ownership(tmp_path: Path) -> None:
@@ -343,3 +434,47 @@ def test_powershell_installer_surfaces_native_install_failure(tmp_path: Path) ->
     assert "native install failure" in result.stdout
     assert f"uv could not install recon-tool=={_VERSION}" in result.stdout
     assert f"uv tool install --force recon-tool=={_VERSION}" in log
+
+
+def test_powershell_installer_rejects_stale_first_launcher_and_lists_candidates(tmp_path: Path) -> None:
+    result, log = _run_windows_installer(
+        tmp_path,
+        stale_recon_output="recon 2.6.3",
+        extra_env={"FAKE_UV_LIST": "recon-tool 2.15.0", "FAKE_PIPX_LIST": ""},
+    )
+
+    assert result.returncode == 1
+    assert f"uv tool install --force recon-tool=={_VERSION}" in log
+    assert "reported 'recon 2.6.3'" in result.stdout
+    assert f"expected 'recon {_VERSION}'" in result.stdout
+    assert f"Resolved launcher: {tmp_path / 'stale-bin' / 'recon.cmd'}" in result.stdout
+    assert "Discovered candidates:" in result.stdout
+    assert str(tmp_path / "stale-bin" / "recon.cmd") in result.stdout
+    assert str(tmp_path / "bin" / "recon.cmd") in result.stdout
+    assert "==> Done." not in result.stdout
+
+
+def test_powershell_installer_rejects_missing_postinstall_launcher(tmp_path: Path) -> None:
+    result, _log = _run_windows_installer(
+        tmp_path,
+        extra_env={"FAKE_CREATE_RECON": "0"},
+    )
+
+    assert result.returncode == 1
+    assert "no 'recon' launcher resolves on PATH" in result.stdout
+    assert "Resolved launcher: (not found)" in result.stdout
+    assert "Discovered candidates:" in result.stdout
+    assert "  (none)" in result.stdout
+
+
+@pytest.mark.parametrize("version_output", ["unexpected output", f"recon {_VERSION} "])
+def test_powershell_installer_rejects_malformed_version_output(tmp_path: Path, version_output: str) -> None:
+    result, _log = _run_windows_installer(
+        tmp_path,
+        extra_env={"FAKE_RECON_VERSION_OUTPUT": version_output},
+    )
+
+    assert result.returncode == 1
+    assert "returned malformed output" in result.stdout
+    assert f"Resolved launcher: {tmp_path / 'bin' / 'recon.cmd'}" in result.stdout
+    assert str(tmp_path / "bin" / "recon.cmd") in result.stdout

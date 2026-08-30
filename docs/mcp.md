@@ -500,7 +500,7 @@ to disk or sharing data and disappear when the server exits.
 
 | Client | Config file location |
 |--------|---------------------|
-| Claude Code | Use the bundled plugin at [`agents/claude-code/`](../agents/claude-code/); wires up MCP and ships a skill in one install |
+| Claude Code | Released path: `recon mcp install --client=claude-code`. The plugin under [`agents/claude-code/`](../agents/claude-code/) is source-checkout-only and adds the local skill. |
 | Claude Desktop | `~/Library/Application Support/Claude/claude_desktop_config.json` (macOS) |
 | Cursor | `.cursor/mcp.json` in your project or `~/.cursor/mcp.json` globally |
 | VS Code + Copilot | `.vscode/mcp.json` in a workspace, or `mcp.json` in the active user profile |

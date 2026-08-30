@@ -63,7 +63,10 @@ It does not call the network by default and it is not part of the user-facing
 2. Version consistency between `pyproject.toml` and the package fallback, plus
    current-version references in both roadmaps, `CITATION.cff`, and the
    supply-chain consumer-verification recipe.
-3. `uv.lock` freshness with `uv lock --check`.
+3. The exact maintainer uv toolchain (`0.11.17`), followed by `uv.lock`
+   freshness with `uv lock --check`. A toolchain mismatch is reported
+   separately and must be corrected with `uv self update 0.11.17`; readiness
+   never changes the maintainer's toolchain automatically.
 4. Coverage authority in `scripts/check.py` and main CI, with the release helper
    and release workflow required to delegate to that canonical gate.
 5. README usage anchors, supply-chain recipe anchors, and repository hygiene.
@@ -100,7 +103,8 @@ uv run python scripts/release_readiness.py
 After publishing the current version from the exact checked-out tag, add the
 optional remote check. In remote mode the gate first requires the remote and
 local current project-version tag plus `HEAD` to resolve to the same full
-commit. It then verifies required GitHub Actions checks for `HEAD`, public
+commit. It then verifies required GitHub Actions checks for `HEAD`, the active
+default-branch ruleset, and public
 Scorecard API freshness and code-owned control scores, PyPI's exact
 current-version record, and the exact four GitHub Release assets for the current
 version. It verifies
@@ -113,8 +117,11 @@ SBOM structure validation; every later release also requires SBOM provenance.
 Its PyPI metadata reader is bounded and accepts only the exact version-scoped
 pair from HTTPS `files.pythonhosted.org` URLs before any verifier runs. It also
 reports the SHA-256 parity of both distribution files across PyPI and GitHub.
-The remote check therefore requires the current release tag locally plus an
-authenticated `gh` session or `GH_TOKEN`:
+The ruleset check requires strict `ci-gate`, `gitleaks`, and `CodeQL Python
+analysis` contexts together with deletion, non-fast-forward, linear-history,
+and pull-request protections. It reports bypass actors rather than silently
+assuming none exist. The remote check therefore requires the current release
+tag locally plus an authenticated `gh` session or `GH_TOKEN`:
 
 ```bash
 uv run python scripts/release_readiness.py --remote
@@ -368,10 +375,10 @@ After the tag is published and the PyPI release exists:
 - [ ] Confirm the GitHub Release contains exactly the wheel, sdist, SBOM, and
       `recon-tool-<version>.intoto.jsonl`.
 - [ ] Run `uv run python scripts/release_readiness.py --remote` after the
-      release so CI, public Scorecard API freshness, PyPI files, PyPI
-      provenance, exact GitHub Release assets, completed SBOM, tag-bound GitHub
-      provenance, cross-channel digests, and citation metadata are checked
-      together.
+      release so CI, the live branch ruleset, public Scorecard API freshness,
+      PyPI files, PyPI provenance, exact GitHub Release assets, completed SBOM,
+      tag-bound GitHub provenance, cross-channel digests, and citation metadata
+      are checked together.
 
 The direct `pipx` / `uv` / `pip` install paths need no per-release action. The
 release transaction updates and validates both reviewed installer-helper pins

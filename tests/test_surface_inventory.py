@@ -75,9 +75,11 @@ def test_surface_inventory_has_expected_mcp_surface() -> None:
     mcp_inventory = _inventory()["mcp"]
     tools = {tool["name"]: tool for tool in mcp_inventory["tools"]}
     resources = {resource["uri"]: resource for resource in mcp_inventory["resources"]}
+    prompts = {prompt["name"]: prompt for prompt in mcp_inventory["prompts"]}
 
     assert mcp_inventory["tool_count"] == len(tools)
     assert mcp_inventory["resource_count"] == len(resources)
+    assert mcp_inventory["prompt_count"] == len(prompts)
     assert {"lookup_tenant", "assess_exposure", "get_posteriors", "inject_ephemeral_fingerprint"} <= set(tools)
     assert {
         "recon://fingerprints",
@@ -86,6 +88,9 @@ def test_surface_inventory_has_expected_mcp_surface() -> None:
         "recon://schema",
         "recon://surface-inventory",
     } <= set(resources)
+    assert set(prompts) == {"domain_report"}
+    assert prompts["domain_report"]["arguments"] == [{"name": "domain", "required": True}]
+    assert "evidence-backed defensive domain briefing" in prompts["domain_report"]["summary"]
 
     lookup = tools["lookup_tenant"]
     lookup_inputs = {param["name"]: param for param in lookup["input_parameters"]}

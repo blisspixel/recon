@@ -122,7 +122,7 @@ Install, update, uninstall, and first-run detail:
 |---|---|---|
 | Review one namespace | `recon "<domain>"` | A compact, hedged panel of observed mail, identity, service, and confidence signals |
 | Explain or hand off a finding | `recon "<domain>" --explain` | Per-source status plus the evidence retained for each material observation |
-| Review an operator-supplied set | `recon batch domains.txt --json` | Ordered, typed results and errors suitable for analysis and automation |
+| Review an operator-supplied set | `recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2` | One portfolio evidence bundle with ordered typed results and errors, observable ecosystem overlaps, and an aggregate cohort summary |
 | Work through an agent | `recon mcp install --client=<name>` | Local typed tools, resources, and prompts without a hosted recon service |
 
 Defenders can follow the
@@ -229,22 +229,20 @@ Full setup:
 [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md).
 Per-client scaffolds and skills:
 [agents/](https://github.com/blisspixel/recon/tree/main/agents).
+The PyPI package installs the CLI and MCP runtime. Repository agent scaffolds
+and plugin files are not included in the wheel or release assets.
 
 The current scaffolds use each client's native configuration. In particular,
-the bundled Claude Code plugin uses Claude Code's client-specific layout; it
-does not claim conformance with the portable
+the source-checkout-only Claude Code plugin uses Claude Code's client-specific
+layout; it does not claim conformance with the portable
 [Agent Plugins v1.0.0 specification](https://agent-plugins.org/specification).
 A complete-surface portable candidate now lives under
 [`agents/agent-plugin/`](https://github.com/blisspixel/recon/tree/main/agents/agent-plugin)
 and passes network-free validation against the exact pinned v1.0.0 schemas,
 whose bytes still match the Published specification. That is not a client
-compatibility or conformance claim. The frozen VS Code, Cursor, and Kiro
-preflight passes, but the paired evaluation remains incomplete. GPT-5.6 Luna
-and a $5 total external-charge ceiling are declared for the frame; collection
-stopped before any model session because account-side hard stops and a
-reproducible driver for all three required desktop clients were not verifiable.
-Until the complete 30-session evaluation passes, use the documented
-client-specific install path above. The aggregate stop disposition is
+compatibility or conformance claim. Representative-client evaluation remains
+incomplete, so use `recon mcp install --client=<name>` as the released setup
+path. The aggregate evaluation status and stop conditions are
 [recorded here](https://github.com/blisspixel/recon/blob/main/validation/2026-08-20-agent-portability-cost-gate.md).
 
 | You say | What the agent should do |
@@ -314,9 +312,13 @@ Research and publication pointers (maintainer track, not the product core):
 
 ## Development
 
-The repository requires `uv >=0.11.8,<0.12`; CI currently pins `0.11.17`.
+Repository and release tasks use uv `0.11.17`. The broader
+`>=0.11.8,<0.12` project constraint exists for dependency-update tooling, not
+as the reproducible maintainer toolchain.
 
 ```bash
+uv self update 0.11.17
+uv --version                # must report uv 0.11.17
 uv sync
 uv run pre-commit install
 uv run python scripts/release_readiness.py --allow-dirty

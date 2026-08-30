@@ -296,9 +296,24 @@ class TestDoctorPathLauncher:
             capture_output=True,
             check=False,
             shell=False,
-            text=True,
             timeout=5.0,
         )
+
+    def test_version_probe_handles_invalid_utf8_without_crashing(self, tmp_path: Path) -> None:
+        import subprocess
+
+        launcher = (tmp_path / "recon").resolve()
+        completed = subprocess.CompletedProcess(
+            args=[str(launcher), "--version"],
+            returncode=0,
+            stdout=b"recon \xff\xfe\n",
+            stderr=b"\x80",
+        )
+        with patch("recon_tool.cli.doctor.subprocess.run", return_value=completed):
+            version, error = _launcher_version(launcher)
+
+        assert version is None
+        assert error == "version output was not recognized"
 
     def test_matching_path_launcher_is_ok(self, tmp_path: Path) -> None:
         launcher = tmp_path / "recon"

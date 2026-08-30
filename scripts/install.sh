@@ -57,6 +57,70 @@ fail_missing_tool() {
     exit 1
 }
 
+cli_candidates() {
+    # Bash's type -a -P returns executable PATH candidates in resolution order.
+    # Deduplicate and cap diagnostics so a hostile or accidental PATH cannot
+    # flood installer output.
+    type -a -P "$CLI" 2>/dev/null | awk '!seen[$0]++' | sed -n '1,20p' || :
+}
+
+print_cli_diagnostics() {
+    local resolved="$1"
+    local candidates="$2"
+    if [ -n "$resolved" ]; then
+        printf 'Resolved launcher: %s\n' "$resolved" >&2
+    else
+        echo "Resolved launcher: (not found)" >&2
+    fi
+    echo "Discovered candidates:" >&2
+    if [ -n "$candidates" ]; then
+        while IFS= read -r candidate; do
+            printf '  %s\n' "${candidate:0:1024}" >&2
+        done <<< "$candidates"
+    else
+        echo "  (none)" >&2
+    fi
+}
+
+verify_installed_cli() {
+    local candidates resolved output bounded_output status expected
+    hash -r
+    candidates="$(cli_candidates)"
+    resolved="${candidates%%$'\n'*}"
+    expected="recon $VERSION"
+
+    if [ -z "$resolved" ]; then
+        echo "Error: $SPEC was installed, but no '$CLI' launcher resolves on PATH." >&2
+        print_cli_diagnostics "$resolved" "$candidates"
+        return 1
+    fi
+
+    if output=$("$resolved" --version 2>&1); then
+        status=0
+    else
+        status=$?
+    fi
+    if [ "$status" -ne 0 ]; then
+        echo "Error: $SPEC was installed, but '$resolved --version' exited $status." >&2
+        print_cli_diagnostics "$resolved" "$candidates"
+        return 1
+    fi
+    if [ "$output" = "$expected" ]; then
+        echo "==> Verified $resolved reports $expected."
+        return 0
+    fi
+    bounded_output="${output:0:512}"
+    if [[ "$output" =~ ^recon[[:space:]]+[^[:space:]]+$ ]]; then
+        printf "Error: %s was installed, but '%s --version' reported %q; expected %q.\n" \
+            "$SPEC" "$resolved" "$bounded_output" "$expected" >&2
+    else
+        printf "Error: %s was installed, but '%s --version' returned malformed output %q; expected %q.\n" \
+            "$SPEC" "$resolved" "$bounded_output" "$expected" >&2
+    fi
+    print_cli_diagnostics "$resolved" "$candidates"
+    return 1
+}
+
 UV_AVAILABLE=false
 PIPX_AVAILABLE=false
 UV_OWNS=false
@@ -110,6 +174,8 @@ else
     fail_missing_tool
 fi
 
+verify_installed_cli
+
 echo ""
 echo "==> Done. $SPEC installed with $MANAGER."
 echo ""
@@ -122,8 +188,9 @@ echo "Quick start:"
 echo "  DNS infrastructure may observe lookup queries; the only default"
 echo "  target-owned HTTP request is the MTA-STS policy fetch. Google CSE"
 echo "  and BIMI direct probes run only with --direct-probes."
-echo "  $CLI example.com"
-echo "  $CLI example.com --json"
+echo "  $CLI \"<domain-you-want-to-review>\""
+echo "  $CLI \"<domain-you-want-to-review>\" --json"
+echo "  Syntax-only reserved example (live stray residue): $CLI example.com"
 echo ""
 echo "Optional: enable tab-completion with  $CLI --install-completion"
 echo ""
