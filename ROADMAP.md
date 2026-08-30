@@ -139,6 +139,10 @@ does not claim traffic, enabled CDN or WAF features, or current configuration
 state. Detail:
 [2026-08-21 Tencent EdgeOne fingerprint review](validation/2026-08-21-tencent-edgeone-fingerprint-review.md).
 
+The 2026-08-30 Cloudflare review is complete. The catalog now has 1,112
+detections, 157 dated (14.1 percent), with zero stale dated rules. Detail:
+[2026-08-30 Cloudflare fingerprint review](validation/2026-08-30-cloudflare-fingerprint-review.md).
+
 Agent portability stays a maintainer track, not a product milestone. The frozen
 [representative-client contract](docs/agent-portability-evaluation-declaration.md)
 is green offline, the pinned v1.0.0 schema bytes still match the Published

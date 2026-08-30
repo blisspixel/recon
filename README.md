@@ -10,7 +10,8 @@ Point recon at a domain and get its **public** technology and identity
 footprint: email security, mail and identity providers, SaaS indicators, and
 certificate-transparency findings. No credentials, no API keys, no active
 scanning. Ships as a CLI, versioned JSON, and a local MCP server for agent
-tools. About ten seconds per domain.
+tools. Lookup time depends on public-provider latency and whether certificate
+transparency enrichment is enabled.
 
 > **Defensive use only.** Posture review, vendor diligence, architecture
 > review. See
@@ -52,8 +53,7 @@ Every lookup is live. recon ships no offline demo mode, so reserved names such
 as `example.com` return a panel of stray public residue from unrelated test
 configurations, including a meaningless display name, at High confidence. It
 shows you the shape of the output, not a result about any organization. Point
-recon at a domain you operate or are authorized to review to see a real
-footprint.
+recon at a domain you want to review to see a real footprint.
 
 A domain is a query coordinate, not proof of one organization or product: recon
 reports observations, not verdicts. That is the caution to keep beside every row
@@ -140,7 +140,8 @@ and unvalidated robustness claims outside the result.
 v2.15 and v2.16 closed a five-round presentation-drift class. Independent
 testers installed the published package, never read the source, and kept finding
 the same issue: a decision applied to one renderer and not the others. The
-engine is feature-complete. Those findings and their fixes are in
+current engine surface and core contracts are stable. Those findings and their
+fixes are in
 [CHANGELOG.md](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md) and in
 [ADR-0015](https://github.com/blisspixel/recon/blob/main/docs/adr/0015-role-split-vendor-claims-in-the-default-view.md)
 through
@@ -305,7 +306,8 @@ uv run python scripts/check.py
 `uv run python scripts/check.py` is the canonical local gate: lint, type
 checks, coverage-gated tests, generated-artifact and catalog checks, text and
 link hygiene, interface and claim checks, and size and complexity ratchets.
-Green locally means green in CI.
+It mirrors the blocking core CI gate; hosted scheduled and supply-chain
+workflows remain separate checks.
 
 Project hygiene: keep examples reserved and synthetic, keep validation artifacts
 aggregate-only, and avoid dead code or placeholders. See

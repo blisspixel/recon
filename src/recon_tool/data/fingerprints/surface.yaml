@@ -2739,14 +2739,16 @@ fingerprints:
   confidence: high
   detections:
   - type: cname_target
-    pattern: cloudflare.net
-    reference: https://developers.cloudflare.com/dns/zone-setups/full-setup/
+    pattern: cdn.cloudflare.net
+    reference: https://developers.cloudflare.com/dns/zone-setups/partial-setup/setup/
+    verified: 2026-08-30
     tier: infrastructure
     description: >-
-      Subdomain CNAMEs into cloudflare.net (Cloudflare's
-      edge-product endpoint domain). Indicates the domain
-      proxies through Cloudflare's edge for CDN, WAF, or
-      other Cloudflare services.
+      Subdomain CNAME terminating under Cloudflare's documented
+      `cdn.cloudflare.net` partial-zone target family. This observes a
+      hostname routed to Cloudflare's reverse proxy while authoritative
+      DNS remains elsewhere. It does not identify enabled CDN, WAF, or
+      security features, and it does not prove current traffic.
 
 - name: Cloudflare Pages
   slug: cloudflare-pages
@@ -2756,12 +2758,13 @@ fingerprints:
   - type: cname_target
     pattern: pages.dev
     reference: https://developers.cloudflare.com/pages/configuration/custom-domains/
+    verified: 2026-08-30
     tier: infrastructure
     description: >-
-      Subdomain CNAMEs into pages.dev (Cloudflare Pages
-      hosted-site endpoint). Indicates the domain delegates
-      a static-site or Jamstack deployment to Cloudflare
-      Pages.
+      Subdomain CNAME terminating under a Cloudflare Pages
+      `<project>.pages.dev` deployment hostname. Cloudflare's current
+      custom-domain guide names this exact target family. The record does
+      not prove that the deployment remains published or reachable.
 
 - name: Imperva (Incapsula)
   slug: imperva
