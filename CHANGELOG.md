@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.12] - 2026-08-30
+
 Audience-specific workflow composition now makes the existing public evidence
 easier to use without expanding recon's collection boundary. Admins can see
 which installation is actually running, defenders have a fixed validity-first
