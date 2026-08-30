@@ -14,7 +14,7 @@
 set -euo pipefail
 
 PACKAGE="recon-tool"
-VERSION="2.17.13"
+VERSION="2.18.0"
 SPEC="${PACKAGE}==${VERSION}"
 CLI="recon"
 
