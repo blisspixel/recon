@@ -54,6 +54,7 @@ _EXPECTED_COVERAGE_GROUPS = frozenset(
         "agent_guidance_sections",
         "insight_generators",
         "json_fields",
+        "mcp_prompts",
         "mcp_tools",
         "panel_producers",
         "recommendation_producers",
@@ -345,6 +346,25 @@ def _mcp_surfaces(tools: object) -> set[str]:
     return surfaces
 
 
+def _mcp_prompt_surfaces(prompts: object) -> set[str]:
+    if not isinstance(prompts, list):
+        raise ValueError("surface inventory has no MCP prompts array")
+    surfaces: set[str] = set()
+    for prompt in prompts:
+        if not isinstance(prompt, Mapping) or not isinstance(prompt.get("name"), str):
+            raise ValueError("surface inventory MCP prompt entries must have string names")
+        name = str(prompt["name"])
+        surfaces.add(name)
+        arguments = prompt.get("arguments")
+        if not isinstance(arguments, list):
+            raise ValueError(f"surface inventory MCP prompt {name} has no arguments array")
+        for argument in arguments:
+            if not isinstance(argument, Mapping) or not isinstance(argument.get("name"), str):
+                raise ValueError(f"surface inventory MCP prompt {name} has an invalid argument")
+            surfaces.add(f"{name}#{argument['name']}")
+    return surfaces
+
+
 def discover_surfaces(root: Path = ROOT) -> dict[str, frozenset[str]]:
     """Return every fail-closed surface set governed by the claim audit."""
     if root.resolve() != ROOT.resolve():
@@ -365,6 +385,7 @@ def discover_surfaces(root: Path = ROOT) -> dict[str, frozenset[str]]:
         "agent_guidance_sections": _agent_guidance_sections(surface_inventory),
         "insight_generators": _insight_generators(),
         "json_fields": frozenset(json_fields),
+        "mcp_prompts": frozenset(_mcp_prompt_surfaces(mcp.get("prompts"))),
         "mcp_tools": frozenset(_mcp_surfaces(mcp.get("tools"))),
         "panel_producers": _panel_producers(),
         "recommendation_producers": _recommendation_producers(),

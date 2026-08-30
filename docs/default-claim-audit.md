@@ -23,6 +23,7 @@ obligations.
 - every property occurrence in the stable JSON schema, including nested
   definitions;
 - every MCP tool and top-level structured-output property;
+- every MCP prompt and declared prompt argument;
 - generated agent-guidance sections, excluding fenced examples and front
   matter;
 - recommendation producers;
@@ -58,9 +59,9 @@ rejected.
 
 At the 2026-08-30 checkpoint, the inventory contains 28 families and covers 122
 agent-guidance sections, 16 insight generators, 261 JSON property occurrences,
-171 MCP tool and output surfaces, 31 panel producers, 4 recommendation
-producers, 91 quantitative or categorical score fields, and 8 MCP instruction
-sections. 28 families are complete. 0 material runtime families have
+171 MCP tool and output surfaces, 2 MCP prompt surfaces, 31 panel producers, 4
+recommendation producers, 91 quantitative or categorical score fields, and 8
+MCP instruction sections. 28 families are complete. 0 material runtime families have
 incomplete lineage. The additive cohort-summary schema is owned by a dedicated
 family whose exact producer path preserves attempted and observable
 denominators, emits no domain names, and treats the operator-supplied set as
@@ -112,8 +113,8 @@ Autodiscover and OIDC metadata subchannels. Current cache reads and writes also
 reject incomplete or inconsistent generated-insight lineage while preserving
 valid degraded results. Role-specific claims such as an MX gateway attach only
 the occurrences that established that role. The two static families now bind
-agent guidance and live MCP descriptions to exact process scope, network
-behavior, output forms, cache behavior, and evidentiary limits. Contract tests
+agent guidance, live MCP descriptions, and MCP prompts to exact process scope,
+network behavior, output forms, cache behavior, and evidentiary limits. Contract tests
 reject session-scoped ephemeral wording, stale SDK adoption state, unbounded
 payload-size promises, simplistic confidence formulas, and related-namespace
 ownership promotion. Rich panel and MCP text assembly now retain

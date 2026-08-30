@@ -139,14 +139,25 @@ accessibility decisions, and **v2.16.0 shipped renderer parity** (one shared
 briefing across the panel, `--plain`, `--md`, and the MCP text surface, MCP JSON
 fusion, and the gated surface-parity matrix).
 
-The stable engine now supports a bounded composition pass for its primary
-audiences. Admins need installation identity diagnostics when multiple launchers
-exist. Defenders need one evidence-first briefing that keeps collection validity
-and unresolved states beside review candidates. Consultants and analysts need
-the existing ecosystem and cohort views in one backward-compatible JSON bundle
-for an operator-supplied set. None of these changes expands collection, infers
-ownership, or creates a security rating. The fingerprint-freshness loop remains
-the durable detection stream and continues alongside this product polish.
+v2.17.12 shipped the stable engine's bounded composition pass for its primary
+audiences. Admins now have installation identity diagnostics when multiple
+launchers exist. Defenders have one evidence-first briefing that keeps
+collection validity and unresolved states beside review candidates. Consultants
+and analysts can carry the existing ecosystem and cohort views in one
+backward-compatible JSON bundle for an operator-supplied set. None of these
+changes expands collection, infers ownership, or creates a security rating.
+
+The next product contract boundary is a prospective **ReviewBundle v1**. It
+does not exist yet. Before any saved review artifact, divergence record, or
+client-ready renderer ships, a separate versioned contract must define a
+caller-owned deterministic evidence handoff for one namespace or an explicitly
+operator-supplied set. It must preserve generator and collection identity,
+ordered successes and typed errors, unavailable and unresolved states,
+evidence-linked review candidates, local-only retention, and the standing scope
+statement without changing the stable lookup, batch, or capsule contracts. It
+must not infer portfolio membership, rank security, schedule collection, or
+upload retained evidence. The fingerprint-freshness loop remains the durable
+detection stream and continues alongside this product polish.
 Agent portability is a separate maintainer track, not a version-path
 milestone: its representative task, client, measure, privacy, and stop-rule
 contract is frozen, its protected-main prerequisite and the candidate's
@@ -206,7 +217,7 @@ current debt without turning every refinement into feature work.
 | Debt class | Current state | Next boundary |
 |---|---|---|
 | Feature work | Governed by the dependency order below, not by the polish loop; the optional operator-hosted surface now has a named architecture and security gate | Do not add commands, schemas, provider claims, or inference modes without their existing evidence gate |
-| UX flow | Root help, no-argument onboarding, installation identity diagnostics, malformed-input recovery, all-source failure recovery, low-confidence next steps, evidence-first defender briefing, combined portfolio JSON, batch outcome guidance, cross-platform release verification, target-free catalog discovery, and explicit bounded-versus-complete cache inspection are implemented | Keep portfolio membership caller-supplied; require a separate contract before adding saved portfolio manifests, divergence records, or a client-ready renderer |
+| UX flow | Root help, no-argument onboarding, installation identity diagnostics, malformed-input recovery, all-source failure recovery, low-confidence next steps, evidence-first defender briefing, combined portfolio JSON, batch outcome guidance, cross-platform release verification, target-free catalog discovery, and explicit bounded-versus-complete cache inspection are implemented | Define the prospective ReviewBundle v1 as a separate caller-owned contract before adding saved review manifests, divergence records, or a client-ready renderer; keep portfolio membership caller-supplied |
 | Visual polish | Lookup and batch help use task panels; linear help and adaptive welcome rows keep commands complete; fingerprint previews, ranked signal results, and narrow cache rows keep hierarchy and field association without changing structured order | Preserve complete option visibility and exact technical-token copyability before changing presentation metadata |
 | Observability | MCP rejection logs and unexpected batch details stay bounded; live MCP diagnostics retain completed rows and name the failed protocol phase; cache overview names exact inspected, uninspected, failed, and temporary-artifact state; corpus tests separate collection errors from negative observations; captured gate logs are plain; remote readiness and release recovery name exact evidence and preconditions | Define a versioned doctor or cache record only after a machine consumer and compatibility envelope are named |
 | Reliability | Static and live MCP diagnostics require canonical tools and resources, with live JSON resource reads; typed batch errors, bounded workers, bounded corpus and default cache inspection, residue-aware cache clearing, closed-pipe handling, explicit degradation, exact exit codes, complete catalog inspection, sealed artifact reconstruction and parity, command-status-aware release recovery, fail-closed bounded dependency-audit retry, and all-nonzero SBOM audit gating are implemented | Do not change the current batch or corpus-test exit contract without a compatibility decision covering mixed and all-error streams |

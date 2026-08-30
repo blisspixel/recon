@@ -386,10 +386,19 @@ check source connectivity, then retry the lookup.
 
 ```bash
 recon batch domains.txt --json
+recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2
 recon batch domains.txt --ndjson
 cat domains.txt | recon batch - --json
 recon delta example.com
 ```
+
+The longer batch command emits one portfolio evidence bundle for the exact
+operator-supplied set. It preserves ordered success and error records, adds
+observable ecosystem hyperedges, and attaches the aggregate-only cohort summary
+under `cohort_summary`. Shared infrastructure and configuration are public
+observations, not proof of ownership, control, a corporate relationship, or
+relative security. Plain batch JSON and the streaming NDJSON path keep their
+existing shapes.
 
 Batch files contain one domain per line. Blank lines and lines beginning with
 `#` are ignored. Valid URL, sub-host, and apex spellings that normalize to the
