@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.13] - 2026-08-30
+
 The trust paths around defensive reporting, installation, and release
 readiness are now explicit and fail closed. Documentation also distinguishes
 released runtime installation from source-checkout integration scaffolds, and
