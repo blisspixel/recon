@@ -26,6 +26,8 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.18.0] - 2026-08-30
+
 NamespaceReviewBundle v1 adds a role-neutral, caller-owned handoff for one
 public namespace. A bundle is composed from exactly one fresh ordinary passive
 resolution, preserves collection opportunity and failure states, and links
