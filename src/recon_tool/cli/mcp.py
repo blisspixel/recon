@@ -232,5 +232,5 @@ def mcp_doctor_command() -> None:
         raise typer.Exit(EXIT_INTERNAL)
 
     console.print("  [green]All checks passed.[/green]")
-    console.print("  Verified: canonical tool registrations and five local JSON resource reads.")
+    console.print("  Verified: canonical tool registrations and six local JSON resource reads.")
     console.print("  [dim]Client config was not checked; run recon doctor --client=<name>.[/dim]")

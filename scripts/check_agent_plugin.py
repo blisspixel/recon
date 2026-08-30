@@ -293,8 +293,8 @@ def _validate_semantics(
 
     inventory = _load_json(surface_inventory, "surface inventory", limit=2 * 1024 * 1024)
     mcp_inventory = inventory.get("mcp")
-    if not isinstance(mcp_inventory, dict) or mcp_inventory.get("tool_count") != 22:
-        raise CandidateError("the generated runtime inventory must retain the complete 22-tool MCP surface")
+    if not isinstance(mcp_inventory, dict) or mcp_inventory.get("tool_count") != 23:
+        raise CandidateError("the generated runtime inventory must retain the complete 23-tool MCP surface")
 
     for skill_id in EXPECTED_SKILLS:
         _validate_skill(plugin_root / "skills" / skill_id / "SKILL.md", skill_id, version)
@@ -355,7 +355,7 @@ def main(argv: list[str] | None = None) -> int:
         return 2
     print(
         "PASS: schema-pinned Agent Plugins candidate "
-        f"version={version} skills={len(EXPECTED_SKILLS)} mcp_tools=22 contract={digest}"
+        f"version={version} skills={len(EXPECTED_SKILLS)} mcp_tools=23 contract={digest}"
     )
     return 0
 

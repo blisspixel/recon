@@ -80,11 +80,18 @@ def test_surface_inventory_has_expected_mcp_surface() -> None:
     assert mcp_inventory["tool_count"] == len(tools)
     assert mcp_inventory["resource_count"] == len(resources)
     assert mcp_inventory["prompt_count"] == len(prompts)
-    assert {"lookup_tenant", "assess_exposure", "get_posteriors", "inject_ephemeral_fingerprint"} <= set(tools)
+    assert {
+        "lookup_tenant",
+        "build_review_bundle",
+        "assess_exposure",
+        "get_posteriors",
+        "inject_ephemeral_fingerprint",
+    } <= set(tools)
     assert {
         "recon://fingerprints",
         "recon://signals",
         "recon://profiles",
+        "recon://review-bundle-schema",
         "recon://schema",
         "recon://surface-inventory",
     } <= set(resources)

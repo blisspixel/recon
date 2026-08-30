@@ -17,6 +17,7 @@ This is a derived maintainer and agent-author reference, not a stable runtime AP
 - [`recon fingerprints`](#recon-fingerprints)
 - [`recon lookup`](#recon-lookup)
 - [`recon mcp`](#recon-mcp)
+- [`recon review`](#recon-review)
 - [`recon signals`](#recon-signals)
 - [`recon update`](#recon-update)
 - [`recon cache clear`](#recon-cache-clear)
@@ -41,7 +42,7 @@ This is a derived maintainer and agent-author reference, not a stable runtime AP
 
 Kind: group
 Summary: Passive domain intelligence from public sources. Start with recon DOMAIN; run recon with no arguments for examples.
-Children: `batch`, `cache`, `capsule`, `delta`, `discover`, `doctor`, `fingerprints`, `lookup`, `mcp`, `signals`, `update`
+Children: `batch`, `cache`, `capsule`, `delta`, `discover`, `doctor`, `fingerprints`, `lookup`, `mcp`, `review`, `signals`, `update`
 
 | Name | Kind | Tokens | Required | Type | Default | Choices |
 |---|---|---|---|---|---|---|
@@ -185,6 +186,21 @@ Summary: MCP server commands: start the stdio server, install client config, run
 Children: `doctor`, `install`
 
 No parameters.
+
+<a id="recon-review"></a>
+## `recon review`
+
+Kind: command
+Summary: Collect once and compose a deterministic evidence-linked review.
+
+| Name | Kind | Tokens | Required | Type | Default | Choices |
+|---|---|---|---|---|---|---|
+| `domain` | argument | `domain` | yes | text |  |  |
+| `output` | option | `--output`, `-o` | no | path |  |  |
+| `no_ct` | option | `--no-ct` | no | boolean | false |  |
+| `timeout` | option | `--timeout`, `-t` | no | float | 120.0 |  |
+| `force` | option | `--force` | no | boolean | false |  |
+| `json_output` | option | `--json` | no | boolean | false |  |
 
 <a id="recon-signals"></a>
 ## `recon signals`

@@ -31,7 +31,7 @@ That handles **piece 1** of the setup (the MCP server). Per-client folders below
 
 | Agent | Folder | Repository content |
 |---|---|---|
-| **Agent Plugins candidate** | [`agent-plugin/`](agent-plugin/) | Complete 22-tool portable packaging candidate, generated from the native skills and validated offline against the byte-pinned Published v1.0.0 schemas. Representative-client compatibility remains unclaimed. |
+| **Agent Plugins candidate** | [`agent-plugin/`](agent-plugin/) | Complete current 23-tool portable packaging candidate, generated from the native skills and validated offline against the byte-pinned Published v1.0.0 schemas. The frozen v2.15 evaluation contract remains a historical 22-tool frame, and representative-client compatibility remains unclaimed. |
 | **Claude Code** | [`claude-code/`](claude-code/) | Source-checkout-only client plugin: MCP registration + skill + manifest. It is not a PyPI or GitHub Release asset. |
 | **Kiro** | [`kiro/`](kiro/) | MCP config + instructions for using the canonical SKILL.md as a Kiro skill. |
 | **Cursor** | [`cursor/`](cursor/) | MCP config + instructions for creating `.cursor/rules/recon.md` from `AGENTS.md`. |

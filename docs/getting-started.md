@@ -382,6 +382,32 @@ confidence instead of implying category grouping.
 If a lookup times out or every online source fails, run `recon doctor` to
 check source connectivity, then retry the lookup.
 
+## Namespace Review Bundles
+
+NamespaceReviewBundle v1 is the separate, caller-owned contract for a
+deterministic evidence handoff about one namespace. It composes exactly one
+fresh baseline that bypasses the lookup-result cache with evidence-linked
+review candidates and one role-neutral human rendering. Direct probes are fixed
+off; CT is the only optional collection lane. CT may use its documented cache,
+and the artifact records that outcome separately. Temporal facts do not become
+a universal fresh or stale verdict.
+
+```bash
+recon review example.com
+recon review example.com --json
+recon review example.com --output example-review.json
+recon review example.com --no-ct
+```
+
+The default view is deterministic Markdown. `--json` emits the validated v1
+artifact, while `--output` writes that JSON artifact locally and refuses to
+replace an existing file unless `--force` is supplied. Through MCP, call
+`build_review_bundle(domain, no_ct=false, timeout_seconds=120)` for the same
+structured artifact. The `domain_report` prompt uses that tool once and asks the
+client to render the standing section order without adding other analysis
+tools. Full contract, failure, privacy, and rendering semantics are in
+[review-bundles.md](review-bundles.md).
+
 ## Batch and Delta
 
 ```bash

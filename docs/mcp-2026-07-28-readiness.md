@@ -57,11 +57,11 @@ package index; all recon probes after installation were local and network-free.
 | 2.0.0b1 | pass | `server/discover` | AnyIO worker thread | Historical candidate checkpoint from 2026-07-13. |
 | 2.0.0 | pass | `server/discover` | AnyIO worker thread | Production line adopted 2026-07-31. All 24 compatibility checks pass. |
 
-The passing rows proved the same deterministic inventory of 22 tools, five
+The passing rows proved the same deterministic inventory of 23 tools, six
 resources, zero resource templates, and one `domain_report` prompt. The matrix
 validated 44 input and output schema documents as JSON Schema 2020-12 with no
 external output references, representative structured success and `ToolError`
-results, all five resource reads, catalog reload concurrency, real stdio
+results, all six resource reads, catalog reload concurrency, real stdio
 framing, `domain_report` prompt rendering, and the live doctor. Under v2, 14
 cacheable results carried valid
 `ttlMs`, `cacheScope`, and `resultType` metadata, and both tested tool results
@@ -145,7 +145,7 @@ against the real specification rather than against release notes. Recording it
 here so the next review starts from evidence instead of repeating the work.
 
 What held up. The stdio server ran clean on v2: `recon mcp doctor` reported
-protocol `2026-07-28`, all 22 tools and 5 resources registered in the same
+protocol `2026-07-28`, all 23 tools and 6 resources registered in the same
 deterministic order, and the compatibility gate passed every check on both
 1.28.1 and 2.0.0. Five wire-level probes were added to that gate so the modern
 requirements rest on recon's own evidence: dual-era `initialize` serving,

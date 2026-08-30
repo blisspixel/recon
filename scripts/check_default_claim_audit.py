@@ -90,6 +90,7 @@ _MATERIAL_FORMATTER_FUNCTIONS = frozenset(
         "format_comparison_dict",
         "format_explanations_list",
         "format_posture_observations",
+        "format_review_bundle_markdown",
     }
 )
 

@@ -60,15 +60,41 @@ def test_getting_started_promotes_the_bounded_portfolio_bundle() -> None:
     assert "not proof of ownership, control, a corporate relationship, or\nrelative security" in batch
 
 
-def test_roadmaps_close_the_audience_tranche_before_review_bundle() -> None:
+def test_roadmaps_close_the_audience_tranche_and_bound_namespace_review_bundle() -> None:
     short = (ROOT / "ROADMAP.md").read_text(encoding="utf-8")
     canonical = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
 
     for roadmap in (short, canonical):
+        normalized = " ".join(roadmap.split())
         assert "v2.17.12 shipped" in roadmap
-        assert "prospective **ReviewBundle v1**" in roadmap
-        assert "does not exist yet" in roadmap
-        assert "inferred portfolio membership" in roadmap or "infer portfolio membership" in roadmap
+        assert "**NamespaceReviewBundle v1**" in roadmap
+        assert "v2.18.0" in roadmap
+        assert "bypasses the lookup-result cache" in normalized
+        assert "future operator-supplied set" in normalized
+        assert "not a signature" in normalized
+
+
+def test_review_bundle_docs_are_role_neutral_and_name_exact_delivery_surface() -> None:
+    guide = (ROOT / "docs" / "review-bundles.md").read_text(encoding="utf-8")
+    defender = (ROOT / "docs" / "defender-workflow.md").read_text(encoding="utf-8")
+    getting_started = (ROOT / "docs" / "getting-started.md").read_text(encoding="utf-8")
+    adr = (ROOT / "docs" / "adr" / "0018-namespace-review-bundle-v1.md").read_text(encoding="utf-8")
+
+    for content in (guide, defender, getting_started):
+        assert "recon review" in content
+        assert "build_review_bundle" in content
+    for audience in ("defenders", "consultants", "analysts", "admins"):
+        assert audience in guide
+    for boundary in (
+        "lookup-result cache",
+        "Direct probes are fixed `false`",
+        "freshness_assessment` the explicit state `not_assigned`",
+        "not a digital signature",
+        "future set extension",
+    ):
+        assert boundary in guide
+    assert "v2.18.0" in adr
+    assert "single-namespace" in adr
 
 
 def test_getting_started_uses_the_same_first_run_trust_sequence() -> None:

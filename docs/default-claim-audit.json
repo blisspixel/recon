@@ -786,6 +786,42 @@
       ],
       "subject_scope": "public names connected by bounded CT, CNAME, Exchange/identity endpoint, autodiscover, DKIM tenant-domain, or SAN co-occurrence breadcrumbs"
     },
+    "runtime.review-bundle.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.review-bundle.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/collection_view.py#collection_observable_info",
+        "src/recon_tool/evidence_models.py#EvidenceRecord",
+        "src/recon_tool/models.py#SourceResult",
+        "src/recon_tool/review_bundle_schema.py#build_review_bundle_schema"
+      ],
+      "limits": [
+        "Complete collection applies only to the recorded public-metadata opportunities in one fresh bounded resolution.",
+        "The digest detects content modification but is not a signature, collector identity, or timestamp attestation.",
+        "Review candidates are evidence-linked prompts, not security findings, rankings, compliance results, or vulnerability verdicts."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/cli/review.py#review",
+        "src/recon_tool/formatter/review.py#format_review_bundle_markdown",
+        "src/recon_tool/review_bundle.py#build_review_bundle",
+        "src/recon_tool/review_bundle.py#build_review_error_bundle",
+        "src/recon_tool/server/review.py#build_review_bundle"
+      ],
+      "regression_tests": [
+        "tests/test_review_bundle.py",
+        "tests/test_review_bundle_formatter.py",
+        "tests/test_review_bundle_schema.py",
+        "tests/test_review_delivery.py"
+      ],
+      "renderer_obligations": [
+        "Render collection validity before observations, retain evidence and candidate identifiers, preserve unavailable and unresolved states, and close with the fixed scope statement.",
+        "Failed baselines expose no observations or review candidates, and no role-specific renderer may strengthen the shared artifact."
+      ],
+      "subject_scope": "one caller-supplied public namespace and one fresh bounded collection attempt"
+    },
     "runtime.service-label.v1": {
       "audit_status": "complete",
       "claim_id": "runtime.service-label.v1",
@@ -904,6 +940,7 @@
         "src/recon_tool/server/introspection.py",
         "src/recon_tool/server/lookup.py#lookup_tenant",
         "src/recon_tool/server/posture.py",
+        "src/recon_tool/server/review.py#build_review_bundle",
         "src/recon_tool/server/__init__.py#domain_report",
         "docs/mcp.md",
         "docs/surface-inventory.json"
@@ -1133,6 +1170,7 @@
     "mcp_tools": {
       "analyze_posture": "runtime.posture-observation.v1",
       "assess_exposure": "runtime.exposure-index.v1",
+      "build_review_bundle": "runtime.review-bundle.v1",
       "chain_lookup": "runtime.related-namespace.v1",
       "clear_ephemeral_fingerprints": "runtime.catalog-operation.v1",
       "cluster_verification_tokens": "runtime.cross-domain-overlap.v1",
@@ -1185,7 +1223,8 @@
       "src/recon_tool/formatter/panel.py#render_tenant_panel": "runtime.panel-assembly.v1",
       "src/recon_tool/formatter/panel.py#render_verbose_sources": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel.py#render_warning": "runtime.collection-status.v1",
-      "src/recon_tool/formatter/panel_status.py#render_low_confidence_guidance": "runtime.confidence-summary.v1"
+      "src/recon_tool/formatter/panel_status.py#render_low_confidence_guidance": "runtime.confidence-summary.v1",
+      "src/recon_tool/formatter/review.py#format_review_bundle_markdown": "runtime.review-bundle.v1"
     },
     "recommendation_producers": {
       "src/recon_tool/exposure_gaps.py#_gap": "runtime.hardening-guidance.v1",
@@ -1334,7 +1373,7 @@
     "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
     "surface_digests": {
       "json_fields": "4de20fa21a03e26768c3e844d94adcfdc1d451ba596b40664293f5705ee219d2",
-      "mcp_tools": "29484a9c137753627480d12ada64c9ca86e89ada7f5d94a90d5dd90d29aad273"
+      "mcp_tools": "c5606814d74e8f27a9885d094f0f80d4bb76df0fa467733eb42b496a0f241d1c"
     }
   },
   "purpose": "Fail-closed taxonomy for every material default panel, JSON, MCP, agent-guidance, recommendation, and score surface. Coverage entries name the claim family that owns each discovered surface; family records state the direct implementation and evidence path, renderer duties, tests, and known limits.",

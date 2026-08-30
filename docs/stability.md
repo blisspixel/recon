@@ -35,6 +35,7 @@ For the JSON output contract in full field-by-field detail, see
 | `recon fingerprints new <slug>` | Stable | v1.2+. Scaffolding wizard: slug / schema / specificity gates then emits YAML. |
 | `recon fingerprints test <slug>` | Stable | v1.2+. Validates, apex-normalizes, and deduplicates a bounded local UTF-8 corpus before live lookup, or uses the fictional format example. JSON rows retain `matched` and `detail` and add the tri-state `status`; human output separates lookup errors from clean misses. A valid invocation retains exit 0 even when lookups fail, so automation must inspect `status`. |
 | `recon signals list` / `search` / `show` | Stable | v1.1+. Ranked search rows carry explicit category and confidence fields; explicit empty category filters are validation errors. |
+| `recon review <domain>` | Stable (v2.18+) | One fresh, cache-bypassed NamespaceReviewBundle. Direct probes remain off; `--no-ct` is the only collection-lane switch. `--output` writes the separate caller-owned JSON contract and requires `--force` to replace a file. |
 | `recon capsule capture <domain>` | Stable (v2.13+) | Writes the separate caller-owned capsule contract. Existing files require explicit `--force`; collection follows the ordinary public-source boundary. |
 | `recon capsule replay <file>` | Stable (v2.13+) | Verifies and replays locally with no network requests. `--as-of` changes only the evaluation context. |
 | `recon capsule compare <before> <after>` | Stable (v2.13+) | Classifies observation, collection-regime, time-evaluation, and interpretation change; `--json` follows the capsule schema. |
@@ -92,7 +93,7 @@ and `error` without relying on color alone.
 
 ### MCP tools
 
-All 22 MCP tools are **stable**: names, existing parameter names, existing
+All 23 MCP tools are **stable**: names, existing parameter names, existing
 parameter types, and existing return fields will not be removed or change type
 or meaning between patch or minor releases. New optional parameters and new
 additive return fields may be added. The Bayesian-fusion tools
@@ -103,6 +104,7 @@ labels and graduate to stable in v2.0 per the disposition table in
 | Tool | Parameters |
 |---|---|
 | `lookup_tenant` | `domain`, `format` ("text"\|"json"\|"markdown", default "text"), `explain` (bool, default false) |
+| `build_review_bundle` | `domain`, `no_ct` (bool, default false), `timeout_seconds` (float, default 120.0) |
 | `analyze_posture` | `domain`, `explain` (bool, default false), `profile` (str, optional) |
 | `chain_lookup` | `domain`, `depth` (1-3, default 1), `result_limit` (int, default 0) |
 | `discover_fingerprint_candidates` | `domain`, `skip_ct` (bool, default False), `keep_intra_org` (bool, default False), `min_count` (int, default 1) |
@@ -175,6 +177,13 @@ Removing or renaming existing fields, changing their types or meanings, or
 changing capsule digest canonicalization requires a new capsule schema version
 and a compatibility path. This guarantee does not make a digest a signature or
 the internal normalized snapshot part of the stable lookup JSON.
+
+NamespaceReviewBundle artifacts use the separate
+[`review-bundle-schema.json`](review-bundle-schema.json) contract. Its
+`schema_version` is independent of the stable lookup and capsule schemas.
+ReviewBundle-owned objects are closed; additive owned fields require a new
+ReviewBundle schema version. The embedded lookup retains the stable v2
+contract and its additive policy.
 
 ### Config / data files
 

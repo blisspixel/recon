@@ -145,4 +145,10 @@ class TestSurfaceInventoryResource:
 
         assert mcp_payload["resource_count"] == len(mcp_payload["resources"])
         assert "recon://surface-inventory" in resource_uris
-        assert {"recon://fingerprints", "recon://signals", "recon://profiles", "recon://schema"} <= resource_uris
+        assert {
+            "recon://fingerprints",
+            "recon://signals",
+            "recon://profiles",
+            "recon://review-bundle-schema",
+            "recon://schema",
+        } <= resource_uris

@@ -107,7 +107,7 @@ def test_candidate_uses_one_explicit_complete_surface_stdio_server() -> None:
         },
     }
     inventory = _json(ROOT / "docs" / "surface-inventory.json")
-    assert inventory["mcp"]["tool_count"] == 22
+    assert inventory["mcp"]["tool_count"] == 23
 
 
 def test_unknown_plugin_field_fails_closed(tmp_path: Path) -> None:
@@ -248,7 +248,7 @@ def test_cli_reports_only_aggregate_package_state(capsys: pytest.CaptureFixture[
     captured = capsys.readouterr()
     assert captured.err == ""
     assert "PASS: schema-pinned Agent Plugins candidate" in captured.out
-    assert "skills=2 mcp_tools=22" in captured.out
+    assert "skills=2 mcp_tools=23" in captured.out
     assert ".invalid" not in captured.out
 
 

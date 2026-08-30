@@ -53,6 +53,13 @@ def test_schema_resource_is_registered() -> None:
     assert model_wire_dict(by_uri["recon://schema"]).get("mimeType") == "application/json"
 
 
+def test_review_bundle_schema_resource_is_registered() -> None:
+    resources = asyncio.run(mcp.list_resources())
+    by_uri = {str(resource.uri): resource for resource in resources}
+    assert "recon://review-bundle-schema" in by_uri
+    assert model_wire_dict(by_uri["recon://review-bundle-schema"]).get("mimeType") == "application/json"
+
+
 def test_bundled_surface_inventory_matches_docs() -> None:
     """The packaged copy is identical to the generated docs inventory."""
     assert _normalize(_PACKAGED_SURFACE_INVENTORY.read_text(encoding="utf-8")) == _normalize(

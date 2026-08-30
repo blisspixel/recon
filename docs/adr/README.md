@@ -37,3 +37,4 @@ deeper rationale for several lives in [correlation.md](../correlation.md),
 | [0015](0015-role-split-vendor-claims-in-the-default-view.md) | Split a mail vendor and a differing identity vendor into roled rows instead of one unroled Provider row |
 | [0016](0016-plain-emits-the-panel-record.md) | Make `--plain` the panel linearised, with the complete record behind `--plain --full` |
 | [0017](0017-one-briefing-in-every-shape.md) | Render one shared briefing on every human surface and gate it with a cross-surface parity matrix |
+| [0018](0018-namespace-review-bundle-v1.md) | Define one bounded, caller-owned single-namespace review artifact with explicit collection validity and lineage |

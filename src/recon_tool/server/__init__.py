@@ -28,6 +28,9 @@ from recon_tool.server import app as server_app
 from recon_tool.server import lookup as server_lookup
 
 # isort: split
+from recon_tool.server import review as server_review
+
+# isort: split
 from recon_tool.server import posture as server_posture
 
 # isort: split
@@ -86,6 +89,7 @@ _SERVER_INSTRUCTIONS = server_app.SERVER_INSTRUCTIONS
 
 # Tool-group re-export facades (registration via the imports above).
 lookup_tenant = server_lookup.lookup_tenant
+build_review_bundle = server_review.build_review_bundle
 analyze_posture = server_posture.analyze_posture
 assess_exposure = server_posture.assess_exposure
 find_hardening_gaps = server_posture.find_hardening_gaps
@@ -173,37 +177,41 @@ _log_structured = _server_runtime.log_structured
 def domain_report(domain: str) -> str:
     """Generate an evidence-backed defensive domain briefing.
 
-    The prompt composes one detailed lookup with a cache-first hardening-gap
-    derivation only when that lookup succeeds. It does not expand recon's
-    ordinary collection boundary.
+    The prompt uses one fresh NamespaceReviewBundle, which already composes its
+    explained baseline and evidence-linked review candidates. It does not
+    expand recon's ordinary collection boundary.
     """
     safe_domain = validate_domain(domain)
     return "\n".join(
         (
             f"Prepare an evidence-backed defensive public-metadata briefing for {safe_domain}.",
             "",
-            "Use this bounded cache-first recon tool sequence:",
-            f'1. Call lookup_tenant(domain="{safe_domain}", format="json", explain=true) once.',
-            f'2. If and only if that lookup succeeds, call find_hardening_gaps(domain="{safe_domain}") once. '
-            "Reuse the cached lookup result.",
-            "If the lookup fails, stop. Do not call find_hardening_gaps or any other tool, and do not infer "
-            "configuration observations or review candidates from the error. Report only the collection failure "
-            "and the scope boundary supported by that error.",
-            "Do not automatically call assess_exposure, simulate_hardening, chain_lookup, or any other tool.",
+            "Use this bounded one-call recon flow:",
+            f'1. Call build_review_bundle(domain="{safe_domain}") exactly once.',
+            "Use only the returned bundle. It already contains the explained baseline, source-opportunity states, "
+            "evidence ledger, and review candidates derived from the same fresh collection.",
+            "If the baseline stage is failed, do not infer configuration observations or review candidates from "
+            "the error. Report only the bounded collection failure and the returned scope statement.",
+            "Do not call lookup_tenant, find_hardening_gaps, assess_exposure, simulate_hardening, chain_lookup, "
+            "or any other tool as part of this report.",
             "Do not enable opt-in direct probes or recursively resolve related domains unless the user asks.",
             "",
             "Render these section headings in this exact order:",
             "## Collection validity",
-            "Report queried_domain, sources, partial, degraded_sources, and confidence from the returned lookup. "
-            "Name unavailable_controls from the gap report when present. Do not infer globally complete collection "
-            "from an empty degraded_sources list. Explain that confidence reflects evidence corroboration, not "
-            "severity.",
+            "Report the namespace scope, workflow state, bounded collection state, source opportunities, and "
+            "confidence from the returned bundle. Name unavailable controls when present. Do not infer globally "
+            "complete collection from complete_for_recorded_opportunities. Explain that confidence reflects evidence "
+            "corroboration, not severity.",
             "## Observed mail and identity configuration",
             "Report only role-scoped mail, tenant, authentication, and identity observations. Cite the "
             "supporting evidence type and retained value for every material statement.",
             "## Public connection indicators",
-            "Summarize connection_map lanes and related-host classes as public routing or configuration "
+            "Summarize connection-map lanes and related-host classes as public routing or configuration "
             "indicators. Do not infer ownership, active use, reachability, or a corporate relationship.",
+            "## Evidence and lineage",
+            "Keep the retained evidence ledger separate from mail and identity observations. Connect each "
+            "explained baseline item to its evidence_ids and lineage_status; do not treat an empty evidence-ID "
+            "list as positive support.",
             "## Review candidates grouped by observation_state",
             "Group every hardening prompt by observation_state. Preserve its generator_rule_id, severity, "
             "observation_scope, metadata_dependencies, evidence, and neutral Consider guidance.",

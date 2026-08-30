@@ -297,6 +297,22 @@ def _resource_schema() -> str:  # pyright: ignore[reportUnusedFunction]
 
 
 @mcp.resource(
+    "recon://review-bundle-schema",
+    name="Namespace ReviewBundle schema",
+    description=(
+        "The separate Draft 2020-12 JSON Schema for NamespaceReviewBundle v1, "
+        "byte-identical to docs/review-bundle-schema.json. Use it to validate "
+        "artifacts returned by build_review_bundle without an external fetch."
+    ),
+    mime_type="application/json",
+)
+def _resource_review_bundle_schema() -> str:  # pyright: ignore[reportUnusedFunction]
+    from recon_tool.review_bundle_schema import packaged_review_bundle_schema_text
+
+    return packaged_review_bundle_schema_text()
+
+
+@mcp.resource(
     "recon://surface-inventory",
     name="Generated surface inventory",
     description=(

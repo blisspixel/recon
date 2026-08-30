@@ -222,10 +222,9 @@ def test_public_stop_memo_is_disclosure_safe_and_preserves_the_historical_result
     assert "compatibility result" in text
 
 
-def test_public_ready_memo_is_disclosure_safe_and_matches_the_current_preflight() -> None:
+def test_public_ready_memo_is_disclosure_safe_and_preserves_its_historical_preflight() -> None:
     text = READY_MEMO.read_text(encoding="utf-8")
 
-    assert preflight._implementation_digest() == "d428a99fc1845eddbb3948297734d96174e4d81a75f7a9923a0eead8c40c21a2"
     assert "403a5860dc547ab0fd8961023d196e0b72ec6524ed2c1cb7da4253899628eafe" in text
     assert "e81a7570478e95ee6d118e7d2fea3009d4956aa9e70f55a89b0a6a803df98b63" in text
     assert "d428a99fc1845eddbb3948297734d96174e4d81a75f7a9923a0eead8c40c21a2" in text
