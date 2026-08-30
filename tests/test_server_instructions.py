@@ -21,18 +21,23 @@ class TestServerInstructions:
 
         instructions = mcp.instructions or ""
         assert "lookup_tenant" in instructions
+        assert "build_review_bundle" in instructions
         assert "analyze_posture" in instructions
         assert "find_hardening_gaps" in instructions
         assert "simulate_hardening" in instructions
 
-    def test_defensive_review_requests_json_before_explanations(self) -> None:
-        """The composition example must select the format that carries provenance."""
+    def test_defensive_review_uses_one_fresh_composed_bundle(self) -> None:
+        """The composition example must use the one-call ReviewBundle path."""
         from recon_tool.server import mcp
 
         instructions = mcp.instructions or ""
-        assert instructions.count('lookup_tenant(domain, format="json", explain=True)') >= 2
-        assert "lookup_tenant(domain, explain=True)" not in instructions
-        assert "Prefer `explain=True` on `lookup_tenant`" not in instructions
+        composition = " ".join(
+            instructions.split("## Composition patterns", 1)[1].split("For introspection", 1)[0].split()
+        )
+        assert composition.count("build_review_bundle(domain)") == 1
+        assert "one fresh ordinary passive resolution" in composition
+        assert "source-opportunity states" in composition
+        assert "find_hardening_gaps(domain)" not in composition
         assert "returns flat explanations for its observations, not an `explanation_dag`" in instructions
 
     def test_introspection_starts_with_a_bounded_fingerprint_page(self) -> None:

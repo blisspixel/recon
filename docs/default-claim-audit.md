@@ -57,11 +57,11 @@ rejected.
   runtime observations remain governed by separate claim families.
 - `audit_status: open` means the family still requires implementation or review.
 
-At the 2026-08-30 checkpoint, the inventory contains 28 families and covers 122
+At the 2026-08-30 checkpoint, the inventory contains 29 families and covers 122
 agent-guidance sections, 16 insight generators, 261 JSON property occurrences,
-171 MCP tool and output surfaces, 2 MCP prompt surfaces, 31 panel producers, 4
+185 MCP tool and output surfaces, 2 MCP prompt surfaces, 32 panel producers, 4
 recommendation producers, 91 quantitative or categorical score fields, and 8
-MCP instruction sections. 28 families are complete. 0 material runtime families have
+MCP instruction sections. 29 families are complete. 0 material runtime families have
 incomplete lineage. The additive cohort-summary schema is owned by a dedicated
 family whose exact producer path preserves attempted and observable
 denominators, emits no domain names, and treats the operator-supplied set as

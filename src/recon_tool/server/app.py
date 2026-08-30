@@ -73,6 +73,12 @@ probes.
   default text format returns a compact agent-readable summary. Use
   `format="json"` for a detailed serialized JSON TenantInfo and add
   `explain=True` for its provenance DAG.
+- `build_review_bundle(domain)` - one fresh, cache-bypassed, single-namespace
+  review artifact. It performs exactly one ordinary passive resolution with
+  direct probes disabled, then derives an explained baseline and evidence-
+  linked review candidates from that same result. CT can be disabled with
+  `no_ct=True`. Use this for a bounded single-artifact handoff or the
+  `domain_report` prompt.
 - `analyze_posture(domain)` - neutral configuration observations. Accepts a
   `profile` argument (fintech, healthcare, saas-b2b, high-value-target,
   public-sector, higher-ed) to apply a posture lens.
@@ -97,12 +103,11 @@ probes.
 
 ## Composition patterns
 
-The `domain_report` prompt uses a bounded defensive-review flow:
-1. `lookup_tenant(domain, format="json", explain=True)` - establish one
-   evidence-linked baseline.
-2. Only when that lookup succeeds, `find_hardening_gaps(domain)` derives
-   categorized review candidates from the cache-first baseline. A failed
-   lookup ends the flow without another tool call or inferred gaps.
+The `domain_report` prompt uses one bounded call to
+`build_review_bundle(domain)`. The bundle performs one fresh ordinary passive
+resolution and composes its explained baseline, source-opportunity states,
+evidence ledger, and review candidates from that same result. A failed baseline
+contains no inferred observations or candidates.
 
 Use `analyze_posture` only when the user requests a posture lens. Use
 `assess_exposure` only when the user explicitly requests the model-bound index,
@@ -139,7 +144,9 @@ For introspection / hypothesis work:
   process sees every injected fingerprint, so treat injection as changing
   server configuration and clear it when done. The server has a 120 s TTL
   cache and per-domain rate limiting; repeated `lookup_tenant` calls for the
-  same domain are cheap.
+  same domain are cheap. `build_review_bundle` deliberately bypasses the result
+  cache and records that choice in the artifact, while retaining the bounded
+  per-domain rate limit.
 - Output is hedged. `confidence` is a deterministic merged-output summary tier
   derived from source, same-claim corroboration, service breadth, conflict, and
   degradation rules. It is not confidence in every claim or a calibrated

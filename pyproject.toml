@@ -41,6 +41,10 @@ dependencies = [
     # exercised. See docs/mcp-2026-07-28-readiness.md.
     "mcp>=2.0.0,<3",
     "networkx>=3.0",
+    # Runtime validation applies the exact packaged Draft 2020-12 ReviewBundle
+    # contract after semantic integrity checks. Keep this direct even while MCP
+    # also pulls it transitively so the public loader never relies on SDK shape.
+    "jsonschema>=4.23,<5",
     # Public Suffix List for registrable-domain (apex) reduction, so a pasted
     # browser URL or sub-host (mail.example.co.uk) is analyzed at the apex
     # (example.co.uk) where recon's signal lives (MX, tenant, _dmarc, CT). Naive
@@ -114,10 +118,6 @@ agentic-validation = [
 ]
 dev = [
     "hypothesis>=6.0",
-    # Independent Draft 2020-12 validation for the published JSON contract.
-    # Keep this direct even while MCP also pulls it transitively: the schema
-    # gate is a first-class development requirement, not an SDK side effect.
-    "jsonschema>=4.23,<5",
     # The Markdown gate wraps v4 inline rules to retain exact source offsets.
     # Verify that integration before allowing a new parser major version.
     "markdown-it-py>=4.0,<5",
@@ -201,6 +201,7 @@ max-complexity = 15
 "tests/**/*.py" = ["E402", "S101"]  # allow assert in tests
 # Typer command signatures declaratively expose each independent CLI option.
 "src/recon_tool/cli/capsule.py" = ["PLR0913"]
+"src/recon_tool/cli/review.py" = ["PLR0913"]
 "validation/aggregate/make_synthetic_cohort.py" = ["S311"]  # seeded RNG for synthetic fixtures, not cryptographic
 "validation/layer_ablation.py" = ["S311"]  # seeded RNG for synthetic worlds / planted partitions, not cryptographic
 "tests/test_layer_ablation.py" = ["S311"]  # seeded RNG driving the synthetic fixtures under test

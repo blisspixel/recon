@@ -38,6 +38,7 @@ STRUCTURED_TOOLS = frozenset(
         "clear_ephemeral_fingerprints",
         "reevaluate_domain",
         "assess_exposure",
+        "build_review_bundle",
         "find_hardening_gaps",
         "compare_postures",
         "analyze_posture",

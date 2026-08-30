@@ -254,6 +254,7 @@
       "read_only_tools": [
         "analyze_posture",
         "assess_exposure",
+        "build_review_bundle",
         "chain_lookup",
         "cluster_verification_tokens",
         "compare_postures",
@@ -294,6 +295,7 @@
           "fingerprints",
           "lookup",
           "mcp",
+          "review",
           "signals",
           "update"
         ],
@@ -1034,6 +1036,86 @@
         ],
         "summary": "Check for and install the latest recon release.",
         "usage": "recon update"
+      },
+      {
+        "kind": "command",
+        "parameters": [
+          {
+            "kind": "argument",
+            "name": "domain",
+            "required": true,
+            "tokens": [
+              "domain"
+            ],
+            "type": "text"
+          },
+          {
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "output",
+            "required": false,
+            "tokens": [
+              "--output",
+              "-o"
+            ],
+            "type": "path"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "no_ct",
+            "required": false,
+            "tokens": [
+              "--no-ct"
+            ],
+            "type": "boolean"
+          },
+          {
+            "default": 120.0,
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "timeout",
+            "required": false,
+            "tokens": [
+              "--timeout",
+              "-t"
+            ],
+            "type": "float"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "force",
+            "required": false,
+            "tokens": [
+              "--force"
+            ],
+            "type": "boolean"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "json_output",
+            "required": false,
+            "tokens": [
+              "--json"
+            ],
+            "type": "boolean"
+          }
+        ],
+        "path": [
+          "review"
+        ],
+        "summary": "Collect once and compose a deterministic evidence-linked review.",
+        "usage": "recon review"
       },
       {
         "kind": "command",
@@ -2123,7 +2205,7 @@
         "summary": "Generate an evidence-backed defensive domain briefing."
       }
     ],
-    "resource_count": 5,
+    "resource_count": 6,
     "resources": [
       {
         "mime_type": "application/json",
@@ -2136,6 +2218,12 @@
         "name": "Posture profile catalog",
         "summary": "Built-in posture profile lenses as JSON. Each entry carries name, description, focus categories, category/signal boost multipliers, excluded signals, and any profile-specific note. Use to answer 'which posture lens fits this target?' before calling analyze_posture with a profile argument.",
         "uri": "recon://profiles"
+      },
+      {
+        "mime_type": "application/json",
+        "name": "Namespace ReviewBundle schema",
+        "summary": "The separate Draft 2020-12 JSON Schema for NamespaceReviewBundle v1, byte-identical to docs/review-bundle-schema.json. Use it to validate artifacts returned by build_review_bundle without an external fetch.",
+        "uri": "recon://review-bundle-schema"
       },
       {
         "mime_type": "application/json",
@@ -2156,7 +2244,7 @@
         "uri": "recon://surface-inventory"
       }
     ],
-    "tool_count": 22,
+    "tool_count": 23,
     "tools": [
       {
         "annotations": {
@@ -2254,6 +2342,76 @@
         },
         "structured_output": true,
         "summary": "Summarize a domain's public configuration evidence for defensive review."
+      },
+      {
+        "annotations": {
+          "destructiveHint": false,
+          "idempotentHint": true,
+          "openWorldHint": true,
+          "readOnlyHint": true
+        },
+        "input_parameters": [
+          {
+            "name": "domain",
+            "required": true,
+            "types": [
+              "string"
+            ]
+          },
+          {
+            "default": false,
+            "name": "no_ct",
+            "required": false,
+            "types": [
+              "boolean"
+            ]
+          },
+          {
+            "default": 120.0,
+            "name": "timeout_seconds",
+            "required": false,
+            "types": [
+              "number"
+            ]
+          }
+        ],
+        "name": "build_review_bundle",
+        "output_schema": {
+          "definition_count": 0,
+          "properties": [
+            "collection",
+            "content_digest",
+            "generated_at",
+            "generator",
+            "interpretation_context",
+            "limitations",
+            "record_type",
+            "result",
+            "schema_version",
+            "scope",
+            "scope_statement",
+            "source_opportunities",
+            "workflow"
+          ],
+          "required": [
+            "collection",
+            "content_digest",
+            "generated_at",
+            "generator",
+            "interpretation_context",
+            "limitations",
+            "record_type",
+            "result",
+            "schema_version",
+            "scope",
+            "scope_statement",
+            "source_opportunities",
+            "workflow"
+          ],
+          "type": "object"
+        },
+        "structured_output": true,
+        "summary": "Build one fresh, evidence-linked NamespaceReviewBundle artifact."
       },
       {
         "annotations": {

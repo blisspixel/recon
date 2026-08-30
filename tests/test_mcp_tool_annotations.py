@@ -121,6 +121,7 @@ def test_all_tool_annotations_match_reviewed_behavior() -> None:
     expected_names = {
         "analyze_posture",
         "assess_exposure",
+        "build_review_bundle",
         "chain_lookup",
         "clear_ephemeral_fingerprints",
         "cluster_verification_tokens",
@@ -158,6 +159,7 @@ def test_all_tool_annotations_match_reviewed_behavior() -> None:
     open_world = {
         "analyze_posture",
         "assess_exposure",
+        "build_review_bundle",
         "chain_lookup",
         "cluster_verification_tokens",
         "compare_postures",
@@ -196,6 +198,7 @@ def test_catalog_resource_examples_cover_resource_consumption_rules() -> None:
         "recon://fingerprints",
         "recon://signals",
         "recon://profiles",
+        "recon://review-bundle-schema",
         "recon://schema",
         "recon://surface-inventory",
     ):
@@ -230,7 +233,7 @@ def test_live_tool_descriptions_preserve_evidentiary_limits() -> None:
 
 
 def test_live_tool_descriptions_preserve_output_and_state_contracts() -> None:
-    descriptions = {name: description.lower() for name, description in _tool_descriptions().items()}
+    descriptions = {name: " ".join(description.lower().split()) for name, description in _tool_descriptions().items()}
 
     assert "compact text by default" in descriptions["lookup_tenant"]
     assert "json returns a detailed serialized record" in descriptions["lookup_tenant"]
@@ -242,6 +245,9 @@ def test_live_tool_descriptions_preserve_output_and_state_contracts() -> None:
     assert "list of observation objects by default" in descriptions["analyze_posture"]
     assert "envelope" in descriptions["analyze_posture"]
     assert "gap-report object" in descriptions["find_hardening_gaps"]
+    assert "fresh" in descriptions["build_review_bundle"]
+    assert "direct probes are always disabled" in descriptions["build_review_bundle"]
+    assert "not a security score" in descriptions["build_review_bundle"]
 
     assert "server process" in descriptions["inject_ephemeral_fingerprint"]
     assert "server process" in descriptions["list_ephemeral_fingerprints"]

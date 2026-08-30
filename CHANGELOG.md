@@ -26,6 +26,62 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+NamespaceReviewBundle v1 adds a role-neutral, caller-owned handoff for one
+public namespace. A bundle is composed from exactly one fresh ordinary passive
+resolution, preserves collection opportunity and failure states, and links
+review candidates to retained evidence without turning observations into a
+security verdict.
+
+### Tool Surface Changes
+
+Tool surface changes: adds `recon review <domain>` with `--json`, `--output`,
+`--force`, `--no-ct`, and `--timeout`; adds the structured MCP
+`build_review_bundle(domain, no_ct=false, timeout_seconds=120.0)` tool; and adds
+the local `recon://review-bundle-schema` MCP resource. The `domain_report`
+prompt now uses the new one-call bundle path. Existing lookup, batch, capsule,
+and stable v2 JSON fields are unchanged.
+
+### Added
+
+- **Fresh review artifacts.** The CLI and MCP tool bypass the lookup-result
+  cache, perform exactly one ordinary passive resolution, keep direct probes
+  disabled, and derive the explained lookup plus review candidates from the
+  same in-memory result. The core composer rejects cached lookup inputs and
+  contradictory cache or direct-probe attestations. CT remains optional and its
+  provider/cache provenance is recorded separately.
+- **Evidence-linked handoff.** Stable content-derived evidence and candidate
+  identifiers make every candidate reference inspectable. Source opportunities
+  distinguish observed values, observed emptiness, partial collection, and
+  unavailable collection.
+- **Typed failure state.** Failed baselines contain no inferred observations,
+  evidence, or review candidates. The workflow records a typed error and
+  explicit `not_observed` or `unavailable` collection validity instead.
+- **Separate contract.** A generated, self-contained Draft 2020-12 schema is
+  published at `docs/review-bundle-schema.json` and shipped byte-identically in
+  the wheel. ReviewBundle-owned objects are closed and the stable lookup v2
+  schema is embedded mechanically.
+- **Runtime contract parity.** Bundle construction and loading apply both the
+  semantic integrity checks and the exact packaged Draft 2020-12 schema, so a
+  malformed embedded lookup or explanation DAG cannot pass the public loader.
+- **Role-neutral rendering.** One deterministic Markdown projection leads with
+  collection validity, preserves evidence and candidate identifiers, groups
+  candidates by `observation_state`, names unresolved evidence, and ends with
+  the fixed scope statement for defenders, consultants, analysts, and admins.
+
+### Changed
+
+- The generated CLI and MCP inventories, agent guidance, MCP compatibility
+  contract, stability policy, claim audit, and doctor messaging now include the
+  ReviewBundle surfaces and six local JSON resources.
+- The fail-closed default-claim audit adds an exact ReviewBundle family covering
+  fresh composition, structured transport, and human rendering.
+
+### Tests
+
+- Added success, sparse, degraded, unavailable, timeout, deterministic digest,
+  evidence linkage, mutation rejection, schema interoperability, CLI, MCP,
+  formatter, packaging, and generated-artifact coverage.
+
 ## [2.17.13] - 2026-08-30
 
 The trust paths around defensive reporting, installation, and release

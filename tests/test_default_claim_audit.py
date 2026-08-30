@@ -104,6 +104,21 @@ def test_hardening_family_records_exact_generation_time_lineage() -> None:
     }
 
 
+def test_review_bundle_family_owns_fresh_composition_and_human_projection() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    family = inventory["claim_families"]["runtime.review-bundle.v1"]
+
+    assert family["audit_status"] == "complete"
+    assert family["lineage_status"] == "exact"
+    assert "src/recon_tool/review_bundle.py#build_review_bundle" in family["producer_paths"]
+    assert "src/recon_tool/server/review.py#build_review_bundle" in family["producer_paths"]
+    assert (
+        inventory["coverage"]["panel_producers"]["src/recon_tool/formatter/review.py#format_review_bundle_markdown"]
+        == "runtime.review-bundle.v1"
+    )
+    assert inventory["coverage"]["mcp_tools"]["build_review_bundle"] == "runtime.review-bundle.v1"
+
+
 def test_digest_report_is_deterministic_and_matches_the_contract(capsys: pytest.CaptureFixture[str]) -> None:
     inventory = load_claim_inventory(AUDIT_PATH)
 
@@ -229,6 +244,7 @@ def test_static_mcp_contract_references_every_description_module_and_behavior_ba
         "src/recon_tool/server/graph.py",
         "src/recon_tool/server/introspection.py",
         "src/recon_tool/server/lookup.py#lookup_tenant",
+        "src/recon_tool/server/review.py#build_review_bundle",
         "src/recon_tool/server/posture.py",
         "src/recon_tool/server/__init__.py#domain_report",
         "docs/mcp.md",
