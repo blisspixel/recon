@@ -149,8 +149,12 @@ def _happy_runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         return _cp(cmd)
     if cmd == ["git", "status", "--short", "--branch"]:
         return _cp(cmd, stdout="## main...origin/main\n")
-    if cmd == ["uv", "lock", "--check"]:
-        return _cp(cmd, stdout="Resolved 1 package\n")
+    uv_outputs = {
+        ("uv", "lock", "--check"): "Resolved 1 package\n",
+        ("uv", "--version"): "uv 0.11.17 (synthetic build)\n",
+    }
+    if tuple(cmd) in uv_outputs:
+        return _cp(cmd, stdout=uv_outputs[tuple(cmd)])
     if cmd == list(check_validation_hygiene.GIT_FILE_INVENTORY_ARGS):
         return _cp(cmd, stdout="README.md\0src/recon_tool/__init__.py\0")
     if cmd == ["git", "log", "-1", "--pretty=%B"]:
@@ -167,12 +171,41 @@ def test_collect_checks_passes_local_happy_path(tmp_path: Path) -> None:
     statuses = {check.name: check.status for check in checks}
     assert statuses["release tag binding"] == "skip"
     assert statuses["remote CI"] == "skip"
+    assert statuses["branch ruleset"] == "skip"
     assert statuses["Scorecard API"] == "skip"
     remote_skips = [check for check in checks if check.name in {"release tag binding", "remote CI", "Scorecard API"}]
     assert all("exact published current-version tag" in check.detail for check in remote_skips)
     assert statuses["coverage gates"] == "pass"
     assert statuses["commit hygiene"] == "pass"
     assert "Homebrew formula" not in statuses
+
+
+def test_uv_toolchain_requires_the_reproducible_release_pin() -> None:
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        assert cmd == ["uv", "--version"]
+        return _cp(cmd, stdout="uv 0.12.6 (synthetic build)\n")
+
+    check = release_readiness._check_uv_toolchain(runner)
+
+    assert check.status == "fail"
+    assert "0.12.6" in check.detail
+    assert "0.11.17" in check.detail
+    assert check.action == "run uv self update 0.11.17, then confirm uv --version"
+
+
+def test_uv_toolchain_rejects_malformed_version_output() -> None:
+    check = release_readiness._check_uv_toolchain(lambda cmd: _cp(cmd, stdout="unexpected\n"))
+
+    assert check.status == "fail"
+    assert "unrecognized" in check.detail
+
+
+def test_uv_lock_failure_retains_lock_specific_recovery() -> None:
+    check = release_readiness._check_uv_lock(lambda cmd: _cp(cmd, returncode=1, stderr="Lock file needs to be updated"))
+
+    assert check.status == "fail"
+    assert check.name == "uv.lock"
+    assert check.action == "run uv lock and commit uv.lock"
 
 
 def test_version_consistency_fails_on_mismatch(tmp_path: Path) -> None:
@@ -458,6 +491,87 @@ def test_remote_workflows_fail_when_pending_or_missing() -> None:
 
     assert "Secrets scan#2: in_progress" in problems
     assert "Scorecard supply-chain security: missing" in problems
+
+
+def _branch_ruleset_payload() -> dict[str, object]:
+    return {
+        "id": 42,
+        "name": "main required checks",
+        "target": "branch",
+        "enforcement": "active",
+        "conditions": {"ref_name": {"include": ["~DEFAULT_BRANCH"], "exclude": []}},
+        "rules": [
+            {"type": "deletion"},
+            {"type": "non_fast_forward"},
+            {"type": "required_linear_history"},
+            {
+                "type": "required_status_checks",
+                "parameters": {
+                    "strict_required_status_checks_policy": True,
+                    "required_status_checks": [
+                        {"context": "ci-gate"},
+                        {"context": "gitleaks"},
+                        {"context": "CodeQL Python analysis"},
+                    ],
+                },
+            },
+            {"type": "pull_request"},
+        ],
+        "bypass_actors": [{"actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always"}],
+    }
+
+
+def test_remote_branch_ruleset_requires_and_reports_the_live_contract() -> None:
+    payload = _branch_ruleset_payload()
+
+    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
+        if cmd == ["git", "remote", "get-url", "origin"]:
+            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
+        if cmd == ["gh", "api", "repos/blisspixel/recon/rulesets?per_page=100"]:
+            return _cp(
+                cmd,
+                stdout=json.dumps(
+                    [{"id": 42, "name": "main required checks", "target": "branch", "enforcement": "active"}]
+                ),
+            )
+        if cmd == ["gh", "api", "repos/blisspixel/recon/rulesets/42"]:
+            return _cp(cmd, stdout=json.dumps(payload))
+        raise AssertionError(f"unexpected command: {cmd}")
+
+    check = release_readiness._check_remote_branch_ruleset(runner)
+
+    assert check.status == "pass"
+    assert "strict" in check.detail
+    assert "ci-gate" in check.detail
+    assert "RepositoryRole#5(always)" in check.detail
+
+
+@pytest.mark.parametrize(
+    ("case", "expected"),
+    [
+        ("not_strict", "not strict"),
+        ("missing_check", "missing required check"),
+        ("missing_deletion", "missing rule type(s): deletion"),
+    ],
+)
+def test_ruleset_problem_reports_exact_protection_drift(case: str, expected: str) -> None:
+    payload = _branch_ruleset_payload()
+    rules = payload["rules"]
+    assert isinstance(rules, list)
+    status_rule = rules[3]
+    assert isinstance(status_rule, dict)
+    parameters = status_rule["parameters"]
+    assert isinstance(parameters, dict)
+    if case == "not_strict":
+        parameters["strict_required_status_checks_policy"] = False
+    elif case == "missing_check":
+        parameters["required_status_checks"] = [{"context": "ci-gate"}]
+    else:
+        rules.pop(0)
+
+    problems = release_readiness._ruleset_problems(payload)
+
+    assert expected in "; ".join(problems)
 
 
 def _scorecard_payload(sha: str, score: float = 8.3, **check_overrides: int) -> dict[str, object]:

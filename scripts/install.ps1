@@ -88,6 +88,84 @@ function Write-MissingToolHelp {
     exit 1
 }
 
+function Get-CliCandidates {
+    # Applications are the executable launchers PowerShell resolves through
+    # PATH. Deduplicate and cap diagnostics so an accidental PATH cannot flood
+    # installer output.
+    return @(
+        Get-Command $Cli -All -CommandType Application -ErrorAction SilentlyContinue |
+            ForEach-Object { $_.Source } |
+            Where-Object { $_ } |
+            Select-Object -Unique -First 20
+    )
+}
+
+function Write-CliDiagnostics($Resolved, $Candidates) {
+    if ($Resolved) {
+        Write-Host "Resolved launcher: $Resolved"
+    }
+    else {
+        Write-Host "Resolved launcher: (not found)"
+    }
+    Write-Host "Discovered candidates:"
+    if ($Candidates.Count -gt 0) {
+        foreach ($candidate in $Candidates) {
+            $bounded = if ($candidate.Length -gt 1024) { $candidate.Substring(0, 1024) } else { $candidate }
+            Write-Host "  $bounded"
+        }
+    }
+    else {
+        Write-Host "  (none)"
+    }
+}
+
+function Test-InstalledCli {
+    $candidates = @(Get-CliCandidates)
+    $resolved = if ($candidates.Count -gt 0) { $candidates[0] } else { $null }
+    $expected = "recon $Version"
+
+    if (-not $resolved) {
+        Write-Host "Error: $Spec was installed, but no '$Cli' launcher resolves on PATH." -ForegroundColor Red
+        Write-CliDiagnostics $resolved $candidates
+        return $false
+    }
+
+    $previousPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    $status = -1
+    try {
+        $outputLines = @(& $resolved --version 2>&1 | ForEach-Object { [string]$_ })
+        $status = $LASTEXITCODE
+    }
+    catch {
+        $outputLines = @([string]$_)
+    }
+    finally {
+        $ErrorActionPreference = $previousPreference
+    }
+    $output = $outputLines -join "`n"
+
+    if ($status -ne 0) {
+        Write-Host "Error: $Spec was installed, but '$resolved --version' exited $status." -ForegroundColor Red
+        Write-CliDiagnostics $resolved $candidates
+        return $false
+    }
+    if ($output -ceq $expected) {
+        Write-Host "==> Verified $resolved reports $expected." -ForegroundColor Green
+        return $true
+    }
+
+    $boundedOutput = if ($output.Length -gt 512) { $output.Substring(0, 512) } else { $output }
+    if ($output -match '^recon\s+\S+$') {
+        Write-Host "Error: $Spec was installed, but '$resolved --version' reported '$boundedOutput'; expected '$expected'." -ForegroundColor Red
+    }
+    else {
+        Write-Host "Error: $Spec was installed, but '$resolved --version' returned malformed output '$boundedOutput'; expected '$expected'." -ForegroundColor Red
+    }
+    Write-CliDiagnostics $resolved $candidates
+    return $false
+}
+
 Write-Host "==> recon installer (CLI: $Cli)" -ForegroundColor Cyan
 Write-Host ""
 
@@ -131,6 +209,10 @@ else {
     Write-MissingToolHelp
 }
 
+if (-not (Test-InstalledCli)) {
+    exit 1
+}
+
 Write-Host ""
 Write-Host "==> Done. $Spec installed with $Manager." -ForegroundColor Green
 Write-Host ""
@@ -143,8 +225,9 @@ Write-Host "Quick start:"
 Write-Host "  DNS infrastructure may observe lookup queries; the only default"
 Write-Host "  target-owned HTTP request is the MTA-STS policy fetch. Google CSE"
 Write-Host "  and BIMI direct probes run only with --direct-probes."
-Write-Host "  $Cli example.com"
-Write-Host "  $Cli example.com --json"
+Write-Host "  $Cli `"<domain-you-want-to-review>`""
+Write-Host "  $Cli `"<domain-you-want-to-review>`" --json"
+Write-Host "  Syntax-only reserved example (live stray residue): $Cli example.com"
 Write-Host ""
 Write-Host "Optional: enable tab-completion with  $Cli --install-completion"
 Write-Host ""

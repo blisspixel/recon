@@ -26,6 +26,57 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+The trust paths around defensive reporting, installation, and release
+readiness are now explicit and fail closed. Documentation also distinguishes
+released runtime installation from source-checkout integration scaffolds, and
+the roadmap now separates shipped audience workflows from the prospective
+ReviewBundle contract.
+
+### Tool Surface Changes
+
+Tool surface changes: no command, flag, JSON field, MCP tool, or MCP resource
+is added, removed, or renamed. The existing `domain_report` prompt now stops
+after a failed baseline lookup and requests only fields its bounded tool
+sequence can return. Installer scripts now require the first `recon` launcher
+on PATH to report the exact installed version before declaring success.
+
+### Fixed
+
+- **Defender report integrity.** `domain_report` calls hardening-gap analysis
+  only after a successful explained lookup, does not infer gaps from collection
+  failures, and no longer asks for freshness or source-opportunity fields that
+  are absent from its allowed outputs.
+- **Installation postconditions.** Both installers verify the resolved PATH
+  launcher, reject stale, malformed, or failing version output, and show
+  bounded candidate diagnostics without mutating competing installations.
+- **Launcher resilience.** `recon doctor` treats undecodable or malformed
+  launcher output as a diagnostic failure instead of crashing or accepting an
+  arbitrary version token.
+- **Distribution clarity.** The guides now state that PyPI provides the CLI and
+  MCP runtime while plugin and agent scaffolds remain source-checkout material.
+  The primary Claude Code path uses the released MCP installer.
+- **Portfolio discoverability.** The README and getting-started guide surface
+  the complete batch evidence bundle, and `--summary` help explains when the
+  combined ecosystem path retains ordered domain rows.
+
+### Changed
+
+- MCP prompt names, summaries, and arguments are now generated into the public
+  surface inventory and covered by the fail-closed default-claim audit.
+- Release readiness requires the repository's pinned uv version before checking
+  lock freshness and verifies the live default-branch ruleset, including exact
+  required checks, strictness, history protections, and reported bypass actors.
+- The roadmap records the v2.17.12 audience workflows as shipped and stages a
+  prospective ReviewBundle v1 behind unresolved freshness and schema contracts.
+- The sole over-cap module baseline now reflects the current 1,506-line panel
+  implementation, preserving prior decomposition progress in the ratchet.
+
+### Tests
+
+- Added mixed-success `BatchResult` JSON Schema validation, prompt failure-path
+  and governance coverage, hostile launcher-output cases, installer behavioral
+  postconditions, pinned-toolchain checks, and branch-ruleset drift cases.
+
 ## [2.17.12] - 2026-08-30
 
 Audience-specific workflow composition now makes the existing public evidence

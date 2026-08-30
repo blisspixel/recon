@@ -1,6 +1,6 @@
 # recon - Claude Code plugin
 
-This directory packages recon as a [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins): one install wires up the MCP server and ships a skill that teaches Claude *when* and *how* to use recon.
+This source-checkout directory packages recon as a [Claude Code plugin](https://docs.claude.com/en/docs/claude-code/plugins): a local development install wires up the MCP server and ships a skill that teaches Claude *when* and *how* to use recon. It is not currently published in a plugin marketplace or attached to recon's GitHub releases.
 
 This is Claude Code's client-specific plugin format. It is not the portable
 root `plugin.json` plus `mcp.json` layout defined by the
@@ -65,9 +65,11 @@ custom fields. Claude Code does not define `autoApprove` in this configuration,
 so the installer removes that legacy field and leaves permissions to Claude
 Code's permission rules.
 
-The plugin path below (2b) is still the recommended setup because it bundles the recon **skill** alongside the MCP server.
+The released setup above is recommended for ordinary use. The source-checkout
+plugin path below is for local development or evaluation when the accompanying
+recon **skill** is needed.
 
-### 2b. Install the Claude Code plugin
+### 2b. Load the source-checkout Claude Code plugin
 
 **Local development / testing.** Point Claude Code at this directory directly:
 
@@ -75,15 +77,9 @@ The plugin path below (2b) is still the recommended setup because it bundles the
 claude --plugin-dir ./agents/claude-code
 ```
 
-The plugin loads for that session without going through a marketplace.
-
-**Marketplace install.** Once recon is published to a Claude Code plugin marketplace, users install by name:
-
-```
-/plugin install recon@<marketplace-name>
-```
-
-A marketplace is itself just a repo containing a `.claude-plugin/marketplace.json` index that points at one or more plugins. The official marketplace is at [claude.com/plugins](https://claude.com/plugins); you can also publish your own. See the [plugin marketplaces docs](https://code.claude.com/docs/en/plugin-marketplaces.md) for the current schema and submission flow - both are still evolving.
+The plugin loads for that session without going through a marketplace. There
+is no supported marketplace install until recon publishes an actual marketplace
+entry or a versioned plugin artifact.
 
 ### 3. Try it
 

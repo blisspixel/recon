@@ -1,7 +1,10 @@
 # Agent integrations
 
-Per-agent install scaffolds for AI clients. Pick the folder that matches your
-agent and follow its README; the client folders reuse the canonical guidance in
+Source-checkout scaffolds for AI clients. PyPI installs the recon CLI and MCP
+runtime, not this repository directory. For a released MCP setup, start with
+`recon mcp install --client=<name>`. Use these folders only when you have a
+source checkout and want the accompanying guidance or development artifacts;
+the client folders reuse the canonical guidance in
 the repository-root [`AGENTS.md`](../AGENTS.md) rather than carrying stale
 copies.
 
@@ -26,10 +29,10 @@ That handles **piece 1** of the setup (the MCP server). Per-client folders below
 
 ## Folders
 
-| Agent | Folder | Pieces shipped |
+| Agent | Folder | Repository content |
 |---|---|---|
 | **Agent Plugins candidate** | [`agent-plugin/`](agent-plugin/) | Complete 22-tool portable packaging candidate, generated from the native skills and validated offline against the byte-pinned Published v1.0.0 schemas. Representative-client compatibility remains unclaimed. |
-| **Claude Code** | [`claude-code/`](claude-code/) | Client-specific Claude Code plugin: MCP registration + skill + manifest. One install wires everything up. |
+| **Claude Code** | [`claude-code/`](claude-code/) | Source-checkout-only client plugin: MCP registration + skill + manifest. It is not a PyPI or GitHub Release asset. |
 | **Kiro** | [`kiro/`](kiro/) | MCP config + instructions for using the canonical SKILL.md as a Kiro skill. |
 | **Cursor** | [`cursor/`](cursor/) | MCP config + instructions for creating `.cursor/rules/recon.md` from `AGENTS.md`. |
 | **Windsurf** | [`windsurf/`](windsurf/) | MCP config + instructions for creating a `.windsurfrules` reference. |

@@ -40,7 +40,7 @@ DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
 DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
 TemplateCreateStatus: TypeAlias = Literal["created", "exists", "non_file"]
 
-_LAUNCHER_VERSION_RE = re.compile(r"^recon\s+v?(?P<version>[^\s]+)$", re.IGNORECASE)
+_LAUNCHER_VERSION_RE = re.compile(r"^recon\s+v?(?P<version>\d+\.\d+\.\d+)$", re.IGNORECASE)
 _LAUNCHER_VERSION_TIMEOUT_SECONDS = 5.0
 
 
@@ -448,12 +448,22 @@ def _launcher_version(launcher: Path) -> tuple[str | None, str | None]:
             capture_output=True,
             check=False,
             shell=False,
-            text=True,
             timeout=_LAUNCHER_VERSION_TIMEOUT_SECONDS,
         )
     except (OSError, subprocess.TimeoutExpired) as exc:
         return None, _fmt_exc(exc)
-    output = "\n".join((completed.stdout, completed.stderr))[:2048]
+
+    # Capture bytes so a stale or hostile launcher cannot crash doctor merely
+    # by emitting output that is invalid under the host's default codec.
+    # Replacement decoding is sufficient here because only an exact ASCII
+    # version line is accepted below; undecodable bytes can never strengthen a
+    # match. Keep supporting text-valued CompletedProcess fixtures/embedders.
+    def _decode(value: bytes | str | None) -> str:
+        if isinstance(value, bytes):
+            return value.decode("utf-8", errors="replace")
+        return value or ""
+
+    output = "\n".join((_decode(completed.stdout), _decode(completed.stderr)))[:2048]
     if completed.returncode != 0:
         return None, f"version check exited {completed.returncode}"
     for line in output.splitlines():

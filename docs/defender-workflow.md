@@ -7,12 +7,14 @@ target mutation, or automatic recursive lookup.
 ## MCP workflow
 
 Use the `domain_report` prompt with the domain to review. The prompt directs the
-client to make exactly two cache-first tool calls:
+client to make one baseline call and, only when it succeeds, one cache-first
+derivation call:
 
 1. `lookup_tenant(domain, format="json", explain=true)` establishes the detailed
    evidence-linked baseline.
 2. `find_hardening_gaps(domain)` derives neutral review candidates from that
-   cached baseline.
+   cached baseline only after the lookup succeeds. A failed lookup ends the
+   flow without a second tool call or inferred gaps.
 
 The prompt does not automatically call `assess_exposure`,
 `simulate_hardening`, `chain_lookup`, or any opt-in direct probe. Request those
@@ -45,10 +47,11 @@ dependencies, or exact retained evidence.
 
 ### Collection validity
 
-Start with `queried_domain`, `resolved_at`, `cached_at`, `partial`,
-`degraded_sources`, source opportunity, and confidence. Confidence describes
-evidence corroboration, not severity. A cached result retains its original
-resolution time.
+Start with the returned `queried_domain`, `sources`, `partial`,
+`degraded_sources`, and confidence, then name `unavailable_controls` from the
+gap report when present. An empty `degraded_sources` list does not prove
+globally complete collection. Confidence describes evidence corroboration, not
+severity.
 
 ### Observed mail and identity configuration
 

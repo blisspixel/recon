@@ -659,12 +659,13 @@ def batch(
         False,
         "--summary",
         help=(
-            "Emit one aggregate-only cohort summary over the whole batch instead "
-            "of per-domain records: declarative public-claim rates, hideable "
-            "model support coverage, model-score mass, and provider / cloud "
-            "concentration. Stateless, ships no "
-            "baselines, names no domain. Add --json for machine output. For "
-            "caller-grouped analysis, see docs/aggregate-state.md."
+            "Emit one aggregate-only cohort summary over the whole batch: declarative "
+            "public-claim rates, hideable model support coverage, "
+            "model-score mass, and provider / cloud concentration. By default "
+            "this replaces per-domain records. With --json and "
+            "--include-ecosystem, retain the ordered records and ecosystem "
+            "hyperedges and attach the summary as cohort_summary. Stateless, "
+            "ships no baselines or domain names. See docs/aggregate-state.md for caller-grouped analysis."
         ),
         rich_help_panel=_ANALYSIS_HELP_PANEL,
     ),
