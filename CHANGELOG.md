@@ -26,7 +26,40 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.17.11] - 2026-08-30
+
+Cloudflare infrastructure fingerprinting now follows the provider's current
+DNS, partial-zone, Pages, and China Network documentation. Generic or
+unsupported match shapes no longer stand in for those exact public roles. The
+catalog now contains 1,112 detection rules, including 157 dated rules, with no
+currently stale dated rules.
+
+### Tool Surface Changes
+
+Tool surface changes: no command, flag, JSON field, MCP tool, or MCP resource
+is added, removed, or renamed. The Cloudflare catalog replaces one unsupported
+apex TXT value with an owner-qualified TXT rule, narrows two CNAME patterns,
+and adds two current China Network target families.
+
 ### Changed
+
+- **Cloudflare verification and edge precision.** The unsupported apex
+  `cloudflare-verify=` value is replaced by the documented
+  `cloudflare-verify.<domain>` owner. A generic CNAME string match and broad
+  `cloudflare.net` target narrow to the current `cdn.cloudflare.net` partial-
+  zone family. Exact Cloudflare standard and secondary nameserver roles and the
+  Pages role are dated. The current `cdn.cloudflareanycast.net` and
+  `cdn.cloudflarecn.net` China Network targets are added. `pacloudflare.com`
+  remains an undated legacy observation because current first-party guidance
+  does not name it.
+- **README claim precision.** Lookup timing is described as provider-dependent,
+  the public-metadata workflow no longer implies an authorization prerequisite,
+  and the local gate is distinguished from hosted scheduled and supply-chain
+  workflows.
+- **One blocking CI result.** A final `ci-gate` job now requires every job in
+  the main CI workflow, including both MCP compatibility rows and the optional
+  cloud artifact checks, to pass before it succeeds. This provides one stable
+  branch-rule context while preserving each diagnostic job.
 
 - **The `v2.6.7` tag and its GitHub release were removed on 2026-08-26.** That
   tag was the last reference holding the two pre-rewrite commits whose messages
@@ -37,6 +70,10 @@ operator, corporate group, ownership, or control.
   No other tag, release, or published artifact changed.
 
 ### Tests
+
+- Added exact metadata, owner-qualified TXT, current global and China Network
+  CNAME, Pages, sparse-value, legacy-rule, and deceptive-suffix coverage for
+  the reviewed Cloudflare rules.
 
 - **The provider-drift gate no longer goes red on a dropped identity request.**
   `user_realm.source_unavailable` is a transport outcome, so one rate-limited

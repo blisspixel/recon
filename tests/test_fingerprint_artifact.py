@@ -63,7 +63,7 @@ def test_generated_builtins_equal_canonical_yaml_exactly() -> None:
     generated = tuple(_load_builtin_artifact(_ARTIFACT))
 
     assert len(canonical) == 869
-    assert sum(len(fingerprint.detections) for fingerprint in canonical) == 1109
+    assert sum(len(fingerprint.detections) for fingerprint in canonical) == 1112
     assert generated == canonical
     assert load_builtin_fingerprints() == canonical
     repeated_slugs = [fingerprint.slug for fingerprint in generated]

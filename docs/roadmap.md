@@ -748,6 +748,9 @@ product milestone:
    relationship rather than traffic, feature, or configuration-state claims.
    Detail:
    [2026-08-21 Tencent EdgeOne fingerprint review](../validation/2026-08-21-tencent-edgeone-fingerprint-review.md).
+   The 2026-08-30 Cloudflare review is complete at 1,112 catalog detections,
+   157 dated, and zero stale dated rules. Detail:
+   [2026-08-30 Cloudflare fingerprint review](../validation/2026-08-30-cloudflare-fingerprint-review.md).
 5. Keep the completed stable-v1 characterization, structural-identifiability
    memo, v2.12 transition, and v2.13 capsule contracts blocking while this work
    proceeds. No catalog result reopens the voided fusion design or upgrades an
@@ -1059,7 +1062,7 @@ known-cluster unit, observation opportunities, CT and direct-probe settings,
 catalog and code digests, aggregate outputs, promotion and regression budgets,
 and disclosure review. A result may not retroactively change those choices.
 
-The catalog currently holds 869 entries across 692 unique slugs, with 1,109
+The catalog currently holds 869 entries across 692 unique slugs, with 1,112
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);
@@ -1416,7 +1419,7 @@ generated-artifact drift gates.
 
 ## Current External Basis
 
-Checked through 2026-08-20 UTC against primary sources and recent research:
+Checked through 2026-08-30 UTC against primary sources and recent research:
 
 - [Agent Plugins v1.0.0 Published specification](https://agent-plugins.org/specification)
 - [Agent Plugins compatible clients](https://agent-plugins.org/compatible-clients)
@@ -1439,6 +1442,10 @@ Checked through 2026-08-20 UTC against primary sources and recent research:
 - [Amazon SES custom MAIL FROM domain](https://docs.aws.amazon.com/ses/latest/dg/mail-from.html)
 - [Google Workspace SPF setup](https://support.google.com/a/answer/33786)
 - [Akamai Property Manager hostname mapping](https://techdocs.akamai.com/property-mgr/reference/modify-property-hostnames)
+- [Cloudflare DNS nameserver formats](https://developers.cloudflare.com/dns/nameservers/)
+- [Cloudflare partial-zone verification and CNAME targets](https://developers.cloudflare.com/dns/zone-setups/partial-setup/setup/)
+- [Cloudflare Pages custom-domain targets](https://developers.cloudflare.com/pages/configuration/custom-domains/)
+- [Cloudflare China Network DNS targets](https://developers.cloudflare.com/china-network/concepts/china-dns/)
 - [HubSpot email authentication](https://knowledge.hubspot.com/marketing-email/manage-email-authentication-in-hubspot)
 - [HubSpot Domains API guide](https://developers.hubspot.com/docs/api-reference/legacy/cms/domains/guide)
 - [Adobe Marketo Engage setup steps](https://experienceleague.adobe.com/en/docs/marketo/using/getting-started/initial-setup/setup-steps)

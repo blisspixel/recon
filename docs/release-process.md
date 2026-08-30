@@ -78,6 +78,13 @@ and v2.0.0 production pins, plus the complete canonical gate on the tagged tree,
 before a build can be sealed or published. A manually pushed tag cannot bypass
 the controls on `main`.
 
+The main CI workflow exposes one final `ci-gate` result that depends on every
+other job in that workflow. After the aggregate first succeeds on `main`, branch
+protection uses that stable result alongside the separate Gitleaks and CodeQL
+results. Individual main-CI jobs stay visible for diagnosis, while the
+aggregate prevents a new matrix row or job from being omitted from branch
+protection.
+
 During active edits, this is useful as a planning report:
 
 ```bash

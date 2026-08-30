@@ -312,15 +312,16 @@ fingerprints:
   confidence: high
   display_group: Infrastructure
   detections:
-  - type: txt
-    pattern: ^cloudflare-verify=
-    reference: https://developers.cloudflare.com/dns/
+  - type: subdomain_txt
+    pattern: cloudflare-verify:.
+    reference: https://developers.cloudflare.com/dns/zone-setups/partial-setup/setup/
+    verified: 2026-08-30
     description: >-
-      Cloudflare domain-verification TXT (`cloudflare-verify=`
-      prefix). Indicates the domain is verified to a
-      Cloudflare account, used for some Cloudflare products
-      (Cloudflare for Teams, Cloudflare Pages custom domains,
-      and so on).
+      Nonempty TXT value at `cloudflare-verify.<domain>`.
+      Cloudflare's current partial-zone setup uses this exact owner to
+      verify control before a CNAME setup can become active. The record
+      is a zone-binding observation; it does not identify the account
+      operator or prove that any hostname currently carries traffic.
   - type: txt
     pattern: ^cloudflare_dashboard_sso=
     reference: https://developers.cloudflare.com/fundamentals/manage-members/dashboard-sso/
@@ -330,23 +331,35 @@ fingerprints:
       The record shows that an SSO connector verification was
       requested; it does not prove the connector remains enabled.
   - type: ns
-    pattern: cloudflare.com
-    reference: https://developers.cloudflare.com/dns/zone-setups/full-setup/
+    pattern: ns.cloudflare.com
+    reference: https://developers.cloudflare.com/dns/nameservers/
+    verified: 2026-08-30
     description: >-
-      NS records terminate at Cloudflare nameservers. The
-      domain uses Cloudflare as authoritative DNS, a common
-      precondition for using Cloudflare's CDN, WAF, or DNS
-      products on the apex. Does not by itself prove the apex
-      sits behind Cloudflare's CDN; those are separate
-      products on the same vendor.
+      NS records terminate at Cloudflare's documented standard
+      `ns.cloudflare.com` nameserver family. This observes Cloudflare
+      authoritative DNS for the namespace. It does not prove that web
+      traffic is proxied, cached, or inspected by another Cloudflare
+      product.
+  - type: ns
+    pattern: secondary.cloudflare.com
+    reference: https://developers.cloudflare.com/dns/nameservers/
+    verified: 2026-08-30
+    description: >-
+      NS records terminate at Cloudflare's documented
+      `secondary.cloudflare.com` secondary-DNS nameserver family. This
+      observes Cloudflare secondary authoritative DNS for the namespace.
+      It does not prove that web traffic is proxied, cached, or inspected
+      by another Cloudflare product.
   - type: cname
-    pattern: cloudflare
-    reference: https://developers.cloudflare.com/dns/
+    pattern: cdn.cloudflare.net
+    reference: https://developers.cloudflare.com/dns/zone-setups/partial-setup/setup/
+    verified: 2026-08-30
     description: >-
-      CNAME containing the string `cloudflare`. Lower-
-      specificity fallback for Cloudflare-product CNAMEs
-      that do not match the more-specific patterns
-      elsewhere in the catalog.
+      Apex or `www` CNAME terminating under Cloudflare's documented
+      `cdn.cloudflare.net` partial-zone target family. This observes a
+      hostname routed to Cloudflare's reverse proxy while authoritative
+      DNS remains elsewhere. It does not identify enabled CDN, WAF, or
+      security features, and it does not prove current traffic.
 - name: Alibaba Cloud DNS
   slug: alibaba-dns
   parent_vendor: Alibaba
