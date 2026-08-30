@@ -6,7 +6,7 @@ that do not move. Shipped work lives in [CHANGELOG.md](CHANGELOG.md).
 
 ## Status
 
-recon **v2.17.11** is the current production baseline: CLI, versioned JSON,
+recon **v2.17.12** is the current production baseline: CLI, versioned JSON,
 local stdio MCP, bounded public-metadata collectors, fail-closed claim audit
 gates, MCP dual-SDK matrix, and a release path with provenance, SBOM, and
 channel parity. Local execution is the default, and the project does not operate
