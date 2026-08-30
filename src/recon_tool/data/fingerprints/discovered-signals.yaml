@@ -1777,10 +1777,36 @@ fingerprints:
   confidence: high
   detections:
   - type: cname_target
+    pattern: cdn.cloudflareanycast.net
+    reference: https://developers.cloudflare.com/china-network/concepts/china-dns/
+    verified: 2026-08-30
+    tier: infrastructure
+    description: >-
+      CNAME terminating under Cloudflare China Network's documented
+      `cdn.cloudflareanycast.net` global-default target family. This
+      observes a partial-zone route associated with the China Network
+      configuration. It does not prove current traffic or enabled
+      performance and security features.
+  - type: cname_target
+    pattern: cdn.cloudflarecn.net
+    reference: https://developers.cloudflare.com/china-network/concepts/china-dns/
+    verified: 2026-08-30
+    tier: infrastructure
+    description: >-
+      CNAME terminating under Cloudflare China Network's documented
+      `cdn.cloudflarecn.net` in-China target family. This observes a
+      partial-zone route associated with the China Network configuration.
+      It does not prove current traffic or enabled performance and security
+      features.
+  - type: cname_target
     pattern: pacloudflare.com
     description: >-
-      Cloudflare China partner CNAME target (`pacloudflare.com`).
-      Used by tenants on Cloudflare's China-network partnership.
+      Undated legacy Cloudflare-partner CNAME observation under
+      `pacloudflare.com`. Current Cloudflare China Network guidance names
+      `cdn.cloudflareanycast.net` and `cdn.cloudflarecn.net` instead. No
+      current first-party page reviewed in this pass names this exact host
+      family, so it does not establish current China Network configuration
+      or traffic.
 - name: Salesforce
   slug: salesforce
   category: CRM & Marketing

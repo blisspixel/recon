@@ -85,7 +85,7 @@ class TestNSDetection:
             {
                 "example.com/TXT": [],
                 "example.com/MX": [],
-                "example.com/NS": ["ns1.cloudflare.com", "ns2.cloudflare.com"],
+                "example.com/NS": ["adele.ns.cloudflare.com", "bob.ns.cloudflare.com"],
             }
         )
         result = await DNSSource().lookup("example.com")

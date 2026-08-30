@@ -73,6 +73,7 @@ docs/accuracy.md
 !/validation/2026-08-21-statuspage-fingerprint-review.md
 !/validation/2026-08-21-zendesk-fingerprint-review.md
 !/validation/2026-08-21-tencent-edgeone-fingerprint-review.md
+!/validation/2026-08-30-cloudflare-fingerprint-review.md
 # Generic catalog-round frame preparer; no target data is embedded.
 !/validation/prepare_catalog_round.py
 # Prior-sample drift contract and aggregate evaluator. Prior frames, retained

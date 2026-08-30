@@ -554,3 +554,41 @@ jobs:
           wheel="${wheels[0]}"
           uv tool run --isolated --from "$wheel" recon --version
           uv run --no-project --isolated --with "$wheel" python -m recon_tool --version
+
+  ci-gate:
+    if: always()
+    needs:
+      - workflow-lint
+      - lint
+      - optional-cloud-draft-artifacts
+      - typecheck
+      - mcp-compatibility
+      - test
+      - audit
+      - validate-fingerprints
+      - hostile-input-fuzz
+      - reproducible-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require every blocking CI job
+        shell: bash
+        env:
+          BLOCKING_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python - <<'PY'
+          import json
+          import os
+          import sys
+
+          results = json.loads(os.environ["BLOCKING_RESULTS"])
+          failed = sorted(
+              name
+              for name, detail in results.items()
+              if detail.get("result") != "success"
+          )
+          if failed:
+              print("Blocking CI jobs did not pass: " + ", ".join(failed))
+              sys.exit(1)
+          print(f"All {len(results)} blocking CI jobs passed.")
+          PY

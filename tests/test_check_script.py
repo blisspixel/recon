@@ -6,6 +6,7 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
 from scripts import check
 
@@ -156,6 +157,17 @@ def test_agent_plugin_candidate_is_wired_into_local_and_ci_gates() -> None:
     assert validated == [check._PY, "scripts/check_agent_plugin.py"]
     assert "run: uv run python scripts/generate_agent_plugin.py --check" in workflow
     assert "run: uv run python scripts/check_agent_plugin.py" in workflow
+
+
+def test_ci_gate_requires_every_other_main_workflow_job() -> None:
+    workflow = yaml.safe_load(_CI_WORKFLOW.read_text(encoding="utf-8"))
+    jobs = workflow["jobs"]
+    gate = jobs["ci-gate"]
+
+    assert set(gate["needs"]) == set(jobs) - {"ci-gate"}
+    assert gate["if"] == "always()"
+    assert gate["steps"][0]["env"]["BLOCKING_RESULTS"] == "${{ toJSON(needs) }}"
+    assert 'detail.get("result") != "success"' in gate["steps"][0]["run"]
 
 
 def test_reproducible_build_smokes_built_wheel_entry_points() -> None:
