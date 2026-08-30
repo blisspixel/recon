@@ -78,6 +78,14 @@ recon update --check
 
 `recon update` detects whether the package was installed with `uv`, `pipx`,
 `pip`, or an editable checkout and runs the matching upgrade command when it can.
+`recon update --check` reports separately when the installed version matches
+PyPI, is behind PyPI, or is newer than the latest published release. It never
+offers to replace a newer local or source build with an older PyPI release.
+
+`recon doctor` reports the running version, Python executable, package location,
+and detected installation method. It also warns when the first `recon` launcher
+on PATH reports a different version, which commonly means a stale global install
+is taking precedence over the intended environment.
 
 Direct package-manager commands also work:
 
@@ -171,8 +179,7 @@ Every lookup is live; recon ships no offline demo mode. Reserved names such as
 `example.com` return a real panel of stray public residue from unrelated test
 configurations, including a meaningless display name, at High confidence. It
 shows you the shape of the output, not a result about any organization. Point
-recon at a domain you operate or are authorized to review to see a real
-footprint.
+recon at a domain you want to review to see a real footprint.
 
 Use explicit synthetic identities under reserved namespaces in examples and
 docs. Public validation work with real apexes stays in gitignored local
@@ -445,6 +452,11 @@ PATH and restart the terminal. As a temporary fallback while PATH is fixed:
 ```bash
 python -m recon_tool --version
 ```
+
+If that version differs from `recon --version`, run `recon doctor` from the
+intended environment. Its `PATH recon launcher` row identifies the launcher
+taking precedence so you can activate the intended environment or reinstall
+that launcher with its package manager.
 
 ## Next Reads
 

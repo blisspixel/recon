@@ -24,6 +24,7 @@ from dataclasses import replace
 from pathlib import Path
 
 import pytest
+from jsonschema import Draft202012Validator
 
 from recon_tool.formatter import format_tenant_dict
 from recon_tool.models import BIMIIdentity, CandidateValue, MergeConflicts, TenantInfo
@@ -171,6 +172,39 @@ def test_include_ecosystem_always_emits_wrapper_on_all_failed_batch(capsys) -> N
     assert out["record_type"] == "batch_result"
     assert out["ecosystem_hyperedges"] == []
     assert out["domains"] == [error_record]
+    assert "cohort_summary" not in out
+
+
+def test_batch_result_can_embed_cohort_summary(capsys, schema: dict) -> None:
+    """The combined aggregate path adds a summary without changing domain rows."""
+    from recon_tool.cli import _batch_emit_json
+    from recon_tool.cohort_summary import build_summary_document
+
+    error_record = {
+        "domain": "bad",
+        "error": "invalid domain syntax",
+        "error_kind": "validation",
+        "record_type": "error",
+    }
+    summary = build_summary_document(
+        [],
+        attempted=1,
+        schema_version="2.2",
+        dmarc_contract_scoped=True,
+    )
+
+    _batch_emit_json(
+        [error_record],
+        {},
+        include_ecosystem=True,
+        cohort_summary=summary,
+    )
+    out = json.loads(capsys.readouterr().out)
+
+    assert out["domains"] == [error_record]
+    assert out["ecosystem_hyperedges"] == []
+    assert out["cohort_summary"] == summary
+    Draft202012Validator(schema).evolve(schema=schema["$defs"]["BatchResult"]).validate(out)
 
 
 def _cross_domain_info(
@@ -352,6 +386,9 @@ def test_schema_declares_batch_array_and_ndjson_defs(schema: dict) -> None:
     assert set(defs["BatchResult"]["required"]) == {"record_type", "domains", "ecosystem_hyperedges"}
     domain_item_refs = _oneof_refs(defs["BatchResult"]["properties"]["domains"]["items"])
     assert domain_item_refs == {"#", "#/$defs/BatchErrorRecord"}
+    assert defs["BatchResult"]["properties"]["cohort_summary"]["$ref"] == "#/$defs/CohortSummary"
+    assert "cohort_summary" not in defs["BatchResult"]["required"]
+    assert set(defs["CohortSummary"]["properties"]["schema_version"]["enum"]) == {"2.1", "2.2"}
 
 
 def test_root_schema_describes_single_domain_scope(schema: dict) -> None:

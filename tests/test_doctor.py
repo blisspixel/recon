@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import importlib
 from io import StringIO
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -16,7 +17,13 @@ from rich.console import Console
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
-from recon_tool.cli.doctor import _doctor_render, _render_mcp_checks
+from recon_tool.cli.doctor import (
+    _doctor_path_launcher_check,
+    _doctor_render,
+    _launcher_is_in_current_workspace,
+    _launcher_version,
+    _render_mcp_checks,
+)
 
 runner = CliRunner()
 
@@ -51,6 +58,16 @@ def patched_doctor_environment(fake_httpx_client):
         yield fake_httpx_client, fake_dns
 
 
+@pytest.fixture(autouse=True)
+def stable_doctor_path_launcher():
+    """Keep command tests independent of launchers installed on the test host."""
+    with patch(
+        "recon_tool.cli.doctor._doctor_path_launcher_check",
+        return_value=("PATH recon launcher", "ok", "test launcher matches running package"),
+    ):
+        yield
+
+
 class TestDoctorCommandHappyPath:
     """All checks pass — every probe returns 200, DNS resolves cleanly."""
 
@@ -72,6 +89,17 @@ class TestDoctorCommandHappyPath:
 
         result = runner.invoke(app, ["doctor"])
         assert sys.version.split()[0] in result.stdout
+
+    def test_doctor_shows_install_identity(self, patched_doctor_environment) -> None:
+        import sys
+
+        result = runner.invoke(app, ["doctor"])
+        rendered = " ".join(result.output.split())
+
+        assert str(Path(sys.executable).resolve()) in rendered
+        assert "Package" in rendered
+        assert "recon_tool" in rendered
+        assert "Install method" in rendered
 
     def test_doctor_prints_schema_stability_label(self, patched_doctor_environment) -> None:
         """The v2.0 quality bar wants the schema-stability indicator
@@ -227,7 +255,105 @@ class TestDoctorCommandFailures:
         assert "Some checks failed" not in result.output
 
 
+class TestDoctorPathLauncher:
+    def test_workspace_launcher_is_not_executed(self, tmp_path: Path) -> None:
+        workspace = tmp_path / "repo"
+        workspace.mkdir()
+        (workspace / ".git").mkdir()
+        launcher = (workspace / "recon").resolve()
+
+        with patch("pathlib.Path.cwd", return_value=workspace):
+            assert _launcher_is_in_current_workspace(launcher)
+
+        with (
+            patch("recon_tool.cli.doctor.shutil.which", return_value=str(launcher)),
+            patch("pathlib.Path.cwd", return_value=workspace),
+            patch("recon_tool.cli.doctor._launcher_version") as probe,
+        ):
+            _, status, detail = _doctor_path_launcher_check()
+
+        assert status == "warn"
+        assert "inside the current workspace" in detail
+        probe.assert_not_called()
+
+    def test_version_probe_uses_direct_absolute_launcher_without_a_shell(self, tmp_path: Path) -> None:
+        import subprocess
+
+        launcher = (tmp_path / "recon").resolve()
+        completed = subprocess.CompletedProcess(
+            args=[str(launcher), "--version"],
+            returncode=0,
+            stdout="recon 2.17.11\n",
+            stderr="",
+        )
+        with patch("recon_tool.cli.doctor.subprocess.run", return_value=completed) as run:
+            version, error = _launcher_version(launcher)
+
+        assert version == "2.17.11"
+        assert error is None
+        run.assert_called_once_with(
+            [str(launcher), "--version"],
+            capture_output=True,
+            check=False,
+            shell=False,
+            text=True,
+            timeout=5.0,
+        )
+
+    def test_matching_path_launcher_is_ok(self, tmp_path: Path) -> None:
+        launcher = tmp_path / "recon"
+        with (
+            patch("recon_tool.cli.doctor.shutil.which", return_value=str(launcher)),
+            patch("recon_tool.cli.doctor._launcher_version", return_value=("2.17.11", None)),
+            patch("recon_tool.updater.current_version", return_value="2.17.11"),
+        ):
+            name, status, detail = _doctor_path_launcher_check()
+
+        assert name == "PATH recon launcher"
+        assert status == "ok"
+        assert str(launcher) in detail
+        assert "2.17.11" in detail
+
+    def test_stale_path_launcher_warns_with_recovery(self, tmp_path: Path) -> None:
+        launcher = tmp_path / "recon"
+        with (
+            patch("recon_tool.cli.doctor.shutil.which", return_value=str(launcher)),
+            patch("recon_tool.cli.doctor._launcher_version", return_value=("2.6.3", None)),
+            patch("recon_tool.updater.current_version", return_value="2.17.11"),
+        ):
+            name, status, detail = _doctor_path_launcher_check()
+
+        assert name == "PATH recon launcher"
+        assert status == "warn"
+        assert str(launcher) in detail
+        assert "reports 2.6.3" in detail
+        assert "this process is 2.17.11" in detail
+        assert "activate the intended environment" in detail
+        assert "reinstall recon-tool" in detail
+        assert "recon doctor" in detail
+
+    def test_missing_path_launcher_keeps_module_invocation_available(self) -> None:
+        with patch("recon_tool.cli.doctor.shutil.which", return_value=None):
+            name, status, detail = _doctor_path_launcher_check()
+
+        assert name == "PATH recon launcher"
+        assert status == "ok"
+        assert "-m recon_tool" in detail
+
+
 class TestDoctorDiagnosticRendering:
+    def test_non_enrichment_warning_gets_a_generic_review_summary(self) -> None:
+        stream = StringIO()
+        console = Console(file=stream, force_terminal=False, color_system=None, width=120)
+
+        has_failures = _doctor_render(
+            console,
+            [("PATH recon launcher", "warn", "stale launcher")],
+        )
+
+        assert not has_failures
+        assert "Core checks passed. Review the warnings above." in stream.getvalue()
+
     def test_default_rows_escape_markup_strip_controls_and_bound_detail(self) -> None:
         stream = StringIO()
         console = Console(file=stream, force_terminal=False, color_system=None, width=120)

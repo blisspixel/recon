@@ -278,7 +278,7 @@ def _print_welcome_banner() -> None:
     console.print(
         "[dim]Every lookup is live. These examples use reserved example.com to show flag "
         "shapes. Reserved names return stray public residue at High confidence, not a "
-        "company result. Point recon at a domain you operate or are authorized to review.[/dim]"
+        "company result. Point recon at a domain you want to review.[/dim]"
     )
     console.print(
         "[dim]Pass a public-suffix domain (for example, example.com). Bare hostnames without a "
@@ -814,9 +814,9 @@ def update(
         render_error("Could not reach PyPI to check for updates. Try again, or upgrade manually.")
         raise typer.Exit(code=EXIT_ERROR)
 
-    if updater.compare_versions(current, latest) >= 0:
-        suffix = f" (latest on PyPI: {latest})" if current != latest else "."
-        console.print(f"[green]recon {current} is up to date{suffix}[/green]")
+    status_message = updater.non_upgrade_status_message(current, latest)
+    if status_message is not None:
+        console.print(status_message)
         return
 
     console.print(f"Update available: [bold]{current}[/bold] -> [bold]{latest}[/bold]")

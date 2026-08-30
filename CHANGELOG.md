@@ -26,6 +26,53 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+Audience-specific workflow composition now makes the existing public evidence
+easier to use without expanding recon's collection boundary. Admins can see
+which installation is actually running, defenders have a fixed validity-first
+briefing, and consultants can carry ordered domain records, ecosystem overlaps,
+and an aggregate cohort summary in one portfolio artifact.
+
+### Tool Surface Changes
+
+Tool surface changes: no command, flag, MCP tool, or MCP resource is added,
+removed, or renamed. The stable `BatchResult` JSON wrapper gains an optional
+`cohort_summary` field when `--summary` and `--include-ecosystem` are combined.
+The existing `domain_report` MCP prompt now composes one explained JSON lookup
+with cache-first hardening gaps. `recon doctor` adds installation identity and
+PATH launcher diagnostics.
+
+### Added
+
+- **Portfolio evidence bundle.** `recon batch domains.txt --json
+  --include-ecosystem --summary --summary-schema 2.2` retains ordered success
+  and error records plus ecosystem hyperedges, then adds the existing
+  aggregate-only cohort document. Plain batch JSON, ecosystem-only JSON, and
+  summary-only JSON keep their prior shapes.
+- **Evidence-first defender briefing.** The `domain_report` prompt now fixes the
+  order and boundaries for collection validity, observed mail and identity,
+  public connection indicators, state-grouped review candidates, unresolved or
+  unavailable evidence, and the standing scope statement. It does not
+  automatically score, simulate, recurse, or enable opt-in probes.
+
+### Changed
+
+- **Installation identity is visible.** `recon doctor` reports the running
+  version, Python executable, package location, detected installation method,
+  and the first PATH launcher. A version collision produces an actionable
+  warning. `recon update --check` now distinguishes an installed build that is
+  newer than PyPI instead of calling it up to date.
+- **First-run wording is consistent.** The CLI and getting-started guide now
+  invite review of a domain without implying an authorization prerequisite for
+  ordinary public-metadata collection. The README starts with real-domain,
+  single-domain, portfolio, and MCP paths while keeping reserved examples
+  clearly labeled as syntax or synthetic output.
+
+### Tests
+
+- Added focused update-state, installation collision, defender-prompt,
+  combined portfolio, all-failed portfolio, aggregate privacy, and JSON Schema
+  contract coverage.
+
 ## [2.17.11] - 2026-08-30
 
 Cloudflare infrastructure fingerprinting now follows the provider's current

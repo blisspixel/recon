@@ -258,3 +258,16 @@ def compare_versions(current: str, latest: str) -> int:
     if current_key == latest_key:
         return 0
     return -1 if current_key < latest_key else 1
+
+
+def non_upgrade_status_message(current: str, latest: str) -> str | None:
+    """Return styled equal/ahead status, or None when an upgrade is available."""
+    comparison = compare_versions(current, latest)
+    if comparison < 0:
+        return None
+    if comparison == 0:
+        return f"[green]recon {current} is up to date.[/green]"
+    return (
+        f"[cyan]Installed recon {current} is newer than the latest PyPI release ({latest}). "
+        "No upgrade is offered.[/cyan]"
+    )

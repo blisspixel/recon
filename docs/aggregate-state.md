@@ -348,6 +348,19 @@ denominators. The grouped reducer independently defaults to 2.1 and accepts
 outside core. Changing the default or removing 2.1 requires a deprecation window
 and package-major release.
 
+For a single machine-readable portfolio artifact, combine the summary with the
+existing ecosystem wrapper:
+
+```bash
+recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2
+```
+
+The result keeps the order-preserved `domains` records and
+`ecosystem_hyperedges`, then adds the same aggregate-only document under
+`cohort_summary`. The domain set is supplied by the operator. The wrapper does
+not establish ownership, control, a corporate relationship, or an overall
+security ranking.
+
 ## 12. References
 
 The methods above are standard; these are the canonical sources, one per choice:

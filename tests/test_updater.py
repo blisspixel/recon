@@ -284,6 +284,23 @@ class TestUpdateCommand:
         assert result.exit_code == 0
         assert "up to date" in result.output
 
+    def test_check_reports_installed_version_ahead_of_pypi(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.setattr(updater, "current_version", lambda: "2.17.11")
+        monkeypatch.setattr(updater, "fetch_latest_version", lambda: "2.17.10")
+        monkeypatch.setattr(
+            updater,
+            "detect_install_method",
+            lambda: pytest.fail("an ahead version must not enter the upgrade path"),
+        )
+
+        result = runner.invoke(app, ["update", "--check"])
+
+        rendered = " ".join(result.output.split())
+        assert result.exit_code == 0
+        assert "Installed recon 2.17.11 is newer than the latest PyPI release (2.17.10)" in rendered
+        assert "No upgrade is offered" in rendered
+        assert "up to date" not in rendered
+
     def test_check_reports_available_without_installing(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater, "fetch_latest_version", lambda: "999.0.0")
         monkeypatch.setattr(updater, "detect_install_method", lambda: updater.PIPX)

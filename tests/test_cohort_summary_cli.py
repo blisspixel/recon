@@ -11,9 +11,11 @@ import io
 import json
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 from typing import Any
 from unittest.mock import patch
 
+from jsonschema import Draft202012Validator
 from rich.console import Console
 
 from recon_tool.bayesian import load_network
@@ -34,6 +36,7 @@ from recon_tool.models import (
 )
 
 _NODES = {node.name: node for node in load_network().nodes}
+_SCHEMA = json.loads((Path(__file__).parents[1] / "docs" / "recon-schema.json").read_text(encoding="utf-8"))
 _OBSERVATION_SIGNAL = {
     "m365_tenant": "m365_tenant_observed",
     "google_workspace_tenant": "google_workspace_tenant_observed",
@@ -136,6 +139,7 @@ def test_summary_json_document() -> None:
     assert m365["model_evidence_n"] == 2
     assert m365["support_coverage"] == 0.6667
     assert m365["observed_rate"] is None
+    Draft202012Validator(_SCHEMA).evolve(schema=_SCHEMA["$defs"]["CohortSummary"]).validate(doc)
 
 
 def test_summary_panel_renders() -> None:
@@ -226,21 +230,18 @@ def test_batch_summary_freezes_one_evaluation_time_and_keeps_annotation_private(
     )
 
 
-def test_summary_rejects_include_ecosystem() -> None:
-    import pytest
-    import typer
-
+def test_summary_accepts_include_ecosystem_with_json() -> None:
     from recon_tool.cli import _batch_validate_flags
 
-    with pytest.raises(typer.Exit):
-        _batch_validate_flags(
-            json_output=True,
-            markdown=False,
-            csv_output=False,
-            ndjson=False,
-            include_ecosystem=True,
-            summary=True,
-        )
+    _batch_validate_flags(
+        json_output=True,
+        markdown=False,
+        csv_output=False,
+        ndjson=False,
+        include_ecosystem=True,
+        summary=True,
+        summary_schema="2.2",
+    )
 
 
 def test_summary_schema_validation() -> None:

@@ -69,8 +69,9 @@ subject coordinate and derive panel-only workload summaries only from
 collection-observable evidence. Service labels, posture observations,
 hardening guidance, and every weighted exposure-index component now retain
 exact generation-time basis. Comparisons carry both namespace ledgers, and
-simulations distinguish hypothetical from live component values. All 27
-default-claim families are complete. The static agent and MCP reviews now pin
+simulations distinguish hypothetical from live component values. All 28
+default-claim families, including the aggregate cohort-summary contract, are
+complete. The static agent and MCP reviews now pin
 process scope, collection boundaries, output forms, and abstention semantics.
 
 ### Scope
