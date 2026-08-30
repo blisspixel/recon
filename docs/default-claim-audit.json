@@ -85,6 +85,34 @@
       ],
       "subject_scope": "local recon process and operator-owned catalog state"
     },
+    "runtime.cohort-summary.v1": {
+      "audit_status": "complete",
+      "claim_id": "runtime.cohort-summary.v1",
+      "classification": "documented_derivation",
+      "evidence_path": [
+        "src/recon_tool/cohort_summary.py#build_summary_document",
+        "src/recon_tool/collection_view.py#collection_observable_info"
+      ],
+      "limits": [
+        "The cohort is supplied by the operator and is not an industry baseline or representative population.",
+        "Aggregate rates and model summaries do not establish security maturity, ownership, or a business relationship."
+      ],
+      "lineage_status": "exact",
+      "material": true,
+      "producer_paths": [
+        "src/recon_tool/cohort_summary.py",
+        "src/recon_tool/cli/batch_summary.py#build_batch_summary_document"
+      ],
+      "regression_tests": [
+        "tests/test_aggregate_state_reducer.py",
+        "tests/test_batch_ndjson_schema.py",
+        "tests/test_cohort_summary_cli.py"
+      ],
+      "renderer_obligations": [
+        "Name exact attempted and observable denominators, keep unavailable or unresolved units out of declarative rates, and emit no domain names."
+      ],
+      "subject_scope": "aggregate observations within one operator-supplied set of public namespace coordinates"
+    },
     "runtime.collection-status.v1": {
       "audit_status": "complete",
       "claim_id": "runtime.collection-status.v1",
@@ -1160,6 +1188,13 @@
     },
     "score_fields": {
       "docs/recon-schema.json#/$defs/ChainMotif/properties/confidence": "runtime.related-namespace.v1",
+      "docs/recon-schema.json#/$defs/CohortSummary/properties/posterior_claims": "runtime.cohort-summary.v1",
+      "docs/recon-schema.json#/$defs/CohortSummaryMix/properties/normalized_entropy": "runtime.cohort-summary.v1",
+      "docs/recon-schema.json#/$defs/CohortSummaryPosteriorClaim/properties/high_confidence_share": "runtime.cohort-summary.v1",
+      "docs/recon-schema.json#/$defs/CohortSummaryPosteriorClaim/properties/high_score_share": "runtime.cohort-summary.v1",
+      "docs/recon-schema.json#/$defs/CohortSummaryPosteriorClaim/properties/mean_interval_width": "runtime.cohort-summary.v1",
+      "docs/recon-schema.json#/$defs/CohortSummaryPosteriorClaim/properties/mean_model_score": "runtime.cohort-summary.v1",
+      "docs/recon-schema.json#/$defs/CohortSummaryPrevalenceMetric/properties/observed_rate_interval_80": "runtime.cohort-summary.v1",
       "docs/recon-schema.json#/$defs/DeltaReport/properties/changed_confidence": "runtime.confidence-summary.v1",
       "docs/recon-schema.json#/$defs/DeltaReport/properties/changed_email_security_score": "runtime.email-control-observation.v1",
       "docs/recon-schema.json#/$defs/EvidenceConflict/properties/candidates/items/properties/confidence": "runtime.collection-status.v1",
@@ -1263,6 +1298,10 @@
       "CertBurst": "runtime.ct-observation.v1",
       "CertSummary": "runtime.ct-observation.v1",
       "ChainMotif": "runtime.related-namespace.v1",
+      "CohortSummary": "runtime.cohort-summary.v1",
+      "CohortSummaryMix": "runtime.cohort-summary.v1",
+      "CohortSummaryPosteriorClaim": "runtime.cohort-summary.v1",
+      "CohortSummaryPrevalenceMetric": "runtime.cohort-summary.v1",
       "ConnectionEntry": "runtime.catalog-indicator.v1",
       "ConnectionLane": "runtime.catalog-indicator.v1",
       "ConnectionMap": "runtime.catalog-indicator.v1",
@@ -1287,7 +1326,7 @@
     ],
     "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
     "surface_digests": {
-      "json_fields": "c4482963dea3b2a148918d2a9f84c3962faa2841c087256430d1c3c453319f4a",
+      "json_fields": "4de20fa21a03e26768c3e844d94adcfdc1d451ba596b40664293f5705ee219d2",
       "mcp_tools": "29484a9c137753627480d12ada64c9ca86e89ada7f5d94a90d5dd90d29aad273"
     }
   },

@@ -21,7 +21,7 @@ def test_readme_separates_offline_install_check_from_online_diagnostics() -> Non
 def test_network_visibility_is_disclosed_before_readme_first_lookup() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
     quick_start = readme.split("## Quick Start", 1)[1].split("## What recon Is Good For", 1)[0]
-    lookup_anchor = "recon example.com"
+    lookup_anchor = 'recon "<domain-you-want-to-review>"'
 
     assert lookup_anchor in quick_start
     before_lookup = quick_start.split(lookup_anchor, 1)[0]
@@ -32,6 +32,21 @@ def test_network_visibility_is_disclosed_before_readme_first_lookup() -> None:
     assert "Google CSE" in before_lookup
     assert "BIMI" in before_lookup
     assert "--direct-probes" in before_lookup
+
+
+def test_readme_routes_primary_audiences_before_the_feature_catalog() -> None:
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    workflow = readme.split("## Start with Your Workflow", 1)[1].split("## What recon Is Good For", 1)[0]
+
+    for audience_path in (
+        "Review one namespace",
+        "Explain or hand off a finding",
+        "Review an operator-supplied set",
+        "Work through an agent",
+        "evidence-first review workflow",
+    ):
+        assert audience_path in workflow
+    assert "does not\ninfer ownership, control, or a corporate relationship" in workflow
 
 
 def test_getting_started_uses_the_same_first_run_trust_sequence() -> None:
@@ -48,6 +63,16 @@ def test_getting_started_uses_the_same_first_run_trust_sequence() -> None:
     assert "Google CSE" in first_lookup
     assert "BIMI" in first_lookup
     assert "--direct-probes" in first_lookup
+
+
+def test_first_run_copy_does_not_imply_an_authorization_prerequisite() -> None:
+    for path in (
+        ROOT / "README.md",
+        ROOT / "docs" / "getting-started.md",
+        ROOT / "src" / "recon_tool" / "cli" / "__init__.py",
+    ):
+        content = " ".join(path.read_text(encoding="utf-8").split()).lower()
+        assert "operate or are authorized to review" not in content
 
 
 def test_canonical_onboarding_exposes_plain_accessible_output() -> None:

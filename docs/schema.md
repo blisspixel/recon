@@ -25,6 +25,7 @@ without guessing.
 | `recon <domain> --json` | a single object | the top-level object below (success), or exit code 2/3 with no JSON on validation/no-data failures |
 | `recon batch <file> --json` | a bare JSON array, one element per order-preserved deduplicated key | each element is either a success object (the top-level object below) or a `BatchErrorRecord`; valid URL, sub-host, and apex variants that normalize to one canonical apex share one key |
 | `recon batch <file> --json --include-ecosystem` | a `BatchResult` wrapper object `{domains, ecosystem_hyperedges}` | `domains` elements are success objects or `BatchErrorRecord`; the wrapper remains present even when no domain resolves |
+| `recon batch <file> --json --include-ecosystem --summary --summary-schema 2.2` | the same `BatchResult` wrapper with additive `cohort_summary` | ordered domain records and ecosystem hyperedges remain present; `cohort_summary` is aggregate-only and names no domain |
 | `recon batch <file> --ndjson` | one JSON object per line (newline-delimited) | each line is a success object or a `BatchErrorRecord` |
 | `recon delta <domain> --json` / `recon <domain> --compare <file> --json` | a single `DeltaReport` object | n/a |
 | `recon capsule capture <domain> --json` | a write-receipt object; the full capsule is written to the caller-owned file | the capsule file uses its separate schema below |
@@ -35,8 +36,8 @@ without guessing.
 The machine-readable form of each shape lives in
 [`recon-schema.json`](recon-schema.json): the document root is the
 single-domain success object; `$defs/BatchArray`, `$defs/BatchResult`,
-`$defs/BatchNdjsonRecord`, `$defs/BatchErrorRecord`, and `$defs/DeltaReport`
-cover the rest.
+`$defs/CohortSummary`, `$defs/BatchNdjsonRecord`, `$defs/BatchErrorRecord`, and
+`$defs/DeltaReport` cover the rest.
 
 Observation capsules are intentionally outside `recon-schema.json`, so adding
 them does not widen the stable v2 lookup object. Capsule files, offline replay
@@ -58,7 +59,10 @@ require the deprecation window and package-major release in
 [`stability.md`](stability.md). Neither version reports per-domain records, and
 the two transient 2.2 projections are never emitted. Shape and small-cell policy are documented in
 [`aggregate-state.md`](aggregate-state.md). It is not part of the v2.0
-single-domain contract and is not yet mirrored in `recon-schema.json`.
+single-domain contract. Its 2.1 and 2.2 shapes are mirrored under
+`$defs/CohortSummary` in `recon-schema.json`; the optional
+`BatchResult.cohort_summary` field embeds the same selected contract when
+`--summary` and `--include-ecosystem` are combined.
 
 ### `BatchErrorRecord` (batch / NDJSON only)
 

@@ -346,6 +346,10 @@ class TestDoctor:
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_http_cls.return_value = mock_client
 
-        result = runner.invoke(app, ["doctor"])
+        with patch(
+            "recon_tool.cli.doctor._doctor_path_launcher_check",
+            return_value=("PATH recon launcher", "ok", "test launcher matches running package"),
+        ):
+            result = runner.invoke(app, ["doctor"])
         assert result.exit_code == 0
         assert "All checks passed" in result.output
