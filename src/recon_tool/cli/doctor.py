@@ -11,6 +11,9 @@ from __future__ import annotations
 import asyncio
 import json
 import os
+import re
+import shutil
+import subprocess
 import sys
 import tempfile
 from pathlib import Path
@@ -36,6 +39,9 @@ DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
 
 DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
 TemplateCreateStatus: TypeAlias = Literal["created", "exists", "non_file"]
+
+_LAUNCHER_VERSION_RE = re.compile(r"^recon\s+v?(?P<version>[^\s]+)$", re.IGNORECASE)
+_LAUNCHER_VERSION_TIMEOUT_SECONDS = 5.0
 
 
 def _classify_template_collision(target: Path) -> TemplateCreateStatus | None:
@@ -390,19 +396,116 @@ def doctor_fix() -> bool:
 
 
 def _doctor_print_header(console: Any) -> None:
-    """Print the version line with the schema-stability indicator, plus Python.
+    """Print version, schema, interpreter, package, and install identity.
 
     The substring "v2.0 stable schema" (vs "pre-v2.0 schema") reports the
     schema-lock generation. Fusion execution policy is independent of schema
     stability and is documented by the CLI flags and ADR-0013.
     """
-    from recon_tool import __version__
+    import recon_tool
+    from recon_tool import __version__, updater
 
     console.print()
     schema_label = "v2.0 stable schema" if __version__.startswith("2.") else "pre-v2.0 schema"
     console.print(f"  recon [bold]v{__version__}[/bold] [dim]({schema_label})[/dim]")
-    console.print(f"  Python [bold]{sys.version.split()[0]}[/bold]")
+    python_executable = _safe_markup(Path(sys.executable).resolve())
+    package_file = getattr(recon_tool, "__file__", None)
+    package_location = Path(package_file).resolve().parent if package_file else "unknown"
+    method = updater.detect_install_method()
+    method_detail = f"{method} (best effort)" if method == updater.PIP else method
+    console.print(f"  Python [bold]{sys.version.split()[0]}[/bold] at {python_executable}")
+    console.print(f"  Package {_safe_markup(package_location)}")
+    console.print(f"  Install method {_safe_markup(method_detail)}")
     console.print()
+
+
+def _same_path(left: Path, right: Path) -> bool:
+    """Compare resolved paths with Windows case folding."""
+    return os.path.normcase(str(left)) == os.path.normcase(str(right))
+
+
+def _launcher_is_in_current_workspace(launcher: Path) -> bool:
+    """Refuse to execute a launcher planted in the current workspace tree."""
+    try:
+        current_directory = Path.cwd().resolve()
+        workspace_root = current_directory
+        for candidate in (current_directory, *current_directory.parents):
+            if (candidate / ".git").exists():
+                workspace_root = candidate
+                break
+        return launcher.is_relative_to(workspace_root)
+    except OSError:
+        return True
+
+
+def _launcher_version(launcher: Path) -> tuple[str | None, str | None]:
+    """Read a PATH launcher's version without involving a command shell."""
+    if os.name == "nt" and launcher.suffix.casefold() in {".bat", ".cmd"}:
+        return None, "batch launchers are not executed by doctor"
+    try:
+        completed = subprocess.run(  # noqa: S603 - absolute PATH result, fixed argument, no shell.
+            [str(launcher), "--version"],
+            capture_output=True,
+            check=False,
+            shell=False,
+            text=True,
+            timeout=_LAUNCHER_VERSION_TIMEOUT_SECONDS,
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        return None, _fmt_exc(exc)
+    output = "\n".join((completed.stdout, completed.stderr))[:2048]
+    if completed.returncode != 0:
+        return None, f"version check exited {completed.returncode}"
+    for line in output.splitlines():
+        match = _LAUNCHER_VERSION_RE.fullmatch(line.strip())
+        if match is not None:
+            return match.group("version"), None
+    return None, "version output was not recognized"
+
+
+def _doctor_path_launcher_check() -> DoctorCheck:
+    """Compare the first PATH launcher with the package running doctor."""
+    from recon_tool import updater
+
+    found = shutil.which("recon")
+    if found is None:
+        return (
+            "PATH recon launcher",
+            "ok",
+            f"not found; this environment can use `{sys.executable} -m recon_tool`",
+        )
+    try:
+        launcher = Path(found).resolve()
+        executable_dir = Path(sys.executable).resolve().parent
+    except OSError as exc:
+        return ("PATH recon launcher", "warn", f"could not resolve {found}: {_fmt_exc(exc)}")
+
+    expected_launchers = (executable_dir / "recon", executable_dir / "recon.exe")
+    if any(_same_path(launcher, candidate) for candidate in expected_launchers):
+        launcher_version = updater.current_version()
+        error = None
+    elif _launcher_is_in_current_workspace(launcher):
+        launcher_version = None
+        error = "launcher is inside the current workspace and was not executed"
+    else:
+        launcher_version, error = _launcher_version(launcher)
+
+    current = updater.current_version()
+    if launcher_version is None:
+        return (
+            "PATH recon launcher",
+            "warn",
+            f"{launcher} could not be verified ({error}); run `{launcher} --version`, then activate the intended "
+            "environment or reinstall recon-tool for that launcher",
+        )
+    if updater.compare_versions(launcher_version, current) != 0:
+        return (
+            "PATH recon launcher",
+            "warn",
+            f"{launcher} reports {launcher_version}, but this process is {current}; activate the intended environment "
+            "or reinstall recon-tool for that launcher, then rerun `recon doctor`",
+        )
+    return ("PATH recon launcher", "ok", f"{launcher} reports {launcher_version}")
 
 
 async def _doctor_identity_checks() -> list[DoctorCheck]:
@@ -602,6 +705,7 @@ def _doctor_render(console: Any, checks: list[DoctorCheck]) -> bool:
     """
     has_failures = False
     has_warnings = False
+    warning_names: list[str] = []
     for name, status, detail in checks:
         mark = {"ok": "ok", "warn": "WARN", "fail": "FAIL"}[status]
         style = {"ok": "green", "warn": "yellow", "fail": "red"}[status]
@@ -612,12 +716,16 @@ def _doctor_render(console: Any, checks: list[DoctorCheck]) -> bool:
             has_failures = True
         elif status == "warn":
             has_warnings = True
+            warning_names.append(name)
 
     console.print()
     if has_failures:
         console.print("  [yellow]Some checks failed. Lookups may be incomplete.[/yellow]")
     elif has_warnings:
-        console.print("  [yellow]Core checks passed. Optional enrichment sources are degraded.[/yellow]")
+        if all(name == "crt.sh (cert transparency)" for name in warning_names):
+            console.print("  [yellow]Core checks passed. Optional enrichment sources are degraded.[/yellow]")
+        else:
+            console.print("  [yellow]Core checks passed. Review the warnings above.[/yellow]")
     else:
         console.print("  [green]All checks passed.[/green]")
     console.print()
@@ -640,6 +748,7 @@ async def doctor() -> None:
     _doctor_print_header(console)
 
     checks: list[DoctorCheck] = []
+    checks.append(_doctor_path_launcher_check())
     checks.extend(await _doctor_identity_checks())
     checks.append(_doctor_dns_check())
     checks.append(await _doctor_ct_check())

@@ -33,8 +33,8 @@ digest-bound v2.6.3 historical exception preserves that release's published
 distribution-only bundle while still requiring SBOM structure validation; every
 later release fails if SBOM provenance is absent.
 
-The evidence-semantic audit is complete: 27 families are complete. 0 material
-runtime families carry incomplete lineage. Fail-closed inventory spans 84 score
+The evidence-semantic audit is complete: 28 families are complete. 0 material
+runtime families carry incomplete lineage. Fail-closed inventory spans 91 score
 or quantitative fields among other governed surfaces. MCP v2 adoption is
 complete and both remain blocking maintenance. The v2.11 pre-collection audit
 found that the frozen M365 arms cannot identify a fusion benefit: A1 collapses
@@ -59,8 +59,26 @@ submission-freeze proof is
 
 ## Next
 
-The fingerprint-freshness loop. It has no version number because it never
-finishes. Monthly, plus on a missed-detection report or a known vendor change:
+The next product work improves how three audiences reach the existing evidence
+without expanding collection or turning observations into verdicts:
+
+1. **Admins:** make installation identity explicit, including the running
+   package, interpreter, launcher, and an actionable warning when PATH resolves
+   to a different recon version.
+2. **Defenders:** provide one evidence-first review workflow that leads with
+   collection validity, preserves unavailable and unresolved states, and ends
+   with neutral review candidates.
+3. **Consultants and analysts:** compose the existing batch ecosystem and cohort
+   summary into one backward-compatible JSON bundle for an operator-supplied
+   domain set, without inferring ownership or ranking security.
+
+These are workflow and diagnostic improvements inside the stable v2 engine.
+They add no target interaction, active scanning, credentials, hosted service,
+or overall security score.
+
+The fingerprint-freshness loop continues alongside that work. It has no version
+number because it never finishes. Monthly, plus on a missed-detection report or
+a known vendor change:
 confirm independently reviewed families against the vendor's current public page,
 backfill `verified` dates only where that page still names the pattern, and seed
 new rules from vendor documentation before a corpus row exhibits them. Most

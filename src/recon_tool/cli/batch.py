@@ -18,6 +18,8 @@ from typing import Any, Literal, TextIO, TypeVar, cast
 import typer
 from rich.markup import escape
 
+from recon_tool.cli.batch_summary import build_batch_summary_document as _batch_build_summary_document
+from recon_tool.cli.batch_summary import emit_batch_summary as batch_emit_summary
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.cli.shared import raise_lookup_error
 from recon_tool.exit_codes import (
@@ -205,12 +207,6 @@ def batch_validate_flags(
     # output) or stands alone (panel); the per-domain formats have no cohort view.
     if summary and (markdown or csv_output or ndjson):
         render_error("--summary cannot combine with --md, --csv, or --ndjson")
-        raise typer.Exit(code=EXIT_VALIDATION)
-    # --summary and --include-ecosystem are different batch-scope aggregates; the
-    # summary path returns before the ecosystem envelope is emitted, so combining
-    # them would silently drop the hypergraph. Reject rather than mislead.
-    if summary and include_ecosystem:
-        render_error("--summary cannot combine with --include-ecosystem")
         raise typer.Exit(code=EXIT_VALIDATION)
     if summary_schema not in {"2.1", "2.2"}:
         render_error("--summary-schema must be 2.1 or 2.2")
@@ -433,11 +429,20 @@ def _batch_attach_peers(json_results: list[dict[str, Any]], batch_infos: dict[st
             entry["shared_display_name"] = display_peers[key]
 
 
-def batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, include_ecosystem: bool) -> None:
+def batch_emit_json(
+    results: list[object],
+    batch_infos: dict[str, Any],
+    *,
+    include_ecosystem: bool,
+    cohort_summary: dict[str, Any] | None = None,
+) -> None:
     """Assemble the batch JSON array (with cross-domain enrichment) and emit it."""
     import json as json_mod
 
     from recon_tool.collection_view import collection_observable_info
+
+    if cohort_summary is not None and not include_ecosystem:
+        raise ValueError("cohort_summary requires the BatchResult ecosystem wrapper")
 
     json_results: list[dict[str, Any]] = [r for r in results if r is not None]  # type: ignore[misc]
 
@@ -465,7 +470,7 @@ def batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, inclu
             from recon_tool.ecosystem import build_ecosystem_hyperedges
 
             hyperedges = list(build_ecosystem_hyperedges(observable_infos))
-        ecosystem_payload = {
+        ecosystem_payload: dict[str, Any] = {
             "record_type": "batch_result",  # SH7 discriminator
             "ecosystem_hyperedges": [
                 {
@@ -477,66 +482,12 @@ def batch_emit_json(results: list[object], batch_infos: dict[str, Any], *, inclu
             ],
             "domains": json_results,
         }
+        if cohort_summary is not None:
+            ecosystem_payload["cohort_summary"] = cohort_summary
         typer.echo(json_mod.dumps(ecosystem_payload, indent=2))
         return
 
     typer.echo(json_mod.dumps(json_results, indent=2))
-
-
-def batch_emit_summary(
-    batch_infos: dict[str, Any],
-    attempted: int,
-    console: Any,
-    *,
-    as_json: bool,
-    schema_version: str = "2.1",
-) -> None:
-    """Emit one aggregate-only cohort summary over the resolved batch.
-
-    Stateless: computed live from the resolved records, stores nothing, ships no
-    baselines, names no domain. The richer caller-grouped analysis lives in the
-    downstream reducer under ``validation/aggregate/``.
-    """
-    import json as json_mod
-    from datetime import UTC, datetime
-
-    from recon_tool.claim_contract import (
-        DMARC_EFFECTIVE_POLICY_FIELD,
-        DMARC_REJECT_CLAIM_STATE_FIELD,
-        ClaimState,
-        dmarc_apex_reject_dossier,
-        dmarc_explicit_policy_projection_from_mapping,
-    )
-    from recon_tool.cohort_summary import build_summary_document, render_cohort_summary
-    from recon_tool.formatter import format_tenant_dict
-
-    as_of = datetime.now(UTC)
-    records = []
-    for info in batch_infos.values():
-        record = format_tenant_dict(info)
-        if schema_version == "2.2":
-            claim_state = dmarc_apex_reject_dossier(
-                info,
-                as_of=as_of,
-            ).state.value
-            atemporal_state, effective_policy = dmarc_explicit_policy_projection_from_mapping(record)
-            state_is_raw_bound = claim_state == atemporal_state.value and claim_state in {
-                ClaimState.SUPPORTED.value,
-                ClaimState.DISCONFIRMED.value,
-            }
-            record[DMARC_REJECT_CLAIM_STATE_FIELD] = claim_state
-            record[DMARC_EFFECTIVE_POLICY_FIELD] = effective_policy if state_is_raw_bound else None
-        records.append(record)
-    document = build_summary_document(
-        records,
-        attempted=attempted,
-        schema_version=schema_version,
-        dmarc_contract_scoped=schema_version == "2.2",
-    )
-    if as_json:
-        typer.echo(json_mod.dumps(document, indent=2))
-    else:
-        console.print(render_cohort_summary(document))
 
 
 async def _batch_map_ordered(
@@ -956,8 +907,23 @@ async def batch(
 
     results = await _batch_map_ordered(domain_list, _tracked, max_pending=concurrency)
 
-    # --summary collapses the batch into one aggregate-only cohort summary.
+    # --summary normally collapses the batch into one aggregate-only cohort
+    # summary. With the JSON ecosystem wrapper, retain the per-domain and
+    # overlap records and attach that same summary as an additive sibling.
     if summary:
+        if include_ecosystem:
+            document = _batch_build_summary_document(
+                batch_infos,
+                len(domain_list),
+                schema_version=summary_schema,
+            )
+            batch_emit_json(
+                results,
+                batch_infos,
+                include_ecosystem=True,
+                cohort_summary=document,
+            )
+            return
         batch_emit_summary(
             batch_infos,
             len(domain_list),

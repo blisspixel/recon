@@ -56,13 +56,16 @@ rejected.
   runtime observations remain governed by separate claim families.
 - `audit_status: open` means the family still requires implementation or review.
 
-At the 2026-08-01 checkpoint, the inventory contains 27 families and covers 89
-agent-guidance sections, 16 insight generators, 214 JSON property occurrences,
-167 MCP tool and output surfaces, 31 panel producers, 4 recommendation
-producers, 84 quantitative or categorical score fields, and 8 MCP instruction
-sections. 27 families are complete. 0 material runtime families have
-incomplete lineage. Service
-labels now derive a bounded role from retained,
+At the 2026-08-30 checkpoint, the inventory contains 28 families and covers 122
+agent-guidance sections, 16 insight generators, 261 JSON property occurrences,
+171 MCP tool and output surfaces, 31 panel producers, 4 recommendation
+producers, 91 quantitative or categorical score fields, and 8 MCP instruction
+sections. 28 families are complete. 0 material runtime families have
+incomplete lineage. The additive cohort-summary schema is owned by a dedicated
+family whose exact producer path preserves attempted and observable
+denominators, emits no domain names, and treats the operator-supplied set as
+neither an industry baseline nor a security ranking. Service labels now derive
+a bounded role from retained,
 collection-observable record evidence and render missing roles as unavailable.
 Posture observations now carry their exact emitter, branch-local retained
 evidence occurrences, and typed metadata predicates through CLI, MCP, profile,

@@ -59,6 +59,78 @@ class TestBatchCommand:
         assert data[0]["display_name"] == "Synthetic Alpha Ltd"
 
     @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_json_combines_ecosystem_and_cohort_summary(self, mock_resolve, tmp_path):
+        mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("alpha.invalid\nnot a domain\n")
+
+        result = runner.invoke(
+            app,
+            [
+                "batch",
+                str(domain_file),
+                "--json",
+                "--include-ecosystem",
+                "--summary",
+                "--summary-schema",
+                "2.2",
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert data["record_type"] == "batch_result"
+        assert data["ecosystem_hyperedges"] == []
+        assert [record.get("queried_domain", record.get("domain")) for record in data["domains"]] == [
+            "alpha.invalid",
+            "not a domain",
+        ]
+        assert data["domains"][1]["record_type"] == "error"
+        summary = data["cohort_summary"]
+        assert summary["record_type"] == "cohort_summary"
+        assert summary["schema_version"] == "2.2"
+        assert summary["n"] == 1
+        assert summary["observability"]["attempted"] == 2
+        assert summary["observability"]["resolved"] == 1
+        assert "alpha.invalid" not in json.dumps(summary)
+        assert "not a domain" not in json.dumps(summary)
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    def test_batch_json_combined_shape_is_stable_when_every_domain_fails(self, mock_resolve, tmp_path):
+        domain_file = tmp_path / "domains.txt"
+        domain_file.write_text("not a domain\nalso not a domain\n")
+
+        result = runner.invoke(
+            app,
+            [
+                "batch",
+                str(domain_file),
+                "--json",
+                "--include-ecosystem",
+                "--summary",
+                "--summary-schema",
+                "2.2",
+            ],
+        )
+
+        assert result.exit_code == 0, result.output
+        data = json.loads(result.output)
+        assert data["record_type"] == "batch_result"
+        assert data["ecosystem_hyperedges"] == []
+        assert [record["domain"] for record in data["domains"]] == ["not a domain", "also not a domain"]
+        assert all(record["record_type"] == "error" for record in data["domains"])
+        assert data["cohort_summary"]["n"] == 0
+        assert data["cohort_summary"]["observability"] == {
+            "attempted": 2,
+            "resolved": 0,
+            "resolution_rate": 0.0,
+            "dns_resolved": 0,
+            "degraded_source_rate": None,
+            "mean_sparse_share": None,
+        }
+        mock_resolve.assert_not_awaited()
+
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
     def test_batch_markdown_output(self, mock_resolve, tmp_path):
         mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
         domain_file = tmp_path / "domains.txt"

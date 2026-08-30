@@ -97,12 +97,17 @@ probes.
 
 ## Composition patterns
 
-Typical agentic flow for a defensive review:
-1. `lookup_tenant(domain, format="json", explain=True)` - establish the baseline.
-2. `analyze_posture(domain)` with the relevant `profile` - posture lens.
-3. `find_hardening_gaps(domain)` - categorized gaps with severity.
-4. `simulate_hardening(domain, fixes=[...])` - report the model-bound index
-   delta and remaining public-configuration observations.
+The `domain_report` prompt uses a bounded defensive-review flow:
+1. `lookup_tenant(domain, format="json", explain=True)` - establish one
+   evidence-linked baseline.
+2. `find_hardening_gaps(domain)` - derive categorized review candidates from
+   the cache-first baseline.
+
+Use `analyze_posture` only when the user requests a posture lens. Use
+`assess_exposure` only when the user explicitly requests the model-bound index,
+and `simulate_hardening` only for an explicit what-if question. Use
+`chain_lookup` only when the user requests recursive related-domain discovery.
+Never enable opt-in direct probes without an explicit request.
 
 For introspection / hypothesis work:
 - `get_fingerprints(limit=20, offset=0)` / `get_signals()` - inspect what the

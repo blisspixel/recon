@@ -137,8 +137,16 @@ closed rank, regional, vendor-seed, and prior-sample drift decisions plus full
 publication proof, v2.15 shipped the default-view claim-clarity and
 accessibility decisions, and **v2.16.0 shipped renderer parity** (one shared
 briefing across the panel, `--plain`, `--md`, and the MCP text surface, MCP JSON
-fusion, and the gated surface-parity matrix). The durable product work after
-that close is the fingerprint-freshness loop, not another version milestone.
+fusion, and the gated surface-parity matrix).
+
+The stable engine now supports a bounded composition pass for its primary
+audiences. Admins need installation identity diagnostics when multiple launchers
+exist. Defenders need one evidence-first briefing that keeps collection validity
+and unresolved states beside review candidates. Consultants and analysts need
+the existing ecosystem and cohort views in one backward-compatible JSON bundle
+for an operator-supplied set. None of these changes expands collection, infers
+ownership, or creates a security rating. The fingerprint-freshness loop remains
+the durable detection stream and continues alongside this product polish.
 Agent portability is a separate maintainer track, not a version-path
 milestone: its representative task, client, measure, privacy, and stop-rule
 contract is frozen, its protected-main prerequisite and the candidate's
@@ -157,7 +165,7 @@ priority 1. Version milestones through v3.0:
 
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
-| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete on 2026-08-01. The fail-closed default-claim audit owns all discovered primary surfaces through 27 families. 27 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
+| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete through the 2026-08-30 cohort-schema review. The fail-closed default-claim audit owns all discovered primary surfaces through 28 families. 28 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, cohort summaries, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
 | [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts make independent catalog measurement interpretable. | Shipped in v2.14. Convenience, unseen-vertical, rank, regional, vendor-seed, and prior-sample drift rounds are complete with aggregate results and explicit dispositions. Drift records no threshold breach, no unavailable or unmeasured row, one disclosed measurement-surface change, and no catalog promotion. | Keep the frozen round contracts and regression gates reproducible; backfill review dates only in independently reviewed families. |
@@ -198,7 +206,7 @@ current debt without turning every refinement into feature work.
 | Debt class | Current state | Next boundary |
 |---|---|---|
 | Feature work | Governed by the dependency order below, not by the polish loop; the optional operator-hosted surface now has a named architecture and security gate | Do not add commands, schemas, provider claims, or inference modes without their existing evidence gate |
-| UX flow | Root help, no-argument onboarding, malformed-input recovery, all-source failure recovery, low-confidence next steps, batch outcome guidance, cross-platform release verification, target-free catalog discovery, and explicit bounded-versus-complete cache inspection are implemented | Specify batch all-error exit semantics before considering an opt-in strict mode |
+| UX flow | Root help, no-argument onboarding, installation identity diagnostics, malformed-input recovery, all-source failure recovery, low-confidence next steps, evidence-first defender briefing, combined portfolio JSON, batch outcome guidance, cross-platform release verification, target-free catalog discovery, and explicit bounded-versus-complete cache inspection are implemented | Keep portfolio membership caller-supplied; require a separate contract before adding saved portfolio manifests, divergence records, or a client-ready renderer |
 | Visual polish | Lookup and batch help use task panels; linear help and adaptive welcome rows keep commands complete; fingerprint previews, ranked signal results, and narrow cache rows keep hierarchy and field association without changing structured order | Preserve complete option visibility and exact technical-token copyability before changing presentation metadata |
 | Observability | MCP rejection logs and unexpected batch details stay bounded; live MCP diagnostics retain completed rows and name the failed protocol phase; cache overview names exact inspected, uninspected, failed, and temporary-artifact state; corpus tests separate collection errors from negative observations; captured gate logs are plain; remote readiness and release recovery name exact evidence and preconditions | Define a versioned doctor or cache record only after a machine consumer and compatibility envelope are named |
 | Reliability | Static and live MCP diagnostics require canonical tools and resources, with live JSON resource reads; typed batch errors, bounded workers, bounded corpus and default cache inspection, residue-aware cache clearing, closed-pipe handling, explicit degradation, exact exit codes, complete catalog inspection, sealed artifact reconstruction and parity, command-status-aware release recovery, fail-closed bounded dependency-audit retry, and all-nonzero SBOM audit gating are implemented | Do not change the current batch or corpus-test exit contract without a compatibility decision covering mixed and all-error streams |
@@ -230,7 +238,7 @@ a different claim. Duplicate result objects from one source count once, and
 explanations name the exact winning claim and qualifying evidence.
 The fail-closed [default-claim audit](default-claim-audit.md) now inventories
 every discovered primary surface and binds compact JSON and MCP ownership to
-exact digests. All 27 families are complete. Generated insights capture the emitting rule and exact
+exact digests. All 28 families are complete. Generated insights capture the emitting rule and exact
 retained-evidence or bounded-observation association before rendering, preserve
 that state through collection projection and result-cache version 4, and feed
 it into explanation construction without text classification. Structured

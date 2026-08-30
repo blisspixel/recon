@@ -1745,8 +1745,362 @@
         }
       ]
     },
+    "CohortSummaryPrevalenceMetric": {
+      "description": "One aggregate cohort metric. Null rates and denominators mean the public observation opportunity was unresolved; model-support metrics are coverage, not prevalence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "positives",
+        "observable_n",
+        "observed_rate",
+        "observed_rate_interval_80",
+        "lower_bound_over_cohort",
+        "observability_fraction",
+        "metric_kind",
+        "model_evidence_n",
+        "support_coverage",
+        "unresolved_share"
+      ],
+      "properties": {
+        "positives": {
+          "oneOf": [
+            {
+              "type": "integer",
+              "minimum": 0
+            },
+            {
+              "type": "string",
+              "const": "<=10 (suppressed)"
+            }
+          ]
+        },
+        "observable_n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "observed_rate": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "observed_rate_interval_80": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            }
+          ]
+        },
+        "lower_bound_over_cohort": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "observability_fraction": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "metric_kind": {
+          "type": "string",
+          "enum": [
+            "authoritative_observed_rate",
+            "contract_scoped_observed_rate",
+            "atemporal_explicit_policy_rate",
+            "scoped_observed_rate",
+            "model_support_coverage"
+          ]
+        },
+        "model_evidence_n": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "support_coverage": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "unresolved_share": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        }
+      }
+    },
+    "CohortSummaryPosteriorClaim": {
+      "description": "Aggregate model-score diagnostics over records that carried one posterior node. These values are not observed prevalence.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "expected_prevalence",
+        "high_confidence_share",
+        "mean_model_score",
+        "high_score_share",
+        "mean_interval_width",
+        "sparse_share",
+        "observed_n"
+      ],
+      "properties": {
+        "expected_prevalence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "high_confidence_share": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "mean_model_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "high_score_share": {
+          "type": [
+            "number",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 1
+        },
+        "mean_interval_width": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "sparse_share": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "observed_n": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "CohortSummaryMix": {
+      "description": "Observed category shares and concentration within the caller-supplied cohort.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "shares",
+        "normalized_entropy",
+        "hhi",
+        "categorized_n"
+      ],
+      "properties": {
+        "shares": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "normalized_entropy": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "hhi": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "categorized_n": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "CohortSummary": {
+      "description": "Aggregate-only result from ``recon batch <file> --summary --json``. It describes observations within a caller-supplied cohort, names no domain, infers no ownership or business relationship, and is not a security verdict or industry baseline. When --include-ecosystem is also set, the same document is embedded under BatchResult.cohort_summary.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "disclaimer",
+        "suppression_policy",
+        "label",
+        "n",
+        "small_n_warning",
+        "observability",
+        "prevalence",
+        "posterior_claims",
+        "mix"
+      ],
+      "properties": {
+        "record_type": {
+          "type": "string",
+          "const": "cohort_summary"
+        },
+        "schema_version": {
+          "type": "string",
+          "enum": [
+            "2.1",
+            "2.2"
+          ]
+        },
+        "disclaimer": {
+          "type": "string",
+          "minLength": 1
+        },
+        "suppression_policy": {
+          "type": "string",
+          "minLength": 1
+        },
+        "label": {
+          "type": "string",
+          "minLength": 1
+        },
+        "n": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "small_n_warning": {
+          "type": "boolean"
+        },
+        "observability": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "attempted",
+            "resolved",
+            "resolution_rate",
+            "dns_resolved",
+            "degraded_source_rate",
+            "mean_sparse_share"
+          ],
+          "properties": {
+            "attempted": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "resolved": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "resolution_rate": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "dns_resolved": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "degraded_source_rate": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "mean_sparse_share": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "prevalence": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "dmarc_reject",
+            "dmarc_enforcing",
+            "mta_sts_enforce",
+            "email_gateway_present",
+            "m365_tenant",
+            "google_workspace"
+          ],
+          "properties": {
+            "dmarc_reject": {
+              "$ref": "#/$defs/CohortSummaryPrevalenceMetric"
+            },
+            "dmarc_enforcing": {
+              "$ref": "#/$defs/CohortSummaryPrevalenceMetric"
+            },
+            "mta_sts_enforce": {
+              "$ref": "#/$defs/CohortSummaryPrevalenceMetric"
+            },
+            "email_gateway_present": {
+              "$ref": "#/$defs/CohortSummaryPrevalenceMetric"
+            },
+            "m365_tenant": {
+              "$ref": "#/$defs/CohortSummaryPrevalenceMetric"
+            },
+            "google_workspace": {
+              "$ref": "#/$defs/CohortSummaryPrevalenceMetric"
+            }
+          }
+        },
+        "posterior_claims": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/CohortSummaryPosteriorClaim"
+          }
+        },
+        "mix": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "provider",
+            "cloud"
+          ],
+          "properties": {
+            "provider": {
+              "$ref": "#/$defs/CohortSummaryMix"
+            },
+            "cloud": {
+              "$ref": "#/$defs/CohortSummaryMix"
+            }
+          }
+        }
+      }
+    },
     "BatchResult": {
-      "description": "Shape of ``recon batch <file> --json --include-ecosystem``: a wrapper object carrying the per-domain results under ``domains`` and the cross-domain ``ecosystem_hyperedges`` array as a sibling. Without --include-ecosystem the batch JSON is a bare BatchArray instead, with no wrapper. From v2.0 (SH9) the wrapper is always emitted when --include-ecosystem is set, including on an all-failed batch (domains carries the error records, ecosystem_hyperedges is empty), so the top-level type does not flip to a bare array. Stable v2.0.",
+      "description": "Shape of ``recon batch <file> --json --include-ecosystem``: a wrapper object carrying the per-domain results under ``domains`` and the cross-domain ``ecosystem_hyperedges`` array as a sibling. Combining --summary adds the same aggregate-only CohortSummary document under the optional ``cohort_summary`` sibling. Without --include-ecosystem the batch JSON is a bare BatchArray instead, with no wrapper. From v2.0 (SH9) the wrapper is always emitted when --include-ecosystem is set, including on an all-failed batch (domains carries the error records, ecosystem_hyperedges is empty), so the top-level type does not flip to a bare array. Stable v2.0 with an additive cohort_summary field.",
       "type": "object",
       "required": [
         "record_type",
@@ -1779,6 +2133,10 @@
           "items": {
             "$ref": "#/$defs/EcosystemHyperedge"
           }
+        },
+        "cohort_summary": {
+          "description": "Optional aggregate-only sibling emitted when --summary is combined with --json --include-ecosystem. It describes only the caller-supplied cohort and names no individual domain.",
+          "$ref": "#/$defs/CohortSummary"
         }
       }
     }

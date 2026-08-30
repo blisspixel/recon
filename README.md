@@ -45,15 +45,18 @@ policy fetch; Google CSE and BIMI certificate probes run only when
 `--direct-probes` is explicitly enabled. See
 [ADR-0011](https://github.com/blisspixel/recon/blob/main/docs/adr/0011-public-metadata-collection-boundary.md).
 
+Run a real review by replacing the placeholder with the domain you want to
+review:
+
 ```bash
-recon example.com
+recon "<domain-you-want-to-review>"
 ```
 
-Every lookup is live. recon ships no offline demo mode, so reserved names such
-as `example.com` return a panel of stray public residue from unrelated test
+For a harmless syntax-only example, you can use `recon example.com`. Every
+lookup is live. recon ships no offline demo mode, so reserved names such as
+`example.com` return a panel of stray public residue from unrelated test
 configurations, including a meaningless display name, at High confidence. It
-shows you the shape of the output, not a result about any organization. Point
-recon at a domain you want to review to see a real footprint.
+shows the shape of the output, not a result about any organization.
 
 A domain is a query coordinate, not proof of one organization or product: recon
 reports observations, not verdicts. That is the caution to keep beside every row
@@ -113,6 +116,21 @@ Insights
 Install, update, uninstall, and first-run detail:
 [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
 
+## Start with Your Workflow
+
+| You are trying to | Start here | What you get |
+|---|---|---|
+| Review one namespace | `recon "<domain>"` | A compact, hedged panel of observed mail, identity, service, and confidence signals |
+| Explain or hand off a finding | `recon "<domain>" --explain` | Per-source status plus the evidence retained for each material observation |
+| Review an operator-supplied set | `recon batch domains.txt --json` | Ordered, typed results and errors suitable for analysis and automation |
+| Work through an agent | `recon mcp install --client=<name>` | Local typed tools, resources, and prompts without a hosted recon service |
+
+Defenders can follow the
+[evidence-first review workflow](https://github.com/blisspixel/recon/blob/main/docs/defender-workflow.md).
+Consultants and analysts should treat every multi-domain set as operator
+supplied: recon describes observable similarities and differences but does not
+infer ownership, control, or a corporate relationship.
+
 ## What recon Is Good For
 
 | Need | Use recon for | Use something else when |
@@ -168,6 +186,8 @@ recon example.com --plain --full               # every field, linear
 recon example.com --json                       # structured record
 recon example.com --explain-dag --explain-dag-format mermaid   # evidence DAG
 recon batch domains.txt --json                 # batch JSON array
+recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2
+                                                # portfolio evidence bundle
 recon delta example.com                        # diff vs local cache
 recon capsule capture example.com -o run.json  # caller-owned replay artifact
 recon mcp install --client=cursor              # wire MCP into a client
