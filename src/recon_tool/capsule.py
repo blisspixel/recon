@@ -72,10 +72,15 @@ __all__ = [
     "NORMALIZER_VERSION",
     "CollectionContext",
     "build_capsule",
+    "canonical_json_bytes",
     "compare_capsules",
+    "content_digest",
     "current_interpretation_context",
     "load_capsule",
+    "parse_utc_time",
+    "project_source_observations",
     "replay_capsule",
+    "utc_text",
     "validate_capsule",
     "write_capsule",
 ]
@@ -93,8 +98,8 @@ class CollectionContext:
     vantage: str = "caller-local"
 
 
-def _canonical_bytes(value: object) -> bytes:
-    """Return recon's deterministic UTF-8 JSON encoding for capsule digests."""
+def canonical_json_bytes(value: object) -> bytes:
+    """Return recon's deterministic UTF-8 JSON encoding for artifact digests."""
     return json.dumps(
         value,
         ensure_ascii=False,
@@ -104,8 +109,15 @@ def _canonical_bytes(value: object) -> bytes:
     ).encode("utf-8")
 
 
-def _sha256(value: object) -> str:
-    return f"sha256:{hashlib.sha256(_canonical_bytes(value)).hexdigest()}"
+def content_digest(value: object) -> str:
+    """Return the lowercase SHA-256 digest of one canonical JSON value."""
+    return f"sha256:{hashlib.sha256(canonical_json_bytes(value)).hexdigest()}"
+
+
+# Backward-compatible private aliases for the capsule implementation and its
+# established mutation tests. New caller-owned artifacts use the public names.
+_canonical_bytes = canonical_json_bytes
+_sha256 = content_digest
 
 
 def _digest_files(names: Iterable[str]) -> str:
@@ -129,13 +141,13 @@ def current_interpretation_context() -> dict[str, str]:
     }
 
 
-def _utc_text(value: datetime) -> str:
+def utc_text(value: datetime) -> str:
     if value.tzinfo is None or value.utcoffset() is None:
-        raise ValueError("capsule timestamps must be timezone-aware")
+        raise ValueError("artifact timestamps must be timezone-aware")
     return value.astimezone(UTC).isoformat()
 
 
-def _parse_time(value: object, field: str) -> datetime:
+def parse_utc_time(value: object, field: str) -> datetime:
     if not isinstance(value, str) or not value:
         raise ValueError(f"{field} must be a non-empty ISO 8601 datetime")
     normalized = f"{value[:-1]}+00:00" if value.endswith("Z") else value
@@ -146,6 +158,10 @@ def _parse_time(value: object, field: str) -> datetime:
     if parsed.tzinfo is None or parsed.utcoffset() is None:
         raise ValueError(f"{field} must include a timezone")
     return parsed.astimezone(UTC)
+
+
+_utc_text = utc_text
+_parse_time = parse_utc_time
 
 
 def _json_value(value: object) -> Any:
@@ -221,7 +237,7 @@ def _source_state(results: list[SourceResult], facts: tuple[dict[str, Any], ...]
     return "observed_value" if facts else "observed_empty"
 
 
-def _source_observations(
+def project_source_observations(
     results: Iterable[SourceResult],
     *,
     started_at: str,
@@ -254,6 +270,9 @@ def _source_observations(
             }
         )
     return opportunities, [all_facts[key] for key in sorted(all_facts)]
+
+
+_source_observations = project_source_observations
 
 
 def _stable_signal_ids(info: TenantInfo) -> list[str]:

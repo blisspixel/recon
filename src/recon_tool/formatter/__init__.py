@@ -78,6 +78,7 @@ from recon_tool.formatter.panel import (
     set_console,
     set_err_console,
 )
+from recon_tool.formatter.review import format_review_bundle_markdown
 from recon_tool.formatter.roles import POSTERIOR_DECISION_THRESHOLD as _POSTERIOR_DECISION_THRESHOLD
 from recon_tool.formatter.roles import posterior_dot_fill as _posterior_dot_fill
 
@@ -126,6 +127,7 @@ __all__ = [
     "format_gaps_dict",
     "format_gaps_json",
     "format_posture_observations",
+    "format_review_bundle_markdown",
     "format_tenant_csv_row",
     "format_tenant_dict",
     "format_tenant_json",

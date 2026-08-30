@@ -1,7 +1,5 @@
 """CLI application facade for recon.
-
-Supports shorthand ``recon DOMAIN``, explicit lookup, doctor, batch, and MCP.
-Non-command first arguments route to lookup so domain validation owns diagnostics.
+Routes bare domains to lookup and registers commands so validation owns diagnostics.
 """
 
 from __future__ import annotations
@@ -91,6 +89,7 @@ _SUBCOMMANDS = frozenset(
         "discover",
         "fingerprints",
         "signals",
+        "review",
     }
 )
 
@@ -262,6 +261,7 @@ def _print_welcome_banner() -> None:
             ("recon <domain> --md", "grouped Markdown; --full is the connection map"),
             ("recon <domain> --json", "structured automation"),
             ("recon <domain> --explain", "evidence and explanation"),
+            ("recon review <domain>", "fresh evidence-linked review handoff"),
             ("recon batch domains.txt", "process multiple domains"),
             ("recon doctor", "check online source connectivity"),
             ("recon mcp install --help", "connect an MCP client"),
@@ -270,9 +270,9 @@ def _print_welcome_banner() -> None:
     console.print()
     console.print("[bold cyan]Common examples[/bold cyan]")
     console.print("  recon example.com")
+    console.print("  recon review example.com")
     console.print("  recon example.com --verbose")
     console.print("  recon example.com --full --json")
-    console.print()
     # The examples show flag shapes, not a demo. A live reserved-name lookup
     # returns stray public residue at High confidence, not an empty panel.
     console.print(

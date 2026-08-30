@@ -55,6 +55,7 @@ A representative set; the full list lives in the source constants the
 | Fingerprint catalog | pattern length 500; `_MAX_CATALOG_ENTRIES_PER_FILE` = 2000; ephemeral (MCP) fingerprints 100 / 20 detections each / 500 total / 200-char fields |
 | Cache files | `_MAX_CACHE_FILE_BYTES` = 5 MB; `_MAX_CT_CACHE_FILE_BYTES` = 5 MB (oversized = miss) |
 | Observation capsule input | `MAX_CAPSULE_BYTES` = 10 MiB; regular files only; symbolic links, mutation during read, excess JSON nesting, non-finite numbers, invalid timestamps, and digest mismatches are rejected |
+| NamespaceReviewBundle artifact | `MAX_REVIEW_BUNDLE_BYTES` = 10 MiB; validated before atomic local writes and after bounded regular-file loads; unknown owned fields, invalid references, non-finite numbers, invalid timestamps, and digest mismatches are rejected |
 | Persisted rate-limiter state | 64 KiB per provider; versioned, provider-bound, finite numeric fields only |
 | PyPI update metadata | 5 MiB response body and 100 JSON nesting levels |
 | Batch input | 10,000 non-comment input records before deduplication; 1 KiB UTF-8 per logical line; 10 MiB UTF-8 total |
@@ -106,6 +107,14 @@ Malformed or integrity-invalid capsule inputs use exit 2; a caught capture
 pipeline failure uses exit 4. The capsule digest is deterministic integrity
 metadata, not authentication.
 
+`recon review` validates its domain and output path before collection, bypasses
+the lookup-result cache, fixes direct probes off, and resolves once. A
+successful baseline exits 0. A typed no-data bundle exits 3; timeout and other
+handled collection failures exit 4. With `--json`, the success or failure
+bundle is the only stdout payload. `--output` writes that same validated object
+atomically and refuses an existing file unless `--force` is explicit. The
+ReviewBundle digest is deterministic integrity metadata, not authentication.
+
 MCP validation rejections emit one structured warning containing a request ID
 and the stable reason `invalid_domain`. The rejected argument and exception
 text are returned only through the caller's private tool response and are not
@@ -141,7 +150,7 @@ environment health instead of always reading success. `recon doctor --mcp`
 follows the same rule for MCP setup: it exits 1 when the package or server
 cannot load, instructions are absent, or any canonical tool or local resource
 registration is missing. `recon mcp doctor` separately spawns the local stdio
-server, checks discovery and canonical tool registrations, and reads all five
+server, checks discovery and canonical tool registrations, and reads all six
 canonical JSON resources. It exits non-zero on an invalid resource envelope,
 URI, media type, JSON object, catalog count/list/identifier relationship,
 schema or surface-inventory envelope, cache metadata, missing registration,

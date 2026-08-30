@@ -1,0 +1,3329 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://raw.githubusercontent.com/blisspixel/recon/main/docs/review-bundle-schema.json",
+  "title": "recon ReviewBundle v1",
+  "description": "Self-contained schema for deterministic, caller-owned single-namespace review artifacts.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "record_type",
+    "schema_version",
+    "generated_at",
+    "generator",
+    "interpretation_context",
+    "scope",
+    "collection",
+    "source_opportunities",
+    "workflow",
+    "result",
+    "scope_statement",
+    "limitations",
+    "content_digest"
+  ],
+  "properties": {
+    "record_type": {
+      "const": "review_bundle"
+    },
+    "schema_version": {
+      "const": "1.0"
+    },
+    "generated_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "generator": {
+      "$ref": "#/$defs/Generator"
+    },
+    "interpretation_context": {
+      "$ref": "#/$defs/InterpretationContext"
+    },
+    "scope": {
+      "$ref": "#/$defs/Scope"
+    },
+    "collection": {
+      "$ref": "#/$defs/Collection"
+    },
+    "source_opportunities": {
+      "type": "array",
+      "items": {
+        "$ref": "#/$defs/SourceOpportunity"
+      }
+    },
+    "workflow": {
+      "$ref": "#/$defs/Workflow"
+    },
+    "result": {
+      "oneOf": [
+        {
+          "$ref": "#/$defs/ReviewSuccess"
+        },
+        {
+          "$ref": "#/$defs/ReviewError"
+        }
+      ]
+    },
+    "scope_statement": {
+      "const": "This caller-owned artifact reviews public metadata for one caller-supplied namespace. It does not establish ownership, an organizational relationship, overall security, a vulnerability, or control completeness."
+    },
+    "limitations": {
+      "type": "array",
+      "prefixItems": [
+        {
+          "const": "Collection uses the documented public-metadata boundary and no credentials or active scanning."
+        },
+        {
+          "const": "Direct probes are disabled; MTA-STS remains the only default target-owned HTTP request."
+        },
+        {
+          "const": "Unavailable or hideable observations do not establish absence."
+        },
+        {
+          "const": "Review candidates are evidence-linked prompts, not security findings, rankings, or verdicts."
+        },
+        {
+          "const": "The artifact is local and caller-owned; recon does not upload, retain, or schedule it."
+        }
+      ],
+      "minItems": 5,
+      "maxItems": 5
+    },
+    "content_digest": {
+      "type": "string",
+      "pattern": "^sha256:[0-9a-f]{64}$"
+    }
+  },
+  "oneOf": [
+    {
+      "properties": {
+        "scope": {
+          "properties": {
+            "queried_domain": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253,
+              "pattern": "^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$"
+            }
+          }
+        },
+        "workflow": {
+          "properties": {
+            "status": {
+              "const": "completed"
+            }
+          }
+        },
+        "result": {
+          "$ref": "#/$defs/ReviewSuccess"
+        }
+      }
+    },
+    {
+      "properties": {
+        "scope": {
+          "properties": {
+            "queried_domain": {
+              "type": "null"
+            }
+          }
+        },
+        "workflow": {
+          "properties": {
+            "status": {
+              "const": "failed"
+            }
+          }
+        },
+        "result": {
+          "$ref": "#/$defs/ReviewError"
+        }
+      }
+    }
+  ],
+  "$defs": {
+    "Generator": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "name",
+        "version"
+      ],
+      "properties": {
+        "name": {
+          "const": "recon-tool"
+        },
+        "version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        }
+      }
+    },
+    "InterpretationContext": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "recon_version",
+        "normalizer_version",
+        "catalog_digest",
+        "model_digest"
+      ],
+      "properties": {
+        "recon_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "normalizer_version": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "catalog_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "model_digest": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        }
+      }
+    },
+    "Scope": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "kind",
+        "selection_basis",
+        "input_coordinate",
+        "queried_domain"
+      ],
+      "properties": {
+        "kind": {
+          "const": "single_namespace"
+        },
+        "selection_basis": {
+          "const": "caller_supplied"
+        },
+        "input_coordinate": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 512,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "queried_domain": {
+          "oneOf": [
+            {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 253,
+              "pattern": "^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "CollectionOptions": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "ct_enabled",
+        "direct_probes",
+        "timeout_seconds"
+      ],
+      "properties": {
+        "ct_enabled": {
+          "type": "boolean"
+        },
+        "direct_probes": {
+          "const": false
+        },
+        "timeout_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        }
+      }
+    },
+    "CollectionCache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "result_cache",
+        "ct_provider_used",
+        "ct_cache_age_days",
+        "ct_attempt_outcome"
+      ],
+      "properties": {
+        "result_cache": {
+          "const": "bypassed"
+        },
+        "ct_provider_used": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ct_cache_age_days": {
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "ct_attempt_outcome": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "Collection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_at",
+        "ended_at",
+        "as_of",
+        "options",
+        "vantage",
+        "cache"
+      ],
+      "properties": {
+        "started_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "ended_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "as_of": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "options": {
+          "$ref": "#/$defs/CollectionOptions"
+        },
+        "vantage": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "cache": {
+          "$ref": "#/$defs/CollectionCache"
+        }
+      }
+    },
+    "ObservationWindow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "started_at",
+        "ended_at"
+      ],
+      "properties": {
+        "started_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$"
+        },
+        "ended_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,6})?(?:Z|[+-]\\d{2}:\\d{2})$"
+        }
+      }
+    },
+    "SourceOpportunity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_role",
+        "state",
+        "instance_count",
+        "degraded_markers",
+        "observation_window"
+      ],
+      "properties": {
+        "source_role": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "enum": [
+            "observed_value",
+            "observed_empty",
+            "partial",
+            "unavailable"
+          ]
+        },
+        "instance_count": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "degraded_markers": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1024,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        },
+        "observation_window": {
+          "$ref": "#/$defs/ObservationWindow"
+        }
+      }
+    },
+    "Workflow": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "collection_validity",
+        "freshness_assessment"
+      ],
+      "properties": {
+        "status": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "enum": [
+            "completed",
+            "failed"
+          ]
+        },
+        "collection_validity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 64,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "enum": [
+            "complete_for_recorded_opportunities",
+            "partial",
+            "unavailable",
+            "not_observed"
+          ]
+        },
+        "freshness_assessment": {
+          "const": "not_assigned"
+        }
+      }
+    },
+    "EvidenceBody": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source_type",
+        "raw_value",
+        "rule_name",
+        "slug"
+      ],
+      "properties": {
+        "source_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "raw_value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "rule_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        }
+      }
+    },
+    "EvidenceLedgerEntry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "evidence_id",
+        "source_type",
+        "raw_value",
+        "rule_name",
+        "slug"
+      ],
+      "properties": {
+        "evidence_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "source_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "raw_value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "rule_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        }
+      }
+    },
+    "ExplanationRecord": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_name",
+        "item_type",
+        "matched_evidence",
+        "evidence_ids",
+        "fired_rules",
+        "confidence_derivation",
+        "weakening_conditions",
+        "curated_explanation",
+        "lineage_status",
+        "lineage_rule_ids"
+      ],
+      "properties": {
+        "item_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "item_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "matched_evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceBody"
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "uniqueItems": true
+        },
+        "fired_rules": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        },
+        "confidence_derivation": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "weakening_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        },
+        "curated_explanation": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "lineage_status": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "enum": [
+            "exact",
+            "exact_rule_only",
+            "reconstructed",
+            "unsupported"
+          ]
+        },
+        "lineage_rule_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "ExplanationEvidenceNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "name",
+        "source_type",
+        "raw_value",
+        "rule_name",
+        "slug"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "type": {
+          "const": "evidence"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "source_type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "raw_value": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "rule_name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "slug": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        }
+      }
+    },
+    "ExplanationSlugNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "name"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "type": {
+          "const": "slug"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        }
+      }
+    },
+    "ExplanationRuleNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "name",
+        "lineage_status"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "type": {
+          "const": "rule"
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "lineage_status": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "enum": [
+            "exact",
+            "exact_rule_only",
+            "reconstructed",
+            "unsupported"
+          ]
+        }
+      }
+    },
+    "ExplanationTerminalNode": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "type",
+        "name",
+        "confidence_derivation",
+        "weakening_conditions",
+        "curated_explanation",
+        "lineage_status",
+        "lineage_rule_ids"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "type": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "enum": [
+            "signal",
+            "insight",
+            "observation",
+            "confidence"
+          ]
+        },
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "confidence_derivation": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "weakening_conditions": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        },
+        "curated_explanation": {
+          "type": "string",
+          "maxLength": 16384
+        },
+        "lineage_status": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "enum": [
+            "exact",
+            "exact_rule_only",
+            "reconstructed",
+            "unsupported"
+          ]
+        },
+        "lineage_rule_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "ExplanationEdge": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "source",
+        "target",
+        "relation"
+      ],
+      "properties": {
+        "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "target": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16384,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "relation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "enum": [
+            "detected-by",
+            "matched-rule",
+            "supports-rule",
+            "contributes-to",
+            "fired"
+          ]
+        }
+      }
+    },
+    "ExplanationDag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nodes",
+        "edges",
+        "schema_version",
+        "provenance_complete",
+        "disconnected_terminals",
+        "exact_provenance_complete",
+        "lineage_disconnected_terminals"
+      ],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/ExplanationEvidenceNode"
+              },
+              {
+                "$ref": "#/$defs/ExplanationSlugNode"
+              },
+              {
+                "$ref": "#/$defs/ExplanationRuleNode"
+              },
+              {
+                "$ref": "#/$defs/ExplanationTerminalNode"
+              }
+            ]
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExplanationEdge"
+          },
+          "uniqueItems": true
+        },
+        "schema_version": {
+          "const": 1
+        },
+        "provenance_complete": {
+          "type": "boolean"
+        },
+        "disconnected_terminals": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        },
+        "exact_provenance_complete": {
+          "type": "boolean"
+        },
+        "lineage_disconnected_terminals": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 16384,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "MetadataDependency": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "field",
+        "operator",
+        "expected_value",
+        "observed_value"
+      ],
+      "properties": {
+        "field": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "operator": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 32,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "expected_value": {},
+        "observed_value": {}
+      }
+    },
+    "ReviewCandidate": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "candidate_id",
+        "category",
+        "severity",
+        "observation",
+        "recommendation",
+        "generator_rule_id",
+        "observation_state",
+        "observation_scope",
+        "metadata_dependencies",
+        "absence_confirmable",
+        "evidence",
+        "evidence_ids"
+      ],
+      "properties": {
+        "candidate_id": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$"
+        },
+        "category": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "severity": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "observation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "recommendation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "generator_rule_id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "observation_state": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8192,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "observation_scope": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        },
+        "metadata_dependencies": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/MetadataDependency"
+          }
+        },
+        "absence_confirmable": {
+          "type": "boolean"
+        },
+        "evidence": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceBody"
+          }
+        },
+        "evidence_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "pattern": "^sha256:[0-9a-f]{64}$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "ReviewCandidates": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "domain",
+        "disclaimer",
+        "unavailable_controls",
+        "degraded_sources",
+        "candidates"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "review_candidates"
+        },
+        "schema_version": {
+          "const": "1.0"
+        },
+        "domain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "pattern": "^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$"
+        },
+        "disclaimer": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+        },
+        "unavailable_controls": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        },
+        "degraded_sources": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 8192,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        },
+        "candidates": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ReviewCandidate"
+          }
+        }
+      }
+    },
+    "ExplainedBaseline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "schema_version",
+        "lookup",
+        "explanations",
+        "explanation_dag"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "explained_lookup_baseline"
+        },
+        "schema_version": {
+          "const": "1.0"
+        },
+        "lookup": {
+          "$ref": "#/$defs/LookupResult"
+        },
+        "explanations": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/ExplanationRecord"
+          }
+        },
+        "explanation_dag": {
+          "$ref": "#/$defs/ExplanationDag"
+        }
+      }
+    },
+    "ReviewSuccess": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "queried_domain",
+        "explained_baseline",
+        "evidence_ledger",
+        "review_candidates"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "review_success"
+        },
+        "queried_domain": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253,
+          "pattern": "^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$"
+        },
+        "explained_baseline": {
+          "$ref": "#/$defs/ExplainedBaseline"
+        },
+        "evidence_ledger": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/EvidenceLedgerEntry"
+          }
+        },
+        "review_candidates": {
+          "$ref": "#/$defs/ReviewCandidates"
+        }
+      }
+    },
+    "ReviewError": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "record_type",
+        "error_kind",
+        "failed_source_roles"
+      ],
+      "properties": {
+        "record_type": {
+          "const": "review_error"
+        },
+        "error_kind": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 16,
+          "pattern": "^[^\\u0000-\\u001f\\u007f]+$",
+          "enum": [
+            "validation",
+            "lookup",
+            "timeout"
+          ]
+        },
+        "failed_source_roles": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "^[^\\u0000-\\u001f\\u007f]+$"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "LookupResult": {
+      "title": "recon JSON output",
+      "description": "Stable v2.0 contract for the single-domain success output of `recon <domain> --json`. This root object describes exactly one output mode: a successful single-domain lookup. The other output modes have their own shapes, documented in $defs and in docs/schema.md. `recon batch <file> --json` (default) emits a bare array of records, one per order-preserved deduplicated batch key (see $defs/BatchArray); valid URL, sub-host, and apex variants that normalize to the same canonical apex share one key. Each element is either a single-domain success object (this root) or a $defs/BatchErrorRecord. `recon batch <file> --json --include-ecosystem` always wraps that array in a $defs/BatchResult object; on an all-failed batch the wrapper is still emitted, with the error records under `domains` and an empty `ecosystem_hyperedges`. `recon batch <file> --ndjson` emits one $defs/BatchNdjsonRecord per line. `recon delta <domain> --json` and `recon <domain> --compare <file> --json` emit a $defs/DeltaReport. The dataclass in recon_tool.models.TenantInfo and the formatter in recon_tool.formatter.format_tenant_dict are the implementation source of truth. Consumers should ignore unknown properties; additive changes are non-breaking within 2.x. A few top-level fields are emitted only in specific modes or behind specific flags and are intentionally absent from `required`; each such property states its condition in its own description. See tests/test_json_schema_contract.py for the executable single-domain contract and tests/test_batch_ndjson_schema.py for the batch-record rule set.",
+      "type": "object",
+      "required": [
+        "tenant_id",
+        "display_name",
+        "default_domain",
+        "queried_domain",
+        "provider",
+        "confidence",
+        "evidence_confidence",
+        "inference_confidence",
+        "region",
+        "auth_type",
+        "google_auth_type",
+        "google_idp_name",
+        "primary_email_provider",
+        "likely_primary_email_provider",
+        "email_gateway",
+        "sources",
+        "partial",
+        "degraded_sources",
+        "services",
+        "slugs",
+        "detection_scores",
+        "insights",
+        "domain_count",
+        "tenant_domains",
+        "related_domains",
+        "email_security_score",
+        "dmarc_policy",
+        "dmarc_pct",
+        "mta_sts_mode",
+        "site_verification_tokens",
+        "ct_subdomain_count",
+        "cert_summary",
+        "cloud_instance",
+        "tenant_region_sub_scope",
+        "msgraph_host",
+        "lexical_observations",
+        "bimi_identity",
+        "slug_confidences",
+        "posterior_observations",
+        "fusion_enabled",
+        "schema_version",
+        "record_type",
+        "surface_attributions",
+        "evidence_conflicts",
+        "chain_motifs",
+        "infrastructure_clusters",
+        "fingerprint_metadata",
+        "connection_map"
+      ],
+      "properties": {
+        "tenant_id": {
+          "description": "Microsoft 365 tenant UUID when observed. Null means no UUID was observed; it does not distinguish a non-M365 domain from unavailable, incomplete, or non-disclosing tenant discovery.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "display_name": {
+          "description": "Best available public display label, which may be an identity-provider federation brand; falls back to the queried domain. It is not a verified legal organization name or ownership claim.",
+          "type": "string"
+        },
+        "default_domain": {
+          "description": "Primary domain within the tenant. Falls back to the queried domain when no tenant was detected.",
+          "type": "string"
+        },
+        "queried_domain": {
+          "description": "The registrable apex (eTLD+1) recon analyzed, after validating and normalizing the input. A pasted URL or sub-host is reduced to its apex (e.g. mail.example.co.uk -> example.co.uk); recon --exact keeps the literal host.",
+          "type": "string"
+        },
+        "provider": {
+          "description": "Evidence-role summary of MX delivery paths, gateways, and possible downstream indicators (e.g. 'Microsoft 365 (MX delivery path) + Proofpoint gateway (MX delivery path)'). Joined entries have no primary or secondary ordering semantics and do not prove complete product use.",
+          "type": "string"
+        },
+        "confidence": {
+          "description": "Deterministic merged-output summary tier derived from source, same-claim corroboration, and degradation heuristics. It is not confidence in every claim or a calibrated probability.",
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "evidence_confidence": {
+          "description": "Count-based confidence from distinct, error-free sources contributing useful data.",
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "inference_confidence": {
+          "description": "Strength of the strongest error-free, same-claim corroboration chain; unrelated claims do not combine.",
+          "type": "string",
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ]
+        },
+        "region": {
+          "description": "Geographic region when detectable via OIDC (e.g. 'NA', 'EU', 'WW').",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "auth_type": {
+          "description": "M365 authentication style.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Federated",
+            "Managed",
+            null
+          ]
+        },
+        "google_auth_type": {
+          "description": "Google Workspace authentication style.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "Federated",
+            "Managed",
+            null
+          ]
+        },
+        "google_idp_name": {
+          "description": "Third-party IdP name for Google Workspace when detectable.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "primary_email_provider": {
+          "description": "Schema-compatible field containing provider names observed directly in MX. Joined values are an unordered set and do not assert primacy.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "likely_primary_email_provider": {
+          "description": "Possible downstream provider indicator from non-MX role evidence when MX names only a gateway. It is not a primary-provider claim.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "email_gateway": {
+          "description": "MX-detected email security gateway (Proofpoint, Mimecast, etc.).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "sources": {
+          "description": "Distinct source names from error-free results that contributed useful data.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "partial": {
+          "description": "True when any core source or core collector-channel marker is in degraded_sources (CT-only degradation does not flip this flag).",
+          "type": "boolean"
+        },
+        "degraded_sources": {
+          "description": "Stable source, collector-channel, or detector identifiers that failed or were unavailable. Values can be finer-grained than top-level sources, for example dns_records, dns:dmarc, dns:mx, or detector:email_security. An unavailable channel is unobserved, not a negative result.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "services": {
+          "description": "Human-readable labels derived from public fingerprints and reviewed rules. They are not proof of active product use.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "slugs": {
+          "description": "Stable identifiers for observed fingerprint patterns. They are not product-use claims.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "detection_scores": {
+          "description": "Per-slug evidence-strength level aggregated from observations. It is not a probability or truth confidence.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "enum": [
+              "low",
+              "medium",
+              "high"
+            ]
+          }
+        },
+        "insights": {
+          "description": "Derived, hedged observations from public evidence. Exact wording may evolve; they are not verified private-state intelligence or proof of product use.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "domain_count": {
+          "description": "Number of domain strings retained from bounded public tenant-discovery responses. It is not organization size or guaranteed tenant cardinality.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "tenant_domains": {
+          "description": "Domain strings retained from bounded public tenant-discovery responses. The list may be incomplete and does not establish ownership or an exhaustive tenant namespace.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "related_domains": {
+          "description": "Domain names linked by bounded CT, CNAME, Exchange/identity endpoint, autodiscover, or DKIM tenant-domain breadcrumbs. The stable field name does not imply ownership or an organizational relationship.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "email_security_score": {
+          "description": "Compatibility count of five observed-present public controls: effectively enforcing DMARC, DKIM selectors, SPF strict (-all), MTA-STS, and BIMI. If a constituent channel is unavailable, the count is incomplete; consult degraded_sources rather than treating uncounted controls as completed negatives.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 5
+        },
+        "dmarc_policy": {
+          "description": "Parser-valid explicit apex DMARC p= value. RFC 9989 effective-none fallback records retain DMARC evidence but leave this field null rather than fabricating p=none.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "reject",
+            "quarantine",
+            "none",
+            null
+          ]
+        },
+        "dmarc_pct": {
+          "description": "DMARC pct= parameter.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0,
+          "maximum": 100
+        },
+        "mta_sts_mode": {
+          "description": "MTA-STS policy mode.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "enforce",
+            "testing",
+            "none",
+            null
+          ]
+        },
+        "site_verification_tokens": {
+          "description": "TXT tokens observed on the apex (e.g. 'google-site-verification=', 'MS=').",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "ct_provider_used": {
+          "description": "Best-effort CT-pipeline telemetry, not part of the guaranteed contract (removed from the required set in the v2.0 schema-hardening pass so the CT pipeline can evolve). Which CT provider answered, or '(cached)' suffix when data came from the per-domain CT cache.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ct_subdomain_count": {
+          "description": "Number of subdomains returned after filtering.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "ct_cache_age_days": {
+          "description": "Best-effort CT-pipeline telemetry, not part of the guaranteed contract (optional since the v2.0 schema-hardening pass). Age of the CT cache entry in days when cached data was used. Null when data came from a live provider.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        },
+        "ct_attempt_outcome": {
+          "description": "Best-effort CT-pipeline telemetry, not part of the guaranteed contract (optional since the v2.0 schema-hardening pass; the enum may gain values as the pipeline evolves). v1.9.25: outcome of the CT enumeration attempt. cache_hit when the cache-first short-circuit served the result. live_success when a live provider returned data. live_rate_limited when a provider hit HTTP 429 or local pacing / wait-ceiling limits and no provider or cache returned data. breaker_open when every failed provider was stopped by an open local breaker before a useful live attempt. live_other_failure for non-429 errors (timeout, 5xx, JSON parse). cache_miss when providers returned empty-but-not-error and no cache entry existed. skipped when --no-ct was passed. Null on older records or sources that do not touch CT.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            null,
+            "cache_hit",
+            "live_success",
+            "live_rate_limited",
+            "breaker_open",
+            "live_other_failure",
+            "cache_miss",
+            "skipped"
+          ]
+        },
+        "cert_summary": {
+          "description": "Certificate transparency summary. Null when no CT data was obtained.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/LookupResult/$defs/CertSummary"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "cloud_instance": {
+          "description": "Microsoft cloud-sovereignty host from M365 OIDC discovery. Microsoft controls this value and may add sovereign clouds, so it is an open string rather than a closed enum; known values include microsoftonline.com (commercial), microsoftonline.us (US Gov), and partner.microsoftonline.cn (China).",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tenant_region_sub_scope": {
+          "description": "Gov-cloud disambiguation from M365 OIDC.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "GCC",
+            "DOD",
+            "USGov",
+            null
+          ]
+        },
+        "msgraph_host": {
+          "description": "Authoritative Microsoft Graph host.",
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "graph.microsoft.com",
+            "graph.microsoft.us",
+            null
+          ]
+        },
+        "lexical_observations": {
+          "description": "Hedged observations from CT subdomain lexical taxonomy.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "bimi_identity": {
+          "description": "BIMI VMC identity from a trust-validated source. Null when no validated identity is available; observing an unverified certificate document does not populate this field.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/LookupResult/$defs/BIMIIdentity"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "fusion_enabled": {
+          "description": "True when the evidence-strength and Bayesian-network post-processing ran for this lookup. v2 preserves the historical implicit enabled CLI default during the ADR-0013 transition; the explicit advanced MCP tools are unchanged. When false, slug_confidences is an empty object and posterior_observations is an empty array. When true, slug_confidences can still be empty if no retained evidence carries a slug, while posterior_observations carries the network's fixed nodes.",
+          "type": "boolean"
+        },
+        "schema_version": {
+          "description": "The recon-schema contract version this record conforms to (SH7, v2.0+). Lets a detached payload (in a log, queue, or tool result, separated from this schema's $id) be routed across a future 2.x to 3.0 boundary.",
+          "type": "string"
+        },
+        "record_type": {
+          "description": "Self-describing discriminator for the output mode (SH7, v2.0+). 'lookup' on a single-domain success object; the other object-shaped modes carry 'batch_result' (the --include-ecosystem wrapper), 'delta' (a delta report), or 'error' (a batch error record). A consumer can branch on this one field instead of inferring the shape from which keys are present.",
+          "type": "string",
+          "const": "lookup"
+        },
+        "slug_confidences": {
+          "description": "Per-slug evidence-strength scores from a Beta-shaped additive heuristic over retained positive evidence occurrences (stable v2.0+). An object mapping each detected slug to a score in [0, 1], parallel to detection_scores. Occurrences are not asserted independent, and scores are not externally calibrated probabilities. Populated only when fusion runs (see fusion_enabled); empty object otherwise. The network layer (posterior_observations) separately propagates evidence through chained claims.",
+          "type": "object",
+          "additionalProperties": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "posterior_observations": {
+          "description": "Model-relative marginal posteriors over high-level claims from the shipped, manually encoded, partly development-corpus-informed Bayesian network (v1.9; stable v2.0+). Each entry includes P(node=present | E) under that model and an 80% evidence-responsive uncertainty band. Populated only when fusion runs (see fusion_enabled); empty array otherwise. The evidence-strength layer (slug_confidences) operates on raw evidence; this network layer propagates through chained claims.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LookupResult/$defs/PosteriorObservation"
+          }
+        },
+        "surface_attributions": {
+          "description": "Per-subdomain attribution to a SaaS or infrastructure provider, derived from CNAME-chain classification of related_domains. Each entry maps one subdomain to its primary service. Application-tier matches (Auth0, Shopify, Zendesk, ...) take precedence over infrastructure-tier matches (Cloudflare, Fastly, CloudFront, ...) when a chain produces both; the infrastructure layer is recorded in infra_slug / infra_name as supplementary context. Empty array when no related domains classified.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LookupResult/$defs/SurfaceAttribution"
+          }
+        },
+        "evidence_conflicts": {
+          "description": "Top-level array of tracked cross-source disagreements (v1.7+). Each entry names one of six merged fields where 2+ sources provided different non-None values, with every candidate preserved. Empty means no disagreement among those tracked fields, not complete claim-level conflict coverage. The merger uses source-result completeness ordering; candidate confidence is not field-specific reliability or calibrated truth confidence. The legacy `conflicts` dict that --explain emits remains for backwards compatibility.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LookupResult/$defs/EvidenceConflict"
+          }
+        },
+        "chain_motifs": {
+          "description": "CNAME chain motifs (v1.7+). Each entry records an ordered proxy/CDN/origin shape (for example Cloudflare to AWS origin or Akamai to Azure origin) that fired on a related subdomain's CNAME chain. Observable structure only; never an ownership claim. Empty array when no motif matched any related subdomain. The built-in motif catalog ships with recon and can be extended via ~/.recon/motifs.yaml (additive only).",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LookupResult/$defs/ChainMotif"
+          }
+        },
+        "infrastructure_clusters": {
+          "description": "Per-domain CT co-occurrence community detection report (v1.8+). Always emitted. ``algorithm`` records which path produced the partition (``louvain`` for small graphs, ``connected_components`` when the graph exceeds the size cap, ``skipped`` when no graph could be built). Modularity is 0.0 in the fallback / skipped paths. Members within each cluster are sorted; clusters are sorted by size descending. Observable structure only; clusters describe co-issuance, not ownership.",
+          "$ref": "#/$defs/LookupResult/$defs/InfrastructureClusterReport"
+        },
+        "fingerprint_metadata": {
+          "description": "Per-slug typed catalog or grouping metadata (v1.8+), keyed by detected fingerprint slug. Each value is `{product_family, parent_vendor, bimi_org}` from fingerprint YAML. Slugs without populated metadata are omitted. Empty object when nothing applies. Drives exact batch hyperedge labels and never implies ownership, administrative control, or a business relationship.",
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/LookupResult/$defs/FingerprintMetadata"
+          }
+        },
+        "connection_map": {
+          "description": "Derived grouping of observed vendors and related-host classes. Always emitted. Empty lane entries mean no catalog match in that display category; that is unresolved, not proof the product is unused. Does not replace services, slugs, related_domains, or surface_attributions. Additive within 2.x.",
+          "$ref": "#/$defs/LookupResult/$defs/ConnectionMap"
+        },
+        "unclassified_cname_chains": {
+          "description": "Conditional. Present only when ``--include-unclassified`` is passed, absent otherwise; consumers should not treat it as always present. CNAME chains the surface classifier resolved but could not attribute to any cname_target fingerprint. Each entry: {subdomain, chain: [hop1, hop2, terminal]}. Wildcard-DNS echoes are filtered out before this list is populated. Feeds the fingerprint-discovery loop in validation/find_gaps.py and the /recon-fingerprint-triage skill.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LookupResult/$defs/UnclassifiedCnameChain"
+          }
+        },
+        "evidence": {
+          "description": "Conditional. Present only with --explain, absent otherwise; consumers should not treat it as always present. Per-detection evidence trace.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LookupResult/$defs/EvidenceRecord"
+          }
+        },
+        "explanations": {
+          "description": "Conditional. Present only with explained JSON through the CLI or lookup_tenant MCP tool, absent otherwise. Flat per-terminal explanations retained alongside explanation_dag for compatibility. Current output always includes lineage_status and lineage_rule_ids; those additive fields remain optional here so earlier v2 explained payloads stay valid.",
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/LookupResult/$defs/ExplanationRecord"
+          }
+        },
+        "explanation_dag": {
+          "description": "Conditional. Present only with --explain through the CLI or lookup_tenant MCP tool, absent otherwise; consumers should not treat it as always present. Occurrence-aware provenance graph with additive completeness diagnostics.",
+          "type": "object",
+          "required": [
+            "nodes",
+            "edges",
+            "schema_version"
+          ],
+          "properties": {
+            "nodes": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "edges": {
+              "type": "array",
+              "items": {
+                "type": "object"
+              }
+            },
+            "schema_version": {
+              "const": 1
+            },
+            "provenance_complete": {
+              "type": "boolean",
+              "description": "Schema-version-1 compatibility diagnostic. True exactly when every signal, insight, observation, and confidence terminal is reachable from at least one evidence node in the emitted graph. Use exact_provenance_complete for exact generation-time evidence-to-rule lineage."
+            },
+            "disconnected_terminals": {
+              "type": "array",
+              "description": "Sorted terminal node ids that are not reachable from any evidence node.",
+              "items": {
+                "type": "string"
+              }
+            },
+            "exact_provenance_complete": {
+              "type": "boolean",
+              "description": "True exactly when every terminal has an explicit exact generation-time evidence-to-rule-to-terminal path."
+            },
+            "lineage_disconnected_terminals": {
+              "type": "array",
+              "description": "Sorted terminal node ids without an explicit exact evidence-to-rule path, including exact-rule-only, reconstructed, unsupported, and evidence-empty terminals.",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "shared_verification_tokens": {
+          "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch shared a TXT verification token. Never emitted in single-domain --json or in --ndjson (which streams before the batch-wide pass runs). Each entry pairs a shared token with the peer domain that also carried it.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "token",
+              "peer"
+            ],
+            "properties": {
+              "token": {
+                "type": "string"
+              },
+              "peer": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "shared_tenant": {
+          "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch shared an M365 tenant_id. Never emitted in single-domain --json or in --ndjson. Each entry carries the shared tenant_id and the peer domains under it.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "tenant_id",
+              "peers"
+            ],
+            "properties": {
+              "tenant_id": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "peers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "shared_display_name": {
+          "description": "Conditional, batch-only. Present on a per-domain success record in `recon batch --json` output only when two or more domains in the batch normalized to the same display name. Hedged signal (customer-supplied brand text, not cryptographic). Never emitted in single-domain --json or in --ndjson. Each entry carries the raw display_name, its normalized form, and the peer domains.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "display_name",
+              "normalized_name",
+              "peers"
+            ],
+            "properties": {
+              "display_name": {
+                "type": "string"
+              },
+              "normalized_name": {
+                "type": "string"
+              },
+              "peers": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        }
+      },
+      "$defs": {
+        "CertSummary": {
+          "type": "object",
+          "required": [
+            "cert_count",
+            "issuer_diversity",
+            "issuance_velocity",
+            "newest_cert_age_days",
+            "oldest_cert_age_days",
+            "top_issuers",
+            "wildcard_sibling_clusters",
+            "deployment_bursts"
+          ],
+          "properties": {
+            "cert_count": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "issuer_diversity": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "issuance_velocity": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Certs issued in last 90 days."
+            },
+            "newest_cert_age_days": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "oldest_cert_age_days": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "top_issuers": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "maxItems": 3
+            },
+            "wildcard_sibling_clusters": {
+              "description": "Stable v1.7+ (reshaped to objects in v2.0). Each entry is an object {names: [...]} whose `names` is the deduplicated, sorted list of non-wildcard SANs from a single cert that also covered at least one wildcard SAN. The object envelope leaves room for a future per-cluster attribute (the generating wildcard SAN or issuer). Empty array when CT data showed no wildcard certs or none had concrete siblings to harvest. Bounded: at most 10 clusters, 20 names per cluster.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": [
+                  "names"
+                ],
+                "properties": {
+                  "names": {
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            },
+            "deployment_bursts": {
+              "description": "Stable v1.7+. Cohorts of cert issuances clustered by `not_before` proximity (default 60s window, min 3 distinct non-wildcard SANs). Output is intentionally relative, using span_seconds plus a name list, and never claims ownership. Empty array when no cluster meets the minimum size. Bounded to at most 8 bursts and 25 names per burst.",
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/CertBurst"
+              }
+            }
+          }
+        },
+        "CertBurst": {
+          "type": "object",
+          "required": [
+            "window_start",
+            "window_end",
+            "span_seconds",
+            "names"
+          ],
+          "properties": {
+            "window_start": {
+              "type": "string",
+              "description": "ISO-8601 UTC of earliest not_before in this burst."
+            },
+            "window_end": {
+              "type": "string",
+              "description": "ISO-8601 UTC of latest not_before in this burst."
+            },
+            "span_seconds": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Window span in seconds."
+            },
+            "names": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Distinct non-wildcard SANs co-issued inside this window, sorted."
+            }
+          }
+        },
+        "BIMIIdentity": {
+          "description": "Identity attributes supplied by a source that validates the certificate chain and VMC profile.",
+          "type": "object",
+          "required": [
+            "organization",
+            "country",
+            "state",
+            "locality",
+            "trademark"
+          ],
+          "properties": {
+            "organization": {
+              "type": "string"
+            },
+            "country": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "state": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "locality": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "trademark": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "EvidenceRecord": {
+          "type": "object",
+          "required": [
+            "source_type",
+            "raw_value",
+            "rule_name",
+            "slug"
+          ],
+          "properties": {
+            "source_type": {
+              "type": "string",
+              "description": "DNS or HTTP source class (TXT, MX, CNAME, NS, SRV, CAA, SPF, HTTP)."
+            },
+            "raw_value": {
+              "type": "string"
+            },
+            "rule_name": {
+              "type": "string"
+            },
+            "slug": {
+              "type": "string"
+            }
+          }
+        },
+        "ExplanationRecord": {
+          "description": "One flat explanation terminal. The seven required fields are the stable pre-lineage shape; lineage_status and lineage_rule_ids are additive diagnostics emitted by current versions.",
+          "type": "object",
+          "required": [
+            "item_name",
+            "item_type",
+            "matched_evidence",
+            "fired_rules",
+            "confidence_derivation",
+            "weakening_conditions",
+            "curated_explanation"
+          ],
+          "properties": {
+            "item_name": {
+              "type": "string"
+            },
+            "item_type": {
+              "type": "string",
+              "enum": [
+                "insight",
+                "signal",
+                "observation",
+                "confidence"
+              ]
+            },
+            "matched_evidence": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/EvidenceRecord"
+              }
+            },
+            "fired_rules": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "confidence_derivation": {
+              "type": "string"
+            },
+            "weakening_conditions": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "curated_explanation": {
+              "type": "string"
+            },
+            "lineage_status": {
+              "type": "string",
+              "enum": [
+                "exact",
+                "exact_rule_only",
+                "reconstructed",
+                "unsupported"
+              ]
+            },
+            "lineage_rule_ids": {
+              "type": "array",
+              "maxItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "SurfaceAttribution": {
+          "description": "Maps one subdomain to its primary service from CNAME chain classification. primary_* fields are the application-tier match when present, else the most specific infrastructure-tier match. infra_* fields are populated only when both an application and an infrastructure tier matched; they record the CDN or load balancer fronting the application service.",
+          "type": "object",
+          "required": [
+            "subdomain",
+            "primary_slug",
+            "primary_name",
+            "primary_tier",
+            "infra_slug",
+            "infra_name"
+          ],
+          "properties": {
+            "subdomain": {
+              "type": "string"
+            },
+            "primary_slug": {
+              "type": "string"
+            },
+            "primary_name": {
+              "type": "string"
+            },
+            "primary_tier": {
+              "type": "string",
+              "enum": [
+                "application",
+                "infrastructure"
+              ]
+            },
+            "infra_slug": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "infra_name": {
+              "type": [
+                "string",
+                "null"
+              ]
+            }
+          }
+        },
+        "ChainMotif": {
+          "description": "One CNAME chain motif observed against a related subdomain. ``chain`` is the ordered subset of hops that matched the motif's markers, not the full original chain.",
+          "type": "object",
+          "required": [
+            "motif_name",
+            "display_name",
+            "confidence",
+            "subdomain",
+            "chain"
+          ],
+          "properties": {
+            "motif_name": {
+              "type": "string",
+              "description": "Stable identifier from motifs.yaml."
+            },
+            "display_name": {
+              "type": "string",
+              "description": "Human-readable label with \u2192 separators."
+            },
+            "confidence": {
+              "type": "string",
+              "enum": [
+                "high",
+                "medium",
+                "low"
+              ]
+            },
+            "subdomain": {
+              "type": "string",
+              "description": "Related subdomain whose chain produced the match."
+            },
+            "chain": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Matched hops in order, one per motif marker."
+            }
+          }
+        },
+        "InfrastructureClusterReport": {
+          "description": "Stable v1.8+. Wraps the cluster list with the algorithm path and the underlying graph metrics so downstream tools can interpret the partition correctly.",
+          "type": "object",
+          "required": [
+            "algorithm",
+            "modularity",
+            "node_count",
+            "edge_count",
+            "clusters"
+          ],
+          "properties": {
+            "algorithm": {
+              "type": "string",
+              "enum": [
+                "louvain",
+                "connected_components",
+                "skipped"
+              ],
+              "description": "Path that produced the partition. ``connected_components`` is the deterministic fallback used when the graph exceeds the v1.8 node cap; ``skipped`` means no graph was built (no CT entries, fewer than two nodes, or no edges)."
+            },
+            "modularity": {
+              "type": "number",
+              "description": "Newman-Girvan modularity for the Louvain partition. 0.0 in the fallback / skipped paths."
+            },
+            "partition_stability": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "description": "Optimizer consensus across a Louvain seed sweep: the mean pairwise adjusted Rand index between the partitions produced by stability_runs different seeds (CAL11). 1.0 means every seed produced the identical partition; lower values show seed sensitivity on that one fixed graph. This does not measure CT data stability, model stability, significance, or partition correctness. null outside the Louvain path (fallback / skipped), where the partition is deterministic and the measure is not applicable. Added 2.2.0; schema-additive."
+            },
+            "stability_runs": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of distinct Louvain seeds in the partition-stability sweep. 0 when partition_stability is null. Added 2.2.0; schema-additive."
+            },
+            "node_count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Distinct non-wildcard SAN hostnames observed across the cert entries."
+            },
+            "edge_count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Edges in the co-occurrence graph (each edge weights co-issuance count)."
+            },
+            "clusters": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/InfrastructureCluster"
+              }
+            }
+          }
+        },
+        "EcosystemHyperedge": {
+          "description": "One observed multi-domain signature in a ``recon batch --json --include-ecosystem`` run (v1.8+). Surfaced as the top-level ``ecosystem_hyperedges`` array of the batch wrapper, where the per-domain entries appear under ``domains``. Not emitted in single-domain ``--json`` output.",
+          "type": "object",
+          "required": [
+            "edge_type",
+            "key",
+            "members"
+          ],
+          "properties": {
+            "edge_type": {
+              "type": "string",
+              "enum": [
+                "top_issuer",
+                "bimi_org",
+                "parent_vendor",
+                "shared_slugs"
+              ],
+              "description": "Rule that produced the edge: shared CT top issuer, shared BIMI VMC organization, shared fingerprint parent_vendor, or shared fingerprint-slug pair (at least 3 overlapping non-ubiquitous slugs)."
+            },
+            "key": {
+              "type": "string",
+              "description": "Value the rule fired on. This is an issuer name, BIMI organization, parent vendor, or, for ``shared_slugs``, the comma-joined intersection of overlapping slug names."
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 2,
+              "description": "Sorted apex domains that share the signature."
+            }
+          }
+        },
+        "FingerprintMetadata": {
+          "description": "Typed catalog or grouping metadata for one fingerprint slug. Stable v1.8+. Each field is optional; at least one is non-null when this record appears. These fields do not imply ownership, control, or a business relationship.",
+          "type": "object",
+          "required": [
+            "product_family",
+            "parent_vendor",
+            "bimi_org"
+          ],
+          "properties": {
+            "product_family": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Vendor-internal product line (e.g. \"Microsoft 365\", \"Google Workspace\", \"AWS\")."
+            },
+            "parent_vendor": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Corporate parent the product rolls up to (e.g. \"Microsoft\", \"Salesforce\" for Slack)."
+            },
+            "bimi_org": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Exact organization name expected on a BIMI VMC for domains under this product."
+            }
+          }
+        },
+        "ConnectionMap": {
+          "description": "Grouped public-connection view derived at format time. Lanes follow the panel display categories. Related-host classes keep every related_domains name. explicit_absences copies email_gateway and mta_sts_mode so a consumer does not have to reconstruct them from a truncated briefing.",
+          "type": "object",
+          "required": [
+            "lanes",
+            "related_host_classes",
+            "explicit_absences"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "lanes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/ConnectionLane"
+              }
+            },
+            "related_host_classes": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/RelatedHostClass"
+              }
+            },
+            "explicit_absences": {
+              "type": "object",
+              "required": [
+                "email_gateway",
+                "mta_sts_mode"
+              ],
+              "additionalProperties": false,
+              "properties": {
+                "email_gateway": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "mta_sts_mode": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                }
+              }
+            }
+          }
+        },
+        "ConnectionLane": {
+          "description": "One display category in the connection map. entries may be empty.",
+          "type": "object",
+          "required": [
+            "id",
+            "label",
+            "entries"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "type": "string"
+            },
+            "label": {
+              "type": "string"
+            },
+            "entries": {
+              "type": "array",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/ConnectionEntry"
+              }
+            }
+          }
+        },
+        "ConnectionEntry": {
+          "description": "One observed vendor or email-control row. slug is null for self-describing observations such as DMARC. role is the evidence-role qualifier, unavailable, or observed control. summary is the first sentence of the catalog detection description when present. hosts are related subdomains whose primary attribution matches the slug.",
+          "type": "object",
+          "required": [
+            "name",
+            "slug",
+            "role",
+            "hosts"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "slug": {
+              "type": [
+                "string",
+                "null"
+              ]
+            },
+            "role": {
+              "type": "string"
+            },
+            "hosts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "summary": {
+              "type": "string"
+            }
+          }
+        },
+        "RelatedHostClass": {
+          "description": "Related-domain names sharing one first-label class (auth., shop., other.). primary_slugs lists surface_attributions primary slugs observed on those hosts.",
+          "type": "object",
+          "required": [
+            "prefix",
+            "hosts",
+            "primary_slugs"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "prefix": {
+              "type": "string"
+            },
+            "hosts": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "primary_slugs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        },
+        "InfrastructureCluster": {
+          "description": "One community in the per-domain SAN co-occurrence graph. Stable v1.8+.",
+          "type": "object",
+          "required": [
+            "cluster_id",
+            "size",
+            "members",
+            "shared_cert_count",
+            "dominant_issuer"
+          ],
+          "properties": {
+            "cluster_id": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Stable id within this report (largest cluster is 0)."
+            },
+            "size": {
+              "type": "integer",
+              "minimum": 2
+            },
+            "members": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "SAN hostnames in this cluster, sorted."
+            },
+            "shared_cert_count": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Number of cert-entry contributions across edges fully inside this cluster (not unique certs)."
+            },
+            "dominant_issuer": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Most common issuer name across contributing certs."
+            }
+          }
+        },
+        "EvidenceConflict": {
+          "description": "A single field where two or more sources provided different non-None values during merge. Stable v1.7+.",
+          "type": "object",
+          "required": [
+            "field",
+            "candidates"
+          ],
+          "properties": {
+            "field": {
+              "type": "string",
+              "description": "Merged field name. One of: display_name, auth_type, region, tenant_id, dmarc_policy, google_auth_type."
+            },
+            "candidates": {
+              "type": "array",
+              "minItems": 2,
+              "items": {
+                "type": "object",
+                "required": [
+                  "value",
+                  "source",
+                  "confidence"
+                ],
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  },
+                  "source": {
+                    "type": "string"
+                  },
+                  "confidence": {
+                    "type": "string",
+                    "description": "Overall completeness tier of the contributing source result, not field-specific reliability or calibrated truth confidence.",
+                    "enum": [
+                      "high",
+                      "medium",
+                      "low"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "UnclassifiedCnameChain": {
+          "description": "A CNAME chain captured during surface classification that did not match any cname_target fingerprint. Surfaced only with ``--include-unclassified``. ``chain`` is ordered: each hop is a CNAME target, terminal last. Useful for proposing new fingerprints because the terminal hostname is usually an unrecognized third-party SaaS endpoint, an intra-org CDN, or noise.",
+          "type": "object",
+          "required": [
+            "subdomain",
+            "chain"
+          ],
+          "properties": {
+            "subdomain": {
+              "type": "string"
+            },
+            "chain": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "minItems": 1
+            }
+          }
+        },
+        "PosteriorObservation": {
+          "description": "Per-node model-relative Bayesian posterior with an 80% evidence-responsive uncertainty band (v1.9; stable v2.0+). The band uses the model mean and hand-set effective display mass to parameterize a Beta shape, with a mean-centered fallback at boundaries. It is not a Bayesian credible interval or frequentist confidence interval, and its width is not generally monotone when evidence changes both the posterior and the mass. ``sparse=true`` marks only the minimum display-mass case; it does not state whether informative absence was counted. ``conflict_provenance`` (v1.9.1+) carries the source-pair detail behind any n_eff penalty.",
+          "type": "object",
+          "required": [
+            "name",
+            "description",
+            "posterior",
+            "interval_low",
+            "interval_high",
+            "evidence_used",
+            "n_eff",
+            "sparse",
+            "conflict_provenance"
+          ],
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Stable node identifier matching bayesian_network.yaml."
+            },
+            "description": {
+              "type": "string",
+              "description": "Plain-English claim the node encodes."
+            },
+            "posterior": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "P(node=present | observed evidence) under the committed manually encoded, partly development-corpus-informed model."
+            },
+            "interval_low": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Lower bound of the 80% evidence-responsive uncertainty band. Not a Bayesian credible interval or frequentist confidence interval."
+            },
+            "interval_high": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Upper bound of the 80% evidence-responsive uncertainty band. Not a Bayesian credible interval or frequentist confidence interval."
+            },
+            "evidence_used": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Bound observations that fired for this node, formatted as ``slug:<name>`` or ``signal:<name>``."
+            },
+            "n_eff": {
+              "type": "number",
+              "minimum": 0,
+              "description": "Effective display mass used to derive the uncertainty band; lower usually means wider for a fixed posterior."
+            },
+            "sparse": {
+              "type": "boolean",
+              "description": "True when n_eff is at the configured floor. This marks the minimum display-mass case, not a calibrated uncertainty level and not whether informative absence was counted."
+            },
+            "conflict_provenance": {
+              "type": "array",
+              "description": "Cross-source disagreements that contributed to this node's n_eff penalty (v1.9.1+). Empty array when no conflicts dampened the interval. Surfaces the source-pair detail dropped by the legacy count-only path; pairs with the existing top-level ``evidence_conflicts`` array.",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/NodeConflict"
+              }
+            },
+            "evidence_ranked": {
+              "type": "array",
+              "description": "Fired bindings ranked by absolute log-likelihood-ratio contribution, descending (v1.9.3.2+; the contributing set, one per correlation group). Empty when no bindings fired, and omitted on batch records (the batch shape predates it).",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/NodeEvidence"
+              }
+            },
+            "entropy_reduction_nats": {
+              "type": "number",
+              "description": "Signed marginal entropy change H(prior marginal) - H(posterior) in nats. It can be negative, is not pointwise information gain, and the sum can double count dependent nodes. Added 2.2.0; schema-additive."
+            },
+            "unit_counterfactuals": {
+              "type": "array",
+              "description": "Exact leave-one-unit-out counterfactuals for every evidence unit informative for this node in this run, sorted by absolute delta descending. An evidence counterfactual over the model, never a causal claim about the world. Deltas are individually exact but not additive (units interact through the DAG). Added 2.2.0; schema-additive.",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/NodeUnitCounterfactual"
+              }
+            }
+          }
+        },
+        "NodeEvidence": {
+          "description": "One fired binding's quantified influence on a node's posterior (v1.9.3.2+). llr is the natural-log likelihood ratio (positive favours present); influence_pct normalizes |llr| to a percentage across the node's fired bindings.",
+          "type": "object",
+          "required": [
+            "kind",
+            "name",
+            "llr",
+            "influence_pct"
+          ],
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "slug",
+                "signal"
+              ],
+              "description": "Binding kind."
+            },
+            "name": {
+              "type": "string",
+              "description": "Slug or signal name that fired."
+            },
+            "llr": {
+              "type": "number",
+              "description": "Natural-log likelihood ratio for the fired observation."
+            },
+            "influence_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "|llr| as a share of the node's total fired |llr|, in percent."
+            }
+          }
+        },
+        "NodeUnitCounterfactual": {
+          "description": "One evidence unit's exact leave-one-out influence on a node's posterior (added 2.2.0). The engine re-runs exact inference with the unit masked as structurally unobserved, globally across the DAG, so posterior_without reflects everything else still observed - including support flowing from other nodes' evidence through the CPTs.",
+          "type": "object",
+          "required": [
+            "unit",
+            "kind",
+            "observed",
+            "posterior_without",
+            "delta"
+          ],
+          "properties": {
+            "unit": {
+              "type": "string",
+              "description": "Evidence-unit name: a correlation-group name (e.g. m365_indicators, dmarc_policy) or an ungrouped binding's slug/signal name."
+            },
+            "kind": {
+              "type": "string",
+              "enum": [
+                "group",
+                "slug",
+                "signal"
+              ],
+              "description": "Unit kind: a correlation group, or the ungrouped binding's kind."
+            },
+            "observed": {
+              "type": "string",
+              "enum": [
+                "fired",
+                "absent"
+              ],
+              "description": "Whether the unit fired, or is an informative absence on a declarative node (there delta is typically negative: the absence drags the posterior down)."
+            },
+            "posterior_without": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "P(node=present | evidence with this unit masked as structurally unobserved)."
+            },
+            "delta": {
+              "type": "number",
+              "minimum": -1,
+              "maximum": 1,
+              "description": "posterior - posterior_without: positive when the unit pushes the node up. Individually exact, not additive across units."
+            }
+          }
+        },
+        "NodeConflict": {
+          "description": "One cross-source disagreement carried through to a NodePosterior (v1.9.1+). ``field`` is the merged TenantInfo field whose sources disagreed; ``sources`` lists the distinct sources that contributed candidate values; ``magnitude`` is the n_eff penalty (in n_eff units) this conflict applied to the node.",
+          "type": "object",
+          "required": [
+            "field",
+            "sources",
+            "magnitude"
+          ],
+          "properties": {
+            "field": {
+              "type": "string",
+              "description": "Merged field name. One of: display_name, auth_type, region, tenant_id, dmarc_policy, google_auth_type."
+            },
+            "sources": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Distinct source identifiers that contributed a candidate value for this field."
+            },
+            "magnitude": {
+              "type": "number",
+              "minimum": 0,
+              "description": "n_eff penalty this single conflict applied. Uniform at v1.9.1; exposed as a number so future per-node relevance weighting is schema-additive."
+            }
+          }
+        },
+        "DeltaReport": {
+          "description": "JSON output shape of `recon delta <domain> --json` and `recon <domain> --compare <file> --json`. A null changed_* field means either no detected comparable change or a withheld comparison; consult incomplete_comparison.suppressed_fields. Stable.",
+          "type": "object",
+          "required": [
+            "record_type",
+            "domain",
+            "added_services",
+            "removed_services",
+            "added_slugs",
+            "removed_slugs",
+            "added_signals",
+            "removed_signals",
+            "changed_auth_type",
+            "changed_dmarc_policy",
+            "changed_email_security_score",
+            "changed_confidence",
+            "changed_domain_count"
+          ],
+          "properties": {
+            "record_type": {
+              "type": "string",
+              "const": "delta",
+              "description": "Record discriminator (SH7, v2.0+); always 'delta' on this shape."
+            },
+            "domain": {
+              "type": "string"
+            },
+            "added_services": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "removed_services": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "added_slugs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "removed_slugs": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "added_signals": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Best-effort signal additions reconstructed from rendered insight text so legacy snapshots remain comparable. Additions are withheld when previous collection is degraded. This is not a raw signal-registry diff."
+            },
+            "removed_signals": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              },
+              "description": "Best-effort signal removals reconstructed from rendered insight text. Removals are withheld when current collection is degraded. This is not a raw signal-registry diff."
+            },
+            "changed_auth_type": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "to"
+                  ],
+                  "properties": {
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "to": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "changed_dmarc_policy": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "to"
+                  ],
+                  "properties": {
+                    "from": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    },
+                    "to": {
+                      "type": [
+                        "string",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "changed_email_security_score": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "to"
+                  ],
+                  "properties": {
+                    "from": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    },
+                    "to": {
+                      "type": [
+                        "integer",
+                        "null"
+                      ]
+                    }
+                  }
+                }
+              ]
+            },
+            "changed_confidence": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "to"
+                  ],
+                  "properties": {
+                    "from": {
+                      "type": "string"
+                    },
+                    "to": {
+                      "type": "string"
+                    }
+                  }
+                }
+              ]
+            },
+            "changed_domain_count": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "from",
+                    "to"
+                  ],
+                  "properties": {
+                    "from": {
+                      "type": "integer"
+                    },
+                    "to": {
+                      "type": "integer"
+                    }
+                  }
+                }
+              ]
+            },
+            "incomplete_comparison": {
+              "description": "Additive diagnostic for fields withheld because one or both snapshot collections were degraded. null means no degradation-triggered suppression was recorded; it does not prove complete observation opportunity or equivalence of options, versions, cache, time, or resolver vantage. The endpoint-specific source lists identify whether additions, removals, or dependent scalar comparisons lacked an observation opportunity represented by the current compatibility markers.",
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "object",
+                  "required": [
+                    "degraded_sources",
+                    "suppressed_fields"
+                  ],
+                  "additionalProperties": false,
+                  "properties": {
+                    "degraded_sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Sorted union of previous and current collection markers that made the comparison incomplete."
+                    },
+                    "suppressed_fields": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Delta fields intentionally withheld rather than treating unavailable evidence at either endpoint as a temporal change."
+                    },
+                    "previous_degraded_sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Previous-snapshot collection markers. A non-empty list can make additions and dependent scalar changes unidentifiable."
+                    },
+                    "current_degraded_sources": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      },
+                      "description": "Current-snapshot collection markers. A non-empty list can make removals and dependent scalar changes unidentifiable."
+                    }
+                  }
+                }
+              ]
+            }
+          }
+        },
+        "BatchErrorRecord": {
+          "description": "Emitted in place of a success object when a single domain in a batch run fails. Appears as an array element in ``recon batch --json`` (BatchArray), as a ``domains`` element in the ``--include-ecosystem`` BatchResult wrapper, and as a line in ``recon batch --ndjson``. A domain yields this shape when it fails input validation (e.g. a malformed apex) or when its lookup raises. Exactly four keys (domain, error, error_kind, record_type) and no overlap with the single-domain success contract (which requires dozens of fields), so a consumer can branch on the key set alone. The deterministic classifier in recon_tool.schema_contract.classify_batch_record encodes that rule.",
+          "type": "object",
+          "required": [
+            "domain",
+            "error",
+            "error_kind",
+            "record_type"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "domain": {
+              "type": "string",
+              "description": "The raw domain string from the input list, before validation and lowercasing."
+            },
+            "error": {
+              "type": "string",
+              "description": "Human-readable failure reason: the validation message or the lookup error text."
+            },
+            "error_kind": {
+              "type": "string",
+              "enum": [
+                "validation",
+                "lookup",
+                "timeout"
+              ],
+              "description": "Machine-readable error category (SH8, v2.0+) so a consumer can route or alert on a code rather than the free-text message. validation = the domain failed input validation; timeout = the lookup timed out; lookup = any other lookup failure. The enum may gain values."
+            },
+            "record_type": {
+              "type": "string",
+              "const": "error",
+              "description": "Record discriminator (SH7, v2.0+); always 'error' on this shape."
+            }
+          }
+        },
+        "BatchArray": {
+          "description": "Default shape of ``recon batch <file> --json`` (without --include-ecosystem): a bare JSON array, one element per order-preserved deduplicated key. Valid URL, sub-host, and apex variants that normalize to the same canonical apex share one key. Each element is either a single-domain success object (the root schema of this file) or a BatchErrorRecord. Success elements may additionally carry batch-only typed overlap fields (shared_verification_tokens, shared_tenant, shared_display_name); none establishes ownership or a business relationship.",
+          "type": "array",
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/$defs/LookupResult"
+              },
+              {
+                "$ref": "#/$defs/LookupResult/$defs/BatchErrorRecord"
+              }
+            ]
+          }
+        },
+        "BatchNdjsonRecord": {
+          "description": "One line of ``recon batch <file> --ndjson`` output. Same per-record shape as a BatchArray element: either a single-domain success object (the root schema of this file) or a BatchErrorRecord. NDJSON streams per domain as each completes, so the cross-domain batch enrichment fields (shared_verification_tokens, shared_tenant, shared_display_name) and the --include-ecosystem hyperedge envelope are never present in this mode; both require the full result set before emission.",
+          "oneOf": [
+            {
+              "$ref": "#/$defs/LookupResult"
+            },
+            {
+              "$ref": "#/$defs/LookupResult/$defs/BatchErrorRecord"
+            }
+          ]
+        },
+        "CohortSummaryPrevalenceMetric": {
+          "description": "One aggregate cohort metric. Null rates and denominators mean the public observation opportunity was unresolved; model-support metrics are coverage, not prevalence.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "positives",
+            "observable_n",
+            "observed_rate",
+            "observed_rate_interval_80",
+            "lower_bound_over_cohort",
+            "observability_fraction",
+            "metric_kind",
+            "model_evidence_n",
+            "support_coverage",
+            "unresolved_share"
+          ],
+          "properties": {
+            "positives": {
+              "oneOf": [
+                {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                {
+                  "type": "string",
+                  "const": "<=10 (suppressed)"
+                }
+              ]
+            },
+            "observable_n": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "observed_rate": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "observed_rate_interval_80": {
+              "oneOf": [
+                {
+                  "type": "null"
+                },
+                {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "type": "number",
+                    "minimum": 0,
+                    "maximum": 1
+                  }
+                }
+              ]
+            },
+            "lower_bound_over_cohort": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "observability_fraction": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "metric_kind": {
+              "type": "string",
+              "enum": [
+                "authoritative_observed_rate",
+                "contract_scoped_observed_rate",
+                "atemporal_explicit_policy_rate",
+                "scoped_observed_rate",
+                "model_support_coverage"
+              ]
+            },
+            "model_evidence_n": {
+              "type": [
+                "integer",
+                "null"
+              ],
+              "minimum": 0
+            },
+            "support_coverage": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "unresolved_share": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            }
+          }
+        },
+        "CohortSummaryPosteriorClaim": {
+          "description": "Aggregate model-score diagnostics over records that carried one posterior node. These values are not observed prevalence.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "expected_prevalence",
+            "high_confidence_share",
+            "mean_model_score",
+            "high_score_share",
+            "mean_interval_width",
+            "sparse_share",
+            "observed_n"
+          ],
+          "properties": {
+            "expected_prevalence": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "high_confidence_share": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "mean_model_score": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "high_score_share": {
+              "type": [
+                "number",
+                "null"
+              ],
+              "minimum": 0,
+              "maximum": 1
+            },
+            "mean_interval_width": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "sparse_share": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "observed_n": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "CohortSummaryMix": {
+          "description": "Observed category shares and concentration within the caller-supplied cohort.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "shares",
+            "normalized_entropy",
+            "hhi",
+            "categorized_n"
+          ],
+          "properties": {
+            "shares": {
+              "type": "object",
+              "additionalProperties": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "normalized_entropy": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "hhi": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            "categorized_n": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "CohortSummary": {
+          "description": "Aggregate-only result from ``recon batch <file> --summary --json``. It describes observations within a caller-supplied cohort, names no domain, infers no ownership or business relationship, and is not a security verdict or industry baseline. When --include-ecosystem is also set, the same document is embedded under BatchResult.cohort_summary.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "record_type",
+            "schema_version",
+            "disclaimer",
+            "suppression_policy",
+            "label",
+            "n",
+            "small_n_warning",
+            "observability",
+            "prevalence",
+            "posterior_claims",
+            "mix"
+          ],
+          "properties": {
+            "record_type": {
+              "type": "string",
+              "const": "cohort_summary"
+            },
+            "schema_version": {
+              "type": "string",
+              "enum": [
+                "2.1",
+                "2.2"
+              ]
+            },
+            "disclaimer": {
+              "type": "string",
+              "minLength": 1
+            },
+            "suppression_policy": {
+              "type": "string",
+              "minLength": 1
+            },
+            "label": {
+              "type": "string",
+              "minLength": 1
+            },
+            "n": {
+              "type": "integer",
+              "minimum": 0
+            },
+            "small_n_warning": {
+              "type": "boolean"
+            },
+            "observability": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "attempted",
+                "resolved",
+                "resolution_rate",
+                "dns_resolved",
+                "degraded_source_rate",
+                "mean_sparse_share"
+              ],
+              "properties": {
+                "attempted": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "resolved": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "resolution_rate": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "dns_resolved": {
+                  "type": "integer",
+                  "minimum": 0
+                },
+                "degraded_source_rate": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "mean_sparse_share": {
+                  "type": [
+                    "number",
+                    "null"
+                  ],
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "prevalence": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "dmarc_reject",
+                "dmarc_enforcing",
+                "mta_sts_enforce",
+                "email_gateway_present",
+                "m365_tenant",
+                "google_workspace"
+              ],
+              "properties": {
+                "dmarc_reject": {
+                  "$ref": "#/$defs/LookupResult/$defs/CohortSummaryPrevalenceMetric"
+                },
+                "dmarc_enforcing": {
+                  "$ref": "#/$defs/LookupResult/$defs/CohortSummaryPrevalenceMetric"
+                },
+                "mta_sts_enforce": {
+                  "$ref": "#/$defs/LookupResult/$defs/CohortSummaryPrevalenceMetric"
+                },
+                "email_gateway_present": {
+                  "$ref": "#/$defs/LookupResult/$defs/CohortSummaryPrevalenceMetric"
+                },
+                "m365_tenant": {
+                  "$ref": "#/$defs/LookupResult/$defs/CohortSummaryPrevalenceMetric"
+                },
+                "google_workspace": {
+                  "$ref": "#/$defs/LookupResult/$defs/CohortSummaryPrevalenceMetric"
+                }
+              }
+            },
+            "posterior_claims": {
+              "type": "object",
+              "additionalProperties": {
+                "$ref": "#/$defs/LookupResult/$defs/CohortSummaryPosteriorClaim"
+              }
+            },
+            "mix": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "provider",
+                "cloud"
+              ],
+              "properties": {
+                "provider": {
+                  "$ref": "#/$defs/LookupResult/$defs/CohortSummaryMix"
+                },
+                "cloud": {
+                  "$ref": "#/$defs/LookupResult/$defs/CohortSummaryMix"
+                }
+              }
+            }
+          }
+        },
+        "BatchResult": {
+          "description": "Shape of ``recon batch <file> --json --include-ecosystem``: a wrapper object carrying the per-domain results under ``domains`` and the cross-domain ``ecosystem_hyperedges`` array as a sibling. Combining --summary adds the same aggregate-only CohortSummary document under the optional ``cohort_summary`` sibling. Without --include-ecosystem the batch JSON is a bare BatchArray instead, with no wrapper. From v2.0 (SH9) the wrapper is always emitted when --include-ecosystem is set, including on an all-failed batch (domains carries the error records, ecosystem_hyperedges is empty), so the top-level type does not flip to a bare array. Stable v2.0 with an additive cohort_summary field.",
+          "type": "object",
+          "required": [
+            "record_type",
+            "domains",
+            "ecosystem_hyperedges"
+          ],
+          "properties": {
+            "record_type": {
+              "type": "string",
+              "const": "batch_result",
+              "description": "Record discriminator (SH7, v2.0+); always 'batch_result' on this wrapper."
+            },
+            "domains": {
+              "type": "array",
+              "description": "Per-domain results, one entry per order-preserved deduplicated key. Valid input variants that normalize to the same canonical apex share one key. Each entry is either a single-domain success object (the root schema of this file) or a BatchErrorRecord.",
+              "items": {
+                "oneOf": [
+                  {
+                    "$ref": "#/$defs/LookupResult"
+                  },
+                  {
+                    "$ref": "#/$defs/LookupResult/$defs/BatchErrorRecord"
+                  }
+                ]
+              }
+            },
+            "ecosystem_hyperedges": {
+              "type": "array",
+              "description": "Multi-domain signatures observed across the batch. Always present in this wrapper (empty array when no rule fired). Each entry is one ``EcosystemHyperedge``.",
+              "items": {
+                "$ref": "#/$defs/LookupResult/$defs/EcosystemHyperedge"
+              }
+            },
+            "cohort_summary": {
+              "description": "Optional aggregate-only sibling emitted when --summary is combined with --json --include-ecosystem. It describes only the caller-supplied cohort and names no individual domain.",
+              "$ref": "#/$defs/LookupResult/$defs/CohortSummary"
+            }
+          }
+        }
+      }
+    }
+  }
+}

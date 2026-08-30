@@ -52,17 +52,19 @@ tracked separately from product work.
 > hosting remains a lower-priority side track and does not change the local
 > default.
 >
-> **The engine is feature-complete.** The surfaces are closed and mutually
-> consistent (one shared briefing, gated by the surface-parity matrix), the
+> **The resolver and detection engine are feature-complete.** Its established
+> lookup, JSON, briefing, batch, and capsule surfaces are stable and mutually
+> consistent, with one shared briefing gated by the surface-parity matrix. The
 > claim contract and its provenance are enforced, the inference model is bounded
-> and evidence-disciplined, the release machinery is complete, and MCP
-> compatibility is characterized rather than expanding. No engine milestone
-> stands between here and done. A v3.0 is conditional, not scheduled (see the
+> and evidence-disciplined, and the release machinery is complete. Additive,
+> bounded composition surfaces may still ship when they reuse those collection
+> and claim contracts and solve a demonstrated handoff problem. A v3.0 is
+> conditional, not scheduled (see the
 > version path): it exists only if the claim/observation-envelope decision
 > resolves to a break, and the claim-neutral fusion default flip rides that
-> boundary or stays deferred behind the stable flags. What remains is not version
-> work; it is the standing maintenance loops below, the fingerprint-freshness
-> loop chief among them.
+> boundary or stays deferred behind the stable flags. The standing maintenance
+> loops below, the fingerprint-freshness loop chief among them, continue beside
+> that additive product polish.
 >
 > **Code-graph orientation:** refresh the ignored
 > `.agent/codegraph/manifest.json` after each tracked milestone and read it for
@@ -73,10 +75,11 @@ tracked separately from product work.
 
 ## Standing loops
 
-With the engine feature-complete, the roadmap is mostly not a version path. It
-is a set of loops that never finish because the world they observe keeps
-changing. The recent releases (v2.15, v2.16) were output of the playtest loop;
-the next durable stream is output of the freshness loop. Agent portability is
+With the resolver and detection engine feature-complete, the roadmap is mostly
+a set of loops that never finish because the world they observe keeps changing,
+plus bounded composition work justified by concrete operator handoffs. The
+recent releases (v2.15, v2.16) were output of the playtest loop; the next durable
+stream is output of the freshness loop. Agent portability is
 a separate maintainer track: its preflight passes, while paired collection is
 deferred behind enforceable account hard stops and a reproducible driver for
 all three required desktop clients. It does not queue product work. Each loop
@@ -147,17 +150,35 @@ and analysts can carry the existing ecosystem and cohort views in one
 backward-compatible JSON bundle for an operator-supplied set. None of these
 changes expands collection, infers ownership, or creates a security rating.
 
-The next product contract boundary is a prospective **ReviewBundle v1**. It
-does not exist yet. Before any saved review artifact, divergence record, or
-client-ready renderer ships, a separate versioned contract must define a
-caller-owned deterministic evidence handoff for one namespace or an explicitly
-operator-supplied set. It must preserve generator and collection identity,
-ordered successes and typed errors, unavailable and unresolved states,
-evidence-linked review candidates, local-only retention, and the standing scope
-statement without changing the stable lookup, batch, or capsule contracts. It
-must not infer portfolio membership, rank security, schedule collection, or
+The v2.18.0 contract boundary is **NamespaceReviewBundle v1**. This separate
+caller-owned artifact composes exactly one baseline that bypasses the
+lookup-result cache for one namespace with its evidence-linked review candidates
+and one deterministic, role-neutral human rendering. Direct probes remain off,
+CT is an explicit recorded choice, and every retained evidence item and
+candidate has a stable content identifier. Workflow status distinguishes
+`completed` from `failed`; collection validity distinguishes
+`complete_for_recorded_opportunities`, `partial`, `unavailable`, and
+`not_observed`. Temporal facts are retained without assigning one universal
+freshness verdict. The digest detects content modification but is not a
+signature or collector identity.
+
+The artifact ships through `recon review <domain>` and the MCP
+`build_review_bundle` tool. Both surfaces preserve the same contract, while the
+stable lookup, batch, and capsule contracts remain unchanged. A future
+operator-supplied set variant is deferred until this first contract is stable.
+It must not infer portfolio membership, rank security, schedule collection, or
 upload retained evidence. The fingerprint-freshness loop remains the durable
 detection stream and continues alongside this product polish.
+
+After v2.18.0 publication, the product path pauses for a stability soak. Fix
+compatibility, rendering, or provenance defects found through real operator use;
+collect role-specific feedback before considering a set-level extension; keep
+set membership caller-supplied; continue the monthly fingerprint-freshness and
+per-release black-box renderer loops; and keep the 29-family claim audit, both
+MCP SDK pins, the full test gate, and release provenance blocking. No v2.19
+feature is scheduled without a named operator handoff that the stable surfaces
+cannot solve.
+
 Agent portability is a separate maintainer track, not a version-path
 milestone: its representative task, client, measure, privacy, and stop-rule
 contract is frozen, its protected-main prerequisite and the candidate's
@@ -176,7 +197,7 @@ priority 1. Version milestones through v3.0:
 
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
-| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete through the 2026-08-30 cohort-schema review. The fail-closed default-claim audit owns all discovered primary surfaces through 28 families. 28 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, cohort summaries, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
+| [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete through the 2026-08-30 ReviewBundle review. The fail-closed default-claim audit owns all discovered primary surfaces through 29 families. 29 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, cohort summaries, ReviewBundles, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
 | [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
 | [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts make independent catalog measurement interpretable. | Shipped in v2.14. Convenience, unseen-vertical, rank, regional, vendor-seed, and prior-sample drift rounds are complete with aggregate results and explicit dispositions. Drift records no threshold breach, no unavailable or unmeasured row, one disclosed measurement-surface change, and no catalog promotion. | Keep the frozen round contracts and regression gates reproducible; backfill review dates only in independently reviewed families. |
@@ -217,7 +238,7 @@ current debt without turning every refinement into feature work.
 | Debt class | Current state | Next boundary |
 |---|---|---|
 | Feature work | Governed by the dependency order below, not by the polish loop; the optional operator-hosted surface now has a named architecture and security gate | Do not add commands, schemas, provider claims, or inference modes without their existing evidence gate |
-| UX flow | Root help, no-argument onboarding, installation identity diagnostics, malformed-input recovery, all-source failure recovery, low-confidence next steps, evidence-first defender briefing, combined portfolio JSON, batch outcome guidance, cross-platform release verification, target-free catalog discovery, and explicit bounded-versus-complete cache inspection are implemented | Define the prospective ReviewBundle v1 as a separate caller-owned contract before adding saved review manifests, divergence records, or a client-ready renderer; keep portfolio membership caller-supplied |
+| UX flow | Root help, no-argument onboarding, installation identity diagnostics, malformed-input recovery, all-source failure recovery, low-confidence next steps, evidence-first defender briefing, combined portfolio JSON, batch outcome guidance, cross-platform release verification, target-free catalog discovery, explicit bounded-versus-complete cache inspection, and NamespaceReviewBundle v1 through CLI and MCP are implemented | Keep both review surfaces contract-identical; defer saved set manifests, divergence records, and any set renderer until the single-namespace contract is stable and keep membership caller-supplied |
 | Visual polish | Lookup and batch help use task panels; linear help and adaptive welcome rows keep commands complete; fingerprint previews, ranked signal results, and narrow cache rows keep hierarchy and field association without changing structured order | Preserve complete option visibility and exact technical-token copyability before changing presentation metadata |
 | Observability | MCP rejection logs and unexpected batch details stay bounded; live MCP diagnostics retain completed rows and name the failed protocol phase; cache overview names exact inspected, uninspected, failed, and temporary-artifact state; corpus tests separate collection errors from negative observations; captured gate logs are plain; remote readiness and release recovery name exact evidence and preconditions | Define a versioned doctor or cache record only after a machine consumer and compatibility envelope are named |
 | Reliability | Static and live MCP diagnostics require canonical tools and resources, with live JSON resource reads; typed batch errors, bounded workers, bounded corpus and default cache inspection, residue-aware cache clearing, closed-pipe handling, explicit degradation, exact exit codes, complete catalog inspection, sealed artifact reconstruction and parity, command-status-aware release recovery, fail-closed bounded dependency-audit retry, and all-nonzero SBOM audit gating are implemented | Do not change the current batch or corpus-test exit contract without a compatibility decision covering mixed and all-error streams |
@@ -249,7 +270,7 @@ a different claim. Duplicate result objects from one source count once, and
 explanations name the exact winning claim and qualifying evidence.
 The fail-closed [default-claim audit](default-claim-audit.md) now inventories
 every discovered primary surface and binds compact JSON and MCP ownership to
-exact digests. All 28 families are complete. Generated insights capture the emitting rule and exact
+exact digests. All 29 families are complete. Generated insights capture the emitting rule and exact
 retained-evidence or bounded-observation association before rendering, preserve
 that state through collection projection and result-cache version 4, and feed
 it into explanation construction without text classification. Structured
@@ -393,7 +414,7 @@ Completed checkpoints:
 - Reject the unproven `mcp>=1.0` floor and raise it to the fully characterized
   stable v1.28.1 release.
 
-The same compatibility boundary passes 22 tools, five resources, zero
+The same compatibility boundary passes 23 tools, six resources, zero
 resource templates, one prompt, 44 schema documents, representative structured
 success and error results, concurrent catalog reloads, real stdio calls, and
 the live doctor on both supported exact pins. Stable v2 additionally proves
@@ -1176,7 +1197,7 @@ variants, success and unsupported-claim measures, discovery and result bytes,
 client-context treatment, launch and recovery behavior, privacy rules, and
 stop rules. It pins the exact Agent Plugins and Agent Skills source revisions
 and canonical schema digests. Its protected-main prerequisite passed. The
-generated `agents/agent-plugin/` candidate preserves all 22 tools and both
+generated `agents/agent-plugin/` candidate preserves all 23 tools and both
 skills, omits client-only and experimental frontmatter, and passes a
 network-free canonical gate over the byte-pinned schemas, exact package layout,
 launch shape, file bounds, path containment, version parity, and qualified claim
@@ -1236,10 +1257,10 @@ and 69 columns, and removes presentation markup from command prose. The
 no-argument path uses indented command and description pairs at narrow widths.
 This closes the measured accessibility debt without replacing the parser.
 
-The dated MCP measurement is also complete. A real local stdio session on the
+The dated pre-ReviewBundle MCP measurement is also complete. A real local stdio session on the
 production SDK yields 81,562 compact serialized result-body bytes across
 initialization, tools, resources, resource templates, and prompts. Counts
-exclude JSON-RPC envelopes and transport framing. The 22-tool listing
+exclude JSON-RPC envelopes and transport framing. That frozen 22-tool listing
 contributes 70,538 bytes, including 41,997 bytes of distinct output schemas. A
 hypothetical seven-tool primary listing is 69.2 percent smaller, above the
 predeclared 30 percent threshold, but that result-body reduction is not yet

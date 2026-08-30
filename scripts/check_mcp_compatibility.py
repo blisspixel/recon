@@ -212,7 +212,7 @@ def _canonical_inventory() -> tuple[set[str], set[str]]:
         raise TypeError("generated MCP inventory has invalid tool or resource lists")
     tool_names = {str(item["name"]) for item in tools if isinstance(item, dict) and "name" in item}
     resource_uris = {str(item["uri"]) for item in resources if isinstance(item, dict) and "uri" in item}
-    if len(tool_names) != 22 or len(resource_uris) != 5:
+    if len(tool_names) != 23 or len(resource_uris) != 6:
         raise ValueError(f"canonical inventory has tools={len(tool_names)} resources={len(resource_uris)}")
     return tool_names, resource_uris
 
@@ -515,17 +515,17 @@ async def _stdio_prompt_get(session: Any) -> ProbeCheck:
     text = content.get("text")
     required_text = (
         "example.com",
-        "lookup_tenant",
-        "find_hardening_gaps",
-        "If and only if that lookup succeeds",
-        "If the lookup fails, stop",
-        "Do not infer globally complete collection from an empty degraded_sources list",
-        "unavailable_controls",
+        "build_review_bundle",
+        "exactly once",
+        "same fresh collection",
+        "If the baseline stage is failed",
+        "complete_for_recorded_opportunities",
+        "source opportunities",
     )
     if not isinstance(text, str) or any(item not in text for item in required_text):
         raise ValueError("domain_report prompt content lost its domain or tool instruction")
-    if any(item in text for item in ("source opportunity", "resolved_at", "cached_at")):
-        raise ValueError("domain_report prompt requests collection fields absent from its tool results")
+    if "Do not call lookup_tenant, find_hardening_gaps" not in text:
+        raise ValueError("domain_report prompt lost its one-call boundary")
     return ProbeCheck("recon_stdio_prompt_get", "pass", "domain_report messages=1")
 
 

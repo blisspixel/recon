@@ -217,7 +217,7 @@ class TestExceptionPath:
         completed = (
             DoctorCheck("server spawn", "ok", "stub"),
             DoctorCheck("initialize handshake", "ok", "stub"),
-            DoctorCheck("tools/list", "ok", "22 tools registered"),
+            DoctorCheck("tools/list", "ok", "23 tools registered"),
         )
 
         async def _fail_resources(
@@ -634,11 +634,11 @@ class TestCLI:
                 checks=(
                     DoctorCheck("server spawn", "ok", "stdio transport opened"),
                     DoctorCheck("initialize handshake", "ok", "server=recon-tool"),
-                    DoctorCheck("tools/list", "ok", "22 tools registered"),
+                    DoctorCheck("tools/list", "ok", "23 tools registered"),
                     DoctorCheck("required tools present", "ok", "5 of 5"),
-                    DoctorCheck("resources/list", "ok", "5 resources registered"),
-                    DoctorCheck("required resources present", "ok", "5 of 5"),
-                    DoctorCheck("resources/read", "ok", "5 JSON resources read"),
+                    DoctorCheck("resources/list", "ok", "6 resources registered"),
+                    DoctorCheck("required resources present", "ok", "6 of 6"),
+                    DoctorCheck("resources/read", "ok", "6 JSON resources read"),
                 ),
                 elapsed_seconds=2.34,
             )
@@ -648,7 +648,7 @@ class TestCLI:
         result = runner.invoke(app, ["mcp", "doctor"])
         assert result.exit_code == 0
         assert "ok" in result.output
-        assert "22 tools registered" in result.output
+        assert "23 tools registered" in result.output
         assert "All checks passed" in result.output
-        assert "canonical tool registrations and five local JSON resource reads" in result.output
+        assert "canonical tool registrations and six local JSON resource reads" in result.output
         assert "client config was not checked" in result.output.lower()

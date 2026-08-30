@@ -13,19 +13,22 @@ channel parity. Local execution is the default, and the project does not operate
 a hosted service. Optional cloud draft materials are directionally useful, not a
 validated production deployment.
 
-**The engine is feature-complete.** The surfaces are closed and mutually
-consistent (one shared briefing, gated by the surface-parity matrix), the claim
-contract and its provenance are enforced, the inference model is bounded and
-evidence-disciplined, the release machinery is complete, and MCP compatibility is
-characterized rather than expanding. No engine milestone stands between here and
-"done." A v3.0 is **conditional**, not scheduled: it exists only if the
+**The resolver and detection engine are feature-complete.** Its established
+lookup, JSON, briefing, batch, and capsule surfaces are stable and mutually
+consistent, with one shared briefing gated by the surface-parity matrix. The
+claim contract and its provenance are enforced, the inference model is bounded
+and evidence-disciplined, and the release machinery is complete. Additive,
+bounded composition surfaces may still ship when they reuse those collection
+and claim contracts and solve a demonstrated handoff problem. A v3.0 is
+**conditional**, not scheduled: it exists only if the
 claim/observation-envelope decision (parked at the v3 boundary) resolves to a
 break that cannot remain additive, and if it never does, there is no v3.0. The
 long-deprecated fusion default flip is claim-neutral, schema-stable compatibility
 debt that rides that major if it ships and otherwise stays deferred behind the
 stable `--fusion` / `--no-fusion` flags; it is not itself a reason to cut a major
-(ADR-0013 amendment, 2026-08-18). What remains is not version work: it is the
-standing maintenance loops, the fingerprint-freshness loop chief among them.
+(ADR-0013 amendment, 2026-08-18). Standing maintenance loops, the
+fingerprint-freshness loop chief among them, continue alongside that additive
+product polish.
 
 Release verification binds every published artifact to its exact tag, workflow,
 signer, and commit digest, and requires SBOM provenance. One
@@ -33,7 +36,7 @@ digest-bound v2.6.3 historical exception preserves that release's published
 distribution-only bundle while still requiring SBOM structure validation; every
 later release fails if SBOM provenance is absent.
 
-The evidence-semantic audit is complete: 28 families are complete. 0 material
+The evidence-semantic audit is complete: 29 families are complete. 0 material
 runtime families carry incomplete lineage. Fail-closed inventory spans 91 score
 or quantitative fields among other governed surfaces. MCP v2 adoption is
 complete and both remain blocking maintenance. The v2.11 pre-collection audit
@@ -57,7 +60,7 @@ before any external submission. The most recent completed historical local
 submission-freeze proof is
 [validation/2026-06-30-submission-freeze-local-proof.md](validation/2026-06-30-submission-freeze-local-proof.md).
 
-## Next
+## Current release and next steps
 
 v2.17.12 shipped the bounded audience-composition tranche without expanding
 collection or turning observations into verdicts:
@@ -73,15 +76,40 @@ collection or turning observations into verdicts:
    JSON artifact for an operator-supplied domain set, without inferring
    ownership or ranking security.
 
-The next product contract boundary is a prospective **ReviewBundle v1**: a
-caller-owned, deterministic evidence handoff for one namespace or an explicitly
-operator-supplied set. It does not exist yet. A separate versioned contract must
-first define its scope, generator metadata, collection-validity states, ordered
-results and errors, evidence-linked review candidates, and deterministic
-structured and human renderers. Any implementation must remain local by
-default, add no target interaction, active scanning, credentials, hosted
-service, inferred portfolio membership, overall security score, automatic
-retention, or scheduling.
+The v2.18.0 product contract boundary is **NamespaceReviewBundle v1**: a
+separate caller-owned, deterministic evidence handoff for one namespace. Its
+first slice fixes one baseline that bypasses the lookup-result cache, direct
+probes off, optional CT, evidence and candidate identifiers, exact
+`complete_for_recorded_opportunities`, `partial`, `unavailable`, and
+`not_observed` collection validity, typed failed workflow state, temporal facts
+without a universal freshness verdict, and one
+role-neutral human renderer. It ships through `recon review <domain>` and the
+MCP `build_review_bundle` tool without changing the stable lookup, batch, or
+capsule contracts. A future operator-supplied set extension is deferred until
+the single-namespace contract is stable. It must reuse the same claim
+boundaries and cannot infer membership, ownership, relative security, or
+organizational relationships.
+
+Review bundles remain local and caller-owned. Their deterministic digest detects
+content modification but is not a signature or proof of collector identity.
+This work adds no active scanning, credentials, hosted service, automatic
+retention, upload, scheduling, overall security score, or client-specific
+ranking.
+
+After v2.18.0 publication, the next steps are deliberately bounded:
+
+1. Hold the single-namespace contract stable and fix any compatibility,
+   rendering, or provenance defect found through real operator use.
+2. Collect defender, consultant, analyst, and admin feedback before considering
+   a set-level extension. Require a named consumer and keep set membership
+   caller-supplied.
+3. Continue the monthly fingerprint-freshness loop and the per-release
+   black-box renderer review.
+4. Keep the 29-family claim audit, both MCP SDK pins, full test gate, and release
+   provenance checks blocking on every change.
+
+No v2.19 feature is scheduled. New product work must be justified by a concrete
+operator handoff that cannot be solved through the stable surfaces above.
 
 The fingerprint-freshness loop continues alongside that work. It has no version
 number because it never finishes. Monthly, plus on a missed-detection report or
@@ -219,7 +247,7 @@ events. They do not displace the version path above.
 
 ### 1. Evidence-semantic integrity - maintenance (highest trust rank)
 
-Complete for the 27-family default surface. New claim surfaces reopen this
+Complete for the 29-family default surface. New claim surfaces reopen this
 track immediately. Detail: [docs/default-claim-audit.md](docs/default-claim-audit.md).
 
 ### 2. MCP v2 compatibility - maintenance

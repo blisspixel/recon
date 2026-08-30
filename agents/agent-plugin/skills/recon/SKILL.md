@@ -157,6 +157,7 @@ Surface the *summary* of the chain - which evidence drove which insight - rather
 When the `recon` MCP server is connected, use it instead of shelling out - typed arguments avoid command interpolation. `lookup_tenant` and the narrative tools return text, while many analysis and catalog tools expose structured results. Common starting points:
 
 - `lookup_tenant(domain, format="json", explain=true)` - full domain intelligence with provenance.
+- `build_review_bundle(domain)` - one fresh, cache-bypassed single-namespace handoff with an explained baseline, source-opportunity states, evidence-linked review candidates, and no direct probes. Use this for a bounded review artifact or the `domain_report` prompt.
 - `analyze_posture(domain, profile=...)` - posture observations, optionally biased by a profile lens.
 - `assess_exposure(domain)` - model-bound public-evidence index on a 0-100 compatibility scale, with an exact-evidence floor, bounded ceiling, and complete component ledger. The current component model assigns at most 90 points. It is not an overall security score. Cache first; it may run the ordinary base lookup on a miss, while index computation adds no network calls after resolution.
 - `find_hardening_gaps(domain)` - categorized gaps with neutral "Consider" notes.
@@ -169,6 +170,7 @@ For quick catalog browsing, start with `get_fingerprints(limit=20, offset=0)`. F
 
 CLI fallbacks when the MCP server is not connected:
 
+- `recon review <domain> --json` - fresh NamespaceReviewBundle; add `--output review.json` for a caller-owned local artifact.
 - `recon <domain> --json` - structured output.
 - `recon <domain> --explain` - panel, source status, and flat retained-evidence explanations.
 - `recon <domain> --json --explain` - structured lookup plus the lineage-qualified provenance graph.

@@ -128,8 +128,10 @@ type instead of raw multiline exception text.
 
 ## Available Tools
 
-Start with `lookup_tenant` for a single-domain summary. Use `format="json"`
-with `explain=true` when provenance fields are required. Use
+Start with `lookup_tenant` for a single-domain summary. Use
+`build_review_bundle` when one fresh, evidence-linked handoff should contain
+the explained baseline and its review candidates. Use `format="json"` with
+`explain=true` on `lookup_tenant` when provenance fields are required. Use
 `analyze_posture` for categorized public observations, and
 `compare_postures` or `cluster_verification_tokens` only for an
 operator-supplied domain set. Graph export, posterior inspection, hypothesis
@@ -143,6 +145,7 @@ instead of being reflected into an instruction template.
 | Tool | Network calls? | What it does | Parameters |
 |------|----------------|-------------|------------|
 | `lookup_tenant` | Cache first; may resolve | Compact agent-readable summary by default; `format="json"` returns the detailed record as serialized JSON text. Collection uses public DNS and unauthenticated endpoints: authoritative DNS may observe resolver traffic, MTA-STS is the only default target-owned HTTP request, and Google CSE / BIMI certificate probes require explicit opt-in. When `format="json"` and `explain=true`, the serialized record includes an `explanation_dag`: evidence occurrences link to matching slug and rule nodes, which link to signal, insight, observation, or confidence terminals. Schema-version-1 `provenance_complete` and `disconnected_terminals` report graph reachability. `exact_provenance_complete` and `lineage_disconnected_terminals` report whether every terminal has an explicit generation-time evidence-to-rule path. Flat records and terminal nodes carry `lineage_status` (`exact`, `exact_rule_only`, `reconstructed`, or `unsupported`); exact and exact-rule-only records carry one emitter ID in `lineage_rule_ids`. | `domain`, `format`: `text` / `json` / `markdown`, `explain`: bool |
+| `build_review_bundle` | One fresh resolution | Build a NamespaceReviewBundle from exactly one cache-bypassed ordinary passive resolution. Direct probes remain off. The explained lookup, source opportunities, evidence ledger, and review candidates derive from that same result. The artifact is not a security verdict, ownership conclusion, or proof of active product use. | `domain`, `no_ct`: bool, `timeout_seconds`: float |
 | `analyze_posture` | Cache first; may resolve | Neutral posture observations across email, identity, infrastructure. Accepts an optional `profile` argument: one of `fintech`, `healthcare`, `saas-b2b`, `high-value-target`, `public-sector`, `higher-ed`, or a custom name from `profiles/` inside recon's resolved config directory (`RECON_CONFIG_DIR`, else an existing legacy `~/.recon/`, else `$XDG_CONFIG_HOME/recon`; `recon doctor` prints the resolved path). | `domain`, `explain`: bool, `profile`: str (optional) |
 | `cluster_verification_tokens` | Cache first; may resolve each domain | Report exact TXT site-verification token reuse. Shared administration, copied configuration, managed service, and stale residue remain compatible explanations; reuse does not establish ownership or current use. Optional peer caps report omitted counts for compact agent output. | `domains`: array of domain strings, `peer_limit_per_domain` (0 means raw) |
 | `assess_exposure` | Cache first; may resolve | Model-bound public-evidence index on a 0-100 compatibility scale, with an exact-evidence floor, bounded ceiling, complete weighted component ledger, and email, identity, and infrastructure sections. The current component model assigns at most 90 points. It summarizes only collected public observables and is not an overall security score (see [correlation.md](correlation.md) for the inference model). | `domain` |
@@ -204,8 +207,9 @@ explanations rather than an `explanation_dag`. Catalog tools (`get_fingerprints`
 `get_signals`, and MCP resources) do not call the network. Definitions describe
 matching and derivation capabilities, not target evidence.
 Domain-analysis tools are cache-first and may resolve the domain when no fresh
-cache entry exists. The server includes a bounded TTL cache (120s) and
-per-domain rate limiting.
+cache entry exists, except `build_review_bundle`, which deliberately bypasses
+the result cache and records that choice. The server includes a bounded TTL
+cache (120s) and per-domain rate limiting.
 
 ### Tool output: structured content and errors
 
@@ -219,7 +223,7 @@ inference tools (`get_fingerprints`, `get_signals`, `explain_signal`,
 `assess_exposure`, `find_hardening_gaps`, `compare_postures`, `analyze_posture`,
 `discover_fingerprint_candidates`, `test_hypothesis`, `simulate_hardening`,
 `cluster_verification_tokens`, `get_infrastructure_clusters`, `export_graph`,
-`get_posteriors`, and the ephemeral-fingerprint tools).
+`get_posteriors`, `build_review_bundle`, and the ephemeral-fingerprint tools).
 
 The graph, chain, and batch-correlation tools preserve raw access by default.
 Passing `result_limit`, `peer_limit_per_domain`, `member_limit_per_cluster`,
@@ -294,7 +298,7 @@ absence.
 
 Each tool carries explicit `readOnlyHint`, `destructiveHint`, `idempotentHint`,
 and `openWorldHint` annotations so a consuming agent can reason about what is
-safe to auto-approve. The complete 22-tool matrix is enforced in code and kept
+safe to auto-approve. The complete 23-tool matrix is enforced in code and kept
 in sync with this section by `tests/test_mcp_tool_annotations.py`.
 
 **Explicit state-mutation tools** change caller-visible, process-wide in-memory
@@ -357,7 +361,7 @@ The injected server instructions carry this same guidance for the agent;
 
 ## Catalog Resources
 
-recon exposes five MCP resources so agents can browse "what can this tool detect?", "what shape is the output?", and "what local surfaces exist?" without spending a tool invocation on introspection:
+recon exposes six MCP resources so agents can browse "what can this tool detect?", "what shape is the output?", and "what local surfaces exist?" without spending a tool invocation on introspection:
 
 | URI | Content |
 |---|---|
@@ -365,9 +369,10 @@ recon exposes five MCP resources so agents can browse "what can this tool detect
 | `recon://signals` | Derived intelligence signals with candidate slugs, min_matches, contradicts/requires relationships, and positive-when-absent inversions |
 | `recon://profiles` | Built-in posture profile lenses (category boosts, signal boosts, focus categories) |
 | `recon://schema` | The JSON-output contract as a JSON Schema (the same document as `docs/recon-schema.json`), so an agent can self-describe the shape of `recon <domain> --json` (plus the batch / delta modes in its `$defs`) without an external fetch. The contract version is in the schema's own `description`. |
+| `recon://review-bundle-schema` | The separate Draft 2020-12 NamespaceReviewBundle v1 contract, byte-identical to `docs/review-bundle-schema.json`, for offline validation of `build_review_bundle` results. |
 | `recon://surface-inventory` | Generated, non-contractual local map of the CLI, MCP tools, MCP resources, JSON schema, agent integration surfaces, and maintainer-loop context packet. It is the same inventory as `docs/surface-inventory.json`. |
 
-The catalog resources return deterministic JSON sourced from the already-loaded YAML catalogs; definitions describe matching and derivation capabilities, not evidence about any target. `recon://schema` returns the bundled schema document; `recon://surface-inventory` returns the bundled generated inventory. No network calls. Changes to the custom `fingerprints.yaml`, `fingerprints/`, or `signals.yaml` overlay in recon's resolved config directory (`RECON_CONFIG_DIR`, else an existing legacy `~/.recon/`, else `$XDG_CONFIG_HOME/recon`; `recon doctor` prints the resolved path, and [fingerprints.md](fingerprints.md#custom-fingerprints) has the full rule) require calling `reload_data` to take effect. The surface inventory is for local discovery and drift checks, not compatibility promises; see [ADR-0007](adr/0007-surface-inventory-discovery-context.md) for the promotion gate.
+The catalog resources return deterministic JSON sourced from the already-loaded YAML catalogs; definitions describe matching and derivation capabilities, not evidence about any target. `recon://schema` and `recon://review-bundle-schema` return their bundled contract documents; `recon://surface-inventory` returns the bundled generated inventory. No network calls. Changes to the custom `fingerprints.yaml`, `fingerprints/`, or `signals.yaml` overlay in recon's resolved config directory (`RECON_CONFIG_DIR`, else an existing legacy `~/.recon/`, else `$XDG_CONFIG_HOME/recon`; `recon doctor` prints the resolved path, and [fingerprints.md](fingerprints.md#custom-fingerprints) has the full rule) require calling `reload_data` to take effect. The surface inventory is for local discovery and drift checks, not compatibility promises; see [ADR-0007](adr/0007-surface-inventory-discovery-context.md) for the promotion gate.
 
 ### Resource Consumption Examples
 
@@ -556,7 +561,7 @@ installed server; the third validates that the named client was told about it.
    `ClientSession`, and runs the discovery flow supported by the installed
    Python MCP SDK. It requires the anchor tools (`lookup_tenant`,
    `analyze_posture`, `assess_exposure`, `find_hardening_gaps`,
-   `chain_lookup`), lists all five canonical local resources, and reads each
+   `chain_lookup`), lists all six canonical local resources, and reads each
    one. Every read must return one matching `application/json` text item whose
    payload is a JSON object. Catalog counts, lists, and identifiers must agree;
    fingerprint detection summaries must be populated; and the schema and

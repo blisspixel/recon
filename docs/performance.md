@@ -246,7 +246,8 @@ A hypothetical primary listing containing `lookup_tenant`, `analyze_posture`,
 bytes, 69.2 percent below the complete tool listing and above the engineering
 plan's 30 percent threshold. This does not justify a runtime profile yet.
 Model-context treatment is client-dependent, the base protocol has no
-interoperable client-selected tool filter, and all 22 names are stable. The
+interoperable client-selected tool filter, and all 22 names in that dated
+v2.5.7 measurement were stable. The
 full registry remains the default until at least one representative client
 proves that an opt-in profile produces an end-to-end context benefit while
 retaining direct specialist access.

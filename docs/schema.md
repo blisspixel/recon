@@ -28,6 +28,7 @@ without guessing.
 | `recon batch <file> --json --include-ecosystem --summary --summary-schema 2.2` | the same `BatchResult` wrapper with additive `cohort_summary` | ordered domain records and ecosystem hyperedges remain present; `cohort_summary` is aggregate-only and names no domain |
 | `recon batch <file> --ndjson` | one JSON object per line (newline-delimited) | each line is a success object or a `BatchErrorRecord` |
 | `recon delta <domain> --json` / `recon <domain> --compare <file> --json` | a single `DeltaReport` object | n/a |
+| `recon review <domain> --json` | a single NamespaceReviewBundle success or typed collection-failure object | the separate ReviewBundle schema below; a failed baseline retains exit code 3 or 4 |
 | `recon capsule capture <domain> --json` | a write-receipt object; the full capsule is written to the caller-owned file | the capsule file uses its separate schema below |
 | `recon capsule replay <file> --json` | a single `observation_capsule_replay` object | n/a |
 | `recon capsule compare <before> <after> --json` | a single `observation_capsule_delta` object | n/a |
@@ -46,6 +47,13 @@ records, and classified capsule deltas use the separate Draft 2020-12
 [`observation-capsules.md`](observation-capsules.md) for collection, replay,
 comparison, integrity, privacy, and retention semantics. The small capture
 write receipt is command status, not a retained evidence artifact.
+
+NamespaceReviewBundle artifacts are also intentionally outside
+`recon-schema.json`. `recon review <domain> --json`, its optional `--output`
+file, and MCP `build_review_bundle` use the separate self-contained Draft
+2020-12 [`review-bundle-schema.json`](review-bundle-schema.json). See
+[`review-bundles.md`](review-bundles.md) for fresh collection, failure,
+integrity, privacy, rendering, and retention semantics.
 
 The `cohort_summary` mode (`recon batch --summary`) is a versioned aggregate-only
 document, distinct from the `"2.0"` single-domain record. The released 2.1

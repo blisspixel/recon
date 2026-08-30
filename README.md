@@ -121,6 +121,7 @@ Install, update, uninstall, and first-run detail:
 | You are trying to | Start here | What you get |
 |---|---|---|
 | Review one namespace | `recon "<domain>"` | A compact, hedged panel of observed mail, identity, service, and confidence signals |
+| Create a deterministic evidence handoff | `recon review "<domain>"` | One fresh, role-neutral NamespaceReviewBundle with collection validity, evidence-linked candidates, and a standing scope statement |
 | Explain or hand off a finding | `recon "<domain>" --explain` | Per-source status plus the evidence retained for each material observation |
 | Review an operator-supplied set | `recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2` | One portfolio evidence bundle with ordered typed results and errors, observable ecosystem overlaps, and an aggregate cohort summary |
 | Work through an agent | `recon mcp install --client=<name>` | Local typed tools, resources, and prompts without a hosted recon service |
@@ -130,6 +131,14 @@ Defenders can follow the
 Consultants and analysts should treat every multi-domain set as operator
 supplied: recon describes observable similarities and differences but does not
 infer ownership, control, or a corporate relationship.
+
+[NamespaceReviewBundle v1](https://github.com/blisspixel/recon/blob/main/docs/review-bundles.md)
+defines the next role-neutral handoff boundary for one namespace: one fresh,
+lookup-result-cache-bypassed baseline, evidence-linked review candidates,
+explicit bounded collection and failure states, and one deterministic human
+rendering. Use `recon review "<domain>"` from the CLI or
+`build_review_bundle(domain)` through MCP. Both surfaces return the same v1
+artifact; the CLI renders it as Markdown unless JSON is requested.
 
 ## What recon Is Good For
 
@@ -184,6 +193,8 @@ recon example.com --gaps                       # neutral hardening prompts
 recon example.com --plain                      # panel as linear text (screen readers, grep)
 recon example.com --plain --full               # every field, linear
 recon example.com --json                       # structured record
+recon review example.com                       # deterministic namespace review
+recon review example.com --output review.json  # save the validated v1 artifact
 recon example.com --explain-dag --explain-dag-format mermaid   # evidence DAG
 recon batch domains.txt --json                 # batch JSON array
 recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2
@@ -197,6 +208,7 @@ More flags:
 [docs/cli-surface.md](https://github.com/blisspixel/recon/blob/main/docs/cli-surface.md).
 JSON contracts:
 [schema](https://github.com/blisspixel/recon/blob/main/docs/schema.md) ·
+[review bundles](https://github.com/blisspixel/recon/blob/main/docs/review-bundles.md) ·
 [stability](https://github.com/blisspixel/recon/blob/main/docs/stability.md) ·
 [operational contract](https://github.com/blisspixel/recon/blob/main/docs/operational-contract.md).
 

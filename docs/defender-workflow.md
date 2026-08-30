@@ -7,14 +7,11 @@ target mutation, or automatic recursive lookup.
 ## MCP workflow
 
 Use the `domain_report` prompt with the domain to review. The prompt directs the
-client to make one baseline call and, only when it succeeds, one cache-first
-derivation call:
-
-1. `lookup_tenant(domain, format="json", explain=true)` establishes the detailed
-   evidence-linked baseline.
-2. `find_hardening_gaps(domain)` derives neutral review candidates from that
-   cached baseline only after the lookup succeeds. A failed lookup ends the
-   flow without a second tool call or inferred gaps.
+client to call `build_review_bundle(domain)` exactly once, then synthesize the
+fixed briefing sections from the returned artifact. The tool performs one fresh
+lookup-result-cache-bypassed baseline and derives neutral candidates from that
+same in-memory result. A failed baseline returns a typed failure without
+observations or candidates.
 
 The prompt does not automatically call `assess_exposure`,
 `simulate_hardening`, `chain_lookup`, or any opt-in direct probe. Request those
@@ -25,31 +22,54 @@ specialist operations separately only when the review question needs them.
 Replace `<domain>` with the public namespace you want to review:
 
 ```bash
-recon <domain> --json --explain
-recon <domain> --gaps --json
+recon review "<domain>"
+recon review "<domain>" --json
+recon review "<domain>" --output review.json
 ```
 
-The second command is cache-first. Read the two structured results together in
-the section order below. recon does not currently combine them into a new CLI
-or JSON contract.
+The default view is deterministic role-neutral Markdown. `--json` emits the
+validated NamespaceReviewBundle v1 object. `--output` writes that JSON artifact
+locally and refuses to overwrite an existing path unless `--force` is supplied.
+Use `--no-ct` when certificate-transparency collection should be skipped.
 
 For a shareable summary of the baseline without the structured gap ledger:
 
 ```bash
-recon <domain> --md --full
+recon "<domain>" --md --full
 ```
 
 The Markdown report carries the standing scope caveat. Keep the structured gap
 record beside it when the review depends on observation state, metadata
 dependencies, or exact retained evidence.
 
+## NamespaceReviewBundle v1 boundary
+
+NamespaceReviewBundle v1 formalizes this composition as one role-neutral,
+caller-owned artifact. It uses exactly one baseline that bypasses the
+lookup-result cache for one namespace, keeps direct probes off, optionally
+includes CT, derives review candidates from that same baseline, and renders one
+deterministic human view.
+It is delivered through the CLI and MCP surfaces above.
+
+The artifact separates `workflow.status` from bounded collection validity.
+Successful artifacts use `completed`; their `collection_validity` is
+`complete_for_recorded_opportunities`, `partial`, or `not_observed`. Failed
+artifacts use `failed` with `unavailable` or `not_observed`, contain no
+observations or candidates, and remain distinguishable from a successful empty
+candidate list. Temporal fields record what happened and when;
+`freshness_assessment` remains `not_assigned` because recon has no universal
+freshness rule for heterogeneous public metadata. See
+[review-bundles.md](review-bundles.md).
+
 ## Briefing sections
 
 ### Collection validity
 
-Start with the returned `queried_domain`, `sources`, `partial`,
-`degraded_sources`, and confidence, then name `unavailable_controls` from the
-gap report when present. An empty `degraded_sources` list does not prove
+Start with `workflow.collection_validity`,
+`workflow.freshness_assessment`, `collection.cache.result_cache`, each recorded
+`source_opportunity`, and confidence from
+`result.explained_baseline.lookup`. Then name `unavailable_controls` from the
+candidate report when present. An empty degraded-marker list does not prove
 globally complete collection. Confidence describes evidence corroboration, not
 severity.
 
@@ -66,6 +86,13 @@ Summarize the connection-map lanes and related-host classes as public routing
 or configuration indicators. A related host, shared tenant identifier, or
 administrative token does not establish ownership, control, reachability, or a
 corporate relationship.
+
+### Evidence and lineage
+
+Keep the retained evidence ledger separate from mail and identity observations.
+Use each explained baseline reference's `evidence_ids` and `lineage_status` to
+connect a reported observation to the exact ledger rows that support it. An
+empty evidence-ID list is not positive support.
 
 ### Review candidates grouped by observation state
 
