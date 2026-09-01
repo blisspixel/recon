@@ -26,6 +26,30 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Changed
+
+- Re-authored the scheduled dependency updates as one coherent maintainer
+  change: CodeQL and build-provenance actions advance at immutable SHAs, and
+  the locked build graph advances `packaging` from 26.2 to 26.3 together with
+  its generated hash constraints.
+
+### Fixed
+
+- Dependabot's current uv 0.12.7 updater is admitted by the bounded
+  `>=0.11.8,<0.13` project range. Reproducible maintainer, CI, package-build,
+  and release paths remain pinned to exact uv 0.11.17, and uv 0.13 remains
+  excluded pending a separate review.
+
+### Tests
+
+- Bound the updater and reproducible uv versions independently, retained the
+  next-minor stop, and updated workflow contract assertions with the reviewed
+  action SHAs.
+
 ## [2.18.1] - 2026-08-31
 
 v2.18.1 restores CT-discovered related hosts when later CNAME enrichment
