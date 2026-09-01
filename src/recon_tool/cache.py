@@ -334,6 +334,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "likely_primary_email_provider": info.likely_primary_email_provider,
         "ct_provider_used": info.ct_provider_used,
         "ct_subdomain_count": info.ct_subdomain_count,
+        "ct_related_domains": list(info.ct_related_domains),
         "ct_cache_age_days": info.ct_cache_age_days,
         "ct_attempt_outcome": info.ct_attempt_outcome,
         "merge_conflicts": (
@@ -951,6 +952,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         ),
         ct_provider_used=_optional_cache_string(data.get("ct_provider_used"), "ct_provider_used"),
         ct_subdomain_count=_cache_count(data.get("ct_subdomain_count"), "ct_subdomain_count"),
+        ct_related_domains=cache_string_tuple(data.get("ct_related_domains", []), "ct_related_domains"),
         ct_cache_age_days=_optional_cache_count(data.get("ct_cache_age_days"), "ct_cache_age_days"),
         ct_attempt_outcome=_optional_cache_string(data.get("ct_attempt_outcome"), "ct_attempt_outcome"),
         slug_confidences=_read_slug_confidences(data.get("slug_confidences")),

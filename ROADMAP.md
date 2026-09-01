@@ -108,6 +108,12 @@ After v2.18.0 publication, the next steps are deliberately bounded:
 4. Keep the 29-family claim audit, both MCP SDK pins, full test gate, and release
    provenance checks blocking on every change.
 
+v2.18.1 addresses the first stability-soak defect: a degraded CNAME
+classification pass no longer erases names contributed by a separately
+successful CT path. The fix records exact CT ownership internally, preserves
+the briefing versus full-map split, and leaves CNAME-dependent classification
+fail closed.
+
 No v2.19 feature is scheduled. New product work must be justified by a concrete
 operator handoff that cannot be solved through the stable surfaces above.
 

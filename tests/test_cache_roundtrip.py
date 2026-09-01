@@ -2,8 +2,8 @@
 
 Covers every field that lives on TenantInfo, including the
 topology fields (primary_email_provider, email_gateway, dmarc_pct,
-likely_primary_email_provider) and the CT provider attribution
-fields (ct_provider_used, ct_subdomain_count). Raises coverage on
+likely_primary_email_provider) and the CT provider attribution and
+name-provenance fields. Raises coverage on
 cache.py from 60% toward 90%.
 
 All fixtures use fabricated data only — no real company names.
@@ -106,6 +106,7 @@ def _complete_info() -> TenantInfo:
         likely_primary_email_provider=None,
         ct_provider_used="certspotter",
         ct_subdomain_count=87,
+        ct_related_domains=("api.alpha.invalid", "dev.alpha.invalid"),
         merge_conflicts=MergeConflicts(
             tenant_id=(),
             display_name=(),
@@ -158,6 +159,7 @@ class TestRoundTripAllFields:
         assert restored.slugs == info.slugs
         assert restored.tenant_domains == info.tenant_domains
         assert restored.related_domains == info.related_domains
+        assert restored.ct_related_domains == info.ct_related_domains
         assert restored.insights == info.insights
         assert restored.degraded_sources == info.degraded_sources
         assert restored.site_verification_tokens == info.site_verification_tokens
@@ -664,9 +666,11 @@ class TestDictShape:
         # Strip out the v0.9.2 fields to simulate an older cache entry
         d.pop("ct_provider_used", None)
         d.pop("ct_subdomain_count", None)
+        d.pop("ct_related_domains", None)
         restored = tenant_info_from_dict(d)
         assert restored.ct_provider_used is None
         assert restored.ct_subdomain_count == 0
+        assert restored.ct_related_domains == ()
 
     def test_from_dict_preserves_tuple_input_compatibility(self) -> None:
         data = tenant_info_to_dict(_complete_info())

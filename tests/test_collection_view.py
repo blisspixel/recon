@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import io
+import json
 from dataclasses import replace
 
 import pytest
@@ -12,15 +13,27 @@ from recon_tool.bayesian import infer_from_tenant_info
 from recon_tool.cache import tenant_info_from_dict, tenant_info_to_dict
 from recon_tool.cache_insights import validate_insight_claim_coverage
 from recon_tool.cli.lookup import _build_explanations
-from recon_tool.collection_view import collection_observable_evidence, collection_observable_info
+from recon_tool.collection_view import (
+    collection_observable_evidence,
+    collection_observable_info,
+    collection_observable_result,
+)
 from recon_tool.constants import SVC_BIMI, SVC_DMARC, SVC_MTA_STS, SVC_SPF_STRICT
 from recon_tool.email_security import signal_context_from_tenant_info
 from recon_tool.explanation import build_explanation_dag
-from recon_tool.formatter import format_tenant_dict, format_tenant_markdown, render_tenant_panel
+from recon_tool.formatter import format_tenant_dict, format_tenant_markdown, format_tenant_plain, render_tenant_panel
 from recon_tool.formatter.classify import provider_line
 from recon_tool.insights import InsightContext, generate_insight_claims, generate_insights
+from recon_tool.lexical import lexical_observations
 from recon_tool.merger import merge_results
-from recon_tool.models import ConfidenceLevel, EvidenceRecord, PosteriorObservation, SourceResult, TenantInfo
+from recon_tool.models import (
+    ConfidenceLevel,
+    EvidenceRecord,
+    PosteriorObservation,
+    SourceResult,
+    SurfaceAttribution,
+    TenantInfo,
+)
 from recon_tool.posture import analyze_posture
 from recon_tool.server.lookup import _format_lookup_tenant
 from recon_tool.signals import evaluate_signals
@@ -57,6 +70,124 @@ def _info(*, degraded_sources: tuple[str, ...]) -> TenantInfo:
 def _empty_dns_insights() -> tuple[str, ...]:
     """Return the real generator output for a domain with no email evidence."""
     return tuple(generate_insights(set(), set(), None, None, 0))
+
+
+def _ct_names_with_degraded_cname() -> TenantInfo:
+    ct_names = (
+        "auth.alpha.invalid",
+        "dev.alpha.invalid",
+        "stage.alpha.invalid",
+        "test.alpha.invalid",
+    )
+    observations = lexical_observations(ct_names, base_domain="alpha.invalid")
+    return TenantInfo(
+        tenant_id=None,
+        display_name="Synthetic Alpha",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
+        sources=("dns_records",),
+        related_domains=(*ct_names, "portal.alpha.invalid"),
+        degraded_sources=("dns:cname",),
+        ct_provider_used="certspotter",
+        ct_subdomain_count=len(ct_names),
+        ct_related_domains=ct_names,
+        ct_attempt_outcome="live_success",
+        lexical_observations=tuple(observation.statement for observation in observations),
+        insights=tuple(f"{observation.category}: {observation.statement}" for observation in observations),
+        surface_attributions=(
+            SurfaceAttribution(
+                subdomain="portal.alpha.invalid",
+                primary_slug="fastly",
+                primary_name="Fastly",
+                primary_tier="infrastructure",
+            ),
+        ),
+    )
+
+
+def test_ct_related_inventory_survives_degraded_cname_projection() -> None:
+    raw = _ct_names_with_degraded_cname()
+
+    visible = collection_observable_info(raw)
+
+    assert visible.related_domains == raw.ct_related_domains
+    assert "portal.alpha.invalid" not in visible.related_domains
+    assert visible.surface_attributions == ()
+    assert visible.ct_provider_used == "certspotter"
+    assert visible.ct_subdomain_count == 4
+    assert visible.ct_attempt_outcome == "live_success"
+    assert visible.lexical_observations
+    assert any(insight.startswith("Environment-like Labels:") for insight in visible.insights)
+
+
+def test_source_projection_retains_only_ct_backed_names_when_cname_is_degraded() -> None:
+    raw = SourceResult(
+        source_name="dns_records",
+        related_domains=("auth.alpha.invalid", "portal.alpha.invalid"),
+        degraded_sources=("dns:cname",),
+        ct_provider_used="certspotter",
+        ct_subdomain_count=1,
+        ct_related_domains=("auth.alpha.invalid",),
+        ct_attempt_outcome="live_success",
+    )
+
+    visible = collection_observable_result(raw)
+
+    assert visible.related_domains == ("auth.alpha.invalid",)
+    assert visible.ct_related_domains == ("auth.alpha.invalid",)
+
+
+def test_merger_carries_exact_ct_ownership_into_degraded_projection() -> None:
+    raw = SourceResult(
+        source_name="dns_records",
+        related_domains=("auth.alpha.invalid", "portal.alpha.invalid"),
+        degraded_sources=("dns:cname",),
+        ct_related_domains=("auth.alpha.invalid",),
+        ct_attempt_outcome="live_success",
+    )
+
+    merged = merge_results([raw], "alpha.invalid")
+    visible = collection_observable_info(merged)
+
+    assert merged.ct_related_domains == ("auth.alpha.invalid",)
+    assert visible.related_domains == ("auth.alpha.invalid",)
+
+
+def test_ct_related_inventory_is_consistent_across_every_lookup_surface() -> None:
+    raw = _ct_names_with_degraded_cname()
+
+    structured = format_tenant_dict(raw)
+    markdown = format_tenant_markdown(raw)
+    full_markdown = format_tenant_markdown(raw, full=True)
+    plain_full = format_tenant_plain(raw, full=True)
+    mcp_json = json.loads(_format_lookup_tenant(raw, (), "json", False))
+    panel = io.StringIO()
+    Console(file=panel, width=100, force_terminal=False).print(render_tenant_panel(raw, show_domains=True))
+
+    expected = list(raw.ct_related_domains)
+    assert structured["related_domains"] == expected
+    assert mcp_json["related_domains"] == expected
+    assert "ct_related_domains" not in structured
+    assert structured["surface_attributions"] == []
+    assert structured["connection_map"]["related_host_classes"]
+    assert "auth\\.alpha\\.invalid" in markdown
+    assert "Related Host Classes" in full_markdown
+    assert "test\\.alpha\\.invalid" in full_markdown
+    assert "test.alpha.invalid" in plain_full
+    assert "auth.alpha.invalid" in panel.getvalue()
+
+
+def test_legacy_cache_without_ct_name_provenance_stays_conservative() -> None:
+    raw = replace(
+        _ct_names_with_degraded_cname(),
+        ct_related_domains=(),
+    )
+
+    visible = collection_observable_info(raw)
+
+    assert visible.related_domains == ()
+    assert visible.lexical_observations == ()
+    assert not any(insight.startswith("Environment-like Labels:") for insight in visible.insights)
 
 
 def test_related_inventory_preserves_exact_pre_enrichment_sparse_lineage() -> None:
