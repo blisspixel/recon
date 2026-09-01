@@ -626,6 +626,11 @@ class SourceResult:
     # after filtering. None when no CT provider was queried or all failed.
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
+    # Exact related-domain names contributed by the successful CT path. This
+    # is internal collection provenance, not a stable public JSON field. It
+    # lets the reporting projection retain independently observed CT names
+    # when later CNAME enrichment is unavailable.
+    ct_related_domains: tuple[str, ...] = ()
 
     # --- CT cache fallback ---
     # When all live CT providers fail, the per-domain CT cache serves as
@@ -766,6 +771,10 @@ class TenantInfo:
     # visible. None when no CT provider succeeded.
     ct_provider_used: str | None = None
     ct_subdomain_count: int = 0
+    # Internal CT ownership for the mixed-source ``related_domains`` field.
+    # Persisted in the result cache so degraded-channel reprojection remains
+    # exact across cache reads, but deliberately omitted from lookup JSON.
+    ct_related_domains: tuple[str, ...] = ()
 
     # --- CT cache fallback ---
     # Age of the CT cache entry in days when cached data was used as a

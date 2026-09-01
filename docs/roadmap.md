@@ -179,6 +179,12 @@ MCP SDK pins, the full test gate, and release provenance blocking. No v2.19
 feature is scheduled without a named operator handoff that the stable surfaces
 cannot solve.
 
+v2.18.1 addresses the first stability-soak defect: a degraded CNAME
+classification pass no longer erases names contributed by a separately
+successful CT path. Exact CT name provenance is internal and cache-persistent;
+the stable lookup schema, briefing versus full-map split, and fail-closed
+CNAME-dependent classifications remain unchanged.
+
 Agent portability is a separate maintainer track, not a version-path
 milestone: its representative task, client, measure, privacy, and stop-rule
 contract is frozen, its protected-main prerequisite and the candidate's

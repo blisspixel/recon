@@ -81,6 +81,9 @@ def test_audit_report_includes_issues_and_intentional_omissions() -> None:
     assert report["intentional_tenantinfo_omissions"]["cached_at"] == (
         "cache metadata, not emitted by the lookup JSON formatter"
     )
+    assert report["intentional_tenantinfo_omissions"]["ct_related_domains"] == (
+        "internal CT name provenance, not emitted by the lookup JSON formatter"
+    )
 
 
 def test_json_cli_outputs_report_for_success(capsys: pytest.CaptureFixture[str]) -> None:

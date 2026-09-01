@@ -754,6 +754,7 @@ class DNSSource:
                 dmarc_pct=ctx.dmarc_pct,
                 ct_provider_used=ctx.ct_provider_used,
                 ct_subdomain_count=ctx.ct_subdomain_count,
+                ct_related_domains=tuple(sorted(ctx.ct_related_domains)),
                 ct_cache_age_days=ctx.ct_cache_age_days,
                 ct_attempt_outcome=ctx.ct_attempt_outcome,
                 raw_dns_records=tuple(
@@ -784,6 +785,7 @@ class DNSSource:
             dmarc_pct=ctx.dmarc_pct,
             ct_provider_used=ctx.ct_provider_used,
             ct_subdomain_count=ctx.ct_subdomain_count,
+            ct_related_domains=tuple(sorted(ctx.ct_related_domains)),
             ct_cache_age_days=ctx.ct_cache_age_days,
             ct_attempt_outcome=ctx.ct_attempt_outcome,
             raw_dns_records=tuple((rtype, val) for rtype, vals in sorted(ctx.raw_dns_records.items()) for val in vals),
@@ -867,6 +869,7 @@ class DNSSource:
 
         # Remove the queried domain itself from related_domains
         ctx.related_domains.discard(domain.lower())
+        ctx.ct_related_domains.discard(domain.lower())
 
         # Surface-attribution pass. Runs after the main gather because it
         # depends on related_domains being fully populated by CT and the

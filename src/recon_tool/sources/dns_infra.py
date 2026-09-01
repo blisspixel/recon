@@ -654,6 +654,7 @@ async def detect_srv(ctx: dns_base.DetectionCtx, domain: str) -> None:
 def _apply_cached_cert_intel(ctx: dns_base.DetectionCtx, cached: CTCacheEntry, attribution: str) -> None:
     """Apply a CT cache entry to the context (shared by cache-first and fallback)."""
     ctx.related_domains.update(cached.subdomains)
+    ctx.ct_related_domains.update(cached.subdomains)
     if cached.cert_summary is not None:
         ctx.cert_summary = cached.cert_summary
     if cached.infrastructure_clusters is not None:
@@ -686,6 +687,7 @@ async def _query_cert_providers(ctx: dns_base.DetectionCtx, domain: str) -> tupl
             failures["rate_limit"] += 1
             ctx.degraded_sources.add(provider.name)
             ctx.related_domains.update(partial.subdomains)
+            ctx.ct_related_domains.update(partial.subdomains)
             if partial.cert_summary is not None:
                 ctx.cert_summary = partial.cert_summary
             if partial.infrastructure_clusters is not None:
@@ -727,6 +729,7 @@ async def _query_cert_providers(ctx: dns_base.DetectionCtx, domain: str) -> tupl
             continue
 
         ctx.related_domains.update(subdomains)
+        ctx.ct_related_domains.update(subdomains)
         if cert_summary is not None:
             ctx.cert_summary = cert_summary
         if infrastructure_clusters is not None:

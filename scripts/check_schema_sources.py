@@ -33,6 +33,7 @@ SPECIAL_SCHEMA_SOURCES: Mapping[str, str] = {
 
 INTENTIONAL_TENANTINFO_OMISSIONS: Mapping[str, str] = {
     "cached_at": "cache metadata, not emitted by the lookup JSON formatter",
+    "ct_related_domains": "internal CT name provenance, not emitted by the lookup JSON formatter",
     "dns_catalog_summaries": "opt-in private catalog diagnostic, excluded from the stable schema",
     "dmarc_testing": "internal RFC 9989 effective-policy input, not a stable output field",
     "insight_claims": "internal generation-time lineage, exposed only through explain-mode projections",

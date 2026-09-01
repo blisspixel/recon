@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import Any, NamedTuple
 
+from recon_tool import merger_catalog
 from recon_tool.confidence import (
     compute_confidence,
     compute_evidence_confidence,
@@ -22,12 +23,6 @@ from recon_tool.constants import (
 from recon_tool.email_security import claim_safe_email_services, observed_email_control_services
 from recon_tool.insight_pipeline import build_insights_with_signals
 from recon_tool.lexical import lexical_observations
-from recon_tool.merger_catalog import (
-    dedupe_motifs,
-    dedupe_surface,
-    dedupe_unclassified,
-    merge_dns_catalog_diagnostics,
-)
 from recon_tool.models import (
     BIMIIdentity,
     CandidateValue,
@@ -598,10 +593,10 @@ def merge_results(
     detection_scores = compute_detection_scores(evidence_tuple)
     lexical_observation_statements = _append_lexical_observations(insights, all_related, queried_domain)
 
-    surface_tuple = dedupe_surface(usable_results)
-    unclassified_tuple = dedupe_unclassified(usable_results)
-    dns_catalog_summaries, unclassified_dns_observations = merge_dns_catalog_diagnostics(usable_results)
-    chain_motifs_tuple = dedupe_motifs(usable_results)
+    surface_tuple = merger_catalog.dedupe_surface(usable_results)
+    unclassified_tuple = merger_catalog.dedupe_unclassified(usable_results)
+    dns_catalog_summaries, unclassified_dns_observations = merger_catalog.merge_dns_catalog_diagnostics(usable_results)
+    chain_motifs_tuple = merger_catalog.dedupe_motifs(usable_results)
     infrastructure_clusters: InfrastructureClusterReport | None = _first_non_none(
         usable_results, "infrastructure_clusters"
     )
@@ -643,6 +638,7 @@ def merge_results(
         likely_primary_email_provider=likely_primary_email_provider,
         ct_provider_used=ct_provider_used,
         ct_subdomain_count=ct_subdomain_count,
+        ct_related_domains=merger_catalog.merge_ct_related_domains(usable_results, all_domains, queried_domain),
         ct_cache_age_days=ct_cache_age_days,
         ct_attempt_outcome=ct_attempt_outcome,
         cloud_instance=cloud_instance,

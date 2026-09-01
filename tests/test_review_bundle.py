@@ -192,6 +192,44 @@ def test_degraded_collection_is_partial_and_suppresses_dmarc_candidate_support()
     )
 
 
+def test_degraded_cname_keeps_ct_hosts_in_explained_baseline() -> None:
+    ct_names = ("auth.example.com", "test.example.com")
+    all_related = (*ct_names, "portal.example.com")
+    info = replace(
+        _info(),
+        related_domains=all_related,
+        ct_related_domains=ct_names,
+        degraded_sources=("dns:cname",),
+        ct_provider_used="certspotter",
+        ct_subdomain_count=len(ct_names),
+        ct_attempt_outcome="live_success",
+    )
+    dns_result = replace(
+        _dns_result(),
+        related_domains=all_related,
+        ct_related_domains=ct_names,
+        degraded_sources=("dns:cname",),
+        ct_provider_used="certspotter",
+        ct_subdomain_count=len(ct_names),
+        ct_attempt_outcome="live_success",
+    )
+
+    bundle = build_review_bundle(
+        info,
+        (dns_result, _oidc_result()),
+        "Example.COM",
+        replace(_context(), ct_enabled=True),
+        generated_at=_GENERATED,
+    )
+    lookup = bundle["result"]["explained_baseline"]["lookup"]
+
+    assert bundle["workflow"]["collection_validity"] == "partial"
+    assert lookup["related_domains"] == list(ct_names)
+    assert lookup["surface_attributions"] == []
+    assert lookup["connection_map"]["related_host_classes"]
+    assert "portal.example.com" not in lookup["related_domains"]
+
+
 @pytest.mark.parametrize("error_kind", ["validation", "lookup", "timeout"])
 def test_error_bundle_is_typed_and_contains_no_lookup_or_candidates(error_kind: str) -> None:
     bundle = build_review_error_bundle(

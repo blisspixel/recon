@@ -26,6 +26,34 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.18.1] - 2026-08-31
+
+v2.18.1 restores CT-discovered related hosts when later CNAME enrichment
+degrades, without exposing CNAME-dependent classification or changing the
+stable lookup schema.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Fixed
+
+- **CT related hosts survive degraded CNAME enrichment.** A successful live,
+  partial, or cached CT result now retains its exact related-domain names when
+  the later `dns:cname` classification channel is unavailable. CNAME-owned
+  attributions and motifs still fail closed, lexical observations are rebuilt
+  from the retained CT names, and lookup, Markdown, panel, MCP, cache, and
+  NamespaceReviewBundle surfaces now agree. Existing cache entries without the
+  additive CT name-provenance field remain conservatively empty under this
+  degraded condition.
+
+### Tests
+
+- Added synthetic regression coverage for live, partial, and cached CT
+  provenance; source and merged projection; legacy caches; stable JSON;
+  briefing and full renderers; connection-map classification; MCP JSON; and
+  NamespaceReviewBundle embedding.
+
 ## [2.18.0] - 2026-08-30
 
 NamespaceReviewBundle v1 adds a role-neutral, caller-owned handoff for one

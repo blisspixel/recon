@@ -75,6 +75,7 @@ def _inventory_only_related_result(result: SourceResult) -> SourceResult:
         spf_include_count=0,
         ct_provider_used=None,
         ct_subdomain_count=0,
+        ct_related_domains=(),
         ct_cache_age_days=None,
         ct_attempt_outcome=None,
         cloud_instance=None,

@@ -173,6 +173,11 @@ _GOOGLE_WORKSPACE_MARKERS = frozenset({"source:google_workspace", "google_worksp
 _IDENTITY_SOURCE_MARKERS = (
     _USER_REALM_MARKERS | _AUTODISCOVER_MARKERS | _OIDC_MARKERS | _GOOGLE_IDENTITY_MARKERS | _GOOGLE_WORKSPACE_MARKERS
 )
+_LEXICAL_INSIGHT_CATEGORIES = (
+    "Environment-like Labels",
+    "Region-like Labels",
+    "Tenant-like Labels",
+)
 _IDENTITY_EVIDENCE_RULES = (
     (_USER_REALM_MARKERS, frozenset({"GetUserRealm"})),
     (_AUTODISCOVER_MARKERS, frozenset({"Autodiscover"})),
@@ -191,6 +196,44 @@ def auth_type_channel_unavailable(degraded_sources: Iterable[str]) -> bool:
     channel could not be read.
     """
     return not frozenset(degraded_sources).isdisjoint(_USER_REALM_MARKERS)
+
+
+def _observable_related_domains(
+    info: TenantInfo | SourceResult,
+    status: SourceStatus,
+) -> tuple[str, ...]:
+    """Retain only related names with an available discovery path.
+
+    ``related_domains`` mixes CT discovery with later CNAME enrichment. A
+    failed CNAME channel therefore cannot own the whole field. Current
+    collector output carries the exact CT subset separately; older cache
+    entries without that provenance retain the conservative empty projection.
+    """
+    if status.whole_dns_unavailable:
+        return ()
+    if status.channel_available("cname"):
+        return info.related_domains
+    return tuple(sorted(set(info.related_domains).intersection(info.ct_related_domains)))
+
+
+def _project_lexical_related_insights(
+    info: TenantInfo,
+    related_domains: tuple[str, ...],
+    visible_insights: tuple[str, ...],
+) -> tuple[tuple[str, ...], tuple[str, ...]]:
+    """Rebuild lexical diagnostics from the related names still observable."""
+    from recon_tool.lexical import lexical_observations
+
+    raw_lexical_insights = {
+        f"{category}: {statement}"
+        for category in _LEXICAL_INSIGHT_CATEGORIES
+        for statement in info.lexical_observations
+    }
+    retained_insights = tuple(insight for insight in visible_insights if insight not in raw_lexical_insights)
+    observations = lexical_observations(related_domains, base_domain=info.queried_domain)
+    statements = tuple(observation.statement for observation in observations)
+    projected_insights = tuple(f"{observation.category}: {observation.statement}" for observation in observations)
+    return statements, retained_insights + projected_insights
 
 
 def _is_retired_numeric_domain_insight(normalized: str) -> bool:
@@ -483,11 +526,12 @@ def collection_observable_result(result: SourceResult) -> SourceResult:
         mta_sts_mode=result.mta_sts_mode if status.channel_available("mta_sts") else None,
         site_verification_tokens=(result.site_verification_tokens if status.channel_available("apex_txt") else ()),
         bimi_identity=None,
-        related_domains=(() if status.channel_unavailable("cname") else result.related_domains),
+        related_domains=_observable_related_domains(result, status),
         cert_summary=(None if status.whole_dns_unavailable else result.cert_summary),
         raw_dns_records=(() if status.whole_dns_unavailable else result.raw_dns_records),
         ct_provider_used=(None if status.whole_dns_unavailable else result.ct_provider_used),
         ct_subdomain_count=(0 if status.whole_dns_unavailable else result.ct_subdomain_count),
+        ct_related_domains=(() if status.whole_dns_unavailable else result.ct_related_domains),
         ct_cache_age_days=(None if status.whole_dns_unavailable else result.ct_cache_age_days),
         ct_attempt_outcome=(None if status.whole_dns_unavailable else result.ct_attempt_outcome),
         surface_attributions=(() if status.channel_unavailable("cname") else result.surface_attributions),
@@ -710,6 +754,15 @@ def collection_observable_info(info: TenantInfo) -> TenantInfo:
             slug_confidences=(info.slug_confidences if posterior_contract_current else ()),
         )
 
+    related_domains = _observable_related_domains(info, status)
+    lexical_observations = info.lexical_observations
+    if status.channel_unavailable("cname"):
+        lexical_observations, visible_insights = _project_lexical_related_insights(
+            info,
+            related_domains,
+            visible_insights,
+        )
+
     services = set(info.services)
     slugs = set(info.slugs)
     if status.whole_dns_unavailable:
@@ -783,13 +836,14 @@ def collection_observable_info(info: TenantInfo) -> TenantInfo:
         likely_primary_email_provider=likely_primary_email_provider,
         site_verification_tokens=info.site_verification_tokens if status.channel_available("apex_txt") else (),
         bimi_identity=None,
-        related_domains=(() if status.channel_unavailable("cname") else info.related_domains),
+        related_domains=related_domains,
         cert_summary=(None if status.whole_dns_unavailable else info.cert_summary),
         ct_provider_used=(None if status.whole_dns_unavailable else info.ct_provider_used),
         ct_subdomain_count=(0 if status.whole_dns_unavailable else info.ct_subdomain_count),
+        ct_related_domains=(() if status.whole_dns_unavailable else info.ct_related_domains),
         ct_cache_age_days=(None if status.whole_dns_unavailable else info.ct_cache_age_days),
         ct_attempt_outcome=(None if status.whole_dns_unavailable else info.ct_attempt_outcome),
-        lexical_observations=(() if status.channel_unavailable("cname") else info.lexical_observations),
+        lexical_observations=lexical_observations,
         surface_attributions=(() if status.channel_unavailable("cname") else info.surface_attributions),
         unclassified_cname_chains=(() if status.channel_unavailable("cname") else info.unclassified_cname_chains),
         chain_motifs=(() if status.channel_unavailable("cname") else info.chain_motifs),

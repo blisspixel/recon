@@ -12,6 +12,18 @@ from recon_tool.models import (
 )
 
 
+def merge_ct_related_domains(
+    results: list[SourceResult],
+    tenant_domains: set[str],
+    queried_domain: str,
+) -> tuple[str, ...]:
+    """Merge exact CT name provenance without duplicating known tenant names."""
+    related = {domain for result in results for domain in result.ct_related_domains}
+    related.difference_update(tenant_domains)
+    related.discard(queried_domain.lower())
+    return tuple(sorted(related))
+
+
 def dedupe_surface(results: list[SourceResult]) -> tuple[SurfaceAttribution, ...]:
     """Deduplicate surface attributions by subdomain using first observation."""
     merged = {item.subdomain: item for result in reversed(results) for item in reversed(result.surface_attributions)}
