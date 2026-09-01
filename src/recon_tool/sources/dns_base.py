@@ -176,6 +176,7 @@ class DetectionCtx:
         "ct_attempt_outcome",
         "ct_cache_age_days",
         "ct_provider_used",
+        "ct_related_domains",
         "ct_subdomain_count",
         "degraded_sources",
         "dmarc_np",
@@ -234,6 +235,9 @@ class DetectionCtx:
         # pagination returned 87 entries". None until a provider succeeds.
         self.ct_provider_used: str | None = None
         self.ct_subdomain_count: int = 0
+        # Preserve exact CT ownership separately from the mixed-source related
+        # inventory. A later CNAME failure must not erase successful CT names.
+        self.ct_related_domains: set[str] = set()
         # CT cache age in days when cached data used as fallback
         self.ct_cache_age_days: int | None = None
         # Per-record CT attempt outcome. See ``TenantInfo.ct_attempt_outcome``

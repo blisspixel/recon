@@ -77,6 +77,7 @@ class TestFallbackChain:
         # Only crt.sh should have been called (it succeeded)
         assert call_order == ["crt.sh"]
         assert "sub.example.com" in ctx.related_domains
+        assert ctx.ct_related_domains == {"sub.example.com"}
 
     @pytest.mark.usefixtures("_bypass_ct_cache_first")
     @pytest.mark.asyncio
@@ -111,6 +112,7 @@ class TestFallbackChain:
 
         assert call_order == ["crt.sh", "certspotter"]
         assert "fallback.example.com" in ctx.related_domains
+        assert ctx.ct_related_domains == {"fallback.example.com"}
         assert "crt.sh" in ctx.degraded_sources
         assert "certspotter" not in ctx.degraded_sources
 
@@ -184,6 +186,7 @@ class TestFallbackChain:
 
         assert ctx.cert_summary is mock_summary
         assert "api.example.com" in ctx.related_domains
+        assert ctx.ct_related_domains == {"api.example.com"}
 
     @pytest.mark.usefixtures("_bypass_ct_cache_first")
     @pytest.mark.asyncio
@@ -272,6 +275,7 @@ class TestFallbackChain:
         # CertSummary instance.
         assert ctx.cert_summary == cached_summary
         assert "api.example.com" in ctx.related_domains
+        assert ctx.ct_related_domains == {"api.example.com", "auth.example.com"}
         assert ctx.ct_subdomain_count == 2
         assert ctx.ct_cache_age_days == 0  # just-cached
         # v1.9.25 attribution: the cache short-circuits providers, so
