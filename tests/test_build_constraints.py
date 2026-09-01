@@ -20,6 +20,7 @@ _WORKFLOW_DIR = _REPO_ROOT / ".github" / "workflows"
 # `pyproject.toml` floor only has to admit it (and stay wide enough for
 # Dependabot's bundled uv to run `uv lock`).
 _REPRODUCIBLE_UV_VERSION = "0.11.17"
+_DEPENDENCY_UPDATE_UV_VERSION = "0.12.7"
 _EXPECTED_BUILD_PACKAGES = {
     "hatchling",
     "packaging",
@@ -83,6 +84,8 @@ def test_build_root_and_uv_are_exactly_selected() -> None:
     required_version = uv_config["required-version"]
     assert not required_version.startswith("=="), required_version
     assert _version_satisfies(_REPRODUCIBLE_UV_VERSION, required_version)
+    assert _version_satisfies(_DEPENDENCY_UPDATE_UV_VERSION, required_version)
+    assert not _version_satisfies("0.13.0", required_version)
 
 
 def test_development_audit_toolchain_excludes_affected_pip() -> None:

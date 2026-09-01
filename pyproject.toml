@@ -146,9 +146,9 @@ mutation = [
 # (0.11.17) through `astral-sh/setup-uv`, so reproducible builds do not depend
 # on this floor. The range stays wide enough for Dependabot's bundled uv to run
 # `uv lock`; without it, every Dependabot update fails closed and no Python
-# dependency or security update can land. See CONTRIBUTING.md and
-# docs/supply-chain.md.
-required-version = ">=0.11.8,<0.12"
+# dependency or security update can land. The next uv minor remains excluded
+# until it is observed and reviewed. See CONTRIBUTING.md and docs/supply-chain.md.
+required-version = ">=0.11.8,<0.13"
 
 [tool.pytest.ini_options]
 asyncio_mode = "strict"
