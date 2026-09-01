@@ -317,6 +317,7 @@ class TestAttestationJob:
         )
         subjects = str(attest_step["with"]["subject-path"]).splitlines()
 
+        assert attest_step["uses"] == ("actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8")
         assert subjects == ["dist/*", "sbom/*"]
 
 

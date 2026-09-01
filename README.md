@@ -325,7 +325,7 @@ Research and publication pointers (maintainer track, not the product core):
 ## Development
 
 Repository and release tasks use uv `0.11.17`. The broader
-`>=0.11.8,<0.12` project constraint exists for dependency-update tooling, not
+`>=0.11.8,<0.13` project constraint exists for dependency-update tooling, not
 as the reproducible maintainer toolchain.
 
 ```bash
