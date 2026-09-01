@@ -26,6 +26,14 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.18.2] - 2026-09-01
+
+v2.18.2 keeps the dependency-maintenance path current without changing any
+released CLI, MCP, schema, or runtime behavior. It admits Dependabot's current
+uv updater while preserving the exact reproducible release toolchain, and
+advances the reviewed workflow and build dependency pins as one coherent
+maintenance batch.
+
 ### Tool Surface Changes
 
 Tool surface changes: no CLI command or flag changes.
