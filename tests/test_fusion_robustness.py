@@ -277,49 +277,43 @@ class TestCLIFlagCombinations:
             # SH6: the flag disambiguates "fusion off" from "ran, found none".
             assert d.get("fusion_enabled") is False
 
-    def test_implicit_v2_fusion_preserves_output_and_warns(self) -> None:
+    def test_implicit_v2_fusion_preserves_output_without_notice(self) -> None:
         app, runner = self._imports()
         from tests.test_cli import RESOLVE_PATH, SAMPLE_INFO, SAMPLE_RESULTS
 
-        with (
-            patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve,
-            patch("recon_tool.cli.shared.fusion_transition_notice_enabled", return_value=True),
-        ):
+        with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
             mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
             result = runner.invoke(app, ["lookup", "alpha.invalid", "--json", "--no-cache"])
             assert result.exit_code == 0
             d = json.loads(result.stdout)
             assert isinstance(d.get("posterior_observations"), list)
             assert d.get("fusion_enabled") is True
-            assert "implicit default is deprecated" in result.stderr
+            assert "Notice:" not in result.stderr
+            assert "implicit default is deprecated" not in result.stderr
 
     @pytest.mark.parametrize("flag", ["--fusion", "--no-fusion"])
     def test_explicit_fusion_choice_has_no_transition_notice(self, flag: str) -> None:
         app, runner = self._imports()
         from tests.test_cli import RESOLVE_PATH, SAMPLE_INFO, SAMPLE_RESULTS
 
-        with (
-            patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve,
-            patch("recon_tool.cli.shared.fusion_transition_notice_enabled", return_value=True),
-        ):
+        with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
             mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
             result = runner.invoke(app, ["lookup", "alpha.invalid", "--json", "--no-cache", flag])
 
         assert result.exit_code == 0
+        assert "Notice:" not in result.stderr
         assert "implicit default is deprecated" not in result.stderr
 
     def test_explain_dag_implies_fusion_without_transition_notice(self) -> None:
         app, runner = self._imports()
         from tests.test_cli import RESOLVE_PATH, SAMPLE_INFO, SAMPLE_RESULTS
 
-        with (
-            patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve,
-            patch("recon_tool.cli.shared.fusion_transition_notice_enabled", return_value=True),
-        ):
+        with patch(RESOLVE_PATH, new_callable=AsyncMock) as mock_resolve:
             mock_resolve.return_value = (SAMPLE_INFO, SAMPLE_RESULTS)
             result = runner.invoke(app, ["lookup", "alpha.invalid", "--explain-dag", "--no-cache"])
 
         assert result.exit_code == 0
+        assert "Notice:" not in result.stderr
         assert "implicit default is deprecated" not in result.stderr
 
 

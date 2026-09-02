@@ -60,7 +60,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--chain`, `--depth <1-3>` | Stable | Recursive related-domain resolution. |
 | `--no-cache`, `--cache-ttl <sec>` | Stable | Cache control. |
 | `--timeout <sec>` / `-t` | Stable | Pipeline timeout (default 120s). |
-| `--fusion` / `--no-fusion` | Stable (v2.0+) | Advanced Bayesian diagnostic control. v2 preserves the historical implicit enabled default; v2.12 adds an interactive transition notice when neither flag is supplied. Pass either flag to pin behavior across future releases. Any omitted-choice change remains conditional on a genuine major contract boundary; otherwise the v2 default stays enabled. |
+| `--fusion` / `--no-fusion` | Stable (v2.0+) | Advanced Bayesian diagnostic control. v2 preserves the historical implicit enabled default. Pass `--no-fusion` for deterministic output or `--fusion` to pin the diagnostic on. A v2.12 interactive transition notice was withdrawn: the omitted-choice flip is deferred optional debt, not a scheduled default change. |
 | `--explain-dag` | Stable (v2.0+) | v1.9.0. Render Bayesian evidence DAG. |
 
 ### CLI flags (on `recon batch <file>`)
@@ -252,8 +252,9 @@ land in minor releases without breaking existing consumers.
 consumer was relying on the default.
 
 That rule also applies to stable CLI defaults. ADR-0013 therefore preserves the
-v2 implicit fusion behavior, adds a v2.12 interactive transition notice, and
-assigns the omitted-choice flip to v3. The explicit `--fusion` and
+v2 implicit fusion behavior. A v2.12 interactive transition notice was later
+withdrawn; the omitted-choice flip remains deferred optional compatibility
+debt rather than a scheduled v3 requirement. The explicit `--fusion` and
 `--no-fusion` behaviors do not change.
 
 ---

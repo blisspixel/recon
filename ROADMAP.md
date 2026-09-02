@@ -50,6 +50,9 @@ handoff the single-namespace contract cannot solve.
 v2.18.1 fixed the first stability-soak defect: degraded CNAME classification no
 longer erases names supplied by successful certificate transparency. v2.18.2
 updated dependency tooling and workflow pins without changing product behavior.
+v2.18.3 tightened diagnostic and renderer truthfulness. v2.18.4 withdraws the
+interactive fusion-transition notice; the implicit default remains enabled and
+silent.
 
 The ordered work now is deliberately small:
 
@@ -84,10 +87,11 @@ silent-failure, and contract-preserving fixes.
 | v2.18 | Stability soak | NamespaceReviewBundle v1 plus contract-preserving fixes and maintenance |
 | v3.0, conditional | Not scheduled | Exists only if a genuine claim or observation contract change cannot remain additive; otherwise v2 remains current |
 
-The fusion omitted-choice change is claim-neutral compatibility debt. Explicit
-`--fusion` and `--no-fusion` pin behavior across future releases. A default
-change may ride a genuine major boundary if one is required, but it does not
-justify a major release by itself.
+The fusion omitted-choice change is claim-neutral compatibility debt. The
+implicit v2 default stays enabled and silent. `--fusion` and `--no-fusion` pin
+behavior if an operator wants a fixed choice. A default change may ride a
+genuine major boundary if one is required, but it does not justify a major
+release by itself.
 
 ## Standing loops
 

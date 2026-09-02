@@ -105,3 +105,23 @@ decision, not on this flip. Until a flip is committed to a specific release, the
 interactive deprecation notice should name the advanced-diagnostic positioning
 without promising a v3 flip that may not occur; that notice rewording is a
 runtime change and rides the release that next touches `cli/shared.py`.
+
+## Amendment, 2026-09-02: withdraw the interactive transition notice
+
+The 2026-08-18 amendment already treated the default-off flip as optional debt
+that may never ship. v2.18.3 then reworded the TTY notice so it no longer
+promised a v3 flip. A standing notice that still calls the implicit default
+deprecated and asks every interactive run to pin `--fusion` or `--no-fusion`
+is a deprecation for a change that is not scheduled. Default `recon <domain>`
+should emit the panel, not a compatibility lecture.
+
+Withdraw the interactive stderr notice. The v2 implicit default remains fusion
+enabled. `--fusion` and `--no-fusion` remain the explicit pins. Redirected and
+machine-oriented output was already silent. Help text describes the default and
+the opt-out; it does not ask operators to prepare for a future flip.
+Documentation continues to classify fusion as an advanced diagnostic.
+
+This is a runtime UX change, not a contract change. JSON fields, flag meanings,
+the implicit enabled default, and MCP behavior are unchanged. A future flip, if
+one is ever committed to a specific release, still requires a major under the
+stability policy and must still reconcile CLI-versus-MCP parity.
