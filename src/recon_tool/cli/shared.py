@@ -26,11 +26,6 @@ from recon_tool.validator import strip_control_chars
 
 _MAX_DIAGNOSTIC_LEN = 2000
 _NARROW_HELP_COLUMNS = 70
-_FUSION_TRANSITION_NOTICE = (
-    "v2 compatibility keeps Bayesian fusion enabled when neither fusion flag is supplied. "
-    "That implicit default is deprecated: pass --fusion to pin the advanced diagnostic on "
-    "or --no-fusion to pin deterministic output across future releases."
-)
 
 
 def help_markup_mode() -> Literal["rich"] | None:
@@ -39,28 +34,18 @@ def help_markup_mode() -> Literal["rich"] | None:
     return None if columns < _NARROW_HELP_COLUMNS else "rich"
 
 
-def resolve_fusion_transition(ctx: typer.Context, fusion: bool, *, explain_dag: bool = False) -> bool:
-    """Preserve the v2 default while offering an explicit release-stable choice.
+def resolve_fusion_transition(ctx: typer.Context, fusion: bool) -> bool:
+    """Honor explicit fusion flags and keep the v2 implicit default enabled.
 
-    Click's parameter source lets v2 warn only on implicit use without changing
-    the declared or effective default. ``--explain-dag`` is already an explicit
-    request for the diagnostic, so it needs no additional notice.
+    Click's parameter source distinguishes an omitted flag from ``--fusion`` /
+    ``--no-fusion``. An omitted flag stays enabled for v2 compatibility. The
+    default run stays silent: operators who want a pin use the flags, and
+    ``--explain-dag`` already requests the diagnostic.
     """
     source = ctx.get_parameter_source("fusion")
     if source is None or source.name != "DEFAULT":
         return fusion
-    if explain_dag:
-        return True
-    if fusion_transition_notice_enabled():
-        typer.echo(f"Notice: {_FUSION_TRANSITION_NOTICE}", err=True)
     return True
-
-
-def fusion_transition_notice_enabled() -> bool:
-    """Keep machine-oriented and redirected output silent during v2."""
-    import sys
-
-    return sys.stderr.isatty()
 
 
 def render_usage_rows(console: Console, rows: Sequence[tuple[str, str]]) -> None:

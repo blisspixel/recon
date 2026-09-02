@@ -819,11 +819,11 @@ The fusion decision is not deferred to the final phase of the broader quality
 plan. The v2.11 preflight established before collection that the frozen
 promotion condition is structurally unreachable. v2.12 aligns product
 positioning, documentation, and tests with non-promotion: fusion is an advanced
-diagnostic and operators are directed to explicit flags. The runtime default
-cannot flip in a minor release because the stability policy classifies that as
-breaking. ADR-0013 therefore preserves implicit v2 behavior with an interactive
-transition notice. Stable JSON fields, explicit CLI flags, and MCP tools remain
-unchanged.
+diagnostic. The runtime default cannot flip in a minor release because the
+stability policy classifies that as breaking. ADR-0013 therefore preserves
+implicit v2 behavior. A later amendment withdraws the interactive transition
+notice: the default-off flip is not scheduled, so default runs stay silent.
+Stable JSON fields, explicit CLI flags, and MCP tools remain unchanged.
 
 The default-off switch is **not itself a scheduled milestone** (ADR-0013
 amendment, 2026-08-18). The flip is claim-neutral: the identifiability finding,

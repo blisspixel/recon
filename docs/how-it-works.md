@@ -151,14 +151,14 @@ score.
 ## Model-Relative Bayesian Diagnostics
 
 The fusion layer maps observed slugs and signals into a small manually encoded
-Bayesian network. Treat it as an advanced diagnostic: use `--fusion` on CLI
-lookups, or the explicit MCP `get_posteriors` and `explain_dag` tools. v2 keeps
-its historical implicit CLI default for compatibility and emits an interactive
-transition notice when neither fusion flag is supplied; `--no-fusion` selects
-the deterministic primary path. The v3 major boundary changes the omitted CLI
-choice to off. The separate batch ecosystem hypergraph remains opt-in through
-`--include-ecosystem`. Fusion produces exact posteriors for the committed model
-and evidence-responsive uncertainty bands for high-level claims such as:
+Bayesian network. Treat it as an advanced diagnostic. The CLI enables it by
+default; pass `--no-fusion` for the deterministic path, or `--fusion` to pin
+it on. MCP exposes `get_posteriors` and `explain_dag` as explicit tools. The
+omitted CLI choice would change to off only at a conditional v3 major
+boundary, if one ships. The separate batch ecosystem hypergraph remains opt-in
+through `--include-ecosystem`. Fusion produces exact posteriors for the
+committed model and evidence-responsive uncertainty bands for high-level
+claims such as:
 
 - Microsoft 365 tenant present.
 - Google Workspace tenant present.

@@ -438,9 +438,8 @@ def lookup(
         "--fusion/--no-fusion",
         help=(
             "Advanced diagnostic: compute per-slug evidence strength plus "
-            "model-relative Bayesian posteriors and uncertainty bands. v2 "
-            "preserves the implicit enabled default with a transition notice; "
-            "pass --fusion or --no-fusion explicitly to pin behavior across future releases."
+            "model-relative Bayesian posteriors and uncertainty bands. "
+            "Enabled by default; pass --no-fusion for deterministic output."
         ),
         rich_help_panel=_EVIDENCE_HELP_PANEL,
     ),
@@ -544,7 +543,7 @@ def lookup(
             show_gaps=gaps,
         ),
         inference=LookupInferenceOptions(
-            fusion=_resolve_fusion_transition(ctx, fusion, explain_dag=explain_dag),
+            fusion=_resolve_fusion_transition(ctx, fusion),
             explain_dag=explain_dag,
             explain_dag_format=explain_dag_format,
         ),
@@ -648,9 +647,8 @@ def batch(
         help=(
             "Advanced diagnostic: compute model-relative Bayesian-network "
             "posteriors and evidence-responsive uncertainty bands over "
-            "high-level claims for every domain. v2 preserves the implicit "
-            "enabled default with a transition notice; pass --fusion or "
-            "--no-fusion explicitly to pin behavior across future releases. Pure post-processing, "
+            "high-level claims for every domain. Enabled by default; pass "
+            "--no-fusion for deterministic output. Pure post-processing, "
             "with no extra network calls."
         ),
         rich_help_panel=_EVIDENCE_HELP_PANEL,
