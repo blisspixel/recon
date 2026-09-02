@@ -2,10 +2,10 @@
 name: recon
 description: Public-metadata domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like "what does <company> use", "tenant", "DMARC", "email security posture", "SaaS stack", "fingerprint", "passive recon", or "vendor diligence". Passive in scope - never use for active scanning, port scans, credentialed access, or vulnerability checks.
 license: Apache-2.0
-compatibility: Requires recon-tool 2.18.3 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.
+compatibility: Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.
 metadata:
   author: blisspixel
-  version: 2.18.3
+  version: 2.18.4
 ---
 
 # recon
@@ -128,7 +128,7 @@ may grow materially with certificate-transparency and evidence data, so inline
 output consumes context for no benefit. Instead:
 
 1. Capture stdout from the Bash call. Use your file-write tool to save it to `recon-<validated-domain>.json` in the current working directory (or a path the user specifies). Never substitute the unvalidated domain into a shell redirect.
-2. Reply with a 3-line headline only (field names per the stable v2.0 contract in [`docs/recon-schema.json`](https://github.com/blisspixel/recon/blob/v2.18.3/docs/recon-schema.json)):
+2. Reply with a 3-line headline only (field names per the stable v2.0 contract in [`docs/recon-schema.json`](https://github.com/blisspixel/recon/blob/v2.18.4/docs/recon-schema.json)):
    > **{display_name}** - {provider}, confidence {confidence}.
    > {N services detected, {ct_subdomain_count} CT subdomains, email security {email_security_score}/5}.
    > Full JSON saved to `recon-{domain}.json`. Ready for the next ask.
