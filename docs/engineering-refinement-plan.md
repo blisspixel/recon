@@ -19,7 +19,7 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- Release metadata is synchronized on v2.18.2. Remote release readiness passed
+- Release metadata is synchronized on v2.18.3. Remote release readiness passed
   for the exact tag, GitHub Release, PyPI files, attestations, SBOM, CI, and
   channel hashes.
 - Local release readiness must pass before tagging; remote release readiness
