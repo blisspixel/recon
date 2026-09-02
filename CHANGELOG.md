@@ -26,6 +26,30 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.18.4] - 2026-09-02
+
+Default `recon <domain>` no longer prints a fusion-flag deprecation notice.
+The v2 implicit default remains fusion enabled; `--fusion` and `--no-fusion`
+still pin the diagnostic on or off.
+
+### Tool Surface Changes
+
+Tool surface changes: lookup and batch no longer emit an interactive stderr
+notice when neither `--fusion` nor `--no-fusion` is supplied. Help text for
+those flags no longer asks operators to pin a future-release choice. Flag
+meanings, the implicit enabled default, JSON fields, and MCP behavior are
+unchanged.
+
+### Changed
+
+- **Silent default fusion path.** The v2.12 TTY notice that the implicit
+  fusion default is deprecated is withdrawn. Running `recon <domain>` on a
+  terminal now emits the panel (or JSON) without a compatibility lecture.
+  Fusion still runs when neither flag is supplied. Pass `--no-fusion` for
+  deterministic output or `--fusion` to pin the diagnostic on.
+- ADR-0013 records the notice withdrawal: the default-off flip remains
+  deferred optional compatibility debt, not a scheduled v3 requirement.
+
 ## [2.18.3] - 2026-09-01
 
 This patch tightens diagnostic and renderer truthfulness without changing the

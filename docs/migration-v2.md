@@ -96,13 +96,14 @@ the primary interpretation path. v2.12 therefore documents it as an advanced
 diagnostic and begins the compatibility transition recorded in ADR-0013.
 
 The v2 runtime result does not silently change: omitting both `--fusion` and
-`--no-fusion` still computes fusion. An interactive terminal notice asks the
-operator to choose explicitly. Redirected output remains silent and parseable.
-Pass `--no-fusion` for the deterministic primary path or `--fusion` to retain
-the advanced diagnostic and pin that choice across future releases. An omitted-
-choice change remains conditional on a genuine major contract boundary;
-otherwise the v2 default stays enabled. Stable JSON fields and the explicit MCP
-`get_posteriors` and `explain_dag` tools do not change.
+`--no-fusion` still computes fusion. A v2.12 interactive terminal notice asked
+operators to choose explicitly; that notice is withdrawn because the default-off
+flip is not scheduled. Redirected output remains silent and parseable.
+Pass `--no-fusion` for the deterministic path or `--fusion` to pin the
+advanced diagnostic. An omitted-choice change remains conditional on a genuine
+major contract boundary; otherwise the v2 default stays enabled. Stable JSON
+fields and the explicit MCP `get_posteriors` and `explain_dag` tools do not
+change.
 
 ## Downgrade path
 

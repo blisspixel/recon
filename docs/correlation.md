@@ -152,10 +152,9 @@ of one observation remain one support unit.
 
 Three layers share the same collected public observations. Only Layer 1 is
 authoritative for "did we observe X?" Layer 2 is always emitted as descriptive
-structure. Layer 3 is an advanced model-relative diagnostic selected explicitly
-with `--fusion`, `get_posteriors`, or `explain_dag`. During the v2 compatibility
-transition, omitting both CLI fusion flags still runs Layer 3 and emits an
-interactive notice; `--no-fusion` selects the deterministic primary path.
+structure. Layer 3 is an advanced model-relative diagnostic. On the CLI it runs
+by default; pin it with `--fusion` or skip it with `--no-fusion`. MCP exposes
+it through `get_posteriors` and `explain_dag`.
 
 ```mermaid
 flowchart LR
@@ -257,12 +256,11 @@ be read as a discovered organization boundary.
 ### 2.4 Bayesian-network diagnostic
 
 The current Bayesian layer contains nine binary claim nodes in a directed
-acyclic graph. `--fusion` enables it for single-domain and batch CLI lookups;
-`get_posteriors` and `explain_dag` expose it explicitly over MCP. v2 preserves
-the historical implicit CLI default for compatibility and warns in interactive
-terminals when neither flag is supplied. Explicit flags and JSON field shapes
-stay stable. Any omitted-choice change remains conditional on a genuine major
-contract boundary; otherwise the v2 default stays enabled.
+acyclic graph. The CLI enables it by default; `--no-fusion` skips it and
+`--fusion` pins it on. `get_posteriors` and `explain_dag` expose it explicitly
+over MCP. Explicit flags and JSON field shapes stay stable. Any omitted-choice
+change remains conditional on a genuine major contract boundary; otherwise the
+v2 default stays enabled.
 The layer is deterministic for fixed inputs, priors, and model data.
 
 ```mermaid

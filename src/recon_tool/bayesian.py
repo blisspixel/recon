@@ -18,9 +18,8 @@ This module is **separate from** ``recon_tool/fusion.py``:
 
 Both layers ship side by side. The evidence-strength layer is single-slug and
 deterministic. The Bayesian layer is multi-node, propagates through the DAG,
-and is an advanced diagnostic. v2 preserves its historical implicit CLI default
-with a transition notice; operators should choose ``--fusion`` or
-``--no-fusion`` explicitly before the v3 default changes.
+and is an advanced diagnostic. v2 preserves its historical implicit CLI default.
+Pass ``--no-fusion`` for deterministic output or ``--fusion`` to pin it on.
 
 ## Inference
 

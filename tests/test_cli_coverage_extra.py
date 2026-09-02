@@ -551,6 +551,9 @@ class TestHelpOutput:
         assert "record_type" in output
         assert "By default this replaces per-domain records" in normalized_output
         assert "attach the summary as cohort_summary" in normalized_output
+        assert "Enabled by default; pass --no-fusion for deterministic output" in normalized_output
+        assert "transition notice" not in normalized_output
+        assert "across future releases" not in normalized_output
 
     def test_root_help_warns_before_sharing_debug_diagnostics(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setenv("FORCE_COLOR", "1")

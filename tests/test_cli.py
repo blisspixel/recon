@@ -76,6 +76,10 @@ class TestHelp:
         assert "MTA-STS policy fetch is the only default target-owned HTTP/application request" in collapsed
         assert "High confidence with at least three sources" in collapsed
         assert "Evidence and validation remain unchanged, as do confidence values" in collapsed
+        assert "Enabled by default; pass --no-fusion for deterministic output" in collapsed
+        assert "transition notice" not in collapsed
+        assert "v3-ready" not in collapsed
+        assert "across future releases" not in collapsed
 
     def test_doctor_help_distinguishes_online_connectivity(self) -> None:
         result = runner.invoke(app, ["doctor", "--help"])
