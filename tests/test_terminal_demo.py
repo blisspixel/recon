@@ -84,7 +84,8 @@ def test_readme_embeds_and_labels_the_synthetic_demo() -> None:
     # carrying unrelated public residue. A README that implies otherwise sends
     # every new reader, and every agent following the front door, to narrate a
     # fixture the binary cannot produce.
-    assert "Every lookup is live." in normalized
+    assert "recon ships no offline demo mode: this is a real lookup command" in normalized
+    assert "`--no-cache` for fresh collection" in normalized
     assert "generated, not captured" in normalized
     assert "no live lookup of reserved" in normalized
     assert "README.md text eol=lf" in attributes

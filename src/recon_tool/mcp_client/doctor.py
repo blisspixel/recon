@@ -52,6 +52,7 @@ REQUIRED_RESOURCES: tuple[str, ...] = (
     "recon://signals",
     "recon://profiles",
     "recon://schema",
+    "recon://review-bundle-schema",
     "recon://surface-inventory",
 )
 
@@ -440,6 +441,25 @@ def _validate_resource_payload(uri: str, payload: dict[str, object]) -> None:
             or not isinstance(payload.get("required"), list)
         ):
             raise ValueError(f"{uri} JSON payload has an invalid schema envelope")
+        return
+
+    if uri == "recon://review-bundle-schema":
+        required = payload.get("required")
+        properties = payload.get("properties")
+        definitions = payload.get("$defs")
+        identifying_fields = {"record_type", "schema_version", "workflow", "result", "content_digest"}
+        if (
+            payload.get("$schema") != "https://json-schema.org/draft/2020-12/schema"
+            or payload.get("title") != "recon ReviewBundle v1"
+            or payload.get("type") != "object"
+            or payload.get("additionalProperties") is not False
+            or not isinstance(required, list)
+            or not isinstance(properties, dict)
+            or not isinstance(definitions, dict)
+            or not identifying_fields.issubset(required)
+            or not identifying_fields.issubset(properties)
+        ):
+            raise ValueError(f"{uri} JSON payload has an invalid ReviewBundle schema envelope")
         return
 
     if uri == "recon://surface-inventory":

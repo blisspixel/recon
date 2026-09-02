@@ -11,6 +11,7 @@ import yaml
 from scripts import check
 
 _CI_WORKFLOW = Path(__file__).resolve().parents[1] / ".github" / "workflows" / "ci.yml"
+_PRE_COMMIT_CONFIG = Path(__file__).resolve().parents[1] / ".pre-commit-config.yaml"
 
 
 def test_text_range_is_forwarded_only_to_text_hygiene(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -74,10 +75,21 @@ def test_color_capable_gate_output_retains_status_style(
 def test_pyright_scope_comes_only_from_pyproject() -> None:
     local_stage = next(command for _group, name, command in check._STAGES if name == "pyright")
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+    pre_commit = yaml.safe_load(_PRE_COMMIT_CONFIG.read_text(encoding="utf-8"))
+    local_repo = next(repo for repo in pre_commit["repos"] if repo["repo"] == "local")
+    pre_commit_hook = next(hook for hook in local_repo["hooks"] if hook["id"] == "pyright")
 
     assert local_stage == [check._PY, "-m", "pyright"]
     assert "run: uv run pyright\n" in workflow
     assert "pyright src/recon_tool/ tests/" not in workflow
+    assert pre_commit_hook["entry"] == "pyright"
+    assert "args" not in pre_commit_hook
+
+
+def test_ci_cancels_obsolete_runs_for_the_same_ref() -> None:
+    workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
+
+    assert "concurrency:\n  group: ${{ github.workflow }}-${{ github.ref }}\n  cancel-in-progress: true\n" in workflow
 
 
 def test_ruff_scope_and_cache_policy_match_ci() -> None:
