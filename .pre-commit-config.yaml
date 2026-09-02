@@ -14,9 +14,8 @@ repos:
         language: system
         types: [python]
         pass_filenames: false
-        # Match CI exactly (.github/workflows/ci.yml: pyright src/recon_tool/ tests/).
-        # A narrower scope here let test-file type errors reach CI red.
-        args: [src/recon_tool/, tests/]
+        # Match scripts/check.py and CI: pyproject.toml owns the complete scope,
+        # including the explicitly covered validation modules.
 
       - id: metadata-coverage
         name: metadata-coverage (descriptions on every fingerprint detection)

@@ -115,7 +115,7 @@ def _mail_identity_lines(lookup: Mapping[str, Any]) -> list[str]:
         ("Mail gateway observation", "email_gateway"),
         ("DMARC policy", "dmarc_policy"),
         ("MTA-STS mode", "mta_sts_mode"),
-        ("Observed email controls", "email_security_score"),
+        ("Public email controls observed", "email_security_score"),
         ("Tenant identifier", "tenant_id"),
         ("Authentication type", "auth_type"),
         ("Google authentication type", "google_auth_type"),
@@ -123,7 +123,14 @@ def _mail_identity_lines(lookup: Mapping[str, Any]) -> list[str]:
         ("Cloud instance", "cloud_instance"),
         ("Region", "region"),
     )
-    observed = [(label, lookup.get(key)) for label, key in fields if lookup.get(key) not in (None, "", [], ())]
+    observed: list[tuple[str, object]] = []
+    for label, key in fields:
+        value = lookup.get(key)
+        if value in (None, "", [], ()):
+            continue
+        if key == "email_security_score" and isinstance(value, int) and not isinstance(value, bool):
+            value = f"{value} of 5"
+        observed.append((label, value))
     if observed:
         lines.extend(_line(label, value) for label, value in observed)
     else:

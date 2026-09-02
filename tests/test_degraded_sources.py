@@ -180,6 +180,44 @@ class TestFormatterDegradedOutput:
         md = format_tenant_markdown(ti)
         assert r"crt\.sh" in md
         assert "certspotter" in md
+        assert "certificate-transparency subdomain discovery may be incomplete" in md
+
+    def test_markdown_core_degradation_does_not_claim_subdomain_incompleteness(self):
+        ti = _make_tenant_info(degraded_sources=("dns:dmarc",))
+        md = format_tenant_markdown(ti)
+        assert "Some sources were unavailable (dns\\:dmarc)." in md
+        assert "subdomain discovery may be incomplete" not in md
+
+    def test_markdown_suppresses_routine_ct_fallback(self):
+        ti = _make_tenant_info(
+            degraded_sources=("crt.sh",),
+            ct_provider_used="certspotter",
+            ct_subdomain_count=87,
+            ct_attempt_outcome="live_success",
+        )
+        md = format_tenant_markdown(ti)
+        assert "Some sources were unavailable" not in md
+        assert "subdomain discovery may be incomplete" not in md
+
+    def test_markdown_names_ct_cache_recovery(self):
+        ti = _make_tenant_info(
+            degraded_sources=("crt.sh", "certspotter"),
+            ct_provider_used="crt.sh (cached)",
+            ct_subdomain_count=12,
+            ct_cache_age_days=2,
+            ct_attempt_outcome="cache_hit",
+        )
+        md = format_tenant_markdown(ti)
+        assert "CT data came from local cache, 2 days old (12 subdomains)." in md
+        assert "subdomain discovery may be incomplete" not in md
+
+    def test_default_and_full_markdown_share_collection_status(self):
+        ti = _make_tenant_info(degraded_sources=("dns:dmarc", "crt.sh", "certspotter"))
+        default_note = next(line for line in format_tenant_markdown(ti).splitlines() if line.startswith("*Note:"))
+        full_note = next(
+            line for line in format_tenant_markdown(ti, full=True).splitlines() if line.startswith("*Note:")
+        )
+        assert default_note == full_note
 
     def test_markdown_no_degraded_note_when_empty(self):
         ti = _make_tenant_info(degraded_sources=())

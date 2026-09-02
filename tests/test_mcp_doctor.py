@@ -85,6 +85,8 @@ class TestLiveHandshake:
         assert "resources/list" in names
         assert "required resources present" in names
         assert "resources/read" in names
+        resource_read = next(c for c in report.checks if c.name == "resources/read")
+        assert resource_read.detail == f"{len(REQUIRED_RESOURCES)} JSON resources read"
 
 
 class TestTimeoutPath:
@@ -442,8 +444,8 @@ class TestRequiredToolsGate:
                     DoctorCheck("server spawn", "ok", "stub"),
                     DoctorCheck("initialize handshake", "ok", "stub"),
                     DoctorCheck("tools/list", "ok", "1 tools registered"),
-                    DoctorCheck("resources/list", "ok", "5 resources registered"),
-                    DoctorCheck("resources/read", "ok", "5 JSON resources read"),
+                    DoctorCheck("resources/list", "ok", f"{len(REQUIRED_RESOURCES)} resources registered"),
+                    DoctorCheck("resources/read", "ok", f"{len(REQUIRED_RESOURCES)} JSON resources read"),
                 ],
             )
 
@@ -472,8 +474,8 @@ class TestRequiredResourcesGate:
                     DoctorCheck("server spawn", "ok", "stub"),
                     DoctorCheck("initialize handshake", "ok", "stub"),
                     DoctorCheck("tools/list", "ok", "5 tools registered"),
-                    DoctorCheck("resources/list", "ok", "4 resources registered"),
-                    DoctorCheck("resources/read", "ok", "4 JSON resources read"),
+                    DoctorCheck("resources/list", "ok", f"{len(REQUIRED_RESOURCES) - 1} resources registered"),
+                    DoctorCheck("resources/read", "ok", f"{len(REQUIRED_RESOURCES) - 1} JSON resources read"),
                 ],
             )
 
@@ -507,6 +509,43 @@ class TestResourceReadValidation:
                                         "detection_types": ["txt"],
                                     }
                                 ],
+                            }
+                        ),
+                    }
+                ]
+            },
+        )
+
+    def test_accepts_review_bundle_schema_identifying_envelope(self) -> None:
+        uri = "recon://review-bundle-schema"
+        _validate_resource_read(
+            uri,
+            {
+                "contents": [
+                    {
+                        "uri": uri,
+                        "mimeType": "application/json",
+                        "text": json.dumps(
+                            {
+                                "$schema": "https://json-schema.org/draft/2020-12/schema",
+                                "title": "recon ReviewBundle v1",
+                                "type": "object",
+                                "additionalProperties": False,
+                                "required": [
+                                    "record_type",
+                                    "schema_version",
+                                    "workflow",
+                                    "result",
+                                    "content_digest",
+                                ],
+                                "properties": {
+                                    "record_type": {"const": "review_bundle"},
+                                    "schema_version": {"const": "1.0"},
+                                    "workflow": {"$ref": "#/$defs/Workflow"},
+                                    "result": {"$ref": "#/$defs/ReviewSuccess"},
+                                    "content_digest": {"type": "string"},
+                                },
+                                "$defs": {"Workflow": {}, "ReviewSuccess": {}},
                             }
                         ),
                     }
@@ -650,5 +689,5 @@ class TestCLI:
         assert "ok" in result.output
         assert "23 tools registered" in result.output
         assert "All checks passed" in result.output
-        assert "canonical tool registrations and six local JSON resource reads" in result.output
+        assert f"canonical tool registrations and {len(REQUIRED_RESOURCES)} local JSON resource reads" in result.output
         assert "client config was not checked" in result.output.lower()

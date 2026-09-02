@@ -273,12 +273,12 @@ def _print_welcome_banner() -> None:
     console.print("  recon review example.com")
     console.print("  recon example.com --verbose")
     console.print("  recon example.com --full --json")
-    # The examples show flag shapes, not a demo. A live reserved-name lookup
-    # returns stray public residue at High confidence, not an empty panel.
     console.print(
-        "[dim]Every lookup is live. These examples use reserved example.com to show flag "
-        "shapes. Reserved names return stray public residue at High confidence, not a "
-        "company result. Point recon at a domain you want to review.[/dim]"
+        "[dim]These are real lookup commands, not an offline demo. Ordinary lookups may "
+        "reuse the default 24-hour result cache; pass --no-cache for fresh collection. "
+        "These examples use reserved example.com to show flag shapes. Reserved names return "
+        "stray public residue at High confidence, not a company result. Point recon at a "
+        "domain you want to review.[/dim]"
     )
     console.print(
         "[dim]Pass a public-suffix domain (for example, example.com). Bare hostnames without a "
@@ -440,7 +440,7 @@ def lookup(
             "Advanced diagnostic: compute per-slug evidence strength plus "
             "model-relative Bayesian posteriors and uncertainty bands. v2 "
             "preserves the implicit enabled default with a transition notice; "
-            "pass --fusion or --no-fusion explicitly for v3-ready behavior."
+            "pass --fusion or --no-fusion explicitly to pin behavior across future releases."
         ),
         rich_help_panel=_EVIDENCE_HELP_PANEL,
     ),
@@ -650,7 +650,7 @@ def batch(
             "posteriors and evidence-responsive uncertainty bands over "
             "high-level claims for every domain. v2 preserves the implicit "
             "enabled default with a transition notice; pass --fusion or "
-            "--no-fusion explicitly for v3-ready behavior. Pure post-processing, "
+            "--no-fusion explicitly to pin behavior across future releases. Pure post-processing, "
             "with no extra network calls."
         ),
         rich_help_panel=_EVIDENCE_HELP_PANEL,

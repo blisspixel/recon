@@ -164,6 +164,9 @@ class TestHelp:
         assert "Google CSE and BIMI direct probes run only with --direct-probes" in collapsed
         assert "stray public residue" in collapsed
         assert "High confidence" in collapsed
+        assert "real lookup commands, not an offline demo" in collapsed
+        assert "default 24-hour result cache" in collapsed
+        assert "--no-cache for fresh collection" in collapsed
         assert "publish little or nothing" not in collapsed
 
     def test_version_flag(self) -> None:

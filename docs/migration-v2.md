@@ -99,9 +99,10 @@ The v2 runtime result does not silently change: omitting both `--fusion` and
 `--no-fusion` still computes fusion. An interactive terminal notice asks the
 operator to choose explicitly. Redirected output remains silent and parseable.
 Pass `--no-fusion` for the deterministic primary path or `--fusion` to retain
-the advanced diagnostic. The omitted choice changes to off only at the v3 major
-boundary. Stable JSON fields and the explicit MCP `get_posteriors` and
-`explain_dag` tools do not change.
+the advanced diagnostic and pin that choice across future releases. An omitted-
+choice change remains conditional on a genuine major contract boundary;
+otherwise the v2 default stays enabled. Stable JSON fields and the explicit MCP
+`get_posteriors` and `explain_dag` tools do not change.
 
 ## Downgrade path
 

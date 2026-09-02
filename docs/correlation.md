@@ -260,8 +260,9 @@ The current Bayesian layer contains nine binary claim nodes in a directed
 acyclic graph. `--fusion` enables it for single-domain and batch CLI lookups;
 `get_posteriors` and `explain_dag` expose it explicitly over MCP. v2 preserves
 the historical implicit CLI default for compatibility and warns in interactive
-terminals when neither flag is supplied. The v3 major boundary changes that
-omitted choice to off; explicit flags and JSON field shapes stay stable.
+terminals when neither flag is supplied. Explicit flags and JSON field shapes
+stay stable. Any omitted-choice change remains conditional on a genuine major
+contract boundary; otherwise the v2 default stays enabled.
 The layer is deterministic for fixed inputs, priors, and model data.
 
 ```mermaid

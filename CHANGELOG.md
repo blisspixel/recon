@@ -26,6 +26,66 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.18.3] - 2026-09-01
+
+This patch tightens diagnostic and renderer truthfulness without changing the
+CLI command set, collection boundary, stable JSON fields, or briefing versus
+full-map split.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Changed
+
+- The panel and Markdown renderer now share one internal collection-status
+  projection. Core-source failures, recovered CT fallback, total CT failure,
+  and CT cache recovery retain distinct meanings without creating a new public
+  output contract.
+- The no-argument welcome and onboarding docs now distinguish a real lookup
+  command from fresh collection: ordinary lookup may reuse the default 24-hour
+  result cache, while `--no-cache` requests fresh collection.
+- The fusion transition notice and active compatibility docs no longer promise
+  a v3 default change that may never ship. Explicit flags pin behavior across
+  future releases; the v2 omitted choice remains enabled.
+- The default panel wraps the unclassified-surface explanation, discovery
+  command, and examples within its width instead of leaving detached words or
+  losing continuation indentation.
+- NamespaceReviewBundle Markdown labels `email_security_score` as a public
+  compatibility count out of five rather than an unbounded control total.
+- The root roadmap is again a short current-state document. Detailed shipped
+  history stays in the changelog and roadmap history, while active gates,
+  invariants, standing loops, and deliberate exclusions remain visible.
+- Pre-commit, the canonical local gate, and CI now let `pyproject.toml` own the
+  full Pyright scope. CI also cancels obsolete runs for the same ref.
+
+### Fixed
+
+- The live and static MCP doctors now require all six registered canonical
+  resources. The live doctor reads and validates the ReviewBundle schema before
+  reporting success, and its summary derives the resource count instead of
+  hard-coding a claim.
+- Markdown no longer says that every degraded source makes subdomain discovery
+  incomplete. Core failures name the affected source, routine recovered CT
+  fallback stays quiet, total CT failure names CT incompleteness, and CT cache
+  recovery reports its age and retained-host count.
+- Contributor documentation now matches the admitted uv `>=0.11.8,<0.13`
+  range while reproducible workflows remain pinned to exact uv 0.11.17.
+- The portable reporting caveat now includes certificate transparency and
+  describes observations for a namespace instead of claiming that one domain
+  published every retained item.
+
+### Tests
+
+- Added live six-resource MCP doctor assertions and ReviewBundle schema-envelope
+  validation coverage.
+- Added panel, Markdown, JSON, full/default, and MCP Markdown coverage for core
+  degradation, CT fallback, total CT failure, and CT cache recovery.
+- Updated golden renders for accurate collection notes and bounded
+  unclassified-surface wrapping.
+- Added pre-commit/CI Pyright-scope parity and same-ref concurrency assertions,
+  and tightened the existing panel and merger file-size ratchets.
+
 ## [2.18.2] - 2026-09-01
 
 v2.18.2 keeps the dependency-maintenance path current without changing any

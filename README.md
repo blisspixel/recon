@@ -52,11 +52,13 @@ review:
 recon "<domain-you-want-to-review>"
 ```
 
-For a harmless syntax-only example, you can use `recon example.com`. Every
-lookup is live. recon ships no offline demo mode, so reserved names such as
-`example.com` return a panel of stray public residue from unrelated test
-configurations, including a meaningless display name, at High confidence. It
-shows the shape of the output, not a result about any organization.
+For a harmless syntax-only example, you can use `recon example.com`. recon
+ships no offline demo mode: this is a real lookup command, but an ordinary
+lookup may reuse a recent result from the default 24-hour cache. Pass
+`--no-cache` for fresh collection. Reserved names such as `example.com` return a
+panel of stray public residue from unrelated test configurations, including a
+meaningless display name, at High confidence. It shows the shape of the output,
+not a result about any organization.
 
 A domain is a query coordinate, not proof of one organization or product: recon
 reports observations, not verdicts. That is the caution to keep beside every row
@@ -236,7 +238,9 @@ recon mcp install --client=claude-desktop
 recon mcp doctor
 ```
 
-Start with manual tool approvals. Treat agents as untrusted input.
+Restart the client after installation, then run `recon doctor --mcp`,
+`recon mcp doctor`, and `recon doctor --client=<name>` in that order. Start with
+manual tool approvals. Treat agents as untrusted input.
 Full setup:
 [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md).
 Per-client scaffolds and skills:

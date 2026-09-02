@@ -54,10 +54,10 @@ we saw X," never "companies like this do X."
 
 For the foot of any artifact that leaves your hands:
 
-> Everything above is published by this domain in public DNS and at public
-> identity endpoints, and anyone can read it with `dig`. It shows what is
-> configured and visible today, not what is licensed, deployed, or in active
-> use, and it is not a security rating.
+> Everything above was observed for this namespace in public DNS,
+> certificate-transparency logs, and public identity endpoints. It shows what
+> was publicly visible during this bounded observation, not what is licensed,
+> deployed, or in active use, and it is not a security rating.
 
 For a call, spoken:
 
