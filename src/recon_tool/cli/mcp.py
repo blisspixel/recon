@@ -193,7 +193,7 @@ def mcp_install_command(
 def mcp_doctor_command() -> None:
     """Check local MCP startup, discovery, tools, and JSON resources."""
     try:
-        from recon_tool.mcp_client.doctor import run_doctor
+        from recon_tool.mcp_client.doctor import REQUIRED_RESOURCES, run_doctor
     except ImportError as exc:
         get_console().print(
             "[red]MCP dependency unavailable in this environment.[/red]\n"
@@ -232,5 +232,5 @@ def mcp_doctor_command() -> None:
         raise typer.Exit(EXIT_INTERNAL)
 
     console.print("  [green]All checks passed.[/green]")
-    console.print("  Verified: canonical tool registrations and six local JSON resource reads.")
+    console.print(f"  Verified: canonical tool registrations and {len(REQUIRED_RESOURCES)} local JSON resource reads.")
     console.print("  [dim]Client config was not checked; run recon doctor --client=<name>.[/dim]")

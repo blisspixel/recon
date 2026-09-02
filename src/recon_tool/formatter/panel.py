@@ -49,6 +49,7 @@ from recon_tool.formatter.classify import (
     provider_line,
     slug_to_relationship_metadata,
 )
+from recon_tool.formatter.collection_status import project_collection_status
 from recon_tool.formatter.comparison import format_comparison_dict, format_comparison_json
 from recon_tool.formatter.delta import (  # re-exported: stable import path after the split
     format_delta_dict,
@@ -803,7 +804,7 @@ def _render_unclassified_surface(info: TenantInfo, show_domains: bool) -> Text |
     The chain walker reached CNAME termini the catalog could not classify.
     Surfacing the count plus up to two representative subdomain -> terminus
     examples corrects the default panel's implicit "they only use the services
-    we listed" to "they use AT LEAST those, plus N unclassified surfaces" —
+    we listed" to "they use AT LEAST those, plus N unclassified surfaces";
     humility over completeness, since absence of evidence otherwise reads as
     evidence of absence. Returns ``None`` when there are no unclassified chains
     or in --domains / --full mode. Output held byte-identical by
@@ -815,30 +816,34 @@ def _render_unclassified_surface(info: TenantInfo, show_domains: bool) -> Text |
     n = len(info.unclassified_cname_chains)
     noun = "terminus" if n == 1 else "termini"
     unc.append("Unclassified surface", style="bold")
-    unc.append("\n  ")
-    unc.append(
-        f"{n} CNAME chain {noun} reached, no fingerprint match. ",
-        style="dim",
+    unc.append("\n")
+    _append_wrapped_lines(
+        unc,
+        (
+            f"{n} CNAME chain {noun} reached, no fingerprint match. We walked them but "
+            "cannot name them; open a fingerprint PR or run:"
+        ),
+        _PANEL_WIDTH - 2,
+        "dim",
     )
-    unc.append(
-        "We walked them but cannot name them — open a fingerprint PR or run\n  ",
-        style="dim",
-    )
-    unc.append(
-        f"`recon discover {info.queried_domain}` to triage candidates.",
-        style="dim italic",
+    _append_wrapped_lines(
+        unc,
+        f"recon discover {info.queried_domain}",
+        _PANEL_WIDTH - 2,
+        "dim italic",
     )
     # Up to 2 representative pairs so the operator can sanity-check what's
     # getting missed; --full / `recon discover` is the path to the full list.
     examples = list(info.unclassified_cname_chains[:2])
     if examples:
-        unc.append("\n  ", style="dim")
-        unc.append("examples: ", style="dim")
         sample_strs: list[str] = []
         for uc in examples:
             terminus = uc.chain[-1] if uc.chain else "(no terminus)"
             sample_strs.append(f"{strip_control_chars(uc.subdomain)} → {strip_control_chars(terminus)}")
-        unc.append(", ".join(sample_strs), style="dim italic")
+        _append_wrapped_lines(unc, "examples:", _PANEL_WIDTH - 2, "dim")
+        for sample in sample_strs:
+            _append_wrapped_lines(unc, f"- {sample}", _PANEL_WIDTH - 2, "dim italic")
+    unc.rstrip()
     return unc
 
 
@@ -1085,24 +1090,18 @@ def _degraded_note_parts(info: TenantInfo) -> tuple[list[str], bool]:
     (provenance stays in --json); a cache fallback that actually changed the
     answer (returned at least one subdomain) is surfaced.
     """
-    non_ct_degraded = [s for s in info.degraded_sources if s not in ("crt.sh", "certspotter")]
-    ct_in_degraded = [s for s in info.degraded_sources if s in ("crt.sh", "certspotter")]
-    ct_fallback_succeeded = bool(ct_in_degraded) and info.ct_provider_used is not None
-    ct_fallback_failed = bool(ct_in_degraded) and info.ct_provider_used is None
-    ct_from_cache = info.ct_cache_age_days is not None
-    ct_fallback_informative = ct_fallback_succeeded and info.ct_subdomain_count > 0
-    is_warning = bool(non_ct_degraded) or ct_fallback_failed
+    status = project_collection_status(info)
 
     note_parts: list[str] = []
-    if non_ct_degraded:
-        note_parts.append(f"Some sources unavailable ({', '.join(non_ct_degraded)})")
-    if ct_fallback_failed:
-        note_parts.append(f"All CT providers unavailable ({', '.join(ct_in_degraded)})")
-    elif ct_from_cache and ct_fallback_informative:
-        age = info.ct_cache_age_days
+    if status.unavailable_sources:
+        note_parts.append(f"Some sources unavailable ({', '.join(status.unavailable_sources)})")
+    if status.ct_state == "unavailable":
+        note_parts.append(f"All CT providers unavailable ({', '.join(status.ct_sources)})")
+    elif status.ct_state == "cache_recovered":
+        age = status.ct_cache_age_days
         age_str = "today" if age == 0 else f"{age} day{'s' if age != 1 else ''} old"
-        note_parts.append(f"CT: from local cache, {age_str} ({info.ct_subdomain_count} subdomains)")
-    return note_parts, is_warning
+        note_parts.append(f"CT: from local cache, {age_str} ({status.ct_subdomain_count} subdomains)")
+    return note_parts, status.is_warning
 
 
 def _render_degraded_note(info: TenantInfo) -> Text | None:

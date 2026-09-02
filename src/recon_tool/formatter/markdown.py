@@ -22,6 +22,7 @@ from recon_tool.formatter.classify import (
     google_workspace_cse_indicators,
     google_workspace_module_indicators,
 )
+from recon_tool.formatter.collection_status import project_collection_status
 from recon_tool.models import ExplanationRecord, TenantInfo
 from recon_tool.validator import strip_control_chars
 
@@ -283,12 +284,23 @@ _MD_SCOPE_CAVEAT = (
 def _md_footer(info: TenantInfo) -> list[str]:
     """Footer: separator, optional degraded-sources note, sources, and scope line."""
     lines: list[str] = ["---"]
-    if info.degraded_sources:
-        sources_list = ", ".join(markdown_escape(source) for source in info.degraded_sources)
-        lines.append(
-            f"*Note: Some sources were unavailable ({sources_list}) - subdomain discovery may be incomplete.*"
-            f"{MARKDOWN_HARD_BREAK}"
+    status = project_collection_status(info)
+    note_parts: list[str] = []
+    if status.unavailable_sources:
+        sources_list = ", ".join(markdown_escape(source) for source in status.unavailable_sources)
+        note_parts.append(f"Some sources were unavailable ({sources_list}).")
+    if status.ct_state == "unavailable":
+        sources_list = ", ".join(markdown_escape(source) for source in status.ct_sources)
+        note_parts.append(
+            f"All CT providers were unavailable ({sources_list}); "
+            "certificate-transparency subdomain discovery may be incomplete."
         )
+    elif status.ct_state == "cache_recovered":
+        age = status.ct_cache_age_days
+        age_str = "today" if age == 0 else f"{age} day{'s' if age != 1 else ''} old"
+        note_parts.append(f"CT data came from local cache, {age_str} ({status.ct_subdomain_count} subdomains).")
+    if note_parts:
+        lines.append(f"*Note: {' '.join(note_parts)}*{MARKDOWN_HARD_BREAK}")
     lines.append(f"*Sources: {', '.join(markdown_escape(source) for source in info.sources)}*")
     lines.append("")
     lines.append(f"*{_MD_SCOPE_CAVEAT}*")

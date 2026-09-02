@@ -105,6 +105,7 @@ def test_complete_bundle_renders_exact_core_fields_in_fixed_section_order() -> N
     assert r"Freshness assessment:** not\_assigned" in output
     assert "Lookup-result cache:** bypassed" in output
     assert "Direct probes:** False" in output
+    assert "Public email controls observed:** 0 of 5" in output
     assert "not a signature or collector identity" in output
     assert render_review_bundle_markdown(bundle) == output
 

@@ -28,8 +28,8 @@ _MAX_DIAGNOSTIC_LEN = 2000
 _NARROW_HELP_COLUMNS = 70
 _FUSION_TRANSITION_NOTICE = (
     "v2 compatibility keeps Bayesian fusion enabled when neither fusion flag is supplied. "
-    "That implicit default is deprecated: pass --fusion to retain the advanced diagnostic "
-    "or --no-fusion for deterministic output before v3."
+    "That implicit default is deprecated: pass --fusion to pin the advanced diagnostic on "
+    "or --no-fusion to pin deterministic output across future releases."
 )
 
 
@@ -40,7 +40,7 @@ def help_markup_mode() -> Literal["rich"] | None:
 
 
 def resolve_fusion_transition(ctx: typer.Context, fusion: bool, *, explain_dag: bool = False) -> bool:
-    """Preserve the v2 default while requiring an explicit v3-ready choice.
+    """Preserve the v2 default while offering an explicit release-stable choice.
 
     Click's parameter source lets v2 warn only on implicit use without changing
     the declared or effective default. ``--explain-dag`` is already an explicit

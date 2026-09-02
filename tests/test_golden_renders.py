@@ -291,7 +291,13 @@ class TestGoldenPanelRenders:
     def test_panel_surface_default(self) -> None:
         # Default mode: exercises the Services subdomain summary and the
         # Unclassified surface block (both keyed on not-show_domains).
-        _check_golden("panel_surface_default", _render_panel(_surface_rich_info()))
+        rendered = _render_panel(_surface_rich_info())
+        _check_golden("panel_surface_default", rendered)
+        unclassified = rendered.split("Unclassified surface", maxsplit=1)[1].split("Insights", maxsplit=1)[0]
+        assert all(len(line) <= 78 for line in unclassified.splitlines())
+        assert "\n  cannot name them" in unclassified
+        assert "\n  examples:" in unclassified
+        assert "\n  - weird.alpha.invalid" in unclassified
 
     def test_panel_surface_full(self) -> None:
         # Full mode: exercises the External surface section (individual rows,

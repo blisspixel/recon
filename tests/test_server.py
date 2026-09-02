@@ -4,12 +4,14 @@ from __future__ import annotations
 
 import asyncio
 import json
+from dataclasses import replace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 
 pytest.importorskip("mcp")
 
+from recon_tool.formatter.markdown import format_tenant_markdown
 from recon_tool.mcp_client.sdk_compat import ToolError
 from recon_tool.models import (
     ConfidenceLevel,
@@ -259,6 +261,15 @@ class TestLookupMarkdown:
         result = await lookup_tenant("alpha.invalid", format="markdown")
         assert "# " in result
         assert "Synthetic Alpha Ltd" in result
+
+    @pytest.mark.asyncio
+    @patch(RESOLVE_PATH, new_callable=AsyncMock)
+    async def test_markdown_collection_status_matches_cli_renderer(self, mock_resolve: AsyncMock) -> None:
+        degraded = replace(SAMPLE_INFO, degraded_sources=("dns:dmarc",))
+        mock_resolve.return_value = (degraded, SAMPLE_RESULTS)
+        result = await lookup_tenant("alpha.invalid", format="markdown")
+        assert result == format_tenant_markdown(degraded)
+        assert "subdomain discovery may be incomplete" not in result
 
 
 class TestErrors:

@@ -17,10 +17,12 @@ High-signal related domains
   login.alpha.invalid, api.alpha.invalid
 
 Unclassified surface
-  3 CNAME chain termini reached, no fingerprint match. We walked them but cannot name them — open a fingerprint PR or 
-run
-  `recon discover alpha.invalid` to triage candidates.
-  examples: weird.alpha.invalid → origin.unknown.example, legacy.alpha.invalid → old.vendor.example
+  3 CNAME chain termini reached, no fingerprint match. We walked them but
+  cannot name them; open a fingerprint PR or run:
+  recon discover alpha.invalid
+  examples:
+  - weird.alpha.invalid → origin.unknown.example
+  - legacy.alpha.invalid → old.vendor.example
 
 Insights
   Email security 4/5 strong (DMARC reject, DKIM, SPF strict, MTA-STS)
