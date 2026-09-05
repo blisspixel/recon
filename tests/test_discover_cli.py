@@ -73,5 +73,6 @@ def test_discovery_patterns_match_the_effective_surface_catalog() -> None:
     from recon_tool.discovery import load_runtime_patterns
     from recon_tool.fingerprints import get_cname_target_rules
 
-    assert load_runtime_patterns() == {rule.pattern.lower() for rule in get_cname_target_rules()}
-    assert "cloudfront.net" in load_runtime_patterns()
+    patterns = load_runtime_patterns()
+    assert patterns == {rule.pattern.lower() for rule in get_cname_target_rules()}
+    assert any(pattern == "cloudfront.net" for pattern in patterns)
