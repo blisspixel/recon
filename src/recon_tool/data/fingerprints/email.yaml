@@ -383,19 +383,6 @@ fingerprints:
       Alternative SendCloud SPF include (`spf2`), used alongside
       `spf1` for SPF lookup-count optimization. Same outbound-
       authorization semantics.
-- name: Postmark
-  slug: postmark
-  category: Email & Communication
-  confidence: high
-  detections:
-  - type: spf
-    pattern: postmarkapp.com
-    reference: https://postmarkapp.com/support/article/1124-
-    description: >-
-      SPF include matching against Postmark (an ActiveCampaign
-      property, formerly Wildbit). Authorizes Postmark to send
-      transactional mail on behalf of the domain. Outbound-only
-      signal.
 - name: SparkPost
   slug: sparkpost
   category: Email & Communication

@@ -7,6 +7,7 @@ import math
 import os
 import stat
 import time
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -52,6 +53,7 @@ def load_bounded_json_file(
     maximum_bytes: int,
     maximum_age_seconds: float | None = None,
     future_mtime_tolerance_seconds: float = 300.0,
+    decoder: Callable[[str], Any] | None = None,
 ) -> tuple[Any, os.stat_result, float]:
     """Decode one stable, regular JSON file without an unbounded path read.
 
@@ -63,6 +65,8 @@ def load_bounded_json_file(
     freshness admission is performed from descriptor metadata before any file
     content is read, avoiding repeated parsing of expired entries. Materially
     future modification times are rejected instead of extending cache life.
+    An optional decoder runs after every file and nesting check; its exceptions
+    propagate. The default JSON decoder is resolved at call time.
     """
     if maximum_bytes < 1:
         raise ValueError("maximum_bytes must be positive")
@@ -110,7 +114,7 @@ def load_bounded_json_file(
     text = raw.decode("utf-8")
     if exceeds_json_nesting_limit(text):
         raise ValueError(f"JSON nesting exceeds {MAX_JSON_NESTING} levels")
-    return json.loads(text), after, age_seconds
+    return (json.loads(text) if decoder is None else decoder(text)), after, age_seconds
 
 
 def _require_same_regular_path(path: Path, opened: os.stat_result) -> None:

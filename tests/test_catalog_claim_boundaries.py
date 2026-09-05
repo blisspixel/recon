@@ -7,6 +7,9 @@ from dataclasses import replace
 
 import pytest
 
+from recon_tool.cache import tenant_info_from_dict, tenant_info_to_dict
+from recon_tool.collection_view import collection_observable_evidence, collection_observable_info
+from recon_tool.email_security import compute_email_security_score
 from recon_tool.fingerprints import (
     DetectionRule,
     clear_ephemeral,
@@ -15,12 +18,19 @@ from recon_tool.fingerprints import (
     load_fingerprints,
     reload_fingerprints,
 )
-from recon_tool.models import EvidenceRecord, SignalContext, TenantInfo
+from recon_tool.formatter.classify import provider_line
+from recon_tool.merger import merge_results
+from recon_tool.models import EvidenceRecord, SignalContext, SourceResult, TenantInfo, UnclassifiedCnameChain
 from recon_tool.posture import analyze_posture, load_posture_rules, reload_posture
 from recon_tool.signals import evaluate_signals, load_signals, reload_signals
 from recon_tool.sources import dns as dns_source
 from recon_tool.sources import dns_base, dns_email, dns_infra
 from recon_tool.sources.dns_tables import classify_chain
+
+_DOCUMENTED_TARGETS = (
+    ("Retool", "retool", "custom-domain.retool.com", r"^custom-domain\.retool\.com\.?$"),
+    ("Postmark", "postmark", "pm.mtasv.net", r"^pm\.mtasv\.net\.?$"),
+)
 
 
 @pytest.fixture(autouse=True)
@@ -270,3 +280,218 @@ async def test_sparse_empty_records_do_not_synthesize_researched_vendor_claims(m
     await dns_infra.detect_subdomain_txt(ctx, "example.com")
     assert not ctx.slugs.intersection({"okta", "slack", "github-advanced-security", "aws-ses"})
     assert classify_chain([], get_cname_target_rules()) == (None, None)
+
+
+@pytest.mark.parametrize(("name", "slug", "target", "pattern"), _DOCUMENTED_TARGETS)
+@pytest.mark.parametrize("uppercase", [False, True])
+def test_documented_fixed_targets_match_only_the_exact_rule(
+    name: str, slug: str, target: str, pattern: str, uppercase: bool
+) -> None:
+    hostname = target.upper() + "." if uppercase else target
+    application, infrastructure = classify_chain([hostname], get_cname_target_rules())
+    assert application is not None
+    assert (application.name, application.slug, application.pattern) == (name, slug, pattern)
+    assert infrastructure is None
+    rule = _rules(slug, "cname_target")[pattern]
+    assert rule.verified == "2026-09-05"
+    assert rule.reference.startswith("https://")
+    assert "does not establish" in rule.description
+
+
+@pytest.mark.parametrize(("name", "slug", "target", "pattern"), _DOCUMENTED_TARGETS)
+@pytest.mark.parametrize("shape", ["suffix", "child", "prefix", "parent", "regex-lookalike"])
+def test_documented_fixed_targets_do_not_expand_into_neighboring_names(
+    name: str, slug: str, target: str, pattern: str, shape: str
+) -> None:
+    hostname = {
+        "suffix": target + ".lookalike.invalid",
+        "child": "synthetic." + target,
+        "prefix": "not" + target,
+        "parent": target.split(".", 1)[1],
+        "regex-lookalike": target.replace(".", "x"),
+    }[shape]
+    application, infrastructure = classify_chain([hostname], get_cname_target_rules())
+    assert application is None or application.slug != slug, (name, pattern, hostname)
+    assert infrastructure is None or infrastructure.slug != slug
+
+
+@pytest.mark.parametrize("pattern", ["postmarkapp.com", "pstmrk.com"])
+def test_unsupported_postmark_suffixes_are_not_customer_cname_rules(pattern: str) -> None:
+    assert pattern not in _rules("postmark", "cname_target")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "target", ["postmarkapp.com", "synthetic.postmarkapp.com", "postmarkapp.com.lookalike.invalid"]
+)
+async def test_postmark_spf_owner_is_not_the_documented_include_target(
+    monkeypatch: pytest.MonkeyPatch, target: str
+) -> None:
+    raw = f"v=spf1 include:{target} include:_spf.google.com -all"
+    _dns_fixture(monkeypatch, {("example.com", "TXT"): [raw]})
+    ctx = dns_base.DetectionCtx()
+    await dns_email.detect_txt(ctx, "example.com")
+    assert "postmark" not in ctx.slugs
+    assert not any(evidence.slug == "postmark" for evidence in ctx.evidence)
+    assert "google-workspace" in ctx.slugs
+    assert any(evidence.source_type == "SPF" and evidence.raw_value == raw for evidence in ctx.evidence)
+    assert "postmarkapp.com" not in _rules("postmark", "spf")
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("term", ["include:spf.mtasv.net", "INCLUDE:SPF.MTASV.NET.", "-include:spf.mtasv.net"])
+async def test_existing_postmark_policy_reference_remains_without_authorization_claim(
+    monkeypatch: pytest.MonkeyPatch, term: str
+) -> None:
+    raw = f"v=spf1 {term} -all"
+    _dns_fixture(monkeypatch, {("example.com", "TXT"): [raw]})
+    ctx = dns_base.DetectionCtx()
+    await dns_email.detect_txt(ctx, "example.com")
+    assert "postmark" in ctx.slugs
+    assert any(evidence.slug == "postmark" and evidence.raw_value == raw for evidence in ctx.evidence)
+    rule = _rules("postmark", "spf")["mtasv.net"]
+    assert not rule.verified
+    assert "does not establish positive authorization" in rule.description
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("target", ["synthetic.postmarkapp.com", "synthetic.pstmrk.com"])
+@pytest.mark.parametrize("with_edge", [False, True])
+async def test_retired_postmark_routes_preserve_observation_without_application_claim(
+    monkeypatch: pytest.MonkeyPatch, target: str, with_edge: bool
+) -> None:
+    host = "app.example.com"
+    edge = "synthetic.cloudfront.net"
+    records = {(host, "CNAME"): [target.upper() + "."]}
+    if with_edge:
+        records[(target, "CNAME")] = [edge]
+    _dns_fixture(monkeypatch, records)
+    ctx = dns_base.DetectionCtx()
+    ctx.related_domains.add(host)
+    await dns_source._classify_related_surface(ctx, "example.com")
+    assert not any(surface.primary_slug == "postmark" for surface in ctx.surface_attributions)
+    assert not any(evidence.slug == "postmark" for evidence in ctx.evidence)
+    if with_edge:
+        (surface,) = ctx.surface_attributions
+        assert surface.primary_slug == "aws-cloudfront"
+        assert ctx.evidence[0].raw_value == f"{host}: {target} -> {edge}"
+        assert not ctx.unclassified_cname_chains
+    else:
+        assert not ctx.surface_attributions
+        assert ctx.unclassified_cname_chains == [UnclassifiedCnameChain(subdomain=host, chain=(target,))]
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="Synthetic Alpha",
+        default_domain="example.com",
+        queried_domain="example.com",
+        surface_attributions=tuple(ctx.surface_attributions),
+        evidence=tuple(ctx.evidence),
+        unclassified_cname_chains=tuple(ctx.unclassified_cname_chains),
+    )
+    restored = tenant_info_from_dict(tenant_info_to_dict(info))
+    assert restored.surface_attributions == info.surface_attributions
+    assert restored.evidence == info.evidence
+    assert restored.unclassified_cname_chains == info.unclassified_cname_chains
+    assert compute_email_security_score(restored) == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("candidate", _DOCUMENTED_TARGETS)
+@pytest.mark.parametrize("with_edge", [False, True])
+async def test_documented_targets_keep_owner_evidence_and_do_not_promote_apex_claims(
+    monkeypatch: pytest.MonkeyPatch, candidate: tuple[str, str, str, str], with_edge: bool
+) -> None:
+    name, slug, target, pattern = candidate
+    host = "app.example.com" if slug == "retool" else "pm-bounces.example.com"
+    edge = "synthetic.cloudfront.net"
+    records = {(host, "CNAME"): [target.upper() + "."]}
+    if with_edge:
+        records[(target, "CNAME")] = [edge]
+    queries = _dns_fixture(monkeypatch, records)
+    ctx = dns_base.DetectionCtx()
+    ctx.related_domains.add(host)
+    await dns_source._classify_related_surface(ctx, "example.com")
+
+    (surface,) = ctx.surface_attributions
+    assert (surface.subdomain, surface.primary_slug, surface.primary_name) == (host, slug, name)
+    assert surface.primary_tier == "application"
+    assert surface.infra_slug == ("aws-cloudfront" if with_edge else None)
+    chain = f"{target} -> {edge}" if with_edge else target
+    assert ctx.evidence == [EvidenceRecord("CNAME", f"{host}: {chain}", name, slug)]
+    assert not ctx.slugs
+    assert not ctx.services
+    assert not ctx.m365
+    assert not ctx.unclassified_cname_chains
+    (summary,) = ctx.catalog_summaries()
+    assert (summary.record_type, summary.opportunity_count, summary.observed_count, summary.classified_count) == (
+        "cname_target",
+        1,
+        1,
+        1,
+    )
+    assert not summary.truncated
+    assert _rules(slug, "cname_target")[pattern].tier == "application"
+    assert all(kind == "CNAME" for _, kind in queries)
+    assert all(
+        queried in {host, target, edge} or queried.startswith("nonsense-classifier-guard-")
+        for queried, _kind in queries
+    )
+    baseline = merge_results([SourceResult(source_name="dns")], "example.com")
+    merged = merge_results(
+        [
+            SourceResult(
+                source_name="dns",
+                evidence=tuple(ctx.evidence),
+                surface_attributions=tuple(ctx.surface_attributions),
+                detected_services=tuple(ctx.services),
+                detected_slugs=tuple(ctx.slugs),
+                m365_detected=ctx.m365,
+            )
+        ],
+        "example.com",
+    )
+    assert provider_line(merged) == provider_line(baseline)
+    assert merged.primary_email_provider is None
+    assert merged.likely_primary_email_provider is None
+    assert merged.email_gateway is None
+    assert compute_email_security_score(merged) == compute_email_security_score(baseline) == 0
+    assert not merged.services
+    assert not merged.slugs
+    assert merged.surface_attributions == (surface,)
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="Synthetic Alpha",
+        default_domain="example.com",
+        queried_domain="example.com",
+        surface_attributions=tuple(ctx.surface_attributions),
+        evidence=tuple(ctx.evidence),
+        degraded_sources=("dns:cname",),
+    )
+    observable = collection_observable_info(info)
+    assert not observable.surface_attributions
+    assert observable.evidence == info.evidence
+    assert not collection_observable_evidence(observable)
+    assert not observable.services
+    assert not observable.slugs
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("candidate", _DOCUMENTED_TARGETS)
+@pytest.mark.parametrize("wildcard", [False, True])
+async def test_empty_or_wildcard_target_observations_cannot_create_a_service(
+    monkeypatch: pytest.MonkeyPatch, candidate: tuple[str, str, str, str], wildcard: bool
+) -> None:
+    name, slug, target, pattern = candidate
+
+    async def resolve(_host: str, **_kwargs: object) -> list[str]:
+        return [target] if wildcard else []
+
+    monkeypatch.setattr(dns_source, "_resolve_cname_chain", resolve)
+    ctx = dns_base.DetectionCtx()
+    ctx.related_domains.add("app.alpha.invalid")
+    await dns_source._classify_related_surface(ctx, "alpha.invalid")
+    assert not ctx.surface_attributions, (name, slug, pattern)
+    assert not ctx.evidence
+    assert not ctx.slugs
+    assert not ctx.services
+    assert not ctx.unclassified_cname_chains

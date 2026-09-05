@@ -1,7 +1,7 @@
 """Evaluate additive catalog rules against one frozen observation set.
 
 Live replay checks whether a complete collection still works with the proposed
-catalog. This evaluator answers the separate causal question: how would the
+catalog. This evaluator answers the separate fixed-observation question: how would the
 specified candidate rules classify the exact observations retained by the
 baseline run? It reads only the private, already collected diagnostics and
 emits aggregate counts and commitments. It performs no network requests.
@@ -188,7 +188,10 @@ def _type_rows(
             _fail(f"counterfactual {record_type} classified count exceeds retained observations")
         before_rate = _rate(classified, observed)
         after_rate = _rate(classified + uplift, observed)
-        delta = round((after_rate or 0.0) - (before_rate or 0.0), 6)
+        # Decide from the retained counts, not rounded presentation values.
+        # Subtracting rounded rates can move an uplift across a frozen gate.
+        exact_delta = uplift / observed if observed else 0.0
+        delta = round(exact_delta, 6)
         affected = uplift > 0
         rows[record_type] = {
             "baseline_observed_count": observed,
@@ -199,8 +202,8 @@ def _type_rows(
             "counterfactual_classified_rate": after_rate,
             "classified_rate_delta": delta,
             "affected": affected,
-            "meets_minimum_improvement": not affected or delta >= minimum_improvement,
-            "within_regression_budget": delta >= -maximum_regression,
+            "meets_minimum_improvement": not affected or exact_delta >= minimum_improvement,
+            "within_regression_budget": exact_delta >= -maximum_regression,
         }
     return rows
 
@@ -262,6 +265,8 @@ def evaluate_partitioned_records(
     matched_slugs = {str(row["slug"]) for row in candidate_matches if int(row["added_classified"]) > 0}
     requested_slugs = {rule.slug for rule in rules}
     decision = {
+        "decision_scope": "pooled-classification-diagnostic",
+        "policy_text_status": "not_evaluated",
         "candidate_match_counts": candidate_matches,
         "all_candidate_slugs_observed": matched_slugs == requested_slugs,
         "all_affected_types_meet_minimum": all(
@@ -428,6 +433,8 @@ def main(argv: Sequence[str] | None = None) -> int:
                 "schema_version": SCHEMA_VERSION,
                 "records_total": public["records_total"],
                 "accepted": public["pooled"]["decision"]["accepted"],
+                "decision_scope": public["pooled"]["decision"]["decision_scope"],
+                "policy_text_status": public["pooled"]["decision"]["policy_text_status"],
                 "results_digest_sha256": public["results_digest_sha256"],
                 "evaluator_digest_sha256": public["evaluator"]["digest_sha256"],
                 "identifiers_printed": 0,

@@ -76,6 +76,7 @@ docs/accuracy.md
 !/validation/2026-08-31-ct-related-domain-degradation.md
 !/validation/2026-08-30-cloudflare-fingerprint-review.md
 !/validation/2026-09-05-catalog-claim-review.md
+!/validation/2026-09-05-documented-cname-review.md
 # Generic catalog-round frame preparer; no target data is embedded.
 !/validation/prepare_catalog_round.py
 # Prior-sample drift contract and aggregate evaluator. Prior frames, retained

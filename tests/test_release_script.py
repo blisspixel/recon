@@ -4,10 +4,16 @@ from __future__ import annotations
 
 import subprocess
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from scripts import release
+
+
+def _confirm_release(_message: str, default_no: bool = True) -> bool:
+    assert default_no
+    return True
 
 
 def test_release_script_points_at_src_layout_init() -> None:
@@ -62,6 +68,22 @@ def test_release_push_failure_preserves_validated_local_release(monkeypatch: pyt
         release._offer_release_push("2.5.9")
 
     assert "credentials unavailable" not in str(error.value)
+
+
+def test_successful_tag_push_does_not_claim_publication(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    def successful_run(cmd: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        return subprocess.CompletedProcess(cmd, 0, "", "")
+
+    monkeypatch.setattr(release, "_prompt_confirm", _confirm_release)
+    monkeypatch.setattr(release, "_run", successful_run)
+
+    release._offer_release_push("2.19.0")
+
+    output = capsys.readouterr().out
+    assert "Tag v2.19.0 pushed; publication pending" in output
+    assert "Released v2.19.0" not in output
 
 
 def test_release_rejects_prerelease_versions() -> None:
@@ -316,3 +338,179 @@ def test_release_validates_after_prospective_bump(monkeypatch: pytest.MonkeyPatc
     monkeypatch.setattr(release, "_run", fake_run)
     assert release.main([]) == 0
     assert events == ["bump", "quality", "readiness", "commit"]
+
+
+@pytest.mark.parametrize("branch", ["main", ""])
+def test_release_preparation_requires_a_named_non_main_branch(monkeypatch: pytest.MonkeyPatch, branch: str) -> None:
+    def fake_run(cmd: list[str], **_kwargs: Any) -> subprocess.CompletedProcess[str]:
+        assert cmd == ["git", "branch", "--show-current"]
+        return subprocess.CompletedProcess(cmd, 0, branch, "")
+
+    monkeypatch.setattr(release, "_run", fake_run)
+
+    with pytest.raises(release.ReleaseError, match="named non-main branch"):
+        release._check_preparation_branch()
+
+
+def _preparation_fixture(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    *,
+    failure: str = "",
+    stale_upstream: bool = False,
+    worktree_status: str = "",
+) -> tuple[Path, list[list[str]], list[str]]:
+    version = tmp_path / "version.txt"
+    version.write_bytes(b"old version\n")
+    changelog = tmp_path / "CHANGELOG.md"
+    changelog.write_text("## [2.19.0] - 2026-09-05\n\nRelease notes.\n", encoding="utf-8")
+    commands: list[list[str]] = []
+    events: list[str] = []
+
+    def bump(_current: str, _new: str, _date: str) -> None:
+        events.append("bump")
+        version.write_bytes(b"new version\n")
+
+    def quality() -> None:
+        events.append("quality")
+        if failure == "quality":
+            raise release.ReleaseError("synthetic quality failure")
+        if failure == "interrupt":
+            raise KeyboardInterrupt
+
+    def version_input(_prompt: str) -> str:
+        return "2.19.0"
+
+    def fake_run(cmd: list[str], check: bool = True, capture: bool = True) -> subprocess.CompletedProcess[str]:
+        del capture
+        commands.append(cmd)
+        fixed_responses = {
+            ("git", "branch", "--show-current"): (0, "release/2.19.0\n"),
+            ("git", "status", "--porcelain"): (0, worktree_status),
+            ("git", "fetch", "--no-tags", "origin", "+refs/heads/main:refs/remotes/origin/main"): (0, ""),
+            ("git", "show-ref", "--verify", "--quiet", "refs/tags/v2.19.0"): (1, ""),
+        }
+        if response := fixed_responses.get(tuple(cmd)):
+            return subprocess.CompletedProcess(cmd, response[0], response[1], "")
+        if cmd[:2] == ["git", "rev-parse"]:
+            value = "other" if stale_upstream and cmd[-1] == "refs/remotes/origin/main" else "start"
+            return subprocess.CompletedProcess(cmd, 0, value, "")
+        if cmd[:4] == ["uv", "run", "python", "scripts/release_readiness.py"]:
+            assert cmd[4:] == ["--allow-dirty", "--allow-non-main"]
+            events.append("readiness")
+            return subprocess.CompletedProcess(cmd, int(failure == "readiness"), "", "")
+        if cmd[:2] == ["git", "add"]:
+            assert cmd[2:] == ["version.txt"]
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+        if cmd[:2] == ["git", "commit"]:
+            events.append("commit")
+            if failure == "commit":
+                assert check
+                raise subprocess.CalledProcessError(1, cmd)
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+        if cmd == ["git", "reset", "--mixed", "start"]:
+            events.append("rollback")
+            return subprocess.CompletedProcess(cmd, 0, "", "")
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(release, "ROOT", tmp_path)
+    monkeypatch.setattr(release, "CHANGELOG", changelog)
+    monkeypatch.setattr(release, "_run", fake_run)
+    monkeypatch.setattr(release, "_check_version_consistency", lambda: "2.18.4")
+    monkeypatch.setattr(release, "_release_mutation_paths", lambda: (version,))
+    monkeypatch.setattr(release, "_bump_release_surfaces", bump)
+    monkeypatch.setattr(release, "_run_quality_gate", quality)
+    monkeypatch.setattr(release, "_prompt_confirm", _confirm_release)
+    monkeypatch.setattr("builtins.input", version_input)
+    return version, commands, events
+
+
+def test_prepare_only_validates_and_commits_owned_paths_without_tagging_or_pushing(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    version, commands, events = _preparation_fixture(monkeypatch, tmp_path)
+
+    assert release.main(["--prepare-only"]) == 0
+
+    assert events == ["bump", "quality", "readiness", "commit"]
+    assert version.read_bytes() == b"new version\n"
+    assert commands[:3] == [
+        ["git", "branch", "--show-current"],
+        ["git", "status", "--porcelain"],
+        ["git", "fetch", "--no-tags", "origin", "+refs/heads/main:refs/remotes/origin/main"],
+    ]
+    assert not any(cmd[:2] in (["git", "tag"], ["git", "push"]) for cmd in commands)
+    output = capsys.readouterr().out
+    assert "No tag was created and nothing was pushed" in output
+    assert "Do not tag before the preparation has merged" in output
+
+
+def test_prepare_only_rejects_a_branch_not_at_refreshed_main(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    version, commands, events = _preparation_fixture(monkeypatch, tmp_path, stale_upstream=True)
+
+    assert release.main(["--prepare-only"]) == 1
+
+    assert version.read_bytes() == b"old version\n"
+    assert events == []
+    assert not any(cmd[:2] in (["git", "add"], ["git", "commit"], ["git", "tag"]) for cmd in commands)
+
+
+def test_prepare_only_rejects_uncommitted_changes_before_fetch_or_mutation(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    version, commands, events = _preparation_fixture(monkeypatch, tmp_path, worktree_status=" M version.txt\n")
+
+    assert release.main(["--prepare-only"]) == 1
+
+    assert events == []
+    assert version.read_bytes() == b"old version\n"
+    assert commands == [["git", "branch", "--show-current"], ["git", "status", "--porcelain"]]
+
+
+def test_prepare_only_declined_confirmation_does_not_mutate(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    version, commands, events = _preparation_fixture(monkeypatch, tmp_path)
+
+    def decline(_message: str, default_no: bool = True) -> bool:
+        assert default_no
+        return False
+
+    monkeypatch.setattr(release, "_prompt_confirm", decline)
+
+    assert release.main(["--prepare-only"]) == 0
+
+    assert events == []
+    assert version.read_bytes() == b"old version\n"
+    assert not any(cmd[:2] in (["git", "add"], ["git", "commit"], ["git", "tag"]) for cmd in commands)
+
+
+@pytest.mark.parametrize("failure", ["quality", "readiness", "commit", "interrupt"])
+def test_prepare_only_rolls_back_owned_files_and_index_without_touching_tags(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, failure: str
+) -> None:
+    version, commands, events = _preparation_fixture(monkeypatch, tmp_path, failure=failure)
+
+    assert release.main(["--prepare-only"]) == (130 if failure == "interrupt" else 1)
+
+    assert version.read_bytes() == b"old version\n"
+    assert events[-1] == "rollback"
+    assert ["git", "reset", "--mixed", "start"] in commands
+    assert not any(cmd[:2] in (["git", "tag"], ["git", "push"]) for cmd in commands)
+    # Only preflight checks local tag absence. A tag-free rollback never reads
+    # or deletes a tag that this preparation transaction did not create.
+    assert sum(cmd[:2] == ["git", "show-ref"] for cmd in commands) == 1
+
+
+def test_prepare_only_dry_run_preserves_release_files_and_git_refs(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    version, commands, events = _preparation_fixture(monkeypatch, tmp_path)
+
+    assert release.main(["--prepare-only", "--dry-run"]) == 0
+
+    assert version.read_bytes() == b"old version\n"
+    assert events == ["quality"]
+    forbidden = {"fetch", "add", "commit", "tag", "push", "reset"}
+    assert not any(cmd[0] == "git" and cmd[1] in forbidden for cmd in commands)
+    output = capsys.readouterr().out
+    assert "without a tag or push" in output
+    assert "validation may write local artifacts" in output

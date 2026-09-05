@@ -1,27 +1,27 @@
 # Release Process
 
-recon releases have two halves: a human-in-the-loop script that handles the
-pre-push steps, and a GitHub Actions workflow that handles build + publish.
+recon releases use a reviewed preparation commit, an exact-main tag, and a
+GitHub Actions workflow that handles build and publication. A successful tag
+push means publication is pending, not that either registry is current.
 
 ## TL;DR
 
 ```bash
-# 1. Finalize the dated CHANGELOG entry and any tool-surface note, then commit
-#    and push the planned release changes to main.
-#    The local tree must be clean and HEAD must exactly match origin/main.
+# 1. Merge the planned changes and dated CHANGELOG through a checked PR.
+#    Wait for current-main CI. Start from clean main exactly at origin/main.
 #    Generate the CLI surface line if commands or flags changed:
 #    uv run python scripts/summarize_cli_surface_changes.py --old-ref vX.Y.Z
 
 # 2. Run the local readiness preflight.
 uv run python scripts/release_readiness.py
 
-# 3. Run the release script.
-uv run python scripts/release.py
+# 3. Create a release preparation branch at that exact main commit.
+git switch -c release/vX.Y.Z
+uv run python scripts/release.py --prepare-only
 
-# 4. Confirm the atomic main + exact-tag push when prompted. The tag triggers
-#    source/tag preflight, the complete quality gate, one sealed build and
-#    attestation path, SBOM validation, PyPI publication, channel parity, and
-#    GitHub Release.
+# 4. Push that branch, open a PR, and merge only after all checks pass.
+#    Then follow "Tagging reviewed main" below. Never tag the preparation SHA.
+#    Do not rerun release.py after the version preparation has merged.
 ```
 
 ## Release Decision and Cadence
@@ -29,7 +29,7 @@ uv run python scripts/release.py
 Release quality includes the signal a version sends to users. The default is a
 coherent release batch, not one package version per merged pull request. Group
 compatible fixes, catalog updates, and documentation needed to explain them
-under one short release narrative, then run the existing atomic release path.
+under one short release narrative, then run the reviewed preparation path.
 
 Cut an immediate patch release when a shipped correctness bug, security issue,
 dependency failure, broken package, or release-artifact defect makes waiting
@@ -165,7 +165,56 @@ infer silence from the rest of the changelog.
 
 ## Human half: `scripts/release.py`
 
-The script enforces the release transaction in this order:
+### PR-first preparation
+
+The recommended `--prepare-only` mode requires a clean, named non-main branch
+whose `HEAD` exactly equals freshly fetched `origin/main`. Finalize the dated
+changelog in the preceding implementation PR before creating this branch.
+The helper validates the next version, synchronizes every release-owned
+surface, runs the complete quality gate and local readiness, and commits only
+those owned paths. The readiness exceptions apply only to the expected dirty
+preparation branch. They do not waive a quality gate or authorize publication.
+
+This mode creates no tag, makes no push, and offers no push prompt. Push its
+commit as a normal PR and wait for all hosted checks before merging. The
+preparation commit is not the publication identity: a squash merge produces a
+different commit. An exception inside preparation restores the starting
+commit, index and owned file bytes without deleting any tag.
+
+### Tagging reviewed main
+
+After the preparation PR merges:
+
+1. Fetch `origin/main`, switch to `main`, and fast-forward only. Require a clean
+   worktree and exact equality among local `HEAD`, refreshed `origin/main`, and
+   the preparation PR's merge commit. Stop on unexpected upstream changes.
+2. Verify all PR checks and the exact merged-main CI run succeeded. Run strict
+   `uv run --frozen python scripts/release_readiness.py` without branch or
+   dirty-tree exceptions. Inspect remote and local refs to establish that the
+   proposed release tag does not already exist.
+3. Run `scripts/validate_release_tag.py --tag vX.Y.Z --sha <checked-main-sha>`
+   with the full verified SHA. Require the package version, dated changelog and
+   main ancestry checks to pass.
+4. Create a lightweight tag on that exact SHA with
+   `git tag --no-sign vX.Y.Z <checked-main-sha>`. Do not use `-a`, `-s` or `-m`.
+   Verify `git rev-parse refs/tags/vX.Y.Z` equals the checked SHA. Lightweight
+   tags are required because the remote verifier compares the exact ref object
+   to the release commit; `--no-sign` also avoids a local `tag.gpgSign` setting
+   silently creating a different tag object.
+5. Push only `refs/tags/vX.Y.Z:refs/tags/vX.Y.Z` to `origin`, without force.
+   Watch the Release workflow and then run strict remote readiness from the
+   unchanged clean main/tag. A tag push alone does not establish publication.
+
+Replace the version and SHA placeholders with the checked values. Do not rerun
+the preparation helper after merging: the project is already at that version,
+and the helper intentionally requires a greater next version. Do not bypass PR
+checks, change branch rules, or move an existing tag to complete this handoff.
+
+### Legacy direct-main transaction
+
+The original mode remains available for repositories whose governance permits
+a direct-main release transaction. It is not the recommended path for this
+repository's PR-protected main. Without `--prepare-only`, the script enforces:
 
 1. **Branch and tree**: require a clean `main` worktree.
 2. **Current upstream**: fetch `origin/main` and require `HEAD` to match it
@@ -202,12 +251,15 @@ does not discard the successfully validated local commit and tag.
 
 ```bash
 uv run python scripts/release.py --dry-run
+uv run python scripts/release.py --prepare-only --dry-run
 ```
 
-Checks the current clean `main` tree against the locally known `origin/main`
+Checks the current clean `main` tree, or the named non-main preparation branch,
+against the locally known `origin/main`
 ref, validates the proposed version, changelog entry, and local tag absence,
-then runs the complete quality gate on the current tree. It makes no file or Git
-changes and performs no network calls. It reports the prospective
+then runs the complete quality gate on the current tree. It makes no
+release-owned file or Git-ref changes and performs no network calls; validation
+may write local coverage, test and cache artifacts. It reports the prospective
 synchronization and release transaction, but it cannot simulate the post-bump
 tree or its release-readiness result.
 
@@ -357,11 +409,11 @@ and `github-release` is the only job with `contents: write`.
 
 ## Pre-release checklist
 
-Before running `scripts/release.py`:
+Before running `scripts/release.py --prepare-only`:
 
 - [ ] All planned changes, including the new dated changelog section, are
-      committed and pushed to `main`; the local tree is clean and exactly at
-      `origin/main`.
+      merged through a checked PR to `main`; current-main CI has passed, and
+      the clean preparation branch starts exactly at refreshed `origin/main`.
 - [ ] `CHANGELOG.md` has a finalized `## [X.Y.Z] - YYYY-MM-DD` section.
 - [ ] `CITATION.cff`, both roadmaps, the package fallback, and the supply-chain
       recipe match the current project version. The helper updates them to the
@@ -400,11 +452,10 @@ For a patch-level fix to the last released minor version:
 1. Branch from the tag: `git checkout -b hotfix/v1.0.1 v1.0.0`
 2. Cherry-pick or write the fix.
 3. Add a `## [1.0.1] - YYYY-MM-DD` section to `CHANGELOG.md`.
-4. Merge or fast-forward the hotfix to `main`, run the complete gate, and push
-   `main` so the clean local tip exactly matches `origin/main`.
-5. Run `scripts/release.py` from that current `main` tip. Do not tag the hotfix
-   branch directly; the local helper and remote preflight both require the
-   published tag commit to be on current `main`.
+4. Merge the hotfix through a checked PR to `main` and wait for exact-main CI.
+5. Follow the PR-first preparation and reviewed-main tagging steps above. Do
+   not tag the hotfix or preparation branch directly; publication must name
+   the checked merged-main commit.
 
 ---
 

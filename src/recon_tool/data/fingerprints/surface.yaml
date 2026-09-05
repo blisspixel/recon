@@ -528,21 +528,14 @@ fingerprints:
   confidence: high
   detections:
   - type: cname_target
-    pattern: postmarkapp.com
-    reference: https://postmarkapp.com/support/article/1124-
+    pattern: ^pm\.mtasv\.net\.?$
+    reference: https://www.postmarkapp.com/support/article/910-how-do-i-add-a-custom-return-path
+    verified: 2026-09-05
     tier: application
     description: >-
-      Subdomain CNAMEs into postmarkapp.com, typically a branded
-      sending-domain on a Postmark (ActiveCampaign) account.
-      Indicates the domain uses Postmark for transactional email.
-  - type: cname_target
-    pattern: pstmrk.com
-    reference: https://postmarkapp.com/support/article/1124-
-    tier: application
-    description: >-
-      Subdomain CNAMEs into pstmrk.com (Postmark's link-tracking
-      shortened-redirect domain). Indicates Postmark click and
-      open tracking under a branded subdomain.
+      Observed CNAME routing to Postmark's documented custom return-path
+      endpoint. This does not establish inbound mailbox hosting, delivered
+      messages, SPF alignment for any message, or active account use.
 
 - name: SparkPost
   slug: sparkpost
@@ -5519,3 +5512,19 @@ fingerprints:
       Cvent event-management CNAME target (`cvent.com`). Customer
       event-microsite subdomains alongside the existing certain-cvent
       and stova-aventri slugs that cover Cvent's other product lines.
+
+- name: Retool
+  slug: retool
+  category: Business Apps
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: ^custom-domain\.retool\.com\.?$
+    reference: https://docs.retool.com/org-users/guides/cloud/custom-domains
+    verified: 2026-09-05
+    tier: application
+    description: >-
+      Observed CNAME routing to Retool's fixed custom-domain endpoint.
+      This does not establish completed domain setup, a running application,
+      accessible data, a product plan, or account ownership. Self-hosted and
+      apex A-record configurations need not publish this target.

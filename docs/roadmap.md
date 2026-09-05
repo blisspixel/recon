@@ -110,7 +110,10 @@ claims after graph-construction clipping, verify explicit installation paths,
 and test the built wheel outside the checkout. The
 [catalog claim review](../validation/2026-09-05-catalog-claim-review.md)
 narrows or retires unsupported rules and keeps new coverage proposals separate.
-These changes live in Unreleased until a deliberate package release.
+These corrections and the subsequent reproducibility and design-language pass
+are grouped for the deliberate v2.19.0 release. The minor version accounts for
+the additive diagnostic flag and documented CNAME support, not a new collection
+surface or a new inference model.
 
 Remaining research is conditional, not an implied backlog commitment:
 
@@ -1142,7 +1145,7 @@ known-cluster unit, observation opportunities, CT and direct-probe settings,
 catalog and code digests, aggregate outputs, promotion and regression budgets,
 and disclosure review. A result may not retroactively change those choices.
 
-The catalog currently holds 867 entries across 691 unique slugs, with 1,110
+The catalog currently holds 867 entries across 692 unique slugs, with 1,109
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);

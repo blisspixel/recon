@@ -103,32 +103,44 @@ def wilson_interval(positives: int, n: int, z: float = _Z80) -> tuple[float, flo
     return (max(0.0, center - half), min(1.0, center + half))
 
 
-def shannon_entropy(counts: Iterable[float]) -> float:
-    """Shannon entropy in bits of a count distribution."""
+def _normalized_positive_counts(counts: Iterable[float]) -> list[float]:
+    """Normalize finite positive counts without overflowing their total.
+
+    Scaling leaves the proportions unchanged. Preserve underflowed zero terms
+    so callers can still count positive categories, but never take their log.
+    As before, nonpositive and NaN entries do not contribute to the mix.
+    """
     vals = [c for c in counts if c > 0]
-    total = sum(vals)
-    if total <= 0:
-        return 0.0
-    return -sum((c / total) * math.log2(c / total) for c in vals)
+    if not vals:
+        return []
+    scale = max(vals)
+    if scale == math.inf:
+        raise ValueError("concentration counts must be finite")
+    scaled = [c / scale for c in vals]
+    total = math.fsum(scaled)
+    return [c / total for c in scaled]
+
+
+def shannon_entropy(counts: Iterable[float]) -> float:
+    """Shannon entropy in bits of a finite positive count distribution."""
+    proportions = _normalized_positive_counts(counts)
+    return -math.fsum(p * math.log2(p) for p in proportions if p > 0)
 
 
 def normalized_entropy(counts: Sequence[float]) -> float:
     """Entropy normalized to [0, 1] by the number of non-empty categories. 0 is a
     single-vendor monoculture; 1 is an even spread."""
     nonzero = [c for c in counts if c > 0]
+    entropy = shannon_entropy(nonzero)
     if len(nonzero) <= 1:
         return 0.0
-    return shannon_entropy(nonzero) / math.log2(len(nonzero))
+    return entropy / math.log2(len(nonzero))
 
 
 def hhi(counts: Iterable[float]) -> float:
     """Herfindahl-Hirschman index of concentration in [0, 1]. 1 is a monoculture;
     near 0 is fragmented."""
-    vals = [c for c in counts if c > 0]
-    total = sum(vals)
-    if total <= 0:
-        return 0.0
-    return sum((c / total) ** 2 for c in vals)
+    return math.fsum(p * p for p in _normalized_positive_counts(counts))
 
 
 def _as_list(value: Any) -> list[Any]:
@@ -261,9 +273,14 @@ def _safe_float(value: Any, default: float = 0.0) -> float:
     so a malformed posterior must not crash the run or poison the aggregate math."""
     try:
         f = float(value)
-    except (TypeError, ValueError):
+    except (TypeError, ValueError, OverflowError):
         return default
     return f if math.isfinite(f) else default
+
+
+def _bounded_model_value(value: Any) -> float:
+    """Keep coerced model scores and interval endpoints in their unit range."""
+    return min(1.0, max(0.0, _safe_float(value)))
 
 
 def _prevalence_block(
@@ -332,8 +349,11 @@ def _posterior_claims_block(records: Sequence[Mapping[str, Any]]) -> dict[str, A
             by_node.setdefault(name, []).append(o)
     block: dict[str, Any] = {}
     for node, obs in sorted(by_node.items()):
-        posteriors = [min(1.0, max(0.0, _safe_float(o.get("posterior")))) for o in obs]
-        widths = [max(0.0, _safe_float(o.get("interval_high")) - _safe_float(o.get("interval_low"))) for o in obs]
+        posteriors = [_bounded_model_value(o.get("posterior")) for o in obs]
+        widths = [
+            max(0.0, _bounded_model_value(o.get("interval_high")) - _bounded_model_value(o.get("interval_low")))
+            for o in obs
+        ]
         high_conf = sum(1 for o, p in zip(obs, posteriors, strict=True) if p > 0.8 and not o.get("sparse"))
         sparse = sum(1 for o in obs if o.get("sparse"))
         # Every metric here is scoped to the records that carried this node, and
@@ -467,8 +487,8 @@ def _fmt_rate(stat: Mapping[str, Any]) -> str:
     """Compact observed-rate with interval and observability for the panel."""
     if stat.get("metric_kind") == "model_support_coverage":
         coverage = stat.get("support_coverage")
-        if coverage in (None, 0.0):
-            return "no model-supported claims"
+        if coverage == 0.0:
+            return "0% model support coverage (no model-supported claims)"
         return f"{_fmt_pct(coverage)} model support coverage"
     rate = stat.get("observed_rate")
     if rate is None:
@@ -502,7 +522,7 @@ def render_cohort_summary(summary: Mapping[str, Any]) -> Panel:
     warn = "  (small cohort, wide intervals)" if summary.get("small_n_warning") else ""
     body.append(f"{resolved} resolved of {attempted}{warn}\n")
     body.append("Observable   ", style="dim")
-    body.append(f"DNS up {obs.get('dns_resolved', 0)}, mean sparse share {obs.get('mean_sparse_share')}\n")
+    body.append(f"DNS up {obs.get('dns_resolved', 0)}, mean sparse share {_fmt_pct(obs.get('mean_sparse_share'))}\n")
 
     body.append("Email        ", style="dim")
     body.append(
@@ -517,6 +537,12 @@ def render_cohort_summary(summary: Mapping[str, Any]) -> Panel:
     body.append(f"{_fmt_mix(mix.get('provider', {}))}\n")
     body.append("Cloud        ", style="dim")
     body.append(f"{_fmt_mix(mix.get('cloud', {}))}\n")
+    body.append(
+        "Rates use eligible rows; brackets are 80% Wilson score intervals under a binomial model. "
+        "Model support uses all resolved rows. Sparse share averages within-row model-node fractions "
+        "among rows with model output. Independence and population coverage are not established.\n",
+        style="dim",
+    )
     disclaimer = strip_control_chars(str(summary.get("disclaimer") or COHORT_DISCLAIMER))
     body.append(disclaimer, style="dim")
 

@@ -121,7 +121,10 @@ def read_exclusions(path: Path) -> tuple[set[str], bytes, int, int, int, int]:
     """Read the bounded development exclusion corpus with aggregate accounting."""
     raw = bounded_stable_read(path, maximum_bytes=8 * 1024 * 1024, kind="development exclusion corpus")
     try:
-        lines = raw.decode("utf-8").splitlines()
+        # Match ranked sources and generic round inputs: a UTF-8 signature is
+        # an encoding marker, not part of the first excluded namespace. Keep
+        # raw bytes unchanged so the manifest still commits to the exact file.
+        lines = raw.decode("utf-8-sig").splitlines()
     except UnicodeDecodeError as exc:
         raise ValueError("development exclusion corpus is not UTF-8") from exc
 

@@ -124,7 +124,10 @@ def _apply_dmarc_fix(fix: str, state: SimulationState) -> str | None:
         _set_simulated_dmarc(state, "reject")
         return "DMARC policy set to reject"
     if "quarantine" in fix:
-        if state.dmarc == "reject" or (
+        # A nominal reject policy can contribute no effective enforcement
+        # (for example pct=0). Only the ledger can establish that this fix
+        # would be a no-op or downgrade under the committed index model.
+        if (
             DMARC_COMPONENT_ID in state.observed_components
             and state.component_points.get(DMARC_COMPONENT_ID, 0) >= DMARC_QUARANTINE_POINTS
         ):
@@ -241,7 +244,10 @@ def simulate_fixes(
 ) -> tuple[list[str], SimulationState]:
     """Apply supported fixes to a fresh mutable state seeded from ``info``."""
     from recon_tool.collection_view import collection_claim_info
+    from recon_tool.exposure_scoring import compute_exposure_index
 
+    if not current_components:
+        current_components = compute_exposure_index(info).components
     # Seed from the claim view so a retained scalar on an unavailable
     # channel cannot make a requested fix look already applied.
     seed = collection_claim_info(info)

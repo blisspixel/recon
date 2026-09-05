@@ -62,12 +62,14 @@ generated discovery context, not stable runtime contracts. See
 |---|---|
 | Contribution workflow | [../CONTRIBUTING.md](../CONTRIBUTING.md) |
 | Engineering practices | [engineering-practices.md](engineering-practices.md) |
+| Operator layout, visual semantics and brand direction | [design-language.md](design-language.md) |
 | Catalog growth and quality strategy | [catalog-strategy.md](catalog-strategy.md) |
 | Corpus planning, catalog-round skills, and promotion limits | [catalog-maintenance.md](catalog-maintenance.md) |
 | Data-handling policy | [data-handling-policy.md](data-handling-policy.md) |
 | Cut and verify a release | [release-process.md](release-process.md) |
 | Local validation workspace | [../validation/README.md](../validation/README.md) |
 | Agent integration scaffolds | [../agents/README.md](../agents/README.md) |
+| Current platform research and bounded integration opportunities | [agent-platform-research.md](agent-platform-research.md) |
 | Architecture decision records | [adr/README.md](adr/README.md) |
 | Native acceleration decision | [adr/0010-evidence-gated-native-acceleration.md](adr/0010-evidence-gated-native-acceleration.md) |
 

@@ -106,10 +106,22 @@ evaluated. They do not bind a full service-selection counterfactual.
 Its additive classified-count arithmetic cannot decrease by construction.
 Therefore a zero-regression result does not establish absence of false
 attribution, provider displacement, or misleading service claims. `accepted`
-means that this diagnostic's frozen bookkeeping conditions passed, not that
-every promotion gate passed. Other record types and conjunctions need dedicated
-detector tests and a separately supported validation route. Do not convert
-`all` to `any` merely to pass the evaluator.
+means that every requested candidate slug added a classification, each affected
+pooled record type met the numeric minimum improvement, and every record type
+met the numeric regression budget. Decisions use unrounded count ratios;
+displayed rates remain rounded. The report and CLI identify this scope as
+`pooled-classification-diagnostic` and mark policy text `not_evaluated`.
+Private `metric` and `decision_rule` prose is digest-bound, not executed or
+printed. Baseline recurrence thresholds do not become per-candidate acceptance
+tests, and per-stratum policy still needs separate review. These checks do not
+establish that every promotion gate passed. Other record types and conjunctions
+need dedicated detector tests and a separately supported validation route.
+Do not convert `all` to `any` merely to pass the evaluator.
+
+Exclusion inputs accept a UTF-8 byte-order mark while commitments retain the
+original bytes. Current execution digests include rank selection and its shared
+sampling helpers. A changed implementation requires a new compatible collection
+commitment; historical manifests and results retain their original digests.
 
 Run focused tests, `uv run python scripts/generate_fingerprint_catalog.py --write`
 when catalog source changes, and `uv run python -m validation.audit_fingerprints
@@ -122,14 +134,44 @@ The audit defaults to the canonical built-in catalog. Its explicit
 do not publish that output without disclosure review or confuse it with a
 reproducible built-in baseline.
 
+## Optional model-assisted proposals
+
+The existing `validation/triage_llm.py` helper is optional, developer-only and
+not required by these skills or the recon runtime. Explicit invocation sends
+the supplied private candidate data to the configured external model. Do not
+run it without the operator's data-sharing and cost approval; environment-held
+credentials are not approval. The normal recon runtime has no model dependency.
+
+The helper reads the canonical built-in inventory and requires exactly one
+valid response for each candidate before writing anything. It rejects missing,
+duplicate, unexpected and malformed rows, inconsistent same-slug metadata, and
+unsupported patterns. These are structural checks, not independent provider
+verification or a precision estimate.
+
+Its `--yaml` output is now a versioned `recon-private-fingerprint-proposals`
+envelope marked `PENDING PRIVATE`, not directly loadable catalog YAML. It does
+not assign confidence or a verification date. Same-slug detections are retained
+without silently discarding later patterns. Existing destinations are never
+overwritten. In-repository inputs and outputs must use ignored private roots;
+the shared path policy also permits operator-local paths outside the checkout.
+Reports, proposed patterns and optional validated-response files all require
+disclosure review before sharing. A model-supplied reference is still unverified.
+
+The separate [platform review](agent-platform-research.md) explains why strict
+result validation and artifact-backed resumption are useful before introducing
+another harness or model provider. No new platform adapter is required for this
+correction, and all its regression tests are offline.
+
 ## Review claims before growing the catalog
 
 A useful maintenance round can remove an unsupported rule, narrow a target,
 or correct a product claim without adding any services. The
 [September 2026 claim review](../validation/2026-09-05-catalog-claim-review.md)
 records concrete owner/value confusion, overbroad routing attribution,
-unsupported plan claims, and a retired hosting surface. Its Retool and
-Postmark candidates are a research queue, not promoted rules or accuracy gains.
+unsupported plan claims, and a retired hosting surface. The separate
+[documented CNAME review](../validation/2026-09-05-documented-cname-review.md)
+records the bounded Retool and Postmark follow-up, exact-target fixtures and
+remaining integration gates. Synthetic contract checks are not accuracy gains.
 
 For each candidate, keep separate answers for: what was published, where it
 was published, which provider documents that grammar, what the route or token

@@ -601,9 +601,13 @@ observed denominators, records both canonical catalog and exact evaluated-rule
 digests, and emits aggregate counts only. Report this fixed-observation
 classification diagnostic separately from live replay. It is not a causal
 effect, complete detector replay, or a precision test: its additive arithmetic
-cannot certify absence of false attribution or provider displacement. An
-`accepted` decision does not waive the other promotion gates. A later DNS change
-is neither a catalog regression nor catalog uplift.
+cannot certify absence of false attribution or provider displacement. The
+report labels its decision `pooled-classification-diagnostic` and policy text
+`not_evaluated`. Numeric acceptance uses unrounded count ratios; private metric
+and decision-rule prose is digest-bound, not executed. Candidate presence and
+pooled numeric thresholds do not establish per-stratum acceptance or waive the
+other promotion gates. A later DNS change is neither a catalog regression nor
+catalog uplift.
 
 For large monthly cadence with `scan.py`, omit `--ct` unless CT coverage is the point and
 use modest concurrency. Real-company corpora live entirely under

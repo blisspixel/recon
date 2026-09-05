@@ -312,6 +312,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "bizzabo": "Business Apps",
     "instatus": "Collaboration",
     "frontify": "Business Apps",
+    "retool": "Business Apps",
     "readme": "Collaboration",
     "swoogo": "Business Apps",
     "uptimerobot": "Collaboration",

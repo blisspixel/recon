@@ -53,6 +53,11 @@ For Claude Desktop and other clients without a folder here, `recon mcp install -
 
 ## How the pieces fit together
 
+The dated [platform integration review](../docs/agent-platform-research.md)
+maps Hermes, OpenClaw, Pi, DeepSeek Harness and NemoClaw to existing surfaces
+and bounded qualification work. Documented host support is not a tested recon
+integration; no additional native installer client is implied by that review.
+
 Every supported agent has the same two things to wire:
 
 1. **The MCP server** - so the AI can call recon. JSON snippet, dropped at the client's MCP config path.

@@ -13,9 +13,15 @@ notes.
 
 Usage:
     python scripts/release.py [--dry-run]
+    python scripts/release.py --prepare-only [--dry-run]
+
+Preparation mode starts on a clean non-main branch at origin/main and creates
+only the validated release commit for pull-request review. Tag the checked
+main commit only after that preparation has merged.
 
 Dry-run mode exercises all the checks and prints what would happen, but
-makes no file, git, or network changes.
+makes no release-owned file, Git-ref, or network changes. Validation may write
+local coverage, test and cache artifacts.
 """
 
 from __future__ import annotations
@@ -113,6 +119,13 @@ def _check_branch() -> None:
     if branch != "main":
         msg = f"Current branch is {branch!r}; releases must be cut from main"
         raise ReleaseError(msg)
+
+
+def _check_preparation_branch() -> None:
+    """Keep release preparation on a named branch for pull-request review."""
+    branch = _run(["git", "branch", "--show-current"]).stdout.strip()
+    if not branch or branch == "main":
+        raise ReleaseError("Release preparation requires a named non-main branch at origin/main")
 
 
 def _check_clean_tree() -> None:
@@ -236,9 +249,16 @@ def _run_quality_gate() -> None:
         raise ReleaseError(f"Quality gate failed (exit code {result.returncode})")
 
 
-def _run_release_readiness() -> None:
+def _run_release_readiness(*, allow_non_main: bool = False) -> None:
     result = _run(
-        ["uv", "run", "python", "scripts/release_readiness.py", "--allow-dirty"],
+        [
+            "uv",
+            "run",
+            "python",
+            "scripts/release_readiness.py",
+            "--allow-dirty",
+            *(["--allow-non-main"] if allow_non_main else []),
+        ],
         check=False,
         capture=False,
     )
@@ -403,15 +423,16 @@ def _release_push_command(version: str) -> list[str]:
     return ["git", "push", "--atomic", "origin", "main", f"refs/tags/{tag}:refs/tags/{tag}"]
 
 
-def _rollback_local_release(starting_head: str, snapshot: dict[Path, bytes | None], tag: str) -> None:
+def _rollback_local_release(starting_head: str, snapshot: dict[Path, bytes | None], tag: str | None) -> None:
     """Restore the clean pre-release files, index, commit, and owned tag."""
     failures: list[str] = []
-    tag_ref = f"refs/tags/{tag}"
-    tag_check = _run(["git", "show-ref", "--verify", "--quiet", tag_ref], check=False)
-    if tag_check.returncode == 0:
-        delete = _run(["git", "tag", "-d", tag], check=False, capture=False)
-        if delete.returncode != 0:
-            failures.append(f"could not delete local tag {tag}")
+    if tag is not None:
+        tag_ref = f"refs/tags/{tag}"
+        tag_check = _run(["git", "show-ref", "--verify", "--quiet", tag_ref], check=False)
+        if tag_check.returncode == 0:
+            delete = _run(["git", "tag", "-d", tag], check=False, capture=False)
+            if delete.returncode != 0:
+                failures.append(f"could not delete local tag {tag}")
     reset = _run(["git", "reset", "--mixed", starting_head], check=False, capture=False)
     if reset.returncode != 0:
         failures.append(f"could not restore HEAD and index to {starting_head}")
@@ -426,10 +447,13 @@ def _rollback_local_release(starting_head: str, snapshot: dict[Path, bytes | Non
 # ── Release pipeline ──────────────────────────────────────────────────────
 
 
-def _release_preflight(*, dry: bool) -> tuple[str, str, str] | None:
+def _release_preflight(*, dry: bool, prepare_only: bool = False) -> tuple[str, str, str] | None:
     """Validate release inputs and return the current, next, and date values."""
     print("->Checking branch...")
-    _check_branch()
+    if prepare_only:
+        _check_preparation_branch()
+    else:
+        _check_branch()
     print("->Checking clean working tree...")
     _check_clean_tree()
     print("->Checking current origin/main...")
@@ -451,32 +475,41 @@ def _release_preflight(*, dry: bool) -> tuple[str, str, str] | None:
     return current, new_version, release_date
 
 
-def _run_dry_release(new_version: str) -> None:
+def _run_dry_release(new_version: str, *, prepare_only: bool = False) -> None:
     print("->Running current-tree quality gate for dry-run confidence...")
     _run_quality_gate()
     print("\n[DRY RUN] Would synchronize version surfaces, regenerate derived files, and rerun all gates.")
-    print("[DRY RUN] Would: git add + commit + tag + atomic prompt-to-push")
-    print(f"[DRY RUN] Tag would be: v{new_version}")
+    if prepare_only:
+        print(
+            f"[DRY RUN] Would create the v{new_version} preparation commit for a pull request, without a tag or push."
+        )
+    else:
+        print("[DRY RUN] Would: git add + commit + tag + atomic prompt-to-push")
+        print(f"[DRY RUN] Tag would be: v{new_version}")
 
 
-def _create_local_release(current: str, new_version: str, release_date: str) -> None:
+def _create_local_release(current: str, new_version: str, release_date: str, *, prepare_only: bool = False) -> None:
     """Build and validate the prospective release, rolling back any failure."""
     snapshot = _snapshot_release_files()
     starting_head = _run(["git", "rev-parse", "HEAD"]).stdout.strip()
-    tag = f"v{new_version}"
+    tag = None if prepare_only else f"v{new_version}"
     try:
         print(f"->Synchronizing release surfaces ->{new_version}")
         _bump_release_surfaces(current, new_version, release_date)
         print("->Running authoritative post-bump quality gate...")
         _run_quality_gate()
         print("->Running post-bump release readiness...")
-        _run_release_readiness()
+        if prepare_only:
+            _run_release_readiness(allow_non_main=True)
+        else:
+            _run_release_readiness()
         print("->Committing...")
         release_paths = [str(path.relative_to(ROOT)) for path in _release_mutation_paths()]
         _run(["git", "add", *release_paths], capture=False)
         _run(["git", "commit", "-m", f"v{new_version}: release"], capture=False)
-        print(f"->Tagging {tag}...")
-        _run(["git", "tag", tag], capture=False)
+        if tag is not None:
+            print(f"->Tagging {tag}...")
+            _run(["git", "tag", tag], capture=False)
     except KeyboardInterrupt:
         _rollback_local_release(starting_head, snapshot, tag)
         raise
@@ -507,23 +540,31 @@ def _offer_release_push(new_version: str) -> None:
         raise ReleaseError(
             f"Atomic push failed with exit code {result.returncode}; the local commit and tag were preserved"
         )
-    print(f"\nReleased v{new_version}. Watch the pipeline:")
+    print(f"\nTag v{new_version} pushed; publication pending. Watch the pipeline:")
     print("  https://github.com/blisspixel/recon/actions")
 
 
-def _run_release(*, dry: bool) -> None:
+def _run_release(*, dry: bool, prepare_only: bool = False) -> None:
     if dry:
-        print("[DRY RUN] No files will be modified, no git state will change.\n")
-    preflight = _release_preflight(dry=dry)
+        print("[DRY RUN] No release files or Git refs change; validation may write local artifacts.\n")
+    preflight = _release_preflight(dry=dry, prepare_only=prepare_only)
     if preflight is None:
         print("Aborted.")
         return
     current, new_version, release_date = preflight
     if dry:
-        _run_dry_release(new_version)
+        _run_dry_release(new_version, prepare_only=prepare_only)
         return
-    _create_local_release(current, new_version, release_date)
-    _offer_release_push(new_version)
+    _create_local_release(current, new_version, release_date, prepare_only=prepare_only)
+    if prepare_only:
+        print(
+            f"\nPrepared v{new_version} locally. No tag was created and nothing was pushed.\n"
+            "Push this preparation branch and open a pull request to main.\n"
+            "After required checks and merge, validate and tag the exact merged main commit.\n"
+            "Do not tag before the preparation has merged. See docs/release-process.md."
+        )
+    else:
+        _offer_release_push(new_version)
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -531,11 +572,16 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Run all checks and print what would happen, but make no changes.",
+        help="Run current-tree checks without release-file or Git-ref changes; validation may write local artifacts.",
+    )
+    parser.add_argument(
+        "--prepare-only",
+        action="store_true",
+        help="Create a validated release commit on a clean non-main branch for PR review, without tagging or pushing.",
     )
     args = parser.parse_args(argv)
     try:
-        _run_release(dry=args.dry_run)
+        _run_release(dry=args.dry_run, prepare_only=args.prepare_only)
     except ReleaseError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1

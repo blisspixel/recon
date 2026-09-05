@@ -657,8 +657,8 @@ class SourceResult:
     # --- External surface attribution ---
     # Per-subdomain attribution from CNAME-chain classification of related
     # domains. Populated by the DNS source after CT and common-subdomain
-    # discovery. Drives both the default-panel slug union and the --full
-    # External surface section.
+    # discovery. Drives the default-panel subdomain summary and the --full
+    # External surface section without promoting related hosts to apex slugs.
     surface_attributions: tuple[SurfaceAttribution, ...] = ()
     # CNAME chains resolved during surface classification that did not match
     # any cname_target rule. Always populated; surfaced in JSON only when
