@@ -429,12 +429,24 @@ context.
 
 ## Staleness Timestamps
 
-Every `TenantInfo` result carries two ISO-8601 UTC fields:
+The internal `TenantInfo` and cache serializer retain two ISO-8601 UTC fields:
 
-- `resolved_at`: when the live resolution produced this result. Always set.
+- `resolved_at`: when the live resolution produced this result; a manually constructed object may omit it.
 - `cached_at`: when the on-disk cache entry was written. Set only when the result was served from `cache/` inside recon's resolved cache directory (`RECON_CONFIG_DIR`, else an existing legacy `~/.recon/`, else `$XDG_CACHE_HOME/recon`).
 
-Agents can compare the two to decide whether to re-resolve. On a fresh lookup, `cached_at` is `null`. On a cache hit, `resolved_at` is preserved from the original resolution so it reflects *when the data was produced*, not just when the cache entry was last written.
+These fields are deliberately absent from the public v2 lookup JSON, including
+`lookup_tenant(format="json")`. Agents cannot inspect them through that output.
+An ordinary lookup can reuse the default 24-hour result cache, so receipt time
+does not establish collection time. For a requested fresh handoff, use
+`build_review_bundle(domain)`; the CLI equivalent for an ordinary fresh lookup
+is `recon "<validated-domain>" --no-cache`. Neither route guarantees that every
+upstream record is current: retain source status, partial-collection, and CT
+cache notes. These are fresh collection attempts, not per-record freshness
+attestations.
+
+For internal callers, `cached_at` is `null` on a fresh lookup. A cache hit
+preserves the original `resolved_at` and stamps `cached_at` from the persisted
+cache-write time. This internal metadata is not an additional public contract.
 
 ## Ephemeral Fingerprints
 
@@ -523,6 +535,12 @@ form by default. VS Code also supports a user-profile file; open it with **MCP:
 Open User Configuration** and pass that path with `--config-path` when desired.
 VS Code does not define `autoApprove` in this file format.
 
+The installer prints a verification command bound to the file it wrote.
+For a profile file, run `recon doctor --client=vscode --config-path "<profile-file>"`.
+This inspects only that explicit file; it does not fall back to the workspace
+config or start a client. `--config-path` requires `--client` and is not an
+option to the separate `recon mcp doctor` live-server diagnostic.
+
 ## Troubleshooting
 
 ### PATH gotcha for GUI clients
@@ -583,7 +601,8 @@ installed server; the third validates that the named client was told about it.
    in `~/.claude.json`. A missing `args` field, an empty list, or a list
    containing any non-string value is a failing diagnostic. The check exits
    non-zero when no usable stanza is found, so it is suitable for setup
-   automation.
+   automation. Add `--config-path "<client-file>"` to check the same explicit
+   user-profile or custom file used during installation.
 
 If all three pass but tools still do not appear, continue with the client-side
 checks below.

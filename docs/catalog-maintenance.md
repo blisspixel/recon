@@ -117,6 +117,28 @@ when catalog source changes, and `uv run python -m validation.audit_fingerprints
 hosted CI matrix for the exact proposed revision. Do not lower floors or
 regenerate expected outcomes to conceal a regression.
 
+The audit defaults to the canonical built-in catalog. Its explicit
+`--effective-catalog` mode includes operator-local rules and is labeled as such;
+do not publish that output without disclosure review or confuse it with a
+reproducible built-in baseline.
+
+## Review claims before growing the catalog
+
+A useful maintenance round can remove an unsupported rule, narrow a target,
+or correct a product claim without adding any services. The
+[September 2026 claim review](../validation/2026-09-05-catalog-claim-review.md)
+records concrete owner/value confusion, overbroad routing attribution,
+unsupported plan claims, and a retired hosting surface. Its Retool and
+Postmark candidates are a research queue, not promoted rules or accuracy gains.
+
+For each candidate, keep separate answers for: what was published, where it
+was published, which provider documents that grammar, what the route or token
+can support, and what remains unobserved. A public verification token is not
+proof that verification completed. A provider domain is not a product plan.
+Retirement metadata is not evidence that a legacy endpoint still responds.
+The strongest maintainable catalog is the one whose positive and withheld
+claims are both testable.
+
 ## Research basis and limits
 
 These are design implications for recon, not measured improvements to recon's

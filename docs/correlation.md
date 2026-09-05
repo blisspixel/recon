@@ -1,7 +1,7 @@
 # Correlation model
 
 Semantic baseline established for recon v2.4.0. Reviewed against v2.18.4 on
-2026-09-04.
+2026-09-05.
 
 This document separates three things that must not be conflated:
 
@@ -244,6 +244,15 @@ probability, calibrated partition-quality score, ownership confidence, or test
 of statistical significance. Seed stability only shows whether the optimizer
 repeats a partition on one fixed graph. It does not show stability to missing
 CT entries, large multi-tenant certificates, or sampling noise.
+
+Clipping a certificate to the 60-SAN construction limit sets the same internal
+truncation flag as an entry or node stop and selects the existing
+connected-components fallback. That path emits no seed-stability value. The
+public report has no completeness flag or omitted-count ledger: `node_count`
+and `edge_count` describe the constructed graph, while cluster members,
+clusters, and exported edges have separate output caps. A Louvain result or
+perfect seed stability therefore establishes neither complete collection nor
+complete presentation of the graph.
 
 The one-mode projection is the deeper limitation. A certificate containing
 $k$ retained SANs creates $\binom{k}{2}$ pairwise edges. A single 60-SAN
@@ -1799,14 +1808,33 @@ validation cannot decide their product disposition.
 
 ### 8.3 Predeclared product ablation
 
-The first task is one paired, aggregate-safe benchmark with four arms:
+The four-arm M365 study was cancelled before target collection on 2026-08-13.
+The [arm-identifiability audit](../validation/2026-08-13-quality-arm-identifiability.md)
+exhaustively checked the 64 DNS evidence-role states in the frozen design:
+A1 equaled A0, A2 equaled A3, and A3 never supported a case where A0 abstained.
+Its positive-benefit gate could not pass at any sample size. This is a
+structural result for that claim, channel, and decision rule, not a measured
+population effect or a claim about every possible inference task.
+
+The following arms and design requirements are retained as a post-mortem, not
+an active collection plan:
 
 1. deterministic evidence plus explicit abstention;
 2. per-slug evidence strength;
 3. strongest reviewed evidence unit;
 4. current Bayesian network.
 
-A fifth robustness-envelope arm is added only after its threat model is frozen.
+Any future candidate needs at least two non-collapsed evidence units, a binary
+operator action tied to shipped behavior, an executable structural-identifiability
+and dominance preflight, disjoint labels, and a new preregistration. The
+cancelled frame must not be reused to complete this voided design. A future
+robustness-envelope arm additionally needs a frozen threat model.
+
+The implicit v2 fusion default remains enabled and silent for compatibility;
+advanced-diagnostic positioning does not mean the default was switched off.
+See [ADR-0013](adr/0013-fusion-non-promotion-and-v3-transition.md) and its
+amendments. The requirements below govern the preserved design and inform,
+but do not by themselves authorize, a new evaluation.
 
 Predeclare one primary claim family, candidate, and comparator. Each unique
 domain contributes one frozen `(domain, claim_family, observation_time)` row,
@@ -1855,10 +1883,11 @@ post-stratification weights for the named target population. Without those
 weights, report stratum-specific values or fixed-sample descriptive losses and
 make no target-population rate or calibration claim.
 
-Use the sample minimums and paired decision rule in [roadmap.md](roadmap.md).
-Freeze the rule before reading results. An inconclusive or negative result moves
-advanced fusion out of the primary path. Secondary metrics cannot rescue a
-failed primary decision after the fact.
+The historical sample minimums and paired decision rule remain in
+[roadmap.md](roadmap.md). A new study must freeze its own justified sample plan,
+decision rule, and compatible product disposition before reading results. The
+cancelled study already received its non-promotion disposition; secondary
+metrics cannot rescue its failed primary design after the fact.
 
 ### 8.4 Robustness benchmark
 
@@ -1917,16 +1946,21 @@ Acceptance:
 
 ### 9.2 Second: establish the correlation value benchmark
 
+Status: the four-arm M365 study was cancelled before target collection; section
+8.3 records the structural stop. Its frozen design is a post-mortem. No
+replacement population study is scheduled by this section.
+
 Value: highest. Dependency: the first machine-enforced claim contract and its
 observation-opportunity ledger. Risk: measurement design and label leakage.
 
-Acceptance:
+Acceptance for any newly proposed study:
 
-- the four current arms and decision rule are frozen before evaluation;
-- at least 100 unique primary sampling units exist; each domain contributes one
-  frozen row, and at most one domain is admitted from any known
-  administrative, ownership, or tenant cluster, including for the roadmap's
-  reference-positive and reference-negative minimums;
+- candidate and comparator first pass an executable structural-identifiability
+  and dominance preflight; their operator decisions and a new preregistration
+  are frozen before evaluation;
+- justified sample minimums and the paired decision rule are declared for the
+  new study; each domain contributes one frozen primary row, and at most one
+  domain is admitted from any known administrative, ownership, or tenant cluster;
 - the target population, eligibility window, stratum-specific sampling frames,
   sampling mechanism, and exchangeability or design assumptions are frozen; a
   purposive corpus is reported as a fixed-corpus result and cannot pass a

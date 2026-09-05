@@ -90,6 +90,11 @@ class TestBackwardCompatFingerprints:
             assert fp.detections, f"Fingerprint {fp.name} has no detections"
             assert fp.match_mode in {"any", "all"}
 
+    def test_named_retirement_preserves_other_reviewed_vendor_families(self) -> None:
+        loaded = {fp.slug for fp in load_fingerprints()}
+        assert {"vercel", "aws-ses", "okta", "slack", "glitch", "github"} <= loaded
+        assert _KNOWN_RETIREMENTS.keys().isdisjoint(loaded)
+
 
 # ── 20.2: Backward compatibility — existing signals ──────────────────
 
@@ -379,7 +384,13 @@ _KNOWN_SLUGS = [
     "kandji",
 ]
 
-_slug_strategy = st.frozensets(st.sampled_from(_KNOWN_SLUGS), min_size=0, max_size=15)
+_KNOWN_RETIREMENTS = {
+    "github-advanced-security": "Generic GitHub organization verification does not establish Advanced Security",
+}
+
+_slug_strategy = st.frozensets(
+    st.sampled_from([slug for slug in _KNOWN_SLUGS if slug not in _KNOWN_RETIREMENTS]), min_size=0, max_size=15
+)
 _dmarc_policy_strategy = st.one_of(st.none(), st.sampled_from(["reject", "quarantine", "none"]))
 
 

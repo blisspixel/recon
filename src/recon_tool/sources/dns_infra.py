@@ -480,7 +480,7 @@ def _wildcard_txt_answers(results: Sequence[Sequence[str]]) -> frozenset[frozens
 async def detect_subdomain_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
     """Query TXT records at specific subdomains for vendor-specific verification.
 
-    Some vendors (Slack Enterprise Grid, GitLab) place their verification
+    Some vendors (Slack, GitLab) place their verification
     tokens at a designated subdomain rather than the zone apex. The pattern
     field in fingerprints.yaml uses 'subdomain:regex' format, e.g.
     '_slack-challenge:.' means query _slack-challenge.domain.com for any TXT value.

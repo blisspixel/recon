@@ -130,6 +130,7 @@ Summary: Check installation health and online source connectivity.
 | `fix` | option | `--fix` | no | boolean | false |  |
 | `mcp` | option | `--mcp` | no | boolean | false |  |
 | `client` | option | `--client` | no | text |  |  |
+| `config_path` | option | `--config-path` | no | text |  |  |
 
 <a id="recon-fingerprints"></a>
 ## `recon fingerprints`

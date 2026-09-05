@@ -36,9 +36,9 @@ the same partition.
 
 Caps
 ----
-``MAX_GRAPH_NODES`` bounds the Louvain pass to keep runtime
-predictable. Beyond the cap, the module falls back to connected-
-components clustering (deterministic, fast, no modularity score).
+Per-certificate SAN, certificate-entry, and graph-node caps bound construction.
+When construction discards otherwise eligible data at a cap, the module falls
+back to connected-components clustering (deterministic, no modularity score).
 ``MAX_CLUSTERS`` and ``MAX_MEMBERS_PER_CLUSTER`` cap the surfaced
 output so a pathologically connected component cannot dominate the
 field.
@@ -180,20 +180,17 @@ def _build_graph(
 ) -> tuple[nx.Graph[str], dict[tuple[str, str], Counter[str]], dict[tuple[str, str], int], bool]:
     """Build the SAN co-occurrence graph from cert entries.
 
-    Returns ``(graph, edge_issuers, truncated)``. ``edge_issuers`` maps
-    each (sorted) edge tuple to the issuer names that contributed to
-    that edge — used afterward to compute ``dominant_issuer`` per
-    cluster without re-reading entries. ``truncated`` is True when
-    construction stopped early because the node cap was reached, so
-    callers can route to the connected-components fallback without
-    attempting Louvain on the partial graph.
+    Returns ``(graph, edge_issuers, edge_cert_counts, truncated)``. The two
+    edge maps retain issuer tallies and contributing-certificate counts for
+    each sorted pair. ``truncated`` is True when a construction cap clips an
+    eligible SAN set or stops processing entries, so callers use the existing
+    connected-components fallback instead of Louvain on that partial graph.
+    Normal SAN filtering and later output caps do not set this internal flag.
 
-    Construction is bounded twice: once per cert by
-    ``_MAX_SANS_PER_CERT_FOR_EDGES`` (so a single huge cert cannot
-    blow up edge count quadratically), and globally by
-    ``MAX_GRAPH_NODES`` (so a hostile/pathological CT response with
-    many large certs cannot materialize millions of edges before the
-    later cap is checked).
+    Construction is bounded by ``_MAX_SANS_PER_CERT_FOR_EDGES`` per cert,
+    ``_MAX_GRAPH_ENTRIES`` overall, and the ``MAX_GRAPH_NODES`` stop condition.
+    The node condition is checked before each certificate, so the last retained
+    certificate can cross the node threshold by its bounded SAN count.
     """
     g: nx.Graph[str] = nx.Graph()
     tallies = _EdgeTallies()
@@ -225,6 +222,7 @@ def _build_graph(
             continue
         if len(sans) > _MAX_SANS_PER_CERT_FOR_EDGES:
             sans = sorted(sans)[:_MAX_SANS_PER_CERT_FOR_EDGES]
+            truncated = True
         canonical_sans = tuple(sorted(sans))
         observed_nodes.update(canonical_sans)
         issuer_raw = entry.get("issuer_name")
@@ -413,8 +411,8 @@ def build_infrastructure_clusters(
 
       * Empty graph / fewer than two nodes / no edges → ``algorithm
         = "skipped"``, empty ``clusters``, ``modularity = 0.0``.
-      * Graph above ``MAX_GRAPH_NODES`` → connected-components
-        fallback.
+      * Construction clipped by a SAN, entry, or node cap, or graph above
+        ``MAX_GRAPH_NODES``: connected-components fallback.
       * Otherwise → Louvain partition with computed modularity.
 
     Output is sorted by cluster size (largest first) and capped by

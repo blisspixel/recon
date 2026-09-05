@@ -1,7 +1,7 @@
 """Tests for `resolved_at` / `cached_at` staleness metadata on TenantInfo.
 
-Agents reading `--json` output need to distinguish freshly-resolved data
-from a cache-served response. This is covered end-to-end:
+Internal cache timestamps do not belong to the public lookup JSON contract.
+These tests distinguish internal serialization from the public formatter:
 
 - Fresh serialize includes a top-level `resolved_at` populated from now
   when the TenantInfo has no pre-existing timestamp.
@@ -17,6 +17,7 @@ from a cache-served response. This is covered end-to-end:
 
 from __future__ import annotations
 
+import json
 import tempfile
 from collections.abc import Iterator
 from datetime import UTC, datetime
@@ -25,6 +26,7 @@ from pathlib import Path
 import pytest
 
 from recon_tool.cache import cache_get, cache_put, tenant_info_from_dict, tenant_info_to_dict
+from recon_tool.formatter import format_tenant_json
 from recon_tool.models import ConfidenceLevel, TenantInfo
 
 
@@ -85,7 +87,7 @@ def test_cache_get_stamps_cached_at(tmp_cache_dir: Path) -> None:
 
     assert loaded is not None
     assert loaded.cached_at is not None
-    # Value came from the persisted _cached_at — must be a valid ISO timestamp
+    # Value came from the persisted _cached_at; must be a valid ISO timestamp
     datetime.fromisoformat(loaded.cached_at)
 
 
@@ -98,7 +100,7 @@ def test_fresh_info_has_no_cached_at() -> None:
 
 
 def test_deserialize_does_not_spuriously_set_cached_at() -> None:
-    """tenant_info_from_dict ignores _cached_at — cache_get is the only
+    """tenant_info_from_dict ignores _cached_at; cache_get is the only
     path that should stamp cached_at, so ad-hoc round-trips through the
     serializer (e.g. MCP responses never written to disk) stay honest."""
     info = _minimal_info()
@@ -112,3 +114,18 @@ def test_deserialize_does_not_spuriously_set_cached_at() -> None:
 
     assert restored.cached_at is None
     assert restored.resolved_at == data["resolved_at"]
+
+
+@pytest.mark.parametrize("cached", [False, True])
+def test_public_lookup_json_does_not_expose_internal_timestamps(cached: bool) -> None:
+    info = _minimal_info(
+        resolved_at="2026-04-21T08:00:00+00:00",
+        cached_at="2026-04-21T09:00:00+00:00" if cached else None,
+    )
+
+    public = json.loads(format_tenant_json(info))
+
+    assert "resolved_at" not in public
+    assert "cached_at" not in public
+    assert "_cached_at" not in public
+    assert tenant_info_to_dict(info)["resolved_at"] == info.resolved_at

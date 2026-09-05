@@ -16,7 +16,7 @@ from recon_tool.fingerprint_audit import (
     render_fingerprint_audit_markdown,
     summarize_fingerprint_freshness,
 )
-from recon_tool.fingerprints import load_fingerprints
+from recon_tool.fingerprints import load_builtin_fingerprints, load_fingerprints
 
 
 def main() -> None:
@@ -24,23 +24,37 @@ def main() -> None:
     parser.add_argument("--json-output", type=Path, default=None, help="Optional path for JSON audit output.")
     parser.add_argument("--markdown-output", type=Path, default=None, help="Optional path for Markdown audit output.")
     parser.add_argument(
+        "--effective-catalog",
+        action="store_true",
+        help="Include operator-local and process-ephemeral fingerprints; not a canonical built-in catalog audit.",
+    )
+    parser.add_argument(
         "--freshness",
         action="store_true",
         help="Print catalog freshness metrics (verified-date coverage and stale count) instead of the audit.",
     )
     args = parser.parse_args()
 
-    fingerprints = load_fingerprints()
+    fingerprints = load_fingerprints() if args.effective_catalog else load_builtin_fingerprints()
+    catalog_scope = "effective" if args.effective_catalog else "builtin"
 
     if args.freshness:
         from datetime import date
 
-        print(json.dumps(summarize_fingerprint_freshness(fingerprints, today=date.today().isoformat()), indent=2))
+        freshness = summarize_fingerprint_freshness(fingerprints, today=date.today().isoformat())
+        print(json.dumps({"catalog_scope": catalog_scope, **freshness}, indent=2))
         return
 
     entries = audit_multi_detection_fingerprints(fingerprints)
-    json_payload = json.dumps(format_fingerprint_audit_dict(entries, fingerprints), indent=2)
-    markdown = render_fingerprint_audit_markdown(entries, fingerprints)
+    json_payload = json.dumps(
+        {"catalog_scope": catalog_scope, **format_fingerprint_audit_dict(entries, fingerprints)}, indent=2
+    )
+    scope_note = (
+        "effective (includes operator-local and process-ephemeral data; not a canonical built-in audit)"
+        if args.effective_catalog
+        else "builtin (canonical built-in catalog only)"
+    )
+    markdown = f"Catalog scope: {scope_note}.\n\n" + render_fingerprint_audit_markdown(entries, fingerprints)
 
     if args.json_output is not None:
         args.json_output.parent.mkdir(parents=True, exist_ok=True)

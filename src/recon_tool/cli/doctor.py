@@ -304,7 +304,17 @@ def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
         _render_status_row(console, mark=mark, style=style, name=name, detail=detail)
 
 
-def doctor_client(client: str) -> None:
+def validate_doctor_mode(*, fix: bool, mcp: bool, client: str | None, config_path: str | None) -> None:
+    """Reject incompatible local modes before any filesystem or network work."""
+    if int(fix) + int(mcp) + int(client is not None) > 1:
+        get_console().print("[red]Choose exactly one of --fix, --mcp, or --client.[/red]")
+        raise typer.Exit(code=EXIT_VALIDATION)
+    if config_path is not None and client is None:
+        get_console().print("[red]--config-path requires --client.[/red]")
+        raise typer.Exit(code=EXIT_VALIDATION)
+
+
+def doctor_client(client: str, config_path: str | None = None) -> None:
     """Read a client's MCP config and report whether recon is registered.
 
     Complements `--mcp` (which validates the server) by answering the
@@ -312,7 +322,7 @@ def doctor_client(client: str) -> None:
     file carry the recon server entry that client would load.
     """
     from recon_tool.mcp_client.client_doctor import ClientCheck, check_client
-    from recon_tool.mcp_client.install import SUPPORTED_CLIENTS
+    from recon_tool.mcp_client.install import SUPPORTED_CLIENTS, InstallError, expand_config_path
 
     console = get_console()
     console.print()
@@ -323,7 +333,12 @@ def doctor_client(client: str) -> None:
         )
         raise typer.Exit(EXIT_VALIDATION)
 
-    report = check_client(client)  # pyright: ignore[reportArgumentType]
+    try:
+        override = expand_config_path(config_path) if config_path is not None else None
+        report = check_client(client, config_path_override=override)  # pyright: ignore[reportArgumentType]
+    except (InstallError, ValueError, OSError) as exc:
+        console.print(f"  [red]client config check refused:[/red] {_safe_markup(exc)}")
+        raise typer.Exit(EXIT_VALIDATION) from exc
     console.print(f"  [bold]MCP client config check: {_safe_markup(client)}[/bold]")
     console.print()
 
@@ -347,7 +362,8 @@ def doctor_client(client: str) -> None:
         return
     console.print(
         f"  [yellow]recon was not found (or a config file is broken).[/yellow] "
-        f"See the notes above, or run `recon mcp install --client={client}`."
+        f"See the inspected paths above, or run `recon mcp install --client={client}`"
+        " with --config-path for an explicit profile."
     )
     console.print()
     raise typer.Exit(EXIT_NO_DATA)

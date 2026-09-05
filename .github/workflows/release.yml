@@ -158,6 +158,17 @@ jobs:
       - name: Audit dependencies
         run: uv run python scripts/run_dependency_audit.py -r .ci-audit-requirements.txt
 
+      - name: Upload standalone wheel smoke inputs
+        # The later smoke job needs no source checkout or development install.
+        # Keep these tested inputs separate from the sealed release artifacts.
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: wheel-smoke-inputs
+          path: |
+            scripts/check_installed_wheel.py
+            agents/agent-plugin/mcp.json
+          if-no-files-found: error
+
   build:
     # Pure build job. The supply-chain isolation contract requires
     # that no project environment is installed and no additional dependency
@@ -216,7 +227,7 @@ jobs:
   package-smoke:
     # Execute the sealed wheel in a separate low-privilege workspace. The pure
     # build job still uploads immediately, and publication cannot proceed if
-    # either supported installed entry path fails here.
+    # installed CLI/MCP contracts or emulated manifest relocation fail here.
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -228,8 +239,8 @@ jobs:
         with:
           version: "0.11.17"
           # This job intentionally has no source checkout: it executes only
-          # the sealed wheel downloaded below. A project cache would weaken
-          # that boundary and has no dependency manifest to key against.
+          # the sealed wheel using the standalone probe downloaded below.
+          # There is no project dependency manifest to key a cache against.
           enable-cache: false
           ignore-empty-workdir: true
 
@@ -244,7 +255,13 @@ jobs:
           name: dist
           path: dist/
 
-      - name: Smoke-test sealed wheel entry points
+      - name: Download standalone wheel smoke inputs
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: wheel-smoke-inputs
+          path: smoke-inputs/
+
+      - name: Check sealed wheel offline contracts
         run: |
           set -euo pipefail
           artifacts=(dist/*)
@@ -264,8 +281,8 @@ jobs:
             echo "Artifact names do not match the validated release tag" >&2
             exit 1
           fi
-          uv tool run --isolated --from "$wheel" recon --version
-          uv run --no-project --isolated --with "$wheel" python -m recon_tool --version
+          python smoke-inputs/scripts/check_installed_wheel.py --wheel "$wheel" \
+            --manifest smoke-inputs/agents/agent-plugin/mcp.json --version "$version"
 
   attest:
     # SLSA build-provenance attestation. Kept in its own job, like
