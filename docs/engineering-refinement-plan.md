@@ -19,9 +19,9 @@ certificate requests are explicit opt-in direct probes.
 
 ## Baseline
 
-- Release metadata is synchronized on v2.18.4. Remote release readiness passed
-  for the exact tag, GitHub Release, PyPI files, attestations, SBOM, CI, and
-  channel hashes.
+- Release metadata is synchronized on v2.19.0. Publication status requires
+  separate remote verification of the exact tag, GitHub Release, PyPI files,
+  attestations, SBOM, CI, and channel hashes; a version bump is not evidence.
 - Local release readiness must pass before tagging; remote release readiness
   must pass for the same commit after publication.
 - Meaningful branch-aware coverage is above 90.2 percent, which is now the
