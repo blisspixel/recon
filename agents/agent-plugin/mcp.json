@@ -6,7 +6,10 @@
       "command": "recon",
       "args": [
         "mcp"
-      ]
+      ],
+      "env": {
+        "RECON_CONFIG_DIR": "${PLUGIN_DATA}/recon"
+      }
     }
   }
 }

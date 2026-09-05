@@ -11,6 +11,7 @@ import sys
 import tomllib
 from pathlib import Path
 from typing import Any
+from urllib.parse import unquote, urlsplit
 
 import yaml
 from jsonschema import Draft202012Validator
@@ -57,6 +58,7 @@ PORTABLE_SKILL_FIELDS = {
     "metadata",
 }
 _SKILL_NAME = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
+_INLINE_LINK = re.compile(r"\[[^\]\n]*\]\(([^)\n]+)\)")
 
 
 class CandidateError(ValueError):
@@ -256,6 +258,24 @@ def _required_text(value: object, label: str, *, maximum: int) -> str:
     return value
 
 
+def _validate_document_links(path: Path, text: str, plugin_root: Path) -> None:
+    """Check this generated package's inline links without fetching references."""
+    for target in _INLINE_LINK.findall(text):
+        try:
+            link = urlsplit(target)
+        except ValueError as exc:
+            raise CandidateError(f"{path.name} contains a malformed documentation link") from exc
+        if link.scheme or link.netloc:
+            if link.scheme != "https" or not link.hostname:
+                raise CandidateError(f"{path.name} documentation links must use HTTPS or package-relative paths")
+            continue
+        if not link.path:
+            continue
+        resolved = (path.parent / unquote(link.path)).resolve()
+        if not resolved.is_relative_to(plugin_root.resolve()) or not resolved.is_file():
+            raise CandidateError(f"{path.name} documentation link is missing or escapes the package: {target}")
+
+
 def _validate_skill(path: Path, skill_id: str, version: str) -> None:
     frontmatter, body = _parse_skill(path)
     fields = set(frontmatter)
@@ -276,6 +296,7 @@ def _validate_skill(path: Path, skill_id: str, version: str) -> None:
     lowered = body.lower()
     if "portable agent plugins conformance" in lowered:
         raise CandidateError(f"{skill_id} contains an unqualified conformance claim")
+    _validate_document_links(path, body, path.parents[2])
 
 
 def _validate_semantics(
@@ -287,7 +308,12 @@ def _validate_semantics(
 ) -> None:
     if plugin.get("name") != "recon" or plugin.get("version") != version:
         raise CandidateError("plugin identity or version does not match pyproject.toml")
-    expected_server = {"type": "stdio", "command": "recon", "args": ["mcp"]}
+    expected_server = {
+        "type": "stdio",
+        "command": "recon",
+        "args": ["mcp"],
+        "env": {"RECON_CONFIG_DIR": "${PLUGIN_DATA}/recon"},
+    }
     if mcp.get("mcpServers") != {"recon": expected_server}:
         raise CandidateError("mcp.json must declare only the exact recon stdio launch")
 
@@ -312,6 +338,7 @@ def _validate_semantics(
     )
     if any(phrase not in readme_text for phrase in required_phrases):
         raise CandidateError("candidate README is missing a required interoperability boundary")
+    _validate_document_links(plugin_root / "README.md", readme_text, plugin_root)
     if (
         _bounded_bytes(plugin_root / "LICENSE", MAX_SUPPORT_FILE_BYTES, "candidate LICENSE")
         != (ROOT / "LICENSE").read_bytes()

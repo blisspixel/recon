@@ -13,9 +13,9 @@ Three steps:
 3. Drop terminals already covered by an existing fingerprint pattern, using
    the same hostname matching semantics as the runtime CNAME classifier.
 
-The result is a list of ``{suffix, count, samples}`` records, each one a
-real candidate worth proposing as a new ``cname_target`` fingerprint or an
-extension to an existing one.
+The result is a list of ``{suffix, count, samples}`` review candidates, not
+verified new services or ownership relationships. A new ``cname_target`` rule
+or extension still requires independent evidence and review.
 """
 
 from __future__ import annotations
@@ -157,6 +157,23 @@ def load_existing_patterns(fingerprints_dir: Path) -> set[str]:
                     if isinstance(pat, str) and pat:
                         patterns.add(pat.lower())
     return patterns
+
+
+def load_runtime_patterns() -> set[str]:
+    """Return CNAME-target patterns from the effective runtime catalog.
+
+    Built-ins are loaded from the generated wheel artifact, with the same
+    validated custom and process-local ephemeral additions used by the surface
+    classifier. Do not cache another copy: injection, clear, and reload must
+    immediately change which retained candidates are already covered.
+
+    Maintainer callers selecting an explicit YAML directory continue to use
+    :func:`load_existing_patterns`; a missing requested directory never falls
+    back to an unrelated runtime catalog.
+    """
+    from recon_tool.fingerprints import get_cname_target_rules
+
+    return {rule.pattern.lower() for rule in get_cname_target_rules()}
 
 
 def already_covered(suffix: str, patterns: set[str]) -> bool:

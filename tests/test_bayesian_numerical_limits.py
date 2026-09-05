@@ -10,7 +10,7 @@ from typing import Any
 import pytest
 import yaml
 
-from recon_tool.bayesian import _query_marginal, infer, load_network
+from recon_tool.bayesian import _multiply, _query_marginal, infer, load_network
 
 
 def _write_model(tmp_path: Path, scale: float, *, absence: bool = False) -> Path:
@@ -50,6 +50,45 @@ def test_unrepresentable_evidence_product_fails_explicitly(tmp_path: Path, absen
     network = load_network(_write_model(tmp_path, 1e-200, absence=absence))
     with pytest.raises(FloatingPointError, match="evidence likelihood lost numerical precision"):
         infer(network, [] if absence else ["first", "second"], [], priors_override={})
+
+
+@pytest.mark.parametrize("likelihood", [(1e-200, 0.5), (0.5, 1e-200)])
+def test_one_sided_evidence_underflow_is_not_a_certain_posterior(
+    tmp_path: Path, likelihood: tuple[float, float]
+) -> None:
+    path = tmp_path / "one-sided.yaml"
+    path.write_text(
+        yaml.safe_dump(
+            {
+                "version": 1,
+                "nodes": [
+                    {
+                        "name": "claim",
+                        "prior": 0.5,
+                        "evidence": [{"slug": name, "likelihood": list(likelihood)} for name in ("first", "second")],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    network = load_network(path)
+    # One product stays positive, so a normalization-only guard would silently
+    # return zero or one. Neither side may lose positive mass unnoticed.
+    with pytest.raises(FloatingPointError, match="evidence likelihood lost numerical precision"):
+        infer(network, ["first", "second"], [], priors_override={})
+
+
+def test_one_sided_factor_underflow_fails_before_normalization() -> None:
+    factor = {frozenset({("claim", "present")}): 1e-200, frozenset({("claim", "absent")}): 0.5}
+    with pytest.raises(FloatingPointError, match="factor multiplication underflow"):
+        _multiply(factor, factor)
+
+
+@pytest.mark.parametrize(("left", "right"), [(0.0, 0.5), (0.5, 0.0), (0.0, 0.0)])
+def test_exact_zero_factor_inputs_are_not_underflow(left: float, right: float) -> None:
+    assignment = frozenset({("claim", "present")})
+    assert _multiply({assignment: left}, {assignment: right}) == {assignment: 0.0}
 
 
 def test_underflow_between_valid_node_factors_fails_explicitly(tmp_path: Path) -> None:
@@ -104,6 +143,7 @@ def test_numerical_guard_remains_enabled_under_python_optimization(tmp_path: Pat
         capture_output=True,
         text=True,
         check=False,
+        timeout=30,
     )
     assert result.returncode != 0
     assert "FloatingPointError: Bayesian evidence likelihood lost numerical precision" in result.stderr

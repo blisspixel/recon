@@ -51,6 +51,12 @@ preserve private artifacts and untouched holdouts, and require independent
 promotion evidence. Their inclusion does not expand runtime collection or
 promote them into the frozen portable plugin candidate.
 
+Portable-plugin guidance separately identifies connected MCP capabilities,
+shell-only discovery, and source-checkout maintenance. It names the plugin
+root and executable prerequisite, discloses client-managed persistent state,
+and keeps offline standards and local protocol checks distinct from actual
+representative-client validation.
+
 ## Family states
 
 - `classification` says whether the output is a direct observation, documented
@@ -64,7 +70,7 @@ promote them into the frozen portable plugin candidate.
   runtime observations remain governed by separate claim families.
 - `audit_status: open` means the family still requires implementation or review.
 
-At the 2026-09-04 checkpoint, the inventory contains 29 families and covers 129
+At the 2026-09-04 checkpoint, the inventory contains 29 families and covers 134
 agent-guidance sections, 16 insight generators, 261 JSON property occurrences,
 185 MCP tool and output surfaces, 2 MCP prompt surfaces, 32 panel producers, 4
 recommendation producers, 91 quantitative or categorical score fields, and 8

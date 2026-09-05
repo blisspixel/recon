@@ -58,6 +58,15 @@ operator-local rules. Runtime lookup JSON fields remain unchanged.
   fabricated uniform posterior. Ordinary-model parameters remain unchanged.
 - Prevent the maintainer promotion evaluator from treating one rule as support
   for a conjunction or evaluating uncommitted operator-local catalog additions.
+- Filter CNAME discovery candidates against the effective runtime catalog in
+  installed wheels, including custom and ephemeral rules, without relying on
+  source-only YAML files.
+- Anchor portable-plugin configuration, caches, and state under the client's
+  persistent plugin data directory. Prefer connected MCP tools without requiring
+  shell access, and distinguish installed-plugin triage from checkout-only
+  maintainer workflows.
+- Include numerical-limit regressions in the mutation gate and its change
+  triggers, with one-sided underflow and exact-zero arithmetic anchors.
 
 ### Documentation
 
@@ -67,6 +76,9 @@ operator-local rules. Runtime lookup JSON fields remain unchanged.
 - Reconcile correlation math and diagrams with executable behavior, correct
   historical calibration interpretation, and distinguish default local operation
   from the draft remote adapter's authentication and disk-retention obligations.
+- Clarify the Agent Plugins package root, executable discovery, persistent-state
+  isolation, and installation prerequisites. Standards and local protocol checks
+  remain distinct from the frozen representative-client evaluation.
 
 ## [2.18.4] - 2026-09-02
 

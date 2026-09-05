@@ -895,13 +895,15 @@
         "src/recon_tool/server/app.py#SERVER_INSTRUCTIONS",
         "docs/recon-schema.json",
         "docs/catalog-maintenance.md",
-        "docs/data-handling-policy.md"
+        "docs/data-handling-policy.md",
+        "src/recon_tool/paths.py"
       ],
       "limits": [
         "Guidance is a consumer contract, not target evidence.",
         "Client-specific installation details can change independently of runtime semantics.",
         "Repository maintainer skills do not authorize collection or publication and are not part of the frozen portable plugin candidate.",
-        "Catalog coverage diagnostics do not establish precision, complete detector replay, or automatic promotion eligibility."
+        "Catalog coverage diagnostics do not establish precision, complete detector replay, or automatic promotion eligibility.",
+        "Portable schema and local stdio checks do not establish representative-client compatibility."
       ],
       "lineage_status": "static",
       "material": true,
@@ -910,17 +912,22 @@
         "agents/claude-code/skills/recon/SKILL.md",
         "agents/maintainer/skills/recon-corpus-plan/SKILL.md",
         "agents/maintainer/skills/recon-catalog-round/SKILL.md",
+        "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md",
+        "scripts/generate_agent_plugin.py",
         "agents/README.md"
       ],
       "regression_tests": [
         "tests/test_documentation_semantic_contracts.py",
         "tests/test_onboarding_docs.py",
+        "tests/test_agent_plugin_candidate.py",
+        "tests/test_agent_plugin_runtime.py",
         "tests/test_default_claim_audit.py",
         "tests/test_surface_inventory.py"
       ],
       "renderer_obligations": [
         "Mirror runtime scope, target-interaction boundaries, output semantics, cache behavior, and abstention rules without stronger claims.",
-        "Keep offline corpus planning, existing-artifact review, and requested collection distinct; preserve private artifacts, frozen holdout separation, and evidence-backed promotion gates."
+        "Keep offline corpus planning, existing-artifact review, and requested collection distinct; preserve private artifacts, frozen holdout separation, and evidence-backed promotion gates.",
+        "Distinguish connected MCP capabilities from shell-only workflows and separately selected source checkouts; disclose plugin data isolation and client-specific installation prerequisites."
       ],
       "subject_scope": "shipped agent guidance, repository maintainer skills, and installation documentation"
     },
@@ -994,11 +1001,15 @@
       "agents/README.md#Quickest path: `recon mcp install`": "static.agent-guidance.v1",
       "agents/README.md#Verifying any install": "static.agent-guidance.v1",
       "agents/README.md#macOS PATH gotcha (most GUI clients)": "static.agent-guidance.v1",
+      "agents/agent-plugin/README.md#Load the directory": "static.agent-guidance.v1",
+      "agents/agent-plugin/README.md#State and skill prerequisites": "static.agent-guidance.v1",
+      "agents/agent-plugin/README.md#Verify locally": "static.agent-guidance.v1",
       "agents/agent-plugin/README.md#recon Agent Plugins candidate": "static.agent-guidance.v1",
       "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md#A. Single-domain discovery": "static.agent-guidance.v1",
       "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md#B. Multi-record catalog round": "static.agent-guidance.v1",
       "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md#C. Historical CNAME candidate queue": "static.agent-guidance.v1",
       "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md#Dispositions": "static.agent-guidance.v1",
+      "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md#Environment and source checkout": "static.agent-guidance.v1",
       "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md#Hard boundaries": "static.agent-guidance.v1",
       "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md#Inputs": "static.agent-guidance.v1",
       "agents/agent-plugin/skills/recon-fingerprint-triage/SKILL.md#Mandatory promotion gates": "static.agent-guidance.v1",
@@ -1041,6 +1052,7 @@
       "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#B. Multi-record catalog round": "static.agent-guidance.v1",
       "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#C. Historical CNAME candidate queue": "static.agent-guidance.v1",
       "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Dispositions": "static.agent-guidance.v1",
+      "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Environment and source checkout": "static.agent-guidance.v1",
       "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Hard boundaries": "static.agent-guidance.v1",
       "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Inputs": "static.agent-guidance.v1",
       "agents/claude-code/skills/recon-fingerprint-triage/SKILL.md#Mandatory promotion gates": "static.agent-guidance.v1",
