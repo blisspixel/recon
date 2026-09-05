@@ -19,6 +19,7 @@ from recon_tool.review_bundle import (
     build_review_error_bundle,
 )
 from recon_tool.review_bundle import build_review_bundle as build_review_bundle_from_info
+from recon_tool.review_input import normalize_review_coordinate
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import log_structured, log_validation_failed, rate_limit_try_acquire
@@ -96,7 +97,8 @@ async def build_review_bundle(
     request_id = uuid.uuid4().hex[:12]
     timeout = _review_timeout(timeout_seconds)
     try:
-        validated = validate_domain(domain)
+        coordinate = normalize_review_coordinate(domain)
+        validated = validate_domain(coordinate)
     except ValueError as exc:
         log_validation_failed(request_id)
         raise ToolError(server_app.invalid_domain_message(exc)) from exc
@@ -120,7 +122,7 @@ async def build_review_bundle(
         ended_at = datetime.now(UTC)
         try:
             bundle = build_review_error_bundle(
-                domain,
+                coordinate,
                 ReviewCollectionContext(
                     started_at=started_at,
                     ended_at=ended_at,
@@ -169,7 +171,7 @@ async def build_review_bundle(
         bundle = build_review_bundle_from_info(
             info,
             results,
-            domain,
+            coordinate,
             ReviewCollectionContext(
                 started_at=started_at,
                 ended_at=ended_at,

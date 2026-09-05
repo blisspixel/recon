@@ -17,6 +17,7 @@ from recon_tool.email_security import compute_email_security_score
 from recon_tool.formatter.briefing import BriefingView
 from recon_tool.formatter.classify import provider_line, slug_to_relationship_metadata
 from recon_tool.models import TenantInfo, serialize_conflicts_array
+from recon_tool.source_status import ObservationChannel, SourceStatus
 from recon_tool.validator import strip_control_chars
 
 _CATALOG_RECORD_TYPES = (
@@ -31,29 +32,28 @@ _CATALOG_RECORD_TYPES = (
     "subdomain_txt",
     "srv",
 )
-_CATALOG_DEGRADED_MARKERS = {
-    "cname_target": "dns:cname",
-    "cname": "dns:cname",
-    "txt": "dns:apex_txt",
-    "spf": "dns:apex_txt",
-    "mx": "dns:mx",
-    "ns": "dns:ns",
-    "caa": "dns:caa",
-    "dmarc_rua": "dns:dmarc",
-    "subdomain_txt": "dns:subdomain_txt",
-    "srv": "dns:srv",
+_CATALOG_CHANNELS: dict[str, tuple[ObservationChannel, ...]] = {
+    "cname_target": ("cname",),
+    "cname": ("cname",),
+    "txt": ("apex_txt",),
+    "spf": ("apex_txt",),
+    "mx": ("mx",),
+    "ns": ("ns",),
+    "caa": ("caa",),
+    "dmarc_rua": ("dmarc", "dmarc_rua"),
+    "subdomain_txt": ("subdomain_txt",),
+    "srv": ("srv",),
 }
 
 
 def _catalog_summary_rows(info: TenantInfo) -> list[dict[str, Any]]:
     """Render complete, count-only status rows for each bounded catalog path."""
     by_type = {summary.record_type: summary for summary in info.dns_catalog_summaries}
-    degraded = set(info.degraded_sources)
-    whole_dns_unavailable = "dns_records" in degraded or "dns" in degraded
+    status = SourceStatus.from_degraded_sources(info.degraded_sources)
     rows: list[dict[str, Any]] = []
     for record_type in _CATALOG_RECORD_TYPES:
         summary = by_type.get(record_type)
-        path_degraded = whole_dns_unavailable or _CATALOG_DEGRADED_MARKERS[record_type] in degraded
+        path_degraded = any(status.channel_unavailable(channel) for channel in _CATALOG_CHANNELS[record_type])
         if summary is None:
             availability = "unavailable" if path_degraded else "unmeasured"
             opportunities = observed = classified = unclassified = 0

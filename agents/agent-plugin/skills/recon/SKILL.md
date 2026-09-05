@@ -2,7 +2,7 @@
 name: recon
 description: Public-metadata domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like "what does <company> use", "tenant", "DMARC", "email security posture", "SaaS stack", "fingerprint", "passive recon", or "vendor diligence". Passive in scope - never use for active scanning, port scans, credentialed access, or vulnerability checks.
 license: Apache-2.0
-compatibility: Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.
+compatibility: 'Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Use connected MCP tools or a shell with recon on PATH. Live lookups require public network access. '
 metadata:
   author: blisspixel
   version: 2.18.4
@@ -40,7 +40,15 @@ If the user wants a verdict like "is this company secure," recon is not that too
 
 ## Before first invocation
 
-Confirm recon is installed before the first call in a session:
+First inspect the available tools for the connected recon server. Client tool
+namespaces vary; identify recon by its server identity and the exposed tool
+names and descriptions, not a required prefix. Already-connected MCP tools are
+sufficient: use them without requiring a shell or running `recon --version`.
+Do not register a second server or install another runtime to use that connection.
+
+Only for the CLI fallback, confirm recon is installed before the first command:
+if no shell is available, report that limitation instead of attempting a tool
+that the client does not expose.
 
 ```bash
 recon --version
@@ -56,7 +64,17 @@ If the user separately asks you to wire recon into another MCP client (Claude De
 
 ## Detecting whether MCP is connected
 
-Before choosing CLI vs MCP, look at your own available-tools list. If you see `recon:*` tools (e.g. `mcp__recon__lookup_tenant`, `mcp__recon__analyze_posture`), the MCP server is connected - prefer those. If you do not, fall back to the CLI. Do not call an MCP tool speculatively to test connectivity.
+Use the tool names actually exposed by the client for recon's `lookup_tenant`,
+`analyze_posture`, and other capabilities. Examples such as
+`mcp__recon__lookup_tenant` are not a portable naming requirement. Prefer the
+connected MCP server; otherwise use the CLI when a shell is available. Do not
+call a lookup speculatively to test connectivity.
+
+The portable MCP process stores recon configuration, caches, and limiter state
+under the client-managed `PLUGIN_DATA/recon` directory. It does not implicitly
+share the CLI's user configuration. Keep user-requested reports in the user's
+chosen workspace, not the installed plugin directory; ask for an output location
+if the client has not provided a writable workspace.
 
 ## Domain validation before any CLI invocation (mandatory)
 
@@ -78,7 +96,7 @@ Once a domain passes validation, recon reduces it to the registrable apex (eTLD+
 
 Use this when the user asks recon-shaped questions conversationally - "recon alpha.invalid", "what does beta.invalid run on" - without explicitly requesting full or structured data.
 
-When MCP is connected, call `lookup_tenant(domain)` and reformat to a panel-equivalent summary. Otherwise shell out (after validating `<domain>` per the rule above):
+When MCP is connected, call `lookup_tenant(domain)` and reformat to a panel-equivalent summary. End with "Ask for full details or evidence." Then stop. Otherwise shell out (after validating `<domain>` per the rule above):
 
 ```bash
 recon "<domain>"
@@ -117,7 +135,25 @@ That is the shape recon emits. Pass it through unchanged.
 
 ### Full / structured mode - `--full --json`
 
-Trigger this mode when the user explicitly says "full", "max details", "give me everything", or when downstream automation needs structured data. Do **not** use shell redirection; capture stdout and write the file with your own file-write tool:
+Trigger this mode when the user explicitly says "full", "max details", "give me everything",
+or when downstream automation needs structured data.
+
+With connected MCP, call `lookup_tenant(domain, format="json")` using the actual
+tool name exposed by the client. No Bash command is needed. On success, save the
+returned JSON text only if the client exposes both a file-write tool and a
+writable user workspace. Use the user's chosen output location, and report a
+filename only after the write succeeds. The three-line headline below also
+applies to a successfully saved MCP result.
+
+If file writing or a writable workspace is unavailable, give a brief hedged
+summary and state that artifact delivery is unavailable in this client. Do not
+claim a file was saved, attempt an unavailable shell or file tool, or dump raw
+JSON unless the user explicitly requests inline JSON. If the lookup itself
+fails, report that failure instead of claiming full JSON was collected. Then
+stop; the CLI-only recipe below does not apply to the connected MCP branch.
+
+For the CLI fallback only, do **not** use shell redirection; capture stdout and
+write the file with your own file-write tool:
 
 ```bash
 recon "<domain>" --full --json
@@ -221,7 +257,7 @@ The operator supplies a group of related apexes - parent + subsidiaries, an M&A 
 
 Tracking change over time:
 
-1. `recon delta <domain>` (CLI) compares the current resolution against the cached snapshot at `~/.recon/cache/`. The output is a `DeltaReport` (see `$defs/DeltaReport` in `docs/recon-schema.json`) with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.
+1. `recon delta <domain>` (CLI) compares the current resolution against the cached snapshot at `~/.recon/cache/`. The output is a `DeltaReport` (see `$defs/DeltaReport` in [`docs/recon-schema.json`](https://github.com/blisspixel/recon/blob/v2.18.4/docs/recon-schema.json)) with explicit `added_*` / `removed_*` / `changed_*` fields. Report the deltas; do not narrate causes.
 2. **First-run case.** A domain that has never been resolved on this machine has no baseline. `recon delta` reports "No cached snapshot," asks the operator to run the ordinary lookup first, and exits with code 3 without emitting a delta. Surface that no-baseline state rather than reporting "no changes."
 
 ## Picking a profile
@@ -302,7 +338,7 @@ the detail for each lives in the section above.
 - **`recon delta` on a never-seen domain exits with code 3.** It reports "No cached snapshot" and asks for an ordinary lookup to establish the baseline; it does not emit a delta.
 - **A sub-host is analyzed as its apex unless you pass `--exact`.** `mail.delta.invalid` returns facts for `delta.invalid`; the `queried_domain` field tells you what was actually analyzed. Reporting apex tenancy as the sub-host's is wrong.
 - **`--full --json` can be large; never dump it inline.** Its size depends on collected certificate-transparency and evidence data. Save it to a file and reply with the 3-line headline. Inline JSON burns context for no benefit.
-- **Do not test MCP connectivity by calling a tool.** Read your own tool list for `mcp__recon__*`; a speculative call to "check" is a wasted, confusing round-trip.
+- **Do not test MCP connectivity by calling a tool.** Inspect the client's actual recon tool names and server identity; a speculative call to "check" is a wasted, confusing round-trip.
 - **`--exposure` / `assess_exposure` is cache first and may resolve on a miss.** The index calculation adds no network calls after the ordinary base lookup. Do not imply that the 0-100 value comes from a separate scan or measures overall security.
 - **Low confidence means sparse public evidence, not a suspicious domain or organization.** Sparse output marks limited evidence for the queried namespace, not a finding or calibrated uncertainty level. Do not manufacture confidence or insinuation.
 - **Do not guess a profile from a thin hint.** A wrong posture lens skews emphasis; omit `--profile` when the target type is unclear.

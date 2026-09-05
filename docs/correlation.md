@@ -1,7 +1,7 @@
 # Correlation model
 
 Semantic baseline established for recon v2.4.0. Reviewed against v2.18.4 on
-2026-09-02.
+2026-09-04.
 
 This document separates three things that must not be conflated:
 
@@ -314,6 +314,16 @@ and missingness rules are manually encoded. Several parameters were informed by
 a June 2026 development corpus. Exact inference is not evidence that the model
 tracks the world or generalizes beyond that corpus.
 
+"Exact" describes variable elimination over the finite network, subject to
+floating-point precision. The exported Python `load_network(path)` and `infer`
+interfaces accept custom models whose individually valid likelihoods can have
+unrepresentable products. Evidence-product underflow, loss of positive factor
+mass during multiplication, or non-finite or nonpositive normalization now
+raises `FloatingPointError`, including under `python -O`. Such a run emits no
+posterior; numerical failure cannot be replaced by `0.5`. The engine remains a
+probability-space implementation, not a general log-space solver for arbitrary
+extreme models.
+
 ## 3. Bayesian evidence semantics
 
 ### 3.1 Fired bindings
@@ -459,15 +469,15 @@ flowchart TB
     sl["0.20"] --- sm["0.5"] --- sh["0.80"]
   end
   subgraph mid["n_eff = 8"]
-    ml["0.27"] --- mm["0.5"] --- mh["0.73"]
+    ml["0.28"] --- mm["0.5"] --- mh["0.72"]
   end
   subgraph dense["n_eff = 14 (dense corroborating units)"]
     dl["0.33"] --- dm["0.5"] --- dh["0.67"]
   end
 ```
 
-At $n_{\mathrm{eff}} = 4$ (the display floor) a mid-mean band is wide: the
-public channel barely constrains the claim. At $n_{\mathrm{eff}} = 14$ the
+At $n_{\mathrm{eff}} = 4$ (the display floor) a mid-mean band is wide under
+the display heuristic. At $n_{\mathrm{eff}} = 14$ the
 same mid-mean is a tighter model-relative band. Neither width is a calibrated
 coverage probability.
 
@@ -543,36 +553,49 @@ and not the other (section 4.9). The test itself asserts a deliberately loose
 regression bound rather than these measured values, so ordinary tuning does not
 trip it and a structural regression still does.
 
-What this establishes: no single hand-set number carries a typical posterior,
-so the reported values are not artifacts of one lucky parameter choice. What it
-does not establish: that the numbers are jointly right. The analysis perturbs
-one entry at a time against a fixed scenario set. It says nothing about
-correlated misspecification across several entries, and nothing about whether
-the network's structure matches the world. Those are section 8 questions.
+These measurements bound the observed response to the tested one-at-a-time
+perturbations on this scenario set. They do not establish typical behavior in a
+target population or joint parameter correctness. Correlated misspecification
+across several entries and whether the network's structure matches the world
+remain section 8 questions.
 
-### 4.5 Prior collapse and the `sparse` flag
+### 4.5 Prior equality and the `sparse` flag
 
-A node with no fired binding does not get a hedged posterior. It gets the
-prior:
+No local fired binding does not imply equality to the prior. Evidence at
+children can update a root, and declarative absence can update a node without
+any positive binding. A sufficient condition for prior equality is that every
+observation factor in the node's connected model component is constant in its
+state variables, including masked or omitted factors:
 
-$$P_m(X\mid e)=P_m(X)\quad\text{whenever no binding of }X\text{ fires and no parent moves.}$$
+$$
+P_m(X_i\mid e)=P_m(X_i)
+\quad\text{if every observation factor in its component is state-independent.}
+$$
 
-This is the same value the network would report before observing anything, and
-reading it as a finding is the single most common misreading of the layer. The
-JSON therefore ships `sparse` alongside the posterior so the distinction is
-machine-readable rather than something an operator must infer from the number.
+The shipped network provides a concrete counterexample to a parent-only
+interpretation. With only `federated_sso_hub` fired and no prior overrides,
+`m365_tenant` has no local evidence and no parents, yet its posterior is
+`0.5199`, above its `0.30` prior, because the observed child updates the root.
+It remains `sparse=true`. With no fired bindings at all, the policy node is
+`0.0554` under the successfully observed declarative-absence model, rather than
+its `0.62` prior. Source masking changes that absence assumption.
 
-The consequence worth internalizing is that a posterior near its prior and a
-posterior driven to its prior by balanced evidence are different states that
-can print the same mean. `sparse`, `n_eff`, and `evidence_used` are what
-separate them, which is why the schema treats them as part of the result rather
-than as diagnostics (section 1.2). Every field the layer surfaces exists so an
-operator can ask why a posterior looks the way it does and get the answer from
-the same object, without a separate report.
+`sparse` means only that effective display mass is at the configured floor.
+Conflicts can return the mass to that floor even when evidence fired. It is
+neither a prior-equality test nor a count of failed collectors. Read
+`evidence_used`, `absence_informative`, `conflict_provenance`, and connected-node
+evidence together. Neither a moved posterior nor an unchanged one identifies a
+private configuration state.
 
-Note that a moved posterior is not evidence that the private state was
-identified, and an unmoved one is not evidence of absence; section 4.3 states
-that asymmetry, and section 3.3 states the missingness policy that produces it.
+The stable `evidence_ranked[*].influence_pct` field is the binding's share of
+total absolute local fired log-likelihood ratio after dependency-group
+reduction. It excludes informative absences and evidence at other nodes. A
+100 percent share therefore does not mean the binding caused the entire
+posterior change. `unit_counterfactuals` reports exact model replay with one
+unit masked globally; those changes need not add to the total change. The LLR
+calculation uses `log(likelihood_present) - log(likelihood_absent)` for both
+group selection and ranking, preserving valid small likelihoods without
+division overflow or an explanatory clamp.
 
 ### 4.6 Relationship to the per-slug evidence-strength layer
 
@@ -604,11 +627,11 @@ and most misreadings of this layer come from collapsing them:
 1. **The engine is faithful to the committed model.** Exact-inference
    agreement with independent enumeration, the canonical-network reference
    test, the sensitivity bound in section 4.4, determinism, and per-node
-   propagation stability all test this. Synthetic calibration belongs here too,
-   and this is the subtle case: the generator samples ground truth from the
-   network's *own* joint distribution, so passing it shows the engine
-   implements the network correctly and shows nothing at all about whether the
-   network describes the world.
+   propagation stability all test this. Synthetic calibration is a separate
+   behavioral diagnostic: even when latent states are sampled from the
+   committed network, the current generator and shipped inference use different
+   nonfire semantics (section 8.1). It cannot replace differential inference
+   checks or validate the model's description of the world.
 2. **The committed model is a useful description of the world.** Only
    corpus work speaks to this, and it speaks weakly. Agreement between a
    high posterior and a high-confidence deterministic classification is close
@@ -616,32 +639,36 @@ and most misreadings of this layer come from collapsing them:
    usual case. Section 8.2 records the ablation result that the current
    validation cannot decide the advanced layers' product disposition.
 
-A related caveat applies to calibration error as a metric. Expected calibration
-error and the Brier score reward posteriors that match empirical frequencies.
-The conflict penalty in section 4.1 deliberately optimizes something else, so
-both metrics read slightly worse on recon's posteriors than on a
-penalty-free baseline, and the strictly correct metric would be risk under that
-same engineered loss. Both are therefore read as diagnostics, not targets;
-driving them down would mean dropping the conflict penalty.
+A related caveat applies to calibration metrics. For fixed observations and
+labels, the conflict penalty in section 4.1 changes display mass and bands, but
+never the posterior mean. It therefore cannot change Brier score, log score,
+or expected calibration error computed from those means. A metric calculated
+after filtering on `sparse` may change because the selected rows changed; that
+is a selection effect and must be reported with its denominator. Proper scores
+require a frozen probability interpretation and an evaluation design as stated
+in section 8.3. An evidence-strength band does not acquire coverage guarantees
+from a low point-forecast loss.
 
 The same care applies to any reported calibration figure's regime. A figure
-computed conditional on at least one binding firing describes the regime where
-the model makes a claim. The unconditional figure over all domains mixes in the
-prior-collapse regime of section 4.5, where the layer is miscalibrated against
-the base rate *by construction*. That gap measures the missingness design, not
-a defect, and quoting either number without its regime misrepresents the layer.
+computed conditional on at least one binding firing describes that selected
+regime, not all model-supported cases: propagation and informative absence may
+also move a posterior. The unconditional figure includes all eligible rows.
+Neither regime is calibrated or miscalibrated by construction. Any measured
+gap can reflect missingness policy, corpus composition, or model mismatch;
+quoting either figure requires its selection rule and denominator.
 
 ### 4.8 What the layer offers a defender
 
 A defender who has hardened their public footprint wants a specific answer: if
 someone ran this against us, what would the public channel actually support?
 
-The layer answers with a band and a provenance trail rather than a grade. On a
-hardened target most nodes come back sparse with wide bands, which is the
-useful negative result: the public channel does not carry the evidence, and the
-hardening is doing its job. On an under-hardened target the bands narrow on
-specific nodes, and `evidence_used` names the exact observable that did it, so
-the finding is actionable rather than atmospheric.
+The layer reports a model-relative posterior, a display band, and the bindings
+that contributed. Sparse results can reflect missing public records, failed
+collection, model structure, or conflict penalties. They do not establish that
+hardening succeeded. Additional public evidence can narrow a band without
+implying a security weakness: standards-defined mail policies are intentionally
+public. The actionable output is the bounded evidence claim and its source
+status, not a ranking of how much a target reveals.
 
 Two limits keep this honest. The output is model-relative, so it describes what
 recon's committed model does with public evidence, not an attacker's ceiling
@@ -678,8 +705,10 @@ definitions that disagree.
   or self-hosted domain publishing reject with DKIM and a strict SPF fires it
   exactly as an M365 one does.
 
-An operator who wants the conjunction computes it downstream from two clear
-claims, which is more useful than one claim that tried to be both.
+An operator who wants their conjunction needs the joint model probability or
+an explicit deterministic claim rule. Multiplying two marginal posteriors is
+valid only if their conditional independence under the observed evidence has
+been established; separate field names do not establish it.
 
 The same discipline applied to `federated_identity`, whose CPT parameterized
 federation on `m365_tenant` alone. Federation exists without M365, so the
@@ -703,122 +732,55 @@ deterministic pipeline at high posterior, the first hypothesis is that the node
 is conceptually wrong. CPT numbers are re-examined only after the topology is
 clean.
 
-### 4.10 Hardening-posture fingerprints
+### 4.10 Historical corpus sparsity
 
-The v1.9.4 milestone ran the layer against a 50-domain corpus stratified across
-five categories of public-DNS posture; `validation/v1.9.4-calibration.md`
-carries the methodology and the per-node trend table. Each category produces a
-recognizable per-node sparse-rate fingerprint, and this subsection records them
-so a defender can read from the posture they have to what the panel will and
-will not support.
+The v1.9.4 milestone used a selected 50-domain corpus with ten domains in each
+of five supplied categories. The historical [run
+memo](../validation/v1.9.4-calibration.md) records these percentages of domains
+whose node display mass was at the floor:
 
-Two scope warnings before the tables. These are sparse rates on one dated
-50-domain sample, so they are shape, not population rates; ten domains per
-category cannot carry a confidence interval worth printing. And the mapping is
-descriptive: it reports what a public surface reveals, never a maturity verdict.
+| Node | Edge-proxied | Privacy | Financial | Defense | Government |
+|---|---:|---:|---:|---:|---:|
+| `aws_hosting` | 50% | 60% | 100% | 80% | 90% |
+| `cdn_fronting` | 50% | 70% | 10% | 60% | 10% |
+| `email_gateway_present` | 90% | 100% | 50% | 70% | 90% |
+| `email_security_modern_provider` | 100% | 100% | 100% | 100% | 100% |
+| `email_security_policy_enforcing` | 0% | 20% | 0% | 20% | 0% |
+| `federated_identity` | 60% | 80% | 50% | 80% | 90% |
+| `google_workspace_tenant` | 10% | 40% | 100% | 80% | 100% |
+| `m365_tenant` | 60% | 50% | 20% | 50% | 20% |
+| `okta_idp` | 90% | 90% | 90% | 100% | 100% |
 
-**Pattern A, heavy edge-proxied apexes**
+Each ten percentage points represents one domain. These are fixed-corpus
+descriptive rates, not population estimates or a classifier for organizational
+posture. Small samples do not make intervals meaningless, but population
+interpretation requires a justified sampling design. The historical model and
+collection version also limit comparison with current output.
 
-| Node | Sparse rate | What the panel supports |
-|---|---|---|
-| `cdn_fronting` | 50% | Fires on the CDN that *is* the front; the layer names the surface passive DNS can see. |
-| `m365_tenant` | 60% | Partial visibility through MX, SPF, and verification records that bypass the edge. |
-| `email_security_policy_enforcing` | 0% | DMARC policy is a public TXT record; the edge does not hide it. |
-| `email_gateway_present` | 90% | Gateways rarely route through the CDN at MX-resolve time. |
-| `okta_idp` | 90% | Identity probes hidden behind the edge. |
+`sparse` does not mean absent, deliberately hidden, or insecure (section 4.5).
+A zero policy-node sparse rate does not establish universal enforcing DMARC,
+and a 100 percent Workspace sparse rate does not establish M365-only
+deployment. The modern-provider node has no local bindings after the v1.9.3
+split, so its display mass stays at the floor even when parent evidence moves
+its posterior.
 
-The CDN front is inferable because the CNAME chain terminates there. The stack
-behind it stays hidden when subdomains front through the same edge.
+The historical survival ratio divides the high-model-support rate in the
+corpus labeled hardened by that in the corpus labeled soft. The memo records
+`email_gateway_present` 0.57, `cdn_fronting` 0.84,
+`email_security_policy_enforcing` 0.98, `okta_idp` 1.21,
+`federated_identity` 1.16, `aws_hosting` 1.09,
+`google_workspace_tenant` 1.03, and `m365_tenant` 0.90. Values below or
+above one describe lower or higher observed rates. The selected cohorts and
+collection differences do not isolate a causal hardening effect; a small
+denominator can make a ratio unstable.
 
-**Pattern B, privacy-focused organizations**
-
-| Node | Sparse rate | What the panel supports |
-|---|---|---|
-| `email_gateway_present` | 100% | Minimal third-party mail surface. |
-| `federated_identity` | 80% | Federation indicators deliberately minimized. |
-| `aws_hosting` | 60% | Some public-facing AWS presence still surfaces. |
-| `google_workspace_tenant` | 40% | Mail-signing records sometimes published. |
-| `email_security_policy_enforcing` | 20% | Enforcing DMARC is near-universal here. |
-
-Strict policy stays publicly inferable, which is the correct posture; identity
-and cloud signals are absent as intended.
-
-**Pattern C, major financial institutions**
-
-| Node | Sparse rate | What the panel supports |
-|---|---|---|
-| `aws_hosting` | 100% | No AWS-specific apex evidence in this sample. |
-| `google_workspace_tenant` | 100% | M365-only in this sample. |
-| `m365_tenant` | 20% | Verification and MX evidence consistently present. |
-| `cdn_fronting` | 10% | CDN-fronted public sites are the norm. |
-| `email_security_policy_enforcing` | 0% | Enforcing DMARC universal in this sample. |
-
-The public fingerprint is M365 plus CDN plus strong DMARC, with everything else
-sparse: a low-disclosure posture around an enterprise stack.
-
-**Pattern D, defense and national-security adjacent**
-
-| Node | Sparse rate | What the panel supports |
-|---|---|---|
-| `okta_idp` | 100% | No Okta-specific evidence in this subset. |
-| `google_workspace_tenant` | 80% | Predominantly AWS, M365, or on-premise. |
-| `aws_hosting` | 80% | Some government-region presence surfaces. |
-| `federated_identity` | 80% | Identity surface suppressed publicly. |
-| `email_security_policy_enforcing` | 20% | Enforcing DMARC mostly published. |
-
-Apex-level cloud footprint is visible; the identity stack behind it is not.
-
-**Pattern E, major government agencies**
-
-| Node | Sparse rate | What the panel supports |
-|---|---|---|
-| `google_workspace_tenant` | 100% | Uniformly absent in this sample. |
-| `okta_idp` | 100% | No Okta surfacing in this subset. |
-| `federated_identity` | 90% | Identity stack hidden. |
-| `aws_hosting` | 90% | Some government-region presence surfaces. |
-| `m365_tenant` | 20% | Heavily M365, reinforced by procurement policy. |
-| `cdn_fronting` | 10% | CDN-fronted public sites are the norm. |
-
-Effectively the same layer-side signature as Pattern C, from a different
-internal stack: public posture converges even where architecture does not.
-
-**Cross-cutting**
-
-- `email_security_modern_provider` is 100 percent sparse on every hardened
-  category, by construction. The v1.9.3 split left it with no evidence
-  bindings, so it is pure propagation; this is the design reporting its own
-  reach, not a defect.
-- The survival ratio quantifies how much of a node's high-confidence firing
-  survives hardening: the hardened high-confidence rate over the soft
-  high-confidence rate, each a percentage of the same 50-domain corpus
-  ([v1.9.4 calibration](../validation/v1.9.4-calibration.md)). A ratio below 1.0
-  is the layer retreating as public DNS stops carrying the evidence; a ratio
-  above 1.0 is the hardened corpus over-representing organizations whose posture
-  includes that specific service, not a layer regression. Both directions
-  appear, and the shape is what the design predicts either way:
-  - Retreating: `email_gateway_present` at 0.57 (the clearest instance; hardened
-    orgs rarely publish a gateway MX publicly), `cdn_fronting` at 0.84 (the CDN
-    is part of the hardening posture rather than something it conceals), and
-    `email_security_policy_enforcing` at 0.98 (DMARC policy is a public record
-    defenders should publish, and no posture in the sample hides it).
-  - Above 1.0 on corpus mix: `okta_idp` at 1.21 (the largest in the table, but
-    on a 3.3 percent soft base, so it is closer to noise than to a trend),
-    `federated_identity` at 1.16, `aws_hosting` at 1.09, and
-    `google_workspace_tenant` at 1.03, where the defense and government strata
-    over-represent federated IdP, AWS, and Workspace-secondary postures.
-    `m365_tenant` sits just below at 0.90. Reporting only the sub-1.0 ratios
-    would be one-directional selection; the memo carries the full table and the
-    CNAME-walker change behind the federated and Workspace figures.
-
-**Not covered.** Actively deceptive DNS is a different threat model and is
-section 4.11. Vertical long-tail postures beyond these five are unmeasured.
-And internal cloud consumption is invisible by construction: a domain whose
-posture is "we use a third-party cloud for internal workloads only" produces no
-signal here, because none exists in public DNS.
+These measurements do not validate deceptive-DNS robustness (section 4.11),
+long-tail categories, or private cloud consumption that leaves no public
+evidence.
 
 ### 4.11 Adversarial deception postures
 
-Section 4.10 catalogues organizations that minimize public exposure. This
+Section 4.10 records sparsity on a selected historical corpus. This
 subsection asks the harder question: how does the layer behave against a
 posture that intends to mislead a passive observer? Pattern I (planted
 administrative tokens) was measured end to end at the DNS-record layer on
@@ -829,21 +791,24 @@ and its result is folded in below. The certificate-surface and rotation patterns
 at this layer, so what follows for them is a stated commitment about predicted
 behavior, recorded so a future calibration run can confirm or refute it.
 
-**Pattern F, wildcard-certificate rotation.** The apex publishes only
-short-lived wildcards, so CT enumeration returns one SAN per certificate and a
-wildcard probe matches every random subdomain. Related-surface attribution
-collapses to the apex plus explicitly published names, and the mail and policy
-nodes are untouched because they read apex records the rotation does not
-affect. The layer goes sparse where it should and stays accurate where it can:
-narrow, not falsely confident.
+**Pattern F, wildcard-certificate rotation.** New certificates containing only
+wildcard names contribute fewer explicit hostnames to CT enumeration. They do
+not erase historical entries, establish one SAN per certificate, or imply
+wildcard DNS resolution. The graph excludes wildcard names. If other records
+stay fixed, apex mail and policy observations need not change. Sparse state,
+posterior accuracy, and band width still depend on those other inputs and the
+committed model; certificate shape alone guarantees none of them.
 
 **Pattern G, short-TTL decoy CNAME chains.** The apex rotates CNAME targets
-between observation windows so snapshots disagree. The merge surfaces the
-inconsistency as a cross-source conflict, which subtracts from effective
-display mass and widens bands globally (section 4.1). Even where a rotating
-target nominally matches a binding, the conflict penalty keeps the band from
-collapsing onto a confident point. The operator sees populated conflict
-provenance and an explicitly dampened band.
+between observation windows so snapshots can disagree. A single lookup does
+not retain those windows as a longitudinal conflict detector. The Bayesian
+adapter currently projects conflicts on `display_name`, `auth_type`, `region`,
+`tenant_id`, `dmarc_policy`, and `google_auth_type`; a changed CNAME target alone
+does not populate that list. If retained source disagreement reaches one of
+those fields, its penalty lowers display mass globally to the configured floor
+(section 4.1). It does not change the posterior or guarantee a wide band near a
+boundary mean. Rotation detection requires comparable snapshots and the
+temporal contract in section 7.
 
 **Pattern H, SAN-stuffing decoys.** The apex publishes certificates whose SAN
 lists name unrelated services it does not run. The defense is upstream of this
@@ -873,10 +838,11 @@ partly-closed vector with named residual gaps:
   verification TXT, an NS delegation, or a CAA record produces the vendor slug
   but not the role-typed evidence (a functional MX, DKIM, or role CNAME) the
   gated observations require, so the node stays at its prior. The slug still
-  enters inventory; it does not reach the decision. What stays arithmetically
-  identical to a real signal is a genuinely functional record: the corroborator
-  class a passive adversary cannot publish without routing through the vendor,
-  and the class the round confirms still supports its node.
+  enters inventory; it does not supply that node's local binding. Routing-shaped
+  records in the positive fixtures still support the node under this model.
+  An MX or CNAME reference to a vendor can itself be published without proving
+  an active vendor account or successful traffic delivery. Record-role gating
+  narrows the claim; it is not an unforgeability proof.
 - **The declarative node moves on a declared policy, not on impersonation.** A
   published enforcing DMARC record adds its positive factor and removes the
   group-absence disconfirmer (section 3.3), so `email_security_policy_enforcing`
@@ -909,13 +875,14 @@ property. Section 5.6 states the acceptance property a fix must satisfy, and the
 **What this subsection does not establish.** For the certificate-surface and
 rotation patterns (F, G, H), these remain predictions from the design, not
 measurements: falsifying them needs a controlled adversarial corpus at that
-layer, synthetic where the posture must be exact, checking that nodes which
-should hedge do hedge and that evidence-silent nodes never go confident. Those
-patterns stay a commitment. Pattern I is the measured exception: the 2026-08-17
+layer, synthetic where the posture must be exact, with predeclared supported
+claims and permitted evidence. Silence at one node does not prevent support
+propagating from another node. Pattern I is the measured exception: the 2026-08-17
 corpus recorded above tested the record-plantable form end to end and the
 record-role gate held (zero of seven administrative-only plants moved a gated
-node to supported), and the record-layer form of Pattern G populated conflict
-provenance as predicted. Section 5.6 states the acceptance property the
+node to supported), and a record-layer disagreement fixture populated conflict
+provenance. That does not establish temporal CNAME-rotation detection.
+Section 5.6 states the acceptance property the
 remaining commitment must satisfy.
 
 ## 5. Claim robustness envelopes
@@ -1507,7 +1474,7 @@ The 2026-08-17 adversarial DNS-record corpus
 `validation/adversarial_corpus/`) is the standing baseline for these properties.
 It measures the record-plantable form of forward planting sensitivity against the
 shipped engine (zero of seven administrative-only plants moved a gated node to
-supported), confirms the functional-corroborator lower bound still holds, and
+supported), retains model support on the positive routing-record fixtures, and
 names the ungated scalar routes a complete gate must still close. A mitigation
 must keep that corpus at its measured floor.
 

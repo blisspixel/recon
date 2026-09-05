@@ -19,7 +19,7 @@ import re
 import sys
 from collections import Counter
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, NoReturn, cast
@@ -28,7 +28,7 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 if str(REPO_ROOT) not in sys.path:
     sys.path.insert(0, str(REPO_ROOT))
 
-from recon_tool.fingerprints import DetectionRule, load_fingerprints  # noqa: E402
+from recon_tool.fingerprints import DetectionRule, load_builtin_fingerprints  # noqa: E402
 from recon_tool.validator import host_has_suffix, is_domain_shaped  # noqa: E402
 from validation import catalog_baseline  # noqa: E402
 from validation.prepare_catalog_round import (  # noqa: E402
@@ -66,7 +66,13 @@ def _fail(message: str) -> NoReturn:
 
 
 def load_candidate_rules(slugs: Sequence[str]) -> tuple[CandidateRule, ...]:
-    """Load exact supported rules for a unique, non-empty slug selection."""
+    """Load exact supported built-in rules for a unique, non-empty selection.
+
+    Operator-local and ephemeral rules do not belong to the reviewed source
+    catalog committed by the report. Whole-fingerprint conjunctions cannot be
+    evaluated from individual retained unclassified observations, so reject
+    them instead of reporting a partial rule match as promotion acceptance.
+    """
     requested = tuple(slugs)
     if not requested or any(not slug for slug in requested):
         _fail("at least one non-empty candidate slug is required")
@@ -75,9 +81,11 @@ def load_candidate_rules(slugs: Sequence[str]) -> tuple[CandidateRule, ...]:
 
     found: set[str] = set()
     rules: list[CandidateRule] = []
-    for fingerprint in load_fingerprints():
+    for fingerprint in load_builtin_fingerprints():
         if fingerprint.slug not in requested:
             continue
+        if fingerprint.match_mode != "any":
+            _fail(f"candidate {fingerprint.slug} uses unsupported counterfactual match_mode {fingerprint.match_mode}")
         found.add(fingerprint.slug)
         for rule in fingerprint.detections:
             _validate_candidate_rule(fingerprint.slug, rule)
@@ -88,6 +96,13 @@ def load_candidate_rules(slugs: Sequence[str]) -> tuple[CandidateRule, ...]:
     if not rules:
         _fail("candidate selection contains no rules")
     return tuple(sorted(set(rules), key=lambda item: (item.record_type, -len(item.pattern), item.slug, item.pattern)))
+
+
+def _candidate_rules_digest(rules: Sequence[CandidateRule]) -> str:
+    """Commit the exact evaluated rules independently of canonical YAML bytes."""
+    canonical = sorted(set(rules), key=lambda item: (item.slug, item.record_type, item.pattern))
+    raw = json.dumps([asdict(rule) for rule in canonical], sort_keys=True, separators=(",", ":")).encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 
 def _validate_candidate_rule(slug: str, rule: DetectionRule) -> None:
@@ -345,6 +360,7 @@ def evaluate_catalog_promotions(
         "results_digest_sha256": results_digest,
         "round_contract": catalog_baseline.public_round_contract(cast(dict[str, Any], manifest)),
         "candidate_catalog_digest_sha256": catalog_digest_sha256(),
+        "candidate_rules_digest_sha256": _candidate_rules_digest(rules),
         "evaluator": {
             "code_revision": revision,
             "working_tree_dirty": dirty,

@@ -58,9 +58,9 @@ fingerprints:
 | Type | Queries | Matching | Best for |
 |------|---------|----------|----------|
 | `txt` | TXT at zone apex | Regex | Verification tokens (`^service-verify=`) |
-| `spf` | SPF includes | Substring | Email sending (`sendgrid.net`) |
-| `mx` | MX hostnames | Substring | Email providers and gateways |
-| `ns` | NS hostnames | Substring | DNS hosting |
+| `spf` | Parsed SPF include and redirect targets | DNS-label suffix | Published sending delegation (`sendgrid.net`) |
+| `mx` | MX hostnames | DNS-label suffix | Email routing providers and gateways |
+| `ns` | NS hostnames | DNS-label suffix for dotted patterns; dotless legacy fragments match a label or its hyphenated prefix | DNS delegation |
 | `cname` | CNAME targets | Regex | CDN / WAF / SaaS infrastructure |
 | `cname_target` | CNAME chain target | Regex (+ `tier`) | SaaS / infrastructure attribution via CNAME chains; carries a `tier` (`application` or `infrastructure`) that surface attribution uses to rank a chain. The most common detection type in the catalog. |
 | `subdomain_txt` | TXT at a specific subdomain | `subdomain:regex` | Challenge records (`_vendor-challenge:.+`) |

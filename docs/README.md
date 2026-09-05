@@ -63,6 +63,7 @@ generated discovery context, not stable runtime contracts. See
 | Contribution workflow | [../CONTRIBUTING.md](../CONTRIBUTING.md) |
 | Engineering practices | [engineering-practices.md](engineering-practices.md) |
 | Catalog growth and quality strategy | [catalog-strategy.md](catalog-strategy.md) |
+| Corpus planning, catalog-round skills, and promotion limits | [catalog-maintenance.md](catalog-maintenance.md) |
 | Data-handling policy | [data-handling-policy.md](data-handling-policy.md) |
 | Cut and verify a release | [release-process.md](release-process.md) |
 | Local validation workspace | [../validation/README.md](../validation/README.md) |

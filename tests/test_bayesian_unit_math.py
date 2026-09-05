@@ -178,6 +178,25 @@ class TestContributingEvidence:
 
 
 class TestRankEvidence:
+    def test_small_valid_likelihoods_keep_their_actual_ratio(self) -> None:
+        ranked = _rank_evidence([_ev("tiny", 1e-20, 1e-30), _ev("ordinary", 0.9, 0.1)])
+        assert [entry.name for entry in ranked] == ["tiny", "ordinary"]
+        assert ranked[0].llr == round(math.log(1e10), 4)
+        total = math.log(1e10) + math.log(9)
+        assert ranked[0].influence_pct == round(100 * math.log(1e10) / total, 2)
+
+    @pytest.mark.parametrize(("lp", "la"), [(0.5, 5e-324), (5e-324, 0.5)])
+    def test_group_selection_and_ranking_stay_finite_at_float_extremes(self, lp: float, la: float) -> None:
+        extreme = _ev("extreme", lp, la, group="g")
+        ordinary = _ev("ordinary", 0.9, 0.1, group="g")
+        expected = math.log(lp) - math.log(la)
+        assert math.isfinite(_binding_llr(extreme))
+        assert _binding_llr(extreme) == expected
+        assert _contributing_evidence([ordinary, extreme]) == [extreme]
+        contribution = _rank_evidence([extreme])[0]
+        assert contribution.llr == round(expected, 4)
+        assert contribution.influence_pct == 100.0
+
     def test_hand_computed_llr_and_shares(self) -> None:
         # a: log(0.9/0.1) = log 9 = 2.1972; b: log(0.6/0.3) = log 2 =
         # 0.6931. abs_sum = 2.8904, so a carries 76.02% and b 23.98%.
@@ -373,7 +392,7 @@ class TestContractPredicates:
         assert not _marginal_in_unit_range({"present": -0.1})
         assert not _marginal_in_unit_range({"present": 1.1})
 
-    def test_query_marginal_neutral_fallbacks_are_normalized(self) -> None:
+    def test_query_marginal_distinguishes_no_factors_from_zero_mass(self) -> None:
         uniform = {"present": 0.5, "absent": 0.5}
         assert _query_marginal([], "q", []) == uniform
 
@@ -381,7 +400,8 @@ class TestContractPredicates:
             frozenset((("q", "present"),)): 0.0,
             frozenset((("q", "absent"),)): 0.0,
         }
-        assert _query_marginal([zero_factor], "q", ["q"]) == uniform
+        with pytest.raises(FloatingPointError, match="invalid normalization mass"):
+            _query_marginal([zero_factor], "q", ["q"])
 
     def test_binding_llr_uses_real_ratio(self) -> None:
         evidence = _ev("ratio", 0.6, 0.4)

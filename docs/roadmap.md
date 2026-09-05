@@ -103,6 +103,14 @@ healthy when it runs on its cadence and produces its artifact, not when it
 
 ### The fingerprint-freshness loop, in detail
 
+The repository [maintainer workflow](catalog-maintenance.md) supplies separate
+corpus-planning and catalog-round skills alongside fingerprint triage. Planning
+is offline; new collection is explicit and bounded. Development exclusions,
+source availability, exact rule provenance, and an untouched holdout remain
+review gates. Fixed-observation coverage uplift is a diagnostic, not precision
+or a complete service-selection counterfactual. These maintenance instructions
+do not open a new feature tranche or expand the frozen portable plugin frame.
+
 This is the loop that runs forever, because vendors add, rename, and retire the
 public patterns recon detects. It runs in two directions each month, and both
 carry a public reference or a disclosure-safe basis by construction, so a

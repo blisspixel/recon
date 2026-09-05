@@ -103,16 +103,18 @@ class ConflictProvenance:
 
 @dataclass(frozen=True)
 class EvidenceContribution:
-    """One bound observation's quantified influence on a node's posterior.
+    """One fired binding's local log-likelihood-ratio contribution.
 
     The log-likelihood-ratio (LLR) for a binding that fired is
     :math:`\\log\\!\\bigl(P(\\text{obs}\\mid\\text{present})\\;/\\;P(\\text{obs}\\mid\\text{absent})\\bigr)`,
     positive when the observation favours ``present`` and negative when
     it favours ``absent``. ``influence_pct`` is this binding's
-    ``|llr|`` normalized to a percentage across all fired bindings for
-    the same node — the renderer uses it to surface "this evidence
-    drove 42% of the posterior shift" without forcing the reader to
-    convert nats to a share.
+    ``|llr|`` normalized to a percentage across contributing fired bindings
+    for the same node after dependency-group reduction. This is a share of
+    local fired |LLR|, not a share of the posterior shift: informative
+    absences and evidence elsewhere in the network can also move that
+    posterior. Exact leave-one-unit-out changes live in ``UnitCounterfactual``
+    and need not add to the total posterior change.
 
     Added v1.9.3.2 to support top-3 influential-edge rendering in
     ``--explain-dag``. Schema-additive: the default empty tuple on
@@ -187,7 +189,7 @@ class NodePosterior:
     """Bindings ranked by absolute LLR contribution (descending), ties
     broken by binding name for diff-stability. The contributing set (one
     per correlation group, CAL7), not every fired binding, so the influence
-    shares reflect what actually moved the posterior. Empty tuple when no
+    shares describe the local fired factors used by inference. Empty tuple when no
     bindings fired. Added v1.9.3.2 for top-3 influential-edge rendering in
     ``--explain-dag``; schema-additive."""
 

@@ -93,6 +93,35 @@ def test_generated_skills_remove_client_only_and_experimental_frontmatter() -> N
         assert body.strip()
 
 
+def test_portable_output_mode_projection_preserves_cli_recipe_and_actual_mcp_api() -> None:
+    from recon_tool.server.lookup import lookup_tenant
+
+    _, native_body = generator._split_skill(generator.SOURCE_SKILLS["recon"])
+    portable_body = generator._portable_output_modes(native_body)
+
+    # Keep the complete native CLI recipe, including its JSON capture and saved
+    # artifact headline, unchanged beneath the explicit CLI-only branch.
+    cli_start = '```bash\nrecon "<domain>" --full --json'
+    next_mode = "### Explain mode"
+    native_cli = native_body.split(cli_start, 1)[1].split(next_mode, 1)[0]
+    portable_cli = portable_body.split(cli_start, 1)[1].split(next_mode, 1)[0]
+    assert portable_cli == native_cli
+
+    # Validate the documented MCP call against the real registered callable;
+    # a CLI flag or invented MCP argument cannot silently replace this route.
+    import inspect
+
+    arguments = inspect.signature(lookup_tenant).bind("example.invalid", format="json")
+    assert arguments.arguments == {"domain": "example.invalid", "format": "json"}
+    mcp_branch = portable_body.split("With connected MCP,", 1)[1].split("For the CLI fallback only,", 1)[0]
+    assert 'lookup_tenant(domain, format="json")' in mcp_branch
+    assert "both a file-write tool and a\nwritable user workspace" in mcp_branch
+    assert "artifact delivery is unavailable" in mcp_branch
+    assert "Do not\nclaim a file was saved" in mcp_branch
+    assert "unless the user explicitly requests inline JSON" in mcp_branch
+    assert "Ask for full details or evidence." in portable_body
+
+
 def test_candidate_uses_one_explicit_complete_surface_stdio_server() -> None:
     mcp = _json(candidate.DEFAULT_PLUGIN_ROOT / "mcp.json")
 
@@ -103,6 +132,7 @@ def test_candidate_uses_one_explicit_complete_surface_stdio_server() -> None:
                 "type": "stdio",
                 "command": "recon",
                 "args": ["mcp"],
+                "env": {"RECON_CONFIG_DIR": "${PLUGIN_DATA}/recon"},
             }
         },
     }
@@ -165,6 +195,53 @@ def test_client_only_skill_field_fails_closed(tmp_path: Path) -> None:
     path.write_bytes(text.replace("---\n", "---\nargument-hint: <domain>\n", 1).encode())
 
     with pytest.raises(candidate.CandidateError, match="frontmatter fields drifted"):
+        candidate.validate_candidate(root)
+
+
+def test_relocated_package_keeps_documentation_references_resolvable(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _copy_candidate(tmp_path)
+    unrelated = tmp_path / "unrelated working directory"
+    unrelated.mkdir()
+    monkeypatch.chdir(unrelated)
+
+    assert candidate.validate_candidate(root)[0] == _project_version()
+    _, triage = candidate._parse_skill(root / "skills" / "recon-fingerprint-triage" / "SKILL.md")
+    for doc in ("fingerprints", "catalog-strategy"):
+        assert f"https://github.com/blisspixel/recon/blob/v{_project_version()}/docs/{doc}.md" in triage
+    assert "`docs/catalog-maintenance.md`" in triage
+    assert f"/blob/v{_project_version()}/docs/catalog-maintenance.md" not in triage
+
+
+@pytest.mark.parametrize(
+    "target",
+    ["references/missing.md", "../../../outside.md", "%2e%2e/%2e%2e/%2e%2e/outside.md", "file:///checkout/docs.md"],
+)
+def test_unportable_documentation_link_fails_closed(tmp_path: Path, target: str) -> None:
+    root = _copy_candidate(tmp_path)
+    (tmp_path / "outside.md").write_text("Not bundled", encoding="utf-8")
+    path = root / "skills" / "recon-fingerprint-triage" / "SKILL.md"
+    path.write_bytes(path.read_bytes() + f"\n[Required guide]({target})\n".encode())
+
+    with pytest.raises(candidate.CandidateError, match="documentation link"):
+        candidate.validate_candidate(root)
+
+
+def test_bundled_documentation_link_survives_relocation(tmp_path: Path) -> None:
+    root = _copy_candidate(tmp_path)
+    path = root / "skills" / "recon" / "SKILL.md"
+    candidate._validate_document_links(path, "[License](../../LICENSE) [Section](#section)", root)
+
+
+@pytest.mark.parametrize("state_path", ["./state", "${PLUGIN_ROOT}/state", "~/.recon", "${UNKNOWN}/state"])
+def test_portable_state_must_use_client_data_directory(tmp_path: Path, state_path: str) -> None:
+    root = _copy_candidate(tmp_path)
+    mcp = _json(root / "mcp.json")
+    mcp["mcpServers"]["recon"]["env"]["RECON_CONFIG_DIR"] = state_path
+    _write_json(root / "mcp.json", mcp)
+
+    with pytest.raises(candidate.CandidateError, match="exact recon stdio launch"):
         candidate.validate_candidate(root)
 
 

@@ -709,9 +709,7 @@ async def discover_fingerprint_candidates(
         JSON array of candidate dicts: ``[{suffix, count, samples: [{subdomain,
         terminal, chain}]}, ...]``. Sorted by count desc, then suffix.
     """
-    from pathlib import Path
-
-    from recon_tool.discovery import find_candidates
+    from recon_tool.discovery import find_candidates, load_runtime_patterns
 
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
@@ -772,13 +770,9 @@ async def discover_fingerprint_candidates(
                 cache_set(validated, info, list(results))
 
     unclassified = [{"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains]
-    # parents[1] is the package root. This module lives one level deeper in
-    # server/, so parent resolves to a directory that does not exist and
-    # load_existing_patterns then reports zero known patterns instead of failing.
-    fingerprints_dir = Path(__file__).resolve().parents[1] / "data" / "fingerprints"
     candidates = find_candidates(
         [(info.queried_domain, unclassified)],
-        fingerprints_dir=fingerprints_dir,
+        existing_patterns=load_runtime_patterns(),
         min_count=min_count,
         drop_intra_org=not keep_intra_org,
     )

@@ -89,6 +89,38 @@ def test_catalog_diagnostics_are_opt_in_and_complete() -> None:
     ]
 
 
+@pytest.mark.parametrize(
+    ("record_type", "marker"),
+    [
+        ("txt", "detector:txt"),
+        ("spf", "detector:txt"),
+        ("mx", "detector:mx"),
+        ("ns", "detector:ns"),
+        ("caa", "detector:caa"),
+        ("srv", "detector:srv"),
+        ("srv", "detector:m365_cnames"),
+        ("cname", "detector:cname_infra"),
+        ("cname_target", "detector:common_subdomains"),
+        ("dmarc_rua", "detector:email_security"),
+        ("dmarc_rua", "detector:dmarc_rua"),
+        ("subdomain_txt", "detector:subdomain_txt"),
+        ("mx", "dns_records"),
+    ],
+)
+@pytest.mark.parametrize("observed", [False, True])
+def test_catalog_diagnostics_preserve_detector_failure_state(record_type: str, marker: str, observed: bool) -> None:
+    summaries = (DnsCatalogSummary(record_type, 1, 1, 0),) if observed else ()
+    info = merge_results(
+        [SourceResult(source_name="dns_records", dns_catalog_summaries=summaries, degraded_sources=(marker,))],
+        "example.com",
+    )
+    diagnostic = format_tenant_dict(info, include_unclassified=True)
+    row = next(row for row in diagnostic["dns_catalog_summary"] if row["record_type"] == record_type)
+    assert row["availability"] == ("partial" if observed else "unavailable")
+    assert row["observed_count"] == int(observed)
+    assert row["opportunity_count"] == int(observed)
+
+
 def test_merger_preserves_catalog_diagnostics() -> None:
     info = merge_results(
         [

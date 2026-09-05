@@ -4,13 +4,13 @@ timeout = 120.0
 excluded-modules = []
 # The kill-set, ordered for kill speed under -x: the hand-computed unit
 # anchors first (they kill the arithmetic mutants the 2026-06 baseline
-# showed surviving), then the behavior suites, then the parser/loader
-# and explain-surface suites. Uses the ``pytest`` console script, never
+# showed surviving), followed by numerical-limit guards and the loader,
+# behavior, and explain-surface suites. Uses the ``pytest`` console script, never
 # bare ``python``: on Windows a bare ``python`` spawned from a venv
 # resolves to the base interpreter (no test deps), which silently turns
 # every mutant into a false kill via a conftest ImportError. The
 # baseline step exists to catch exactly that class of breakage.
-test-command = "pytest -x -q -p no:cacheprovider tests/test_bayesian_unit_math.py tests/test_bayesian_loader_edges.py tests/test_bayesian_inference.py tests/test_bayesian_canonical.py tests/test_bayesian_evidence_groups.py tests/test_drift_check.py tests/test_bayesian_validation_rounds.py tests/test_bayesian_topology.py tests/test_bayesian_dag.py"
+test-command = "pytest -x -q -p no:cacheprovider tests/test_bayesian_unit_math.py tests/test_bayesian_numerical_limits.py tests/test_bayesian_loader_edges.py tests/test_bayesian_inference.py tests/test_bayesian_canonical.py tests/test_bayesian_evidence_groups.py tests/test_drift_check.py tests/test_bayesian_validation_rounds.py tests/test_bayesian_topology.py tests/test_bayesian_dag.py"
 
 [cosmic-ray.distributor]
 name = "local"

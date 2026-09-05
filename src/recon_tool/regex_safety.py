@@ -54,47 +54,69 @@ _REDOS_RE = re.compile(
     r"(?:\.[+*]\??\.[+*]\??\.[+*])"  # three adjacent quantified atoms
 )
 
-# Only prefix-overlapping alternatives are rejected. Disjoint alternatives such
-# as (foo|bar)+ remain useful and do not have the same ambiguous partitioning.
-_ALT_GROUP_QUANT_RE = re.compile(r"\(([^()]*\|[^()]*)\)[+*{]")
+_LITERAL_BRANCH_RE = re.compile(r"(?:[a-zA-Z0-9_/-]|\\[.\^$*+?{}\[\]\\()|/-])+")
 
 
-# A branch beginning with a wildcard, a shorthand class, or a character class
-# can match the first character of a sibling branch, so the group partitions a
-# subject ambiguously even though the branches share no literal prefix. An
-# escaped literal such as ``\.`` is not wide: its first character is the
-# backslash, which neither alternative below matches.
-_WIDE_BRANCH_RE = re.compile(r"^(?:\\[wWsSdD]|[.\[])")
+def _disjoint_literal_branches(body: str) -> bool:
+    """Prove a repeated alternation is a prefix-free set of ASCII literals.
+
+    Anything requiring regex interpretation, including nested groups, encoded
+    characters, empty branches, or assertions, fails closed. Merely comparing
+    regex source text misses equivalent ways to match the same characters.
+    """
+    body = re.sub(r"^\?[aimsxLu-]*:", "", body)
+    branches = re.split(r"(?<!\\)\|", body)
+    if any(_LITERAL_BRANCH_RE.fullmatch(branch) is None for branch in branches):
+        return False
+    literals = [re.sub(r"\\(.)", r"\1", branch).casefold() for branch in branches]
+    return all(
+        not first.startswith(second) and not second.startswith(first)
+        for index, first in enumerate(literals)
+        for second in literals[index + 1 :]
+    )
 
 
 def _alternation_redos(pattern: str) -> bool:
-    """Return whether a simple quantified alternation partitions ambiguously."""
-    pattern = re.sub(r"\(\?[aimsxLu]*:", "(", pattern)
-    for match in _ALT_GROUP_QUANT_RE.finditer(pattern):
-        branches = [branch.strip() for branch in match.group(1).split("|")]
-        populated = [branch for branch in branches if branch]
-        # Overlap by character class, not only by literal prefix. ``(.|a)*``
-        # shares no prefix yet costs exponential time on a failing subject, so
-        # a literal-only comparison admitted it.
-        if len(populated) > 1 and any(_WIDE_BRANCH_RE.match(branch) for branch in populated):
-            return True
-        for index, first in enumerate(branches):
-            for second in branches[index + 1 :]:
-                if first and second and (first.startswith(second) or second.startswith(first)):
-                    return True
+    """Check every repeated group, including alternations in child groups."""
+    stack: list[tuple[int, bool]] = []
+    # Replace escaped atoms and classes with equal-width placeholders so the
+    # scan keeps source offsets without treating their punctuation as syntax.
+    structural = _strip_escapes_and_classes(pattern, preserve_width=True)
+    for index, char in enumerate(structural):
+        if char == "(":
+            stack.append((index, False))
+        elif char == "|" and stack:
+            opening, _ = stack[-1]
+            stack[-1] = (opening, True)
+        elif char == ")" and stack:
+            opening, has_alternation = stack.pop()
+            if has_alternation and stack:
+                parent, _ = stack[-1]
+                stack[-1] = (parent, True)
+            following = structural[index + 1 : index + 2]
+            if (
+                has_alternation
+                and following
+                and following in "+*{"
+                and not _disjoint_literal_branches(pattern[opening + 1 : index])
+            ):
+                return True
     return False
 
 
-def _strip_escapes_and_classes(pattern: str) -> str:
+def _strip_escapes_and_classes(pattern: str, *, preserve_width: bool = False) -> str:
     """Remove escaped characters and character classes for structural scans."""
     output: list[str] = []
     index, length = 0, len(pattern)
     while index < length:
         char = pattern[index]
         if char == "\\":
+            if preserve_width:
+                output.append("_" * min(2, length - index))
             index += 2
             continue
         if char == "[":
+            opening = index
             index += 1
             if index < length and pattern[index] == "^":
                 index += 1
@@ -103,6 +125,8 @@ def _strip_escapes_and_classes(pattern: str) -> str:
             while index < length and pattern[index] != "]":
                 index += 2 if pattern[index] == "\\" else 1
             index += 1
+            if preserve_width:
+                output.append("_" * (index - opening))
             continue
         output.append(char)
         index += 1
@@ -143,7 +167,11 @@ def _has_nested_quantifier(pattern: str) -> bool:
         elif char == ")" and stack:
             opening = stack.pop()
             following = cleaned[index + 1] if index + 1 < len(cleaned) else ""
-            if following in "+*{" and any(_is_quantifier_at(cleaned, inner) for inner in range(opening + 1, index)):
+            if (
+                following
+                and following in "+*{"
+                and any(_is_quantifier_at(cleaned, inner) for inner in range(opening + 1, index))
+            ):
                 return True
     return False
 

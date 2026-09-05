@@ -11,11 +11,11 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 SELECTED_RULES = ("PLR0911", "PLR0912", "PLR0913", "PLR0915")
 
-# Current debt baseline as of 2026-07-31. New code must not increase these
+# Current debt baseline as of 2026-09-05. New code must not increase these
 # counts. A lower live count also fails with a stale-baseline message so every
 # earned reduction is locked into this maintained ceiling.
 MAX_COUNTS = {
-    "PLR0911": 21,  # too many return statements
+    "PLR0911": 20,  # too many return statements
     "PLR0912": 8,  # too many branches
     "PLR0913": 50,  # too many arguments
     "PLR0915": 7,  # too many statements

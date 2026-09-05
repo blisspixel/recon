@@ -150,6 +150,12 @@ sessions started and external spend is $0.
 
 ## The fingerprint-discovery loop
 
+For new agent-assisted rounds, start with the
+[maintainer workflow](../docs/catalog-maintenance.md). It distinguishes offline
+corpus planning, explicit collection, existing-artifact review, and promotion
+gates. The historical CNAME-oriented sketch below is not an automatic promotion
+pipeline; typed coverage and independent claim validation remain separate.
+
 ```
 USER runs recon on a target (single domain or corpus)
     ↓
@@ -587,13 +593,19 @@ python validation/evaluate_catalog_promotions.py \
 ```
 
 Repeat `--candidate-slug` for a batch. The evaluator accepts only referenced,
-dated DNS-label suffix rules for `mx`, `ns`, `spf`, and `cname_target`. It binds
+dated, built-in `match_mode: any` DNS-label suffix rules for `mx`, `ns`, `spf`,
+and `cname_target`. Conjunctions and local custom/ephemeral candidates are
+rejected. It binds
 the complete frozen membership and baseline result digest, uses the original
-observed denominators, and emits aggregate counts only. Report this causal
-counterfactual separately from the live replay. A later DNS change is neither a
-catalog regression nor catalog uplift.
+observed denominators, records both canonical catalog and exact evaluated-rule
+digests, and emits aggregate counts only. Report this fixed-observation
+classification diagnostic separately from live replay. It is not a causal
+effect, complete detector replay, or a precision test: its additive arithmetic
+cannot certify absence of false attribution or provider displacement. An
+`accepted` decision does not waive the other promotion gates. A later DNS change
+is neither a catalog regression nor catalog uplift.
 
-For large monthly cadence, keep `--no-ct` on unless CT coverage is the point and
+For large monthly cadence with `scan.py`, omit `--ct` unless CT coverage is the point and
 use modest concurrency. Real-company corpora live entirely under
 `validation/corpus-private/` and never leave your machine; only generic patterns
 surfaced for triage become candidate PRs.

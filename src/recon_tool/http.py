@@ -6,14 +6,9 @@ connecting.
 
 Includes retry logic for transient failures (429, 503) with exponential backoff.
 
-SECURITY NOTE (TOCTOU): The SSRF check resolves the hostname and validates the
-IP, then httpx resolves it again independently for the actual connection. A
-sophisticated attacker with a short-TTL DNS record could pass the check with a
-public IP, then resolve to 169.254.169.254 when httpx connects. Full mitigation
-would require pinning the resolved IP and connecting to it directly, which httpx
-does not natively support. This defense-in-depth layer catches the vast majority
-of SSRF attempts (literal IPs, stable DNS, open redirects) but is not proof
-against active DNS rebinding with sub-second TTLs.
+The connection backend separately validates and pins numeric destinations at
+socket creation. TLS verification and connection pooling retain the original
+hostname, while DNS changes cannot redirect a validated connection internally.
 """
 
 from __future__ import annotations
@@ -27,6 +22,8 @@ from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
 import httpx
+
+from recon_tool.http_backend import CoreHTTPTransport
 
 logger = logging.getLogger("recon")
 
@@ -161,6 +158,30 @@ async def _is_private_ip_async(host: str) -> bool:
     return False
 
 
+async def _public_addresses_async(host: str) -> tuple[str, ...]:
+    """Resolve once and admit the complete answer before any socket is opened."""
+    address = _parse_ip_address(host)
+    if address is not None:
+        return () if _addr_is_blocked(address) else (str(address),)
+    if not host:
+        return ()
+    try:
+        answers = await asyncio.get_running_loop().getaddrinfo(
+            host, None, family=socket.AF_UNSPEC, type=socket.SOCK_STREAM
+        )
+    except OSError:
+        return ()
+    addresses: list[str] = []
+    for _family, _type, _proto, _canonname, sockaddr in answers:
+        address = _parse_ip_address(str(sockaddr[0]))
+        if address is None or _addr_is_blocked(address):
+            return ()
+        normalized = str(address)
+        if normalized not in addresses:
+            addresses.append(normalized)
+    return tuple(addresses)
+
+
 def _is_private_ip(host: str) -> bool:  # pyright: ignore[reportUnusedFunction]
     """Synchronous check if a host must be refused by destination validation.
 
@@ -248,7 +269,7 @@ class _RefusingStream(httpx.AsyncByteStream):
         return None
 
 
-class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
+class _SSRFSafeTransport(CoreHTTPTransport):
     """Transport wrapper that blocks requests to private/internal IPs.
 
     Intercepts each request before it hits the network and rejects any
@@ -261,13 +282,22 @@ class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
     compressing Content-Encoding (despite recon's ``Accept-Encoding: identity``
     request) is refused outright by _RefusingStream, since the byte cap counts
     compressed transfer bytes and cannot bound a decompression bomb. Uses async
-    DNS resolution to avoid blocking the event loop. See module docstring for
-    TOCTOU limitations.
+    DNS resolution to avoid blocking the event loop. Socket creation repeats
+    destination admission and pins the accepted numeric address.
     """
+
+    def __init__(self) -> None:
+        super().__init__(_public_addresses_async)
 
     async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
         host = request.url.host or ""
-        if await _is_private_ip_async(host):
+        timeout = request.extensions.get("timeout", {}).get("connect", DEFAULT_TIMEOUT)
+        try:
+            async with asyncio.timeout(timeout):
+                blocked = await _is_private_ip_async(host)
+        except TimeoutError as exc:
+            raise httpx.ConnectTimeout("Timed out validating destination", request=request) from exc
+        if blocked:
             raise httpx.ConnectError(
                 f"SSRF blocked: request destination is non-public or could not be validated: {host}",
                 request=request,
@@ -289,7 +319,7 @@ class _SSRFSafeTransport(httpx.AsyncHTTPTransport):
         return response
 
 
-class _RetryTransport(httpx.AsyncHTTPTransport):
+class _RetryTransport(httpx.AsyncBaseTransport):
     """Transport wrapper that retries on 429/503 with exponential backoff.
 
     Wraps another transport (typically _SSRFSafeTransport) and adds retry
@@ -300,7 +330,7 @@ class _RetryTransport(httpx.AsyncHTTPTransport):
     on retry. All current callers use content= (bytes), not stream=.
     """
 
-    def __init__(self, wrapped: httpx.AsyncHTTPTransport) -> None:
+    def __init__(self, wrapped: httpx.AsyncBaseTransport) -> None:
         super().__init__()
         self._wrapped = wrapped
 
@@ -391,8 +421,8 @@ async def http_client(
     if provided is not None:
         yield provided
     else:
-        base_transport: httpx.AsyncHTTPTransport = _SSRFSafeTransport()
-        transport: httpx.AsyncHTTPTransport = (
+        base_transport: httpx.AsyncBaseTransport = _SSRFSafeTransport()
+        transport: httpx.AsyncBaseTransport = (
             _RetryTransport(wrapped=base_transport) if retry_transient else base_transport
         )
         client = httpx.AsyncClient(

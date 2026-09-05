@@ -4,8 +4,9 @@ Two responsibilities:
 
 1. **LLR correctness.** Every binding's surfaced log-likelihood-ratio must
    match ``log(P(obs|present) / P(obs|absent))`` on the YAML schema. The
-   percentage of evidence influence must sum to 100% across the fired
-   bindings on each node. These are hand-verifiable mathematical claims;
+   percentages of local fired |LLR| sum to 100% across contributing non-neutral
+   bindings on each node. They are not percentages of the posterior change.
+   These are hand-verifiable mathematical claims;
    getting them wrong undermines the operator's ability to challenge a
    posterior.
 
@@ -53,7 +54,7 @@ class TestLLRMath:
         expected = math.log(0.95 / 0.03)
         assert ec.llr == pytest.approx(expected, abs=1e-3)
         assert ec.influence_pct == pytest.approx(100.0, abs=0.01), (
-            "single fired binding accounts for 100% of evidence influence"
+            "single non-neutral fired binding accounts for 100% of local fired |LLR|"
         )
 
     def test_okta_role_signal_llr_matches_hand_computation(self, network):
@@ -187,7 +188,7 @@ class TestRenderDagTextTop3:
         )
         lines = _node_influence_lines(node)
         assert any("ranked top 3 of 4 fired" in line for line in lines)
-        assert sum(1 for line in lines if "% of evidence influence" in line) == 3
+        assert sum(1 for line in lines if "% of local fired |LLR|" in line) == 3
 
     def test_llr_appears_with_sign_and_two_decimals(self, network):
         result = infer(network, [], ["m365_tenant_observed"], priors_override={})
@@ -200,7 +201,8 @@ class TestRenderDagTextTop3:
     def test_influence_percentage_appears(self, network):
         result = infer(network, [], ["m365_tenant_observed"], priors_override={})
         out = render_dag_text(network, result, domain="alpha.invalid")
-        assert "% of evidence influence" in out
+        assert "% of local fired |LLR|" in out
+        assert "not percentages of the posterior change" in out
 
 
 class TestRenderDagDotTop3:
@@ -212,7 +214,7 @@ class TestRenderDagDotTop3:
         out = render_dag_dot(network, result, domain="x")
         policy_lines = [line for line in out.splitlines() if '"email_security_policy_enforcing" [label=' in line]
         assert len(policy_lines) == 1
-        assert "top influences:" in policy_lines[0]
+        assert "local fired |LLR|:" in policy_lines[0]
         assert "dmarc_reject" in policy_lines[0]
         assert "spf_strict" in policy_lines[0]
 
@@ -220,7 +222,7 @@ class TestRenderDagDotTop3:
         # All-sparse target: no node has fired bindings.
         result = infer(network, [], [], priors_override={})
         out = render_dag_dot(network, result, domain="x")
-        assert "top influences:" not in out
+        assert "local fired |LLR|:" not in out
 
 
 # ── Snapshot ────────────────────────────────────────────────────────
@@ -230,13 +232,15 @@ class TestRenderDagDotTop3:
 # vendor slugs are intentionally absent from this provenance block.
 _SNAPSHOT_FRAGMENT = (
     "## m365_tenant\n"
+    "\n"
     "_A Microsoft 365 or Entra tenant-compatible identity response, mail route, or DKIM endpoint was observed._\n"
     "\n"
     "- **Posterior:** 0.931 _(80% uncertainty band: [0.786, 1.000], n_eff=5.00)_\n"
     "- **Model-support label:** high model support\n"
     "- **Evidence:** signal `m365_tenant_observed`\n"
     "- **Top influence:**\n"
-    "    1. signal `m365_tenant_observed`, LLR +3.46 (100.0% of evidence influence)"
+    "\n"
+    "    1. signal `m365_tenant_observed`, LLR +3.46 (100.0% of local fired |LLR|)"
 )
 
 

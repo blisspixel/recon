@@ -132,12 +132,33 @@ def _digest_files(names: Iterable[str]) -> str:
 
 
 def current_interpretation_context() -> dict[str, str]:
-    """Identify the code, normalizer, catalog, and model used for interpretation."""
+    """Identify packaged inputs and the effective operator-local interpretation.
+
+    Hash loaded catalogs, including custom and ephemeral entries, rather than
+    re-reading custom files that a long-running process has not reloaded.
+    Existing capsules keep their recorded digests and remain valid; the
+    packaged-only context used historically no longer claims an exact match.
+    """
+    from recon_tool.bayesian_loader import apply_priors_override, load_network, load_priors_override
+    from recon_tool.fingerprints import load_fingerprints
+    from recon_tool.motifs import load_motifs
+    from recon_tool.signals import load_signals
+
+    catalog = {
+        "packaged_digest": _digest_files(_CATALOG_FILES),
+        "fingerprints": [dataclasses.asdict(item) for item in load_fingerprints()],
+        "signals": [dataclasses.asdict(item) for item in load_signals()],
+        "motifs": [dataclasses.asdict(item) for item in load_motifs()],
+    }
+    model = {
+        "packaged_digest": _digest_files(_MODEL_FILES),
+        "network": dataclasses.asdict(apply_priors_override(load_network(), load_priors_override())),
+    }
     return {
         "recon_version": __version__,
         "normalizer_version": NORMALIZER_VERSION,
-        "catalog_digest": _digest_files(_CATALOG_FILES),
-        "model_digest": _digest_files(_MODEL_FILES),
+        "catalog_digest": content_digest(catalog),
+        "model_digest": content_digest(model),
     }
 
 
@@ -598,6 +619,8 @@ def write_capsule(path: Path, capsule: Mapping[str, Any], *, overwrite: bool = F
     if path.exists() and not overwrite:
         raise FileExistsError(f"Capsule output already exists: {path}")
     payload = json.dumps(capsule, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    if len(payload.encode("utf-8")) > MAX_CAPSULE_BYTES:
+        raise ValueError("Capsule exceeds the maximum artifact size")
     descriptor, temporary_name = tempfile.mkstemp(prefix=f"{path.name}.", suffix=".tmp", dir=str(parent))
     reserved = False
     try:

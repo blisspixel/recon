@@ -57,10 +57,12 @@ def review(
     from recon_tool.models import ReconLookupError
     from recon_tool.resolver import resolve_tenant
     from recon_tool.review_bundle import ReviewCollectionContext, build_review_bundle, build_review_error_bundle
+    from recon_tool.review_input import normalize_review_coordinate
     from recon_tool.validator import validate_domain
 
     try:
-        validated = validate_domain(domain)
+        coordinate = normalize_review_coordinate(domain)
+        validated = validate_domain(coordinate)
         _preflight_output(output, force=force)
     except (FileExistsError, ValueError) as exc:
         render_error(fmt_exc(exc))
@@ -79,7 +81,7 @@ def review(
             ended_at = datetime.now(UTC)
             error_kind = "timeout" if exc.error_type == "timeout" else "lookup"
             bundle = build_review_error_bundle(
-                domain,
+                coordinate,
                 ReviewCollectionContext(
                     started_at=started_at,
                     ended_at=ended_at,
@@ -94,7 +96,7 @@ def review(
         bundle = build_review_bundle(
             info,
             results,
-            domain,
+            coordinate,
             ReviewCollectionContext(
                 started_at=started_at,
                 ended_at=ended_at,

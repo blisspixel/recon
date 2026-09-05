@@ -177,7 +177,9 @@ def _factor_for_node(node: _Node) -> Factor:
 
 def _binding_llr(ev: _Evidence) -> float:
     """Natural-log likelihood ratio for one binding. Finite (likelihoods in (0,1))."""
-    return math.log(ev.likelihood_present / ev.likelihood_absent)
+    # Dividing first can overflow or underflow for valid subnormal likelihoods.
+    # Taking logs separately preserves the ratio without clamping the model.
+    return math.log(ev.likelihood_present) - math.log(ev.likelihood_absent)
 
 
 def _unit_name(ev: _Evidence) -> str:
@@ -311,31 +313,20 @@ def _factor_for_evidence(
     there. On hideable nodes absence already contributes nothing, so the
     filtering of fired bindings is the whole story.
     """
-    if node.missingness != "declarative":
-        # Hideable (MNAR): only fired bindings contribute.
-        if not fired_evidence:
-            return None
-        like_present = 1.0
-        like_absent = 1.0
-        for ev in _contributing_evidence(fired_evidence):
-            like_present *= ev.likelihood_present
-            like_absent *= ev.likelihood_absent
-        return {
-            frozenset({(node.name, "present")}): like_present,
-            frozenset({(node.name, "absent")}): like_absent,
-        }
-    # Declarative, with a specified nonfire-informative observation model:
-    # fired bindings contribute their likelihood and non-firing units contribute
-    # their absence likelihood. This is not a missing-at-random conclusion. A
-    # factor is always returned because all-absent is itself informative.
-    like_present = 1.0
-    like_absent = 1.0
-    for ev in _contributing_evidence(fired_evidence):
-        like_present *= ev.likelihood_present
-        like_absent *= ev.likelihood_absent
-    for _, _, absence_present, absence_absent in _declarative_absent_units(node, fired_evidence, masked_units):
-        like_present *= absence_present
-        like_absent *= absence_absent
+    if node.missingness != "declarative" and not fired_evidence:
+        return None
+    likelihoods = [(ev.likelihood_present, ev.likelihood_absent) for ev in _contributing_evidence(fired_evidence)]
+    if node.missingness == "declarative":
+        # Observed nonfires contribute only under the declared absence model.
+        likelihoods.extend(
+            (present, absent) for _, _, present, absent in _declarative_absent_units(node, fired_evidence, masked_units)
+        )
+    like_present = math.prod(present for present, _ in likelihoods)
+    like_absent = math.prod(absent for _, absent in likelihoods)
+    # A valid model uses positive likelihoods, but their product can underflow.
+    # This must remain enforced under python -O, when deal contracts are off.
+    if not (0.0 < like_present <= 1.0 and 0.0 < like_absent <= 1.0):
+        raise FloatingPointError(f"Bayesian evidence likelihood lost numerical precision for node {node.name!r}")
     return {
         frozenset({(node.name, "present")}): like_present,
         frozenset({(node.name, "absent")}): like_absent,
@@ -436,7 +427,10 @@ def _multiply(a: Factor, b: Factor) -> Factor:
                 if any(ka_dict[v] != kb_dict[v] for v in shared_vars):
                     continue
             merged = ka | kb
-            out[merged] = out.get(merged, 0.0) + va * vb
+            contribution = va * vb
+            if contribution == 0.0 and va != 0.0 and vb != 0.0:
+                raise FloatingPointError("Bayesian factor multiplication underflow; posterior unavailable")
+            out[merged] = out.get(merged, 0.0) + contribution
     return out
 
 
@@ -480,11 +474,10 @@ def _query_marginal(factors: list[Factor], query: str, all_vars: list[str]) -> d
         final = _multiply(final, f)
     # Normalize.
     total = sum(final.values())
-    if total <= 0:
-        # Degenerate all-zero factor (only reachable with a pinned 0/1 in a
-        # custom model, which load_network now rejects). Fall back to the
-        # uniform prior rather than return a non-normalized {0, 0}.
-        return {"present": 0.5, "absent": 0.5}
+    if total <= 0 or not math.isfinite(total):
+        # Zero or non-finite mass defines no normalized posterior. It must not
+        # be replaced by a seemingly valid 0.5, including with contracts off.
+        raise FloatingPointError("Bayesian marginal has invalid normalization mass; posterior unavailable")
     out: dict[str, float] = {"present": 0.0, "absent": 0.0}
     for assign, val in final.items():
         for var, state in assign:
@@ -648,6 +641,11 @@ def infer(
 
     Returns:
         ``InferenceResult`` with one ``NodePosterior`` per node.
+
+    Raises:
+        FloatingPointError: a custom model exhausts probability-space precision
+            or produces invalid normalization mass. No posterior is emitted for
+            that run; numerical failure is not evidence for a uniform claim.
     """
     if priors_override is None:
         priors_override = load_priors_override()
@@ -780,16 +778,9 @@ def _rank_evidence(fired: Iterable[_Evidence]) -> tuple[EvidenceContribution, ..
     fired_list = list(fired)
     if not fired_list:
         return ()
-    raw: list[tuple[_Evidence, float]] = []
-    for ev in fired_list:
-        # Schema guarantees both likelihoods in the open interval (0, 1),
-        # so the ratio is positive and the log is finite — no clamp
-        # needed. We still defend against a future schema relaxation by
-        # clamping if either side rounds to exactly 0; behaviour stays
-        # honest (LLR magnitude grows large but doesn't overflow).
-        present = max(ev.likelihood_present, 1e-12)
-        absent = max(ev.likelihood_absent, 1e-12)
-        raw.append((ev, math.log(present / absent)))
+    # Use exactly the same likelihoods as dependency-group selection. Clamping
+    # small but valid likelihoods changes their ordering and reported shares.
+    raw = [(ev, _binding_llr(ev)) for ev in fired_list]
     abs_sum = sum(abs(llr) for _, llr in raw) or 1.0
     ranked = sorted(
         raw,

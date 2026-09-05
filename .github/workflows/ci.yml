@@ -135,9 +135,8 @@ jobs:
         run: uv run pyright
 
   mcp-compatibility:
-    # Exercise the supported stable v1 SDK and the exact stable v2 SDK in
-    # isolated environments. Production remains constrained to stable v1; the
-    # v2 pin is a compatibility proof, not a published dependency.
+    # Exercise the exact v1 rollback SDK and production v2 SDK in isolated
+    # environments. Production depends on mcp>=2.0.0,<3; both pinned rows block.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:

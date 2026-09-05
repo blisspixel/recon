@@ -136,6 +136,40 @@ def test_guidance_discovery_ignores_heading_shaped_code_examples() -> None:
     assert "agents/windsurf/README.md#Paste the body of AGENTS.md directly." not in sections
 
 
+def test_maintainer_skill_sections_have_explicit_static_guidance_ownership() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    family = inventory["claim_families"]["static.agent-guidance.v1"]
+    prefix = "agents/maintainer/skills/"
+    expected = {
+        f"{prefix}recon-corpus-plan/SKILL.md#Corpus planning",
+        f"{prefix}recon-corpus-plan/SKILL.md#Define the question before selecting rows",
+        f"{prefix}recon-corpus-plan/SKILL.md#Freeze and hand off",
+        f"{prefix}recon-catalog-round/SKILL.md#Catalog round",
+        f"{prefix}recon-catalog-round/SKILL.md#Admit the round",
+        f"{prefix}recon-catalog-round/SKILL.md#Evaluate observations, then candidates",
+        f"{prefix}recon-catalog-round/SKILL.md#Completion",
+    }
+    discovered = discover_surfaces()["agent_guidance_sections"]
+
+    assert {section for section in discovered if section.startswith(prefix)} == expected
+    assert all(inventory["coverage"]["agent_guidance_sections"][section] == family["claim_id"] for section in expected)
+    assert {section.split("#", 1)[0] for section in expected} <= set(family["producer_paths"])
+    assert {"docs/catalog-maintenance.md", "docs/data-handling-policy.md"} <= set(family["evidence_path"])
+    assert family["lineage_status"] == "static"
+    audit_doc = " ".join((ROOT / "docs/default-claim-audit.md").read_text(encoding="utf-8").split())
+    assert f"{len(discovered)} agent-guidance sections" in audit_doc
+
+
+def test_maintainer_skill_section_cannot_lose_its_owner() -> None:
+    inventory = load_claim_inventory(AUDIT_PATH)
+    section = "agents/maintainer/skills/recon-catalog-round/SKILL.md#Admit the round"
+    del inventory["coverage"]["agent_guidance_sections"][section]
+
+    problems = audit_claim_inventory(inventory, ROOT)
+
+    assert any("agent_guidance_sections" in problem and section in problem for problem in problems)
+
+
 def test_panel_discovery_covers_every_formatter_renderer_with_qualified_ids() -> None:
     producers = discover_surfaces()["panel_producers"]
 

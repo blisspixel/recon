@@ -24,6 +24,9 @@ rather than "X is true".
 
 from __future__ import annotations
 
+import html
+import re
+
 from recon_tool.bayesian import BayesianNetwork, InferenceResult, NodePosterior
 
 __all__ = [
@@ -39,22 +42,21 @@ def _model_support_label(posterior: float, sparse: bool, absence_informative: bo
         # Minimum display-mass case, so language stays tentative. A low model
         # value for a hideable node is unresolved rather than evidence of
         # real-world absence.
-        if posterior >= 0.75:
-            return "tentative high model support"
-        if posterior >= 0.50:
-            return "tentative moderate model support"
-        if posterior >= 0.25:
-            return "tentative low model support"
-        return "tentative support for public absence" if absence_informative else "tentative low model support"
-    if posterior >= 0.90:
-        return "high model support"
-    if posterior >= 0.70:
-        return "moderate model support"
-    if posterior >= 0.40:
-        return "threshold-ambiguous model support"
-    if posterior >= 0.15:
-        return "low model support"
-    return "very low model support"
+        thresholds = (
+            (0.75, "tentative high model support"),
+            (0.50, "tentative moderate model support"),
+            (0.25, "tentative low model support"),
+        )
+        fallback = "tentative support for public absence" if absence_informative else "tentative low model support"
+    else:
+        thresholds = (
+            (0.90, "high model support"),
+            (0.70, "moderate model support"),
+            (0.40, "threshold-ambiguous model support"),
+            (0.15, "low model support"),
+        )
+        fallback = "very low model support"
+    return next((label for threshold, label in thresholds if posterior >= threshold), fallback)
 
 
 def _node_evidence_phrase(posterior: NodePosterior) -> str:
@@ -66,7 +68,7 @@ def _node_evidence_phrase(posterior: NodePosterior) -> str:
                 "declaration is itself evidence, so the posterior reflects that absence, "
                 "not the prior"
             )
-        return "no direct evidence (posterior follows network priors and parent claims)"
+        return "no direct evidence (posterior reflects network priors and evidence at connected nodes)"
     parts: list[str] = []
     for binding in posterior.evidence_used:
         kind, _, name = binding.partition(":")
@@ -98,9 +100,9 @@ def _node_influence_lines(posterior: NodePosterior) -> list[str]:
             1. slug `entra-id`     LLR +3.78 (52.3% of evidence influence)
             2. slug `microsoft365` LLR +3.46 (47.7%)
 
-    Single-binding case prints the LLR and reports "100% of evidence
-    influence" honestly — a single fact is the entirety of the
-    posterior shift on that node.
+    Shares describe contributing fired |LLR| only. Even a single binding's
+    100 percent share does not attribute the full posterior shift to that
+    binding: absence factors and connected-node evidence can also contribute.
     """
     ranked = posterior.evidence_ranked
     if not ranked:
@@ -112,7 +114,7 @@ def _node_influence_lines(posterior: NodePosterior) -> list[str]:
         header = f"- **Top influences (ranked, {len(ranked)} fired):**"
     else:
         header = f"- **Top influences (ranked top {_TOP_K_INFLUENTIAL} of {len(ranked)} fired):**"
-    lines: list[str] = [header]
+    lines: list[str] = [header, ""]
     for idx, ec in enumerate(top, start=1):
         if ec.kind == "slug":
             label = f"slug `{ec.name}`"
@@ -120,7 +122,8 @@ def _node_influence_lines(posterior: NodePosterior) -> list[str]:
             label = f"signal `{ec.name}`"
         else:
             label = f"{ec.kind}:{ec.name}"
-        lines.append(f"    {idx}. {label}, LLR {ec.llr:+.2f} ({ec.influence_pct:.1f}% of evidence influence)")
+        lines.append(f"    {idx}. {label}, LLR {ec.llr:+.2f} ({ec.influence_pct:.1f}% of local fired |LLR|)")
+    lines.append("")
     return lines
 
 
@@ -173,7 +176,7 @@ def render_dag_text(
 
     lines: list[str] = []
     header_target = domain or "the queried domain"
-    lines.append(f"# Bayesian evidence DAG — {header_target}")
+    lines.append(f"# Bayesian evidence DAG: {header_target}")
     lines.append("")
     lines.append(
         f"Inference summary: {result.evidence_count} fired bound observation(s) across "
@@ -187,7 +190,8 @@ def render_dag_text(
         "P(claim | observed evidence). The 80% uncertainty band is a separate "
         "evidence-strength display, not a credible or confidence interval. "
         "``Sparse`` flags display mass at the configured floor; it is not an "
-        "absence finding."
+        "absence finding. Ranked shares normalize local fired |LLR| only; "
+        "they are not percentages of the posterior change."
     )
     lines.append("")
 
@@ -198,6 +202,7 @@ def render_dag_text(
         evidence_phrase = _node_evidence_phrase(post)
 
         lines.append(f"## {node.name}")
+        lines.append("")
         lines.append(f"_{node.description}_")
         lines.append("")
         lines.append(
@@ -222,7 +227,7 @@ def render_dag_text(
                 parent_phrases.append(f"`{parent_name}` (posterior {parent_post.posterior:.3f})")
             lines.append(
                 f"- **Depends on:** {', '.join(parent_phrases)} "
-                f"— see CPT in `bayesian_network.yaml` for the conditional table."
+                f"(see CPT in `bayesian_network.yaml` for the conditional table)."
             )
         lines.append("")
     return "\n".join(lines).rstrip() + "\n"
@@ -243,7 +248,7 @@ def render_dag_dot(
     posteriors_by_name = {p.name: p for p in result.posteriors}
     title = domain or "domain"
     lines: list[str] = []
-    lines.append(f'digraph "recon_bayesian_{title}" {{')
+    lines.append(f'digraph "{_dot_escape_label(f"recon_bayesian_{title}")}" {{')
     lines.append("  rankdir=LR;")
     lines.append('  node [shape=box, style="rounded", fontname="Helvetica"];')
     lines.append('  edge [fontname="Helvetica", fontsize=10];')
@@ -258,7 +263,7 @@ def render_dag_dot(
         else:
             conflict_suffix = ""
             if post.conflict_provenance:
-                conflict_suffix = "\\nconflicts: " + ", ".join(c.field for c in post.conflict_provenance)
+                conflict_suffix = "\nconflicts: " + ", ".join(c.field for c in post.conflict_provenance)
             # v1.9.3.2: surface top-3 influential bindings inside the
             # node label so a DOT viewer renders the same evidence
             # ranking the text narrative shows. ``edge label`` per the
@@ -268,13 +273,13 @@ def render_dag_dot(
             influence_suffix = ""
             if post.evidence_ranked:
                 top = post.evidence_ranked[:_TOP_K_INFLUENTIAL]
-                influence_suffix = "\\ntop influences: " + ", ".join(
+                influence_suffix = "\nlocal fired |LLR|: " + ", ".join(
                     f"{ec.name} (LLR {ec.llr:+.2f}, {ec.influence_pct:.0f}%)" for ec in top
                 )
             label = (
-                f"{node.name}\\n"
-                f"{node.description}\\n"
-                f"posterior {post.posterior:.3f}\\n"
+                f"{node.name}\n"
+                f"{node.description}\n"
+                f"posterior {post.posterior:.3f}\n"
                 f"80% uncertainty band [{post.interval_low:.3f}, {post.interval_high:.3f}]"
                 f"{' (sparse)' if post.sparse else ''}"
                 f"{conflict_suffix}"
@@ -282,16 +287,14 @@ def render_dag_dot(
             )
             border = "dashed" if post.sparse else "solid"
             color = _color_for_posterior(post.posterior)
-        # Escape any double quotes in labels — node names are slug-shaped
-        # in our network, but description text could in principle contain
-        # them. The replace is cheap and defensive.
-        safe_label = label.replace('"', '\\"')
-        lines.append(f'  "{node.name}" [label="{safe_label}", style="rounded,{border}", color="{color}"];')
+        safe_label = _dot_escape_label(label)
+        safe_name = _dot_escape_label(node.name)
+        lines.append(f'  "{safe_name}" [label="{safe_label}", style="rounded,{border}", color="{color}"];')
 
     lines.append("")
     for node in network.nodes:
         for parent in node.parents:
-            lines.append(f'  "{parent}" -> "{node.name}";')
+            lines.append(f'  "{_dot_escape_label(parent)}" -> "{_dot_escape_label(node.name)}";')
 
     lines.append("}")
     return "\n".join(lines) + "\n"
@@ -329,19 +332,38 @@ def _mermaid_color_for_posterior(posterior: float) -> str:
     return "#cccccc"
 
 
+def _dot_escape_label(label: str) -> str:
+    """Keep DOT syntax, literal backslashes, and intended line breaks distinct."""
+    normalized = label.replace("\r\n", "\n").replace("\r", "\n")
+    return normalized.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n")
+
+
 def _mermaid_escape_label(label: str) -> str:
-    """Escape a label for inclusion inside a Mermaid quoted-node label.
+    """Escape literal label text before adding the renderer's HTML line breaks."""
+    normalized = label.replace("\r\n", "\n").replace("\r", "\n")
+    return html.escape(normalized, quote=True).replace("\n", "<br/>")
 
-    Mermaid quoted labels use double quotes as the delimiter and allow
-    HTML-style ``<br/>`` for line breaks. We need to:
 
-    * Replace ``\\n`` with ``<br/>`` so multi-line labels render.
-    * Escape any literal double quotes via the HTML entity ``&quot;``.
-      Mermaid does not support backslash-escaped quotes inside the
-      quoted form — the entity is the only safe form.
-    * Leave ``<br/>`` itself untouched (we inserted it deliberately).
-    """
-    return label.replace('"', "&quot;").replace("\n", "<br/>")
+def _mermaid_node_ids(network: BayesianNetwork) -> dict[str, str]:
+    """Preserve ordinary identifiers and safely alias custom names and keywords."""
+    reserved = {"end", "graph", "flowchart", "subgraph", "direction", "style", "class", "classDef", "click"}
+    safe_names = {
+        node.name
+        for node in network.nodes
+        if re.fullmatch(r"[A-Za-z_][A-Za-z_0-9]*", node.name) and node.name not in reserved
+    }
+    used = set(safe_names)
+    aliases: dict[str, str] = {}
+    for index, node in enumerate(network.nodes):
+        if node.name in safe_names:
+            aliases[node.name] = node.name
+            continue
+        alias = f"recon_node_{index}"
+        while alias in used:
+            alias += "_"
+        used.add(alias)
+        aliases[node.name] = alias
+    return aliases
 
 
 def render_dag_mermaid(
@@ -362,7 +384,8 @@ def render_dag_mermaid(
     captures the output can identify which run it came from.
     """
     posteriors_by_name = {p.name: p for p in result.posteriors}
-    title = domain or "domain"
+    title = " ".join((domain or "domain").splitlines())
+    node_ids = _mermaid_node_ids(network)
     lines: list[str] = []
     lines.append(f"%% recon Bayesian DAG for {title}")
     lines.append("graph LR")
@@ -381,7 +404,7 @@ def render_dag_mermaid(
             influence_suffix = ""
             if post.evidence_ranked:
                 top = post.evidence_ranked[:_TOP_K_INFLUENTIAL]
-                influence_suffix = "\ntop influences: " + ", ".join(
+                influence_suffix = "\nlocal fired |LLR|: " + ", ".join(
                     f"{ec.name} (LLR {ec.llr:+.2f}, {ec.influence_pct:.0f}%)" for ec in top
                 )
             label = (
@@ -396,13 +419,14 @@ def render_dag_mermaid(
             stroke_color = _mermaid_color_for_posterior(post.posterior)
             stroke_dash = ",stroke-dasharray:5 5" if post.sparse else ""
         safe_label = _mermaid_escape_label(label)
-        lines.append(f'  {node.name}["{safe_label}"]')
-        style_lines.append(f"  style {node.name} stroke:{stroke_color},stroke-width:2px{stroke_dash}")
+        node_id = node_ids[node.name]
+        lines.append(f'  {node_id}["{safe_label}"]')
+        style_lines.append(f"  style {node_id} stroke:{stroke_color},stroke-width:2px{stroke_dash}")
 
     lines.append("")
     for node in network.nodes:
         for parent in node.parents:
-            lines.append(f"  {parent} --> {node.name}")
+            lines.append(f"  {node_ids[parent]} --> {node_ids[node.name]}")
 
     if style_lines:
         lines.append("")
