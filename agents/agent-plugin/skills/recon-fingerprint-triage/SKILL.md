@@ -2,10 +2,10 @@
 name: recon-fingerprint-triage
 description: Triage recon fingerprint candidates across the bounded DNS catalog surface. Reads private single-domain discovery output, aggregate catalog baselines, or candidate queues, then classifies candidates as pending, promoted, rejected, or deferred under the v2.14 catalog-quality gates. Use when the user asks to find missing fingerprints, review unclassified DNS observations, or improve catalog coverage.
 license: Apache-2.0
-compatibility: Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Use connected MCP tools or a shell with recon on PATH. Live lookups require public network access. Catalog patching and tests require a separate recon source checkout.
+compatibility: Requires recon-tool 2.19.0 or a compatible v2 release and Python 3.11+. Use connected MCP tools or a shell with recon on PATH. Live lookups require public network access. Catalog patching and tests require a separate recon source checkout.
 metadata:
   author: blisspixel
-  version: 2.18.4
+  version: 2.19.0
 ---
 
 # recon-fingerprint-triage
@@ -95,7 +95,7 @@ public artifact.
 ### B. Multi-record catalog round
 
 Use the private outputs produced by `validation/catalog_baseline.py` and the
-round protocol in [`docs/catalog-strategy.md`](https://github.com/blisspixel/recon/blob/v2.18.4/docs/catalog-strategy.md). Keep these dimensions separate:
+round protocol in [`docs/catalog-strategy.md`](https://github.com/blisspixel/recon/blob/v2.19.0/docs/catalog-strategy.md). Keep these dimensions separate:
 
 - `cname_target` related-host chains;
 - apex `cname`;
@@ -142,7 +142,7 @@ A candidate remains `pending` until every item below is satisfied:
 
 1. **Exact rule shape.** Name the exact supported record type and the narrowest
    reusable pattern. State whether matching is exact, prefix, suffix, or the
-   type-specific grammar documented in [`docs/fingerprints.md`](https://github.com/blisspixel/recon/blob/v2.18.4/docs/fingerprints.md).
+   type-specific grammar documented in [`docs/fingerprints.md`](https://github.com/blisspixel/recon/blob/v2.19.0/docs/fingerprints.md).
 2. **Independent basis.** Cite a current provider-owned public reference or a
    disclosure-safe aggregate basis that did not consume the same row as both
    predictor and label. Repetition alone is not an independent label.
@@ -202,7 +202,7 @@ provider basis identifies a reusable pattern.
 ## YAML proposal shape
 
 Use the existing canonical name when extending a slug. Follow the exact
-type-specific grammar in [`docs/fingerprints.md`](https://github.com/blisspixel/recon/blob/v2.18.4/docs/fingerprints.md). A typical proposal is:
+type-specific grammar in [`docs/fingerprints.md`](https://github.com/blisspixel/recon/blob/v2.19.0/docs/fingerprints.md). A typical proposal is:
 
 ```yaml
 - name: <canonical display name>

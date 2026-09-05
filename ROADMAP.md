@@ -7,7 +7,7 @@ operator and contributor view: current state, next work, boundaries, and gates.
 
 ## Status
 
-recon **v2.18.4** is the current production baseline. The CLI, versioned JSON,
+recon **v2.19.0** is the current production baseline. The CLI, versioned JSON,
 local stdio MCP server, bounded public-metadata collectors, fail-closed claim
 audit, MCP dual-SDK matrix, and verified release path are complete. Local
 execution is the default, and the project does not operate a hosted service.
