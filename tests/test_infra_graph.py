@@ -3,7 +3,7 @@
 Covers:
 - Graph builder skips wildcards / empty / single-SAN certs.
 - Louvain detects two cleanly-separated cliques with high modularity.
-- Connected-components fallback fires above the node cap.
+- Connected-components fallback fires on construction caps.
 - ``skipped`` envelope on empty / trivial inputs.
 - Cluster member sorting, cap on members, cap on cluster count.
 - Edge surface is sorted by weight and capped.
@@ -50,7 +50,7 @@ def _unaggregated_graph_snapshot(
     dict[tuple[str, str], int],
     bool,
 ]:
-    """Preserve the pre-aggregation builder as a differential test oracle."""
+    """Unaggregated oracle with corrected construction-cap accounting."""
     from recon_tool import infra_graph
 
     graph: nx.Graph[str] = nx.Graph()
@@ -69,6 +69,7 @@ def _unaggregated_graph_snapshot(
             continue
         if len(sans) > infra_graph._MAX_SANS_PER_CERT_FOR_EDGES:
             sans = sorted(sans)[: infra_graph._MAX_SANS_PER_CERT_FOR_EDGES]
+            truncated = True
         issuer_raw = entry.get("issuer_name")
         issuer = infra_graph.strip_control_chars(str(issuer_raw)) if isinstance(issuer_raw, str) else ""
         for left, right in itertools.combinations(sorted(sans), 2):
@@ -260,6 +261,79 @@ class TestConnectedComponentsFallback:
 
 
 class TestCaps:
+    @pytest.mark.parametrize("san_count", [59, 60, 61])
+    def test_san_construction_cap_boundary(self, san_count: int) -> None:
+        from recon_tool.infra_graph import _MAX_SANS_PER_CERT_FOR_EDGES, _build_graph
+
+        names = [f"host{index:03}.alpha.invalid" for index in range(san_count)]
+        entries = [_entry(list(reversed(names)))]
+        graph, _, cert_counts, truncated = _build_graph(entries)
+        retained_count = min(san_count, _MAX_SANS_PER_CERT_FOR_EDGES)
+        expected_edges = retained_count * (retained_count - 1) // 2
+
+        assert set(graph.nodes) == set(names[:retained_count])
+        assert graph.number_of_edges() == expected_edges
+        assert len(cert_counts) == expected_edges
+        assert all(count == 1 for count in cert_counts.values())
+        assert truncated is (san_count > _MAX_SANS_PER_CERT_FOR_EDGES)
+
+        report = build_infrastructure_clusters(entries)
+        assert report.node_count == retained_count
+        assert report.edge_count == expected_edges
+        assert sum(cluster.size for cluster in report.clusters) == MAX_MEMBERS_PER_CLUSTER
+        if truncated:
+            assert report.algorithm == "connected_components"
+            assert report.modularity == 0.0
+            assert report.partition_stability is None
+            assert report.stability_runs == 0
+        else:
+            # The output-only member cap must not masquerade as construction loss.
+            assert report.algorithm == "louvain"
+            assert report.partition_stability == 1.0
+            assert report.stability_runs == 8
+
+    def test_san_clipping_skips_optimizer_and_continues_later_certificates(
+        self, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        from recon_tool import infra_graph
+
+        names = [f"host{index:03}.alpha.invalid" for index in range(61)]
+        entries = [
+            _entry(names),
+            _entry(list(reversed(names))),
+            _entry(["later-a.alpha.invalid", "later-b.alpha.invalid"]),
+        ]
+        louvain = Mock(side_effect=AssertionError("clipped construction must skip Louvain"))
+        stability = Mock(side_effect=AssertionError("clipped construction must skip seed stability"))
+        monkeypatch.setattr(infra_graph, "_louvain_partition", louvain)
+        monkeypatch.setattr(infra_graph, "_partition_stability", stability)
+
+        report = build_infrastructure_clusters(entries)
+
+        louvain.assert_not_called()
+        stability.assert_not_called()
+        assert report.algorithm == "connected_components"
+        assert report.node_count == 62
+        assert report.edge_count == 1771
+        assert report.edges[0].shared_cert_count == 2
+        assert report.edges[-1].source == "later-a.alpha.invalid"
+        assert report.edges[-1].target == "later-b.alpha.invalid"
+        assert report.edges[-1].shared_cert_count == 1
+        assert report.partition_stability is None
+        assert report.stability_runs == 0
+
+    def test_normal_san_filtering_does_not_report_construction_truncation(self) -> None:
+        from recon_tool.infra_graph import _build_graph
+
+        names = [f"host{index:03}.alpha.invalid" for index in range(60)]
+        raw_names = [*names, names[0].upper(), "*.alpha.invalid", "not a host", ""]
+
+        graph, _, _, truncated = _build_graph([_entry(raw_names)])
+
+        assert set(graph.nodes) == set(names)
+        assert graph.number_of_edges() == 1770
+        assert truncated is False
+
     def test_cluster_count_capped(self):
         # Build many disconnected small cliques; the report should
         # surface at most MAX_CLUSTERS even if more exist.
@@ -401,6 +475,8 @@ class TestRepeatedHyperedgeAggregation:
                 _entry(["*.example.com", "not a host"], issuer="Ignored CA"),
             ],
             [_entry([f"cluster-{cluster}-host-{index}.example.com" for index in range(50)]) for cluster in range(11)],
+            [_entry([f"host{index:03}.alpha.invalid" for index in range(61)])] * 3
+            + [_entry(["later-a.alpha.invalid", "later-b.alpha.invalid"])],
         ],
     )
     def test_aggregation_matches_the_unaggregated_graph_contract(self, entries: list[dict]) -> None:

@@ -1,7 +1,7 @@
 # Statistical assurance
 
 Semantic baseline established for recon v2.4.0. Reviewed against v2.18.4 on
-2026-09-02.
+2026-09-05.
 
 This document records what recon's numerical outputs establish and where their
 support stops. Faithful computation, model-relative uncertainty, external
@@ -148,6 +148,13 @@ Connected-component and skipped paths use `0.0` as a sentinel.
 fixed graph. It does not measure stability to missing CT entries, hub
 certificates, or graph weighting choices.
 
+Construction caps, including per-certificate SAN clipping, select the
+connected-components fallback without a seed-stability value. The public report
+does not expose a completeness flag or omitted counts. Graph counts describe
+the constructed graph, and separate presentation caps can omit members,
+clusters, or exported edges. Neither algorithm selection nor seed stability
+establishes complete collection or presentation.
+
 ## External evidence ledger
 
 | Claim or output | Highest level | Evidence | Limit |
@@ -174,12 +181,29 @@ clean calibration claim but is not itself a level-4 training-disjoint result.
 
 ## Validation that remains necessary
 
-The roadmap's first statistical task is a paired, predeclared product ablation:
+The four-arm M365 study was cancelled before target collection on 2026-08-13.
+The [arm-identifiability audit](../validation/2026-08-13-quality-arm-identifiability.md)
+found A1 equal to A0 and A2 equal to A3 across the frozen 64 DNS evidence-role
+states, with no case where A3 supported and A0 abstained. Its benefit gate
+could not pass at any sample size. The following arms are a post-mortem of that
+design, not an active collection plan:
 
 1. deterministic evidence plus explicit abstention;
 2. per-slug evidence strength;
 3. strongest reviewed evidence unit;
 4. current Bayesian network.
+
+Any future study needs a distinct candidate with at least two non-collapsed
+evidence units, a binary operator action tied to shipped behavior, an executable
+structural-identifiability and dominance preflight, disjoint labels, and a new
+preregistration. The cancelled frame remains unused and cannot complete the
+voided design. The implicit v2 fusion default remains enabled and silent for
+compatibility; the non-promotion disposition classifies it as an advanced
+diagnostic, not a default-off runtime change. See
+[ADR-0013](adr/0013-fusion-non-promotion-and-v3-transition.md) and its amendments.
+
+The following measurement requirements remain necessary for any new study,
+but are not sufficient to authorize collection:
 
 Predeclare one primary family, candidate, and comparator. Use one frozen
 `(domain, claim_family, observation_time)` row per unique domain, admit at most
@@ -198,10 +222,11 @@ at zero discordance. Bootstrap intervals are secondary, must preserve the
 predeclared label strata and paired structure, and cannot repair unknown
 cross-domain dependence. Every interval must name its assumptions.
 
-The minimum sample sizes and go or no-go rule live in
-[roadmap.md](roadmap.md). An inconclusive or negative result moves advanced
-fusion out of the primary path. No secondary metric can override that decision
-after results are visible.
+The historical minimum sample sizes and go or no-go rule remain in
+[roadmap.md](roadmap.md). A new study must freeze its own justified sample plan,
+decision rule, and compatible product disposition before evaluation. No
+secondary metric can override a failed primary decision after results are
+visible or revive the cancelled design.
 
 The proposed claim-robustness envelope adds a separate test: evidence removal
 and planting under explicit provenance classes, dependency units, costs, and

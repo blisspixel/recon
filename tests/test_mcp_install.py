@@ -514,12 +514,16 @@ class TestCLI:
         console = Console(file=output, width=40, color_system=None)
         monkeypatch.setattr("recon_tool.cli.mcp.get_err_console", lambda: console)
 
-        _render_install_verification("claude-desktop")
+        config_path = Path("profile with spaces") / "mcp.json"
+        _render_install_verification("claude-desktop", config_path)
 
         lines = output.getvalue().splitlines()
         assert any(line.strip() == "recon doctor --mcp" for line in lines)
         assert any(line.strip() == "recon mcp doctor" for line in lines)
-        assert any(line.strip() == "recon doctor --client=claude-desktop" for line in lines)
+        assert any(
+            line.strip().startswith("recon doctor --client=claude-desktop --config-path ") and str(config_path) in line
+            for line in lines
+        )
         assert not any(line.startswith("--client=") for line in lines)
 
     def test_install_dry_run_emits_plan_without_writing(self, tmp_path: Path) -> None:

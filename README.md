@@ -52,7 +52,7 @@ review:
 recon "<domain-you-want-to-review>"
 ```
 
-For a harmless syntax-only example, you can use `recon example.com`. recon
+For a real lookup showing the output shape, you can use `recon example.com`. recon
 ships no offline demo mode: this is a real lookup command, but an ordinary
 lookup may reuse a recent result from the default 24-hour cache. Pass
 `--no-cache` for fresh collection. Reserved names such as `example.com` return a
@@ -124,7 +124,7 @@ Install, update, uninstall, and first-run detail:
 |---|---|---|
 | Review one namespace | `recon "<domain>"` | A compact, hedged panel of observed mail, identity, service, and confidence signals |
 | Create a deterministic evidence handoff | `recon review "<domain>"` | One fresh, role-neutral NamespaceReviewBundle with collection validity, evidence-linked candidates, and a standing scope statement |
-| Explain or hand off a finding | `recon "<domain>" --explain` | Per-source status plus the evidence retained for each material observation |
+| Explain or hand off a finding | `recon "<domain>" --explain` | Per-source status, lineage-qualified rules, and retained-evidence counts; use `--json --explain` for the structured evidence graph |
 | Review an operator-supplied set | `recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2` | One portfolio evidence bundle with ordered typed results and errors, observable ecosystem overlaps, and an aggregate cohort summary |
 | Work through an agent | `recon mcp install --client=<name>` | Local typed tools, resources, and prompts without a hosted recon service |
 

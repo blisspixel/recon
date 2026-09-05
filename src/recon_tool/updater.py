@@ -15,9 +15,13 @@ from __future__ import annotations
 
 import http.client
 import json
+import os
 import re
 import shutil
+import stat
+import subprocess
 import sys
+import tomllib
 import urllib.error
 import urllib.request
 from importlib.metadata import PackageNotFoundError, distribution
@@ -28,6 +32,7 @@ from recon_tool.json_limits import exceeds_json_nesting_limit
 
 _PACKAGE = "recon-tool"
 _MAX_PYPI_RESPONSE_BYTES = 5 * 1024 * 1024
+_MAX_INSTALL_RECEIPT_BYTES = 64 * 1024
 
 # Install methods, in detection order of specificity.
 PIPX = "pipx"
@@ -35,6 +40,7 @@ UV = "uv"
 HOMEBREW = "homebrew"
 EDITABLE = "editable"
 PIP = "pip"
+UNKNOWN = "unverified"
 
 
 def current_version() -> str:
@@ -54,25 +60,92 @@ def _is_editable() -> bool:
         return False
 
 
-def detect_install_method() -> str:
-    """Best-effort guess of how the running recon was installed.
+def _read_install_receipt(path: Path) -> str | None:
+    """Read bounded manager metadata, distinguishing absent from invalid."""
+    try:
+        if not stat.S_ISREG(path.lstat().st_mode):
+            raise ValueError("installation receipt is not a regular file")
+        # Refuse links and avoid blocking on a FIFO substituted after lstat on
+        # platforms that expose these flags. Recheck the opened descriptor.
+        flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0)
+        with os.fdopen(os.open(path, flags), "rb") as handle:
+            if not stat.S_ISREG(os.fstat(handle.fileno()).st_mode):
+                raise ValueError("installation receipt is not a regular file")
+            raw = handle.read(_MAX_INSTALL_RECEIPT_BYTES + 1)
+    except FileNotFoundError:
+        return None
+    if len(raw) > _MAX_INSTALL_RECEIPT_BYTES:
+        raise ValueError("installation receipt exceeds supported size")
+    return raw.decode("utf-8-sig")
 
-    Reads the interpreter prefix (pipx / uv live in distinctive paths) and the
-    package's direct_url.json (editable installs). Falls back to
-    ``pip``, the safe default, since ``pip install -U`` works for a plain venv
-    or user install.
+
+def _pipx_receipt_method(raw: str) -> str:
+    if exceeds_json_nesting_limit(raw):
+        return UNKNOWN
+    data = json.loads(raw)
+    if not isinstance(data, dict) or not isinstance(data.get("pipx_metadata_version"), str):
+        return UNKNOWN
+    package = data.get("main_package")
+    if not isinstance(package, dict) or package.get("package") != _PACKAGE:
+        return UNKNOWN
+    return PIPX if not package.get("suffix") and not package.get("pinned") else UNKNOWN
+
+
+def _uv_receipt_method(raw: str) -> str:
+    tool = tomllib.loads(raw).get("tool")
+    if not isinstance(tool, dict):
+        return UNKNOWN
+    requirements = tool.get("requirements")
+    if not isinstance(requirements, list) or not requirements:
+        return UNKNOWN
+    first = requirements[0]
+    return UV if isinstance(first, dict) and first.get("name") == _PACKAGE else UNKNOWN
+
+
+def _receipt_method(prefix: Path) -> str | None:
+    """Identify the environment owner, not the installer of a dependency.
+
+    pipx records its main package in pipx_metadata.json. uv records the tool
+    as its first requirement in uv-receipt.toml, before any --with packages.
+    Receipts work with custom manager directories without path-name guesses.
+    Unknown receipt shapes deliberately require manual maintenance.
+    """
+    try:
+        pipx_raw = _read_install_receipt(prefix / "pipx_metadata.json")
+        uv_raw = _read_install_receipt(prefix / "uv-receipt.toml")
+        if pipx_raw is not None and uv_raw is not None:
+            return UNKNOWN
+        if pipx_raw is not None:
+            return _pipx_receipt_method(pipx_raw)
+        if uv_raw is not None:
+            return _uv_receipt_method(uv_raw)
+    except (OSError, ValueError, RecursionError):
+        return UNKNOWN
+    return None
+
+
+def detect_install_method() -> str:
+    """Identify the running install from editable or manager metadata.
+
+    Directory names alone never authorize a manager upgrade. A pip fallback
+    requires package INSTALLER metadata; an unknown installer is manual-only.
     """
     if _is_editable():
         return EDITABLE
-    prefix = str(Path(sys.prefix)).replace("\\", "/").lower()
-    parts = prefix.split("/")
-    if "pipx" in parts:
-        return PIPX
-    if "uv" in parts and "tools" in parts:
-        return UV
-    if "cellar" in parts or "homebrew" in prefix:
+    receipt_method = _receipt_method(Path(sys.prefix))
+    if receipt_method is not None:
+        return receipt_method
+    prefix_text = str(Path(sys.prefix)).replace("\\", "/").lower()
+    parts = prefix_text.split("/")
+    if "cellar" in parts or "homebrew" in prefix_text:
         return HOMEBREW
-    return PIP
+    if "pipx" in parts or ("uv" in parts and "tools" in parts):
+        return UNKNOWN
+    try:
+        installer = distribution(_PACKAGE).read_text("INSTALLER")
+    except (PackageNotFoundError, OSError):
+        return UNKNOWN
+    return PIP if installer is not None and installer.strip() == PIP else UNKNOWN
 
 
 def _current_workspace_root(current_directory: Path) -> Path:
@@ -118,13 +191,46 @@ def upgrade_command(method: str) -> list[str] | None:
     """
     if method == PIPX:
         launcher = _resolve_launcher("pipx")
-        return None if launcher is None else [launcher, "upgrade", _PACKAGE]
+        if launcher is not None and _manager_targets_current_install(launcher, method):
+            return [launcher, "upgrade", _PACKAGE]
+        return None
     if method == UV:
         launcher = _resolve_launcher("uv")
-        return None if launcher is None else [launcher, "tool", "upgrade", _PACKAGE]
+        if launcher is not None and _manager_targets_current_install(launcher, method):
+            return [launcher, "tool", "upgrade", _PACKAGE]
+        return None
     if method == PIP:
         return [sys.executable, "-m", "pip", "install", "-U", _PACKAGE]
     return None
+
+
+def _manager_targets_current_install(launcher: str, method: str) -> bool:
+    """Verify the launcher's local destination before offering an upgrade.
+
+    Custom UV_TOOL_DIR / PIPX_HOME settings may differ from those that created
+    this environment. Query only the already-vetted launcher, with no package
+    operation or network lookup, and compare its reported root to sys.prefix.
+    """
+    prefix = Path(sys.prefix)
+    if prefix.name != _PACKAGE or _receipt_method(prefix) != method:
+        return False
+    query = ["tool", "dir"] if method == UV else ["environment", "--value", "PIPX_LOCAL_VENVS"]
+    try:
+        result = subprocess.run(  # noqa: S603
+            [launcher, *query],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            text=True,
+            timeout=5.0,
+            check=False,
+        )
+        root = result.stdout.strip()
+        if result.returncode != 0 or not root or len(root) > 4096 or any(ord(char) < 32 for char in root):
+            return False
+        root_path = Path(root)
+        return root_path.is_absolute() and (root_path / _PACKAGE).resolve() == prefix.resolve()
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        return False
 
 
 def manual_hint(method: str) -> str:
@@ -134,10 +240,14 @@ def manual_hint(method: str) -> str:
     if method == EDITABLE:
         return "git pull  (editable install from a source checkout)"
     if method == PIPX:
-        return "pipx upgrade recon-tool"
+        return (
+            "verify `pipx environment --value PIPX_LOCAL_VENVS` contains this install, then `pipx upgrade recon-tool`"
+        )
     if method == UV:
-        return "uv tool upgrade recon-tool"
-    return "pip install -U recon-tool"
+        return "verify `uv tool dir` contains this install, then `uv tool upgrade recon-tool`"
+    if method == PIP:
+        return "pip install -U recon-tool"
+    return "installation owner could not be verified; use the original environment's package manager manually"
 
 
 def fetch_latest_version(timeout: float = 10.0) -> str | None:

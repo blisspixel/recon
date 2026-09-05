@@ -101,6 +101,32 @@ healthy when it runs on its cadence and produces its artifact, not when it
 | Doc-versus-runtime consistency | Each release | Per release | Reconciled roadmap, schema, stability, and CHANGELOG; the parity matrix | The drift gates stay green; no document claims behavior the code lacks |
 | Release readiness and provenance | Each release | Per release | Local and remote readiness, SBOM, provenance, channel parity | The tag, PyPI artifact, and GitHub Release identify one commit; the SBOM and attestations are present |
 
+### Current assurance priorities
+
+The September 2026 step-back review prioritizes operator trust over feature
+count. Its bounded corrections preserve unavailable-source and sparse-result
+caveats in linear output, honor explicit explanation requests, avoid stability
+claims after graph-construction clipping, verify explicit installation paths,
+and test the built wheel outside the checkout. The
+[catalog claim review](../validation/2026-09-05-catalog-claim-review.md)
+narrows or retires unsupported rules and keeps new coverage proposals separate.
+These changes live in Unreleased until a deliberate package release.
+
+Remaining research is conditional, not an implied backlog commitment:
+
+- Before retuning inference, characterize repeated records and shared
+  derivations as dependency units. Freeze the operator decision, independent
+  labels, and loss before claiming accuracy gains. Existing fusion repetition
+  behavior remains a documented heuristic, not a calibrated probability.
+- Before extending the public observation envelope, identify a consumer that
+  needs per-record collection windows, vantage, or graph-completeness metadata.
+  Internal timestamps and seed stability cannot supply those guarantees.
+- Before claiming client portability, complete the frozen representative-client
+  evaluation. Manifest validation and local stdio tests do not substitute for it.
+- Before broadening fingerprints, test exact owner/value grammar, deceptive
+  lookalikes, overlap, collection opportunity, and retirement semantics. A
+  missing public signal can remain the correct answer.
+
 ### The fingerprint-freshness loop, in detail
 
 The repository [maintainer workflow](catalog-maintenance.md) supplies separate
@@ -1116,7 +1142,7 @@ known-cluster unit, observation opportunities, CT and direct-probe settings,
 catalog and code digests, aggregate outputs, promotion and regression budgets,
 and disclosure review. A result may not retroactively change those choices.
 
-The catalog currently holds 869 entries across 692 unique slugs, with 1,112
+The catalog currently holds 867 entries across 691 unique slugs, with 1,110
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);

@@ -17,7 +17,6 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
-from recon_tool.confidence import is_confidence_contributor
 from recon_tool.formatter.briefing import (
     SCALE_GAP_NOTE,
     briefing_insights,
@@ -49,7 +48,11 @@ from recon_tool.formatter.classify import (
     provider_line,
     slug_to_relationship_metadata,
 )
-from recon_tool.formatter.collection_status import project_collection_status
+from recon_tool.formatter.collection_status import (
+    collection_note_parts,
+    project_collection_status,
+    source_display_state,
+)
 from recon_tool.formatter.comparison import format_comparison_dict, format_comparison_json
 from recon_tool.formatter.delta import (  # re-exported: stable import path after the split
     format_delta_dict,
@@ -1092,16 +1095,7 @@ def _degraded_note_parts(info: TenantInfo) -> tuple[list[str], bool]:
     """
     status = project_collection_status(info)
 
-    note_parts: list[str] = []
-    if status.unavailable_sources:
-        note_parts.append(f"Some sources unavailable ({', '.join(status.unavailable_sources)})")
-    if status.ct_state == "unavailable":
-        note_parts.append(f"All CT providers unavailable ({', '.join(status.ct_sources)})")
-    elif status.ct_state == "cache_recovered":
-        age = status.ct_cache_age_days
-        age_str = "today" if age == 0 else f"{age} day{'s' if age != 1 else ''} old"
-        note_parts.append(f"CT: from local cache, {age_str} ({status.ct_subdomain_count} subdomains)")
-    return note_parts, status.is_warning
+    return list(collection_note_parts(status)), status.is_warning
 
 
 def _render_degraded_note(info: TenantInfo) -> Text | None:
@@ -1186,10 +1180,11 @@ def render_verbose_sources(results: list[SourceResult], *, console: Console | No
     """Print per-source status lines to console."""
     c = console or get_console()
     for result in results:
-        success = is_confidence_contributor(result)
-        soft_miss = not success and _is_soft_miss(result.error)
+        state = source_display_state(result)
+        success = state == "match"
+        soft_miss = state == "no_match"
         marker = "[green]match[/green]" if success else ("[dim]no match[/dim]" if soft_miss else "[red]error[/red]")
-        detail = _source_success_description(result) if success else result.error or "no match"
+        detail = _source_success_description(result) if success else result.error or state.replace("_", " ")
         safe_detail = escape(strip_control_chars(detail))
         c.print(f"  {marker} {result.source_name}: {safe_detail}")
 
@@ -1224,11 +1219,12 @@ def render_sources_detail(results: list[SourceResult]) -> Table:
     table.add_column("Details")
 
     for result in results:
-        status = (
-            Text("\u2713 success", style="green")
-            if is_confidence_contributor(result)
-            else Text("\u2717 failed", style="red")
-        )
+        state = source_display_state(result)
+        status = {
+            "match": Text("\u2713 success", style="green"),
+            "no_match": Text("\u2013 no match", style="dim"),
+            "unavailable": Text("\u2717 unavailable", style="red"),
+        }[state]
         tenant_id = result.tenant_id or "—"
         # region and error can carry attacker-influenced text (a federation
         # region value, or a domain / exception interpolated into an error
@@ -1393,28 +1389,6 @@ def render_chain_panel(report: ChainReport) -> Panel:
 # ── Explanation rendering ────────────────────────────────────────────────
 
 
-# Substrings that mark a SourceResult error as a "soft miss" — the source
-# ran cleanly and determined the target isn't theirs — rather than a
-# transport/transient failure. Rendering these with `✗` in red misreads
-# a legitimate "not a customer" answer as if the tool had broken.
-_SOFT_MISS_MARKERS: tuple[str, ...] = (
-    "No Google Workspace",
-    "No federated IdP redirect",
-    "Not a Google Workspace",
-    "No M365 tenant",
-    "Not a registered M365",
-    "HTTP 400 from OIDC discovery",
-    "No information could be resolved",
-    "no data returned",
-)
-
-
-def _is_soft_miss(error: str | None) -> bool:
-    if not error:
-        return True  # empty error but is_success False = soft miss
-    return any(marker in error for marker in _SOFT_MISS_MARKERS)
-
-
 def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
     """Render a compact per-source status panel for ``--explain`` output.
 
@@ -1453,19 +1427,20 @@ def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
     for i, result in enumerate(primary):
         if i > 0:
             text.append("\n")
-        if is_confidence_contributor(result):
+        state = source_display_state(result)
+        if state == "match":
             description = _source_success_description(result)
             text.append("  ✓ ", style="#a3d9a5")
             text.append(f"{result.source_name}", style="bold")
             text.append(f" — {description}", style="dim")
-        elif _is_soft_miss(result.error):
+        elif state == "no_match":
             text.append("  – ", style="dim")
             text.append(f"{result.source_name}", style="bold")
             text.append(f" — {result.error or 'no match'}", style="dim")
         else:
             text.append("  ✗ ", style="#e07a5f")
             text.append(f"{result.source_name}", style="bold")
-            text.append(f" — {result.error}", style="dim")
+            text.append(f" - {result.error or 'source unavailable'}", style="dim")
     return Panel(
         text,
         title="Source Status",

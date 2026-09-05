@@ -28,10 +28,15 @@ operator, corporate group, ownership, or control.
 
 ### Tool Surface Changes
 
-Tool surface changes: no CLI command or flag changes. Google identity no longer
-follows external IdP destinations. Maintainer promotion reports additionally
-bind the exact evaluated-rule digest and reject unsupported conjunctions and
-operator-local rules. Runtime lookup JSON fields remain unchanged.
+Tool surface changes: `recon doctor --client=<name>` accepts `--config-path` for the exact
+client file verified after installation. MCP lookup honors `explain=true` on
+text and Markdown as well as JSON. Plain briefings retain material collection
+caveats and sparse-result guidance. Maintainer fingerprint audits default to
+built-ins, with explicit `--effective-catalog` for local additions. Google
+identity no longer follows external IdP destinations. Promotion reports bind
+the exact evaluated-rule digest and reject unsupported conjunctions and
+operator-local rules. Runtime lookup JSON fields and the MCP tool set remain
+unchanged.
 
 ### Fixed
 
@@ -67,6 +72,22 @@ operator-local rules. Runtime lookup JSON fields remain unchanged.
   maintainer workflows.
 - Include numerical-limit regressions in the mutation gate and its change
   triggers, with one-sided underflow and exact-zero arithmetic anchors.
+- Mark per-certificate SAN clipping as graph-construction truncation and use
+  the existing deterministic fallback without a misleading seed-stability
+  diagnostic. Graph weights, caps, and public fields remain unchanged.
+- Share clean non-match versus unavailable-source labeling across source views,
+  preserve caveats in plain briefings, and honor human-format MCP explanations.
+- Resolve only the selected client configuration path, verify explicit profile
+  files after installation, and require manager ownership and matching upgrade
+  destinations before automatic uv or pipx upgrades. A successful upgrade command
+  no longer asserts that the latest PyPI version was installed.
+- Narrow Vercel routes, retire generic AWS-to-SES and unsupported Okta/GitHub
+  verification rules, and correct Slack plan and Glitch lifecycle claims.
+  Keep new Retool and Postmark candidates in a separate unpromoted review queue.
+- Gate CI on the same built wheel's offline contracts across Windows, Linux,
+  and macOS. Release smoke also verifies installed catalogs, MCP resources and
+  tools, import origin, executable identity, and portable data relocation without
+  adding dependency execution to the isolated build-and-seal job.
 
 ### Documentation
 
@@ -79,6 +100,9 @@ operator-local rules. Runtime lookup JSON fields remain unchanged.
 - Clarify the Agent Plugins package root, executable discovery, persistent-state
   isolation, and installation prerequisites. Standards and local protocol checks
   remain distinct from the frozen representative-client evaluation.
+- Correct cache-freshness guidance: internal timestamps are not public lookup
+  JSON fields. Document fresh collection routes without implying per-record
+  freshness, and reconcile cancelled correlation-study status across documents.
 
 ## [2.18.4] - 2026-09-02
 

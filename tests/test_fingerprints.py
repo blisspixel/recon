@@ -696,10 +696,8 @@ def test_okta_custom_domain_family_matches_current_vendor_pages() -> None:
     txt = _rules_for_slug("okta", "txt")
     cname = _rules_for_slug("okta", "cname")
     targets = _rules_for_slug("okta", "cname_target")
-    owned = txt["^_oktaverification="]
-    assert owned.verified == "2026-08-19"
-    assert "_oktaverification" in owned.description
-    assert "developer.okta.com/docs/guides/custom-url-domain" in owned.reference
+    # The documented marker is a DNS owner, not an apex TXT value prefix.
+    assert "^_oktaverification=" not in txt
     alternate = txt["^okta-domain-verification"]
     assert alternate.verified == ""
     assert "stays undated" in alternate.description

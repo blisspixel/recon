@@ -270,7 +270,14 @@ recon will sometimes return very little - a domain behind heavy proxies, with mi
 
 ## Cache awareness
 
-Every `TenantInfo` carries `resolved_at` (when the live resolution produced this result) and `cached_at` (when the cache entry was written; `null` on a fresh lookup). If the user asks for "current" data and `resolved_at` is older than they likely want, mention it and offer to re-resolve. Don't silently serve stale data as if it were fresh.
+Ordinary lookups may reuse a result from the default 24-hour cache. The public
+lookup JSON does not expose `resolved_at` or `cached_at`; those timestamps are
+internal cache metadata. Do not invent a collection time or describe a normal
+lookup as fresh merely because it just returned. When current collection is
+requested, use `build_review_bundle(domain)` for a fresh, lookup-cache-bypassed
+MCP handoff, or `recon "<validated-domain>" --no-cache` through the CLI. Check
+source status and degraded-source notes as well: a fresh lookup attempt does
+not guarantee every upstream observation is current or available.
 
 ## Ephemeral fingerprints
 
@@ -303,7 +310,7 @@ the detail for each lives in the section above.
 - **`--exposure` / `assess_exposure` is cache first and may resolve on a miss.** The index calculation adds no network calls after the ordinary base lookup. Do not imply that the 0-100 value comes from a separate scan or measures overall security.
 - **Low confidence means sparse public evidence, not a suspicious domain or organization.** Sparse output marks limited evidence for the queried namespace, not a finding or calibrated uncertainty level. Do not manufacture confidence or insinuation.
 - **Do not guess a profile from a thin hint.** A wrong posture lens skews emphasis; omit `--profile` when the target type is unclear.
-- **Serve cache honestly.** Check `resolved_at` / `cached_at`; if the user wants current data and the entry is old, offer to re-resolve rather than passing stale data as fresh.
+- **Serve cache honestly.** Public lookup JSON omits internal timestamps. For current collection, use `build_review_bundle` or CLI `--no-cache`, and retain source freshness and failure caveats.
 
 ## Hard rules
 

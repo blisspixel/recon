@@ -188,7 +188,7 @@ class TestBuildJobIsPure:
 class TestPackageSmokeJob:
     """A low-privilege job must execute the sealed wheel before publication."""
 
-    def test_package_smoke_consumes_dist_and_runs_both_entry_points(self, workflow):
+    def test_package_smoke_consumes_dist_and_standalone_probe_without_checkout(self, workflow):
         job = workflow["jobs"]["package-smoke"]
         text = "\n".join(_step_text(step) for step in _steps(job))
         needs = job.get("needs")
@@ -206,9 +206,21 @@ class TestPackageSmokeJob:
         assert '"${#sdists[@]}" -ne 1' in text
         assert '"$wheel" != "$expected_wheel"' in text
         assert '"${sdists[0]}" != "$expected_sdist"' in text
-        assert 'uv tool run --isolated --from "$wheel" recon --version' in text
-        assert 'uv run --no-project --isolated --with "$wheel" python -m recon_tool --version' in text
+        assert 'smoke-inputs/scripts/check_installed_wheel.py --wheel "$wheel"' in text
+        assert '--manifest smoke-inputs/agents/agent-plugin/mcp.json --version "$version"' in text
+        assert "name=wheel-smoke-inputs" in text
+        assert "actions/checkout@" not in text
         assert job.get("permissions", {}).get("id-token") != _PERM_WRITE
+
+    def test_smoke_inputs_are_tested_source_files_not_release_artifacts(self, workflow):
+        steps = _steps(workflow["jobs"]["test"])
+        upload = next(step for step in steps if step.get("with", {}).get("name") == "wheel-smoke-inputs")
+        assert upload["uses"].startswith("actions/upload-artifact@")
+        assert set(upload["with"]["path"].splitlines()) == {
+            "scripts/check_installed_wheel.py",
+            "agents/agent-plugin/mcp.json",
+        }
+        assert upload["with"]["if-no-files-found"] == "error"
 
     def test_publication_waits_for_package_smoke(self, workflow):
         for name in ("publish-pypi", "github-release"):

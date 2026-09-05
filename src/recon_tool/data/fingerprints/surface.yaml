@@ -2498,27 +2498,35 @@ fingerprints:
     reference: https://vercel.com/docs/projects/domains
     tier: application
     description: >-
-      Subdomain CNAMEs into cname.vercel-dns.com (Vercel's
-      custom-domain CNAME-pointer for non-apex hostnames).
-      Indicates the domain delegates a branded subdomain to
-      a Vercel-deployed application.
+      CNAME routing to Vercel's legacy custom-domain target.
+      Does not establish authoritative DNS delegation, completed
+      domain verification, or active hosting.
   - type: cname_target
     pattern: vercel.app
     reference: https://vercel.com/docs/projects/domains
     tier: application
     description: >-
-      Subdomain CNAMEs into vercel.app (Vercel's default
-      hosted-app hostname). Indicates the domain delegates
-      a branded subdomain to a Vercel-deployed app.
+      CNAME routing to a Vercel application hostname. Does not
+      establish authoritative DNS delegation, completed domain
+      verification, or active hosting.
   - type: cname_target
-    pattern: vercel-dns-
-    reference: https://vercel.com/docs/projects/domains
+    pattern: vercel-dns-017.com
+    reference: https://vercel.com/docs/domains/working-with-domains/add-a-domain
+    verified: '2026-09-05'
     tier: application
     description: >-
-      Subdomain CNAMEs into a vercel-dns-* pattern (Vercel
-      DNS verification or apex-helper endpoints). Indicates
-      the domain uses Vercel-managed DNS for a custom-domain
-      hookup.
+      CNAME routing to Vercel's documented project-specific
+      custom-domain target family. Does not establish authoritative
+      DNS delegation, completed domain verification, or active hosting.
+  - type: cname_target
+    pattern: ^cname\.vercel-dns-0\.com\.?$
+    reference: https://vercel.com/docs/domains/set-up-custom-domain
+    verified: '2026-09-05'
+    tier: application
+    description: >-
+      CNAME routing to Vercel's documented general-purpose
+      custom-domain target. Does not establish authoritative DNS
+      delegation, completed domain verification, or active hosting.
 
 - name: Netlify
   slug: netlify
@@ -3815,11 +3823,12 @@ fingerprints:
     pattern: glitch.me
     tier: infrastructure
     description: >-
-      Glitch hosted-app endpoint CNAME (projects resolve at
-      `<project>.glitch.me`). Indicates the org runs at least one
-      Glitch project. Does not by itself indicate production use;
-      Glitch is most commonly used for prototypes and demos.
-    reference: https://help.glitch.com/kb/article/29-using-a-custom-domain/
+      Legacy Glitch project-hostname routing. Glitch ended project
+      hosting in July 2025 and announced redirects through at least
+      the end of 2026. This may be a redirect or stale configuration;
+      it does not establish a running Glitch application.
+    reference: https://blog.glitch.com/post/changes-are-coming-to-glitch
+    verified: '2026-09-05'
 
 # ── SSE / SASE / CASB — security service edges ─────────────────────────────
 

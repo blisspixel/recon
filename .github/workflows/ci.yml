@@ -546,17 +546,52 @@ jobs:
           done
           exit "$fail"
 
-      - name: Smoke-test built wheel entry points
+      - name: Upload wheel for installed-artifact checks
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        with:
+          name: smoke-wheel
+          path: ${{ runner.temp }}/r1/*.whl
+          if-no-files-found: error
+
+  installed-wheel-smoke:
+    # The same built artifact must work without an editable install or source
+    # YAML. These are offline CLI/MCP contracts and emulated manifest launches,
+    # not claims of real external client acceptance.
+    needs: reproducible-build
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        with:
+          version: "0.11.17"
+
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: "3.11"
+
+      - name: Download built wheel
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        with:
+          name: smoke-wheel
+          path: ${{ runner.temp }}/wheel-smoke-dist
+
+      - name: Check installed wheel offline contracts
+        shell: bash
         run: |
           set -euo pipefail
-          wheels=("$RUNNER_TEMP"/r1/*.whl)
-          if [ "${#wheels[@]}" -ne 1 ] || [ ! -f "${wheels[0]}" ]; then
-            echo "Expected exactly one built wheel in $RUNNER_TEMP/r1" >&2
-            exit 1
-          fi
-          wheel="${wheels[0]}"
-          uv tool run --isolated --from "$wheel" recon --version
-          uv run --no-project --isolated --with "$wheel" python -m recon_tool --version
+          version="$(python -c 'import tomllib; print(tomllib.load(open("pyproject.toml", "rb"))["project"]["version"])')"
+          python scripts/check_installed_wheel.py --wheel "$RUNNER_TEMP/wheel-smoke-dist" \
+            --manifest agents/agent-plugin/mcp.json --version "$version"
 
   ci-gate:
     if: always()
@@ -571,6 +606,7 @@ jobs:
       - validate-fingerprints
       - hostile-input-fuzz
       - reproducible-build
+      - installed-wheel-smoke
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

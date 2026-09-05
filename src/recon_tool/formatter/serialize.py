@@ -16,6 +16,11 @@ from typing import Any
 from recon_tool.email_security import compute_email_security_score
 from recon_tool.formatter.briefing import BriefingView
 from recon_tool.formatter.classify import provider_line, slug_to_relationship_metadata
+from recon_tool.formatter.collection_status import (
+    collection_note_parts,
+    low_confidence_guidance,
+    project_collection_status,
+)
 from recon_tool.models import TenantInfo, serialize_conflicts_array
 from recon_tool.source_status import ObservationChannel, SourceStatus
 from recon_tool.validator import strip_control_chars
@@ -475,6 +480,12 @@ def _plain_panel_data(
         if value in (None, "", [], {}):
             continue
         panel[key] = value
+    caveats = collection_note_parts(project_collection_status(info))
+    if caveats:
+        panel["collection_note"] = "; ".join(caveats) + "."
+    guidance = low_confidence_guidance(info, detailed=detailed)
+    if guidance is not None:
+        panel["next"] = guidance
     return panel
 
 

@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import json
 import os
+import shlex
+from pathlib import Path
 
 import typer
 
@@ -23,14 +25,18 @@ mcp_app = typer.Typer(
 )
 
 
-def _render_install_verification(client: str) -> None:
+def _render_install_verification(client: str, config_path: Path) -> None:
     """Show the ordered checks that complete one client installation."""
     console = get_err_console()
+    # PowerShell on Windows, POSIX shells elsewhere. Never interpolate an
+    # unquoted operator path into the copyable verification command.
+    path_arg = "'" + str(config_path).replace("'", "''") + "'" if os.name == "nt" else shlex.quote(str(config_path))
+    client_check = f"recon doctor --client={client} --config-path {path_arg}"
     console.print("  Restart your MCP client to pick up the new server, then verify in order:")
     steps = (
         ("Static registry", "recon doctor --mcp"),
         ("Live tools and resources", "recon mcp doctor"),
-        ("This client config", f"recon doctor --client={client}"),
+        ("This client config", client_check),
     )
     for number, (description, command) in enumerate(steps, start=1):
         console.print(f"    {number}. {description}")
@@ -94,12 +100,11 @@ def mcp_install_command(
     `mcp.json`-shaped config so a fresh install of a supported AI
     client picks up recon without any copy-paste.
     """
-    from pathlib import Path
-
     from recon_tool.mcp_client.install import (
         SUPPORTED_CLIENTS,
         InstallError,
         default_scope,
+        expand_config_path,
         install,
         plan_install,
         servers_key,
@@ -128,9 +133,8 @@ def mcp_install_command(
     # PowerShell expands `~` for top-level argv but not for paths embedded
     # in arguments. Expand both `~` and `$HOME`-style env vars so the
     # operator's intent matches what we resolve.
-    override = Path(os.path.expandvars(config_path)).expanduser() if config_path else None
-
     try:
+        override = expand_config_path(config_path) if config_path is not None else None
         plan = plan_install(
             client,  # pyright: ignore[reportArgumentType]
             resolved_scope,  # pyright: ignore[reportArgumentType]
@@ -186,7 +190,7 @@ def mcp_install_command(
         console.print(f"  [yellow]{_safe_markup(fallback_warning)}[/yellow]")
         console.print()
 
-    _render_install_verification(client)
+    _render_install_verification(client, result.path.absolute())
 
 
 @mcp_app.command("doctor", short_help="Check MCP tools and resources.")

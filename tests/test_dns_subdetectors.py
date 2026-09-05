@@ -464,7 +464,7 @@ class TestSRVDetection:
 class TestSubdomainTxtDetection:
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_slack_enterprise_grid_via_subdomain(self, mock_resolve):
+    async def test_slack_domain_verification_via_subdomain(self, mock_resolve):
         """_slack-challenge subdomain TXT should detect Slack."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
@@ -524,8 +524,8 @@ class TestSubdomainTxtDetection:
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_github_advanced_security_via_challenge_subdomain(self, mock_resolve):
-        """_github-challenge subdomain TXT should detect GitHub Advanced Security."""
+    async def test_github_challenge_does_not_claim_advanced_security(self, mock_resolve):
+        """An organization verification value does not identify a security product."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
                 "example.com/TXT": [],
@@ -534,8 +534,8 @@ class TestSubdomainTxtDetection:
             }
         )
         result = await DNSSource().lookup("example.com")
-        assert "GitHub Advanced Security" in result.detected_services
-        assert "github-advanced-security" in result.detected_slugs
+        assert "GitHub Advanced Security" not in result.detected_services
+        assert "github-advanced-security" not in result.detected_slugs
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")

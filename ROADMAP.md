@@ -67,6 +67,15 @@ The ordered work now is deliberately small:
 5. Collect role-specific feedback before considering any new composition
    surface.
 
+The September assurance pass makes that order concrete: preserve collection
+caveats across output formats, correct unsupported catalog claims before
+growing coverage, make profile-specific installation diagnostics reproducible,
+and exercise the installed wheel outside its source checkout. The
+[claim-review ledger](validation/2026-09-05-catalog-claim-review.md) records
+retirements and a separate unpromoted research queue. Passing these gates is
+bounded implementation evidence, not enterprise certification, calibrated
+accuracy, or proof that any named organization should adopt recon.
+
 The portable Agent Plugins candidate remains an offline maintainer track. Its
 schema validation and frozen client preflight are useful readiness evidence,
 not a compatibility claim or conformance claim. Resume the paired client frame

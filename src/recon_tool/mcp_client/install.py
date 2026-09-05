@@ -73,7 +73,8 @@ class _ClientSpec:
     """Per-client config-path metadata.
 
     ``user_paths`` maps an OS family ("windows" / "darwin" / "linux") to
-    the user-scope config file. ``workspace_path`` is relative to the
+    the home-relative user-scope config file (except the Windows desktop
+    path, which is relative to APPDATA). ``workspace_path`` is relative to the
     operator's current working directory. Either may be None when the
     client doesn't support that scope; one of them must be set.
     """
@@ -117,11 +118,11 @@ def _appdata_dir() -> Path:
 def _client_specs() -> dict[Client, _ClientSpec]:
     """Source-of-truth path table.
 
-    Computed at call time (not at import time) so monkeypatching
-    ``Path.home`` / ``$APPDATA`` in tests actually takes effect.
+    These paths are relative templates. Resolve only the selected root so
+    workspace and explicit-profile installs do not need a user home.
     """
-    home = _user_home()
-    appdata = _appdata_dir()
+    home = Path()
+    appdata = Path()
     return {
         "claude-desktop": _ClientSpec(
             user_paths={
@@ -213,7 +214,8 @@ def resolve_config_path(
             "use --scope=workspace or pass --config-path explicitly."
         )
     family = _os_family(platform_name)
-    return spec.user_paths[family]
+    root = _appdata_dir() if client == "claude-desktop" and family == "windows" else _user_home()
+    return root / spec.user_paths[family]
 
 
 def default_scope(client: Client) -> Scope:
@@ -226,6 +228,14 @@ def default_scope(client: Client) -> Scope:
     if spec.user_paths is None:
         return "workspace"
     return "user"
+
+
+def expand_config_path(value: str) -> Path:
+    """Expand an explicit CLI path consistently for install and doctor."""
+    try:
+        return Path(os.path.expandvars(value)).expanduser().absolute()
+    except (RuntimeError, OSError, ValueError) as exc:
+        raise InstallError("cannot expand --config-path; pass an explicit absolute config file path.") from exc
 
 
 # Cwd-strip launcher used by the fallback persisted MCP block when

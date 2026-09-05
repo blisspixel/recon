@@ -188,6 +188,21 @@ def test_math_docs_distinguish_semantic_baseline_from_current_review() -> None:
         assert date.fromisoformat(review.group(1)) >= date.fromisoformat(release_date)
 
 
+@pytest.mark.parametrize("path", ["docs/correlation.md", "docs/statistical-assurance.md"])
+def test_math_docs_record_cancelled_m365_design_and_compatible_default(path: str) -> None:
+    text = _read(path)
+    normalized = " ".join(text.split())
+
+    assert "four-arm M365 study was cancelled before target collection on 2026-08-13" in normalized
+    assert "2026-08-13-quality-arm-identifiability.md" in text
+    assert "post-mortem" in text
+    assert "structural-identifiability and dominance preflight" in normalized
+    assert "new preregistration" in normalized
+    assert "implicit v2 fusion default remains enabled and silent" in normalized
+    assert "first statistical task is a paired" not in normalized
+    assert "first task is one paired" not in normalized
+
+
 def test_documented_current_catalog_counts_match_the_generated_catalog() -> None:
     """Docs that state the catalog's *current* size must agree with the catalog.
 

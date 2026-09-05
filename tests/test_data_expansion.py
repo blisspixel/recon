@@ -74,7 +74,6 @@ class TestNewFingerprintsLoad:
             "dify",
             "autogen",
             "snyk",
-            "github-advanced-security",
             "sonatype",
             "beyond-identity",
             "ping-identity",
@@ -88,6 +87,9 @@ class TestNewFingerprintsLoad:
         loaded_slugs = {fp.slug for fp in fps}
         for slug in new_slugs:
             assert slug in loaded_slugs, f"New fingerprint slug '{slug}' not found"
+        # Retired specifically because generic domain verification cannot
+        # establish this product. All other historical slugs stay required.
+        assert "github-advanced-security" not in loaded_slugs
 
     def test_all_fingerprints_have_valid_categories(self) -> None:
         fps = load_fingerprints()
