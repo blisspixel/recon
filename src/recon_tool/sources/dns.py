@@ -540,11 +540,10 @@ async def _classify_related_surface(ctx: _DetectionCtx, queried_domain: str) -> 
     CNAME chain and matches every hop against the cname_target fingerprint
     catalog. Each successful classification:
 
-      * appends a SurfaceAttribution (subdomain → primary service, plus
+      * appends a SurfaceAttribution (subdomain to primary service, plus
         the fronting infrastructure when both tiers matched);
-      * unions the primary slug into ctx.slugs and the primary service
-        name into ctx.services so the default panel surfaces the
-        attribution without a new section;
+      * retains related-host attribution separately from apex services and
+        slugs; the panel derives its subdomain summary from that surface;
       * emits an EvidenceRecord with the full chain for --explain.
 
     Application-tier matches always beat infrastructure-tier matches when

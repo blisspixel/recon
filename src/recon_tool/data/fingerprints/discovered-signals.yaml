@@ -117,7 +117,12 @@ fingerprints:
   - type: spf
     pattern: mtasv.net
     description: >-
-      Postmark SPF include (`mtasv.net`). Indicates the org authorizes Postmark to send email for this domain.
+      SPF policy references a target under Postmark's mtasv.net namespace.
+      The documented include target is spf.mtasv.net; this legacy suffix rule
+      is broader and remains undated pending exact-grammar review. The
+      collector also retains non-positive include qualifiers and redirects,
+      so this does not establish positive authorization, actual sending,
+      active account use, mailbox hosting, successful SPF, or DMARC alignment.
 - name: SAP SuccessFactors
   slug: successfactors
   category: HR & Operations

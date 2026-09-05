@@ -70,7 +70,12 @@ from recon_tool.formatter.exposure import (  # re-exported: stable import path a
     render_gaps_panel,
 )
 from recon_tool.formatter.key_facts import key_facts_auth_line, key_facts_multicloud_line
-from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
+from recon_tool.formatter.layout import (
+    ResponsiveTextGroup,
+    compact_subdomain_summary_lines,
+    subdomain_surface_summary_items,
+)
+from recon_tool.formatter.layout import wrap_plain_text as _wrap_text
 from recon_tool.formatter.markdown import (
     format_explanations_markdown,
     format_tenant_markdown,
@@ -354,23 +359,6 @@ def _wrap_service_list(
     return ("\n" + continuation_indent).join(lines)
 
 
-def _wrap_text(text: str, max_width: int) -> list[str]:
-    """Word-wrap a plain text string to fit within max_width characters."""
-    words = text.split()
-    lines: list[str] = []
-    current = ""
-    for word in words:
-        candidate = word if not current else f"{current} {word}"
-        if len(candidate) > max_width and current:
-            lines.append(current)
-            current = word
-        else:
-            current = candidate
-    if current:
-        lines.append(current)
-    return lines or [text]
-
-
 def _append_field(facts: Text, label: str, value: str, value_style: str = "") -> None:
     """Emit one "  Label    value" row into ``facts``, wrapping the value at the
     panel width with a continuation indent matching the label column."""
@@ -533,8 +521,6 @@ def render_tenant_panel(
     function name and ``show_services`` remain for compatibility; Services are
     part of the default panel.
     """
-    from rich.console import Group
-
     from recon_tool.collection_view import collection_observable_info
 
     info = collection_observable_info(info)
@@ -609,7 +595,7 @@ def render_tenant_panel(
             _spacer()
             blocks.append(detail_section)
 
-    return Group(*blocks)
+    return ResponsiveTextGroup(*blocks, preferred_width=_PANEL_WIDTH)
 
 
 def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: bool, max_width: int) -> bool:

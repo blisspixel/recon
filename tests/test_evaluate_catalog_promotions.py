@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -14,9 +15,11 @@ from validation.evaluate_catalog_promotions import (
     CandidateRule,
     _candidate_rules_digest,
     _matched_slugs,
+    _type_rows,
     evaluate_catalog_promotions,
     evaluate_partitioned_records,
     load_candidate_rules,
+    main,
 )
 from validation.prepare_catalog_round import SCHEMA_VERSION, prepare_catalog_round
 
@@ -138,6 +141,42 @@ def test_suffix_matching_rejects_lookalikes_and_keeps_longest_host_rule() -> Non
     assert _matched_slugs("mx", "", rules) == set()
 
 
+@pytest.mark.parametrize(
+    ("classified", "minimum", "expected"),
+    [(0, 0.3333332, True), (1, 0.3333335, False), (2, 0.3333335, False), (1, 1 / 3, True)],
+)
+def test_promotion_threshold_uses_unrounded_count_ratio(classified: int, minimum: float, expected: bool) -> None:
+    baseline = {
+        "record_types": {
+            kind: {"observed_count": 3 if kind == "mx" else 0, "classified_count": classified if kind == "mx" else 0}
+            for kind in catalog_baseline.RECORD_TYPES
+        }
+    }
+
+    rows = _type_rows(baseline, {"mx": 1}, minimum_improvement=minimum, maximum_regression=0.0)
+
+    assert rows["mx"]["classified_rate_delta"] == 0.333333
+    assert rows["mx"]["meets_minimum_improvement"] is expected
+    assert rows["mx"]["within_regression_budget"] is True
+
+
+@pytest.mark.parametrize(("minimum", "expected"), [(0.3333332, True), (0.3333335, False)])
+def test_acceptance_uses_unrounded_uplift(minimum: float, expected: bool) -> None:
+    records = [_record(mx=f"tenant{index}.vendor.invalid") for index in range(3)]
+    rules = (CandidateRule("synthetic", "mx", "tenant0.vendor.invalid"),)
+
+    _, pooled = evaluate_partitioned_records(
+        [records],
+        rules,
+        min_count=1,
+        min_distinct_namespaces=1,
+        minimum_improvement=minimum,
+        maximum_regression=0.0,
+    )
+
+    assert pooled["decision"]["accepted"] is expected
+
+
 def test_counterfactual_uses_fixed_denominators_and_zero_regression() -> None:
     rules = (
         CandidateRule("cloudflare-email-routing", "mx", "mx.cloudflare.net"),
@@ -213,7 +252,13 @@ def test_public_shape_has_no_target_fields(tmp_path: Path) -> None:
     assert tmp_path.exists()
 
 
-def _bound_fixture(tmp_path: Path, *, rows_per_stratum: int = 20) -> tuple[Path, Path, Path, Path, list[str]]:
+def _bound_fixture(
+    tmp_path: Path,
+    *,
+    rows_per_stratum: int = 20,
+    metric: str = "classified opportunity share by record type",
+    decision_rule: str = "Promote referenced candidates only when fixed-observation uplift is positive.",
+) -> tuple[Path, Path, Path, Path, list[str]]:
     private = tmp_path / "private"
     private.mkdir(parents=True)
     domains = [f"counterfactual-{index}.invalid" for index in range(rows_per_stratum * 4)]
@@ -235,10 +280,10 @@ def _bound_fixture(tmp_path: Path, *, rows_per_stratum: int = 20) -> tuple[Path,
         "collection": {"ct_enabled": False, "direct_probes_enabled": False},
         "thresholds": {"minimum_occurrences": 2, "minimum_distinct_namespaces": 2},
         "promotion_budget": {
-            "metric": "classified opportunity share by record type",
+            "metric": metric,
             "minimum_improvement": 0.001,
             "maximum_regression": 0.0,
-            "decision_rule": "Promote referenced candidates only when fixed-observation uplift is positive.",
+            "decision_rule": decision_rule,
         },
     }
     plan_path = private / "plan.json"
@@ -305,6 +350,8 @@ def test_end_to_end_evaluation_binds_inputs_and_omits_members(tmp_path: Path) ->
     rendered = json.dumps(public, sort_keys=True)
     assert public["records_total"] == 80
     assert public["pooled"]["decision"]["accepted"] is True
+    assert public["pooled"]["decision"]["decision_scope"] == "pooled-classification-diagnostic"
+    assert public["pooled"]["decision"]["policy_text_status"] == "not_evaluated"
     assert public["pooled"]["record_types"]["mx"]["counterfactual_added_classified"] == 80
     assert public["candidate_rules_digest_sha256"] == _candidate_rules_digest(
         load_candidate_rules(("cloudflare-email-routing",))
@@ -312,6 +359,67 @@ def test_end_to_end_evaluation_binds_inputs_and_omits_members(tmp_path: Path) ->
     assert all(domain not in rendered for domain in domains)
     assert "route1.mx.cloudflare.net" not in rendered
     catalog_baseline.assert_aggregate_safe(public)
+
+
+def test_policy_text_is_preserved_but_not_reported_as_evaluated(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    metric = "Independent provider confirmation count"
+    decision_rule = "Do not promote until a curator verifies independent provider confirmation."
+    plan, manifest, results, pooled, _domains = _bound_fixture(tmp_path, metric=metric, decision_rule=decision_rule)
+    output = tmp_path / "evaluation.json"
+
+    assert (
+        main(
+            [
+                "--input",
+                str(results),
+                "--round-plan",
+                str(plan),
+                "--round-manifest",
+                str(manifest),
+                "--pooled-aggregate",
+                str(pooled),
+                "--candidate-slug",
+                "cloudflare-email-routing",
+                "--output",
+                str(output),
+            ]
+        )
+        == 0
+    )
+
+    public = json.loads(output.read_text(encoding="utf-8"))
+    summary = json.loads(capsys.readouterr().out)
+    budget = json.loads(manifest.read_text(encoding="utf-8"))["promotion_budget"]
+    assert budget["metric"] == metric
+    assert budget["decision_rule"] == decision_rule
+    encoded_budget = json.dumps(budget, ensure_ascii=True, separators=(",", ":"), sort_keys=True).encode("ascii")
+    assert public["round_contract"]["promotion_budget_digest_sha256"] == hashlib.sha256(encoded_budget).hexdigest()
+    assert metric not in json.dumps(public)
+    assert decision_rule not in json.dumps(public)
+    for decision in (public["pooled"]["decision"], summary):
+        assert decision["accepted"] is True
+        assert decision["decision_scope"] == "pooled-classification-diagnostic"
+        assert decision["policy_text_status"] == "not_evaluated"
+
+
+def test_acceptance_does_not_claim_per_candidate_recurrence() -> None:
+    _, pooled = evaluate_partitioned_records(
+        [[_record(mx="vendor.invalid")]],
+        (CandidateRule("synthetic", "mx", "vendor.invalid"),),
+        min_count=100,
+        min_distinct_namespaces=100,
+        minimum_improvement=0.1,
+        maximum_regression=0.0,
+    )
+
+    assert pooled["decision"]["accepted"] is True
+    assert pooled["decision"]["candidate_match_counts"] == [
+        {"slug": "synthetic", "record_type": "mx", "added_classified": 1}
+    ]
+    assert pooled["decision"]["decision_scope"] == "pooled-classification-diagnostic"
+    assert pooled["decision"]["policy_text_status"] == "not_evaluated"
 
 
 def test_end_to_end_evaluation_rejects_small_strata_and_unbound_aggregate(tmp_path: Path) -> None:

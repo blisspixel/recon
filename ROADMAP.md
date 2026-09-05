@@ -17,8 +17,10 @@ deployment.
 The resolver and detection engine are feature-complete. The stable lookup,
 briefing, full connection map, batch, capsule, and NamespaceReviewBundle
 surfaces share one evidence and claim discipline. New product work must solve a
-named operator handoff that the existing surfaces cannot solve. No v2.19
-feature tranche is scheduled.
+named operator handoff that the existing surfaces cannot solve. The forthcoming
+v2.19 assurance batch groups compatible fixes, two documented CNAME indicators,
+operator-display corrections and a PR-first release workflow. It does not add
+a collector or expand the inference model.
 
 The evidence-semantic audit is complete: 29 families are complete. 0 material
 runtime families carry incomplete lineage. Fail-closed inventory spans 91 score
