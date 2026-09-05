@@ -3,7 +3,7 @@
 Validates:
 - 12 new fingerprints load without warnings (9.1)
 - 5 enriched fingerprints have correct detection counts and weights (9.2)
-- GitHub Advanced Security pattern correction (9.3)
+- Unsupported GitHub Advanced Security pattern retirement (9.3)
 - 7 new signals evaluate correctly (9.4)
 - 4 updated signals include new slugs (9.5)
 - 4 new posture rules + 1 updated rule produce observations (9.6)
@@ -192,24 +192,18 @@ class TestEnrichedFingerprints:
 # ── 9.3: GitHub Advanced Security pattern correction ──────────────────
 
 
-class TestGHASPatternCorrection:
-    """Verify the corrected GitHub Advanced Security pattern."""
+class TestGHASPatternRetirement:
+    """Generic organization verification cannot identify Advanced Security."""
 
     def setup_method(self) -> None:
         reload_fingerprints()
         self.fps = {fp.slug: fp for fp in load_fingerprints()}
 
-    def test_corrected_pattern_matches_expected_format(self) -> None:
-        fp = self.fps["github-advanced-security"]
-        pattern = fp.detections[0].pattern
-        subdomain, regex = pattern.split(":", 1)
-        assert subdomain == "_github-challenge"
-        assert re.match(regex, "github-domain-verification=abc123")
+    def test_unsupported_product_claim_is_retired(self) -> None:
+        assert "github-advanced-security" not in self.fps
 
-    def test_subdomain_txt_delimiter_present(self) -> None:
-        fp = self.fps["github-advanced-security"]
-        for det in fp.detections:
-            assert ":" in det.pattern, f"subdomain_txt pattern missing delimiter: '{det.pattern}'"
+    def test_generic_github_indicator_is_retained(self) -> None:
+        assert "github" in self.fps
 
 
 # ── 9.4: New signals evaluate correctly ───────────────────────────────
@@ -249,8 +243,12 @@ class TestNewSignals:
 
     # Software Supply Chain Maturity — needs 2+ supply chain slugs
     def test_supply_chain_maturity_fires_with_two_slugs(self) -> None:
-        names = _signal_names(_ctx({"github-advanced-security", "snyk"}))
+        names = _signal_names(_ctx({"sonatype", "snyk"}))
         assert "Software Supply Chain Maturity" in names
+
+    def test_retired_product_slug_cannot_supply_a_second_security_indicator(self) -> None:
+        names = _signal_names(_ctx({"github-advanced-security", "snyk"}))
+        assert "Software Supply Chain Maturity" not in names
 
     def test_supply_chain_maturity_does_not_fire_with_one(self) -> None:
         names = _signal_names(_ctx({"snyk"}))

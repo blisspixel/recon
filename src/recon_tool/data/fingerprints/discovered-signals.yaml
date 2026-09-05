@@ -1752,16 +1752,6 @@ fingerprints:
     pattern: alibaba.com
     description: >-
       Alibaba Cloud generic CNAME target (`alibaba.com`).
-- name: AWS SES
-  slug: aws-ses
-  category: Email & Communication
-  confidence: high
-  detections:
-  - type: cname_target
-    pattern: awsapps.com
-    description: >-
-      AWS apps suite (WorkMail / SES web console) CNAME target
-      (`awsapps.com`).
 - name: Zoho Mail
   slug: zoho
   category: Email & Communication

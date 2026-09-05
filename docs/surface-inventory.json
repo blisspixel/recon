@@ -1025,6 +1025,17 @@
               "--client"
             ],
             "type": "text"
+          },
+          {
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "config_path",
+            "required": false,
+            "tokens": [
+              "--config-path"
+            ],
+            "type": "text"
           }
         ],
         "path": [

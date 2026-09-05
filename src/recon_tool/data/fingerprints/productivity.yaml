@@ -29,21 +29,21 @@ fingerprints:
   - type: txt
     pattern: ^slack-domain-verification=
     description: >-
-      Slack workspace domain-verification TXT. Indicates the
-      domain is claimed by a Slack workspace, typically as part
-      of Enterprise Grid setup. Slack is a Salesforce product
-      after the 2021 acquisition.
+      Legacy Slack domain-verification TXT prefix. Retained as an
+      administrative verification indicator, not proof of a plan,
+      completed verification, enforced SSO, or active workspace use.
+      The current guide does not specify this TXT value grammar,
+      so this rule remains undated.
     reference: https://slack.com/help/articles/5513043606547
   - type: subdomain_txt
     pattern: _slack-challenge:.
-    reference: https://slack.com/help
+    reference: https://slack.com/help/articles/5513043606547-Claim-and-verify-email-domains
+    verified: '2026-09-05'
     description: >-
-      Slack Enterprise Grid subdomain-challenge TXT found at
-      `_slack-challenge.<domain>`. Indicates the domain is
-      verified to a Slack Enterprise Grid org (Slack's top
-      tier), not a Pro or Business+ workspace. Useful for
-      distinguishing Enterprise customers from standard
-      tenants.
+      Nonempty TXT at Slack's documented wildcard-domain challenge
+      owner. The workflow is available on Pro, Business+, and
+      Enterprise plans. The record alone does not establish the
+      plan, completed verification, enforced SSO, or active use.
 - name: Notion
   slug: notion
   category: Productivity & Collaboration

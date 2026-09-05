@@ -397,17 +397,6 @@ fingerprints:
   parent_vendor: Okta
   detections:
   - type: txt
-    pattern: ^_oktaverification=
-    reference: https://developer.okta.com/docs/guides/custom-url-domain/main/
-    verified: 2026-08-19
-    description: >-
-      Okta custom-domain ownership TXT (`_oktaverification=`).
-      Okta's current custom-domain guide names this host for the
-      bring-your-own-certificate path. Okta-managed certificates
-      use an ACME `_acme-challenge` record instead. This observes
-      an administrative domain claim, not that Okta is the primary
-      IdP or that a branded login host is live.
-  - type: txt
     pattern: ^okta-domain-verification
     reference: https://developer.okta.com/docs/guides/custom-url-domain/main/
     description: >-
@@ -809,22 +798,6 @@ fingerprints:
       web-asset scanning authorization. Same administrative-
       binding semantics; web-asset scanning requires this
       verification to confirm ownership before scanning.
-- name: GitHub Advanced Security
-  slug: github-advanced-security
-  category: Security & Compliance
-  confidence: high
-  detections:
-  - type: subdomain_txt
-    pattern: _github-challenge:.+
-    reference: https://docs.github.com/en/code-security/getting-started/github-security-features
-    description: >-
-      GitHub Enterprise domain-challenge TXT (the
-      `_github-challenge:` form found at
-      `_github-challenge.<domain>`). Indicates the domain has
-      been verified to a GitHub Enterprise Cloud organization;
-      a precondition for using GitHub Advanced Security
-      features (code scanning, secret scanning, dependency
-      review) on Enterprise repos under that domain.
 - name: Sonatype
   slug: sonatype
   category: Security & Compliance

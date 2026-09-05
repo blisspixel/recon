@@ -11,6 +11,8 @@ import http.client
 import io
 import sys
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 from typer.testing import CliRunner
@@ -73,6 +75,7 @@ class TestCompareVersions:
 class TestUpgradeCommand:
     def test_pipx_uv_pip_argvs(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater.shutil, "which", _resolvable_launcher)
+        monkeypatch.setattr(updater, "_manager_targets_current_install", Mock(return_value=True))
 
         pipx = updater.upgrade_command(updater.PIPX)
         uv = updater.upgrade_command(updater.UV)
@@ -94,8 +97,9 @@ class TestUpgradeCommand:
         assert "Homebrew install is retired" in updater.manual_hint(updater.HOMEBREW)
         assert "git" in updater.manual_hint(updater.EDITABLE)
         assert updater.manual_hint(updater.PIP) == "pip install -U recon-tool"
-        assert updater.manual_hint(updater.PIPX) == "pipx upgrade recon-tool"
-        assert updater.manual_hint(updater.UV) == "uv tool upgrade recon-tool"
+        assert "pipx upgrade recon-tool" in updater.manual_hint(updater.PIPX)
+        assert "uv tool upgrade recon-tool" in updater.manual_hint(updater.UV)
+        assert "could not be verified" in updater.manual_hint(updater.UNKNOWN)
 
     def test_launcher_planted_in_the_working_directory_is_refused(
         self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
@@ -165,22 +169,25 @@ class TestDetectInstallMethod:
     def test_pipx_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater, "_is_editable", lambda: False)
         monkeypatch.setattr("sys.prefix", "/home/u/.local/pipx/venvs/recon-tool")
-        assert updater.detect_install_method() == updater.PIPX
+        assert updater.detect_install_method() == updater.UNKNOWN
 
     def test_uv_tools_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater, "_is_editable", lambda: False)
         monkeypatch.setattr("sys.prefix", "/home/u/.local/share/uv/tools/recon-tool")
-        assert updater.detect_install_method() == updater.UV
+        assert updater.detect_install_method() == updater.UNKNOWN
 
     def test_homebrew_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater, "_is_editable", lambda: False)
         monkeypatch.setattr("sys.prefix", "/opt/homebrew/Cellar/recon/2.1.18/libexec")
         assert updater.detect_install_method() == updater.HOMEBREW
 
-    def test_pip_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
+    def test_unverified_installer_is_not_a_pip_fallback(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater, "_is_editable", lambda: False)
         monkeypatch.setattr("sys.prefix", "/home/u/project/.venv")
-        assert updater.detect_install_method() == updater.PIP
+        monkeypatch.setattr(
+            updater, "distribution", Mock(return_value=SimpleNamespace(read_text=Mock(return_value=None)))
+        )
+        assert updater.detect_install_method() == updater.UNKNOWN
 
     def test_editable_wins(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater, "_is_editable", lambda: True)
@@ -308,6 +315,7 @@ class TestUpdateCommand:
         # resolves outside the working directory, so the check has to state that
         # precondition rather than depend on what the test machine has on PATH.
         monkeypatch.setattr(updater.shutil, "which", _resolvable_launcher)
+        monkeypatch.setattr(updater, "_manager_targets_current_install", Mock(return_value=True))
         result = runner.invoke(app, ["update", "--check"])
         # The resolved launcher is an absolute path, so the rendered line can
         # wrap. Compare on collapsed whitespace rather than the raw output.

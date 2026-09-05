@@ -322,18 +322,24 @@ def check_client(
     *,
     platform_name: str | None = None,
     cwd: Path | None = None,
+    config_path_override: Path | None = None,
 ) -> ClientDoctorReport:
     """Read ``client``'s MCP config and report whether recon is registered.
 
     Walks each config path the client supports, parses it, and looks for
     the recon stanza. The first stanza found wins and its launch command
     is sanity-checked. When no stanza is found anywhere, every checked
-    path is listed so the operator knows which files were inspected.
+    path is listed so the operator knows which files were inspected. An
+    explicit profile path replaces default discovery, not supplements it.
     """
     work_cwd = cwd if cwd is not None else Path.cwd()
     key = servers_key(client)
     checks: list[ClientCheck] = []
-    candidates = _candidate_paths(client, platform_name)
+    candidates = (
+        [("explicit", config_path_override)]
+        if config_path_override is not None
+        else _candidate_paths(client, platform_name)
+    )
 
     located: tuple[dict[str, object], str] | None = None
     for scope, path in candidates:
@@ -369,8 +375,8 @@ def check_client(
                 ClientCheck(
                     "recon stanza",
                     "fail",
-                    f"no {key}.recon found in: {paths_blurb}. Run `recon mcp install --client={client}` "
-                    f"to write it, or check whether you installed via a plugin instead.",
+                    f"no {key}.recon found in: {paths_blurb}. Use `recon mcp install --client={client}` "
+                    "with --config-path for an explicit profile, or check whether you installed via a plugin instead.",
                 )
             )
         else:

@@ -328,7 +328,7 @@ signals:
     description: Multiple software-supply-chain vendor indicators observed; process maturity is not inferred
     explain: "Two or more software-supply-chain vendor indicators are observed. These public records do not establish deployment scope, process maturity, or investment."
     requires:
-      any: [github-advanced-security, sonatype, snyk, cosign-attestation, github]
+      any: [sonatype, snyk, cosign-attestation, github]
     min_matches: 2
 
   - name: Edge-Native Architecture

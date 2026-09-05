@@ -33,7 +33,7 @@ from recon_tool.formatter.classify import (
 )
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
-from recon_tool.models import ReconLookupError, SourceResult, TenantInfo
+from recon_tool.models import ExplanationRecord, ReconLookupError, SourceResult, TenantInfo
 from recon_tool.server import app as server_app
 from recon_tool.server.app import mcp
 from recon_tool.server.runtime import (
@@ -165,7 +165,7 @@ async def lookup_tenant(
     """Return compact text by default; JSON returns a detailed serialized record.
 
     The default is agent-readable text. Use ``format="json"`` for serialized
-    JSON or ``markdown`` for the full report. Public observations can include
+    JSON or ``markdown`` for a Markdown briefing. Public observations can include
     display label, tenant ID, provider indicators, email-control records, and
     signal correlations.
 
@@ -180,8 +180,9 @@ async def lookup_tenant(
 
     Args:
         domain: A domain name to look up (e.g., alpha.invalid, gamma.invalid).
-        format: Output format: "text" (default), "json" (structured), or "markdown" (full report).
-        explain: When true, include structured explanations for insights and signals in the response.
+        format: Output format: "text" (default), "json" (structured), or "markdown" (briefing).
+        explain: Include lineage-qualified explanations in the selected format.
+            JSON also includes the structured provenance graph and conflicts.
 
     Returns:
         Domain intelligence in the requested format, or an error message.
@@ -284,16 +285,28 @@ def _format_lookup_tenant(
         if explain:
             return _lookup_tenant_json_with_explain(info, list(results))
         return format_tenant_json(info)
+    return _lookup_tenant_human(info, list(results), output_format, explain)
+
+
+def _lookup_tenant_human(info: TenantInfo, results: list[SourceResult], output_format: str, explain: bool) -> str:
+    """Honor explanation requests on both human-readable MCP formats."""
+    from recon_tool.formatter.explanations import format_explanations_text
+    from recon_tool.formatter.markdown import format_explanations_markdown
+
     if output_format == "markdown":
-        return format_tenant_markdown(info)
-    return _lookup_tenant_text(info)
+        briefing = format_tenant_markdown(info, detailed=explain)
+        explanation_formatter = format_explanations_markdown
+    else:
+        briefing = _lookup_tenant_text(info)
+        explanation_formatter = format_explanations_text
+    if explain:
+        records = _lookup_tenant_explanations(info, results)
+        return briefing + "\n\n" + explanation_formatter(records)
+    return briefing
 
 
-def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResult]) -> str:
-    """Build JSON response for lookup_tenant with explain=True.
-
-    Includes explanations for insights, signals, confidence, and conflicts.
-    """
+def _lookup_tenant_explanations(info: TenantInfo, results: list[SourceResult]) -> list[ExplanationRecord]:
+    """Build one explanation record set for every MCP lookup format."""
     from recon_tool.absence import evaluate_absence_signals, evaluate_positive_absence
     from recon_tool.collection_view import collection_observable_evidence, collection_observable_results
     from recon_tool.email_security import signal_context_from_tenant_info, signal_context_metadata
@@ -301,13 +314,10 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
         explain_confidence,
         explain_insights,
         explain_signals,
-        serialize_explanation,
     )
     from recon_tool.insight_explanation import InsightExplanationContext
-    from recon_tool.models import serialize_conflicts
     from recon_tool.signals import evaluate_signals, load_signals
 
-    base = format_tenant_dict(info)
     observable_evidence = collection_observable_evidence(info)
 
     context = signal_context_from_tenant_info(info)
@@ -321,8 +331,6 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
 
     context_metadata = signal_context_metadata(context)
 
-    all_explanations: list[dict[str, object]] = []
-
     # Signal explanations
     signal_recs = explain_signals(
         all_signal_matches,
@@ -332,7 +340,6 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
         observable_evidence,
         info.detection_scores,
     )
-    all_explanations.extend(serialize_explanation(r) for r in signal_recs)
 
     # Insight explanations
     insight_recs = explain_insights(
@@ -342,7 +349,6 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
         observable_evidence,
         InsightExplanationContext(info.detection_scores, info.insight_claims),
     )
-    all_explanations.extend(serialize_explanation(r) for r in insight_recs)
 
     # Confidence explanation
     conf_rec = explain_confidence(
@@ -352,16 +358,22 @@ def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResul
         info.confidence,
         identity_conflict=bool(info.merge_conflicts and info.merge_conflicts.tenant_id),
     )
-    all_explanations.append(serialize_explanation(conf_rec))
+    return [*signal_recs, *insight_recs, conf_rec]
 
-    base["explanations"] = all_explanations
+
+def _lookup_tenant_json_with_explain(info: TenantInfo, results: list[SourceResult]) -> str:
+    """Keep the JSON explanations, provenance graph, and conflict contract."""
+    from recon_tool.collection_view import collection_observable_evidence
+    from recon_tool.explanation import build_explanation_dag, serialize_explanation
+    from recon_tool.models import serialize_conflicts
+
+    base = format_tenant_dict(info)
+    all_records = _lookup_tenant_explanations(info, results)
+    base["explanations"] = [serialize_explanation(record) for record in all_records]
 
     # Structured provenance DAG in parallel with the flat list.
     # Both views are emitted so existing tooling keeps working.
-    from recon_tool.explanation import build_explanation_dag
-
-    all_records = [*signal_recs, *insight_recs, conf_rec]
-    base["explanation_dag"] = build_explanation_dag(all_records, observable_evidence)
+    base["explanation_dag"] = build_explanation_dag(all_records, collection_observable_evidence(info))
 
     # Include conflicts when present
     if info.merge_conflicts and info.merge_conflicts.has_conflicts:

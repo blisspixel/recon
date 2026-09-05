@@ -182,14 +182,24 @@ def test_ci_gate_requires_every_other_main_workflow_job() -> None:
     assert 'detail.get("result") != "success"' in gate["steps"][0]["run"]
 
 
-def test_reproducible_build_smokes_built_wheel_entry_points() -> None:
+def test_reproducible_build_feeds_blocking_cross_platform_artifact_smoke() -> None:
     workflow = _CI_WORKFLOW.read_text(encoding="utf-8")
     build_commands = [line.strip() for line in workflow.splitlines() if line.strip().startswith("uv build")]
 
-    assert "Smoke-test built wheel entry points" in workflow
     assert len(build_commands) == 2
     assert all("--build-constraints build-constraints.txt --require-hashes" in line for line in build_commands)
     assert 'uv build --sdist --out-dir "$out_dir"' in workflow
     assert 'uv build --wheel "${sdists[0]}" --out-dir "$out_dir"' in workflow
-    assert 'uv tool run --isolated --from "$wheel" recon --version' in workflow
-    assert 'uv run --no-project --isolated --with "$wheel" python -m recon_tool --version' in workflow
+    jobs = yaml.safe_load(workflow)["jobs"]
+    smoke = jobs["installed-wheel-smoke"]
+    assert smoke["needs"] == "reproducible-build"
+    assert set(smoke["strategy"]["matrix"]["os"]) == {"ubuntu-latest", "windows-latest", "macos-latest"}
+    assert "installed-wheel-smoke" in jobs["ci-gate"]["needs"]
+    build_steps = jobs["reproducible-build"]["steps"]
+    assert build_steps[-1]["with"]["name"] == "smoke-wheel"
+    assert build_steps[-1]["with"]["path"] == "${{ runner.temp }}/r1/*.whl"
+    assert any(step.get("with", {}).get("name") == "smoke-wheel" for step in smoke["steps"])
+    command = smoke["steps"][-1]["run"]
+    assert 'scripts/check_installed_wheel.py --wheel "$RUNNER_TEMP/wheel-smoke-dist"' in command
+    assert '--manifest agents/agent-plugin/mcp.json --version "$version"' in command
+    assert 'tomllib.load(open("pyproject.toml", "rb"))["project"]["version"]' in command

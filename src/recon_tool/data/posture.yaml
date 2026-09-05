@@ -180,7 +180,7 @@ observations:
     category: saas_footprint
     salience: medium
     condition:
-      slugs_any: [github-advanced-security, sonatype, snyk, cosign-attestation]
+      slugs_any: [sonatype, snyk, cosign-attestation]
       slugs_min: 1
     template: "Software-supply-chain security vendor indicator observed ({matched_slugs})"
 

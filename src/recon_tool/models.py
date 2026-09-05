@@ -443,9 +443,9 @@ class InfrastructureCluster:
 
     Members are SAN names that co-occur across the same certificates,
     grouped by community detection (Louvain) over an in-memory graph
-    whose edges weight shared-cert co-occurrence and same-issuer
-    proximity. The cluster is observable structure — it does not assert
-    ownership.
+    whose edge weights count shared-certificate co-occurrences. Issuer
+    tallies are retained for display and do not affect the partition.
+    The cluster is observable structure; it does not assert ownership.
 
     Surfaced under top-level ``infrastructure_clusters.clusters`` in
     --json.
@@ -482,8 +482,9 @@ class InfrastructureClusterReport:
     """Result of running community detection on the CT co-occurrence graph.
 
     ``algorithm`` records which path produced ``clusters`` — Louvain on
-    small graphs, connected-components fallback when the graph exceeds
-    ``MAX_GRAPH_NODES``, or "skipped" when the graph was empty / trivial.
+    small graphs, connected-components fallback when construction is clipped by a cap,
+    the graph exceeds ``MAX_GRAPH_NODES``, or partitioning fails, and "skipped"
+    when the graph was empty / trivial.
     ``modularity`` is 0.0 in the fallback / skipped paths since modularity
     only applies to a Louvain partition.
 

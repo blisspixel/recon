@@ -193,10 +193,10 @@ class TestEvidenceRoleAwareServiceClassification:
             ("github", "GitHub", "Collaboration", "GitHub (public TXT account indicator)"),
             ("jamf", "Jamf", "Security", "Jamf (public TXT account indicator)"),
             (
-                "github-advanced-security",
-                "GitHub Advanced Security",
-                "Security",
-                "GitHub Advanced Security (public TXT account indicator)",
+                "gitlab",
+                "GitLab",
+                "Collaboration",
+                "GitLab (public TXT account indicator)",
             ),
         ],
     )
@@ -212,7 +212,7 @@ class TestEvidenceRoleAwareServiceClassification:
             slugs=(slug,),
             evidence=(
                 EvidenceRecord(
-                    "SUBDOMAIN_TXT" if slug == "github-advanced-security" else "TXT",
+                    "SUBDOMAIN_TXT" if slug == "gitlab" else "TXT",
                     f"{slug}=opaque",
                     service,
                     slug,
@@ -825,7 +825,7 @@ class TestRenderVerboseSources:
         _, buf = _make_console()
         get_console().print(render_sources_detail([result]))
         detail = _strip(buf.getvalue())
-        assert "failed" in detail
+        assert "unavailable" in detail
         assert "upstream failed" in detail
 
 

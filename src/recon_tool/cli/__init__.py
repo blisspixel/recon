@@ -766,20 +766,22 @@ def doctor(
         "Reads the config file the client loads. The config-side complement "
         "to --mcp, which validates the server itself.",
     ),
+    config_path: str | None = typer.Option(
+        None,
+        "--config-path",
+        help="With --client, inspect only this explicit MCP config file (including user profiles).",
+    ),
 ) -> None:
     """Check installation health and online source connectivity.
     Synthetic checks: Microsoft identity endpoints, DNS for example.com, and crt.sh. No user-supplied target is queried.
     --fix, --mcp, and --client are local-only modes."""
-    mode_count = int(fix) + int(mcp) + int(client is not None)
-    if mode_count > 1:
-        get_console().print("[red]Choose exactly one of --fix, --mcp, or --client.[/red]")
-        raise typer.Exit(code=EXIT_VALIDATION)
+    cli_doctor.validate_doctor_mode(fix=fix, mcp=mcp, client=client, config_path=config_path)
     if fix:
         if not _doctor_fix():
             raise typer.Exit(code=EXIT_ERROR)
         return
     if client is not None:
-        _doctor_client(client)
+        _doctor_client(client, config_path=config_path)
         return
     if mcp:
         _doctor_mcp()
@@ -848,7 +850,7 @@ def update(
     if rc != 0:
         render_error(f"Upgrade failed (exit {rc}). Try manually: {updater.manual_hint(method)}")
         raise typer.Exit(code=EXIT_ERROR)
-    console.print(f"[green]Updated to {latest}. Open a new shell and run `recon --version` to confirm.[/green]")
+    console.print("[green]Upgrade command completed. Open a new shell and run `recon --version` to confirm.[/green]")
 
 
 register_command_groups(app)

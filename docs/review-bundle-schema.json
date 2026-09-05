@@ -2100,7 +2100,7 @@
                 "connected_components",
                 "skipped"
               ],
-              "description": "Path that produced the partition. ``connected_components`` is the deterministic fallback used when the graph exceeds the v1.8 node cap; ``skipped`` means no graph was built (no CT entries, fewer than two nodes, or no edges)."
+              "description": "Path that produced the partition. ``connected_components`` is the deterministic fallback used after a graph-construction cap clips input or partition optimization fails; ``skipped`` means no graph was built (no CT entries, fewer than two nodes, or no edges)."
             },
             "modularity": {
               "type": "number",

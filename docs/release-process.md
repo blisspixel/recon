@@ -232,12 +232,19 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
 3. **build**: after `test`, exact uv 0.11.17 uses the hash-locked build graph to
    produce one sdist, constructs one wheel from that exact sdist, and
    immediately seals both under `dist/`. Main CI runs the same sequence twice,
-   requires matching hashes, and executes both entry points from one built
-   wheel.
+   requires matching hashes, and passes the same built wheel to blocking
+   Windows, Linux, and macOS installed-artifact jobs.
 4. **package-smoke**: after `build`, downloads the sealed artifact into a
    separate read-only job, requires exactly one tag-matching canonical wheel
-   and sdist, and executes both `recon --version` and
-   `python -m recon_tool --version` from the wheel in isolated environments.
+   and sdist, and downloads the standalone smoke helper and portable manifest
+   from a separate test-job artifact. It installs the wheel in a fresh
+   environment outside the workspace, verifies both CLI entry points and
+   import origin/version, checks packaged catalogs and MCP resources/tools,
+   and exercises two relocated manifest launches sharing persistent plugin
+   data. The job has no source checkout. Dependency installation may download
+   packages; the subsequent probes perform no domain lookups and include a
+   Python socket tripwire. This is not an OS sandbox, a real external client
+   evaluation, or a cross-environment reproducible-build claim.
 5. **sbom**: after `test`, generates the CycloneDX release SBOM independently of
    the package build path, adds the project root and dependency edge, and
    validates the resulting document. Every nonzero audit status is fatal here,

@@ -389,11 +389,9 @@ async def test_wildcard_txt_does_not_attribute_every_probed_vendor(
 ) -> None:
     """A wildcard TXT zone answers every probe label identically, so it is not evidence.
 
-    Three catalog patterns accept any non-empty TXT (`_slack-challenge:.`,
-    `_gitlab-pages-verification-code:.`, `_github-challenge:.+`). Against a zone
-    that answers every owner with the same unrelated record, each one matched
-    and the single zone was reported as running Slack, GitLab and GitHub
-    Advanced Security at once.
+    Slack and GitLab accept nonempty owner-qualified TXT. Repeated unrelated
+    values across owners must not identify either service. The retired GitHub
+    Advanced Security rule must also stay absent.
     """
     wildcard = ["v=spf1 ip6:fdcf:abda:4154::/48 -all"]
     monkeypatch.setattr(
@@ -445,7 +443,7 @@ async def test_distinct_tokens_at_two_owners_both_attribute(
         _resolver(
             {
                 ("_slack-challenge.example.com", "TXT"): ["fictional-slack-token"],
-                ("_github-challenge.example.com", "TXT"): ["fictional-github-token"],
+                ("_gitlab-pages-verification-code.example.com", "TXT"): ["fictional-gitlab-token"],
             }
         ),
     )
@@ -454,7 +452,8 @@ async def test_distinct_tokens_at_two_owners_both_attribute(
     await dns_infra.detect_subdomain_txt(ctx, "example.com")
 
     assert "slack" in ctx.slugs
-    assert "github-advanced-security" in ctx.slugs
+    assert "gitlab" in ctx.slugs
+    assert "github-advanced-security" not in ctx.slugs
 
 
 @pytest.mark.asyncio
