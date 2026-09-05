@@ -160,7 +160,25 @@
       },
       {
         "frontmatter": {
-          "compatibility": "Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.",
+          "description": "Plan a private, reproducible domain corpus for recon catalog development, an independent holdout, or a drift round. Use for maintainer sampling and corpus design, not ordinary domain lookups or live collection.",
+          "name": "recon-corpus-plan"
+        },
+        "kind": "maintainer_skill",
+        "path": "agents/maintainer/skills/recon-corpus-plan/SKILL.md",
+        "title": "Corpus planning"
+      },
+      {
+        "frontmatter": {
+          "description": "Run or evaluate a bounded recon catalog-maintenance round from a frozen private corpus and manifest, preserving source availability, holdout separation, and promotion evidence. Use for maintainer collection and validation, not ordinary lookup or automatic catalog expansion.",
+          "name": "recon-catalog-round"
+        },
+        "kind": "maintainer_skill",
+        "path": "agents/maintainer/skills/recon-catalog-round/SKILL.md",
+        "title": "Catalog round"
+      },
+      {
+        "frontmatter": {
+          "compatibility": "Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Use connected MCP tools or a shell with recon on PATH. Live lookups require public network access. ",
           "description": "Public-metadata domain intelligence - Microsoft 365 / Google Workspace tenant identification, email security configuration (DMARC, DKIM, SPF, MTA-STS, BIMI), SaaS fingerprinting from DNS, certificate-transparency findings, related-domain discovery. Use when a domain name appears alongside phrases like \"what does <company> use\", \"tenant\", \"DMARC\", \"email security posture\", \"SaaS stack\", \"fingerprint\", \"passive recon\", or \"vendor diligence\". Passive in scope - never use for active scanning, port scans, credentialed access, or vulnerability checks.",
           "license": "Apache-2.0",
           "metadata": {
@@ -175,7 +193,7 @@
       },
       {
         "frontmatter": {
-          "compatibility": "Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.",
+          "compatibility": "Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Use connected MCP tools or a shell with recon on PATH. Live lookups require public network access. Catalog patching and tests require a separate recon source checkout.",
           "description": "Triage recon fingerprint candidates across the bounded DNS catalog surface. Reads private single-domain discovery output, aggregate catalog baselines, or candidate queues, then classifies candidates as pending, promoted, rejected, or deferred under the v2.14 catalog-quality gates. Use when the user asks to find missing fingerprints, review unclassified DNS observations, or improve catalog coverage.",
           "license": "Apache-2.0",
           "metadata": {

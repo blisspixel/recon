@@ -16,6 +16,7 @@ import httpx
 import pytest
 
 from recon_tool.sources.google_identity import (
+    MAX_REDIRECTS,
     GoogleIdentitySource,
     _extract_idp_name,
 )
@@ -91,6 +92,20 @@ class TestExtractIdpName:
 
 
 class TestIsFederatedRedirect:
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "not-a-url",
+            "javascript:alert(1)",
+            "https:///idp.synthetic.invalid/login",
+            "https://user:password@idp.synthetic.invalid/login",
+            "https://idp.synthetic.invalid:invalid/login",
+            "https://[broken/login",
+        ],
+    )
+    def test_malformed_url_is_not_federation(self, url: str):
+        assert GoogleIdentitySource._is_federated_redirect(url) is False
+
     def test_non_google_domain_is_federated(self):
         assert GoogleIdentitySource._is_federated_redirect("https://synthetic-delta.okta.com/sso") is True
 
@@ -100,17 +115,19 @@ class TestIsFederatedRedirect:
             is False
         )
 
-    def test_google_with_saml_indicator(self):
-        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/saml/redirect?idp=okta") is True
+    def test_google_saml_path_is_not_external_routing(self):
+        assert (
+            GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/saml/redirect?idp=okta") is False
+        )
 
-    def test_google_with_sso_indicator(self):
-        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/sso/redirect") is True
+    def test_google_sso_path_is_not_external_routing(self):
+        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/sso/redirect") is False
 
     def test_plain_google_com(self):
         assert GoogleIdentitySource._is_federated_redirect("https://www.google.com/accounts/servicelogin") is False
 
-    def test_adfs_indicator(self):
-        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/adfs/ls") is True
+    def test_google_adfs_path_is_not_external_routing(self):
+        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/adfs/ls") is False
 
     def test_google_lookalike_host_is_federated(self):
         assert GoogleIdentitySource._is_federated_redirect("https://evilgoogle.invalid/accounts/servicelogin") is True
@@ -122,8 +139,8 @@ class TestIsFederatedRedirect:
             is True
         )
 
-    def test_sso_indicator_in_query_on_google_host_still_counts(self):
-        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/signin?continue=saml") is True
+    def test_sso_indicator_in_query_is_not_external_routing(self):
+        assert GoogleIdentitySource._is_federated_redirect("https://accounts.google.com/signin?continue=saml") is False
 
 
 # ── _classify_response unit tests ──────────────────────────────────────
@@ -291,3 +308,251 @@ class TestGoogleIdentityLookup:
 
     def test_source_name(self):
         assert GoogleIdentitySource().name == "google_identity"
+
+
+class TestGoogleIdentityRequestBoundary:
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("marker", ["saml", "sso", "adfs", "okta", "pingone", "auth0"])
+    async def test_domain_keywords_on_a_normal_google_page_do_not_establish_federation(self, marker: str):
+        requests: list[httpx.Request] = []
+        domain = f"{marker}.synthetic.invalid"
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            assert request.url.host == "accounts.google.com"
+            assert request.url.params["hd"] == domain
+            return httpx.Response(200, text=f"Sign in for {domain}; identifier; SAML SSO Okta")
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            result = await GoogleIdentitySource().lookup(domain, client=client)
+
+        assert len(requests) == 1
+        assert result.source_unavailable is False
+        assert result.google_auth_type is None
+        assert result.google_idp_name is None
+        assert result.detected_slugs == ()
+        assert result.detected_services == ()
+        assert result.evidence == ()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "location",
+        [
+            "/signin?continue=saml",
+            "/signin?continue=https://idp.synthetic.invalid/sso",
+            "/saml/redirect?idp=okta",
+            "/sso/redirect",
+            "/adfs/ls",
+        ],
+    )
+    async def test_google_hosted_handoff_text_is_not_federation(self, location: str):
+        requests: list[httpx.Request] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            assert request.url.host == "accounts.google.com"
+            if len(requests) == 1:
+                return httpx.Response(302, headers={"Location": location})
+            return httpx.Response(200, text="Google sign-in page")
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            result = await GoogleIdentitySource().lookup("synthetic.invalid", client=client)
+
+        assert len(requests) == 2
+        assert result.source_unavailable is False
+        assert result.google_auth_type is None
+        assert result.detected_slugs == ()
+        assert result.detected_services == ()
+        assert result.evidence == ()
+
+    @pytest.mark.asyncio
+    async def test_external_redirect_after_google_handoff_establishes_federation(self):
+        requests: list[httpx.Request] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            assert request.url.host == "accounts.google.com"
+            location = "/saml/redirect" if len(requests) == 1 else "https://idp.synthetic.invalid/login"
+            return httpx.Response(302, headers={"Location": location})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond), follow_redirects=True) as client:
+            result = await GoogleIdentitySource().lookup("synthetic.invalid", client=client)
+
+        assert len(requests) == 2
+        assert result.source_unavailable is False
+        assert result.google_auth_type == "Federated"
+        assert result.google_idp_name == "idp.synthetic.invalid"
+        assert result.detected_slugs == ("google-federated", "google-workspace")
+        assert any(item.raw_value == "Federated redirect to idp.synthetic.invalid" for item in result.evidence)
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("status", [301, 302, 303, 307, 308])
+    @pytest.mark.parametrize("scheme", ["http", "https"])
+    async def test_external_routing_is_observed_without_an_idp_request(self, status: int, scheme: str):
+        requests: list[httpx.Request] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            assert request.url.host == "accounts.google.com"
+            return httpx.Response(status, headers={"Location": f"{scheme}://idp.synthetic.invalid/saml"})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond), follow_redirects=True) as client:
+            result = await GoogleIdentitySource().lookup("synthetic.invalid", client=client)
+
+        assert len(requests) == 1
+        assert requests[0].url.params["hd"] == "synthetic.invalid"
+        assert result.google_auth_type == "Federated"
+        assert result.google_idp_name == "idp.synthetic.invalid"
+        assert result.detected_slugs == ("google-federated", "google-workspace")
+        assert result.source_unavailable is False
+        assert any(item.raw_value == "Federated redirect to idp.synthetic.invalid" for item in result.evidence)
+
+    @pytest.mark.asyncio
+    async def test_relative_google_chain_keeps_the_same_https_origin(self):
+        requests: list[httpx.Request] = []
+        destinations = [
+            "/signin/step-one?flow=1",
+            "step-two?flow=2",
+            "https://accounts.google.com:443/signin/complete",
+        ]
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            assert request.url.scheme == "https"
+            assert request.url.host == "accounts.google.com"
+            assert request.url.port in {None, 443}
+            if len(requests) <= len(destinations):
+                return httpx.Response(302, headers={"Location": destinations[len(requests) - 1]})
+            return httpx.Response(200, text="Generic Google sign-in page")
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond), follow_redirects=True) as client:
+            result = await GoogleIdentitySource().lookup("synthetic.invalid", client=client)
+
+        assert [request.url.path for request in requests] == [
+            "/ServiceLogin",
+            "/signin/step-one",
+            "/signin/step-two",
+            "/signin/complete",
+        ]
+        assert result.google_auth_type is None
+        assert result.source_unavailable is False
+        assert "No federated IdP redirect" in (result.error or "")
+
+    @pytest.mark.asyncio
+    async def test_google_chain_stops_before_protocol_relative_external_idp(self):
+        requests: list[httpx.Request] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            assert request.url.host == "accounts.google.com"
+            location = "/signin/next" if len(requests) == 1 else "//idp.synthetic.invalid/saml"
+            return httpx.Response(302, headers={"Location": location})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            result = await GoogleIdentitySource().lookup("synthetic.invalid", client=client)
+
+        assert len(requests) == 2
+        assert result.google_auth_type == "Federated"
+        assert result.google_idp_name == "idp.synthetic.invalid"
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "location",
+        [
+            "",
+            "javascript:alert(1)",
+            "ftp://idp.synthetic.invalid/login",
+            "https:///idp.synthetic.invalid/login",
+            "https:relative-path",
+            "///idp.synthetic.invalid/login",
+            "//",
+            "https://./login",
+            "https://idp..synthetic.invalid/login",
+            "https://_idp.synthetic.invalid/login",
+            "https://-idp.synthetic.invalid/login",
+            "https://user:password@idp.synthetic.invalid/login",
+            "https://@idp.synthetic.invalid/login",
+            "https://idp.synthetic.invalid:invalid/login",
+            "https://idp.synthetic.invalid:65536/login",
+            "https://idp.synthetic.invalid:0/login",
+            "https://idp.synthetic.invalid:/login",
+            "https://[broken/login",
+            "https://accounts.google.com\\@idp.synthetic.invalid/login",
+            "https://%61ccounts.google.com/login",
+            " https://idp.synthetic.invalid/login",
+            "https://idp.synthetic.invalid/a b",
+            "https://idp.synthetic.invalid/\tlogin",
+            "https://idp.synthetic.invalid/\x00login",
+            "http://accounts.google.com/login",
+            "https://accounts.google.com:8443/login",
+            "/" + "a" * 8192,
+        ],
+    )
+    async def test_invalid_redirect_is_unavailable_and_never_fetched(self, location: str):
+        requests: list[httpx.Request] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            assert len(requests) == 1
+            return httpx.Response(302, headers={"Location": location})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond), follow_redirects=True) as client:
+            result = await GoogleIdentitySource().lookup("synthetic.invalid", client=client)
+
+        assert len(requests) == 1
+        assert result.source_unavailable is True
+        assert result.google_auth_type is None
+        assert result.detected_slugs == ()
+        assert result.evidence == ()
+        assert "Google identity routing unavailable" in (result.error or "")
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "headers",
+        [[], [("Location", "/first"), ("Location", "https://idp.synthetic.invalid/saml")]],
+    )
+    async def test_missing_or_duplicate_location_is_unavailable(self, headers: list[tuple[str, str]]):
+        requests: list[httpx.Request] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(302, headers=headers)
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            result = await GoogleIdentitySource().lookup("synthetic.invalid", client=client)
+
+        assert len(requests) == 1
+        assert result.source_unavailable is True
+        assert result.detected_slugs == ()
+
+    @pytest.mark.asyncio
+    async def test_redirect_loop_is_bounded_and_unavailable(self):
+        requests: list[httpx.Request] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(302, headers={"Location": "/loop"})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            result = await GoogleIdentitySource().lookup("synthetic.invalid", client=client)
+
+        assert len(requests) == MAX_REDIRECTS + 1
+        assert result.source_unavailable is True
+        assert result.error == "Google identity routing unavailable: redirect limit exceeded"
+        assert result.detected_slugs == ()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(("status", "location"), [(304, "/signin"), (302, "https://www.google.com/signin")])
+    async def test_unsupported_routing_is_unavailable(self, status: int, location: str):
+        requests: list[httpx.Request] = []
+
+        def respond(request: httpx.Request) -> httpx.Response:
+            requests.append(request)
+            return httpx.Response(status, headers={"Location": location})
+
+        async with httpx.AsyncClient(transport=httpx.MockTransport(respond)) as client:
+            result = await GoogleIdentitySource().lookup("synthetic.invalid", client=client)
+
+        assert len(requests) == 1
+        assert result.source_unavailable is True
+        assert result.detected_slugs == ()

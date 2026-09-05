@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -344,3 +345,106 @@ def test_load_rejects_symlink(tmp_path: Path) -> None:
 def test_capsule_serialization_is_strict_json() -> None:
     encoded = json.dumps(_capsule(), allow_nan=False)
     assert "NaN" not in encoded
+
+
+def test_context_tracks_ephemeral_fingerprints_and_preserves_recorded_capsule() -> None:
+    from recon_tool.fingerprints import DetectionRule, Fingerprint, clear_ephemeral, get_ephemeral, inject_ephemeral
+
+    previous_ephemeral = get_ephemeral()
+    recorded = _capsule()
+    before = replay_capsule(recorded)
+    assert before["interpretation_context_match"] is True
+    rule = Fingerprint(
+        name="Synthetic capsule token",
+        slug="synthetic-capsule-token",
+        category="security",
+        confidence="high",
+        m365=False,
+        detections=(DetectionRule(type="txt", pattern=r"^synthetic-capsule-token="),),
+    )
+    try:
+        inject_ephemeral(rule)
+        replay = replay_capsule(recorded)
+        assert replay["interpretation_context_match"] is False
+        assert replay["recorded_interpretation_context"] == recorded["interpretation_context"]
+        assert replay["result"] == before["result"]
+        assert (
+            replay["current_interpretation_context"]["model_digest"]
+            == before["current_interpretation_context"]["model_digest"]
+        )
+    finally:
+        clear_ephemeral()
+        for previous in previous_ephemeral:
+            inject_ephemeral(previous)
+    assert replay_capsule(recorded)["interpretation_context_match"] is True
+
+
+@pytest.mark.parametrize("catalog", ["fingerprints", "signals", "motifs"])
+def test_context_tracks_effective_loaded_custom_catalogs(monkeypatch: pytest.MonkeyPatch, catalog: str) -> None:
+    from recon_tool import fingerprints, motifs, signals
+
+    loaders = {
+        "fingerprints": (fingerprints, "load_fingerprints", "name"),
+        "signals": (signals, "load_signals", "description"),
+        "motifs": (motifs, "load_motifs", "description"),
+    }
+    module, loader_name, field = loaders[catalog]
+    loaded = getattr(module, loader_name)()
+    before = capsule_module.current_interpretation_context()
+    changed = (replace(loaded[0], **{field: "Synthetic changed catalog definition"}), *loaded[1:])
+    monkeypatch.setattr(module, loader_name, lambda: changed)
+    after = capsule_module.current_interpretation_context()
+    assert before["catalog_digest"] != after["catalog_digest"]
+    assert before["model_digest"] == after["model_digest"]
+    assert after == capsule_module.current_interpretation_context()
+
+
+def test_context_tracks_effective_prior_overrides(monkeypatch: pytest.MonkeyPatch) -> None:
+    from recon_tool import bayesian_loader
+
+    before = capsule_module.current_interpretation_context()
+    root = next(node for node in bayesian_loader.load_network().nodes if not node.parents)
+    override = 0.99 if root.prior != 0.99 else 0.01
+    monkeypatch.setattr(bayesian_loader, "load_priors_override", lambda: {root.name: override})
+    after = capsule_module.current_interpretation_context()
+    assert before["model_digest"] != after["model_digest"]
+    assert before["catalog_digest"] == after["catalog_digest"]
+
+
+def test_historical_packaged_only_context_still_replays() -> None:
+    recorded = _capsule()
+    recorded["interpretation_context"]["catalog_digest"] = capsule_module._digest_files(capsule_module._CATALOG_FILES)
+    recorded["interpretation_context"]["model_digest"] = capsule_module._digest_files(capsule_module._MODEL_FILES)
+    recorded["content_digest"] = capsule_module.content_digest(capsule_module._without_digest(recorded))
+    replay = replay_capsule(recorded)
+    assert replay["interpretation_context_match"] is False
+    assert replay["result"] == recorded["interpretation"]["rendered_result"]
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_capsule_write_rejects_oversized_utf8_before_touching_output(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, existing: bool
+) -> None:
+    capsule = _capsule(info=replace(_info(), display_name="Synthetic caf\u00e9"))
+    payload = json.dumps(capsule, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    assert len(payload.encode("utf-8")) > len(payload)
+    monkeypatch.setattr(capsule_module, "MAX_CAPSULE_BYTES", len(payload))
+    output = tmp_path / "capsule.json"
+    if existing:
+        output.write_text("caller-owned", encoding="utf-8")
+    with pytest.raises(ValueError, match="maximum artifact size"):
+        write_capsule(output, capsule, overwrite=existing)
+    if existing:
+        assert output.read_text(encoding="utf-8") == "caller-owned"
+    else:
+        assert not output.exists()
+    assert sorted(path.name for path in tmp_path.iterdir()) == (["capsule.json"] if existing else [])
+
+
+def test_capsule_write_at_exact_utf8_limit_round_trips(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    capsule = _capsule()
+    payload = json.dumps(capsule, ensure_ascii=False, indent=2, allow_nan=False) + "\n"
+    monkeypatch.setattr(capsule_module, "MAX_CAPSULE_BYTES", len(payload.encode("utf-8")))
+    output = tmp_path / "capsule.json"
+    write_capsule(output, capsule)
+    assert load_capsule(output) == capsule

@@ -134,7 +134,7 @@ async def discover(
     """
     import json as json_mod
 
-    from recon_tool.discovery import find_candidates
+    from recon_tool.discovery import find_candidates, load_runtime_patterns
     from recon_tool.formatter import render_error
     from recon_tool.models import ReconLookupError
     from recon_tool.resolver import resolve_tenant
@@ -159,13 +159,9 @@ async def discover(
     unclassified_records = [
         {"subdomain": uc.subdomain, "chain": list(uc.chain)} for uc in info.unclassified_cname_chains
     ]
-    # parents[1] is the package root. This module lives one level deeper in
-    # cli/, so parent resolves to a directory that does not exist and
-    # load_existing_patterns then reports zero known patterns instead of failing.
-    fingerprints_dir = Path(__file__).resolve().parents[1] / "data" / "fingerprints"
     candidates = find_candidates(
         [(info.queried_domain, unclassified_records)],
-        fingerprints_dir=fingerprints_dir,
+        existing_patterns=load_runtime_patterns(),
         min_count=min_count,
         drop_intra_org=drop_intra_org,
     )

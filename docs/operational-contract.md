@@ -8,10 +8,12 @@ holds itself to. Values here are current as of the latest release; they can move
 within the stability contract, and the load-bearing ones are gated by tests
 (see [assurance-case.md](assurance-case.md)).
 
-The single most important guarantee: **no single attacker-influenceable input
-can make recon crash, hang, or consume unbounded resources.** Every external
-boundary is bounded by a named cap and a timeout, and every failure degrades to
-a clean "we cannot tell" result. The bounds below are how that holds.
+The central engineering objective is to bound attacker-influenceable work and
+represent failed collection as unavailable rather than negative evidence.
+Named caps, deadlines, and regression tests enforce the boundaries below. They
+are not a proof that every possible input is harmless: regex admission remains
+heuristic, and a process-level budget or egress policy adds useful containment
+when embedding recon in a long-lived service.
 
 ## Timeouts
 
@@ -33,8 +35,12 @@ applies across all attempts.
 Before each shared-client request and redirect, recon resolves the destination
 and requires every returned address to be public unicast. A missing hostname,
 DNS error, empty answer, or invalid address fails closed before the HTTP
-transport runs. The validated address is not pinned to the connection, so the
-documented DNS rebinding time-of-check/time-of-use residual still applies.
+transport runs. When opening a connection, the backend revalidates the complete
+answer set and dials validated numeric addresses, preserving the original Host
+and TLS identity. DNS and dialing share the connection timeout. At most 16
+interleaved IPv4/IPv6 candidates are raced at 250 ms intervals; unused sockets
+are closed. Google identity redirects stay within HTTPS `accounts.google.com`
+on port 443; external identity routing is observed without following it.
 
 ## Resource caps
 

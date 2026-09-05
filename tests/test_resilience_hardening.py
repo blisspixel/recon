@@ -142,7 +142,7 @@ class TestDecompressionBombGuard:
             return crafted
 
         monkeypatch.setattr(http_mod, "_is_private_ip_async", _not_private)
-        monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", _fake_super)
+        monkeypatch.setattr(http_mod.CoreHTTPTransport, "handle_async_request", _fake_super)
 
         resp = await _SSRFSafeTransport().handle_async_request(httpx.Request("GET", "https://cse.alpha.invalid/x"))
         assert isinstance(resp.stream, _RefusingStream)
@@ -172,7 +172,7 @@ class TestDecompressionBombGuard:
             return crafted
 
         monkeypatch.setattr(http_mod, "_is_private_ip_async", _not_private)
-        monkeypatch.setattr(httpx.AsyncHTTPTransport, "handle_async_request", _fake_super)
+        monkeypatch.setattr(http_mod.CoreHTTPTransport, "handle_async_request", _fake_super)
 
         resp = await _SSRFSafeTransport().handle_async_request(httpx.Request("GET", "https://crt.sh/x"))
         assert isinstance(resp.stream, _MaxBytesStream)

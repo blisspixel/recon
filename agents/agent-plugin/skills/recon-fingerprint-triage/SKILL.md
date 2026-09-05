@@ -2,7 +2,7 @@
 name: recon-fingerprint-triage
 description: Triage recon fingerprint candidates across the bounded DNS catalog surface. Reads private single-domain discovery output, aggregate catalog baselines, or candidate queues, then classifies candidates as pending, promoted, rejected, or deferred under the v2.14 catalog-quality gates. Use when the user asks to find missing fingerprints, review unclassified DNS observations, or improve catalog coverage.
 license: Apache-2.0
-compatibility: Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Live lookups require public network access; MCP launch requires recon on PATH.
+compatibility: Requires recon-tool 2.18.4 or a compatible v2 release and Python 3.11+. Use connected MCP tools or a shell with recon on PATH. Live lookups require public network access. Catalog patching and tests require a separate recon source checkout.
 metadata:
   author: blisspixel
   version: 2.18.4
@@ -15,7 +15,7 @@ collects and helps maintainers improve the fingerprint catalog. It supports the
 multi-record v2.14 quality loop rather than treating catalog growth as a count
 of new CNAME suffixes.
 
-This is the portable Agent Skills form used by the schema-pinned v2.15
+This is the portable Agent Skills form used by the schema-pinned
 candidate. It omits client-only frontmatter and does not depend on experimental
 `allowed-tools` behavior. Package compatibility remains unclaimed until the
 frozen representative-client evaluation is complete.
@@ -33,6 +33,27 @@ Use this skill when the user wants to:
 For an ordinary domain lookup, use the base `recon` skill. This skill is for
 catalog maintenance, not general domain intelligence.
 
+## Environment and source checkout
+
+An installed recon runtime or connected recon MCP server is enough to review
+user-supplied observations and inspect the current catalog. Use the tool names
+actually exposed by the client; no fixed MCP namespace or shell is required
+when those tools are already connected. For catalog absence, read the complete
+`recon://fingerprints` resource or page `get_fingerprints(limit=20, offset=0)`
+until a page contains fewer than 20 entries. These catalog reads are local.
+
+Catalog patching, formatter changes, validation scripts, and repository tests
+require a separate recon source checkout selected by the user. Before using
+them, identify that checkout root and read its `AGENTS.md` and project guidance.
+Paths under `docs/`, `src/`, `scripts/`, `validation/`, and `tests/` below refer
+to that checkout, not the installed skill directory or an arbitrary working
+directory. Documentation links may be read when browsing is available; they
+do not provide executable scripts or a writable checkout.
+
+Without the checkout or required evidence, return the review and gate ledger
+with affected candidates still `pending`. Do not fabricate successful tests,
+edit the installed package, or clone a repository without a separate request.
+
 ## Inputs
 
 Choose the narrowest input the user supplied. Treat every real-domain input and
@@ -40,15 +61,29 @@ every per-domain row as private working data.
 
 ### A. Single-domain discovery
 
-Run the ordinary validated-domain workflow described by the base `recon` skill:
+Only collect when the user requested collection. Full typed unclassified
+discovery requires the CLI; `lookup_tenant` has no `include_unclassified`
+parameter. Without a shell, review a supplied private discovery artifact.
+For explicitly requested CNAME-only discovery, a connected
+`discover_fingerprint_candidates(domain)` is an alternative, but returns
+suffix/count/sample candidates, not the three collections below. It can run an
+ordinary public-metadata lookup on a cache miss, so it is not a local catalog
+check. Do not treat that limited result as full typed discovery.
+
+For the CLI, follow the base `recon` skill's domain-validation workflow.
+When that skill is unavailable, lowercase the input and strip a leading
+`https://`, `http://`, or `www.`, then require the entire remaining value to
+match `^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$`. Reject malformed input rather
+than removing other characters. Pass only the validated value as a quoted
+argument:
 
 ```text
-recon <validated-domain> --json --include-unclassified
+recon "<validated-domain>" --json --include-unclassified
 ```
 
 Read all three catalog-discovery collections when present:
 
-- `dns_catalog_summaries` for bounded opportunity and classification counts;
+- `dns_catalog_summary` for bounded opportunity and classification counts;
 - `unclassified_dns_observations` for typed unmatched values;
 - `unclassified_cname_chains` for the historical related-host CNAME view.
 
@@ -60,7 +95,7 @@ public artifact.
 ### B. Multi-record catalog round
 
 Use the private outputs produced by `validation/catalog_baseline.py` and the
-round protocol in `docs/catalog-strategy.md`. Keep these dimensions separate:
+round protocol in [`docs/catalog-strategy.md`](https://github.com/blisspixel/recon/blob/v2.18.4/docs/catalog-strategy.md). Keep these dimensions separate:
 
 - `cname_target` related-host chains;
 - apex `cname`;
@@ -75,6 +110,9 @@ round protocol in `docs/catalog-strategy.md`. Keep these dimensions separate:
 Do not pool unlike record types into one coverage rate. Preserve the round's
 catalog digest, collection options, source-opportunity counts, unresolved and
 unavailable counts, truncation state, stratum, and frozen regression budget.
+For a new corpus or round, start with the repository maintainer workflow in
+`docs/catalog-maintenance.md`. Triage does not authorize new collection, and an
+evaluation holdout is not a candidate-development queue.
 
 ### C. Historical CNAME candidate queue
 
@@ -104,7 +142,7 @@ A candidate remains `pending` until every item below is satisfied:
 
 1. **Exact rule shape.** Name the exact supported record type and the narrowest
    reusable pattern. State whether matching is exact, prefix, suffix, or the
-   type-specific grammar documented in `docs/fingerprints.md`.
+   type-specific grammar documented in [`docs/fingerprints.md`](https://github.com/blisspixel/recon/blob/v2.18.4/docs/fingerprints.md).
 2. **Independent basis.** Cite a current provider-owned public reference or a
    disclosure-safe aggregate basis that did not consume the same row as both
    predictor and label. Repetition alone is not an independent label.
@@ -126,6 +164,14 @@ A candidate remains `pending` until every item below is satisfied:
    round budget. Report the aggregate before-and-after result. Reject or leave
    pending any rule that exceeds it. Do not tune the pattern or budget on an
    independent holdout after reading its result.
+
+`validation/evaluate_catalog_promotions.py` is a bounded fixed-observation
+coverage diagnostic for built-in, `match_mode: any` DNS-suffix candidates in
+`cname_target`, `mx`, `ns`, and `spf`. It is not full detector replay or a
+precision test. Its additive coverage arithmetic cannot certify absence of
+false attribution or displacement, and `accepted` does not satisfy the other
+promotion gates. Unsupported types and conjunctions require dedicated detector
+tests and separately justified evaluation, not a forced conversion to `any`.
 
 If the public reference documents only a setup flow and not the proposed token
 or hostname, say so. A vendor name or generic documentation homepage does not
@@ -156,7 +202,7 @@ provider basis identifies a reusable pattern.
 ## YAML proposal shape
 
 Use the existing canonical name when extending a slug. Follow the exact
-type-specific grammar in `docs/fingerprints.md`. A typical proposal is:
+type-specific grammar in [`docs/fingerprints.md`](https://github.com/blisspixel/recon/blob/v2.18.4/docs/fingerprints.md). A typical proposal is:
 
 ```yaml
 - name: <canonical display name>

@@ -3,12 +3,16 @@
 This is the engineering-level threat model. For **how to report a
 vulnerability**, see [`SECURITY.md`](../SECURITY.md) in the repository root.
 
-recon is a target-read-only CLI tool plus local MCP server with a passive
-collection scope. It performs no port scanning, credential handling, inbound
-listening, or user-code execution. It can write its own local cache and MCP
-client configuration. DNS resolver traffic can be externally visible, MTA-STS
-is the only default target-owned HTTP request, and Google CSE and BIMI
-certificate requests are explicit opt-in direct probes.
+recon's default interfaces are a target-read-only CLI and local stdio MCP server
+with a passive collection scope. Collection uses no target credentials, port
+scanning, or user-code execution; the default interfaces open no inbound
+listener. recon can write local caches, artifacts, and MCP client configuration.
+DNS resolver traffic can be externally visible, MTA-STS is the only default
+target-owned HTTP request, and Google CSE and BIMI certificate requests are
+explicit opt-in direct probes. The separately opted-in
+[draft remote adapter](../deploy/container/README.md) opens an HTTP listener
+and requires bearer authentication or authenticated platform ingress. Its
+credentials, local retention, and hosting controls are additional trust boundaries.
 
 ---
 
@@ -27,7 +31,8 @@ certificate requests are explicit opt-in direct probes.
 | User-supplied domain strings | `src/recon_tool/validator.py` - regex + length cap + scheme stripping |
 | Raw DNS responses (TXT values, MX hostnames, CNAME targets) | Length caps + structured parsing in `src/recon_tool/sources/dns.py` |
 | Environment variables (`RECON_CONFIG_DIR`) | Treated as arbitrary user input. Cache operations bind one resolved parent directory, validate lexical child paths, and use descriptor identity checks for reads. |
-| Custom YAML at `~/.recon/fingerprints.yaml` and friends | Validated by `_validate_fingerprint`, `_validate_signal`, `_validate_profile` - regex compilation + ReDoS heuristic + required-field checks. Additive-only (cannot override built-ins). |
+| Custom fingerprint and signal YAML | Required-field validation, regex compilation, and conservative ReDoS admission. Additive-only; cannot override built-ins. |
+| Custom profile YAML | Validated profile schema. Same-name local profiles intentionally override packaged profiles; this is operator configuration, not an additive catalog rule. |
 | CT provider response bodies | Size-capped, filtered for wildcards and malformed entries in `sources/cert_providers.py` |
 | Malicious HTTP redirect targets / private-IP redirects | `src/recon_tool/http.py` `_SSRFSafeTransport` validates every hop |
 | Queried-namespace MTA-STS declarations and policy responses | Exact TXT admission plus bounded RFC 8461 parsing in `src/recon_tool/sources/mta_sts.py`; the policy request never follows redirects |
@@ -108,8 +113,12 @@ to one stable regular-file descriptor. Symbolic links, mutation during read,
 excessive nesting, invalid UTF-8 or JSON, non-finite values, invalid timestamps,
 unknown fields, malformed normalized snapshots, and digest mismatches fail with
 a validation error. Replay does not call the resolver or any network source.
-Writes refuse an existing path unless `--force` is explicit and use a
-same-directory exclusive temporary file plus atomic replacement. SHA-256
+Writes enforce the same 10 MiB bound before creating a temporary file, refuse
+an existing path unless `--force` is explicit, and use a same-directory
+exclusive temporary file plus atomic replacement. Interpretation digests bind
+the effective catalog and prior overrides, including custom and ephemeral
+rules; older packaged-only context digests remain readable but compare as
+different contexts. SHA-256
 detects modification but provides no signer identity or authenticity guarantee.
 
 ### Malicious CNAME chains (surface-attribution walker)
@@ -139,7 +148,8 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
 
 ### Malicious YAML / user-supplied regex
 
-**Surface:** Custom fingerprint/signal YAML files under `~/.recon/` can contain arbitrary regex patterns.
+**Surface:** Custom fingerprint/signal YAML files and process-local MCP
+fingerprint injection can supply arbitrary regex patterns.
 
 **Mitigation:** [`src/recon_tool/fingerprints.py`](../src/recon_tool/fingerprints.py):
 - `yaml.safe_load` (not `yaml.load`) - no arbitrary constructor execution
@@ -155,7 +165,12 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
   prefix, so the earlier literal-only comparison admitted them even though
   they cost roughly twice as much per added input character. Disjoint
   alternation such as `(foo|bar)+` and branches beginning with an escaped
-  literal such as `\.` remain accepted. Since v2.7.1 the nested-quantifier scan
+  literal such as `\.` remain accepted. The alternation check walks enclosing
+  groups too, so wrapping ambiguous branches in another group cannot bypass
+  admission. Under repetition, only provably disjoint, prefix-free ASCII
+  literal branches are accepted; character classes, encoded escapes, nested
+  groups, assertions, empty alternatives, and whitespace-dependent branches
+  fail closed. Since v2.7.1 the nested-quantifier scan
   also counts `?` as an inner repetition operator, so `(a?){50}a{50}$` is
   rejected; it distinguishes that `?` from the one opening `(?:`, `(?=`, and
   `(?i)`, which stay accepted. This is a heuristic guardrail, not a formal
@@ -177,16 +192,28 @@ Neither is currently shipped; see `docs/security-audit-resolutions.md` ("Mitigat
   private, link-local, shared-address, unspecified, reserved, documentation,
   multicast, and IPv6 unique-local ranges
 - Literal IP check on URL host
-- Asynchronous DNS resolution check (IP from resolver vs public-unicast policy)
+- Asynchronous DNS resolution check (every answer vs public-unicast policy)
 - Missing hosts, DNS errors, empty answers, and invalid resolved addresses fail
-  closed before the HTTP transport can perform its own resolution
+  closed before a connection is attempted
 - Used by default in all outbound HTTP (OIDC discovery, UserRealm, cert providers, Google identity)
 
-**Known limitation:** The validated address is not pinned to the connection.
-`httpx` resolves the hostname again after the preflight, so an attacker who can
-change the answer between those operations may still rebind the request. Failing
-closed on unresolved destinations removes the prior fail-open path but does not
-eliminate this time-of-check/time-of-use residual.
+The connection backend in
+[`http_backend.py`](../src/recon_tool/http_backend.py) independently resolves
+and validates the complete answer set when opening a socket, then dials only
+those numeric addresses. The original origin, Host header, TLS server name,
+and certificate verification remain intact. This closes the earlier gap
+between preflight resolution and socket resolution. Dual-stack attempts are
+interleaved, staggered, and capped; DNS and dialing share a connect deadline.
+Cancelled and losing attempts close their sockets. Tests cover changed DNS,
+mixed public/private answers, TLS identity, pool reuse, and cancellation without
+contacting real infrastructure. Address checks do not establish that a public
+service is trustworthy, nor replace operator-controlled egress policy.
+
+Google identity follows only bounded HTTPS redirects within
+`accounts.google.com` on port 443. A validated external redirect is retained as
+routing evidence without fetching the destination. Google query strings and
+SSO-looking path text alone do not establish federation. Invalid redirect
+locations become unavailable observations.
 
 ### MTA-STS declaration and policy integrity
 
@@ -332,7 +359,10 @@ recon does **not** defend against:
 - **Active scanning attacks.** recon does not scan ports, crawl arbitrary target
   applications, or test exploitability. An attacker with a shell on your machine
   can do more than recon can see.
-- **Credential theft.** recon handles zero credentials. There is nothing to steal.
+- **Target credential theft during collection.** Collectors use no target
+  credentials. This does not cover credentials in the optional remote adapter,
+  maintainer-only validation environment, or an operator's surrounding system;
+  those still require protection.
 - **DNS cache poisoning at the OS level.** If the user's resolver is compromised, the entire threat model is compromised regardless of what recon does.
 - **Supply-chain compromise of transitive dependencies.** Locked runtime
   dependencies are checked by blocking `pip-audit` gates in CI and release

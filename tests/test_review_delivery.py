@@ -66,6 +66,65 @@ def test_review_cli_json_collects_once_with_cache_bypass_contract() -> None:
     )
 
 
+@pytest.mark.parametrize("coordinate", [" example.com ", " https://mail.Example.COM/path?query=one "])
+def test_review_cli_preserves_trimmed_coordinate(coordinate: str) -> None:
+    resolve = AsyncMock(return_value=_fixture())
+    with patch("recon_tool.resolver.resolve_tenant", new=resolve):
+        result = runner.invoke(app, ["review", coordinate, "--json", "--no-ct"])
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stdout)["scope"]["input_coordinate"] == coordinate.strip()
+    assert resolve.await_args.args == ("example.com",)
+
+
+@pytest.mark.parametrize(
+    "coordinate", ["example.com\n", "https://example.com/\x1b[31m", " " * 512 + "example.com", " "]
+)
+def test_review_cli_rejects_unsafe_coordinate_before_collection(coordinate: str) -> None:
+    resolve = AsyncMock()
+    with patch("recon_tool.resolver.resolve_tenant", new=resolve):
+        result = runner.invoke(app, ["review", coordinate, "--json"])
+    assert result.exit_code == EXIT_VALIDATION
+    assert "input_coordinate" in result.output
+    resolve.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("coordinate", [" example.com ", " https://mail.Example.COM/path?query=one "])
+async def test_review_mcp_preserves_trimmed_coordinate(coordinate: str) -> None:
+    _rate_limit_clear()
+    resolve = AsyncMock(return_value=_fixture())
+    with patch("recon_tool.server.app.resolve_tenant", new=resolve):
+        bundle = await build_review_bundle(coordinate, no_ct=True)
+    assert bundle["scope"]["input_coordinate"] == coordinate.strip()
+    assert resolve.await_args.args == ("example.com",)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "coordinate", ["example.com\n", "https://example.com/\x1b[31m", " " * 512 + "example.com", " "]
+)
+async def test_review_mcp_rejects_unsafe_coordinate_before_admission(coordinate: str) -> None:
+    resolve = AsyncMock()
+    with (
+        patch("recon_tool.server.app.resolve_tenant", new=resolve),
+        patch("recon_tool.server.review.rate_limit_try_acquire") as admission,
+        pytest.raises(ToolError, match="input_coordinate"),
+    ):
+        await build_review_bundle(coordinate)
+    resolve.assert_not_awaited()
+    admission.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_review_mcp_failure_keeps_trimmed_coordinate() -> None:
+    _rate_limit_clear()
+    error = ReconLookupError(domain="example.com", message="timed out", error_type="timeout")
+    with patch("recon_tool.server.app.resolve_tenant", new=AsyncMock(side_effect=error)):
+        bundle = await build_review_bundle(" example.com ")
+    assert bundle["workflow"]["status"] == "failed"
+    assert bundle["scope"]["input_coordinate"] == "example.com"
+
+
 def test_review_cli_preflights_existing_output_before_collection(tmp_path: Path) -> None:
     output = tmp_path / "review.json"
     output.write_text("caller-owned", encoding="utf-8")
