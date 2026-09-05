@@ -31,6 +31,7 @@ from recon_tool.formatter.classify import (
     google_workspace_cse_indicators,
     google_workspace_module_indicators,
 )
+from recon_tool.formatter.collection_status import collection_note_parts, project_collection_status
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import ExplanationRecord, ReconLookupError, SourceResult, TenantInfo
@@ -129,6 +130,12 @@ def _lookup_tenant_text(info: TenantInfo) -> str:
     lines.extend(_lookup_tenant_gws_lines(info))
     if info.degraded_sources:
         lines.append(f"Degraded sources: {', '.join(info.degraded_sources)}")
+        status = project_collection_status(info)
+        notes = collection_note_parts(status)
+        if status.ct_state == "fallback_recovered":
+            notes += (f"CT recovered via {info.ct_provider_used}",)
+        if notes:
+            lines.append(f"Collection note: {'; '.join(notes)}.")
     return "\n".join(lines)
 
 

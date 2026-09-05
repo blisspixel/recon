@@ -219,8 +219,9 @@ def _append_index_summary(
     """Append the compatible score line and exact ledger detail when present."""
     text.append("  Public-evidence index: ", style="dim")
     score = index.score_floor if index is not None else assessment.posture_score
-    score_style = "#a3d9a5" if score >= 60 else "#7ec8e3" if score >= 30 else "#e07a5f"
-    text.append(f"{score}/100", style=score_style)
+    # Magnitude is not a security grade. Keep emphasis independent of value;
+    # explicit control and collection states retain their own status colors.
+    text.append(f"{score}/100", style="bold")
     text.append(f" ({assessment.posture_score_label})\n", style="dim")
     if index is None:
         if assessment.unconfirmable_absent_points:

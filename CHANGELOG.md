@@ -26,10 +26,17 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.0] - 2026-09-05
+
+Compatible assurance improvements to collection boundaries, catalog claims,
+numerical behavior, operator displays and release reproducibility. No new
+collector or model calibration is introduced.
+
 ### Tool Surface Changes
 
-Tool surface changes: `recon doctor --client=<name>` accepts `--config-path` for the exact
-client file verified after installation. MCP lookup honors `explain=true` on
+Tool surface changes: added flag `--config-path` to `recon doctor`.
+
+The flag selects the exact client file verified after installation. MCP lookup honors `explain=true` on
 text and Markdown as well as JSON. Plain briefings retain material collection
 caveats and sparse-result guidance. Maintainer fingerprint audits default to
 built-ins, with explicit `--effective-catalog` for local additions. Google
@@ -83,7 +90,33 @@ unchanged.
   no longer asserts that the latest PyPI version was installed.
 - Narrow Vercel routes, retire generic AWS-to-SES and unsupported Okta/GitHub
   verification rules, and correct Slack plan and Glitch lifecycle claims.
-  Keep new Retool and Postmark candidates in a separate unpromoted review queue.
+- Add exact, dated Retool custom-domain and Postmark return-path CNAME rules,
+  with synthetic wrong-owner, lookalike, sparse, wildcard and downstream
+  claim-isolation tests. Separately retire two unsupported Postmark CNAME
+  suffixes and an SPF owner/target confusion; preserve existing documented SPF
+  detection with policy-reference wording. No owner probes are added.
+- Keep batch serialization failures out of successful peer, ecosystem and
+  cohort accounting; preserve explicit operator failure states.
+- Clamp model-bound diagnostic inputs before interval arithmetic and normalize
+  extreme count vectors without overflow. Keep unavailable support distinct
+  from zero, and show the cohort interval method and eligible denominators.
+- Apply DMARC what-if changes to the effective component ledger, including a
+  nominal reject policy applied to zero percent of messages. Model weights and
+  component ceilings are unchanged.
+- Accept UTF-8 byte-order marks in exclusion lists without changing raw-byte
+  commitments. Bind shared rank-sampling implementation files into new round
+  execution digests and use unrounded ratios for promotion threshold decisions.
+  Explicitly label the evaluator's pooled diagnostic and unexecuted policy text.
+- Wrap narrow terminal rows with aligned continuation text and a single divider,
+  preserve CT unavailable/cache/recovery caveats in MCP text, and remove
+  magnitude-based security-grade coloring from the aggregate exposure index.
+- Add `scripts/release.py --prepare-only` for a checked preparation PR without
+  a tag or push. Keep rollback bounded to owned files, then tag the exact
+  reviewed merged-main commit only after hosted checks pass.
+- Repair optional model-assisted triage to use the built-in inventory, reject
+  malformed or incomplete batches before output, preserve same-slug detections,
+  and serialize explicitly private pending proposals. No confidence, review
+  date or ready-to-promote status is assigned by the model helper.
 - Gate CI on the same built wheel's offline contracts across Windows, Linux,
   and macOS. Release smoke also verifies installed catalogs, MCP resources and
   tools, import origin, executable identity, and portable data relocation without
@@ -103,6 +136,10 @@ unchanged.
 - Correct cache-freshness guidance: internal timestamps are not public lookup
   JSON fields. Document fresh collection routes without implying per-record
   freshness, and reconcile cancelled correlation-study status across documents.
+- Document a consistent operator design language and a dated platform research
+  review covering Hermes, OpenClaw, Pi, DeepSeek Harness and NemoClaw. Separate
+  documented host capabilities from unrun client qualification and keep the
+  frozen representative-client evaluation unchanged.
 
 ## [2.18.4] - 2026-09-02
 

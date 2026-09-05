@@ -7,9 +7,11 @@ import stat
 import time
 from pathlib import Path
 from types import SimpleNamespace
+from unittest.mock import Mock
 
 import pytest
 
+from recon_tool import json_limits
 from recon_tool.json_limits import load_bounded_json_file
 
 
@@ -22,6 +24,68 @@ def test_load_bounded_json_file_returns_data_metadata_and_age(tmp_path: Path) ->
     assert data == {"ok": True}
     assert file_stat.st_size == len(b'{"ok": true}')
     assert age_seconds >= 0.0
+
+
+def test_default_decoder_is_resolved_at_call_time(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "state.json"
+    path.write_text('{"ok": true}', encoding="utf-8")
+    decoder = Mock(return_value={"decoded": "at call time"})
+    monkeypatch.setattr(json_limits.json, "loads", decoder)
+
+    data, _file_stat, _age_seconds = load_bounded_json_file(path, maximum_bytes=1024)
+
+    assert data == {"decoded": "at call time"}
+    decoder.assert_called_once_with('{"ok": true}')
+
+
+def test_custom_decoder_receives_checked_text_and_preserves_metadata(tmp_path: Path) -> None:
+    path = tmp_path / "state.json"
+    raw = b'\xef\xbb\xbf{"key": 1, "key": 2}'
+    path.write_bytes(raw)
+    decoded = object()
+    decoder = Mock(return_value=decoded)
+
+    data, file_stat, age_seconds = load_bounded_json_file(path, maximum_bytes=1024, decoder=decoder)
+
+    assert data is decoded
+    assert file_stat.st_size == len(raw)
+    assert age_seconds >= 0.0
+    decoder.assert_called_once_with(raw.decode("utf-8"))
+
+
+def test_custom_decoder_exception_propagates_unchanged(tmp_path: Path) -> None:
+    path = tmp_path / "state.json"
+    path.write_text("{}", encoding="utf-8")
+    failure = RuntimeError("custom admission failed")
+
+    with pytest.raises(RuntimeError, match="custom admission failed") as caught:
+        load_bounded_json_file(path, maximum_bytes=1024, decoder=Mock(side_effect=failure))
+
+    assert caught.value is failure
+
+
+@pytest.mark.parametrize(
+    ("contents", "maximum_bytes", "age", "message"),
+    [
+        (b"{}", 1, 10.0, "byte limit"),
+        (b"\xff", 1024, 10.0, "decode"),
+        ((b"[" * 101) + b"0" + (b"]" * 101), 1024, 10.0, "nesting"),
+        (b"{}", 1024, 0.0, "maximum age"),
+    ],
+)
+def test_file_and_structure_checks_precede_custom_decoder(
+    contents: bytes, maximum_bytes: int, age: float, message: str, tmp_path: Path
+) -> None:
+    path = tmp_path / "state.json"
+    path.write_bytes(contents)
+    old = time.time() - 1.0
+    os.utime(path, (old, old))
+    decoder = Mock(side_effect=AssertionError("unadmitted text reached custom decoder"))
+
+    with pytest.raises(ValueError, match=message):
+        load_bounded_json_file(path, maximum_bytes=maximum_bytes, maximum_age_seconds=age, decoder=decoder)
+
+    decoder.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -124,7 +188,10 @@ def test_load_bounded_json_file_rejects_excessive_nesting(tmp_path: Path) -> Non
         load_bounded_json_file(path, maximum_bytes=1024)
 
 
-def test_non_regular_path_is_rejected_before_open(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("custom_decoder", [False, True])
+def test_non_regular_path_is_rejected_before_open(
+    custom_decoder: bool, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
     path = tmp_path / "state.json"
     path.write_text("{}", encoding="utf-8")
 
@@ -136,8 +203,12 @@ def test_non_regular_path_is_rejected_before_open(tmp_path: Path, monkeypatch: p
 
     monkeypatch.setattr(Path, "lstat", fifo_stat)
     monkeypatch.setattr("recon_tool.json_limits.os.open", unexpected_open)
+    decoder = Mock(side_effect=AssertionError("non-regular file reached decoder"))
+    if not custom_decoder:
+        monkeypatch.setattr(json_limits.json, "loads", decoder)
     with pytest.raises(ValueError, match="regular file"):
-        load_bounded_json_file(path, maximum_bytes=1024)
+        load_bounded_json_file(path, maximum_bytes=1024, decoder=decoder if custom_decoder else None)
+    decoder.assert_not_called()
 
 
 @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="POSIX FIFO admission")

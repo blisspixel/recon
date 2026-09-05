@@ -738,9 +738,7 @@ async def _batch_process_one(
                     network=fusion_network,
                     priors_override=fusion_priors_override,
                 )
-            if batch_infos is not None:
-                batch_infos[info.queried_domain] = info
-            return _batch_success_result(
+            result = _batch_success_result(
                 info,
                 domain,
                 json_output=json_output,
@@ -749,6 +747,11 @@ async def _batch_process_one(
                 markdown=markdown,
                 include_unclassified=include_unclassified,
             )
+            # A formatting failure becomes an error record, so it must not
+            # also contribute peers, hyperedges, or a successful summary row.
+            if batch_infos is not None:
+                batch_infos[info.queried_domain] = info
+            return result
         except ReconLookupError as exc:
             return _batch_error_result(
                 domain,
@@ -851,7 +854,7 @@ async def batch(
             fusion_configuration_error = _UNEXPECTED_BATCH_ERROR
 
     # Batch-scope token clustering. Each successful resolution
-    # stashes its TenantInfo here keyed by the *input* domain string,
+    # stashes its TenantInfo here keyed by the canonical queried domain,
     # so the post-processing pass can compute `shared_verification_tokens`
     # across every domain in the batch. Scoped to this batch run - never
     # persisted to disk cache, never shared between batch invocations.

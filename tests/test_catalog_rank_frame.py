@@ -129,6 +129,22 @@ def test_public_summary_omits_membership_paths_labels_rules_and_key(
     assert all(domain not in serialized for domain in domains)
 
 
+def test_bom_exclusion_remains_disjoint_in_rank_selection(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    _configure_small_source(monkeypatch)
+    plan, _, exclusion, domains = _fixture(tmp_path)
+    exclusion.write_bytes(b"\xef\xbb\xbf" + f"{domains[0]}\nnot-in-source.invalid\n".encode("ascii"))
+
+    payloads, manifest = rank_preparer.prepare_rank_strata(
+        plan, tmp_path / "private" / "rank-output", prepared_at="2026-08-13T12:00:00Z"
+    )
+
+    assert domains[0] not in {domain for raw in payloads.values() for domain in raw.decode("ascii").splitlines()}
+    assert manifest["development_exclusion"]["canonical_rows"] == 2
+    assert manifest["development_exclusion"]["invalid_rows_excluded"] == 0
+    assert manifest["bands"][0]["development_overlap_excluded"] == 1
+    assert manifest["development_exclusion"]["sha256"] == hashlib.sha256(exclusion.read_bytes()).hexdigest()
+
+
 def test_manifest_commits_to_plan_source_exclusions_key_and_each_frame(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
