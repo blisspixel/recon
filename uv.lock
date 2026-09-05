@@ -948,6 +948,11 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/7e/f5/f66802a942d491edb555dd61e3a9961140fd64c90bce1eafd741609d334d/httpcore-1.0.9-py3-none-any.whl", hash = "sha256:2d400746a40668fc9dec9810239072b40b4484b640a8c38fd654a024c7a1bf55", size = 78784, upload-time = "2025-04-24T22:06:20.566Z" },
 ]
 
+[package.optional-dependencies]
+asyncio = [
+    { name = "anyio" },
+]
+
 [[package]]
 name = "httpcore2"
 version = "2.9.1"
@@ -2088,6 +2093,7 @@ dependencies = [
     { name = "deal" },
     { name = "defusedxml" },
     { name = "dnspython" },
+    { name = "httpcore", extra = ["asyncio"] },
     { name = "httpx" },
     { name = "jsonschema" },
     { name = "mcp" },
@@ -2129,6 +2135,7 @@ requires-dist = [
     { name = "deal", specifier = ">=4.24.0" },
     { name = "defusedxml", specifier = ">=0.7" },
     { name = "dnspython", specifier = ">=2.6" },
+    { name = "httpcore", extras = ["asyncio"], specifier = ">=1.0.9,<2" },
     { name = "httpx", specifier = ">=0.27" },
     { name = "jsonschema", specifier = ">=4.23,<5" },
     { name = "mcp", specifier = ">=2.0.0,<3" },

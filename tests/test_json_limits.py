@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import stat
 import time
 from pathlib import Path
 from types import SimpleNamespace
@@ -120,4 +121,37 @@ def test_load_bounded_json_file_rejects_excessive_nesting(tmp_path: Path) -> Non
     path.write_text(("[" * 101) + "0" + ("]" * 101), encoding="utf-8")
 
     with pytest.raises(ValueError, match="nesting"):
+        load_bounded_json_file(path, maximum_bytes=1024)
+
+
+def test_non_regular_path_is_rejected_before_open(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "state.json"
+    path.write_text("{}", encoding="utf-8")
+
+    def fifo_stat(_path: Path) -> SimpleNamespace:
+        return SimpleNamespace(st_mode=stat.S_IFIFO)
+
+    def unexpected_open(*_args: object, **_kwargs: object) -> int:
+        pytest.fail("non-regular file reached a potentially blocking open")
+
+    monkeypatch.setattr(Path, "lstat", fifo_stat)
+    monkeypatch.setattr("recon_tool.json_limits.os.open", unexpected_open)
+    with pytest.raises(ValueError, match="regular file"):
+        load_bounded_json_file(path, maximum_bytes=1024)
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="POSIX FIFO admission")
+def test_regular_file_swapped_to_fifo_does_not_block(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    path = tmp_path / "state.json"
+    path.write_text("{}", encoding="utf-8")
+    original_open = os.open
+
+    def swapped_open(target: Path, flags: int) -> int:
+        assert flags & os.O_NONBLOCK
+        target.unlink()
+        os.mkfifo(target)
+        return original_open(target, flags)
+
+    monkeypatch.setattr("recon_tool.json_limits.os.open", swapped_open)
+    with pytest.raises(ValueError, match="regular file"):
         load_bounded_json_file(path, maximum_bytes=1024)

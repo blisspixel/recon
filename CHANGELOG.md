@@ -26,6 +26,48 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes. Google identity no longer
+follows external IdP destinations. Maintainer promotion reports additionally
+bind the exact evaluated-rule digest and reject unsupported conjunctions and
+operator-local rules. Runtime lookup JSON fields remain unchanged.
+
+### Fixed
+
+- Pin HTTP socket destinations to validated public addresses while preserving
+  Host, TLS identity, origin pooling, bounded dual-stack fallback, and cleanup
+  on cancellation, including an interrupted TLS handshake.
+- Keep Google identity redirects within the documented collector boundary and
+  stop inferring federation from Google query-string or path keywords.
+- Reject nested-wrapper ambiguous regex alternations before synchronous
+  fingerprint specificity evaluation. Keep simple disjoint literals accepted;
+  admission remains conservative and heuristic.
+- Reject special JSON input files before opening them and prevent FIFO-swap
+  reads from blocking on platforms with nonblocking file-open support.
+- Bind capsule interpretation context to effective custom/ephemeral catalogs
+  and prior overrides. Enforce the capsule write-size bound before temporary
+  output creation, preserving existing destinations on failure.
+- Validate review coordinates consistently before collection and retain partial
+  catalog diagnostics when source or detector work fails.
+- Use numerically stable, consistent likelihood-ratio ranking. Correct graph
+  evidence attribution, Markdown list layout, DOT escaping, and Mermaid custom
+  identifiers without claiming calibrated probabilities or additive causal effects.
+- Fail explicitly when a custom Bayesian model underflows or has invalid
+  normalization mass, including under optimized Python, instead of emitting a
+  fabricated uniform posterior. Ordinary-model parameters remain unchanged.
+- Prevent the maintainer promotion evaluator from treating one rule as support
+  for a conjunction or evaluating uncommitted operator-local catalog additions.
+
+### Documentation
+
+- Add repository corpus-planning and catalog-round skills; repair the triage
+  skill's typed-summary field and portable-packaging status. Document frozen
+  exclusions, untouched holdouts, truthful metrics, and independent review.
+- Reconcile correlation math and diagrams with executable behavior, correct
+  historical calibration interpretation, and distinguish default local operation
+  from the draft remote adapter's authentication and disk-retention obligations.
+
 ## [2.18.4] - 2026-09-02
 
 Default `recon <domain>` no longer prints a fusion-flag deprecation notice.

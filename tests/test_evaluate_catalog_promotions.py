@@ -7,9 +7,12 @@ from pathlib import Path
 
 import pytest
 
+from recon_tool import fingerprints
+from recon_tool.fingerprints import DetectionRule, Fingerprint
 from validation import catalog_baseline
 from validation.evaluate_catalog_promotions import (
     CandidateRule,
+    _candidate_rules_digest,
     _matched_slugs,
     evaluate_catalog_promotions,
     evaluate_partitioned_records,
@@ -66,6 +69,62 @@ def test_candidate_rule_loading_rejects_missing_or_duplicate_slugs() -> None:
         load_candidate_rules(("yandex-360", "yandex-360"))
     with pytest.raises(ValueError, match="absent"):
         load_candidate_rules(("missing-candidate",))
+
+
+def _synthetic_fingerprint(*, match_mode: str = "any") -> Fingerprint:
+    return Fingerprint(
+        name="Synthetic Vendor",
+        slug="synthetic-vendor",
+        category="Email & Communication",
+        confidence="high",
+        m365=False,
+        match_mode=match_mode,
+        detections=tuple(
+            DetectionRule(
+                type=record_type,
+                pattern=pattern,
+                reference="https://vendor.example/docs",
+                verified="2026-08-01",
+            )
+            for record_type, pattern in (("mx", "mail.vendor.invalid"), ("ns", "dns.vendor.invalid"))
+        ),
+    )
+
+
+def test_candidate_rule_loading_rejects_whole_fingerprint_conjunctions(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(
+        "validation.evaluate_catalog_promotions.load_builtin_fingerprints",
+        lambda: (_synthetic_fingerprint(match_mode="all"),),
+    )
+
+    with pytest.raises(ValueError, match="unsupported counterfactual match_mode all"):
+        load_candidate_rules(("synthetic-vendor",))
+
+
+def test_candidate_rule_loading_excludes_operator_and_ephemeral_rules(monkeypatch: pytest.MonkeyPatch) -> None:
+    runtime_catalog = (*fingerprints.load_builtin_fingerprints(), _synthetic_fingerprint())
+    monkeypatch.setattr(fingerprints._cache_state, "fingerprints", runtime_catalog)
+
+    assert any(fingerprint.slug == "synthetic-vendor" for fingerprint in fingerprints.load_fingerprints())
+    with pytest.raises(ValueError, match="absent from the current catalog"):
+        load_candidate_rules(("synthetic-vendor",))
+
+
+def test_candidate_rules_digest_is_order_independent_and_binds_exact_rules() -> None:
+    rules = (
+        CandidateRule("synthetic", "mx", "mail.vendor.invalid"),
+        CandidateRule("synthetic", "ns", "dns.vendor.invalid"),
+    )
+    digest = _candidate_rules_digest(rules)
+
+    assert _candidate_rules_digest((*reversed(rules), rules[0])) == digest
+    assert _candidate_rules_digest(rules[:1]) != digest
+    for replacement in (
+        CandidateRule("different", "mx", "mail.vendor.invalid"),
+        CandidateRule("synthetic", "spf", "mail.vendor.invalid"),
+        CandidateRule("synthetic", "mx", "other.vendor.invalid"),
+    ):
+        assert _candidate_rules_digest((replacement, rules[1])) != digest
 
 
 def test_suffix_matching_rejects_lookalikes_and_keeps_longest_host_rule() -> None:
@@ -247,6 +306,9 @@ def test_end_to_end_evaluation_binds_inputs_and_omits_members(tmp_path: Path) ->
     assert public["records_total"] == 80
     assert public["pooled"]["decision"]["accepted"] is True
     assert public["pooled"]["record_types"]["mx"]["counterfactual_added_classified"] == 80
+    assert public["candidate_rules_digest_sha256"] == _candidate_rules_digest(
+        load_candidate_rules(("cloudflare-email-routing",))
+    )
     assert all(domain not in rendered for domain in domains)
     assert "route1.mx.cloudflare.net" not in rendered
     catalog_baseline.assert_aggregate_safe(public)

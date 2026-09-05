@@ -4,10 +4,10 @@ External audits, scanners, and security-review tools sometimes report
 findings that are already closed by subsequent commits - most scanners
 flag the commit that *introduced* an issue and don't automatically
 trace forward through fix commits. This file is the project's
-authoritative disposition record. If a finding listed here is also
-reported by a scanner as open, the closure status documented below
-takes precedence; the scanner output is stale until it re-scans the
-fix commit.
+disposition record. If a finding listed here is also reported as open,
+compare the scanned revision and attack path with the fix and its regression
+tests. A historical closure does not override a reproducible bypass or a
+regression in a later revision.
 
 Findings are indexed by *topic* rather than vendor-specific ID so the
 record stays portable across audit tools.
@@ -15,6 +15,30 @@ record stays portable across audit tools.
 For the reporting process and disclosure expectations, see
 [`SECURITY.md`](../SECURITY.md). For deeper engineering threat-model
 notes, see [`docs/security.md`](security.md).
+
+---
+
+## Unreleased: connection pinning and regex admission
+
+The shared HTTP client now validates every answer at connection time and dials
+only validated numeric addresses while preserving the original Host and TLS
+identity. This addresses the preflight/socket DNS rebinding gap retained by
+v2.6.4. The Google identity collector also stops before fetching external IdPs;
+only bounded same-host HTTPS redirects are followed. These controls do not
+replace deployment egress policy or prove a public origin trustworthy.
+
+Regex admission now checks alternation through nested group wrappers and
+requires provably disjoint literal branches under repetition. Previously an
+ambiguous alternation inside an extra group could reach synchronous specificity
+evaluation during process-local fingerprint injection. The new rejection runs
+before that evaluation. The guard remains heuristic, not a general proof of
+regex complexity. Shared JSON loading also rejects special files before open
+and uses nonblocking open where available to avoid waiting on a raced FIFO.
+
+Regression evidence: `tests/test_http_connection_boundary.py`,
+`tests/test_google_identity.py`, `tests/test_regex_admission.py`, and
+`tests/test_json_limits.py`. Tests use synthetic responses and local fixtures;
+they do not contact internal or third-party infrastructure.
 
 ---
 
@@ -79,7 +103,8 @@ The shared HTTP preflight previously returned "not private" when hostname
 resolution failed, allowing the underlying transport to resolve again without a
 validated result. Missing hosts, resolution errors, empty answers, and invalid
 addresses now refuse the request before transport. Public addresses remain
-allowed and the documented address-pinning TOCTOU residual remains.
+allowed. That release retained a separate address-pinning TOCTOU residual;
+the unreleased connection-backend fix above addresses it.
 
 Importing the MCP server previously installed a process-wide handler on the
 shared `recon` logger. That made later embedded CLI output order-dependent and

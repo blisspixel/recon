@@ -1,7 +1,7 @@
 # Catalog Growth and Quality Strategy
 
 Status: measurement-first maintenance plan
-Review date: 2026-08-30 UTC
+Review date: 2026-09-05 UTC
 
 This document is the plan for growing and maintaining the fingerprint catalog
 (`src/recon_tool/data/fingerprints/*.yaml`) so coverage, precision, and
@@ -17,6 +17,11 @@ records, and per-domain results may not.
 This plan implements the catalog-quality track in the canonical
 [roadmap](roadmap.md). Catalog size is not a success metric; classified public
 surface and independently supported precision are.
+
+The [maintainer workflow](catalog-maintenance.md) turns this strategy into
+corpus-planning, collection/evaluation, and rule-triage skills using the existing
+harnesses. It also records evaluator limits and research-backed sampling
+caveats. No evaluation holdout becomes a development queue.
 
 ## How the catalog grows today
 
@@ -476,13 +481,14 @@ disclosure-safe artifact the promotion gate wants: a vendor, a record type, a
 pattern, and a citation, with the corpus supplying only an aggregate
 observation count if the pattern is present at all.
 
-The standard the catalog actually applies is a prefix that names its vendor
-plus a vendor-owned reference; existing rules such as
-`^anthropic-domain-verification=` cite a documentation index rather than a page
-documenting the string, because vendors issue these tokens through an admin
-console and do not publish the prefix. A pattern whose prefix does not name a
-vendor cannot meet that standard from either direction and belongs in the
-deferred queue, not the proposal queue.
+A vendor-looking prefix and a documentation index are not independent support
+for an exact record pattern. Legacy entries with such references remain an
+unresolved review backlog; their presence is not precedent for promotion or a
+fresh `verified` date. Check a current provider-owned page that names the exact
+record role and reusable form, or document an independent disclosure-safe
+basis. If neither is available, leave the candidate pending or deferred. A
+vendor name in a string is a search lead, not proof of attribution; an opaque
+prefix can still qualify if its exact independent basis is established.
 
 ## 6. Prioritized backlog
 

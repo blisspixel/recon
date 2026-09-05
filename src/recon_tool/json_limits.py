@@ -72,9 +72,14 @@ def load_bounded_json_file(
         raise ValueError("maximum_age_seconds must be finite and non-negative")
     if path.is_symlink():
         raise ValueError("JSON file must not be a symbolic link")
+    if not stat.S_ISREG(path.lstat().st_mode):
+        raise ValueError("JSON path must identify a regular file")
 
     flags = os.O_RDONLY | getattr(os, "O_BINARY", 0) | getattr(os, "O_CLOEXEC", 0)
     flags |= getattr(os, "O_NOFOLLOW", 0)
+    # A regular path can be replaced by a FIFO between lstat and open. Avoid
+    # waiting for a writer before descriptor validation can reject that swap.
+    flags |= getattr(os, "O_NONBLOCK", 0)
     descriptor = os.open(path, flags)
     try:
         before = os.fstat(descriptor)

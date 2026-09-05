@@ -178,13 +178,19 @@ through
 
 The living work is the fingerprint catalog. Vendors add, rename, and retire the
 public patterns recon detects, so a rule with no re-check is a slow source of
-false positives and negatives. Most useful contributions are one YAML file, not
-code: a current vendor-documentation page (or a disclosure-safe aggregate
-basis), a `verified` date, a fictional positive, and a lookalike negative.
+false positives and negatives. Useful contributions are scoped catalog changes
+with a current exact vendor reference (or an independent disclosure-safe basis),
+a genuine `verified` review date, synthetic positive/lookalike/sparse fixtures,
+and provenance tests. A vendor-looking string alone is not sufficient support.
 [CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md)
 has the schema, the validation command, and what is deliberately out of scope.
 The freshness loop and its coverage floor live in
 [docs/catalog-strategy.md](https://github.com/blisspixel/recon/blob/main/docs/catalog-strategy.md).
+For an agent-assisted maintainer pass, use the
+[corpus planning and catalog-round workflow](https://github.com/blisspixel/recon/blob/main/docs/catalog-maintenance.md).
+It separates offline selection, explicitly bounded collection, candidate
+refinement, and untouched holdout evaluation. Increased classification coverage
+does not by itself establish accuracy or justify promotion.
 
 ## Common Commands
 

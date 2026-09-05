@@ -106,6 +106,10 @@ release by itself.
 | Release readiness | Every release | Main, tag, GitHub Release, and PyPI identify one commit and one artifact set |
 
 Catalog detail lives in [docs/catalog-strategy.md](docs/catalog-strategy.md).
+The executable [maintenance workflow](docs/catalog-maintenance.md) separates
+corpus planning, bounded collection, and rule triage. New rounds must bind their
+actual exclusions and preserve untouched holdouts; a classified-surface uplift
+is not independent precision or permission for automatic promotion.
 Quality and publication evidence lives in
 [docs/strategic-gap-audit.md](docs/strategic-gap-audit.md). External submission
 work must rerun the

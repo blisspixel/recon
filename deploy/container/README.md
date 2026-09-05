@@ -72,9 +72,19 @@ it in Terraform variables, image layers, shell history, logs, or client source.
 
 ## Operational limits
 
-The process retains only bounded in-memory cache and rate-limit state. Multiple
-instances do not share cache entries or rate limits. Enforce a maximum instance
+The process has bounded in-memory lookup caches and rate-limit maps, but it is
+not disk-stateless. The image creates `/home/recon/.recon`; ordinary CT-enabled
+lookups can write queried-domain CT entries under `ct-cache/` and fixed-provider
+limiter snapshots under `rate-limit-state/`. Individual CT cache files are
+capped at 5 MiB and limiter files at 64 KiB. The CT cache's 30-day freshness
+window is not automatic deletion or a total disk quota. Treat filenames and
+contents as private lookup data, use an explicit retention and storage budget,
+and verify cleanup at the hosting layer. The container's writable filesystem
+is ephemeral unless an operator mounts persistent storage.
+
+Instances do not coordinate caches or rate limits. Enforce a maximum instance
 count, concurrency, per-identity quotas, and cost alerts at the hosting layer.
+All callers of one instance share its process state; this is not tenant isolation.
 Cloud logs can contain queried domain names in application diagnostics, so use
 restricted access and a deliberately short retention period.
 

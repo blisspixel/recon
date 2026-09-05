@@ -893,28 +893,36 @@
       "evidence_path": [
         "README.md",
         "src/recon_tool/server/app.py#SERVER_INSTRUCTIONS",
-        "docs/recon-schema.json"
+        "docs/recon-schema.json",
+        "docs/catalog-maintenance.md",
+        "docs/data-handling-policy.md"
       ],
       "limits": [
         "Guidance is a consumer contract, not target evidence.",
-        "Client-specific installation details can change independently of runtime semantics."
+        "Client-specific installation details can change independently of runtime semantics.",
+        "Repository maintainer skills do not authorize collection or publication and are not part of the frozen portable plugin candidate.",
+        "Catalog coverage diagnostics do not establish precision, complete detector replay, or automatic promotion eligibility."
       ],
       "lineage_status": "static",
       "material": true,
       "producer_paths": [
         "AGENTS.md",
         "agents/claude-code/skills/recon/SKILL.md",
+        "agents/maintainer/skills/recon-corpus-plan/SKILL.md",
+        "agents/maintainer/skills/recon-catalog-round/SKILL.md",
         "agents/README.md"
       ],
       "regression_tests": [
         "tests/test_documentation_semantic_contracts.py",
         "tests/test_onboarding_docs.py",
+        "tests/test_default_claim_audit.py",
         "tests/test_surface_inventory.py"
       ],
       "renderer_obligations": [
-        "Mirror runtime scope, target-interaction boundaries, output semantics, cache behavior, and abstention rules without stronger claims."
+        "Mirror runtime scope, target-interaction boundaries, output semantics, cache behavior, and abstention rules without stronger claims.",
+        "Keep offline corpus planning, existing-artifact review, and requested collection distinct; preserve private artifacts, frozen holdout separation, and evidence-backed promotion gates."
       ],
-      "subject_scope": "shipped agent guidance and installation documentation"
+      "subject_scope": "shipped agent guidance, repository maintainer skills, and installation documentation"
     },
     "static.mcp-contract.v1": {
       "audit_status": "complete",
@@ -1072,6 +1080,13 @@
       "agents/kiro/README.md#Verifying the install": "static.agent-guidance.v1",
       "agents/kiro/README.md#What's inside": "static.agent-guidance.v1",
       "agents/kiro/README.md#recon - Kiro install": "static.agent-guidance.v1",
+      "agents/maintainer/skills/recon-catalog-round/SKILL.md#Admit the round": "static.agent-guidance.v1",
+      "agents/maintainer/skills/recon-catalog-round/SKILL.md#Catalog round": "static.agent-guidance.v1",
+      "agents/maintainer/skills/recon-catalog-round/SKILL.md#Completion": "static.agent-guidance.v1",
+      "agents/maintainer/skills/recon-catalog-round/SKILL.md#Evaluate observations, then candidates": "static.agent-guidance.v1",
+      "agents/maintainer/skills/recon-corpus-plan/SKILL.md#Corpus planning": "static.agent-guidance.v1",
+      "agents/maintainer/skills/recon-corpus-plan/SKILL.md#Define the question before selecting rows": "static.agent-guidance.v1",
+      "agents/maintainer/skills/recon-corpus-plan/SKILL.md#Freeze and hand off": "static.agent-guidance.v1",
       "agents/vscode/README.md#1. Install the recon CLI": "static.agent-guidance.v1",
       "agents/vscode/README.md#2. Wire the MCP server": "static.agent-guidance.v1",
       "agents/vscode/README.md#3. Wire the agent guidance": "static.agent-guidance.v1",

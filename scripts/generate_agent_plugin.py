@@ -23,8 +23,9 @@ SOURCE_SKILLS = {
 
 _TRIAGE_NATIVE_BOUNDARY = """This is a Claude Code-native skill. Its `argument-hint` field and surrounding
 plugin layout are client-specific. It does not claim portable Agent Skills or
-Agent Plugins conformance. Portable packaging remains a separate v2.15
-decision."""
+Agent Plugins conformance. The generated portable candidate under
+`agents/agent-plugin/` is separately schema-validated; compatibility remains
+unclaimed until its frozen representative-client evaluation is complete."""
 _TRIAGE_PORTABLE_BOUNDARY = """This is the portable Agent Skills form used by the schema-pinned v2.15
 candidate. It omits client-only frontmatter and does not depend on experimental
 `allowed-tools` behavior. Package compatibility remains unclaimed until the

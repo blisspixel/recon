@@ -6,6 +6,7 @@ import json
 import re
 import subprocess
 import tomllib
+from datetime import date
 from pathlib import Path
 
 import pytest
@@ -180,7 +181,11 @@ def test_math_docs_distinguish_semantic_baseline_from_current_review() -> None:
     for path in ("docs/correlation.md", "docs/statistical-assurance.md"):
         text = _read(path)
         assert "Semantic baseline established for recon v2.4.0" in text
-        assert f"Reviewed against v{version} on\n{release_date}" in text
+        review = re.search(rf"Reviewed against v{re.escape(version)} on\s+(\d{{4}}-\d{{2}}-\d{{2}})\.", text)
+        assert review is not None
+        # A later review of the same release is valid and should retain its
+        # actual date, not be backdated to the release merely to pass a gate.
+        assert date.fromisoformat(review.group(1)) >= date.fromisoformat(release_date)
 
 
 def test_documented_current_catalog_counts_match_the_generated_catalog() -> None:

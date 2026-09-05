@@ -14,8 +14,9 @@ of new CNAME suffixes.
 
 This is a Claude Code-native skill. Its `argument-hint` field and surrounding
 plugin layout are client-specific. It does not claim portable Agent Skills or
-Agent Plugins conformance. Portable packaging remains a separate v2.15
-decision.
+Agent Plugins conformance. The generated portable candidate under
+`agents/agent-plugin/` is separately schema-validated; compatibility remains
+unclaimed until its frozen representative-client evaluation is complete.
 
 ## When to use this
 
@@ -45,7 +46,7 @@ recon <validated-domain> --json --include-unclassified
 
 Read all three catalog-discovery collections when present:
 
-- `dns_catalog_summaries` for bounded opportunity and classification counts;
+- `dns_catalog_summary` for bounded opportunity and classification counts;
 - `unclassified_dns_observations` for typed unmatched values;
 - `unclassified_cname_chains` for the historical related-host CNAME view.
 
@@ -72,6 +73,9 @@ round protocol in `docs/catalog-strategy.md`. Keep these dimensions separate:
 Do not pool unlike record types into one coverage rate. Preserve the round's
 catalog digest, collection options, source-opportunity counts, unresolved and
 unavailable counts, truncation state, stratum, and frozen regression budget.
+For a new corpus or round, start with the repository maintainer workflow in
+`docs/catalog-maintenance.md`. Triage does not authorize new collection, and an
+evaluation holdout is not a candidate-development queue.
 
 ### C. Historical CNAME candidate queue
 
@@ -123,6 +127,14 @@ A candidate remains `pending` until every item below is satisfied:
    round budget. Report the aggregate before-and-after result. Reject or leave
    pending any rule that exceeds it. Do not tune the pattern or budget on an
    independent holdout after reading its result.
+
+`validation/evaluate_catalog_promotions.py` is a bounded fixed-observation
+coverage diagnostic for built-in, `match_mode: any` DNS-suffix candidates in
+`cname_target`, `mx`, `ns`, and `spf`. It is not full detector replay or a
+precision test. Its additive coverage arithmetic cannot certify absence of
+false attribution or displacement, and `accepted` does not satisfy the other
+promotion gates. Unsupported types and conjunctions require dedicated detector
+tests and separately justified evaluation, not a forced conversion to `any`.
 
 If the public reference documents only a setup flow and not the proposed token
 or hostname, say so. A vendor name or generic documentation homepage does not
