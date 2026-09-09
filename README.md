@@ -135,7 +135,7 @@ supplied: recon describes observable similarities and differences but does not
 infer ownership, control, or a corporate relationship.
 
 [NamespaceReviewBundle v1](https://github.com/blisspixel/recon/blob/main/docs/review-bundles.md)
-defines the next role-neutral handoff boundary for one namespace: one fresh,
+provides a role-neutral handoff for one namespace: one fresh,
 lookup-result-cache-bypassed baseline, evidence-linked review candidates,
 explicit bounded collection and failure states, and one deterministic human
 rendering. Use `recon review "<domain>"` from the CLI or
@@ -165,6 +165,15 @@ is the deeper design contract for that question. It separates observed facts,
 deterministic deductions, and model-relative diagnostics; treats provenance and
 abstention as first-class; and keeps ownership, causation, complete-inventory,
 and unvalidated robustness claims outside the result.
+
+The numerical diagnostics have a narrower meaning than their precision may
+suggest. `slug_confidences` measures evidence strength; a Bayesian posterior
+such as `0.9314` is conditional on manually encoded model assumptions, not a
+validated 93% chance of product use. Its uncertainty band is a display heuristic,
+not a confidence or credible interval. No current claim family has the
+independent validation needed for general calibration claims; see
+[statistical assurance](https://github.com/blisspixel/recon/blob/main/docs/statistical-assurance.md).
+The general robustness machinery in correlation section 5 remains research.
 
 v2.15 and v2.16 closed a five-round presentation-drift class. Independent
 testers installed the published package, never read the source, and kept finding
@@ -203,7 +212,7 @@ recon example.com --plain --full               # every field, linear
 recon example.com --json                       # structured record
 recon review example.com                       # deterministic namespace review
 recon review example.com --output review.json  # save the validated v1 artifact
-recon example.com --explain-dag --explain-dag-format mermaid   # evidence DAG
+recon example.com --explain-dag --explain-dag-format mermaid   # Bayesian model DAG
 recon batch domains.txt --json                 # batch JSON array
 recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2
                                                 # portfolio evidence bundle

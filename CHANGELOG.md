@@ -26,6 +26,28 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.2] - 2026-09-09
+
+Clarify the interpretation of correlation diagnostics in the packaged README
+and align the roadmap with shipped behavior and the stopped M365 evaluation.
+No runtime, model parameter, collection, or schema change.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Documentation
+
+- Put the calibration and heuristic-band limits beside the README's correlation
+  overview, and identify `--explain-dag` as the Bayesian model graph.
+- Explain the assumptions behind a `0.9314` posterior, distinguish the complete
+  latent-state enumeration from its bounded evidence sweep, and document fusion
+  in ordinary MCP JSON as well as dedicated diagnostic tools.
+- Replace stale release planning with shipped status. Prioritize documented
+  public patterns, synthetic and adversarial fixtures, and renderer truth.
+  Independent calibration remains unestablished, with no replacement study or
+  company outreach planned.
+
 ## [2.19.1] - 2026-09-09
 
 Documented catalog additions for Tailscale, PostHog, and Resend, plus
