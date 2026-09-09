@@ -95,6 +95,38 @@ def test_unsupported_math_macro_is_rejected(tmp_path: Path) -> None:
     assert "supported primitive notation" in findings[0].detail
 
 
+def test_escaped_set_braces_in_math_are_rejected(tmp_path: Path) -> None:
+    findings = check_paths([_write(tmp_path, "## Heading\n\nThe set $\\sigma\\in\\{+,\\-}$ is binary.\n")])
+
+    assert [finding.check for finding in findings] == ["math-brace"]
+    assert r"\lbrace" in findings[0].detail
+
+
+def test_left_brace_delimiter_in_display_math_is_rejected(tmp_path: Path) -> None:
+    body = "## Heading\n\n$$\n\\left\\{\\bigcup_a Q_a\n\\right\\}\n$$\n"
+    findings = check_paths([_write(tmp_path, body)])
+
+    assert {finding.check for finding in findings} == {"math-brace"}
+
+
+def test_left_at_end_of_math_line_is_rejected(tmp_path: Path) -> None:
+    body = "## Heading\n\n$$\nn=\\max\\left\n(a,b)\n\\right\n$$\n"
+    findings = check_paths([_write(tmp_path, body)])
+
+    assert "math-left" in {finding.check for finding in findings}
+    assert any(r"\left" in finding.detail or r"\right" in finding.detail for finding in findings)
+
+
+def test_lbrace_math_is_accepted(tmp_path: Path) -> None:
+    doc = _write(
+        tmp_path,
+        "## Heading\n\nInline $\\sigma\\in\\lbrace +, -\\rbrace$ and display:\n\n"
+        "$$\n\\lbrace\\bigcup_a Q_a:Q_a\\in E\\rbrace\n$$\n",
+    )
+
+    assert check_paths([doc]) == []
+
+
 def test_unsupported_math_macro_in_code_is_ignored(tmp_path: Path) -> None:
     doc = _write(
         tmp_path,

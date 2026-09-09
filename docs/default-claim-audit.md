@@ -70,7 +70,7 @@ representative-client validation.
   runtime observations remain governed by separate claim families.
 - `audit_status: open` means the family still requires implementation or review.
 
-At the 2026-09-04 checkpoint, the inventory contains 29 families and covers 134
+At the 2026-09-08 checkpoint, the inventory contains 29 families and covers 135
 agent-guidance sections, 16 insight generators, 261 JSON property occurrences,
 185 MCP tool and output surfaces, 2 MCP prompt surfaces, 32 panel producers, 4
 recommendation producers, 91 quantitative or categorical score fields, and 8

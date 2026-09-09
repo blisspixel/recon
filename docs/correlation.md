@@ -204,7 +204,7 @@ For prior parameters $(\alpha_0,\beta_0)$ and observed positive weights $w_j$,
 
 $$
 s = \frac{\alpha_0 + \sum_j w_j}
-         {\alpha_0 + \beta_0 + \sum_j w_j}.
+ {\alpha_0 + \beta_0 + \sum_j w_j}.
 $$
 
 This is a monotone evidence-strength heuristic. It is not a fitted Bernoulli
@@ -232,8 +232,8 @@ For a partition $c$, weighted modularity is
 
 $$
 Q = \frac{1}{2m}\sum_{ij}
-    \left(A_{ij} - \frac{k_i k_j}{2m}\right)
-    \mathbf{1}[c_i=c_j].
+ \bigl(A_{ij} - \frac{k_i k_j}{2m}\bigr)
+ \mathbf{1}\lbrack c_i=c_j\rbrack.
 $$
 
 Here $A_{ij}$ is the observed edge weight,
@@ -312,9 +312,9 @@ $\phi_e(X_i)$. Exact variable elimination then computes
 $$
 P_m(X_i\mid e) =
 \frac{\sum_{X\setminus X_i}\prod_j
-      P_m(X_j\mid X_{\mathrm{pa}(j)})\prod_e\phi_e(X)}
-     {\sum_X\prod_j
-      P_m(X_j\mid X_{\mathrm{pa}(j)})\prod_e\phi_e(X)}.
+ P_m(X_j\mid X_{\mathrm{pa}(j)})\prod_e\phi_e(X)}
+ {\sum_X\prod_j
+ P_m(X_j\mid X_{\mathrm{pa}(j)})\prod_e\phi_e(X)}.
 $$
 
 The subscript $m$ matters. The value is exact for the committed model, but the
@@ -451,10 +451,7 @@ interval that misses the mean, use a clamped mean-centered fallback.
 The effective mass is
 
 $$
-n_{\mathrm{eff}}=\max\left(
-n_{\min},
-n_{\min}+c_e N_e-c_c N_c
-\right),
+n_{\mathrm{eff}}=\max\bigl(n_{\min},\, n_{\min}+c_e N_e-c_c N_c\bigr),
 $$
 
 where $N_e$ is the effective-unit count after dependency grouping, structural
@@ -517,7 +514,7 @@ dependent claims.
 For one realized observation, a nonnegative measure of belief change would be
 
 $$
-D_{KL}\!\left(P_m(X_i\mid e)\,\|\,P_m(X_i)\right),
+D_{\mathrm{KL}}\bigl(P_m(X_i\mid e)\Vert P_m(X_i)\bigr),
 $$
 
 but even that remains model-relative and does not measure product value.
@@ -974,7 +971,7 @@ define a scoring procedure, not a generative observation model.
 The first prototype should be Boolean and threshold-free. Use separate reviewed
 predicates $h^+_{m,C}(z)$ for positive public support and
 $h^-_{m,C}(z)$ for authoritative public disconfirmation. For each
-$\sigma\in\{+,-\}$, use the compatibility set defined below and report
+$\sigma\in\lbrace +,-\rbrace$, use the compatibility set defined below and report
 
 $$
 \underline h_b^\sigma(C,o)=
@@ -1031,8 +1028,8 @@ class. The observational compatibility set is
 
 $$
 \mathcal K_b^T(o)=
-\{(m,z):m\in\mathcal M,\ z\in\mathcal Z_m,\
-o\in\mathcal H_{b,m}^T(z)\}.
+\lbrace (m,z):m\in\mathcal M,\ z\in\mathcal Z_m,\
+o\in\mathcal H_{b,m}^T(z)\rbrace.
 $$
 
 The feasibility condition excludes model-impossible states. A reported envelope
@@ -1063,11 +1060,11 @@ $q_m(o\mid C,X,R)$. It then defines
 $$
 P_m(C=1\mid O=o)=
 \frac{\int q_m(o\mid C=1,x,r)\,P_m(C=1,dx,dr)}
-{\sum_{c\in\{0,1\}}\int q_m(o\mid C=c,x,r)\,P_m(C=c,dx,dr)},
+{\sum_{c\in\lbrace 0,1\rbrace}\int q_m(o\mid C=c,x,r)\,P_m(C=c,dx,dr)},
 $$
 
 when the denominator is positive. Omitting $C$ from the kernel asserts the
-conditional independence $O\mathbin{\perp\!\!\!\perp}C\mid X,R$, which must be
+conditional independence $O\mathbin{\perp\perp}C\mid X,R$, which must be
 defended rather than implied. If only marginal constraints are specified, the
 compatible joint laws and observation kernels they admit are themselves the
 model class. Probabilistic partial-identification bounds are the infimum and
@@ -1134,14 +1131,14 @@ $\mathrm{Atoms}(U)$ be the signed normalized and derived atoms exposed
 by a unit set. Each observed atom $a$ retains an antichain
 $\mathrm{Orig}_o(a)\subseteq 2^{U(o)}$ of minimal raw-origin unit
 environments. Alternatives remain separate: if either $u_1$ or $u_2$
-derives $a$, the environments are $\{u_1\}$ and $\{u_2\}$, not
-$\{u_1,u_2\}$. Lift one atom proof $E$ to dependency units by distributive
+derives $a$, the environments are $\lbrace u_1\rbrace$ and $\lbrace u_2\rbrace$, not
+$\lbrace u_1,u_2\rbrace$. Lift one atom proof $E$ to dependency units by distributive
 choice:
 
 $$
 \Pi_o(E)=\min_{\subseteq}
-\left\{\bigcup_{a\in E}Q_a:
-Q_a\in\mathrm{Orig}_o(a)\ \text{for every }a\in E\right\}.
+\lbrace\bigcup_{a\in E}Q_a:
+Q_a\in\mathrm{Orig}_o(a)\ \text{for every }a\in E\rbrace.
 $$
 
 Let $J$ be a reviewed monotone signed rule system. Write
@@ -1156,26 +1153,26 @@ model-wide proof templates
 
 $$
 \widehat{\mathcal P}_C^T=\min_{\subseteq}
-\{E\subseteq\Omega_C:\mathrm{valid}_J(E),\ E\vdash_J^+ C\},
+\lbrace E\subseteq\Omega_C:\mathrm{valid}_J(E),\ E\vdash_J^+ C\rbrace,
 $$
 
 $$
 \widehat{\mathcal N}_C^T=\min_{\subseteq}
-\{E\subseteq\Omega_C:\mathrm{valid}_J(E),\ E\vdash_J^- C\}.
+\lbrace E\subseteq\Omega_C:\mathrm{valid}_J(E),\ E\vdash_J^- C\rbrace.
 $$
 
 The active dependency-unit certificate antichains for the observed snapshot are
 
 $$
 \mathcal P_C(o)=\min_{\subseteq}
-\{Q:E\subseteq\mathrm{Atoms}(U(o)),\
-  \mathrm{valid}_J(E),\ E\vdash_J^+ C,\ Q\in\Pi_o(E)\},
+\lbrace Q:E\subseteq\mathrm{Atoms}(U(o)),\
+ \mathrm{valid}_J(E),\ E\vdash_J^+ C,\ Q\in\Pi_o(E)\rbrace,
 $$
 
 $$
 \mathcal N_C(o)=\min_{\subseteq}
-\{Q:E\subseteq\mathrm{Atoms}(U(o)),\
-  \mathrm{valid}_J(E),\ E\vdash_J^- C,\ Q\in\Pi_o(E)\}.
+\lbrace Q:E\subseteq\mathrm{Atoms}(U(o)),\
+ \mathrm{valid}_J(E),\ E\vdash_J^- C,\ Q\in\Pi_o(E)\rbrace.
 $$
 
 An absent optional record never enters $\mathcal N_C$. A negative atom exists
@@ -1192,7 +1189,7 @@ The snapshot reducer has a useful algebra that should be explicit in the first
 claim contract. Encode the state as
 
 $$
-q_C(o)=(p_C(o),n_C(o))\in\{0,1\}^2,
+q_C(o)=(p_C(o),n_C(o))\in\lbrace 0,1\rbrace^2,
 $$
 
 where each coordinate records whether its certificate family is nonempty.
@@ -1232,7 +1229,7 @@ weight. The reduced expression
 
 $$
 \rho_C^+(o)=\bigoplus_{E\in\mathcal P_C(o)}
-             \bigotimes_{u\in E}x_u
+ \bigotimes_{u\in E}x_u
 $$
 
 has one minimal monomial per support certificate. It can be implemented with
@@ -1256,10 +1253,10 @@ planting-only threat model, the valid completion-action antichain is
 
 $$
 \mathcal G_{C,+}^T(o)=\min_{\subseteq}
-\{A:E\in\widehat{\mathcal P}_C^T,\
-  A\in\Lambda_T^+(o),\
-  S_A=\mathrm{Cl}_J(\mathrm{Atoms}(\phi_A(U(o)))),\
-  \mathrm{valid}_J(S_A),\ E\subseteq S_A\}.
+\lbrace A:E\in\widehat{\mathcal P}_C^T,\
+ A\in\Lambda_T^+(o),\
+ S_A=\mathrm{Cl}_J(\mathrm{Atoms}(\phi_A(U(o)))),\
+ \mathrm{valid}_J(S_A),\ E\subseteq S_A\rbrace.
 $$
 
 This family deliberately excludes an addition that conflicts with an observed
@@ -1320,7 +1317,7 @@ decision radius is
 
 $$
 r_T^{\mathrm{bool}}(C,o)=
-\inf\{b:D_b^{\mathrm{bool}}(C,o)\ne D_0^{\mathrm{bool}}(C,o)\}.
+\inf\lbrace b:D_b^{\mathrm{bool}}(C,o)\ne D_0^{\mathrm{bool}}(C,o)\rbrace.
 $$
 
 This definition covers robust support, disconfirmation, and conflict. For
@@ -1331,14 +1328,14 @@ cost only when a flip witness attains it.
 
 A componentwise Pareto budget is not totally ordered and must not be reduced to
 one infimum. With $b\preceq b'$ meaning componentwise no greater, let
-$F_T(C,o)=\{b:D_b^{\mathrm{bool}}(C,o)\ne D_0^{\mathrm{bool}}(C,o)\}$.
+$F_T(C,o)=\lbrace b:D_b^{\mathrm{bool}}(C,o)\ne D_0^{\mathrm{bool}}(C,o)\rbrace$.
 When the flip set has attainable minimal points,
 report the Pareto-minimal flip frontier
 
 $$
 \mathcal R_T^{\mathrm{bool}}(C,o)=
-\min_{\preceq}\{b:D_b^{\mathrm{bool}}(C,o)
-                    \ne D_0^{\mathrm{bool}}(C,o)\}.
+\min_{\preceq}\lbrace b:D_b^{\mathrm{bool}}(C,o)
+ \ne D_0^{\mathrm{bool}}(C,o)\rbrace.
 $$
 
 Incomparable points remain separate. A finite prototype has such a frontier
@@ -1356,13 +1353,13 @@ requirement.
 For a claim with $\underline s_0\ge\tau$, define the lower-support radius
 
 $$
-r_T^-(C,o)=\inf\{b:\underline s_b(C,o)<\tau\}.
+r_T^-(C,o)=\inf\lbrace b:\underline s_b(C,o)<\tau\rbrace.
 $$
 
 For a claim with $\overline s_0<\tau$, define the upper-support radius
 
 $$
-r_T^+(C,o)=\inf\{b:\overline s_b(C,o)\ge\tau\}.
+r_T^+(C,o)=\inf\lbrace b:\overline s_b(C,o)\ge\tau\rbrace.
 $$
 
 Use $\inf\varnothing=\infty$. The upper-support radius can be finite because
@@ -1380,11 +1377,11 @@ $$
 \mathrm{bad}_D(m,z)=
 \begin{cases}
 h^+_{m,C}(z)=0\ \text{or}\ h^-_{m,C}(z)=1,
-  &D=\text{supported},\\
+ &D=\text{supported},\\
 h^-_{m,C}(z)=0\ \text{or}\ h^+_{m,C}(z)=1,
-  &D=\text{disconfirmed},\\
+ &D=\text{disconfirmed},\\
 h^+_{m,C}(z)=0\ \text{or}\ h^-_{m,C}(z)=0,
-  &D=\text{conflicted}.
+ &D=\text{conflicted}.
 \end{cases}
 $$
 
@@ -1393,8 +1390,8 @@ The primary inverse Boolean flip-certificate antichain is
 $$
 \mathcal W_{B,D}^{\mathrm{bool}}=
 \min_{\subseteq}
-\{A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),
-              \mathrm{bad}_D(m,z)\}.
+\lbrace A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),
+ \mathrm{bad}_D(m,z)\rbrace.
 $$
 
 It is undefined for an unresolved initial state. The secondary graded
@@ -1402,12 +1399,12 @@ lowering and raising certificate families are
 
 $$
 \mathcal W_{B}^{\mathrm{score},-} = \min_{\subseteq}
-\{A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),\ s_m(C,z)<\tau\},
+\lbrace A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),\ s_m(C,z)<\tau\rbrace,
 $$
 
 $$
 \mathcal W_{B}^{\mathrm{score},+} = \min_{\subseteq}
-\{A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),\ s_m(C,z)\ge\tau\}.
+\lbrace A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),\ s_m(C,z)\ge\tau\rbrace.
 $$
 
 Report only the family relevant to the current decision and diagnostic. First
@@ -1448,8 +1445,8 @@ subproblem, a local log-odds model with additive unit values
 $v_u=\log LR_u$ and costs $k_u$ has the worst-deletion problem
 
 $$
-\min_{d_u\in\{0,1\}}
-\left(\log O_0+\sum_u(1-d_u)v_u\right)
+\min_{d_u\in\lbrace 0,1\rbrace}
+\bigl(\log O_0+\sum_u(1-d_u)v_u\bigr)
 \quad\text{subject to}\quad
 \sum_u k_u d_u\le b.
 $$
@@ -1510,16 +1507,16 @@ constraints. The inclusion-minimal forward flip families are
 
 $$
 \mathcal F_{\mathrm{del}}=
-\min_{\subseteq}\{A\in\mathfrak D_T(o):
+\min_{\subseteq}\lbrace A\in\mathfrak D_T(o):
 \mathrm{feasible}_{m_0}(d_A(o)),\
-D_{m_0}(d_A(o))\ne D_{m_0}(o)\},
+D_{m_0}(d_A(o))\ne D_{m_0}(o)\rbrace,
 $$
 
 $$
 \mathcal F_{\mathrm{add}}=
-\min_{\subseteq}\{A\in\mathfrak P_T(o):
+\min_{\subseteq}\lbrace A\in\mathfrak P_T(o):
 \mathrm{feasible}_{m_0}(p_A(o)),\
-D_{m_0}(p_A(o))\ne D_{m_0}(o)\}.
+D_{m_0}(p_A(o))\ne D_{m_0}(o)\rbrace.
 $$
 
 These families are antichains in the Boolean lattice. For a monotone Boolean
@@ -1707,7 +1704,7 @@ model sequences of directly observed facts:
 
 $$
 Y_t=(\text{MX RRset},\text{NS RRset},\text{DMARC RRset},
-     \text{tenant response},\text{CT entries},\text{source status},\ldots)_t.
+ \text{tenant response},\text{CT entries},\text{source status},\ldots)_t.
 $$
 
 Derived provider or product labels are interpretation outputs, not components of

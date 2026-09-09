@@ -70,7 +70,9 @@ _EXPECTED_RUNTIME_DEPENDENCIES = {
     "defusedxml",
     "dnspython",
     "httpcore",  # Existing HTTPX transport dependency, now a direct guarded-backend API contract.
+    "httpcore2",  # Security floor for the MCP HTTPX v2 transport.
     "httpx",
+    "httpx2",  # Security floor for the MCP HTTPX v2 client.
     "jsonschema",
     "mcp",
     "networkx",

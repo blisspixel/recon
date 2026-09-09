@@ -67,6 +67,11 @@ dependencies = [
     # and 0.0.26 has CVE-2026-42561 (fix: 0.0.27). Pinned here so resolvers and
     # `pip-audit` stay green until mcp's own floor catches up.
     "python-multipart>=0.0.27",
+    # Security floors on the HTTPX v2 packages mcp pulls in. httpcore2 2.9.1 is
+    # CVE-2026-84381 (fix: 2.10.0). httpx2 2.9.1 is CVE-2026-84378 through
+    # CVE-2026-84382 (fix: 2.12.0). Keep the floors until mcp's own pins catch up.
+    "httpcore2>=2.10.0",
+    "httpx2>=2.12.0",
 ]
 
 [project.scripts]

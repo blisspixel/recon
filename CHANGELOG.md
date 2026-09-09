@@ -26,6 +26,41 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.1] - 2026-09-09
+
+Documented catalog additions for Tailscale, PostHog, and Resend, plus
+source-checkout agent briefing, GitHub-safe math rendering, and HTTPX v2
+security floors. No collector or model change.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Added
+
+- Documented Tailscale `_tailscale-challenge` and PostHog `_posthog-challenge`
+  owner-qualified TXT rules, plus PostHog's US managed-proxy CNAME zone and
+  Resend's `links1.resend-dns.com` tracking target. Claims stay routing or
+  administrative-verification observations. Synthetic owner, lookalike, sparse,
+  and related-host tests cover the new rules. No real-target data is committed.
+
+### Security
+
+- Raise locked `httpx2` and `httpcore2` floors so `pip-audit` clears
+  CVE-2026-84378 through CVE-2026-84382. These are transitive MCP HTTP
+  packages, not a collector change.
+
+### Documentation
+
+- Add a source-checkout working section to `AGENTS.md` so coding agents get
+  seams, the canonical local gate, generated-artifact rules, and safety
+  constraints without replacing the consumer invocation contract.
+- Repair GitHub/KaTeX rendering of `docs/correlation.md` set braces and
+  `\left`/`\right` so formulas no longer fail with "Missing or unrecognized
+  delimiter for `\left`". Use `\lbrace`/`\rbrace` and keep sized delimiters on
+  one line. The documentation gate now rejects `\{` in math and a `\left` at
+  end of line.
+
 ## [2.19.0] - 2026-09-05
 
 Compatible assurance improvements to collection boundaries, catalog claims,

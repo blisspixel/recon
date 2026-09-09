@@ -94,7 +94,9 @@ local test stage uses at most four file-grouped workers and combines branch
 coverage; focused tests remain serial by default.
 The standards this project holds itself (and any AI working in it) to are in
 [docs/engineering-practices.md](docs/engineering-practices.md); load-bearing
-design decisions are in [docs/adr/](docs/adr/).
+design decisions are in [docs/adr/](docs/adr/). Coding agents should read
+[AGENTS.md](AGENTS.md#working-in-this-repository) for the short operational
+briefing, then this file and the engineering-practices standard.
 
 ---
 

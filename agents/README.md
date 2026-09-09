@@ -75,11 +75,12 @@ The behavioral contract is shared across clients. It is maintained in two
 format-specific files:
 
 - [`agents/claude-code/skills/recon/SKILL.md`](claude-code/skills/recon/SKILL.md) - skill-format guidance for Claude Code and Kiro auto-loading, with CLI-specific gotchas.
-- [`AGENTS.md`](../AGENTS.md) at the repo root - portable guidance for tools that do not use the skill format. Auto-detected by Kiro and other agents.md-aware clients.
+- [`AGENTS.md`](../AGENTS.md) at the repo root - portable guidance for tools that do not use the skill format. Auto-detected by Kiro and other agents.md-aware clients. The [Working in this repository](../AGENTS.md#working-in-this-repository) section is source-checkout development briefing; consumer invocation starts at [What recon is](../AGENTS.md#what-recon-is).
 
 The prose need not be byte-for-byte identical, but collection boundaries,
 failure behavior, MCP invocation contracts, and output interpretation must stay
-semantically aligned.
+semantically aligned. Do not copy the source-checkout working section into
+consumer skills.
 
 ## macOS PATH gotcha (most GUI clients)
 

@@ -25,6 +25,13 @@ either thing.
    resolves, which a stub satisfies perfectly, so a hollowed-out section reads
    as a live cross-reference target while carrying nothing.
 
+5. **GitHub-unsafe math braces and ``\\left``. ** CommonMark unescapes
+   ``\\{`` to ``{`` before KaTeX runs. ``\\left{`` is not a delimiter, so
+   GitHub shows ``Missing or unrecognized delimiter for \\left``. The same
+   unescape drops set braces from ``\\{0,1\\}``. ``\\left`` at the end of a
+   line also fails if a renderer sizes each line. Use ``\\lbrace`` /
+   ``\\rbrace`` and keep any ``\\left``/``\\right`` pair on one line.
+
 Both checks skip fenced code blocks and inline code spans, because documenting
 either pattern is legitimate and this file itself does it.
 
@@ -56,6 +63,9 @@ _HEADING = re.compile(r"^(#{2,6})\s+(.*)$")
 # enough; a document never has one without meaning to open a math span.
 _BROKEN_MATH = re.compile(r"\\\(|\\\[")
 _UNSUPPORTED_MATH_MACRO = re.compile(r"\\operatorname\b")
+_ESCAPED_SET_BRACE = re.compile(r"\\[{}]")
+_LEFT_RIGHT_AT_EOL = re.compile(r"\\(left|right)\s*$")
+_LEFT_RIGHT_NAKED_BRACE = re.compile(r"\\(left|right)\s*\{")
 _FENCE_DETAILS = re.compile(r"^\s*(```|~~~)(.*)$")
 _MERMAID_CLASS_DEF = re.compile(r"^\s*classDef\s+([A-Za-z][A-Za-z0-9_-]*)\b", re.IGNORECASE)
 _MERMAID_RESERVED_IDENTIFIERS = frozenset({"end", "flowchart", "graph", "subgraph"})
@@ -151,6 +161,83 @@ def _check_unbalanced_display_math(path: Path, lines: list[str], mask: list[bool
             else:
                 opens.append(index)
     return [Finding(path, line, "display-math", "unclosed $$ display-math block") for line in opens]
+
+
+def _iter_math_spans(lines: list[str], mask: list[bool]) -> list[tuple[int, str]]:
+    """Yield ``(line_number, math_text)`` for inline and display math spans."""
+    spans: list[tuple[int, str]] = []
+    in_display = False
+    display_start = 0
+    display_parts: list[str] = []
+    inline = re.compile(r"(?<!\$)\$(?!\$)([^$\n]+)\$(?!\$)")
+    for index, line in enumerate(lines, start=1):
+        if mask[index - 1]:
+            continue
+        scanned = _strip_inline_code(line)
+        cursor = 0
+        while cursor <= len(scanned):
+            if in_display:
+                end = scanned.find("$$", cursor)
+                if end == -1:
+                    display_parts.append(scanned[cursor:])
+                    break
+                display_parts.append(scanned[cursor:end])
+                spans.append((display_start, "\n".join(display_parts)))
+                in_display = False
+                display_parts = []
+                cursor = end + 2
+                continue
+            display_at = scanned.find("$$", cursor)
+            match = inline.search(scanned, cursor)
+            if display_at != -1 and (match is None or display_at <= match.start()):
+                in_display = True
+                display_start = index
+                display_parts = []
+                cursor = display_at + 2
+                continue
+            if match is None:
+                break
+            spans.append((index, match.group(1)))
+            cursor = match.end()
+    return spans
+
+
+def _check_github_unsafe_math(path: Path, lines: list[str], mask: list[bool]) -> list[Finding]:
+    """Reject ``\\{`` and split ``\\left`` that GitHub/KaTeX render as error panels."""
+    findings: list[Finding] = []
+    for line_number, tex in _iter_math_spans(lines, mask):
+        if _ESCAPED_SET_BRACE.search(tex):
+            findings.append(
+                Finding(
+                    path,
+                    line_number,
+                    "math-brace",
+                    r"\{ or \} is unescaped before KaTeX; use \lbrace / \rbrace",
+                )
+            )
+        for part in tex.split("\n"):
+            if _LEFT_RIGHT_NAKED_BRACE.search(part):
+                findings.append(
+                    Finding(
+                        path,
+                        line_number,
+                        "math-left",
+                        r"\left{ is not a KaTeX delimiter; use \left\lbrace or \lbrace",
+                    )
+                )
+            match = _LEFT_RIGHT_AT_EOL.search(part)
+            if match is None:
+                continue
+            findings.append(
+                Finding(
+                    path,
+                    line_number,
+                    "math-left",
+                    f"\\{match.group(1)} at end of line has no delimiter; "
+                    "keep the pair on one line or use \\bigl / \\lbrace",
+                )
+            )
+    return findings
 
 
 def _check_unsupported_math_macros(path: Path, lines: list[str], mask: list[bool]) -> list[Finding]:
@@ -259,6 +346,7 @@ def check_paths(paths: list[Path]) -> list[Finding]:
         findings.extend(_check_math_delimiters(path, lines, mask))
         findings.extend(_check_unbalanced_display_math(path, lines, mask))
         findings.extend(_check_unsupported_math_macros(path, lines, mask))
+        findings.extend(_check_github_unsafe_math(path, lines, mask))
         findings.extend(_check_mermaid_reserved_class_names(path, lines))
         findings.extend(_check_pointer_stubs(path, lines, mask))
     return findings

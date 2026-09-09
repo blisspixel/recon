@@ -25,7 +25,7 @@ caveats. No evaluation holdout becomes a development queue.
 
 ## How the catalog grows today
 
-The catalog carries 867 entries and 1,109 detection rules across nine populated
+The catalog carries 870 entries and 1,113 detection rules across nine populated
 types: `cname_target`, `cname`, `txt`, `spf`, `dmarc_rua`, `mx`, `ns`, `caa`,
 and `subdomain_txt`. The grammar and runtime also support `srv`, but the built-in
 catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
@@ -55,7 +55,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 162 of 1,109 detections currently carry a `verified` date (14.6 percent).
+date: 166 of 1,113 detections currently carry a `verified` date (14.9 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 
@@ -231,9 +231,12 @@ python -m validation.audit_fingerprints --freshness
 
 It defaults to the canonical built-in catalog and reports verified-date
 coverage and detections older than a staleness threshold. As of 2026-09-05 the
-catalog has 162 dated detections of 1,109 (14.6 percent), after the
+catalog had 162 dated detections of 1,109 (14.6 percent), after the
 [claim and retirement review](../validation/2026-09-05-catalog-claim-review.md)
 and the [documented CNAME round](../validation/2026-09-05-documented-cname-review.md).
+As of 2026-09-08 it has 166 dated detections of 1,113 (14.9 percent) after
+adding documented Tailscale, PostHog, and Resend rules
+([review](../validation/2026-09-08-documented-fingerprint-review.md)).
 An explicit `--effective-catalog` audit includes local additions and is not a
 canonical baseline. The diff-aware `scripts/check_fingerprint_freshness.py`
 gate permits the legacy undated backlog but requires every new detection to
