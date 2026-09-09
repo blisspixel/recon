@@ -111,16 +111,38 @@ and test the built wheel outside the checkout. The
 [catalog claim review](../validation/2026-09-05-catalog-claim-review.md)
 narrows or retires unsupported rules and keeps new coverage proposals separate.
 These corrections and the subsequent reproducibility and design-language pass
-are grouped for the deliberate v2.19.0 release. The minor version accounts for
+shipped in v2.19.0. The minor version accounts for
 the additive diagnostic flag and documented CNAME support, not a new collection
 surface or a new inference model.
 
-Remaining research is conditional, not an implied backlog commitment:
+The correlation review reinforces a practical standard: best-effort
+interpretation of what the public channel exposes. The next work is:
+
+- Verify fingerprint meaning against current vendor documentation and test
+  synthetic positives, deceptive lookalikes, and optional or stale declarations.
+- Exercise repeated records, shared derivations, conflicting evidence, sparse
+  results, and failed collectors with offline fixtures. A repeated view adds no
+  independent corroboration; a failed source supplies no negative fact.
+- Check panel, plain, Markdown, and MCP wording against those fixtures. Keep
+  evidence strength, model-relative posteriors, and heuristic bands distinct
+  from validated probabilities, preserving stable JSON fields.
+- Fix concrete mismatches found in reproducible reports, and retain unknown or
+  unresolved states when the public evidence cannot decide the claim.
+
+Independent calibration remains unestablished. No company interviews, private
+inventory collection, or replacement population study is planned or required
+to maintain and release recon. The cancelled M365 frame remains closed. The
+[product-quality study requirements](#3-establish-a-reproducible-product-quality-baseline)
+are conditional standards for any future empirical accuracy claim, not the next
+maintenance task. General robustness envelopes remain research, not a promised
+feature. Best effort does not relax provenance, correctness, or wording gates.
+
+Further research remains conditional:
 
 - Before retuning inference, characterize repeated records and shared
-  derivations as dependency units. Freeze the operator decision, independent
-  labels, and loss before claiming accuracy gains. Existing fusion repetition
-  behavior remains a documented heuristic, not a calibrated probability.
+  derivations as dependency units. Compare duplicate views, distinct source
+  units, and failed collection before changing weights. Existing fusion
+  repetition behavior remains a documented heuristic, not a calibrated probability.
 - Before extending the public observation envelope, identify a consumer that
   needs per-record collection windows, vantage, or graph-completeness metadata.
   Internal timestamps and seed stability cannot supply those guarantees.

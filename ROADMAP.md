@@ -17,10 +17,10 @@ deployment.
 The resolver and detection engine are feature-complete. The stable lookup,
 briefing, full connection map, batch, capsule, and NamespaceReviewBundle
 surfaces share one evidence and claim discipline. New product work must solve a
-named operator handoff that the existing surfaces cannot solve. The forthcoming
-v2.19 assurance batch groups compatible fixes, two documented CNAME indicators,
-operator-display corrections and a PR-first release workflow. It does not add
-a collector or expand the inference model.
+named operator handoff that the existing surfaces cannot solve. The shipped
+v2.19 assurance batch includes compatible fixes, documented catalog indicators,
+operator-display corrections and a PR-first release workflow. It adds no
+collector and does not expand the inference model.
 
 The evidence-semantic audit is complete: 29 families are complete. 0 material
 runtime families carry incomplete lineage. Fail-closed inventory spans 91 score
@@ -66,8 +66,19 @@ The ordered work now is deliberately small:
 3. Run renderer parity review on every release that changes human output.
 4. Keep the 29-family claim audit, both MCP SDK pins, full test gate, release
    provenance, and channel parity blocking.
-5. Collect role-specific feedback before considering any new composition
-   surface.
+5. Use concrete bug reports and reproducible operator examples to justify any
+   new composition surface.
+
+For correlation, prioritize the accuracy of the public observation and the
+honesty of its explanation: documented vendor patterns, synthetic positive and
+lookalike cases, duplicate-evidence checks, and sparse or failed collection.
+Keep numerical diagnostics visibly model-relative. Independent calibration is
+unestablished; no replacement population study, company interviews, or private
+inventory collection is planned or required for maintenance. The cancelled
+M365 frame remains closed. The
+[canonical assurance priorities](docs/roadmap.md#current-assurance-priorities)
+define this practical loop. General robustness envelopes remain conditional
+research rather than a promised product feature.
 
 The September assurance pass makes that order concrete: preserve collection
 caveats across output formats, correct unsupported catalog claims before
@@ -96,6 +107,7 @@ silent-failure, and contract-preserving fixes.
 | v2.16 | Shipped | One shared briefing across panel, plain, Markdown, and MCP text, plus renderer parity gates |
 | v2.17 | Shipped | Additive downstream connection map while preserving briefing cuts |
 | v2.18 | Stability soak | NamespaceReviewBundle v1 plus contract-preserving fixes and maintenance |
+| v2.19 | Shipped; maintenance continues | Catalog and operator assurance, reproducible builds, and reviewed release preparation |
 | v3.0, conditional | Not scheduled | Exists only if a genuine claim or observation contract change cannot remain additive; otherwise v2 remains current |
 
 The fusion omitted-choice change is claim-neutral compatibility debt. The

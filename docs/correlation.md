@@ -10,7 +10,7 @@ This document separates three things that must not be conflated:
 3. a research program that must pass predeclared product tests before it can
    change default behavior.
 
-The immediate research thesis is **proof-carrying public observation with
+The conditional research thesis is **proof-carrying public observation with
 provenance-constrained claim robustness**. The first candidate in section 5 is
 a Boolean must/may claim envelope over compatible clean public states. The
 robust score envelope is a secondary model diagnostic, not the foundation. A
@@ -28,10 +28,22 @@ abstention, and turns adversarial ambiguity into an inspectable result. One
 bounded claim contract and its minimal-certificate algebra are now implemented
 internally for exact apex DMARC `p=reject`; see
 [claim-contracts.md](claim-contracts.md). No public dossier, general registry,
-robustness envelope, or graded bound is shipped. The first contract remains the
-prerequisite for the measured product baseline; Boolean robustness comes before
-graded score bounds. Any operator surface must earn its place through the
-roadmap's measured ablation.
+robustness envelope, or graded bound is shipped. The first contract supplies an
+implementation baseline; Boolean robustness would precede graded score bounds
+in a future prototype. A new robustness surface would need demonstrated
+operator value before promotion.
+
+The product standard is best-effort interpretation of observable public
+evidence, with explicit limits. No current claim family has independent
+predictive validation supporting general calibration language; the
+[statistical-assurance ledger](statistical-assurance.md#external-evidence-ledger)
+states what each family can claim today. The first M365 study stopped before
+collection because its candidate could not pass the declared benefit gate;
+[section 8.3](#83-predeclared-product-ablation) records that bounded result.
+It creates no obligation to launch a replacement study. Section 5 is conditional
+research design, not a shipped robust-inference engine or a maintenance backlog.
+Current work improves record interpretation, provenance, failure handling, and
+renderer truth through documented public patterns and reproducible fixtures.
 
 ## 1. Scope and epistemic contract
 
@@ -151,20 +163,22 @@ of one observation remain one support unit.
 ## 2. Current correlation layers
 
 Three layers share the same collected public observations. Only Layer 1 is
-authoritative for "did we observe X?" Layer 2 is always emitted as descriptive
-structure. Layer 3 is an advanced model-relative diagnostic. On the CLI it runs
-by default; pin it with `--fusion` or skip it with `--no-fusion`. MCP exposes
-it through `get_posteriors` and `explain_dag`.
+authoritative for "did we observe X?" Layer 2 describes retained CT
+co-occurrence when available. Layer 3 is an advanced model-relative diagnostic.
+On the CLI it runs by default; pin it with `--fusion` or skip it with
+`--no-fusion`. MCP `lookup_tenant(format="json")` also populates fusion and has
+no fusion toggle; `get_posteriors` and `explain_dag` expose dedicated diagnostic
+views. Ordinary MCP text and Markdown do not render the posterior fields.
 
 ```mermaid
 flowchart LR
-  obs["O = (O_DNS, O_CT, O_ID)"]
+  obs["Public observations: DNS, CT, identity, MTA-STS"]
   obs --> rules["Layer 1: deterministic rules<br/>slugs and signals"]
   rules --> panel["Default panel and JSON"]
   obs --> graphL["Layer 2: CT co-occurrence graph<br/>communities and motifs"]
   graphL --> panel
   rules -. "evidence chain" .-> bn["Layer 3: Bayesian network<br/>posteriors and bands"]
-  bn -. "fusion path" .-> panel
+  bn -. "fusion path" .-> diagnostics["Detailed model diagnostics"]
 
   classDef det fill:#dbe5f7,stroke:#3c5a8c,stroke-width:1px,color:#101828
   classDef cooccurrence fill:#d7ecdf,stroke:#3f7d55,stroke-width:1px,color:#101828
@@ -323,6 +337,13 @@ and missingness rules are manually encoded. Several parameters were informed by
 a June 2026 development corpus. Exact inference is not evidence that the model
 tracks the world or generalizes beyond that corpus.
 
+For example, the M365 root prior `0.30` and fired likelihoods `[0.95, 0.03]`
+give `0.30 * 0.95 / (0.30 * 0.95 + 0.70 * 0.03) = 0.931372...` when that
+binding is the only evidence. The emitted `0.9314` reflects four-decimal
+rounding of those assumptions, not four-decimal empirical precision or a
+validated 93% chance of current product use. Changing the display band's
+`n_eff` does not test or integrate uncertainty in those parameters.
+
 "Exact" describes variable elimination over the finite network, subject to
 floating-point precision. The exported Python `load_network(path)` and `infer`
 interfaces accept custom models whose individually valid likelihoods can have
@@ -471,13 +492,13 @@ effective mass changes:
 
 ```mermaid
 flowchart TB
-  subgraph sparse["n_eff = 4 (sparse public channel)"]
+  subgraph sparse["n_eff = 4 (display floor)"]
     sl["0.20"] --- sm["0.5"] --- sh["0.80"]
   end
   subgraph mid["n_eff = 8"]
     ml["0.28"] --- mm["0.5"] --- mh["0.72"]
   end
-  subgraph dense["n_eff = 14 (dense corroborating units)"]
+  subgraph dense["n_eff = 14 (more counted units)"]
     dl["0.33"] --- dm["0.5"] --- dh["0.67"]
   end
 ```
@@ -1771,7 +1792,10 @@ review.
 
 Current local checks establish implementation properties such as:
 
-- exact variable-elimination agreement with independent enumeration;
+- variable-elimination agreement with independent enumeration of all 512
+  latent states for each swept evidence configuration, anchored by
+  [hand-computed cases](../tests/test_bayesian_differential.py); the sweep is
+  not exhaustive over the global evidence power set;
 - positive factors and ordered bounded bands;
 - deterministic ordering;
 - counterfactual masking behavior;
