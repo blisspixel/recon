@@ -537,6 +537,25 @@ fingerprints:
       endpoint. This does not establish inbound mailbox hosting, delivered
       messages, SPF alignment for any message, or active account use.
 
+- name: Resend
+  slug: resend
+  category: Email & Communication
+  confidence: medium
+  detections:
+  - type: cname_target
+    pattern: ^links1\.resend-dns\.com\.?$
+    reference: https://resend.com/docs/api-reference/domains/create-domain
+    verified: 2026-09-08
+    tier: application
+    description: >-
+      Observed CNAME routing to Resend's documented tracking
+      endpoint `links1.resend-dns.com`. This observes a related
+      host delegated for Resend open or click tracking. It does
+      not establish sending authorization, inbound mailbox
+      hosting, delivered messages, or an active sending domain.
+      Other Resend DNS forms are dashboard-generated and are
+      not claimed here.
+
 - name: SparkPost
   slug: sparkpost
   category: Email & Communication

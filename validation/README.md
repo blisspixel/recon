@@ -93,6 +93,10 @@ Gitignored (your private workspace):
 
 - `corpus-private/`: your curated test bed of real apexes, organized however
   you want (by region, vertical, customer type)
+- `corpus-private/lists/`: extra private frames that never belong on GitHub.
+  Drop one apex per line. Suggested slots: `nonprofit.txt`, `k12.txt`,
+  `utilities.txt`, `foundations.txt`, plus any vendor-doc seed you are not
+  ready to promote. Synthetic rehearsal files may use `.invalid` names only.
 - `runs-private/`: output dirs from each run (results, gaps, diffs)
 - `live_runs/`: default output from `run_corpus.py`
 - `local/`: any other scratch space (notes, half-finished YAMLs, etc.)

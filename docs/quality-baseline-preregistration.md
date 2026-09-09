@@ -261,14 +261,14 @@ candidate minus baseline, that is A3 minus A0.
 
 **Primary benefit: reference-positive support rate.**
 
-$$\text{benefit} = \frac{\#\{\text{reference-positive units emitted as supported}\}}{\#\{\text{reference-positive units}\}}$$
+$$\text{benefit} = \frac{\#\lbrace\text{reference-positive units emitted as supported}\rbrace}{\#\lbrace\text{reference-positive units}\rbrace}$$
 
 Candidate minus baseline is positive when the candidate supports more true
 claims.
 
 **Primary safety: reference-negative unsupported-emission rate.**
 
-$$\text{safety} = \frac{\#\{\text{reference-negative units emitted as supported}\}}{\#\{\text{reference-negative units}\}}$$
+$$\text{safety} = \frac{\#\lbrace\text{reference-negative units emitted as supported}\rbrace}{\#\lbrace\text{reference-negative units}\rbrace}$$
 
 Candidate minus baseline is positive when the candidate causes more unsupported
 emissions. The denominator is the negative stratum, which is what stops this
