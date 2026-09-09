@@ -903,7 +903,8 @@
         "Client-specific installation details can change independently of runtime semantics.",
         "Repository maintainer skills do not authorize collection or publication and are not part of the frozen portable plugin candidate.",
         "Catalog coverage diagnostics do not establish precision, complete detector replay, or automatic promotion eligibility.",
-        "Portable schema and local stdio checks do not establish representative-client compatibility."
+        "Portable schema and local stdio checks do not establish representative-client compatibility.",
+        "The Working in this repository section is source-checkout development briefing. It does not change runtime collection, claims, or consumer invocation."
       ],
       "lineage_status": "static",
       "material": true,
@@ -995,6 +996,7 @@
       "AGENTS.md#What recon is": "static.agent-guidance.v1",
       "AGENTS.md#When to reach for recon": "static.agent-guidance.v1",
       "AGENTS.md#Workflow patterns": "static.agent-guidance.v1",
+      "AGENTS.md#Working in this repository": "static.agent-guidance.v1",
       "agents/README.md#Agent integrations": "static.agent-guidance.v1",
       "agents/README.md#Folders": "static.agent-guidance.v1",
       "agents/README.md#How the pieces fit together": "static.agent-guidance.v1",

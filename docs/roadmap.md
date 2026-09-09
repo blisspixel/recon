@@ -1145,7 +1145,7 @@ known-cluster unit, observation opportunities, CT and direct-probe settings,
 catalog and code digests, aggregate outputs, promotion and regression budgets,
 and disclosure review. A result may not retroactively change those choices.
 
-The catalog currently holds 867 entries across 692 unique slugs, with 1,109
+The catalog currently holds 870 entries across 695 unique slugs, with 1,113
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);

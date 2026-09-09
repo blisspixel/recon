@@ -441,6 +441,22 @@ fingerprints:
       Business or Teams account, typically for SSO federation
       or domain-bound enrollment. Does not prove employee-wide
       rollout.
+- name: Tailscale
+  slug: tailscale
+  category: Security & Compliance
+  confidence: high
+  detections:
+  - type: subdomain_txt
+    pattern: _tailscale-challenge:.
+    reference: https://tailscale.com/docs/account/domain-verification
+    verified: 2026-09-08
+    description: >-
+      Nonempty TXT at Tailscale's documented `_tailscale-challenge`
+      owner. Tailscale uses this record to verify a domain for
+      claimed or alias use on a tailnet. The record does not
+      establish completed verification, an active mesh, device
+      enrollment, SSO enforcement, or that the queried namespace
+      is the tailnet's primary domain.
 - name: Jamf
   slug: jamf
   category: Security & Compliance

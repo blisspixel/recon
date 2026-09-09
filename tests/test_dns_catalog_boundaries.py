@@ -405,6 +405,8 @@ async def test_wildcard_txt_does_not_attribute_every_probed_vendor(
                 ("_mcp.example.com", "TXT"): list(wildcard),
                 ("_agent.example.com", "TXT"): list(wildcard),
                 ("_webflow.example.com", "TXT"): list(wildcard),
+                ("_tailscale-challenge.example.com", "TXT"): list(wildcard),
+                ("_posthog-challenge.example.com", "TXT"): list(wildcard),
             }
         ),
     )
@@ -414,6 +416,8 @@ async def test_wildcard_txt_does_not_attribute_every_probed_vendor(
 
     assert "slack" not in ctx.slugs
     assert "gitlab" not in ctx.slugs
+    assert "tailscale" not in ctx.slugs
+    assert "posthog" not in ctx.slugs
     assert "github-advanced-security" not in ctx.slugs
 
 

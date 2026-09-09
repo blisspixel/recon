@@ -145,7 +145,7 @@ Those compatibility entries use `metric_kind: model_support_coverage`, set
 
 $$
 \text{model support coverage}=
-\frac{\#\{\text{domains whose model output crosses the support rule}\}}{N}.
+\frac{\#\lbrace\text{domains whose model output crosses the support rule}\rbrace}{N}.
 $$
 
 `model_evidence_n` reports how many rows carried an evidence-bearing non-sparse
@@ -165,7 +165,7 @@ evidence-responsive band:
 
 $$
 \text{mean model score} = \frac{1}{N}\sum_{i=1}^{N} P_{m,i}(X), \qquad
-\text{high-score share} = \frac{\#\{i : P_{m,i}(X) > 0.8 \text{ and not sparse}_i\}}{N}.
+\text{high-score share} = \frac{\#\lbrace i : P_{m,i}(X) > 0.8 \text{ and not sparse}_i\rbrace}{N}.
 $$
 
 Here $N$ is the number of records that carried this node's posterior, reported

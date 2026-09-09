@@ -78,6 +78,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "sendgrid": "Email",
     "mailgun": "Email",
     "postmark": "Email",
+    "resend": "Email",
     "sparkpost": "Email",
     "brevo": "Email",
     "mailchimp": "Email",
@@ -195,6 +196,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "sophos": "Security",
     "knowbe4": "Security",
     "zscaler": "Security",
+    "tailscale": "Security",
     "netskope": "Security",
     "paloalto": "Security",
     "cato": "Security",
@@ -420,6 +422,7 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     # Data & Analytics; MDM and privacy-management belong in Security;
     # standalone CDN and DNS providers belong in Cloud.
     "amplitude": "Data & Analytics",
+    "posthog": "Data & Analytics",
     "databricks": "Data & Analytics",
     "datadog": "Data & Analytics",
     "dynatrace": "Data & Analytics",

@@ -155,6 +155,34 @@ fingerprints:
       organization, typically for SSO federation or custom-domain
       ingestion. Does not prove active event ingestion.
       Verification is a one-time setup step.
+- name: PostHog
+  slug: posthog
+  category: Data & Analytics
+  confidence: high
+  detections:
+  - type: subdomain_txt
+    pattern: _posthog-challenge:.
+    reference: https://posthog.com/docs/settings/sso
+    verified: 2026-09-08
+    description: >-
+      Nonempty TXT at PostHog's documented `_posthog-challenge`
+      owner. PostHog Cloud uses this record to verify an
+      authentication domain for SSO, SAML, SCIM, or automatic
+      provisioning. The record does not establish completed
+      verification, enforced SSO, active event capture, a Cloud
+      plan, or product use.
+  - type: cname_target
+    pattern: '\.proxy-us\.posthog\.com\.?$'
+    reference: https://posthog.com/docs/advanced/proxy
+    verified: 2026-09-08
+    tier: application
+    description: >-
+      Observed CNAME routing to PostHog's documented US managed
+      reverse-proxy zone (`*.proxy-us.posthog.com`). This observes
+      a related host delegated to that proxy endpoint. It does not
+      establish completed proxy setup, live event ingestion, SDK
+      installation, a Cloud region, or that a self-hosted proxy is
+      in use. The current guide's example is the US zone only.
 - name: Heap Analytics
   slug: heap
   category: Data & Analytics

@@ -5,6 +5,9 @@ or AI could admire**: coherent architecture, one obvious way to do each thing,
 small reviewable units, no dead corners, and every promise backed by a gate, not
 a hope. This file is the standard we hold ourselves (and any AI working here) to,
 and an honest scorecard of where we meet it and where we don't yet.
+Coding agents load the short operational briefing in
+[AGENTS.md](../AGENTS.md#working-in-this-repository); this file is the full
+standard that briefing points at.
 
 It is grounded in a 2026 review of current best practices (Ruff/Astral docs,
 PyPA, clig.dev, PEP 8/257, the Python devguide, GitClear/DORA/Thoughtworks on

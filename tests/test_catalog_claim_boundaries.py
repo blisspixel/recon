@@ -236,6 +236,138 @@ async def test_slack_challenge_is_an_owner_qualified_administrative_indicator(
     assert "active use" in rule.description
 
 
+_CHALLENGE_OWNERS = (
+    ("Tailscale", "tailscale", "_tailscale-challenge", "does not establish"),
+    ("PostHog", "posthog", "_posthog-challenge", "does not establish"),
+)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("owner_case", _CHALLENGE_OWNERS)
+@pytest.mark.parametrize("shape", ["exact", "lookalike", "apex"])
+async def test_documented_challenge_owners_are_owner_qualified(
+    monkeypatch: pytest.MonkeyPatch,
+    owner_case: tuple[str, str, str, str],
+    shape: str,
+) -> None:
+    name, slug, owner, hedge = owner_case
+    value = f"synthetic-{slug}-verification-token"
+    queried = {
+        "exact": f"{owner}.example.com",
+        "lookalike": f"{owner}.lookalike.example.com",
+        "apex": "example.com",
+    }[shape]
+    _dns_fixture(monkeypatch, {(queried, "TXT"): [value]})
+    ctx = dns_base.DetectionCtx()
+    await dns_email.detect_txt(ctx, "example.com")
+    await dns_infra.detect_subdomain_txt(ctx, "example.com")
+    assert (slug in ctx.slugs) is (shape == "exact")
+    if shape == "exact":
+        assert ctx.services == {name}
+        assert ctx.evidence == [EvidenceRecord("SUBDOMAIN_TXT", value, name, slug)]
+    rule = _rules(slug, "subdomain_txt")[f"{owner}:."]
+    assert rule.verified == "2026-09-08"
+    assert rule.reference.startswith("https://")
+    assert hedge in rule.description
+
+
+@pytest.mark.parametrize(
+    "hostname",
+    [
+        "proxy-us.posthog.com",
+        "synthetic.proxy-us.posthog.com.lookalike.invalid",
+        "notproxy-us.posthog.com",
+        "synthetic.proxy-eu.posthog.com",
+        "proxy-us.posthog.com.evil.com",
+    ],
+)
+def test_posthog_proxy_does_not_match_undocumented_or_lookalike_zones(hostname: str) -> None:
+    application, infrastructure = classify_chain([hostname], get_cname_target_rules())
+    assert application is None or application.slug != "posthog"
+    assert infrastructure is None or infrastructure.slug != "posthog"
+
+
+def test_posthog_proxy_matches_the_documented_us_zone() -> None:
+    application, infrastructure = classify_chain(
+        ["4854cf84789d8596ad01.proxy-us.posthog.com"], get_cname_target_rules()
+    )
+    assert application is not None
+    assert application.slug == "posthog"
+    assert application.pattern == r"\.proxy-us\.posthog\.com\.?$"
+    assert infrastructure is None
+    rule = _rules("posthog", "cname_target")[application.pattern]
+    assert rule.verified == "2026-09-08"
+    assert "does not establish" in rule.description
+
+
+@pytest.mark.parametrize(
+    "hostname",
+    [
+        "links1.resend-dns.com",
+        "LINKS1.RESEND-DNS.COM.",
+    ],
+)
+def test_resend_tracking_matches_the_documented_host(hostname: str) -> None:
+    application, infrastructure = classify_chain([hostname], get_cname_target_rules())
+    assert application is not None
+    assert application.slug == "resend"
+    assert application.pattern == r"^links1\.resend-dns\.com\.?$"
+    assert infrastructure is None
+    rule = _rules("resend", "cname_target")[application.pattern]
+    assert rule.verified == "2026-09-08"
+    assert "does not establish" in rule.description
+
+
+@pytest.mark.parametrize(
+    "hostname",
+    [
+        "links2.resend-dns.com",
+        "synthetic.links1.resend-dns.com",
+        "links1.resend-dns.com.lookalike.invalid",
+        "notlinks1.resend-dns.com",
+        "links1.resend-dns.com.evil.com",
+        "resend-dns.com",
+    ],
+)
+def test_resend_tracking_does_not_match_undocumented_hosts(hostname: str) -> None:
+    application, infrastructure = classify_chain([hostname], get_cname_target_rules())
+    assert application is None or application.slug != "resend"
+    assert infrastructure is None or infrastructure.slug != "resend"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "case",
+    [
+        (
+            "PostHog",
+            "posthog",
+            "e.example.com",
+            "4854cf84789d8596ad01.proxy-us.posthog.com",
+            r"\.proxy-us\.posthog\.com\.?$",
+        ),
+        ("Resend", "resend", "links.example.com", "links1.resend-dns.com", r"^links1\.resend-dns\.com\.?$"),
+    ],
+)
+async def test_documented_2026_09_08_targets_keep_related_host_evidence(
+    monkeypatch: pytest.MonkeyPatch,
+    case: tuple[str, str, str, str, str],
+) -> None:
+    name, slug, host, target, pattern = case
+    _dns_fixture(monkeypatch, {(host, "CNAME"): [target.upper() + "."]})
+    ctx = dns_base.DetectionCtx()
+    ctx.related_domains.add(host)
+    await dns_source._classify_related_surface(ctx, "example.com")
+    (surface,) = ctx.surface_attributions
+    assert (surface.subdomain, surface.primary_slug, surface.primary_name) == (host, slug, name)
+    assert surface.primary_tier == "application"
+    assert ctx.evidence == [EvidenceRecord("CNAME", f"{host}: {target}", name, slug)]
+    assert not ctx.slugs
+    assert not ctx.services
+    rule = _rules(slug, "cname_target")[pattern]
+    assert rule.verified == "2026-09-08"
+
+
 @pytest.mark.parametrize("target", ["synthetic.glitch.me", "SYNTHETIC.GLITCH.ME."])
 def test_glitch_is_legacy_routing_not_application_hosting(target: str) -> None:
     application, infrastructure = classify_chain([target], get_cname_target_rules())
@@ -278,7 +410,9 @@ async def test_sparse_empty_records_do_not_synthesize_researched_vendor_claims(m
     await dns_email.detect_txt(ctx, "example.com")
     await dns_email.detect_mx(ctx, "example.com")
     await dns_infra.detect_subdomain_txt(ctx, "example.com")
-    assert not ctx.slugs.intersection({"okta", "slack", "github-advanced-security", "aws-ses"})
+    assert not ctx.slugs.intersection(
+        {"okta", "slack", "github-advanced-security", "aws-ses", "tailscale", "posthog", "resend"}
+    )
     assert classify_chain([], get_cname_target_rules()) == (None, None)
 
 
