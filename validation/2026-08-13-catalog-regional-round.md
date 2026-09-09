@@ -117,7 +117,7 @@ is accepted.
 |---|---|
 | Candidate catalog SHA-256 | `206ee855ba9f5107634f0876b66ed46306dbecfaaaff6c8a10a089ac4678baa2` |
 | Evaluator SHA-256 | `99fb50eacc760d71cc6a85d7b71f3f94e1c1f78059fa590503678502a1cacf00` |
-| Clean protected-main revision | `d19b888e3f6826df33994be3b46d91751438a7bd` |
+| Clean protected-main revision | `4ddae5e705ff86c98bfb5ed2807f75f57f41c2a2` |
 | Counterfactual file SHA-256 | `6c1888fad80508e595da398a1c3139d389146a34dec06356445025673f3abd26` |
 | Network requests | 0 |
 | Identifiers printed | 0 |
@@ -135,7 +135,7 @@ across the five frozen strata. Every stratum reducer membership check passed.
 
 | Replay commitment | Value |
 |---|---|
-| Protected-main revision | `d19b888e3f6826df33994be3b46d91751438a7bd` |
+| Protected-main revision | `4ddae5e705ff86c98bfb5ed2807f75f57f41c2a2` |
 | Replay manifest SHA-256 | `c7e0d97c79adc2f8fe56cd6902aa642d4ada54fa0e853551cf1025bbd36b4125` |
 | Replay catalog SHA-256 | `206ee855ba9f5107634f0876b66ed46306dbecfaaaff6c8a10a089ac4678baa2` |
 | Replay execution SHA-256 | `d9b199d0d731b1684af8ec7eb436ba4e73176e1b3cdb350a003f7cc138e152b6` |

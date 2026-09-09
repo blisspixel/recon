@@ -32,7 +32,7 @@ effectively unused. This memo supplies the empirical input it would need.
 | Field | Value |
 |---|---|
 | Source run | `quality-proof-baseline-2026-07-17` |
-| Collection revision | `1c130ee7c6c6687491e4423e3987587a4f39b571` |
+| Collection revision | `b3d321264752bdfee508f89b95bb7e911119c6e0` |
 | Results digest | `39655fc31713302803d37a17345f30f3b2a8253da082e3c47509db25e16db7ed` |
 | Output records | 5,202 |
 | Successfully measured namespaces | 5,199 |

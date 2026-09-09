@@ -16,7 +16,7 @@ and fictional regression fixtures.
 
 | Field | Value |
 |---|---|
-| Collection revision | `1c130ee7c6c6687491e4423e3987587a4f39b571` |
+| Collection revision | `b3d321264752bdfee508f89b95bb7e911119c6e0` |
 | Catalog at collection | 850 entries, 1,051 detections |
 | Catalog digest | `f755f5c4626e9d525510c471b84a6f5633e19a81e5792b8a50cb547b0919cc1f` |
 | Result digest | `39655fc31713302803d37a17345f30f3b2a8253da082e3c47509db25e16db7ed` |
@@ -117,7 +117,7 @@ contract. It is not an independently labeled false positive.
 
 ## Unseen vertical holdout
 
-After revision `9ab8a79282df228b2b836b59c69fae329cb296be` was committed and
+After revision `4004875bbd385e7501c4e28e5ba08c6fd6e662d2` was committed and
 the full repository gate passed, 30 private `industry-*` strata were normalized
 and cumulatively deduplicated against the development baseline and each earlier
 holdout stratum. This left 366 previously unseen namespaces. No rule or

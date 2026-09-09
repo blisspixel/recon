@@ -3114,7 +3114,7 @@ Tool surface changes: no CLI command, flag, JSON, MCP, cache, or import changes.
   repeated slugs, metadata, accessors, and matching behavior.
 - Replaced repeated built-in YAML parsing with bounded JSON decoding followed by
   the canonical fingerprint validator. A 15-repetition CPython 3.14.4 local
-  characterization at clean commit `157bf6c` measured 558.188 ms median for
+  characterization at clean commit `1b9fe26` measured 558.188 ms median for
   the YAML reference and 44.339 ms for the generated runtime, a 12.59-times
   stage gain with 72.0
   percent less traced peak Python allocation. This is a dated local diagnostic,
@@ -3141,7 +3141,7 @@ Tool surface changes: no CLI command, flag, JSON, MCP, cache, or import changes.
   by flags, and is cleared on catalog reload or process-catalog mutation.
   Exact differential output and existing ReDoS admission controls are
   preserved. The checked 1,000-value by 298-rule Python 3.14.4 fixture fell
-  from a 348 ms historical median to 115 ms at clean commit `47c5494`.
+  from a 348 ms historical median to 115 ms at clean commit `9b90af0`.
 - Loaded the Bayesian network and prior override once per fusion-enabled batch
   and reused one coherent invocation-local snapshot. A 25-record synthetic
   fusion fixture fell from an 864 ms repeated-setup reference to 355 ms without

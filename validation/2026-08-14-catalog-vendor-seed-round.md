@@ -33,7 +33,7 @@ measured path eligible for the frozen HubSpot slug.
 
 | Commitment | Value |
 |---|---|
-| Clean protected-main revision | `d6e7b17aa3686a83cf004e8cd93415aa411ec423` |
+| Clean protected-main revision | `1510ad637590306b36408ac4e6ab6d1c2713d68c` |
 | Frame rows | 33 |
 | Frame SHA-256 | `37bb3e9f2609b9f4470d637d60f42077593169522b117af9660ac3058516728b` |
 | Manifest SHA-256 | `74c2bf7989f81a72d853132c74eddf3bd3f061aaf8168836d825fe3f5166eeb3` |

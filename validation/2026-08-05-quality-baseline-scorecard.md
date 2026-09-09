@@ -1,6 +1,6 @@
 # Product-quality baseline scorecard
 
-Commit `8a0536b34caa`, catalog `sha256:004afd17fe96`, Python 3.14.4.
+Commit `8603367b3f9c`, catalog `sha256:004afd17fe96`, Python 3.14.4.
 
 Network-free, corpus-free, aggregate-safe. Diagnostic artifact, not a gate.
 
