@@ -7,7 +7,7 @@ full repository gate pass.
 
 ## Trigger and scope
 
-A black-box pass against the published `v2.18.0` tag, commit `93956634`,
+A black-box pass against the published `v2.18.0` tag, commit `8c6af459`,
 reported one lookup with a successful CertSpotter result and 100 CT names but
 an empty `related_domains` inventory on every output surface after
 `dns:cname` degraded. The pass used aliases only and filed no issue. This

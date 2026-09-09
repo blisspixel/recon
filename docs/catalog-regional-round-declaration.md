@@ -102,7 +102,7 @@ count does not establish a population rate or an independent precision label.
 | Private round manifest | `7209b80ef5b248802a6b0fe0ecb8f9d53889a26aaae7b46272d7e28fcfbcad4b` |
 
 The implementation was frozen against protected `main` commit
-`2900404a15c8d701599117c2cdcf2f15a7b82a71`. The private contract was
+`ed13798584ab5a51f68bdd0632208f41166c58fe`. The private contract was
 independently reloaded and validated against the exact frame, catalog,
 implementation, collection settings, recurrence thresholds, and digest chain.
 
@@ -125,7 +125,7 @@ fixed-observation zero-regression decision for six documented provider
 families. It publishes no target identifier or per-domain row.
 
 The accepted catalog and tests merged through protected main at
-`d19b888e3f6826df33994be3b46d91751438a7bd` after all 27 hosted checks passed.
+`4ddae5e705ff86c98bfb5ed2807f75f57f41c2a2` after all 27 hosted checks passed.
 A live operational pass then replayed this exact frozen frame with 1,000 of
 1,000 rows, zero errors, and 39 partials. All five membership-bound strata
 reduced completely, and the clean-main counterfactual reproduced the accepted

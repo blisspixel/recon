@@ -137,7 +137,7 @@ def test_release_surface_generation_updates_installers_and_artifacts(
     windows_installer = tmp_path / "install.ps1"
     windows_installer.write_text('$Version = "2.6.3"\n', encoding="utf-8")
     supply_chain = tmp_path / "supply-chain.md"
-    legacy_digest = "3d5218e00e969874dda40956d677e131d392dbf9"
+    legacy_digest = "2751dc11c64001272750df29477d6b9052407261"
     supply_chain.write_text(
         "\n".join(
             (

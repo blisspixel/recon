@@ -83,7 +83,7 @@ unknown owner, certificate, or upstream service was byte-identical.
 
 | Commitment | SHA-256 or count |
 |---|---|
-| Prior collection revision | `1c130ee7c6c6687491e4423e3987587a4f39b571` |
+| Prior collection revision | `b3d321264752bdfee508f89b95bb7e911119c6e0` |
 | Prior retained result | `39655fc31713302803d37a17345f30f3b2a8253da082e3c47509db25e16db7ed` |
 | Prior aggregate file | `d9a4f76b0b0999cc82ef492e0e6898515f7ec9f84e2db39b11776d552545ff72` |
 | Prior catalog | `f755f5c4626e9d525510c471b84a6f5633e19a81e5792b8a50cb547b0919cc1f` |

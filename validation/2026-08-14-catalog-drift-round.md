@@ -36,7 +36,7 @@ minutes 32 seconds.
 
 | Commitment | Value |
 |---|---|
-| Clean protected-main revision | `2ab1e4a99faac761313e7260fa79818425fa376e` |
+| Clean protected-main revision | `168abb35d093b03dfe60fe22e2524f564a615607` |
 | Frame rows | 5,199 |
 | Frame SHA-256 | `d1400df98f3b083dbd0176b1805c95c8204f254c9fa1d2bf2dabe58f61d0b9cd` |
 | Manifest SHA-256 | `0bb7c32ea9bb63452f5d800cf93acc5c6d794263c63fe4465709accc92830f53` |

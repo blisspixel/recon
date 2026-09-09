@@ -91,7 +91,7 @@ _COMMAND_TIMEOUT_SECONDS = 120
 _MAX_RELEASE_ASSET_BYTES = 64 * 1024 * 1024
 _REMOTE_RELEASE_HINT = "not requested; pass --remote on the exact published current-version tag"
 _LEGACY_SBOM_ATTESTATION_EXCEPTIONS = {
-    "2.6.3": "3d5218e00e969874dda40956d677e131d392dbf9",
+    "2.6.3": "2751dc11c64001272750df29477d6b9052407261",
 }
 _README_FORBIDDEN_FRAGMENTS = (
     "enterprise use, contact",

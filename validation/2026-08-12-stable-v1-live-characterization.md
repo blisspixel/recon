@@ -70,7 +70,7 @@ publishing it:
 | Per-domain rows written | 0 |
 
 The exact repository revision was
-`d8cc0896fc6369aeaeb9b1fcae69f165bbafecb4`; the working tree was dirty with
+`25f505ab420a90f49c21e40a26b3dd93c4881b9a`; the working tree was dirty with
 the characterization and product-contract fixes under review.
 
 ## Environment and method

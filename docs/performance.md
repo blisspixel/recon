@@ -31,7 +31,7 @@ rotation and 30-day cache policy.
 ## Pre-optimization local-compute characterization
 
 The table below is a July 11, 2026 CPU-only reference characterization from the working
-tree based on commit `747f359` on Windows 11, Python 3.14.4, an AMD Ryzen 9
+tree based on commit `efcc33d` on Windows 11, Python 3.14.4, an AMD Ryzen 9
 5950X, and 64 GiB RAM.
 Each current median is from nine repetitions after one warm-up, except that the
 catalog case deliberately clears the process cache before every measurement.
@@ -126,7 +126,7 @@ JSON, MCP, cache, timeout, or evidence contracts:
 
 Diagnostic measurements on the same Windows workstation and CPython 3.14.4.
 The stage harness and full local gate both ran from clean implementation commit
-`47c5494`:
+`9b90af0`:
 
 | Checked operation | Before | After | Observed change |
 |---|---:|---:|---:|
@@ -162,7 +162,7 @@ The network-free harness compared the full canonical YAML parse and validation
 path with the generated runtime path on Windows 11, CPython 3.14.4, and an AMD
 Ryzen 9 5950X. Each median is from 15 repetitions after three warm-ups. Both
 cases clear the catalog and compiled-regex caches on every repetition. The
-measurement ran from clean implementation commit `157bf6c`.
+measurement ran from clean implementation commit `1b9fe26`.
 
 | Checked operation | Median | Nearest-rank p95 | Python peak |
 |---|---:|---:|---:|
@@ -293,7 +293,7 @@ immediately.
 This local one-off `tracemalloc` characterization used the uv-managed Python
 3.14.4 runtime on Windows 11 Pro build 26200, an AMD Ryzen 9 5950X, and 64 GB of
 RAM. The working tree was based on commit
-`cce7e50558a26d4dcb1d1cab9eed6931ca27ac2c` and contained the worker-pool change.
+`551788cc3cbd3a699f242bf2be59e4ae6b7b05a0` and contained the worker-pool change.
 The fixture was an await-once synthetic processor at seven-way concurrency. The
 exact allocation bytes are a diagnostic receipt, not a reproducible benchmark
 or gate; the deterministic task bound is enforced separately by

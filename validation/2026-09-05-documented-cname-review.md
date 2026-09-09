@@ -7,7 +7,7 @@ Date: 2026-09-05 UTC
 This follow-up to the [claim review](2026-09-05-catalog-claim-review.md) uses
 provider documentation and network-free synthetic detector tests. Before
 catalog edits, the round froze baseline commit
-`f4466d549a46d1e49c8fa3c06212d5494e712646` and a zero-regression budget for
+`76b153e79af47617cdb5cc75ae62105d0d6dbf29` and a zero-regression budget for
 existing rule selection, lookalike matches, queried owner names, and apex
 service or email-control promotion. Only the two exact target additions below
 were permitted. Existing edge attribution must remain available alongside an

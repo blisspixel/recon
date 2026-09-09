@@ -61,7 +61,7 @@ do not silently substitute `main` or a source archive whose tag you have not
 reviewed.
 The published v2.6.3 bundle covers its wheel and sdist; the recipe binds that
 historical exception to commit
-`3d5218e00e969874dda40956d677e131d392dbf9` and still validates the completed
+`2751dc11c64001272750df29477d6b9052407261` and still validates the completed
 SBOM structure. Every later release must also verify the SBOM as an attestation
 subject.
 
@@ -72,7 +72,7 @@ set -euo pipefail
 
 VERSION=2.19.1
 REPO=blisspixel/recon
-LEGACY_SBOM_ATTESTATION_SHA=3d5218e00e969874dda40956d677e131d392dbf9
+LEGACY_SBOM_ATTESTATION_SHA=2751dc11c64001272750df29477d6b9052407261
 MAX_RELEASE_ASSET_BYTES=$((64 * 1024 * 1024))
 VERIFY_DIR="$(mktemp -d)"
 DIST_DIR="${VERIFY_DIR}/dist"
@@ -213,7 +213,7 @@ $ErrorActionPreference = "Stop"
 
 $Version = "2.19.1"
 $Repo = "blisspixel/recon"
-$LegacySbomAttestationSha = "3d5218e00e969874dda40956d677e131d392dbf9"
+$LegacySbomAttestationSha = "2751dc11c64001272750df29477d6b9052407261"
 $MaxReleaseAssetBytes = 64 * 1024 * 1024
 $VerifyDir = Join-Path ([IO.Path]::GetTempPath()) ("recon-verify-" + [guid]::NewGuid())
 $DistDir = Join-Path $VerifyDir "dist"

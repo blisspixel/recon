@@ -1,7 +1,7 @@
 # Structural Maintainability
 
 Status: measured plan, checked 2026-07-14 against recon v2.6.3 at
-`3d5218e00e969874dda40956d677e131d392dbf9`.
+`2751dc11c64001272750df29477d6b9052407261`.
 
 This plan addresses a specific failure mode of fast, AI-assisted development:
 code can become locally tidy while the repository becomes harder to navigate.
