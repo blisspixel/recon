@@ -29,8 +29,8 @@ operator, corporate group, ownership, or control.
 ## [2.19.1] - 2026-09-09
 
 Documented catalog additions for Tailscale, PostHog, and Resend, plus
-source-checkout agent briefing and GitHub-safe math rendering. No collector
-or model change.
+source-checkout agent briefing, GitHub-safe math rendering, and HTTPX v2
+security floors. No collector or model change.
 
 ### Tool Surface Changes
 
@@ -43,6 +43,12 @@ Tool surface changes: no CLI command or flag changes.
   Resend's `links1.resend-dns.com` tracking target. Claims stay routing or
   administrative-verification observations. Synthetic owner, lookalike, sparse,
   and related-host tests cover the new rules. No real-target data is committed.
+
+### Security
+
+- Raise locked `httpx2` and `httpcore2` floors so `pip-audit` clears
+  CVE-2026-84378 through CVE-2026-84382. These are transitive MCP HTTP
+  packages, not a collector change.
 
 ### Documentation
 
