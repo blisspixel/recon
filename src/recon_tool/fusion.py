@@ -6,8 +6,8 @@ deterministic confidence fields.
 
 ## Model
 
-For each slug, use a Beta-shaped additive score. Each evidence record for the
-slug updates the positive mass:
+For each slug, use a Beta-shaped additive score. Each distinct retained
+source-type/value pair for the slug updates the positive mass:
 
     α_new = α_prior + success_weight
     β_new = β_prior + (failure_weight)  # currently always 0 for present evidence
@@ -17,9 +17,10 @@ with stronger informational content (OIDC tenant ID, DKIM signing) contribute
 more than weaker ones (TXT tokens, CT subdomain presence).
 
 The mean α / (α + β) lands in [0, 1] and summarizes evidence strength.
-Multiple records drive the score up. There is no fitted negative likelihood,
-general dependency correction, or external calibration, so this value is not a
-validated posterior probability.
+Distinct pairs drive the score up. Repeated records and additional matching
+rule names for the same pair add no weight. There is no fitted negative
+likelihood, general dependency correction, or external calibration, so this
+value is not a validated posterior probability.
 
 ## Why no numpy
 
@@ -58,8 +59,8 @@ __all__ = [
 # Rationale:
 #   - OIDC / HTTP identity endpoints: authoritative responses from the
 #     vendor. Very reliable for the attribution they carry.
-#   - DKIM: the vendor cryptographically signs mail for this domain.
-#     Almost impossible to fake accidentally.
+#   - DKIM: a public selector or signing-route indicator. No message signature
+#     is checked, so this does not establish that the vendor signs live mail.
 #   - MX: the domain's mail is routed to this provider. Strong direct evidence.
 #   - TXT: verification tokens are strong attribution but can linger on
 #     dormant accounts, so slightly weaker than MX/DKIM.
@@ -84,7 +85,7 @@ SOURCE_PRIORS: dict[str, tuple[float, float]] = {
     "SPF": (3.0, 2.0),
 }
 
-# Additive weight added to α each time a slug is observed via this source type.
+# Additive weight for each distinct retained value of this source type per slug.
 # Falls back to 1.0 for unknown source types so unknown sources don't silently
 # drop evidence.
 SOURCE_WEIGHTS: dict[str, float] = {
@@ -123,6 +124,13 @@ def compute_slug_posteriors(
 
     This operates purely on already-collected evidence, with no network calls or
     additional lookups. Safe to call from cached pipeline data.
+
+    Identity is the exact ``(slug, source_type, raw_value)`` tuple. A rule name
+    is a derived label, not another observation. Raw values remain byte-for-byte
+    distinct, including opaque token case. The evidence model has no separate
+    owner, collection window, or dependency identifier; this bounded deduplication
+    does not establish independence of the remaining observations. All input
+    occurrences remain available to callers for provenance.
     """
     # For each slug: start from the prior for its strongest evidence source (the
     # outset trust level), then add that source's success weight for each observed
@@ -135,9 +143,14 @@ def compute_slug_posteriors(
 
     # Group by slug for deterministic iteration
     by_slug: dict[str, list[EvidenceRecord]] = defaultdict(list)
+    seen: set[tuple[str, str, str]] = set()
     for ev in evidence:
         if not ev.slug:
             continue
+        observation = (ev.slug, ev.source_type, ev.raw_value)
+        if observation in seen:
+            continue
+        seen.add(observation)
         by_slug[ev.slug].append(ev)
 
     for slug, records in by_slug.items():

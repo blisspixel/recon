@@ -96,7 +96,7 @@ healthy when it runs on its cadence and produces its artifact, not when it
 | Dependency and supply-chain audit | A PR or push, an advisory, a Dependabot bump | Weekly, plus on event | Green CodeQL, Scorecard, secrets scan, dependency audit; re-authored bot bumps | Floors green; the SAST ratchet advances only on Scorecard evidence, never by backfill |
 | Upstream provider-endpoint drift | The passive integration cron | Weekly | A live passive smoke of the identity and CT endpoints | Endpoints still behave; a break is an upstream change to characterize |
 | Inference CPT drift gate | An edit to `bayesian_network.yaml` | Per commit | The committed inference baseline plus an explicit `--update` acknowledgement in the diff | No node moves beyond its band without an acknowledged baseline update |
-| MCP dual-SDK matrix | An SDK release or a spec change | On event, plus per CI | A dated compatibility matrix, both pins green | The v1.28.1 rollback and v2.0.0 production rows stay green |
+| MCP dual-SDK matrix | An SDK release or a spec change | On event, plus per CI | A dated compatibility matrix, all three pins green | The v1.28.1 rollback, v2.0.0 production floor, and v2.2.0 current stable rows stay green |
 | Mutation gate | A push or PR to a gated module, plus a weekly sweep | Per change, plus weekly | The mutation score over tested mutants | Genuine survivors killed with per-field pins; the floor is a fraction over tested mutants and is not bumped to pass |
 | Doc-versus-runtime consistency | Each release | Per release | Reconciled roadmap, schema, stability, and CHANGELOG; the parity matrix | The drift gates stay green; no document claims behavior the code lacks |
 | Release readiness and provenance | Each release | Per release | Local and remote readiness, SBOM, provenance, channel parity | The tag, PyPI artifact, and GitHub Release identify one commit; the SBOM and attestations are present |
@@ -141,8 +141,10 @@ Further research remains conditional:
 
 - Before retuning inference, characterize repeated records and shared
   derivations as dependency units. Compare duplicate views, distinct source
-  units, and failed collection before changing weights. Existing fusion
-  repetition behavior remains a documented heuristic, not a calibrated probability.
+  units, and failed collection before changing weights. Per-slug fusion now
+  counts each exact source-type/value pair once regardless of matching rule
+  names. Dependence among distinct pairs remains unresolved; the score is a
+  heuristic, not a calibrated probability.
 - Before extending the public observation envelope, identify a consumer that
   needs per-record collection windows, vantage, or graph-completeness metadata.
   Internal timestamps and seed stability cannot supply those guarantees.
@@ -151,6 +153,36 @@ Further research remains conditional:
 - Before broadening fingerprints, test exact owner/value grammar, deceptive
   lookalikes, overlap, collection opportunity, and retirement semantics. A
   missing public signal can remain the correct answer.
+
+### Autonomous improvement acceptance
+
+The improvement goal is more correctly scoped observations from the existing
+public channels, with repeatable evidence for each change. Authorized local
+implementation can proceed through automated checks without a human approval
+step, company interviews, or private inventory. Independent vendor support is
+an evidence requirement; it does not require a human reviewer. Publication
+continues to follow the operator's explicit instructions.
+
+Each bounded pass follows the [maintainer loop](maintainer-loop-runbook.md):
+
+1. Select a documented missed pattern or reproduce a violated invariant.
+2. Pin the positive and withheld outcomes before changing behavior. For math,
+   include duplication, rule aliases, input ordering, and failed-source cases.
+   For catalog rules, include exact owners, lookalikes, wildcard responses,
+   empty observations, and retained rule provenance.
+3. Implement the smallest correction, regenerate affected artifacts, and run
+   the focused regressions followed by `uv run python scripts/check.py`.
+4. Record the observed improvement and remaining limits, then take the next
+   supported candidate. Insufficient documentary support leaves that candidate
+   unresolved; it does not block unrelated supported work.
+
+The [first pass](../validation/2026-09-13-evidence-and-catalog-loop.md) makes
+per-slug evidence strength invariant to repeated records and rule aliases and
+adds Shopify's documented root-domain verification owner.
+These are executable correctness and documented-pattern improvements, without
+retuning priors or claiming measured real-world precision. Next, apply the same
+negative fixtures to additional vendor families and characterize cross-channel
+shared derivations before considering broader dependency math.
 
 ### The fingerprint-freshness loop, in detail
 
@@ -192,7 +224,7 @@ and per-domain rows never leave the private workspace.
 Rank and urgency are different axes. Priority 1 remains the standing highest
 trust priority because output truthfulness outranks features; its current
 27-family audit closed on 2026-08-01. Priority 2 adopted MCP v2 on 2026-07-31
-and retains both exact compatibility pins as blocking checks. Priority 3's
+and retains rollback, production-floor, and current-stable pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. v2.14 is also shipped with the
 closed rank, regional, vendor-seed, and prior-sample drift decisions plus full
@@ -263,7 +295,7 @@ priority 1. Version milestones through v3.0:
 | Track | Why it sits here | State today | What closes it |
 |---|---|---|---|
 | [1. Evidence-semantic integrity](#1-restore-evidence-semantic-integrity) | Truthfulness outranks features, and this defect class required a complete sweep rather than one-case fixes. | Complete through the 2026-08-30 ReviewBundle review. The fail-closed default-claim audit owns all discovered primary surfaces through 29 families. 29 are complete; 0 material runtime families carry incomplete lineage. Static agent and MCP contracts now pin process scope, collection boundaries, output forms, cache behavior, and abstention semantics. Runtime explanations, insights, panels, service labels, posture observations, hardening prompts, cohort summaries, ReviewBundles, and every exposure-index component carry their reviewed evidence or static contract basis. | Keep the fail-closed audit green; any uncovered or semantically stronger surface reopens this track. |
-| [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. The exact stable `1.28.1` rollback and `2.0.0` production rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and both exact stable pins green. |
+| [2. MCP protocol characterization](#2-keep-final-mcp-v2-compatibility-green-after-adoption) | The 2026-07-28 specification is a breaking release and the SDK moves regardless of recon, so compatibility must stay explicit. | Production adopted `mcp>=2.0.0,<3` on 2026-07-31. Exact `1.28.1`, `2.0.0`, and `2.2.0` rows remain blocking. | Keep deterministic ordering, conforming schemas, live stdio behavior, and all three exact pins green. |
 | [3. Product-quality baseline](#3-establish-a-reproducible-product-quality-baseline) | Depends on a stable claim taxonomy from priority 1. Measuring still-incomplete claim families would measure a definition that is changing. | v2.11 stopped a structurally non-identifying design before target contact. v2.12 classifies fusion as an advanced diagnostic and starts the explicit-flag transition while preserving the stable v2 default. | Keep the identifiability gate and ADR-0013 transition contract blocking. Any future fusion study needs a new identifiable candidate and preregistration. |
 | [4. Catalog quality loop](#turn-catalog-quality-into-the-detection-improvement-loop) | The shipped claim, compatibility, quality-decision, and capsule contracts make independent catalog measurement interpretable. | Shipped in v2.14. Convenience, unseen-vertical, rank, regional, vendor-seed, and prior-sample drift rounds are complete with aggregate results and explicit dispositions. Drift records no threshold breach, no unavailable or unmeasured row, one disclosed measurement-surface change, and no catalog promotion. | Keep the frozen round contracts and regression gates reproducible; backfill review dates only in independently reviewed families. |
 | [4. Optional cloud access and scale-out](#4-optional-operator-hosted-access-and-scale-out) | Useful accessibility and scale polish for some operators, but lower priority than the core evidence, compatibility, and catalog-quality tracks. | Draft stateless remote adapter, container, and Cloud Run Terraform pass local artifact checks but are not yet provider-validated. Local remains the default. | One operator proof plus bounded load, cost, rotation, retention, and rollback evidence. Each additional provider needs named demand and its own validation context. |
@@ -455,8 +487,9 @@ claim lacks adequate evidence.
 
 ### 2. Keep final MCP v2 compatibility green after adoption
 
-Status: production adoption complete on 2026-07-31. The exact v1.28.1 rollback
-and v2.0.0 production rows remain blocking.
+Status: production adoption complete on 2026-07-31. The 2026-09-13 currency
+check adds SDK 2.2.0; exact v1.28.1 rollback, v2.0.0 production-floor, and
+v2.2.0 current-stable rows remain blocking.
 
 The matrix pin lives in `.github/workflows/ci.yml` and the probe is
 `scripts/check_mcp_compatibility.py`. It exercises both stable SDK generations
@@ -482,7 +515,7 @@ Completed checkpoints:
 The same compatibility boundary passes 23 tools, six resources, zero
 resource templates, one prompt, 44 schema documents, representative structured
 success and error results, concurrent catalog reloads, real stdio calls, and
-the live doctor on both supported exact pins. Stable v2 additionally proves
+the live doctor on all three supported exact pins. Stable v2 additionally proves
 `server/discover`, worker-thread synchronous handlers, and conservative
 complete-result metadata on every cacheable method. Production uses
 `mcp>=2.0.0,<3`, adopted after the remote adapter and compatibility boundary
@@ -1167,7 +1200,7 @@ known-cluster unit, observation opportunities, CT and direct-probe settings,
 catalog and code digests, aggregate outputs, promotion and regression budgets,
 and disclosure review. A result may not retroactively change those choices.
 
-The catalog currently holds 870 entries across 695 unique slugs, with 1,113
+The catalog currently holds 870 entries across 695 unique slugs, with 1,114
 detections. The frozen classified-surface baseline that the promotion gate
 measures against is 855 entries and 1,062 detections, recorded in
 [the 2026-07-17 aggregate memo](../validation/2026-07-17-typed-catalog-baseline.md);

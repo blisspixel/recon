@@ -76,9 +76,12 @@ supports general calibration language.
 ### Per-slug `slug_confidences`
 
 The per-slug value is a Beta-shaped additive evidence-strength score. It uses
-hand-set source priors and positive weights, has no fitted negative likelihood,
-and can increase with repeated evidence records. It is level 2. It is not an
-externally calibrated posterior probability.
+hand-set source priors and positive weights, with no fitted negative likelihood.
+Each exact `(slug, source_type, raw_value)` contributes once, including when
+different rule names match it. Repeated copies cannot raise the score. Distinct
+values still add weight without a general dependency correction; their
+independence is not established. This is level 2, not an externally calibrated
+posterior probability. Retained provenance occurrences are not removed.
 
 ### Bayesian-network posterior
 

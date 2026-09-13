@@ -23,6 +23,10 @@ discovery mechanism. Paths inside them resolve against a recon checkout. They
 do not install tooling, start a paid model session, or authorize network work.
 An agent may prepare proposals autonomously within the requested task; rule
 promotion and publication still require the repository's review and CI gates.
+Within an authorized implementation task, that review can be automated through
+source inspection, independently supported vendor grammar, and regression
+checks. It does not add a human approval checkpoint before local catalog edits.
+See the [maintainer acceptance rule](maintainer-loop-runbook.md#acceptance-rule).
 
 ## One round, with explicit boundaries
 

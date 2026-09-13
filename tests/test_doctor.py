@@ -19,6 +19,7 @@ from typer.testing import CliRunner
 from recon_tool.cli import app
 from recon_tool.cli.doctor import (
     _doctor_path_launcher_check,
+    _doctor_print_header,
     _doctor_render,
     _launcher_is_in_current_workspace,
     _launcher_version,
@@ -100,6 +101,27 @@ class TestDoctorCommandHappyPath:
         assert "Package" in rendered
         assert "recon_tool" in rendered
         assert "Install method" in rendered
+
+    def test_install_identity_paths_remain_copyable_in_narrow_output(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        import sys
+
+        import recon_tool
+        from recon_tool import updater
+
+        directory = tmp_path / ("synthetic-long-path-" * 8) / "[literal]"
+        executable = directory / "python"
+        package = directory / "recon_tool" / "__init__.py"
+        monkeypatch.setattr(sys, "executable", str(executable))
+        monkeypatch.setattr(recon_tool, "__file__", str(package))
+        monkeypatch.setattr(updater, "detect_install_method", lambda: updater.PIP)
+        output = StringIO()
+
+        _doctor_print_header(Console(file=output, width=30, color_system=None))
+
+        assert str(executable.resolve()) in output.getvalue()
+        assert str(package.resolve().parent) in output.getvalue()
 
     def test_doctor_prints_schema_stability_label(self, patched_doctor_environment) -> None:
         """The v2.0 quality bar wants the schema-stability indicator

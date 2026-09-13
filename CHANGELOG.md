@@ -26,6 +26,45 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.3] - 2026-09-13
+
+Prevent duplicate evidence from inflating diagnostic strength, cover Shopify's
+documented verification owner, and validate the current MCP SDK and portable
+plugin package. Preserve public fields, model weights, and collection boundaries.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Fixed
+
+- Doctor output preserves complete, copyable interpreter and package paths at
+  narrow terminal widths, including literal markup characters in paths.
+- Section-link validation prunes disposable directories before descent and
+  checks sentence-final references without accepting partial identifiers.
+- MCP compatibility testing now resolves each SDK with its required companion
+  `mcp-types` package while keeping unrelated runtime dependencies locked. Add
+  current stable SDK 2.2.0 to the blocking local/CI matrix alongside the 1.28.1
+  rollback and 2.0.0 floor; all 24 isolated checks pass on 2.2.0.
+- Per-slug evidence strength counts each exact source-type/value pair once,
+  including when several rule names match it. Repeated records cannot inflate
+  `slug_confidences`; retained provenance and distinct-value weights remain
+  intact. This does not add a general dependency or calibration model.
+
+### Catalog
+
+- Recognize Shopify's documented `shopify_verification` TXT owner with exact
+  owner, lookalike, wildcard, sparse, and provenance regressions. Keep its
+  separately undated apex prefix distinct and remove unsupported account,
+  SSO, and live-storefront implications from the family's descriptions.
+
+### Documentation
+
+- Define automated acceptance for authorized local improvement loops, including
+  concrete evidence and regression gates, without a human approval checkpoint.
+- Refine the existing shared agent instructions with bounded work, current-source
+  research, failure-driven verification, and distinct compatibility evidence.
+
 ## [2.19.2] - 2026-09-09
 
 Clarify the interpretation of correlation diagnostics in the packaged README

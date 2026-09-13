@@ -12,8 +12,48 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
+from scripts import check_section_links
+
 REPO_ROOT = Path(__file__).resolve().parent.parent
 _CHECKER = REPO_ROOT / "scripts" / "check_section_links.py"
+
+
+def test_disposable_root_state_does_not_define_section_links(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    paths = [
+        "docs/current.md",
+        "src/current.py",
+        "data/current.yaml",
+        "data/current.json",
+        "docs/" + ".agent/misplaced.md",
+        ".agent/old.md",
+        ".grok/old.md",
+        ".venv/package/old.md",
+        "nested/.venv/package/old.md",
+    ]
+    for name in paths:
+        path = tmp_path / name
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("See correlation.md section " + "999.", encoding="utf-8")
+    monkeypatch.setattr(check_section_links, "REPO_ROOT", tmp_path)
+
+    files = check_section_links._iter_files()
+    assert {path.relative_to(tmp_path).as_posix() for path in files} == set(paths[:5])
+    assert len(check_section_links.dangling_refs({"1"}, files=files, anchors=set())) == 5
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("See correlation.md section " + "999.", {"999"}),
+        ("See correlation.md sections 3.4 and " + "999.", {"3.4", "999"}),
+        ("See correlation.md section 3.4.json", set()),
+        ("See correlation.md section 3.4suffix", set()),
+    ],
+)
+def test_sentence_punctuation_does_not_hide_sections_or_split_identifiers(text: str, expected: set[str]) -> None:
+    assert check_section_links._section_refs_in_line(text) == expected
 
 
 def _run(*args: str) -> subprocess.CompletedProcess[str]:

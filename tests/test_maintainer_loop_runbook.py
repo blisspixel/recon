@@ -27,7 +27,8 @@ def test_runbook_pins_agentic_boundary_and_gates() -> None:
         "does not change recon runtime behavior",
         "success is decided by a deterministic gate",
         "target data and per-domain artifacts stay in ignored local paths",
-        "semantic changes still receive maintainer review",
+        "semantic changes have a reviewable diff, supporting evidence, and passing gates",
+        "Review may be automated",
         "uv run python scripts/check.py",
     ):
         assert required in normalized
@@ -51,7 +52,9 @@ def test_runbook_requires_side_effect_boundaries_and_resume_keys() -> None:
     assert "Resume key" in text
     assert "externally visible" in normalized
     assert "checks this key before repeating a write" in normalized
-    assert "Release, distribution, schema, CPT, and catalog changes require maintainer approval" in normalized
+    assert "Existing task authorization carries through local catalog and correctness fixes" in normalized
+    assert "Commit, push, release, and publication require explicit instructions" in normalized
+    assert "CPT and schema changes still need their documented design and compatibility basis" in normalized
 
 
 def test_runbook_private_calibration_uses_preflight_and_hygiene_gate() -> None:

@@ -499,10 +499,21 @@ fingerprints:
   - type: txt
     pattern: ^shopify-verification-code=
     description: >-
-      Shopify domain-verification TXT (`shopify-verification-code=`). Indicates the
-      domain is bound to a Shopify account or tenant for SSO /
-      provisioning. Account-binding signal only; it does not prove
-      active usage.
+      Undated Shopify-named apex TXT prefix (`shopify-verification-code=`).
+      The current transfer guide documents a separate `shopify_verification`
+      owner. This declaration does not
+      establish account binding, SSO, completed verification, or active use.
+  - type: subdomain_txt
+    pattern: shopify_verification:.
+    reference: https://help.shopify.com/en/manual/domains/add-a-domain/connecting-domains/verify-domain-ownership
+    verified: '2026-09-13'
+    description: >-
+      Nonempty TXT at `shopify_verification` follows Shopify's documented
+      third-party root-domain transfer verification workflow. This is an
+      administrative verification indicator; it does not establish completed
+      verification, transfer, account ownership, a live storefront, SSO, or a
+      product plan. Subdomain-specific `shopify_verification_<subdomain>`
+      owners are outside this fixed-owner rule.
 - name: Monday.com
   slug: monday
   category: Business Apps

@@ -25,7 +25,8 @@ collector and does not expand the inference model.
 The evidence-semantic audit is complete: 29 families are complete. 0 material
 runtime families carry incomplete lineage. Fail-closed inventory spans 91 score
 or quantitative fields. Production MCP stays on `mcp>=2.0.0,<3`, with exact
-1.28.1 rollback and 2.0.0 production rows blocking in CI.
+1.28.1 rollback, 2.0.0 production-floor, and 2.2.0 current-stable rows blocking
+in CI.
 
 Release verification binds each published artifact to its exact tag, workflow,
 signer, and commit digest and requires SBOM provenance. One
@@ -56,7 +57,16 @@ v2.18.3 tightened diagnostic and renderer truthfulness. v2.18.4 withdraws the
 interactive fusion-transition notice; the implicit default remains enabled and
 silent.
 
-The ordered work now is deliberately small:
+The next improvement target is automated, evidence-backed quality: close
+documented pattern misses and make inference insensitive to repeated views of
+one observation. The [executable acceptance loop](docs/roadmap.md#autonomous-improvement-acceptance)
+requires exact positive/negative fixtures, provenance, and the full local gate.
+Authorized local changes do not wait on human review, interviews, or private
+inventory. The first pass covers duplicate-insensitive per-slug strength and
+Shopify's documented verification owner; distinct-source dependency correction
+remains a separate question to characterize before changing model weights.
+
+The ordered work is:
 
 1. Fix compatibility, rendering, diagnostic, or provenance defects found by
    black-box use.
@@ -64,7 +74,7 @@ The ordered work now is deliberately small:
    drift round remains a measurement contract, not a source of automatic
    catalog promotion.
 3. Run renderer parity review on every release that changes human output.
-4. Keep the 29-family claim audit, both MCP SDK pins, full test gate, release
+4. Keep the 29-family claim audit, all three MCP SDK pins, full test gate, release
    provenance, and channel parity blocking.
 5. Use concrete bug reports and reproducible operator examples to justify any
    new composition surface.
@@ -124,7 +134,7 @@ release by itself.
 | Catalog drift | Quarterly or by declared window | Frozen thresholds hold; comparisons across unequal catalog digests are withheld; no promotion comes from the drift frame |
 | Black-box renderer review | Per human-surface release | Compact surfaces keep their intended cuts and agree on claim meaning |
 | Claim audit | Every material claim change | All discovered claim families remain fail closed with exact or explicitly bounded lineage |
-| MCP compatibility | CI and SDK events | Exact 1.28.1 and 2.0.0 rows remain green |
+| MCP compatibility | CI and SDK events | Exact 1.28.1, 2.0.0, and 2.2.0 rows remain green |
 | Dependency and supply chain | Weekly, on advisory, and per release | CI, CodeQL, Scorecard, secrets scan, dependency audit, SBOM, provenance, and artifact parity remain green |
 | Release readiness | Every release | Main, tag, GitHub Release, and PyPI identify one commit and one artifact set |
 

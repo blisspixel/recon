@@ -40,21 +40,19 @@ fingerprints:
     reference: https://help.shopify.com/en/manual/online-store/domains
     tier: application
     description: >-
-      Subdomain CNAME terminating at a Shopify-hosted storefront
-      (canonical form `<shop>.myshopify.com`). Indicates the org
-      runs a Shopify storefront for at least one branded subdomain.
-      Does not indicate Shopify Plus vs basic plan; the chain is
-      identical across tiers.
+      Related-hostname CNAME terminating under `myshopify.com`. This
+      observes a DNS route into Shopify's namespace; it does not establish
+      completed setup, a currently published storefront, account ownership,
+      or a product plan.
   - type: cname_target
     pattern: shopifycdn.com
     reference: https://help.shopify.com/en/manual/online-store/domains
     tier: application
     description: >-
-      CNAME into Shopify's image and asset CDN
-      (`*.shopifycdn.com`). Indicates the storefront serves
-      product imagery through Shopify's hosted CDN. Does not by
-      itself prove an active storefront; orphaned product images
-      can persist after a shop is unpublished.
+      CNAME into the Shopify-named asset zone `shopifycdn.com`.
+      This is an undated routing indicator; it does not establish current
+      asset delivery, product imagery, or a published storefront. Stale
+      configuration can remain after a shop is unpublished.
 
 - name: Zendesk
   slug: zendesk

@@ -1,12 +1,16 @@
 # AGENTS.md: recon
 
-This file is portable agent guidance in the [agents.md](https://agents.md) format. AI coding tools that auto-detect `AGENTS.md` (Kiro, OpenAI Codex, Jules, Aider, others) load it automatically. Tools that don't (Claude Code, Cursor, Windsurf) can reference or include it from their own rules / skill files. This repository gitignores `CLAUDE.md`; a local file may start with `@AGENTS.md`.
+This file is the canonical shared agent guidance in the [agents.md](https://agents.md) format. Keep tool-specific instructions as thin pointers to it. This repository gitignores `CLAUDE.md`; a local file may start with `@AGENTS.md`.
 
 If you are changing this source checkout, start at [Working in this repository](#working-in-this-repository). If you are using recon as a CLI or MCP tool, start at [What recon is](#what-recon-is).
 
 ## Working in this repository
 
 recon is a Python 3.11-3.14 CLI and local stdio MCP server for public-metadata domain intelligence. The resolver and detection engine are feature-complete. Default work is catalog quality, claim and renderer truth, and contract-preserving fixes. Do not add collectors, scores, or inference machinery without a named operator handoff the existing surfaces cannot solve. A domain is a query coordinate, not an organization. Output is hedged observation, not a verdict.
+
+**Orient and bound.** Read the README, roadmap, relevant ADRs, recent changes, and touched source/tests before choosing work. Resolve stale prose against source, configuration, lockfiles, and Git history. Record a bounded objective and acceptance evidence for work spanning sessions. Use current primary documentation for version-sensitive decisions; preserve the established stack and pinned tooling unless a demonstrated need justifies changing them.
+
+**Converge.** Proceed with authorized research, reversible local edits, and verification without a separate human signoff. Reproduce meaningful failures, fix the canonical implementation, run focused tests and the full gate, inspect failures, and self-review the diff. For fingerprints and inference, cover lookalikes, sparse or failed sources, duplicate evidence, and claim provenance. Synthetic invariants prove behavior; they do not establish real-world precision or calibrated probabilities. Follow [the maintainer loop](docs/maintainer-loop-runbook.md) and update tests, current docs, and changelog when their claims change.
 
 **Verify.** Repository tasks use uv `0.11.17` (`pyproject.toml` allows `>=0.11.8,<0.13` for lock-update tooling). Do not "upgrade" to a newer uv minor for this checkout. Canonical local gate:
 
@@ -17,6 +21,8 @@ uv run pytest tests/test_foo.py         # focused tests stay serial
 ```
 
 `scripts/check.py` is local parity with the blocking CI core. `--fast` is for iteration. Green CI is the floor. Do not make a gate pass by weakening it (broader ignores, lowered coverage, deleted assertions, tests changed to accept wrong behavior). Branch coverage floor is 90.2 percent. Pyright is `typeCheckingMode = strict` in `pyproject.toml`; do not add new global suppressions. Mutation testing and the MCP dual-SDK matrix are separate CI jobs, not this local wrapper.
+
+For MCP or packaging changes, use the exact-pin matrix in `scripts/check_mcp_compatibility.py` and the installed-wheel probe in `scripts/check_installed_wheel.py`; see [MCP readiness](docs/mcp-2026-07-28-readiness.md). Check Agent Plugins changes against the current upstream specification and generated-package validators. Distinguish protocol support, SDK checks, manifest validation, packaged runtime tests, and actual client execution. Report local verification separately from hosted CI and released behavior; a passing baseline run does not validate an unpushed patch.
 
 **Seams.** Implementation lives under `src/recon_tool/`. Use the package-local modules, not the top-level compatibility shims:
 

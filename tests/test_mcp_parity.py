@@ -11,6 +11,8 @@ from __future__ import annotations
 import json
 from dataclasses import replace
 
+import pytest
+
 from recon_tool.server.lookup import _format_lookup_tenant, _lookup_tenant_text
 from tests.test_role_split_panel import split_info
 
@@ -61,16 +63,26 @@ def test_mcp_json_carries_fusion() -> None:
     assert payload["slug_confidences"]
 
 
-def test_mcp_json_fusion_matches_cli_json() -> None:
+@pytest.mark.parametrize("copies", [1, 20])
+@pytest.mark.parametrize("degraded_sources", [(), ("dns:mx",)])
+def test_mcp_json_fusion_matches_cli_json(copies: int, degraded_sources: tuple[str, ...]) -> None:
     """The Bayesian layer must not vanish between the CLI and MCP for one record."""
     from recon_tool.formatter import format_tenant_json
     from recon_tool.fusion_apply import apply_fusion
 
-    info = split_info()
-    cli = json.loads(format_tenant_json(apply_fusion(info)))
+    baseline = replace(split_info(), degraded_sources=degraded_sources)
+    info = replace(baseline, evidence=baseline.evidence * copies)
+    fused = apply_fusion(info)
+    cli = json.loads(format_tenant_json(fused))
     mcp = json.loads(_format_lookup_tenant(info, [], "json", explain=False))
 
     assert cli["fusion_enabled"] == mcp["fusion_enabled"]
-    cli_names = [p["name"] for p in cli["posterior_observations"]]
-    mcp_names = [p["name"] for p in mcp["posterior_observations"]]
-    assert cli_names == mcp_names
+    assert cli["slug_confidences"] == mcp["slug_confidences"]
+    assert cli["posterior_observations"] == mcp["posterior_observations"]
+    baseline_fused = apply_fusion(baseline)
+    assert fused.slug_confidences == baseline_fused.slug_confidences
+    assert fused.posterior_observations == baseline_fused.posterior_observations
+    assert fused.evidence == info.evidence
+    assert len(fused.evidence) == len(baseline.evidence) * copies
+    if degraded_sources:
+        assert "google-workspace" not in cli["slug_confidences"]

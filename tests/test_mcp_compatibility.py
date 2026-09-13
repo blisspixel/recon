@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import shlex
 import tomllib
 from pathlib import Path
 
 import pytest
+import yaml
 
 from recon_tool.mcp_client.doctor import DoctorCheck, _append_cache_metadata_check
 from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, mcp_application_options, model_wire_dict
@@ -109,3 +111,35 @@ def test_isolated_uv_operations_use_copy_mode(monkeypatch: pytest.MonkeyPatch) -
 
     assert env["UV_LINK_MODE"] == "copy"
     assert check_mcp_compatibility.os.environ["UV_LINK_MODE"] == "hardlink"
+
+
+def test_sdk_matrix_allows_its_companion_types_without_unlocking_other_dependencies(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
+    exported = "# locked runtime\nmcp==2.0.0\nmcp-types==2.0.0\nhttpx==0.28.1\npydantic==2.12.5\n"
+
+    def run(args: list[str], **_kwargs: object) -> check_mcp_compatibility.CommandResult:
+        assert args == ["uv", "export", "--locked", "--no-dev", "--no-hashes", "--no-emit-project"]
+        return check_mcp_compatibility.CommandResult(0, exported, "")
+
+    monkeypatch.setattr(check_mcp_compatibility, "_run_command", run)
+    constraints = tmp_path / "constraints.txt"
+    result = check_mcp_compatibility._locked_constraints("uv", constraints)
+
+    assert result.returncode == 0
+    assert constraints.read_text(encoding="utf-8") == "# locked runtime\nhttpx==0.28.1\npydantic==2.12.5\n"
+
+
+def test_local_ci_and_release_mcp_matrix_cover_rollback_floor_and_current_release() -> None:
+    workflow_dir = Path(__file__).resolve().parents[1] / ".github" / "workflows"
+    workflow = workflow_dir / "ci.yml"
+    jobs = yaml.safe_load(workflow.read_text(encoding="utf-8"))["jobs"]
+    matrix = jobs["mcp-compatibility"]["strategy"]["matrix"]["mcp-version"]
+    assert tuple(matrix) == check_mcp_compatibility.DEFAULT_SDK_VERSIONS == ("1.28.1", "2.0.0", "2.2.0")
+    release = yaml.safe_load((workflow_dir / "release.yml").read_text(encoding="utf-8"))
+    commands = [step.get("run", "") for step in release["jobs"]["test"]["steps"]]
+    (command,) = [command for command in commands if "scripts/check_mcp_compatibility.py" in command]
+    arguments = shlex.split(command)
+    for option in ("--sdk-version", "--require-compatible"):
+        assert tuple(arguments[index + 1] for index, value in enumerate(arguments) if value == option) == tuple(matrix)

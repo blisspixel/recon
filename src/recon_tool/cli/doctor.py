@@ -429,8 +429,9 @@ def _doctor_print_header(console: Any) -> None:
     package_location = Path(package_file).resolve().parent if package_file else "unknown"
     method = updater.detect_install_method()
     method_detail = f"{method} (best effort)" if method == updater.PIP else method
-    console.print(f"  Python [bold]{sys.version.split()[0]}[/bold] at {python_executable}")
-    console.print(f"  Package {_safe_markup(package_location)}")
+    # Preserve copyable paths in captured output even at narrow terminal widths.
+    console.print(f"  Python [bold]{sys.version.split()[0]}[/bold] at {python_executable}", soft_wrap=True)
+    console.print(f"  Package {_safe_markup(package_location)}", soft_wrap=True)
     console.print(f"  Install method {_safe_markup(method_detail)}")
     console.print()
 
