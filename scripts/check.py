@@ -90,6 +90,13 @@ _STAGES: list[tuple[str, str, list[str]]] = [
     (_CORE, "workflow-pins", [_PY, "scripts/check_workflow_pins.py"]),
     (_CORE, "cost-surface", [_PY, "scripts/check_cost_surface.py"]),
     (_CORE, "text-hygiene", [_PY, "scripts/check_text_hygiene.py"]),
+    # Commit metadata is a separate scope: trailers and bot identities are
+    # invisible to a diff. Audit whatever this branch adds over origin/main.
+    (
+        _CORE,
+        "commit-hygiene",
+        [_PY, "scripts/check_text_hygiene.py", "--commits", "origin/main..HEAD"],
+    ),
     (_CORE, "markdown-links", [_PY, "scripts/check_markdown_links.py"]),
     (_CORE, "doc-rot", [_PY, "scripts/check_doc_rot.py"]),
     (_CORE, "terminal-demo", [_PY, "scripts/generate_terminal_demo.py", "--check"]),

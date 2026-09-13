@@ -26,6 +26,29 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- CI no longer fails on a branch-creation push. `github.event.before` is all
+  zeros for such an event, and the fingerprint-freshness step passed that
+  straight to `git` as a revision, failing with `Needed a single revision` on a
+  tree that had not changed. The step now falls back to the first parent and
+  skips cleanly when no base revision exists, matching how the text-hygiene step
+  already resolves the same event.
+
+### Added
+
+- Attribution enforcement covering commit metadata, not only repository text.
+  `scripts/check_text_hygiene.py` gains `--commits <range>`, which audits commit
+  messages and author and committer identity, and `--message-file <path>` for a
+  `commit-msg` hook. The added-line scope alone could never see an attribution
+  trailer, because a trailer lives in commit metadata and never appears in a
+  diff. Wired into `scripts/check.py`, the CI text-hygiene step, and
+  `.pre-commit-config.yaml`; install with
+  `pre-commit install --hook-type commit-msg`.
+- Tracked `.claude/settings.json` carrying the attribution policy, so it applies
+  to every clone rather than one machine. `.gitignore` keeps the rest of
+  `.claude/` local.
+
 ## [2.19.3] - 2026-09-13
 
 Prevent duplicate evidence from inflating diagnostic strength, cover Shopify's

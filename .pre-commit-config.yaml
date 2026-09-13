@@ -17,6 +17,19 @@ repos:
         # Match scripts/check.py and CI: pyproject.toml owns the complete scope,
         # including the explicitly covered validation modules.
 
+      # Attribution trailers never appear in a diff, so the added-line gate
+      # cannot see them. They must be refused before the commit exists:
+      # once a commit is pushed to a pull request branch, GitHub retains its
+      # head under refs/pull/*/head permanently, and no history rewrite,
+      # branch deletion, or release deletion can remove it.
+      # Requires: pre-commit install --hook-type commit-msg
+      - id: commit-msg-hygiene
+        name: commit message hygiene (no attribution trailers)
+        entry: python scripts/check_text_hygiene.py --message-file
+        language: system
+        stages: [commit-msg]
+        always_run: true
+
       - id: metadata-coverage
         name: metadata-coverage (descriptions on every fingerprint detection)
         entry: python scripts/check_metadata_coverage.py
