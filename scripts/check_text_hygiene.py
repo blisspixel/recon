@@ -1,5 +1,21 @@
 #!/usr/bin/env python3
-"""Check added lines for forbidden attribution and text markers."""
+"""Check added lines, commit messages, and commit identities for forbidden markers.
+
+Three scopes, because attribution leaks through three different doors:
+
+* added diff lines (default) - repo text a change introduces;
+* commit messages (``--commits``, ``--message-file``) - trailers such as a
+  co-author line, which never appear in a diff and so survived the older
+  diff-only gate;
+* commit author and committer identity (``--commits``) - a name or address
+  belonging to an assistant or bot rather than a maintainer.
+
+A trailer written into a commit on a side branch is permanent once pushed:
+GitHub keeps every pull request head under ``refs/pull/*/head`` forever, and
+no rewrite, branch deletion, or release deletion can remove it. The only
+reliable control is to refuse the commit locally, before it exists, which is
+what the ``--message-file`` mode does from a ``commit-msg`` hook.
+"""
 
 from __future__ import annotations
 
@@ -32,6 +48,27 @@ PICTOGRAPH_RANGES = (
     (0x1F000, 0x1FAFF),
     (0x2600, 0x27BF),
 )
+# Applied only to commit author and committer identity, never to repo text.
+# The catalog legitimately documents vendor names such as the Anthropic and
+# OpenAI verification-token prefixes, so these substrings must not reach the
+# diff-line scanner.
+IDENTITY_MARKERS = tuple(
+    "".join(parts)
+    for parts in (
+        ("noreply@", "anthro", "pic.com"),
+        ("cla", "ude"),
+        ("cod", "ex"),
+        ("cop", "ilot"),
+        ("open", "ai.com"),
+        ("[b", "ot]"),
+    )
+)
+_COMMIT_FIELD_SEPARATOR = "\x00"
+_COMMIT_RECORD_SEPARATOR = "\x1e"
+# git expands these escapes itself. Passing the raw control characters in argv
+# instead would fail on Windows, where CreateProcess rejects an embedded NUL.
+_COMMIT_FIELD_ESCAPE = "%x00"
+_COMMIT_RECORD_ESCAPE = "%x1e"
 
 
 @dataclass(frozen=True)
@@ -69,6 +106,68 @@ def forbidden_markers(text: str) -> tuple[str, ...]:
     if _has_pictograph(text):
         markers.append("pictograph")
     return tuple(markers)
+
+
+def identity_markers(text: str) -> tuple[str, ...]:
+    """Return forbidden markers for a commit author or committer identity."""
+    lowered = text.lower()
+    return tuple(marker for marker in IDENTITY_MARKERS if marker in lowered)
+
+
+def commit_lines_from_log(log_text: str, *, source: str) -> list[AddedLine]:
+    """Turn ``git log`` records into auditable lines.
+
+    Each record contributes its author identity, its committer identity, and
+    every line of its message body, so a trailer buried at the end of a long
+    message is audited exactly like a subject line.
+    """
+    lines: list[AddedLine] = []
+    for record in log_text.split(_COMMIT_RECORD_SEPARATOR):
+        if not record.strip():
+            continue
+        parts = record.split(_COMMIT_FIELD_SEPARATOR)
+        if len(parts) < 4:
+            continue
+        short = parts[0].strip()[:12]
+        author = parts[1].strip()
+        committer = parts[2].strip()
+        message = parts[3]
+        for role, identity in (("author", author), ("committer", committer)):
+            for marker in identity_markers(identity):
+                lines.append(AddedLine(source, f"{short} ({role})", None, f"{marker}: {identity}"))
+        lines.extend(
+            AddedLine(source, f"{short} (message)", number, text)
+            for number, text in enumerate(message.splitlines(), start=1)
+        )
+    return lines
+
+
+def collect_commit_lines(ranges: Iterable[str]) -> list[AddedLine]:
+    """Audit commit metadata for each supplied range."""
+    collected: list[AddedLine] = []
+    log_format = _COMMIT_FIELD_ESCAPE.join(["%h", "%an <%ae>", "%cn <%ce>", "%B"])
+    for commit_range in ranges:
+        log = _diff_or_error(["log", f"--format={log_format}{_COMMIT_RECORD_ESCAPE}", commit_range])
+        collected.extend(commit_lines_from_log(log, source=f"commit {commit_range}"))
+    return collected
+
+
+def audit_identity_lines(lines: Iterable[AddedLine]) -> list[TextHygieneViolation]:
+    """Report identity lines, which arrive pre-flagged by ``commit_lines_from_log``."""
+    violations: list[TextHygieneViolation] = []
+    for line in lines:
+        if line.line_number is None and line.path.endswith((" (author)", " (committer)")):
+            marker, _, detail = line.text.partition(": ")
+            violations.append(
+                TextHygieneViolation(
+                    source=line.source,
+                    path=line.path,
+                    line_number=None,
+                    marker=f"forbidden identity {marker}",
+                    text=detail,
+                )
+            )
+    return violations
 
 
 def added_lines_from_diff(diff_text: str, *, source: str) -> list[AddedLine]:
@@ -211,20 +310,65 @@ def main(argv: list[str] | None = None) -> int:
         default=[],
         help="Commit range to inspect with git diff -U0. May be repeated.",
     )
+    parser.add_argument(
+        "--commits",
+        action="append",
+        default=[],
+        help=(
+            "Commit range whose messages and author/committer identities to inspect. "
+            "May be repeated. Catches trailers, which never appear in a diff."
+        ),
+    )
+    parser.add_argument(
+        "--message-file",
+        help=(
+            "Path to a prepared commit message to inspect, for use from a commit-msg "
+            "hook. Refuses the commit before it exists, which is the only durable "
+            "control: a pushed pull request head cannot be purged from GitHub."
+        ),
+    )
     args = parser.parse_args(argv)
 
+    scope = "added lines"
     try:
-        violations = audit_added_lines(collect_added_lines(args.range))
-    except RuntimeError as exc:
+        if args.message_file is not None:
+            scope = "commit message"
+            text = Path(args.message_file).read_text(encoding="utf-8", errors="replace")
+            body = "\n".join(line for line in text.splitlines() if not line.lstrip().startswith("#"))
+            lines = [
+                AddedLine("commit-msg", args.message_file, number, line)
+                for number, line in enumerate(body.splitlines(), start=1)
+            ]
+            violations = audit_added_lines(lines)
+        elif args.commits:
+            scope = "commit metadata"
+            collected = collect_commit_lines(args.commits)
+            identity = [
+                line
+                for line in collected
+                if line.line_number is None and line.path.endswith((" (author)", " (committer)"))
+            ]
+            message = [line for line in collected if line not in identity]
+            violations = audit_identity_lines(identity) + audit_added_lines(message)
+        else:
+            violations = audit_added_lines(collect_added_lines(args.range))
+    except (RuntimeError, OSError) as exc:
         print(f"Text hygiene check failed: {exc}", file=sys.stderr)
         return 1
 
     if violations:
-        print("Text hygiene check failed on added lines:", file=sys.stderr)
+        print(f"Text hygiene check failed on {scope}:", file=sys.stderr)
         for violation in violations:
             print(f"  {violation.render()}", file=sys.stderr)
+        if scope != "added lines":
+            print(
+                "\nRemove the marker and amend. Attribution trailers are forbidden in this\n"
+                "repository: see the Attribution section of AGENTS.md. A trailer that reaches\n"
+                "a pushed branch is permanent, because GitHub retains every pull request head.",
+                file=sys.stderr,
+            )
         return 1
-    print("OK: added lines contain no attribution markers, em dashes, or pictographs.")
+    print(f"OK: no attribution markers, em dashes, or pictographs in {scope}.")
     return 0
 
 

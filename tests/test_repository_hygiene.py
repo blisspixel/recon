@@ -23,6 +23,12 @@ LOCAL_TOOL_ARTIFACT_PROBES = {
     ".venv": ".venv/probe",
     ".claude": ".claude/probe",
 }
+# Deliberately tracked under an otherwise ignored local-tool root. This file
+# carries the attribution policy, which has to apply to every clone rather than
+# to one machine, and prose cannot enforce it because the trailer is appended by
+# the tool rather than written by the model. See the Attribution and authorship
+# section of AGENTS.md.
+LOCAL_TOOL_TRACKED_EXCEPTIONS = frozenset({".claude/settings.json"})
 
 
 def _tracked_files() -> list[str]:
@@ -89,9 +95,24 @@ def test_local_tool_artifact_roots_are_gitignored_and_untracked() -> None:
     tracked = set(_tracked_files())
 
     for root_name, probe in LOCAL_TOOL_ARTIFACT_PROBES.items():
-        tracked_under_root = [path for path in tracked if path == root_name or path.startswith(f"{root_name}/")]
+        tracked_under_root = [
+            path
+            for path in tracked
+            if (path == root_name or path.startswith(f"{root_name}/")) and path not in LOCAL_TOOL_TRACKED_EXCEPTIONS
+        ]
         assert _git_ignores(probe), root_name
         assert tracked_under_root == []
+
+
+def test_tracked_local_tool_exceptions_are_present() -> None:
+    """The carve-out above must stay a real tracked file, not a stale allowance.
+
+    If the attribution policy file stops being tracked, the rule silently
+    reverts to per-machine configuration, which is the failure this guards.
+    """
+    tracked = set(_tracked_files())
+
+    assert tracked >= LOCAL_TOOL_TRACKED_EXCEPTIONS
 
 
 def test_public_tracked_text_does_not_reference_docs_agent_state() -> None:

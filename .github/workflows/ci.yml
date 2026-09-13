@@ -321,9 +321,28 @@ jobs:
         run: uv run python scripts/check_metadata_coverage.py
 
       - name: Enforce verification dates on new fingerprint detections
+        # A branch-creation push (including renaming the default branch away and
+        # back) reports ``github.event.before`` as all zeros, which is not a
+        # revision and made this step fail with "Needed a single revision" on a
+        # tree that had not changed. Fall back to the first parent, matching how
+        # the text-hygiene step below resolves the same event.
         env:
-          FINGERPRINT_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: uv run python scripts/check_fingerprint_freshness.py --base-ref "$FINGERPRINT_BASE_SHA"
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          BEFORE_SHA: ${{ github.event.before }}
+        run: |
+          set -euo pipefail
+          if [ -n "$PR_BASE_SHA" ]; then
+            base="$PR_BASE_SHA"
+          elif [ -z "$BEFORE_SHA" ] || [[ "$BEFORE_SHA" =~ ^0+$ ]]; then
+            base="$(git rev-parse --verify --quiet HEAD^ || true)"
+          else
+            base="$BEFORE_SHA"
+          fi
+          if [ -z "$base" ]; then
+            echo "No usable base revision for this event; skipping freshness diff."
+            exit 0
+          fi
+          uv run python scripts/check_fingerprint_freshness.py --base-ref "$base"
 
       - name: Enforce validation artifact hygiene
         # Release and calibration artifacts may publish aggregate statistics
@@ -382,6 +401,11 @@ jobs:
             range="$BEFORE_SHA..$HEAD_SHA"
           fi
           uv run python scripts/check_text_hygiene.py --range "$range"
+          # Trailers and bot identities live in commit metadata, not in the
+          # diff, so the range above cannot see them. Fail the pull request
+          # here, while its head can still be rewritten: once merged, the
+          # refs/pull/*/head copy is retained by GitHub permanently.
+          uv run python scripts/check_text_hygiene.py --commits "$range"
 
       - name: Enforce Markdown links and heading anchors
         run: uv run python scripts/check_markdown_links.py

@@ -361,9 +361,18 @@ uv self update 0.11.17
 uv --version                # must report uv 0.11.17
 uv sync
 uv run pre-commit install
+uv run pre-commit install --hook-type commit-msg   # required; see below
 uv run python scripts/release_readiness.py --allow-dirty
 uv run python scripts/check.py
 ```
+
+The `commit-msg` hook is a separate installation step and is not optional.
+Attribution trailers live in commit metadata rather than in a diff, so no
+file-content hook can see them, and a trailer that reaches a pushed branch
+cannot be removed afterward: GitHub retains the head commit of every pull
+request under `refs/pull/*/head`, where the repository owner cannot delete it.
+[AGENTS.md](https://github.com/blisspixel/recon/blob/main/AGENTS.md#attribution-and-authorship)
+states the rule.
 
 `uv run python scripts/check.py` is the canonical local gate: lint, type
 checks, coverage-gated tests, generated-artifact and catalog checks, text and

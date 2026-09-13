@@ -158,3 +158,119 @@ def test_collect_added_lines_decodes_utf8_em_dash(tmp_path: Path, monkeypatch: p
     violations = CHECKER.audit_added_lines(CHECKER.collect_added_lines([]))
 
     assert any(v.marker == "em dash" for v in violations)
+
+
+def test_identity_markers_detects_constructed_bot_identity() -> None:
+    identity = "depend" + "abot" + "[b" + "ot]" + " <49699333+x@users.noreply.github.com>"
+    expected_marker = "[b" + "ot]"
+
+    assert expected_marker in CHECKER.identity_markers(identity)
+
+
+def test_identity_markers_detects_constructed_assistant_address() -> None:
+    identity = "An Assistant <noreply@" + "anthro" + "pic.com>"
+    expected_marker = "noreply@" + "anthro" + "pic.com"
+
+    assert expected_marker in CHECKER.identity_markers(identity)
+
+
+def test_identity_markers_allows_maintainer_identity() -> None:
+    assert CHECKER.identity_markers("Nick Seal <maintainer@example.invalid>") == ()
+
+
+def test_identity_markers_do_not_reach_repository_text() -> None:
+    """Vendor names the catalog documents must never fail the diff-line scope.
+
+    The catalog carries verification-token prefixes naming model vendors, so an
+    identity marker leaking into ``forbidden_markers`` would block legitimate
+    fingerprint rules.
+    """
+    vendor_line = "  pattern: '^" + "anthro" + "pic-domain-verification='"
+
+    assert CHECKER.forbidden_markers(vendor_line) == ()
+
+
+def test_commit_lines_from_log_splits_identity_and_message() -> None:
+    field = CHECKER._COMMIT_FIELD_SEPARATOR
+    record = CHECKER._COMMIT_RECORD_SEPARATOR
+    author = "Nick Seal <maintainer@example.invalid>"
+    log = field.join(["abc1234", author, author, "Subject line\n\nBody line\n"]) + record
+
+    lines = CHECKER.commit_lines_from_log(log, source="commit range")
+
+    assert [(line.path, line.line_number, line.text) for line in lines] == [
+        ("abc1234 (message)", 1, "Subject line"),
+        ("abc1234 (message)", 2, ""),
+        ("abc1234 (message)", 3, "Body line"),
+    ]
+
+
+def test_commit_lines_from_log_flags_bot_author() -> None:
+    field = CHECKER._COMMIT_FIELD_SEPARATOR
+    record = CHECKER._COMMIT_RECORD_SEPARATOR
+    bot = "depend" + "abot" + "[b" + "ot]" + " <x@users.noreply.github.com>"
+    human = "Nick Seal <maintainer@example.invalid>"
+    log = field.join(["abc1234", bot, human, "Bump a dependency\n"]) + record
+
+    lines = CHECKER.commit_lines_from_log(log, source="commit range")
+    violations = CHECKER.audit_identity_lines(lines)
+
+    assert len(violations) == 1
+    assert violations[0].path == "abc1234 (author)"
+    assert violations[0].marker.startswith("forbidden identity")
+
+
+def test_message_file_mode_rejects_trailer(tmp_path: Path) -> None:
+    trailer = "Co-Authored" + "-By: " + "Cla" + "ude" + " <noreply@example.invalid>"
+    message = tmp_path / "COMMIT_EDITMSG"
+    message.write_text(f"Fix a thing\n\nBody.\n\n{trailer}\n", encoding="utf-8")
+
+    assert CHECKER.main(["--message-file", str(message)]) == 1
+
+
+def test_message_file_mode_ignores_comment_lines(tmp_path: Path) -> None:
+    """Git appends commented help text to the message buffer.
+
+    Those lines are stripped before the commit is written, so auditing them
+    would reject commits over text the author never wrote.
+    """
+    trailer = "Co-Authored" + "-By: " + "Cla" + "ude" + " <noreply@example.invalid>"
+    message = tmp_path / "COMMIT_EDITMSG"
+    message.write_text(f"Fix a thing\n\n# {trailer}\n", encoding="utf-8")
+
+    assert CHECKER.main(["--message-file", str(message)]) == 0
+
+
+def test_commits_mode_catches_trailer_a_diff_cannot_see(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    """A trailer lives only in commit metadata, so the added-line scope misses it."""
+    import subprocess
+
+    def _git(*args: str) -> None:
+        subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True)  # noqa: S603, S607
+
+    _git("init", "-q")
+    _git("config", "user.email", "test@example.invalid")
+    _git("config", "user.name", "test")
+    note = tmp_path / "note.txt"
+    note.write_text("clean line\n", encoding="utf-8")
+    _git("add", ".")
+    _git("commit", "-qm", "init")
+    note.write_text("clean line\nsecond clean line\n", encoding="utf-8")
+    _git("add", ".")
+    trailer = "Co-Authored" + "-By: " + "Cla" + "ude" + " <noreply@example.invalid>"
+    _git("commit", "-qm", f"Add a line\n\n{trailer}")
+
+    monkeypatch.setattr(CHECKER, "ROOT", tmp_path)
+
+    diff = subprocess.run(
+        ["git", "diff", "-U0", "HEAD~1..HEAD"],  # noqa: S607
+        cwd=tmp_path,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    diff_violations = CHECKER.audit_added_lines(CHECKER.added_lines_from_diff(diff, source="range"))
+    assert diff_violations == []
+
+    commit_violations = CHECKER.audit_added_lines(CHECKER.collect_commit_lines(["HEAD~1..HEAD"]))
+    assert any("co-authored" in v.marker for v in commit_violations)
