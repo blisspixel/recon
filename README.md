@@ -201,6 +201,15 @@ It separates offline selection, explicitly bounded collection, candidate
 refinement, and untouched holdout evaluation. Increased classification coverage
 does not by itself establish accuracy or justify promotion.
 
+The next improvement loop combines documented catalog coverage with automated
+checks for duplicate evidence, deceptive lookalikes, failed sources, and output
+agreement. Local implementation within an authorized task can proceed without
+human approval steps. Per-slug evidence strength now counts each exact
+source-type/value pair once, even when multiple rules match it; distinct pairs
+still use the existing heuristic. The
+[acceptance loop](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md#autonomous-improvement-acceptance)
+sets the next work and its executable pass conditions.
+
 ## Common Commands
 
 ```bash

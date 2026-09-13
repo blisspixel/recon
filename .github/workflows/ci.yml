@@ -136,13 +136,14 @@ jobs:
 
   mcp-compatibility:
     # Exercise the exact v1 rollback SDK and production v2 SDK in isolated
-    # environments. Production depends on mcp>=2.0.0,<3; both pinned rows block.
+    # environments. Keep rollback, production floor, and current stable SDK
+    # blocking; production depends on mcp>=2.0.0,<3.
     runs-on: ubuntu-latest
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        mcp-version: ["1.28.1", "2.0.0"]
+        mcp-version: ["1.28.1", "2.0.0", "2.2.0"]
     env:
       UV_PYTHON: "3.11"
     steps:

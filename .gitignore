@@ -78,6 +78,7 @@ docs/accuracy.md
 !/validation/2026-09-05-catalog-claim-review.md
 !/validation/2026-09-05-documented-cname-review.md
 !/validation/2026-09-08-documented-fingerprint-review.md
+!/validation/2026-09-13-evidence-and-catalog-loop.md
 # Generic catalog-round frame preparer; no target data is embedded.
 !/validation/prepare_catalog_round.py
 # Prior-sample drift contract and aggregate evaluator. Prior frames, retained

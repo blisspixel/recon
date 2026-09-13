@@ -211,8 +211,10 @@ organizational control, live product use, or a causal explanation for change.
 ### 2.2 Per-slug evidence-strength heuristic
 
 `fusion.py` computes `slug_confidences` from a Beta-shaped additive score. For a
-slug, it chooses a source-type prior, adds positive weights for observed evidence
-records, leaves the negative mass fixed, and reports the resulting mean.
+slug, it chooses a source-type prior, adds positive weights once per exact
+source-type/value pair, leaves the negative mass fixed, and reports the
+resulting mean. Different rule names for the same pair add no weight; retained
+provenance still includes every occurrence. Opaque raw values are not normalized.
 
 For prior parameters $(\alpha_0,\beta_0)$ and observed positive weights $w_j$,
 
@@ -223,7 +225,9 @@ $$
 
 This is a monotone evidence-strength heuristic. It is not a fitted Bernoulli
 posterior because there is no labeled likelihood model, no negative update, and
-no general correction for duplicate or dependent evidence records. Human-facing
+no general correction for dependence among distinct pairs. Exact deduplication
+does not identify shared derivations across source types or values, and the
+record has no separate owner or collection-window identifier. Human-facing
 documentation should call it evidence strength. The stable field name remains
 unchanged pending a versioned contract decision.
 

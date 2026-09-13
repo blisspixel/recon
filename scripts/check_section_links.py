@@ -20,6 +20,7 @@ Run:
 
 from __future__ import annotations
 
+import os
 import re
 import sys
 from pathlib import Path
@@ -34,13 +35,15 @@ _HEADING_TEXT = re.compile(r"^#{1,6}\s+(.+?)\s*$")
 # an optional "section(s)" word, then a whole or dotted section identifier. The
 # ``[^\w\n]`` run stops at the first unrelated word, so a later version or date
 # on the line is not mistaken for a section reference.
+# A sentence-final period is punctuation; a dotted or word suffix must not
+# turn a larger identifier into a partial section match.
 _XREF_START = re.compile(
     r"""
     correlation\.md(?!\#)[^\w\n]*
     (?:
-        (?:sections?\s+|§\s*)(\d+(?:\.\d+)*)(?![\w.])
+        (?:sections?\s+|§\s*)(\d+(?:\.\d+)*)(?!\w|\.\w)
         |
-        (\d+\.\d+(?:\.\d+)*)(?![\w.])
+        (\d+\.\d+(?:\.\d+)*)(?!\w|\.\w)
     )
     """,
     re.IGNORECASE | re.VERBOSE,
@@ -50,13 +53,14 @@ _XREF_START = re.compile(
 # immediately after an ``_XREF_START`` match, so unrelated numbers later in the
 # sentence remain out of scope.
 _XREF_CONTINUATION = re.compile(
-    r"\s*(?:,\s*(?:and\s+)?|and\s+|&\s*|[-–]\s*)(\d+(?:\.\d+)*)(?![\w.])",
+    r"\s*(?:,\s*(?:and\s+)?|and\s+|&\s*|[-\u2013]\s*)(\d+(?:\.\d+)*)(?!\w|\.\w)",
     re.IGNORECASE,
 )
 _ANCHOR_XREF = re.compile(r"correlation\.md#([a-z0-9][a-z0-9-]*)", re.IGNORECASE)
 
-_SCAN_GLOBS = ("*.md", "*.py", "*.yaml", "*.json")
+_SCAN_SUFFIXES = {".md", ".py", ".yaml", ".json"}
 _SKIP_DIRS = {".git", ".venv", "node_modules", "dist", "build", "__pycache__"}
+_ROOT_SCRATCH = {".agent", ".grok"}
 
 
 def valid_sections() -> set[str]:
@@ -95,13 +99,15 @@ def _section_refs_in_line(line: str) -> set[str]:
 
 
 def _iter_files() -> list[Path]:
-    seen: set[Path] = set()
-    for glob in _SCAN_GLOBS:
-        for p in REPO_ROOT.rglob(glob):
-            if any(part in _SKIP_DIRS for part in p.parts):
-                continue
-            seen.add(p)
-    return sorted(seen)
+    files: list[Path] = []
+    for directory, children, names in os.walk(REPO_ROOT):
+        parent = Path(directory)
+        # Prune before descent: ignored environments and root agent scratch
+        # are not project sources. Nested scratch remains visible as repo debt.
+        excluded = _SKIP_DIRS | _ROOT_SCRATCH if parent == REPO_ROOT else _SKIP_DIRS
+        children[:] = [name for name in children if name not in excluded]
+        files.extend(parent / name for name in names if Path(name).suffix in _SCAN_SUFFIXES)
+    return sorted(files)
 
 
 def dangling_refs(

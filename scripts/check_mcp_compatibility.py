@@ -31,7 +31,7 @@ from typing import Any, Literal, TextIO, cast
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 AGENT_ROOT = REPO_ROOT / ".agent"
-DEFAULT_SDK_VERSIONS = ("1.28.1", "2.0.0")
+DEFAULT_SDK_VERSIONS = ("1.28.1", "2.0.0", "2.2.0")
 
 MODERN_PROTOCOL_VERSION = "2026-07-28"
 LEGACY_PROTOCOL_VERSION = "2025-11-25"
@@ -1117,7 +1117,10 @@ def _locked_constraints(uv: str, destination: Path) -> CommandResult:
     )
     if result.returncode != 0:
         return result
-    lines = [line for line in result.stdout.splitlines() if not line.lower().startswith("mcp==")]
+    # The SDK pins its companion wire models. Keeping the production mcp-types
+    # constraint would make a newer SDK unsatisfiable before any probe runs.
+    # All unrelated runtime constraints remain locked.
+    lines = [line for line in result.stdout.splitlines() if not line.lower().startswith(("mcp==", "mcp-types=="))]
     destination.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return result
 
@@ -1241,7 +1244,7 @@ def characterize_versions(sdk_versions: tuple[str, ...]) -> dict[str, Any]:
         "method": {
             "sdk_versions": list(sdk_versions),
             "source": "isolated editable working tree",
-            "constraints": "uv.lock production runtime versions except mcp",
+            "constraints": "uv.lock production runtime versions except mcp and its mcp-types companion",
             "network": "package-index installation only; recon probes are local",
             "production_dependency_changed": False,
         },

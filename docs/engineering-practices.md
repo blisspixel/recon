@@ -37,8 +37,8 @@ files remain directly searchable.
 The package-index-dependent MCP SDK matrix is intentionally separate:
 `scripts/check_mcp_compatibility.py` creates isolated exact-pin environments,
 and the `mcp-compatibility` CI job blocks regressions on the stable v1.28.1
-rollback pin and stable v2.0.0 production pin without making the ordinary local
-gate depend on network access.
+rollback pin, v2.0.0 production floor, and v2.2.0 current stable pin without
+making the ordinary local gate depend on network access.
 Before pushing a local stack, `uv run python scripts/release_readiness.py` also
 checks every `origin/main..HEAD` commit message for attribution markers, em
 dashes, and pictographic symbols.
@@ -199,11 +199,12 @@ stripped at every source-derived sink.
 
 ## 7. Releases
 
-`scripts/release.py` requires a clean `main` exactly matching freshly fetched
-`origin/main`, synchronizes all code-owned version surfaces, runs the complete
-gate and release readiness on the prospective tree, and creates a local commit
-and tag inside a rollback boundary. Its final push sends `main` and the exact
-tag atomically. The tagged workflow independently validates tag/source/main
+Use the [PR-first release process](release-process.md). Run
+`scripts/release.py --prepare-only` from a clean preparation branch exactly at
+freshly fetched `origin/main`. It synchronizes all release-owned surfaces, runs
+the complete gate and readiness, and creates the preparation commit without a
+tag or push. Merge through checked PRs, then tag the exact checked main commit.
+The tagged workflow independently validates tag/source/main
 agreement, reruns the complete gate, and requires provenance plus a valid SBOM
 before either publication channel. PyPI publishing uses Trusted Publishing.
 The `pipx`/`uv`/`pip` paths and `recon update` need no per-release action because

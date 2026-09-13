@@ -25,7 +25,7 @@ caveats. No evaluation holdout becomes a development queue.
 
 ## How the catalog grows today
 
-The catalog carries 870 entries and 1,113 detection rules across nine populated
+The catalog carries 870 entries and 1,114 detection rules across nine populated
 types: `cname_target`, `cname`, `txt`, `spf`, `dmarc_rua`, `mx`, `ns`, `caa`,
 and `subdomain_txt`. The grammar and runtime also support `srv`, but the built-in
 catalog currently has no `srv` rules. New rules come from a corpus-mining loop:
@@ -55,7 +55,7 @@ complete. Its [aggregate result](../validation/2026-08-14-catalog-drift-round.md
 reports complete measurement, no decline beyond the frozen review threshold,
 no catalog promotion, and the exact catalog-driven `subdomain_txt`
 measurement-surface change. Most legacy detections still lack a freshness
-date: 166 of 1,113 detections currently carry a `verified` date (14.9 percent).
+date: 167 of 1,114 detections currently carry a `verified` date (15.0 percent).
 That share is the dated floor, not a reason to stamp today's date on the
 undated backlog.
 

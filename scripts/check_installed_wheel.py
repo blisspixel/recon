@@ -259,6 +259,8 @@ async def _probe(root: Path, manifest: Path, version: str) -> dict[str, Any]:
         "result": "pass",
         "version": version,
         "python_version": sys.version.split()[0],
+        "mcp_version": distribution_version("mcp"),
+        "mcp_types_version": distribution_version("mcp-types"),
         "platform": sys.platform,
         "package_root": str(package_root),
         "source_yaml_absent": True,

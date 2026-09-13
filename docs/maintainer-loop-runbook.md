@@ -12,11 +12,13 @@ Use it only when all of these are true:
 - success is decided by a deterministic gate;
 - target data and per-domain artifacts stay in ignored local paths;
 - external spend is tracked and defaults to 0 USD;
-- semantic changes still receive maintainer review.
+- semantic changes have a reviewable diff, supporting evidence, and passing gates.
 
-Do not use a loop to change CPT values, fingerprints, schemas, release assets,
-or distribution artifacts without a reviewed diff and the project gates that
-normally protect that surface.
+Within an authorized task, the loop may inspect evidence, implement local
+corrections, and run gates without another approval step. Review may be
+automated; it must explain the supported behavior and test its failure modes.
+CPT and schema changes still need their documented design and compatibility
+basis. Commit, push, release, and publication require explicit instructions.
 
 ## Shared Loop Contract
 
@@ -30,9 +32,10 @@ Every loop uses the same six records:
    outcome, commit, elapsed time, spend, touched files, and any unresolved
    assumptions. It records traces and outcomes, not raw model reasoning.
 3. **Action boundary:** a short statement of which steps are read-only, which
-   steps write local files, and which steps are externally visible. Release,
-   distribution, schema, CPT, and catalog changes require maintainer approval
-   before execution.
+   steps write local files, and which steps are externally visible. Existing
+   task authorization carries through local catalog and correctness fixes;
+   do not add a human checkpoint between a reproduced defect and its tests.
+   New collection and publication must remain within explicit task scope.
 4. **Resume key:** a run stamp, branch, commit, artifact path, or command that
    makes retry behavior explicit. A resumed loop checks this key before
    repeating a write or any externally visible action.
@@ -99,15 +102,20 @@ touching private data.
 
 ## Fingerprint Proposal Loop
 
-Use on local gap output, never on guessed vendors.
+Use on local gap output or a current vendor's documented public-record shape.
 
 1. Refresh the context packet and read `docs/fingerprints.md` and
    `validation/README.md`.
-2. Start from `validation/scan.py`, `validation/find_gaps.py`, or
-   `validation/triage_candidates.py` output in ignored local paths.
+2. Start from current first-party documentation, or existing
+   `validation/find_gaps.py` or `validation/triage_candidates.py` output in
+   ignored local paths. New collection through `validation/scan.py` requires
+   a separately scoped corpus and collection task.
 3. Propose a catalog or motif patch only when the candidate has public vendor
    documentation or repeated aggregate-safe validation evidence.
-4. Add negative tests for overmatch and sparse-result wording where relevant.
+4. Add synthetic positives and negatives for wrong owners, deceptive suffixes,
+   wildcard responses, empty observations, and collection failure as applicable.
+   Pin exact rule provenance and supported wording. Use current vendor support
+   to set a real verification date; an unsupported candidate stays unresolved.
 5. Run the narrow classifier or motif tests, then `uv run python scripts/check.py`
    before claiming readiness.
 6. Record candidate slug, public reference, aggregate delta if available,
@@ -123,9 +131,16 @@ Default spend is 0 USD. If a maintainer explicitly permits paid validation for
 a loop, write the approved cap and current total into the ignored state file
 before the paid action starts. The loop stops before the cap is exceeded.
 
-## Review Rule
+## Acceptance Rule
 
-The loop can prepare a patch. It cannot dispose of semantic changes on its own.
-Catalog entries, CPT edits, schema changes, release changes, and distribution
-changes still need normal maintainer review and the same gates as hand-written
-work.
+Authorized local patches can satisfy review through source inspection,
+independently supported vendor grammar, regression tests, and automated gates.
+No company interviews, private inventory, or human signoff is required for that
+maintenance loop. A passing classifier test establishes the tested behavior,
+not empirical precision or completed service activation. General calibration
+claims retain their separate evidence requirements. An unresolved candidate
+does not prevent work on another supported one.
+
+Stop a bounded pass after its declared corrections and full gate pass, record
+the result, and select the next pass explicitly. Never weaken a gate to keep
+the loop moving or treat local success as hosted CI or publication success.

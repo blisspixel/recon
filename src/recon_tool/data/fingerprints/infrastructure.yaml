@@ -620,10 +620,9 @@ fingerprints:
     pattern: myshopify.com
     reference: https://help.shopify.com/en/manual/online-store/domains
     description: >-
-      CNAME terminating in myshopify.com (Shopify's storefront
-      hostname domain). Indicates the domain points to a
-      Shopify store, typically via a `shop.example.com` or
-      apex CNAME flattening configuration.
+      CNAME terminating under `myshopify.com`. This observes a DNS route
+      into Shopify's namespace; it does not establish completed setup,
+      a currently published storefront, account ownership, or a product plan.
 - name: Wix
   slug: wix
   category: Infrastructure

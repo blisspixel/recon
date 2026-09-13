@@ -2,7 +2,7 @@
 
 Status: adopted. Production serves MCP 2026-07-28 on the v2 SDK; 1.28.1
 remains the rollback pin and stays blocking in the compatibility matrix
-Review date: 2026-07-28
+Review date: 2026-09-13
 
 The Model Context Protocol 2026-07-28 specification and official Python SDK
 `2.0.0` were published on 2026-07-28. This is a breaking protocol release.
@@ -43,6 +43,21 @@ Those facts materially reduce the immediate blast radius.
 
 ## Dated Compatibility Results
 
+The 2026-09-13 currency check confirmed that
+[2026-07-28 remains the current protocol](https://modelcontextprotocol.io/docs/2026-07-28/learn/versioning),
+while the [Python SDK has reached 2.2.0](https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.2.0).
+All 24 isolated recon compatibility checks pass with SDK 2.2.0 and its
+`mcp-types` 2.2.0 companion. The matrix now keeps three exact rows blocking:
+v1.28.1 rollback, v2.0.0 production floor, and v2.2.0 current stable. The runtime
+dependency range and reproducible production lock remain unchanged.
+
+The harness now allows the SDK's companion `mcp-types` package to follow the
+tested SDK while retaining every unrelated runtime constraint. Previously,
+pinning production `mcp-types` 2.0.0 prevented 2.2.0 from installing, so no
+runtime compatibility test could execute. This correction tests the supported
+package pair rather than interpreting an artificial resolver conflict as a
+server failure.
+
 The candidate isolated working-tree matrix completed on 2026-07-13. The final
 stable matrix completed on 2026-07-28. Each run exported the
 locked production runtime constraints, replaced only the exact MCP pin, and
@@ -56,6 +71,7 @@ package index; all recon probes after installation were local and network-free.
 | 1.28.1 | pass | `initialize` | event-loop thread | Tested rollback line. Seventeen checks pass; seven v2-only checks are correctly not applicable. |
 | 2.0.0b1 | pass | `server/discover` | AnyIO worker thread | Historical candidate checkpoint from 2026-07-13. |
 | 2.0.0 | pass | `server/discover` | AnyIO worker thread | Production line adopted 2026-07-31. All 24 compatibility checks pass. |
+| 2.2.0 | pass | `server/discover` | AnyIO worker thread | Current stable SDK checked 2026-09-13. All 24 compatibility checks pass with companion types 2.2.0. |
 
 The passing rows proved the same deterministic inventory of 23 tools, six
 resources, zero resource templates, and one `domain_report` prompt. The matrix
@@ -75,10 +91,10 @@ to one authorization context. It avoids claiming reusable freshness for
 catalogs that can change through process-wide reload or local configuration. A
 longer TTL requires separate freshness evidence.
 
-Reproduce both supported rows with:
+Reproduce all three supported rows with:
 
 ```bash
-uv run python scripts/check_mcp_compatibility.py --sdk-version 1.0.0 --sdk-version 1.28.1 --sdk-version 2.0.0 --require-compatible 1.28.1 --require-compatible 2.0.0
+uv run python scripts/check_mcp_compatibility.py --require-compatible 1.28.1 --require-compatible 2.0.0 --require-compatible 2.2.0
 ```
 
 The matrix itself is compatibility evidence. The later adoption review below
@@ -126,8 +142,8 @@ is the production dependency decision.
 1. Keep the local stdio server as the supported MCP surface.
 2. Do not implement remote Streamable HTTP, OAuth, Apps, or Tasks for this
    readiness track.
-3. Keep the exact-pinned stable v1.28.1 and v2.0.0 compatibility matrix
-   blocking in CI.
+3. Keep exact v1.28.1 rollback, v2.0.0 production-floor, and v2.2.0
+   current-stable compatibility rows blocking in CI.
 4. Run production on stable v2 after the adoption gate; retain exact v1.28.1 as
    the blocking rollback row.
 5. Build compatibility around the doctor, tool/resource discovery, schemas,
@@ -356,5 +372,5 @@ on 2026-07-31. Before any future major dependency change:
 - Every complete cacheable result recon exposes carries valid `ttlMs` and
   `cacheScope` hints under the 2026 protocol.
 - MCP docs name the supported protocol behavior accurately.
-- The exact stable v1.28.1 and v2.0.0 matrix remains blocking in CI, with any
-  future delta documented before the production dependency changes.
+- The exact v1.28.1, v2.0.0, and v2.2.0 matrix remains blocking in CI, with
+  future deltas documented before the production dependency changes.

@@ -237,25 +237,61 @@ async def test_slack_challenge_is_an_owner_qualified_administrative_indicator(
 
 
 _CHALLENGE_OWNERS = (
-    ("Tailscale", "tailscale", "_tailscale-challenge", "does not establish"),
-    ("PostHog", "posthog", "_posthog-challenge", "does not establish"),
+    (
+        "Tailscale",
+        "tailscale",
+        "_tailscale-challenge",
+        "2026-09-08",
+        "https://tailscale.com/docs/account/domain-verification",
+    ),
+    (
+        "PostHog",
+        "posthog",
+        "_posthog-challenge",
+        "2026-09-08",
+        "https://posthog.com/docs/settings/sso",
+    ),
+    (
+        "Shopify",
+        "shopify",
+        "shopify_verification",
+        "2026-09-13",
+        "https://help.shopify.com/en/manual/domains/add-a-domain/connecting-domains/verify-domain-ownership",
+    ),
 )
+
+
+def test_shopify_undated_rules_do_not_claim_account_or_live_service_state() -> None:
+    token = _rules("shopify", "txt")["^shopify-verification-code="]
+    assert token.verified == ""
+    assert "does not establish account binding, SSO, completed verification, or active use" in token.description
+    for kind in ("cname", "cname_target"):
+        route = _rules("shopify", kind)["myshopify.com"]
+        assert route.verified == ""
+        assert "does not establish" in route.description
+        assert "a currently published storefront" in route.description
+    assets = _rules("shopify", "cname_target")["shopifycdn.com"]
+    assert assets.verified == ""
+    assert "does not establish current asset delivery" in assets.description
 
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("owner_case", _CHALLENGE_OWNERS)
-@pytest.mark.parametrize("shape", ["exact", "lookalike", "apex"])
+@pytest.mark.parametrize("shape", ["exact", "lookalike", "apex", "prefix", "subdomain", "empty"])
 async def test_documented_challenge_owners_are_owner_qualified(
     monkeypatch: pytest.MonkeyPatch,
-    owner_case: tuple[str, str, str, str],
+    owner_case: tuple[str, str, str, str, str],
     shape: str,
 ) -> None:
-    name, slug, owner, hedge = owner_case
-    value = f"synthetic-{slug}-verification-token"
+    name, slug, owner, verified, reference = owner_case
+    value = "" if shape == "empty" else f"synthetic-{slug}-verification-token"
     queried = {
         "exact": f"{owner}.example.com",
         "lookalike": f"{owner}.lookalike.example.com",
         "apex": "example.com",
+        "prefix": f"not{owner}.example.com",
+        "subdomain": f"{owner}_shop.example.com",
+        "empty": f"{owner}.example.com",
     }[shape]
     _dns_fixture(monkeypatch, {(queried, "TXT"): [value]})
     ctx = dns_base.DetectionCtx()
@@ -265,10 +301,43 @@ async def test_documented_challenge_owners_are_owner_qualified(
     if shape == "exact":
         assert ctx.services == {name}
         assert ctx.evidence == [EvidenceRecord("SUBDOMAIN_TXT", value, name, slug)]
+        assert (slug, "subdomain_txt", f"{owner}:.") in ctx._matched_fp_detections
     rule = _rules(slug, "subdomain_txt")[f"{owner}:."]
-    assert rule.verified == "2026-09-08"
-    assert rule.reference.startswith("https://")
-    assert hedge in rule.description
+    assert rule.verified == verified
+    assert rule.reference == reference
+    assert "does not establish" in rule.description
+
+
+@pytest.mark.asyncio
+async def test_documented_challenge_owners_abstain_on_wildcard_txt(monkeypatch: pytest.MonkeyPatch) -> None:
+    _dns_fixture(
+        monkeypatch,
+        {(f"{owner}.example.com", "TXT"): ["synthetic-wildcard"] for _, _, owner, _, _ in _CHALLENGE_OWNERS},
+    )
+    ctx = dns_base.DetectionCtx()
+    await dns_infra.detect_subdomain_txt(ctx, "example.com")
+    assert not ctx.slugs.intersection(slug for _, slug, _, _, _ in _CHALLENGE_OWNERS)
+
+
+@pytest.mark.parametrize("owner_case", _CHALLENGE_OWNERS)
+def test_unavailable_challenge_collection_cannot_corroborate_retained_tokens(
+    owner_case: tuple[str, str, str, str, str],
+) -> None:
+    name, slug, _, _, _ = owner_case
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="",
+        default_domain="example.com",
+        queried_domain="example.com",
+        slugs=(slug,),
+        services=(name,),
+        evidence=(EvidenceRecord("SUBDOMAIN_TXT", "synthetic-token", name, slug),),
+    )
+    assert collection_observable_evidence(info) == info.evidence
+    failed = replace(info, degraded_sources=("dns:subdomain_txt",))
+    assert collection_observable_evidence(failed) == ()
+    assert slug not in collection_observable_info(failed).slugs
+    assert failed.evidence == info.evidence
 
 
 @pytest.mark.parametrize(
@@ -411,7 +480,7 @@ async def test_sparse_empty_records_do_not_synthesize_researched_vendor_claims(m
     await dns_email.detect_mx(ctx, "example.com")
     await dns_infra.detect_subdomain_txt(ctx, "example.com")
     assert not ctx.slugs.intersection(
-        {"okta", "slack", "github-advanced-security", "aws-ses", "tailscale", "posthog", "resend"}
+        {"okta", "slack", "github-advanced-security", "aws-ses", "tailscale", "posthog", "resend", "shopify"}
     )
     assert classify_chain([], get_cname_target_rules()) == (None, None)
 
