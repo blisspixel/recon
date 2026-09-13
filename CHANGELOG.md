@@ -26,6 +26,16 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.4] - 2026-09-13
+
+Close the gap that let attribution trailers reach commit metadata, and fix a CI
+step that failed on a branch-creation push. No collector, fingerprint, claim, or
+output change.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ### Fixed
 
 - CI no longer fails on a branch-creation push. `github.event.before` is all
