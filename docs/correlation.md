@@ -1,7 +1,7 @@
 # Correlation model
 
-Semantic baseline established for recon v2.4.0. Reviewed against v2.19.2 on
-2026-09-09.
+Semantic baseline established for recon v2.4.0. Reviewed against v2.19.3 on
+2026-09-13.
 
 This document separates three things that must not be conflated:
 
