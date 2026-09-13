@@ -979,6 +979,7 @@
   "coverage": {
     "agent_guidance_sections": {
       "AGENTS.md#AGENTS.md: recon": "static.agent-guidance.v1",
+      "AGENTS.md#Attribution and authorship": "static.agent-guidance.v1",
       "AGENTS.md#Before first invocation": "static.agent-guidance.v1",
       "AGENTS.md#Cache awareness": "static.agent-guidance.v1",
       "AGENTS.md#Default mode: panel output": "static.agent-guidance.v1",
