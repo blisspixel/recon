@@ -99,10 +99,20 @@ recon update --check
 PyPI, is behind PyPI, or is newer than the latest published release. It never
 offers to replace a newer local or source build with an older PyPI release.
 
+On Windows, a running `recon` launcher holds files that the package manager
+needs to replace. `recon update` schedules an isolated background worker, prints
+a local progress and result log, and exits so those locks can be released.
+Scheduling is not completion: wait for `Update completed` in the log, then run
+`recon --version`. A failure stays in the log with recovery guidance. Direct
+package-manager commands below run synchronously outside the recon launcher.
+
 `recon doctor` reports the running version, Python executable, package location,
 and detected installation method. It also warns when the first `recon` launcher
 on PATH reports a different version, which commonly means a stale global install
-is taking precedence over the intended environment.
+is taking precedence over the intended environment. Its release-status check
+reports whether this version is current on PyPI and suggests `recon update`
+when a newer release is available. A version-check outage is a warning and
+never triggers an installation.
 
 Direct package-manager commands also work:
 

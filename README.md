@@ -13,82 +13,7 @@ scanning. Ships as a CLI, versioned JSON, and a local MCP server for agent
 tools. Lookup time depends on public-provider latency and whether certificate
 transparency enrichment is enabled.
 
-> **Defensive use only.** Posture review, vendor diligence, architecture
-> review. See
-> [docs/legal.md](https://github.com/blisspixel/recon/blob/main/docs/legal.md).
-
-## Quick Start
-
-**macOS / Linux:**
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
-```
-
-**Windows (PowerShell):**
-
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
-```
-
-The installer sets up recon for your user account, including `uv` and Python
-3.14 when needed. No administrator access or existing Python setup is required
-for a fresh install. Open a new terminal afterward.
-
-**Already have Python 3.11 through 3.14?** These work too:
-
-```bash
-pip install recon-tool
-# Or install in an isolated tool environment:
-uv tool install recon-tool
-pipx install recon-tool
-```
-
-If your system Python is externally managed, use the installer above or a
-[virtual environment](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#install-in-a-virtual-environment).
-
-```bash
-recon --version      # offline install check
-recon doctor         # check installation, latest release, and online connectivity
-recon update         # update through the original package manager
-recon update --check # check for a newer release without installing
-```
-
-The scripts install an exact published version, preserve a sole existing `uv`
-or `pipx` owner, and explain how to recover ambiguous or unmanaged installs.
-For a fixed installer, download a
-[release tag source archive](https://github.com/blisspixel/recon/releases/latest)
-and review `scripts/install.sh` or `scripts/install.ps1` before running it.
-Artifact verification is covered in the
-[consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
-
-Before the first lookup, know what leaves your machine. recon makes DNS queries
-that recursive and authoritative DNS infrastructure may observe. Its only
-default request to a target-owned endpoint is the standards-defined MTA-STS
-policy fetch; Google CSE and BIMI certificate probes run only when
-`--direct-probes` is explicitly enabled. See
-[ADR-0011](https://github.com/blisspixel/recon/blob/main/docs/adr/0011-public-metadata-collection-boundary.md).
-
-Run a real review by replacing the placeholder with the domain you want to
-review:
-
-```bash
-recon "<domain-you-want-to-review>"
-```
-
-For a real lookup showing the output shape, you can use `recon example.com`. recon
-ships no offline demo mode: this is a real lookup command, but an ordinary
-lookup may reuse a recent result from the default 24-hour cache. Pass
-`--no-cache` for fresh collection. Reserved names such as `example.com` return a
-panel of stray public residue from unrelated test configurations, including a
-meaningless display name, at High confidence. It shows the shape of the output,
-not a result about any organization.
-
-A domain is a query coordinate, not proof of one organization or product: recon
-reports observations, not verdicts. That is the caution to keep beside every row
-the panel shows.
-
-### Illustrated output (synthetic, not a captured run)
+## See the Output
 
 ![Synthetic recon output in a modern Linux terminal](https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg)
 
@@ -138,6 +63,85 @@ Insights
 
 </details>
 <!-- terminal-demo-transcript:end -->
+
+> **Defensive use only.** Posture review, vendor diligence, architecture
+> review. See
+> [docs/legal.md](https://github.com/blisspixel/recon/blob/main/docs/legal.md).
+
+## Quick Start
+
+**macOS / Linux:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
+```
+
+**Windows (PowerShell):**
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
+```
+
+The installer sets up recon for your user account, including `uv` and Python
+3.14 when needed. No administrator access or existing Python setup is required
+for a fresh install. Open a new terminal afterward.
+
+**Already have Python 3.11 through 3.14?** These work too:
+
+```bash
+pip install recon-tool
+# Or install in an isolated tool environment:
+uv tool install recon-tool
+pipx install recon-tool
+```
+
+If your system Python is externally managed, use the installer above or a
+[virtual environment](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#install-in-a-virtual-environment).
+
+```bash
+recon --version      # offline install check
+recon doctor         # check installation, latest release, and online connectivity
+recon update         # update through the original package manager
+recon update --check # check for a newer release without installing
+```
+
+On Windows, `recon update` starts a background update after the running launcher
+exits. It prints the path to a local progress and result log. Once complete,
+run `recon --version` to confirm.
+
+The scripts install an exact published version, preserve a sole existing `uv`
+or `pipx` owner, and explain how to recover ambiguous or unmanaged installs.
+For a fixed installer, download a
+[release tag source archive](https://github.com/blisspixel/recon/releases/latest)
+and review `scripts/install.sh` or `scripts/install.ps1` before running it.
+Artifact verification is covered in the
+[consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
+
+Before the first lookup, know what leaves your machine. recon makes DNS queries
+that recursive and authoritative DNS infrastructure may observe. Its only
+default request to a target-owned endpoint is the standards-defined MTA-STS
+policy fetch; Google CSE and BIMI certificate probes run only when
+`--direct-probes` is explicitly enabled. See
+[ADR-0011](https://github.com/blisspixel/recon/blob/main/docs/adr/0011-public-metadata-collection-boundary.md).
+
+Run a real review by replacing the placeholder with the domain you want to
+review:
+
+```bash
+recon "<domain-you-want-to-review>"
+```
+
+For a real lookup showing the output shape, you can use `recon example.com`. recon
+ships no offline demo mode: this is a real lookup command, but an ordinary
+lookup may reuse a recent result from the default 24-hour cache. Pass
+`--no-cache` for fresh collection. Reserved names such as `example.com` return a
+panel of stray public residue from unrelated test configurations, including a
+meaningless display name, at High confidence. It shows the shape of the output,
+not a result about any organization.
+
+A domain is a query coordinate, not proof of one organization or product: recon
+reports observations, not verdicts. That is the caution to keep beside every row
+the panel shows.
 
 Install, update, uninstall, and first-run detail:
 [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).

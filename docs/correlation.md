@@ -1,7 +1,7 @@
 # Correlation model
 
 Semantic baseline established for recon v2.4.0. Reviewed against v2.19.4 on
-2026-09-13.
+2026-09-20.
 
 This document separates three things that must not be conflated:
 
@@ -246,7 +246,7 @@ The current graph layer constructs an undirected one-mode projection:
 - bounded or failed cases fall back to connected components as documented by
   the schema.
 
-For a partition $c$, weighted modularity is
+For a partition $c$ with positive total edge weight ($2m>0$), weighted modularity is
 
 $$
 Q = \frac{1}{2m}\sum_{ij}
@@ -351,12 +351,13 @@ validated 93% chance of current product use. Changing the display band's
 "Exact" describes variable elimination over the finite network, subject to
 floating-point precision. The exported Python `load_network(path)` and `infer`
 interfaces accept custom models whose individually valid likelihoods can have
-unrepresentable products. Evidence-product underflow, loss of positive factor
-mass during multiplication, or non-finite or nonpositive normalization now
-raises `FloatingPointError`, including under `python -O`. Such a run emits no
-posterior; numerical failure cannot be replaced by `0.5`. The engine remains a
-probability-space implementation, not a general log-space solver for arbitrary
-extreme models.
+numerically unsafe products. Evidence and factor products below the smallest
+normal floating-point value raise `FloatingPointError`, including positive
+subnormal products that can lose substantial relative precision before reaching
+zero. Non-finite or nonpositive normalization also raises. These checks remain
+active under `python -O`. Such a run emits no posterior; numerical failure cannot
+be replaced by `0.5`. The engine remains a probability-space implementation,
+not a general log-space solver for arbitrary extreme models.
 
 ## 3. Bayesian evidence semantics
 
@@ -571,14 +572,17 @@ perturbation produces anywhere in the network.
 
 On the shipped topology:
 
-| Statistic | v1.9.0 | Current (v1.9.3 topology) |
+| Statistic | v1.9.0 | Current model (2026-09-20) |
 |---|---|---|
-| Median posterior shift | 0.019 | 0.018 |
+| Median posterior shift | 0.019 | 0.020 |
 | 95th percentile | 0.109 | 0.100 |
-| Maximum observed | 0.139 | 0.106 |
+| Maximum observed | 0.139 | 0.134 |
 
-Sensitivity tightened at the v1.9.3 split because that change removed the
-most-sensitive node. The retired `email_security_strong` combined three parents
+The current column reruns the test's three scenarios with prior overrides
+disabled against the current committed parameters. Historical measurements
+from the v1.9.3 split are not current measurements merely because the topology
+is unchanged: later prior and likelihood changes also affect sensitivity.
+The retired `email_security_strong` combined three parents
 with five evidence bindings; its replacements each carry one of those burdens
 and not the other (section 4.9). The test itself asserts a deliberately loose
 regression bound rather than these measured values, so ordinary tuning does not
@@ -868,8 +872,9 @@ partly-closed vector with named residual gaps:
 - **The gate blocks the plantable form on the gated nodes.** A planted
   verification TXT, an NS delegation, or a CAA record produces the vendor slug
   but not the role-typed evidence (a functional MX, DKIM, or role CNAME) the
-  gated observations require, so the node stays at its prior. The slug still
-  enters inventory; it does not supply that node's local binding. Routing-shaped
+  gated observations require, so that node's local binding stays inactive. The
+  posterior can still move through evidence elsewhere in the network (section
+  4.5). The slug enters inventory without supplying that local binding. Routing-shaped
   records in the positive fixtures still support the node under this model.
   An MX or CNAME reference to a vendor can itself be published without proving
   an active vendor account or successful traffic delivery. Record-role gating
@@ -1186,18 +1191,39 @@ $$
 \lbrace E\subseteq\Omega_C:\mathrm{valid}_J(E),\ E\vdash_J^- C\rbrace.
 $$
 
+Atom-proof validity alone does not guarantee that its chosen raw origins can
+coexist. Let $\mathrm{Base}(Q)$ contain only the signed base assertions supplied
+by dependency units $Q$, and let $\mathrm{Cl}_J$ recompute deterministic signed
+closure. Each origin environment for an atom must reproduce that atom from
+its own base assertions. Define validity of a lifted unit environment by
+
+$$
+\mathrm{valid}^{\mathrm{unit}}_J(Q)=
+\mathrm{valid}_J\bigl(\mathrm{Cl}_J(\mathrm{Base}(Q))\bigr).
+$$
+
+This checks the full closed raw-origin environment against every declared
+nogood. For example, if $x\land y$ is a nogood, $x\vdash_J a$,
+$y\vdash_J b$, and $a\land b\vdash_J^+C$, the atom proof
+$\lbrace a,b\rbrace$ cannot bypass the nogood by hiding its origins $x,y$.
+Apply this test separately to each candidate proof environment $Q$, never to
+the entire observed ledger. Independently valid positive and negative proofs
+remain available even when their combined ledger contains a nogood.
+
 The active dependency-unit certificate antichains for the observed snapshot are
 
 $$
 \mathcal P_C(o)=\min_{\subseteq}
 \lbrace Q:E\subseteq\mathrm{Atoms}(U(o)),\
- \mathrm{valid}_J(E),\ E\vdash_J^+ C,\ Q\in\Pi_o(E)\rbrace,
+ \mathrm{valid}_J(E),\ E\vdash_J^+ C,\ Q\in\Pi_o(E),\
+ \mathrm{valid}^{\mathrm{unit}}_J(Q)\rbrace,
 $$
 
 $$
 \mathcal N_C(o)=\min_{\subseteq}
 \lbrace Q:E\subseteq\mathrm{Atoms}(U(o)),\
- \mathrm{valid}_J(E),\ E\vdash_J^- C,\ Q\in\Pi_o(E)\rbrace.
+ \mathrm{valid}_J(E),\ E\vdash_J^- C,\ Q\in\Pi_o(E),\
+ \mathrm{valid}^{\mathrm{unit}}_J(Q)\rbrace.
 $$
 
 An absent optional record never enters $\mathcal N_C$. A negative atom exists
@@ -1272,8 +1298,7 @@ base atoms the threat model permits an operator to assert directly. Let
 $\Lambda_T^+(o)$ be the finite family of admissible tagged dependency-unit
 addition sets whose direct base-atom assertions lie in that set. One action may
 assert several dependent base atoms. Let $\phi_A(U)$ be the dependency-unit
-state after applying tagged actions $A$, and let $\mathrm{Cl}_J(S)$
-recompute the deterministic signed-rule closure of atom set $S$. For a
+state after applying tagged actions $A$. For a
 planting-only threat model, the valid completion-action antichain is
 
 $$
@@ -1322,6 +1347,9 @@ explicit opportunity, value, validity, and nogood atoms or must remain outside
 the first evaluator. The implemented evaluator further requires an acyclic Horn
 program and computes deterministic topological closure. At-least-k rules over
 monotone positive atoms remain within the algebra when encoded without cycles.
+The shipped DMARC evaluator declares no nogood environments; the explicit
+raw-origin validity filter above is part of the general research definition,
+not a claim that the current evaluator implements arbitrary nogood contracts.
 
 The same registry can define a narrow implication order over canonical claim
 classes. Logical implication is first a preorder; mutually entailing claims
@@ -1337,8 +1365,9 @@ this order.
 
 For a scalar extended-real budget or another explicitly order-complete,
 totally ordered nested budget domain, let
-$D_b^{\mathrm{bool}}(C,o)$ be the robust Boolean state from section 5.3. Its
-decision radius is
+$D_b^{\mathrm{bool}}(C,o)$ be the robust Boolean state from section 5.3. For a
+budget-zero state that is supported, disconfirmed, or conflicted, its decision
+radius is
 
 $$
 r_T^{\mathrm{bool}}(C,o)=
@@ -1347,9 +1376,11 @@ $$
 
 This definition covers robust support, disconfirmation, and conflict. For
 example, support is lost when positive must-support fails or negative support
-becomes possible; conflict is lost when either must bound fails. An unresolved
-budget-zero state has no positive robust-decision radius. The infimum is a least
-cost only when a flip witness attains it.
+becomes possible; conflict is lost when either must bound fails. The radius is
+undefined for an unresolved budget-zero state. Nested compatibility sets cannot
+turn that initial ambiguity into a robust decision, so applying the formula to
+it would yield an empty flip set and a misleading infinite radius. The infimum
+is a least cost only when a flip witness attains it.
 
 A componentwise Pareto budget is not totally ordered and must not be reduced to
 one infimum. With $b\preceq b'$ meaning componentwise no greater, let
@@ -1364,11 +1395,19 @@ $$
 $$
 
 Incomparable points remain separate. A finite prototype has such a frontier
-whenever its nonempty budget set is finite. In a continuous or open model,
-$F_T(C,o)$ may be nonempty without an attainable minimal point. In that case,
-report the minimal boundary of $\overline{F_T(C,o)}$, label it unattained, and
-attach declared-tolerance epsilon-Pareto witnesses; do not call it an attained
-frontier or least cost. A lexicographic budget can use the radius form only
+whenever its nonempty budget set is finite. For continuous budgets in a
+finite-dimensional nonnegative orthant, also report the Pareto-minimal boundary
+of $\overline{F_T(C,o)}$. Mark each boundary point as attained exactly when
+it belongs to $F_T(C,o)$; attained and unattained portions can coexist.
+For example, the upward-closed flip set
+$\lbrace(x,y):x>0,\ y\ge1\rbrace\cup
+\lbrace(x,y):x\ge1,\ y\ge0\rbrace$ has the sole attained minimal point
+$(1,0)$, but its closure has minimal points $(0,1)$ and $(1,0)$.
+Reporting only the attained point would omit the first flip branch. Attach
+declared-tolerance epsilon-Pareto witnesses to each unattained boundary point;
+do not call those points attained costs. Other continuous budget domains need
+their topology and boundary-existence conditions declared separately. A
+lexicographic budget can use the radius form only
 after its priority order is declared and its domain is finite, discrete and
 well-ordered, or otherwise shown order-complete. Totality alone is insufficient.
 
@@ -1389,14 +1428,25 @@ $$
 
 Use $\inf\varnothing=\infty$. The upper-support radius can be finite because
 the inverse model admits clean supporting evidence hidden on the path from
-$z$ to $o$; it is not a forward planting radius. A lower-support inverse
+$z$ to $o$; it is not a forward planting radius. In a general infinite model,
+$\overline s_b=\tau$ can also hold without any compatible state attaining
+$s_m(C,z)\ge\tau$. This is loss of the strictly-below-threshold envelope
+decision, not an actual supporting-state witness. Report that boundary-only
+case explicitly, with epsilon-optimal score witnesses labeled as remaining
+below the threshold. At each budget, envelope crossing and existence of a
+supporting-state witness agree when the supremum is attained, as in the finite
+prototype. A lower-support inverse
 witness can instead classify an observed supporting unit as planted, admit a
 clean disconfirming unit hidden from observation, or combine allowed actions.
 All witness directions are stated from clean state to observation.
 
-For a finite cap $B$, let $A_T(m,z,o)$ be the set of nonidentity
-clean-to-observed manipulation actions used by one compatible witness. For a
-budget-zero Boolean decision $D$, define an adverse-state predicate
+For a finite cap $B$, let $\mathcal A_{T,B}(m,z,o)$ be the family of all
+admissible sets of nonidentity clean-to-observed manipulation actions that
+produce $o$ from $(m,z)$ within that cap. The identity realization contributes
+the empty action set. Different action realizations of the same compatible
+state remain separate; arbitrarily choosing one could omit a cheaper or
+inclusion-minimal certificate. For a budget-zero Boolean decision $D$, define
+an adverse-state predicate
 
 $$
 \mathrm{bad}_D(m,z)=
@@ -1415,7 +1465,8 @@ The primary inverse Boolean flip-certificate antichain is
 $$
 \mathcal W_{B,D}^{\mathrm{bool}}=
 \min_{\subseteq}
-\lbrace A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),
+\lbrace A:(m,z)\in\mathcal K_B^T(o),\
+ A\in\mathcal A_{T,B}(m,z,o),
  \mathrm{bad}_D(m,z)\rbrace.
 $$
 
@@ -1424,21 +1475,28 @@ lowering and raising certificate families are
 
 $$
 \mathcal W_{B}^{\mathrm{score},-} = \min_{\subseteq}
-\lbrace A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),\ s_m(C,z)<\tau\rbrace,
+\lbrace A:(m,z)\in\mathcal K_B^T(o),\
+ A\in\mathcal A_{T,B}(m,z,o),\ s_m(C,z)<\tau\rbrace,
 $$
 
 $$
 \mathcal W_{B}^{\mathrm{score},+} = \min_{\subseteq}
-\lbrace A_T(m,z,o):(m,z)\in\mathcal K_B^T(o),\ s_m(C,z)\ge\tau\rbrace.
+\lbrace A:(m,z)\in\mathcal K_B^T(o),\
+ A\in\mathcal A_{T,B}(m,z,o),\ s_m(C,z)\ge\tau\rbrace.
 $$
 
 Report only the family relevant to the current decision and diagnostic. First
 enumerate every inclusion-minimal member, then identify radius-attaining members
-under a total order or Pareto-minimal cost vectors under a partial order. If an
-infimum is not attained, report epsilon-optimal witnesses without calling them
-least-cost certificates. These antichains connect recon's provenance graph to
-fault-tree-style explanations and distinguish "one stale TXT token" from "a
-provider-attested response plus a live routing change" without pretending the
+under a total order or Pareto-minimal cost vectors under a partial order.
+The raising family contains only actual threshold-crossing witnesses and can
+be empty at a boundary-only upper-envelope crossing. Such a crossing has no
+raising certificate, even when its budget attains the diagnostic radius. If a
+radius infimum is not attained, report epsilon-optimal budget witnesses without
+calling them least-cost certificates; distinguish these from epsilon-optimal
+score witnesses that do not cross the threshold. These antichains connect
+recon's provenance graph to fault-tree-style explanations and distinguish
+"one stale TXT token" from "a provider-attested response plus a live routing
+change" without pretending the
 assigned costs are objective facts. Radii or frontiers must not be compared
 across claim families with different cost or threat models.
 

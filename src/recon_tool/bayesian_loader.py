@@ -159,6 +159,8 @@ def _parse_network_node(raw_node: Any, seen_names: set[str]) -> Node:
     if not isinstance(parents_raw, list) or not all(isinstance(p, str) for p in parents_raw):
         raise ValueError(f"bayesian_network[{name}]: 'parents' must be a list of strings")
     parents: tuple[str, ...] = tuple(parents_raw)
+    if len(set(parents)) != len(parents):
+        raise ValueError(f"bayesian_network[{name}]: duplicate parent names are not allowed")
 
     prior, cpt = _parse_node_prior_cpt(name, parents, raw_node.get("prior"), raw_node.get("cpt") or {})
     evidence = _parse_node_evidence(name, raw_node.get("evidence") or [])

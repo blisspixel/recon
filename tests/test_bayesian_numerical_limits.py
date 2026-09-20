@@ -52,6 +52,18 @@ def test_unrepresentable_evidence_product_fails_explicitly(tmp_path: Path, absen
         infer(network, [] if absence else ["first", "second"], [], priors_override={})
 
 
+@pytest.mark.parametrize("scale", [1e-161, 2e-162, 3e-162, 4e-162])
+@pytest.mark.parametrize("absence", [False, True])
+def test_positive_subnormal_evidence_product_fails_explicitly(tmp_path: Path, scale: float, absence: bool) -> None:
+    # These LR=10 units have the same posterior 25/26 as the ordinary-scale
+    # case above, but positive subnormal products previously emitted values
+    # from 0.9412 to 0.9701 without triggering the zero-underflow guard.
+    assert 0.0 < scale * scale < sys.float_info.min
+    network = load_network(_write_model(tmp_path, scale, absence=absence))
+    with pytest.raises(FloatingPointError, match="evidence likelihood lost numerical precision"):
+        infer(network, [] if absence else ["first", "second"], [], priors_override={})
+
+
 @pytest.mark.parametrize("likelihood", [(1e-200, 0.5), (0.5, 1e-200)])
 def test_one_sided_evidence_underflow_is_not_a_certain_posterior(
     tmp_path: Path, likelihood: tuple[float, float]
@@ -85,13 +97,28 @@ def test_one_sided_factor_underflow_fails_before_normalization() -> None:
         _multiply(factor, factor)
 
 
+@pytest.mark.parametrize(("left", "right"), [(1e-161, 1e-161), (sys.float_info.min, 0.5)])
+def test_positive_subnormal_factor_product_fails_before_normalization(left: float, right: float) -> None:
+    assignment = frozenset({("claim", "present")})
+    assert 0.0 < left * right < sys.float_info.min
+    with pytest.raises(FloatingPointError, match="factor multiplication underflow"):
+        _multiply({assignment: left}, {assignment: right})
+
+
+@pytest.mark.parametrize(("left", "right"), [(sys.float_info.min, 1.0), (2 * sys.float_info.min, 0.5)])
+def test_smallest_normal_factor_product_remains_supported(left: float, right: float) -> None:
+    assignment = frozenset({("claim", "present")})
+    assert _multiply({assignment: left}, {assignment: right}) == {assignment: sys.float_info.min}
+
+
 @pytest.mark.parametrize(("left", "right"), [(0.0, 0.5), (0.5, 0.0), (0.0, 0.0)])
 def test_exact_zero_factor_inputs_are_not_underflow(left: float, right: float) -> None:
     assignment = frozenset({("claim", "present")})
     assert _multiply({assignment: left}, {assignment: right}) == {assignment: 0.0}
 
 
-def test_underflow_between_valid_node_factors_fails_explicitly(tmp_path: Path) -> None:
+@pytest.mark.parametrize("scale", [1e-200, 1e-161])
+def test_underflow_between_valid_node_factors_fails_explicitly(tmp_path: Path, scale: float) -> None:
     path = tmp_path / "independent.yaml"
     path.write_text(
         yaml.safe_dump(
@@ -101,12 +128,12 @@ def test_underflow_between_valid_node_factors_fails_explicitly(tmp_path: Path) -
                     {
                         "name": "claim",
                         "prior": 0.2,
-                        "evidence": [{"slug": "first", "likelihood": [1e-200, 1e-201]}],
+                        "evidence": [{"slug": "first", "likelihood": [scale, scale / 10]}],
                     },
                     {
                         "name": "independent",
                         "prior": 0.5,
-                        "evidence": [{"slug": "second", "likelihood": [1e-200, 1e-200]}],
+                        "evidence": [{"slug": "second", "likelihood": [scale, scale]}],
                     },
                 ],
             }
@@ -128,8 +155,9 @@ def test_invalid_normalization_is_not_a_uniform_posterior(mass: float) -> None:
         _query_marginal([factor], "claim", ["claim"])
 
 
-def test_numerical_guard_remains_enabled_under_python_optimization(tmp_path: Path) -> None:
-    path = _write_model(tmp_path, 1e-200)
+@pytest.mark.parametrize("scale", [1e-200, 2e-162])
+def test_numerical_guard_remains_enabled_under_python_optimization(tmp_path: Path, scale: float) -> None:
+    path = _write_model(tmp_path, scale)
     result = subprocess.run(  # noqa: S603 - current interpreter and a caller-owned synthetic test fixture
         [
             sys.executable,

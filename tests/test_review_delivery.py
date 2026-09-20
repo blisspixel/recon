@@ -151,6 +151,28 @@ def test_review_cli_rejects_directory_output_before_collection_even_with_force(t
     resolve.assert_not_awaited()
 
 
+def test_review_cli_reports_output_access_error_before_collection(tmp_path: Path) -> None:
+    output = tmp_path / "unreadable" / "review.json"
+    resolve = AsyncMock()
+    original_is_dir = Path.is_dir
+
+    def inaccessible_parent(path: Path) -> bool:
+        if path == output.parent:
+            raise PermissionError("Permission denied inspecting output directory")
+        return original_is_dir(path)
+
+    with (
+        patch.object(Path, "is_dir", new=inaccessible_parent),
+        patch("recon_tool.resolver.resolve_tenant", new=resolve),
+    ):
+        result = runner.invoke(app, ["review", "example.com", "--output", str(output)])
+
+    assert result.exit_code == EXIT_INTERNAL
+    assert "Permission denied inspecting output directory" in result.output
+    assert not isinstance(result.exception, PermissionError)
+    resolve.assert_not_awaited()
+
+
 def test_review_cli_unexpected_collection_error_is_safe_and_internal() -> None:
     internal_detail = "credential-shaped internal detail"
     with patch("recon_tool.resolver.resolve_tenant", new=AsyncMock(side_effect=RuntimeError(internal_detail))):

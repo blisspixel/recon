@@ -149,6 +149,23 @@ class TestNodeShapeValidation:
     def test_parents_must_be_string_list(self, tmp_path: Path) -> None:
         _rejects(tmp_path, _spec(prior=None, parents="root"), "list of strings")
 
+    def test_duplicate_parents_rejected_before_inference(self, tmp_path: Path) -> None:
+        # Repeated parents previously passed the CPT completeness check, then
+        # produced factor rows assigning both states to the same variable.
+        # Even with no evidence, that invalid factor could change the root prior.
+        spec = _spec(
+            prior=None,
+            parents=["root", "root"],
+            cpt={
+                "root=present,root=present": 0.8,
+                "root=present,root=absent": 0.4,
+                "root=absent,root=present": 0.6,
+                "root=absent,root=absent": 0.2,
+            },
+            evidence=[],
+        )
+        _rejects(tmp_path, spec, "duplicate parent names")
+
     def test_missingness_enum(self, tmp_path: Path) -> None:
         _rejects(tmp_path, _spec(missingness="adversarial"), "'hideable' or 'declarative'")
 

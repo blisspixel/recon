@@ -246,19 +246,20 @@ def _build_graph(
     return g, tallies.issuers, tallies.cert_counts, truncated
 
 
-def _louvain_partition(g: nx.Graph[str]) -> tuple[list[set[str]], float, str]:
-    """Run Louvain. Returns (communities, modularity, algorithm-name)."""
-    # Re-insert nodes in a content-determined (sorted) order before running
-    # Louvain. networkx seeds its initial communities and its internal shuffle
-    # from node insertion order, which here follows cert-entry arrival order
-    # (the crt.sh response / CertSpotter pagination, which is not stable across
-    # requests); without this, two runs of the same domain could produce
-    # different clusters on tied moves. Edge data is preserved; only iteration
-    # order is normalized.
+def _canonical_graph_order(g: nx.Graph[str]) -> nx.Graph[str]:
+    """Normalize node and neighbor iteration order without changing weights."""
+    # Louvain uses node order for its seeded shuffle and neighbor order to break
+    # tied moves. Both must be independent of certificate arrival order.
     ordered: nx.Graph[str] = nx.Graph()
     ordered.add_nodes_from(sorted(g.nodes()))
-    ordered.add_edges_from(g.edges(data=True))
-    g = ordered
+    canonical_edges = ((min(u, v), max(u, v), data) for u, v, data in g.edges(data=True))
+    ordered.add_edges_from(sorted(canonical_edges, key=lambda edge: (edge[0], edge[1])))
+    return ordered
+
+
+def _louvain_partition(g: nx.Graph[str]) -> tuple[list[set[str]], float, str]:
+    """Run Louvain. Returns (communities, modularity, algorithm-name)."""
+    g = _canonical_graph_order(g)
     # networkx returns a list of sets — one per community.
     communities = nx.community.louvain_communities(  # type: ignore[attr-defined]
         g,
@@ -343,9 +344,7 @@ def _partition_stability(
     seed-dependent. Returns None when a sweep run fails — stability is then
     unknown, not 1.0.
     """
-    ordered: nx.Graph[str] = nx.Graph()
-    ordered.add_nodes_from(sorted(g.nodes()))
-    ordered.add_edges_from(g.edges(data=True))
+    ordered = _canonical_graph_order(g)
     if runs < 2:
         return None
     # The primary Louvain result already used the first sweep seed. Reuse it

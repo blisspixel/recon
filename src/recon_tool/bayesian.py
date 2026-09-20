@@ -51,6 +51,7 @@ from __future__ import annotations
 
 import logging
 import math
+import sys
 from collections.abc import Iterable
 from itertools import product
 
@@ -323,9 +324,10 @@ def _factor_for_evidence(
         )
     like_present = math.prod(present for present, _ in likelihoods)
     like_absent = math.prod(absent for _, absent in likelihoods)
-    # A valid model uses positive likelihoods, but their product can underflow.
-    # This must remain enforced under python -O, when deal contracts are off.
-    if not (0.0 < like_present <= 1.0 and 0.0 < like_absent <= 1.0):
+    # Subnormal products can lose substantial relative precision before they
+    # reach zero. Reject both gradual and complete underflow, including under
+    # python -O when deal contracts are off.
+    if not (sys.float_info.min <= like_present <= 1.0 and sys.float_info.min <= like_absent <= 1.0):
         raise FloatingPointError(f"Bayesian evidence likelihood lost numerical precision for node {node.name!r}")
     return {
         frozenset({(node.name, "present")}): like_present,
@@ -428,7 +430,7 @@ def _multiply(a: Factor, b: Factor) -> Factor:
                     continue
             merged = ka | kb
             contribution = va * vb
-            if contribution == 0.0 and va != 0.0 and vb != 0.0:
+            if contribution < sys.float_info.min and va != 0.0 and vb != 0.0:
                 raise FloatingPointError("Bayesian factor multiplication underflow; posterior unavailable")
             out[merged] = out.get(merged, 0.0) + contribution
     return out

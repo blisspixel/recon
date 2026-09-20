@@ -38,6 +38,24 @@ def _failure_exit_code(error_type: str) -> int:
     return EXIT_NO_DATA if error_type == "no_data" else EXIT_INTERNAL
 
 
+def _validated_review_input(domain: str, output: Path | None, *, force: bool) -> tuple[str, str]:
+    from recon_tool.review_input import normalize_review_coordinate
+    from recon_tool.validator import validate_domain
+
+    try:
+        coordinate = normalize_review_coordinate(domain)
+        validated = validate_domain(coordinate)
+        _preflight_output(output, force=force)
+    except (FileExistsError, ValueError) as exc:
+        render_error(fmt_exc(exc))
+        raise typer.Exit(code=EXIT_VALIDATION) from exc
+    except OSError as exc:
+        render_error(fmt_exc(exc))
+        raise typer.Exit(code=EXIT_INTERNAL) from exc
+
+    return coordinate, validated
+
+
 def review(
     domain: Annotated[str, typer.Argument(help="Namespace to review at its registrable apex.")],
     output: Annotated[Path | None, typer.Option("--output", "-o", help="Write the ReviewBundle JSON here.")] = None,
@@ -57,16 +75,8 @@ def review(
     from recon_tool.models import ReconLookupError
     from recon_tool.resolver import resolve_tenant
     from recon_tool.review_bundle import ReviewCollectionContext, build_review_bundle, build_review_error_bundle
-    from recon_tool.review_input import normalize_review_coordinate
-    from recon_tool.validator import validate_domain
 
-    try:
-        coordinate = normalize_review_coordinate(domain)
-        validated = validate_domain(coordinate)
-        _preflight_output(output, force=force)
-    except (FileExistsError, ValueError) as exc:
-        render_error(fmt_exc(exc))
-        raise typer.Exit(code=EXIT_VALIDATION) from exc
+    coordinate, validated = _validated_review_input(domain, output, force=force)
 
     async def _collect() -> tuple[dict[str, Any], int]:
         started_at = datetime.now(UTC)

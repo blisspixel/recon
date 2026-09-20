@@ -28,7 +28,8 @@ operator, corporate group, ownership, or control.
 
 ## [2.19.5] - 2026-09-20
 
-Make installation, updates, and release diagnostics work as one consistent flow.
+Polish installation, updates, and diagnostics, with mathematical and graph
+correctness fixes verified before publication.
 
 ### Tool Surface Changes
 
@@ -55,6 +56,18 @@ Tool surface changes: no CLI command or flag changes.
 - Consolidated the pending AnyIO 4.14.2 patch into the lockfile and matching
   ClusterFuzzLite runtime export. The wheel also requires the patched minimum
   so upgrades cannot retain an older affected transitive dependency.
+- Windows launcher updates now hand off to an isolated background worker after
+  the running launchers exit, avoiding executable locks. The command reports
+  the local progress and result log instead of claiming premature completion.
+- Review output-path access errors now produce a useful diagnostic before
+  collection begins.
+- CT graph partitions and seed-stability runs now use canonical edge ordering,
+  preventing certificate arrival order from changing uncapped results.
+- Custom Bayesian models reject duplicate parents and unsafe subnormal
+  intermediate products instead of emitting misleading posteriors.
+- The README shows its terminal illustration before installation. Correlation
+  documentation refreshes measured sensitivity values and clarifies robustness
+  radii, continuous boundaries, witness attainment, and valid proof origins.
 
 ## [2.19.4] - 2026-09-13
 
