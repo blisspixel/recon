@@ -13,10 +13,9 @@ import subprocess
 import sys
 import tempfile
 import time
-from collections.abc import Callable
 from ctypes import wintypes
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol, cast
 
 
 class _ProcessEntry(ctypes.Structure):
@@ -34,20 +33,28 @@ class _ProcessEntry(ctypes.Structure):
     ]
 
 
+class _WindowsCtypes(Protocol):
+    """ctypes exports available only when the Windows handoff is invoked."""
+
+    def WinDLL(self, name: str, *, use_last_error: bool) -> Any: ...
+    def get_last_error(self) -> int: ...
+    def WinError(self, code: int) -> OSError: ...
+
+
+_windows_ctypes = cast(_WindowsCtypes, ctypes)
+_CREATE_NO_WINDOW = 0x08000000
+
+
 def _last_error() -> int:
-    # These ctypes exports exist only on Windows. Resolve them when the
-    # Windows handoff runs so the module remains portable to import and check.
-    getter: Callable[[], int] = getattr(ctypes, "get_last_error")
-    return getter()
+    return _windows_ctypes.get_last_error()
 
 
 def _windows_error() -> OSError:
-    factory: Callable[[int], OSError] = getattr(ctypes, "WinError")
-    return factory(_last_error())
+    return _windows_ctypes.WinError(_last_error())
 
 
 def _windows_api() -> Any:
-    api = getattr(ctypes, "WinDLL")("kernel32", use_last_error=True)
+    api = _windows_ctypes.WinDLL("kernel32", use_last_error=True)
     api.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
     api.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
     for name in ("Process32FirstW", "Process32NextW"):
@@ -125,7 +132,7 @@ def start_update(command: list[str]) -> Path:
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 cwd=log_path.parent,
-                creationflags=getattr(subprocess, "CREATE_NO_WINDOW"),
+                creationflags=_CREATE_NO_WINDOW,
                 close_fds=True,
             )
         except OSError:
