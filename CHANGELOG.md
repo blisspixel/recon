@@ -53,7 +53,8 @@ Tool surface changes: no CLI command or flag changes.
 - The roadmap now reflects shipped work and prioritizes install and update
   quality. Default lookups remain free of the withdrawn fusion notice.
 - Consolidated the pending AnyIO 4.14.2 patch into the lockfile and matching
-  ClusterFuzzLite runtime export.
+  ClusterFuzzLite runtime export. The wheel also requires the patched minimum
+  so upgrades cannot retain an older affected transitive dependency.
 
 ## [2.19.4] - 2026-09-13
 

@@ -16,6 +16,7 @@ anyio==4.14.2 \
     #   httpx
     #   httpx2
     #   mcp
+    #   recon-tool
     #   sse-starlette
     #   starlette
 attrs==26.1.0 \

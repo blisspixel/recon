@@ -2101,6 +2101,7 @@ name = "recon-tool"
 version = "2.19.4"
 source = { editable = "." }
 dependencies = [
+    { name = "anyio" },
     { name = "deal" },
     { name = "defusedxml" },
     { name = "dnspython" },
@@ -2145,6 +2146,7 @@ mutation = [
 
 [package.metadata]
 requires-dist = [
+    { name = "anyio", specifier = ">=4.14.2" },
     { name = "deal", specifier = ">=4.24.0" },
     { name = "defusedxml", specifier = ">=0.7" },
     { name = "dnspython", specifier = ">=2.6" },
