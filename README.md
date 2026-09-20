@@ -19,23 +19,47 @@ transparency enrichment is enabled.
 
 ## Quick Start
 
-Install and check the version offline:
+**macOS / Linux:**
 
 ```bash
-uv tool install recon-tool    # or: pipx install recon-tool
-recon --version               # offline check
+curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
 ```
 
-Python 3.11 through 3.14, on Windows, macOS, or Linux. `recon doctor` tests
-online connectivity to recon's public data sources.
+**Windows (PowerShell):**
 
-Optional install helpers at `scripts/install.ps1` and `scripts/install.sh` drive
-an existing `uv` or `pipx` installation. Download a
-[release-tag source archive](https://github.com/blisspixel/recon/releases/latest),
-review the helper locally, then run it: each installs the exact version
-represented by that tag, preserves a sole existing owner, and refuses ambiguous
-or unmanaged installations. Do not pipe mutable branch content into a shell. To
-verify published artifacts first, follow the
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
+```
+
+The installer sets up recon for your user account, including `uv` and Python
+3.14 when needed. No administrator access or existing Python setup is required
+for a fresh install. Open a new terminal afterward.
+
+**Already have Python 3.11 through 3.14?** These work too:
+
+```bash
+pip install recon-tool
+# Or install in an isolated tool environment:
+uv tool install recon-tool
+pipx install recon-tool
+```
+
+If your system Python is externally managed, use the installer above or a
+[virtual environment](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#install-in-a-virtual-environment).
+
+```bash
+recon --version      # offline install check
+recon doctor         # check installation, latest release, and online connectivity
+recon update         # update through the original package manager
+recon update --check # check for a newer release without installing
+```
+
+The scripts install an exact published version, preserve a sole existing `uv`
+or `pipx` owner, and explain how to recover ambiguous or unmanaged installs.
+For a fixed installer, download a
+[release tag source archive](https://github.com/blisspixel/recon/releases/latest)
+and review `scripts/install.sh` or `scripts/install.ps1` before running it.
+Artifact verification is covered in the
 [consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
 
 Before the first lookup, know what leaves your machine. recon makes DNS queries

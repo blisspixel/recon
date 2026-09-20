@@ -314,7 +314,7 @@ def test_supply_chain_docs_track_scorecard_gap_decisions() -> None:
     text = " ".join((_ROOT / "docs" / "supply-chain.md").read_text(encoding="utf-8").split())
 
     for required in (
-        "refuses to execute remote tool installers",
+        "version-pinned official shell or PowerShell installer",
         "CodeQL Action v4",
         "full-SHA GitHub Action pins",
         "dependency security updates",

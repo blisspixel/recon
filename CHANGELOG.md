@@ -26,6 +26,35 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.5] - 2026-09-20
+
+Make installation, updates, and release diagnostics work as one consistent flow.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Added
+
+- One-command macOS/Linux and Windows installation in the README. The helpers
+  bootstrap pinned `uv` and supported Python when needed, preserve an existing
+  package-manager owner, configure PATH, and verify the installed version.
+- `recon doctor` checks the latest installable release with a short PyPI timeout
+  and suggests `recon update` when needed. An unavailable version check is a
+  warning, and diagnostics never install updates automatically.
+
+### Fixed
+
+- `recon update` advances installer-pinned copies through the same verified
+  package manager, using an in-place uv update compatible with Windows. Source
+  installs and unverifiable ownership retain manual recovery guidance.
+- README and getting-started instructions now include `pip install recon-tool`,
+  update and uninstall paths, and an optional release-tag review workflow.
+- The roadmap now reflects shipped work and prioritizes install and update
+  quality. Default lookups remain free of the withdrawn fusion notice.
+- Consolidated the pending AnyIO 4.14.2 patch into the lockfile and matching
+  ClusterFuzzLite runtime export.
+
 ## [2.19.4] - 2026-09-13
 
 Close the gap that let attribution trailers reach commit metadata, and fix a CI

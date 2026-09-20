@@ -183,24 +183,30 @@ def _resolve_launcher(name: str) -> str | None:
     return str(resolved)
 
 
-def upgrade_command(method: str) -> list[str] | None:
+def upgrade_command(method: str, *, version: str | None = None) -> list[str] | None:
     """The argv to upgrade in place, or None when the user must act manually.
 
     Returns None for retired Homebrew and editable installs, and also when the
     detected launcher cannot be resolved to a trusted absolute path.
     """
-    if method == PIPX:
-        launcher = _resolve_launcher("pipx")
-        if launcher is not None and _manager_targets_current_install(launcher, method):
-            return [launcher, "upgrade", _PACKAGE]
+    if version is not None and _version_key(version) is None:
         return None
-    if method == UV:
-        launcher = _resolve_launcher("uv")
-        if launcher is not None and _manager_targets_current_install(launcher, method):
-            return [launcher, "tool", "upgrade", _PACKAGE]
-        return None
+    spec = f"{_PACKAGE}=={version}" if version is not None else _PACKAGE
+    if method in (PIPX, UV):
+        launcher = _resolve_launcher(method)
+        if launcher is None or not _manager_targets_current_install(launcher, method):
+            return None
+        prefix = [launcher, "tool"] if method == UV else [launcher]
+        # pipx's upgrade path already removes original version specifiers.
+        if method == PIPX or version is None:
+            return [*prefix, "upgrade", _PACKAGE]
+        # A version-pinned installer receipt constrains `tool upgrade`.
+        # Replace that requirement with the checked release through its owner.
+        # Do not force-recreate a uv environment: its running interpreter is
+        # locked on Windows. An ordinary install updates the requirement in place.
+        return [*prefix, "install", "--upgrade", spec]
     if method == PIP:
-        return [sys.executable, "-m", "pip", "install", "-U", _PACKAGE]
+        return [sys.executable, "-m", "pip", "install", "-U", spec]
     return None
 
 
@@ -244,7 +250,7 @@ def manual_hint(method: str) -> str:
             "verify `pipx environment --value PIPX_LOCAL_VENVS` contains this install, then `pipx upgrade recon-tool`"
         )
     if method == UV:
-        return "verify `uv tool dir` contains this install, then `uv tool upgrade recon-tool`"
+        return "verify `uv tool dir` contains this install, then `uv tool install --upgrade recon-tool`"
     if method == PIP:
         return "pip install -U recon-tool"
     return "installation owner could not be verified; use the original environment's package manager manually"

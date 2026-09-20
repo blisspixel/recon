@@ -5,45 +5,56 @@ The short product overview is in [README.md](../README.md).
 
 ## Requirements
 
-- Python 3.11 through 3.14. The latest Python 3.14 patch is recommended; every
+- Windows, macOS, or Linux. The one-command installer below sets up `uv` and
+  Python when needed; a fresh install does not require administrator access.
+- For a manual Python install: Python 3.11 through 3.14. The latest Python 3.14 patch is recommended; every
   version in that tested range retains the same supported behavior and output
   contracts. Later Python versions are not yet part of the compatibility claim.
-- Windows, macOS, or Linux.
 - The recon runtime needs no API keys, credentials, paid accounts, or external
   services owned by recon. Optional GitHub Release verification uses an
   authenticated GitHub CLI session or `GH_TOKEN` with public read access.
 
 ## Install or Update
 
-Install with `uv` or `pipx`:
+**macOS or Linux:**
 
 ```bash
-uv tool install recon-tool
-# or
-pipx install recon-tool
+curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash
 ```
-
-The optional platform helpers ask you to install `uv` or `pipx` if neither is
-present. A helper from a release-tag checkout installs exactly that release,
-preserves the sole manager that already owns `recon-tool`, and refuses dual or
-unmanaged ownership with recovery guidance. It does not execute a remote tool
-installer on your behalf. Review the local file before running it. To update,
-review and run the helper from the newer release tag.
 
 **Windows (PowerShell):**
 
 ```powershell
-powershell -ExecutionPolicy ByPass -File .\scripts\install.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
 ```
 
-**macOS or Linux:**
+The helper installs the exact recon version recorded in the script. It preserves
+the sole `uv` or `pipx` owner of an existing install and refuses ambiguous or
+unmanaged ownership with recovery guidance. On a fresh machine it downloads
+the pinned official `uv` installer, then lets `uv` install Python 3.14 and recon
+in an isolated tool environment. It updates PATH and verifies `recon --version`
+before reporting success. An existing `pipx` installation uses its own Python.
+
+You can rerun the current installer to install its release or use `recon update`
+to get the latest published version. GitHub Release and PyPI carry the same
+release artifacts; the package manager downloads the package from PyPI.
+
+To inspect a fixed script first, download a
+[release tag](https://github.com/blisspixel/recon/releases/latest), review its
+helper, then run `bash scripts/install.sh` or
+`powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1` locally.
+
+If you already have Python 3.11 through 3.14, install directly:
 
 ```bash
-bash scripts/install.sh
+pip install recon-tool
+# Or use an isolated tool environment:
+uv tool install recon-tool
+pipx install recon-tool
 ```
 
-These commands assume a reviewed local checkout. Do not pipe mutable branch
-content directly into a shell.
+If `pip` reports an externally managed environment, use the platform installer
+or the [virtual environment instructions](#install-in-a-virtual-environment).
 
 Open a new terminal after install, then run an offline verification of the
 installed command:
@@ -52,11 +63,17 @@ installed command:
 recon --version
 ```
 
-To test online connectivity to recon's public data sources, run:
+To check the latest release and online connectivity to recon's public data sources, run:
 
 ```bash
 recon doctor
 ```
+
+The release check queries PyPI with a short timeout. It reports an available
+update, an up-to-date install, or a local version newer than the published
+release. A failed release check is a warning; it never installs anything and
+does not fail otherwise healthy diagnostics. Ordinary lookups and `--version`
+do not check for updates.
 
 ## Verify a Published Release
 
@@ -90,7 +107,7 @@ is taking precedence over the intended environment.
 Direct package-manager commands also work:
 
 ```bash
-uv tool upgrade recon-tool
+uv tool install --upgrade recon-tool
 pipx upgrade recon-tool
 pip install -U recon-tool
 ```

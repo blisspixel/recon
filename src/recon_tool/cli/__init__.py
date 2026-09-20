@@ -822,7 +822,7 @@ def update(
 
     console.print(f"Update available: [bold]{current}[/bold] -> [bold]{latest}[/bold]")
     method = updater.detect_install_method()
-    cmd = updater.upgrade_command(method)
+    cmd = updater.upgrade_command(method, version=latest)
 
     if check:
         console.print(f"  install method: {method}")

@@ -6,65 +6,30 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.19.4 is current. The stable baseline is complete: CLI, versioned
-> JSON, local stdio MCP, bounded collectors, claim-audit gates, MCP dual-SDK
-> matrix, and a verified release path. Tracks 1–2 (evidence integrity, MCP v2)
-> are complete maintenance. Track 3's v2.11 structural decision and compatible
-> v2.12 fusion transition are complete. v2.13 shipped caller-held observation
-> capsules and the evidence-backed ADR-0014 decision to defer OKF v0.2 until a
-> named consumer exists; its full, protected-main, publication, provenance, and
-> channel-parity gates passed. **v2.14 is also shipped:** the rank
-> and regional rounds are complete. The regional clean-main replay completed
-> all 1,000 frozen rows with zero errors, and six bounded provider-family
-> additions are accepted. The vendor-seed protocol and exact 33-row HubSpot
-> holdout are also closed: 29 rows corroborated the provider relationship, 4
-> were observed silent, no row was unavailable, unmeasured, or an error, and no
-> catalog rule was promoted from the evaluation holdout. The 5,199-row
-> [prior-sample drift result](../validation/2026-08-14-catalog-drift-round.md)
-> is also closed: every row was measured, no record type breached the frozen
-> decline threshold, classification comparison was withheld across unequal
-> catalog digests, the `_webflow` owner-set expansion was disclosed as a
-> measurement-surface change, and no rule was promoted. The release then passed
-> local, protected-main, PyPI, GitHub Release, SBOM, provenance, and exact
-> channel-parity checks. **v2.15 shipped default-view claim clarity and
-> accessibility (ADR-0015 role-split vendor claims, ADR-0016 `--plain` as the
-> panel with the full record behind `--full`, pre-collection flag validation),
-> and v2.16 shipped renderer parity: one shared briefing (`build_briefing`,
-> ADR-0017) rendered by the panel, `--plain`, `--md`, and the MCP text surface,
-> MCP JSON fusion populated, `--plain --full` role keys, and a gated
-> `surface-parity.md` matrix that fails on cross-surface drift. Both releases
-> came from independent black-box rounds that found the compact surfaces, not
-> the data, were misreading themselves; a fifth round confirmed 2.16. v2.16 is
-> the reopened form of the evidence-integrity track (a miscounting note is a
-> false claim recon emits about itself), closed by the parity gate. Agent
-> portability is a separate maintainer track, not a version-path
-> milestone: its
-> [representative-client contract](agent-portability-evaluation-declaration.md)
-> is frozen and its offline validation passes, but the paired evaluation is
-> not complete. Agent Plugins v1.0.0 is Published, its canonical schema bytes
-> still match the pinned candidate, and the three-client/runtime preflight now
-> passes. GPT-5.6 Luna and a $5 total external-charge ceiling are declared, but
-> the paired frame stopped before collection because account-side hard stops
-> and a reproducible three-desktop-client driver were not verifiable. Readiness
-> is not compatibility or conformance. Resume only under the frozen rules; this
-> does not queue product work behind it.** The ordered version path through v3.0 is summarized
-> in [ROADMAP.md](../ROADMAP.md#version-path-order-of-operations). Optional cloud
-> hosting remains a lower-priority side track and does not change the local
-> default.
+> **Status:** v2.19.4 is current. The CLI, versioned JSON, local stdio MCP,
+> bounded collectors, evidence and renderer contracts, MCP compatibility matrix,
+> and verified release path are established. The resolver and detection engine
+> are feature-complete. Recent shipped work belongs in the
+> [changelog](../CHANGELOG.md), with earlier plans in
+> [roadmap-history.md](roadmap-history.md).
 >
-> **The resolver and detection engine are feature-complete.** Its established
-> lookup, JSON, briefing, batch, and capsule surfaces are stable and mutually
-> consistent, with one shared briefing gated by the surface-parity matrix. The
-> claim contract and its provenance are enforced, the inference model is bounded
-> and evidence-disciplined, and the release machinery is complete. Additive,
-> bounded composition surfaces may still ship when they reuse those collection
-> and claim contracts and solve a demonstrated handoff problem. A v3.0 is
-> conditional, not scheduled (see the
-> version path): it exists only if the claim/observation-envelope decision
-> resolves to a break, and the claim-neutral fusion default flip rides that
-> boundary or stays deferred behind the stable flags. The standing maintenance
-> loops below, the fingerprint-freshness loop chief among them, continue beside
-> that additive product polish.
+> **Current priority: installation and update polish.** Provide a single command
+> for macOS/Linux and Windows, bootstrap prerequisites for a fresh user account,
+> verify PATH and the installed version, and keep `pip install recon-tool` a
+> documented option. `recon update` must advance an installer-pinned copy through
+> its existing manager; `recon doctor` must report release status without
+> changing the installation or adding noise to ordinary lookups.
+>
+> `main` is the single integration and release branch. Checked implementation
+> and release-preparation branches are temporary. Publication is complete only
+> when the exact main commit, tag, GitHub Release, and PyPI artifacts agree.
+>
+> New product surfaces need a demonstrated operator handoff. A v3.0 remains
+> conditional on a genuine claim or observation contract break. Optional cloud
+> hosting and agent portability remain separate maintainer tracks, without a
+> hosted-service or cross-client compatibility claim. The
+> [short roadmap](../ROADMAP.md#version-path-order-of-operations) records version
+> boundaries and the standing loops below preserve the stable baseline.
 >
 > **Code-graph orientation:** refresh the ignored
 > `.agent/codegraph/manifest.json` after each tracked milestone and read it for

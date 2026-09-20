@@ -759,6 +759,22 @@ def _doctor_render(console: Any, checks: list[DoctorCheck]) -> bool:
     return has_failures
 
 
+def _doctor_release_check() -> DoctorCheck:
+    """Report the installable release without changing the environment."""
+    from recon_tool import updater
+
+    current = updater.current_version()
+    latest = updater.fetch_latest_version(timeout=3.0)
+    if latest is None:
+        return ("Release status", "warn", "could not check PyPI; retry with `recon update --check`")
+    comparison = updater.compare_versions(current, latest)
+    if comparison < 0:
+        return ("Release status", "warn", f"{current} installed; {latest} available on PyPI; run `recon update`")
+    if comparison > 0:
+        return ("Release status", "ok", f"{current} is newer than PyPI ({latest}); no downgrade offered")
+    return ("Release status", "ok", f"{current} is up to date on PyPI")
+
+
 async def doctor() -> None:
     """Run diagnostic checks.
 
@@ -776,6 +792,7 @@ async def doctor() -> None:
 
     checks: list[DoctorCheck] = []
     checks.append(_doctor_path_launcher_check())
+    checks.append(await asyncio.to_thread(_doctor_release_check))
     checks.extend(await _doctor_identity_checks())
     checks.append(_doctor_dns_check())
     checks.append(await _doctor_ct_check())
