@@ -193,4 +193,4 @@ def test_zero_exit_does_not_claim_latest_version_was_installed(prefix: Path, mon
     assert "Upgrade command completed" in result.output
     assert "Updated to 999.0.0" not in result.output
     assert "recon --version" in result.output
-    process.assert_called_once_with([sys.executable, "-m", "pip", "install", "-U", "recon-tool"], check=False)
+    process.assert_called_once_with([sys.executable, "-m", "pip", "install", "-U", "recon-tool==999.0.0"], check=False)

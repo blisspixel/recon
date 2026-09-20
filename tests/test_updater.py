@@ -73,6 +73,23 @@ class TestCompareVersions:
 
 
 class TestUpgradeCommand:
+    @pytest.mark.parametrize("method", [updater.UV, updater.PIP])
+    def test_explicit_release_replaces_installer_version_pin(
+        self, monkeypatch: pytest.MonkeyPatch, method: str
+    ) -> None:
+        monkeypatch.setattr(updater.shutil, "which", _resolvable_launcher)
+        monkeypatch.setattr(updater, "_manager_targets_current_install", Mock(return_value=True))
+        command = updater.upgrade_command(method, version="2.19.5")
+        assert command is not None
+        assert "install" in command
+        assert command[-1] == "recon-tool==2.19.5"
+        assert "upgrade" not in command
+        if method == updater.UV:
+            assert "--force" not in command
+
+    def test_invalid_release_does_not_produce_an_install_command(self) -> None:
+        assert updater.upgrade_command(updater.PIP, version="--other-option") is None
+
     def test_pipx_uv_pip_argvs(self, monkeypatch: pytest.MonkeyPatch) -> None:
         monkeypatch.setattr(updater.shutil, "which", _resolvable_launcher)
         monkeypatch.setattr(updater, "_manager_targets_current_install", Mock(return_value=True))
@@ -98,7 +115,7 @@ class TestUpgradeCommand:
         assert "git" in updater.manual_hint(updater.EDITABLE)
         assert updater.manual_hint(updater.PIP) == "pip install -U recon-tool"
         assert "pipx upgrade recon-tool" in updater.manual_hint(updater.PIPX)
-        assert "uv tool upgrade recon-tool" in updater.manual_hint(updater.UV)
+        assert "uv tool install --upgrade recon-tool" in updater.manual_hint(updater.UV)
         assert "could not be verified" in updater.manual_hint(updater.UNKNOWN)
 
     def test_launcher_planted_in_the_working_directory_is_refused(

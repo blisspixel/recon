@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 # Installer / updater for recon (macOS / Linux).
 #
-# Review this file from a release-tag checkout, then install or update with:
+# Install from a local checkout with:
 #   bash scripts/install.sh
 #
 # Uninstall:
 #   uv tool uninstall recon-tool   # or: pipx uninstall recon-tool
 #
 # Preserves the manager that already owns recon. For a clean install, prefers
-# uv (fast, manages its own Python) and falls back to pipx. The reviewed helper
-# installs the exact release version represented by this source tag.
+# uv and falls back to pipx. Bootstraps a pinned uv if neither is installed.
+# Installs the exact recon release below, with no administrator privileges.
 
 set -euo pipefail
 
@@ -17,6 +17,7 @@ PACKAGE="recon-tool"
 VERSION="2.19.4"
 SPEC="${PACKAGE}==${VERSION}"
 CLI="recon"
+UV_VERSION="0.11.17"
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -33,28 +34,82 @@ package_owned_by() {
 }
 
 install_exact_uv() {
-    echo "==> Installing reviewed $SPEC with uv ..."
-    if ! uv tool install --force "$SPEC"; then
+    echo "==> Installing $SPEC with uv ..."
+    if ! uv tool install --force "$SPEC" --python 3.14; then
         echo "Error: uv could not install $SPEC." >&2
         exit 1
     fi
 }
 
 install_exact_pipx() {
-    echo "==> Installing reviewed $SPEC with pipx ..."
+    echo "==> Installing $SPEC with pipx ..."
     if ! pipx install --force "$SPEC"; then
         echo "Error: pipx could not install $SPEC." >&2
         exit 1
     fi
 }
 
-fail_missing_tool() {
-    echo "Error: install uv or pipx first, then re-run this installer." >&2
-    echo "Recommended:" >&2
-    echo "  https://docs.astral.sh/uv/getting-started/installation/" >&2
-    echo "Alternative:" >&2
-    echo "  https://pipx.pypa.io/stable/installation/" >&2
-    exit 1
+bootstrap_uv() {
+    local installer uv_bin url
+    uv_bin="${UV_INSTALL_DIR:-$HOME/.local/bin}"
+    url="https://astral.sh/uv/$UV_VERSION/install.sh"
+    installer=$(mktemp)
+    echo "==> Installing uv $UV_VERSION ..."
+    # Download completely before execution, so a failed transfer cannot run a
+    # partial script. The upstream installer persists its own PATH entry.
+    if have curl; then
+        if ! curl --fail --silent --show-error --location "$url" --output "$installer"; then
+            rm -f "$installer"
+            echo "Error: could not download uv. Check your connection and retry." >&2
+            exit 1
+        fi
+    elif have wget; then
+        if ! wget -q "$url" -O "$installer"; then
+            rm -f "$installer"
+            echo "Error: could not download uv. Check your connection and retry." >&2
+            exit 1
+        fi
+    else
+        rm -f "$installer"
+        echo "Error: curl or wget is required to install uv." >&2
+        exit 1
+    fi
+    if ! UV_INSTALL_DIR="$uv_bin" sh "$installer"; then
+        rm -f "$installer"
+        echo "Error: uv installation failed. Check the output above and retry." >&2
+        exit 1
+    fi
+    rm -f "$installer"
+    export PATH="$PATH:$uv_bin"
+    if ! have uv; then
+        echo "Error: uv installation did not create a launcher in $uv_bin." >&2
+        exit 1
+    fi
+}
+
+ensure_cli_path() {
+    local bin_dir
+    if [ "$MANAGER" = uv ]; then
+        bin_dir=$(uv tool dir --bin)
+    else
+        bin_dir=$(pipx environment --value PIPX_BIN_DIR)
+    fi
+    if [ -z "$bin_dir" ] || [ ! -d "$bin_dir" ]; then
+        echo "Error: $MANAGER did not report a valid executable directory." >&2
+        exit 1
+    fi
+    case ":$PATH:" in
+        *":$bin_dir:"*) ;;
+        *)
+            if [ "$MANAGER" = uv ]; then
+                uv tool update-shell
+            else
+                pipx ensurepath
+            fi
+            # Append so an existing stale launcher still fails verification.
+            export PATH="$PATH:$bin_dir"
+            ;;
+    esac
 }
 
 cli_candidates() {
@@ -143,10 +198,6 @@ if have pipx; then
     fi
 fi
 
-if [ "$UV_AVAILABLE" = false ] && [ "$PIPX_AVAILABLE" = false ]; then
-    fail_missing_tool
-fi
-
 if [ "$UV_OWNS" = true ] && [ "$PIPX_OWNS" = true ]; then
     echo "Error: both uv and pipx report an installed $PACKAGE." >&2
     echo "Uninstall one copy, confirm which 'recon' resolves on PATH, then re-run this helper." >&2
@@ -171,9 +222,12 @@ elif [ "$PIPX_AVAILABLE" = true ]; then
     MANAGER="pipx"
     install_exact_pipx
 else
-    fail_missing_tool
+    bootstrap_uv
+    MANAGER="uv"
+    install_exact_uv
 fi
 
+ensure_cli_path
 verify_installed_cli
 
 echo ""
@@ -194,6 +248,6 @@ echo "  Syntax-only reserved example (live stray residue): $CLI example.com"
 echo ""
 echo "Optional: enable tab-completion with  $CLI --install-completion"
 echo ""
-echo "Update later: review and run the helper from the newer release tag."
+echo "Update later: recon update"
 echo "Uninstall:    uv tool uninstall $PACKAGE   (or: pipx uninstall $PACKAGE)"
 echo ""

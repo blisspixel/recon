@@ -1,14 +1,14 @@
 # Installer / updater for recon (Windows PowerShell).
 #
-# Review this file from a release-tag checkout, then install or update with:
+# Install from a local checkout with:
 #   powershell -ExecutionPolicy ByPass -File .\scripts\install.ps1
 #
 # Uninstall:
 #   uv tool uninstall recon-tool   # or: pipx uninstall recon-tool
 #
 # Preserves the manager that already owns recon. For a clean install, prefers
-# uv (fast, manages its own Python) and falls back to pipx. The reviewed helper
-# installs the exact release version represented by this source tag.
+# uv and falls back to pipx. Bootstraps a pinned uv if neither is installed.
+# Installs the exact recon release below, with no administrator privileges.
 
 $ErrorActionPreference = "Stop"
 
@@ -16,6 +16,7 @@ $Package = "recon-tool"
 $Version = "2.19.4"
 $Spec = "$Package==$Version"
 $Cli = "recon"
+$UvVersion = "0.11.17"
 
 function Test-Have($name) {
     return [bool](Get-Command $name -ErrorAction SilentlyContinue)
@@ -64,28 +65,66 @@ function Test-PackageInstalled($ListCmd) {
 }
 
 function Install-Exact-Uv {
-    Write-Host "==> Installing reviewed $Spec with uv ..." -ForegroundColor Green
-    if ((Invoke-Tool uv tool install --force $Spec) -ne 0) {
+    Write-Host "==> Installing $Spec with uv ..." -ForegroundColor Green
+    if ((Invoke-Tool uv tool install --force $Spec --python 3.14) -ne 0) {
         Write-Host "Error: uv could not install $Spec." -ForegroundColor Red
         exit 1
     }
 }
 
 function Install-Exact-Pipx {
-    Write-Host "==> Installing reviewed $Spec with pipx ..." -ForegroundColor Green
+    Write-Host "==> Installing $Spec with pipx ..." -ForegroundColor Green
     if ((Invoke-Tool pipx install --force $Spec) -ne 0) {
         Write-Host "Error: pipx could not install $Spec." -ForegroundColor Red
         exit 1
     }
 }
 
-function Write-MissingToolHelp {
-    Write-Host "Error: install uv or pipx first, then re-run this installer." -ForegroundColor Red
-    Write-Host "Recommended:"
-    Write-Host "  https://docs.astral.sh/uv/getting-started/installation/"
-    Write-Host "Alternative:"
-    Write-Host "  https://pipx.pypa.io/stable/installation/"
-    exit 1
+function Install-Uv {
+    $uvBin = if ($env:UV_INSTALL_DIR) { $env:UV_INSTALL_DIR } else { Join-Path $HOME ".local\bin" }
+    $installer = Join-Path ([IO.Path]::GetTempPath()) ("recon-uv-" + [guid]::NewGuid() + ".ps1")
+    $previousInstallDir = $env:UV_INSTALL_DIR
+    $previousProtocol = [Net.ServicePointManager]::SecurityProtocol
+    Write-Host "==> Installing uv $UvVersion ..." -ForegroundColor Green
+    try {
+        [Net.ServicePointManager]::SecurityProtocol = $previousProtocol -bor [Net.SecurityProtocolType]::Tls12
+        # Download completely before executing in a child process. This also
+        # isolates the upstream script's preferences and exit statements.
+        Invoke-WebRequest -UseBasicParsing "https://astral.sh/uv/$UvVersion/install.ps1" -OutFile $installer
+        $env:UV_INSTALL_DIR = $uvBin
+        if ((Invoke-Tool powershell.exe -NoProfile -ExecutionPolicy Bypass -File $installer) -ne 0) {
+            throw "uv installation failed. Check the output above and retry."
+        }
+    }
+    finally {
+        $env:UV_INSTALL_DIR = $previousInstallDir
+        [Net.ServicePointManager]::SecurityProtocol = $previousProtocol
+        Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
+    }
+    $env:PATH = "$env:PATH;$uvBin"
+    if (-not (Test-Have "uv")) {
+        throw "uv installation did not create a launcher in $uvBin."
+    }
+}
+
+function Set-CliPath {
+    if ($Manager -eq "uv") {
+        $binDir = & uv tool dir --bin
+    }
+    else {
+        $binDir = & pipx environment --value PIPX_BIN_DIR
+    }
+    if ($LASTEXITCODE -ne 0 -or -not $binDir -or -not (Test-Path -LiteralPath $binDir -PathType Container)) {
+        throw "$Manager did not report a valid executable directory."
+    }
+    if (($env:PATH -split ';') -notcontains $binDir) {
+        $status = if ($Manager -eq "uv") { Invoke-Tool uv tool update-shell } else { Invoke-Tool pipx ensurepath }
+        if ($status -ne 0) {
+            throw "Could not add the $Manager executable directory to PATH."
+        }
+        # Append so an existing stale launcher still fails verification.
+        $env:PATH = "$env:PATH;$binDir"
+    }
 }
 
 function Get-CliCandidates {
@@ -171,10 +210,6 @@ Write-Host ""
 
 $uvAvailable = Test-Have "uv"
 $pipxAvailable = Test-Have "pipx"
-if (-not $uvAvailable -and -not $pipxAvailable) {
-    Write-MissingToolHelp
-}
-
 $uvOwns = $uvAvailable -and (Test-PackageInstalled @("uv", "tool", "list"))
 $pipxOwns = $pipxAvailable -and (Test-PackageInstalled @("pipx", "list"))
 
@@ -206,9 +241,12 @@ elseif ($pipxAvailable) {
     Install-Exact-Pipx
 }
 else {
-    Write-MissingToolHelp
+    Install-Uv
+    $Manager = "uv"
+    Install-Exact-Uv
 }
 
+Set-CliPath
 if (-not (Test-InstalledCli)) {
     exit 1
 }
@@ -231,6 +269,6 @@ Write-Host "  Syntax-only reserved example (live stray residue): $Cli example.co
 Write-Host ""
 Write-Host "Optional: enable tab-completion with  $Cli --install-completion"
 Write-Host ""
-Write-Host "Update later: review and run the helper from the newer release tag."
+Write-Host "Update later: recon update"
 Write-Host "Uninstall:    uv tool uninstall $Package   (or: pipx uninstall $Package)"
 Write-Host ""

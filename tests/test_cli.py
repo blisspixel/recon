@@ -353,9 +353,14 @@ class TestDoctor:
         mock_client.__aexit__ = AsyncMock(return_value=None)
         mock_http_cls.return_value = mock_client
 
-        with patch(
-            "recon_tool.cli.doctor._doctor_path_launcher_check",
-            return_value=("PATH recon launcher", "ok", "test launcher matches running package"),
+        from recon_tool import __version__
+
+        with (
+            patch(
+                "recon_tool.cli.doctor._doctor_path_launcher_check",
+                return_value=("PATH recon launcher", "ok", "test launcher matches running package"),
+            ),
+            patch("recon_tool.updater.fetch_latest_version", return_value=__version__),
         ):
             result = runner.invoke(app, ["doctor"])
         assert result.exit_code == 0

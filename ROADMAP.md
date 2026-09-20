@@ -53,18 +53,25 @@ handoff the single-namespace contract cannot solve.
 v2.18.1 fixed the first stability-soak defect: degraded CNAME classification no
 longer erases names supplied by successful certificate transparency. v2.18.2
 updated dependency tooling and workflow pins without changing product behavior.
-v2.18.3 tightened diagnostic and renderer truthfulness. v2.18.4 withdraws the
+v2.18.3 tightened diagnostic and renderer truthfulness. v2.18.4 withdrew the
 interactive fusion-transition notice; the implicit default remains enabled and
 silent.
 
-The next improvement target is automated, evidence-backed quality: close
-documented pattern misses and make inference insensitive to repeated views of
-one observation. The [executable acceptance loop](docs/roadmap.md#autonomous-improvement-acceptance)
-requires exact positive/negative fixtures, provenance, and the full local gate.
-Authorized local changes do not wait on human review, interviews, or private
-inventory. The first pass covers duplicate-insensitive per-slug strength and
-Shopify's documented verification owner; distinct-source dependency correction
-remains a separate question to characterize before changing model weights.
+v2.19 shipped the duplicate-evidence correction, documented catalog additions,
+and PR-first release workflow. Installation and update maintenance focuses on the first
+five minutes: one-command Windows and macOS/Linux installers, working upgrades
+from version-pinned installs, release status in `recon doctor`, and clear pip
+instructions. Normal lookup output stays quiet. Acceptance requires fresh
+install and upgrade tests, PATH and failure handling, and release parity.
+
+`main` is the single integration and release branch. Short-lived implementation
+and release-preparation branches merge through required checks and are deleted
+after merge. GitHub Release and PyPI must agree before publication is complete.
+
+The [executable acceptance loop](docs/roadmap.md#autonomous-improvement-acceptance)
+continues to require positive/negative fixtures, provenance, and the full gate.
+Distinct-source dependency correction remains a separate question to
+characterize before changing model weights.
 
 The ordered work is:
 

@@ -72,6 +72,9 @@ dependencies = [
     # CVE-2026-84382 (fix: 2.12.0). Keep the floors until mcp's own pins catch up.
     "httpcore2>=2.10.0",
     "httpx2>=2.12.0",
+    # Carry the patched AnyIO floor into installed wheels as well as uv.lock,
+    # so pip upgrades cannot retain an older affected transitive dependency.
+    "anyio>=4.14.2",
 ]
 
 [project.scripts]

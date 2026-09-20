@@ -134,9 +134,10 @@ class TestLookupFlags:
 
 
 class TestDoctorFailures:
+    @patch("recon_tool.updater.fetch_latest_version", return_value=None)
     @patch("dns.resolver.resolve")
     @patch("httpx.AsyncClient")
-    def test_doctor_with_dns_failure(self, mock_http_cls, mock_dns):
+    def test_doctor_with_dns_failure(self, mock_http_cls, mock_dns, mock_latest):
         import dns.resolver
 
         mock_dns.side_effect = dns.resolver.NoNameservers("no nameservers")

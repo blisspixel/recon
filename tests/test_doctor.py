@@ -20,6 +20,7 @@ from recon_tool.cli import app
 from recon_tool.cli.doctor import (
     _doctor_path_launcher_check,
     _doctor_print_header,
+    _doctor_release_check,
     _doctor_render,
     _launcher_is_in_current_workspace,
     _launcher_version,
@@ -62,11 +63,46 @@ def patched_doctor_environment(fake_httpx_client):
 @pytest.fixture(autouse=True)
 def stable_doctor_path_launcher():
     """Keep command tests independent of launchers installed on the test host."""
-    with patch(
-        "recon_tool.cli.doctor._doctor_path_launcher_check",
-        return_value=("PATH recon launcher", "ok", "test launcher matches running package"),
+    from recon_tool import updater
+
+    with (
+        patch(
+            "recon_tool.cli.doctor._doctor_path_launcher_check",
+            return_value=("PATH recon launcher", "ok", "test launcher matches running package"),
+        ),
+        patch("recon_tool.updater.fetch_latest_version", return_value=updater.current_version()),
     ):
         yield
+
+
+@pytest.mark.parametrize(
+    ("latest", "status", "detail"),
+    [
+        ("2.19.4", "ok", "up to date on PyPI"),
+        ("2.19.5", "warn", "2.19.5 available on PyPI; run `recon update`"),
+        ("2.19.3", "ok", "newer than PyPI (2.19.3); no downgrade offered"),
+        (None, "warn", "could not check PyPI"),
+    ],
+)
+def test_doctor_release_status(latest: str | None, status: str, detail: str) -> None:
+    with (
+        patch("recon_tool.updater.current_version", return_value="2.19.4"),
+        patch("recon_tool.updater.fetch_latest_version", return_value=latest) as fetch,
+    ):
+        name, actual_status, actual_detail = _doctor_release_check()
+    assert name == "Release status"
+    assert actual_status == status
+    assert detail in actual_detail
+    fetch.assert_called_once_with(timeout=3.0)
+
+
+@pytest.mark.parametrize("latest", ["999.0.0", None])
+def test_doctor_release_warning_does_not_fail_health_check(patched_doctor_environment, latest: str | None) -> None:
+    with patch("recon_tool.updater.fetch_latest_version", return_value=latest):
+        result = runner.invoke(app, ["doctor"])
+    assert result.exit_code == 0, result.output
+    assert "Release status" in result.output
+    assert "Core checks passed. Review the warnings above." in result.output
 
 
 class TestDoctorCommandHappyPath:

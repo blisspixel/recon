@@ -18,7 +18,7 @@ _GETTING_STARTED = _ROOT / "docs" / "getting-started.md"
 _VERSION = tomllib.loads((_ROOT / "pyproject.toml").read_text(encoding="utf-8"))["project"]["version"]
 
 
-def test_installers_do_not_bootstrap_pipx_with_unpinned_pip() -> None:
+def test_installers_bootstrap_pinned_uv_without_system_pip() -> None:
     script = _INSTALL_SH.read_text(encoding="utf-8")
     powershell = _INSTALL_PS1.read_text(encoding="utf-8")
 
@@ -27,8 +27,10 @@ def test_installers_do_not_bootstrap_pipx_with_unpinned_pip() -> None:
     assert "pip install" not in powershell
     assert "https://astral.sh/uv/install.sh" not in script
     assert "https://astral.sh/uv/install.ps1" not in powershell
-    assert "install uv or pipx first" in script
-    assert "install uv or pipx first" in powershell
+    assert 'UV_VERSION="0.11.17"' in script
+    assert '$UvVersion = "0.11.17"' in powershell
+    assert "https://astral.sh/uv/$UV_VERSION/install.sh" in script
+    assert "https://astral.sh/uv/$UvVersion/install.ps1" in powershell
     assert "Invoke-Expression (Invoke-RestMethod" not in powershell
 
 
@@ -64,7 +66,7 @@ def test_installers_bind_the_reviewed_release_version_and_owner() -> None:
     assert "uv tool install $Package" not in powershell
 
 
-def test_helper_guidance_requires_local_review_before_execution() -> None:
+def test_helper_guidance_provides_one_command_and_reviewable_alternative() -> None:
     texts = {
         "README": _README.read_text(encoding="utf-8"),
         "Getting Started": _GETTING_STARTED.read_text(encoding="utf-8"),
@@ -73,8 +75,12 @@ def test_helper_guidance_requires_local_review_before_execution() -> None:
     }
 
     for label, text in texts.items():
-        assert "raw.githubusercontent.com/blisspixel/recon/main/scripts/install" not in text, label
-        assert "review" in text.lower(), label
+        if label in {"README", "Getting Started"}:
+            assert "raw.githubusercontent.com/blisspixel/recon/main/scripts/install.sh | bash" in text, label
+            assert "raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex" in text, label
+            assert "review" in text.lower(), label
+            assert "pip install recon-tool" in text, label
+            assert "recon update" in text, label
     assert "blob/main/scripts/install" not in texts["README"]
     assert "https://github.com/blisspixel/recon/releases/latest" in texts["README"]
     assert "scripts/install.sh" in texts["README"]
@@ -120,6 +126,13 @@ def _fake_manager(path: Path, manager: str) -> None:
                 f"  printf '%s\\n' \"${{FAKE_{prefix}_LIST:-}}\"",
                 f'  exit "${{FAKE_{prefix}_LIST_STATUS:-0}}"',
                 "fi",
+                'if [ "$*" = "tool dir --bin" ] || [ "$*" = "environment --value PIPX_BIN_DIR" ]; then',
+                '  printf "%s\\n" "$FAKE_BIN_DIR"',
+                '  exit "${FAKE_BIN_STATUS:-0}"',
+                "fi",
+                'if [ "$*" = "tool update-shell" ] || [ "$*" = "ensurepath" ]; then',
+                '  exit "${FAKE_PATH_STATUS:-0}"',
+                "fi",
                 f"printf '%s\\n' \"${{FAKE_{prefix}_INSTALL_OUTPUT:-{manager} install output}}\" >&2",
                 f'if [ "${{FAKE_{prefix}_INSTALL_STATUS:-0}}" -eq 0 ] && [ "${{FAKE_CREATE_RECON:-1}}" = "1" ]; then',
                 "  cat > \"$FAKE_RECON_PATH\" <<'RECON_EOF'",
@@ -151,9 +164,25 @@ def _run_unix_installer(
     bash = shutil.which("bash")
     if bash is None:
         pytest.skip("bash is not available")
+    bin_on_path = (extra_env or {}).get("FAKE_BIN_OFF_PATH") != "1"
+    bootstrap = (extra_env or {}).get("FAKE_BOOTSTRAP") == "1"
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
-    _fake_manager(fake_bin / "uv", "uv")
+    tool_bin = fake_bin if bin_on_path else tmp_path / "tool bin"
+    tool_bin.mkdir(exist_ok=True)
+    manager_bin = tmp_path / "uv bin" if bootstrap else fake_bin
+    manager_bin.mkdir(exist_ok=True)
+    _fake_manager(manager_bin / "uv", "uv")
+    if bootstrap:
+        download = fake_bin / "curl"
+        download.write_text(
+            '#!/usr/bin/env bash\nprintf "%s\\n" "$*" >> "$INSTALLER_LOG"\n'
+            "for output; do :; done\n"
+            'printf \'echo "bootstrap executed" >> "$INSTALLER_LOG"\\n\' > "$output"\n'
+            'exit "${FAKE_DOWNLOAD_FAILURE:-0}"\n',
+            encoding="utf-8",
+        )
+        download.chmod(0o755)
     if pipx:
         _fake_manager(fake_bin / "pipx", "pipx")
     if recon:
@@ -179,7 +208,9 @@ def _run_unix_installer(
             "PATH": os.pathsep.join(path_entries),
             "INSTALLER_LOG": str(log),
             "FAKE_CREATE_RECON": "1",
-            "FAKE_RECON_PATH": str(fake_bin / "recon"),
+            "FAKE_RECON_PATH": str(tool_bin / "recon"),
+            "FAKE_BIN_DIR": str(tool_bin),
+            "UV_INSTALL_DIR": str(manager_bin),
             "FAKE_RECON_VERSION_OUTPUT": f"recon {_VERSION}",
             "FAKE_RECON_VERSION_STATUS": "0",
         }
@@ -311,6 +342,16 @@ def _fake_windows_manager(path: Path, manager: str) -> None:
                 f"  echo(%FAKE_{prefix}_LIST%",
                 f"  exit /b %FAKE_{prefix}_LIST_STATUS%",
                 ")",
+                'if /I "%~1 %~2 %~3"=="tool dir --bin" (',
+                "  echo(%FAKE_BIN_DIR%",
+                "  exit /b %FAKE_BIN_STATUS%",
+                ")",
+                'if /I "%~1 %~2 %~3"=="environment --value PIPX_BIN_DIR" (',
+                "  echo(%FAKE_BIN_DIR%",
+                "  exit /b %FAKE_BIN_STATUS%",
+                ")",
+                'if /I "%~1 %~2"=="tool update-shell" exit /b %FAKE_PATH_STATUS%',
+                'if /I "%~1"=="ensurepath" exit /b %FAKE_PATH_STATUS%',
                 f"1>&2 echo(%FAKE_{prefix}_INSTALL_OUTPUT%",
                 f'if "%FAKE_{prefix}_INSTALL_STATUS%"=="0" if "%FAKE_CREATE_RECON%"=="1" (',
                 '>"%FAKE_RECON_PATH%" echo @echo off',
@@ -338,9 +379,15 @@ def _run_windows_installer(
     powershell = shutil.which("powershell")
     if powershell is None:
         pytest.skip("Windows PowerShell is not available")
+    bin_on_path = (extra_env or {}).get("FAKE_BIN_OFF_PATH") != "1"
+    bootstrap = (extra_env or {}).get("FAKE_BOOTSTRAP") == "1"
     fake_bin = tmp_path / "bin"
     fake_bin.mkdir()
-    _fake_windows_manager(fake_bin / "uv.cmd", "uv")
+    tool_bin = fake_bin if bin_on_path else tmp_path / "tool bin"
+    tool_bin.mkdir(exist_ok=True)
+    manager_bin = tmp_path / "uv bin" if bootstrap else fake_bin
+    manager_bin.mkdir(exist_ok=True)
+    _fake_windows_manager(manager_bin / "uv.cmd", "uv")
     if pipx:
         _fake_windows_manager(fake_bin / "pipx.cmd", "pipx")
     if recon:
@@ -355,7 +402,7 @@ def _run_windows_installer(
             encoding="utf-8",
         )
         path_entries.append(str(stale_bin))
-    path_entries.extend((str(fake_bin), str(system_root / "System32"), str(system_root)))
+    path_entries.extend((str(fake_bin), str(system_root / "System32"), str(system_root), str(Path(powershell).parent)))
     log = tmp_path / "manager.log"
     env = os.environ.copy()
     env.update(
@@ -364,7 +411,11 @@ def _run_windows_installer(
             "PATHEXT": ".COM;.EXE;.BAT;.CMD",
             "INSTALLER_LOG": str(log),
             "FAKE_CREATE_RECON": "1",
-            "FAKE_RECON_PATH": str(fake_bin / "recon.cmd"),
+            "FAKE_RECON_PATH": str(tool_bin / "recon.cmd"),
+            "FAKE_BIN_DIR": str(tool_bin),
+            "FAKE_BIN_STATUS": "0",
+            "FAKE_PATH_STATUS": "0",
+            "UV_INSTALL_DIR": str(manager_bin),
             "FAKE_RECON_VERSION_OUTPUT": f"recon {_VERSION}",
             "FAKE_RECON_VERSION_STATUS": "0",
             "FAKE_UV_LIST": "",
@@ -379,8 +430,22 @@ def _run_windows_installer(
     )
     if extra_env:
         env.update(extra_env)
+    script = _INSTALL_PS1
+    if bootstrap:
+        script = tmp_path / "bootstrap-test.ps1"
+        quoted_script = str(_INSTALL_PS1).replace("'", "''")
+        script.write_text(
+            "function Invoke-WebRequest {\n"
+            "  param([switch]$UseBasicParsing, [string]$Uri, [string]$OutFile)\n"
+            "  Add-Content -LiteralPath $env:INSTALLER_LOG -Value $Uri\n"
+            "  if ($env:FAKE_DOWNLOAD_FAILURE -eq '1') { throw 'download failed' }\n"
+            "  Set-Content -LiteralPath $OutFile -Value 'exit 0'\n"
+            "}\n"
+            f"& '{quoted_script}'\n",
+            encoding="utf-8",
+        )
     result = subprocess.run(  # noqa: S603
-        [powershell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(_INSTALL_PS1)],
+        [powershell, "-NoProfile", "-ExecutionPolicy", "Bypass", "-File", str(script)],
         cwd=_ROOT,
         env=env,
         text=True,
@@ -478,3 +543,42 @@ def test_powershell_installer_rejects_malformed_version_output(tmp_path: Path, v
     assert "returned malformed output" in result.stdout
     assert f"Resolved launcher: {tmp_path / 'bin' / 'recon.cmd'}" in result.stdout
     assert str(tmp_path / "bin" / "recon.cmd") in result.stdout
+
+
+@pytest.mark.parametrize("manager", ["uv", "pipx"])
+def test_installer_adds_missing_tool_directory_to_path(tmp_path: Path, manager: str) -> None:
+    run = _run_windows_installer if os.name == "nt" else _run_unix_installer
+    result, log = run(
+        tmp_path,
+        extra_env={"FAKE_BIN_OFF_PATH": "1", "FAKE_PIPX_LIST": "package recon-tool 2.6.2" if manager == "pipx" else ""},
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert ("uv tool update-shell" if manager == "uv" else "pipx ensurepath") in log
+    assert f"reports recon {_VERSION}" in result.stdout
+    assert "tool bin" in result.stdout
+
+
+def test_installer_bootstraps_uv_on_a_fresh_machine(tmp_path: Path) -> None:
+    run = _run_windows_installer if os.name == "nt" else _run_unix_installer
+    result, log = run(tmp_path, pipx=False, extra_env={"FAKE_BOOTSTRAP": "1", "FAKE_BIN_OFF_PATH": "1"})
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "https://astral.sh/uv/0.11.17/install." in log
+    assert f"uv tool install --force recon-tool=={_VERSION} --python 3.14" in log
+    assert f"reports recon {_VERSION}" in result.stdout
+
+
+def test_installer_stops_when_bootstrap_download_fails(tmp_path: Path) -> None:
+    run = _run_windows_installer if os.name == "nt" else _run_unix_installer
+    result, log = run(tmp_path, pipx=False, extra_env={"FAKE_BOOTSTRAP": "1", "FAKE_DOWNLOAD_FAILURE": "1"})
+    assert result.returncode != 0
+    assert "uv tool install" not in log
+    assert "bootstrap executed" not in log
+    assert "==> Done." not in result.stdout
+
+
+@pytest.mark.parametrize("failure", ["FAKE_BIN_STATUS", "FAKE_PATH_STATUS"])
+def test_installer_does_not_claim_success_when_path_setup_fails(tmp_path: Path, failure: str) -> None:
+    run = _run_windows_installer if os.name == "nt" else _run_unix_installer
+    result, _ = run(tmp_path, extra_env={"FAKE_BIN_OFF_PATH": "1", failure: "1"})
+    assert result.returncode != 0
+    assert "==> Done." not in result.stdout

@@ -73,6 +73,7 @@ _EXPECTED_RUNTIME_DEPENDENCIES = {
     "httpcore2",  # Security floor for the MCP HTTPX v2 transport.
     "httpx",
     "httpx2",  # Security floor for the MCP HTTPX v2 client.
+    "anyio",  # Patched floor for the transitive async runtime.
     "jsonschema",
     "mcp",
     "networkx",

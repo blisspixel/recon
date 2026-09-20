@@ -521,10 +521,14 @@ The repository also runs supply-chain posture checks outside the release flow:
 - Workflow actions are pinned to full commit SHAs, with the readable version kept
   in a trailing comment. `scripts/check_workflow_pins.py` gates this locally and
   in CI.
-- Installer scripts do not bootstrap package managers by executing remote shell
-  or PowerShell installers. Each reviewed tag installs its exact `recon-tool`
-  version, preserves a sole existing `uv` or `pipx` owner, refuses ambiguous or
-  unmanaged ownership, and exposes manager failures.
+- Installer scripts bootstrap `uv` through its version-pinned official shell or
+  PowerShell installer when neither `uv` nor `pipx` is available. They download
+  that helper completely before execution. Each script installs its exact
+  `recon-tool` version, preserves a sole existing manager, refuses ambiguous or
+  unmanaged ownership, exposes failures, and verifies the installed launcher.
+  The one-command URLs track `main`; a release-tag checkout provides a fixed
+  script for local review. These convenience installers do not enforce artifact
+  attestations; the consumer verification recipe above does.
 - Generated security and surface artifacts used by CI are checked locally and in
   the CI validation job, including ClusterFuzzLite requirements, schema source
   tracing, surface inventory, CLI surface docs, file-size ratchets, and PLR
@@ -574,8 +578,9 @@ supported SAST checks for every merged pull request in its sampled window. The
 sample size and dated `8.2` value are snapshots, not permanent promises.
 The June 28 review found one code-owned gap and several repository-process gaps.
 The code-owned gap was an
-unpinned installer download-and-run path; the installer now refuses to execute
-remote tool installers. The Scorecard SARIF upload step also uses CodeQL Action
+unpinned installer download-and-run path; that path was removed at the time.
+The current convenience installer bootstraps a version-pinned upstream helper
+as described above. The Scorecard SARIF upload step also uses CodeQL Action
 v4 to avoid the scheduled v3 deprecation. Live repository settings now enforce
 full-SHA GitHub Action pins, enable dependency security updates, and protect
 `main` with an active repository ruleset that requires the CI matrix, gitleaks,
