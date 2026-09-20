@@ -13,6 +13,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from collections.abc import Callable
 from ctypes import wintypes
 from pathlib import Path
 from typing import Any
@@ -33,8 +34,20 @@ class _ProcessEntry(ctypes.Structure):
     ]
 
 
+def _last_error() -> int:
+    # These ctypes exports exist only on Windows. Resolve them when the
+    # Windows handoff runs so the module remains portable to import and check.
+    getter: Callable[[], int] = getattr(ctypes, "get_last_error")
+    return getter()
+
+
+def _windows_error() -> OSError:
+    factory: Callable[[int], OSError] = getattr(ctypes, "WinError")
+    return factory(_last_error())
+
+
 def _windows_api() -> Any:
-    api = ctypes.WinDLL("kernel32", use_last_error=True)
+    api = getattr(ctypes, "WinDLL")("kernel32", use_last_error=True)
     api.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
     api.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
     for name in ("Process32FirstW", "Process32NextW"):
@@ -54,7 +67,7 @@ def _process_table() -> dict[int, tuple[int, str]]:
     api = _windows_api()
     snapshot = api.CreateToolhelp32Snapshot(2, 0)  # TH32CS_SNAPPROCESS
     if snapshot == ctypes.c_void_p(-1).value:
-        raise ctypes.WinError(ctypes.get_last_error())
+        raise _windows_error()
     entry = _ProcessEntry()
     entry.size = ctypes.sizeof(entry)
     records: dict[int, tuple[int, str]] = {}
@@ -63,8 +76,8 @@ def _process_table() -> dict[int, tuple[int, str]]:
         while more:
             records[int(entry.pid)] = (int(entry.parent_pid), str(entry.name))
             more = api.Process32NextW(snapshot, ctypes.byref(entry))
-        if ctypes.get_last_error() != 18:  # ERROR_NO_MORE_FILES
-            raise ctypes.WinError(ctypes.get_last_error())
+        if _last_error() != 18:  # ERROR_NO_MORE_FILES
+            raise _windows_error()
     finally:
         api.CloseHandle(snapshot)
     return records
@@ -112,7 +125,7 @@ def start_update(command: list[str]) -> Path:
                 stdout=log,
                 stderr=subprocess.STDOUT,
                 cwd=log_path.parent,
-                creationflags=subprocess.CREATE_NO_WINDOW,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW"),
                 close_fds=True,
             )
         except OSError:
@@ -128,16 +141,16 @@ def _wait_for_exit(pids: list[int]) -> None:
     for pid in pids:
         handle = api.OpenProcess(0x00100000, False, pid)  # SYNCHRONIZE
         if not handle:
-            if ctypes.get_last_error() == 87:  # already exited
+            if _last_error() == 87:  # already exited
                 continue
-            raise ctypes.WinError(ctypes.get_last_error())
+            raise _windows_error()
         try:
             remaining = max(0, int((deadline - time.monotonic()) * 1000))
             status = api.WaitForSingleObject(handle, remaining)
             if status == 258:
                 raise TimeoutError("recon is still running; retry the update after it exits")
             if status != 0:
-                raise ctypes.WinError(ctypes.get_last_error())
+                raise _windows_error()
         finally:
             api.CloseHandle(handle)
 
