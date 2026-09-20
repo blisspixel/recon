@@ -387,6 +387,21 @@ class TestDeterminism:
         assert forward.clusters == reordered.clusters
         assert forward.modularity == reordered.modularity
 
+    @pytest.mark.parametrize("order", list(itertools.permutations(range(4))))
+    def test_tied_moves_are_invariant_to_certificate_order(self, order: tuple[int, ...]) -> None:
+        # This path has equally good partitions. Normalizing nodes alone leaves
+        # neighbor iteration order dependent on certificate arrival order.
+        entries = [
+            _entry(["n0.invalid", "n1.invalid"]),
+            _entry(["n0.invalid", "n2.invalid"]),
+            _entry(["n1.invalid", "n3.invalid"]),
+            _entry(["n2.invalid", "n4.invalid"]),
+        ]
+        expected = build_infrastructure_clusters(entries)
+        reordered = build_infrastructure_clusters([entries[index] for index in order])
+
+        assert reordered == expected
+
 
 class TestReportShape:
     def test_returns_report_dataclass(self):

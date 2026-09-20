@@ -782,8 +782,8 @@ async def doctor() -> None:
     httpx mock with a positional side-effect list, so identity probes must
     run before the crt.sh probe.
 
-    Exit code is 0 when every check passes or only optional enrichment is
-    degraded (warnings), and 1 when any core check fails, so a CI or
+    Exit code is 0 when every check passes or only optional checks (including
+    release status) report warnings, and 1 when any core check fails, so a CI or
     monitoring job can gate on ``recon doctor`` instead of always reading
     success.
     """
