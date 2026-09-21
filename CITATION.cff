@@ -18,7 +18,7 @@ authors:
 repository-code: "https://github.com/blisspixel/recon"
 url: "https://github.com/blisspixel/recon"
 license: Apache-2.0
-version: 2.19.5
+version: 2.19.6
 date-released: "2026-09-20"
 keywords:
   - passive reconnaissance
