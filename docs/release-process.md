@@ -276,11 +276,11 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
 2. **test**: after preflight, runs the exact stable v1.28.1 and v2.0.0 MCP SDK
    matrix, then delegates to the complete `scripts/check.py` gate with
    added-line text hygiene covering the full previous-release-to-tag range. A
-   separate hash-pinned runtime requirements export is audited with
-   `pip-audit`. The audit runner resolves the installed auditor under Python
-   isolated mode and retries once only for recognized transport failures;
-   findings, unknown
-   failures, and a second transport failure remain fatal.
+   separate hash-pinned requirements export covering runtime dependencies, all
+   development groups, and all extras is audited with `pip-audit`. The audit
+   runner resolves the installed auditor under Python isolated mode and retries
+   once only for recognized transport failures; findings, unknown failures, and
+   a second transport failure remain fatal.
 3. **build**: after `test`, exact uv 0.11.17 uses the hash-locked build graph to
    produce one sdist, constructs one wheel from that exact sdist, and
    immediately seals both under `dist/`. Main CI runs the same sequence twice,

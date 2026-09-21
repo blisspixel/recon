@@ -151,11 +151,12 @@ jobs:
           fi
           uv run python scripts/check.py --text-range "$text_range"
 
-      - name: Export runtime requirements
+      - name: Export all locked requirements
         # Hash-pinned (no --no-hashes): the exported requirements carry
         # per-package sha256 hashes, so the audit reads a hash-pinned
-        # surface. pip-audit handles hashed requirements.
-        run: uv export --frozen --no-dev --no-emit-project --format requirements.txt --output-file .ci-audit-requirements.txt
+        # surface, including optional tooling and extras. pip-audit handles
+        # hashed requirements.
+        run: uv export --frozen --all-groups --all-extras --no-emit-project --format requirements.txt --output-file .ci-audit-requirements.txt
 
       - name: Audit dependencies
         run: uv run python scripts/run_dependency_audit.py -r .ci-audit-requirements.txt

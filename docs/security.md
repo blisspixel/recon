@@ -24,7 +24,7 @@ credentials, local retention, and hosting controls are additional trust boundari
 | Public OIDC / UserRealm / Google identity / CT endpoints | These are Microsoft, Google, and Sectigo-operated services. recon validates response shapes but cannot out-verify the underlying TLS-authenticated origin. |
 | `src/recon_tool/data/fingerprints.generated.json` (built-in fingerprints) | Installed wheels load the checked-in generated JSON. Canonical split YAML is contributor source and ships in the source distribution, not as a second wheel runtime catalog. Both have the same trust level as Python source. |
 | `src/recon_tool/data/*.yaml` and `src/recon_tool/data/profiles/*.yaml` (signals, posture rules, profiles) | These ship with the package and are loaded via `yaml.safe_load`. Same trust level as Python source. |
-| Python stdlib + pinned dependencies in `uv.lock` | Standard supply-chain trust. CI and release jobs audit locked runtime dependencies on every build. |
+| Python stdlib + pinned dependencies in `uv.lock` | Standard supply-chain trust. CI and release jobs audit locked runtime dependencies, all development groups, and all extras on every build. |
 
 | What recon does NOT trust | Mitigation location |
 |---|---|
@@ -365,8 +365,9 @@ recon does **not** defend against:
   those still require protection.
 - **DNS cache poisoning at the OS level.** If the user's resolver is compromised, the entire threat model is compromised regardless of what recon does.
 - **Supply-chain compromise of transitive dependencies.** Locked runtime
-  dependencies are checked by blocking `pip-audit` gates in CI and release
-  workflows. Their runner resolves the installed auditor under Python isolated
+  dependencies, all development groups, and all extras are checked by
+  blocking `pip-audit` gates in CI and release workflows. Their runner resolves
+  the installed auditor under Python isolated
   mode, retries once only for recognized transport failures, and never converts
   a finding or exhausted retry into success. The later isolated SBOM job also
   blocks on every nonzero audit status. This detects known advisories; it does

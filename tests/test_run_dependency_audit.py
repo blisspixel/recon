@@ -150,6 +150,13 @@ def test_enforcing_workflows_use_bounded_audit_runner() -> None:
         assert audit_step["run"] == expected
         assert "continue-on-error" not in audit_step
         assert "uv run pip-audit" not in "\n".join(str(step.get("run", "")) for step in steps)
+        export_step = next(step for step in steps if step.get("name") == "Export all locked requirements")
+        export_arguments = export_step["run"].split()
+        assert export_arguments[:2] == ["uv", "export"]
+        assert {"--frozen", "--all-groups", "--all-extras", "--no-emit-project"} <= set(export_arguments)
+        assert not {"--no-dev", "--no-hashes"} & set(export_arguments)
+        assert export_arguments[-2:] == ["--output-file", ".ci-audit-requirements.txt"]
+        assert "continue-on-error" not in export_step
 
 
 def test_dependency_audit_guidance_matches_fail_closed_workflows() -> None:

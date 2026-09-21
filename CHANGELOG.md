@@ -26,6 +26,23 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.6] - 2026-09-20
+
+Close the optional-tooling audit gap identified during final release verification.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
+### Fixed
+
+- Require GitPython 3.1.60 or newer in the optional mutation-testing group to
+  address PYSEC-2026-3982, PYSEC-2026-3983, and PYSEC-2026-3984. GitPython is not
+  a dependency of the published CLI or MCP wheel.
+- CI and release audits now cover every locked development group and extra as
+  well as runtime dependencies. A workflow regression test enforces that scope;
+  the release SBOM continues to describe the shipped runtime graph.
+
 ## [2.19.5] - 2026-09-20
 
 Polish installation, updates, and diagnostics, with mathematical and graph
