@@ -786,8 +786,9 @@ fails the test.
 
 ## Dependency advisories (CI audit gate, v1.9.16)
 
-The CI `audit` job runs `pip-audit` against the frozen runtime
-dependency set on every push and PR. Two advisories surfaced on
+The CI `audit` job runs `pip-audit` against frozen dependencies on every push
+and PR. Since v2.19.6, this includes all development groups and extras alongside
+the runtime dependency set. Two advisories surfaced on
 2026-05-20 against already-locked versions (newly published, not a
 regression in any recon commit):
 

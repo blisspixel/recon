@@ -26,8 +26,11 @@ produces and publishes:
 | **Published-channel parity gate** | After PyPI publication, a separate read-only job requires the exact wheel and sdist and compares their SHA-256 digests with the sealed build pair. GitHub Release publication cannot create or replace assets until parity passes | Inspect the `verify-pypi-parity` job or run `scripts/check_release_channel_parity.py` from the exact source tag |
 | **CycloneDX SBOM** | Generated from a runtime-requirements export of `uv.lock` (`pip-audit --format=cyclonedx-json`), completed with the `recon-tool` root component and dependency edge, validated as nonempty JSON, and attached to the GitHub Release. Any finding, SBOM tool failure, malformed output, or validation failure in this later isolated job blocks both PyPI and GitHub publication | Download `recon-tool-<version>.cdx.json` from the release assets and inspect `metadata.component` and the root dependency entry |
 
-The enforcing CI and release dependency audits resolve the installed auditor
-under Python isolated mode and retry exactly once only when their output matches
+The enforcing CI and release dependency audits cover hash-pinned runtime
+dependencies, all development groups, and all extras exported from `uv.lock`.
+The release SBOM continues to describe only the shipped runtime dependency graph.
+The audits resolve the installed auditor under Python isolated mode and retry
+exactly once only when their output matches
 a narrow set of recognized transport failures. A vulnerability summary,
 malformed input, unknown failure, or second transport failure remains nonzero.
 The later isolated SBOM job also fails on every nonzero audit status, including a

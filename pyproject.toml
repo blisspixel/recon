@@ -150,6 +150,8 @@ dev = [
 # mutation job and by a maintainer running the sweep locally.
 mutation = [
     "cosmic-ray>=8.4",
+    # Security floor for cosmic-ray's repository tooling (PYSEC-2026-3982/3/4).
+    "gitpython>=3.1.60",
 ]
 
 [tool.uv]
