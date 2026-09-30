@@ -2,12 +2,14 @@
 
 from __future__ import annotations
 
+import shlex
 import subprocess
 from collections.abc import Sequence
 from pathlib import Path
 
 import pytest
 import yaml
+from pip_audit._dependency_source.requirement import RequirementSource
 
 from scripts import run_dependency_audit
 
@@ -139,7 +141,7 @@ def test_pip_audit_module_resolution_ignores_checkout_shadow(
 
 
 def test_enforcing_workflows_use_bounded_audit_runner() -> None:
-    expected = "uv run python scripts/run_dependency_audit.py -r .ci-audit-requirements.txt"
+    expected = "uv run python scripts/run_dependency_audit.py --disable-pip -r .ci-audit-requirements.txt"
     for relative, job_name in (
         (".github/workflows/ci.yml", "audit"),
         (".github/workflows/release.yml", "test"),
@@ -157,6 +159,45 @@ def test_enforcing_workflows_use_bounded_audit_runner() -> None:
         assert not {"--no-dev", "--no-hashes"} & set(export_arguments)
         assert export_arguments[-2:] == ["--output-file", ".ci-audit-requirements.txt"]
         assert "continue-on-error" not in export_step
+
+
+@pytest.mark.parametrize(
+    "audit_case",
+    [
+        ("ci.yml", "audit", "Audit dependencies", True),
+        ("release.yml", "test", "Audit dependencies", True),
+        ("release.yml", "sbom", "Generate CycloneDX SBOM", False),
+    ],
+)
+def test_locked_workflow_audits_never_launch_pip_resolution(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+    audit_case: tuple[str, str, str, bool],
+) -> None:
+    workflow_name, job_name, step_name, hashed = audit_case
+    workflow = yaml.safe_load((ROOT / ".github/workflows" / workflow_name).read_text(encoding="utf-8"))
+    step = next(step for step in workflow["jobs"][job_name]["steps"] if step.get("name") == step_name)
+    arguments = shlex.split(step["run"], comments=True)
+    if job_name == "sbom":
+        assert arguments[arguments.index("--from") + 1] == "pip-audit==2.10.1"
+        assert arguments[arguments.index("--with") + 1] == "urllib3>=2.8.0"
+    requirements = tmp_path / "locked.txt"
+    hash_option = f" --hash=sha256:{'0' * 64}" if hashed else ""
+    requirements.write_text(f"synthetic-package==1.0{hash_option}\n", encoding="utf-8")
+
+    def refuse_pip(*_args: object, **_kwargs: object) -> None:
+        raise AssertionError("Locked audits must not bootstrap pip or download packages")
+
+    monkeypatch.setattr("pip_audit._dependency_source.requirement.VirtualEnv", refuse_pip)
+    source = RequirementSource(
+        [requirements],
+        disable_pip="--disable-pip" in arguments,
+        no_deps="--no-deps" in arguments,
+    )
+    dependencies = list(source.collect())
+
+    assert len(dependencies) == 1
+    assert dependencies[0].name == "synthetic-package"
 
 
 def test_dependency_audit_guidance_matches_fail_closed_workflows() -> None:

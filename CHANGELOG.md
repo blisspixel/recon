@@ -55,6 +55,16 @@ Tool surface changes: no CLI command, flag or JSON schema changes.
 Detailed service labels and `connection_map` entry roles use "SPF policy
 reference" for SPF observations.
 
+### Security
+
+- Raise the development-only urllib3 floor to 2.8.0 and refresh its locked
+  artifacts, addressing CVE-2026-97687 and CVE-2026-97689 in the dependency
+  audit toolchain. Apply the same floor to the isolated release SBOM tool.
+  urllib3 remains outside the published runtime graph.
+- Audit the complete frozen exports without launching pip's resolver, avoiding
+  its separate vendored transport. CI, release audits and SBOM generation keep
+  their existing coverage and fail-closed vulnerability checks.
+
 ## [2.19.7] - 2026-09-30
 
 Harden updates and local fingerprint admission, correct agent-discovery
