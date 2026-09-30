@@ -112,7 +112,7 @@ async def test_bimi_vmc_not_fetched_by_default() -> None:
     ctx = dns_mod._DetectionCtx()  # active_probes defaults to False
     calls: list[str] = []
     with patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, "pem"), calls)):
-        await dns_email._apply_bimi(ctx, ["v=BIMI1; a=https://logo.example/vmc.pem"], "alpha.invalid")
+        await dns_email._apply_bimi(ctx, ["v=BIMI1; l=; a=https://logo.example/vmc.pem"], "alpha.invalid")
     assert SVC_BIMI in ctx.services, "BIMI presence must still be detected from the TXT record"
     assert calls == [], "the VMC fetch must not run by default"
     assert ctx.bimi_identity is None
@@ -127,7 +127,7 @@ async def test_bimi_vmc_fetched_when_active() -> None:
     # A reserved public-DNS https .pem host that passes the SSRF guard.
     a_url = "https://bimi.beta.example.com/vmc.pem"
     with patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, "not-a-real-pem"), calls)):
-        await dns_email._apply_bimi(ctx, [f"v=BIMI1; a={a_url}"], "alpha.invalid")
+        await dns_email._apply_bimi(ctx, [f"v=BIMI1; l=; a={a_url}"], "alpha.invalid")
     assert SVC_BIMI in ctx.services
     assert calls == [a_url], "the VMC fetch must run when opted in"
 

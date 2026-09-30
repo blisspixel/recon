@@ -26,6 +26,28 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.10] - 2026-09-30
+
+Correct BIMI and TLS-RPT declaration observations through the existing DNS
+collection path. Compact output and network scope stay unchanged.
+
+### Fixed
+
+- Admit one eligible BIMI or TLS-RPT TXT record before creating service or
+  control evidence. Reject version lookalikes, malformed required fields,
+  conflicting records and explicit BIMI declination.
+- Preserve protocol-specific whitespace and extension rules, including
+  repeated TLS-RPT reporting fields. Share URI syntax validation with DMARC
+  while keeping its legacy report-size handling separate.
+- Extract opt-in BIMI certificate URLs from the same admitted, case-sensitive
+  tags. Existing destination guards and the default no-fetch boundary remain
+  in force. Record admission does not validate logos, certificates, message
+  authentication, endpoint availability or successful report delivery.
+
+### Tool Surface Changes
+
+- No commands, flags, MCP tools or schema fields changed.
+
 ## [2.19.9] - 2026-09-30
 
 Tighten DKIM TXT observations without expanding collection or changing the
