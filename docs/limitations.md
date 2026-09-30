@@ -224,6 +224,16 @@ Times recon has been wrong in empirically verified ways:
   non-standard or per-account selectors (for example some Mailchimp, SendGrid,
   Salesforce Marketing Cloud, and regional providers) can still produce "No
   DKIM observed" false negatives.
+- **Email declarations are not operational validation.** BIMI and TLS-RPT
+  observations require one eligible record with valid declaration syntax.
+  Conflicting records and BIMI's explicit opt-out do not create a positive
+  control. This follows [RFC 8460 section 3](https://www.rfc-editor.org/rfc/rfc8460.html#section-3)
+  and the [BIMI draft -14](https://datatracker.ietf.org/doc/html/draft-brand-indicators-for-message-identification-14),
+  which remains an Internet-Draft. recon does not validate BIMI logo contents,
+  message authentication or recipient display behavior, follow local-part
+  selectors, or test TLS report delivery and receiver scheme support. Ordinary
+  lookups can retain older cached observations until expiry; use `--no-cache`
+  when checking current declaration admission.
 - **Domain homograph / Punycode.** recon IDNA-encodes Unicode input and enforces
   a round-trip guard before analysis. This validation reduces ambiguous input;
   it does not make a Unicode display name safe from visual confusables or

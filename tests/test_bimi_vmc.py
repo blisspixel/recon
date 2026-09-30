@@ -76,19 +76,23 @@ async def test_refuses_unsafe_a_url(a_url: str):
 
 
 @pytest.mark.asyncio
-async def test_malformed_port_does_not_abort_email_security():
+async def test_enrichment_failure_does_not_abort_email_security():
     # Defense in depth: even if BIMI VMC parsing raised, _detect_email_security
     # must keep the BIMI service detection and not propagate (which would turn
     # the whole DNS source into an error and drop valid SPF/DMARC/MX data).
     ctx = dns_mod._DetectionCtx()
+    ctx.active_probes = True
+    attempted: list[str] = []
+    record = "v=BIMI1; l=https://assets.example.com/logo.svg; a=https://assets.example.com/vmc.pem"
 
     async def _boom(_ctx: Any, _txt: str) -> None:
+        attempted.append(_txt)
         raise ValueError("simulated BIMI parse failure")
 
     async def _txt_for(domain: str, rdtype: str, **_kw: Any) -> list[str]:
         # Return a BIMI record only for the default._bimi.<domain> name.
         if rdtype == "TXT" and domain.startswith("default._bimi."):
-            return ["v=BIMI1; a=https://attacker.example:bad/vmc.pem"]
+            return [record]
         return []
 
     with (
@@ -99,6 +103,7 @@ async def test_malformed_port_does_not_abort_email_security():
         await dns_mod._detect_email_security(ctx, "example.com")
 
     assert dns_email.SVC_BIMI in ctx.services
+    assert attempted == [record]
 
 
 @pytest.mark.asyncio
@@ -108,7 +113,7 @@ async def test_accepts_public_https_without_trusting_subject():
     pem = "-----BEGIN CERTIFICATE-----\nMAA=\n-----END CERTIFICATE-----"
 
     with patch.object(dns_email, "_http_client", _fake_http_client(_Resp(200, pem), calls)):
-        await dns_email._parse_bimi_vmc(ctx, "v=BIMI1; a=https://amplify.alpha.example.com/vmc.pem")
+        await dns_email._parse_bimi_vmc(ctx, "v=BIMI1; l=; a=https://amplify.alpha.example.com/vmc.pem")
 
     # A legitimate public https URL is fetched, with redirects disabled.
     assert len(calls) == 1

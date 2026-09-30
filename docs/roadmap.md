@@ -30,6 +30,8 @@ tracked separately from product work.
 > DKIM TXT admission now follows tag and key-material boundaries, rejects
 > revoked keys and recognizes the omitted-version default. Selector scope and
 > positive evidence stay intact; cryptographic verification remains out of scope.
+> BIMI and TLS-RPT declaration admission also rejects malformed, conflicting
+> and explicitly declined records without widening collection or default output.
 >
 > `main` is the single integration and release branch. Checked implementation
 > and release-preparation branches are temporary. Publication is complete only

@@ -12,10 +12,9 @@ from __future__ import annotations
 import asyncio
 import base64
 import binascii
-import ipaddress
 import logging
 import re
-from urllib.parse import SplitResult, urlsplit
+from urllib.parse import SplitResult
 
 from recon_tool.constants import (
     SVC_BIMI,
@@ -48,10 +47,13 @@ from recon_tool.sources.dns_tables import (
     is_public_dns_name,
     is_spf_record,
     match_spf_targets,
+    select_bimi_record,
+    select_tls_rpt_record,
     spf_all_qualifier,
     spf_redirect_target,
     spf_targets,
 )
+from recon_tool.sources.email_uri import parse_email_policy_uri
 from recon_tool.sources.mta_sts import is_plain_text_policy, parse_mta_sts_policy, select_mta_sts_record
 from recon_tool.validator import host_has_suffix, is_domain_shaped, strip_control_chars
 
@@ -553,16 +555,6 @@ async def _fetch_mta_sts_policy(domain: str, degraded_sources: set[str] | None =
 # The rua tag value is a comma-separated list of DMARC aggregate report URIs,
 # as specified by RFC 9990. Each parsed item is URI-validated before a mailto
 # path can contribute vendor evidence.
-_URI_SCHEME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9+.-]*:")
-_INVALID_URI_CHAR_RE = re.compile(r"[\x00-\x20\x7f]")
-_INVALID_PERCENT_ESCAPE_RE = re.compile(r"%(?![0-9A-Fa-f]{2})")
-_URI_PATH_RE = re.compile(r"^[A-Za-z0-9._~$&'()*+,;=:@%/-]*$")
-_URI_QUERY_FRAGMENT_RE = re.compile(r"^[A-Za-z0-9._~$&'()*+,;=:@%/?-]*$")
-_URI_USERINFO_RE = re.compile(r"^[A-Za-z0-9._~$&'()*+,;=:%-]*$")
-_URI_REG_NAME_RE = re.compile(r"^[A-Za-z0-9._~$&'()*+,;=%-]*$")
-_IPV_FUTURE_RE = re.compile(r"^[vV][0-9A-Fa-f]+\.[A-Za-z0-9._~$&'()*+,;=:-]+$")
-_UPPER_IPV_FUTURE_RE = re.compile(r"(://(?:[^/?#]*@)?\[)V(?=[0-9A-Fa-f]+\.)")
-_ASCII_PORT_RE = re.compile(r"^[0-9]*$")
 _OBSOLETE_REPORT_SIZE_RE = re.compile(r"![0-9]+[kmgt]?$", re.IGNORECASE)
 
 _DMARC_POLICY_VALUES = frozenset({"none", "quarantine", "reject"})
@@ -695,64 +687,12 @@ def leading_dmarc_version_value(dmarc_record: str) -> str | None:
     return value.rstrip(" \t") if ";" in dmarc_record else value
 
 
-def _valid_uri_ip_literal(literal: str) -> bool:
-    if "%" in literal:
-        return False
-    try:
-        ipaddress.IPv6Address(literal)
-        return True
-    except ValueError:
-        return bool(_IPV_FUTURE_RE.fullmatch(literal))
-
-
-def _valid_uri_authority(netloc: str) -> bool:
-    userinfo, separator, host_port = netloc.rpartition("@")
-    if separator and not _URI_USERINFO_RE.fullmatch(userinfo):
-        return False
-    if host_port.startswith("["):
-        close = host_port.find("]")
-        suffix = host_port[close + 1 :] if close >= 0 else "invalid"
-        valid_suffix = not suffix or (suffix.startswith(":") and bool(_ASCII_PORT_RE.fullmatch(suffix[1:])))
-        if close < 0 or not valid_suffix:
-            return False
-        return _valid_uri_ip_literal(host_port[1:close])
-    if "[" in host_port or "]" in host_port:
-        return False
-    host, separator, port = host_port.rpartition(":")
-    if not separator:
-        host = host_port
-    return (
-        ":" not in host
-        and (not separator or bool(_ASCII_PORT_RE.fullmatch(port)))
-        and bool(_URI_REG_NAME_RE.fullmatch(host))
-    )
-
-
 def _parse_reporting_uri(raw_uri: str) -> SplitResult | None:
     """Return one syntax-checked RFC 3986 URI with legacy size removed."""
     candidate = _OBSOLETE_REPORT_SIZE_RE.sub("", raw_uri.lstrip(" \t"))
-    if (
-        not candidate
-        or not candidate.isascii()
-        or "!" in candidate
-        or _INVALID_URI_CHAR_RE.search(candidate)
-        or _INVALID_PERCENT_ESCAPE_RE.search(candidate)
-        or not _URI_SCHEME_RE.match(candidate)
-    ):
+    if "!" in candidate:
         return None
-    try:
-        parsed = urlsplit(_UPPER_IPV_FUTURE_RE.sub(r"\1v", candidate, count=1))
-    except ValueError:
-        return None
-    components_valid = (
-        bool(parsed.scheme)
-        and bool(_URI_PATH_RE.fullmatch(parsed.path))
-        and bool(_URI_QUERY_FRAGMENT_RE.fullmatch(parsed.query))
-        and bool(_URI_QUERY_FRAGMENT_RE.fullmatch(parsed.fragment))
-    )
-    if not components_valid or (parsed.netloc and not _valid_uri_authority(parsed.netloc)):
-        return None
-    return parsed
+    return parse_email_policy_uri(candidate)
 
 
 def _valid_reporting_uri(raw_uri: str) -> bool:
@@ -874,16 +814,16 @@ async def _apply_bimi(ctx: dns_base.DetectionCtx, bimi_results: list[str], domai
     anything it raises is caught and the BIMI detection plus the rest of the DNS
     intelligence is kept.
     """
-    for txt in bimi_results:
-        if "v=bimi1" in txt.lower():
-            ctx.services.add(SVC_BIMI)
-            ctx.evidence.append(EvidenceRecord("BIMI", txt, SVC_BIMI, "bimi"))
-            if not ctx.active_probes:
-                continue
-            try:
-                await _parse_bimi_vmc(ctx, txt)
-            except Exception as exc:
-                logger.debug("BIMI VMC enrichment failed for %s: %s", domain, exc)
+    txt = select_bimi_record(bimi_results)
+    if txt is None:
+        return
+    ctx.services.add(SVC_BIMI)
+    ctx.evidence.append(EvidenceRecord("BIMI", txt, SVC_BIMI, "bimi"))
+    if ctx.active_probes:
+        try:
+            await _parse_bimi_vmc(ctx, txt)
+        except Exception as exc:
+            logger.debug("BIMI VMC enrichment failed for %s: %s", domain, exc)
 
 
 async def _apply_mta_sts(ctx: dns_base.DetectionCtx, mta_sts_results: list[str], domain: str) -> None:
@@ -903,11 +843,10 @@ async def _apply_mta_sts(ctx: dns_base.DetectionCtx, mta_sts_results: list[str],
 
 
 def _apply_tls_rpt(ctx: dns_base.DetectionCtx, tls_rpt_results: list[str]) -> None:
-    """Record TLS-RPT presence."""
-    for txt in tls_rpt_results:
-        if "v=tlsrptv1" in txt.lower():
-            ctx.add("TLS-RPT", "tls-rpt", source_type="TXT", raw_value=txt)
-            break
+    """Record one admitted TLS-RPT policy, preserving its exact DNS evidence."""
+    txt = select_tls_rpt_record(tls_rpt_results)
+    if txt is not None:
+        ctx.add("TLS-RPT", "tls-rpt", source_type="TXT", raw_value=txt)
 
 
 async def detect_email_security(ctx: dns_base.DetectionCtx, domain: str) -> None:

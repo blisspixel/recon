@@ -14,10 +14,12 @@ import base64
 import binascii
 import logging
 import re
+from collections.abc import Iterable
 from typing import TYPE_CHECKING, Any
 
 from recon_tool.rate_limit import RateLimited
 from recon_tool.regex_safety import compile_regex
+from recon_tool.sources.email_uri import parse_email_policy_uri
 from recon_tool.validator import host_has_suffix, is_domain_shaped
 
 logger = logging.getLogger("recon")
@@ -27,6 +29,9 @@ if TYPE_CHECKING:
 
 _CNAME_TARGET_FRAGMENT_RE = re.compile(r"^[a-z0-9_-]+$", re.ASCII)
 _DKIM_TAG_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*", re.ASCII)
+_TLS_RPT_FIELD_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,31}", re.ASCII)
+_TLS_RPT_EXTENSION_RE = re.compile(r"[\x21-\x3a\x3c\x3e-\x7e]+", re.ASCII)
+_BIMI_LOCAL_PART_PREFIX_RE = re.compile(r"[A-Za-z0-9-]{1,63}", re.ASCII)
 
 
 def parse_rdata(raw: str) -> str:
@@ -59,8 +64,8 @@ def parse_rdata(raw: str) -> str:
     return stripped
 
 
-def _dkim_key_tags(record: str) -> dict[str, str] | None:
-    """Parse the bounded, case-sensitive tag list without interpreting key bytes."""
+def _parse_dkim_tag_list(record: str) -> dict[str, str] | None:
+    """Parse RFC 6376 tag-list syntax, also used by BIMI assertion records."""
     # DNS RDATA has a 16-bit length. Reject oversized caller-supplied input
     # before allocating tag lists, and unfold only RFC 6376-permitted FWS.
     if len(record) > 65_535 or not record.isascii():
@@ -89,7 +94,7 @@ def is_dkim_key_record(record: str) -> bool:
     admission only: no signature, algorithm, key strength or ASN.1 validation.
     Unknown tags retain their specified ignore semantics.
     """
-    tags = _dkim_key_tags(record)
+    tags = _parse_dkim_tag_list(record)
     if not tags or ("v" in tags and (next(iter(tags)) != "v" or tags["v"] != "DKIM1")):
         return False
     encoded = tags.get("p", "").replace(" ", "").replace("\t", "")
@@ -180,15 +185,105 @@ def match_spf_targets(targets: tuple[str, ...], patterns: tuple[Detection, ...])
     return list(dict.fromkeys(det for det in patterns if det in matched))
 
 
+def _valid_bimi_uri(value: str, *, authority_evidence: bool) -> bool:
+    if "," in value:
+        return False
+    parsed = parse_email_policy_uri(value)
+    if parsed is None or parsed.scheme != "https" or not parsed.hostname:
+        return False
+    # BIMI's authority document specifically requires an FQDN. This is
+    # declaration syntax only, not permission to fetch a destination.
+    host = parsed.hostname.lower().rstrip(".")
+    return not authority_evidence or (
+        is_domain_shaped(host) and len(host) <= 253 and all(len(label) <= 63 for label in host.split("."))
+    )
+
+
+def _bimi_assertion_tags(record: str) -> dict[str, str] | None:
+    """Admit a participating default-selector declaration, not logo validity.
+
+    BIMI draft -14 sections 4.3 and 7.2 require an exact leading version,
+    a location tag, and one assertion. Both locations empty is an opt-out.
+    Unknown tags and unknown avatar preferences retain ignore semantics.
+    """
+    tags = _parse_dkim_tag_list(record)
+    if not tags or next(iter(tags)) != "v" or tags["v"] != "BIMI1" or "l" not in tags:
+        return None
+    if not tags["l"] and not tags.get("a"):
+        return None
+    for name in ("l", "a"):
+        value = tags.get(name, "")
+        if value and not _valid_bimi_uri(value, authority_evidence=name == "a"):
+            return None
+    prefixes = tags.get("lps", "")
+    if prefixes and any(
+        _BIMI_LOCAL_PART_PREFIX_RE.fullmatch(prefix.strip(" \t")) is None for prefix in prefixes.split(",")
+    ):
+        return None
+    return tags
+
+
+def select_bimi_record(records: Iterable[str]) -> str | None:
+    """Select before validating so a malformed competing assertion still blocks."""
+    candidates = [record for record in records if _parse_dkim_tag_list(record.split(";", 1)[0]) == {"v": "BIMI1"}]
+    if len(candidates) != 1 or _bimi_assertion_tags(candidates[0]) is None:
+        return None
+    return candidates[0]
+
+
 def extract_bimi_vmc_url(bimi_txt: str) -> str | None:
-    """Return the ``a=`` VMC ``.pem`` URL from a BIMI TXT record, or None."""
-    for part in bimi_txt.split(";"):
-        cleaned = part.strip()
-        if cleaned.lower().startswith("a="):
-            candidate = cleaned[2:].strip()
-            if candidate.lower().endswith(".pem"):
-                return candidate
-    return None
+    """Use the admitted, case-sensitive authority tag for opt-in enrichment."""
+    tags = _bimi_assertion_tags(bimi_txt)
+    candidate = tags.get("a", "") if tags else ""
+    return candidate if candidate.lower().endswith(".pem") else None
+
+
+def _valid_tls_rpt_record(record: str) -> bool:
+    if len(record) > 65_535 or not record.isascii():
+        return False
+    parts = record.split(";")
+    if parts[0].rstrip(" \t") != "v=TLSRPTv1":
+        return False
+    has_rua = False
+    for index, part in enumerate(parts[1:], start=1):
+        # WSP belongs to a semicolon delimiter or a URI-list comma, never
+        # around '=' or after the final URI without a trailing semicolon.
+        field = part.lstrip(" \t")
+        if index < len(parts) - 1:
+            field = field.rstrip(" \t")
+        elif not field:
+            continue
+        name, separator, value = field.partition("=")
+        if not separator or _TLS_RPT_FIELD_RE.fullmatch(name) is None:
+            return False
+        if name == "rua":
+            has_rua = True
+            uris = value.split(",")
+            for uri_index, uri in enumerate(uris):
+                candidate = uri.lstrip(" \t") if uri_index else uri
+                if uri_index < len(uris) - 1:
+                    candidate = candidate.rstrip(" \t")
+                if "!" in candidate or parse_email_policy_uri(candidate) is None:
+                    return False
+        elif _TLS_RPT_EXTENSION_RE.fullmatch(value) is None:
+            return False
+    return has_rua
+
+
+def select_tls_rpt_record(records: Iterable[str]) -> str | None:
+    """Apply RFC 8460 section 3 selection and declaration grammar.
+
+    Repeated rua fields and unknown extensions are allowed. URI syntax does
+    not establish endpoint reachability, scheme support or report delivery.
+    """
+    candidates = list(records)
+    # The ABNF permits WSP before ';' for a lone record. The RFC specifies
+    # a literal-prefix filter specifically when multiple TXT RRs arrive.
+    if len(candidates) > 1:
+        candidates = [record for record in candidates if record.startswith("v=TLSRPTv1;")]
+    if len(candidates) != 1 or not _valid_tls_rpt_record(candidates[0]):
+        return None
+    return candidates[0]
 
 
 def bimi_vmc_url_is_safe(a_url: str) -> bool:
