@@ -147,6 +147,9 @@ dev = [
     # the published runtime graph.
     "pip>=26.2",
     "pip-audit>=2.7",
+    # pip-audit uses Requests. Keep its transport above the proxy-TLS and
+    # chunk-size fixes (CVE-2026-97687 and CVE-2026-97689), outside runtime.
+    "urllib3>=2.8.0",
 ]
 # Mutation-testing gate (the `mutation-gate` CI workflow). Separate group so
 # the per-push dev environment stays lean; cosmic-ray is pulled only by the

@@ -24,6 +24,9 @@ tracked separately from product work.
 > and closes reproducible updater and regex-admission defects. Routine catalog
 > maintenance uses public specifications and synthetic evidence; company
 > interviews and private inventory confirmation are not release gates.
+> The subsequent SPF accuracy pass shares version, directive and per-target
+> matching rules between live collection and cache replay, preserving raw
+> evidence while avoiding ignored-policy claims and unnecessary redirect hops.
 >
 > `main` is the single integration and release branch. Checked implementation
 > and release-preparation branches are temporary. Publication is complete only

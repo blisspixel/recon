@@ -45,6 +45,10 @@ from recon_tool.sources.dns_tables import (
     bimi_vmc_url_is_safe,
     extract_bimi_vmc_url,
     is_public_dns_name,
+    is_spf_record,
+    match_spf_targets,
+    spf_all_qualifier,
+    spf_redirect_target,
     spf_targets,
 )
 from recon_tool.sources.mta_sts import is_plain_text_policy, parse_mta_sts_policy, select_mta_sts_record
@@ -67,35 +71,6 @@ def _record_spf_targets(
         classified = any(host_has_suffix(target, det.pattern.lower()) for det in patterns)
         ctx.record_catalog_observation("spf", "@", target, classified=classified)
     return tuple(targets)
-
-
-def _matching_spf_patterns(
-    targets: tuple[str, ...],
-    patterns: tuple[Detection, ...],
-) -> list[Detection]:
-    """Return provider patterns that match a parsed SPF target by DNS labels."""
-    return [det for det in patterns if any(host_has_suffix(target, det.pattern.lower()) for target in targets)]
-
-
-def spf_all_qualifier(spf_record: str) -> str | None:
-    """Return the qualifier of the ``all`` mechanism, or None when absent.
-
-    RFC 7208 section 6 lets modifiers such as ``exp=`` and ``redirect=`` appear
-    anywhere in the record, including after ``all``; the RFC's own example is
-    ``v=spf1 mx -all exp=explain._spf.%{d}``. Matching on the end of the record
-    therefore missed the policy whenever a modifier trailed it, and it could
-    not see ``+all`` or ``?all`` at all. Walk the terms instead: a mechanism
-    carries an optional leading qualifier and never contains ``=``, which is
-    what distinguishes it from a modifier.
-    """
-    for term in spf_record.split():
-        if not term or "=" in term:
-            continue
-        qualifier = term[0] if term[0] in "+-~?" else "+"
-        mechanism = term[1:] if term[0] in "+-~?" else term
-        if mechanism.lower() == "all":
-            return qualifier
-    return None
 
 
 def apply_spf_policy_record(ctx: dns_base.DetectionCtx, txt: str) -> None:
@@ -136,7 +111,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
         txt_lower = txt.lower()
 
         txt_matches = match_txt_all(txt, txt_patterns)
-        if not txt_lower.startswith("v=spf1"):
+        if not is_spf_record(txt):
             ctx.record_catalog_observation("txt", "@", txt, classified=bool(txt_matches))
         if txt_matches:
             # One TXT value can carry more than one vendor token. Catalog
@@ -157,22 +132,16 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             if token:
                 ctx.site_verification_tokens.add(token)
 
-        if txt_lower.startswith("v=spf1"):
+        if is_spf_record(txt):
             observed_targets = _record_spf_targets(ctx, txt_lower, spf_patterns)
             ctx.spf_include_count = max(ctx.spf_include_count, txt_lower.count("include:"))
             # SPF patterns match parsed include: and redirect= domains on DNS
             # label boundaries. A raw substring match would misattribute a
             # lookalike such as ``vendor.example.evil.test``.
             #
-            # Multiple distinct vendors can legitimately fire on one SPF
-            # record (e.g. M365 + Salesforce includes), so we accumulate
-            # rather than break-on-first-match. We then apply
-            # ``filter_shadowed_matches`` so that when a broad pattern
-            # (e.g. ``cisco.com``) and a narrow one
-            # (e.g. ``ess.cisco.com``) both match, only the narrow one's
-            # slug fires , preventing double-counting of the same vendor.
-            spf_matches = _matching_spf_patterns(observed_targets, spf_patterns)
-            for det in filter_shadowed_matches(spf_matches):
+            # Suppress overlapping rules per target, not across independent
+            # includes. One specific target cannot erase another provider.
+            for det in match_spf_targets(observed_targets, spf_patterns):
                 ctx.add(det.name, det.slug, source_type="SPF", raw_value=txt)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
             apply_spf_policy_record(ctx, txt)
@@ -191,7 +160,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # end of the record let ``+all`` and ``?all`` through, so the
             # redirect target's strict policy was credited to a record whose
             # own policy passes everything.
-            if "redirect=" in txt_lower and spf_all_qualifier(txt_lower) is None:
+            if spf_redirect_target(txt) is not None:
                 await _follow_spf_redirect(ctx, txt_lower, depth=0, max_depth=3)
 
     # SPF complexity summary - runs once per domain after the TXT
@@ -222,13 +191,8 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
     if depth >= max_depth:
         return
     try:
-        import re
-
-        match = re.search(r"redirect=([^\s]+)", spf_text)
-        if not match:
-            return
-        target = match.group(1).strip().rstrip(".")
-        if not target or "." not in target:
+        target = spf_redirect_target(spf_text)
+        if target is None or "." not in target:
             return
         # Security: the redirect= target is attacker-controlled. The owner
         # of the queried domain authors their own SPF record, so a record
@@ -261,15 +225,14 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
         )
         patterns = get_spf_patterns()
         for record in target_records:
-            rec_lower = record.strip().lower()
-            if not rec_lower.startswith("v=spf1"):
+            rec_lower = record.lower()
+            if not is_spf_record(record):
                 continue
             spf_targets = _record_spf_targets(ctx, rec_lower, patterns)
             # Run the same fingerprint pass on the target's SPF, with
             # specificity suppression for shadow patterns (see the
             # comment in detect_txt above).
-            spf_matches = _matching_spf_patterns(spf_targets, patterns)
-            for det in filter_shadowed_matches(spf_matches):
+            for det in match_spf_targets(spf_targets, patterns):
                 ctx.add(det.name, det.slug, source_type="SPF", raw_value=record)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
             # Propagate the policy qualifier from the redirect
@@ -287,7 +250,7 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
                 ctx.evidence.append(EvidenceRecord("SPF", record, SVC_SPF_SOFTFAIL, "spf-softfail"))
                 return
             # Chain continues: recurse one more hop.
-            if "redirect=" in rec_lower:
+            if spf_redirect_target(record) is not None:
                 await _follow_spf_redirect(ctx, rec_lower, depth + 1, max_depth)
                 return
     except Exception as exc:

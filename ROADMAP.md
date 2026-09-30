@@ -93,6 +93,11 @@ The default panel remains compact, and collection remains within its existing
 passive boundary. Protocol currency does not imply that every agent harness or
 portable plugin client has been exercised.
 
+The subsequent SPF accuracy pass keeps ignored directives out of provider
+claims, applies redirect constraints at every hop, and preserves independent
+targets through specificity matching. Raw observations and compact output stay
+intact; this does not turn recon into a full SPF evaluator.
+
 For correlation, prioritize the accuracy of the public observation and the
 honesty of its explanation: documented vendor patterns, synthetic positive and
 lookalike cases, duplicate-evidence checks, and sparse or failed collection.

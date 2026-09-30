@@ -87,6 +87,20 @@ fingerprints:
 | `srv` | Bounded common SRV targets | DNS-label suffix; dotless patterns use substring matching | Service discovery (Teams, XMPP) |
 | `dmarc_rua` | DMARC `rua=` report URI | Substring | DMARC aggregate-report processor / vendor (the report mailbox host) |
 
+SPF provider matching requires the complete `v=spf1` version token. It uses
+include references before the first `all` mechanism and a single effective
+`redirect=` modifier. All include qualifiers remain policy references, not
+proof of sender authorization. An `all` mechanism makes redirect ineffective
+wherever it appears.
+The bounded redirect collector applies that rule at every hop. See
+[RFC 7208 sections 4.5, 4.6.2, 5.1 and 6.1](https://www.rfc-editor.org/rfc/rfc7208.html).
+
+Specificity is resolved per SPF target, so an overlapping rule cannot hide a
+different, independently listed target. Live detection and cache-only replay
+share this behavior and preserve the original record as evidence. This is a
+bounded observation parser, not full SPF validation or sender-IP evaluation;
+recon does not recursively expand includes or evaluate SPF macros.
+
 ## Metadata fields
 
 The required `confidence` value (`low`, `medium`, or `high`) is a reviewed

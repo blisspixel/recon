@@ -72,7 +72,7 @@ _ROLE_DETECTION_TYPES: dict[str, tuple[str, ...]] = {
     "public TXT account indicator": ("txt", "subdomain_txt"),
     "MX delivery path": ("mx",),
     "CNAME endpoint binding": ("cname", "cname_target"),
-    "SPF sender authorization": ("spf",),
+    "SPF policy reference": ("spf",),
     "DMARC aggregate-report destination": ("dmarc_rua",),
     "SRV service-discovery reference": ("srv",),
     "authoritative DNS delegation": ("ns",),

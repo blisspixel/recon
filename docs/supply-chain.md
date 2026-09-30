@@ -29,6 +29,9 @@ produces and publishes:
 The enforcing CI and release dependency audits cover hash-pinned runtime
 dependencies, all development groups, and all extras exported from `uv.lock`.
 The release SBOM continues to describe only the shipped runtime dependency graph.
+All three audit paths use `--disable-pip` to read their complete frozen exports
+without bootstrapping pip or downloading the audited packages. The isolated
+SBOM tool separately carries the patched urllib3 floor from development tooling.
 The audits resolve the installed auditor under Python isolated mode and retry
 exactly once only when their output matches
 a narrow set of recognized transport failures. A vulnerability summary,

@@ -159,7 +159,7 @@ jobs:
         run: uv export --frozen --all-groups --all-extras --no-emit-project --format requirements.txt --output-file .ci-audit-requirements.txt
 
       - name: Audit dependencies
-        run: uv run python scripts/run_dependency_audit.py -r .ci-audit-requirements.txt
+        run: uv run python scripts/run_dependency_audit.py --disable-pip -r .ci-audit-requirements.txt
 
       - name: Upload standalone wheel smoke inputs
         # The later smoke job needs no source checkout or development install.
@@ -414,31 +414,24 @@ jobs:
         # resolved set, derivable independently.
         run: uv export --frozen --no-dev --no-emit-project --no-hashes --format requirements.txt --output-file .ci-audit-requirements.txt
 
-      - name: Install pip-audit (isolated)
-        # pipx-style isolation: pip-audit lives only in a uv-managed
-        # virtualenv on this throwaway runner. It never sees dist/
-        # because dist/ is on the ``build`` job's filesystem (sealed
-        # into GitHub storage at upload time and not retrieved here).
-        # Pinned rather than floating: this was the one unpinned software
-        # install across every workflow, so an upstream compromise could have
-        # shaped SBOM content on a release run.
-        run: uv tool install pip-audit==2.10.1
-
       - name: Generate CycloneDX SBOM
         run: |
           set -euo pipefail
           VERSION="${GITHUB_REF_NAME#v}"
           mkdir -p sbom
-          # ``--no-deps`` tells pip-audit not to install the locked
-          # requirements again; it just reads the requirements text
-          # to produce the SBOM. Every nonzero status blocks publication,
+          # ``--disable-pip`` avoids bootstrapping an installer. ``--no-deps``
+          # admits this complete, pinned, unhashed runtime export. The auditor
+          # reads that graph directly. Every nonzero status blocks publication,
           # including a finding first disclosed after the enforcing audit ran.
           # Missing/corrupt JSON or a missing project root also fails closed.
+          # Pin the isolated invocation itself, including its transport floor;
+          # it does not inherit project dev constraints or consume sealed dist/.
           set +e
-          uv tool run pip-audit -r .ci-audit-requirements.txt \
+          uv tool run --from pip-audit==2.10.1 --with 'urllib3>=2.8.0' \
+            pip-audit -r .ci-audit-requirements.txt \
             --format=cyclonedx-json \
             --output "sbom/recon-tool-${VERSION}.cdx.json" \
-            --no-deps
+            --no-deps --disable-pip
           audit_status=$?
           set -e
           if [ "$audit_status" -ne 0 ]; then
