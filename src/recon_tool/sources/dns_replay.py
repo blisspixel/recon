@@ -30,7 +30,7 @@ from recon_tool.models import EvidenceRecord, SourceResult
 from recon_tool.regex_safety import compile_regex
 from recon_tool.source_status import ObservationChannel, SourceStatus
 from recon_tool.sources.dns_base import DetectionCtx
-from recon_tool.sources.dns_tables import spf_targets
+from recon_tool.sources.dns_tables import is_spf_record, match_spf_targets, spf_targets
 from recon_tool.validator import host_has_suffix, is_domain_shaped
 
 if TYPE_CHECKING:
@@ -93,18 +93,13 @@ def _replay_txt(ctx: DetectionCtx, value: str) -> None:
             ctx.record_fp_match(match.slug, "txt", match.pattern)
 
     lowered = value.lower()
-    if not lowered.startswith("v=spf1"):
+    if not is_spf_record(value):
         return
     # Compare parsed include: and redirect= targets on label boundaries, as the
     # live detector does. Searching the whole record text let a lookalike
     # include attribute the record to the impersonated provider.
     targets = spf_targets(lowered)
-    spf_matches = [
-        rule
-        for rule in get_spf_patterns()
-        if any(host_has_suffix(target, rule.pattern.lower().rstrip(".")) for target in targets)
-    ]
-    for match in filter_shadowed_matches(spf_matches):
+    for match in match_spf_targets(targets, get_spf_patterns()):
         ctx.add(match.name, match.slug, source_type="SPF", raw_value=value)
         ctx.record_fp_match(match.slug, "spf", match.pattern)
     from recon_tool.sources.dns_email import apply_spf_policy_record

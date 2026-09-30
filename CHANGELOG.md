@@ -26,6 +26,35 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.8] - 2026-09-30
+
+Correct SPF provider observations and bounded redirect handling without adding
+collection or changing the compact default view.
+
+### Fixed
+
+- SPF detection requires the complete `v=spf1` version token. Lookalike
+  prefixes such as `v=spf10` no longer produce provider or SPF policy claims.
+- Provider matching excludes includes after `all` and redirects ignored
+  because `all` is present.
+  Original TXT records remain available as retained observations.
+- Qualified includes remain observable policy references. Detailed service
+  roles say "SPF policy reference" rather than claiming sender authorization;
+  the default panel continues to show the compact service name.
+- Redirect collection requires one exact `redirect=` modifier and applies the
+  `all` rule at every hop. Embedded modifier text and repeated redirects no
+  longer schedule unrelated DNS requests or inherit a downstream policy.
+- SPF specificity is applied to each target independently. A narrow match no
+  longer hides a separately listed provider with an overlapping catalog rule.
+  Repeated targets still produce one occurrence per matching rule. Live
+  collection and cache-only fingerprint replay share the same matching path.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag or JSON schema changes.
+Detailed service labels and `connection_map` entry roles use "SPF policy
+reference" for SPF observations.
+
 ## [2.19.7] - 2026-09-30
 
 Harden updates and local fingerprint admission, correct agent-discovery

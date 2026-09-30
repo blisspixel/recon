@@ -12,13 +12,16 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from recon_tool.rate_limit import RateLimited
 from recon_tool.regex_safety import compile_regex
 from recon_tool.validator import host_has_suffix, is_domain_shaped
 
 logger = logging.getLogger("recon")
+
+if TYPE_CHECKING:
+    from recon_tool.fingerprints import Detection
 
 _CNAME_TARGET_FRAGMENT_RE = re.compile(r"^[a-z0-9_-]+$", re.ASCII)
 
@@ -53,28 +56,81 @@ def parse_rdata(raw: str) -> str:
     return stripped
 
 
-_SPF_TARGET_RE = re.compile(
-    r"(?:^|\s)(?:[+?~-]?include:|redirect=)([^\s]+)",
-    re.IGNORECASE,
-)
+def is_spf_record(value: str) -> bool:
+    """Recognize the complete version token (RFC 7208 section 4.5)."""
+    lowered = value.lower()
+    return lowered == "v=spf1" or lowered.startswith("v=spf1 ")
+
+
+def _spf_terms(record: str) -> tuple[str, ...]:
+    """Keep SPF's ASCII-space term boundaries without interpreting macros."""
+    if not is_spf_record(record):
+        return ()
+    return tuple(term for term in record.lower().split(" ")[1:] if term)
+
+
+def spf_all_qualifier(record: str) -> str | None:
+    """Return the first exact all mechanism's qualifier, wherever it occurs."""
+    for term in _spf_terms(record):
+        if term == "all":
+            return "+"
+        if len(term) == 4 and term[0] in "+-~?" and term[1:] == "all":
+            return term[0]
+    return None
+
+
+def spf_redirect_target(record: str) -> str | None:
+    """Return one effective redirect, never modifier text or an ignored hop.
+
+    RFC 7208 sections 6 and 6.1 forbid repeated redirect modifiers and ignore
+    redirect whenever any all mechanism is present, including on later hops.
+    """
+    if spf_all_qualifier(record) is not None:
+        return None
+    targets = [
+        term.removeprefix("redirect=").rstrip(".") for term in _spf_terms(record) if term.startswith("redirect=")
+    ]
+    return targets[0] if len(targets) == 1 and targets[0] else None
 
 
 def spf_targets(spf_text: str) -> tuple[str, ...]:
-    """Return the normalized ``include:`` and ``redirect=`` targets of a record.
+    """Return reachable include references and the effective redirect target.
 
     Provider attribution must compare a parsed target, not the raw record text.
     Searching the whole string lets a lookalike such as
     ``_spf.vendor.com.attacker-controlled.test`` match ``vendor.com``, because
     the vendor name appears as an interior label rather than the target's
-    suffix. Both the live detector and the cached-record replay share this so
-    they cannot drift apart.
+    suffix. Every include qualifier can supply a policy reference, but no
+    include after all is reachable. Both live collection and cached replay
+    use this projection. It does not establish sender authorization, evaluate
+    sender IPs or expand SPF macros.
     """
     targets: list[str] = []
-    for match in _SPF_TARGET_RE.finditer(spf_text):
-        target = match.group(1).strip().lower().rstrip(".")
-        if target:
+    for term in _spf_terms(spf_text):
+        mechanism = term[1:] if term[0] in "+-~?" else term
+        if mechanism == "all":
+            break
+        if mechanism.startswith("include:") and (target := mechanism.removeprefix("include:").rstrip(".")):
             targets.append(target)
+    if redirect := spf_redirect_target(spf_text):
+        targets.append(redirect)
     return tuple(targets)
+
+
+def match_spf_targets(targets: tuple[str, ...], patterns: tuple[Detection, ...]) -> list[Detection]:
+    """Apply specificity per target, then preserve independently matched rules.
+
+    A narrow rule shadows its parent only on the same target. A separate
+    include for the parent's own domain still supplies evidence for that rule.
+    Repeated targets do not duplicate the resulting rule occurrences.
+    """
+    from recon_tool.fingerprints import filter_shadowed_matches
+
+    matched: set[Detection] = set()
+    for target in targets:
+        candidates = [det for det in patterns if host_has_suffix(target, det.pattern)]
+        matched.update(filter_shadowed_matches(candidates))
+    return list(dict.fromkeys(det for det in patterns if det in matched))
 
 
 def extract_bimi_vmc_url(bimi_txt: str) -> str | None:

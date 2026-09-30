@@ -10,6 +10,7 @@ from rich.console import Console
 
 from recon_tool.formatter import render_tenant_panel
 from recon_tool.formatter.classify import categorize_services, role_aware_service_label
+from recon_tool.formatter.serialize import format_tenant_dict
 from recon_tool.models import EvidenceRecord, TenantInfo
 
 
@@ -60,7 +61,7 @@ def _services_block(output: str) -> str:
         ("MX", "MX delivery path"),
         ("CNAME", "CNAME endpoint binding"),
         ("CNAME_TARGET", "CNAME endpoint binding"),
-        ("SPF", "SPF sender authorization"),
+        ("SPF", "SPF policy reference"),
         ("DMARC_RUA", "DMARC aggregate-report destination"),
         ("SRV", "SRV service-discovery reference"),
         ("NS", "authoritative DNS delegation"),
@@ -86,6 +87,31 @@ def test_catalog_service_without_matching_lineage_states_role_unavailable() -> N
 
     assert role_aware_service_label("Synthetic Service", ()) == "Synthetic Service (role unavailable)"
     assert categorize_services(info) == {"Business Apps": ["Synthetic Service (role unavailable)"]}
+
+
+@pytest.mark.parametrize("qualifier", ["", "+", "-", "~", "?"])
+def test_spf_policy_reference_stays_compact_and_does_not_claim_authorization(qualifier: str) -> None:
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="",
+        default_domain="alpha.invalid",
+        queried_domain="alpha.invalid",
+        services=("Postmark",),
+        slugs=("postmark",),
+        evidence=(EvidenceRecord("SPF", f"v=spf1 {qualifier}include:spf.mtasv.net -all", "Postmark", "postmark"),),
+    )
+
+    compact = " ".join(_services_block(_render(info)).split())
+    detailed = " ".join(_services_block(_render(info, verbose=True)).split())
+    assert compact == "Email Postmark Evidence roles: --explain"
+    assert "Postmark (SPF policy reference)" in detailed
+    assert "sender authorization" not in detailed
+    payload = format_tenant_dict(info)
+    entry = next(
+        entry for lane in payload["connection_map"]["lanes"] for entry in lane["entries"] if entry["slug"] == "postmark"
+    )
+    assert entry["role"] == "SPF policy reference"
+    assert entry["summary"] == "SPF policy references a target under Postmark's mtasv.net namespace."
 
 
 def test_explicit_email_control_label_does_not_require_catalog_lineage() -> None:

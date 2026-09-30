@@ -126,7 +126,7 @@ _EVIDENCE_ROLE_SUFFIXES = (
     " (public TXT account indicator)",
     " (MX delivery path)",
     " (CNAME endpoint binding)",
-    " (SPF sender authorization)",
+    " (SPF policy reference)",
     " (DMARC aggregate-report destination)",
     " (SRV service-discovery reference)",
     " (authoritative DNS delegation)",
@@ -135,7 +135,7 @@ _EVIDENCE_ROLE_SUFFIXES = (
     " (identity endpoint)",
 )
 _RECORD_ROLE_QUALIFIERS = (
-    ("SPF", "SPF sender authorization"),
+    ("SPF", "SPF policy reference"),
     ("DMARC_RUA", "DMARC aggregate-report destination"),
     ("SRV", "SRV service-discovery reference"),
     ("NS", "authoritative DNS delegation"),
