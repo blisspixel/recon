@@ -182,10 +182,27 @@ def test_cli_ambiguous_owner_never_executes_upgrade(prefix: Path, monkeypatch: p
     assert "or just: recon update" not in result.output
 
 
-def test_zero_exit_does_not_claim_latest_version_was_installed(prefix: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_zero_exit_does_not_claim_latest_version_was_installed(
+    prefix: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
     monkeypatch.setattr(updater, "fetch_latest_version", lambda: "999.0.0")
-    process = Mock(return_value=SimpleNamespace(returncode=0))
-    monkeypatch.setattr(updater.subprocess, "run", process)
+    monkeypatch.setattr("recon_tool.updater_windows.requires_handoff", lambda: False)
+    wheelhouse = tmp_path / "recon-update-wheels-job"
+    wheelhouse.mkdir()
+
+    def _stage(_spec: str) -> Path:
+        return wheelhouse
+
+    monkeypatch.setattr(updater, "stage_pip_wheelhouse", _stage)
+    calls: list[list[str]] = []
+
+    def _run(command: list[str], **_kwargs: object) -> SimpleNamespace:
+        calls.append(list(command))
+        if "-c" in command:
+            return SimpleNamespace(returncode=0, stdout="999.0.0\n", stderr="")
+        return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+    monkeypatch.setattr(updater.subprocess, "run", _run)
 
     result = CliRunner().invoke(app, ["update"])
 
@@ -193,4 +210,36 @@ def test_zero_exit_does_not_claim_latest_version_was_installed(prefix: Path, mon
     assert "Upgrade command completed" in result.output
     assert "Updated to 999.0.0" not in result.output
     assert "recon --version" in result.output
-    process.assert_called_once_with([sys.executable, "-m", "pip", "install", "-U", "recon-tool==999.0.0"], check=False)
+    assert calls[0][-1] == "recon-tool==999.0.0"
+    assert "--no-index" in calls[0]
+    assert "--only-binary=:all:" in calls[0]
+    assert "-c" in calls[1]
+
+
+def test_foreground_manager_failure_prints_a_direct_recovery_command(
+    prefix: Path, monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    monkeypatch.setattr(updater, "fetch_latest_version", lambda: "999.0.0")
+    monkeypatch.setattr("recon_tool.updater_windows.requires_handoff", lambda: False)
+    wheelhouse = tmp_path / "recon-update-wheels-job"
+    wheelhouse.mkdir()
+
+    def _stage(_spec: str) -> Path:
+        return wheelhouse
+
+    monkeypatch.setattr(updater, "stage_pip_wheelhouse", _stage)
+
+    def _run(command: list[str], **_kwargs: object) -> SimpleNamespace:
+        if "-c" in command:
+            raise AssertionError("import check must not run after a failed install")
+        return SimpleNamespace(returncode=2, stdout="boom\n", stderr="")
+
+    monkeypatch.setattr(updater.subprocess, "run", _run)
+
+    result = CliRunner().invoke(app, ["update"])
+    rendered = " ".join(result.output.split())
+
+    assert result.exit_code == 1, result.output
+    assert "Upgrade failed" in rendered
+    assert "recon-tool==999.0.0" in rendered
+    assert "Upgrade command completed" not in rendered

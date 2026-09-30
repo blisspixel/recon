@@ -78,6 +78,7 @@ _EXPECTED_RUNTIME_DEPENDENCIES = {
     "mcp",
     "networkx",
     "publicsuffixlist",
+    "pyjwt",  # Patched floor for the existing MCP JWT dependency.
     "python-multipart",
     "pyyaml",
     "rich",
@@ -255,3 +256,6 @@ def test_wheel_runtime_dependencies_stay_lean(tmp_path: Path) -> None:
     dependency_names = _runtime_dependency_names(metadata_text)
     assert dependency_names == _EXPECTED_RUNTIME_DEPENDENCIES
     assert dependency_names.isdisjoint(_FORBIDDEN_RUNTIME_DEPENDENCIES)
+    # The patched floor must survive the sdist-to-wheel path. A lock update
+    # alone would let pip retain an affected version in an existing install.
+    assert "pyjwt>=2.14.0" in (Parser().parsestr(metadata_text).get_all("Requires-Dist") or [])

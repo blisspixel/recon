@@ -18,7 +18,35 @@ notes, see [`docs/security.md`](security.md).
 
 ---
 
-## Unreleased: connection pinning and regex admission
+## v2.19.7: updater module isolation and comment-aware regex admission
+
+Updater-managed pip commands use the current interpreter with safe-path mode
+for staging, installation and recovery. This excludes implicit working-directory
+imports while retaining supported user-site installations. Regression tests run
+synthetic `pip.py` and package collisions through every command builder and the
+real staging subprocess; no package is downloaded or installed by those tests.
+
+Shared regex admission now accounts for inline comments, verbose whitespace,
+scoped flags and escaped comment terminators before its structural checks.
+The same boundary protects catalog loading, direct specificity evaluation and
+process-local MCP fingerprint injection. The guard remains conservative and
+heuristic, not a proof that every admitted expression has linear complexity.
+
+Evidence: `tests/test_updater_module_safety.py`, `tests/test_updater_windows.py`
+and `tests/test_regex_admission.py`. The original triggers and alternate
+representations are regression cases; ordinary expressions and user-site pip
+remain supported. The focused source review did not cover every repository
+file and does not establish an absence of other vulnerabilities.
+
+The dependency audit also required excluding PyJWT 2.13.0. The patched
+`pyjwt>=2.14.0` floor ships in wheel metadata, and the lock uses stable 2.15.1.
+The [upstream changelog](https://pyjwt.readthedocs.io/en/stable/changelog.html#v2-14-0)
+records the JWT/JWK fixes. Package tests enforce the floor through the
+sdist-to-wheel build, and the dependency audit covers every group and extra.
+
+---
+
+## Closed in v2.19.0: connection pinning and regex admission
 
 The shared HTTP client now validates every answer at connection time and dials
 only validated numeric addresses while preserving the original Host and TLS

@@ -154,6 +154,10 @@ fingerprint injection can supply arbitrary regex patterns.
 **Mitigation:** [`src/recon_tool/fingerprints.py`](../src/recon_tool/fingerprints.py):
 - `yaml.safe_load` (not `yaml.load`) - no arbitrary constructor execution
 - Pattern length capped at 500 chars
+- Structural checks first remove ignored inline comments and verbose-mode
+  whitespace, honoring scoped flags, escapes and continued comments. The
+  original expression is compiled only after admission; comment text cannot
+  hide a reviewed unsafe repetition shape from the guard.
 - ReDoS heuristic (`_validate_regex` in `fingerprints.py`) rejects nested
   quantifiers like `(a+)+`, `(a*)+`, and `(\w+)+`; a balanced-paren scan
   (`_has_nested_quantifier`, v2.1.1) also catches the redundantly-nested
@@ -257,6 +261,18 @@ and read API credentials.
   `pipx` to absolute paths and refuses any launcher inside the resolved current
   workspace tree, including launchers reached through relative nested PATH
   entries. A refused or missing launcher degrades to a manual command.
+- Pip upgrades download the pinned release before replacing installed files.
+- Every pip subprocess and recovery command uses the current interpreter's
+  safe-path option (`-P`), so implicit current-directory imports cannot select
+  a workspace `pip.py` or `pip` package. User-site installs remain available.
+  Explicit Python environment configuration is still operator-controlled.
+  Regression tests execute synthetic modules without downloading or installing
+  packages: `tests/test_updater_module_safety.py`.
+  The Windows worker is a private copy of
+  [`src/recon_tool/updater_windows.py`](../src/recon_tool/updater_windows.py)
+  run with the base interpreter in isolated mode. It waits until `recon.exe`
+  has exited, skips the package manager while another `recon.exe` is running,
+  and prints a direct recovery command that does not require `recon` to start.
 - Paid-provider SDKs are absent from the runtime and default development
   dependency graphs. The optional `agentic-validation` group has exact roots in
   `pyproject.toml` and artifact hashes in `uv.lock`.

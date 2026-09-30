@@ -105,9 +105,13 @@ recon update         # update through the original package manager
 recon update --check # check for a newer release without installing
 ```
 
-On Windows, `recon update` starts a background update after the running launcher
-exits. It prints the path to a local progress and result log. Once complete,
-run `recon --version` to confirm.
+On macOS and Linux, `recon update` runs the package manager in the foreground.
+A pip install is downloaded before the current copy is replaced. On Windows,
+the running launcher locks `recon.exe`, so the command hands the install to a
+background worker and prints a log path. Wait for `Update completed`, then run
+`recon --version`. If `recon` cannot start, use the recovery command in that
+output. A Windows pip install older than 2.19.5 should be upgraded with
+`python -m pip install -U recon-tool`.
 
 The scripts install an exact published version, preserve a sole existing `uv`
 or `pipx` owner, and explain how to recover ambiguous or unmanaged installs.
@@ -317,9 +321,16 @@ path. The aggregate evaluation status and stop conditions are
 |---|---|
 | "Recon example.com" | Call `lookup_tenant` (or `recon example.com`) and return the panel-style summary |
 | "What does example.com run for email and identity?" | Same lookup; lead with MX/IdP/tenant facts and confidence |
+| "Which of these domains show Microsoft 365 or Okta?" | Look up the supplied domains or use batch JSON; return a compact service table with evidence and unavailable-source states |
 | "Why do you think that?" | Re-run with explain / provenance (`--explain` or `explain=true`) |
 | "Compare example.com and example.net" | `compare_postures` or two lookups side by side |
 | "Any public hardening gaps?" | `find_hardening_gaps` after a lookup - hedged "Consider" notes only |
+
+Bare lookups stay compact. Full evidence and model diagnostics belong in
+explicit full, explain or structured requests. A supplied domain list is enough
+to begin a comparison; operators do not need to confirm each company's actual
+stack. Missing public evidence is reported as not observed, with failed sources
+kept distinct.
 
 **Example chat.** This transcript uses the same synthetic Example Industries
 fixture as the illustration above, so it shows the shape of a full-signal

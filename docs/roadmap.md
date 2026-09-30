@@ -19,6 +19,11 @@ tracked separately from product work.
 > documented option. `recon update` must advance an installer-pinned copy through
 > its existing manager; `recon doctor` must report release status without
 > changing the installation or adding noise to ordinary lookups.
+> The current polish batch also corrects documented agent-discovery indicators,
+> keeps the locked MCP SDK current, improves supplied-domain service workflows,
+> and closes reproducible updater and regex-admission defects. Routine catalog
+> maintenance uses public specifications and synthetic evidence; company
+> interviews and private inventory confirmation are not release gates.
 >
 > `main` is the single integration and release branch. Checked implementation
 > and release-preparation branches are temporary. Publication is complete only
@@ -188,8 +193,9 @@ and per-domain rows never leave the private workspace.
 
 Rank and urgency are different axes. Priority 1 remains the standing highest
 trust priority because output truthfulness outranks features; its current
-27-family audit closed on 2026-08-01. Priority 2 adopted MCP v2 on 2026-07-31
-and retains rollback, production-floor, and current-stable pins as blocking checks. Priority 3's
+29-family audit is complete at the 2026-09-13 checkpoint. Priority 2 adopted
+MCP v2 on 2026-07-31 and retains rollback, production-floor, and current-stable
+pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. v2.14 is also shipped with the
 closed rank, regional, vendor-seed, and prior-sample drift decisions plus full
@@ -226,13 +232,13 @@ It must not infer portfolio membership, rank security, schedule collection, or
 upload retained evidence. The fingerprint-freshness loop remains the durable
 detection stream and continues alongside this product polish.
 
-After v2.18.0 publication, the product path pauses for a stability soak. Fix
+The stability soak that began with v2.18.0 continues after v2.19.6. Fix
 compatibility, rendering, or provenance defects found through real operator use;
 collect role-specific feedback before considering a set-level extension; keep
 set membership caller-supplied; continue the monthly fingerprint-freshness and
-per-release black-box renderer loops; and keep the 29-family claim audit, both
-MCP SDK pins, the full test gate, and release provenance blocking. No v2.19
-feature is scheduled without a named operator handoff that the stable surfaces
+per-release black-box renderer loops; and keep the 29-family claim audit, all three
+MCP SDK pins, the full test gate, and release provenance blocking. Further
+feature work requires a named operator handoff that the stable surfaces
 cannot solve.
 
 v2.18.1 addresses the first stability-soak defect: a degraded CNAME

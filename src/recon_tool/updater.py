@@ -17,10 +17,12 @@ import http.client
 import json
 import os
 import re
+import shlex
 import shutil
 import stat
 import subprocess
 import sys
+import tempfile
 import tomllib
 import urllib.error
 import urllib.request
@@ -183,6 +185,15 @@ def _resolve_launcher(name: str) -> str | None:
     return str(resolved)
 
 
+def _pip_command() -> list[str]:
+    """Use installed pip without importing a module from the current directory.
+
+    Safe-path mode preserves user-site installs, unlike isolated mode. Explicit
+    interpreter configuration remains the operator's responsibility.
+    """
+    return [sys.executable, "-P", "-m", "pip"]
+
+
 def upgrade_command(method: str, *, version: str | None = None) -> list[str] | None:
     """The argv to upgrade in place, or None when the user must act manually.
 
@@ -206,8 +217,86 @@ def upgrade_command(method: str, *, version: str | None = None) -> list[str] | N
         # locked on Windows. An ordinary install updates the requirement in place.
         return [*prefix, "install", "--upgrade", spec]
     if method == PIP:
-        return [sys.executable, "-m", "pip", "install", "-U", spec]
+        return [*_pip_command(), "install", "-U", spec]
     return None
+
+
+def pinned_spec(version: str) -> str:
+    """Return a version-pinned requirement, or raise when the version is unsafe."""
+    if _version_key(version) is None:
+        raise ValueError("unsupported release version")
+    return f"{_PACKAGE}=={version}"
+
+
+def interpreter_reinstall_argv(version: str) -> list[str]:
+    """Pip reinstall through the current interpreter, without the recon launcher."""
+    return [*_pip_command(), "install", "-U", pinned_spec(version)]
+
+
+def offline_pip_command(spec: str, wheelhouse: Path) -> list[str]:
+    """Install one already-downloaded release without contacting the index."""
+    return [
+        *_pip_command(),
+        "install",
+        "--disable-pip-version-check",
+        "--upgrade",
+        "--only-binary=:all:",
+        "--no-index",
+        f"--find-links={wheelhouse}",
+        spec,
+    ]
+
+
+def format_argv(command: list[str]) -> str:
+    """Render an argv for a person to copy, without invoking a shell."""
+    if sys.platform == "win32":
+        return subprocess.list2cmdline(command)
+    return shlex.join(command)
+
+
+def _noninteractive_env() -> dict[str, str]:
+    env = dict(os.environ)
+    env["PIP_DISABLE_PIP_VERSION_CHECK"] = "1"
+    env["PIP_NO_INPUT"] = "1"
+    return env
+
+
+def stage_pip_wheelhouse(spec: str) -> Path:
+    """Download a pinned release before pip is allowed to replace the install.
+
+    A failed download leaves the current files in place. The caller installs
+    from the returned directory and then deletes it.
+    """
+    version = spec.split("==", 1)[1] if "==" in spec else ""
+    if not spec.startswith(f"{_PACKAGE}==") or _version_key(version) is None:
+        raise OSError("refusing to download an unpinned package")
+    from recon_tool.updater_windows import WHEELHOUSE_PREFIX, remove_wheelhouse
+
+    destination = Path(tempfile.mkdtemp(prefix=WHEELHOUSE_PREFIX))
+    command = [
+        *_pip_command(),
+        "download",
+        "--disable-pip-version-check",
+        "--only-binary=:all:",
+        "--dest",
+        str(destination),
+        spec,
+    ]
+    try:
+        result = subprocess.run(  # noqa: S603 - interpreter, pip module, and pinned spec; no shell.
+            command,
+            check=False,
+            stdin=subprocess.DEVNULL,
+            timeout=180,
+            env=_noninteractive_env(),
+        )
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        remove_wheelhouse(destination)
+        raise OSError(f"could not download {spec} ({exc})") from exc
+    if result.returncode != 0 or not any(destination.iterdir()):
+        remove_wheelhouse(destination)
+        raise OSError(f"could not download {spec} (exit {result.returncode})")
+    return destination
 
 
 def _manager_targets_current_install(launcher: str, method: str) -> bool:

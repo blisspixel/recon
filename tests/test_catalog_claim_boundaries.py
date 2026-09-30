@@ -68,6 +68,83 @@ def _rules(slug: str, kind: str) -> dict[str, DetectionRule]:
     }
 
 
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "value",
+    [
+        "v=aid2;u=https://agent.example.com/mcp;p=mcp",
+        "p=a2a; version = aid2 ; uri=https://agent.example.com/a2a",
+        " VERSION = aid2 ; p=local; u=docker:synthetic/agent:1",
+        "v=aid1;uri=https://agent.example.com/mcp;proto=mcp",
+        "v=aid2",  # A declaration alone does not prove a valid AID record.
+    ],
+)
+async def test_aid_declaration_preserves_dns_provenance_without_vendor_attribution(
+    monkeypatch: pytest.MonkeyPatch, value: str
+) -> None:
+    queries = _dns_fixture(monkeypatch, {("_agent.example.com", "TXT"): [value, value]})
+    ctx = dns_base.DetectionCtx()
+    await dns_infra.detect_subdomain_txt(ctx, "example.com")
+    name, slug = "Agent Identity & Discovery (AID)", "crewai-aid"
+    assert ctx.services == {name}
+    assert ctx.slugs == {slug}
+    assert ctx.evidence == [EvidenceRecord("SUBDOMAIN_TXT", value, name, slug)]
+    ((pattern, rule),) = _rules(slug, "subdomain_txt").items()
+    assert (slug, "subdomain_txt", pattern) in ctx._matched_fp_detections
+    assert rule.verified == "2026-09-30"
+    assert "agentcommunity/agent-identity-discovery" in rule.reference
+    assert "does not identify CrewAI" in rule.description
+    assert all(kind == "TXT" and host.endswith(".example.com") for host, kind in queries)
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("owner", "value"),
+    [
+        ("_agent", "v=aid20;u=https://agent.example.com/mcp;p=mcp"),
+        ("_agent", "v=aid2preview;u=https://agent.example.com/mcp;p=mcp"),
+        ("_agent", "desc=v=aid2;u=https://agent.example.com/mcp;p=mcp"),
+        ("_agent", "notversion=aid2;u=https://agent.example.com/mcp;p=mcp"),
+        ("_agent", "version=notaid2;u=https://agent.example.com/mcp;p=mcp"),
+        ("_agent", "uri=https://agent.example.com/mcp;p=mcp"),
+        ("_agent", ""),
+        ("_agent.lookalike", "v=aid2;u=https://agent.example.com/mcp;p=mcp"),
+        ("_mcp", "v=aid2;u=https://agent.example.com/mcp;p=mcp"),
+    ],
+)
+async def test_aid_lookalikes_and_empty_records_do_not_match(
+    monkeypatch: pytest.MonkeyPatch, owner: str, value: str
+) -> None:
+    _dns_fixture(monkeypatch, {(f"{owner}.example.com", "TXT"): [value]})
+    ctx = dns_base.DetectionCtx()
+    await dns_infra.detect_subdomain_txt(ctx, "example.com")
+    assert "crewai-aid" not in ctx.slugs
+    assert not any(record.slug == "crewai-aid" for record in ctx.evidence)
+
+
+def test_discovery_declarations_cannot_establish_ai_platform_or_agent_deployment() -> None:
+    slugs = ("crewai-aid", "mcp-discovery")
+    info = TenantInfo(
+        tenant_id=None,
+        display_name="",
+        default_domain="example.com",
+        queried_domain="example.com",
+        slugs=slugs,
+        evidence=tuple(EvidenceRecord("SUBDOMAIN_TXT", "synthetic-declaration", slug, slug) for slug in slugs),
+    )
+    assert not {"ai_tooling_detected", "agentic_ai_detected"}.intersection(
+        observation.source_name for observation in analyze_posture(info)
+    )
+    ctx = SignalContext(detected_slugs=frozenset(slugs))
+    assert not {"AI Adoption", "Agentic AI Infrastructure"}.intersection(
+        signal.name for signal in evaluate_signals(ctx)
+    )
+    failed = replace(info, degraded_sources=("dns:subdomain_txt",))
+    assert not collection_observable_evidence(failed)
+    assert not collection_observable_info(failed).slugs
+    assert failed.evidence == info.evidence
+
+
 @pytest.mark.parametrize(
     ("hostname", "pattern"),
     [

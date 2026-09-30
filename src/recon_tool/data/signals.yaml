@@ -17,7 +17,7 @@ signals:
     confidence: high
     description: Public indicators associated with an AI platform; registration or verification does not establish active use
     requires:
-      any: [openai, anthropic, mistral, perplexity, crewai-aid, langsmith, mcp-discovery]
+      any: [openai, anthropic, mistral, perplexity, langsmith]
     min_matches: 1
 
   - name: High GTM Maturity
@@ -310,7 +310,7 @@ signals:
     description: Multiple AI or automation-platform indicators observed; autonomous-agent deployment is not established
     explain: "This rule reports multiple AI or automation-platform indicators. Public registration and discovery records do not establish that an autonomous agent is deployed or active."
     requires:
-      any: [crewai-aid, langsmith, mcp-discovery, openai, anthropic, mistral, perplexity, dify, n8n, autogen]
+      any: [langsmith, openai, anthropic, mistral, perplexity, dify, n8n, autogen]
     min_matches: 2
 
   - name: AI Platform Diversity

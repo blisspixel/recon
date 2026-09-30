@@ -22,6 +22,15 @@ from recon_tool.regex_safety import validate_regex
         r"^(ab|a[b])+z$",
         r"^(a|)+z$",
         r"^((a|aa)){20}z$",
+        r"(?# [)^((.)+)+NEVERMATCH$",
+        r"^(?:a|aa)(?# separator)+z$",
+        r"^((.)+)(?# escaped \) [)+z$",
+        "(?x)# [\n^((.)+)+z$",
+        "(?x)# \\\n[\n^((.)+)+NEVERMATCH$",
+        "(?x:# \\\n[\n^((.)+)+NEVERMATCH$)",
+        "(?x:^((.)+) # [\n +z$)",
+        "(?x:^(?-x:a #)(?:a|aa) # [\n +z$)",
+        "(?x)^(?:a|aa)\n  +z$",
     ],
 )
 def test_ambiguous_repetition_is_refused_before_matching(pattern: str, source: str) -> None:
@@ -30,7 +39,23 @@ def test_ambiguous_repetition_is_refused_before_matching(pattern: str, source: s
 
 @pytest.mark.parametrize(
     "pattern",
-    [r"(foo|bar)+", r"(?:foo|bar)+", r"(foo\.|bar\.)+", r"^[a-z0-9-]+\.example\.invalid$", r"(a+)"],
+    [
+        r"(foo|bar)+",
+        r"(?:foo|bar)+",
+        r"(foo\.|bar\.)+",
+        r"^[a-z0-9-]+\.example\.invalid$",
+        r"(a+)",
+        r"(?# [)(foo|bar)+",
+        r"(foo|bar)(?# comment)+",
+        "(?x) ^ (?: foo | bar ) # explanation [\n + $",
+        r"^(?x: (?:foo|bar) + )$",
+        r"(?x)^(?-x:a #)(?:foo|bar)+$",
+        "^(?x:a # ignored [\n)b$",
+        "(?x)^(?:foo|bar) # \\\n[\n+$",
+        r"(?x)^\#\ [ #\]]+$",
+        r"^[(?# ]+$",
+        r"^[]# ]+$",
+    ],
 )
 def test_disjoint_literals_and_ordinary_repetition_remain_accepted(pattern: str) -> None:
     assert validate_regex(pattern, "catalog:test")
@@ -38,7 +63,10 @@ def test_disjoint_literals_and_ordinary_repetition_remain_accepted(pattern: str)
 
 
 @pytest.mark.asyncio
-async def test_ephemeral_injection_rejects_before_specificity_matching(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("pattern", [r"^((.|..))+!$", r"(?# [)^((.)+)+NEVERMATCH$", "(?x)# [\n^((.)+)+z$"])
+async def test_ephemeral_injection_rejects_before_specificity_matching(
+    monkeypatch: pytest.MonkeyPatch, pattern: str
+) -> None:
     from recon_tool.mcp_client.sdk_compat import ToolError
     from recon_tool.server.ephemeral import inject_ephemeral_fingerprint
 
@@ -48,5 +76,5 @@ async def test_ephemeral_injection_rejects_before_specificity_matching(monkeypat
     monkeypatch.setattr("recon_tool.specificity.evaluate_pattern", unexpected_matching)
     with pytest.raises(ToolError, match="Validation failed"):
         await inject_ephemeral_fingerprint(
-            "Synthetic Boundary", "synthetic-boundary", "SaaS", "high", [{"type": "txt", "pattern": r"^((.|..))+!$"}]
+            "Synthetic Boundary", "synthetic-boundary", "SaaS", "high", [{"type": "txt", "pattern": pattern}]
         )

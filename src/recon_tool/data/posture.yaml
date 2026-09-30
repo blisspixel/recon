@@ -164,7 +164,7 @@ observations:
     category: saas_footprint
     salience: medium
     condition:
-      slugs_any: [openai, anthropic, mistral, perplexity, crewai-aid, langsmith, mcp-discovery, dify, n8n, autogen]
+      slugs_any: [openai, anthropic, mistral, perplexity, langsmith, dify, n8n, autogen]
       slugs_min: 1
     template: "AI/LLM vendor indicator observed ({matched_slugs})"
 
@@ -172,9 +172,9 @@ observations:
     category: saas_footprint
     salience: medium
     condition:
-      slugs_any: [crewai-aid, langsmith, mcp-discovery, dify, n8n, autogen]
+      slugs_any: [langsmith, dify, n8n, autogen]
       slugs_min: 1
-    template: "Agentic AI platform indicators observed ({matched_slugs})"
+    template: "AI or automation-platform indicators observed ({matched_slugs})"
 
   - name: supply_chain_security_detected
     category: saas_footprint

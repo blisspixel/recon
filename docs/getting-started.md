@@ -99,12 +99,26 @@ recon update --check
 PyPI, is behind PyPI, or is newer than the latest published release. It never
 offers to replace a newer local or source build with an older PyPI release.
 
-On Windows, a running `recon` launcher holds files that the package manager
-needs to replace. `recon update` schedules an isolated background worker, prints
-a local progress and result log, and exits so those locks can be released.
-Scheduling is not completion: wait for `Update completed` in the log, then run
-`recon --version`. A failure stays in the log with recovery guidance. Direct
-package-manager commands below run synchronously outside the recon launcher.
+`recon update` downloads a pip release before it replaces a pip install, so a
+download failure leaves the current files in place. On macOS and Linux it then
+runs the package manager in the foreground. On Windows the running launcher
+locks `recon.exe`, so the command copies an isolated worker outside the
+package, prints a log path, and exits. The worker waits until that launcher
+and any other `recon.exe` have exited, retries a transient file lock, and
+checks that `recon-tool` imports before it reports success.
+
+Wait for `Update completed` in the terminal or the Windows log, then run
+`recon --version`. If `recon` cannot start, run the recovery command at the
+end of that output. After a pip download, that command reuses the downloaded
+files when the staging directory is still present, and otherwise installs the
+same release from PyPI with the original interpreter, for example
+`python -m pip install -U recon-tool`. A `site-packages` directory whose name
+starts with `~econ-tool` is an unfinished pip uninstall and can be removed
+after `recon --version` works.
+
+Windows pip installs older than 2.19.5 keep the package manager inside the
+locked launcher. Upgrade those copies with `python -m pip install -U recon-tool`.
+Direct package-manager commands below also run outside the recon launcher.
 
 `recon doctor` reports the running version, Python executable, package location,
 and detected installation method. It also warns when the first `recon` launcher

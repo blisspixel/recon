@@ -17,6 +17,25 @@ and differential tests prove exact ordered equality with the YAML source. Run
 `uv run python scripts/generate_fingerprint_catalog.py --write` after changing
 built-ins. Custom YAML remains runtime parsed and validated.
 
+## Agent discovery declarations
+
+The `crewai-aid` slug is retained for compatibility but identifies the
+vendor-neutral **Agent Identity & Discovery (AID)** declaration. It recognizes
+current `aid2` and legacy `aid1` version fields at `_agent.<domain>` using the
+[AID specification](https://github.com/agentcommunity/agent-identity-discovery/blob/main/packages/docs/specification.md).
+It does not identify CrewAI or validate a complete AID record. The separate
+`mcp-discovery` rule recognizes a
+[community DNS proposal](https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/2368),
+not an adopted MCP discovery standard. Neither declaration contributes an
+AI-platform or autonomous-agent deployment claim.
+
+These are DNS observations only. recon does not fetch advertised endpoints,
+agent cards or proof challenges. The
+[A2A 1.0 specification](https://a2a-protocol.org/v1.0.0/specification/)
+defines agent-card discovery, but recon does not implement an A2A client or
+server. Ordinary apex normalization still applies; use `--exact` for a literal
+sub-host query. Detection is not AID client conformance or A2A compatibility.
+
 ## Custom fingerprints
 
 Drop a `fingerprints.yaml` in recon's config directory, or split it across a

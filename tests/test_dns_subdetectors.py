@@ -494,8 +494,8 @@ class TestSubdomainTxtDetection:
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
-    async def test_crewai_aid_via_agent_subdomain(self, mock_resolve):
-        """_agent subdomain TXT should detect CrewAI AID."""
+    async def test_aid_via_agent_subdomain(self, mock_resolve):
+        """_agent TXT declares vendor-neutral AID, retaining its historical slug."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
                 "example.com/TXT": [],
@@ -504,13 +504,13 @@ class TestSubdomainTxtDetection:
             }
         )
         result = await DNSSource().lookup("example.com")
-        assert "CrewAI Agent Interface Discovery (AID)" in result.detected_services
+        assert "Agent Identity & Discovery (AID)" in result.detected_services
         assert "crewai-aid" in result.detected_slugs
 
     @pytest.mark.asyncio
     @patch("recon_tool.sources.dns_base.safe_resolve")
     async def test_mcp_discovery_via_mcp_subdomain(self, mock_resolve):
-        """_mcp subdomain TXT should detect MCP DNS Discovery."""
+        """_mcp TXT identifies the community proposal, not protocol support."""
         mock_resolve.side_effect = _mock_safe_resolve_factory(
             {
                 "example.com/TXT": [],
@@ -519,7 +519,7 @@ class TestSubdomainTxtDetection:
             }
         )
         result = await DNSSource().lookup("example.com")
-        assert "MCP DNS Discovery" in result.detected_services
+        assert "MCP DNS Discovery Proposal" in result.detected_services
         assert "mcp-discovery" in result.detected_slugs
 
     @pytest.mark.asyncio
