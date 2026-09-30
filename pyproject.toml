@@ -142,6 +142,9 @@ dev = [
     "ruff>=0.4",
     "pyright>=1.1",
     "pre-commit>=3.0",
+    # pre-commit creates hook environments with virtualenv. Keep its activation,
+    # configuration and seed-wheel fixes current (PYSEC-2026-4011 through 4014).
+    "virtualenv>=21.14.1",
     # Security floor on development tooling: pip-api pulls in pip, and pip
     # before 26.2 has PYSEC-2026-3721 / CVE-2026-13346. pip is excluded from
     # the published runtime graph.

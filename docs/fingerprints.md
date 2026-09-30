@@ -101,6 +101,18 @@ share this behavior and preserve the original record as evidence. This is a
 bounded observation parser, not full SPF validation or sender-IP evaluation;
 recon does not recursively expand includes or evaluate SPF macros.
 
+DKIM TXT observations at the existing Google and generic selectors share a
+bounded tag-list parser. It respects the case-sensitive, optional `v=DKIM1`
+tag, rejects duplicate or malformed tags, and requires nonempty base64 `p=`
+material. Empty `p=` is a revoked key and does not create a DKIM control.
+Omitted `v=` uses the specified default. Original admitted records remain the
+evidence values. See [RFC 6376 sections 3.2 and 3.6.1](https://www.rfc-editor.org/rfc/rfc6376.html).
+
+This check admits record shape only; it does not validate cryptographic key
+structure, strength, algorithms, signed messages, or active signing. Existing
+CNAME observations remain delegation indicators. It adds no selectors or
+network requests and does not reinterpret previously cached results.
+
 ## Metadata fields
 
 The required `confidence` value (`low`, `medium`, or `high`) is a reviewed

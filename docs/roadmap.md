@@ -27,6 +27,9 @@ tracked separately from product work.
 > The subsequent SPF accuracy pass shares version, directive and per-target
 > matching rules between live collection and cache replay, preserving raw
 > evidence while avoiding ignored-policy claims and unnecessary redirect hops.
+> DKIM TXT admission now follows tag and key-material boundaries, rejects
+> revoked keys and recognizes the omitted-version default. Selector scope and
+> positive evidence stay intact; cryptographic verification remains out of scope.
 >
 > `main` is the single integration and release branch. Checked implementation
 > and release-preparation branches are temporary. Publication is complete only
