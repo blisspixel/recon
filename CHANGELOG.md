@@ -41,6 +41,14 @@ compact output contract.
   delegation observations. This is record-shape admission, not cryptographic
   validation, message verification, or proof of active signing.
 
+### Security
+
+- Raise the development-only virtualenv floor to 21.14.1 and refresh its
+  interpreter-discovery dependency. This removes PYSEC-2026-4011 through 4014
+  from the locked pre-commit toolchain, including activation, configuration
+  injection and downloaded seed-wheel verification fixes. Neither package is
+  added to recon's runtime dependencies.
+
 ### Tool Surface Changes
 
 Tool surface changes: no CLI command, flag or JSON schema changes.
