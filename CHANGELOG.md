@@ -26,6 +26,25 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.9] - 2026-09-30
+
+Tighten DKIM TXT observations without expanding collection or changing the
+compact output contract.
+
+### Fixed
+
+- Google and generic DKIM selectors use one bounded tag-list parser. Version
+  lookalikes, misplaced version tags, duplicate tags, malformed key material,
+  and missing or revoked `p=` values no longer create DKIM control claims.
+- Recognize the specified omitted-version default and permitted whitespace.
+  Preserve raw positive evidence, later valid selectors and existing CNAME
+  delegation observations. This is record-shape admission, not cryptographic
+  validation, message verification, or proof of active signing.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command, flag or JSON schema changes.
+
 ## [2.19.8] - 2026-09-30
 
 Correct SPF provider observations and bounded redirect handling without adding

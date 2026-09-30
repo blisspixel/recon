@@ -10,6 +10,8 @@ original (underscore) spelling and are re-exported from ``dns.py`` so the
 
 from __future__ import annotations
 
+import base64
+import binascii
 import logging
 import re
 from typing import TYPE_CHECKING, Any
@@ -24,6 +26,7 @@ if TYPE_CHECKING:
     from recon_tool.fingerprints import Detection
 
 _CNAME_TARGET_FRAGMENT_RE = re.compile(r"^[a-z0-9_-]+$", re.ASCII)
+_DKIM_TAG_NAME_RE = re.compile(r"[A-Za-z][A-Za-z0-9_]*", re.ASCII)
 
 
 def parse_rdata(raw: str) -> str:
@@ -54,6 +57,50 @@ def parse_rdata(raw: str) -> str:
         # The whole target was the root label; keep it verbatim.
         return value
     return stripped
+
+
+def _dkim_key_tags(record: str) -> dict[str, str] | None:
+    """Parse the bounded, case-sensitive tag list without interpreting key bytes."""
+    # DNS RDATA has a 16-bit length. Reject oversized caller-supplied input
+    # before allocating tag lists, and unfold only RFC 6376-permitted FWS.
+    if len(record) > 65_535 or not record.isascii():
+        return None
+    unfolded = re.sub(r"\r\n(?=[ \t])", "", record)
+    if any(char != "\t" and not 0x20 <= ord(char) <= 0x7E for char in unfolded):
+        return None
+    parts = unfolded.strip(" \t").split(";")
+    if parts[-1].strip(" \t") == "":
+        parts.pop()
+    tags: dict[str, str] = {}
+    for part in parts:
+        name, separator, value = part.strip(" \t").partition("=")
+        name = name.rstrip(" \t")
+        if not separator or _DKIM_TAG_NAME_RE.fullmatch(name) is None or name in tags:
+            return None
+        tags[name] = value.strip(" \t")
+    return tags
+
+
+def is_dkim_key_record(record: str) -> bool:
+    """Recognize a DKIM TXT key declaration with nonempty base64 key material.
+
+    RFC 6376 sections 3.2 and 3.6.1 make ``v`` optional, case-sensitive and
+    first when supplied. Empty ``p`` revokes a key. This is record-shape
+    admission only: no signature, algorithm, key strength or ASN.1 validation.
+    Unknown tags retain their specified ignore semantics.
+    """
+    tags = _dkim_key_tags(record)
+    if not tags or ("v" in tags and (next(iter(tags)) != "v" or tags["v"] != "DKIM1")):
+        return False
+    encoded = tags.get("p", "").replace(" ", "").replace("\t", "")
+    # validate=True checks the alphabet, but some Python versions still accept
+    # surplus padding after a complete quartet. Enforce its position as well.
+    if not encoded or len(encoded) % 4 or "=" in encoded[:-2]:
+        return False
+    try:
+        return bool(base64.b64decode(encoded, validate=True))
+    except binascii.Error:
+        return False
 
 
 def is_spf_record(value: str) -> bool:

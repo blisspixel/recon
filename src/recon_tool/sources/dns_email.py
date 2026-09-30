@@ -44,6 +44,7 @@ from recon_tool.sources.dns_tables import (
     GENERIC_DKIM_SELECTORS,
     bimi_vmc_url_is_safe,
     extract_bimi_vmc_url,
+    is_dkim_key_record,
     is_public_dns_name,
     is_spf_record,
     match_spf_targets,
@@ -372,7 +373,7 @@ def _apply_google_dkim(ctx: dns_base.DetectionCtx, txt_results: list[str], cname
     points to a gateway (Proofpoint, etc.).
     """
     for record in txt_results:
-        if "v=dkim1" in record.lower():
+        if is_dkim_key_record(record):
             ctx.services.add(SVC_DKIM)
             ctx.add(SVC_DKIM_GOOGLE, "google-workspace", source_type="DKIM", raw_value=record)
             return
@@ -410,7 +411,7 @@ def _apply_esp_dkim(
 
 
 def _apply_generic_dkim(ctx: dns_base.DetectionCtx, generic_results: list[list[str]]) -> None:
-    """Confirm DKIM exists via generic selectors when no provider-specific DKIM fired.
+    """Observe a DKIM key record when no provider-specific DKIM fired.
 
     Only feeds the email-security score; does not attribute a provider.
     """
@@ -418,7 +419,7 @@ def _apply_generic_dkim(ctx: dns_base.DetectionCtx, generic_results: list[list[s
         return
     for txt_records in generic_results:
         for record in txt_records:
-            if "v=dkim1" in record.lower():
+            if is_dkim_key_record(record):
                 ctx.services.add(SVC_DKIM)
                 ctx.evidence.append(EvidenceRecord("DKIM", record, SVC_DKIM, "dkim"))
                 return

@@ -98,6 +98,11 @@ claims, applies redirect constraints at every hop, and preserves independent
 targets through specificity matching. Raw observations and compact output stay
 intact; this does not turn recon into a full SPF evaluator.
 
+The DKIM observation pass rejects malformed or revoked TXT key declarations
+and recognizes the specified omitted-version default. It preserves existing
+selector scope, CNAME indicators, positive provenance and compact output;
+cryptographic key and signed-message verification remain outside the product.
+
 For correlation, prioritize the accuracy of the public observation and the
 honesty of its explanation: documented vendor patterns, synthetic positive and
 lookalike cases, duplicate-evidence checks, and sparse or failed collection.
