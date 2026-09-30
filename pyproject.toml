@@ -75,6 +75,9 @@ dependencies = [
     # Carry the patched AnyIO floor into installed wheels as well as uv.lock,
     # so pip upgrades cannot retain an older affected transitive dependency.
     "anyio>=4.14.2",
+    # MCP's JWT dependency must include the 2.14 security fixes even when pip
+    # reuses an existing environment. Keep this floor until MCP requires it.
+    "pyjwt>=2.14.0",
 ]
 
 [project.scripts]

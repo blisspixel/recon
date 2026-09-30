@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import http.client
 import io
+import shutil
 import sys
 from pathlib import Path
 from types import SimpleNamespace
@@ -105,6 +106,51 @@ class TestUpgradeCommand:
         pip = updater.upgrade_command(updater.PIP)
         assert pip is not None
         assert pip[-3:] == ["install", "-U", "recon-tool"]
+
+    def test_pip_wheelhouse_is_removed_when_download_fails(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        destination = tmp_path / "recon-update-wheels-job"
+
+        def _mkdtemp(prefix: str) -> str:
+            destination.mkdir()
+            return str(destination)
+
+        monkeypatch.setattr(updater.tempfile, "mkdtemp", _mkdtemp)
+        monkeypatch.setattr(updater.tempfile, "gettempdir", lambda: str(tmp_path))
+        monkeypatch.setattr(
+            updater.subprocess, "run", Mock(return_value=SimpleNamespace(returncode=1, stdout="", stderr=""))
+        )
+
+        with pytest.raises(OSError, match="could not download"):
+            updater.stage_pip_wheelhouse("recon-tool==1.2.3")
+
+        assert not destination.exists()
+
+    def test_pip_wheelhouse_keeps_a_downloaded_file(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        destination = tmp_path / "recon-update-wheels-job"
+
+        def _mkdtemp(prefix: str) -> str:
+            destination.mkdir()
+            return str(destination)
+
+        def _download(command: list[str], **_kwargs: object) -> SimpleNamespace:
+            dest = Path(command[command.index("--dest") + 1])
+            (dest / "recon_tool-1.2.3-py3-none-any.whl").write_bytes(b"wheel")
+            return SimpleNamespace(returncode=0, stdout="", stderr="")
+
+        monkeypatch.setattr(updater.tempfile, "mkdtemp", _mkdtemp)
+        monkeypatch.setattr(updater.subprocess, "run", _download)
+
+        staged = updater.stage_pip_wheelhouse("recon-tool==1.2.3")
+
+        assert staged == destination
+        assert any(staged.iterdir())
+        shutil.rmtree(staged)
+
+    def test_unpinned_download_is_refused(self) -> None:
+        with pytest.raises(OSError, match="unpinned"):
+            updater.stage_pip_wheelhouse("recon-tool")
 
     def test_manual_methods_have_no_auto_command(self) -> None:
         assert updater.upgrade_command(updater.HOMEBREW) is None

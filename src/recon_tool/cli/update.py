@@ -2,13 +2,51 @@
 
 from __future__ import annotations
 
-import subprocess
+import sys
+from pathlib import Path
 
 import typer
 
 from recon_tool import updater, updater_windows
 from recon_tool.exit_codes import EXIT_ERROR
 from recon_tool.formatter import get_console, get_err_console, render_error
+
+
+def _prepare_pip_upgrade(latest: str) -> tuple[list[str], list[str], Path]:
+    """Download the pinned release and return the offline install, recovery, and staging dir."""
+    spec = updater.pinned_spec(latest)
+    wheelhouse = updater.stage_pip_wheelhouse(spec)
+    return updater.offline_pip_command(spec, wheelhouse), updater.interpreter_reinstall_argv(latest), wheelhouse
+
+
+def _run_prepared_upgrade(
+    *,
+    method: str,
+    prepared: list[str],
+    recovery: list[str],
+    wheelhouse: Path | None,
+) -> int | None:
+    """Run or hand off an upgrade. None means the Windows worker now owns it."""
+    err = get_err_console()
+    console = get_console()
+    err.print(f"==> upgrading via {method}: {updater.format_argv(prepared)}")
+    if updater_windows.requires_handoff():
+        log_path = updater_windows.start_update(
+            prepared,
+            wheelhouse=wheelhouse,
+            recovery=recovery,
+            interpreter=sys.executable,
+        )
+        console.print("Update scheduled. Installation starts after this command exits.")
+        console.print(f"Progress and result: {log_path}", markup=False)
+        console.print("When it finishes, run `recon --version` to confirm.")
+        return None
+    return updater_windows.apply_upgrade(
+        prepared,
+        wheelhouse=wheelhouse,
+        recovery=recovery,
+        interpreter=sys.executable,
+    )
 
 
 def run_update(*, check: bool = False) -> None:
@@ -43,25 +81,29 @@ def run_update(*, check: bool = False) -> None:
         console.print(f"Detected a {method} install; manual action needed: [cyan]{updater.manual_hint(method)}[/cyan]")
         return
 
-    err.print(f"==> upgrading via {method}: {' '.join(cmd)}")
+    prepared = cmd
+    recovery = cmd
+    wheelhouse: Path | None = None
+    if method == updater.PIP:
+        err.print("Downloading the checked release before replacing the installation...")
+        try:
+            prepared, recovery, wheelhouse = _prepare_pip_upgrade(latest)
+        except OSError as exc:
+            render_error(
+                "Could not download the release "
+                f"({exc}). The installed copy was left unchanged. "
+                f"Run manually: {updater.format_argv(updater.interpreter_reinstall_argv(latest))}"
+            )
+            raise typer.Exit(code=EXIT_ERROR) from None
     try:
-        if updater_windows.requires_handoff():
-            log_path = updater_windows.start_update(cmd)
-            console.print("Update scheduled. Installation starts after this command exits.")
-            console.print(f"Progress and result: {log_path}", markup=False)
-            console.print("When it finishes, run `recon --version` to confirm.")
-            return
-        # cmd is a fixed argv from updater.upgrade_command's install-method
-        # table (pipx/uv/pip), never user input, and its program is an absolute
-        # path that upgrade_command already refused to take from the current
-        # directory. Both halves matter: the arguments are not attacker-facing,
-        # and the executable is not resolved by a search that includes the
-        # working directory.
-        rc = subprocess.run(cmd, check=False).returncode  # noqa: S603
+        result = _run_prepared_upgrade(method=method, prepared=prepared, recovery=recovery, wheelhouse=wheelhouse)
     except OSError as exc:
-        render_error(f"Could not start the upgrade ({exc}). Run manually: {updater.manual_hint(method)}")
+        updater_windows.remove_wheelhouse(wheelhouse)
+        render_error(f"Could not start the upgrade ({exc}). Run manually: {updater.format_argv(recovery)}")
         raise typer.Exit(code=EXIT_ERROR) from None
-    if rc != 0:
-        render_error(f"Upgrade failed (exit {rc}). Try manually: {updater.manual_hint(method)}")
+    if result is None:
+        return
+    if result != 0:
+        render_error(f"Upgrade failed. Run manually: {updater.format_argv(prepared)}")
         raise typer.Exit(code=EXIT_ERROR)
     console.print("[green]Upgrade command completed. Open a new shell and run `recon --version` to confirm.[/green]")

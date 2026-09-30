@@ -217,8 +217,12 @@ class TestNewSignals:
 
     # Agentic AI Infrastructure — needs 2+ slugs
     def test_agentic_ai_infrastructure_fires_with_two_slugs(self) -> None:
-        names = _signal_names(_ctx({"crewai-aid", "openai"}))
+        names = _signal_names(_ctx({"langsmith", "openai"}))
         assert "Agentic AI Infrastructure" in names
+
+    def test_discovery_does_not_count_as_a_second_ai_platform(self) -> None:
+        names = _signal_names(_ctx({"crewai-aid", "openai"}))
+        assert "Agentic AI Infrastructure" not in names
 
     def test_agentic_ai_infrastructure_does_not_fire_with_one_slug(self) -> None:
         names = _signal_names(_ctx({"crewai-aid"}))
@@ -303,17 +307,17 @@ class TestUpdatedSignals:
     def setup_method(self) -> None:
         reload_signals()
 
-    def test_ai_adoption_fires_with_crewai_aid(self) -> None:
+    def test_aid_declaration_does_not_identify_an_ai_platform(self) -> None:
         names = _signal_names(_ctx({"crewai-aid"}))
-        assert "AI Adoption" in names
+        assert "AI Adoption" not in names
 
     def test_ai_adoption_fires_with_langsmith(self) -> None:
         names = _signal_names(_ctx({"langsmith"}))
         assert "AI Adoption" in names
 
-    def test_ai_adoption_fires_with_mcp_discovery(self) -> None:
+    def test_mcp_discovery_does_not_identify_an_ai_platform(self) -> None:
         names = _signal_names(_ctx({"mcp-discovery"}))
-        assert "AI Adoption" in names
+        assert "AI Adoption" not in names
 
     def test_enterprise_security_stack_includes_beyond_identity(self) -> None:
         # beyond-identity + one other security slug = 2 matches (min_matches: 2)
@@ -365,13 +369,13 @@ class TestNewPostureRules:
         observations = analyze_posture(info)
         return {obs.statement for obs in observations}
 
-    def test_agentic_ai_detected_fires(self) -> None:
+    def test_aid_declaration_does_not_claim_agentic_ai(self) -> None:
         stmts = self._observation_statements(("crewai-aid",))
-        assert any("Agentic AI" in s for s in stmts)
+        assert not any("AI" in s for s in stmts)
 
     def test_agentic_ai_detected_fires_with_langsmith(self) -> None:
         stmts = self._observation_statements(("langsmith",))
-        assert any("Agentic AI" in s for s in stmts)
+        assert any("AI or automation-platform indicators observed" in s for s in stmts)
 
     def test_supply_chain_security_detected_fires(self) -> None:
         stmts = self._observation_statements(("sonatype",))
@@ -401,9 +405,9 @@ class TestNewPostureRules:
         stmts = self._observation_statements(("langsmith",))
         assert any("AI/LLM vendor indicator" in s for s in stmts)
 
-    def test_updated_ai_tooling_fires_with_mcp_discovery(self) -> None:
+    def test_mcp_discovery_does_not_claim_an_ai_vendor(self) -> None:
         stmts = self._observation_statements(("mcp-discovery",))
-        assert any("AI/LLM vendor indicator" in s for s in stmts)
+        assert not any("AI/LLM vendor indicator" in s for s in stmts)
 
 
 # ── 9.7: Backward compatibility ──────────────────────────────────────

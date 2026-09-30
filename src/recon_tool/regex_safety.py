@@ -55,6 +55,68 @@ _REDOS_RE = re.compile(
 )
 
 _LITERAL_BRANCH_RE = re.compile(r"(?:[a-zA-Z0-9_/-]|\\[.\^$*+?{}\[\]\\()|/-])+")
+_INLINE_FLAGS_RE = re.compile(r"\(\?([aiLmsux]*)(?:-([imsx]+))?([:)])")
+
+
+def _character_class_end(pattern: str, opening: int) -> int:
+    """Find the end of a class, retaining escaped and initial literal brackets."""
+    index, length = opening + 1, len(pattern)
+    if index < length and pattern[index] == "^":
+        index += 1
+    if index < length and pattern[index] == "]":
+        index += 1
+    while index < length and pattern[index] != "]":
+        index += 2 if pattern[index] == "\\" else 1
+    return min(index + 1, length)
+
+
+def _comment_end(pattern: str, index: int, terminator: str) -> int:
+    """Skip comment tokens, including escaped delimiters and escaped newlines."""
+    while index < len(pattern) and pattern[index] != terminator:
+        index += 2 if pattern[index] == "\\" else 1
+    return min(index + 1, len(pattern))
+
+
+def _normalize_regex_syntax(pattern: str) -> str:
+    """Remove comments and verbose whitespace before every structural check.
+
+    This is a lexer for ignored syntax, not a replacement regex parser. Keep
+    escapes, classes and flag groups intact, track scoped verbose mode, and
+    compile the original expression after admission. Removing ignored text
+    restores adjacency between a group and its quantifier.
+    """
+    output: list[str] = []
+    modes: list[bool] = []
+    index, verbose = 0, False
+    while index < len(pattern):
+        char = pattern[index]
+        if char == "\\":
+            output.append(pattern[index : index + 2])
+            index += 2
+        elif char == "[":
+            end = _character_class_end(pattern, index)
+            output.append(pattern[index:end])
+            index = end
+        elif pattern.startswith("(?#", index):
+            index = _comment_end(pattern, index + 3, ")")
+        elif verbose and char == "#":
+            index = _comment_end(pattern, index + 1, "\n")
+        elif verbose and char in " \t\n\r\v\f":
+            index += 1
+        elif char == "(" and (flags := _INLINE_FLAGS_RE.match(pattern, index)):
+            if flags[3] == ":":
+                modes.append(verbose)
+            verbose = (verbose or "x" in flags[1]) and "x" not in (flags[2] or "")
+            output.append(flags[0])
+            index = flags.end()
+        else:
+            if char == "(":
+                modes.append(verbose)
+            elif char == ")" and modes:
+                verbose = modes.pop()
+            output.append(char)
+            index += 1
+    return "".join(output)
 
 
 def _disjoint_literal_branches(body: str) -> bool:
@@ -117,14 +179,7 @@ def _strip_escapes_and_classes(pattern: str, *, preserve_width: bool = False) ->
             continue
         if char == "[":
             opening = index
-            index += 1
-            if index < length and pattern[index] == "^":
-                index += 1
-            if index < length and pattern[index] == "]":
-                index += 1
-            while index < length and pattern[index] != "]":
-                index += 2 if pattern[index] == "\\" else 1
-            index += 1
+            index = _character_class_end(pattern, index)
             if preserve_width:
                 output.append("_" * (index - opening))
             continue
@@ -199,14 +254,15 @@ def validate_regex(pattern: str, source: str) -> bool:
             source,
         )
         return False
-    if _REDOS_RE.search(pattern) or _alternation_redos(pattern) or _has_nested_quantifier(pattern):
+    normalized = _normalize_regex_syntax(pattern)
+    if _REDOS_RE.search(normalized) or _alternation_redos(normalized) or _has_nested_quantifier(normalized):
         logger.warning(
             "Potentially unsafe regex (catastrophic backtracking) %r in %s - skipped",
             pattern,
             source,
         )
         return False
-    if source.startswith("ephemeral:") and _repetition_operator_count(pattern) > 1:
+    if source.startswith("ephemeral:") and _repetition_operator_count(normalized) > 1:
         logger.warning(
             "Ephemeral regex contains multiple repetition operators %r in %s - skipped",
             pattern,

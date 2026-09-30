@@ -104,20 +104,23 @@ fingerprints:
       agents reach external endpoints from this domain; the TXT is a
       tenant-claim signal, not a runtime signal.
     reference: https://microsoft.github.io/autogen/
-- name: CrewAI Agent Interface Discovery (AID)
+- name: Agent Identity & Discovery (AID)
+  # Retain the historical slug for saved-output compatibility.
   slug: crewai-aid
   category: AI & Generative
   confidence: high
   detections:
   - type: subdomain_txt
-    pattern: _agent:v=aid1;.*(?:src=|uri=)
+    pattern: _agent:(?:^|;)\s*(?:v|version)\s*=\s*aid[12]\s*(?:;|$)
+    verified: '2026-09-30'
     description: >-
-      CrewAI Agent Interface Discovery TXT at `_agent.<domain>`,
-      advertising autonomous-agent MCP endpoints per the AID v1
-      proposal. Indicates the org is publishing discoverable agent
-      surfaces. Does not prove the advertised endpoints are reachable
-      or authenticated; AID is a discovery layer, not a contract.
-    reference: https://github.com/crewAIInc/crewAI/discussions/3164
+      AID version declaration at `_agent.<domain>`: current `aid2` or
+      legacy `aid1`. Recognizes the version key and its alias, with
+      whitespace and field-order tolerance. This vendor-neutral marker
+      does not identify CrewAI, an AI platform, or a valid complete AID
+      record. recon does not contact advertised URIs, verify endpoint
+      proof, or establish reachability, authentication, or active use.
+    reference: https://github.com/agentcommunity/agent-identity-discovery/blob/main/packages/docs/specification.md
 - name: LangSmith Enterprise
   slug: langsmith
   category: AI & Generative
@@ -132,20 +135,20 @@ fingerprints:
       Does not prove which LangChain SDKs are emitting traces; the
       CNAME is the ingestion surface, not the application code.
     reference: https://docs.langchain.com/langsmith/cloud
-- name: MCP DNS Discovery
+- name: MCP DNS Discovery Proposal
   slug: mcp-discovery
   category: AI & Generative
   confidence: medium
   detections:
   - type: subdomain_txt
     pattern: _mcp:^v=mcp1;
+    verified: '2026-09-30'
     description: >-
-      Model Context Protocol DNS discovery record at `_mcp.<domain>`,
-      advertising MCP server endpoints per the v1 discovery draft.
-      Indicates the org is publishing MCP endpoints for agent
-      discovery. Does not prove the advertised servers are reachable
-      or implement the current MCP spec; treat as discovery metadata,
-      not a contract.
+      TXT declaration at `_mcp.<domain>` matching a community MCP DNS
+      discovery proposal. This proposal is not part of the current MCP
+      specification. The marker does not establish an active MCP server,
+      protocol compatibility, authentication, or AI-platform use. recon
+      does not contact the advertised endpoint.
     reference: https://github.com/modelcontextprotocol/modelcontextprotocol/discussions/2368
 - name: ElevenLabs
   slug: elevenlabs

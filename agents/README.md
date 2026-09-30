@@ -82,6 +82,14 @@ failure behavior, MCP invocation contracts, and output interpretation must stay
 semantically aligned. Do not copy the source-checkout working section into
 consumer skills.
 
+The 2026-09-30 review rechecked the Published Agent Plugins 1.0.0 schemas
+against the vendored copies; both remain byte-identical. Skills now distinguish
+compact one-off lookups from service comparisons over a supplied domain list.
+Generated manifests and installed-wheel probes establish package behavior;
+actual client acceptance still requires the documented representative-client
+evaluation. Passive AID/MCP discovery markers are described in
+[the fingerprint contract](../docs/fingerprints.md#agent-discovery-declarations).
+
 ## macOS PATH gotcha (most GUI clients)
 
 Cursor, Windsurf, VS Code, and Claude Desktop are GUI Electron apps. On macOS they do not inherit your shell's PATH, so `command: "recon"` will fail to launch the MCP server even when `recon` works fine in your terminal.

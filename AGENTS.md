@@ -46,6 +46,8 @@ recon is a Python 3.11-3.14 CLI and local stdio MCP server for public-metadata d
 
 **Orient and bound.** Read the README, roadmap, relevant ADRs, recent changes, and touched source/tests before choosing work. Resolve stale prose against source, configuration, lockfiles, and Git history. Record a bounded objective and acceptance evidence for work spanning sessions. Use current primary documentation for version-sensitive decisions; preserve the established stack and pinned tooling unless a demonstrated need justifies changing them.
 
+Consult manifests, CI and existing verification scripts before documenting commands. Keep planned, implemented, tested, shipped and deployed behavior distinct. A local structural index can help find callers and tests; check its revision and working-tree freshness, then inspect source before editing. An index or previous session summary is navigation, not evidence.
+
 **Converge.** Proceed with authorized research, reversible local edits, and verification without a separate human signoff. Reproduce meaningful failures, fix the canonical implementation, run focused tests and the full gate, inspect failures, and self-review the diff. For fingerprints and inference, cover lookalikes, sparse or failed sources, duplicate evidence, and claim provenance. Synthetic invariants prove behavior; they do not establish real-world precision or calibrated probabilities. Follow [the maintainer loop](docs/maintainer-loop-runbook.md) and update tests, current docs, and changelog when their claims change.
 
 **Verify.** Repository tasks use uv `0.11.17` (`pyproject.toml` allows `>=0.11.8,<0.13` for lock-update tooling). Do not "upgrade" to a newer uv minor for this checkout. Canonical local gate:
@@ -70,6 +72,10 @@ For MCP or packaging changes, use the exact-pin matrix in `scripts/check_mcp_com
 
 One helper per job. Before adding HTTP, cache, retry, logging, config, or serialization, reuse what exists (`http.py`, `cache.py`, `retry.py`). Do not put an LLM, bundled estimator, or numpy into the observe-infer-report core (`docs/agentic-balance.md`, ADR-0004).
 
+The bare-domain experience is the compact `formatter/briefing.py` projection. Keep protocol details, model diagnostics and full evidence in explicit full, explain or structured surfaces. Check rendered output when changing presentation. Agent workflows should answer the requested lookup or supplied-domain comparison without adding unsolicited exposure scores or requiring confirmation of a company's actual stack.
+
+Dependencies need a concrete capability or risk reduction beyond the standard library and existing packages. Check current stable releases and migration notes, preserve compatible constraints, and refresh the lock and derived exports together. Encode recurring failures in shared validation, types or tests; instruction Markdown is not a security boundary.
+
 **Catalog.** Most useful contributions are scoped YAML rules with a current vendor page or disclosure-safe basis, a real `verified` date, synthetic positive/lookalike/sparse fixtures, and provenance tests. After YAML edits:
 
 ```bash
@@ -77,6 +83,8 @@ uv run python scripts/generate_fingerprint_catalog.py --write
 ```
 
 Do not hand-edit `fingerprints.generated.json`. New slugs need `formatter/classify_tables.py` `CATEGORY_BY_SLUG`. Promotion gates: [CONTRIBUTING.md](CONTRIBUTING.md), [docs/catalog-maintenance.md](docs/catalog-maintenance.md), [docs/fingerprints.md](docs/fingerprints.md).
+
+Documented public patterns and synthetic invariants support routine maintenance without company interviews or operator confirmation of private inventories. Keep declaration, vendor attribution, protocol compatibility and active use separate. Narrow or retire unsupported claims before adding coverage; never turn missing or failed collection into confirmed absence.
 
 **Generated files.** Change the source or generator, then regenerate. Do not patch: `src/recon_tool/data/fingerprints.generated.json`, either `recon-schema.json`, `review-bundle-schema.json`, `docs/surface-inventory.json`, `docs/surface-parity.md`, `docs/cli-surface.md`, or `agents/agent-plugin/**` (except by `scripts/generate_agent_plugin.py`).
 
@@ -250,23 +258,24 @@ CLI fallbacks when the MCP server is not connected:
 
 ## Workflow patterns
 
-Single-domain assessment (the common case):
+Single-domain lookup (the common case):
 
-1. `lookup_tenant` with `format="json", explain=true` to get identity, services, and provenance.
-2. `assess_exposure` for the model-bound public-evidence index.
-3. `find_hardening_gaps` only if the user wants to discuss specific gaps.
-4. `simulate_hardening` only if the user explicitly asks "what if we did X."
+1. Use `lookup_tenant(domain)` or the bare CLI command for the compact answer.
+2. Request JSON and `explain=true` when the question needs evidence or downstream processing; keep the human answer focused on the requested services.
+3. Use `assess_exposure` or `find_hardening_gaps` only for a requested posture discussion, and `simulate_hardening` only for an explicit what-if question.
 
-Vendor diligence across many domains:
+Service questions across a supplied domain list:
 
-1. `cluster_verification_tokens` over the list to find exact token-reuse groups.
-2. `lookup_tenant` only the domains the user wants to drill into; don't fan out unprompted.
+1. The supplied list authorizes lookups of those domains. Use `lookup_tenant(domain, format="json")` for each, or write a domain file and run `recon batch <file> --json`. Use `--ndjson` for streamed results on a large list.
+2. Return a compact table with domain, requested service indicators, evidence type, confidence and relevant collection failures. Preserve per-domain errors and partial results. "Not observed" is not "not used"; a failed relevant source is unavailable evidence.
+3. Add token clustering, ecosystem relationships or detailed posture only when the question needs them. Do not follow related domains beyond the supplied set without a request.
+4. If only company names are supplied, ask for their domains. Do not require confirmation that the companies actually use the observed services.
 
 Family-of-companies / portfolio rollup:
 
 The operator supplies a group of related apexes (parent + subsidiaries, an M&A target's brand portfolio, a holding-company structure) and wants a unified report. recon does **not** infer ownership. The operator owns the relationship; recon describes observable structure across the set.
 
-1. **Confirm the input list explicitly.** Ask for the apexes one per line; do not derive them from a company name or external research. The operator's list is authoritative.
+1. **Use the supplied domains.** Ask for apexes only when missing; do not derive ownership from company names or require reconfirmation of an already supplied list. The operator's list is authoritative.
 2. **Fan out.** For ~5 or fewer apexes, call `lookup_tenant(domain, format="json", explain=true)` per apex. For larger sets, `recon batch <file> --json --include-ecosystem` returns the per-domain lookups plus the v1.8 ecosystem hypergraph and cross-domain token clustering in one payload.
 3. **Report administrative token overlap without validating the relationship.** `cluster_verification_tokens(domains=[...])` surfaces exact shared TXT token strings. Reuse is compatible with shared administration, copied configuration, managed service, or stale residue. Absence is non-informative because publication is optional; do not call the domains administratively separate.
 4. **Synthesize the rollup along these axes:**

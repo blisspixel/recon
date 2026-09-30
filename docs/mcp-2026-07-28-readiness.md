@@ -2,7 +2,7 @@
 
 Status: adopted. Production serves MCP 2026-07-28 on the v2 SDK; 1.28.1
 remains the rollback pin and stays blocking in the compatibility matrix
-Review date: 2026-09-13
+Review date: 2026-09-30
 
 The Model Context Protocol 2026-07-28 specification and official Python SDK
 `2.0.0` were published on 2026-07-28. This is a breaking protocol release.
@@ -31,17 +31,34 @@ boundary:
 - Live doctor tests: `tests/test_mcp_doctor.py`
 
 The declared production dependency is `mcp>=2.0.0,<3`, and the lock resolves to
-stable v2.0.0. Stable v2 uses `server/discover`, `MCPServer`, `mcp_types`,
+stable v2.2.0 with `mcp-types` 2.2.0. Stable v2 uses `server/discover`, `MCPServer`, `mcp_types`,
 snake-case Python attributes, wire aliases, and worker threads for synchronous
 handlers. Exact v1.28.1 remains the tested rollback pin and uses
 `ClientSession.initialize()` plus `tools/list`. The same server registration
 and domain logic pass on both generations.
 
-recon does not currently operate a remote Streamable HTTP MCP server, does not
-implement MCP OAuth flows, and does not use Roots, Sampling, or MCP Logging.
-Those facts materially reduce the immediate blast radius.
+Local stdio remains the default. `src/recon_tool/remote_server.py` also provides
+an optional operator-owned Streamable HTTP adapter with a read-only tool
+allow-list and deployment controls. The project does not operate a hosted
+endpoint; [remote deployment materials](optional-cloud-deployment-plan.md)
+remain a draft without provider validation. recon does not implement MCP OAuth
+flows, Roots, Sampling or MCP Logging. Review the HTTP adapter as a real code
+surface even though hosting is optional.
 
 ## Dated Compatibility Results
+
+The 2026-09-30 source and upstream review confirmed that protocol 2026-07-28
+and SDK 2.2.0 remain current stable. The production lock now adopts 2.2.0 and
+its companion types, within the existing `>=2.0.0,<3` constraint. The three
+exact compatibility rows remain unchanged. The
+[2.2.0 release notes](https://github.com/modelcontextprotocol/python-sdk/releases/tag/v2.2.0)
+include HTTP redirect, OAuth issuer, session-bound and output-schema-reference
+hardening; protocol support and actual recon client execution remain separate
+claims. Local verification passed all three isolated SDK rows (17 applicable
+checks on 1.28.1, 24 on each v2 pin), plus the installed-wheel probe with
+23 tools, six resources, two manifest launches and zero external socket
+attempts. These are package and protocol checks, not desktop-client acceptance.
+The older results below retain their original validation dates.
 
 The 2026-09-13 currency check confirmed that
 [2026-07-28 remains the current protocol](https://modelcontextprotocol.io/docs/2026-07-28/learn/versioning),
@@ -129,10 +146,10 @@ is the production dependency decision.
 - MCP Apps. Useful only if recon grows an interactive UI surface, which is not
   on the current roadmap.
 
-### Low or No Current Relevance
+### Optional Transport Relevance
 
-- Remote HTTP routing headers such as `Mcp-Method` and `Mcp-Name`. These
-  matter if recon ships a remote Streamable HTTP server.
+- Remote HTTP routing headers such as `Mcp-Method` and `Mcp-Name` apply to the
+  optional adapter and are covered by the shared SDK boundary.
 - OAuth and Dynamic Client Registration hardening. Important for MCP clients
   and remote servers, but recon's current stdio server has no OAuth surface.
 - HTTP+SSE migration. recon does not ship that transport.
@@ -140,8 +157,8 @@ is the production dependency decision.
 ## Decisions
 
 1. Keep the local stdio server as the supported MCP surface.
-2. Do not implement remote Streamable HTTP, OAuth, Apps, or Tasks for this
-   readiness track.
+2. Preserve the optional HTTP adapter through the shared SDK boundary. Do not
+   add OAuth, Apps or Tasks without an operator workflow requiring them.
 3. Keep exact v1.28.1 rollback, v2.0.0 production-floor, and v2.2.0
    current-stable compatibility rows blocking in CI.
 4. Run production on stable v2 after the adoption gate; retain exact v1.28.1 as

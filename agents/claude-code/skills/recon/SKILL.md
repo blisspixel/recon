@@ -189,23 +189,24 @@ the user asks for one of these, say so plainly rather than approximating it.
 
 ## Workflow patterns
 
-Single-domain assessment (the common case):
+Single-domain lookup (the common case):
 
-1. `lookup_tenant` with `format="json", explain=true` to get identity, services, and provenance.
-2. `assess_exposure` for the model-bound public-evidence index.
-3. `find_hardening_gaps` only if the user wants to discuss specific gaps.
-4. `simulate_hardening` only if the user explicitly asks "what if we did X."
+1. Use `lookup_tenant(domain)` or the bare CLI command for the compact answer.
+2. Request JSON and `explain=true` when the question needs evidence or downstream processing; keep the human answer focused on the requested services.
+3. Use `assess_exposure` or `find_hardening_gaps` only for a requested posture discussion, and `simulate_hardening` only for an explicit what-if question.
 
-Vendor diligence across many domains:
+Service questions across a supplied domain list:
 
-1. `cluster_verification_tokens` over the list to find exact token-reuse groups.
-2. `lookup_tenant` only the domains the user wants to drill into - don't fan out unprompted.
+1. The supplied list authorizes lookups of those domains. Use `lookup_tenant(domain, format="json")` for each, or write a domain file and run `recon batch <file> --json`. Use `--ndjson` for streamed results on a large list.
+2. Return a compact table with domain, requested service indicators, evidence type, confidence and relevant collection failures. Preserve per-domain errors and partial results. "Not observed" is not "not used"; a failed relevant source is unavailable evidence.
+3. Add token clustering, ecosystem relationships or detailed posture only when the question needs them. Do not follow related domains beyond the supplied set without a request.
+4. If only company names are supplied, ask for their domains. Do not require confirmation that the companies actually use the observed services.
 
 Family-of-companies / portfolio rollup:
 
 The operator supplies a group of related apexes - parent + subsidiaries, an M&A target's brand portfolio, a holding-company structure - and wants a unified report. recon does **not** infer ownership. The operator owns the relationship; recon describes observable structure across the set.
 
-1. **Confirm the input list explicitly.** Ask for the apexes one per line; do not derive them from a company name or external research. The operator's list is authoritative.
+1. **Use the supplied domains.** Ask for apexes only when missing; do not derive ownership from company names or require reconfirmation of an already supplied list. The operator's list is authoritative.
 2. **Fan out.** For ~5 or fewer apexes, call `lookup_tenant(domain, format="json", explain=true)` per apex. For larger sets, `recon batch <file> --json --include-ecosystem` returns the per-domain lookups plus the v1.8 ecosystem hypergraph and cross-domain token clustering in one payload.
 3. **Report administrative token overlap without validating the relationship.** `cluster_verification_tokens(domains=[...])` surfaces exact shared TXT token strings. Reuse is compatible with shared administration, copied configuration, managed service, or stale residue. Absence is non-informative because publication is optional; do not call the domains administratively separate.
 4. **Synthesize the rollup along these axes:**

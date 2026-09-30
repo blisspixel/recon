@@ -86,6 +86,13 @@ The ordered work is:
 5. Use concrete bug reports and reproducible operator examples to justify any
    new composition surface.
 
+The current polish batch applies these priorities to updater recovery and
+module isolation, regex admission, vendor-neutral agent-discovery declarations,
+the current stable MCP SDK, and concise supplied-domain service comparisons.
+The default panel remains compact, and collection remains within its existing
+passive boundary. Protocol currency does not imply that every agent harness or
+portable plugin client has been exercised.
+
 For correlation, prioritize the accuracy of the public observation and the
 honesty of its explanation: documented vendor patterns, synthetic positive and
 lookalike cases, duplicate-evidence checks, and sparse or failed collection.

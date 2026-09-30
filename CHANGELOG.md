@@ -26,6 +26,52 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.7] - 2026-09-30
+
+Harden updates and local fingerprint admission, correct agent-discovery
+attribution, and keep current agent integrations focused on the requested work.
+
+### Fixed
+
+- `recon update` downloads a pip release before replacing the installation, on
+  every platform. A failed download leaves the current files in place. macOS
+  and Linux then run the package manager in the foreground. Windows copies an
+  isolated worker out of the package, waits until every `recon.exe` has exited,
+  retries a transient file lock, and checks that `recon-tool` imports. A failed
+  upgrade prints a direct recovery command. The previous Windows failure text
+  told the operator to run `recon update` again after the package could already
+  have been removed.
+- Every updater-managed pip command now suppresses implicit working-directory
+  imports, including download, offline install and printed recovery commands.
+  A workspace `pip.py` or `pip` package can no longer replace installed pip;
+  user-site installs remain supported.
+- Regex admission accounts for inline comments, scoped verbose mode and
+  escaped comment terminators before checking repetition. Comment syntax can
+  no longer hide the reviewed unsafe forms from catalog, specificity or
+  process-local fingerprint-injection validation.
+- AID detection recognizes current `aid2` and legacy `aid1` declarations and
+  uses the vendor-neutral name. The historical `crewai-aid` slug stays stable.
+  MCP DNS discovery is labeled as a community proposal. These markers no
+  longer establish an AI-platform or autonomous-agent deployment claim.
+
+### Changed
+
+- Adopt stable MCP SDK 2.2.0 and companion types in the lock, retaining the
+  existing dependency range and exact 1.28.1, 2.0.0 and 2.2.0 compatibility gates.
+- Require PyJWT 2.14.0 or newer for the existing MCP dependency and lock current
+  stable 2.15.1. This excludes the affected 2.13.0 release flagged by the
+  September dependency audit; the floor also ships in wheel metadata so pip
+  upgrades cannot retain it. See the [upstream security fixes](https://pyjwt.readthedocs.io/en/stable/changelog.html#v2-14-0).
+- Refine shared development guidance and native/generated skills: concise
+  one-off lookups, direct comparisons over supplied domains, relevant evidence
+  and collection failures, and posture diagnostics only when requested. Current
+  Agent Plugins schemas remain byte-identical to the vendored 1.0.0 copies;
+  representative-client acceptance remains a separate uncompleted evaluation.
+
+### Tool Surface Changes
+
+Tool surface changes: no CLI command or flag changes.
+
 ## [2.19.6] - 2026-09-20
 
 Close the optional-tooling audit gap identified during final release verification.
