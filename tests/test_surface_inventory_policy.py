@@ -13,6 +13,7 @@ def test_surface_inventory_promotion_decision_is_documented() -> None:
     adr = (ROOT / "docs" / "adr" / "0007-surface-inventory-discovery-context.md").read_text(encoding="utf-8")
     roadmap = (ROOT / "docs" / "roadmap.md").read_text(encoding="utf-8")
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    schema = (ROOT / "docs" / "schema.md").read_text(encoding="utf-8")
     mcp_docs = (ROOT / "docs" / "mcp.md").read_text(encoding="utf-8")
     adr_index = (ROOT / "docs" / "adr" / "README.md").read_text(encoding="utf-8")
 
@@ -20,7 +21,9 @@ def test_surface_inventory_promotion_decision_is_documented() -> None:
     assert "Do not promote `docs/surface-inventory.json` or `recon://surface-inventory`" in adr
     assert "v2.3 stable surface" in adr
     assert "concrete external consumer" in adr
-    assert "not stable runtime API contracts" in _compact(readme)
+    assert "https://github.com/blisspixel/recon/blob/main/docs/schema.md" in readme
+    assert "not stable runtime API contracts" in _compact(schema)
+    assert "0007-surface-inventory-discovery-context.md" in schema
     assert "ADR-0007" in roadmap
     assert "ADR-0007" in mcp_docs
     assert "0007-surface-inventory-discovery-context.md" in adr_index

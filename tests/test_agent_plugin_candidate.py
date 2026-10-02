@@ -353,7 +353,6 @@ def test_readme_keeps_standards_and_claim_boundaries_separate() -> None:
 
 def test_active_docs_publish_offline_candidate_state_and_client_gate() -> None:
     active_paths = (
-        ROOT / "README.md",
         ROOT / "ROADMAP.md",
         ROOT / "agents" / "README.md",
         ROOT / "docs" / "roadmap.md",
@@ -368,6 +367,9 @@ def test_active_docs_publish_offline_candidate_state_and_client_gate() -> None:
     assert all("candidate" in document for document in normalized)
     assert all("client" in document for document in normalized)
     assert all("conformance claim" in document or "compatibility claim" in document for document in normalized)
+    readme = (ROOT / "README.md").read_text(encoding="utf-8")
+    assert "https://github.com/blisspixel/recon/blob/main/agents/README.md" in readme
+    normalized.append(" ".join(readme.lower().split()))
     stale_phrases = (
         "build the schema-pinned portable candidate",
         "next operation is the schema-pinned portable candidate",

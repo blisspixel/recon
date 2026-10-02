@@ -26,6 +26,17 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Changed
+
+- Shortened the README around installation, common commands, and local agent
+  setup. Detailed installer, research, and maintainer guidance lives in linked
+  docs; documentation checks enforce those boundaries at their canonical homes.
+
+### Fixed
+
+- Update failures print the complete recovery command separately from bounded
+  error details, preserving long interpreter paths and literal markup characters.
+
 ## [2.19.11] - 2026-10-01
 
 Correct public observation claims and CLI lifecycle handling. This release

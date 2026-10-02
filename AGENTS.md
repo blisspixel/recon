@@ -92,6 +92,8 @@ Documented public patterns and synthetic invariants support routine maintenance 
 
 **Scratch vs durable.** Temporary agent state belongs in gitignored `.agent/` (and `.grok/` in this environment). Indexes and receipts there are not source of truth. Promote lasting knowledge into tests, ADRs, changelog, or tracked docs. Do not invent a parallel `.agents/` tree.
 
+Keep the README focused on purpose, output, first use, and navigation. Put detailed procedures and research in their canonical linked guides, and enforce documentation contracts there instead of requiring duplicated README prose. Preserve absolute README links for the PyPI description.
+
 **Read next, in order:** [CONTRIBUTING.md](CONTRIBUTING.md), [docs/engineering-practices.md](docs/engineering-practices.md), [docs/adr/](docs/adr/), [ROADMAP.md](ROADMAP.md). Catalog work: [docs/catalog-maintenance.md](docs/catalog-maintenance.md). Claim language: [docs/reporting-observations.md](docs/reporting-observations.md). Do not commit, push, tag, or publish unless asked.
 
 ## What recon is

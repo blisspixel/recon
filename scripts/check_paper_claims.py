@@ -81,7 +81,6 @@ DOC_PATHS: dict[str, str] = {
 }
 
 LATEST_PROOF_DOC_NAMES: tuple[str, ...] = (
-    "readme-root",
     "roadmap-root",
     "docs-index",
     "roadmap",
@@ -276,6 +275,8 @@ def _statistical_overclaim_issues(docs: dict[str, str]) -> list[str]:
 
 def _latest_proof_issues(docs: dict[str, str]) -> list[str]:
     issues: list[str] = []
+    if "https://github.com/blisspixel/recon/blob/main/docs/README.md" not in docs["readme-root"]:
+        issues.append("readme-root does not link the documentation index")
     for doc_name in LATEST_PROOF_DOC_NAMES:
         if LATEST_PUBLIC_PROOF_MEMO not in docs[doc_name]:
             issues.append(f"{doc_name} does not link latest public proof memo")

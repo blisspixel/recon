@@ -8,6 +8,11 @@ additive changes (new fields) are non-breaking within the 2.x line.
 
 For the broader stability policy, see [`stability.md`](stability.md).
 
+`docs/surface-inventory.json`, `docs/cli-surface.md`, and
+`recon://surface-inventory` are generated discovery context and drift guards,
+not stable runtime API contracts.
+[ADR-0007](adr/0007-surface-inventory-discovery-context.md) records the promotion gate.
+
 Conformance tests at `tests/test_json_schema_contract.py` assert that every
 documented field is present and correctly typed on a fixture TenantInfo.
 

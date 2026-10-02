@@ -12,7 +12,6 @@ def _read(path: Path) -> str:
 
 def test_submission_freeze_checklist_is_linked_from_current_docs() -> None:
     for path in (
-        ROOT / "README.md",
         ROOT / "ROADMAP.md",
         ROOT / "docs" / "README.md",
         ROOT / "docs" / "roadmap.md",

@@ -324,7 +324,10 @@ def test_worker_request_round_trip_checks_this_install() -> None:
     assert worker.main(["worker.py", json.dumps(payload)]) == 0
 
 
-def test_pip_download_failure_does_not_replace_the_install(monkeypatch: pytest.MonkeyPatch) -> None:
+@pytest.mark.parametrize("long_path", [False, True])
+def test_pip_download_failure_does_not_replace_the_install(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, long_path: bool
+) -> None:
     monkeypatch.setattr(updater, "fetch_latest_version", lambda: "999.0.0")
     monkeypatch.setattr(updater, "detect_install_method", lambda: updater.PIP)
 
@@ -333,6 +336,14 @@ def test_pip_download_failure_does_not_replace_the_install(monkeypatch: pytest.M
 
     monkeypatch.setattr(updater, "upgrade_command", _command)
     monkeypatch.setattr(updater, "stage_pip_wheelhouse", Mock(side_effect=OSError("network down")))
+    recovery = updater.interpreter_reinstall_argv("999.0.0")
+    if long_path:
+        recovery[0] = str(tmp_path / ("install directory " * 12) / "[red]" / "python.exe")
+
+        def _recovery_command(_version: str) -> list[str]:
+            return recovery
+
+        monkeypatch.setattr(updater, "interpreter_reinstall_argv", _recovery_command)
     start = Mock()
     monkeypatch.setattr(worker, "start_update", start)
     apply = Mock()
@@ -344,6 +355,7 @@ def test_pip_download_failure_does_not_replace_the_install(monkeypatch: pytest.M
     assert result.exit_code == 1, result.output
     assert "left unchanged" in rendered
     assert "recon-tool==999.0.0" in rendered
+    assert updater.format_argv(recovery) in result.stderr
     start.assert_not_called()
     apply.assert_not_called()
 

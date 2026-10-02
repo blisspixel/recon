@@ -51,8 +51,11 @@ def test_public_package_and_development_metadata_use_current_language() -> None:
     project = tomllib.loads(_read("pyproject.toml"))["project"]
     description = project["description"]
 
-    assert "uv run pre-commit install" in readme
-    assert "`uv run python scripts/check.py` is the canonical local gate" in readme
+    contributing = _read("CONTRIBUTING.md")
+    assert "https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md" in readme
+    assert "uv run pre-commit install" in contributing
+    assert "uv run pre-commit install --hook-type commit-msg" in contributing
+    assert "`uv run python scripts/check.py` is the canonical local gate" in contributing
     assert description.startswith("Public-metadata domain intelligence")
     assert "\N{EM DASH}" not in description
 
@@ -63,7 +66,11 @@ def test_optional_cloud_docs_preserve_the_local_default_and_operator_boundary() 
     roadmap = " ".join(_read("docs/roadmap.md").split())
     plan = " ".join(_read("docs/optional-cloud-deployment-plan.md").split())
 
-    for text in (readme, short_roadmap, roadmap, plan):
+    assert "Local execution is the default" in readme
+    assert "project does not operate a hosted service" in readme
+    assert "https://github.com/blisspixel/recon/blob/main/docs/README.md" in readme
+    assert "optional-cloud-deployment-plan.md" in _read("docs/README.md")
+    for text in (short_roadmap, roadmap, plan):
         assert "optional" in text.lower()
         assert "local" in text.lower()
         assert "project does not operate" in text.lower()

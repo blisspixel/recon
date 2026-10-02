@@ -12,7 +12,6 @@ def _read(path: Path) -> str:
 
 def test_strategic_gap_audit_is_linked_from_reader_docs() -> None:
     for path in (
-        ROOT / "README.md",
         ROOT / "ROADMAP.md",
         ROOT / "docs" / "README.md",
         ROOT / "docs" / "roadmap.md",

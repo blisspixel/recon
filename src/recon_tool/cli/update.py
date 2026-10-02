@@ -10,6 +10,15 @@ import typer
 from recon_tool import updater, updater_windows
 from recon_tool.exit_codes import EXIT_ERROR
 from recon_tool.formatter import get_console, get_err_console, render_error
+from recon_tool.validator import strip_control_chars
+
+
+def _render_update_error(message: str, recovery: list[str]) -> None:
+    """Bound untrusted error detail without truncating the executable recovery command."""
+    render_error(message)
+    command = updater.format_argv(recovery)
+    safe = strip_control_chars(command, max_len=len(command))
+    get_err_console().print(f"Run manually: {safe}", markup=False, highlight=False, soft_wrap=True)
 
 
 def _prepare_pip_upgrade(latest: str) -> tuple[list[str], list[str], Path]:
@@ -89,21 +98,20 @@ def run_update(*, check: bool = False) -> None:
         try:
             prepared, recovery, wheelhouse = _prepare_pip_upgrade(latest)
         except OSError as exc:
-            render_error(
-                "Could not download the release "
-                f"({exc}). The installed copy was left unchanged. "
-                f"Run manually: {updater.format_argv(updater.interpreter_reinstall_argv(latest))}"
+            _render_update_error(
+                f"Could not download the release ({exc}). The installed copy was left unchanged.",
+                updater.interpreter_reinstall_argv(latest),
             )
             raise typer.Exit(code=EXIT_ERROR) from None
     try:
         result = _run_prepared_upgrade(method=method, prepared=prepared, recovery=recovery, wheelhouse=wheelhouse)
     except OSError as exc:
         updater_windows.remove_wheelhouse(wheelhouse)
-        render_error(f"Could not start the upgrade ({exc}). Run manually: {updater.format_argv(recovery)}")
+        _render_update_error(f"Could not start the upgrade ({exc}).", recovery)
         raise typer.Exit(code=EXIT_ERROR) from None
     if result is None:
         return
     if result != 0:
-        render_error(f"Upgrade failed. Run manually: {updater.format_argv(prepared)}")
+        _render_update_error("Upgrade failed.", prepared)
         raise typer.Exit(code=EXIT_ERROR)
     console.print("[green]Upgrade command completed. Open a new shell and run `recon --version` to confirm.[/green]")
