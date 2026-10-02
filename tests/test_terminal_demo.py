@@ -79,14 +79,13 @@ def test_readme_embeds_and_labels_the_synthetic_demo() -> None:
     assert render_terminal_demo_text() in readme
 
     # The illustration must never read as a capture of `recon example.com`.
-    # recon ships no offline demo mode, so a reader who runs the Quick Start
-    # command gets a live lookup of a reserved domain: sparse, and sometimes
-    # carrying unrelated public residue. A README that implies otherwise sends
-    # every new reader, and every agent following the front door, to narrate a
-    # fixture the binary cannot produce.
-    assert "recon ships no offline demo mode: this is a real lookup command" in normalized
-    assert "`--no-cache` to bypass the lookup-result cache" in normalized
-    assert "CT enrichment can still reuse its separate cache" in normalized
+    # Keep the illustration boundary beside the image and the complete
+    # real-lookup/cache explanation in the linked onboarding guide.
+    guide = " ".join((ROOT / "docs" / "getting-started.md").read_text(encoding="utf-8").split())
+    assert "docs/getting-started.md#first-lookup" in readme
+    assert "recon ships no offline demo mode: this is a real lookup command" in guide
+    assert "`--no-cache` to bypass the lookup-result cache" in guide
+    assert "CT enrichment can still reuse its separate cache" in guide
     assert "generated, not captured" in normalized
     assert "no live lookup of reserved" in normalized
     assert "README.md text eol=lf" in attributes

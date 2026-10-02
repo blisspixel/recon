@@ -109,6 +109,9 @@ actually shipped.
 ## Research and assurance
 
 The formal model, its assurance story, and the separate publication track.
+Public-list numbers are robustness checks rather than population rates.
+Model-relative diagnostics do not establish independently calibrated
+probabilities of product use; see the statistical-assurance dossier below.
 
 | Topic | Read |
 |---|---|

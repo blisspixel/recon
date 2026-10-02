@@ -497,19 +497,27 @@ def _check_citation_metadata(root: Path) -> CheckResult:
 def _check_readme_usage(root: Path) -> CheckResult:
     try:
         text = _read_text(root, "README.md")
+        contributing = _read_text(root, "CONTRIBUTING.md")
     except OSError as exc:
         return _result("README usage", "fail", str(exc))
     anchors = (
         "recon example.com",
         "recon batch domains.txt --json",
         "recon mcp install --client=",
-        "IETF reserved `.invalid` namespaces",
+        "https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md",
+        "https://github.com/blisspixel/recon/blob/main/docs/getting-started.md",
+        "https://github.com/blisspixel/recon/blob/main/docs/README.md",
+    )
+    missing = [f"README.md: {anchor}" for anchor in anchors if anchor not in text]
+    contributor_anchors = (
+        "IETF reserved `.invalid`",
         "python scripts/check.py",
+        "pre-commit install --hook-type commit-msg",
         "Project hygiene: keep examples reserved and synthetic",
         "keep validation artifacts",
         "avoid dead code or placeholders",
     )
-    missing = [anchor for anchor in anchors if anchor not in text]
+    missing.extend(f"CONTRIBUTING.md: {anchor}" for anchor in contributor_anchors if anchor not in contributing)
     if missing:
         return _result("README usage", "fail", "missing anchors: " + ", ".join(missing))
     unsafe_examples = any(

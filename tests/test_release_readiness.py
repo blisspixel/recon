@@ -97,14 +97,13 @@ def _write_minimal_root(root: Path, version: str = "2.2.8") -> None:
                 "recon example.com",
                 "recon batch domains.txt --json",
                 "recon mcp install --client=",
-                "IETF reserved `.invalid` namespaces",
-                "python scripts/check.py",
-                "Project hygiene: keep examples reserved and synthetic",
-                "keep validation artifacts",
-                "avoid dead code or placeholders",
+                "https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md",
+                "https://github.com/blisspixel/recon/blob/main/docs/getting-started.md",
+                "https://github.com/blisspixel/recon/blob/main/docs/README.md",
             ]
         ),
     )
+    _write_file(root, "CONTRIBUTING.md", (_ROOT / "CONTRIBUTING.md").read_text(encoding="utf-8"))
     _write_file(root, "CHANGELOG.md", f"# Changelog\n\n## [{version}] - 2026-06-26\n")
     _write_file(root, "CITATION.cff", f'version: {version}\ndate-released: "2026-06-26"\n')
     _write_file(
@@ -261,6 +260,26 @@ def test_repository_readme_satisfies_release_usage_contract() -> None:
     check = release_readiness._check_readme_usage(_ROOT)
 
     assert check.status == "pass", check.detail
+
+
+@pytest.mark.parametrize(
+    "anchor",
+    [
+        "python scripts/check.py",
+        "pre-commit install --hook-type commit-msg",
+        "keep validation artifacts",
+        "avoid dead code or placeholders",
+    ],
+)
+def test_linked_contributing_guide_preserves_maintainer_requirements(tmp_path: Path, anchor: str) -> None:
+    _write_minimal_root(tmp_path)
+    path = tmp_path / "CONTRIBUTING.md"
+    path.write_text(path.read_text(encoding="utf-8").replace(anchor, ""), encoding="utf-8")
+
+    check = release_readiness._check_readme_usage(tmp_path)
+
+    assert check.status == "fail"
+    assert f"CONTRIBUTING.md: {anchor}" in check.detail
 
 
 def test_coverage_gate_rejects_stale_src_layout_target(tmp_path: Path) -> None:

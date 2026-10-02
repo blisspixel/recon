@@ -38,26 +38,31 @@ def test_paper_claim_audit_passes_current_docs() -> None:
     assert collect_issues(ROOT) == []
 
 
-def test_paper_claim_audit_rejects_missing_latest_public_proof(tmp_path: Path) -> None:
+@pytest.mark.parametrize(
+    ("relative", "name"), [("docs/external-writeup-plan.md", "external-plan"), ("docs/README.md", "docs-index")]
+)
+def test_paper_claim_audit_rejects_missing_latest_public_proof(tmp_path: Path, relative: str, name: str) -> None:
     _copy_paper_docs(tmp_path)
-    plan = tmp_path / "docs" / "external-writeup-plan.md"
+    plan = tmp_path / relative
     text = plan.read_text(encoding="utf-8").replace("2026-06-30-submission-freeze-local-proof.md", "")
     plan.write_text(text, encoding="utf-8")
 
     issues = collect_issues(tmp_path)
 
-    assert "external-plan does not link latest public proof memo" in issues
+    assert f"{name} does not link latest public proof memo" in issues
 
 
-def test_paper_claim_audit_rejects_root_docs_without_latest_public_proof(tmp_path: Path) -> None:
+def test_paper_claim_audit_rejects_missing_readme_navigation(tmp_path: Path) -> None:
     _copy_paper_docs(tmp_path)
     readme = tmp_path / "README.md"
-    text = readme.read_text(encoding="utf-8").replace("2026-06-30-submission-freeze-local-proof.md", "")
+    text = readme.read_text(encoding="utf-8").replace(
+        "https://github.com/blisspixel/recon/blob/main/docs/README.md", ""
+    )
     readme.write_text(text, encoding="utf-8")
 
     issues = collect_issues(tmp_path)
 
-    assert "readme-root does not link latest public proof memo" in issues
+    assert "readme-root does not link the documentation index" in issues
 
 
 def test_paper_claim_audit_rejects_missing_claim_map_row(tmp_path: Path) -> None:

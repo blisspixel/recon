@@ -6,24 +6,23 @@
 [![License](https://img.shields.io/pypi/l/recon-tool.svg?cacheSeconds=300)](https://github.com/blisspixel/recon/blob/main/LICENSE)
 [![OpenSSF Scorecard](https://api.securityscorecards.dev/projects/github.com/blisspixel/recon/badge)](https://scorecard.dev/viewer/?uri=github.com/blisspixel/recon)
 
-Point recon at a domain and get its **public** technology and identity
-footprint: email security, mail and identity providers, SaaS indicators, and
-certificate-transparency findings. No credentials, no API keys, no active
-scanning. Ships as a CLI, versioned JSON, and a local MCP server for agent
-tools. Lookup time depends on public-provider latency and whether certificate
-transparency enrichment is enabled.
+Point recon at a domain to see its **public technology and identity
+footprint**: email providers and controls, identity indicators, SaaS services,
+and cloud infrastructure. No credentials, API keys, or active scanning.
+Use the CLI for a quick lookup, versioned JSON for automation, or the local
+MCP server from an agent.
+
+recon reports evidence-backed observations, not a complete inventory or a
+security verdict. A domain does not establish an organization's boundaries.
 
 ## See the Output
 
 ![Synthetic recon output in a modern Linux terminal](https://raw.githubusercontent.com/blisspixel/recon/main/docs/assets/terminal-demo.svg)
 
-The panel above is **generated, not captured**:
-[`scripts/generate_terminal_demo.py`](https://github.com/blisspixel/recon/blob/main/scripts/generate_terminal_demo.py)
-drives recon's real formatter over a deterministic, no-network fixture for the
-fictional Example Industries Ltd. It shows the *shape* of a full-signal
-result, every row a rich target can fill, and no live lookup of reserved
-`example.com` reproduces it. No real organization is depicted. Other project
-fixtures use IETF reserved `.invalid` namespaces.
+**Synthetic illustration, generated, not captured.** The real formatter renders
+a deterministic, no-network fixture for Example Industries Ltd. No real
+organization is depicted, and no live lookup of reserved `example.com`
+reproduces this fixture.
 
 <!-- terminal-demo-transcript:start -->
 <details>
@@ -64,10 +63,6 @@ Insights
 </details>
 <!-- terminal-demo-transcript:end -->
 
-> **Defensive use only.** Posture review, vendor diligence, architecture
-> review. See
-> [docs/legal.md](https://github.com/blisspixel/recon/blob/main/docs/legal.md).
-
 ## Quick Start
 
 **macOS / Linux:**
@@ -82,350 +77,96 @@ curl -fsSL https://raw.githubusercontent.com/blisspixel/recon/main/scripts/insta
 powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubusercontent.com/blisspixel/recon/main/scripts/install.ps1 | iex"
 ```
 
-The installer sets up recon for your user account, including `uv` and Python
-3.14 when needed. No administrator access or existing Python setup is required
-for a fresh install. Open a new terminal afterward.
-
-**Already have Python 3.11 through 3.14?** These work too:
-
-```bash
-pip install recon-tool
-# Or install in an isolated tool environment:
-uv tool install recon-tool
-pipx install recon-tool
-```
-
-If your system Python is externally managed, use the installer above or a
-[virtual environment](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#install-in-a-virtual-environment).
+The installer sets up recon for your user account, including Python when needed.
+Open a new terminal afterward. Already have Python 3.11 through 3.14? Use
+`pip install recon-tool` in a virtual environment.
+For review-before-run instructions, other package managers, updates, and recovery,
+see the [installation guide](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#install-or-update).
 
 ```bash
 recon --version      # offline install check
-recon doctor         # check installation, latest release, and online connectivity
-recon update         # update through the original package manager
-recon update --check # check for a newer release without installing
+recon doctor         # online connectivity and installation diagnostics
 ```
 
-On macOS and Linux, `recon update` runs the package manager in the foreground.
-A pip install is downloaded before the current copy is replaced. On Windows,
-the running launcher locks `recon.exe`, so the command hands the install to a
-background worker and prints a log path. Wait for `Update completed`, then run
-`recon --version`. If `recon` cannot start, use the recovery command in that
-output. A Windows pip install older than 2.19.5 should be upgraded with
-`python -m pip install -U recon-tool`.
-
-The scripts install an exact published version, preserve a sole existing `uv`
-or `pipx` owner, and explain how to recover ambiguous or unmanaged installs.
-For a fixed installer, download a
-[release tag source archive](https://github.com/blisspixel/recon/releases/latest)
-and review `scripts/install.sh` or `scripts/install.ps1` before running it.
-Artifact verification is covered in the
-[consumer verification recipe](https://github.com/blisspixel/recon/blob/main/docs/supply-chain.md#consumer-verification-quick-path).
-
-Before the first lookup, know what leaves your machine. recon makes DNS queries
-that recursive and authoritative DNS infrastructure may observe. Its only
-default request to a target-owned endpoint is the standards-defined MTA-STS
-policy fetch; Google CSE and BIMI certificate probes run only when
-`--direct-probes` is explicitly enabled. See
-[ADR-0011](https://github.com/blisspixel/recon/blob/main/docs/adr/0011-public-metadata-collection-boundary.md).
-
-Run a real review by replacing the placeholder with the domain you want to
-review:
+Lookups make DNS queries visible to recursive and authoritative infrastructure.
+MTA-STS is the only default target-owned HTTP request; Google CSE and BIMI
+certificate probes require explicit `--direct-probes`. There is no port
+scanning or application crawling. Replace the placeholder to start:
 
 ```bash
 recon "<domain-you-want-to-review>"
 ```
 
-For a real lookup showing the output shape, you can use `recon example.com`. recon
-ships no offline demo mode: this is a real lookup command, but an ordinary
-lookup may reuse a recent result from the default 24-hour cache. Pass
-`--no-cache` to bypass the lookup-result cache; CT enrichment can still reuse
-its separate cache. Reserved names such as `example.com` return a
-panel of stray public residue from unrelated test configurations, including a
-meaningless display name, at High confidence. It shows the shape of the output,
-not a result about any organization.
-
-A domain is a query coordinate, not proof of one organization or product: recon
-reports observations, not verdicts. That is the caution to keep beside every row
-the panel shows.
-
-Install, update, uninstall, and first-run detail:
-[docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md).
-
-## Start with Your Workflow
-
-| You are trying to | Start here | What you get |
-|---|---|---|
-| Review one namespace | `recon "<domain>"` | A compact, hedged panel of observed mail, identity, service, and confidence signals |
-| Create a deterministic evidence handoff | `recon review "<domain>"` | One fresh, role-neutral NamespaceReviewBundle with collection validity, evidence-linked candidates, and a standing scope statement |
-| Explain or hand off a finding | `recon "<domain>" --explain` | Per-source status, lineage-qualified rules, and retained-evidence counts; use `--json --explain` for the structured evidence graph |
-| Review an operator-supplied set | `recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2` | One portfolio evidence bundle with ordered typed results and errors, observable ecosystem overlaps, and an aggregate cohort summary |
-| Work through an agent | `recon mcp install --client=<name>` | Local typed tools, resources, and prompts without a hosted recon service |
-
-Defenders can follow the
-[evidence-first review workflow](https://github.com/blisspixel/recon/blob/main/docs/defender-workflow.md).
-Consultants and analysts should treat every multi-domain set as operator
-supplied: recon describes observable similarities and differences but does not
-infer ownership, control, or a corporate relationship.
-
-[NamespaceReviewBundle v1](https://github.com/blisspixel/recon/blob/main/docs/review-bundles.md)
-provides a role-neutral handoff for one namespace: one fresh,
-lookup-result-cache-bypassed baseline, evidence-linked review candidates,
-explicit bounded collection and failure states, and one deterministic human
-rendering. Use `recon review "<domain>"` from the CLI or
-`build_review_bundle(domain)` through MCP. Both surfaces return the same v1
-artifact; the CLI renders it as Markdown unless JSON is requested.
-
-## What recon Is Good For
-
-| Need | Use recon for | Use something else when |
-|---|---|---|
-| Fast external stack context | Passive DNS, identity-endpoint, CT, SaaS, and posture indicators | You need authenticated tenant inventory or asset-management truth |
-| Defensive review or vendor diligence | Hedged observations and evidence traces you can verify | You need vulnerability scanning, exploit checks, or host-level facts |
-| Automation-friendly output | Stable JSON, batch mode, delta mode, and local MCP tools | You need dashboards, scheduling, or report generation built in |
-
-recon reports observations, not verdicts. Public channel ceiling:
-[docs/limitations.md](https://github.com/blisspixel/recon/blob/main/docs/limitations.md).
-How to report a result without overstating it:
-[docs/reporting-observations.md](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md).
-
-### Correlation without overclaiming
-
-recon is designed around a harder question than record collection: when may
-several incomplete public observations support one claim, and when must the
-result stay unresolved? The
-[correlation model](https://github.com/blisspixel/recon/blob/main/docs/correlation.md)
-is the deeper design contract for that question. It separates observed facts,
-deterministic deductions, and model-relative diagnostics; treats provenance and
-abstention as first-class; and keeps ownership, causation, complete-inventory,
-and unvalidated robustness claims outside the result.
-
-The numerical diagnostics have a narrower meaning than their precision may
-suggest. `slug_confidences` measures evidence strength; a Bayesian posterior
-such as `0.9314` is conditional on manually encoded model assumptions, not a
-validated 93% chance of product use. Its uncertainty band is a display heuristic,
-not a confidence or credible interval. No current claim family has the
-independent validation needed for general calibration claims; see
-[statistical assurance](https://github.com/blisspixel/recon/blob/main/docs/statistical-assurance.md).
-The general robustness machinery in correlation section 5 remains research.
-
-v2.15 and v2.16 closed a five-round presentation-drift class. Independent
-testers installed the published package, never read the source, and kept finding
-the same issue: a decision applied to one renderer and not the others. The
-current engine surface and core contracts are stable. Those findings and their
-fixes are in
-[CHANGELOG.md](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md) and in
-[ADR-0015](https://github.com/blisspixel/recon/blob/main/docs/adr/0015-role-split-vendor-claims-in-the-default-view.md)
-through
-[ADR-0017](https://github.com/blisspixel/recon/blob/main/docs/adr/0017-one-briefing-in-every-shape.md).
-
-The living work is the fingerprint catalog. Vendors add, rename, and retire the
-public patterns recon detects, so a rule with no re-check is a slow source of
-false positives and negatives. Useful contributions are scoped catalog changes
-with a current exact vendor reference (or an independent disclosure-safe basis),
-a genuine `verified` review date, synthetic positive/lookalike/sparse fixtures,
-and provenance tests. A vendor-looking string alone is not sufficient support.
-[CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md)
-has the schema, the validation command, and what is deliberately out of scope.
-The freshness loop and its coverage floor live in
-[docs/catalog-strategy.md](https://github.com/blisspixel/recon/blob/main/docs/catalog-strategy.md).
-For an agent-assisted maintainer pass, use the
-[corpus planning and catalog-round workflow](https://github.com/blisspixel/recon/blob/main/docs/catalog-maintenance.md).
-It separates offline selection, explicitly bounded collection, candidate
-refinement, and untouched holdout evaluation. Increased classification coverage
-does not by itself establish accuracy or justify promotion.
-
-The next improvement loop combines documented catalog coverage with automated
-checks for duplicate evidence, deceptive lookalikes, failed sources, and output
-agreement. Local implementation within an authorized task can proceed without
-human approval steps. Per-slug evidence strength now counts each exact
-source-type/value pair once, even when multiple rules match it; distinct pairs
-still use the existing heuristic. The
-[acceptance loop](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md#autonomous-improvement-acceptance)
-sets the next work and its executable pass conditions.
+Ordinary lookups may reuse the 24-hour result cache. Use `--no-cache` to bypass
+it; certificate-transparency enrichment has a separate cache. See
+[first lookup and cache behavior](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#first-lookup).
 
 ## Common Commands
 
+The bare command stays compact. Request evidence or structured output when needed:
+
 ```bash
-recon example.com                              # default panel
-recon example.com --explain                    # evidence trail
-recon example.com --gaps                       # neutral hardening prompts
-recon example.com --plain                      # panel as linear text (screen readers, grep)
-recon example.com --plain --full               # every field, linear
-recon example.com --json                       # structured record
-recon review example.com                       # deterministic namespace review
-recon review example.com --output review.json  # save the validated v1 artifact
-recon example.com --explain-dag --explain-dag-format mermaid   # Bayesian model DAG
-recon batch domains.txt --json                 # batch JSON array
-recon batch domains.txt --json --include-ecosystem --summary --summary-schema 2.2
-                                                # portfolio evidence bundle
-recon delta example.com                        # diff vs local cache
-recon capsule capture example.com -o run.json  # caller-owned replay artifact
-recon mcp install --client=cursor              # wire MCP into a client
+recon example.com                      # compact panel
+recon example.com --explain             # evidence and source status
+recon example.com --json                # structured record
+recon example.com --plain               # linear text for screen readers and grep
+recon review example.com               # fresh, evidence-linked review bundle
+recon batch domains.txt --json          # look up a supplied domain list
+recon delta example.com                # compare with a cached baseline
+recon update                           # update through the original package manager
 ```
 
-More flags:
-[docs/cli-surface.md](https://github.com/blisspixel/recon/blob/main/docs/cli-surface.md).
-JSON contracts:
-[schema](https://github.com/blisspixel/recon/blob/main/docs/schema.md) ·
-[review bundles](https://github.com/blisspixel/recon/blob/main/docs/review-bundles.md) ·
-[stability](https://github.com/blisspixel/recon/blob/main/docs/stability.md) ·
-[operational contract](https://github.com/blisspixel/recon/blob/main/docs/operational-contract.md).
+These examples use reserved domains; real lookups will not reproduce the
+synthetic illustration above. For multi-domain reviews, recon describes
+observed similarities and differences without inferring ownership or a
+corporate relationship. See the
+[evidence-first review workflow](https://github.com/blisspixel/recon/blob/main/docs/defender-workflow.md)
+and [batch guide](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#batch-and-delta).
 
-Versioned JSON remains recon's structured runtime contract. The
-[Open Knowledge Format v0.2](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
-projection is deferred until a named consumer justifies the mapping. recon does
-not emit OKF, and any future OKF view would be additive rather than a replacement
-for JSON. Caller-owned JSON observation capsules are documented in
-[docs/observation-capsules.md](https://github.com/blisspixel/recon/blob/main/docs/observation-capsules.md),
-with the decision boundary in
-[ADR-0014](https://github.com/blisspixel/recon/blob/main/docs/adr/0014-caller-owned-capsules-and-okf-deferral.md).
+## Use with an Agent
 
-`docs/surface-inventory.json`, `docs/cli-surface.md`, and
-`recon://surface-inventory` are generated discovery context and drift guards,
-not stable runtime API contracts. ADR-0007 records the promotion gate.
-
-## Use with an AI agent (plugin / MCP / skill)
-
-Wire recon into Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, Kiro,
-or any MCP-compatible client:
+The PyPI package installs the CLI and MCP runtime. Connect the local server to
+Claude Desktop, Claude Code, Cursor, VS Code, Windsurf, or Kiro:
 
 ```bash
 recon mcp install --client=claude-desktop
-# also: claude-code, cursor, vscode, windsurf, kiro
 recon mcp doctor
 ```
 
-Restart the client after installation, then run `recon doctor --mcp`,
-`recon mcp doctor`, and `recon doctor --client=<name>` in that order. Start with
-manual tool approvals. Treat agents as untrusted input.
-Full setup:
-[docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md).
-Per-client scaffolds and skills:
-[agents/](https://github.com/blisspixel/recon/tree/main/agents).
-The PyPI package installs the CLI and MCP runtime. Repository agent scaffolds
-and plugin files are not included in the wheel or release assets.
+Restart the client and begin with manual tool approvals. Ask for one domain's
+email and identity indicators, or a service comparison across supplied domains.
+Missing evidence means "not observed", not "not used"; collection failures
+remain explicit. Local execution is the default, and the project does not
+operate a hosted service.
 
-The current scaffolds use each client's native configuration. In particular,
-the source-checkout-only Claude Code plugin uses Claude Code's client-specific
-layout; it does not claim conformance with the portable
-[Agent Plugins v1.0.0 specification](https://agent-plugins.org/specification).
-A complete-surface portable candidate now lives under
-[`agents/agent-plugin/`](https://github.com/blisspixel/recon/tree/main/agents/agent-plugin)
-and passes network-free validation against the exact pinned v1.0.0 schemas,
-whose bytes still match the Published specification. That is not a client
-compatibility or conformance claim. Representative-client evaluation remains
-incomplete, so use `recon mcp install --client=<name>` as the released setup
-path. The aggregate evaluation status and stop conditions are
-[recorded here](https://github.com/blisspixel/recon/blob/main/validation/2026-08-20-agent-portability-cost-gate.md).
+See [MCP setup and supported clients](https://github.com/blisspixel/recon/blob/main/docs/mcp.md)
+and [skills, plugins, and their validation status](https://github.com/blisspixel/recon/blob/main/agents/README.md).
 
-| You say | What the agent should do |
+## Documentation
+
+| Need | Guide |
 |---|---|
-| "Recon example.com" | Call `lookup_tenant` (or `recon example.com`) and return the panel-style summary |
-| "What does example.com run for email and identity?" | Same lookup; lead with MX/IdP/tenant facts and confidence |
-| "Which of these domains show Microsoft 365 or Okta?" | Look up the supplied domains or use batch JSON; return a compact service table with evidence and unavailable-source states |
-| "Why do you think that?" | Re-run with explain / provenance (`--explain` or `explain=true`) |
-| "Compare example.com and example.net" | `compare_postures` or two lookups side by side |
-| "Any public hardening gaps?" | `find_hardening_gaps` after a lookup - hedged "Consider" notes only |
+| Install, update, uninstall, or troubleshoot | [Getting started](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md) |
+| Find a command or flag | [CLI reference](https://github.com/blisspixel/recon/blob/main/docs/cli-surface.md) |
+| Build automation or hand off evidence | [JSON schema](https://github.com/blisspixel/recon/blob/main/docs/schema.md), [review bundles](https://github.com/blisspixel/recon/blob/main/docs/review-bundles.md) |
+| Understand results and their limits | [How it works](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md), [limitations](https://github.com/blisspixel/recon/blob/main/docs/limitations.md), [reporting observations](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md) |
+| Check plans and shipped changes | [Roadmap](https://github.com/blisspixel/recon/blob/main/ROADMAP.md), [changelog](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md) |
+| Find architecture, security, research, or release procedures | [Full documentation index](https://github.com/blisspixel/recon/blob/main/docs/README.md) |
 
-Bare lookups stay compact. Full evidence and model diagnostics belong in
-explicit full, explain or structured requests. A supplied domain list is enough
-to begin a comparison; operators do not need to confirm each company's actual
-stack. Missing public evidence is reported as not observed, with failed sources
-kept distinct.
+## Contributing and Support
 
-**Example chat.** This transcript uses the same synthetic Example Industries
-fixture as the illustration above, so it shows the shape of a full-signal
-answer rather than what a live `example.com` lookup returns:
+Catalog corrections and documented vendor patterns are especially useful.
+Start with [CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md)
+for setup, verification, and contribution requirements; coding agents should
+also read [AGENTS.md](https://github.com/blisspixel/recon/blob/main/AGENTS.md).
 
-> **You:** Recon example.com and tell me what you observe.
->
-> **Agent:** Public evidence for `example.com` (fictional demo):
-> - **Mail:** Microsoft 365 delivery path plus Proofpoint gateway; DMARC
->   `p=reject`, SPF strict, MTA-STS enforce.
-> - **Identity:** Federated; Okta indicator via CNAME.
-> - **Tenant:** GUID present, region NA; confidence high from four sources.
-> - **Also seen:** Cloudflare and Route 53 infrastructure, Wiz, Snowflake,
->   Datadog, Slack, Atlassian, GitHub, and Zoom public indicators.
->
-> These are public-record observations, not a security grade or proof of
-> active product use. Say if you want evidence detail or a gap review.
-
-Guidance:
-[agents/claude-code/skills/recon/](https://github.com/blisspixel/recon/tree/main/agents/claude-code/skills/recon/),
-[AGENTS.md](https://github.com/blisspixel/recon/blob/main/AGENTS.md).
-
-## Optional Cloud Access
-
-Local execution is the default, and the project does not operate a hosted
-service. For teams that want shared remote access, the repository includes a
-draft authenticated container and Cloud Run Terraform starting point. It is
-intended to be directionally useful, not a validated production deployment.
-Operators own deployment, identity, data handling, cost, and operations.
-
-- [Optional cloud plan](https://github.com/blisspixel/recon/blob/main/docs/optional-cloud-deployment-plan.md)
-- [Draft deployment framework](https://github.com/blisspixel/recon/tree/main/deploy)
-
-## Docs
-
-| Topic | Link |
-|---|---|
-| Glossary of recon's terms | [docs/glossary.md](https://github.com/blisspixel/recon/blob/main/docs/glossary.md) |
-| Install and first commands | [docs/getting-started.md](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md) |
-| Reporting a result without overstating it | [docs/reporting-observations.md](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md) |
-| How it works | [docs/how-it-works.md](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md) |
-| Known weak areas and conservative wording | [docs/weak-areas.md](https://github.com/blisspixel/recon/blob/main/docs/weak-areas.md) |
-| Catalog growth and freshness loop | [docs/catalog-strategy.md](https://github.com/blisspixel/recon/blob/main/docs/catalog-strategy.md) |
-| Observation capsules | [docs/observation-capsules.md](https://github.com/blisspixel/recon/blob/main/docs/observation-capsules.md) |
-| Correlation model | [docs/correlation.md](https://github.com/blisspixel/recon/blob/main/docs/correlation.md) |
-| MCP and agents | [docs/mcp.md](https://github.com/blisspixel/recon/blob/main/docs/mcp.md), [agents/](https://github.com/blisspixel/recon/tree/main/agents) |
-| Full docs index | [docs/README.md](https://github.com/blisspixel/recon/blob/main/docs/README.md) |
-| Roadmap | [ROADMAP.md](https://github.com/blisspixel/recon/blob/main/ROADMAP.md) · [docs/roadmap.md](https://github.com/blisspixel/recon/blob/main/docs/roadmap.md) · [docs/strategic-gap-audit.md](https://github.com/blisspixel/recon/blob/main/docs/strategic-gap-audit.md) |
-| Changelog | [CHANGELOG.md](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md) |
-| Security | [SECURITY.md](https://github.com/blisspixel/recon/blob/main/SECURITY.md) · [docs/security.md](https://github.com/blisspixel/recon/blob/main/docs/security.md) |
-
-Research and publication pointers (maintainer track, not the product core):
-[docs/submission-freeze-checklist.md](https://github.com/blisspixel/recon/blob/main/docs/submission-freeze-checklist.md),
-[validation/2026-06-30-submission-freeze-local-proof.md](https://github.com/blisspixel/recon/blob/main/validation/2026-06-30-submission-freeze-local-proof.md),
-[docs/public-label-snapshot-decision.md](https://github.com/blisspixel/recon/blob/main/docs/public-label-snapshot-decision.md)
-(public lists as robustness checks rather than population rates), and
-[docs/m365-tenancy-decision.md](https://github.com/blisspixel/recon/blob/main/docs/m365-tenancy-decision.md).
-
-## Development
-
-Repository and release tasks use uv `0.11.17`. The broader
-`>=0.11.8,<0.13` project constraint exists for dependency-update tooling, not
-as the reproducible maintainer toolchain.
-
-```bash
-uv self update 0.11.17
-uv --version                # must report uv 0.11.17
-uv sync
-uv run pre-commit install
-uv run pre-commit install --hook-type commit-msg   # required; see below
-uv run python scripts/release_readiness.py --allow-dirty
-uv run python scripts/check.py
-```
-
-The `commit-msg` hook is a separate installation step and is not optional.
-Attribution trailers live in commit metadata rather than in a diff, so no
-file-content hook can see them, and a trailer that reaches a pushed branch
-cannot be removed afterward: GitHub retains the head commit of every pull
-request under `refs/pull/*/head`, where the repository owner cannot delete it.
-[AGENTS.md](https://github.com/blisspixel/recon/blob/main/AGENTS.md#attribution-and-authorship)
-states the rule.
-
-`uv run python scripts/check.py` is the canonical local gate: lint, type
-checks, coverage-gated tests, generated-artifact and catalog checks, text and
-link hygiene, interface and claim checks, and size and complexity ratchets.
-It mirrors the blocking core CI gate; hosted scheduled and supply-chain
-workflows remain separate checks.
-
-Project hygiene: keep examples reserved and synthetic, keep validation artifacts
-aggregate-only, and avoid dead code or placeholders. See
-[CONTRIBUTING.md](https://github.com/blisspixel/recon/blob/main/CONTRIBUTING.md).
+Use [issues](https://github.com/blisspixel/recon/issues) for bugs and feature
+requests. Keep public examples reserved and synthetic; never post evaluated
+company domains, tenant IDs, or per-domain results. See the
+[private reporting paths](https://github.com/blisspixel/recon/blob/main/docs/data-handling-policy.md#private-non-security-reports)
+and [security policy](https://github.com/blisspixel/recon/blob/main/SECURITY.md).
+Intended for [defensive use](https://github.com/blisspixel/recon/blob/main/docs/legal.md).
 
 ## License
 
-Apache 2.0. Free to use, build on, fork, and share. See
-[LICENSE](https://github.com/blisspixel/recon/blob/main/LICENSE) for
-the full terms.
+[Apache 2.0](https://github.com/blisspixel/recon/blob/main/LICENSE).

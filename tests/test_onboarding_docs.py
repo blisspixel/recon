@@ -11,7 +11,7 @@ ROOT = Path(__file__).parents[1]
 
 def test_readme_separates_offline_install_check_from_online_diagnostics() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    quick_start = readme.split("## Quick Start", 1)[1].split("## What recon Is Good For", 1)[0]
+    quick_start = readme.split("## Quick Start", 1)[1].split("## Common Commands", 1)[0]
 
     assert quick_start.index("recon --version") < quick_start.index("recon doctor")
     assert "offline" in quick_start
@@ -20,7 +20,7 @@ def test_readme_separates_offline_install_check_from_online_diagnostics() -> Non
 
 def test_network_visibility_is_disclosed_before_readme_first_lookup() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    quick_start = readme.split("## Quick Start", 1)[1].split("## What recon Is Good For", 1)[0]
+    quick_start = readme.split("## Quick Start", 1)[1].split("## Common Commands", 1)[0]
     lookup_anchor = 'recon "<domain-you-want-to-review>"'
 
     assert lookup_anchor in quick_start
@@ -34,21 +34,22 @@ def test_network_visibility_is_disclosed_before_readme_first_lookup() -> None:
     assert "--direct-probes" in before_lookup
 
 
-def test_readme_routes_primary_audiences_before_the_feature_catalog() -> None:
+def test_readme_routes_common_workflows_to_detailed_guides() -> None:
     readme = (ROOT / "README.md").read_text(encoding="utf-8")
-    workflow = readme.split("## Start with Your Workflow", 1)[1].split("## What recon Is Good For", 1)[0]
+    workflow = readme.split("## Common Commands", 1)[1].split("## Documentation", 1)[0]
 
     for audience_path in (
-        "Review one namespace",
-        "Explain or hand off a finding",
-        "Review an operator-supplied set",
-        "Work through an agent",
-        "evidence-first review workflow",
+        "recon review example.com",
+        "recon example.com --explain",
+        "recon batch domains.txt --json",
+        "recon mcp install --client=",
+        "docs/defender-workflow.md",
+        "docs/getting-started.md#batch-and-delta",
+        "docs/mcp.md",
+        "agents/README.md",
     ):
         assert audience_path in workflow
-    assert "--include-ecosystem --summary --summary-schema 2.2" in workflow
-    assert "portfolio evidence bundle" in workflow
-    assert "does not\ninfer ownership, control, or a corporate relationship" in workflow
+    assert "without inferring ownership or a corporate relationship" in " ".join(workflow.split())
 
 
 def test_getting_started_promotes_the_bounded_portfolio_bundle() -> None:
@@ -209,7 +210,7 @@ def test_plugin_guidance_matches_the_released_distribution() -> None:
     mcp = (ROOT / "docs" / "mcp.md").read_text(encoding="utf-8")
 
     assert "The PyPI package installs the CLI and MCP runtime" in readme
-    assert "source-checkout-only Claude Code plugin" in readme
+    assert "https://github.com/blisspixel/recon/blob/main/agents/README.md" in readme
     assert "Source-checkout scaffolds" in agents
     assert "not a PyPI or GitHub Release asset" in agents
     assert "not currently published in a plugin marketplace" in claude

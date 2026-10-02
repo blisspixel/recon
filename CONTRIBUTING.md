@@ -75,11 +75,16 @@ uv self update 0.11.17      # select the repository's reproducible uv release
 uv --version                # must report uv 0.11.17
 uv sync                    # installs the dev group (pip: pip install -e . --group dev, pip 25.1+)
 uv run pre-commit install              # activate pre-commit hooks
+uv run pre-commit install --hook-type commit-msg
 uv run python scripts/release_readiness.py --allow-dirty
 uv run python scripts/check.py         # canonical local gate (--fast skips tests)
 ```
 
-`scripts/check.py` runs the canonical local gate: Ruff, Pyright using the
+The `commit-msg` hook is required separately: file-content hooks cannot check
+commit trailers. Read the [authorship rule](AGENTS.md#attribution-and-authorship)
+before committing or pushing.
+
+`uv run python scripts/check.py` is the canonical local gate: Ruff, Pyright using the
 complete `pyproject.toml` include and exclude contract, the coverage-gated test
 run, catalog and generated
 artifact checks, validation and text hygiene, tracked Markdown link and local
@@ -97,6 +102,10 @@ The standards this project holds itself (and any AI working in it) to are in
 design decisions are in [docs/adr/](docs/adr/). Coding agents should read
 [AGENTS.md](AGENTS.md#working-in-this-repository) for the short operational
 briefing, then this file and the engineering-practices standard.
+
+Project hygiene: keep examples reserved and synthetic, keep validation artifacts
+aggregate-only, and avoid dead code or placeholders. Use IETF reserved `.invalid`
+namespaces or the other reserved examples described above.
 
 ---
 

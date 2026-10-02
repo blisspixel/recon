@@ -82,7 +82,8 @@ def test_helper_guidance_provides_one_command_and_reviewable_alternative() -> No
             assert "pip install recon-tool" in text, label
             assert "recon update" in text, label
     assert "blob/main/scripts/install" not in texts["README"]
-    assert "https://github.com/blisspixel/recon/releases/latest" in texts["README"]
+    assert "docs/getting-started.md#install-or-update" in texts["README"]
+    assert "https://github.com/blisspixel/recon/releases/latest" in texts["Getting Started"]
     assert "scripts/install.sh" in texts["README"]
     assert "scripts/install.ps1" in texts["README"]
     assert "bash scripts/install.sh" in texts["Unix installer"]
@@ -93,13 +94,13 @@ def test_onboarding_explains_exact_owner_preserving_helpers_and_release_verifica
     readme = _README.read_text(encoding="utf-8")
     getting_started = _GETTING_STARTED.read_text(encoding="utf-8")
 
-    for text in (readme, getting_started):
-        normalized = " ".join(text.split())
-        assert "exact" in normalized
-        assert "release tag" in normalized or "represented by that tag" in normalized
-        assert "sole" in normalized
-        assert "unmanaged" in normalized
-        assert "supply-chain.md#consumer-verification-quick-path" in normalized
+    assert "docs/getting-started.md#install-or-update" in readme
+    normalized = " ".join(getting_started.split())
+    assert "exact" in normalized
+    assert "release tag" in normalized or "represented by that tag" in normalized
+    assert "sole" in normalized
+    assert "unmanaged" in normalized
+    assert "supply-chain.md#consumer-verification-quick-path" in normalized
     assert "Python 3.11 through 3.14" in getting_started
     assert "Python 3.11 or newer" not in getting_started
 
