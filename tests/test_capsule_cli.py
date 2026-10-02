@@ -7,6 +7,7 @@ from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
+import pytest
 from typer.testing import CliRunner
 
 from recon_tool.capsule import CollectionContext, build_capsule, write_capsule
@@ -120,10 +121,60 @@ def test_capture_refuses_existing_file_without_force(tmp_path: Path) -> None:
     output = tmp_path / "example-capsule.json"
     _written_capsule(output)
     info, results = _fixture()
-    with patch("recon_tool.resolver.resolve_tenant", new=AsyncMock(return_value=(info, results))):
+    with patch("recon_tool.resolver.resolve_tenant", new=AsyncMock(return_value=(info, results))) as resolve:
         result = runner.invoke(app, ["capsule", "capture", "example.com", "-o", str(output), "--no-ct"])
     assert result.exit_code == EXIT_VALIDATION
     assert "already exists" in result.output
+    resolve.assert_not_awaited()
+
+
+@pytest.mark.parametrize("vantage", ["", " padded", "trailing ", "line\nbreak", "control\x1b", "x" * 129])
+def test_capture_rejects_invalid_vantage_before_collection(tmp_path: Path, vantage: str) -> None:
+    output = tmp_path / "capsule.json"
+    resolve = AsyncMock(return_value=_fixture())
+    with patch("recon_tool.resolver.resolve_tenant", new=resolve):
+        result = runner.invoke(app, ["capsule", "capture", "example.com", "-o", str(output), "--vantage", vantage])
+    assert result.exit_code == EXIT_VALIDATION
+    assert "vantage" in result.output
+    resolve.assert_not_awaited()
+    assert not output.exists()
+
+
+@pytest.mark.parametrize("force", [False, True])
+@pytest.mark.parametrize("destination", ["directory", "missing-parent"])
+def test_capture_rejects_unusable_destination_before_collection(tmp_path: Path, force: bool, destination: str) -> None:
+    output = tmp_path if destination == "directory" else tmp_path / "missing" / "capsule.json"
+    resolve = AsyncMock(return_value=_fixture())
+    with patch("recon_tool.resolver.resolve_tenant", new=resolve):
+        result = runner.invoke(
+            app, ["capsule", "capture", "example.com", "-o", str(output), *(["--force"] if force else [])]
+        )
+    assert result.exit_code == EXIT_VALIDATION
+    resolve.assert_not_awaited()
+
+
+def test_capture_force_replaces_existing_capsule(tmp_path: Path) -> None:
+    output = tmp_path / "capsule.json"
+    output.write_text("caller-owned", encoding="utf-8")
+    resolve = AsyncMock(return_value=_fixture())
+    with patch("recon_tool.resolver.resolve_tenant", new=resolve):
+        result = runner.invoke(app, ["capsule", "capture", "example.com", "-o", str(output), "--force", "--json"])
+    assert result.exit_code == 0, result.output
+    resolve.assert_awaited_once()
+    assert json.loads(output.read_text(encoding="utf-8"))["record_type"] == "observation_capsule"
+
+
+def test_capture_preserves_file_created_during_collection(tmp_path: Path) -> None:
+    output = tmp_path / "capsule.json"
+
+    async def resolve(*_args: object, **_kwargs: object):
+        output.write_text("concurrent writer", encoding="utf-8")
+        return _fixture()
+
+    with patch("recon_tool.resolver.resolve_tenant", new=resolve):
+        result = runner.invoke(app, ["capsule", "capture", "example.com", "-o", str(output)])
+    assert result.exit_code == EXIT_VALIDATION
+    assert output.read_text(encoding="utf-8") == "concurrent writer"
 
 
 def test_capture_rejects_invalid_domain_before_collection(tmp_path: Path) -> None:

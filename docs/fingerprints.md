@@ -87,6 +87,22 @@ fingerprints:
 | `srv` | Bounded common SRV targets | DNS-label suffix; dotless patterns use substring matching | Service discovery (Teams, XMPP) |
 | `dmarc_rua` | DMARC `rua=` report URI | Substring | DMARC aggregate-report processor / vendor (the report mailbox host) |
 
+Adobe's `adobe-idp-site-verification=` TXT marker is displayed as **Adobe Admin
+Console** under Business Apps. It is a
+[domain-verification marker](https://helpx.adobe.com/business/enterprise/directories-domains-access/directories-and-domains/verify-domain-ownership.html),
+not evidence that Adobe is the organization's identity provider. The marker
+does not establish completed verification, SSO, licenses, or active product
+use. Adobe supports both externally authenticated Federated ID and Adobe-authenticated
+Enterprise ID; see [Adobe identity types](https://helpx.adobe.com/business/enterprise/identity-sso/set-up-identity/identity-types.html).
+The historical `adobe-idp` slug remains stable for automation.
+
+The built-in `null-mx` observation requires `0 .` as the sole distinct MX
+record, as specified in [RFC 7505 section 3](https://www.rfc-editor.org/rfc/rfc7505.html#section-3).
+Mixed sets and malformed root targets retain their raw evidence without a
+no-mail claim. Ordinary MX hosts in a mixed set still receive their normal
+catalog classification. This reports the published declaration, not a mail
+delivery test; missing MX records alone do not establish that email is absent.
+
 SPF provider matching requires the complete `v=spf1` version token. It uses
 include references before the first `all` mechanism and a single effective
 `redirect=` modifier. All include qualifiers remain policy references, not

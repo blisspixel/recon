@@ -58,8 +58,8 @@ For the JSON output contract in full field-by-field detail, see
 | `--confidence-mode {hedged,strict}`, `--strict` | Stable | v0.11. Default `hedged`; `--strict` is a shortcut for `--confidence-mode strict`. `strict` drops hedging qualifiers (`observed`, `likely`, `indicators`) only on a dense-evidence record (High confidence with at least three sources); a thin-evidence record keeps its hedges under `strict` by design, so the same insight can read differently across two records and identically when neither is dense. |
 | `--compare <file>` | Stable | Diff against previous JSON export. |
 | `--chain`, `--depth <1-3>` | Stable | Recursive related-domain resolution. |
-| `--no-cache`, `--cache-ttl <sec>` | Stable | Cache control. |
-| `--timeout <sec>` / `-t` | Stable | Pipeline timeout (default 120s). |
+| `--no-cache`, `--cache-ttl <sec>` | Stable | Lookup-result cache control. The independent CT cache still applies. |
+| `--timeout <sec>` / `-t` | Stable | Per-domain pipeline timeout (default 120s). Chains have a total budget of depth times timeout; each lookup is capped by the remaining budget. |
 | `--fusion` / `--no-fusion` | Stable (v2.0+) | Advanced Bayesian diagnostic control. v2 preserves the historical implicit enabled default. Pass `--no-fusion` for deterministic output or `--fusion` to pin the diagnostic on. A v2.12 interactive transition notice was withdrawn: the omitted-choice flip is deferred optional debt, not a scheduled default change. |
 | `--explain-dag` | Stable (v2.0+) | v1.9.0. Render Bayesian evidence DAG. |
 

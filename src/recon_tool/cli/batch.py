@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import io
 import logging
-from collections.abc import Awaitable, Callable, Sequence
+from collections.abc import Awaitable, Callable, Coroutine, Sequence
 from pathlib import Path
 from typing import Any, Literal, TextIO, TypeVar, cast
 
@@ -486,6 +486,15 @@ def batch_emit_json(
     typer.echo(json_mod.dumps(json_results, indent=2))
 
 
+def _create_batch_task(coroutine: Coroutine[Any, Any, _R]) -> asyncio.Task[_R]:
+    """Release an unscheduled coroutine if the event loop rejects task creation."""
+    try:
+        return asyncio.create_task(coroutine)
+    except BaseException:
+        coroutine.close()
+        raise
+
+
 async def _batch_map_ordered(
     items: Sequence[_T],
     process_one: Callable[[_T], Awaitable[_R]],
@@ -509,7 +518,7 @@ async def _batch_map_ordered(
     workers: list[asyncio.Task[None]] = []
     try:
         for _ in range(min(max_pending, len(items))):
-            workers.append(asyncio.create_task(worker()))
+            workers.append(_create_batch_task(worker()))
         await asyncio.gather(*workers)
     finally:
         for worker_task in workers:
@@ -523,7 +532,7 @@ async def _batch_map_ordered(
 
 async def _batch_emit_ndjson(
     domain_list: list[str],
-    process_one: Any,
+    process_one: Callable[[str], Coroutine[Any, Any, object]],
     error_prefix: str,
     *,
     max_pending: int,
@@ -549,12 +558,11 @@ async def _batch_emit_ndjson(
             index, domain = next(domain_iter)
         except StopIteration:
             return
-        pending[asyncio.create_task(process_one(domain))] = index
-
-    for _ in range(min(max_pending, len(domain_list))):
-        schedule_next()
+        pending[_create_batch_task(process_one(domain))] = index
 
     try:
+        for _ in range(min(max_pending, len(domain_list))):
+            schedule_next()
         while pending:
             done, _ = await asyncio.wait(pending, return_when=asyncio.FIRST_COMPLETED)
             for future in sorted(done, key=pending.__getitem__):

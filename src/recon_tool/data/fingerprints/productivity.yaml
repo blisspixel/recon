@@ -284,7 +284,7 @@ fingerprints:
       in media and entertainment production workflows).
       Indicates the domain is registered with a LucidLink
       organization.
-- name: Adobe (IDP)
+- name: Adobe Admin Console
   slug: adobe-idp
   category: Productivity & Collaboration
   confidence: high
@@ -292,14 +292,15 @@ fingerprints:
   detections:
   - type: txt
     pattern: ^adobe-idp-site-verification=
-    reference: https://helpx.adobe.com/enterprise/using/set-up-identity.html
+    reference: https://helpx.adobe.com/business/enterprise/directories-domains-access/directories-and-domains/verify-domain-ownership.html
+    verified: '2026-10-01'
     description: >-
-      Adobe Identity domain-verification TXT (the `adobe-idp`
-      prefix corresponds to Adobe's Identity service used
-      across Creative Cloud, Document Cloud, and Experience
-      Cloud SSO). Indicates the domain is registered with an
-      Adobe Admin Console organization for Federated ID or
-      Enterprise ID setup.
+      TXT marker for Adobe Admin Console domain verification.
+      Publishing the token does not prove completed verification,
+      active product use, licenses, SSO configuration, or which
+      identity provider authenticates users. Federated ID can use
+      an external IdP; Enterprise ID uses Adobe authentication.
+      The historical adobe-idp slug is retained for compatibility.
 - name: Adobe Sign
   slug: adobe-sign
   category: Productivity & Collaboration

@@ -82,6 +82,7 @@ __all__ = [
     "replay_capsule",
     "utc_text",
     "validate_capsule",
+    "validate_collection_vantage",
     "write_capsule",
 ]
 
@@ -307,6 +308,14 @@ def _without_digest(capsule: Mapping[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in capsule.items() if key != "content_digest"}
 
 
+def validate_collection_vantage(vantage: str, *, label: str = "capsule") -> str:
+    """Validate the same caller label before collection and artifact creation."""
+    safe = strip_control_chars(vantage, max_len=128).strip()
+    if not safe or safe != vantage:
+        raise ValueError(f"{label} vantage must be 1 to 128 printable characters")
+    return safe
+
+
 def build_capsule(
     info: TenantInfo,
     results: Iterable[SourceResult],
@@ -319,9 +328,7 @@ def build_capsule(
         raise ValueError("capsule collection end must not precede its start")
     if not math.isfinite(collection.timeout_seconds) or collection.timeout_seconds <= 0:
         raise ValueError("capsule timeout must be finite and positive")
-    safe_vantage = strip_control_chars(collection.vantage, max_len=128).strip()
-    if not safe_vantage or safe_vantage != collection.vantage:
-        raise ValueError("capsule vantage must be 1 to 128 printable characters")
+    safe_vantage = validate_collection_vantage(collection.vantage)
 
     domain = validate_domain(info.queried_domain, apex=False)
     if domain != info.queried_domain:

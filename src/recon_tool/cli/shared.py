@@ -13,6 +13,7 @@ import math
 import shutil
 import textwrap
 from collections.abc import Sequence
+from pathlib import Path
 from typing import Literal, Never
 
 import typer
@@ -85,6 +86,22 @@ def non_negative_int(value: int) -> int:
     if isinstance(value, bool) or value < 0:
         raise typer.BadParameter("must be a non-negative integer")
     return value
+
+
+def preflight_artifact_output(path: Path | None, *, force: bool, label: str) -> None:
+    """Reject known unusable destinations before collection, without writing.
+
+    The artifact writer must still enforce no-clobber at publication time.
+    """
+    if path is None:
+        return
+    if not path.parent.is_dir():
+        raise ValueError(f"{label} output directory does not exist: {path.parent}")
+    exists = path.exists() or path.is_symlink()
+    if path.exists() and not path.is_file():
+        raise ValueError(f"{label} output must be a file path: {path}")
+    if exists and not force:
+        raise FileExistsError(f"{label} output already exists: {path}")
 
 
 def fmt_exc(exc: BaseException) -> str:

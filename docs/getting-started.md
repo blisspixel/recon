@@ -218,7 +218,8 @@ recon example.com
 
 recon ships no offline demo mode: this is a real lookup command, but an ordinary
 lookup may reuse a recent result from the default 24-hour cache. Pass
-`--no-cache` for fresh collection. Reserved names such as `example.com` return a
+`--no-cache` to bypass the lookup-result cache; CT enrichment can still reuse
+its separate cache. Reserved names such as `example.com` return a
 real panel of stray public residue from unrelated test configurations,
 including a meaningless display name, at High confidence. It shows you the
 shape of the output, not a result about any organization. Point recon at a

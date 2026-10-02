@@ -41,6 +41,11 @@ The output path is never replaced unless `--force` is explicit. Writes use a
 same-directory temporary file and an atomic replacement. Newly reserved files
 use owner-only mode where the operating system supports it.
 
+Before collection, capture rejects invalid vantage labels, missing output
+directories, directory destinations, and existing files without `--force`.
+The writer checks again when publishing, so a file created during collection
+is also protected from accidental overwrite.
+
 The capsule contains:
 
 - the collection start, end, and frozen evaluation `as_of` timestamps;

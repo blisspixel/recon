@@ -300,8 +300,8 @@ def _load_fingerprint_corpus(corpus: str | None) -> tuple[list[str], bool]:
             using_example_corpus = True
         else:
             render_error(
-                "No corpus specified. Pass --corpus path/to/file or drop a "
-                "newline-delimited apex list at ~/.recon/corpus.txt."
+                "No corpus specified. Pass --corpus path/to/file or put a "
+                f"newline-delimited apex list at {user_corpus}."
             )
             raise typer.Exit(code=EXIT_VALIDATION) from None
     else:
@@ -466,8 +466,9 @@ def fingerprints_show(
         "null-mx": (
             "Null MX (domain does not accept email)",
             "Emitted by recon_tool.sources.dns_email.detect_mx for the RFC 7505 "
-            "Null MX form `0 .`. This is an explicit public declaration that "
-            "the domain does not accept email.",
+            "Null MX form `0 .` as the sole distinct MX record. Conflicting "
+            "records do not support this no-mail declaration. The declaration "
+            "does not test actual mail delivery.",
         ),
     }
 
@@ -648,9 +649,9 @@ def fingerprints_test(
         "--corpus",
         help=(
             "Path to a newline-delimited file of apex domains. If omitted, "
-            "recon looks for ~/.recon/corpus.txt; otherwise falls back to the "
-            "reserved synthetic example at tests/fixtures/corpus-example.txt "
-            "(format demo only; no real matches)."
+            "recon looks for corpus.txt in its configuration directory, then "
+            "tests/fixtures/corpus-example.txt in the working directory or source checkout. "
+            "Every selected domain uses live public-metadata collection."
         ),
     ),
     json_output: bool = typer.Option(False, "--json", help="Structured JSON output"),
@@ -715,10 +716,10 @@ def fingerprints_test(
     console.print()
     console.print(f"  [bold]Testing {slug!r} against {len(domains)} domain{'s' if len(domains) != 1 else ''}[/bold]")
     if using_example_corpus:
-        console.print("  [yellow]Using the fictional-company example corpus (no real matches expected).[/yellow]")
         console.print(
-            "  [dim]Supply --corpus path/to/file or drop ~/.recon/corpus.txt to test against real apexes.[/dim]"
+            "  [yellow]Using a discovered corpus-example.txt file; every selected domain is queried live.[/yellow]"
         )
+        console.print("  [dim]Supply --corpus path/to/file to select the input explicitly.[/dim]")
     console.print()
     with get_err_console().status(f"Resolving {len(domains)} domains..."):
         results = asyncio.run(_resolve_all())

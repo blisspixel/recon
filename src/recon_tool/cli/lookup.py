@@ -225,26 +225,22 @@ async def _lookup_chain(
     options: LookupOptions,
 ) -> None:
     """Follow related-domain breadcrumbs (`--chain`)."""
-    from recon_tool.chain import chain_resolve
+    from recon_tool.chain import ChainOptions, resolve_chain
     from recon_tool.formatter import format_chain_json, render_chain_panel, render_error
     from recon_tool.models import ReconLookupError
 
+    chain_options = ChainOptions(
+        depth=options.chain_depth,
+        timeout=options.timeout,
+        skip_ct=options.skip_ct,
+        active_probes=options.active_probes,
+    )
     try:
         if not options.quiet:
             with get_err_console().status(_CHAIN_STATUS_MESSAGE):
-                report = await chain_resolve(
-                    validated,
-                    depth=options.chain_depth,
-                    skip_ct=options.skip_ct,
-                    active_probes=options.active_probes,
-                )
+                report = await resolve_chain(validated, chain_options)
         else:
-            report = await chain_resolve(
-                validated,
-                depth=options.chain_depth,
-                skip_ct=options.skip_ct,
-                active_probes=options.active_probes,
-            )
+            report = await resolve_chain(validated, chain_options)
     except ReconLookupError as exc:
         raise_lookup_error(exc, domain=validated)
     except Exception as exc:
