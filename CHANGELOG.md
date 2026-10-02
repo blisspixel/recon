@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.11] - 2026-10-01
+
+Correct public observation claims and CLI lifecycle handling. This release
+also includes the BIMI and TLS-RPT declaration fixes prepared for v2.19.10,
+which was not published.
+
 ### Fixed
 
 - Display Adobe's domain-verification TXT marker as `Adobe Admin Console`
@@ -45,6 +51,15 @@ operator, corporate group, ownership, or control.
 - Describe lookup-result versus CT caching accurately in help. Corpus help
   follows the configured location and identifies fallback files as live input
   without assuming that their contents are synthetic.
+- Correct BIMI and TLS-RPT TXT admission for malformed, conflicting and
+  declined records while preserving protocol extensions and the existing
+  no-fetch boundary.
+
+### Security
+
+- Raise the development-only GitPython floor to 3.1.62 for the upstream
+  submodule path-traversal fix, GHSA-59cr-6r3x-644w. It remains outside the
+  runtime dependency graph. Refresh the pinned CodeQL actions to v4.38.2.
 
 ### Tool Surface Changes
 
@@ -52,6 +67,8 @@ operator, corporate group, ownership, or control.
   timeout flags now take effect; the default per-domain timeout remains 120 seconds.
 
 ## [2.19.10] - 2026-09-30
+
+Prepared but not published. These fixes are included in v2.19.11.
 
 Correct BIMI and TLS-RPT declaration observations through the existing DNS
 collection path. Compact output and network scope stay unchanged.
