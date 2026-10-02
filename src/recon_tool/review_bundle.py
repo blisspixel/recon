@@ -27,6 +27,7 @@ from recon_tool.capsule import (
     parse_utc_time,
     project_source_observations,
     utc_text,
+    validate_collection_vantage,
 )
 from recon_tool.collection_view import (
     collection_observable_evidence,
@@ -178,9 +179,7 @@ def _collection_times(collection: ReviewCollectionContext) -> tuple[str, str]:
         or collection.timeout_seconds <= 0
     ):
         raise ValueError("review timeout must be finite and positive")
-    safe_vantage = strip_control_chars(collection.vantage, max_len=128).strip()
-    if not safe_vantage or safe_vantage != collection.vantage:
-        raise ValueError("review vantage must be 1 to 128 printable characters")
+    validate_collection_vantage(collection.vantage, label="review")
     if collection.result_cache != "bypassed":
         raise ValueError("review collection must attest that the lookup-result cache was bypassed")
     if collection.direct_probes is not False:

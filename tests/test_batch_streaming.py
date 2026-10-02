@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import inspect
 import json
 from unittest.mock import AsyncMock, patch
 
@@ -248,6 +249,7 @@ async def test_ordered_map_worker_exception_cleans_up_other_workers() -> None:
 async def test_ordered_map_cleans_partial_pool_when_task_creation_fails() -> None:
     real_create_task = asyncio.create_task
     created: list[asyncio.Task[None]] = []
+    rejected = []
 
     async def process_one(_value: int) -> int:
         await asyncio.Event().wait()
@@ -255,7 +257,7 @@ async def test_ordered_map_cleans_partial_pool_when_task_creation_fails() -> Non
 
     def create_task(coroutine):
         if created:
-            coroutine.close()
+            rejected.append(coroutine)
             raise RuntimeError("synthetic task creation failure")
         task = real_create_task(coroutine)
         created.append(task)
@@ -269,6 +271,41 @@ async def test_ordered_map_cleans_partial_pool_when_task_creation_fails() -> Non
 
     assert len(created) == 1
     assert created[0].cancelled()
+    assert inspect.getcoroutinestate(rejected[0]) == inspect.CORO_CLOSED
+
+
+@pytest.mark.asyncio
+async def test_ndjson_cleans_partial_pool_when_task_creation_fails() -> None:
+    real_create_task = asyncio.create_task
+    created = []
+    rejected = []
+
+    async def process_one(domain: str) -> dict[str, str]:
+        await asyncio.Event().wait()
+        return {"domain": domain}
+
+    def create_task(coroutine):
+        if created:
+            rejected.append(coroutine)
+            raise RuntimeError("synthetic task creation failure")
+        task = real_create_task(coroutine)
+        created.append(task)
+        return task
+
+    with (
+        patch("recon_tool.cli.batch.asyncio.create_task", side_effect=create_task),
+        pytest.raises(RuntimeError, match="synthetic task creation failure"),
+    ):
+        await _batch_emit_ndjson(["a.invalid", "b.invalid"], process_one, "\x00ERR:", max_pending=2)
+
+    try:
+        assert created[0].cancelled()
+        assert inspect.getcoroutinestate(rejected[0]) == inspect.CORO_CLOSED
+    finally:
+        # Keep a failing regression from leaking work into the test runner.
+        created[0].cancel()
+        await asyncio.gather(*created, return_exceptions=True)
+        rejected[0].close()
 
 
 @pytest.mark.asyncio

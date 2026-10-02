@@ -350,7 +350,7 @@ def lookup(
         120.0,
         "--timeout",
         "-t",
-        help="Max seconds for the full resolve pipeline (default: 120)",
+        help="Max seconds per domain (chain budget: depth times timeout; default: 120)",
         callback=positive_finite_float,
         rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
@@ -382,7 +382,7 @@ def lookup(
     no_cache: bool = typer.Option(
         False,
         "--no-cache",
-        help="Bypass disk cache entirely",
+        help="Bypass lookup-result cache; CT cache still applies",
         rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     cache_ttl: int = typer.Option(
@@ -827,7 +827,8 @@ def delta(
     signals, auth, DMARC, email control count (0-5), and confidence.
     Incomplete collections suppress unconfirmable additions, removals, and
     dependent scalar changes. Uses the main TenantInfo cache
-    (~/.recon/cache/) automatically; no manual export file required.
+    automatically; no manual export file required. The cache location honors
+    RECON_CONFIG_DIR, legacy directories, and XDG settings.
     """
     from recon_tool.cache import cache_get, cache_put, tenant_info_to_dict
     from recon_tool.delta import compute_delta, validate_snapshot_domain

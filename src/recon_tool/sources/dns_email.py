@@ -270,9 +270,9 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
 
     Emit a generic EvidenceRecord for EVERY MX host
     found, whether or not a fingerprint pattern matched. This lets
-    downstream code distinguish "no MX records at all" (domain has no
-    email) from "MX records exist but the host isn't in our fingerprint
-    set" (the domain has custom or self-hosted email). Previously, a
+    downstream code distinguish no observed MX records from published
+    records without a catalog match. Neither establishes service operation
+    or ownership. Previously, a
     namespace with unclassified MX records looked identical to one with
     no MX records from the evidence perspective. The "generic MX evidence"
     carries an empty slug so it
@@ -295,10 +295,13 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
 
     unmatched_hosts: list[str] = []
     any_matched = False
-    null_mx_observed = False
+    # RFC 7505 section 3: the zero-preference root target must be the only
+    # MX record. Duplicate observations of that same RDATA do not add a
+    # distinct RR. A mixed set cannot support a no-mail declaration.
+    null_mx_observed = {tuple(record.split()) for record in mx_records} == {("0", ".")}
     for mx in mx_records:
         parts = mx.strip().split()
-        if len(parts) >= 2 and parts[0] == "0" and parts[-1].rstrip(".") == "":
+        if null_mx_observed:
             ctx.record_catalog_observation("mx", "@", ".", classified=True)
             ctx.add(
                 "Null MX (domain does not accept email)",
@@ -306,7 +309,6 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
                 source_type="MX",
                 raw_value=mx,
             )
-            null_mx_observed = True
             continue
         host = parts[-1].rstrip(".").lower() if parts else mx.lower().strip().rstrip(".")
         matched = False
@@ -327,22 +329,22 @@ async def detect_mx(ctx: dns_base.DetectionCtx, domain: str) -> None:
                 EvidenceRecord(
                     source_type="MX",
                     raw_value=mx,
-                    rule_name="Custom or unclassified MX host",
+                    rule_name="Custom or unclassified MX host" if host else "Unclassified MX root target",
                     slug="",
                 )
             )
             # Track unmatched MX hosts for the bounded unclassified-MX label.
             # MX record format is ``<priority> <host>`` - extract host.
-            if len(parts) >= 2:
-                unmatched_hosts.append(parts[-1].rstrip(".").lower())
-        ctx.record_catalog_observation("mx", "@", host, classified=matched)
+            if len(parts) >= 2 and host:
+                unmatched_hosts.append(host)
+        ctx.record_catalog_observation("mx", "@", host or mx.strip(), classified=matched)
 
     # The compatibility slug is retained for serialized-cache stability, but
     # the observation does not infer who operates an unmatched MX host. It may
     # be self-managed, hosted by an uncatalogued provider, or delegated through
     # another public namespace. A Null MX is an explicit no-mail declaration,
     # not an unclassified delivery path.
-    if unmatched_hosts and not any_matched and not null_mx_observed:
+    if unmatched_hosts and not any_matched:
         ctx.add(
             "Custom or unclassified MX",
             "self-hosted-mail",

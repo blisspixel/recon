@@ -36,6 +36,7 @@ from __future__ import annotations
 
 from recon_tool.fingerprints import load_fingerprints
 from recon_tool.formatter import _CATEGORY_BY_SLUG
+from recon_tool.formatter.classify import categorize_service
 
 # Slugs that intentionally fall through to "Business Apps" via the
 # pass-2 service-name fallback in ``_categorize_service``. Most are
@@ -47,7 +48,6 @@ from recon_tool.formatter import _CATEGORY_BY_SLUG
 EXPECTED_BUSINESS_APPS_FALLBACK: frozenset[str] = frozenset(
     {
         "6sense",
-        "adobe-idp",
         "adobe-sign",
         "apollo",
         "apple",
@@ -379,3 +379,14 @@ def test_mapped_and_fallback_sets_are_disjoint() -> None:
     assert not overlap, (
         f"Slugs in BOTH _CATEGORY_BY_SLUG and EXPECTED_BUSINESS_APPS_FALLBACK (contradictory decisions): {overlap}"
     )
+
+
+def test_business_app_fallback_names_cannot_silently_become_identity() -> None:
+    """A name containing IdP must not override an intended business-app role."""
+    accidental_identity = {
+        fingerprint.slug
+        for fingerprint in load_fingerprints()
+        if fingerprint.slug in EXPECTED_BUSINESS_APPS_FALLBACK
+        and categorize_service(fingerprint.name, fingerprint.slug) == "Identity"
+    }
+    assert not accidental_identity, f"Business-app fallbacks classified as Identity: {sorted(accidental_identity)}"

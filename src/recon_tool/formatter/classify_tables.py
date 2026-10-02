@@ -251,6 +251,8 @@ CATEGORY_BY_SLUG: dict[str, str] = {
     "github": "Collaboration",
     "gitlab": "Collaboration",
     "linear": "Collaboration",
+    # Adobe's TXT prefix names domain verification, not the organization's IdP.
+    "adobe-idp": "Business Apps",
     "disciple-media": "Collaboration",
     # Higher-ed LMS / SIS / student-facing platforms
     "canvas-lms": "Collaboration",

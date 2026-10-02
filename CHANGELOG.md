@@ -26,6 +26,31 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- Display Adobe's domain-verification TXT marker as `Adobe Admin Console`
+  under Business Apps, including retained results with the old display name.
+  The token does not identify the organization's IdP or establish SSO or
+  product use. Keep the `adobe-idp` slug for compatibility.
+- Require a sole distinct `0 .` MX record for a Null MX no-mail declaration.
+  Conflicting or malformed root targets no longer create that claim or hide
+  ordinary unclassified mail routes. Raw records and valid provider evidence
+  remain available.
+- Honor `--timeout` for chain lookups, cap each resolution by the remaining
+  aggregate budget, and retain completed results with explicit truncation.
+- Validate capsule output paths and vantage labels before collection, using
+  the same output preflight as review bundles and retaining write-time checks.
+- Cancel and join batch workers when task creation fails during streaming
+  startup. Both batch schedulers close rejected coroutines.
+- Describe lookup-result versus CT caching accurately in help. Corpus help
+  follows the configured location and identifies fallback files as live input
+  without assuming that their contents are synthetic.
+
+### Tool Surface Changes
+
+- No commands, flags, MCP tools or schema fields changed. Existing chain
+  timeout flags now take effect; the default per-domain timeout remains 120 seconds.
+
 ## [2.19.10] - 2026-09-30
 
 Correct BIMI and TLS-RPT declaration observations through the existing DNS

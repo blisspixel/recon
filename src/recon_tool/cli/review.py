@@ -11,7 +11,7 @@ from typing import Annotated, Any
 
 import typer
 
-from recon_tool.cli.shared import fmt_exc, positive_finite_float
+from recon_tool.cli.shared import fmt_exc, positive_finite_float, preflight_artifact_output
 from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_NO_DATA, EXIT_VALIDATION
 from recon_tool.formatter import render_error
 
@@ -20,18 +20,6 @@ __all__ = ["review"]
 logger = logging.getLogger("recon")
 
 _UNEXPECTED_REVIEW_ERROR = "Review collection failed because of an internal error. Run recon doctor, then retry."
-
-
-def _preflight_output(path: Path | None, *, force: bool) -> None:
-    if path is None:
-        return
-    if not path.parent.is_dir():
-        raise ValueError(f"Review bundle output directory does not exist: {path.parent}")
-    exists = path.exists() or path.is_symlink()
-    if path.exists() and not path.is_file():
-        raise ValueError(f"Review bundle output must be a file path: {path}")
-    if exists and not force:
-        raise FileExistsError(f"Review bundle output already exists: {path}")
 
 
 def _failure_exit_code(error_type: str) -> int:
@@ -45,7 +33,7 @@ def _validated_review_input(domain: str, output: Path | None, *, force: bool) ->
     try:
         coordinate = normalize_review_coordinate(domain)
         validated = validate_domain(coordinate)
-        _preflight_output(output, force=force)
+        preflight_artifact_output(output, force=force, label="Review bundle")
     except (FileExistsError, ValueError) as exc:
         render_error(fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from exc

@@ -561,7 +561,8 @@ def test_fingerprints_test_default_example_corpus_runs_without_user_corpus(
 
     assert result.exit_code == 0, result.output
     plain_output = _collapsed(result.output)
-    assert "fictional-company example corpus" in plain_output
+    assert "discovered corpus-example.txt" in plain_output
+    assert "queried live" in plain_output
     assert "0 of" in plain_output
 
 

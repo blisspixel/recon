@@ -14,6 +14,7 @@ is reached before exploring deeper levels.
 from __future__ import annotations
 
 import logging
+import math
 import time
 from collections import defaultdict
 from dataclasses import dataclass, replace
@@ -24,7 +25,9 @@ from recon_tool.resolver import RESOLVE_TIMEOUT, SourcePool, resolve_tenant
 logger = logging.getLogger("recon")
 
 __all__ = [
+    "ChainOptions",
     "chain_resolve",
+    "resolve_chain",
 ]
 
 # Hard limits to prevent runaway lookups
@@ -38,16 +41,24 @@ _MAX_NEXT_LEVEL_QUEUE = MAX_CHAIN_DOMAINS * 20
 
 
 @dataclass(frozen=True, slots=True)
-class _ChainLookup:
-    pool: SourcePool | None
-    skip_ct: bool
-    active_probes: bool
+class ChainOptions:
+    """One validated collection policy for a complete chain traversal."""
+
+    depth: int = 1
+    pool: SourcePool | None = None
+    skip_ct: bool = False
+    active_probes: bool = False
+    timeout: float = RESOLVE_TIMEOUT
+
+    def __post_init__(self) -> None:
+        if isinstance(self.timeout, bool) or not math.isfinite(self.timeout) or self.timeout <= 0:
+            raise ValueError("chain timeout must be finite and positive")
 
 
 async def _resolve_one_chain_domain(
     domain: str,
     depth: int,
-    lookup: _ChainLookup,
+    lookup: ChainOptions,
     *,
     seed: str,
     have_results: bool,
@@ -57,7 +68,7 @@ async def _resolve_one_chain_domain(
         info, _ = await resolve_tenant(
             domain,
             pool=lookup.pool,
-            timeout=RESOLVE_TIMEOUT,
+            timeout=lookup.timeout,
             skip_ct=lookup.skip_ct,
             active_probes=lookup.active_probes,
         )
@@ -81,6 +92,11 @@ async def chain_resolve(
     skip_ct: bool = False,
     active_probes: bool = False,
 ) -> ChainReport:
+    """Compatibility entry point with the default per-domain timeout."""
+    return await resolve_chain(domain, ChainOptions(depth, pool, skip_ct, active_probes))
+
+
+async def resolve_chain(domain: str, options: ChainOptions) -> ChainReport:
     """BFS resolution of related domains up to *depth* levels.
 
     At each level:
@@ -91,24 +107,18 @@ async def chain_resolve(
 
     Args:
         domain: Starting domain to resolve.
-        depth: Maximum recursion depth (1-3, default 1).
-        pool: Optional SourcePool (defaults to standard pool).
-        skip_ct: When True, skip cert-transparency providers for every
-            domain visited in the chain. Forwarded into each
-            ``resolve_tenant`` call so ``--no-ct`` is honored across
-            the BFS, not just the seed domain.
-        active_probes: When True, forward the opt-in direct-probe choice
-            (Google CSE, BIMI VMC) into each ``resolve_tenant`` call so
-            ``--direct-probes`` is honored across the whole chain.
+        options: Shared pool, depth, CT and explicit direct-probe policy.
+            Timeout is a per-domain resolution budget in seconds. The total
+            chain budget is depth times timeout; each lookup is capped by
+            the remaining aggregate budget.
 
     Returns:
         ChainReport with all resolved domains and metadata.
     """
     # Clamp depth to valid range
-    depth = max(1, min(depth, MAX_CHAIN_DEPTH))
+    depth = max(1, min(options.depth, MAX_CHAIN_DEPTH))
 
-    # Aggregate timeout: depth × 120 seconds
-    aggregate_timeout = depth * 120.0
+    aggregate_timeout = depth * options.timeout
     start_time = time.monotonic()
 
     visited: set[str] = set()
@@ -124,16 +134,6 @@ async def chain_resolve(
         if not current_level:
             break
 
-        # Check aggregate timeout before starting a new level
-        if time.monotonic() - start_time > aggregate_timeout:
-            logger.debug(
-                "Chain: aggregate timeout (%.0fs) reached after %d domains",
-                aggregate_timeout,
-                len(results),
-            )
-            truncated = True
-            break
-
         next_level: list[str] = []
 
         for d in current_level:
@@ -144,7 +144,8 @@ async def chain_resolve(
                 break
 
             # Check aggregate timeout before each domain resolution
-            if time.monotonic() - start_time > aggregate_timeout:
+            remaining = aggregate_timeout - (time.monotonic() - start_time)
+            if remaining <= 0:
                 logger.debug(
                     "Chain: aggregate timeout (%.0fs) reached after %d domains",
                     aggregate_timeout,
@@ -158,11 +159,14 @@ async def chain_resolve(
             resolved = await _resolve_one_chain_domain(
                 d,
                 current_depth,
-                _ChainLookup(pool, skip_ct, active_probes),
+                replace(options, timeout=min(options.timeout, remaining)),
                 seed=seed,
                 have_results=bool(results),
             )
             if resolved is None:
+                if time.monotonic() - start_time >= aggregate_timeout:
+                    truncated = True
+                    break
                 continue
             results.append(resolved)
             max_depth_reached = max(max_depth_reached, current_depth)

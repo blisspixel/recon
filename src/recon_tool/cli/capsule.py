@@ -12,7 +12,7 @@ from typing import Annotated, Any
 import typer
 from rich.markup import escape
 
-from recon_tool.cli.shared import fmt_exc, positive_finite_float, raise_lookup_error
+from recon_tool.cli.shared import fmt_exc, positive_finite_float, preflight_artifact_output, raise_lookup_error
 from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_VALIDATION
 from recon_tool.formatter import get_console, render_error
 
@@ -64,17 +64,22 @@ def capture(
     json_output: bool = typer.Option(False, "--json", help="Emit the write receipt as JSON."),
 ) -> None:
     """Collect a domain and write a versioned, integrity-bound local capsule."""
-    from recon_tool.capsule import CollectionContext, build_capsule, write_capsule
+    from recon_tool.capsule import CollectionContext, build_capsule, validate_collection_vantage, write_capsule
     from recon_tool.models import ReconLookupError
     from recon_tool.resolver import resolve_tenant
     from recon_tool.validator import validate_domain
 
     try:
         validated = validate_domain(domain)
-    except ValueError as exc:
+        output_path = output or _default_output(validated)
+        validate_collection_vantage(vantage)
+        preflight_artifact_output(output_path, force=force, label="Capsule")
+    except (FileExistsError, ValueError) as exc:
         render_error(fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from exc
-    output_path = output or _default_output(validated)
+    except OSError as exc:
+        render_error(fmt_exc(exc))
+        raise typer.Exit(code=EXIT_INTERNAL) from exc
 
     async def _capture() -> tuple[dict[str, Any], datetime, datetime]:
         started_at = datetime.now(UTC)
