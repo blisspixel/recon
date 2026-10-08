@@ -114,6 +114,17 @@ def is_spf_record(value: str) -> bool:
     return lowered == "v=spf1" or lowered.startswith("v=spf1 ")
 
 
+def select_spf_record(records: Iterable[str]) -> str | None:
+    """Select one SPF TXT record before policy credit or redirects.
+
+    RFC 7208 section 4.5 treats competing records as permerror. Distinct wire
+    records may concatenate to identical text, so retain their multiplicity.
+    dnspython's RRset already removes byte-identical duplicate DNS records.
+    """
+    candidates = [record for record in records if is_spf_record(record)]
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def _spf_terms(record: str) -> tuple[str, ...]:
     """Keep SPF's ASCII-space term boundaries without interpreting macros."""
     if not is_spf_record(record):

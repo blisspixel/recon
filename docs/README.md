@@ -103,6 +103,7 @@ actually shipped.
 | Draft optional remote MCP and cloud framework, not provider-validated | [optional-cloud-deployment-plan.md](optional-cloud-deployment-plan.md) |
 | Run maintainer validation safely | [maintainer-validation.md](maintainer-validation.md) |
 | Maintainer loop contract | [maintainer-loop-runbook.md](maintainer-loop-runbook.md) |
+| October dependency, bug and security review | [maintenance-review-2026-10-08.md](maintenance-review-2026-10-08.md) |
 | OpenSSF Scorecard and Best Practices posture | [openssf-posture.md](openssf-posture.md) |
 | OpenSSF Best Practices Badge readiness | [openssf-badge-readiness.md](openssf-badge-readiness.md) |
 

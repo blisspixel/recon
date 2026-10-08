@@ -207,3 +207,62 @@ def test_failed_cached_channel_cannot_restore_spf_provider(marker: str) -> None:
         degraded_sources=(marker,),
     )
     assert dns_replay.replay_cached_dns_fingerprints(original) is original
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("reverse", [False, True])
+@pytest.mark.parametrize(
+    "second", ["v=spf1 +all", "v=spf1 include:mailgun.org -all", "v=spf1 redirect=policy.example.net"]
+)
+async def test_competing_spf_records_withhold_policy_but_keep_references(
+    monkeypatch: pytest.MonkeyPatch, reverse: bool, second: str
+) -> None:
+    records = ["v=spf1 include:sendgrid.net -all", second, "unrelated TXT"]
+    if reverse:
+        records.reverse()
+    queries = _dns_fixture(monkeypatch, {"example.com": records})
+    ctx = dns_base.DetectionCtx()
+    await dns_email.detect_txt(ctx, "example.com")
+    replayed = dns_replay.replay_cached_dns_fingerprints(
+        SourceResult(source_name="dns_records", raw_dns_records=tuple(("TXT", value) for value in records))
+    )
+    assert queries == ["example.com"]
+    assert "sendgrid" in ctx.slugs
+    assert ctx.raw_dns_records["TXT"] == records
+    assert not any(item.slug in {"spf-strict", "spf-softfail"} for item in (*ctx.evidence, *replayed.evidence))
+    assert "SPF: strict (-all)" not in ctx.services
+    assert "SPF: strict (-all)" not in replayed.detected_services
+
+
+@pytest.mark.asyncio
+async def test_competing_spf_records_stop_later_redirect_hop(monkeypatch: pytest.MonkeyPatch) -> None:
+    queries = _dns_fixture(
+        monkeypatch,
+        {
+            "example.com": ["v=spf1 redirect=first.example.net"],
+            "first.example.net": ["v=spf1 redirect=second.example.net"],
+            "second.example.net": ["v=spf1 -all", "v=spf1 redirect=third.example.net"],
+            "third.example.net": ["v=spf1 -all"],
+        },
+    )
+    ctx = dns_base.DetectionCtx()
+    await dns_email.detect_txt(ctx, "example.com")
+    assert queries == ["example.com", "first.example.net", "second.example.net"]
+    assert not any(item.slug in {"spf-strict", "spf-softfail"} for item in ctx.evidence)
+
+
+@pytest.mark.asyncio
+async def test_single_spf_and_unrelated_txt_keep_policy(monkeypatch: pytest.MonkeyPatch) -> None:
+    record = "v=spf1 include:sendgrid.net -all"
+    _dns_fixture(monkeypatch, {"example.com": [record, "unrelated TXT"]})
+    ctx = dns_base.DetectionCtx()
+    await dns_email.detect_txt(ctx, "example.com")
+    assert "SPF: strict (-all)" in ctx.services
+
+
+def test_cached_equal_text_records_keep_rr_multiplicity() -> None:
+    record = "v=spf1 -all"
+    replayed = dns_replay.replay_cached_dns_fingerprints(
+        SourceResult(source_name="dns_records", raw_dns_records=(("TXT", record), ("TXT", record)))
+    )
+    assert not any(item.slug == "spf-strict" for item in replayed.evidence)

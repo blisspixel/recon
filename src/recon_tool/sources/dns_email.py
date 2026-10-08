@@ -48,6 +48,7 @@ from recon_tool.sources.dns_tables import (
     is_spf_record,
     match_spf_targets,
     select_bimi_record,
+    select_spf_record,
     select_tls_rpt_record,
     spf_all_qualifier,
     spf_redirect_target,
@@ -76,14 +77,14 @@ def _record_spf_targets(
     return tuple(targets)
 
 
-def apply_spf_policy_record(ctx: dns_base.DetectionCtx, txt: str) -> None:
+def apply_spf_policy_record(ctx: dns_base.DetectionCtx, txt: str, *, policy_admitted: bool = True) -> None:
     """Retain the observed SPF policy, including a permissive or missing ``all``.
 
     Strict and softfail keep their scored labels. ``+all``, ``?all``, and a
     record with no ``all`` still need a typed SPF occurrence so exposure and
     explain do not treat a live policy as an empty channel.
     """
-    qualifier = spf_all_qualifier(txt)
+    qualifier = spf_all_qualifier(txt) if policy_admitted else None
     if qualifier == "-":
         ctx.services.add(SVC_SPF_STRICT)
         ctx.evidence.append(EvidenceRecord("SPF", txt, SVC_SPF_STRICT, "spf-strict"))
@@ -109,6 +110,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
         degraded_name="dns:apex_txt",
     )
     ctx.raw_dns_records.setdefault("TXT", []).extend(txt_records)
+    selected_spf = select_spf_record(txt_records)
 
     for txt in txt_records:
         txt_lower = txt.lower()
@@ -147,7 +149,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             for det in match_spf_targets(observed_targets, spf_patterns):
                 ctx.add(det.name, det.slug, source_type="SPF", raw_value=txt)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
-            apply_spf_policy_record(ctx, txt)
+            apply_spf_policy_record(ctx, txt, policy_admitted=selected_spf is not None)
             # Follow SPF redirect= chains. A record like
             # "v=spf1 redirect=_spf.mail.umich.edu" means "use that
             # domain's SPF as mine" - RFC 7208 §6.1. Higher-ed and
@@ -163,7 +165,7 @@ async def detect_txt(ctx: dns_base.DetectionCtx, domain: str) -> None:
             # end of the record let ``+all`` and ``?all`` through, so the
             # redirect target's strict policy was credited to a record whose
             # own policy passes everything.
-            if spf_redirect_target(txt) is not None:
+            if selected_spf is not None and spf_redirect_target(txt) is not None:
                 await _follow_spf_redirect(ctx, txt_lower, depth=0, max_depth=3)
 
     # SPF complexity summary - runs once per domain after the TXT
@@ -227,6 +229,7 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
             degraded_name="dns:spf_redirect",
         )
         patterns = get_spf_patterns()
+        selected_spf = select_spf_record(target_records)
         for record in target_records:
             rec_lower = record.lower()
             if not is_spf_record(record):
@@ -238,6 +241,8 @@ async def _follow_spf_redirect(ctx: dns_base.DetectionCtx, spf_text: str, depth:
             for det in match_spf_targets(spf_targets, patterns):
                 ctx.add(det.name, det.slug, source_type="SPF", raw_value=record)
                 ctx.record_fp_match(det.slug, "spf", det.pattern)
+            if selected_spf is None:
+                continue
             # Propagate the policy qualifier from the redirect
             # target up to the origin - if _spf.mail.umich.edu
             # ends in -all, then umich.edu's SPF effectively ends

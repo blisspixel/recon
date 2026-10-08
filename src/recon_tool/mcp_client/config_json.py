@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
-from recon_tool.json_limits import exceeds_json_nesting_limit
+from recon_tool.json_limits import exceeds_json_nesting_limit, read_bounded_regular_file
 
 MAX_CLIENT_CONFIG_BYTES = 1024 * 1024
 
@@ -31,17 +31,18 @@ def read_json_object(path: Path) -> JsonObjectRead:
         return JsonObjectRead("invalid", None, "is a directory, not a config file")
 
     try:
-        with path.open("rb") as handle:
-            raw_bytes = handle.read(MAX_CLIENT_CONFIG_BYTES + 1)
+        raw_bytes, _, _ = read_bounded_regular_file(
+            path,
+            maximum_bytes=MAX_CLIENT_CONFIG_BYTES,
+            allow_symlinks=True,
+            future_mtime_tolerance_seconds=None,
+        )
     except OSError as exc:
         return JsonObjectRead("invalid", None, f"cannot read: {exc}")
-
-    if len(raw_bytes) > MAX_CLIENT_CONFIG_BYTES:
-        return JsonObjectRead(
-            "invalid",
-            None,
-            f"exceeds maximum size of {MAX_CLIENT_CONFIG_BYTES // (1024 * 1024)} MiB",
-        )
+    except ValueError as exc:
+        if "byte limit" in str(exc):
+            return JsonObjectRead("invalid", None, "exceeds maximum size of 1 MiB")
+        return JsonObjectRead("invalid", None, f"cannot read: {exc}")
     try:
         raw = raw_bytes.decode("utf-8-sig")
     except UnicodeDecodeError as exc:
