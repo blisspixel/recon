@@ -26,16 +26,46 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.12] - 2026-10-08
+
+Correct SPF and TXT observations, bound local MCP inputs, and refresh compatible
+dependencies with synchronized reproducible build constraints.
+
 ### Changed
 
 - Shortened the README around installation, common commands, and local agent
   setup. Detailed installer, research, and maintainer guidance lives in linked
   docs; documentation checks enforce those boundaries at their canonical homes.
+- Refresh compatible runtime and development dependencies, optional validation
+  SDK pins, and Hatchling 1.32.4 with synchronized hash-locked build constraints.
+  Provider SDKs remain outside the runtime and default development groups.
+- Reconcile completed roadmap tranches and record the remaining upstream pip
+  vendored-transport blocker separately from local maintenance.
 
 ### Fixed
 
 - Update failures print the complete recovery command separately from bounded
   error details, preserving long interpreter paths and literal markup characters.
+- Withhold SPF policy control credit and stop redirect traversal when an owner
+  publishes competing SPF records, including cached replay. Preserve raw TXT
+  observations, vendor references and include counts. Invalidate older lookup
+  caches that can retain incorrect policy evidence.
+- Parse real TXT character-string bytes before protocol admission, preserving
+  folding whitespace, quotes, backslashes and multi-string concatenation.
+
+### Security
+
+- Bound relative TXT fingerprint owners and retained ephemeral detection
+  patterns, closing a local MCP resource-quota bypass.
+- Reject non-regular MCP client configuration files before reading, including
+  FIFO substitutions. Preserve regular-file symlinks, BOM and empty-file behavior.
+- Require Typer 0.27.3 for its terminal-control escaping fix in CLI error messages.
+- Exclude multidict before 6.9.1 from the optional mutation toolchain for
+  CVE-2026-104874. It remains outside the runtime dependency graph.
+
+### Tool Surface Changes
+
+- Tool surface changes: no CLI command or flag changes.
 
 ## [2.19.11] - 2026-10-01
 

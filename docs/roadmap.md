@@ -13,25 +13,17 @@ tracked separately from product work.
 > [changelog](../CHANGELOG.md), with earlier plans in
 > [roadmap-history.md](roadmap-history.md).
 >
-> **Current priority: installation and update polish.** Provide a single command
-> for macOS/Linux and Windows, bootstrap prerequisites for a fresh user account,
-> verify PATH and the installed version, and keep `pip install recon-tool` a
-> documented option. `recon update` must advance an installer-pinned copy through
-> its existing manager; `recon doctor` must report release status without
-> changing the installation or adding noise to ordinary lookups.
-> The current polish batch also corrects documented agent-discovery indicators,
-> keeps the locked MCP SDK current, improves supplied-domain service workflows,
-> and closes reproducible updater and regex-admission defects. Routine catalog
-> maintenance uses public specifications and synthetic evidence; company
-> interviews and private inventory confirmation are not release gates.
-> The subsequent SPF accuracy pass shares version, directive and per-target
-> matching rules between live collection and cache replay, preserving raw
-> evidence while avoiding ignored-policy claims and unnecessary redirect hops.
-> DKIM TXT admission now follows tag and key-material boundaries, rejects
-> revoked keys and recognizes the omitted-version default. Selector scope and
-> positive evidence stay intact; cryptographic verification remains out of scope.
-> BIMI and TLS-RPT declaration admission also rejects malformed, conflicting
-> and explicitly declined records without widening collection or default output.
+> **Current priority: contract-preserving maintenance.** Installation and update
+> polish, agent-discovery declarations, supplied-domain service workflows, and
+> SPF, DKIM, BIMI and TLS-RPT admission corrections shipped in v2.19 maintenance
+> releases. Keep those behaviors under regression tests rather than treating
+> completed work as a future tranche. Routine catalog maintenance uses public
+> specifications and synthetic evidence; company interviews and private
+> inventory confirmation are not release gates.
+> The [October review](maintenance-review-2026-10-08.md) records the dependency
+> refresh, synchronized build graph, current bug fixes and local security
+> boundaries. The changelog records its release batch. The pip vendored-transport issue
+> requires an upstream stable fix; package audit workarounds remain in force.
 >
 > `main` is the single integration and release branch. Checked implementation
 > and release-preparation branches are temporary. Publication is complete only
@@ -74,7 +66,7 @@ healthy when it runs on its cadence and produces its artifact, not when it
 | Dependency and supply-chain audit | A PR or push, an advisory, a Dependabot bump | Weekly, plus on event | Green CodeQL, Scorecard, secrets scan, dependency audit; re-authored bot bumps | Floors green; the SAST ratchet advances only on Scorecard evidence, never by backfill |
 | Upstream provider-endpoint drift | The passive integration cron | Weekly | A live passive smoke of the identity and CT endpoints | Endpoints still behave; a break is an upstream change to characterize |
 | Inference CPT drift gate | An edit to `bayesian_network.yaml` | Per commit | The committed inference baseline plus an explicit `--update` acknowledgement in the diff | No node moves beyond its band without an acknowledged baseline update |
-| MCP dual-SDK matrix | An SDK release or a spec change | On event, plus per CI | A dated compatibility matrix, all three pins green | The v1.28.1 rollback, v2.0.0 production floor, and v2.2.0 current stable rows stay green |
+| MCP dual-SDK matrix | An SDK release or a spec change | On event, plus per CI | A dated compatibility matrix, all three pins green | The v1.28.1 rollback, v2.0.0 production floor, and v2.2.0 locked baseline rows stay green |
 | Mutation gate | A push or PR to a gated module, plus a weekly sweep | Per change, plus weekly | The mutation score over tested mutants | Genuine survivors killed with per-field pins; the floor is a fraction over tested mutants and is not bumped to pass |
 | Doc-versus-runtime consistency | Each release | Per release | Reconciled roadmap, schema, stability, and CHANGELOG; the parity matrix | The drift gates stay green; no document claims behavior the code lacks |
 | Release readiness and provenance | Each release | Per release | Local and remote readiness, SBOM, provenance, channel parity | The tag, PyPI artifact, and GitHub Release identify one commit; the SBOM and attestations are present |
@@ -202,7 +194,7 @@ and per-domain rows never leave the private workspace.
 Rank and urgency are different axes. Priority 1 remains the standing highest
 trust priority because output truthfulness outranks features; its current
 29-family audit is complete at the 2026-09-13 checkpoint. Priority 2 adopted
-MCP v2 on 2026-07-31 and retains rollback, production-floor, and current-stable
+MCP v2 on 2026-07-31 and retains rollback, production-floor, and locked-baseline
 pins as blocking checks. Priority 3's
 v2.11 decision and v2.12 compatibility transition are complete, and v2.13's
 capsule and OKF-deferral release is shipped. v2.14 is also shipped with the
@@ -468,7 +460,9 @@ claim lacks adequate evidence.
 
 Status: production adoption complete on 2026-07-31. The 2026-09-13 currency
 check adds SDK 2.2.0; exact v1.28.1 rollback, v2.0.0 production-floor, and
-v2.2.0 current-stable rows remain blocking.
+v2.2.0 locked-baseline rows remain blocking. See the
+[October review](maintenance-review-2026-10-08.md) for newer SDK observations;
+the dated compatibility pin is not a claim about the latest upstream release.
 
 The matrix pin lives in `.github/workflows/ci.yml` and the probe is
 `scripts/check_mcp_compatibility.py`. It exercises both stable SDK generations

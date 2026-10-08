@@ -16,6 +16,7 @@ from typing import Any
 import dns.asyncresolver
 import dns.exception
 import dns.resolver
+from dns.rdtypes.txtbase import TXTBase
 
 from recon_tool.fingerprints import get_m365_slugs as _get_m365_slugs
 from recon_tool.fingerprints import load_fingerprints
@@ -128,7 +129,12 @@ async def safe_resolve(
                     canonical,
                 )
                 return []
-        return [parse_rdata(rdata.to_text()) for rdata in answers]  # pyright: ignore[reportGeneralTypeIssues]
+        return [
+            b"".join(rdata.strings).decode("utf-8", errors="replace")
+            if isinstance(rdata, TXTBase)
+            else parse_rdata(rdata.to_text())
+            for rdata in answers  # pyright: ignore[reportGeneralTypeIssues]
+        ]
     except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
         return []
     except dns.resolver.NoNameservers:

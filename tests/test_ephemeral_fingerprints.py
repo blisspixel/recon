@@ -74,6 +74,11 @@ def _cleanup_ephemeral():  # pyright: ignore[reportUnusedFunction]
 class TestEphemeralCoreFunctions:
     """Verify inject_ephemeral(), get_ephemeral(), clear_ephemeral() in fingerprints.py."""
 
+    def test_direct_injection_rejects_oversized_detection(self) -> None:
+        with pytest.raises(EphemeralCapacityError, match="pattern"):
+            inject_ephemeral(_make_fingerprint(det_type="subdomain_txt", pattern="x" * 10_000 + ":^proof$"))
+        assert get_ephemeral() == ()
+
     def test_inject_then_get_contains_fingerprint(self) -> None:
         """inject → get returns collection containing injected fingerprint."""
         fp = _make_fingerprint()
@@ -968,3 +973,39 @@ class TestProperty5EphemeralRoundTrip:
 
         # All should be gone
         assert get_ephemeral() == ()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "owner",
+    ["x" * 10_000, "x" * 64, "_proof..nested", "_proof.", "_proof\\", "_proof/other", "_pr\u00f6of"],
+    ids=["oversized", "long-label", "empty-label", "absolute", "escape", "path", "unicode"],
+)
+async def test_mcp_injection_rejects_invalid_txt_owner(owner: str) -> None:
+    from recon_tool.server.ephemeral import inject_ephemeral_fingerprint
+
+    with pytest.raises(ToolError, match="Validation failed"):
+        await inject_ephemeral_fingerprint(
+            name="Synthetic Owner Proof",
+            slug="synthetic-owner-proof",
+            category="SaaS",
+            confidence="high",
+            detections=[{"type": "subdomain_txt", "pattern": owner + ":^proof$"}],
+        )
+    assert get_ephemeral() == ()
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("owner", ["_proof.nested", "x" * 63, ".".join(["x" * 63] * 3 + ["x" * 61])])
+async def test_mcp_injection_preserves_bounded_relative_txt_owners(owner: str) -> None:
+    from recon_tool.server.ephemeral import inject_ephemeral_fingerprint
+
+    result = await inject_ephemeral_fingerprint(
+        name="Synthetic Owner Proof",
+        slug="synthetic-owner-proof",
+        category="SaaS",
+        confidence="high",
+        detections=[{"type": "subdomain_txt", "pattern": owner + ":^proof$"}],
+    )
+    assert result["status"] == "ok"
+    assert get_ephemeral()[0].detections[0].pattern == owner + ":^proof$"

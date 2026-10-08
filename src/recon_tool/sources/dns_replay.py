@@ -30,7 +30,7 @@ from recon_tool.models import EvidenceRecord, SourceResult
 from recon_tool.regex_safety import compile_regex
 from recon_tool.source_status import ObservationChannel, SourceStatus
 from recon_tool.sources.dns_base import DetectionCtx
-from recon_tool.sources.dns_tables import is_spf_record, match_spf_targets, spf_targets
+from recon_tool.sources.dns_tables import is_spf_record, match_spf_targets, select_spf_record, spf_targets
 from recon_tool.validator import host_has_suffix, is_domain_shaped
 
 if TYPE_CHECKING:
@@ -84,7 +84,7 @@ def _record_match(
         return
 
 
-def _replay_txt(ctx: DetectionCtx, value: str) -> None:
+def _replay_txt(ctx: DetectionCtx, value: str, *, policy_admitted: bool) -> None:
     """Replay apex TXT and SPF catalog rules with live-detector semantics."""
     matches = match_txt_all(value, get_txt_patterns())
     if matches:
@@ -104,7 +104,7 @@ def _replay_txt(ctx: DetectionCtx, value: str) -> None:
         ctx.record_fp_match(match.slug, "spf", match.pattern)
     from recon_tool.sources.dns_email import apply_spf_policy_record
 
-    apply_spf_policy_record(ctx, value)
+    apply_spf_policy_record(ctx, value, policy_admitted=policy_admitted)
 
 
 def _replayed_context(result: SourceResult) -> DetectionCtx:
@@ -114,6 +114,9 @@ def _replayed_context(result: SourceResult) -> DetectionCtx:
     if result.error is not None or result.source_unavailable or status.whole_dns_unavailable:
         return ctx
 
+    selected_spf = select_spf_record(
+        value for record_type, value in result.raw_dns_records if record_type.upper() == "TXT"
+    )
     records = sorted(
         {(record_type.upper(), value) for record_type, value in result.raw_dns_records},
         key=lambda item: (item[0], item[1]),
@@ -123,7 +126,7 @@ def _replayed_context(result: SourceResult) -> DetectionCtx:
         if channel is None or status.channel_unavailable(channel):
             continue
         if record_type == "TXT":
-            _replay_txt(ctx, value)
+            _replay_txt(ctx, value, policy_admitted=selected_spf is not None)
         elif record_type == "MX":
             _record_match(ctx, "MX", value, get_mx_patterns())
         elif record_type == "NS":

@@ -47,33 +47,38 @@ def exceeds_json_nesting_limit(text: str, *, maximum: int = MAX_JSON_NESTING) ->
     return False
 
 
-def load_bounded_json_file(
+def read_bounded_regular_file(
     path: Path,
     *,
     maximum_bytes: int,
     maximum_age_seconds: float | None = None,
-    future_mtime_tolerance_seconds: float = 300.0,
-    decoder: Callable[[str], Any] | None = None,
-) -> tuple[Any, os.stat_result, float]:
-    """Decode one stable, regular JSON file without an unbounded path read.
+    future_mtime_tolerance_seconds: float | None = 300.0,
+    allow_symlinks: bool = False,
+) -> tuple[bytes, os.stat_result, float]:
+    """Read bounded bytes from one stable regular file.
 
     The descriptor owns both metadata checks and the bounded read, so replacing
     or growing a path after a preliminary stat cannot bypass the byte ceiling.
-    Stable symlinks are rejected on every platform, and ``O_NOFOLLOW`` closes
+    By default, symlinks are rejected on every platform, and ``O_NOFOLLOW`` closes
     the open-time race on platforms that provide it. Identity and metadata are
     checked again after the read before parsed content is admitted. Optional
     freshness admission is performed from descriptor metadata before any file
     content is read, avoiding repeated parsing of expired entries. Materially
     future modification times are rejected instead of extending cache life.
-    An optional decoder runs after every file and nesting check; its exceptions
-    propagate. The default JSON decoder is resolved at call time.
+    Config readers may explicitly resolve stable symlinks and disable the
+    cache-specific future-mtime check. Descriptor checks still reject special
+    files and replacements of the resolved target.
     """
     if maximum_bytes < 1:
         raise ValueError("maximum_bytes must be positive")
-    if not math.isfinite(future_mtime_tolerance_seconds) or future_mtime_tolerance_seconds < 0:
+    if future_mtime_tolerance_seconds is not None and (
+        not math.isfinite(future_mtime_tolerance_seconds) or future_mtime_tolerance_seconds < 0
+    ):
         raise ValueError("future_mtime_tolerance_seconds must be finite and non-negative")
     if maximum_age_seconds is not None and (not math.isfinite(maximum_age_seconds) or maximum_age_seconds < 0):
         raise ValueError("maximum_age_seconds must be finite and non-negative")
+    if allow_symlinks:
+        path = path.resolve(strict=True)
     if path.is_symlink():
         raise ValueError("JSON file must not be a symbolic link")
     if not stat.S_ISREG(path.lstat().st_mode):
@@ -91,7 +96,9 @@ def load_bounded_json_file(
         if before.st_size > maximum_bytes:
             raise ValueError(f"JSON file exceeds {maximum_bytes}-byte limit")
         age_seconds = time.time() - before.st_mtime
-        if not math.isfinite(age_seconds) or age_seconds < -future_mtime_tolerance_seconds:
+        if not math.isfinite(age_seconds) or (
+            future_mtime_tolerance_seconds is not None and age_seconds < -future_mtime_tolerance_seconds
+        ):
             raise ValueError("JSON file has an invalid future modification time")
         age_seconds = max(0.0, age_seconds)
         if maximum_age_seconds is not None and age_seconds > maximum_age_seconds:
@@ -110,6 +117,29 @@ def load_bounded_json_file(
         _require_same_regular_path(path, after)
     finally:
         os.close(descriptor)
+
+    return raw, after, age_seconds
+
+
+def load_bounded_json_file(
+    path: Path,
+    *,
+    maximum_bytes: int,
+    maximum_age_seconds: float | None = None,
+    future_mtime_tolerance_seconds: float = 300.0,
+    decoder: Callable[[str], Any] | None = None,
+) -> tuple[Any, os.stat_result, float]:
+    """Decode stable regular JSON with byte, nesting and optional age limits.
+
+    Symlinks and materially future modification times are rejected. The
+    optional decoder runs after file and nesting admission; its errors propagate.
+    """
+    raw, after, age_seconds = read_bounded_regular_file(
+        path,
+        maximum_bytes=maximum_bytes,
+        maximum_age_seconds=maximum_age_seconds,
+        future_mtime_tolerance_seconds=future_mtime_tolerance_seconds,
+    )
 
     text = raw.decode("utf-8")
     if exceeds_json_nesting_limit(text):

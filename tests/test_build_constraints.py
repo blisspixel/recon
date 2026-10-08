@@ -26,6 +26,7 @@ _EXPECTED_BUILD_PACKAGES = {
     "packaging",
     "pathspec",
     "pluggy",
+    "tomlkit",
     "trove-classifiers",
 }
 _EXACT_REQUIREMENT = re.compile(r"^([a-z0-9-]+)==([^\s\\]+) \\$", re.MULTILINE)
@@ -77,7 +78,7 @@ def test_build_root_and_uv_are_exactly_selected() -> None:
     dependency_groups = config["dependency-groups"]
     uv_config = config["tool"]["uv"]
 
-    assert build_system["requires"] == ["hatchling==1.31.0"]
+    assert build_system["requires"] == ["hatchling==1.32.4"]
     assert dependency_groups["build"] == build_system["requires"]
     # The floor must admit the reproducible uv version while staying a range
     # (not an exact pin) so Dependabot's bundled uv can still run `uv lock`.

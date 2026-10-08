@@ -25,7 +25,7 @@ collector and does not expand the inference model.
 The evidence-semantic audit is complete: 29 families are complete. 0 material
 runtime families carry incomplete lineage. Fail-closed inventory spans 91 score
 or quantitative fields. Production MCP stays on `mcp>=2.0.0,<3`, with exact
-1.28.1 rollback, 2.0.0 production-floor, and 2.2.0 current-stable rows blocking
+1.28.1 rollback, 2.0.0 production-floor, and 2.2.0 locked-baseline rows blocking
 in CI.
 
 Release verification binds each published artifact to its exact tag, workflow,
@@ -86,22 +86,19 @@ The ordered work is:
 5. Use concrete bug reports and reproducible operator examples to justify any
    new composition surface.
 
-The current polish batch applies these priorities to updater recovery and
-module isolation, regex admission, vendor-neutral agent-discovery declarations,
-the current stable MCP SDK, and concise supplied-domain service comparisons.
-The default panel remains compact, and collection remains within its existing
-passive boundary. Protocol currency does not imply that every agent harness or
-portable plugin client has been exercised.
+The v2.19 maintenance releases shipped updater recovery, module isolation,
+regex admission, vendor-neutral agent-discovery declarations, supplied-domain
+service workflows, and SPF, DKIM, BIMI and TLS-RPT admission corrections.
+The default panel remains compact. Cryptographic verification and full SPF
+evaluation remain outside the product. Protocol currency does not imply that
+every agent harness or portable plugin client has been exercised.
 
-The subsequent SPF accuracy pass keeps ignored directives out of provider
-claims, applies redirect constraints at every hop, and preserves independent
-targets through specificity matching. Raw observations and compact output stay
-intact; this does not turn recon into a full SPF evaluator.
-
-The DKIM observation pass rejects malformed or revoked TXT key declarations
-and recognizes the specified omitted-version default. It preserves existing
-selector scope, CNAME indicators, positive provenance and compact output;
-cryptographic key and signed-message verification remain outside the product.
+The [October maintenance review](docs/maintenance-review-2026-10-08.md) tracks
+the current dependency refresh and its synchronized build constraints, plus
+SPF record selection, TXT byte fidelity and bounded local MCP inputs. These
+changes follow the checked PR and release workflow; see the changelog for
+publication status. The upstream pip
+vendored-transport refresh remains blocked on a stable upstream release.
 
 For correlation, prioritize the accuracy of the public observation and the
 honesty of its explanation: documented vendor patterns, synthetic positive and
@@ -140,7 +137,7 @@ silent-failure, and contract-preserving fixes.
 | v2.15 | Shipped | Default-view claim clarity, accessible `--plain`, and pre-collection validation |
 | v2.16 | Shipped | One shared briefing across panel, plain, Markdown, and MCP text, plus renderer parity gates |
 | v2.17 | Shipped | Additive downstream connection map while preserving briefing cuts |
-| v2.18 | Stability soak | NamespaceReviewBundle v1 plus contract-preserving fixes and maintenance |
+| v2.18 | Shipped | NamespaceReviewBundle v1 plus contract-preserving fixes and maintenance |
 | v2.19 | Shipped; maintenance continues | Catalog and operator assurance, reproducible builds, and reviewed release preparation |
 | v3.0, conditional | Not scheduled | Exists only if a genuine claim or observation contract change cannot remain additive; otherwise v2 remains current |
 

@@ -24,7 +24,7 @@ classifiers = [
     "Typing :: Typed",
 ]
 dependencies = [
-    "typer>=0.24.1",
+    "typer>=0.27.3",
     "rich>=13.0",
     "httpx>=0.27",
     # Public connection-backend API pins validated IPs without changing TLS
@@ -90,7 +90,7 @@ Changelog = "https://github.com/blisspixel/recon/blob/main/CHANGELOG.md"
 Issues = "https://github.com/blisspixel/recon/issues"
 
 [build-system]
-requires = ["hatchling==1.31.0"]
+requires = ["hatchling==1.32.4"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -121,14 +121,14 @@ exclude = [
 build = [
     # Exact root for the hash-locked isolated artifact build graph exported to
     # build-constraints.txt. This group is not installed by default.
-    "hatchling==1.31.0",
+    "hatchling==1.32.4",
 ]
 # Provider SDKs are confined to the optional, maintainer-invoked validation
 # harness. Exact roots plus uv.lock make those paid-network tools reproducible
 # without adding either SDK to recon's runtime or default development graph.
 agentic-validation = [
-    "anthropic==0.120.2",
-    "openai==2.52.0",
+    "anthropic==0.125.0",
+    "openai==2.54.0",
 ]
 dev = [
     "hypothesis>=6.0",
@@ -161,6 +161,9 @@ mutation = [
     "cosmic-ray>=8.4",
     # Security floor for cosmic-ray's repository tooling (PYSEC-2026-3982/3/4).
     "gitpython>=3.1.62",
+    # cosmic-ray pulls aiohttp. Exclude the multidict C-extension reference
+    # leak (CVE-2026-104874) without adding aio-libs to runtime dependencies.
+    "multidict>=6.9.1",
 ]
 
 [tool.uv]

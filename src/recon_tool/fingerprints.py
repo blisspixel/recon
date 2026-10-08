@@ -70,6 +70,8 @@ _VALID_DETECTION_TYPES = frozenset(
 _VALID_CNAME_TARGET_TIERS = frozenset({"application", "infrastructure"})
 _VALID_CONFIDENCE_LEVELS = frozenset({"high", "medium", "low"})
 _VALID_MATCH_MODES = frozenset({"any", "all"})
+# Relative DNS owner (253), delimiter (1), and the independently bounded regex (500).
+_MAX_DETECTION_PATTERN_LENGTH = 754
 
 
 class Detection(NamedTuple):
@@ -135,6 +137,9 @@ class Fingerprint:
 
 def _validate_subdomain_txt_pattern(pattern: str, source: str, name: str) -> bool:
     """Validate ``subdomain_txt`` uses ``subdomain:regex`` format."""
+    if len(pattern) > _MAX_DETECTION_PATTERN_LENGTH:
+        logger.warning("Fingerprint %r in %s has an oversized TXT detection pattern - skipped", name, source)
+        return False
     if ":" not in pattern:
         logger.warning(
             "Fingerprint %r subdomain_txt pattern %r in %s is missing 'subdomain:regex' delimiter - skipped",
@@ -151,6 +156,11 @@ def _validate_subdomain_txt_pattern(pattern: str, source: str, name: str) -> boo
             pattern,
             source,
         )
+        return False
+    if len(subdomain) > 253 or any(
+        re.fullmatch(r"[a-zA-Z0-9_][a-zA-Z0-9_-]{0,62}", label) is None for label in subdomain.split(".")
+    ):
+        logger.warning("Fingerprint %r in %s has an invalid relative TXT owner - skipped", name, source)
         return False
     return _validate_regex(regex, f"{source}:{name}")
 
@@ -580,6 +590,10 @@ def inject_ephemeral(fp: Fingerprint) -> None:
         confidence=fp.confidence,
         detection_count=len(fp.detections),
     )
+    if any(len(det.pattern) > _MAX_DETECTION_PATTERN_LENGTH for det in fp.detections):
+        raise EphemeralCapacityError(
+            f"Ephemeral fingerprint detection pattern is too long (maximum {_MAX_DETECTION_PATTERN_LENGTH})."
+        )
     with _ephemeral_lock:
         if fp.slug in _reserved_semantic_slugs():
             raise ValueError(
@@ -955,17 +969,9 @@ def filter_shadowed_matches(
        the broader slug would fire alongside the narrower one and
        double-count in ctx.slugs. The broader is dropped.
 
-    Pre-condition: every Detection in *matches* has already been
-    verified to match the same record. The function does not re-match; it only
-    enforces specificity between the matches the caller already
-    collected.
-
-    Returns the matches to keep: those whose pattern is NOT a strict
-    substring of another match's pattern under a different slug.
-    Non-overlapping matches (e.g. spf.protection.outlook.com plus
-    _spf.salesforce.com on the same SPF record) both survive, which is
-    the correct semantics: multiple distinct vendor signals can fire
-    on one record.
+    Every Detection must already match the same record. Return those whose
+    patterns are not strict substrings of another slug's pattern, preserving
+    non-overlapping vendor signals such as Microsoft 365 and Salesforce.
     """
     if not matches:
         return list(matches)

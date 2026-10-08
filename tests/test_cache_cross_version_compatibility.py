@@ -2,10 +2,10 @@
 
 The permissive dataclass decoder continues to accept older serialized field
 shapes for fixture and import compatibility. Disk reads are intentionally
-stricter: cache version 4 adds exact generated-insight lineage, so ``cache_get``
-must miss every pre-v4 entry rather than serve an insight without its
-generation-time association. Current-version disk round trips must preserve
-that lineage exactly.
+stricter: version 4 added exact generated-insight lineage, and version 5 adds
+SPF policy selection. ``cache_get`` must miss every pre-v5 entry rather than
+serve obsolete policy credit. Current-version disk round trips must also
+preserve generation-time lineage exactly.
 """
 
 from __future__ import annotations
@@ -157,20 +157,21 @@ class TestCacheVersionConstantPinning:
     commit time. To intentionally bump, update both this constant
     and the synthesized fixtures above."""
 
-    _EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE = 4
+    _EXPECTED_CACHE_VERSION_AFTER_SPF_SELECTION = 5
 
     def test_cache_version_constant_matches_pinned_value(self):
         # The actual constant in cache.py may evolve. This test
         # exists to prevent silent bumps; if you intentionally
-        # changed _CACHE_VERSION, update _EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE
+        # changed _CACHE_VERSION, update _EXPECTED_CACHE_VERSION_AFTER_SPF_SELECTION
         # and document the change in the CHANGELOG.
-        assert _CACHE_VERSION == self._EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE, (
-            f"_CACHE_VERSION changed from {self._EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE} to {_CACHE_VERSION}. "
-            f"If this was intentional: update _EXPECTED_CACHE_VERSION_AFTER_INSIGHT_LINEAGE above, document the bump "
+        assert _CACHE_VERSION == self._EXPECTED_CACHE_VERSION_AFTER_SPF_SELECTION, (
+            f"_CACHE_VERSION changed from {self._EXPECTED_CACHE_VERSION_AFTER_SPF_SELECTION} to {_CACHE_VERSION}. "
+            f"If this was intentional: update _EXPECTED_CACHE_VERSION_AFTER_SPF_SELECTION above, document the bump "
             f"in CHANGELOG.md, and ensure the v1.9.9 compat fixtures above reflect the new schema."
         )
 
-    def test_pre_v4_disk_entry_is_a_cache_miss(self) -> None:
+    @pytest.mark.parametrize("version", [3, 4])
+    def test_pre_v5_disk_entry_is_a_cache_miss(self, version: int) -> None:
         info = TenantInfo(
             tenant_id=None,
             display_name="Example",
@@ -179,7 +180,7 @@ class TestCacheVersionConstantPinning:
             confidence=ConfidenceLevel.LOW,
         )
         payload = tenant_info_to_dict(info)
-        payload["_cache_version"] = 3
+        payload["_cache_version"] = version
         cache_dir().mkdir(parents=True, exist_ok=True)
         (cache_dir() / "example.invalid.json").write_text(json.dumps(payload), encoding="utf-8")
 
