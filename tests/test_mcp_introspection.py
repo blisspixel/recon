@@ -644,6 +644,24 @@ class TestSimulateHardening:
         data = await simulate_hardening("alpha.invalid", ["DMARC reject", "MTA-STS enforce"])
         assert data["score_delta"] >= 0
 
+    @pytest.mark.asyncio
+    async def test_simulate_hardening_rejects_oversized_fixes_count(self) -> None:
+        fixes = [f"fix-{i}" for i in range(101)]
+        with pytest.raises(ToolError, match="Too many fixes"):
+            await simulate_hardening("alpha.invalid", fixes)
+
+    @pytest.mark.asyncio
+    async def test_simulate_hardening_rejects_oversized_item(self) -> None:
+        oversized = "a" * 257
+        with pytest.raises(ToolError, match="Fix item exceeds maximum length"):
+            await simulate_hardening("alpha.invalid", [oversized])
+
+    @pytest.mark.asyncio
+    async def test_simulate_hardening_rejects_over_budget_aggregate(self) -> None:
+        fixes = ["a" * 200 for _ in range(25)]
+        with pytest.raises(ToolError, match="Aggregate fixes input exceeds maximum length"):
+            await simulate_hardening("alpha.invalid", fixes)
+
 
 # ── 11.5 explain parameter on lookup_tenant ──────────────────────────────
 
@@ -869,3 +887,19 @@ class TestGetFingerprintsPagingConvention:
 
         assert len(await get_fingerprints(category="")) == full
         assert len(await get_fingerprints(category="   ")) == full
+
+    @pytest.mark.asyncio
+    async def test_overlong_category_rejected(self) -> None:
+        with pytest.raises(ToolError, match="exceeds maximum length"):
+            await get_fingerprints(category="a" * 65)
+
+        with pytest.raises(ToolError, match="exceeds maximum length"):
+            await get_signals(category="a" * 65)
+
+    @pytest.mark.asyncio
+    async def test_control_character_category_rejected(self) -> None:
+        with pytest.raises(ToolError, match="control characters"):
+            await get_fingerprints(category="ai\n")
+
+        with pytest.raises(ToolError, match="control characters"):
+            await get_signals(category="ai\x1b[0m")

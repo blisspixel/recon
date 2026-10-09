@@ -304,6 +304,7 @@ class InstallPlan:
     existing_block: dict[str, object] | None
     new_block: dict[str, object]
     parent_dirs_to_create: list[Path]
+    target_path: Path | None = None
 
 
 @dataclass(frozen=True)
@@ -313,6 +314,7 @@ class InstallResult:
     path: Path
     action: Literal["create", "merge", "replace", "noop-dry-run"]
     final_block: dict[str, object]
+    target_path: Path | None = None
 
 
 class InstallError(RuntimeError):
@@ -320,7 +322,29 @@ class InstallError(RuntimeError):
     existing recon block without --force."""
 
 
-def _read_existing(path: Path) -> dict[str, object]:
+def _validate_implicit_workspace_path(path: Path) -> None:
+    """Refuse symlinks and directory traversal for implicit workspace installs."""
+    try:
+        resolved_cwd = Path.cwd().resolve()
+        resolved_path = path.resolve(strict=False)
+        resolved_path.relative_to(resolved_cwd)
+    except (ValueError, RuntimeError) as exc:
+        raise InstallError(f"refusing to install to workspace path outside current directory: {path}") from exc
+
+    curr = path
+    cwd = Path.cwd()
+    while True:
+        try:
+            if curr.is_symlink():
+                raise InstallError(f"refusing to install through workspace symlink: {curr}")
+        except OSError as exc:
+            raise InstallError(f"cannot inspect workspace path {curr}: {exc}") from exc
+        if curr == cwd or curr.parent == cwd or curr.parent == curr:
+            break
+        curr = curr.parent
+
+
+def _read_existing(path: Path, *, allow_symlinks: bool = True) -> dict[str, object]:
     """Read the existing config or return an empty dict.
 
     Refuses to proceed (raises InstallError) when the file exists but
@@ -332,7 +356,7 @@ def _read_existing(path: Path) -> dict[str, object]:
     silently consumed instead of confusing ``json.loads`` into a
     "Unexpected character" error.
     """
-    result = read_json_object(path)
+    result = read_json_object(path, allow_symlinks=allow_symlinks)
     if result.state in {"missing", "empty"}:
         return {}
     if result.state == "invalid":
@@ -399,7 +423,12 @@ def plan_install(
         if config_path_override is not None
         else resolve_config_path(client, scope, platform_name=platform_name)
     )
-    existing = _read_existing(path)
+    is_implicit_workspace = scope == "workspace" and config_path_override is None
+    if is_implicit_workspace:
+        _validate_implicit_workspace_path(path)
+
+    target_path = path.resolve(strict=False) if path.is_symlink() else path
+    existing = _read_existing(path, allow_symlinks=not is_implicit_workspace)
     canonical_block = build_recon_block(client)
     key = servers_key(client)
     mcp_servers = existing.get(key)
@@ -426,6 +455,7 @@ def plan_install(
             existing_block=None,
             new_block=_merge_recon_block(None, canonical_block, client),
             parent_dirs_to_create=parent_dirs,
+            target_path=target_path,
         )
 
     existing_recon: dict[str, object] | None = None
@@ -456,6 +486,7 @@ def plan_install(
                 existing_block=existing_recon,
                 new_block=target_block,
                 parent_dirs_to_create=[],
+                target_path=target_path,
             )
         if not force:
             # Tell the operator exactly which canonical fields would
@@ -478,6 +509,7 @@ def plan_install(
             existing_block=existing_recon,
             new_block=target_block,
             parent_dirs_to_create=[],
+            target_path=target_path,
         )
 
     return InstallPlan(
@@ -486,6 +518,7 @@ def plan_install(
         existing_block=None,
         new_block=target_block,
         parent_dirs_to_create=[],
+        target_path=target_path,
     )
 
 
@@ -500,7 +533,7 @@ def install(
 ) -> InstallResult:
     """Write the recon stanza into the client's MCP config file.
 
-    Always reads → mutates → writes the entire file rather than
+    Always reads -> mutates -> writes the entire file rather than
     streaming, so we never end up with a partially-written JSON
     document on disk if we crash mid-operation.
     """
@@ -516,6 +549,7 @@ def install(
             path=plan.path,
             action="noop-dry-run",
             final_block=plan.new_block,
+            target_path=plan.target_path,
         )
 
     # Idempotency: if the existing recon block already matches what we'd
@@ -527,12 +561,17 @@ def install(
             path=plan.path,
             action="merge",
             final_block=plan.new_block,
+            target_path=plan.target_path,
         )
+
+    is_implicit_workspace = scope == "workspace" and config_path_override is None
+    if is_implicit_workspace:
+        _validate_implicit_workspace_path(plan.path)
 
     plan.path.parent.mkdir(parents=True, exist_ok=True)
 
     key = servers_key(client)
-    existing = _read_existing(plan.path)
+    existing = _read_existing(plan.path, allow_symlinks=not is_implicit_workspace)
     mcp_servers_raw = existing.get(key)
     if isinstance(mcp_servers_raw, dict):
         mcp_servers: dict[str, object] = {str(k): v for k, v in mcp_servers_raw.items()}
@@ -545,16 +584,17 @@ def install(
     # comments or unicode field values the user may have in their
     # existing config) instead of munging them into \uXXXX escapes.
     rendered = json.dumps(existing, indent=2, sort_keys=False, ensure_ascii=False) + "\n"
-    _atomic_write_text(plan.path, rendered)
+    _atomic_write_text(plan.path, rendered, target_path=plan.target_path)
 
     return InstallResult(
         path=plan.path,
         action=plan.action,
         final_block=plan.new_block,
+        target_path=plan.target_path,
     )
 
 
-def _atomic_write_text(path: Path, content: str) -> None:
+def _atomic_write_text(path: Path, content: str, *, target_path: Path | None = None) -> None:
     """Write ``content`` to ``path`` atomically.
 
     Writes to a sibling tempfile in the same directory (so the rename
@@ -572,7 +612,17 @@ def _atomic_write_text(path: Path, content: str) -> None:
     # configs are commonly symlinked between dotfile repositories and their
     # platform-specific locations, so resolve only the final write target and
     # keep the operator's topology intact.
+    if target_path is not None:
+        expected_target = target_path
+    else:
+        expected_target = path.resolve(strict=False) if path.is_symlink() else path
     write_path = path.resolve(strict=False) if path.is_symlink() else path
+    if write_path != expected_target:
+        raise InstallError(
+            f"target path changed during installation: {path} now resolves to {write_path} (expected {expected_target})"
+        )
+    if write_path.is_symlink():
+        raise InstallError(f"target path must not be a symbolic link: {write_path}")
     parent = write_path.parent
     parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_path = tempfile.mkstemp(prefix=write_path.name + ".", suffix=".tmp", dir=str(parent))

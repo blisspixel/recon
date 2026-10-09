@@ -365,3 +365,21 @@ class TestClusterVerificationTokens:
         many = [f"d{i}.invalid" for i in range(101)]
         with pytest.raises(ToolError, match="Too many domains"):
             await cluster_verification_tokens(many)
+
+    @pytest.mark.asyncio
+    async def test_duplicate_or_invalid_raw_domains_over_limit_rejected_immediately(self) -> None:
+        many_invalid = ["not a domain"] * 101
+        with pytest.raises(ToolError, match="Too many domains: 101 items"):
+            await cluster_verification_tokens(many_invalid)
+
+    @pytest.mark.asyncio
+    async def test_oversized_cluster_domain_item_rejected(self) -> None:
+        oversized = "a" * 254 + ".invalid"
+        with pytest.raises(ToolError, match="Domain item exceeds maximum length"):
+            await cluster_verification_tokens([oversized])
+
+    @pytest.mark.asyncio
+    async def test_oversized_cluster_aggregate_text_rejected(self) -> None:
+        domains = [f"{'a' * 200}{i}.invalid" for i in range(50)]
+        with pytest.raises(ToolError, match="Aggregate domain input exceeds maximum length"):
+            await cluster_verification_tokens(domains)

@@ -142,6 +142,22 @@ class TestDeltaRendering:
         panel = render_delta_panel(delta)
         assert "Service: New" in panel.renderable.plain
 
+    def test_render_delta_panel_neutralizes_controls_in_collection_values(self) -> None:
+        delta = DeltaReport(
+            domain="test.invalid",
+            added_services=(),
+            removed_services=("Old\x1b[31mService\x1b[0m\nLine2",),
+            added_slugs=(),
+            removed_slugs=(),
+            added_signals=(),
+            removed_signals=(),
+        )
+        panel = render_delta_panel(delta)
+        plain = panel.renderable.plain
+        assert "\x1b" not in plain
+        assert "\nLine2" not in plain
+        assert "Service: Old[31mService[0mLine2" in plain
+
     def test_incomplete_delta_is_machine_readable_and_warned(self) -> None:
         delta = DeltaReport(
             domain="test.invalid",

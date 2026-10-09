@@ -11,7 +11,10 @@ from typing import Any, NoReturn
 
 import typer
 
-from recon_tool.catalog_discovery import category_matches
+from recon_tool.catalog_discovery import (
+    category_matches_normalized,
+    normalize_category_query,
+)
 from recon_tool.cli.catalog_rendering import print_field, print_indented
 from recon_tool.exit_codes import EXIT_VALIDATION
 from recon_tool.formatter import get_console, render_error
@@ -64,11 +67,19 @@ def signals_list(
 
     sigs = reportable_signals()
     if category is not None:
-        category = category.strip()
-        if not category:
+        try:
+            category_normalized = normalize_category_query(category)
+        except ValueError as exc:
+            render_error(str(exc))
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+        if not category_normalized:
             render_error("Signal category filter cannot be empty.")
             raise typer.Exit(code=EXIT_VALIDATION) from None
-        sigs = tuple((signal, label) for signal, label in sigs if category_matches(signal.category, category))
+        sigs = tuple(
+            (signal, label)
+            for signal, label in sigs
+            if category_matches_normalized(signal.category, category_normalized)
+        )
 
     if json_output:
         payload = [_signal_summary(signal, label) for signal, label in sigs]

@@ -441,16 +441,53 @@ def _same_path(left: Path, right: Path) -> bool:
     return os.path.normcase(str(left)) == os.path.normcase(str(right))
 
 
-def _launcher_is_in_current_workspace(launcher: Path) -> bool:
+def _is_relative_lexical(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _is_relative_launcher_path(path: Path) -> bool:
+    s = str(path)
+    if not s or s == ".":
+        return True
+    if s.startswith((".", "..")):
+        return True
+    return not (path.is_absolute() or s.startswith(("/", "\\")))
+
+
+def _target_in_ancestors(target: Path, current_directory: Path) -> bool:
+    try:
+        resolved_t = target.resolve()
+    except OSError:
+        return True
+    if resolved_t.is_relative_to(current_directory) or _is_relative_lexical(target, current_directory):
+        return True
+    for ancestor in current_directory.parents:
+        if ancestor == ancestor.parent or ancestor == Path.home():
+            continue
+        if resolved_t.is_relative_to(ancestor) or _is_relative_lexical(target, ancestor):
+            return True
+    return False
+
+
+def _launcher_is_in_current_workspace(launcher: Path, lexical: Path | None = None) -> bool:
     """Refuse to execute a launcher planted in the current workspace tree."""
     try:
         current_directory = Path.cwd().resolve()
-        workspace_root = current_directory
+        targets = [launcher]
+        if lexical is not None:
+            targets.append(lexical)
+            if _is_relative_launcher_path(lexical):
+                return True
+
         for candidate in (current_directory, *current_directory.parents):
             if (candidate / ".git").exists():
-                workspace_root = candidate
-                break
-        return launcher.is_relative_to(workspace_root)
+                return any(t.resolve().is_relative_to(candidate) or _is_relative_lexical(t, candidate) for t in targets)
+
+        return any(_target_in_ancestors(t, current_directory) for t in targets)
     except OSError:
         return True
 
@@ -501,8 +538,9 @@ def _doctor_path_launcher_check() -> DoctorCheck:
             "ok",
             f"not found; this environment can use `{sys.executable} -m recon_tool`",
         )
+    lexical = Path(found)
     try:
-        launcher = Path(found).resolve()
+        launcher = lexical.resolve()
         executable_dir = Path(sys.executable).resolve().parent
     except OSError as exc:
         return ("PATH recon launcher", "warn", f"could not resolve {found}: {_fmt_exc(exc)}")
@@ -511,7 +549,7 @@ def _doctor_path_launcher_check() -> DoctorCheck:
     if any(_same_path(launcher, candidate) for candidate in expected_launchers):
         launcher_version = updater.current_version()
         error = None
-    elif _launcher_is_in_current_workspace(launcher):
+    elif _is_relative_launcher_path(lexical) or _launcher_is_in_current_workspace(launcher, lexical=lexical):
         launcher_version = None
         error = "launcher is inside the current workspace and was not executed"
     else:

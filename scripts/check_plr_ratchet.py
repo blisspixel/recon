@@ -15,8 +15,8 @@ SELECTED_RULES = ("PLR0911", "PLR0912", "PLR0913", "PLR0915")
 # counts. A lower live count also fails with a stale-baseline message so every
 # earned reduction is locked into this maintained ceiling.
 MAX_COUNTS = {
-    "PLR0911": 19,  # too many return statements
-    "PLR0912": 8,  # too many branches
+    "PLR0911": 18,  # too many return statements
+    "PLR0912": 7,  # too many branches
     "PLR0913": 50,  # too many arguments
     "PLR0915": 7,  # too many statements
 }

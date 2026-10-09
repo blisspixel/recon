@@ -26,6 +26,41 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.13] - 2026-10-08
+
+Harden local inputs, neutralize diagnostic and delta terminal controls, and bound
+discovery, clustering, simulation and reverse DNS traversal.
+
+### Security
+
+- Neutralize control characters and enforce element and aggregate string bounds on
+  compare-snapshot collection values in delta parsing and terminal rendering.
+- Reject control sequences in fingerprint YAML names, enforce a 128-character limit,
+  and sanitize diagnostics and quiet CI output paths.
+- Enforce pre-validation bounds on raw domain counts, item lengths, and aggregate text
+  in cluster_verification_tokens, and bound returned validation errors.
+- Validate category query length and control characters before catalog search, and
+  apply single-pass normalized category matching across MCP and CLI catalog tools.
+- Enforce per-item and aggregate character bounds on hardening simulation fixes
+  before resolution, and slice unrecognized fix text before sanitization.
+- Constrain PTR canonical targets in safe_resolve, preserving RFC 2317 classless
+  aliases while discarding chains crossing into private reverse DNS or internal namespaces.
+- Harden launcher resolution against untrusted workspace symlinks and ancestor PATH
+  executables across updater and doctor commands, rejecting relative and workspace-origin
+  candidates before execution.
+- Disallow symlinks in implicit workspace MCP client configuration paths and bind
+  verified targets during atomic configuration writes.
+
+### Changed
+
+- Tighten complexity ratchet limits and refactor reverse DNS and configuration path
+  precondition checks.
+
+### Tool Surface Changes
+
+- No commands, flags, MCP tools or schema fields changed. Input bounds on clustering,
+  simulation, category discovery, delta comparisons and workspace MCP paths are enforced.
+
 ## [2.19.12] - 2026-10-08
 
 Correct SPF and TXT observations, bound local MCP inputs, and refresh compatible

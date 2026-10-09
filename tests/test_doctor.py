@@ -7,6 +7,7 @@ checks run without touching the real network. Pushes cli.py coverage.
 from __future__ import annotations
 
 import importlib
+import sys
 from io import StringIO
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
@@ -325,6 +326,63 @@ class TestDoctorPathLauncher:
 
         with (
             patch("recon_tool.cli.doctor.shutil.which", return_value=str(launcher)),
+            patch("pathlib.Path.cwd", return_value=workspace),
+            patch("recon_tool.cli.doctor._launcher_version") as probe,
+        ):
+            _, status, detail = _doctor_path_launcher_check()
+
+        assert status == "warn"
+        assert "inside the current workspace" in detail
+        probe.assert_not_called()
+
+    def test_no_git_nested_ancestor_launcher_is_not_executed(self, tmp_path: Path) -> None:
+        workspace = tmp_path / "project"
+        nested = workspace / "nested" / "checkout"
+        nested.mkdir(parents=True)
+        planted_bin = workspace / "bin"
+        planted_bin.mkdir()
+        launcher = planted_bin / ("recon.exe" if sys.platform == "win32" else "recon")
+        launcher.write_text("", encoding="utf-8")
+
+        with (
+            patch("recon_tool.cli.doctor.shutil.which", return_value=str(launcher)),
+            patch("pathlib.Path.cwd", return_value=nested),
+            patch("recon_tool.cli.doctor._launcher_version") as probe,
+        ):
+            _, status, detail = _doctor_path_launcher_check()
+
+        assert status == "warn"
+        assert "inside the current workspace" in detail
+        probe.assert_not_called()
+
+    def test_relative_path_launcher_is_not_executed(self, tmp_path: Path) -> None:
+        with (
+            patch("recon_tool.cli.doctor.shutil.which", return_value="../bin/recon"),
+            patch("pathlib.Path.cwd", return_value=tmp_path),
+            patch("recon_tool.cli.doctor._launcher_version") as probe,
+        ):
+            _, status, detail = _doctor_path_launcher_check()
+
+        assert status == "warn"
+        assert "inside the current workspace" in detail
+        probe.assert_not_called()
+
+    def test_git_workspace_launcher_symlink_is_not_executed(self, tmp_path: Path) -> None:
+        workspace = tmp_path / "repo"
+        workspace.mkdir()
+        (workspace / ".git").mkdir()
+        outside = tmp_path / "outside_bin"
+        outside.mkdir()
+        outside_target = outside / ("recon.exe" if sys.platform == "win32" else "recon")
+        outside_target.write_text("", encoding="utf-8")
+        link = workspace / "recon"
+        try:
+            link.symlink_to(outside_target)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        with (
+            patch("recon_tool.cli.doctor.shutil.which", return_value=str(link)),
             patch("pathlib.Path.cwd", return_value=workspace),
             patch("recon_tool.cli.doctor._launcher_version") as probe,
         ):

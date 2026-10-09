@@ -704,6 +704,11 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
     return result
 
 
+_MAX_SIMULATION_FIXES = 100
+_MAX_FIX_ITEM_LENGTH = 256
+_MAX_FIXES_AGGREGATE_CHARS = 4096
+
+
 @mcp.tool(
     annotations=tool_annotations(
         read_only=True,
@@ -730,9 +735,21 @@ async def simulate_hardening(domain: str, fixes: list[str]) -> HardeningSimulati
         JSON object with current_score, simulated_score, score_delta, both
         exact component ledgers, applied_fixes, and remaining_gaps.
     """
-    # Bound the fix list so a multi-million-element argument cannot drive
-    # O(n) work and a proportionally huge response.
-    fixes = fixes[:100]
+    if not isinstance(fixes, list):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ToolError("fixes must be a list of strings")
+    if len(fixes) > _MAX_SIMULATION_FIXES:
+        raise ToolError(f"Too many fixes: {len(fixes)} items (max {_MAX_SIMULATION_FIXES})")
+
+    total_chars = 0
+    for f in fixes:
+        if not isinstance(f, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+            raise ToolError("each fix item must be a string")
+        if len(f) > _MAX_FIX_ITEM_LENGTH:
+            raise ToolError(f"Fix item exceeds maximum length of {_MAX_FIX_ITEM_LENGTH} characters")
+        total_chars += len(f)
+        if total_chars > _MAX_FIXES_AGGREGATE_CHARS:
+            raise ToolError(f"Aggregate fixes input exceeds maximum length of {_MAX_FIXES_AGGREGATE_CHARS} characters")
+
     resolved = await server_app.resolve_or_cache(domain)
     if isinstance(resolved, str):
         raise ToolError(resolved)

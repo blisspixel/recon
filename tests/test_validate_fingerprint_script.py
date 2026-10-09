@@ -339,3 +339,50 @@ def test_main_delegates_to_validate_path(tmp_path: Path) -> None:
     path.write_text(_fingerprint_yaml(), encoding="utf-8")
 
     assert fingerprint_validator.main([str(path), "--quiet"]) == 0
+
+
+def test_validate_path_rejects_and_neutralizes_control_chars_in_name(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    import yaml
+
+    path = tmp_path / "controls.yaml"
+    bad_name = "Hostile\u202eRTL\x7fDEL"
+    content = yaml.safe_dump(
+        {
+            "fingerprints": [
+                {
+                    "name": bad_name,
+                    "slug": "bad-slug",
+                    "category": "SaaS",
+                    "confidence": "high",
+                    "detections": [{"type": "txt", "pattern": "foo"}],
+                }
+            ]
+        }
+    )
+    path.write_text(content, encoding="utf-8")
+
+    code = fingerprint_validator.validate_path(path, quiet=True)
+    captured = capsys.readouterr()
+
+    assert code == 1
+    assert "\u202e" not in captured.err
+    assert "\x7f" not in captured.err
+    assert "FAIL  controls.yaml: HostileRTLDEL" in captured.err
+
+
+def test_validate_path_preserves_normal_unicode_names(
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    path = tmp_path / "unicode.yaml"
+    unicode_name = "München Cloud サービス"
+    path.write_text(_fingerprint_yaml(name=unicode_name), encoding="utf-8")
+
+    code = fingerprint_validator.validate_path(path, quiet=False)
+    captured = capsys.readouterr()
+
+    assert code == 0
+    assert f"ok    unicode.yaml: {unicode_name}" in captured.out

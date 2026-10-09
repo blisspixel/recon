@@ -851,3 +851,77 @@ class TestGoogleDkimSuffixMatch:
 
         assert "DKIM (Google Workspace)" not in ctx.services
         assert "google-workspace" not in ctx.slugs
+
+
+class TestPtrCanonicalGuard:
+    """PTR queries must permit public RFC 2317 aliases while discarding private reverse targets."""
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "canonical",
+        [
+            "4.0-28.2.0.192.in-addr.arpa.",
+            "4.sub.example.com.",
+        ],
+    )
+    async def test_ptr_allows_public_rfc2317_alias(self, monkeypatch: pytest.MonkeyPatch, canonical: str) -> None:
+        from unittest.mock import AsyncMock, MagicMock
+
+        from recon_tool.sources import dns_base
+
+        answers = MagicMock()
+        answers.canonical_name = canonical
+        answers.__iter__.return_value = iter([MagicMock(to_text=lambda: "ec2-1-2-3-4.compute.amazonaws.com.")])
+        resolver = MagicMock()
+        resolver.resolve = AsyncMock(return_value=answers)
+        monkeypatch.setattr(dns_base, "get_resolver", lambda: resolver)
+
+        records = await dns_base.safe_resolve("4.2.0.192.in-addr.arpa", "PTR")
+        assert records == ["ec2-1-2-3-4.compute.amazonaws.com"]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "canonical",
+        [
+            "1.10.in-addr.arpa.",
+            "10.in-addr.arpa.",
+            "1.168.192.in-addr.arpa.",
+            "1.20.172.in-addr.arpa.",
+            "target.internal.",
+            "target.corp.",
+        ],
+    )
+    async def test_ptr_discards_private_reverse_canonical(
+        self, monkeypatch: pytest.MonkeyPatch, canonical: str
+    ) -> None:
+        from unittest.mock import AsyncMock, MagicMock
+
+        from recon_tool.sources import dns_base
+
+        answers = MagicMock()
+        answers.canonical_name = canonical
+        answers.__iter__.return_value = iter([MagicMock(to_text=lambda: "internal-host.")])
+        resolver = MagicMock()
+        resolver.resolve = AsyncMock(return_value=answers)
+        monkeypatch.setattr(dns_base, "get_resolver", lambda: resolver)
+
+        records = await dns_base.safe_resolve("4.2.0.192.in-addr.arpa", "PTR")
+        assert records == []
+
+    @pytest.mark.asyncio
+    async def test_ptr_hosting_detection_ignores_internal_hostname(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from recon_tool.sources import dns_base
+
+        async def fake_safe_resolve(domain: str, rdtype: str, **kwargs):
+            if rdtype == "A":
+                return ["198.51.100.1"]
+            if rdtype == "PTR":
+                return ["internal-host.corp"]
+            return []
+
+        monkeypatch.setattr(dns_base, "safe_resolve", fake_safe_resolve)
+        ctx = dns_source._DetectionCtx()
+        await dns_source._detect_hosting_from_a_record(ctx, "example.com")
+
+        assert not ctx.evidence
+        assert not ctx.services

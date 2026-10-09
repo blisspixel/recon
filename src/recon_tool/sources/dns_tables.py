@@ -376,6 +376,72 @@ def is_public_dns_name(name: str) -> bool:
     return all(not n.endswith(suffix) for suffix in PRIVATE_DNS_SUFFIXES)
 
 
+_PRIVATE_V4_EXACT = frozenset(
+    {
+        "10.in-addr.arpa",
+        "168.192.in-addr.arpa",
+        "127.in-addr.arpa",
+        "254.169.in-addr.arpa",
+        "0.in-addr.arpa",
+    }
+)
+
+_PRIVATE_V4_SUFFIXES = (
+    ".10.in-addr.arpa",
+    ".168.192.in-addr.arpa",
+    ".127.in-addr.arpa",
+    ".254.169.in-addr.arpa",
+    ".0.in-addr.arpa",
+)
+
+
+def _is_private_v4_reverse(n: str) -> bool:
+    if n in _PRIVATE_V4_EXACT or n.endswith(_PRIVATE_V4_SUFFIXES):
+        return True
+    if n.endswith(".172.in-addr.arpa") or n == "172.in-addr.arpa":
+        parts = n.split(".")
+        idx = parts.index("172")
+        if idx > 0 and parts[idx - 1].isdigit() and 16 <= int(parts[idx - 1]) <= 31:
+            return True
+    if n.endswith(".100.in-addr.arpa") or n == "100.in-addr.arpa":
+        parts = n.split(".")
+        idx = parts.index("100")
+        if idx > 0 and parts[idx - 1].isdigit() and 64 <= int(parts[idx - 1]) <= 127:
+            return True
+    return False
+
+
+def _is_private_v6_reverse(n: str) -> bool:
+    if n.endswith((".c.f.ip6.arpa", ".d.f.ip6.arpa")):
+        return True
+    if any(n.endswith(f".{nibble}.e.f.ip6.arpa") for nibble in ("8", "9", "a", "b")):
+        return True
+    return n.endswith(".0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.0.ip6.arpa")
+
+
+def is_public_ptr_canonical_name(name: str) -> bool:
+    """Return True if a PTR canonical target is in a public reverse or DNS namespace.
+
+    Permits RFC 2317 classless reverse aliases while discarding CNAME targets
+    that cross into private IPv4/IPv6 reverse zones or private DNS suffixes.
+    """
+    if not name or not name.strip().rstrip("."):
+        return False
+    n = name.strip().lower().rstrip(".")
+
+    if n.endswith(".in-addr.arpa"):
+        return not _is_private_v4_reverse(n) and all(
+            all(c.isalnum() or c in "-_/" for c in label) for label in n.split(".")
+        )
+
+    if n.endswith(".ip6.arpa"):
+        return not _is_private_v6_reverse(n) and all(
+            all(c.isalnum() or c in "-_" for c in label) for label in n.split(".")
+        )
+
+    return is_public_dns_name(n)
+
+
 def classify_ct_failure(exc: Exception) -> str:
     """Bucket a CT-provider exception as breaker / rate_limit / other.
 

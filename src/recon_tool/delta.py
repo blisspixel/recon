@@ -22,6 +22,7 @@ from recon_tool.email_security import compute_email_security_score
 from recon_tool.json_limits import exceeds_json_nesting_limit
 from recon_tool.models import DeltaComparisonIncomplete, DeltaReport, TenantInfo
 from recon_tool.source_status import ObservationChannel, SourceStatus
+from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger("recon")
 
@@ -83,11 +84,30 @@ def load_previous(path: Path) -> dict[str, Any]:
     return data
 
 
+_MAX_SNAPSHOT_LIST_ITEMS = 1000
+_MAX_SNAPSHOT_STRING_LEN = 512
+_MAX_SNAPSHOT_LIST_AGGREGATE_CHARS = 65536
+
+
 def _string_list_field(previous_json: dict[str, Any], field: str) -> list[str]:
     value = previous_json.get(field, [])
     if not isinstance(value, list) or not all(isinstance(item, str) for item in value):
         raise ValueError(f"Previous snapshot field '{field}' must be a list of strings")
-    return value
+    if len(value) > _MAX_SNAPSHOT_LIST_ITEMS:
+        raise ValueError(f"Previous snapshot field '{field}' exceeds {_MAX_SNAPSHOT_LIST_ITEMS} items")
+    total_chars = 0
+    cleaned: list[str] = []
+    for item in value:
+        if len(item) > _MAX_SNAPSHOT_STRING_LEN:
+            raise ValueError(f"Previous snapshot string in '{field}' exceeds {_MAX_SNAPSHOT_STRING_LEN} characters")
+        total_chars += len(item)
+        if total_chars > _MAX_SNAPSHOT_LIST_AGGREGATE_CHARS:
+            raise ValueError(
+                f"Previous snapshot field '{field}' exceeds aggregate "
+                f"character limit of {_MAX_SNAPSHOT_LIST_AGGREGATE_CHARS}"
+            )
+        cleaned.append(strip_control_chars(item, _MAX_SNAPSHOT_STRING_LEN))
+    return cleaned
 
 
 def _optional_str_field(previous_json: dict[str, Any], field: str) -> str | None:
@@ -96,7 +116,9 @@ def _optional_str_field(previous_json: dict[str, Any], field: str) -> str | None
         return None
     if not isinstance(value, str):
         raise ValueError(f"Previous snapshot field '{field}' must be a string or null")
-    return value
+    if len(value) > _MAX_SNAPSHOT_STRING_LEN:
+        raise ValueError(f"Previous snapshot field '{field}' exceeds {_MAX_SNAPSHOT_STRING_LEN} characters")
+    return strip_control_chars(value, _MAX_SNAPSHOT_STRING_LEN)
 
 
 def _optional_int_field(
@@ -128,9 +150,11 @@ def _optional_enum_field(previous_json: dict[str, Any], field: str, allowed: fro
 
 def _validate_previous_snapshot(previous_json: dict[str, Any]) -> None:
     for field in ("services", "slugs", "insights", "degraded_sources"):
-        _string_list_field(previous_json, field)
+        if field in previous_json:
+            previous_json[field] = _string_list_field(previous_json, field)
     for field in ("queried_domain", "ct_provider_used"):
-        _optional_str_field(previous_json, field)
+        if field in previous_json:
+            previous_json[field] = _optional_str_field(previous_json, field)
     _optional_int_field(previous_json, "domain_count", minimum=0)
     _optional_int_field(previous_json, "email_security_score", minimum=0, maximum=5)
     _optional_enum_field(previous_json, "auth_type", frozenset({"Federated", "Managed"}))
