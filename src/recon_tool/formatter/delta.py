@@ -128,9 +128,10 @@ def render_delta_panel(report: DeltaReport) -> Panel:
         )
         for label, values, color, marker in collections:
             for value in values:
+                safe_value = strip_control_chars(str(value))
                 text.append("\n  ")
                 text.append(marker, style=f"{color} bold")
-                text.append(f"{label}: {value}", style=color)
+                text.append(f"{label}: {safe_value}", style=color)
         _append_scalar_changes(text, report)
 
     return Panel(

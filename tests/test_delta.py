@@ -113,6 +113,33 @@ class TestLoadPrevious:
         with pytest.raises(ValueError, match=field):
             load_previous(snapshot)
 
+    def test_control_characters_neutralized_in_snapshot_strings(self, tmp_path: Path) -> None:
+        snapshot = tmp_path / "controls.json"
+        snapshot.write_text(
+            json.dumps({"services": ["Service\x1b[31mRed\x1b[0m", "Line1\nLine2", "Bidi\u202eRTL"]}),
+            encoding="utf-8",
+        )
+        loaded = load_previous(snapshot)
+        assert loaded["services"] == ["Service[31mRed[0m", "Line1Line2", "BidiRTL"]
+
+    def test_oversized_snapshot_list_rejected(self, tmp_path: Path) -> None:
+        snapshot = tmp_path / "many.json"
+        snapshot.write_text(json.dumps({"services": ["s"] * 1001}), encoding="utf-8")
+        with pytest.raises(ValueError, match="exceeds 1000 items"):
+            load_previous(snapshot)
+
+    def test_oversized_snapshot_string_rejected(self, tmp_path: Path) -> None:
+        snapshot = tmp_path / "long_str.json"
+        snapshot.write_text(json.dumps({"services": ["a" * 513]}), encoding="utf-8")
+        with pytest.raises(ValueError, match="exceeds 512 characters"):
+            load_previous(snapshot)
+
+    def test_oversized_snapshot_aggregate_rejected(self, tmp_path: Path) -> None:
+        snapshot = tmp_path / "long_agg.json"
+        snapshot.write_text(json.dumps({"services": ["a" * 400 for _ in range(200)]}), encoding="utf-8")
+        with pytest.raises(ValueError, match="exceeds aggregate character limit"):
+            load_previous(snapshot)
+
 
 class TestComputeDelta:
     @pytest.mark.parametrize(

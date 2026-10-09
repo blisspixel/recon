@@ -150,37 +150,71 @@ def detect_install_method() -> str:
     return PIP if installer is not None and installer.strip() == PIP else UNKNOWN
 
 
-def _current_workspace_root(current_directory: Path) -> Path:
-    """Return the nearest Git workspace root, or the current directory."""
-    for candidate in (current_directory, *current_directory.parents):
-        if (candidate / ".git").exists():
-            return candidate
-    return current_directory
+def _is_relative_lexical(path: Path, root: Path) -> bool:
+    try:
+        path.relative_to(root)
+        return True
+    except ValueError:
+        return False
+
+
+def _is_relative_launcher_path(path: Path) -> bool:
+    s = str(path)
+    if not s or s == ".":
+        return True
+    if s.startswith((".", "..")):
+        return True
+    return not (path.is_absolute() or s.startswith(("/", "\\")))
+
+
+def _target_in_ancestors(target: Path, current_directory: Path) -> bool:
+    try:
+        resolved_t = target.resolve()
+    except OSError:
+        return True
+    if resolved_t.is_relative_to(current_directory) or _is_relative_lexical(target, current_directory):
+        return True
+    for ancestor in current_directory.parents:
+        if ancestor == ancestor.parent or ancestor == Path.home():
+            continue
+        if resolved_t.is_relative_to(ancestor) or _is_relative_lexical(target, ancestor):
+            return True
+    return False
+
+
+def _launcher_is_in_workspace(target: Path, *, lexical: Path | None = None) -> bool:
+    """Return True if target or lexical is within the current workspace."""
+    try:
+        current_directory = Path.cwd().resolve()
+        targets = [target]
+        if lexical is not None:
+            targets.append(lexical)
+            if _is_relative_launcher_path(lexical):
+                return True
+
+        for candidate in (current_directory, *current_directory.parents):
+            if (candidate / ".git").exists():
+                return any(t.resolve().is_relative_to(candidate) or _is_relative_lexical(t, candidate) for t in targets)
+
+        return any(_target_in_ancestors(t, current_directory) for t in targets)
+    except OSError:
+        return True
 
 
 def _resolve_launcher(name: str) -> str | None:
-    """Absolute path to a launcher outside the current workspace tree.
-
-    Windows resolves a bare program name against the current directory before
-    PATH, and ``shutil.which`` mirrors that by searching the current directory
-    first. Spawning bare ``uv`` or ``pipx`` therefore let anyone who could drop
-    ``uv.exe`` into a directory the operator happened to be in run code as the
-    operator during ``recon update``. Resolving to an absolute path removes the
-    search entirely. Rejecting any result inside the nearest Git workspace also
-    covers relative PATH entries such as ``./bin`` and ``../bin`` from a nested
-    working directory; a planted binary then degrades to the printed manual
-    command instead of being executed.
-    """
+    """Absolute path to a launcher outside the current workspace tree."""
     found = shutil.which(name)
     if found is None:
         return None
-    resolved = Path(found).resolve()
+    lexical = Path(found)
+    if _is_relative_launcher_path(lexical):
+        return None
     try:
-        current_directory = Path.cwd().resolve()
-        if resolved.is_relative_to(_current_workspace_root(current_directory)):
-            return None
+        resolved = lexical.resolve()
     except OSError:
-        # An unresolvable working directory cannot be compared, so refuse.
+        return None
+
+    if _launcher_is_in_workspace(resolved, lexical=lexical):
         return None
     return str(resolved)
 

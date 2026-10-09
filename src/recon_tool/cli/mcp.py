@@ -148,7 +148,9 @@ def mcp_install_command(
     console.print()
     console.print(f"  client    {_safe_markup(client)}")
     console.print(f"  scope     {_safe_markup(resolved_scope)}")
-    console.print(f"  path      {_safe_markup(plan.path)}")
+    console.print(f"  path      {_safe_markup(plan.path)}", soft_wrap=True)
+    if plan.target_path is not None and plan.target_path != plan.path:
+        console.print(f"  target    {_safe_markup(plan.target_path)}", soft_wrap=True)
     console.print(f"  action    {_safe_markup(plan.action)}")
     if plan.existing_block is not None and plan.action == "replace":
         console.print(

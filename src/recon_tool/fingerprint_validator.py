@@ -13,10 +13,12 @@ import yaml
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_SUCCESS, EXIT_VALIDATION
 from recon_tool.fingerprint_artifact import FingerprintArtifactError
 from recon_tool.fingerprints import (
+    Fingerprint,
     _load_builtin_artifact,  # pyright: ignore[reportPrivateUsage]
     _validate_fingerprint,  # pyright: ignore[reportPrivateUsage]
 )
 from recon_tool.specificity import evaluate_pattern
+from recon_tool.validator import strip_control_chars
 
 __all__ = ["main", "validate_builtin_artifact", "validate_path"]
 
@@ -67,6 +69,42 @@ def _load_yaml_document(path: Path) -> tuple[Any, str | None]:
         return None, f"{path} (YAML parse)"
 
 
+def _record_slug(
+    entry: object,
+    idx: int,
+    path: Path,
+    slug_sources: dict[str, list[Path]],
+    slug_names: dict[str, set[str]],
+) -> str:
+    if not isinstance(entry, dict):
+        return f"<index {idx}>"
+    raw_name = entry.get("name", f"<index {idx}>")
+    name = str(raw_name) if raw_name is not None else f"<index {idx}>"
+    slug = entry.get("slug")
+    if isinstance(slug, str) and slug:
+        slug_sources.setdefault(slug, []).append(path)
+        slug_names.setdefault(slug, set()).add(name)
+    return name
+
+
+def _evaluate_entry_specificity(result: Fingerprint | None, skip: bool) -> list[str]:
+    if skip or result is None:
+        return []
+    fails: list[str] = []
+    for det in result.detections:
+        verdict = evaluate_pattern(det.pattern, det.type)
+        if verdict.threshold_exceeded:
+            msg = (
+                f"over-broad pattern: type={det.type!r} "
+                f"pattern={det.pattern!r} matched {verdict.matches}/"
+                f"{verdict.corpus_size} of the synthetic corpus "
+                f"({verdict.match_rate:.1%} > "
+                f"{0.01:.0%} threshold)"
+            )
+            fails.append(msg)
+    return fails
+
+
 def _validate_file(
     path: Path,
     *,
@@ -93,43 +131,27 @@ def _validate_file(
     for idx, entry in enumerate(entries):
         total += 1
         before = len(captured)
-        name: str | Any = "<unknown>"
-        if isinstance(entry, dict):
-            name = entry.get("name", f"<index {idx}>")
-            slug = entry.get("slug")
-            if isinstance(slug, str) and slug:
-                slug_sources.setdefault(slug, []).append(path)
-                if isinstance(name, str):
-                    slug_names.setdefault(slug, set()).add(name)
+        name = _record_slug(entry, idx, path, slug_sources, slug_names)
         result = _validate_fingerprint(entry if isinstance(entry, dict) else {}, str(path))
         warnings_this_entry = captured[before:]
+        specificity_fails = _evaluate_entry_specificity(result, skip_specificity)
 
-        specificity_fails: list[str] = []
-        if not skip_specificity and result is not None:
-            for det in result.detections:
-                verdict = evaluate_pattern(det.pattern, det.type)
-                if verdict.threshold_exceeded:
-                    msg = (
-                        f"over-broad pattern: type={det.type!r} "
-                        f"pattern={det.pattern!r} matched {verdict.matches}/"
-                        f"{verdict.corpus_size} of the synthetic corpus "
-                        f"({verdict.match_rate:.1%} > "
-                        f"{0.01:.0%} threshold)"
-                    )
-                    specificity_fails.append(msg)
-
+        safe_name = strip_control_chars(name, 128)
+        safe_path_name = strip_control_chars(path.name, 128)
         if result is not None and not warnings_this_entry and not specificity_fails:
             passed += 1
             if not quiet:
-                print(f"ok    {path.name}: {name}")
+                print(f"ok    {safe_path_name}: {safe_name}")
         else:
-            failed_names.append(f"{path.name}: {name}")
-            print(f"FAIL  {path.name}: {name}", file=sys.stderr)
+            failed_names.append(f"{safe_path_name}: {safe_name}")
+            print(f"FAIL  {safe_path_name}: {safe_name}", file=sys.stderr)
             for warning in warnings_this_entry:
-                print(f"      {warning.getMessage()}", file=sys.stderr)
+                safe_warning = strip_control_chars(warning.getMessage(), 512)
+                print(f"      {safe_warning}", file=sys.stderr)
             for specificity_fail in specificity_fails:
-                print(f"      {specificity_fail}", file=sys.stderr)
-                specificity_warnings.append(f"{path.name}: {name}: {specificity_fail}")
+                safe_specificity = strip_control_chars(specificity_fail, 512)
+                print(f"      {safe_specificity}", file=sys.stderr)
+                specificity_warnings.append(f"{safe_path_name}: {safe_name}: {safe_specificity}")
             if result is None and not warnings_this_entry and not specificity_fails:
                 print("      (validation returned None - see earlier output)", file=sys.stderr)
 
@@ -180,21 +202,24 @@ def validate_builtin_artifact(*, quiet: bool = False) -> int:
     slug_names: dict[str, set[str]] = {}
     for fingerprint in fingerprints:
         slug_names.setdefault(fingerprint.slug, set()).add(fingerprint.name)
+        safe_fp_name = strip_control_chars(fingerprint.name, 128)
         for detection in fingerprint.detections:
             verdict = evaluate_pattern(detection.pattern, detection.type)
             if verdict.threshold_exceeded:
                 failed.add(fingerprint.name)
                 print(
-                    f"FAIL  {fingerprint.name}: over-broad {detection.type} pattern {detection.pattern!r} "
+                    f"FAIL  {safe_fp_name}: over-broad {detection.type} pattern {detection.pattern!r} "
                     f"matched {verdict.matches}/{verdict.corpus_size} synthetic records",
                     file=sys.stderr,
                 )
         if not quiet and fingerprint.name not in failed:
-            print(f"ok    fingerprints.generated.json: {fingerprint.name}")
+            print(f"ok    fingerprints.generated.json: {safe_fp_name}")
 
     duplicate_slugs = {slug: names for slug, names in slug_names.items() if len(names) > 1}
     for slug, names in sorted(duplicate_slugs.items()):
-        print(f"FAIL  duplicate slug {slug!r}: {', '.join(sorted(names))}", file=sys.stderr)
+        safe_slug = strip_control_chars(slug, 128)
+        safe_names = ", ".join(strip_control_chars(n, 128) for n in sorted(names))
+        print(f"FAIL  duplicate slug {safe_slug!r}: {safe_names}", file=sys.stderr)
 
     print()
     print(f"Validated {len(fingerprints)} entries: {len(fingerprints) - len(failed)} passed, {len(failed)} failed")

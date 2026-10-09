@@ -85,13 +85,15 @@ _BIDI_CONTROL_CODEPOINTS = frozenset(
 )
 
 
-def _has_no_control_chars(value: str) -> bool:
+def has_no_control_chars(value: str) -> bool:
     """No terminal or bidirectional formatting control survives."""
-
     return all(
         not (ord(c) < 0x20 or ord(c) == 0x7F or 0x80 <= ord(c) <= 0x9F or ord(c) in _BIDI_CONTROL_CODEPOINTS)
         for c in value
     )
+
+
+_has_no_control_chars = has_no_control_chars
 
 
 @deal.post(_has_no_control_chars)  # pyright: ignore[reportUntypedFunctionDecorator]

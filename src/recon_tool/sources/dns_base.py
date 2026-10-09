@@ -30,7 +30,11 @@ from recon_tool.models import (
     UnclassifiedCnameChain,
     UnclassifiedDnsObservation,
 )
-from recon_tool.sources.dns_tables import is_public_dns_name, parse_rdata
+from recon_tool.sources.dns_tables import (
+    is_public_dns_name,
+    is_public_ptr_canonical_name,
+    parse_rdata,
+)
 from recon_tool.validator import strip_control_chars
 
 logger = logging.getLogger("recon")
@@ -65,13 +69,8 @@ _default_resolver = dns.asyncresolver.Resolver()
 
 # Query types that are exempt from the canonical-name leak guard below.
 # A CNAME query returns the immediate record without the recursive
-# resolver chasing further (the CNAME walker validates that target
-# itself), and PTR records legitimately CNAME within the .arpa tree
-# (RFC 2317 classless reverse delegation), so a private-looking .arpa
-# canonical there is normal, not a leak. Every other query type (A,
-# AAAA, TXT, MX, SRV, NS, CAA) makes a recursive resolver chase a CNAME
-# on the queried name before answering, which is the leak vector.
-_CANONICAL_GUARD_SKIP_RDTYPES = frozenset({"CNAME", "PTR"})
+# resolver chasing further (the CNAME walker validates that target itself).
+_CANONICAL_GUARD_SKIP_RDTYPES = frozenset({"CNAME"})
 
 
 async def safe_resolve(
@@ -121,14 +120,16 @@ async def safe_resolve(
         if rdtype not in _CANONICAL_GUARD_SKIP_RDTYPES:
             queried = domain.strip().rstrip(".").lower()
             canonical = str(answers.canonical_name).rstrip(".").lower()  # pyright: ignore[reportGeneralTypeIssues]
-            if canonical != queried and not is_public_dns_name(canonical):
-                logger.debug(
-                    "DNS %s answer for %s discarded: resolver chased CNAME to non-public canonical %s",
-                    rdtype,
-                    domain,
-                    canonical,
-                )
-                return []
+            if canonical != queried:
+                guard_ok = is_public_ptr_canonical_name(canonical) if rdtype == "PTR" else is_public_dns_name(canonical)
+                if not guard_ok:
+                    logger.debug(
+                        "DNS %s answer for %s discarded: resolver chased CNAME to non-public canonical %s",
+                        rdtype,
+                        domain,
+                        canonical,
+                    )
+                    return []
         return [
             b"".join(rdata.strings).decode("utf-8", errors="replace")
             if isinstance(rdata, TXTBase)

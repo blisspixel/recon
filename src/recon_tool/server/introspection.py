@@ -18,7 +18,10 @@ from typing import cast
 
 from typing_extensions import TypedDict
 
-from recon_tool.catalog_discovery import category_matches
+from recon_tool.catalog_discovery import (
+    category_matches_normalized,
+    normalize_category_query,
+)
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import MetadataCondition, ReconLookupError
 from recon_tool.server import app as server_app
@@ -374,11 +377,12 @@ async def get_fingerprints(
     from recon_tool.fingerprints import load_fingerprints
 
     fps = load_fingerprints()
-    # Strip first: "" and "   " were two spellings of an empty filter that gave
-    # opposite results, the blank one matching nothing at all.
-    normalized_category = (category or "").strip()
+    try:
+        normalized_category = normalize_category_query(category)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
     if normalized_category:
-        fps = tuple(fp for fp in fps if category_matches(fp.category, normalized_category))
+        fps = tuple(fp for fp in fps if category_matches_normalized(fp.category, normalized_category))
     # Match the cap convention the rest of the server uses: zero means the full
     # remainder and a negative value is an error. Folding both to an empty page
     # produced exactly the "no catalog match" false negative the server
@@ -457,10 +461,15 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
     """
     from recon_tool.signals import public_signal_names, reportable_signals
 
+    try:
+        normalized_category = normalize_category_query(category)
+    except ValueError as exc:
+        raise ToolError(str(exc)) from exc
+
     result: list[SignalSummary] = []
     for sig, public_label in reportable_signals():
         sig_layer = _classify_signal_layer(sig)
-        if category and not category_matches(sig.category, category):
+        if normalized_category and not category_matches_normalized(sig.category, normalized_category):
             continue
         if layer is not None and sig_layer != layer:
             continue

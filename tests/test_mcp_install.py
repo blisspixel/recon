@@ -954,3 +954,130 @@ class TestVscodeServersKey:
         data = json.loads(target.read_text(encoding="utf-8"))
         assert "mcpServers" in data
         assert "servers" not in data
+
+
+class TestWorkspaceSymlinkSafety:
+    def test_implicit_workspace_symlink_escaping_cwd_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        outside = tmp_path / "outside"
+        outside.mkdir()
+        target = outside / "mcp.json"
+        target.write_text("{}", encoding="utf-8")
+
+        vscode_dir = workspace / ".vscode"
+        vscode_dir.mkdir()
+        link = vscode_dir / "mcp.json"
+        try:
+            link.symlink_to(target)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        monkeypatch.chdir(workspace)
+        with pytest.raises(InstallError, match="outside current directory"):
+            plan_install("vscode", "workspace")
+
+        with pytest.raises(InstallError, match="outside current directory"):
+            install("vscode", "workspace")
+
+    def test_implicit_workspace_symlink_dir_is_refused(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        outside = tmp_path / "outside_vscode"
+        outside.mkdir()
+        target = outside / "mcp.json"
+        target.write_text("{}", encoding="utf-8")
+
+        vscode_link = workspace / ".vscode"
+        try:
+            vscode_link.symlink_to(outside)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        monkeypatch.chdir(workspace)
+        with pytest.raises(InstallError, match="outside current directory"):
+            plan_install("vscode", "workspace")
+
+        with pytest.raises(InstallError, match="outside current directory"):
+            install("vscode", "workspace")
+
+    def test_implicit_workspace_symlink_inside_cwd_is_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        workspace = tmp_path / "workspace"
+        workspace.mkdir()
+        target = workspace / "actual_mcp.json"
+        target.write_text("{}", encoding="utf-8")
+
+        vscode_dir = workspace / ".vscode"
+        vscode_dir.mkdir()
+        link = vscode_dir / "mcp.json"
+        try:
+            link.symlink_to(target)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        monkeypatch.chdir(workspace)
+        with pytest.raises(InstallError, match="workspace symlink"):
+            plan_install("vscode", "workspace")
+
+        with pytest.raises(InstallError, match="workspace symlink"):
+            install("vscode", "workspace")
+
+    def test_explicit_symlink_binds_target_path(self, tmp_path: Path) -> None:
+        real_target = tmp_path / "real" / "mcp.json"
+        real_target.parent.mkdir()
+        real_target.write_text("{}", encoding="utf-8")
+        link = tmp_path / "mcp.json"
+        try:
+            link.symlink_to(real_target)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        plan = plan_install("cursor", "user", config_path_override=link)
+        assert plan.target_path == real_target.resolve()
+
+        result = install("cursor", "user", config_path_override=link)
+        assert result.target_path == real_target.resolve()
+        assert link.is_symlink()
+        assert "recon" in json.loads(real_target.read_text(encoding="utf-8"))["mcpServers"]
+
+    def test_link_swap_redirection_is_detected_and_refused(
+        self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+    ) -> None:
+        real_target = tmp_path / "real" / "mcp.json"
+        real_target.parent.mkdir()
+        real_target.write_text("{}", encoding="utf-8")
+        evil_target = tmp_path / "evil" / "mcp.json"
+        evil_target.parent.mkdir()
+        evil_target.write_text("{}", encoding="utf-8")
+
+        link = tmp_path / "mcp.json"
+        try:
+            link.symlink_to(real_target)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        from recon_tool.mcp_client.install import _atomic_write_text
+
+        with pytest.raises(InstallError, match="target path changed"):
+            _atomic_write_text(link, "{}", target_path=evil_target.resolve())
+
+    def test_cli_displays_target_when_symlinked(self, tmp_path: Path) -> None:
+        real_target = tmp_path / "real" / "mcp.json"
+        real_target.parent.mkdir()
+        real_target.write_text("{}", encoding="utf-8")
+        link = tmp_path / "mcp.json"
+        try:
+            link.symlink_to(real_target)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        result = runner.invoke(app, ["mcp", "install", "--client", "cursor", "--config-path", str(link), "--dry-run"])
+        assert result.exit_code == 0
+        normalized = "".join(result.output.split())
+        assert "target" in result.output
+        assert "real" in normalized
+        assert real_target.name in normalized

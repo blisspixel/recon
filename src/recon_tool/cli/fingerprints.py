@@ -15,7 +15,10 @@ from typing import Any, Literal
 import typer
 from rich.markup import escape
 
-from recon_tool.catalog_discovery import category_matches
+from recon_tool.catalog_discovery import (
+    category_matches_normalized,
+    normalize_category_query,
+)
 from recon_tool.cli.catalog_rendering import print_field, print_indented
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.exit_codes import EXIT_VALIDATION
@@ -340,11 +343,15 @@ def fingerprints_list(
     fps = load_fingerprints()
     had_filter = category is not None or detection_type is not None
     if category is not None:
-        category = category.strip()
-        if not category:
+        try:
+            category_normalized = normalize_category_query(category)
+        except ValueError as exc:
+            render_error(str(exc))
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+        if not category_normalized:
             render_error("Fingerprint category filter cannot be empty.")
             raise typer.Exit(code=EXIT_VALIDATION) from None
-        fps = tuple(fp for fp in fps if category_matches(fp.category, category))
+        fps = tuple(fp for fp in fps if category_matches_normalized(fp.category, category_normalized))
     if detection_type is not None:
         dtype = detection_type.strip().lower()
         if not dtype:

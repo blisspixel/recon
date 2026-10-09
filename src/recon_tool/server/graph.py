@@ -249,6 +249,9 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
 
 
 _MAX_CLUSTER_DOMAINS = 100
+_MAX_CLUSTER_ITEM_CHARS = 253
+_MAX_CLUSTER_AGGREGATE_CHARS = 8192
+_MAX_CLUSTER_ERRORS = 100
 
 
 def _admit_cluster_domains(domains: list[str]) -> tuple[list[str], list[DomainToolError]]:
@@ -259,6 +262,21 @@ def _admit_cluster_domains(domains: list[str]) -> tuple[list[str], list[DomainTo
     rows as duplicates so a last-write cannot hide that only one namespace
     was compared.
     """
+    if len(domains) > _MAX_CLUSTER_DOMAINS:
+        raise ToolError(f"Too many domains: {len(domains)} items (max {_MAX_CLUSTER_DOMAINS})")
+
+    total_chars = 0
+    for raw in domains:
+        if not isinstance(raw, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+            raise ToolError("each domain entry must be a string")
+        if len(raw) > _MAX_CLUSTER_ITEM_CHARS:
+            raise ToolError(f"Domain item exceeds maximum length of {_MAX_CLUSTER_ITEM_CHARS} characters")
+        total_chars += len(raw)
+        if total_chars > _MAX_CLUSTER_AGGREGATE_CHARS:
+            raise ToolError(
+                f"Aggregate domain input exceeds maximum length of {_MAX_CLUSTER_AGGREGATE_CHARS} characters"
+            )
+
     seen_apexes: set[str] = set()
     admitted: list[str] = []
     errors: list[DomainToolError] = []
@@ -266,15 +284,15 @@ def _admit_cluster_domains(domains: list[str]) -> tuple[list[str], list[DomainTo
         try:
             apex = validate_domain(raw)
         except ValueError as exc:
-            errors.append({"domain": raw.strip() or raw, "error": server_app.invalid_domain_message(exc)})
+            if len(errors) < _MAX_CLUSTER_ERRORS:
+                errors.append({"domain": raw.strip() or raw, "error": server_app.invalid_domain_message(exc)})
             continue
         if apex in seen_apexes:
-            errors.append({"domain": raw.strip(), "error": f"Duplicate of {apex}"})
+            if len(errors) < _MAX_CLUSTER_ERRORS:
+                errors.append({"domain": raw.strip(), "error": f"Duplicate of {apex}"})
             continue
         seen_apexes.add(apex)
         admitted.append(raw)
-    if len(admitted) > _MAX_CLUSTER_DOMAINS:
-        raise ToolError(f"Too many domains: {len(admitted)} distinct (max {_MAX_CLUSTER_DOMAINS})")
     return admitted, errors
 
 

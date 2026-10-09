@@ -435,6 +435,8 @@ async def detect_hosting_from_a_record(ctx: dns_base.DetectionCtx, domain: str) 
         return
 
     ptr_lower = ptr_results[0].rstrip(".").lower()
+    if not is_public_dns_name(ptr_lower):
+        return
     for substring, name, slug, region_regex in HOSTING_PTR_PATTERNS:
         if substring not in ptr_lower:
             continue

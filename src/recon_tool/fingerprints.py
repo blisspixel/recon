@@ -23,6 +23,7 @@ from recon_tool.regex_safety import (
     compile_regex,
 )
 from recon_tool.regex_safety import validate_regex as _validate_regex
+from recon_tool.validator import has_no_control_chars, strip_control_chars
 
 logger = logging.getLogger("recon")
 
@@ -314,8 +315,9 @@ def _validate_fingerprint(fp: dict[str, Any], source: str) -> Fingerprint | None
         return None
 
     name = fp.get("name")
-    if not name or not isinstance(name, str):
-        logger.warning("Fingerprint missing 'name' in %s — skipped", source)
+    if not isinstance(name, str) or not name or len(name) > 128 or not has_no_control_chars(name):
+        safe_name = strip_control_chars(name, 64) if isinstance(name, str) else ""
+        logger.warning("Fingerprint name invalid in %s (%r) - skipped", source, safe_name)
         return None
 
     detections_raw = fp.get("detections")

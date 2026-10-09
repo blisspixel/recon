@@ -227,6 +227,55 @@ class TestUpgradeCommand:
         assert updater.upgrade_command(updater.UV) is None
         assert updater.upgrade_command(updater.PIPX) is None
 
+    def test_git_workspace_launcher_symlink_is_refused(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        (tmp_path / ".git").mkdir()
+        working_directory = tmp_path / "checkout"
+        working_directory.mkdir()
+        monkeypatch.chdir(working_directory)
+
+        outside_dir = tmp_path.parent / "outside_bin"
+        outside_dir.mkdir(exist_ok=True)
+        outside_target = outside_dir / ("uv.exe" if sys.platform == "win32" else "uv")
+        outside_target.write_text("", encoding="utf-8")
+
+        planted_bin = tmp_path / "bin"
+        planted_bin.mkdir()
+        planted_link = planted_bin / ("uv.exe" if sys.platform == "win32" else "uv")
+        try:
+            planted_link.symlink_to(outside_target)
+        except OSError as exc:
+            pytest.skip(f"symlinks unavailable: {exc}")
+
+        def _which_planted_link(_name: str) -> str:
+            return str(planted_link)
+
+        monkeypatch.setattr(updater.shutil, "which", _which_planted_link)
+        assert updater.upgrade_command(updater.UV) is None
+
+    def test_non_git_nested_ancestor_launcher_is_refused(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        working_directory = tmp_path / "nested" / "checkout"
+        working_directory.mkdir(parents=True)
+        planted_dir = tmp_path / "bin"
+        planted_dir.mkdir()
+        planted = planted_dir / ("uv.exe" if sys.platform == "win32" else "uv")
+        planted.write_text("", encoding="utf-8")
+        monkeypatch.chdir(working_directory)
+
+        def _which_planted(_name: str) -> str:
+            return str(planted)
+
+        monkeypatch.setattr(updater.shutil, "which", _which_planted)
+        assert updater.upgrade_command(updater.UV) is None
+
+    def test_relative_launcher_path_is_refused(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+        monkeypatch.chdir(tmp_path)
+
+        def _which_relative(_name: str) -> str:
+            return "../bin/uv"
+
+        monkeypatch.setattr(updater.shutil, "which", _which_relative)
+        assert updater.upgrade_command(updater.UV) is None
+
 
 class TestDetectInstallMethod:
     def test_pipx_prefix(self, monkeypatch: pytest.MonkeyPatch) -> None:

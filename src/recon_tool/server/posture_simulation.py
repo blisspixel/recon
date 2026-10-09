@@ -234,7 +234,7 @@ def _apply_one_fix(fix: str, state: SimulationState) -> str | None:
             slug="letsencrypt",
         )
         return "CAA records configured"
-    return f"Unrecognized fix: {strip_control_chars(fix)[:80]}"
+    return f"Unrecognized fix: {strip_control_chars(fix[:80])}"
 
 
 def simulate_fixes(
