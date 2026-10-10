@@ -334,6 +334,11 @@ def _keyword_group_matches(terms: frozenset[str], keywords: list[str]) -> bool:
     return any((keyword_terms := _hypothesis_terms(keyword)) and keyword_terms <= terms for keyword in keywords)
 
 
+def _relevant_categories(terms: frozenset[str]) -> set[str]:
+    """Return categories whose keywords match terms."""
+    return {cat for cat, keywords in _HYPOTHESIS_KEYWORDS.items() if _keyword_group_matches(terms, keywords)}
+
+
 @mcp.tool(
     annotations=tool_annotations(
         read_only=True,
@@ -614,8 +619,8 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
         JSON object with unresolved likelihood, related and contradicting
         observations, missing evidence, and collection confidence.
     """
-    # Bound the free-text hypothesis so a multi-megabyte argument cannot
-    # multiply the per-signal substring scan cost.
+    if not isinstance(hypothesis, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ToolError("hypothesis must be a string")
     hypothesis = hypothesis[:4000]
     resolved = await server_app.resolve_or_cache(domain)
     if isinstance(resolved, str):
@@ -635,10 +640,7 @@ async def test_hypothesis(domain: str, hypothesis: str) -> HypothesisAssessmentR
 
     # Map hypothesis to relevant categories via keyword matching
     hypothesis_terms = _hypothesis_terms(hypothesis)
-    relevant_categories: set[str] = set()
-    for cat, keywords in _HYPOTHESIS_KEYWORDS.items():
-        if _keyword_group_matches(hypothesis_terms, keywords):
-            relevant_categories.add(cat)
+    relevant_categories = _relevant_categories(hypothesis_terms)
 
     # Find supporting and contradicting signals
     supporting: list[str] = []

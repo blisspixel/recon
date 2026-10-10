@@ -887,6 +887,9 @@ class TestPtrCanonicalGuard:
             "10.in-addr.arpa.",
             "1.168.192.in-addr.arpa.",
             "1.20.172.in-addr.arpa.",
+            "172.1.20.172.in-addr.arpa.",
+            "1.172.20.172.in-addr.arpa.",
+            "100.1.65.100.in-addr.arpa.",
             "target.internal.",
             "target.corp.",
         ],
@@ -925,3 +928,22 @@ class TestPtrCanonicalGuard:
 
         assert not ctx.evidence
         assert not ctx.services
+
+
+def test_is_private_v4_reverse_with_repeated_octets() -> None:
+    from recon_tool.sources.dns_tables import _is_private_v4_reverse
+
+    # Private RFC 1918 172.16.0.0/12 with 172 in other octets
+    assert _is_private_v4_reverse("172.1.20.172.in-addr.arpa") is True
+    assert _is_private_v4_reverse("1.172.20.172.in-addr.arpa") is True
+    assert _is_private_v4_reverse("1.20.172.in-addr.arpa") is True
+    assert _is_private_v4_reverse("20.172.in-addr.arpa") is True
+    # Public 172.x outside 16-31
+    assert _is_private_v4_reverse("1.1.50.172.in-addr.arpa") is False
+
+    # Private RFC 6598 100.64.0.0/10 with 100 in other octets
+    assert _is_private_v4_reverse("100.1.65.100.in-addr.arpa") is True
+    assert _is_private_v4_reverse("1.65.100.in-addr.arpa") is True
+    assert _is_private_v4_reverse("65.100.in-addr.arpa") is True
+    # Public 100.x outside 64-127
+    assert _is_private_v4_reverse("1.1.50.100.in-addr.arpa") is False

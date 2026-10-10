@@ -248,6 +248,26 @@ class LookupResult(TypedDict):
     evidence: list[LookupEvidenceSummary]
 
 
+def _validate_raw_detections(detections: list[dict[str, str]]) -> None:
+    """Validate ephemeral detection structure and field constraints."""
+    if not isinstance(detections, list):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ToolError("detections must be a list of detection objects.")
+    if not detections:
+        raise ToolError("At least one detection rule is required.")
+    if not all(isinstance(d, dict) for d in detections):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ToolError("Each detection must be a dict with 'type' and 'pattern' keys.")
+
+    for d in detections:
+        det_type = d.get("type")
+        det_pattern = d.get("pattern")
+        if not isinstance(det_type, str) or not isinstance(det_pattern, str):
+            raise ToolError("Detection 'type' and 'pattern' must be strings.")
+        if len(det_type) > 200:
+            raise ToolError("Detection type is too long (must not exceed 200 characters).")
+        if len(det_pattern) > 500:
+            raise ToolError("Detection pattern exceeds maximum length of 500 characters.")
+
+
 @mcp.tool(
     annotations=tool_annotations(
         read_only=False,
@@ -294,6 +314,11 @@ async def inject_ephemeral_fingerprint(
     )
     from recon_tool.specificity import evaluate_pattern
 
+    for field_val in (name, slug, category, confidence):
+        if not isinstance(field_val, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+            raise ToolError("name, slug, category, and confidence must be strings.")
+    _validate_raw_detections(detections)
+
     try:
         validate_ephemeral_input_size(
             name=name,
@@ -304,10 +329,6 @@ async def inject_ephemeral_fingerprint(
         )
     except (EphemeralCapacityError, ValueError) as exc:
         raise ToolError(str(exc)) from exc
-
-    # detections is typed list[dict] but arrives over MCP unenforced; guard at runtime.
-    if not all(isinstance(d, dict) for d in detections):  # pyright: ignore[reportUnnecessaryIsInstance]
-        raise ToolError("Each detection must be a dict with 'type' and 'pattern' keys.")
 
     fp_dict: dict[str, object] = {
         "name": name,

@@ -396,3 +396,19 @@ class TestIsSafeDnsName:
     )
     def test_rejects_control_and_non_dns(self, name: str):
         assert not is_safe_dns_name(name)
+
+    def test_rejects_non_string_type(self):
+        assert not is_safe_dns_name(123)  # type: ignore[arg-type]
+        assert not is_safe_dns_name(None)  # type: ignore[arg-type]
+
+
+def test_validate_domain_rejects_non_string_type():
+    with pytest.raises(ValueError, match="A valid domain is required"):
+        validate_domain(123)  # type: ignore[arg-type]
+    with pytest.raises(ValueError, match="A valid domain is required"):
+        validate_domain(None)  # type: ignore[arg-type]
+
+
+def test_strip_control_chars_handles_non_string_type():
+    assert strip_control_chars(123) == ""  # type: ignore[arg-type]
+    assert strip_control_chars(None) == ""  # type: ignore[arg-type]

@@ -279,6 +279,14 @@ class TestHypothesis:
         assert result["supporting_signals"] == ["AI-platform indicators observed"]
         assert "active use" in result["disclaimer"]
 
+    @pytest.mark.asyncio
+    async def test_rejects_non_string_hypothesis(self) -> None:
+        from recon_tool.mcp_client.sdk_compat import ToolError
+        from recon_tool.server import test_hypothesis
+
+        with pytest.raises(ToolError, match="hypothesis must be a string"):
+            await test_hypothesis("alpha.invalid", 123)  # type: ignore[arg-type]
+
 
 # ── simulate_hardening ───────────────────────────────────────────────
 
@@ -500,3 +508,19 @@ class TestClusterVerificationTokensCap:
         domains = [f"d{i}.invalid" for i in range(101)]  # > 100 distinct apexes
         with pytest.raises(ToolError, match="max"):
             await cluster_verification_tokens(domains)
+
+
+class TestDomainValidationSecurityGuards:
+    @pytest.mark.asyncio
+    async def test_resolve_or_cache_rejects_non_string(self) -> None:
+        from recon_tool.server.app import resolve_or_cache
+
+        result = await resolve_or_cache(123)  # type: ignore[arg-type]
+        assert isinstance(result, str)
+        assert "A valid domain is required" in result
+
+    def test_validate_domain_for_tool_rejects_non_string(self) -> None:
+        from recon_tool.server.app import validate_domain_for_tool
+
+        with pytest.raises(ToolError, match="A valid domain is required"):
+            validate_domain_for_tool(123, "req-123")  # type: ignore[arg-type]

@@ -30,6 +30,8 @@ _CAA_ISSUER_RE = re.compile(
 
 def is_safe_dns_name(name: str) -> bool:
     """True when *name* contains only DNS-safe characters (case-insensitive)."""
+    if not isinstance(name, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+        return False
     return bool(name) and all(c in _SAFE_DNS_CHARS for c in name.lower())
 
 
@@ -117,6 +119,8 @@ def strip_control_chars(value: str, max_len: int = _MAX_DISPLAY_LEN) -> str:
     to *max_len*. Ordinary right-to-left letters remain intact; only invisible
     formatting state that can reorder surrounding output is removed.
     """
+    if not isinstance(value, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+        return ""
     cleaned = "".join(
         c
         for c in value
@@ -195,6 +199,9 @@ def validate_domain(raw_input: str, *, apex: bool = True) -> str:
     Raises:
         ValueError: If domain is empty, whitespace-only, or invalid format.
     """
+    if not isinstance(raw_input, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ValueError("A valid domain is required")
+
     stripped = raw_input.strip()
 
     if not stripped:

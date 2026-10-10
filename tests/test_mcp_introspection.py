@@ -903,3 +903,52 @@ class TestGetFingerprintsPagingConvention:
 
         with pytest.raises(ToolError, match="control characters"):
             await get_signals(category="ai\x1b[0m")
+
+    @pytest.mark.asyncio
+    async def test_invalid_type_limit_or_offset_rejected(self) -> None:
+        from recon_tool.mcp_client.sdk_compat import ToolError
+
+        with pytest.raises(ToolError, match="limit must be zero or a positive integer"):
+            await get_fingerprints(limit=True)  # type: ignore[arg-type]
+
+        with pytest.raises(ToolError, match="limit must be zero or a positive integer"):
+            await get_fingerprints(limit="invalid")  # type: ignore[arg-type]
+
+        with pytest.raises(ToolError, match="offset must be zero or a positive integer"):
+            await get_fingerprints(offset=-1)
+
+        with pytest.raises(ToolError, match="offset must be zero or a positive integer"):
+            await get_fingerprints(offset=True)  # type: ignore[arg-type]
+
+        with pytest.raises(ToolError, match="offset must be zero or a positive integer"):
+            await get_fingerprints(offset="invalid")  # type: ignore[arg-type]
+
+    @pytest.mark.asyncio
+    async def test_invalid_type_output_format_rejected(self) -> None:
+        from recon_tool.mcp_client.sdk_compat import ToolError
+        from recon_tool.server.introspection import explain_dag
+
+        with pytest.raises(ToolError, match="output_format must be 'text' or 'dot'"):
+            await explain_dag("alpha.invalid", output_format=123)  # type: ignore[arg-type]
+
+    @pytest.mark.asyncio
+    async def test_invalid_type_layer_rejected(self) -> None:
+        from recon_tool.mcp_client.sdk_compat import ToolError
+        from recon_tool.server.introspection import get_signals
+
+        with pytest.raises(ToolError, match="layer must be 1, 2, 3, or 4"):
+            await get_signals(layer=True)  # type: ignore[arg-type]
+        with pytest.raises(ToolError, match="layer must be 1, 2, 3, or 4"):
+            await get_signals(layer="invalid")  # type: ignore[arg-type]
+        with pytest.raises(ToolError, match="layer must be 1, 2, 3, or 4"):
+            await get_signals(layer=5)
+
+    @pytest.mark.asyncio
+    async def test_invalid_signal_name_rejected(self) -> None:
+        from recon_tool.mcp_client.sdk_compat import ToolError
+        from recon_tool.server.introspection import explain_signal
+
+        with pytest.raises(ToolError, match="signal_name must be a string up to 200 characters"):
+            await explain_signal(123)  # type: ignore[arg-type]
+        with pytest.raises(ToolError, match="signal_name must be a string up to 200 characters"):
+            await explain_signal("a" * 201)

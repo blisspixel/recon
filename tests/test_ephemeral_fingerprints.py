@@ -984,7 +984,7 @@ class TestProperty5EphemeralRoundTrip:
 async def test_mcp_injection_rejects_invalid_txt_owner(owner: str) -> None:
     from recon_tool.server.ephemeral import inject_ephemeral_fingerprint
 
-    with pytest.raises(ToolError, match="Validation failed"):
+    with pytest.raises(ToolError, match=r"Validation failed|exceeds maximum length"):
         await inject_ephemeral_fingerprint(
             name="Synthetic Owner Proof",
             slug="synthetic-owner-proof",
@@ -1009,3 +1009,69 @@ async def test_mcp_injection_preserves_bounded_relative_txt_owners(owner: str) -
     )
     assert result["status"] == "ok"
     assert get_ephemeral()[0].detections[0].pattern == owner + ":^proof$"
+
+
+@pytest.mark.asyncio
+async def test_mcp_injection_rejects_invalid_types_and_bounds() -> None:
+    from recon_tool.mcp_client.sdk_compat import ToolError
+    from recon_tool.server.ephemeral import inject_ephemeral_fingerprint
+
+    # Non-string scalar fields
+    with pytest.raises(ToolError, match="must be strings"):
+        await inject_ephemeral_fingerprint(
+            name=123,  # type: ignore[arg-type]
+            slug="valid-slug",
+            category="SaaS",
+            confidence="high",
+            detections=[{"type": "cname", "pattern": "valid"}],
+        )
+
+    # Non-list detections
+    with pytest.raises(ToolError, match="must be a list"):
+        await inject_ephemeral_fingerprint(
+            name="Valid Name",
+            slug="valid-slug",
+            category="SaaS",
+            confidence="high",
+            detections="not-a-list",  # type: ignore[arg-type]
+        )
+
+    # Empty detections
+    with pytest.raises(ToolError, match="At least one detection rule is required"):
+        await inject_ephemeral_fingerprint(
+            name="Valid Name",
+            slug="valid-slug",
+            category="SaaS",
+            confidence="high",
+            detections=[],
+        )
+
+    # Non-dict detection item
+    with pytest.raises(ToolError, match="Each detection must be a dict"):
+        await inject_ephemeral_fingerprint(
+            name="Valid Name",
+            slug="valid-slug",
+            category="SaaS",
+            confidence="high",
+            detections=["not-a-dict"],  # type: ignore[list-item]
+        )
+
+    # Non-string detection field
+    with pytest.raises(ToolError, match="must be strings"):
+        await inject_ephemeral_fingerprint(
+            name="Valid Name",
+            slug="valid-slug",
+            category="SaaS",
+            confidence="high",
+            detections=[{"type": 123, "pattern": "abc"}],  # type: ignore[dict-item]
+        )
+
+    # Oversized detection pattern (> 500 chars)
+    with pytest.raises(ToolError, match="exceeds maximum length of 500 characters"):
+        await inject_ephemeral_fingerprint(
+            name="Valid Name",
+            slug="valid-slug",
+            category="SaaS",
+            confidence="high",
+            detections=[{"type": "cname", "pattern": "x" * 501}],
+        )

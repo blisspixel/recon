@@ -109,7 +109,7 @@ def _verification_peer(token: str, peer: str) -> SharedVerificationPeer:
 
 def _normalize_limit(value: int, name: str) -> int:
     """Validate an optional compact-output cap. Zero means full raw output."""
-    if value < 0:
+    if not isinstance(value, int) or isinstance(value, bool) or value < 0:  # pyright: ignore[reportUnnecessaryIsInstance]
         raise ToolError(f"{name} must be zero or a positive integer")
     return value
 
@@ -196,6 +196,8 @@ async def chain_lookup(domain: str, depth: int = 1, result_limit: int = 0) -> st
     request_id = uuid.uuid4().hex[:12]
     start_time = time.monotonic()
 
+    if not isinstance(depth, int) or isinstance(depth, bool):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ToolError("depth must be an integer between 1 and 3")
     # Clamp depth
     depth = max(1, min(depth, 3))
     result_limit = _normalize_limit(result_limit, "result_limit")
@@ -262,6 +264,8 @@ def _admit_cluster_domains(domains: list[str]) -> tuple[list[str], list[DomainTo
     rows as duplicates so a last-write cannot hide that only one namespace
     was compared.
     """
+    if not isinstance(domains, list):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ToolError("domains must be a list of strings")
     if len(domains) > _MAX_CLUSTER_DOMAINS:
         raise ToolError(f"Too many domains: {len(domains)} items (max {_MAX_CLUSTER_DOMAINS})")
 
@@ -346,6 +350,8 @@ async def cluster_verification_tokens(
     from recon_tool.clustering import compute_shared_tokens
 
     peer_limit_per_domain = _normalize_limit(peer_limit_per_domain, "peer_limit_per_domain")
+    if not isinstance(domains, list):  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ToolError("domains must be a list of strings")
     if not domains:
         raise ToolError("At least one domain is required")
 
