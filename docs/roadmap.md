@@ -6,7 +6,7 @@ in [CHANGELOG.md](../CHANGELOG.md). Historical planning lives in
 [release-process.md](release-process.md). Research and publication work is
 tracked separately from product work.
 
-> **Status:** v2.19.14 is current. The CLI, versioned JSON, local stdio MCP,
+> **Status:** v2.19.15 is current. The CLI, versioned JSON, local stdio MCP,
 > bounded collectors, evidence and renderer contracts, MCP compatibility matrix,
 > and verified release path are established. The resolver and detection engine
 > are feature-complete. Recent shipped work belongs in the
@@ -98,6 +98,10 @@ interpretation of what the public channel exposes. The next work is:
   from validated probabilities, preserving stable JSON fields.
 - Fix concrete mismatches found in reproducible reports, and retain unknown or
   unresolved states when the public evidence cannot decide the claim.
+- Provide thin, independently removable desktop integrations (such as the
+  keyboard-first Omarchy Quickshell plugin in `integrations/omarchy/`), reusing
+  existing structured CLI JSON outputs and domain-validation logic without
+  shell interpolation or background daemons.
 
 Independent calibration remains unestablished. No company interviews, private
 inventory collection, or replacement population study is planned or required

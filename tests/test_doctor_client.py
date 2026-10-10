@@ -105,6 +105,20 @@ class TestCheckClient:
         assert not report.ok
         assert _statuses(report)["recon stanza"] == "fail"
 
+    def test_claude_code_respects_claude_config_dir(
+        self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path, recon_on_path: None
+    ) -> None:
+        custom_dir = tmp_path / "custom-claude"
+        _write(
+            custom_dir / ".claude.json",
+            {"mcpServers": {"recon": {"command": "recon", "args": ["mcp"]}}},
+        )
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(custom_dir))
+        report = check_client("claude-code", platform_name="linux")
+        assert report.ok
+        config_check = next(c for c in report.checks if c.name == "config file" and c.status == "ok")
+        assert str(custom_dir / ".claude.json") in config_check.detail
+
     def test_malformed_json_is_reported(self, home: Path) -> None:
         (home / ".claude.json").write_text("{ not valid json", encoding="utf-8")
         report = check_client("claude-code", platform_name="linux")

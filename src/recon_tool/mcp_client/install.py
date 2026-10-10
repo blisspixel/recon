@@ -213,6 +213,10 @@ def resolve_config_path(
             f"recon has no portable default path for {client} user-profile config; "
             "use --scope=workspace or pass --config-path explicitly."
         )
+    if client == "claude-code":
+        claude_config_dir = os.environ.get("CLAUDE_CONFIG_DIR")
+        if claude_config_dir:
+            return Path(claude_config_dir).expanduser().absolute() / ".claude.json"
     family = _os_family(platform_name)
     root = _appdata_dir() if client == "claude-desktop" and family == "windows" else _user_home()
     return root / spec.user_paths[family]

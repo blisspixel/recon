@@ -26,6 +26,27 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.15] - 2026-10-09
+
+Add thin Omarchy desktop shell integration, support `CLAUDE_CONFIG_DIR` for profile isolation
+and account switching, and document Arch Linux and Omarchy environments.
+
+### Added
+
+- Add thin, keyboard-first Omarchy desktop shell integration in `integrations/omarchy/`
+  with asynchronous QML execution, direct argument passing, clipboard safety,
+  fail-closed timeout bounding, and baseline drift inspection.
+- Support `CLAUDE_CONFIG_DIR` when resolving user-scoped Claude Code configuration
+  paths in `recon mcp install` and `recon doctor --client=claude-code`, enabling
+  profile isolation and automatic compatibility with Omarchy account switching.
+- Add Linux and Omarchy environment documentation in `docs/omarchy-and-linux.md`
+  covering PEP 668 tool installation, agent launcher integration, terminal rendering
+  in Hyprland, and unprivileged DNS resolution.
+
+### Tool Surface Changes
+
+- No CLI commands, flags, schema fields, or MCP tool signatures changed. Added `integrations/omarchy/` desktop bar widget and support for `CLAUDE_CONFIG_DIR` configuration resolution.
+
 ## [2.19.14] - 2026-10-09
 
 Harden reverse DNS prefix parsing, enforce strict type guards across core validation
