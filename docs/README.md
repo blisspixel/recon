@@ -31,6 +31,7 @@ public, but not written for a first-time reader.
 | Legal and query-exposure notes | [legal.md](legal.md) |
 | What leaves your machine | [adr/0011-public-metadata-collection-boundary.md](adr/0011-public-metadata-collection-boundary.md) |
 | Capture, replay, and compare caller-owned observations | [observation-capsules.md](observation-capsules.md) |
+| Linux and Omarchy environment execution | [omarchy-and-linux.md](omarchy-and-linux.md) |
 | Upgrade from v1.x to v2.0 | [migration-v2.md](migration-v2.md) |
 
 ## Building against recon

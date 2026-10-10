@@ -614,7 +614,7 @@ This is a common failure mode, and it usually is not a broken config. A healthy 
 - **Run `/mcp` in the client.** It lists the connected MCP servers and any startup error. If `recon` is not listed, the config was not picked up or the server crashed on spawn.
 - **Look for the right tool-name prefix.** Local stdio tools appear as `mcp__recon__*`, not `mcp__claude_ai_*`. Searching the tool list for the claude.ai naming pattern will not find them, which can read as "the install failed" when it did not.
 - **Restart means a full application quit.** Closing a chat window and opening a new one in the same process does not re-spawn MCP servers. Quit the application entirely (Alt+F4 on Windows, Cmd+Q on macOS) and relaunch.
-- **Check which path you installed by.** `recon mcp install --client=claude-code` writes a user-scoped stanza into `~/.claude.json`. The Claude Code plugin instead keeps its config inside the plugin, and the plugin has to be *enabled*, not just present. The two paths are independent; `recon doctor --client` reads the former, not the latter.
+- **Check which path you installed by.** `recon mcp install --client=claude-code` writes a user-scoped stanza into `~/.claude.json` (or `$CLAUDE_CONFIG_DIR/.claude.json` when that environment variable is set for profile isolation or Omarchy account switching). The Claude Code plugin instead keeps its config inside the plugin, and the plugin has to be *enabled*, not just present. The two paths are independent; `recon doctor --client` reads the former, not the latter.
 
 ### Client approval policy
 

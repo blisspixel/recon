@@ -79,7 +79,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubus
 
 The installer sets up recon for your user account, including Python when needed.
 Open a new terminal afterward. Already have Python 3.11 through 3.14? Use
-`pip install recon-tool` in a virtual environment.
+`pip install recon-tool` in a virtual environment, or `uv tool install recon-tool` /
+`pipx install recon-tool` on managed distributions like Arch Linux and Omarchy.
 For review-before-run instructions, other package managers, updates, and recovery,
 see the [installation guide](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#install-or-update).
 
@@ -142,6 +143,20 @@ operate a hosted service.
 See [MCP setup and supported clients](https://github.com/blisspixel/recon/blob/main/docs/mcp.md)
 and [skills, plugins, and their validation status](https://github.com/blisspixel/recon/blob/main/agents/README.md).
 
+### Omarchy Desktop Shell Integration
+
+recon includes a thin, keyboard-first desktop shell plugin for [Omarchy](https://omarchy.org)
+located in [`integrations/omarchy/`](https://github.com/blisspixel/recon/blob/main/integrations/omarchy/):
+
+- **Keyboard-driven workflow**: focus domain input automatically, press `Enter` to run
+  bounded inspection, and press `Ctrl+D` to toggle baseline delta comparison.
+- **Direct process invocation**: passes structured arguments directly (`["recon", domain, "--json"]`)
+  without shell interpolation.
+- **Safe clipboard handling**: pasting text never triggers an automatic network request.
+- **Zero background daemons**: runs unprivileged inside Omarchy's Quickshell environment.
+
+See [`integrations/omarchy/README.md`](https://github.com/blisspixel/recon/blob/main/integrations/omarchy/README.md) for installation and shortcuts.
+
 ## Documentation
 
 | Need | Guide |
@@ -150,6 +165,7 @@ and [skills, plugins, and their validation status](https://github.com/blisspixel
 | Find a command or flag | [CLI reference](https://github.com/blisspixel/recon/blob/main/docs/cli-surface.md) |
 | Build automation or hand off evidence | [JSON schema](https://github.com/blisspixel/recon/blob/main/docs/schema.md), [review bundles](https://github.com/blisspixel/recon/blob/main/docs/review-bundles.md) |
 | Understand results and their limits | [How it works](https://github.com/blisspixel/recon/blob/main/docs/how-it-works.md), [limitations](https://github.com/blisspixel/recon/blob/main/docs/limitations.md), [reporting observations](https://github.com/blisspixel/recon/blob/main/docs/reporting-observations.md) |
+| Linux and Omarchy environment setup | [Linux / Omarchy guide](https://github.com/blisspixel/recon/blob/main/docs/omarchy-and-linux.md) |
 | Check plans and shipped changes | [Roadmap](https://github.com/blisspixel/recon/blob/main/ROADMAP.md), [changelog](https://github.com/blisspixel/recon/blob/main/CHANGELOG.md) |
 | Find architecture, security, research, or release procedures | [Full documentation index](https://github.com/blisspixel/recon/blob/main/docs/README.md) |
 

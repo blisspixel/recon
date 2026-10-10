@@ -7,7 +7,7 @@ operator and contributor view: current state, next work, boundaries, and gates.
 
 ## Status
 
-recon **v2.19.14** is the current production baseline. The CLI, versioned JSON,
+recon **v2.19.15** is the current production baseline. The CLI, versioned JSON,
 local stdio MCP server, bounded public-metadata collectors, fail-closed claim
 audit, MCP dual-SDK matrix, and verified release path are complete. Local
 execution is the default, and the project does not operate a hosted service.
@@ -85,6 +85,10 @@ The ordered work is:
    provenance, and channel parity blocking.
 5. Use concrete bug reports and reproducible operator examples to justify any
    new composition surface.
+6. Provide thin, independently removable desktop integrations (such as the
+   keyboard-first Omarchy Quickshell plugin in `integrations/omarchy/`) that reuse
+   existing structured CLI JSON outputs and domain-validation logic without
+   shell interpolation or background daemons.
 
 The v2.19 maintenance releases shipped updater recovery, module isolation,
 regex admission, vendor-neutral agent-discovery declarations, supplied-domain

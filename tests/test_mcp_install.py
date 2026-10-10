@@ -110,6 +110,18 @@ class TestResolveConfigPath:
         monkeypatch.chdir(tmp_path)
         assert resolve_config_path("claude-code", "workspace") == tmp_path / ".mcp.json"
 
+    def test_claude_code_user_default_path(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        monkeypatch.setattr(Path, "home", staticmethod(lambda: tmp_path))
+        monkeypatch.delenv("CLAUDE_CONFIG_DIR", raising=False)
+        for os_name in ("win32", "darwin", "linux"):
+            assert resolve_config_path("claude-code", "user", platform_name=os_name) == tmp_path / ".claude.json"
+
+    def test_claude_code_user_respects_claude_config_dir(self, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+        custom_dir = tmp_path / "custom-claude-profile"
+        monkeypatch.setenv("CLAUDE_CONFIG_DIR", str(custom_dir))
+        for os_name in ("win32", "darwin", "linux"):
+            assert resolve_config_path("claude-code", "user", platform_name=os_name) == custom_dir / ".claude.json"
+
 
 class TestDefaultScope:
     def test_clients_with_user_default_to_user(self) -> None:

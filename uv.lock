@@ -2162,7 +2162,7 @@ wheels = [
 
 [[package]]
 name = "recon-tool"
-version = "2.19.14"
+version = "2.19.15"
 source = { editable = "." }
 dependencies = [
     { name = "anyio" },
