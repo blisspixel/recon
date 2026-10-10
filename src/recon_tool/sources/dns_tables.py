@@ -398,16 +398,18 @@ _PRIVATE_V4_SUFFIXES = (
 def _is_private_v4_reverse(n: str) -> bool:
     if n in _PRIVATE_V4_EXACT or n.endswith(_PRIVATE_V4_SUFFIXES):
         return True
-    if n.endswith(".172.in-addr.arpa") or n == "172.in-addr.arpa":
+    if n.endswith(".172.in-addr.arpa"):
         parts = n.split(".")
-        idx = parts.index("172")
-        if idx > 0 and parts[idx - 1].isdigit() and 16 <= int(parts[idx - 1]) <= 31:
-            return True
-    if n.endswith(".100.in-addr.arpa") or n == "100.in-addr.arpa":
+        if len(parts) >= 4:
+            raw = parts[-4].split("-")[0].split("/")[0]
+            if raw.isdigit() and 16 <= int(raw) <= 31:
+                return True
+    if n.endswith(".100.in-addr.arpa"):
         parts = n.split(".")
-        idx = parts.index("100")
-        if idx > 0 and parts[idx - 1].isdigit() and 64 <= int(parts[idx - 1]) <= 127:
-            return True
+        if len(parts) >= 4:
+            raw = parts[-4].split("-")[0].split("/")[0]
+            if raw.isdigit() and 64 <= int(raw) <= 127:
+                return True
     return False
 
 

@@ -387,13 +387,12 @@ async def get_fingerprints(
     # remainder and a negative value is an error. Folding both to an empty page
     # produced exactly the "no catalog match" false negative the server
     # instructions warn agents about.
-    if limit is not None and limit < 0:
+    if limit is not None and (not isinstance(limit, int) or isinstance(limit, bool) or limit < 0):  # pyright: ignore[reportUnnecessaryIsInstance]
         raise ToolError("limit must be zero or a positive integer")
+    if not isinstance(offset, int) or isinstance(offset, bool) or offset < 0:  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ToolError("offset must be zero or a positive integer")
     start = max(0, offset)
-    if limit:
-        fps = fps[start : start + limit]
-    elif start:
-        fps = fps[start:]
+    fps = fps[start : start + limit] if limit else fps[start:]
     return [
         {
             "name": fp.name,
@@ -466,6 +465,11 @@ async def get_signals(category: str | None = None, layer: int | None = None) -> 
     except ValueError as exc:
         raise ToolError(str(exc)) from exc
 
+    if layer is not None and (
+        not isinstance(layer, int) or isinstance(layer, bool) or layer not in (1, 2, 3, 4)  # pyright: ignore[reportUnnecessaryIsInstance]
+    ):
+        raise ToolError("layer must be 1, 2, 3, or 4")
+
     result: list[SignalSummary] = []
     for sig, public_label in reportable_signals():
         sig_layer = _classify_signal_layer(sig)
@@ -520,6 +524,9 @@ async def explain_signal(
         JSON object with signal definition and evaluation state, or an error.
     """
     from recon_tool.signals import public_signal_names, reportable_signals, resolve_reportable_signal
+
+    if not isinstance(signal_name, str) or len(signal_name) > 200:  # pyright: ignore[reportUnnecessaryIsInstance]
+        raise ToolError("signal_name must be a string up to 200 characters")
 
     resolved_signal = resolve_reportable_signal(signal_name)
     if resolved_signal is None:
@@ -946,9 +953,9 @@ async def explain_dag(domain: str, output_format: str = "text") -> str:
         log_validation_failed(request_id)
         raise ToolError(server_app.invalid_domain_message(exc)) from exc
 
-    fmt = (output_format or "text").lower()
-    if fmt not in ("text", "dot"):
+    if not isinstance(output_format, str) or (output_format or "text").lower() not in ("text", "dot"):  # pyright: ignore[reportUnnecessaryIsInstance]
         raise ToolError(f"Error: output_format must be 'text' or 'dot', got {output_format!r}")
+    fmt = (output_format or "text").lower()
 
     cached = cache_get(validated)
     if cached is not None:

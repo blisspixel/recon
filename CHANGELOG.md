@@ -26,6 +26,31 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.19.14] - 2026-10-09
+
+Harden reverse DNS prefix parsing, enforce strict type guards across core validation
+and MCP stdio tools, and bound injected ephemeral fingerprint rules.
+
+### Security
+
+- Fix positional network prefix evaluation in `_is_private_v4_reverse` to prevent private
+  reverse DNS bypasses when host octets repeat `172` or `100`.
+- Enforce runtime type validation in `validate_domain`, `is_safe_dns_name`, and
+  `strip_control_chars` to return structured errors on non-string inputs.
+- Enforce strict type validation and length limits on ephemeral fingerprint injection
+  fields, detections, and regex patterns.
+- Guard MCP tool parameters against invalid types, rejecting booleans and non-integers
+  in pagination limits, `chain_lookup` depth, `get_signals` layer, and `explain_signal` name.
+- Preflight destination path usability in batch discovery to fail fast on invalid output paths.
+
+### Changed
+
+- Refactor hypothesis matching and DAG explanation format validation to preserve complexity ratchets.
+
+### Tool Surface Changes
+
+- No commands, flags, MCP tools or schema fields changed. Strict runtime type contracts and bounds on core validation, reverse DNS parsing, and MCP tools are enforced.
+
 ## [2.19.13] - 2026-10-08
 
 Harden local inputs, neutralize diagnostic and delta terminal controls, and bound

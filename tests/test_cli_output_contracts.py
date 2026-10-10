@@ -166,6 +166,7 @@ class TestBadInputIsCleanError:
         mock_resolve.return_value = (_INFO, [])
         result = runner.invoke(app, ["discover", "alpha.invalid", "--output", str(tmp_path)])
         assert result.exit_code == 2
+        assert not mock_resolve.called
 
     def test_md_with_exposure_is_rejected(self) -> None:
         # --exposure renders its own output and does not honor --md, so the flag

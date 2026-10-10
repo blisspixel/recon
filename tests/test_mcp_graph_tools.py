@@ -183,6 +183,12 @@ class TestChainLookupDepthBound:
 
         assert seen == [1]
 
+    def test_depth_boolean_or_non_int_rejected(self):
+        with pytest.raises(ToolError, match="depth must be an integer"):
+            asyncio.run(server.chain_lookup("example.com", depth=True))  # type: ignore[arg-type]
+        with pytest.raises(ToolError, match="depth must be an integer"):
+            asyncio.run(server.chain_lookup("example.com", depth="invalid"))  # type: ignore[arg-type]
+
 
 class TestChainLookupCompact:
     def test_zero_result_limit_preserves_raw_formatter(self, stub_chain):

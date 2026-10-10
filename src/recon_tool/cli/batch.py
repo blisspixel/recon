@@ -146,6 +146,12 @@ async def discover(
         render_error(str(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from None
 
+    if output_path is not None:
+        out_preflight = Path(output_path)
+        if out_preflight.exists() and not out_preflight.is_file():
+            render_error(f"Cannot write output file {out_preflight}: path is not a file")
+            raise typer.Exit(code=EXIT_VALIDATION) from None
+
     try:
         info, _results = await resolve_tenant(validated, timeout=timeout, skip_ct=skip_ct)
     except ReconLookupError as exc:

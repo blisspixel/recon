@@ -261,6 +261,8 @@ def internal_lookup_error(domain: str, request_id: str, exc: BaseException, acti
 
 async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]] | str:
     """Resolve a domain, using cache if available. Returns error string on failure."""
+    if not isinstance(domain, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+        return "Error: A valid domain is required"
     try:
         validated = validate_domain(domain)
     except ValueError as exc:
@@ -295,6 +297,9 @@ async def resolve_or_cache(domain: str) -> tuple[TenantInfo, list[SourceResult]]
 
 def validate_domain_for_tool(domain: str, request_id: str) -> str:
     """Validate one structured-tool domain and preserve its error contract."""
+    if not isinstance(domain, str):  # pyright: ignore[reportUnnecessaryIsInstance]
+        log_validation_failed(request_id)
+        raise ToolError("Error: A valid domain is required")
     try:
         return validate_domain(domain)
     except ValueError as exc:

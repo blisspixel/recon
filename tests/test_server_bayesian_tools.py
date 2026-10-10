@@ -383,3 +383,15 @@ class TestClusterVerificationTokens:
         domains = [f"{'a' * 200}{i}.invalid" for i in range(50)]
         with pytest.raises(ToolError, match="Aggregate domain input exceeds maximum length"):
             await cluster_verification_tokens(domains)
+
+    @pytest.mark.asyncio
+    async def test_non_list_domains_rejected(self) -> None:
+        with pytest.raises(ToolError, match="domains must be a list of strings"):
+            await cluster_verification_tokens("alpha.invalid")  # type: ignore[arg-type]
+
+    @pytest.mark.asyncio
+    async def test_boolean_or_non_int_peer_limit_rejected(self) -> None:
+        with pytest.raises(ToolError, match="peer_limit_per_domain must be zero or a positive integer"):
+            await cluster_verification_tokens(["alpha.invalid"], peer_limit_per_domain=True)  # type: ignore[arg-type]
+        with pytest.raises(ToolError, match="peer_limit_per_domain must be zero or a positive integer"):
+            await cluster_verification_tokens(["alpha.invalid"], peer_limit_per_domain="invalid")  # type: ignore[arg-type]
