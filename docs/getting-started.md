@@ -317,6 +317,12 @@ or box-drawing: the same claims the panel shows, in the same order, under the
 stable schema names, and with the same cuts. Grep for `provider:` and
 `tenant_id:`, not `Provider`.
 
+Insight sentences, uncertainty hedges, next steps and omission notes remain
+complete in both plain modes. All values have terminal and bidirectional
+formatting controls removed. Other display values keep the shared 200-character
+bound; a shortened value ends with ` [truncated; see --json]`. Use `--json` for
+the structured record rather than parsing a shortened display value.
+
 A record whose mail vendor and identity vendor differ leads with `mail:` and
 `identity:` (the role split from
 [ADR-0015](adr/0015-role-split-vendor-claims-in-the-default-view.md)) and still

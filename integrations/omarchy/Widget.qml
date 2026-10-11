@@ -39,7 +39,7 @@ Item {
                     var parsed = JSON.parse(outText);
                     if (parsed.record_type === "delta") {
                         reconView.deltaResult = parsed;
-                        reconView.statusMessage = "Baseline comparison complete (" + (parsed.has_changes ? "changes observed" : "unchanged") + ").";
+                        reconView.statusMessage = reconView.deltaCompletionMessage(parsed);
                     } else {
                         reconView.lookupResult = parsed;
                         reconView.statusMessage = "Public metadata observation complete (" + (parsed.services ? parsed.services.length : 0) + " services observed).";

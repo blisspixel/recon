@@ -377,13 +377,30 @@ def format_tenant_json(info: TenantInfo, *, include_unclassified: bool = False) 
     return json.dumps(format_tenant_dict(info, include_unclassified=include_unclassified), indent=2)
 
 
+_PLAIN_PROSE_KEYS = frozenset(
+    {"insights", "next", "collection_note", "evidence_roles", "insights_note", "related_domains_note"}
+)
+
+
+def _plain_value(value: Any, key: str) -> str:
+    """Keep owned prose complete and make bounded source values explicit."""
+    text = str(value)
+    cleaned = strip_control_chars(text, max_len=len(text))
+    if key in _PLAIN_PROSE_KEYS:
+        return cleaned
+    bounded = strip_control_chars(cleaned)
+    return bounded + " [truncated; see --json]" if len(bounded) < len(cleaned) else bounded
+
+
 def plain_lines(value: Any, key: str, indent: int) -> list[str]:
     """Render one (key, value) as linear, indented `key: value` lines.
 
     Recurses into dicts and lists. No color, no box-drawing, no markup - a
     greppable, screen-reader-friendly serialization. Strings are control-char
     stripped (the same untrusted-content discipline the panel/markdown sinks
-    use); empty/None values are omitted to keep the output scannable.
+    use). Owned insight and guidance prose stays complete; other values retain
+    the shared display bound and name any truncation. Empty/None values are
+    omitted to keep the output scannable.
     """
     pad = "  " * indent
     if value is None or value == "" or value == [] or value == {}:
@@ -399,9 +416,9 @@ def plain_lines(value: Any, key: str, indent: int) -> list[str]:
             if isinstance(item, dict | list):
                 children.extend(plain_lines(item, "-", indent + 1))
             else:
-                children.append(f"{pad}  - {strip_control_chars(str(item))}")
+                children.append(f"{pad}  - {_plain_value(item, key)}")
         return [f"{pad}{key}:", *children] if children else []
-    return [f"{pad}{key}: {strip_control_chars(str(value))}"]
+    return [f"{pad}{key}: {_plain_value(value, key)}"]
 
 
 _PANEL_KEY_ORDER: tuple[str, ...] = (
