@@ -24,12 +24,26 @@ have() { command -v "$1" >/dev/null 2>&1; }
 package_owned_by() {
     local manager="$1"
     shift
-    local output
-    if ! output=$("$@" 2>&1); then
+    local output attempt
+    echo "==> Inspecting $manager ownership (another tool operation may hold its lock) ..." >&2
+    for attempt in 1 2; do
+        if [ "$manager" = uv ]; then
+            if output=$(UV_LOCK_TIMEOUT=15 "$@" 2>&1); then break; fi
+        else
+            if output=$("$@" 2>&1); then break; fi
+        fi
+        if [ "$manager" = uv ] && [[ "$output" == *"Timeout ("*"when waiting for lock"* ]]; then
+            if [ "$attempt" -eq 1 ]; then
+                echo "==> uv's tool lock is busy; retrying ownership inspection once ..." >&2
+                continue
+            fi
+            echo "Wait for the other uv operation to finish, then rerun this helper." >&2
+            echo "Ownership is unknown; switching to pipx could create a duplicate install." >&2
+        fi
         echo "Error: could not inspect $manager ownership for $PACKAGE." >&2
         printf '%s\n' "$output" >&2
         return 2
-    fi
+    done
     printf '%s\n' "$output" | grep -Eq "(^|[^[:alnum:]_-])${PACKAGE}([^[:alnum:]_-]|$)"
 }
 
@@ -41,9 +55,38 @@ install_exact_uv() {
     fi
 }
 
+inspect_pipx_python() {
+    local output
+    if ! output=$("$1" -c 'import sys; sys.exit(1) if not ((3, 11) <= sys.version_info[:2] <= (3, 14) and sys.version_info.releaselevel == "final") else None; print(sys.executable); print(sys.version.split()[0])' 2>/dev/null); then
+        return 1
+    fi
+    PIPX_PYTHON="${output%%$'\n'*}"
+    PIPX_PYTHON_VERSION="${output#*$'\n'}"
+    [ -n "$PIPX_PYTHON" ] && [ "$PIPX_PYTHON" != "$output" ]
+}
+
+select_pipx_python() {
+    local candidate venvs
+    if [ "$PIPX_OWNS" = true ]; then
+        if venvs=$(pipx environment --value PIPX_LOCAL_VENVS) && inspect_pipx_python "$venvs/$PACKAGE/bin/python"; then
+            return 0
+        fi
+        echo "Error: the existing pipx environment needs a stable Python 3.11 through 3.14." >&2
+        echo "Use 'pipx reinstall $PACKAGE --python <supported-python>', then rerun this helper." >&2
+        return 1
+    fi
+    for candidate in python3.14 python3.13 python3.12 python3.11 python3 python; do
+        if have "$candidate" && inspect_pipx_python "$candidate"; then return 0; fi
+    done
+    echo "Error: pipx needs an available stable Python 3.11 through 3.14." >&2
+    echo "Install a supported Python, or install uv and rerun this helper." >&2
+    return 1
+}
+
 install_exact_pipx() {
-    echo "==> Installing $SPEC with pipx ..."
-    if ! pipx install --force "$SPEC"; then
+    select_pipx_python || exit 1
+    echo "==> Installing $SPEC with pipx using Python $PIPX_PYTHON_VERSION at $PIPX_PYTHON ..."
+    if ! pipx install --force "$SPEC" --python "$PIPX_PYTHON"; then
         echo "Error: pipx could not install $SPEC." >&2
         exit 1
     fi

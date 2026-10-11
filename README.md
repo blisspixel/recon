@@ -79,8 +79,8 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubus
 
 The installer sets up recon for your user account, including Python when needed.
 Open a new terminal afterward. Already have Python 3.11 through 3.14? Use
-`pip install recon-tool` in a virtual environment, or `uv tool install recon-tool` /
-`pipx install recon-tool` on managed distributions like Arch Linux and Omarchy.
+`pip install recon-tool` in a virtual environment, or `uv tool install --python 3.14 recon-tool` /
+`pipx install --python python3.14 recon-tool` on managed distributions like Arch Linux and Omarchy.
 For review-before-run instructions, other package managers, updates, and recovery,
 see the [installation guide](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#install-or-update).
 

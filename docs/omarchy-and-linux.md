@@ -22,7 +22,7 @@ Use an isolated tool manager:
 ### Recommended: uv tool
 
 ```bash
-uv tool install recon-tool
+uv tool install --python 3.14 recon-tool
 ```
 
 `uv` installs recon into an isolated tool environment and symlinks the `recon`
@@ -31,8 +31,13 @@ binary into `~/.local/bin/`.
 ### Alternative: pipx
 
 ```bash
-pipx install recon-tool
+pipx install --python python3.14 recon-tool
 ```
+
+Use an installed stable Python 3.11 through 3.14 for pipx. If mise selects a
+newer Python by default, this explicit interpreter keeps the install within
+the tested range. If an older recon shadows the new installation, start with
+`type -a recon`; see [PATH troubleshooting](getting-started.md#installer-and-path-troubleshooting).
 
 ### Ephemeral execution: uvx
 

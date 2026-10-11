@@ -431,6 +431,8 @@ def _doctor_print_header(console: Any) -> None:
     method_detail = f"{method} (best effort)" if method == updater.PIP else method
     # Preserve copyable paths in captured output even at narrow terminal widths.
     console.print(f"  Python [bold]{sys.version.split()[0]}[/bold] at {python_executable}", soft_wrap=True)
+    if not (3, 11) <= sys.version_info[:2] <= (3, 14) or sys.version_info.releaselevel != "final":
+        console.print("  [yellow]Python is outside the tested stable range (3.11 through 3.14).[/yellow]")
     console.print(f"  Package {_safe_markup(package_location)}", soft_wrap=True)
     console.print(f"  Install method {_safe_markup(method_detail)}")
     console.print()
@@ -463,11 +465,10 @@ def _target_in_ancestors(target: Path, current_directory: Path) -> bool:
         resolved_t = target.resolve()
     except OSError:
         return True
-    if resolved_t.is_relative_to(current_directory) or _is_relative_lexical(target, current_directory):
-        return True
-    for ancestor in current_directory.parents:
-        if ancestor == ancestor.parent or ancestor == Path.home():
-            continue
+    home = Path.home().resolve()
+    for ancestor in (current_directory, *current_directory.parents):
+        if ancestor == ancestor.parent or home.is_relative_to(ancestor):
+            break
         if resolved_t.is_relative_to(ancestor) or _is_relative_lexical(target, ancestor):
             return True
     return False
@@ -553,24 +554,24 @@ def _doctor_path_launcher_check() -> DoctorCheck:
         launcher_version = None
         error = "launcher is inside the current workspace and was not executed"
     else:
-        launcher_version, error = _launcher_version(launcher)
+        launcher_version, error = _launcher_version(lexical)
 
     current = updater.current_version()
     if launcher_version is None:
         return (
             "PATH recon launcher",
             "warn",
-            f"{launcher} could not be verified ({error}); run `{launcher} --version`, then activate the intended "
+            f"{lexical} could not be verified ({error}); run `{lexical} --version`, then activate the intended "
             "environment or reinstall recon-tool for that launcher",
         )
     if updater.compare_versions(launcher_version, current) != 0:
         return (
             "PATH recon launcher",
             "warn",
-            f"{launcher} reports {launcher_version}, but this process is {current}; activate the intended environment "
+            f"{lexical} reports {launcher_version}, but this process is {current}; activate the intended environment "
             "or reinstall recon-tool for that launcher, then rerun `recon doctor`",
         )
-    return ("PATH recon launcher", "ok", f"{launcher} reports {launcher_version}")
+    return ("PATH recon launcher", "ok", f"{lexical} reports {launcher_version}")
 
 
 async def _doctor_identity_checks() -> list[DoctorCheck]:

@@ -7,9 +7,11 @@ checks run without touching the real network. Pushes cli.py coverage.
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 from io import StringIO
 from pathlib import Path
+from typing import NamedTuple
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -159,6 +161,26 @@ class TestDoctorCommandHappyPath:
 
         assert str(executable.resolve()) in output.getvalue()
         assert str(package.resolve().parent) in output.getvalue()
+
+    @pytest.mark.parametrize(
+        ("minor", "releaselevel", "warning"),
+        [(11, "final", False), (14, "final", False), (15, "final", True), (14, "candidate", True)],
+    )
+    def test_interpreter_support_advisory(
+        self, minor: int, releaselevel: str, warning: bool, patched_doctor_environment
+    ) -> None:
+        class Version(NamedTuple):
+            major: int
+            minor: int
+            micro: int
+            releaselevel: str
+            serial: int
+
+        with patch("recon_tool.cli.doctor.sys.version_info", Version(3, minor, 1, releaselevel, 0)):
+            result = runner.invoke(app, ["doctor"])
+        assert ("outside the tested stable range (3.11 through 3.14)" in result.output) is warning
+        assert result.exit_code == 0
+        assert "All checks passed." in result.output
 
     def test_doctor_prints_schema_stability_label(self, patched_doctor_environment) -> None:
         """The v2.0 quality bar wants the schema-stability indicator
@@ -315,6 +337,61 @@ class TestDoctorCommandFailures:
 
 
 class TestDoctorPathLauncher:
+    @pytest.mark.parametrize("location", ["home", "nested", "outside"])
+    def test_home_launcher_shim_dispatches_through_lexical_path(self, tmp_path: Path, location: str) -> None:
+        if os.name == "nt":
+            pytest.skip("Unix executable symlink dispatch")
+        home = tmp_path / "home" / "user"
+        shim = home / ".local" / "share" / "mise" / "shims" / "recon"
+        shim.parent.mkdir(parents=True)
+        target = tmp_path / "system" / "mise"
+        target.parent.mkdir()
+        target.write_text(
+            f"#!{sys.executable}\nfrom pathlib import Path\nimport sys\n"
+            "print('recon 2.17.10' if Path(sys.argv[0]).name == 'recon' else 'mise 2026.10.8')\n",
+            encoding="utf-8",
+        )
+        target.chmod(0o755)
+        shim.symlink_to(target)
+        cwd = {"home": home, "nested": home / ".cache" / "qa" / "recon", "outside": tmp_path / "outside"}[location]
+        cwd.mkdir(parents=True, exist_ok=True)
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch("pathlib.Path.cwd", return_value=cwd),
+            patch("recon_tool.cli.doctor.shutil.which", return_value=str(shim)),
+            patch("recon_tool.updater.current_version", return_value="2.17.11"),
+        ):
+            _, status, detail = _doctor_path_launcher_check()
+
+        assert status == "warn"
+        assert f"{shim} reports 2.17.10, but this process is 2.17.11" in detail
+        assert str(target) not in detail
+
+    def test_home_sibling_launcher_is_not_treated_as_project_content(self, tmp_path: Path) -> None:
+        home = tmp_path / "home" / "user"
+        project = home / "project" / "nested"
+        project.mkdir(parents=True)
+        launcher = home.parent / "other-user" / "bin" / "recon"
+        with patch("pathlib.Path.home", return_value=home), patch("pathlib.Path.cwd", return_value=project):
+            assert not _launcher_is_in_current_workspace(launcher)
+
+    def test_project_under_home_still_refuses_planted_launcher(self, tmp_path: Path) -> None:
+        home = tmp_path / "home"
+        project = home / "project"
+        nested = project / "nested"
+        nested.mkdir(parents=True)
+        launcher = project / "bin" / "recon"
+        with (
+            patch("pathlib.Path.home", return_value=home),
+            patch("pathlib.Path.cwd", return_value=nested),
+            patch("recon_tool.cli.doctor.shutil.which", return_value=str(launcher)),
+            patch("recon_tool.cli.doctor._launcher_version") as probe,
+        ):
+            _, status, detail = _doctor_path_launcher_check()
+        assert status == "warn"
+        assert "inside the current workspace" in detail
+        probe.assert_not_called()
+
     def test_workspace_launcher_is_not_executed(self, tmp_path: Path) -> None:
         workspace = tmp_path / "repo"
         workspace.mkdir()
