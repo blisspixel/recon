@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import json
+import os
 import re
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -12,6 +15,38 @@ from recon_tool.validator import validate_domain
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 OMARCHY_DIR = REPO_ROOT / "integrations" / "omarchy"
+
+
+def test_delta_presentation_in_qt_runtime(tmp_path: Path) -> None:
+    """Exercise real QML bindings where the optional desktop runtime exists."""
+    runner = shutil.which("qmltestrunner")
+    if runner is None:
+        installed = Path("/usr/lib/qt6/bin/qmltestrunner")
+        runner = str(installed) if installed.is_file() else None
+    if runner is None:
+        pytest.skip("Qt Quick Test runtime is not installed")
+    runtime = tmp_path / "runtime"
+    runtime.mkdir(mode=0o700)
+    env = os.environ.copy()
+    env.update(
+        QT_QPA_PLATFORM="offscreen",
+        QT_QUICK_BACKEND="software",
+        QML_DISABLE_DISK_CACHE="1",
+        XDG_RUNTIME_DIR=str(runtime),
+        XDG_CONFIG_HOME=str(tmp_path / "config"),
+        XDG_CACHE_HOME=str(tmp_path / "cache"),
+        XDG_DATA_HOME=str(tmp_path / "data"),
+        XDG_STATE_HOME=str(tmp_path / "state"),
+    )
+    result = subprocess.run(  # noqa: S603 - installed Qt test runner, fixed local QML input, no shell.
+        [runner, "-input", str(REPO_ROOT / "tests/qml/tst_omarchy_delta.qml"), "-o", "-,txt"],
+        env=env,
+        capture_output=True,
+        text=True,
+        timeout=60,
+        check=False,
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
 
 
 class TestOmarchyManifest:
@@ -40,6 +75,10 @@ class TestOmarchyManifest:
 
 
 class TestQMLSecurityContracts:
+    def test_widget_delegates_delta_status_to_the_tested_view(self) -> None:
+        widget = (OMARCHY_DIR / "Widget.qml").read_text(encoding="utf-8")
+        assert "reconView.statusMessage = reconView.deltaCompletionMessage(parsed);" in widget
+
     def test_no_shell_command_interpolation(self) -> None:
         """Process execution must never invoke an intermediate shell or shell string interpolation."""
         for filename in ("Widget.qml", "ReconView.qml"):

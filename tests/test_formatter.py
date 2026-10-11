@@ -187,6 +187,49 @@ class TestPlainOutput:
         assert "Evil" in out  # printable text preserved
         assert "Corp" in out
 
+    @pytest.mark.parametrize("full", [False, True])
+    def test_preserves_complete_insight_hedge_and_command(self, full: bool) -> None:
+        from recon_tool.formatter import format_tenant_plain
+
+        insight = (
+            "Sparse public signal: "
+            + "Public records can omit services hosted behind another provider or on a different apex. " * 4
+            + "Observation, not a verdict. Next step: run `recon alpha.invalid --chain --depth 2`."
+        )
+        info = dataclasses.replace(self._info(), insights=(insight,))
+        out = format_tenant_plain(info, full=full)
+        assert f"  - {insight}\n" in out
+        assert "[truncated" not in out
+
+    @pytest.mark.parametrize("as_list", [False, True])
+    def test_bounded_values_show_truncation_after_sanitizing(self, as_list: bool) -> None:
+        from recon_tool.formatter import _plain_lines
+
+        value = "\x1b\x07\r\n\u202e" + "é" * 200 + "TAIL"
+        out = "\n".join(_plain_lines([value] if as_list else value, "source", 0))
+        assert "é" * 200 + " [truncated; see --json]" in out
+        assert "TAIL" not in out
+        assert all(char not in out for char in ("\x1b", "\x07", "\r", "\u202e"))
+
+    def test_exact_bound_is_complete_and_prose_still_strips_controls(self) -> None:
+        from recon_tool.formatter import _plain_lines
+
+        assert _plain_lines("x" * 200, "source", 0) == ["source: " + "x" * 200]
+        prose = "Lead\x1b\x07\n\u202e" + "x" * 201 + " retained hedge."
+        out = "\n".join(_plain_lines([prose], "insights", 0))
+        assert "Lead" + "x" * 201 + " retained hedge." in out
+        assert "[truncated" not in out
+        assert all(char not in out for char in ("\x1b", "\x07", "\u202e"))
+
+    @pytest.mark.parametrize(
+        "key", ["next", "collection_note", "evidence_roles", "insights_note", "related_domains_note"]
+    )
+    def test_plain_guidance_and_omission_notes_remain_complete(self, key: str) -> None:
+        from recon_tool.formatter import _plain_lines
+
+        prose = "\x1b\u202e" + "Guidance and its uncertainty stay together. " * 6 + "See --plain --full."
+        assert _plain_lines(prose, key, 0) == [f"{key}: {prose[2:]}"]
+
     def test_services_use_role_aware_labels_without_changing_json(self) -> None:
         from recon_tool.formatter import format_tenant_json, format_tenant_plain
 

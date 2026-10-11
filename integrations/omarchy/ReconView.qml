@@ -21,6 +21,21 @@ Rectangle {
     property string errorMessage: ""
     property bool deltaMode: false
     property string activeDomain: ""
+    readonly property var incompleteDelta: root.deltaResult ? root.deltaResult.incomplete_comparison : null
+    readonly property bool deltaComparisonIncomplete: !!root.incompleteDelta
+
+    function deltaFieldSuppressed(field) {
+        var fields = root.incompleteDelta ? root.incompleteDelta.suppressed_fields : [];
+        return !!fields && fields.indexOf(field) !== -1;
+    }
+
+    function deltaCompletionMessage(report) {
+        if (report.incomplete_comparison) {
+            return "Baseline comparison incomplete (" + (report.has_changes
+                ? "changes observed in comparable fields" : "some fields not compared") + ").";
+        }
+        return "Baseline comparison complete (" + (report.has_changes ? "changes observed" : "unchanged") + ").";
+    }
 
     // Public signals
     signal requestLookup(string domain, bool delta)
@@ -656,32 +671,55 @@ Rectangle {
                                 Layout.preferredHeight: 20
                                 Layout.preferredWidth: deltaStatusText.implicitWidth + 12
                                 radius: 4
-                                color: root.deltaResult && root.deltaResult.has_changes ? "#3e1f29" : "#1e3a2f"
+                                color: root.deltaComparisonIncomplete ? "#3d3525" : (root.deltaResult && root.deltaResult.has_changes ? "#3e1f29" : "#1e3a2f")
 
                                 Text {
                                     id: deltaStatusText
                                     anchors.centerIn: parent
-                                    text: root.deltaResult && root.deltaResult.has_changes ? "Changes Observed" : "No Changes"
+                                    text: root.deltaComparisonIncomplete ? "Partial comparison" : (root.deltaResult && root.deltaResult.has_changes ? "Changes Observed" : "No Changes")
                                     font.pixelSize: 10
                                     font.bold: true
-                                    color: root.deltaResult && root.deltaResult.has_changes ? "#f38ba8" : "#a6e3a1"
+                                    color: root.deltaComparisonIncomplete ? "#f9e2af" : (root.deltaResult && root.deltaResult.has_changes ? "#f38ba8" : "#a6e3a1")
                                 }
                             }
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            visible: root.deltaComparisonIncomplete && !!root.incompleteDelta.degraded_sources && root.incompleteDelta.degraded_sources.length > 0
+                            text: "Degraded sources: " + (root.incompleteDelta && root.incompleteDelta.degraded_sources ? root.incompleteDelta.degraded_sources.join(", ") : "")
+                            wrapMode: Text.Wrap
+                            font.pixelSize: 11
+                            color: "#f9e2af"
+                        }
+
+                        Text {
+                            Layout.fillWidth: true
+                            visible: root.deltaComparisonIncomplete && !!root.incompleteDelta.suppressed_fields && root.incompleteDelta.suppressed_fields.length > 0
+                            text: "Not compared: " + (root.incompleteDelta && root.incompleteDelta.suppressed_fields ? root.incompleteDelta.suppressed_fields.join(", ") : "")
+                            wrapMode: Text.Wrap
+                            font.pixelSize: 11
+                            color: "#f9e2af"
                         }
 
                         // Added Services
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 4
-                            visible: root.deltaResult && root.deltaResult.added_services && root.deltaResult.added_services.length > 0
+                            visible: !!root.deltaResult && (root.deltaFieldSuppressed("added_services") || !!root.deltaResult.added_services && root.deltaResult.added_services.length > 0)
 
-                            Text { text: "Added Services:"; font.pixelSize: 11; color: "#a6e3a1"; font.bold: true }
+                            Text {
+                                text: root.deltaFieldSuppressed("added_services") ? "Added Services: not compared" : "Added Services:"
+                                font.pixelSize: 11
+                                color: root.deltaFieldSuppressed("added_services") ? "#f9e2af" : "#a6e3a1"
+                                font.bold: true
+                            }
 
                             Flow {
                                 Layout.fillWidth: true
                                 spacing: 6
                                 Repeater {
-                                    model: root.deltaResult ? (root.deltaResult.added_services || []) : []
+                                    model: root.deltaResult && !root.deltaFieldSuppressed("added_services") ? (root.deltaResult.added_services || []) : []
                                     delegate: Rectangle {
                                         height: 22
                                         width: addedText.implicitWidth + 12
@@ -697,15 +735,20 @@ Rectangle {
                         ColumnLayout {
                             Layout.fillWidth: true
                             spacing: 4
-                            visible: root.deltaResult && root.deltaResult.removed_services && root.deltaResult.removed_services.length > 0
+                            visible: !!root.deltaResult && (root.deltaFieldSuppressed("removed_services") || !!root.deltaResult.removed_services && root.deltaResult.removed_services.length > 0)
 
-                            Text { text: "Removed Services:"; font.pixelSize: 11; color: "#f38ba8"; font.bold: true }
+                            Text {
+                                text: root.deltaFieldSuppressed("removed_services") ? "Removed Services: not compared" : "Removed Services:"
+                                font.pixelSize: 11
+                                color: root.deltaFieldSuppressed("removed_services") ? "#f9e2af" : "#f38ba8"
+                                font.bold: true
+                            }
 
                             Flow {
                                 Layout.fillWidth: true
                                 spacing: 6
                                 Repeater {
-                                    model: root.deltaResult ? (root.deltaResult.removed_services || []) : []
+                                    model: root.deltaResult && !root.deltaFieldSuppressed("removed_services") ? (root.deltaResult.removed_services || []) : []
                                     delegate: Rectangle {
                                         height: 22
                                         width: removedText.implicitWidth + 12

@@ -23,7 +23,10 @@ intelligence and baseline drift without leaving their keyboard workflow.
 - **Fail-Closed Bounded Execution**: Enforces a 30-second timeout guard. If
   remote nameservers or network links hang, the query halts safely.
 - **Baseline Drift Detection**: Seamlessly toggles delta comparison against
-  cached baseline snapshots, highlighting added and removed services.
+  cached baseline snapshots, highlighting added and removed services. An
+  incomplete comparison has an amber "Partial comparison" badge, names degraded
+  sources and fields not compared, and marks suppressed service lists as
+  "not compared". Comparable changes remain visible alongside that uncertainty.
 - **Hedged Observation Semantics**: Surfaces provider, tenant indicators,
   services, and CT subdomains with explicit uncertainty and hedge notices.
   Observations are not a security verdict.
@@ -85,3 +88,13 @@ Or delete the plugin folder directly:
 rm -rf ~/.config/omarchy/plugins/org.recon.omarchy
 omarchy-restart-shell
 ```
+
+## Local display checks
+
+`uv run pytest tests/test_omarchy_integration.py` checks process safety and
+executes the delta display cases with the installed Qt Quick Test runtime when
+available. The QML cases run offscreen with private XDG directories and synthetic
+records; they perform no lookup and do not start or reconfigure the desktop
+shell. A system without that optional runtime reports the display test as
+skipped. These checks do not establish compatibility with every Omarchy shell
+or replace an explicit desktop integration review.

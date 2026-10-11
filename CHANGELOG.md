@@ -36,6 +36,12 @@ operator, corporate group, ownership, or control.
 - Preserve Python admission arguments under Windows PowerShell's legacy native
   forwarding, and use native environment paths and PATH separators when running
   the PowerShell helper on Unix.
+- Preserve complete insight sentences, uncertainty hedges and guidance in
+  `--plain` and `--plain --full`; visibly mark bounded display values while
+  retaining shared control-character sanitization.
+- Show incomplete Omarchy baseline comparisons with an amber partial badge,
+  degraded sources and fields not compared, while retaining comparable changes
+  and marking suppressed service lists explicitly.
 
 ## [2.19.15] - 2026-10-09
 

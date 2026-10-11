@@ -183,7 +183,9 @@ package.
 2. **MCP compatibility:** keep both supported SDK generations and complete
    local resource/tool diagnostics green.
 3. **Product quality:** stability soak, operator feedback, renderer parity, and
-   reproducible black-box tests. Do not substitute feature count for quality.
+   reproducible black-box tests. Preserve complete accessibility guidance and
+   incomplete-comparison diagnostics across human surfaces. Do not substitute
+   feature count for quality.
 4. **Catalog quality:** continue bounded freshness and drift work. Do not stamp
    unverifiable dates or promote from evaluation holdouts.
 5. **Vendor-role visibility:** the human renderer decision is complete. Any
