@@ -26,6 +26,17 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- Verify PATH launchers through their lexical entry so symlink shims dispatch
+  correctly, and stop home-directory ancestry from hiding user-level installs.
+- Announce installer ownership checks and retry a busy uv tool lock once;
+  explicitly select supported stable Python for new pipx installs, retain valid
+  existing pipx interpreters, and explain interpreter and PATH recovery.
+- Preserve Python admission arguments under Windows PowerShell's legacy native
+  forwarding, and use native environment paths and PATH separators when running
+  the PowerShell helper on Unix.
+
 ## [2.19.15] - 2026-10-09
 
 Add thin Omarchy desktop shell integration, support `CLAUDE_CONFIG_DIR` for profile isolation

@@ -3,8 +3,10 @@
 from __future__ import annotations
 
 import os
+import shlex
 import shutil
 import subprocess
+import sys
 import tomllib
 from pathlib import Path
 
@@ -124,8 +126,20 @@ def _fake_manager(path: Path, manager: str) -> None:
                 "#!/usr/bin/env bash",
                 "printf '%s %s\\n' \"" + manager + '" "$*" >> "$INSTALLER_LOG"',
                 f"if [ {list_command} ]; then",
+                f'  if [ "${{FAKE_{prefix}_LOCK_BUSY:-0}}" != "0" ]; then',
+                '    printf "lock timeout=%s\\n" "${UV_LOCK_TIMEOUT:-unset}" >> "$INSTALLER_LOG"',
+                f'    if [ "${{FAKE_{prefix}_LOCK_BUSY}}" = "always" ] || [ ! -f "$INSTALLER_LOG.lock-seen" ]; then',
+                '      touch "$INSTALLER_LOG.lock-seen"',
+                '      echo "error: Timeout (15s) when waiting for lock on tools, is another uv process running?" >&2',
+                "      exit 2",
+                "    fi",
+                "  fi",
                 f"  printf '%s\\n' \"${{FAKE_{prefix}_LIST:-}}\"",
                 f'  exit "${{FAKE_{prefix}_LIST_STATUS:-0}}"',
+                "fi",
+                'if [ "$*" = "environment --value PIPX_LOCAL_VENVS" ]; then',
+                '  printf "%s\\n" "$FAKE_VENVS"',
+                "  exit 0",
                 "fi",
                 'if [ "$*" = "tool dir --bin" ] || [ "$*" = "environment --value PIPX_BIN_DIR" ]; then',
                 '  printf "%s\\n" "$FAKE_BIN_DIR"',
@@ -152,6 +166,46 @@ def _fake_manager(path: Path, manager: str) -> None:
     path.chmod(0o755)
 
 
+def _fake_python(path: Path, minor: int, releaselevel: str = "final") -> None:
+    # Execute the installer's real admission probe against a controlled Python
+    # identity, including version_info's release-level contract.
+    probe = (
+        "import sys; from collections import namedtuple; "
+        "Version = namedtuple('Version', 'major minor micro releaselevel serial'); "
+        f"sys.version_info = Version(3, {minor}, 1, {releaselevel!r}, 0); "
+        f"sys.version = '3.{minor}.1'; sys.executable = {str(path)!r}; exec(sys.argv[1])"
+    )
+    path.write_text(
+        f'#!/usr/bin/env bash\nexec {shlex.quote(sys.executable)} -c {shlex.quote(probe)} "$2"\n',
+        encoding="utf-8",
+    )
+    path.chmod(0o755)
+
+
+def _fake_pipx_pythons(fake_bin: Path, venvs: Path, options: dict[str, str]) -> None:
+    selected_python = options.get("FAKE_SUPPORTED_PYTHON", "python3.14")
+    for candidate in ("python3.14", "python3.13", "python3.12", "python3.11", "python3", "python"):
+        minor = int(candidate.rsplit(".", 1)[-1]) if candidate == selected_python and "." in candidate else 15
+        _fake_python(fake_bin / candidate, minor)
+    existing_python = venvs / "recon-tool" / "bin/python"
+    existing_python.parent.mkdir(parents=True)
+    _fake_python(
+        existing_python,
+        int(options.get("FAKE_EXISTING_PYTHON_MINOR", "12")),
+        options.get("FAKE_EXISTING_PYTHON_RELEASELEVEL", "final"),
+    )
+
+
+def _legacy_powershell_script(tmp_path: Path) -> Path:
+    script = tmp_path / "legacy-arguments.ps1"
+    quoted_script = str(_INSTALL_PS1).replace("'", "''")
+    script.write_text(
+        f"$PSNativeCommandArgumentPassing = 'Legacy'\n& '{quoted_script}'\nexit $LASTEXITCODE\n",
+        encoding="utf-8",
+    )
+    return script
+
+
 def _run_unix_installer(
     tmp_path: Path,
     *,
@@ -165,6 +219,10 @@ def _run_unix_installer(
     bash = shutil.which("bash")
     if bash is None:
         pytest.skip("bash is not available")
+    powershell = (extra_env or {}).get("FAKE_POWERSHELL") == "1"
+    shell = shutil.which("pwsh") if powershell else bash
+    if shell is None:
+        pytest.skip("PowerShell is not available")
     bin_on_path = (extra_env or {}).get("FAKE_BIN_OFF_PATH") != "1"
     bootstrap = (extra_env or {}).get("FAKE_BOOTSTRAP") == "1"
     fake_bin = tmp_path / "bin"
@@ -173,7 +231,8 @@ def _run_unix_installer(
     tool_bin.mkdir(exist_ok=True)
     manager_bin = tmp_path / "uv bin" if bootstrap else fake_bin
     manager_bin.mkdir(exist_ok=True)
-    _fake_manager(manager_bin / "uv", "uv")
+    if (extra_env or {}).get("FAKE_NO_UV") != "1":
+        _fake_manager(manager_bin / "uv", "uv")
     if bootstrap:
         download = fake_bin / "curl"
         download.write_text(
@@ -186,6 +245,8 @@ def _run_unix_installer(
         download.chmod(0o755)
     if pipx:
         _fake_manager(fake_bin / "pipx", "pipx")
+    venvs = tmp_path / "pipx venvs"
+    _fake_pipx_pythons(fake_bin, venvs, extra_env or {})
     if recon:
         command = fake_bin / "recon"
         command.write_text("#!/usr/bin/env bash\nexit 0\n", encoding="utf-8")
@@ -201,7 +262,10 @@ def _run_unix_installer(
         )
         stale.chmod(0o755)
         path_entries.append(str(stale_bin))
-    path_entries.extend((str(fake_bin), "/usr/bin", "/bin"))
+    system_paths = (
+        [str(Path(bash).parent)] if (extra_env or {}).get("FAKE_SINGLE_SYSTEM_PATH") == "1" else ["/usr/bin", "/bin"]
+    )
+    path_entries.extend((str(fake_bin), *system_paths))
     log = tmp_path / "manager.log"
     env = os.environ.copy()
     env.update(
@@ -211,6 +275,7 @@ def _run_unix_installer(
             "FAKE_CREATE_RECON": "1",
             "FAKE_RECON_PATH": str(tool_bin / "recon"),
             "FAKE_BIN_DIR": str(tool_bin),
+            "FAKE_VENVS": str(venvs),
             "UV_INSTALL_DIR": str(manager_bin),
             "FAKE_RECON_VERSION_OUTPUT": f"recon {_VERSION}",
             "FAKE_RECON_VERSION_STATUS": "0",
@@ -218,8 +283,14 @@ def _run_unix_installer(
     )
     if extra_env:
         env.update(extra_env)
+    script = (
+        _legacy_powershell_script(tmp_path)
+        if powershell and (extra_env or {}).get("FAKE_LEGACY_ARGUMENTS") == "1"
+        else _INSTALL_PS1
+    )
+    command = [shell, "-NoProfile", "-File", str(script)] if powershell else [shell, str(_INSTALL_SH)]
     result = subprocess.run(  # noqa: S603
-        [bash, str(_INSTALL_SH)],
+        command,
         cwd=_ROOT,
         env=env,
         text=True,
@@ -241,6 +312,165 @@ def test_unix_installer_preserves_existing_pipx_owner(tmp_path: Path) -> None:
     assert f"reports recon {_VERSION}" in result.stdout
     assert 'recon "<domain-you-want-to-review>"' in result.stdout
     assert "Syntax-only reserved example" in result.stdout
+    assert f"--python {tmp_path / 'pipx venvs' / 'recon-tool' / 'bin' / 'python'}" in log
+    assert "Python 3.12.1" in result.stdout
+
+
+@pytest.mark.parametrize("powershell", [False, True])
+@pytest.mark.parametrize("selected", ["python3.14", "python3.12"])
+def test_new_pipx_install_uses_explicit_supported_interpreter(tmp_path: Path, selected: str, powershell: bool) -> None:
+    result, log = _run_unix_installer(
+        tmp_path,
+        extra_env={"FAKE_NO_UV": "1", "FAKE_SUPPORTED_PYTHON": selected, "FAKE_POWERSHELL": str(int(powershell))},
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert f"pipx install --force recon-tool=={_VERSION} --python {tmp_path / 'bin' / selected}" in log
+    assert "uv tool install" not in log
+
+
+@pytest.mark.parametrize("existing", [False, True])
+def test_powershell_python_probe_preserves_legacy_native_arguments(tmp_path: Path, existing: bool) -> None:
+    result, log = _run_unix_installer(
+        tmp_path,
+        extra_env={
+            "FAKE_NO_UV": "1",
+            "FAKE_POWERSHELL": "1",
+            "FAKE_LEGACY_ARGUMENTS": "1",
+            "FAKE_PIPX_LIST": "package recon-tool 2.6.2" if existing else "",
+        },
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    expected_python = tmp_path / "pipx venvs/recon-tool/bin/python" if existing else tmp_path / "bin/python3.14"
+    assert f"pipx install --force recon-tool=={_VERSION} --python {expected_python}" in log
+
+
+@pytest.mark.parametrize(("minor", "releaselevel"), [(15, "final"), (14, "candidate")])
+def test_powershell_legacy_probe_still_refuses_unsupported_interpreter(
+    tmp_path: Path, minor: int, releaselevel: str
+) -> None:
+    result, log = _run_unix_installer(
+        tmp_path,
+        extra_env={
+            "FAKE_POWERSHELL": "1",
+            "FAKE_LEGACY_ARGUMENTS": "1",
+            "FAKE_PIPX_LIST": "package recon-tool 2.6.2",
+            "FAKE_EXISTING_PYTHON_MINOR": str(minor),
+            "FAKE_EXISTING_PYTHON_RELEASELEVEL": releaselevel,
+        },
+    )
+    assert result.returncode == 1
+    assert "existing pipx environment needs a stable Python 3.11 through 3.14" in result.stdout + result.stderr
+    assert "install --force" not in log
+
+
+def test_powershell_existing_pipx_owner_uses_native_environment_layout(tmp_path: Path) -> None:
+    result, log = _run_unix_installer(
+        tmp_path,
+        extra_env={"FAKE_POWERSHELL": "1", "FAKE_PIPX_LIST": "package recon-tool 2.6.2"},
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert f"--python {tmp_path / 'pipx venvs/recon-tool/bin/python'}" in log
+
+
+@pytest.mark.parametrize("off_path", [False, True])
+def test_powershell_preserves_the_only_system_path_entry(tmp_path: Path, off_path: bool) -> None:
+    result, log = _run_unix_installer(
+        tmp_path,
+        extra_env={
+            "FAKE_POWERSHELL": "1",
+            "FAKE_SINGLE_SYSTEM_PATH": "1",
+            "FAKE_BIN_OFF_PATH": str(int(off_path)),
+        },
+    )
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert ("uv tool update-shell" in log) is off_path
+
+
+@pytest.mark.parametrize("powershell", [False, True])
+def test_pipx_refuses_unsupported_existing_environment(tmp_path: Path, powershell: bool) -> None:
+    result, log = _run_unix_installer(
+        tmp_path,
+        extra_env={
+            "FAKE_PIPX_LIST": "package recon-tool 2.6.2",
+            "FAKE_EXISTING_PYTHON_MINOR": "15",
+            "FAKE_POWERSHELL": str(int(powershell)),
+        },
+    )
+    assert result.returncode == 1
+    output = result.stdout + result.stderr
+    assert "existing pipx environment needs a stable Python 3.11 through 3.14" in output
+    assert "pipx reinstall recon-tool --python <supported-python>" in result.stderr
+    assert "install --force" not in log
+
+
+@pytest.mark.parametrize("powershell", [False, True])
+def test_pipx_without_supported_python_stops_before_install(tmp_path: Path, powershell: bool) -> None:
+    result, log = _run_unix_installer(
+        tmp_path,
+        extra_env={"FAKE_NO_UV": "1", "FAKE_SUPPORTED_PYTHON": "none", "FAKE_POWERSHELL": str(int(powershell))},
+    )
+    assert result.returncode == 1
+    assert "pipx needs an available stable Python 3.11 through 3.14" in result.stderr
+    assert "install --force" not in log
+
+
+@pytest.mark.parametrize("powershell", [False, True])
+@pytest.mark.parametrize(("busy", "succeeds"), [("once", True), ("always", False)])
+def test_uv_lock_retry_preserves_ownership_boundary(
+    tmp_path: Path, busy: str, succeeds: bool, powershell: bool
+) -> None:
+    result, log = _run_unix_installer(
+        tmp_path, extra_env={"FAKE_UV_LOCK_BUSY": busy, "FAKE_POWERSHELL": str(int(powershell))}
+    )
+    output = result.stdout + result.stderr
+    assert "Inspecting uv ownership" in output
+    assert "retrying ownership inspection once" in output
+    assert log.count("uv tool list\n") == 2
+    assert log.count("lock timeout=15\n") == 2
+    assert result.returncode == (0 if succeeds else 1), result.stdout + result.stderr
+    if succeeds:
+        assert f"uv tool install --force recon-tool=={_VERSION}" in log
+    else:
+        assert "Wait for the other uv operation to finish" in output
+        assert "switching to pipx could create a duplicate install" in output
+        assert "install --force" not in log
+
+
+def test_unix_ownership_failure_is_not_retried_as_lock_contention(tmp_path: Path) -> None:
+    result, log = _run_unix_installer(
+        tmp_path, extra_env={"FAKE_UV_LIST_STATUS": "7", "FAKE_UV_LIST": "permission denied"}
+    )
+    assert result.returncode == 1
+    assert "permission denied" in result.stderr
+    assert "retrying" not in result.stderr
+    assert log.count("uv tool list\n") == 1
+    assert "install --force" not in log
+
+
+@pytest.mark.parametrize(("uv_owner", "pipx_owner", "status"), [(True, False, 0), (False, True, 0), (True, True, 1)])
+def test_powershell_preserves_owner_or_refuses_ambiguity_on_unix(
+    tmp_path: Path, uv_owner: bool, pipx_owner: bool, status: int
+) -> None:
+    result, log = _run_unix_installer(
+        tmp_path,
+        extra_env={
+            "FAKE_POWERSHELL": "1",
+            "FAKE_UV_LIST": "recon-tool 2.6.2" if uv_owner else "",
+            "FAKE_PIPX_LIST": "package recon-tool 2.6.2" if pipx_owner else "",
+        },
+    )
+    assert result.returncode == status, result.stdout + result.stderr
+    if status:
+        assert "both uv and pipx report an installed" in result.stdout
+        assert "install --force" not in log
+    elif pipx_owner:
+        assert f"pipx install --force recon-tool=={_VERSION} --python" in log
+        assert f"--python {tmp_path / 'pipx venvs/recon-tool/bin/python'}" in log
+        assert "uv tool install" not in log
+        assert "Python 3.12.1" in result.stdout
+    else:
+        assert f"uv tool install --force recon-tool=={_VERSION}" in log
+        assert "pipx install" not in log
 
 
 def test_unix_installer_refuses_ambiguous_dual_ownership(tmp_path: Path) -> None:
@@ -351,6 +581,10 @@ def _fake_windows_manager(path: Path, manager: str) -> None:
                 "  echo(%FAKE_BIN_DIR%",
                 "  exit /b %FAKE_BIN_STATUS%",
                 ")",
+                'if /I "%~1 %~2 %~3"=="environment --value PIPX_LOCAL_VENVS" (',
+                "  echo(%FAKE_VENVS%",
+                "  exit /b 0",
+                ")",
                 'if /I "%~1 %~2"=="tool update-shell" exit /b %FAKE_PATH_STATUS%',
                 'if /I "%~1"=="ensurepath" exit /b %FAKE_PATH_STATUS%',
                 f"1>&2 echo(%FAKE_{prefix}_INSTALL_OUTPUT%",
@@ -391,6 +625,10 @@ def _run_windows_installer(
     _fake_windows_manager(manager_bin / "uv.cmd", "uv")
     if pipx:
         _fake_windows_manager(fake_bin / "pipx.cmd", "pipx")
+    venvs = tmp_path / "pipx venvs"
+    subprocess.run(  # noqa: S603
+        [sys.executable, "-m", "venv", "--without-pip", str(venvs / "recon-tool")], check=True
+    )
     if recon:
         (fake_bin / "recon.cmd").write_text("@echo off\r\nexit /b 0\r\n", encoding="utf-8")
     system_root = Path(os.environ.get("SYSTEMROOT", r"C:\Windows"))
@@ -414,6 +652,7 @@ def _run_windows_installer(
             "FAKE_CREATE_RECON": "1",
             "FAKE_RECON_PATH": str(tool_bin / "recon.cmd"),
             "FAKE_BIN_DIR": str(tool_bin),
+            "FAKE_VENVS": str(venvs),
             "FAKE_BIN_STATUS": "0",
             "FAKE_PATH_STATUS": "0",
             "UV_INSTALL_DIR": str(manager_bin),

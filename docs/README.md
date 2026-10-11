@@ -17,6 +17,7 @@ public, but not written for a first-time reader.
 | Definitions of recon's load-bearing terms | [glossary.md](glossary.md) |
 | First overview | [../README.md](../README.md) |
 | Install, update, uninstall, and first commands | [getting-started.md](getting-started.md) |
+| Diagnose launchers, interpreter ownership, and installer lock recovery | [launcher-installation.md](launcher-installation.md) |
 | Run an evidence-first defensive review | [defender-workflow.md](defender-workflow.md) |
 | Produce and interpret a bounded single-namespace review artifact | [review-bundles.md](review-bundles.md) |
 | How to report a result without overstating it | [reporting-observations.md](reporting-observations.md) |

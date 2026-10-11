@@ -33,7 +33,10 @@ the sole `uv` or `pipx` owner of an existing install and refuses ambiguous or
 unmanaged ownership with recovery guidance. On a fresh machine it downloads
 the pinned official `uv` installer, then lets `uv` install Python 3.14 and recon
 in an isolated tool environment. It updates PATH and verifies `recon --version`
-before reporting success. An existing `pipx` installation uses its own Python.
+before reporting success. For pipx it selects an available stable Python from
+3.14 through 3.11 and prints its version and executable. An existing pipx
+installation keeps its own supported Python; an unsupported or unreadable
+environment stops with `pipx reinstall` guidance.
 
 You can rerun the current installer to install its release or use `recon update`
 to get the latest published version. GitHub Release and PyPI carry the same
@@ -49,9 +52,15 @@ If you already have Python 3.11 through 3.14, install directly:
 ```bash
 pip install recon-tool
 # Or use an isolated tool environment:
-uv tool install recon-tool
-pipx install recon-tool
+uv tool install --python 3.14 recon-tool
+pipx install --python python3.14 recon-tool
 ```
+
+For pipx, name an installed stable Python 3.11 through 3.14; on Windows with
+the Python launcher, use `--python 3.14`. Passing `--python` together with
+`pipx install --force` does not change an existing environment's interpreter.
+Use `pipx reinstall recon-tool --python <supported-python>` to change it, then
+rerun the helper to install its exact release.
 
 If `pip` reports an externally managed environment, use the platform installer
 or the [virtual environment instructions](#install-in-a-virtual-environment).
@@ -121,7 +130,9 @@ locked launcher. Upgrade those copies with `python -m pip install -U recon-tool`
 Direct package-manager commands below also run outside the recon launcher.
 
 `recon doctor` reports the running version, Python executable, package location,
-and detected installation method. It also warns when the first `recon` launcher
+and detected installation method. It advises when Python is outside the tested
+stable range without treating that advisory as a failed connectivity check.
+It also warns when the first `recon` launcher
 on PATH reports a different version, which commonly means a stale global install
 is taking precedence over the intended environment. Its release-status check
 reports whether this version is current on PyPI and suggests `recon update`
@@ -520,6 +531,29 @@ recon --show-completion
 ```
 
 Restart the shell after installing completion.
+
+## Installer and PATH Troubleshooting
+
+If installation appears to wait, check its ownership progress message. Another
+uv tool operation can hold the tool-directory lock. The helper waits up to
+15 seconds per ownership probe and retries a recognized lock timeout once.
+If it still cannot inspect ownership, wait for that operation to finish and
+rerun the helper. It does not switch managers while ownership is unknown.
+
+If the version after a manual install is unexpected, first list the launchers:
+
+```bash
+type -a recon
+```
+
+In PowerShell, use `Get-Command recon -All`. Check the first entry against the
+intended manager's executable directory (`uv tool dir --bin` or
+`pipx environment --value PIPX_BIN_DIR`). Run `recon doctor` from the intended
+environment to compare that PATH launcher, including a symlink shim, with the
+running package. Activate the intended environment or remove the obsolete copy
+with its owning manager, then restart the shell.
+The [launcher and installer contract](launcher-installation.md) describes the
+ownership and workspace safeguards.
 
 ## Windows PATH Notes
 

@@ -48,13 +48,30 @@ function Test-PackageInstalled($ListCmd) {
     # The list command (`uv tool list` / `pipx list`) prints the package name in
     # its stanza; match it anywhere in the combined stdout+stderr.
     $prev = $ErrorActionPreference
+    $previousTimeout = $env:UV_LOCK_TIMEOUT
     $ErrorActionPreference = "Continue"
+    $manager = $ListCmd[0]
+    Write-Host "==> Inspecting $manager ownership (another tool operation may hold its lock) ..."
     try {
-        $listed = & $ListCmd[0] @($ListCmd[1..($ListCmd.Count - 1)]) 2>&1 | Out-String
-        $exitCode = $LASTEXITCODE
+        if ($manager -eq "uv") { $env:UV_LOCK_TIMEOUT = "15" }
+        foreach ($attempt in 1..2) {
+            $listed = & $ListCmd[0] @($ListCmd[1..($ListCmd.Count - 1)]) 2>&1 | Out-String
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) { break }
+            $lockTimeout = $manager -eq "uv" -and $listed -match '(?s)Timeout \(.*when waiting for lock'
+            if (-not $lockTimeout) { break }
+            if ($attempt -eq 1) {
+                Write-Host "==> uv's tool lock is busy; retrying ownership inspection once ..."
+            }
+            else {
+                Write-Host "Wait for the other uv operation to finish, then rerun this helper."
+                Write-Host "Ownership is unknown; switching to pipx could create a duplicate install."
+            }
+        }
     }
     finally {
         $ErrorActionPreference = $prev
+        $env:UV_LOCK_TIMEOUT = $previousTimeout
     }
     if ($exitCode -ne 0) {
         Write-Host "Error: could not inspect $($ListCmd[0]) ownership for $Package." -ForegroundColor Red
@@ -72,9 +89,53 @@ function Install-Exact-Uv {
     }
 }
 
+function Get-SupportedPython([string[]]$Command) {
+    $prev = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        # Single-quoted Python literals survive legacy native argument forwarding.
+        $probe = 'import sys; sys.exit(1) if not ((3, 11) <= sys.version_info[:2] <= (3, 14) and sys.version_info.releaselevel == ''final'') else None; print(sys.executable); print(sys.version.split()[0])'
+        $output = @(& $Command[0] @($Command | Select-Object -Skip 1) -c $probe 2>$null)
+        if ($LASTEXITCODE -eq 0 -and $output.Count -eq 2) { return $output }
+    }
+    finally { $ErrorActionPreference = $prev }
+    return $null
+}
+
+function Find-PipxPython {
+    if ($pipxOwns) {
+        $venvs = & pipx environment --value PIPX_LOCAL_VENVS
+        if ($LASTEXITCODE -eq 0 -and $venvs) {
+            $pythonRelative = if ([IO.Path]::DirectorySeparatorChar -eq '\') { "$Package\Scripts\python.exe" } else { "$Package/bin/python" }
+            $existing = Join-Path $venvs $pythonRelative
+            if (Test-Path -LiteralPath $existing -PathType Leaf) {
+                $identity = Get-SupportedPython @($existing)
+                if ($identity) { return $identity }
+            }
+        }
+        throw "The existing pipx environment needs a stable Python 3.11 through 3.14. Use 'pipx reinstall $Package --python <supported-python>', then rerun this helper."
+    }
+    foreach ($minor in 14, 13, 12, 11) {
+        foreach ($candidate in @(@("py", "-3.$minor"), @("python3.$minor"))) {
+            if (Test-Have $candidate[0]) {
+                $identity = Get-SupportedPython $candidate
+                if ($identity) { return $identity }
+            }
+        }
+    }
+    foreach ($candidate in "python3", "python") {
+        if (Test-Have $candidate) {
+            $identity = Get-SupportedPython @($candidate)
+            if ($identity) { return $identity }
+        }
+    }
+    throw "pipx needs an available stable Python 3.11 through 3.14. Install a supported Python, or install uv and rerun this helper."
+}
+
 function Install-Exact-Pipx {
-    Write-Host "==> Installing $Spec with pipx ..." -ForegroundColor Green
-    if ((Invoke-Tool pipx install --force $Spec) -ne 0) {
+    $identity = Find-PipxPython
+    Write-Host "==> Installing $Spec with pipx using Python $($identity[1]) at $($identity[0]) ..." -ForegroundColor Green
+    if ((Invoke-Tool pipx install --force $Spec --python $identity[0]) -ne 0) {
         Write-Host "Error: pipx could not install $Spec." -ForegroundColor Red
         exit 1
     }
@@ -101,7 +162,7 @@ function Install-Uv {
         [Net.ServicePointManager]::SecurityProtocol = $previousProtocol
         Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
     }
-    $env:PATH = "$env:PATH;$uvBin"
+    $env:PATH = "$env:PATH$([IO.Path]::PathSeparator)$uvBin"
     if (-not (Test-Have "uv")) {
         throw "uv installation did not create a launcher in $uvBin."
     }
@@ -117,13 +178,13 @@ function Set-CliPath {
     if ($LASTEXITCODE -ne 0 -or -not $binDir -or -not (Test-Path -LiteralPath $binDir -PathType Container)) {
         throw "$Manager did not report a valid executable directory."
     }
-    if (($env:PATH -split ';') -notcontains $binDir) {
+    if (($env:PATH -split [IO.Path]::PathSeparator) -notcontains $binDir) {
         $status = if ($Manager -eq "uv") { Invoke-Tool uv tool update-shell } else { Invoke-Tool pipx ensurepath }
         if ($status -ne 0) {
             throw "Could not add the $Manager executable directory to PATH."
         }
         # Append so an existing stale launcher still fails verification.
-        $env:PATH = "$env:PATH;$binDir"
+        $env:PATH = "$env:PATH$([IO.Path]::PathSeparator)$binDir"
     }
 }
 
