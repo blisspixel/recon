@@ -93,7 +93,8 @@ function Get-SupportedPython([string[]]$Command) {
     $prev = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        $probe = 'import sys; sys.exit(1) if not ((3, 11) <= sys.version_info[:2] <= (3, 14) and sys.version_info.releaselevel == "final") else None; print(sys.executable); print(sys.version.split()[0])'
+        # Single-quoted Python literals survive legacy native argument forwarding.
+        $probe = 'import sys; sys.exit(1) if not ((3, 11) <= sys.version_info[:2] <= (3, 14) and sys.version_info.releaselevel == ''final'') else None; print(sys.executable); print(sys.version.split()[0])'
         $output = @(& $Command[0] @($Command | Select-Object -Skip 1) -c $probe 2>$null)
         if ($LASTEXITCODE -eq 0 -and $output.Count -eq 2) { return $output }
     }
@@ -105,7 +106,8 @@ function Find-PipxPython {
     if ($pipxOwns) {
         $venvs = & pipx environment --value PIPX_LOCAL_VENVS
         if ($LASTEXITCODE -eq 0 -and $venvs) {
-            $existing = Join-Path $venvs "$Package\Scripts\python.exe"
+            $pythonRelative = if ([IO.Path]::DirectorySeparatorChar -eq '\') { "$Package\Scripts\python.exe" } else { "$Package/bin/python" }
+            $existing = Join-Path $venvs $pythonRelative
             if (Test-Path -LiteralPath $existing -PathType Leaf) {
                 $identity = Get-SupportedPython @($existing)
                 if ($identity) { return $identity }
@@ -160,7 +162,7 @@ function Install-Uv {
         [Net.ServicePointManager]::SecurityProtocol = $previousProtocol
         Remove-Item -LiteralPath $installer -Force -ErrorAction SilentlyContinue
     }
-    $env:PATH = "$env:PATH;$uvBin"
+    $env:PATH = "$env:PATH$([IO.Path]::PathSeparator)$uvBin"
     if (-not (Test-Have "uv")) {
         throw "uv installation did not create a launcher in $uvBin."
     }
@@ -176,13 +178,13 @@ function Set-CliPath {
     if ($LASTEXITCODE -ne 0 -or -not $binDir -or -not (Test-Path -LiteralPath $binDir -PathType Container)) {
         throw "$Manager did not report a valid executable directory."
     }
-    if (($env:PATH -split ';') -notcontains $binDir) {
+    if (($env:PATH -split [IO.Path]::PathSeparator) -notcontains $binDir) {
         $status = if ($Manager -eq "uv") { Invoke-Tool uv tool update-shell } else { Invoke-Tool pipx ensurepath }
         if ($status -ne 0) {
             throw "Could not add the $Manager executable directory to PATH."
         }
         # Append so an existing stale launcher still fails verification.
-        $env:PATH = "$env:PATH;$binDir"
+        $env:PATH = "$env:PATH$([IO.Path]::PathSeparator)$binDir"
     }
 }
 

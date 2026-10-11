@@ -39,3 +39,7 @@ Controlled executable shims verify real lexical dispatch and project refusal.
 Installer tests use fake managers and interpreters to exercise lock recovery,
 unknown ownership, stable interpreter selection, existing-owner admission and
 PATH shadowing without installing software or changing user configuration.
+PowerShell controls exercise legacy native argument forwarding as well as the
+native environment layout and PATH separator on Unix; Windows CI retains the
+real supported-venv admission check. These controls preserve interpreter
+validation rather than substituting a successful version response.
