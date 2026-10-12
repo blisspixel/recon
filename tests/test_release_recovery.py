@@ -115,7 +115,9 @@ def test_version_must_be_stable_and_canonical(version: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "raw", [b"{} " + b" " * recovery.MAX_RELEASE_JSON_BYTES, b"[]", b"{", b' {"id":1,"id":2}', b'"\xff"']
+    "raw",
+    [b"{} " + b" " * recovery.MAX_RELEASE_JSON_BYTES, b"[]", b"{", b' {"id":1,"id":2}', b'"\xff"'],
+    ids=("oversized", "non-object", "truncated", "duplicate-key", "invalid-utf8"),
 )
 def test_metadata_is_bounded_unambiguous_json(raw: bytes) -> None:
     with pytest.raises(recovery.RecoveryError):
