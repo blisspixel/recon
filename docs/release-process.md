@@ -1,7 +1,8 @@
 # Release Process
 
 recon releases use a reviewed preparation commit, an exact-main tag, and a
-GitHub Actions workflow that handles build and publication. A successful tag
+GitHub Actions workflow that handles build and PyPI publication, followed by
+a human-owned GitHub Release handoff. A successful tag
 push means publication is pending, not that either registry is current.
 
 ## TL;DR
@@ -107,7 +108,7 @@ commit. It then verifies required GitHub Actions checks for `HEAD`, the active
 default-branch ruleset, and public
 Scorecard API freshness and code-owned control scores, PyPI's exact
 current-version record, and the exact four GitHub Release assets for the current
-version. It verifies
+version, with the human maintainer as release author and every asset uploader. It verifies
 both PyPI files with pinned `pypi-attestations==0.0.29`, validates the completed
 CycloneDX SBOM without repairing it, and verifies the GitHub subjects required
 by the exact release policy against the downloaded bundle with the release
@@ -315,9 +316,14 @@ Triggered by any tag matching `v*` pushed to the repo. The workflow:
    read-only job, waits for the exact two PyPI records, and requires both
    SHA-256 digests to match before GitHub publication can proceed.
 10. **github-release**: after `build`, `attest`, `export-attestations`,
-    `package-smoke`, `sbom`, and `verify-pypi-parity`, extracts the matching
-    `## [X.Y.Z]` section from `CHANGELOG.md` as the release body and attaches
-    the package, SBOM, and provenance artifacts.
+    `package-smoke`, `sbom`, and `verify-pypi-parity`, verifies the human-published
+    release against all four sealed files from this original run. This job has
+    `contents: read` and performs no release creation, upload, edit or deletion.
+    It fails with a human handoff until that release exists. The verifier binds
+    local HEAD and local/remote tag to the original workflow SHA, exact tag/title
+    and published stable state, the human `blisspixel` User account as release
+    author and every asset uploader, exact four-asset inventory and bytes,
+    completed SBOM, hosted tag-bound provenance, and canonical PyPI parity.
 
 The dependency graph blocks both publication channels when tag preflight, the
 complete test gate, package build, installed-wheel smoke, provenance
@@ -328,6 +334,66 @@ state. Diagnose the failed row, preserve the existing PyPI files, and rerun the
 same tag only when its sealed pair is byte-identical to PyPI. Never manually
 rebuild or replace evidence, and never bypass a failed verifier to complete the
 second channel.
+
+### Human GitHub Release handoff
+
+The final job's expected initial failure does not undo PyPI publication. Keep
+its run ID and original source SHA. GitHub releases and asset uploads belong to
+the maintainer's existing authenticated session, never the workflow token. No
+new token, exported credential or repository secret is needed. Confirm
+`gh api user --jq '[.login, .type] | @tsv'` reports `blisspixel` and `User`.
+Do not use a bot-created draft: publishing an existing object is not a supported
+way to change its author.
+
+Before any release mutation, require the clean exact tag/main and original-run
+binding described below. Inspect the failed final job and require all upstream
+jobs to have succeeded. Download only that original run's `dist`, `sbom`, and
+`provenance` artifacts into separate empty directories with
+`gh run download <original-run-id> --name <artifact-name> --dir <directory>`.
+Never manually rebuild or replace evidence. Inspect the exact wheel, sdist,
+completed SBOM and provenance inventory, verify their SHA-256 hashes against the
+original run's attested subject digests, validate the SBOM without rewriting it with the existing
+`scripts.finalize_sbom.validate_completed_sbom(Path(<sbom>), "X.Y.Z")` Python
+function, and verify wheel, sdist and SBOM provenance as documented in
+[supply-chain.md](supply-chain.md). Run the canonical
+`scripts/check_release_channel_parity.py --version X.Y.Z --dist-dir <dist>`
+against that sealed pair. Preserve the output. Any mismatch blocks promotion.
+
+Inspect the release endpoint first. A new draft is appropriate only after an
+authenticated lookup confirms that the matching release is absent. An unknown
+lookup error is not absence. If an existing release is partial, bot-owned or
+mismatched, stop and inspect it; neither this workflow nor this runbook repairs,
+replaces or clobbers its assets. A complete matching human-owned published
+release can go directly to original-job verification, including if immutable.
+
+For an absent release, use the maintainer session to create a draft with the
+exact `vX.Y.Z` tag and title, notes extracted from that version's checked
+`CHANGELOG.md` section, and only the four sealed files. The command shape is
+`gh release create vX.Y.Z --repo blisspixel/recon --verify-tag --draft
+--title vX.Y.Z --notes-file <notes-file> <wheel> <sdist> <sbom> <provenance>`.
+Use explicit file paths, not a wildcard over a mixed directory. Do not use
+automatically generated contributor notes. Inspect the draft author and every
+asset uploader, then run the read-only draft verifier before publishing:
+
+```bash
+python3 scripts/verify_github_release.py --version X.Y.Z \
+  --source-sha <original-full-source-sha> \
+  --dist-dir <sealed-dist-directory> --sbom-dir <sealed-sbom-directory> \
+  --provenance-dir <sealed-provenance-directory> --check-draft --release-id <draft-numeric-id>
+```
+
+Use the draft's positive numeric release ID from the creation response or its
+authenticated metadata, not an asset ID. This mode reads the numeric release
+and asset REST endpoints; the by-tag endpoint is for published releases.
+It requires that response ID to match and requires a complete human-owned
+draft and all the same byte,
+provenance and parity checks; it does not establish published status. After it
+passes, publish that same draft with the maintainer session using
+`gh release edit vX.Y.Z --repo blisspixel/recon --verify-tag --draft=false`.
+Rerun only the original failed `github-release` job. Its default verification
+requires published status and read-only credentials; it cannot create a new
+release or upload assets on a retry. Never delete and recreate a mismatched
+release to make a check pass.
 
 ### Recovery after partial publication
 
@@ -383,27 +449,26 @@ Run this block in Bash or Git Bash so strict mode and the here-string use the
 documented shell semantics. A named precondition failure exits before any rerun.
 
 Use that rerun path for transient timeouts, rate limits, temporary 5xx
-responses, delayed PyPI visibility, or a GitHub upload interruption after the
-sealed pair already passed parity. Do not rerun blindly after a digest,
+responses or delayed PyPI visibility. Once only the final job has failed,
+complete the human handoff first and rerun only that original failed final job. Do not rerun blindly after a digest,
 inventory, tag, signer, source, SBOM, or provenance mismatch. Preserve the
 failed output and inspect the original workflow artifacts first.
 
 This runbook applies to recovery of the current project version while clean
-`main` still points at that exact release tag. If a GitHub Release already
-exists, the workflow validates its exact tag and title, non-draft,
-non-prerelease, and mutable state, and expected-only inventory, complete or
-partial, before `gh release upload --clobber` can execute. It also rechecks the
-remote tag against the original workflow SHA immediately before mutation. A
-draft, prerelease, immutable release, unexpected asset, duplicate asset,
-malformed response, missing tag, or moved tag stops recovery. If PyPI contains
-incorrect immutable bytes, do not attempt to overwrite them;
-follow the documented PyPI project-management yanking path and cut a corrected
-version. A run is recovered only after the strict remote readiness command
-passes in full.
+`main` still points at that exact release tag. The final job rechecks the
+remote tag against the original workflow SHA and requires a complete matching
+human-owned published release. A draft, prerelease, partial inventory,
+unexpected asset, duplicate asset, malformed response, missing tag, moved tag,
+wrong author/uploader or any byte/provenance mismatch stops recovery. It never
+mutates release state. If PyPI contains incorrect immutable bytes, do not
+attempt to overwrite them; follow the documented PyPI project-management
+yanking path and cut a corrected version. A run is recovered only after the
+strict remote readiness command passes in full.
 
-Workflow permissions are least-privilege: read-only jobs use `contents: read`,
-`attest` and `publish-pypi` receive `id-token: write` only where OIDC is needed,
-and `github-release` is the only job with `contents: write`.
+Workflow permissions are least-privilege: every job has `contents: read`;
+`attest` and `publish-pypi` receive `id-token: write` only where OIDC is needed.
+The existing attestation export uses the workflow token for read-only evidence
+access. No publishing token is added to the final job.
 
 ---
 

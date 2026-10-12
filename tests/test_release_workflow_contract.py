@@ -497,24 +497,18 @@ class TestGithubReleaseAttachesBothArtifacts:
         assert "dist" in names, "github-release must download the dist artifact"
         assert "sbom" in names, "github-release must download the sbom artifact"
         assert "provenance" in names, "github-release must download the provenance artifact"
-        assert "provenance/*" in run_text, "github-release must attach exported provenance to the release"
+        assert "--provenance-dir provenance" in run_text, "github-release must verify exported provenance"
 
-    def test_existing_release_is_validated_before_assets_can_be_replaced(self, workflow):
+    def test_final_job_is_read_only_and_verifies_original_artifacts(self, workflow):
         job = workflow["jobs"]["github-release"]
         text = "\n".join(_step_text(step) for step in _steps(job))
-
-        metadata = "--json tagName,name,isDraft,isPrerelease,isImmutable,assets"
-        validator = "python3 scripts/check_release_recovery.py"
-        clobber = "gh release upload"
-        remote_tag = "git ls-remote --exit-code --refs origin"
-        assert metadata in text
-        assert validator in text
-        assert clobber in text
-        assert remote_tag in text
-        assert text.index(remote_tag) < text.index(metadata) < text.index(validator) < text.index(clobber)
-        assert '"$remote_tag_sha" != "$GITHUB_SHA"' in text
-        assert ">/dev/null" not in text
-        assert "--verify-tag" in text
+        assert job["permissions"] == {"contents": "read"}
+        assert "scripts/verify_github_release.py" in text
+        assert '--source-sha "$GITHUB_SHA"' in text
+        assert '--version "${GITHUB_REF_NAME#v}"' in text
+        for forbidden in ("gh release create", "gh release upload", "gh release edit", "--clobber"):
+            assert forbidden not in text
+        assert "--dist-dir dist --sbom-dir sbom --provenance-dir provenance" in text
 
 
 class TestPublishedChannelParity:

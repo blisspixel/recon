@@ -67,13 +67,15 @@ def test_partial_release_recovery_is_exact_and_evidence_preserving() -> None:
         "scripts/release_readiness.py --remote",
         "original `GITHUB_SHA` and `GITHUB_REF`",
         "Never manually rebuild or replace evidence",
-        "before `gh release upload --clobber` can execute",
+        "never the workflow token",
+        "--check-draft",
+        "rerun only that original failed final job",
         "git branch --show-current",
         "git status --porcelain --untracked-files=normal",
         "--json databaseId,headSha",
         '"${RUN_HEAD_SHA}" = "${HEAD_SHA}"',
         "remote tag against the original workflow SHA",
-        "immutable release",
+        "including if immutable",
     ):
         assert required in text
 

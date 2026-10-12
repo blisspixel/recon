@@ -66,7 +66,9 @@ install and upgrade tests, PATH and failure handling, and release parity.
 
 `main` is the single integration and release branch. Short-lived implementation
 and release-preparation branches merge through required checks and are deleted
-after merge. GitHub Release and PyPI must agree before publication is complete.
+after merge. GitHub Release and PyPI must agree before publication is complete. The final
+release job verifies human maintainer ownership and original sealed evidence;
+GitHub promotion remains an explicit human handoff.
 
 The [executable acceptance loop](docs/roadmap.md#autonomous-improvement-acceptance)
 continues to require positive/negative fixtures, provenance, and the full gate.

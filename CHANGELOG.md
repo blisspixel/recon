@@ -28,6 +28,10 @@ operator, corporate group, ownership, or control.
 
 ### Fixed
 
+- Keep GitHub Release creation and asset uploads under the human maintainer;
+  verify the original run's complete sealed artifacts, authorship, provenance
+  and PyPI parity in a read-only final job with an explicit recovery handoff.
+
 - Verify PATH launchers through their lexical entry so symlink shims dispatch
   correctly, and stop home-directory ancestry from hiding user-level installs.
 - Announce installer ownership checks and retry a busy uv tool lock once;

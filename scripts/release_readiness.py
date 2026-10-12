@@ -33,6 +33,12 @@ try:
         expected_distribution_names,
         release_file_urls_from_payload,
     )
+    from scripts.check_release_recovery import (
+        RecoveryError,
+        download_release_asset,
+        load_release_metadata,
+        validate_release_recovery,
+    )
     from scripts.finalize_sbom import SbomError, validate_completed_sbom
 except ImportError:
     import check_validation_hygiene  # type: ignore[no-redef]
@@ -40,6 +46,12 @@ except ImportError:
         ParityError,
         expected_distribution_names,
         release_file_urls_from_payload,
+    )
+    from check_release_recovery import (  # type: ignore[no-redef]
+        RecoveryError,
+        download_release_asset,
+        load_release_metadata,
+        validate_release_recovery,
     )
     from finalize_sbom import SbomError, validate_completed_sbom  # type: ignore[no-redef]
 
@@ -179,7 +191,10 @@ class _ReleaseAssetClient:
         if unsafe:
             raise _ReleaseEvidenceError(f"release asset declares an empty or oversized file: {', '.join(unsafe)}")
 
-    def download(self, subject: str) -> Path:
+    def download(self, subject: str, *, asset_id: int | None = None) -> Path:
+        if asset_id is not None:
+            artifact = download_release_asset(subject, asset_id, self.directory)
+            return self._require_downloaded_file(artifact, subject)
         result = self.runner(
             [
                 "gh",
@@ -198,6 +213,9 @@ class _ReleaseAssetClient:
             detail = (result.stderr or result.stdout).strip() or f"could not download {subject}"
             raise _ReleaseEvidenceError(detail)
         artifact = self.directory / subject
+        return self._require_downloaded_file(artifact, subject)
+
+    def _require_downloaded_file(self, artifact: Path, subject: str) -> Path:
         if not artifact.is_file() or artifact.is_symlink():
             raise _ReleaseEvidenceError(f"release download did not produce a regular file for {subject}")
         try:
@@ -1180,65 +1198,20 @@ def _check_release_channel_parity(root: Path, runner: Runner) -> CheckResult:
 
 
 def _load_github_release_payload(runner: Runner, repo: str, version: str) -> dict[str, object] | CheckResult:
-    result = runner(
-        [
-            "gh",
-            "release",
-            "view",
-            f"v{version}",
-            "--repo",
-            repo,
-            "--json",
-            "tagName,isDraft,isPrerelease,assets",
-        ]
-    )
-    if result.returncode != 0:
-        return _result("GitHub release", "fail", (result.stderr or result.stdout).strip() or "gh release view failed")
+    if repo != "blisspixel/recon":
+        return _result("GitHub release", "fail", "release repository must be blisspixel/recon")
     try:
-        payload = json.loads(result.stdout)
-    except json.JSONDecodeError as exc:
-        return _result("GitHub release", "fail", f"could not parse gh JSON: {exc}")
-    if not isinstance(payload, dict):
-        return _result("GitHub release", "fail", "gh JSON was not an object")
-    return payload
-
-
-def _release_asset_problem(assets: object, version: str) -> str | None:
-    if not isinstance(assets, list):
-        return "release assets were not a list"
-    asset_names: list[str] = []
-    for asset in assets:
-        if not isinstance(asset, dict) or not isinstance(asset.get("name"), str):
-            return "release asset inventory contains a malformed entry"
-        asset_names.append(asset["name"])
-    expected_assets = {
-        f"recon_tool-{version}-py3-none-any.whl",
-        f"recon_tool-{version}.tar.gz",
-        f"recon-tool-{version}.cdx.json",
-        f"recon-tool-{version}.intoto.jsonl",
-    }
-    duplicates = sorted(name for name in set(asset_names) if asset_names.count(name) > 1)
-    if duplicates:
-        return "duplicate asset(s): " + ", ".join(duplicates)
-    observed_assets = set(asset_names)
-    missing = sorted(expected_assets - observed_assets)
-    if missing:
-        return "missing asset(s): " + ", ".join(missing)
-    unexpected = sorted(observed_assets - expected_assets)
-    if unexpected:
-        return "unexpected asset(s): " + ", ".join(unexpected)
-    return None
+        return load_release_metadata(runner, version)
+    except RecoveryError as exc:
+        return _result("GitHub release", "fail", str(exc))
 
 
 def _github_release_problem(payload: dict[str, object], version: str) -> str | None:
-    tag = payload.get("tagName")
-    if tag != f"v{version}":
-        return f"release tag is {tag!r}, expected v{version}"
-    if payload.get("isDraft") is True:
-        return f"v{version} is still a draft"
-    if payload.get("isPrerelease") is True:
-        return f"v{version} is marked prerelease"
-    return _release_asset_problem(payload.get("assets"), version)
+    try:
+        validate_release_recovery(version, payload)
+    except RecoveryError as exc:
+        return str(exc)
+    return None
 
 
 def collect_checks(
