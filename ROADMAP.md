@@ -90,7 +90,9 @@ The ordered work is:
 6. Provide thin, independently removable desktop integrations (such as the
    keyboard-first Omarchy Quickshell plugin in `integrations/omarchy/`) that reuse
    existing structured CLI JSON outputs and domain-validation logic without
-   shell interpolation or background daemons.
+   shell interpolation or background daemons. The Omarchy panel defaults to no
+   bar slot, with native settings and explicit lookup, baseline, copy and terminal
+   actions. Optional automatic watching remains separate follow-up scope.
 
 The v2.19 maintenance releases shipped updater recovery, module isolation,
 regex admission, vendor-neutral agent-discovery declarations, supplied-domain

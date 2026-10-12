@@ -2,19 +2,13 @@
   "schemaVersion": 1,
   "id": "org.recon.omarchy",
   "name": "Recon",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "author": "Nick Seal",
   "description": "Public-metadata domain intelligence and baseline drift inspector for Omarchy",
   "kinds": [
-    "bar-widget"
+    "panel"
   ],
   "entryPoints": {
-    "barWidget": "Widget.qml"
-  },
-  "barWidget": {
-    "displayName": "Recon",
-    "category": "Security",
-    "allowMultiple": false,
-    "defaultSection": "right"
+    "panel": "Panel.qml"
   }
 }
