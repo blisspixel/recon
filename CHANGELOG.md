@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- Keep home-managed uv and pipx updates available from home, nested and
+  unrelated directories; preserve symlink shim dispatch for ownership queries
+  and upgrade commands while retaining project-launcher refusal.
+
 ## [2.20.0] - 2026-10-11
 
 Make installation and update recovery reliable, preserve accessible prose and

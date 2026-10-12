@@ -108,6 +108,11 @@ recon update --check
 PyPI, is behind PyPI, or is newer than the latest published release. It never
 offers to replace a newer local or source build with an older PyPI release.
 
+User-level uv and pipx launchers work from home and unrelated directories,
+including symlink shims. The updater still requires a matching installation
+receipt and local manager destination; project-local or relative manager
+launchers require manual maintenance.
+
 `recon update` downloads a pip release before it replaces a pip install, so a
 download failure leaves the current files in place. On macOS and Linux it then
 runs the package manager in the foreground. On Windows the running launcher
