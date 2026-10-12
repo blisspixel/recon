@@ -1,100 +1,199 @@
-# Recon Omarchy Integration
+# Recon Omarchy panel
 
-A polished, keyboard-first Omarchy desktop shell plugin for Recon.
+An on-demand, keyboard-first public-metadata inspector. The plugin reuses Recon's
+structured CLI output and adds no service, watcher or automatic network query.
+Plugin version 2.0.0 changes the host integration from a bar widget to a panel;
+it does not change the Recon package version or CLI contract.
 
-This plugin integrates Recon directly into Omarchy's Quickshell environment,
-allowing developers and security operators to inspect public-metadata domain
-intelligence and baseline drift without leaving their keyboard workflow.
+## Install and open
 
-## Features
-
-- **Keyboard-First Interface**: Focus the domain input automatically, press
-  `Enter` to inspect, `Ctrl+D` to toggle baseline comparison, and `Esc` to
-  cancel or dismiss.
-- **Direct Process Execution**: Invokes `recon` directly with structured argument
-  arrays (`["recon", domain, "--json"]` or `["recon", "delta", domain, "--json"]`).
-  Never invokes an intermediate shell or shell interpolation.
-- **Safe Input & Clipboard Handling**: Pasting text into the domain input box
-  never triggers an automatic network request. Execution requires an explicit
-  operator action.
-- **Client-Side Domain Validation**: Validates and normalizes input against
-  canonical domain rules before spawning any process, immediately rejecting
-  spaces, shell meta-characters, and malformed strings.
-- **Fail-Closed Bounded Execution**: Enforces a 30-second timeout guard. If
-  remote nameservers or network links hang, the query halts safely.
-- **Baseline Drift Detection**: Seamlessly toggles delta comparison against
-  cached baseline snapshots, highlighting added and removed services. An
-  incomplete comparison has an amber "Partial comparison" badge, names degraded
-  sources and fields not compared, and marks suppressed service lists as
-  "not compared". Comparable changes remain visible alongside that uncertainty.
-- **Hedged Observation Semantics**: Surfaces provider, tenant indicators,
-  services, and CT subdomains with explicit uncertainty and hedge notices.
-  Observations are not a security verdict.
-- **Independent & Removable**: Lives cleanly in user configuration space with zero
-  system daemon dependencies.
-
-## Installation
-
-Ensure `recon` is installed and available on your PATH:
-
-```bash
-uv tool install recon-tool
-# or
-pipx install recon-tool
-```
-
-Run the installation script:
+Install `recon-tool` with the supported [installer](../../docs/getting-started.md)
+or an existing isolated tool manager. Confirm `recon --version` works before:
 
 ```bash
 cd integrations/omarchy
-./install.sh
+bash install.sh
+omarchy-shell shell toggle org.recon.omarchy '{}'
 ```
 
-Or copy manually into Omarchy's third-party plugin directory:
+The setup scripts require the running Omarchy shell and its existing `jq` and
+coreutils `timeout` utilities. Every setup IPC attempt has a one-second limit
+plus a one-second force-termination grace. Invalid version1 configuration shapes
+are refused before setup mutation, including missing or non-array plugin and
+bar-layout sections; supported string bar-widget entries remain supported.
+It copies the plugin to `~/.config/omarchy/plugins/org.recon.omarchy`, rescans the
+registry, waits for registration and enables one inline `plugins[]` entry. It
+neither adds a bar slot nor restarts the shell. Failure to verify enablement is
+reported as failure. Duplicate Recon entries are refused before modification.
+Registration waits for the own ID with exactly panel-only kinds, rather than
+accepting a stale bar-widget registry entry. The current public inventory does
+not expose version or launcher metadata, so it cannot prove freshness of an
+already panel-only registry entry. Installed manifest bytes are updated; a
+settings read failure remains visible and disables dispatch.
+
+The installed manifest records the absolute lexical path of the external
+`recon` launcher found on PATH, preserving tool-manager shim identity. On first
+open only, the panel seeds an **absent** `reconCommand` through its own host
+facade. An existing value, including empty, null or invalid values, is never
+replaced automatically. Reinstalling does not reset existing inline settings.
+
+Use the host's public `toggle` or `summon` command, which can load an unopened
+panel. No plugin-owned IPC target needs to be running beforehand:
 
 ```bash
-mkdir -p ~/.config/omarchy/plugins/org.recon.omarchy
-cp manifest.json Widget.qml ReconView.qml README.md ~/.config/omarchy/plugins/org.recon.omarchy/
+omarchy-shell shell summon org.recon.omarchy '{"domain":"alpha.invalid","mode":"delta"}'
 ```
 
-Restart the Omarchy shell to activate the bar widget:
+Opening, prefilled payloads, pasting, copying and saving settings never run a
+lookup. Press Enter or Inspect to query. A malformed payload produces an error
+and cannot dispatch a command.
 
-```bash
-omarchy-restart-shell
+## Settings and execution
+
+Choose **Settings** in the panel. Settings belong to the one enabled inline
+Omarchy entry, not a second plugin configuration file:
+
+| Setting | Contract |
+| --- | --- |
+| `reconCommand` | Absolute executable launcher path; preserve the shim path rather than its symlink target |
+| `timeoutSec` | Integer from 10 to 120 seconds; absent defaults to 30 |
+| `defaultMode` | `lookup` or `delta`; absent defaults to `lookup` |
+
+Invalid explicit settings and failed settings reads disable dispatch. The form
+allows repair; missing or non-executable launchers produce a visible startup
+error. Each Save reads the fresh own entry, merges only edited fields, writes
+through the own-plugin facade, then verifies those values through another read.
+Unknown own-entry keys and fresh changes to untouched fields are preserved.
+The host replaces an entry as a unit; this is not a compare-and-swap transaction
+or a guarantee against a simultaneous write between that read and write. Full
+host configuration is neither logged nor retained by the panel.
+
+Lookup uses `[absoluteLauncher, domain, "--json"]`; comparison uses
+`[absoluteLauncher, "delta", domain, "--json"]`. Arguments are passed directly,
+with no shell interpolation. Only one child runs at a time. Cancellation and
+timeout retain their diagnosis through a delayed exit, send SIGTERM, then
+SIGKILL after one second if necessary. Reading settings has a separate
+five-second timeout. Closing the panel cancels its owned query.
+
+A missing baseline (delta exit 3) offers **Record baseline**. That explicit action
+runs one ordinary lookup; opening the panel or comparing does not silently
+collect a baseline. Incomplete comparisons retain their partial badge, degraded
+sources, suppressed fields and comparable changes. Observations are not a
+security verdict.
+
+**Copy JSON** copies the completed structured result as plain text through Qt.
+It launches no process and does not query. **Open in terminal** is a separate,
+explicit new lookup using `recon <domain> --explain`, not a display of the cached
+JSON. It invokes the host terminal helper with separate arguments:
+`[omarchy-launch-terminal, "--hold", absoluteLauncher, domain, "--explain"]`.
+Terminal support for `--hold` is best effort.
+
+The UI follows the host's live native palette and font, including light and
+dark themes. There is no automatic watching or scheduled refresh. Optional
+watching remains a separate follow-up, not an installed background feature.
+
+## Optional keybinding and menu entry
+
+These examples are manual opt-ins. The installer does not edit user bindings or
+menus. Current Omarchy uses Lua bindings; add a free shortcut to
+`~/.config/omarchy/bindings.lua`:
+
+```lua
+o.bind("SUPER + ALT + R", "Recon", "omarchy-shell shell toggle org.recon.omarchy '{}'")
 ```
 
-## Keyboard Shortcuts
+An optional native menu entry in
+`~/.config/omarchy/extensions/omarchy-menu.jsonc` can use:
+
+```json
+{
+  "recon": {
+    "label": "Recon",
+    "description": "On-demand public-metadata lookup",
+    "action": "omarchy-shell shell summon org.recon.omarchy '{}'"
+  }
+}
+```
+
+Merge this entry into the existing object, preserving other entries. Check for
+shortcut and menu ID conflicts before choosing either example.
 
 | Shortcut | Action |
-|---|---|
-| `Enter` | Run inspection for entered domain |
-| `Escape` | Cancel active lookup (if running) or dismiss panel |
-| `Ctrl+D` | Toggle baseline delta comparison mode |
-| `Ctrl+L` | Clear domain input and current results |
-| `Tab` / `Shift+Tab` | Navigate interactive controls |
+| --- | --- |
+| Enter | Inspect the entered domain |
+| Escape | Cancel the active lookup or dismiss the panel |
+| Ctrl+D | Toggle baseline comparison |
+| Ctrl+L | Clear the domain input and visible results |
+| Tab / Shift+Tab | Navigate controls |
 
-## Removal
+## Legacy bar migration
 
-To remove the plugin cleanly:
+Version 1.0.0 used a bar placement. The host can still load an enabled panel
+from that entry, but its public IPC has no supported operation to move the
+entry to `plugins[]` while preserving settings and removing the bar placement.
+The installer therefore refuses a legacy bar entry **before any file, settings
+or enablement mutation**. It does not rewrite the whole host configuration.
+
+Export and inspect **only the Recon entry** before explicitly disabling it:
+
+```bash
+omarchy-shell shell listShellConfig | jq '[.plugins[]?, .bar.layout.left[]?, .bar.layout.center[]?, .bar.layout.right[]?] | map(select((if type == "string" then . else .id end) == "org.recon.omarchy"))' > recon-plugin-settings.json
+```
+
+Confirm the export contains the intended entry. Keep it privately if its custom
+settings are sensitive. Disabling **deletes the old inline entry and its
+settings**; it is not a lossless migration:
+
+```bash
+omarchy-shell shell setPluginEnabled org.recon.omarchy false
+bash install.sh
+```
+
+Open Settings and re-enter the supported values from the export. Other custom
+keys remain in the export and are not automatically restored. If duplicate
+entries exist, resolve their ownership in Omarchy before reinstalling. An
+assisted migration is outside this plugin's current contract.
+
+## Remove
 
 ```bash
 cd integrations/omarchy
-./uninstall.sh
+bash uninstall.sh
 ```
 
-Or delete the plugin folder directly:
+Uninstall disables and verifies removal of the own host entry before deleting
+plugin files, without restarting the shell, then waits for the own ID to leave
+the public inventory after rescanning. Verification polls at most 20 times,
+0.1 seconds apart, with each IPC client limited to one second plus a one-second
+force-termination grace using Omarchy's coreutils `timeout`. Stale inventory,
+malformed replies and refused or timed-out IPC report failure rather than
+claiming verified removal; rerun uninstall once the shell is ready. A failed
+disable preserves files. Disabling removes inline settings, so export them first
+if needed. Remove any manually added keybinding or menu entry yourself.
+
+## Qualification and limits
+
+The panel lifecycle, manifest and facade contract were reviewed against Omarchy
+commit [`9480d1b6`](https://github.com/omacom/omarchy/tree/9480d1b6a98156314dbabe6bfef08f39f8b9cd07).
+The host's panel loader supplies the manifest and own-plugin facade; generic
+bar-widget settings are not injected into panels. Settings reads use the fixed
+public `omarchy-shell shell listShellConfig` call and immediately project the
+own entry in memory. Writes use that own facade, with no second live authority.
 
 ```bash
-rm -rf ~/.config/omarchy/plugins/org.recon.omarchy
-omarchy-restart-shell
+uv run pytest tests/test_omarchy_integration.py tests/test_omarchy_lifecycle.py tests/test_omarchy_panel_runtime.py
 ```
 
-## Local display checks
+With the optional installed Qt Quick Test and Quickshell runtimes, these tests
+execute actual QML rendering, process startup/termination, clipboard operations
+and Bash lifecycle scripts with synthetic CLI/IPC peers and private XDG roots.
+Successful lookup and delta fixtures come from the actual Python formatters and
+synthetic models, with raw JSON byte-copy controls and malformed-schema refusals.
+They exercise no real desktop, user configuration or external domain. Missing
+optional desktop runtimes are reported as skips. Light/dark rendering checks
+supply native palette roles in an isolated shell; they do not establish live
+compatibility with every Omarchy release or terminal.
 
-`uv run pytest tests/test_omarchy_integration.py` checks process safety and
-executes the delta display cases with the installed Qt Quick Test runtime when
-available. The QML cases run offscreen with private XDG directories and synthetic
-records; they perform no lookup and do not start or reconfigure the desktop
-shell. A system without that optional runtime reports the display test as
-skipped. These checks do not establish compatibility with every Omarchy shell
-or replace an explicit desktop integration review.
+Primary contracts: [Quickshell Process](https://quickshell.org/docs/v0.2.0/types/Quickshell.Io/Process/),
+[Qt plain-text copying](https://doc.qt.io/qt-6/qml-qtquick-textedit.html#copy-method),
+and [terminal argv and hold support](https://github.com/Vladimir-csp/xdg-terminal-exec#syntax).

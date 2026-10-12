@@ -16,6 +16,36 @@ Item {
             view.deltaResult = null;
         }
 
+        function test_domain_validation_data() {
+            return [
+                {tag: "apex", raw: "example.com", domain: "example.com"},
+                {tag: "subdomain", raw: "sub.domain.example.org", domain: "sub.domain.example.org"},
+                {tag: "hyphen", raw: "my-domain.invalid", domain: "my-domain.invalid"},
+                {tag: "scheme", raw: "https://example.com/some/path", domain: "example.com"},
+                {tag: "port", raw: "http://sub.example.co.uk:8080?q=test#frag", domain: "sub.example.co.uk"},
+                {tag: "case", raw: "ALPHA-123.TEST", domain: "alpha-123.test"},
+                {tag: "empty", raw: "", domain: null},
+                {tag: "whitespace", raw: "   ", domain: null},
+                {tag: "semicolon", raw: "; rm -rf /", domain: null},
+                {tag: "pipe", raw: "example.com | cat /etc/passwd", domain: null},
+                {tag: "substitution", raw: "`whoami`.example.com", domain: null},
+                {tag: "dollar", raw: "foo$bar.invalid", domain: null},
+                {tag: "space", raw: "bad domain.invalid", domain: null},
+                {tag: "backslash", raw: "http://alpha.invalid\\@beta.invalid", domain: null},
+                {tag: "leading hyphen", raw: "-leading-hyphen.invalid", domain: null},
+                {tag: "trailing hyphen", raw: "trailing-hyphen-.invalid", domain: null},
+                {tag: "long label", raw: "a".repeat(64) + ".invalid", domain: null},
+                {tag: "empty label", raw: "example..invalid", domain: null}
+            ];
+        }
+
+        function test_domain_validation(data) {
+            var result = view.validateDomainInput(data.raw);
+            compare(result.valid, data.domain !== null);
+            if (result.valid)
+                compare(result.domain, data.domain);
+        }
+
         function findText(item, expected) {
             if (item.text !== undefined && item.text === expected)
                 return item;

@@ -8,9 +8,9 @@ Rectangle {
     // Dimensions for Omarchy panel popup or standalone window
     width: 720
     height: 640
-    color: "#181825"
+    color: root.colors.background
     radius: 12
-    border.color: "#313244"
+    border.color: root.colors.border
     border.width: 1
 
     // Public API properties
@@ -21,8 +21,28 @@ Rectangle {
     property string errorMessage: ""
     property bool deltaMode: false
     property string activeDomain: ""
+    property bool canRun: true
+    property bool noBaseline: false
+    property string rawJson: ""
+    property string fontFamily: "Sans Serif"
+    // Standalone previews use a fallback; the host supplies live native roles.
+    property var colors: ({
+        background: "#181825", surface: "#1e1e2e", foreground: "#cdd6f4",
+        secondary: "#a6adc8", muted: "#6c7086", border: "#313244",
+        accent: "#89b4fa", onAccent: "#11111b", success: "#a6e3a1",
+        warning: "#f9e2af", error: "#f38ba8", successFill: "#1e3a2f",
+        warningFill: "#3d3525", errorFill: "#3e1f29"
+    })
     readonly property var incompleteDelta: root.deltaResult ? root.deltaResult.incomplete_comparison : null
     readonly property bool deltaComparisonIncomplete: !!root.incompleteDelta
+
+    component ActionButton: Button {
+        font.family: root.fontFamily
+        palette.button: root.colors.surface
+        palette.buttonText: root.colors.foreground
+        palette.highlight: root.colors.accent
+        palette.highlightedText: root.colors.onAccent
+    }
 
     function deltaFieldSuppressed(field) {
         var fields = root.incompleteDelta ? root.incompleteDelta.suppressed_fields : [];
@@ -41,6 +61,31 @@ Rectangle {
     signal requestLookup(string domain, bool delta)
     signal requestCancel()
     signal requestClose()
+    signal requestSettings()
+    signal requestTerminal(string domain)
+
+    function prefill(domain, mode) {
+        if (typeof domain === "string")
+            domainField.text = domain;
+        root.deltaMode = mode === "delta";
+        domainField.forceActiveFocus();
+    }
+
+    function copyJson() {
+        if (root.rawJson.length > 0) {
+            copyBuffer.selectAll();
+            copyBuffer.copy();
+            copyBuffer.deselect();
+        }
+    }
+
+    function openTerminal() {
+        var check = validateDomainInput(domainField.text);
+        if (check.valid && root.canRun && !root.isRunning)
+            root.requestTerminal(check.domain);
+        else if (!check.valid)
+            root.errorMessage = check.error;
+    }
 
     // Domain validation function (parity with recon_tool.validator)
     function validateDomainInput(raw) {
@@ -88,7 +133,7 @@ Rectangle {
 
     // Explicit user action to run lookup (never triggered automatically on clipboard paste)
     function runInspection() {
-        if (root.isRunning) {
+        if (root.isRunning || !root.canRun) {
             return;
         }
         var check = validateDomainInput(domainField.text);
@@ -151,41 +196,60 @@ Rectangle {
         anchors.margins: 18
         spacing: 14
 
+        RowLayout {
+            Layout.fillWidth: true
+            ActionButton { text: "Settings"; enabled: !root.isRunning; onClicked: root.requestSettings() }
+            ActionButton { text: "Copy JSON"; enabled: root.rawJson.length > 0 && !root.isRunning; onClicked: root.copyJson() }
+            ActionButton { text: "Open in terminal"; enabled: root.canRun && !root.isRunning; onClicked: root.openTerminal() }
+            Item { Layout.fillWidth: true }
+        }
+
+        ActionButton {
+            objectName: "recordBaseline"
+            text: "Record baseline"
+            visible: root.noBaseline
+            enabled: root.canRun && !root.isRunning
+            onClicked: {
+                root.deltaMode = false;
+                root.requestLookup(root.activeDomain, false);
+            }
+        }
+
         // Top Header Row
         RowLayout {
             Layout.fillWidth: true
             spacing: 12
 
-            Text {
+            Text { font.family: root.fontFamily;
                 text: "RECON"
                 font.bold: true
                 font.pixelSize: 18
-                color: "#cdd6f4"
+                color: root.colors.foreground
                 font.letterSpacing: 1.5
             }
 
             Rectangle {
-                color: "#313244"
+                color: root.colors.border
                 radius: 4
                 Layout.preferredHeight: 22
                 Layout.preferredWidth: hedgedText.implicitWidth + 14
 
-                Text {
+                Text { font.family: root.fontFamily;
                     id: hedgedText
                     anchors.centerIn: parent
                     text: "Public Metadata Observation"
                     font.pixelSize: 11
                     font.weight: Font.DemiBold
-                    color: "#89b4fa"
+                    color: root.colors.accent
                 }
             }
 
             Item { Layout.fillWidth: true }
 
-            Text {
+            Text { font.family: root.fontFamily;
                 text: "Esc: Close | Ctrl+D: Delta | Ctrl+L: Clear"
                 font.pixelSize: 11
-                color: "#6c7086"
+                color: root.colors.muted
             }
         }
 
@@ -193,9 +257,9 @@ Rectangle {
         Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 46
-            color: "#1e1e2e"
+            color: root.colors.surface
             radius: 8
-            border.color: domainField.activeFocus ? "#89b4fa" : "#313244"
+            border.color: domainField.activeFocus ? root.colors.accent : root.colors.border
             border.width: 1
 
             RowLayout {
@@ -204,19 +268,20 @@ Rectangle {
                 anchors.rightMargin: 8
                 spacing: 8
 
-                Text {
+                Text { font.family: root.fontFamily;
                     text: ">"
-                    color: "#89b4fa"
+                    color: root.colors.accent
                     font.bold: true
                     font.pixelSize: 15
                 }
 
                 TextField {
+                    font.family: root.fontFamily
                     id: domainField
                     Layout.fillWidth: true
                     placeholderText: "Enter domain (e.g. example.com)..."
-                    placeholderTextColor: "#585b70"
-                    color: "#cdd6f4"
+                    placeholderTextColor: root.colors.muted
+                    color: root.colors.foreground
                     font.pixelSize: 14
                     background: null
                     selectByMouse: true
@@ -232,17 +297,17 @@ Rectangle {
                     Layout.preferredHeight: 30
                     Layout.preferredWidth: deltaLabel.implicitWidth + 18
                     radius: 6
-                    color: root.deltaMode ? "#45475a" : "#181825"
-                    border.color: root.deltaMode ? "#89b4fa" : "#313244"
+                    color: root.deltaMode ? root.colors.border : root.colors.background
+                    border.color: root.deltaMode ? root.colors.accent : root.colors.border
                     border.width: 1
 
-                    Text {
+                    Text { font.family: root.fontFamily;
                         id: deltaLabel
                         anchors.centerIn: parent
                         text: "Baseline Delta"
                         font.pixelSize: 11
                         font.weight: Font.DemiBold
-                        color: root.deltaMode ? "#89b4fa" : "#a6adc8"
+                        color: root.deltaMode ? root.colors.accent : root.colors.secondary
                     }
 
                     MouseArea {
@@ -259,14 +324,14 @@ Rectangle {
                     Layout.preferredHeight: 30
                     Layout.preferredWidth: 80
                     radius: 6
-                    color: root.isRunning ? "#f38ba8" : "#89b4fa"
+                    color: root.isRunning ? root.colors.error : root.colors.accent
 
-                    Text {
+                    Text { font.family: root.fontFamily;
                         anchors.centerIn: parent
                         text: root.isRunning ? "Cancel" : "Inspect"
                         font.pixelSize: 12
                         font.weight: Font.Bold
-                        color: "#11111b"
+                        color: root.colors.onAccent
                     }
 
                     MouseArea {
@@ -289,17 +354,17 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: errorText.text.length > 0 ? errorText.implicitHeight + 16 : 0
             visible: errorText.text.length > 0
-            color: "#3e1f29"
+            color: root.colors.errorFill
             radius: 6
-            border.color: "#f38ba8"
+            border.color: root.colors.error
             border.width: 1
 
-            Text {
+            Text { font.family: root.fontFamily;
                 id: errorText
                 anchors.fill: parent
                 anchors.margins: 8
                 text: root.errorMessage
-                color: "#f38ba8"
+                color: root.colors.error
                 font.pixelSize: 12
                 wrapMode: Text.WordWrap
             }
@@ -309,7 +374,7 @@ Rectangle {
             Layout.fillWidth: true
             Layout.preferredHeight: 32
             visible: root.isRunning || (root.statusMessage.length > 0 && root.errorMessage.length === 0)
-            color: "#1e1e2e"
+            color: root.colors.surface
             radius: 6
 
             RowLayout {
@@ -325,10 +390,10 @@ Rectangle {
                     visible: root.isRunning
                 }
 
-                Text {
+                Text { font.family: root.fontFamily;
                     Layout.fillWidth: true
                     text: root.statusMessage
-                    color: root.isRunning ? "#89b4fa" : "#a6adc8"
+                    color: root.isRunning ? root.colors.accent : root.colors.secondary
                     font.pixelSize: 12
                     elide: Text.ElideRight
                 }
@@ -351,7 +416,7 @@ Rectangle {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: 260
-                    color: "#1e1e2e"
+                    color: root.colors.surface
                     radius: 8
                     visible: root.lookupResult === null && root.deltaResult === null && !root.isRunning
 
@@ -359,18 +424,18 @@ Rectangle {
                         anchors.centerIn: parent
                         spacing: 10
 
-                        Text {
+                        Text { font.family: root.fontFamily;
                             text: "Ready for Domain Inspection"
                             font.bold: true
                             font.pixelSize: 15
-                            color: "#cdd6f4"
+                            color: root.colors.foreground
                             Layout.alignment: Qt.AlignHCenter
                         }
 
-                        Text {
+                        Text { font.family: root.fontFamily;
                             text: "Type an apex domain above and press Enter to query public metadata.\nRecon reads public DNS, certificate transparency, and unauthenticated endpoints.\nDefault checks make zero active port scans or application crawls."
                             font.pixelSize: 12
-                            color: "#a6adc8"
+                            color: root.colors.secondary
                             horizontalAlignment: Text.AlignHCenter
                             Layout.alignment: Qt.AlignHCenter
                         }
@@ -378,16 +443,16 @@ Rectangle {
                         Rectangle {
                             Layout.topMargin: 10
                             Layout.alignment: Qt.AlignHCenter
-                            color: "#313244"
+                            color: root.colors.border
                             radius: 4
                             Layout.preferredWidth: 320
                             Layout.preferredHeight: 30
 
-                            Text {
+                            Text { font.family: root.fontFamily;
                                 anchors.centerIn: parent
                                 text: "Observation only: results are not a security verdict."
                                 font.pixelSize: 11
-                                color: "#f9e2af"
+                                color: root.colors.warning
                             }
                         }
                     }
@@ -397,7 +462,7 @@ Rectangle {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: overviewCol.implicitHeight + 24
-                    color: "#1e1e2e"
+                    color: root.colors.surface
                     radius: 8
                     visible: root.lookupResult !== null
 
@@ -411,17 +476,19 @@ Rectangle {
                             Layout.fillWidth: true
                             spacing: 10
 
-                            Text {
+                            Text { font.family: root.fontFamily;
+                                objectName: "queriedDomain"
                                 text: root.lookupResult ? (root.lookupResult.queried_domain || "") : ""
                                 font.bold: true
                                 font.pixelSize: 16
-                                color: "#cdd6f4"
+                                color: root.colors.foreground
                             }
 
-                            Text {
+                            Text { font.family: root.fontFamily;
+                                objectName: "displayName"
                                 text: root.lookupResult && root.lookupResult.display_name && root.lookupResult.display_name !== root.lookupResult.queried_domain ? "(" + root.lookupResult.display_name + ")" : ""
                                 font.pixelSize: 13
-                                color: "#a6adc8"
+                                color: root.colors.secondary
                                 visible: text.length > 0
                             }
 
@@ -434,15 +501,15 @@ Rectangle {
                                 radius: 4
                                 color: {
                                     var c = root.lookupResult ? (root.lookupResult.confidence || "low") : "low";
-                                    return c === "high" ? "#1e3a2f" : (c === "medium" ? "#3e321e" : "#2f313d");
+                                    return c === "high" ? root.colors.successFill : (c === "medium" ? root.colors.warningFill : root.colors.surface);
                                 }
                                 border.color: {
                                     var c = root.lookupResult ? (root.lookupResult.confidence || "low") : "low";
-                                    return c === "high" ? "#a6e3a1" : (c === "medium" ? "#f9e2af" : "#6c7086");
+                                    return c === "high" ? root.colors.success : (c === "medium" ? root.colors.warning : root.colors.muted);
                                 }
                                 border.width: 1
 
-                                Text {
+                                Text { font.family: root.fontFamily;
                                     id: confText
                                     anchors.centerIn: parent
                                     text: {
@@ -454,7 +521,7 @@ Rectangle {
                                     font.weight: Font.DemiBold
                                     color: {
                                         var c = root.lookupResult ? (root.lookupResult.confidence || "low") : "low";
-                                        return c === "high" ? "#a6e3a1" : (c === "medium" ? "#f9e2af" : "#cdd6f4");
+                                        return c === "high" ? root.colors.success : (c === "medium" ? root.colors.warning : root.colors.foreground);
                                     }
                                 }
                             }
@@ -467,31 +534,31 @@ Rectangle {
 
                             ColumnLayout {
                                 spacing: 2
-                                Text { text: "PROVIDER"; font.pixelSize: 10; font.bold: true; color: "#6c7086" }
-                                Text {
+                                Text { font.family: root.fontFamily; text: "PROVIDER"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
+                                Text { font.family: root.fontFamily;
                                     text: root.lookupResult ? (root.lookupResult.provider || "None observed") : ""
                                     font.pixelSize: 13
                                     font.weight: Font.DemiBold
-                                    color: "#cdd6f4"
+                                    color: root.colors.foreground
                                 }
                             }
 
                             ColumnLayout {
                                 spacing: 2
                                 visible: root.lookupResult && root.lookupResult.tenant_id
-                                Text { text: "TENANT ID"; font.pixelSize: 10; font.bold: true; color: "#6c7086" }
+                                Text { font.family: root.fontFamily; text: "TENANT ID"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
                                 Text {
                                     text: root.lookupResult && root.lookupResult.tenant_id ? root.lookupResult.tenant_id : ""
                                     font.pixelSize: 12
                                     font.family: "monospace"
-                                    color: "#89b4fa"
+                                    color: root.colors.accent
                                 }
                             }
 
                             ColumnLayout {
                                 spacing: 2
-                                Text { text: "EMAIL SECURITY"; font.pixelSize: 10; font.bold: true; color: "#6c7086" }
-                                Text {
+                                Text { font.family: root.fontFamily; text: "EMAIL SECURITY"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
+                                Text { font.family: root.fontFamily;
                                     text: {
                                         if (!root.lookupResult) return "0/5";
                                         var score = root.lookupResult.email_security_score;
@@ -499,17 +566,17 @@ Rectangle {
                                     }
                                     font.pixelSize: 13
                                     font.weight: Font.DemiBold
-                                    color: "#a6e3a1"
+                                    color: root.colors.success
                                 }
                             }
 
                             ColumnLayout {
                                 spacing: 2
-                                Text { text: "CT SUBDOMAINS"; font.pixelSize: 10; font.bold: true; color: "#6c7086" }
-                                Text {
+                                Text { font.family: root.fontFamily; text: "CT SUBDOMAINS"; font.pixelSize: 10; font.bold: true; color: root.colors.muted }
+                                Text { font.family: root.fontFamily;
                                     text: root.lookupResult ? (root.lookupResult.ct_subdomain_count || 0).toString() : "0"
                                     font.pixelSize: 13
-                                    color: "#cdd6f4"
+                                    color: root.colors.foreground
                                 }
                             }
                         }
@@ -519,9 +586,9 @@ Rectangle {
                             Layout.fillWidth: true
                             Layout.preferredHeight: degradedCol.implicitHeight + 12
                             visible: root.lookupResult && root.lookupResult.degraded_sources && root.lookupResult.degraded_sources.length > 0
-                            color: "#2f281e"
+                            color: root.colors.warningFill
                             radius: 6
-                            border.color: "#f9e2af"
+                            border.color: root.colors.warning
                             border.width: 1
 
                             ColumnLayout {
@@ -530,16 +597,16 @@ Rectangle {
                                 anchors.margins: 6
                                 spacing: 2
 
-                                Text {
+                                Text { font.family: root.fontFamily;
                                     text: "Degraded sources: " + (root.lookupResult && root.lookupResult.degraded_sources ? root.lookupResult.degraded_sources.join(", ") : "")
                                     font.pixelSize: 11
                                     font.weight: Font.DemiBold
-                                    color: "#f9e2af"
+                                    color: root.colors.warning
                                 }
-                                Text {
+                                Text { font.family: root.fontFamily;
                                     text: "Observations reflect available public records; unreached sources are surfaced explicitly rather than assumed absent."
                                     font.pixelSize: 10
-                                    color: "#bac2de"
+                                    color: root.colors.secondary
                                 }
                             }
                         }
@@ -550,7 +617,7 @@ Rectangle {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: servicesCol.implicitHeight + 24
-                    color: "#1e1e2e"
+                    color: root.colors.surface
                     radius: 8
                     visible: root.lookupResult !== null && root.lookupResult.services && root.lookupResult.services.length > 0
 
@@ -560,11 +627,11 @@ Rectangle {
                         anchors.margins: 14
                         spacing: 8
 
-                        Text {
+                        Text { font.family: root.fontFamily;
                             text: "OBSERVED SERVICES (" + (root.lookupResult && root.lookupResult.services ? root.lookupResult.services.length : 0) + ")"
                             font.pixelSize: 11
                             font.bold: true
-                            color: "#89b4fa"
+                            color: root.colors.accent
                         }
 
                         Flow {
@@ -577,16 +644,16 @@ Rectangle {
                                     height: 24
                                     width: serviceText.implicitWidth + 14
                                     radius: 4
-                                    color: "#313244"
-                                    border.color: "#45475a"
+                                    color: root.colors.border
+                                    border.color: root.colors.border
                                     border.width: 1
 
-                                    Text {
+                                    Text { font.family: root.fontFamily;
                                         id: serviceText
                                         anchors.centerIn: parent
                                         text: modelData
                                         font.pixelSize: 11
-                                        color: "#cdd6f4"
+                                        color: root.colors.foreground
                                     }
                                 }
                             }
@@ -598,7 +665,7 @@ Rectangle {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: insightsCol.implicitHeight + 24
-                    color: "#1e1e2e"
+                    color: root.colors.surface
                     radius: 8
                     visible: root.lookupResult !== null && root.lookupResult.insights && root.lookupResult.insights.length > 0
 
@@ -608,11 +675,11 @@ Rectangle {
                         anchors.margins: 14
                         spacing: 8
 
-                        Text {
+                        Text { font.family: root.fontFamily;
                             text: "HEDGED OBSERVATIONS"
                             font.pixelSize: 11
                             font.bold: true
-                            color: "#89b4fa"
+                            color: root.colors.accent
                         }
 
                         Repeater {
@@ -621,17 +688,17 @@ Rectangle {
                                 Layout.fillWidth: true
                                 spacing: 8
 
-                                Text {
+                                Text { font.family: root.fontFamily;
                                     text: "•"
-                                    color: "#89b4fa"
+                                    color: root.colors.accent
                                     font.pixelSize: 13
                                     Layout.alignment: Qt.AlignTop
                                 }
 
-                                Text {
+                                Text { font.family: root.fontFamily;
                                     Layout.fillWidth: true
                                     text: modelData
-                                    color: "#bac2de"
+                                    color: root.colors.secondary
                                     font.pixelSize: 12
                                     wrapMode: Text.WordWrap
                                 }
@@ -644,7 +711,7 @@ Rectangle {
                 Rectangle {
                     Layout.fillWidth: true
                     Layout.preferredHeight: deltaCol.implicitHeight + 24
-                    color: "#1e1e2e"
+                    color: root.colors.surface
                     radius: 8
                     visible: root.deltaResult !== null
 
@@ -658,11 +725,11 @@ Rectangle {
                             Layout.fillWidth: true
                             spacing: 8
 
-                            Text {
+                            Text { font.family: root.fontFamily;
                                 text: "BASELINE DRIFT ANALYSIS"
                                 font.pixelSize: 11
                                 font.bold: true
-                                color: "#f9e2af"
+                                color: root.colors.warning
                             }
 
                             Item { Layout.fillWidth: true }
@@ -671,35 +738,35 @@ Rectangle {
                                 Layout.preferredHeight: 20
                                 Layout.preferredWidth: deltaStatusText.implicitWidth + 12
                                 radius: 4
-                                color: root.deltaComparisonIncomplete ? "#3d3525" : (root.deltaResult && root.deltaResult.has_changes ? "#3e1f29" : "#1e3a2f")
+                                color: root.deltaComparisonIncomplete ? root.colors.warningFill : (root.deltaResult && root.deltaResult.has_changes ? root.colors.errorFill : root.colors.successFill)
 
-                                Text {
+                                Text { font.family: root.fontFamily;
                                     id: deltaStatusText
                                     anchors.centerIn: parent
                                     text: root.deltaComparisonIncomplete ? "Partial comparison" : (root.deltaResult && root.deltaResult.has_changes ? "Changes Observed" : "No Changes")
                                     font.pixelSize: 10
                                     font.bold: true
-                                    color: root.deltaComparisonIncomplete ? "#f9e2af" : (root.deltaResult && root.deltaResult.has_changes ? "#f38ba8" : "#a6e3a1")
+                                    color: root.deltaComparisonIncomplete ? root.colors.warning : (root.deltaResult && root.deltaResult.has_changes ? root.colors.error : root.colors.success)
                                 }
                             }
                         }
 
-                        Text {
+                        Text { font.family: root.fontFamily;
                             Layout.fillWidth: true
                             visible: root.deltaComparisonIncomplete && !!root.incompleteDelta.degraded_sources && root.incompleteDelta.degraded_sources.length > 0
                             text: "Degraded sources: " + (root.incompleteDelta && root.incompleteDelta.degraded_sources ? root.incompleteDelta.degraded_sources.join(", ") : "")
                             wrapMode: Text.Wrap
                             font.pixelSize: 11
-                            color: "#f9e2af"
+                            color: root.colors.warning
                         }
 
-                        Text {
+                        Text { font.family: root.fontFamily;
                             Layout.fillWidth: true
                             visible: root.deltaComparisonIncomplete && !!root.incompleteDelta.suppressed_fields && root.incompleteDelta.suppressed_fields.length > 0
                             text: "Not compared: " + (root.incompleteDelta && root.incompleteDelta.suppressed_fields ? root.incompleteDelta.suppressed_fields.join(", ") : "")
                             wrapMode: Text.Wrap
                             font.pixelSize: 11
-                            color: "#f9e2af"
+                            color: root.colors.warning
                         }
 
                         // Added Services
@@ -708,10 +775,10 @@ Rectangle {
                             spacing: 4
                             visible: !!root.deltaResult && (root.deltaFieldSuppressed("added_services") || !!root.deltaResult.added_services && root.deltaResult.added_services.length > 0)
 
-                            Text {
+                            Text { font.family: root.fontFamily;
                                 text: root.deltaFieldSuppressed("added_services") ? "Added Services: not compared" : "Added Services:"
                                 font.pixelSize: 11
-                                color: root.deltaFieldSuppressed("added_services") ? "#f9e2af" : "#a6e3a1"
+                                color: root.deltaFieldSuppressed("added_services") ? root.colors.warning : root.colors.success
                                 font.bold: true
                             }
 
@@ -724,8 +791,8 @@ Rectangle {
                                         height: 22
                                         width: addedText.implicitWidth + 12
                                         radius: 4
-                                        color: "#1e3a2f"
-                                        Text { id: addedText; anchors.centerIn: parent; text: "+ " + modelData; font.pixelSize: 11; color: "#a6e3a1" }
+                                        color: root.colors.successFill
+                                        Text { font.family: root.fontFamily; id: addedText; anchors.centerIn: parent; text: "+ " + modelData; font.pixelSize: 11; color: root.colors.success }
                                     }
                                 }
                             }
@@ -737,10 +804,10 @@ Rectangle {
                             spacing: 4
                             visible: !!root.deltaResult && (root.deltaFieldSuppressed("removed_services") || !!root.deltaResult.removed_services && root.deltaResult.removed_services.length > 0)
 
-                            Text {
+                            Text { font.family: root.fontFamily;
                                 text: root.deltaFieldSuppressed("removed_services") ? "Removed Services: not compared" : "Removed Services:"
                                 font.pixelSize: 11
-                                color: root.deltaFieldSuppressed("removed_services") ? "#f9e2af" : "#f38ba8"
+                                color: root.deltaFieldSuppressed("removed_services") ? root.colors.warning : root.colors.error
                                 font.bold: true
                             }
 
@@ -753,8 +820,8 @@ Rectangle {
                                         height: 22
                                         width: removedText.implicitWidth + 12
                                         radius: 4
-                                        color: "#3e1f29"
-                                        Text { id: removedText; anchors.centerIn: parent; text: "- " + modelData; font.pixelSize: 11; color: "#f38ba8" }
+                                        color: root.colors.errorFill
+                                        Text { font.family: root.fontFamily; id: removedText; anchors.centerIn: parent; text: "- " + modelData; font.pixelSize: 11; color: root.colors.error }
                                     }
                                 }
                             }
@@ -763,5 +830,14 @@ Rectangle {
                 }
             }
         }
+    }
+
+    TextEdit {
+        id: copyBuffer
+        objectName: "rawJsonCopy"
+        visible: false
+        readOnly: true
+        textFormat: TextEdit.PlainText
+        text: root.rawJson
     }
 }

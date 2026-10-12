@@ -26,12 +26,27 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.20.0] - 2026-10-11
+
+Make installation and update recovery reliable, preserve accessible prose and
+partial-comparison limits, and replace the Omarchy bar widget with an on-demand
+native desktop panel.
+
+### Changed
+
+- Replace the Omarchy bar widget with plugin 2.0.0, an on-demand native-themed
+  panel with canonical inline settings, explicit baseline recording, Copy JSON
+  and terminal handoff. Installation verifies enablement without restarting the
+  shell; legacy bar placements require an explicit settings export and migration.
+
 ### Fixed
 
 - Keep GitHub Release creation and asset uploads under the human maintainer;
   verify the original run's complete sealed artifacts, authorship, provenance
   and PyPI parity in a read-only final job with an explicit recovery handoff.
 
+- Bound Omarchy setup IPC and verify asynchronous registry removal; accept
+  canonical lookup JSON so successful CLI reports render in the panel.
 - Verify PATH launchers through their lexical entry so symlink shims dispatch
   correctly, and stop home-directory ancestry from hiding user-level installs.
 - Announce installer ownership checks and retry a busy uv tool lock once;
@@ -46,6 +61,13 @@ operator, corporate group, ownership, or control.
 - Show incomplete Omarchy baseline comparisons with an amber partial badge,
   degraded sources and fields not compared, while retaining comparable changes
   and marking suppressed service lists explicitly.
+
+### Tool Surface Changes
+
+- Tool surface changes: no CLI command or flag changes.
+- No lookup schema fields or MCP tool signatures changed. The independently
+  versioned Omarchy plugin 2.0.0 replaces the bar-widget integration with an
+  on-demand panel and explicit settings, baseline, clipboard and terminal actions.
 
 ## [2.19.15] - 2026-10-09
 

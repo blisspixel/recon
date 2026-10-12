@@ -160,20 +160,30 @@ recon performs public metadata reconnaissance without privileged network access:
 
 ## Omarchy Quickshell Desktop Plugin
 
-recon ships an asynchronous desktop plugin for Omarchy located in
-[`integrations/omarchy/`](../integrations/omarchy/):
+recon ships an on-demand, panel-only plugin in
+[`integrations/omarchy/`](../integrations/omarchy/). It follows Omarchy's native
+palette and font, defaults to no bar slot, and runs the existing CLI through
+structured argument arrays. Opening, pasting, copying JSON and changing
+settings do not query. Enter or Inspect explicitly starts a bounded lookup;
+missing baselines offer an explicit Record baseline action.
 
-- **Keyboard-driven workflow**: Enter an apex domain, press `Enter` to run
-  bounded inspection, and press `Ctrl+D` to toggle baseline delta comparison.
-- **Direct process invocation**: Passes structured argument arrays directly
-  (`["recon", domain, "--json"]`) without shell interpolation.
-- **Safe clipboard handling**: Pasting text never triggers an automatic network request.
-- **Bounded execution**: Enforces a 30-second timeout guard.
-- **Independent installation and removal**:
-  ```bash
-  cd integrations/omarchy
-  ./install.sh     # Installs to ~/.config/omarchy/plugins/org.recon.omarchy/
-  ./uninstall.sh   # Cleans up the plugin directory
-  ```
-- **Preview**: An offscreen rendered UI preview is available at
-  [`docs/assets/omarchy-recon-preview.png`](assets/omarchy-recon-preview.png).
+```bash
+cd integrations/omarchy
+bash install.sh
+omarchy-shell shell toggle org.recon.omarchy '{}'
+```
+
+The installer rescans and verifies enablement without restarting the shell.
+The Settings form owns the plugin's canonical inline host entry, preserving
+unknown keys and fresh changes to unedited fields. Its absolute lexical launcher
+path preserves tool-manager shims; timeout is an integer from 10 to 120 seconds,
+defaulting to 30. Invalid settings or failed reads disable dispatch.
+
+Plugin version 2.0.0 replaces the former bar-widget contract. Existing bar
+placements are refused before mutation because supported host IPC cannot move
+that entry while preserving settings and removing its placement. Disabling
+removes settings. Follow the [explicit export and migration
+instructions](../integrations/omarchy/README.md#legacy-bar-migration) first.
+The same guide covers optional Lua keybindings and native menu entries, Copy
+JSON, terminal handoff, uninstall and isolated Qt/Quickshell qualification.
+No background watcher or automatic user-desktop configuration is installed.
