@@ -35,9 +35,6 @@ _ALLOWED_ELEVATED_JOB_PERMISSIONS = {
         "publish-pypi": {
             "id-token": "write",
         },
-        "github-release": {
-            "contents": "write",
-        },
     },
     ".github/workflows/scorecard.yml": {
         "analysis": {
@@ -164,7 +161,9 @@ def test_release_workflow_exports_scorecard_recognized_provenance() -> None:
     assert ".intoto.jsonl" in export_text
     assert "gh attestation download" in export_text
     assert "export-attestations" in github_release["needs"]
-    assert "provenance/*" in release_text
+    assert github_release["permissions"] == _READ_ONLY_PERMISSIONS
+    assert "scripts/verify_github_release.py" in release_text
+    assert "--provenance-dir provenance" in release_text
 
 
 def test_codeql_workflow_covers_main_prs_pushes_and_schedule_with_least_privilege() -> None:

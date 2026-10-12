@@ -38,8 +38,8 @@ on:
 #     runs no project dependency code.
 #   * ``publish-pypi`` waits for the package smoke, provenance attestation, and
 #     SBOM paths. A separate read-only parity job then proves PyPI serves the
-#     sealed wheel and sdist bytes before ``github-release`` can publish or
-#     clobber the matching GitHub assets during partial-release recovery.
+#     sealed wheel and sdist bytes before human GitHub promotion. The final
+#     read-only job verifies those same assets on its original-run retry.
 #     These jobs never re-build, never re-install dev deps, and never execute
 #     project dependency code. A pre-publication trust failure blocks both
 #     channels. A parity failure after PyPI accepts immutable files blocks the
@@ -488,8 +488,8 @@ jobs:
     # PyPI upload is idempotent because a partial release may need recovery.
     # If PyPI already contains this version, skip-existing preserves those
     # immutable files while the current run has a newly sealed pair. Compare
-    # both SHA-256 digests before the write-capable GitHub Release job can
-    # create or clobber assets, preventing a split release across channels.
+    # both SHA-256 digests before the read-only final job can verify human
+    # GitHub promotion, preventing a split release across channels.
     needs: [build, publish-pypi]
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -527,19 +527,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
-      contents: write
+      contents: read
     steps:
       - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
         with:
           persist-credentials: false
-
-      - name: Extract changelog
-        id: changelog
-        run: |
-          VERSION="${GITHUB_REF_NAME#v}"
-          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          awk "/^## \[${VERSION}\]/{found=1; next} /^## \[/{if(found) exit} found{print}" CHANGELOG.md > release_notes.md
-          cat release_notes.md
 
       - name: Download build artifacts
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
@@ -559,40 +551,14 @@ jobs:
           name: provenance
           path: provenance/
 
-      - name: Create GitHub Release
-        # Native gh CLI rather than a third-party action: it authenticates
-        # through the job's GITHUB_TOKEN with no moving major-version tag to
-        # regress (a softprops/action-gh-release@v3 token-handling regression
-        # 401'd the v2.1.14 release after v2.1.13 succeeded on the same step).
-        # A re-run may replace assets only after the existing release's tag,
-        # title, publication state, and expected-only inventory pass a bounded
-        # local validator. Attaches wheels, sdist, and the CycloneDX SBOM, which
-        # consumers pull by stable name (recon-tool-<version>.cdx.json) for
-        # downstream supply-chain audits.
+      - name: Verify human GitHub Release
+        # Publishing belongs to the maintainer. The original job rerun has only
+        # read authority and verifies the original sealed artifacts unchanged.
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
-          version="${GITHUB_REF_NAME#v}"
-          read -r remote_tag_sha remote_tag_ref extra <<< "$(
-            git ls-remote --exit-code --refs origin "refs/tags/$GITHUB_REF_NAME"
-          )"
-          if [ -n "${extra:-}" ] || \
-             [ "$remote_tag_ref" != "refs/tags/$GITHUB_REF_NAME" ] || \
-             [ "$remote_tag_sha" != "$GITHUB_SHA" ]; then
-            echo "Remote release tag does not resolve exactly to GITHUB_SHA; refusing publication." >&2
-            exit 1
-          fi
-          if release_json="$(gh release view "$GITHUB_REF_NAME" \
-            --json tagName,name,isDraft,isPrerelease,isImmutable,assets)"; then
-            printf '%s\n' "$release_json" | \
-              python3 scripts/check_release_recovery.py --version "$version"
-            gh release upload "$GITHUB_REF_NAME" dist/* sbom/* provenance/* --clobber
-          else
-            echo "No readable existing GitHub Release was found; attempting a new fail-closed release." >&2
-            gh release create "$GITHUB_REF_NAME" \
-              --verify-tag \
-              --title "v${version}" \
-              --notes-file release_notes.md \
-              dist/* sbom/* provenance/*
-          fi
+          python3 scripts/verify_github_release.py \
+            --version "${GITHUB_REF_NAME#v}" \
+            --source-sha "$GITHUB_SHA" \
+            --dist-dir dist --sbom-dir sbom --provenance-dir provenance

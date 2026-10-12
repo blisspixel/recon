@@ -9,6 +9,7 @@ from pathlib import Path
 import pytest
 
 from scripts import check_validation_hygiene, release_readiness
+from tests.test_release_recovery import release_payload
 
 _RELEASE_SHA = "a" * 40
 _ROOT = Path(__file__).resolve().parents[1]
@@ -873,71 +874,55 @@ def test_pypi_attestations_reject_unsafe_url_before_verifier_execution(tmp_path:
 
 def test_github_release_passes_when_assets_are_complete(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path, version="2.2.17")
-    assets = [
-        {"name": "recon-tool-2.2.17.cdx.json"},
-        {"name": "recon-tool-2.2.17.intoto.jsonl"},
-        {"name": "recon_tool-2.2.17-py3-none-any.whl"},
-        {"name": "recon_tool-2.2.17.tar.gz"},
-    ]
-
-    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        if cmd == ["git", "remote", "get-url", "origin"]:
-            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
-        if cmd[:3] == ["gh", "release", "view"]:
-            return _cp(
-                cmd,
-                stdout=json.dumps({"tagName": "v2.2.17", "isDraft": False, "isPrerelease": False, "assets": assets}),
-            )
-        raise AssertionError(f"unexpected command: {cmd}")
-
-    check = release_readiness._check_github_release(tmp_path, runner)
-
+    check = release_readiness._check_github_release(tmp_path, _metadata_runner(release_payload("2.2.17")))
     assert check.status == "pass"
     assert "v2.2.17" in check.detail
 
 
-def test_github_release_requires_all_release_assets(tmp_path: Path) -> None:
-    _write_minimal_root(tmp_path, version="2.2.17")
-
+def _metadata_runner(payload: dict[str, object]) -> release_readiness.Runner:
     def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
         if cmd == ["git", "remote", "get-url", "origin"]:
             return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
-        if cmd[:3] == ["gh", "release", "view"]:
-            return _cp(
-                cmd,
-                stdout=json.dumps({"tagName": "v2.2.17", "isDraft": False, "isPrerelease": False, "assets": []}),
-            )
+        if cmd == ["gh", "api", "--hostname", "github.com", "repos/blisspixel/recon/releases/tags/v2.2.17"]:
+            return _cp(cmd, stdout=json.dumps(payload))
         raise AssertionError(f"unexpected command: {cmd}")
 
-    check = release_readiness._check_github_release(tmp_path, runner)
+    return runner
 
+
+def test_github_release_requires_all_release_assets(tmp_path: Path) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    payload = release_payload("2.2.17")
+    payload["assets"] = []
+    check = release_readiness._check_github_release(tmp_path, _metadata_runner(payload))
     assert check.status == "fail"
     assert "recon-tool-2.2.17.cdx.json" in check.detail
     assert "recon_tool-2.2.17.tar.gz" in check.detail
 
 
+@pytest.mark.parametrize("identity", ["author", "uploader"])
+def test_github_release_rejects_nonhuman_attribution(tmp_path: Path, identity: str) -> None:
+    _write_minimal_root(tmp_path, version="2.2.17")
+    payload = release_payload("2.2.17")
+    bot = {"login": "github-actions[bot]", "type": "Bot"}
+    if identity == "author":
+        payload["author"] = bot
+    else:
+        assets = payload["assets"]
+        assert isinstance(assets, list)
+        assets[0]["uploader"] = bot
+    check = release_readiness._check_github_release(tmp_path, _metadata_runner(payload))
+    assert check.status == "fail"
+    assert "must be the human blisspixel" in check.detail
+
+
 def test_github_release_rejects_unexpected_release_asset(tmp_path: Path) -> None:
     _write_minimal_root(tmp_path, version="2.2.17")
-    assets = [
-        {"name": "recon-tool-2.2.17.cdx.json"},
-        {"name": "recon-tool-2.2.17.intoto.jsonl"},
-        {"name": "recon_tool-2.2.17-py3-none-any.whl"},
-        {"name": "recon_tool-2.2.17.tar.gz"},
-        {"name": "unreviewed.txt"},
-    ]
-
-    def runner(cmd: list[str]) -> subprocess.CompletedProcess[str]:
-        if cmd == ["git", "remote", "get-url", "origin"]:
-            return _cp(cmd, stdout="https://github.com/blisspixel/recon.git\n")
-        if cmd[:3] == ["gh", "release", "view"]:
-            return _cp(
-                cmd,
-                stdout=json.dumps({"tagName": "v2.2.17", "isDraft": False, "isPrerelease": False, "assets": assets}),
-            )
-        raise AssertionError(f"unexpected command: {cmd}")
-
-    check = release_readiness._check_github_release(tmp_path, runner)
-
+    payload = release_payload("2.2.17")
+    assets = payload["assets"]
+    assert isinstance(assets, list)
+    assets.append({**assets[0], "id": 99, "name": "unreviewed.txt"})
+    check = release_readiness._check_github_release(tmp_path, _metadata_runner(payload))
     assert check.status == "fail"
     assert "unexpected asset(s): unreviewed.txt" in check.detail
 
