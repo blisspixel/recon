@@ -26,11 +26,19 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+## [2.20.1] - 2026-10-11
+
+Keep valid home-managed updates available and preserve installed launcher dispatch.
+
 ### Fixed
 
 - Keep home-managed uv and pipx updates available from home, nested and
   unrelated directories; preserve symlink shim dispatch for ownership queries
   and upgrade commands while retaining project-launcher refusal.
+
+### Tool Surface Changes
+
+- Tool surface changes: no CLI command or flag changes.
 
 ## [2.20.0] - 2026-10-11
 
