@@ -8,8 +8,9 @@ before an atomic push.
 
 The GitHub Actions release pipeline (`.github/workflows/release.yml`) takes
 over after the tag is pushed: seal the sdist and wheel, publish to PyPI via
-OIDC, prove channel byte parity, then create the GitHub release with changelog
-notes.
+OIDC, prove channel byte parity, then verify the human-created GitHub release
+and its sealed assets with read-only access. The maintainer creates and
+publishes that release from the original run's verified artifact packet.
 
 Usage:
     python scripts/release.py [--dry-run]
