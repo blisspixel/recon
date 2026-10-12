@@ -172,11 +172,10 @@ def _target_in_ancestors(target: Path, current_directory: Path) -> bool:
         resolved_t = target.resolve()
     except OSError:
         return True
-    if resolved_t.is_relative_to(current_directory) or _is_relative_lexical(target, current_directory):
-        return True
-    for ancestor in current_directory.parents:
-        if ancestor == ancestor.parent or ancestor == Path.home():
-            continue
+    home = Path.home().resolve()
+    for ancestor in (current_directory, *current_directory.parents):
+        if ancestor == ancestor.parent or home.is_relative_to(ancestor):
+            break
         if resolved_t.is_relative_to(ancestor) or _is_relative_lexical(target, ancestor):
             return True
     return False
@@ -202,7 +201,7 @@ def _launcher_is_in_workspace(target: Path, *, lexical: Path | None = None) -> b
 
 
 def _resolve_launcher(name: str) -> str | None:
-    """Absolute path to a launcher outside the current workspace tree."""
+    """Vetted absolute lexical launcher outside the current workspace tree."""
     found = shutil.which(name)
     if found is None:
         return None
@@ -216,7 +215,7 @@ def _resolve_launcher(name: str) -> str | None:
 
     if _launcher_is_in_workspace(resolved, lexical=lexical):
         return None
-    return str(resolved)
+    return str(lexical)
 
 
 def _pip_command() -> list[str]:

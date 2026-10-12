@@ -64,6 +64,11 @@ from version-pinned installs, release status in `recon doctor`, and clear pip
 instructions. Normal lookup output stays quiet. Acceptance requires fresh
 install and upgrade tests, PATH and failure handling, and release parity.
 
+The 2026-10-11 updater follow-up is implemented for the next maintenance batch:
+home-managed uv and pipx launchers retain their lexical dispatch and local
+destination checks. Regression coverage includes home and unrelated working
+directories plus project, Git, symlink and relative-path refusal boundaries.
+
 `main` is the single integration and release branch. Short-lived implementation
 and release-preparation branches merge through required checks and are deleted
 after merge. GitHub Release and PyPI must agree before publication is complete. The final

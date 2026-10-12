@@ -1,6 +1,6 @@
 # Launcher and installer contract
 
-This maintenance design covers first-run installation and doctor diagnostics.
+This maintenance design covers first-run installation, updates and doctor diagnostics.
 The installer continues to install its exact recorded release from PyPI and
 preserve the sole owning tool manager. It does not replace an unmanaged copy
 or choose a second manager when ownership cannot be established.
@@ -15,6 +15,14 @@ entry users actually invoke. Relative PATH entries and launchers inside a
 project remain unexecuted. The fallback project-ancestor search stops before
 the home directory or its parents; a home directory is not itself a project.
 An explicit Git worktree still defines its own containment boundary.
+
+The updater uses the same home-directory boundary when checking a manager on
+PATH. It checks both the lexical entry and its resolved target for project
+containment, then preserves the absolute lexical entry for the local ownership
+query and the upgrade command. A symlink shim can dispatch by its invoked name;
+running its resolved implementation directly can select a different command.
+An accepted launcher still needs a valid installation receipt and must report
+the root containing the current environment before an upgrade is offered.
 
 ## Installer admission
 
@@ -35,7 +43,9 @@ advisory a failed connectivity check or changing package metadata.
 
 ## Validation
 
-Controlled executable shims verify real lexical dispatch and project refusal.
+Controlled executable shims verify real lexical dispatch and project refusal,
+including updater ownership queries from home, nested and unrelated directories.
+These queries perform no package installation or upgrade.
 Installer tests use fake managers and interpreters to exercise lock recovery,
 unknown ownership, stable interpreter selection, existing-owner admission and
 PATH shadowing without installing software or changing user configuration.
