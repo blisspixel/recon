@@ -388,8 +388,23 @@ and asset REST endpoints; the by-tag endpoint is for published releases.
 It requires that response ID to match and requires a complete human-owned
 draft and all the same byte,
 provenance and parity checks; it does not establish published status. After it
-passes, publish that same draft with the maintainer session using
-`gh release edit vX.Y.Z --repo blisspixel/recon --verify-tag --draft=false`.
+passes, re-read the draft through its numeric REST endpoint. Require the same
+positive release ID, exact tag and title, human author and asset uploaders,
+draft state and complete verified inventory. Recheck the existing remote tag
+against the original workflow SHA; stop if the draft or tag changed.
+
+Promote that same numeric object with the maintainer session, replacing the
+placeholders only with the verified draft ID and stable version:
+
+```bash
+gh api --method PATCH "repos/blisspixel/recon/releases/<draft-numeric-id>" \
+  -f tag_name=vX.Y.Z -F draft=false -F prerelease=false -f make_latest=true
+```
+
+The REST update explicitly supplies the checked tag, published stable state
+and latest-release designation; it does not substitute for the preceding
+identity, inventory and remote-tag verification. Re-read the published object
+and require the same release ID before rerunning the final verifier.
 Rerun only the original failed `github-release` job. Its default verification
 requires published status and read-only credentials; it cannot create a new
 release or upload assets on a retry. Never delete and recreate a mismatched
