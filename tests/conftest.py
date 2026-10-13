@@ -4,6 +4,11 @@ Auto-patches the cert intel HTTP calls in all non-integration tests to avoid
 real network calls and timeouts per test. Also resets the global Rich Console
 between tests so CliRunner-based tests get a fresh stdout binding rather than
 inheriting a stale one from earlier tests that called set_console().
+
+An autouse fixture removes inherited color and terminal-size variables so
+panel and CLI assertions do not depend on the parent shell. Tests that need
+a specific value set it themselves. This does not change how recon colors
+output when a user sets FORCE_COLOR.
 """
 
 from __future__ import annotations
@@ -45,6 +50,27 @@ settings.register_profile(
     max_examples=500,
 )
 settings.load_profile("ci-fuzz" if os.environ.get("RECON_FUZZ") else "recon")
+
+# Rich treats any non-empty FORCE_COLOR as a forced terminal, which changes
+# panel width and injects ANSI into CliRunner output. Clear the variables
+# the suite must not inherit. Tests that exercise them set them explicitly.
+_ISOLATED_TERMINAL_ENV = (
+    "FORCE_COLOR",
+    "NO_COLOR",
+    "CLICOLOR_FORCE",
+    "COLUMNS",
+    "LINES",
+    "TERM",
+    "TTY_COMPATIBLE",
+    "TTY_INTERACTIVE",
+)
+
+
+@pytest.fixture(autouse=True)
+def _isolate_terminal_env(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Drop inherited color and terminal-size variables before each test."""
+    for name in _ISOLATED_TERMINAL_ENV:
+        monkeypatch.delenv(name, raising=False)
 
 
 @pytest.fixture
