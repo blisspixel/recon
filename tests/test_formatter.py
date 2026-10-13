@@ -8,6 +8,7 @@ from __future__ import annotations
 import dataclasses
 import io
 import json
+import os
 
 import pytest
 from hypothesis import HealthCheck, given, settings
@@ -297,6 +298,20 @@ class TestColorSuppressionContract:
     the Windows env-var gotcha flagged in the 2026 CLI best-practices review, so
     it is pinned explicitly here rather than assumed.
     """
+
+    def test_inherited_color_env_is_not_visible(self) -> None:
+        """Parent FORCE_COLOR / NO_COLOR must not leak into the suite."""
+        assert os.environ.get("FORCE_COLOR") is None
+        assert os.environ.get("NO_COLOR") is None
+        assert os.environ.get("CLICOLOR_FORCE") is None
+
+    def test_explicit_force_color_still_forces_a_terminal(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        """A test, like a user, can still opt into color by setting FORCE_COLOR."""
+        monkeypatch.setenv("FORCE_COLOR", "1")
+        monkeypatch.delenv("NO_COLOR", raising=False)
+        console = Console()
+        assert console.is_terminal is True
+        assert console.no_color is False
 
     def test_no_color_flag_disables(self) -> None:
         from recon_tool.formatter import _make_console, set_color_override
