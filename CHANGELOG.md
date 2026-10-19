@@ -58,6 +58,16 @@ operator, corporate group, ownership, or control.
 
 ### Changed
 
+- Python 3.15 is supported and is the default toolchain. CI tests 3.11
+  through 3.15 on Linux, macOS and Windows plus a non-blocking free-threaded
+  3.15t probe; single-version and release jobs run on 3.15; the draft container
+  uses `python:3.15.0-slim-trixie` pinned by digest. Install helpers prefer
+  Python 3.15, and `recon doctor` treats 3.11 through 3.15 as the tested range
+  (#225).
+- CI moves to Node 24 LTS and current action releases (checkout v7,
+  setup-python v7, setup-node v7, setup-uv v10, codeql-action v4.39.0,
+  scorecard-action v2.5.0). Locked dependencies were refreshed to releases with
+  3.15 wheels, and pip-api 0.0.35 restores pip-audit on 3.15 (#225).
 - `recon mcp doctor` labels its isolated empty-directory check and adds a
   generated-launch check that runs the installer's exact command, arguments,
   and environment from the current directory or `--launch-cwd`, naming the

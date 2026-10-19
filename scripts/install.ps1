@@ -83,7 +83,7 @@ function Test-PackageInstalled($ListCmd) {
 
 function Install-Exact-Uv {
     Write-Host "==> Installing $Spec with uv ..." -ForegroundColor Green
-    if ((Invoke-Tool uv tool install --force $Spec --python 3.14) -ne 0) {
+    if ((Invoke-Tool uv tool install --force $Spec --python 3.15) -ne 0) {
         Write-Host "Error: uv could not install $Spec." -ForegroundColor Red
         exit 1
     }
@@ -94,7 +94,7 @@ function Get-SupportedPython([string[]]$Command) {
     $ErrorActionPreference = "Continue"
     try {
         # Single-quoted Python literals survive legacy native argument forwarding.
-        $probe = 'import sys; sys.exit(1) if not ((3, 11) <= sys.version_info[:2] <= (3, 14) and sys.version_info.releaselevel == ''final'') else None; print(sys.executable); print(sys.version.split()[0])'
+        $probe = 'import sys; sys.exit(1) if not ((3, 11) <= sys.version_info[:2] <= (3, 15) and sys.version_info.releaselevel == ''final'') else None; print(sys.executable); print(sys.version.split()[0])'
         $output = @(& $Command[0] @($Command | Select-Object -Skip 1) -c $probe 2>$null)
         if ($LASTEXITCODE -eq 0 -and $output.Count -eq 2) { return $output }
     }
@@ -113,9 +113,9 @@ function Find-PipxPython {
                 if ($identity) { return $identity }
             }
         }
-        throw "The existing pipx environment needs a stable Python 3.11 through 3.14. Use 'pipx reinstall $Package --python <supported-python>', then rerun this helper."
+        throw "The existing pipx environment needs a stable Python 3.11 through 3.15. Use 'pipx reinstall $Package --python <supported-python>', then rerun this helper."
     }
-    foreach ($minor in 14, 13, 12, 11) {
+    foreach ($minor in 15, 14, 13, 12, 11) {
         foreach ($candidate in @(@("py", "-3.$minor"), @("python3.$minor"))) {
             if (Test-Have $candidate[0]) {
                 $identity = Get-SupportedPython $candidate
@@ -129,7 +129,7 @@ function Find-PipxPython {
             if ($identity) { return $identity }
         }
     }
-    throw "pipx needs an available stable Python 3.11 through 3.14. Install a supported Python, or install uv and rerun this helper."
+    throw "pipx needs an available stable Python 3.11 through 3.15. Install a supported Python, or install uv and rerun this helper."
 }
 
 function Install-Exact-Pipx {

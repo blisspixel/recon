@@ -22,8 +22,8 @@ not a production-readiness claim.
 - Browser requests rejected unless their exact Origin is allowed
 - Uvicorn access log disabled so bearer credentials are not copied into it
 
-The image uses a digest-pinned Python 3.11.15 base and digest-pinned uv 0.11.17
-binary. Dependencies are installed from the checked-in `uv.lock`. Build a new
+The image uses a digest-pinned Python 3.15.0 base on Debian trixie and a
+digest-pinned uv 0.11.17 binary. Dependencies are installed from the checked-in `uv.lock`. Build a new
 image for each recon revision and deploy its immutable digest.
 
 ## Local container smoke test

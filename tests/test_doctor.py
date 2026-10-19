@@ -164,7 +164,7 @@ class TestDoctorCommandHappyPath:
 
     @pytest.mark.parametrize(
         ("minor", "releaselevel", "warning"),
-        [(11, "final", False), (14, "final", False), (15, "final", True), (14, "candidate", True)],
+        [(11, "final", False), (15, "final", False), (16, "final", True), (15, "candidate", True)],
     )
     def test_interpreter_support_advisory(
         self, minor: int, releaselevel: str, warning: bool, patched_doctor_environment
@@ -178,7 +178,7 @@ class TestDoctorCommandHappyPath:
 
         with patch("recon_tool.cli.doctor.sys.version_info", Version(3, minor, 1, releaselevel, 0)):
             result = runner.invoke(app, ["doctor"])
-        assert ("outside the tested stable range (3.11 through 3.14)" in result.output) is warning
+        assert ("outside the tested stable range (3.11 through 3.15)" in result.output) is warning
         assert result.exit_code == 0
         assert "All checks passed." in result.output
 

@@ -42,7 +42,7 @@ pre-commit install --hook-type commit-msg
 
 ## Working in this repository
 
-recon is a Python 3.11-3.14 CLI and local stdio MCP server for public-metadata domain intelligence. The resolver and detection engine are feature-complete. Default work is catalog quality, claim and renderer truth, and contract-preserving fixes. Do not add collectors, scores, or inference machinery without a named operator handoff the existing surfaces cannot solve. A domain is a query coordinate, not an organization. Output is hedged observation, not a verdict.
+recon is a Python 3.11-3.15 CLI and local stdio MCP server for public-metadata domain intelligence. The resolver and detection engine are feature-complete. Default work is catalog quality, claim and renderer truth, and contract-preserving fixes. Do not add collectors, scores, or inference machinery without a named operator handoff the existing surfaces cannot solve. A domain is a query coordinate, not an organization. Output is hedged observation, not a verdict.
 
 **Orient and bound.** Read the README, roadmap, relevant ADRs, recent changes, and touched source/tests before choosing work. Resolve stale prose against source, configuration, lockfiles, and Git history. Record a bounded objective and acceptance evidence for work spanning sessions. Use current primary documentation for version-sensitive decisions; preserve the established stack and pinned tooling unless a demonstrated need justifies changing them.
 

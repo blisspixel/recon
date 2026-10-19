@@ -178,8 +178,8 @@ def test_codeql_workflow_covers_main_prs_pushes_and_schedule_with_least_privileg
     assert triggers["push"] == {"branches": ["main"]}
     assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
     assert job["permissions"] == _ALLOWED_ELEVATED_JOB_PERMISSIONS[".github/workflows/codeql.yml"]["analyze"]
-    assert "github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2" in step_text
-    assert "github/codeql-action/analyze@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2" in step_text
+    assert "github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee" in step_text
+    assert "github/codeql-action/analyze@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee" in step_text
 
 
 def test_provider_drift_workflow_runs_scheduled_live_integration_smoke() -> None:
@@ -191,7 +191,7 @@ def test_provider_drift_workflow_runs_scheduled_live_integration_smoke() -> None
     assert set(triggers) == {"schedule", "workflow_dispatch"}
     assert workflow["permissions"] == _READ_ONLY_PERMISSIONS
     assert job["timeout-minutes"] == 20
-    assert job["env"] == {"UV_PYTHON": "3.11"}
+    assert job["env"] == {"UV_PYTHON": "3.15"}
     assert commands.count("uv run pytest") == 1
     assert "uv run pytest tests/test_integration.py -m integration -q" in commands
 
@@ -226,10 +226,10 @@ def test_workflow_actions_are_pinned_with_readable_version_comments() -> None:
         path.read_text(encoding="utf-8") for path in sorted((_ROOT / ".github" / "workflows").glob("*.yml"))
     )
 
-    assert "uses: github/codeql-action/init@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4" in workflow_text
-    assert "uses: github/codeql-action/upload-sarif@2892aa5e19bbd11bc0cff5427e3b750a04d9e3c2 # v4" in workflow_text
+    assert "uses: github/codeql-action/init@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0" in workflow_text
+    assert "uses: github/codeql-action/upload-sarif@6f2ac81f5cd81fe351a197ba0b00d91d03cd2aee # v4.39.0" in workflow_text
     assert "github/codeql-action/upload-sarif@dd903d2e4f5405488e5ef1422510ee31c8b32357" not in workflow_text
-    assert "uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6" in workflow_text
+    assert "uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1" in workflow_text
     for line in workflow_text.splitlines():
         stripped = line.strip()
         if stripped.startswith("uses: ") and not stripped.startswith("uses: ./"):
@@ -410,7 +410,7 @@ def test_supply_chain_docs_provide_consumer_verification_recipe() -> None:
         "Consumer verification quick path",
         "macOS or Linux",
         "Windows PowerShell",
-        "Python 3.11 through 3.14",
+        "Python 3.11 through 3.15",
         "set -euo pipefail",
         "Set-StrictMode -Version Latest",
         "git status --porcelain",

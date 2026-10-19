@@ -309,7 +309,7 @@ debt rather than a scheduled v3 requirement. The explicit `--fusion` and
 The stable Python surface is the range advertised in `pyproject.toml` and
 tested in CI.
 
-- **Currently tested:** Python 3.11, 3.12, 3.13, and 3.14.
+- **Currently tested:** Python 3.11, 3.12, 3.13, 3.14, and 3.15.
 - **Adding a Python version:** update CI, classifiers, and this section in the
   same change.
 - **Dropping a Python version:** treat as a compatibility change, document it
