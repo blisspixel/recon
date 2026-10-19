@@ -306,6 +306,21 @@ defense-in-depth (catches misconfigured callers who bypass the
 persisted launcher), but it is no longer the sole protection on
 Python 3.10.
 
+**Guard narrowed to import origin (issue 220).** The guard originally
+refused whenever the loaded package sat anywhere below the working
+directory. Every per-user installation lives below the home directory
+and a filesystem root is an ancestor of every path, so the generated
+launcher was refused from `$HOME` and `/`. The guard in
+`recon_tool/server/launch_guard.py` now refuses only when the package
+was imported through the working directory: its import root is the
+working directory itself, or a relative `sys.path` entry resolves to
+it. It compares directories by file identity, so symlinked and
+case-variant spellings still match. An import root that is one of the
+running interpreter's own installation roots, or a working directory
+whose `pyproject.toml` names `recon-tool`, remains allowed.
+`recon mcp doctor` now also runs the generated launch from the
+operator's chosen directory.
+
 **Receipts (v1.9.9 code state).**
 
 ```python

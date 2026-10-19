@@ -14,9 +14,12 @@ Pins the three defense layers that close the audit finding "MCP doctor
 
   3. ``recon_tool.server._detect_cwd_shadow_install`` is the runtime
      guard. Regardless of how the server was launched, it checks
-     whether the loaded package path is under cwd and whether cwd
-     looks like the legitimate source repo. A shadow workspace
-     triggers a refusal-to-start error.
+     whether the loaded package was imported through cwd (cwd itself
+     or a relative sys.path entry) and whether cwd looks like the
+     legitimate source repo. A shadow workspace triggers a
+     refusal-to-start error. Benign ancestor directories such as
+     $HOME and a filesystem root are covered in
+     ``tests/test_mcp_launch_cwd.py``.
 
 The shadow-workspace integration test is the load-bearing one: it
 actually spawns ``python -m recon_tool.server`` from a tempdir

@@ -44,8 +44,14 @@ client-specific server stanza:
 
 For persisted client configuration, prefer the installer-generated,
 interpreter-bound launcher over copying the `uvx` command. It binds the client
-to the recon installation you just verified and removes the working directory
-from Python's import path before loading recon.
+to the recon installation you just verified, sets `PYTHONSAFEPATH=1`, and drops
+the empty and `.` entries that stand for the working directory from `sys.path`
+before importing recon, so a `recon_tool` folder in the client's working
+directory is not imported. It starts from any working directory, including your
+home directory and a filesystem root. It does not remove import-path entries
+that the client environment adds itself, such as `PYTHONPATH=.`. If one of those
+makes Python import `recon_tool` through the working directory, the server
+refuses to start, exits with status 2, and explains why on stderr.
 
 2. Wire the MCP server into your client. Two ways:
 
@@ -78,9 +84,11 @@ from Python's import path before loading recon.
    The preview includes the client-specific top-level key, including `servers`
    for VS Code and `mcpServers` for other supported clients. Merge that stanza
    without replacing sibling servers. The generated launcher avoids PATH
-   ambiguity and strips the workspace from the import path. Do not replace it
-   with a bare `recon` command or hand-write `python -m recon_tool.server` in an
-   untrusted working directory.
+   ambiguity and drops the working-directory entries Python itself adds to the
+   import path, as described above. Do not replace it with a bare `recon`
+   command or hand-write `python -m recon_tool.server` in an untrusted working
+   directory. To check this launch from the directory your client starts in,
+   run `recon mcp doctor --launch-cwd "<client-working-directory>"`.
 
 3. Ask your AI tool something like: "Run a recon lookup on
 gamma.invalid and summarize the observed public configuration, naming
@@ -574,10 +582,19 @@ installed server; the third validates that the named client was told about it.
    `recon mcp install --client=<name>` for an actual client because the
    installer safely merges the recon block without replacing sibling servers
    or client-specific fields.
-2. **`recon mcp doctor`**: live local stdio diagnostic. Spawns the recon MCP
-   server through the running interpreter, opens a real `stdio_client` plus
-   `ClientSession`, and runs the discovery flow supported by the installed
-   Python MCP SDK. It requires the anchor tools (`lookup_tenant`,
+2. **`recon mcp doctor`**: live local stdio diagnostic. It runs two labeled
+   launches and prints the command, arguments, added environment entries, and
+   working directory each one used. The isolated install check starts
+   `python -m recon_tool.server` through the running interpreter in a new empty
+   temporary directory; it verifies the installation, not a client launch. The
+   generated client launch check starts the exact command, arguments, and
+   environment entries that `recon mcp install` writes, from the current
+   directory or from `--launch-cwd "<dir>"`. Pass the directory your MCP client
+   starts in, such as your home directory, to check that launch. A pass covers
+   only the directory shown; a client that starts elsewhere, or that passes a
+   different environment, can still differ. For each launch the doctor opens a
+   real `stdio_client` plus `ClientSession` and runs the discovery flow
+   supported by the installed Python MCP SDK. It requires the anchor tools (`lookup_tenant`,
    `analyze_posture`, `assess_exposure`, `find_hardening_gaps`,
    `chain_lookup`), lists all six canonical local resources, and reads each
    one. Every read must return one matching `application/json` text item whose
@@ -590,7 +607,7 @@ installed server; the third validates that the named client was told about it.
    listing, and reads. A failure retains completed check rows and names the
    failed protocol phase. Spawned-server stderr is limited to its trailing
    twelve lines, and resource payload text is never copied into failure detail.
-   The whole run has a 30-second timeout. This command does not inspect any
+   Each launch has a 30-second timeout. This command does not inspect any
    client configuration.
 3. **`recon doctor --client=<name>`**: reads the config file the named client
    actually loads (`claude-code`, `claude-desktop`, `cursor`, `vscode`,

@@ -1275,7 +1275,19 @@
       },
       {
         "kind": "command",
-        "parameters": [],
+        "parameters": [
+          {
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "launch_cwd",
+            "required": false,
+            "tokens": [
+              "--launch-cwd"
+            ],
+            "type": "text"
+          }
+        ],
         "path": [
           "mcp",
           "doctor"

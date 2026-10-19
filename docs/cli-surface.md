@@ -372,7 +372,9 @@ Summary: Resolve a local corpus through live lookups and report fingerprint matc
 Kind: command
 Summary: Check local MCP startup, discovery, tools, and JSON resources.
 
-No parameters.
+| Name | Kind | Tokens | Required | Type | Default | Choices |
+|---|---|---|---|---|---|---|
+| `launch_cwd` | option | `--launch-cwd` | no | text |  |  |
 
 <a id="recon-mcp-install"></a>
 ## `recon mcp install`
