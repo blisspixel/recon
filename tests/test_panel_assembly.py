@@ -38,7 +38,11 @@ def test_header_uses_the_queried_namespace_not_a_tenant_default_domain() -> None
     rendered = _render(info)
     structured = format_tenant_dict(info)
 
-    assert rendered.splitlines()[:2] == [structured["display_name"], structured["queried_domain"]]
+    assert rendered.splitlines()[:3] == [
+        f"{structured['display_name']} (unverified)",
+        structured["queried_domain"],
+        "Reserved name: results are public residue, not an organization.",
+    ]
     assert f"Tenant domain {structured['default_domain']}" in " ".join(rendered.split())
 
 

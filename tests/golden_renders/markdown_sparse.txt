@@ -1,5 +1,7 @@
 # Tenant Report: gamma\.invalid
 
+**Reserved name: results are public residue, not an organization.**
+
 **Provider:** Microsoft 365 \(no supporting record\)\
 **Display name (unverified):** Synthetic Gamma\
 **Confidence:** low (1 source)\

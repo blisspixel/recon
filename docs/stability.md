@@ -147,7 +147,7 @@ The full top-level JSON contract is in [`schema.md`](schema.md) and the
 machine-readable schema is [`recon-schema.json`](recon-schema.json). Summary of
 stability tags:
 
-- **59 top-level properties, 48 required on single-domain success output**,
+- **61 top-level properties, 48 required on single-domain success output**,
   covering identity, provider, sources, services, domains, email security, CT
   metadata, sovereignty, and nested `cert_summary` / `bimi_identity` objects.
 - **Bayesian fusion fields** (`slug_confidences`,
@@ -165,6 +165,10 @@ stability tags:
 - **`dns_name_status`** (conditional, additive): present only as `"nxdomain"`
   when the resolver returned NXDOMAIN for the queried name; absent otherwise.
   See [`schema.md`](schema.md).
+- **`display_name_verified`** (additive, optional): always `false`; recon
+  never verifies the provider-reported display name.
+- **`reserved_name`** (conditional, additive): present only as `true` when
+  the queried name is a reserved special-use name. See [`schema.md`](schema.md).
 
 The v2.0 schema-hardening pass also reshaped two surfaces before the lock:
 `slug_confidences` is now an object map, and `wildcard_sibling_clusters`

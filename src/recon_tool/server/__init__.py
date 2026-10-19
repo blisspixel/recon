@@ -305,7 +305,7 @@ def _print_tty_misuse_panel() -> None:
 
     lines = [
         "=" * 80,
-        "recon MCP server — this is NOT an interactive REPL.",
+        "recon MCP server: this is NOT an interactive REPL.",
         "=" * 80,
         "",
         "The server speaks JSON-RPC over stdio. It is meant to be launched",

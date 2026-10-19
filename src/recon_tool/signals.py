@@ -217,19 +217,19 @@ def _parse_metadata_block(name: str, raw_metadata: list[Any]) -> tuple[MetadataC
     conditions: list[MetadataCondition] = []
     for entry in raw_metadata:
         if not isinstance(entry, dict):
-            logger.warning("Signal %r has non-dict metadata entry — skipped entire signal", name)
+            logger.warning("Signal %r has non-dict metadata entry; skipped entire signal", name)
             return None
         field = entry.get("field")
         operator = entry.get("operator")
         value = entry.get("value")
         if field not in _VALID_METADATA_FIELDS:
-            logger.warning("Signal %r has invalid metadata field %r — skipped entire signal", name, field)
+            logger.warning("Signal %r has invalid metadata field %r; skipped entire signal", name, field)
             return None
         if operator not in _VALID_OPERATORS:
-            logger.warning("Signal %r has invalid metadata operator %r — skipped entire signal", name, operator)
+            logger.warning("Signal %r has invalid metadata operator %r; skipped entire signal", name, operator)
             return None
         if value is None:
-            logger.warning("Signal %r has missing metadata value — skipped entire signal", name)
+            logger.warning("Signal %r has missing metadata value; skipped entire signal", name)
             return None
         conditions.append(MetadataCondition(field=field, operator=operator, value=value))
     return tuple(conditions)
@@ -244,11 +244,11 @@ def _parse_strict_str_list(name: str, field: str, raw: Any) -> tuple[str, ...] |
     if raw is None:
         return ()
     if not isinstance(raw, list):
-        logger.warning("Signal %r has invalid %r (not a list) — skipped", name, field)
+        logger.warning("Signal %r has invalid %r (not a list); skipped", name, field)
         return None
     for entry in raw:
         if not isinstance(entry, str) or not entry:
-            logger.warning("Signal %r has invalid entry in %r — skipped", name, field)
+            logger.warning("Signal %r has invalid entry in %r; skipped", name, field)
             return None
     return tuple(raw)
 
@@ -262,11 +262,11 @@ def _parse_lenient_str_list(name: str, field: str, raw: Any) -> tuple[str, ...]:
     if raw is None:
         return ()
     if not isinstance(raw, list):
-        logger.warning("Signal %r has invalid %r (not a list) — defaulting to empty", name, field)
+        logger.warning("Signal %r has invalid %r (not a list); defaulting to empty", name, field)
         return ()
     for entry in raw:
         if not isinstance(entry, str) or not entry.strip():
-            logger.warning("Signal %r has invalid entry in %r — defaulting to empty tuple", name, field)
+            logger.warning("Signal %r has invalid entry in %r; defaulting to empty tuple", name, field)
             return ()
     return tuple(raw)
 
@@ -280,25 +280,25 @@ def _parse_requires_block(name: str, signal: dict[str, Any], has_metadata: bool)
     requires = signal.get("requires")
     if requires is not None:
         if not isinstance(requires, dict):
-            logger.warning("Signal %r has invalid 'requires' — skipped", name)
+            logger.warning("Signal %r has invalid 'requires'; skipped", name)
             return None
         any_list = requires.get("any")
         if isinstance(any_list, list) and any_list:
             min_matches = signal.get("min_matches", 1)
             if not isinstance(min_matches, int) or min_matches < 1:
-                logger.warning("Signal %r has invalid min_matches %r — defaulting to 1", name, min_matches)
+                logger.warning("Signal %r has invalid min_matches %r; defaulting to 1", name, min_matches)
                 min_matches = 1
             return tuple(any_list), min_matches
         if has_metadata:
             # requires block present but no valid any list — OK if metadata present
             return (), 0
-        logger.warning("Signal %r has empty or missing 'requires.any' and no metadata — skipped", name)
+        logger.warning("Signal %r has empty or missing 'requires.any' and no metadata; skipped", name)
         return None
     if not has_metadata:
         # No requires and no metadata — OK only if requires_signals is present
         raw_requires_signals_check = signal.get("requires_signals")
         if not (isinstance(raw_requires_signals_check, list) and raw_requires_signals_check):
-            logger.warning("Signal %r has neither 'requires' nor 'metadata' nor 'requires_signals' — skipped", name)
+            logger.warning("Signal %r has neither 'requires' nor 'metadata' nor 'requires_signals'; skipped", name)
             return None
     return (), 0
 
@@ -312,11 +312,11 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
     Does NOT mutate the input dict.
     """
     if not isinstance(signal, dict):  # pyright: ignore[reportUnnecessaryIsInstance, reportUnreachable]
-        logger.warning("Signal at index %d is not a dict — skipped", index)  # pyright: ignore[reportUnreachable]
+        logger.warning("Signal at index %d is not a dict; skipped", index)  # pyright: ignore[reportUnreachable]
         return None
     name = signal.get("name")
     if not name or not isinstance(name, str):
-        logger.warning("Signal at index %d missing 'name' — skipped", index)
+        logger.warning("Signal at index %d missing 'name'; skipped", index)
         return None
 
     # Parse optional metadata block
@@ -324,7 +324,7 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
     raw_metadata = signal.get("metadata")
     if raw_metadata is not None:
         if not isinstance(raw_metadata, list) or not raw_metadata:
-            logger.warning("Signal %r has invalid 'metadata' block — skipped", name)
+            logger.warning("Signal %r has invalid 'metadata' block; skipped", name)
             return None
         parsed = _parse_metadata_block(name, raw_metadata)
         if parsed is None:
@@ -349,7 +349,7 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
     # Parse optional explain field
     raw_explain = signal.get("explain")
     if raw_explain is not None and not isinstance(raw_explain, str):
-        logger.warning("Signal %r has non-string 'explain' — defaulting to empty", name)
+        logger.warning("Signal %r has non-string 'explain'; defaulting to empty", name)
         raw_explain = ""
     explain: str = raw_explain if isinstance(raw_explain, str) else ""
 
@@ -361,7 +361,7 @@ def _validate_and_build_signal(signal: dict[str, Any], index: int) -> Signal | N
     raw_exclude_primary = signal.get("exclude_matches_in_primary", False)
     if not isinstance(raw_exclude_primary, bool):
         logger.warning(
-            "Signal %r has non-bool 'exclude_matches_in_primary' — defaulting to False",
+            "Signal %r has non-bool 'exclude_matches_in_primary'; defaulting to False",
             name,
         )
         raw_exclude_primary = False
@@ -438,7 +438,7 @@ def _validate_meta_signals(entries: list[Signal]) -> list[Signal]:
         missing = [name for name in sig.requires_signals if name not in all_names]
         if missing:
             logger.warning(
-                "Meta-signal %r references non-existent signal(s) %r — skipped",
+                "Meta-signal %r references non-existent signal(s) %r; skipped",
                 sig.name,
                 missing,
             )
@@ -447,7 +447,7 @@ def _validate_meta_signals(entries: list[Signal]) -> list[Signal]:
         meta_refs = [name for name in sig.requires_signals if name in meta_names]
         if meta_refs:
             logger.warning(
-                "Meta-signal %r references other meta-signal(s) %r — skipped (cycle prevention)",
+                "Meta-signal %r references other meta-signal(s) %r; skipped (cycle prevention)",
                 sig.name,
                 meta_refs,
             )

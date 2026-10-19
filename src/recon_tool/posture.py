@@ -107,19 +107,19 @@ def _parse_metadata_block(name: str, raw_metadata: list[Any]) -> tuple[_Metadata
     conditions: list[_MetadataCondition] = []
     for entry in raw_metadata:
         if not isinstance(entry, dict):
-            logger.warning("Posture rule %r has non-dict metadata entry — skipped entire rule", name)
+            logger.warning("Posture rule %r has non-dict metadata entry; skipped entire rule", name)
             return None
         field = entry.get("field")
         operator = entry.get("operator")
         value = entry.get("value")
         if field not in _VALID_METADATA_FIELDS:
-            logger.warning("Posture rule %r has invalid metadata field %r — skipped entire rule", name, field)
+            logger.warning("Posture rule %r has invalid metadata field %r; skipped entire rule", name, field)
             return None
         if operator not in _VALID_OPERATORS:
-            logger.warning("Posture rule %r has invalid metadata operator %r — skipped entire rule", name, operator)
+            logger.warning("Posture rule %r has invalid metadata operator %r; skipped entire rule", name, operator)
             return None
         if value is None:
-            logger.warning("Posture rule %r has missing metadata value — skipped entire rule", name)
+            logger.warning("Posture rule %r has missing metadata value; skipped entire rule", name)
             return None
         conditions.append(_MetadataCondition(field=field, operator=operator, value=value))
     return tuple(conditions)
@@ -136,7 +136,7 @@ def _parse_slug_condition(condition: dict[str, Any], name: str) -> tuple[tuple[s
     slugs_any = tuple(raw_slugs)
     slugs_min = condition.get("slugs_min", 1)
     if not isinstance(slugs_min, int) or slugs_min < 0:
-        logger.warning("Posture rule %r has invalid slugs_min — defaulting to 1", name)
+        logger.warning("Posture rule %r has invalid slugs_min; defaulting to 1", name)
         slugs_min = 1
     slugs_max: int | None = None
     raw_max = condition.get("slugs_max")
@@ -144,7 +144,7 @@ def _parse_slug_condition(condition: dict[str, Any], name: str) -> tuple[tuple[s
         if isinstance(raw_max, int) and raw_max >= 0:
             slugs_max = raw_max
         else:
-            logger.warning("Posture rule %r has invalid slugs_max — ignored", name)
+            logger.warning("Posture rule %r has invalid slugs_max; ignored", name)
     return slugs_any, slugs_min, slugs_max
 
 
@@ -161,7 +161,7 @@ def _parse_rule_explain(name: str, raw_explain: object) -> str:
 def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule | None:
     """Validate a single posture rule and return a frozen _PostureRule, or None."""
     if not isinstance(rule, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-        logger.warning("Posture rule at index %d is not a dict — skipped", index)
+        logger.warning("Posture rule at index %d is not a dict; skipped", index)
         return None
 
     name = rule.get("name")
@@ -171,22 +171,22 @@ def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule |
 
     category = rule.get("category", "")
     if category not in _VALID_CATEGORIES:
-        logger.warning("Posture rule %r has invalid category %r — skipped", name, category)
+        logger.warning("Posture rule %r has invalid category %r; skipped", name, category)
         return None
 
     salience = rule.get("salience", "medium")
     if salience not in _VALID_SALIENCE:
-        logger.warning("Posture rule %r has invalid salience %r — skipped", name, salience)
+        logger.warning("Posture rule %r has invalid salience %r; skipped", name, salience)
         return None
 
     template = rule.get("template")
     if not template or not isinstance(template, str):
-        logger.warning("Posture rule %r missing 'template' — skipped", name)
+        logger.warning("Posture rule %r missing 'template'; skipped", name)
         return None
 
     condition = rule.get("condition")
     if not isinstance(condition, dict):
-        logger.warning("Posture rule %r missing 'condition' — skipped", name)
+        logger.warning("Posture rule %r missing 'condition'; skipped", name)
         return None
 
     # Parse slug conditions
@@ -197,7 +197,7 @@ def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule |
     raw_metadata = condition.get("metadata")
     if raw_metadata is not None:
         if not isinstance(raw_metadata, list) or not raw_metadata:
-            logger.warning("Posture rule %r has invalid 'metadata' block — skipped", name)
+            logger.warning("Posture rule %r has invalid 'metadata' block; skipped", name)
             return None
         parsed = _parse_metadata_block(name, raw_metadata)
         if parsed is None:
@@ -206,7 +206,7 @@ def _validate_and_build_rule(rule: dict[str, Any], index: int) -> _PostureRule |
 
     # Must have at least one condition type
     if not slugs_any and not metadata_conditions:
-        logger.warning("Posture rule %r has no slug or metadata conditions — skipped", name)
+        logger.warning("Posture rule %r has no slug or metadata conditions; skipped", name)
         return None
 
     # Parse explain field

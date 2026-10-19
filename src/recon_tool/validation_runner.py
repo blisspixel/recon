@@ -384,7 +384,7 @@ def _md_per_domain_snapshot(results: list[dict[str, Any]]) -> list[str]:
     lines = ["## Per-domain snapshot", ""]
     for entry in results:
         if "error" in entry:
-            lines.append(f"- `{entry.get('domain', '?')}`: ERROR — {entry['error']}")
+            lines.append(f"- `{entry.get('domain', '?')}`: ERROR - {entry['error']}")
             continue
         domain = str(entry.get("queried_domain") or "?")
         provider = str(entry.get("provider") or "-")

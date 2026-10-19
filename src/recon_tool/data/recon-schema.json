@@ -66,6 +66,11 @@
       "description": "Best available public display label, which may be an identity-provider federation brand; falls back to the queried domain. It is not a verified legal organization name or ownership claim.",
       "type": "string"
     },
+    "display_name_verified": {
+      "description": "Additive. Always false: recon never verifies display_name. It is either a provider-reported string (for Microsoft 365, the GetUserRealm federation brand name, which the tenant administrator sets) or the queried-domain fallback. Human surfaces mark a provider-reported display name (unverified). Absent from records produced before this field was added; treat absence as false.",
+      "type": "boolean",
+      "const": false
+    },
     "default_domain": {
       "description": "Primary domain within the tenant. Falls back to the queried domain when no tenant was detected.",
       "type": "string"
@@ -325,6 +330,11 @@
       "enum": [
         "nxdomain"
       ]
+    },
+    "reserved_name": {
+      "description": "Conditional, additive. Present only as true when queried_domain is, or sits below, a reserved special-use name: the RFC 2606 and RFC 6761 names (example.com, example.net, example.org, .example, .test, .invalid, .localhost), .local (RFC 6762), .onion (RFC 7686), .alt (RFC 9476), and the forward special-use names under arpa such as home.arpa. Public answers for such a name are residue, not evidence about an organization. Human surfaces show the note 'Reserved name: results are public residue, not an organization.' Absent for every other name and for older records.",
+      "type": "boolean",
+      "const": true
     },
     "cert_summary": {
       "description": "Certificate transparency summary. Null when no CT data was obtained.",

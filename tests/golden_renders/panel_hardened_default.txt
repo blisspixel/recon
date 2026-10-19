@@ -1,5 +1,6 @@
-Synthetic Beta, Inc.
+Synthetic Beta, Inc. (unverified)
 beta.invalid
+Reserved name: results are public residue, not an organization.
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Unknown (no known provider pattern matched)
   Confidence   ●○○ Low (2 sources)

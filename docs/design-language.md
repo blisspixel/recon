@@ -18,6 +18,22 @@ non-match is not a failed source; recovered CT and stale cached CT are not fresh
 live collection. Preserve their explicit labels across output formats. Do not
 encode a qualification only in color, an icon, or an explanatory footnote.
 
+## Voice and qualifiers
+
+- Use a colon between a label and its value (`Tenant: n/a`, `Reserved name:
+  results are public residue, not an organization.`) and a spaced hyphen for
+  an aside (`sub.example.com - Synthetic Alpha (unverified)`). Output strings
+  carry no em dash or en dash; `tests/test_caveat_parity.py` scans the string
+  literals of `formatter/`, `cli/` and `server/` to keep it that way.
+- Render an unavailable value as `n/a`, never a dash placeholder.
+- A qualifier is a word, present on every surface: the panel, `--plain`,
+  `--md`, MCP text, and a field in `--json`. A provider-reported display name
+  reads `(unverified)`, muted on the panel; the word, not the color, carries
+  it. A reserved special-use queried name gets one line under the title,
+  `Reserved name: results are public residue, not an organization.`, and
+  `"reserved_name": true` in JSON. The wording lives once, in
+  `src/recon_tool/formatter/caveats.py`.
+
 ## Visual semantics
 
 - Use bold for hierarchy and neutral numeric emphasis. The exposure index is
@@ -96,7 +112,9 @@ command legible without requiring the symbol to explain the product.
 narrow-width content and style retention. `tests/test_exposure_visual_semantics.py`
 pins neutral index styling. `tests/test_theme_roles.py` pins the role table,
 color precedence and the ASCII fallback, and `tests/test_theme_contrast.py`
-measures panel contrast on Omarchy palettes. `tests/test_cohort_display_semantics.py` checks
+measures panel contrast on Omarchy palettes. `tests/test_caveat_parity.py`
+renders a reserved and an ordinary name on every surface and asserts the same
+qualifiers on each. `tests/test_cohort_display_semantics.py` checks
 units, denominators and unavailable values. `tests/test_mcp_collection_notes.py`
 keeps material CT caveats aligned across interfaces. The generated terminal
 demo and existing golden renders remain independent integration gates.

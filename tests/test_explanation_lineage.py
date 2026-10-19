@@ -352,7 +352,7 @@ def test_positive_absence_match_keeps_its_exact_evaluator_identity() -> None:
             (),
             "fixture",
         ),
-        SignalMatch("Operator comparison \u2014 Missing Counterparts", "Absence", "medium", ("consumer",), "fixture"),
+        SignalMatch("Operator comparison: Missing Counterparts", "Absence", "medium", ("consumer",), "fixture"),
     ],
 )
 def test_absence_match_without_matching_parent_configuration_is_omitted(match: SignalMatch) -> None:
@@ -384,7 +384,7 @@ def test_absence_match_without_a_fired_parent_is_omitted() -> None:
         expected_counterparts=("counterpart",),
     )
     derived = SignalMatch(
-        "Counterpart rule \u2014 Missing Counterparts",
+        "Counterpart rule: Missing Counterparts",
         "Absence",
         "medium",
         ("counterpart",),
