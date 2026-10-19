@@ -26,6 +26,12 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Security
+
+- Bump the locked mutation-testing dependency aiohttp from 3.14.3 to 3.14.5 for
+  CVE-2026-111063, CVE-2026-111064 and GHSA-2g87-pp6c-29x5. aiohttp is not a
+  runtime dependency of the published package.
+
 ### Fixed
 
 - A lookup or review where every DNS query fails and every identity endpoint
