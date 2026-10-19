@@ -105,7 +105,7 @@ class GoogleSource:
         # target-controlled subdomain, so skip it unless the operator opted in
         # via --direct-probes (active_probes). No error, just no contribution.
         if not bool(kwargs.get("active_probes", False)):
-            return SourceResult(source_name="google_workspace")
+            return SourceResult(source_name="google_workspace", not_attempted=True)
 
         services: list[str] = []
         slugs: list[str] = []

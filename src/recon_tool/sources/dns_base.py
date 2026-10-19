@@ -10,8 +10,12 @@ and the per-channel detector modules, never the reverse. ``safe_resolve`` /
 
 from __future__ import annotations
 
+import contextvars
 import logging
-from typing import Any
+from collections.abc import Generator
+from contextlib import contextmanager
+from dataclasses import dataclass, field
+from typing import Any, Literal
 
 import dns.asyncresolver
 import dns.exception
@@ -67,6 +71,95 @@ def get_resolver() -> dns.asyncresolver.Resolver:
 _default_resolver = dns.asyncresolver.Resolver()
 
 
+# Response class of one DNS query as the resolver adapter observed it.
+# ``answer`` and ``no_answer`` are NOERROR responses (with and without records
+# of the queried type), ``nxdomain`` is a clean name-error response, and
+# ``unavailable`` is a timeout, no usable nameserver, or other transport or
+# resolver failure that produced no observation at all.
+DnsQueryOutcome = Literal["answer", "no_answer", "nxdomain", "unavailable"]
+_CLEAN_OUTCOMES: frozenset[str] = frozenset({"answer", "no_answer", "nxdomain"})
+
+
+def _normalize_dns_name(name: str) -> str:
+    return name.strip().rstrip(".").lower()
+
+
+@dataclass
+class DnsQueryLedger:
+    """Typed, query-scoped response classes retained for one DNS source lookup.
+
+    ``safe_resolve`` returns an empty list for NXDOMAIN, NoAnswer, and
+    transport failure alike, which is the right shape for detectors but loses
+    the distinction the collection status needs. The ledger keeps that
+    distinction per ``(name, rdtype)`` so the DNS source can tell "the resolver
+    answered and the records were empty" from "no query received a usable
+    response", and can report an NXDOMAIN observed for the queried name
+    itself. It records response classes only, never record data.
+    """
+
+    outcomes: list[tuple[str, str, DnsQueryOutcome]] = field(default_factory=list)
+
+    def record(self, name: str, rdtype: str, outcome: DnsQueryOutcome) -> None:
+        """Append one query outcome."""
+        self.outcomes.append((_normalize_dns_name(name), rdtype.upper(), outcome))
+
+    @property
+    def attempted(self) -> int:
+        """Number of recorded queries."""
+        return len(self.outcomes)
+
+    @property
+    def clean_responses(self) -> int:
+        """Number of queries that received a usable resolver response."""
+        return sum(1 for _, _, outcome in self.outcomes if outcome in _CLEAN_OUTCOMES)
+
+    @property
+    def all_unavailable(self) -> bool:
+        """True when at least one query ran and none received a usable response."""
+        return self.attempted > 0 and self.clean_responses == 0
+
+    def name_status(self, name: str) -> Literal["nxdomain"] | None:
+        """Return ``"nxdomain"`` when every clean response for ``name`` was NXDOMAIN.
+
+        A NOERROR response (with or without records) for the same name wins:
+        the name exists at that resolver, so mixed results are not reported as
+        nonexistence. Transport failures for the name neither establish nor
+        contradict the observation.
+        """
+        target = _normalize_dns_name(name)
+        clean = [outcome for owner, _, outcome in self.outcomes if owner == target and outcome in _CLEAN_OUTCOMES]
+        if clean and all(outcome == "nxdomain" for outcome in clean):
+            return "nxdomain"
+        return None
+
+
+_ACTIVE_LEDGER: contextvars.ContextVar[DnsQueryLedger | None] = contextvars.ContextVar(
+    "recon_dns_query_ledger", default=None
+)
+
+
+@contextmanager
+def dns_query_ledger() -> Generator[DnsQueryLedger]:
+    """Record every ``safe_resolve`` outcome in the current task tree.
+
+    Tasks created inside the block (``asyncio.gather``) inherit the context and
+    therefore share the same ledger object. The previous ledger is restored on
+    exit so nested or sequential lookups do not mix their observations.
+    """
+    ledger = DnsQueryLedger()
+    token = _ACTIVE_LEDGER.set(ledger)
+    try:
+        yield ledger
+    finally:
+        _ACTIVE_LEDGER.reset(token)
+
+
+def _record_outcome(domain: str, rdtype: str, outcome: DnsQueryOutcome) -> None:
+    ledger = _ACTIVE_LEDGER.get()
+    if ledger is not None:
+        ledger.record(domain, rdtype, outcome)
+
+
 # Query types that are exempt from the canonical-name leak guard below.
 # A CNAME query returns the immediate record without the recursive
 # resolver chasing further (the CNAME walker validates that target itself).
@@ -103,6 +196,10 @@ async def safe_resolve(
     case, which returns nothing observable. See
     docs/security-audit-resolutions.md.
 
+    Inside ``dns_query_ledger()`` every call also records its response class
+    (answer, NoAnswer, NXDOMAIN, or unavailable), so callers can separate an
+    observed empty answer from a failed query after the fact.
+
     Args:
         domain: The domain name to query.
         rdtype: DNS record type (TXT, MX, CNAME, etc.).
@@ -129,26 +226,35 @@ async def safe_resolve(
                         domain,
                         canonical,
                     )
+                    # Still a NOERROR response: the name resolved, and only
+                    # its private canonical target is withheld.
+                    _record_outcome(domain, rdtype, "answer")
                     return []
-        return [
+        records = [
             b"".join(rdata.strings).decode("utf-8", errors="replace")
             if isinstance(rdata, TXTBase)
             else parse_rdata(rdata.to_text())
             for rdata in answers  # pyright: ignore[reportGeneralTypeIssues]
         ]
-    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer):
+        _record_outcome(domain, rdtype, "answer")
+        return records
+    except (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer) as exc:
+        _record_outcome(domain, rdtype, "nxdomain" if isinstance(exc, dns.resolver.NXDOMAIN) else "no_answer")
         return []
     except dns.resolver.NoNameservers:
+        _record_outcome(domain, rdtype, "unavailable")
         if degraded_sources is not None and degraded_name is not None:
             degraded_sources.add(degraded_name)
         logger.debug("DNS %s lookup had no usable nameserver for %s", rdtype, domain)
         return []
     except dns.exception.Timeout:
+        _record_outcome(domain, rdtype, "unavailable")
         if degraded_sources is not None and degraded_name is not None:
             degraded_sources.add(degraded_name)
         logger.debug("DNS %s lookup timed out for %s (%.1fs)", rdtype, domain, timeout)
         return []
     except Exception as exc:
+        _record_outcome(domain, rdtype, "unavailable")
         if degraded_sources is not None and degraded_name is not None:
             degraded_sources.add(degraded_name)
         logger.debug("DNS %s lookup failed for %s: %s", rdtype, domain, exc)

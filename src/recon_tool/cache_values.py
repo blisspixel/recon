@@ -224,6 +224,17 @@ def optional_cache_string(value: Any, field: str) -> str | None:
     return value
 
 
+_DNS_NAME_STATUSES = frozenset({"nxdomain"})
+
+
+def cache_dns_name_status(value: Any) -> str | None:
+    """Return a known queried-name DNS response class or reject the entry."""
+    status = optional_cache_string(value, "dns_name_status")
+    if status is not None and status not in _DNS_NAME_STATUSES:
+        raise ValueError("Cache field 'dns_name_status' has an unsupported value")
+    return status
+
+
 def cache_bool(value: Any, field: str, *, default: bool = False) -> bool:
     """Return a strict JSON boolean or reject the cache entry."""
     if value is None:

@@ -20,6 +20,7 @@ from recon_tool.formatter.collection_status import (
     cache_reuse_note,
     collection_note_parts,
     low_confidence_guidance,
+    name_nxdomain_statement,
     project_collection_status,
 )
 from recon_tool.models import TenantInfo, serialize_conflicts_array
@@ -364,6 +365,10 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     # posterior_observations means fusion was computed (slug_confidences /
     # posterior_observations being empty then means "off", not "no signal").
     d["fusion_enabled"] = bool(info.posterior_observations)
+    # Conditional, additive: present only when the resolver returned NXDOMAIN
+    # for the queried name. Absence does not establish that the name exists.
+    if info.dns_name_status is not None:
+        d["dns_name_status"] = info.dns_name_status
     # SH7: self-describing payload. record_type discriminates the four object
     # output modes for a consumer (such as an agent) handed a bare payload
     # without the invocation context; schema_version lets a detached payload be
@@ -379,7 +384,15 @@ def format_tenant_json(info: TenantInfo, *, include_unclassified: bool = False) 
 
 
 _PLAIN_PROSE_KEYS = frozenset(
-    {"insights", "next", "collection_note", "evidence_roles", "insights_note", "related_domains_note"}
+    {
+        "insights",
+        "next",
+        "collection_note",
+        "dns_name_note",
+        "evidence_roles",
+        "insights_note",
+        "related_domains_note",
+    }
 )
 
 
@@ -438,6 +451,7 @@ _PANEL_KEY_ORDER: tuple[str, ...] = (
     "auth_type",
     "confidence",
     "source_count",
+    "dns_name_note",
     "services",
     # Email posture the panel folds into its Services/Email row. Keeping these
     # as their own keys preserves the fact in linear form without reproducing
@@ -470,6 +484,9 @@ def _plain_panel_data(
 
     view = build_briefing(info, confidence_mode=confidence_mode, detailed=detailed)
     _apply_briefing_cuts(data, view)
+    nxdomain = name_nxdomain_statement(info)
+    if nxdomain is not None:
+        data["dns_name_note"] = nxdomain
     panel: dict[str, Any] = {}
     for key in _PANEL_KEY_ORDER:
         if key in {"mail", "identity"}:

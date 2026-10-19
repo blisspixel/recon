@@ -32,7 +32,6 @@ from recon_tool.models import (
     InfrastructureClusterReport,
     InsightClaim,
     MergeConflicts,
-    ReconLookupError,
     SourceResult,
     TenantInfo,
 )
@@ -48,6 +47,7 @@ __all__ = [
     "merge_results",
 ]
 
+from recon_tool.merger_status import collect_degraded, raise_if_all_sources_failed
 from recon_tool.merger_tables import (
     EMAIL_PROVIDER_SLUG_NAMES,
     GATEWAY_SLUG_NAMES,
@@ -319,25 +319,6 @@ def _compute_merge_conflicts(results: list[SourceResult]) -> MergeConflicts | No
     return MergeConflicts(**conflict_fields) if conflict_fields else None
 
 
-def _raise_if_all_sources_failed(results: list[SourceResult], queried_domain: str, tenant_id: str | None) -> None:
-    """Raise ``all_sources_failed`` only when EVERY source returned an error.
-
-    If any source produced a clean result (even with empty services/slugs), the
-    successful lookup is honored downstream as a sparse TenantInfo: "we looked
-    and found nothing" is a valid, hedged answer, not an error.
-    """
-    if tenant_id is not None or not all(r.error is not None for r in results):
-        return
-    source_errors: tuple[tuple[str, str], ...] = tuple((r.source_name, r.error) for r in results if r.error is not None)
-    reasons = "; ".join(f"{n}: {e}" for n, e in source_errors)
-    raise ReconLookupError(
-        domain=queried_domain,
-        message=(f"No information could be resolved for {queried_domain}. All sources returned errors: {reasons}"),
-        error_type="all_sources_failed",
-        source_errors=source_errors,
-    )
-
-
 def _resolve_display_name(display_name: str | None, queried_domain: str) -> str:
     """Use an observed identity brand when available, otherwise the domain."""
     if display_name is not None and not _is_placeholder_name(display_name):
@@ -435,15 +416,6 @@ def _collect_evidence(results: list[SourceResult]) -> tuple[EvidenceRecord, ...]
     return tuple(all_evidence)
 
 
-def _collect_degraded(results: list[SourceResult]) -> set[str]:
-    """Deduplicate granular markers and preserve whole DNS failure status."""
-    degraded = {source for result in results for source in result.degraded_sources}
-    degraded.update(f"source:{result.source_name}" for result in results if result.source_unavailable)
-    if any(result.source_name == "dns_records" and result.error is not None for result in results):
-        degraded.add("dns_records")
-    return degraded
-
-
 def _finalize_confidence(
     base_confidence: ConfidenceLevel,
     results: list[SourceResult],
@@ -495,7 +467,7 @@ def merge_results(
     all_domains = scalars.all_domains
     merge_conflicts = _compute_merge_conflicts(usable_results)
 
-    _raise_if_all_sources_failed(results, queried_domain, tenant_id)
+    raise_if_all_sources_failed(results, queried_domain, tenant_id)
 
     display_name = _resolve_display_name(scalars.display_name, queried_domain)
     default_domain = scalars.default_domain if scalars.default_domain is not None else queried_domain
@@ -552,7 +524,8 @@ def merge_results(
 
     primary_email_provider, email_gateway, likely_primary_email_provider = compute_email_topology(observable_evidence)
     has_mx_records = any(e.source_type == "MX" for e in observable_evidence)
-    all_degraded = _collect_degraded(results)
+    dns_name_status: str | None = _first_non_none(observable_results, "dns_name_status")
+    all_degraded = collect_degraded(results)
     # Build insights list, then append signal intelligence.
     insight_claims: list[InsightClaim] = []
     insights = build_insights_with_signals(
@@ -578,6 +551,7 @@ def merge_results(
         evidence=observable_evidence,
         degraded_sources=tuple(sorted(all_degraded)),
         insight_claims_out=insight_claims,
+        name_nxdomain=dns_name_status == "nxdomain",
     )
 
     # Surface conflicting tenant IDs — high-value intel that explains why
@@ -651,4 +625,5 @@ def merge_results(
         unclassified_dns_observations=unclassified_dns_observations,
         chain_motifs=chain_motifs_tuple,
         infrastructure_clusters=infrastructure_clusters,
+        dns_name_status=dns_name_status,
     )

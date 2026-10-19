@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from rich.text import Text
 
-from recon_tool.formatter.collection_status import cache_reuse_note, low_confidence_guidance
+from recon_tool.formatter.collection_status import (
+    cache_reuse_note,
+    low_confidence_guidance,
+    name_nxdomain_statement,
+)
 from recon_tool.models import ConfidenceLevel, TenantInfo
 
 
@@ -36,3 +40,9 @@ def render_cache_reuse_note(info: TenantInfo) -> Text | None:
     if note is None:
         return None
     return Text(note, style="dim")
+
+
+def render_name_nxdomain(info: TenantInfo) -> Text | None:
+    """State an observed queried-name NXDOMAIN so it is not read as a quiet domain."""
+    statement = name_nxdomain_statement(info)
+    return None if statement is None else Text(statement, style="bold")

@@ -30,7 +30,7 @@ def test_current_schema_properties_have_sources() -> None:
     audit = CHECKER.audit_schema_sources(CHECKER.load_schema_properties(), CHECKER.tenant_info_fields())
 
     assert audit.ok
-    assert audit.schema_property_count == 58
+    assert audit.schema_property_count == 59
 
 
 def test_formatter_derived_fields_are_explicit() -> None:
@@ -92,6 +92,6 @@ def test_json_cli_outputs_report_for_success(capsys: pytest.CaptureFixture[str])
     assert result == 0
     report = CHECKER.json.loads(capsys.readouterr().out)
     assert report["ok"] is True
-    assert report["schema_property_count"] == 58
+    assert report["schema_property_count"] == 59
     assert report["schema_sources"]["tenant_id"] == "TenantInfo.tenant_id"
     assert report["issues"]["untraced_schema_properties"] == []
