@@ -30,6 +30,7 @@ from recon_tool.exit_codes import (
     EXIT_VALIDATION,
 )
 from recon_tool.formatter import get_console, get_err_console
+from recon_tool.formatter.theme import ERROR, MUTED, SUCCESS, WARNING
 
 McpCheck: TypeAlias = tuple[str, bool, str]
 
@@ -193,7 +194,7 @@ def _render_mcp_reference_config() -> None:
     recon_block = build_recon_block()
     console.print()
     console.print(
-        "  [yellow]Security note:[/yellow] `recon mcp` runs with the privileges of\n"
+        f"  [{WARNING}]Security note:[/{WARNING}] `recon mcp` runs with the privileges of\n"
         "  the calling user. Start with manual approvals and only expand\n"
         "  `autoApprove` if you fully understand the risk."
     )
@@ -218,7 +219,7 @@ def _render_mcp_reference_config() -> None:
 
     if warn_if_fallback() is not None:
         console.print(
-            "  [yellow]Tip:[/yellow] GUI clients (Claude Desktop, Windsurf) often don't\n"
+            f"  [{WARNING}]Tip:[/{WARNING}] GUI clients (Claude Desktop, Windsurf) often don't\n"
             "  inherit your shell PATH. The config above uses recon's safe\n"
             "  sys.path-stripping Python fallback. For a shorter config, add\n"
             "  `recon` to PATH and rerun `recon doctor --mcp`."
@@ -300,17 +301,17 @@ def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
     console = get_err_console()
     for name, ok, detail in checks:
         mark = "ok" if ok else "FAIL"
-        style = "green" if ok else "red"
+        style = SUCCESS if ok else ERROR
         _render_status_row(console, mark=mark, style=style, name=name, detail=detail)
 
 
 def validate_doctor_mode(*, fix: bool, mcp: bool, client: str | None, config_path: str | None) -> None:
     """Reject incompatible local modes before any filesystem or network work."""
     if int(fix) + int(mcp) + int(client is not None) > 1:
-        get_console().print("[red]Choose exactly one of --fix, --mcp, or --client.[/red]")
+        get_console().print(f"[{ERROR}]Choose exactly one of --fix, --mcp, or --client.[/{ERROR}]")
         raise typer.Exit(code=EXIT_VALIDATION)
     if config_path is not None and client is None:
-        get_console().print("[red]--config-path requires --client.[/red]")
+        get_console().print(f"[{ERROR}]--config-path requires --client.[/{ERROR}]")
         raise typer.Exit(code=EXIT_VALIDATION)
 
 
@@ -329,7 +330,7 @@ def doctor_client(client: str, config_path: str | None = None) -> None:
 
     if client not in SUPPORTED_CLIENTS:
         console.print(
-            f"  [red]unknown client '{_safe_markup(client)}'[/red]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}"
+            f"  [{ERROR}]unknown client '{_safe_markup(client)}'[/{ERROR}]\n  Supported: {', '.join(SUPPORTED_CLIENTS)}"
         )
         raise typer.Exit(EXIT_VALIDATION)
 
@@ -337,12 +338,12 @@ def doctor_client(client: str, config_path: str | None = None) -> None:
         override = expand_config_path(config_path) if config_path is not None else None
         report = check_client(client, config_path_override=override)  # pyright: ignore[reportArgumentType]
     except (InstallError, ValueError, OSError) as exc:
-        console.print(f"  [red]client config check refused:[/red] {_safe_markup(exc)}")
+        console.print(f"  [{ERROR}]client config check refused:[/{ERROR}] {_safe_markup(exc)}")
         raise typer.Exit(EXIT_VALIDATION) from exc
     console.print(f"  [bold]MCP client config check: {_safe_markup(client)}[/bold]")
     console.print()
 
-    _style = {"ok": "green", "warn": "yellow", "fail": "red", "info": "dim"}
+    _style = {"ok": SUCCESS, "warn": WARNING, "fail": ERROR, "info": MUTED}
     _mark = {"ok": "ok", "warn": "warn", "fail": "FAIL", "info": "·"}
     check: ClientCheck
     for check in report.checks:
@@ -357,11 +358,11 @@ def doctor_client(client: str, config_path: str | None = None) -> None:
 
     console.print()
     if report.ok:
-        console.print("  [green]recon is registered in this client's config.[/green]")
+        console.print(f"  [{SUCCESS}]recon is registered in this client's config.[/{SUCCESS}]")
         console.print()
         return
     console.print(
-        f"  [yellow]recon was not found (or a config file is broken).[/yellow] "
+        f"  [{WARNING}]recon was not found (or a config file is broken).[/{WARNING}] "
         f"See the inspected paths above, or run `recon mcp install --client={client}`"
         " with --config-path for an explicit profile."
     )
@@ -380,7 +381,9 @@ def doctor_fix() -> bool:
     try:
         config_dir.mkdir(parents=True, exist_ok=True)
     except OSError as exc:
-        console.print(f"[red]Cannot create config directory {_safe_markup(config_dir)}: {_safe_markup(exc)}[/red]")
+        console.print(
+            f"[{ERROR}]Cannot create config directory {_safe_markup(config_dir)}: {_safe_markup(exc)}[/{ERROR}]"
+        )
         return False
 
     templates = [
@@ -394,19 +397,19 @@ def doctor_fix() -> bool:
         try:
             status = _create_template_atomically(target, content)
             if status == "created":
-                console.print(f"  [green]created:[/green] {_safe_markup(target)}")
+                console.print(f"  [{SUCCESS}]created:[/{SUCCESS}] {_safe_markup(target)}")
             elif status == "exists":
                 console.print(f"  already exists: {_safe_markup(target)}")
             else:
                 failures += 1
-                console.print(f"  [red]cannot use {_safe_markup(target)}: path is not a regular file[/red]")
+                console.print(f"  [{ERROR}]cannot use {_safe_markup(target)}: path is not a regular file[/{ERROR}]")
         except OSError as exc:
             failures += 1
-            console.print(f"  [red]failed to create {_safe_markup(target)}: {_safe_markup(exc)}[/red]")
+            console.print(f"  [{ERROR}]failed to create {_safe_markup(target)}: {_safe_markup(exc)}[/{ERROR}]")
 
     if failures:
         noun = "template" if failures == 1 else "templates"
-        console.print(f"  [red]{failures} {noun} could not be created.[/red]")
+        console.print(f"  [{ERROR}]{failures} {noun} could not be created.[/{ERROR}]")
         return False
     return True
 
@@ -432,7 +435,7 @@ def _doctor_print_header(console: Any) -> None:
     # Preserve copyable paths in captured output even at narrow terminal widths.
     console.print(f"  Python [bold]{sys.version.split()[0]}[/bold] at {python_executable}", soft_wrap=True)
     if not (3, 11) <= sys.version_info[:2] <= (3, 14) or sys.version_info.releaselevel != "final":
-        console.print("  [yellow]Python is outside the tested stable range (3.11 through 3.14).[/yellow]")
+        console.print(f"  [{WARNING}]Python is outside the tested stable range (3.11 through 3.14).[/{WARNING}]")
     console.print(f"  Package {_safe_markup(package_location)}", soft_wrap=True)
     console.print(f"  Install method {_safe_markup(method_detail)}")
     console.print()
@@ -774,7 +777,7 @@ def _doctor_render(console: Any, checks: list[DoctorCheck]) -> bool:
     warning_names: list[str] = []
     for name, status, detail in checks:
         mark = {"ok": "ok", "warn": "WARN", "fail": "FAIL"}[status]
-        style = {"ok": "green", "warn": "yellow", "fail": "red"}[status]
+        style = {"ok": SUCCESS, "warn": WARNING, "fail": ERROR}[status]
         safe_name = _safe_markup(name)
         safe_detail = _safe_markup(detail)
         console.print(f"  [{style}]{mark:>4}[/{style}]  {safe_name}: {safe_detail}")
@@ -786,14 +789,14 @@ def _doctor_render(console: Any, checks: list[DoctorCheck]) -> bool:
 
     console.print()
     if has_failures:
-        console.print("  [yellow]Some checks failed. Lookups may be incomplete.[/yellow]")
+        console.print(f"  [{WARNING}]Some checks failed. Lookups may be incomplete.[/{WARNING}]")
     elif has_warnings:
         if all(name == "crt.sh (cert transparency)" for name in warning_names):
-            console.print("  [yellow]Core checks passed. Optional enrichment sources are degraded.[/yellow]")
+            console.print(f"  [{WARNING}]Core checks passed. Optional enrichment sources are degraded.[/{WARNING}]")
         else:
-            console.print("  [yellow]Core checks passed. Review the warnings above.[/yellow]")
+            console.print(f"  [{WARNING}]Core checks passed. Review the warnings above.[/{WARNING}]")
     else:
-        console.print("  [green]All checks passed.[/green]")
+        console.print(f"  [{SUCCESS}]All checks passed.[/{SUCCESS}]")
     console.print()
     return has_failures
 

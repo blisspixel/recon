@@ -356,6 +356,18 @@
             "type": "boolean"
           },
           {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "ascii_glyphs",
+            "required": false,
+            "tokens": [
+              "--ascii"
+            ],
+            "type": "boolean"
+          },
+          {
             "is_flag": true,
             "kind": "option",
             "multiple": false,

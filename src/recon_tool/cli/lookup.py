@@ -21,6 +21,7 @@ from recon_tool.exit_codes import (
     EXIT_VALIDATION,
 )
 from recon_tool.formatter import get_console, get_err_console
+from recon_tool.formatter.theme import spinner_kwargs
 
 _STATUS_MESSAGE = "Collecting and correlating public evidence..."
 _CHAIN_STATUS_MESSAGE = "Following related-domain evidence..."
@@ -127,7 +128,7 @@ async def _resolve_with_spinner(
 
 async def _run_with_status(console: Any, coro: Any) -> Any:
     """Await ``coro`` under one outcome-neutral progress message."""
-    with console.status(_STATUS_MESSAGE):
+    with console.status(_STATUS_MESSAGE, **spinner_kwargs()):
         return await coro
 
 
@@ -254,7 +255,7 @@ async def _lookup_chain(
     )
     try:
         if not options.quiet:
-            with get_err_console().status(_CHAIN_STATUS_MESSAGE):
+            with get_err_console().status(_CHAIN_STATUS_MESSAGE, **spinner_kwargs()):
                 report = await resolve_chain(validated, chain_options)
         else:
             report = await resolve_chain(validated, chain_options)

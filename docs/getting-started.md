@@ -386,10 +386,21 @@ This is the linear view for a standard single-domain lookup. Chain, compare,
 exposure, and gaps reports use their own formats; batch and delta have
 mode-specific output.
 
-`--color` and `--no-color` are global options, but they work in either
-position: `recon example.com --no-color` and `recon --no-color example.com` are
-the same, as is any subcommand form such as `recon review example.com
---no-color`. When both appear, the last one given wins. The other global
+Color follows one order, highest first: `--color` or `--no-color`, then a
+non-empty `NO_COLOR`, then `TERM=dumb`, then `FORCE_COLOR` (any value except
+empty or `0`), then terminal detection. `--no-color` removes every escape
+sequence, bold included, on stdout and stderr.
+
+`--ascii` replaces the Unicode glyphs with ASCII: `[##-]` for confidence dots,
+`ok`, `-` and `x` for source marks, `H`, `M` and `L` for salience, and `-` for
+the divider. It turns on automatically under `TERM=dumb` and on a terminal whose
+encoding cannot show the glyphs, so `TERM=dumb recon example.com` prints pure
+ASCII.
+
+`--color`, `--no-color` and `--ascii` are global options, but they work in
+either position: `recon example.com --no-color` and `recon --no-color
+example.com` are the same, as is any subcommand form such as `recon review
+example.com --no-color`. When both color flags appear, the last one given wins. The other global
 options must come first: use `recon --debug example.com`, and run
 `recon --version` on its own. A misplaced one is rejected with exit code 2 and
 a message that shows the working form.

@@ -49,6 +49,7 @@ Children: `batch`, `cache`, `capsule`, `delta`, `discover`, `doctor`, `fingerpri
 | `version` | option | `-V`, `--version` | no | boolean |  |  |
 | `debug` | option | `--debug` | no | boolean | false |  |
 | `color` | option | `--color`, `--no-color` | no | boolean |  |  |
+| `ascii_glyphs` | option | `--ascii` | no | boolean | false |  |
 | `install_completion` | option | `--install-completion` | no | boolean |  |  |
 | `show_completion` | option | `--show-completion` | no | boolean |  |  |
 

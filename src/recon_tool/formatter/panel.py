@@ -81,10 +81,9 @@ from recon_tool.formatter.markdown import (
     format_tenant_markdown,
     markdown_escape,
 )
-from recon_tool.formatter.panel_status import confidence_is_high, render_low_confidence_guidance, render_name_nxdomain
+from recon_tool.formatter.panel_status import render_low_confidence_guidance, render_name_nxdomain
 from recon_tool.formatter.roles import (
     DOT_FILL_COLOR,
-    DOT_FILL_GLYPH,
     model_support_claims,
     posterior_support_phrase,
     role_split_vendors,
@@ -98,6 +97,23 @@ from recon_tool.formatter.serialize import (
     format_tenant_plain,
     plain_lines,
 )
+from recon_tool.formatter.terminal import (  # re-exported: stable import path
+    get_console,
+    get_err_console,
+    set_console,
+)
+from recon_tool.formatter.theme import (
+    ACCENT,
+    CONFIDENCE_ROLE,
+    ERROR,
+    MUTED,
+    SUCCESS,
+    WARNING,
+    confidence_marker,
+    fill_marker,
+    glyph,
+)
+from recon_tool.formatter.theme import rule as theme_rule
 from recon_tool.models import (
     CandidateValue,
     ChainReport,
@@ -176,99 +192,9 @@ __all__ = [
     "set_console",
 ]
 
-# Default console — can be overridden via get_console/set_console for testing.
-# Why a global instead of dependency injection? Because Rich's Console is used
-# by dozens of call sites (render_*, cli status spinners, etc.) and threading
-# a console parameter through every function would be noisy. The global is
-# effectively a singleton with a test seam via set_console().
-_console: Console | None = None
-# Separate console bound to stderr for diagnostics (errors, warnings, progress
-# spinners). Keeping these off stdout means a consumer piping `recon ... --json`
-# gets only the data stream, never an error line or a spinner mixed into it —
-# the core clig.dev / 12-factor-CLI rule. Test seam via set_err_console().
-_err_console: Console | None = None
-# Explicit color override from --color/--no-color: True forces color (even when
-# piped), False disables it (overriding NO_COLOR's auto behavior), None = auto
-# (Rich's TTY/NO_COLOR detection). Applied to both consoles at creation.
-_color_override: bool | None = None
-
-
-def _make_console(*, stderr: bool) -> Console:
-    """Construct a Console honoring the --color/--no-color override."""
-    if _color_override is False:
-        return Console(stderr=stderr, no_color=True)
-    if _color_override is True:
-        return Console(stderr=stderr, force_terminal=True)
-    return Console(stderr=stderr)
-
-
-def set_color_override(value: bool | None) -> None:
-    """Force (True) / disable (False) / auto (None) color, rebuilding consoles."""
-    global _color_override, _console, _err_console  # noqa: PLW0603
-    _color_override = value
-    _console = None
-    _err_console = None
-
-
-def get_console() -> Console:
-    """Return the active console instance, creating a default if needed.
-
-    On Windows, the default stdout encoding is often cp1252 which cannot
-    represent the Unicode characters used in panel rendering (confidence
-    dots, arrows, em-dashes, box-drawing). Reconfigure stdout to UTF-8
-    with replacement-on-error so the tool never crashes on unencodable
-    glyphs — worst case the user sees "?" in place of a decorator
-    character instead of a traceback.
-    """
-    global _console  # noqa: PLW0603
-    if _console is None:
-        import sys
-        from typing import cast
-
-        try:
-            stdout_any: Any = cast(Any, sys.stdout)
-            if hasattr(stdout_any, "reconfigure"):
-                stdout_any.reconfigure(encoding="utf-8", errors="replace")
-            stderr_any: Any = cast(Any, sys.stderr)
-            if hasattr(stderr_any, "reconfigure"):
-                stderr_any.reconfigure(encoding="utf-8", errors="replace")
-        except Exception as exc:
-            logger.debug("stdout UTF-8 reconfigure failed: %s", exc)
-        _console = _make_console(stderr=False)
-    return _console
-
-
-def get_err_console() -> Console:
-    """Return the active stderr console, creating a default if needed.
-
-    Diagnostics — errors, warnings, and progress spinners — go here so they
-    never contaminate the stdout data stream that a pipe or agent consumes.
-    stderr is already reconfigured to UTF-8 in get_console().
-    """
-    global _err_console  # noqa: PLW0603
-    if _err_console is None:
-        get_console()  # ensure stdout/stderr UTF-8 reconfigure has run
-        _err_console = _make_console(stderr=True)
-    return _err_console
-
-
-def set_console(console: Console) -> None:
-    """Replace the active console (for testing)."""
-    global _console  # noqa: PLW0603
-    _console = console
-
-
-def set_err_console(console: Console) -> None:
-    """Replace the active stderr console (for testing)."""
-    global _err_console  # noqa: PLW0603
-    _err_console = console
-
-
-CONFIDENCE_COLORS: dict[ConfidenceLevel, str] = {
-    ConfidenceLevel.HIGH: "#a3d9a5",  # soft sage green
-    ConfidenceLevel.MEDIUM: "#7ec8e3",  # muted sky blue
-    ConfidenceLevel.LOW: "#e07a5f",  # warm terracotta
-}
+# Role colors for the confidence marker (formatter/theme.py). The marker is
+# colored; the level word beside it stays in the default foreground.
+CONFIDENCE_COLORS: dict[ConfidenceLevel, str] = dict(CONFIDENCE_ROLE)
 
 CONFIDENCE_DOTS: dict[ConfidenceLevel, str] = {
     ConfidenceLevel.HIGH: "●●●",
@@ -390,9 +316,10 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     source_count = len(info.sources)
     source_noun = "source" if source_count == 1 else "sources"
     tail = f" {info.confidence.value.capitalize()} ({source_count} {source_noun})"
-    dots = CONFIDENCE_DOTS[info.confidence]
-    style = "green" if confidence_is_high(info.confidence) else ""
-    facts.append(dots + tail, style=style)
+    # The marker carries the role color; the level word stays readable in the
+    # default foreground on light and dark themes alike.
+    facts.append(confidence_marker(info.confidence), style=CONFIDENCE_COLORS[info.confidence])
+    facts.append(tail)
     facts.append("\n")
     claimed = [o for o in info.posterior_observations if o.evidence_used]
     if not claimed:
@@ -404,8 +331,8 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
     # so continuation lines indent past them, not just past the label.
     label = "Model support"
     label_width = max(_LABEL_WIDTH, len(label) + 1)
-    glyph = DOT_FILL_GLYPH[fill]
-    value_indent = 2 + label_width + len(glyph) + 1
+    marker = fill_marker(fill)
+    value_indent = 2 + label_width + len(marker) + 1
     phrase = posterior_support_phrase(named, fill)
     if scales_disagree(info.confidence, fill):
         # Two rows, two dot scales, two steps apart: "Low (1 source)" above a
@@ -417,7 +344,7 @@ def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
         if index == 0:
             facts.append("  ")
             facts.append(label.ljust(label_width), style="dim")
-            facts.append(glyph, style=DOT_FILL_COLOR[fill])
+            facts.append(marker, style=DOT_FILL_COLOR[fill])
             facts.append(" ")
         else:
             facts.append(" " * value_indent)
@@ -505,17 +432,17 @@ def render_tenant_panel(
         Provider     <detect_provider output>
         Tenant       <tenant_id> • <region>          (only if present)
         Auth         <auth_type> + <GWS auth>        (only if present)
-        Confidence   ●●○ Medium (N sources)          (green only on High)
+        Confidence   ●●○ Medium (N sources)          (marker in the confidence role)
 
-        Services                                     (bold cyan header)
+        Services                                     (bold header)
           Email          svc, svc, svc
           Identity       svc, svc
           …
 
-        High-signal related domains                  (bold cyan header)
+        High-signal related domains                  (bold header)
           login.x, sso.x, api.x ... (N total, use --full to see all)
 
-        Note: …                                     (yellow only when degraded)
+        ! Note                                       (warning mark when degraded)
 
     --verbose, --explain, --domains add sections after the core layout. The
     function name and ``show_services`` remain for compatibility; Services are
@@ -543,7 +470,7 @@ def render_tenant_panel(
         header.append("\n")
         header.append(info.queried_domain, style="dim")
     blocks.append(header)
-    rule = Text("─" * _PANEL_WIDTH, style="dim")
+    rule = Text(theme_rule(_PANEL_WIDTH), style="dim")
     blocks.append(rule)
 
     # ── Key facts block ────────────────────────────────────────────
@@ -1073,7 +1000,7 @@ def _degraded_note_parts(info: TenantInfo) -> tuple[list[str], bool]:
     """Decide which degraded-source note lines to show and whether the framing
     is a warning.
 
-    Warning tone (yellow) applies when a non-CT source is unavailable or every
+    Warning tone (a yellow ! mark) applies when a non-CT source is unavailable or every
     CT provider failed. Info tone (dim) covers a routine CT fallback that
     recovered. Routine crt.sh -> certspotter fallbacks are suppressed as noise
     (provenance stays in --json); a cache fallback that actually changed the
@@ -1094,9 +1021,13 @@ def _render_degraded_note(info: TenantInfo) -> Text | None:
     note_parts, is_warning = _degraded_note_parts(info)
     if not note_parts:
         return None
-    style = "yellow" if is_warning else "dim"
+    # Warning tone puts the role color on a marker and keeps the words in the
+    # default foreground, which stays readable where a theme's yellow does not.
+    style = "" if is_warning else MUTED
     note = Text()
-    note.append("Note", style=style)
+    if is_warning:
+        note.append(f"{glyph('warn')} ", style=f"bold {WARNING}")
+    note.append("Note", style="bold" if is_warning else MUTED)
     note.append("\n  ")
     note_text = " — ".join(note_parts) + "."
     for j, line in enumerate(_wrap_text(note_text, _PANEL_WIDTH - 2)):
@@ -1162,14 +1093,23 @@ def _render_explain_conflicts(info: TenantInfo, explain: bool, verbose: bool) ->
     return conf_block
 
 
+# Source state -> (glyph name, status word, role). The glyph carries the role
+# color; the status word stays in the default foreground beside it.
+_SOURCE_MARKS: dict[str, tuple[str, str, str]] = {
+    "match": ("ok", "match", SUCCESS),
+    "no_match": ("neutral", "no match", MUTED),
+    "unavailable": ("fail", "error", ERROR),
+}
+
+
 def render_verbose_sources(results: list[SourceResult], *, console: Console | None = None) -> None:
     """Print per-source status lines to console."""
     c = console or get_console()
     for result in results:
         state = source_display_state(result)
         success = state == "match"
-        soft_miss = state == "no_match"
-        marker = "[green]match[/green]" if success else ("[dim]no match[/dim]" if soft_miss else "[red]error[/red]")
+        mark, word, role = _SOURCE_MARKS[state if state in _SOURCE_MARKS else "unavailable"]
+        marker = f"[{role}]{glyph(mark)}[/{role}] {word}"
         detail = _source_success_description(result) if success else result.error or state.replace("_", " ")
         safe_detail = escape(strip_control_chars(detail))
         c.print(f"  {marker} {result.source_name}: {safe_detail}")
@@ -1206,11 +1146,12 @@ def render_sources_detail(results: list[SourceResult]) -> Table:
 
     for result in results:
         state = source_display_state(result)
-        status = {
-            "match": Text("\u2713 success", style="green"),
-            "no_match": Text("\u2013 no match", style="dim"),
-            "unavailable": Text("\u2717 unavailable", style="red"),
+        mark, word, role = {
+            "match": ("ok", "success", SUCCESS),
+            "no_match": ("neutral", "no match", MUTED),
+            "unavailable": ("fail", "unavailable", ERROR),
         }[state]
+        status = Text.assemble((glyph(mark), role), f" {word}")
         tenant_id = result.tenant_id or "—"
         # region and error can carry attacker-influenced text (a federation
         # region value, or a domain / exception interpolated into an error
@@ -1235,7 +1176,7 @@ def render_warning(domain: str, error: ReconLookupError | None = None) -> None:
     """
     console = get_err_console()
     safe_domain = escape(strip_control_chars(domain))
-    console.print(f"[yellow]No information found for {safe_domain}[/yellow]")
+    console.print(f"[{WARNING}]No information found for {safe_domain}[/{WARNING}]")
     if error is not None and getattr(error, "source_errors", ()):
         for name, reason in error.source_errors:
             line = escape(strip_control_chars(f"{name}: {reason}"))
@@ -1249,15 +1190,15 @@ def render_error(message: str) -> None:
     into the console. Goes to stderr so it never pollutes a piped stdout
     data stream."""
     safe = escape(strip_control_chars(message))
-    get_err_console().print(f"[red]{safe}[/red]")
+    get_err_console().print(f"[{ERROR}]{safe}[/{ERROR}]")
 
 
 # ── Posture observation rendering ────────────────────────────────────────
 
 _SALIENCE_INDICATORS: dict[str, str] = {
-    "high": "●",
-    "medium": "◐",
-    "low": "○",
+    "high": "salience_high",
+    "medium": "salience_medium",
+    "low": "salience_low",
 }
 
 
@@ -1293,8 +1234,8 @@ def render_posture_panel(observations: tuple[Observation, ...]) -> Panel | None:
 
         text.append(f"  {category.replace('_', ' ').title()}\n", style="bold")
         for obs in obs_list:
-            indicator = _SALIENCE_INDICATORS.get(obs.salience, "○")
-            text.append(f"  {indicator} ", style="dim")
+            indicator = glyph(_SALIENCE_INDICATORS.get(obs.salience, "salience_low"))
+            text.append(f"  {indicator} ", style=MUTED)
             text.append(obs.statement)
             text.append("\n")
 
@@ -1341,7 +1282,8 @@ def render_chain_panel(report: ChainReport) -> Panel:
     text.append(f"{report.max_depth_reached}\n")
     if report.truncated:
         text.append("  Status:        ", style="dim")
-        text.append("Truncated (cap reached)", style="yellow")
+        text.append(f"{glyph('warn')} ", style=f"bold {WARNING}")
+        text.append("Truncated (cap reached)")
         text.append("\n")
 
     # Domain tree grouped by depth
@@ -1357,7 +1299,7 @@ def render_chain_panel(report: ChainReport) -> Panel:
             # densest repetition of the provider line in the tool, so it takes
             # the default view's compaction (ADR-0012) unconditionally.
             provider = compact_provider_line(provider_line(r.info))
-            text.append(f"{indent}{r.domain}", style="cyan")
+            text.append(f"{indent}{r.domain}", style=ACCENT)
             text.append(f" — {r.info.display_name}", style="dim")
             if not provider.startswith("Unknown"):
                 text.append(f" ({provider})", style="dim")
@@ -1416,15 +1358,15 @@ def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
         state = source_display_state(result)
         if state == "match":
             description = _source_success_description(result)
-            text.append("  ✓ ", style="#a3d9a5")
+            text.append(f"  {glyph('ok')} ", style=SUCCESS)
             text.append(f"{result.source_name}", style="bold")
             text.append(f" — {description}", style="dim")
         elif state == "no_match":
-            text.append("  – ", style="dim")
+            text.append(f"  {glyph('neutral')} ", style=MUTED)
             text.append(f"{result.source_name}", style="bold")
             text.append(f" — {result.error or 'no match'}", style="dim")
         else:
-            text.append("  ✗ ", style="#e07a5f")
+            text.append(f"  {glyph('fail')} ", style=ERROR)
             text.append(f"{result.source_name}", style="bold")
             text.append(f" - {result.error or 'source unavailable'}", style="dim")
     return Panel(

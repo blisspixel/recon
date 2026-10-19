@@ -10,6 +10,7 @@ import typer
 from recon_tool import updater, updater_windows
 from recon_tool.exit_codes import EXIT_ERROR
 from recon_tool.formatter import get_console, get_err_console, render_error
+from recon_tool.formatter.theme import ACCENT, SUCCESS
 from recon_tool.validator import strip_control_chars
 
 
@@ -82,12 +83,14 @@ def run_update(*, check: bool = False) -> None:
     if check:
         console.print(f"  install method: {method}")
         if cmd is None:
-            console.print(f"  to upgrade:     [cyan]{updater.manual_hint(method)}[/cyan]")
+            console.print(f"  to upgrade:     [{ACCENT}]{updater.manual_hint(method)}[/{ACCENT}]")
         else:
-            console.print(f"  to upgrade:     [cyan]{' '.join(cmd)}[/cyan]   (or just: recon update)")
+            console.print(f"  to upgrade:     [{ACCENT}]{' '.join(cmd)}[/{ACCENT}]   (or just: recon update)")
         return
     if cmd is None:
-        console.print(f"Detected a {method} install; manual action needed: [cyan]{updater.manual_hint(method)}[/cyan]")
+        console.print(
+            f"Detected a {method} install; manual action needed: [{ACCENT}]{updater.manual_hint(method)}[/{ACCENT}]"
+        )
         return
 
     prepared = cmd
@@ -114,4 +117,6 @@ def run_update(*, check: bool = False) -> None:
     if result != 0:
         _render_update_error("Upgrade failed.", prepared)
         raise typer.Exit(code=EXIT_ERROR)
-    console.print("[green]Upgrade command completed. Open a new shell and run `recon --version` to confirm.[/green]")
+    console.print(
+        f"[{SUCCESS}]Upgrade command completed. Open a new shell and run `recon --version` to confirm.[/{SUCCESS}]"
+    )

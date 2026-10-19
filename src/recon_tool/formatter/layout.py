@@ -39,7 +39,7 @@ def _hanging_prefix(line: Text) -> int:
 
 def wrap_indented_text(text: Text, console: Console, width: int) -> Text:
     """Adapt already styled panel rows to a narrow console without dropping text."""
-    if text.plain and not text.plain.strip("─"):
+    if text.plain and not text.plain.strip("─-"):  # the divider, in either glyph set
         return text[:width]
     lines: list[Text] = []
     for line in text.split("\n", allow_blank=True):

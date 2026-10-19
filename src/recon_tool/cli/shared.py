@@ -282,3 +282,24 @@ def silence_closed_standard_streams() -> None:
         except OSError:
             continue
         setattr(sys, stream_name, replacement)
+
+
+def color_callback(value: bool | None) -> None:
+    """Force (--color) or disable (--no-color) colored output."""
+    if value is None:
+        return
+    from recon_tool.formatter import set_color_override
+
+    set_color_override(value)
+
+
+def ascii_callback(value: bool) -> None:
+    """Record --ascii (or its absence) for this invocation.
+
+    Click runs the callback with the default too, so a flag from an earlier
+    in-process invocation never carries over. The root callback resolves the
+    glyph set once every eager option has been seen.
+    """
+    from recon_tool.formatter import set_ascii_override
+
+    set_ascii_override(value)

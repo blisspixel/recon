@@ -30,6 +30,7 @@ from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 
 from recon_tool import __version__
+from recon_tool.formatter.theme import ACCENT, SUCCESS
 from recon_tool.json_limits import exceeds_json_nesting_limit
 
 _PACKAGE = "recon-tool"
@@ -504,8 +505,8 @@ def non_upgrade_status_message(current: str, latest: str) -> str | None:
     if comparison < 0:
         return None
     if comparison == 0:
-        return f"[green]recon {current} is up to date.[/green]"
+        return f"[{SUCCESS}]recon {current} is up to date.[/{SUCCESS}]"
     return (
-        f"[cyan]Installed recon {current} is newer than the latest PyPI release ({latest}). "
-        "No upgrade is offered.[/cyan]"
+        f"[{ACCENT}]Installed recon {current} is newer than the latest PyPI release ({latest}). "
+        f"No upgrade is offered.[/{ACCENT}]"
     )

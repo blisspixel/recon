@@ -23,6 +23,7 @@ from recon_tool.cli.catalog_rendering import print_field, print_indented
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.exit_codes import EXIT_VALIDATION
 from recon_tool.formatter import get_console, get_err_console, render_error
+from recon_tool.formatter.theme import ERROR, SUCCESS, WARNING, spinner_kwargs
 from recon_tool.validator import strip_control_chars, validate_domain
 
 fingerprints_app = typer.Typer(help="Inspect the built-in fingerprint catalog.")
@@ -639,7 +640,7 @@ def fingerprints_new(
         )
     else:
         console.print()
-        console.print("  [green]OK[/green]  Slug, schema, and specificity all pass.")
+        console.print(f"  [{SUCCESS}]OK[/{SUCCESS}]  Slug, schema, and specificity all pass.")
         console.print()
         console.print("  [dim]Paste into data/fingerprints/<category>.yaml:[/dim]")
         console.print()
@@ -724,11 +725,12 @@ def fingerprints_test(
     console.print(f"  [bold]Testing {slug!r} against {len(domains)} domain{'s' if len(domains) != 1 else ''}[/bold]")
     if using_example_corpus:
         console.print(
-            "  [yellow]Using a discovered corpus-example.txt file; every selected domain is queried live.[/yellow]"
+            f"  [{WARNING}]Using a discovered corpus-example.txt file; "
+            f"every selected domain is queried live.[/{WARNING}]"
         )
         console.print("  [dim]Supply --corpus path/to/file to select the input explicitly.[/dim]")
     console.print()
-    with get_err_console().status(f"Resolving {len(domains)} domains..."):
+    with get_err_console().status(f"Resolving {len(domains)} domains...", **spinner_kwargs()):
         results = asyncio.run(_resolve_all())
 
     hits = [result for result in results if result.status == "matched"]
@@ -739,11 +741,13 @@ def fingerprints_test(
         # markup and strip control bytes so it cannot inject Rich markup
         # or ANSI into the operator's terminal.
         console.print(
-            f"    [green]MATCH[/green]  {escape(strip_control_chars(result.domain))}    "
+            f"    [{SUCCESS}]MATCH[/{SUCCESS}]  {escape(strip_control_chars(result.domain))}    "
             f"{escape(strip_control_chars(result.detail))}"
         )
     for result in errors:
-        console.print(f"    [red]ERROR[/red]  {escape(strip_control_chars(result.domain))}    {escape(result.detail)}")
+        console.print(
+            f"    [{ERROR}]ERROR[/{ERROR}]  {escape(strip_control_chars(result.domain))}    {escape(result.detail)}"
+        )
     console.print()
     error_label = "lookup error" if len(errors) == 1 else "lookup errors"
     console.print(

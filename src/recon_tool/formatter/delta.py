@@ -9,6 +9,7 @@ from typing import Any
 from rich.panel import Panel
 from rich.text import Text
 
+from recon_tool.formatter.theme import DIFF_ADDED, DIFF_CHANGED, DIFF_REMOVED, WARNING, glyph
 from recon_tool.models import DeltaReport
 from recon_tool.validator import strip_control_chars
 
@@ -65,11 +66,10 @@ def _append_incomplete_warning(text: Text, report: DeltaReport) -> None:
     limitation = report.incomplete_comparison
     if limitation is None:
         return
-    text.append(
-        "\n  Warning: one or both snapshot collections were incomplete. ",
-        style="yellow bold",
-    )
-    text.append("Unconfirmable additions, removals, and dependent changes were withheld.\n", style="yellow")
+    text.append("\n  ")
+    text.append(f"{glyph('warn')} ", style=f"bold {WARNING}")
+    text.append("Warning: one or both snapshot collections were incomplete. ", style="bold")
+    text.append("Unconfirmable additions, removals, and dependent changes were withheld.\n")
     previous_sources = limitation.previous_degraded_sources
     current_sources = limitation.current_degraded_sources
     if not previous_sources and not current_sources:
@@ -101,8 +101,8 @@ def _append_scalar_changes(text: Text, report: DeltaReport) -> None:
         before = strip_control_chars(str(change[0]))
         after = strip_control_chars(str(change[1]))
         text.append("\n  ")
-        text.append("~ ", style="yellow bold")
-        text.append(f"{label}: {before} → {after}", style="yellow")
+        text.append("~ ", style=f"bold {DIFF_CHANGED}")
+        text.append(f"{label}: {before} {glyph('arrow')} {after}")
 
 
 def render_delta_panel(report: DeltaReport) -> Panel:
@@ -119,19 +119,19 @@ def render_delta_panel(report: DeltaReport) -> Panel:
         text.append(f"\n  {message}", style="dim italic")
     else:
         collections = (
-            ("Service", report.added_services, "green", "+ "),
-            ("Service", report.removed_services, "red", "- "),
-            ("Slug", report.added_slugs, "green", "+ "),
-            ("Slug", report.removed_slugs, "red", "- "),
-            ("Signal", report.added_signals, "green", "+ "),
-            ("Signal", report.removed_signals, "red", "- "),
+            ("Service", report.added_services, DIFF_ADDED, "+ "),
+            ("Service", report.removed_services, DIFF_REMOVED, "- "),
+            ("Slug", report.added_slugs, DIFF_ADDED, "+ "),
+            ("Slug", report.removed_slugs, DIFF_REMOVED, "- "),
+            ("Signal", report.added_signals, DIFF_ADDED, "+ "),
+            ("Signal", report.removed_signals, DIFF_REMOVED, "- "),
         )
         for label, values, color, marker in collections:
             for value in values:
                 safe_value = strip_control_chars(str(value))
                 text.append("\n  ")
-                text.append(marker, style=f"{color} bold")
-                text.append(f"{label}: {safe_value}", style=color)
+                text.append(marker, style=f"bold {color}")
+                text.append(f"{label}: {safe_value}")
         _append_scalar_changes(text, report)
 
     return Panel(

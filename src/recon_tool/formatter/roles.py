@@ -17,6 +17,7 @@ imports this module.
 
 from __future__ import annotations
 
+from recon_tool.formatter.theme import FILL_ROLE
 from recon_tool.models import PosteriorObservation, TenantInfo
 
 __all__ = [
@@ -116,7 +117,8 @@ POSTERIOR_DECISION_THRESHOLD = 0.5
 # How a fill level is expressed. Beside the function that computes it so the
 # glyph and the threshold rule cannot drift apart; the panel owns placement.
 DOT_FILL_GLYPH: dict[int, str] = {3: "●●●", 2: "●●○", 1: "●○○"}
-DOT_FILL_COLOR: dict[int, str] = {3: "#a3d9a5", 2: "#7ec8e3", 1: "#e07a5f"}
+# Role color per fill, from the single role table in formatter/theme.py.
+DOT_FILL_COLOR: dict[int, str] = dict(FILL_ROLE)
 
 
 def posterior_dot_fill(obs: PosteriorObservation, threshold: float = POSTERIOR_DECISION_THRESHOLD) -> int:

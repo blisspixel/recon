@@ -23,9 +23,44 @@ encode a qualification only in color, an icon, or an explanatory footnote.
 - Use bold for hierarchy and neutral numeric emphasis. The exposure index is
   model-bound, not an overall security grade, so its magnitude does not select
   a red-to-green scale.
-- Keep existing status colors attached to named collection or evidence states.
-  Confidence uses both a written level and the existing marker count; color
-  alone does not communicate the level.
+- Every color comes from one role table, `src/recon_tool/formatter/theme.py`,
+  mapped to the terminal's 16 named colors so a theme switch recolors recon.
+  No hex or 256-color values, no ANSI 0 (several theme generators, Omarchy's
+  included, set it to the background), and no magenta.
+
+  | Role | ANSI | Used for |
+  | --- | --- | --- |
+  | accent | cyan | headings in the welcome screen, discovered domains, commands in hints |
+  | success | green + word | `ok`, `match`, High confidence marker |
+  | warning | yellow + word | `warn`, partial, cache recovered, unverified, Low confidence marker |
+  | error | red + word | `fail`, source unavailable |
+  | info | blue + word | Medium confidence marker, vantage, mode |
+  | muted | dim default foreground | labels, provenance, clean no-match |
+
+  Gap severity uses high red, medium yellow and low blue, each beside its
+  severity word. Snapshot deltas color only the `+`, `-` and `~` markers.
+- Role colors mark state; words stay readable. In the lookup panel, source
+  status, exposure, gaps and delta views, a role color sits on a marker (dots,
+  source marks, the `!` warning mark) and the word that names the state stays
+  in the default foreground, bold, or muted. Measured on Omarchy's tokyo-night
+  (dark) and catppuccin-latte and flexoki-light (light) palettes, the default
+  foreground reaches 7:1 or more everywhere and every role color reaches 5.4:1
+  or more on the dark theme. On the light themes yellow measures 2.3:1 and
+  green about 3:1, so they can mark state but cannot carry text there.
+  Muted text, rendered faint by foot, measures 3.8:1 on tokyo-night, so muted
+  is for repeated structure such as labels, never the only copy of a finding.
+  `tests/test_theme_contrast.py` records the ratios and the known shortfalls.
+- Color precedence, highest first: `--color` / `--no-color` (the last one
+  given wins) > `NO_COLOR` (non-empty) > `TERM=dumb` > `FORCE_COLOR` (non-empty
+  and not `0`) > terminal detection. Disabled color emits no escape sequence at
+  all, on stdout and stderr.
+- Functional glyphs have ASCII fallbacks, used under `--ascii`, `TERM=dumb`,
+  or a terminal whose encoding cannot show them: `●●○` becomes `[##-]`, the
+  source marks (check mark, dash mark, cross) become `ok`, `-` and `x`,
+  `● ◐ ○` become `H M L`, and the divider becomes `-`. Any other glyph, such as a bullet, arrow, ellipsis, dash or box border,
+  is transliterated, so ASCII mode output is pure ASCII.
+- Confidence uses both a written level and the marker count; color alone does
+  not communicate the level.
 - Preserve one main divider, stable label alignment, and hanging continuation
   indentation. Text wraps at the actual console width; decorative rules do not
   wrap into extra rows. Ordinary wide output retains its established layout.
@@ -59,7 +94,9 @@ command legible without requiring the symbol to explain the product.
 
 `tests/test_panel_responsive_layout.py` preserves wide output and verifies
 narrow-width content and style retention. `tests/test_exposure_visual_semantics.py`
-pins neutral index styling. `tests/test_cohort_display_semantics.py` checks
+pins neutral index styling. `tests/test_theme_roles.py` pins the role table,
+color precedence and the ASCII fallback, and `tests/test_theme_contrast.py`
+measures panel contrast on Omarchy palettes. `tests/test_cohort_display_semantics.py` checks
 units, denominators and unavailable values. `tests/test_mcp_collection_notes.py`
 keeps material CT caveats aligned across interfaces. The generated terminal
 demo and existing golden renders remain independent integration gates.

@@ -9,7 +9,7 @@ Insights
   Wildcard-only certificate posture limits passive visibility.
 
 
-Note
+! Note
   Some sources unavailable (oidc_discovery).
 
 Next

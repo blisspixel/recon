@@ -2,9 +2,9 @@
 
 Pure helpers used by the root group before Click parses anything:
 
-- ``--color`` / ``--no-color`` are root options, but users place them after the
-  domain like every lookup flag. Trailing occurrences move in front of the
-  command so they behave exactly like the leading form.
+- ``--color`` / ``--no-color`` and ``--ascii`` are root options, but users
+  place them after the domain like every lookup flag. Trailing occurrences move
+  in front of the command so they behave exactly like the leading form.
 - The other root-only options (``--debug``, ``-V``/``--version``) still have to
   lead; a trailing one gets an error that names the working form.
 - A near-miss subcommand typo followed by more arguments gets a suggestion
@@ -16,6 +16,8 @@ from __future__ import annotations
 from collections.abc import Iterable, Sequence
 
 COLOR_FLAGS = frozenset({"--color", "--no-color"})
+# Root output options accepted anywhere on the command line.
+HOISTED_ROOT_FLAGS = COLOR_FLAGS | frozenset({"--ascii"})
 ROOT_ONLY_FLAGS = frozenset({"--debug", "-V", "--version"})
 _MAX_SUGGESTION_DISTANCE = 2
 
@@ -35,7 +37,7 @@ def _command_index(args: Sequence[str]) -> int | None:
 
 
 def hoist_trailing_color_flags(args: Sequence[str]) -> list[str]:
-    """Move ``--color``/``--no-color`` after the command in front of it.
+    """Move ``--color``/``--no-color``/``--ascii`` after the command in front of it.
 
     Relative order is preserved, so when both forms appear the last one on the
     command line wins, as with any repeated Click flag. Tokens after a ``--``
@@ -51,7 +53,7 @@ def hoist_trailing_color_flags(args: Sequence[str]) -> list[str]:
         if arg == "--":
             kept.extend(tail[offset:])
             break
-        (moved if arg in COLOR_FLAGS else kept).append(arg)
+        (moved if arg in HOISTED_ROOT_FLAGS else kept).append(arg)
     return [*args[:start], *moved, *kept]
 
 
