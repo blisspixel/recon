@@ -26,6 +26,40 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
+### Fixed
+
+- A lookup or review where every DNS query fails and every identity endpoint
+  fails now reports `all_sources_failed` and exits 4 instead of an empty
+  success. The disabled CSE probe no longer counts as a clean source. Empty and
+  mixed DNS results remain partial lookups (#221).
+- An NXDOMAIN for the queried name is now stated on the panel, `--plain`,
+  `--md`, and MCP text, carried as the additive JSON field `dns_name_status`,
+  and no longer narrated as a parked or web-only domain (#222).
+- A lookup whose collection had unavailable sources is no longer reused from
+  the result cache, so the next default lookup after a network recovery
+  collects again, including for entries saved by earlier releases. `recon cache
+  show` reports the same reuse decision as the lookup, and human output served
+  from the cache says so in one muted line. `--no-cache` remains a read and
+  write bypass; lookup JSON is unchanged (#223).
+- The MCP launcher written by `recon mcp install`, and `recon mcp`, no longer
+  refuse to start when the client's working directory is the home directory or
+  a filesystem root. The startup guard now refuses only a `recon_tool` package
+  imported through the working directory, with a bounded, actionable message
+  (#220).
+- `--color` and `--no-color` now work after the domain or command, matching
+  the leading form; the last one given wins. A trailing `--debug`, `-V`, or
+  `--version` explains that it is a global option (#224).
+
+### Changed
+
+- `recon mcp doctor` labels its isolated empty-directory check and adds a
+  generated-launch check that runs the installer's exact command, arguments,
+  and environment from the current directory or `--launch-cwd`, naming the
+  launch it exercised (#220).
+- A near-miss command typo followed by more arguments (`recon lookpu
+  example.com`) now reports `Unknown command "lookpu". Did you mean "lookup"?`
+  with exit 2 (#229).
+
 ## [2.20.1] - 2026-10-11
 
 Keep valid home-managed updates available and preserve installed launcher dispatch.
