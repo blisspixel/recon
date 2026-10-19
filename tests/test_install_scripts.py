@@ -103,7 +103,7 @@ def test_onboarding_explains_exact_owner_preserving_helpers_and_release_verifica
     assert "sole" in normalized
     assert "unmanaged" in normalized
     assert "supply-chain.md#consumer-verification-quick-path" in normalized
-    assert "Python 3.11 through 3.14" in getting_started
+    assert "Python 3.11 through 3.15" in getting_started
     assert "Python 3.11 or newer" not in getting_started
 
 
@@ -183,9 +183,9 @@ def _fake_python(path: Path, minor: int, releaselevel: str = "final") -> None:
 
 
 def _fake_pipx_pythons(fake_bin: Path, venvs: Path, options: dict[str, str]) -> None:
-    selected_python = options.get("FAKE_SUPPORTED_PYTHON", "python3.14")
-    for candidate in ("python3.14", "python3.13", "python3.12", "python3.11", "python3", "python"):
-        minor = int(candidate.rsplit(".", 1)[-1]) if candidate == selected_python and "." in candidate else 15
+    selected_python = options.get("FAKE_SUPPORTED_PYTHON", "python3.15")
+    for candidate in ("python3.15", "python3.14", "python3.13", "python3.12", "python3.11", "python3", "python"):
+        minor = int(candidate.rsplit(".", 1)[-1]) if candidate == selected_python and "." in candidate else 16
         _fake_python(fake_bin / candidate, minor)
     existing_python = venvs / "recon-tool" / "bin/python"
     existing_python.parent.mkdir(parents=True)
@@ -317,7 +317,7 @@ def test_unix_installer_preserves_existing_pipx_owner(tmp_path: Path) -> None:
 
 
 @pytest.mark.parametrize("powershell", [False, True])
-@pytest.mark.parametrize("selected", ["python3.14", "python3.12"])
+@pytest.mark.parametrize("selected", ["python3.15", "python3.12"])
 def test_new_pipx_install_uses_explicit_supported_interpreter(tmp_path: Path, selected: str, powershell: bool) -> None:
     result, log = _run_unix_installer(
         tmp_path,
@@ -340,11 +340,11 @@ def test_powershell_python_probe_preserves_legacy_native_arguments(tmp_path: Pat
         },
     )
     assert result.returncode == 0, result.stdout + result.stderr
-    expected_python = tmp_path / "pipx venvs/recon-tool/bin/python" if existing else tmp_path / "bin/python3.14"
+    expected_python = tmp_path / "pipx venvs/recon-tool/bin/python" if existing else tmp_path / "bin/python3.15"
     assert f"pipx install --force recon-tool=={_VERSION} --python {expected_python}" in log
 
 
-@pytest.mark.parametrize(("minor", "releaselevel"), [(15, "final"), (14, "candidate")])
+@pytest.mark.parametrize(("minor", "releaselevel"), [(16, "final"), (15, "candidate")])
 def test_powershell_legacy_probe_still_refuses_unsupported_interpreter(
     tmp_path: Path, minor: int, releaselevel: str
 ) -> None:
@@ -359,7 +359,7 @@ def test_powershell_legacy_probe_still_refuses_unsupported_interpreter(
         },
     )
     assert result.returncode == 1
-    assert "existing pipx environment needs a stable Python 3.11 through 3.14" in result.stdout + result.stderr
+    assert "existing pipx environment needs a stable Python 3.11 through 3.15" in result.stdout + result.stderr
     assert "install --force" not in log
 
 
@@ -392,13 +392,13 @@ def test_pipx_refuses_unsupported_existing_environment(tmp_path: Path, powershel
         tmp_path,
         extra_env={
             "FAKE_PIPX_LIST": "package recon-tool 2.6.2",
-            "FAKE_EXISTING_PYTHON_MINOR": "15",
+            "FAKE_EXISTING_PYTHON_MINOR": "16",
             "FAKE_POWERSHELL": str(int(powershell)),
         },
     )
     assert result.returncode == 1
     output = result.stdout + result.stderr
-    assert "existing pipx environment needs a stable Python 3.11 through 3.14" in output
+    assert "existing pipx environment needs a stable Python 3.11 through 3.15" in output
     assert "pipx reinstall recon-tool --python <supported-python>" in result.stderr
     assert "install --force" not in log
 
@@ -410,7 +410,7 @@ def test_pipx_without_supported_python_stops_before_install(tmp_path: Path, powe
         extra_env={"FAKE_NO_UV": "1", "FAKE_SUPPORTED_PYTHON": "none", "FAKE_POWERSHELL": str(int(powershell))},
     )
     assert result.returncode == 1
-    assert "pipx needs an available stable Python 3.11 through 3.14" in result.stderr
+    assert "pipx needs an available stable Python 3.11 through 3.15" in result.stderr
     assert "install --force" not in log
 
 
@@ -803,7 +803,7 @@ def test_installer_bootstraps_uv_on_a_fresh_machine(tmp_path: Path) -> None:
     result, log = run(tmp_path, pipx=False, extra_env={"FAKE_BOOTSTRAP": "1", "FAKE_BIN_OFF_PATH": "1"})
     assert result.returncode == 0, result.stdout + result.stderr
     assert "https://astral.sh/uv/0.11.17/install." in log
-    assert f"uv tool install --force recon-tool=={_VERSION} --python 3.14" in log
+    assert f"uv tool install --force recon-tool=={_VERSION} --python 3.15" in log
     assert f"reports recon {_VERSION}" in result.stdout
 
 

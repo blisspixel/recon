@@ -32,7 +32,7 @@ once. Other failures stop immediately. An unresolved lock stops with retry
 guidance, even when pipx is available, because it cannot establish ownership.
 The timeout is local to the probe, not a persistent uv setting.
 
-New pipx installations select an available stable Python 3.14, 3.13, 3.12 or
+New pipx installations select an available stable Python 3.15, 3.14, 3.13, 3.12 or
 3.11, in that order, and pass its verified absolute executable explicitly.
 Existing pipx installations retain their own supported interpreter. Since
 [pipx ignores `--python` with `--force` for an existing environment](https://github.com/pypa/pipx/blob/1.17.13/src/pipx/commands/install.py),

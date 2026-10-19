@@ -313,12 +313,14 @@ constant completed-result memory should continue to use NDJSON.
 
 ## Python version policy
 
-The package continues to require Python 3.11 or newer. Python 3.14 is the
-preferred development and characterization runtime because users receive its
-interpreter, import, and asyncio improvements without a compatibility break.
-CI still runs the full functional and coverage contract on Python 3.11 through
-3.14 across Windows, macOS, and Linux, with a non-blocking 3.14t dependency
-probe.
+The package continues to require Python 3.11 or newer. Python 3.15 is the
+preferred development runtime and the interpreter for single-version CI and
+release jobs, so users receive current interpreter, import, and asyncio
+improvements without a compatibility break. The performance figures in this
+document were characterized on Python 3.14 and have not been re-measured on
+3.15. CI still runs the full functional and coverage contract on Python 3.11
+through 3.15 across Windows, macOS, and Linux, with a non-blocking 3.15t
+dependency probe.
 
 Reviewed July 13, 2026 against current official guidance:
 
@@ -380,8 +382,9 @@ Checked July 11, 2026 against official documentation:
 - [PyO3 supports free-threaded CPython](https://pyo3.rs/main/free-threading),
   but its [ABI feature guidance](https://pyo3.rs/main/features) states that
   `abi3` does not support free-threaded builds and `abi3t` starts with Python
-  3.15. Supporting recon's current Python 3.14t probe would therefore require a
-  separate native artifact in addition to regular stable-ABI wheels.
+  3.15. Supporting a free-threaded build such as recon's 3.15t probe with
+  native code would therefore require an `abi3t` or per-version free-threaded
+  artifact in addition to regular stable-ABI wheels.
 - [Maturin distribution guidance](https://www.maturin.rs/distribution.html)
   requires platform-compatible native wheels and explicit Linux compatibility.
   This is materially broader than recon's current `py3-none-any` release.

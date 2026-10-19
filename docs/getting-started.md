@@ -7,7 +7,7 @@ The short product overview is in [README.md](../README.md).
 
 - Windows, macOS, or Linux. The one-command installer below sets up `uv` and
   Python when needed; a fresh install does not require administrator access.
-- For a manual Python install: Python 3.11 through 3.14. The latest Python 3.14 patch is recommended; every
+- For a manual Python install: Python 3.11 through 3.15. The latest Python 3.15 patch is recommended; every
   version in that tested range retains the same supported behavior and output
   contracts. Later Python versions are not yet part of the compatibility claim.
 - The recon runtime needs no API keys, credentials, paid accounts, or external
@@ -31,10 +31,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -Command "irm https://raw.githubus
 The helper installs the exact recon version recorded in the script. It preserves
 the sole `uv` or `pipx` owner of an existing install and refuses ambiguous or
 unmanaged ownership with recovery guidance. On a fresh machine it downloads
-the pinned official `uv` installer, then lets `uv` install Python 3.14 and recon
+the pinned official `uv` installer, then lets `uv` install Python 3.15 and recon
 in an isolated tool environment. It updates PATH and verifies `recon --version`
 before reporting success. For pipx it selects an available stable Python from
-3.14 through 3.11 and prints its version and executable. An existing pipx
+3.15 through 3.11 and prints its version and executable. An existing pipx
 installation keeps its own supported Python; an unsupported or unreadable
 environment stops with `pipx reinstall` guidance.
 
@@ -47,17 +47,17 @@ To inspect a fixed script first, download a
 helper, then run `bash scripts/install.sh` or
 `powershell -ExecutionPolicy Bypass -File .\scripts\install.ps1` locally.
 
-If you already have Python 3.11 through 3.14, install directly:
+If you already have Python 3.11 through 3.15, install directly:
 
 ```bash
 pip install recon-tool
 # Or use an isolated tool environment:
-uv tool install --python 3.14 recon-tool
-pipx install --python python3.14 recon-tool
+uv tool install --python 3.15 recon-tool
+pipx install --python python3.15 recon-tool
 ```
 
-For pipx, name an installed stable Python 3.11 through 3.14; on Windows with
-the Python launcher, use `--python 3.14`. Passing `--python` together with
+For pipx, name an installed stable Python 3.11 through 3.15; on Windows with
+the Python launcher, use `--python 3.15`. Passing `--python` together with
 `pipx install --force` does not change an existing environment's interpreter.
 Use `pipx reinstall recon-tool --python <supported-python>` to change it, then
 rerun the helper to install its exact release.

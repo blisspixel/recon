@@ -34,7 +34,7 @@ Compatibility notes:
     ``encoding="utf-8"`` so the test passes identically on Linux,
     macOS, and Windows runners.
   * No subprocess, no Python-version-specific features. Runs cleanly
-    on every supported Python version (3.11 through 3.14).
+    on every supported Python version (3.11 through 3.15).
 """
 
 from __future__ import annotations

@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -34,19 +34,19 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.17"
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.15"
 
       - name: Install dependencies
         run: uv sync
@@ -63,7 +63,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
@@ -108,24 +108,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Set up Node.js
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
-          node-version: "22"
+          node-version: "24"
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.17"
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.15"
 
       - name: Install dependencies
         run: uv sync
@@ -145,21 +145,21 @@ jobs:
       matrix:
         mcp-version: ["1.28.1", "2.0.0", "2.2.0"]
     env:
-      UV_PYTHON: "3.11"
+      UV_PYTHON: "3.15"
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.17"
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.15"
 
       - name: Install locked development environment
         run: uv sync --locked
@@ -177,21 +177,26 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
-        python-version: ["3.11", "3.12", "3.13", "3.14"]
+        # Every maintained CPython release. 3.11 is the supported floor
+        # (requires-python and pyright pythonVersion); single-version jobs
+        # elsewhere run the newest stable release, 3.15.
+        python-version: ["3.11", "3.12", "3.13", "3.14", "3.15"]
         include:
-          # Free-threaded 3.14 (PEP 703), Ubuntu only, as a
+          # Free-threaded 3.15 (PEP 703/779), Ubuntu only, as a
           # dependency-compatibility probe. recon is asyncio-based with no
           # shared mutable thread state, so the value here is catching a
-          # dependency without a cp314t wheel before a user on
+          # dependency without a cp315t wheel before a user on
           # free-threaded Python hits it. Marked experimental so it does
-          # not block CI: a missing cp314t wheel reports, it does not fail.
+          # not block CI: a missing cp315t wheel reports, it does not fail.
+          # At 3.15.0 the locked cryptography (abi3 wheels only, no cp315t)
+          # and PyYAML (no 3.15 wheels) must build from source here.
           - os: ubuntu-latest
-            python-version: "3.14t"
+            python-version: "3.15t"
             experimental: true
-    # `.python-version` pins the local and dev toolchain to 3.14. In CI the
+    # `.python-version` pins the local and dev toolchain to 3.15. In CI the
     # matrix has to win, so force uv to the matrix interpreter; without this
-    # uv reads `.python-version` and runs every matrix job on 3.14, which
-    # would silently defeat the 3.11 / 3.12 / 3.13 coverage.
+    # uv reads `.python-version` and runs every matrix job on 3.15, which
+    # would silently defeat the 3.11 / 3.12 / 3.13 / 3.14 coverage.
     env:
       UV_PYTHON: ${{ matrix.python-version }}
     # Non-blocking only for the experimental free-threaded probe above;
@@ -199,17 +204,17 @@ jobs:
     continue-on-error: ${{ matrix.experimental || false }}
 
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.17"
 
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: ${{ matrix.python-version }}
 
@@ -232,26 +237,26 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      # `.python-version` pins the local / dev toolchain to 3.14, and uv reads
-      # it unless UV_PYTHON is set. Without this the audit's uv sync / export /
-      # pip-audit would run on 3.14 instead of the interpreter setup-python
-      # installs below, auditing the wrong environment. Mirror the test matrix,
-      # which sets UV_PYTHON for the same reason.
-      UV_PYTHON: "3.11"
+      # uv reads `.python-version` (the 3.15 dev pin) unless UV_PYTHON is set.
+      # Pin the audit's uv sync / export / pip-audit explicitly to the
+      # interpreter setup-python installs below, so a future dev-pin change
+      # cannot silently audit a different environment. Mirror the test
+      # matrix, which sets UV_PYTHON for the same reason.
+      UV_PYTHON: "3.15"
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.17"
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.15"
 
       - name: Install dependencies
         run: uv sync
@@ -272,7 +277,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
           # Repository-policy checks need HEAD^ and historical commit objects.
@@ -280,14 +285,14 @@ jobs:
           fetch-depth: 0
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.17"
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.15"
 
       - name: Install dependencies
         run: uv sync
@@ -490,24 +495,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 30
     env:
-      # .python-version pins the toolchain to 3.14; force the matrix interpreter.
-      UV_PYTHON: "3.11"
+      # Pin the interpreter explicitly rather than inheriting .python-version.
+      UV_PYTHON: "3.15"
       # Load the higher-budget Hypothesis profile (conftest.py) for this job.
       RECON_FUZZ: "1"
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.17"
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.15"
 
       - name: Install dependencies
         run: uv sync
@@ -526,24 +531,24 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     env:
-      UV_PYTHON: "3.11"
+      UV_PYTHON: "3.15"
       # A fixed epoch so the two builds below share pinned file mtimes; the
       # value is arbitrary (this gate tests determinism, not the release stamp).
       SOURCE_DATE_EPOCH: "1700000000"
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.17"
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.15"
 
       - name: Build twice and compare artifact hashes
         run: |
@@ -575,7 +580,7 @@ jobs:
           exit "$fail"
 
       - name: Upload wheel for installed-artifact checks
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: smoke-wheel
           path: ${{ runner.temp }}/r1/*.whl
@@ -593,22 +598,22 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest, macos-latest]
     steps:
-      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@11f9893b081a58869d3b5fccaea48c9e9e46f990 # v8.3.2
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
         with:
           version: "0.11.17"
 
       - name: Set up Python
-        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          python-version: "3.11"
+          python-version: "3.15"
 
       - name: Download built wheel
-        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: smoke-wheel
           path: ${{ runner.temp }}/wheel-smoke-dist
