@@ -55,7 +55,7 @@ def _panel_text(posteriors: tuple[PosteriorObservation, ...]) -> str:
 
 def test_high_model_support_is_separate_from_deterministic_confidence() -> None:
     out = _panel_text((_obs("m365_tenant", 0.95, 0.88, 0.99),))
-    assert "Confidence   ●●● High (4 sources)" in out
+    assert "Confidence    ●●● High (4 sources)" in out
     assert "Model support ●●● display above threshold for the M365 tenant" in out
     assert "believable" not in out
     assert "confident" not in out.lower()
@@ -63,14 +63,14 @@ def test_high_model_support_is_separate_from_deterministic_confidence() -> None:
 
 def test_threshold_straddling_display_does_not_demote_confidence() -> None:
     out = _panel_text((_obs("m365_tenant", 0.62, 0.41, 0.78),))
-    assert "Confidence   ●●● High (4 sources)" in out
+    assert "Confidence    ●●● High (4 sources)" in out
     assert "Model support ●●○ threshold-straddling display for the M365 tenant" in out
     assert "thin on" not in out
 
 
 def test_below_threshold_mean_avoids_an_evidence_verdict() -> None:
     out = _panel_text((_obs("m365_tenant", 0.38, 0.19, 0.61),))
-    assert "Confidence   ●●● High (4 sources)" in out
+    assert "Confidence    ●●● High (4 sources)" in out
     assert "Model support ●○○ model mean below threshold for the M365 tenant" in out
     assert "evidence does not back" not in out
 
@@ -91,7 +91,7 @@ def test_weakest_claimed_node_drives_model_support_only() -> None:
             _obs("email_gateway_present", 0.58, 0.42, 0.74),
         )
     )
-    assert "Confidence   ●●● High (4 sources)" in out
+    assert "Confidence    ●●● High (4 sources)" in out
     assert "Model support ●●○ threshold-straddling display for the email gateway" in out
 
 
@@ -109,7 +109,7 @@ def test_negative_node_does_not_demote_confidence() -> None:
         sparse=False,
     )
     out = _panel_text((_obs("m365_tenant", 0.95, 0.88, 0.99), not_enforcing))
-    assert "Confidence   ●●● High (4 sources)" in out
+    assert "Confidence    ●●● High (4 sources)" in out
     assert "Model support ●●● display above threshold for the M365 tenant" in out
 
 

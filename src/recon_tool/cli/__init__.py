@@ -858,7 +858,7 @@ def delta(
         if json_output:
             typer.echo(format_delta_json(diff))
         else:
-            console.print(render_delta_panel(diff))
+            console.print(render_delta_panel(diff), crop=False)
         # Update cache with fresh snapshot so the next delta compares
         # against today's state, not the baseline from two runs ago.
         cache_put(validated, info)

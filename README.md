@@ -33,11 +33,11 @@ demo@recon:~$ recon example.com    # synthetic fixture, not a captured run
 Example Industries Ltd
 example.com
 ──────────────────────────────────────────────────────────────────────────────
-  Provider     Microsoft 365 + Proofpoint gateway
-  Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
+  Provider      Microsoft 365 + Proofpoint gateway
+  Tenant        a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA
   Tenant domain example-industries.onmicrosoft.example.com
-  Auth         Federated
-  Confidence   ●●● High (4 sources)
+  Auth          Federated
+  Confidence    ●●● High (4 sources)
 
 
 Services

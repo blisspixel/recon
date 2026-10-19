@@ -64,6 +64,23 @@ encode a qualification only in color, an icon, or an explanatory footnote.
 - Preserve one main divider, stable label alignment, and hanging continuation
   indentation. Text wraps at the actual console width; decorative rules do not
   wrap into extra rows. Ordinary wide output retains its established layout.
+- Width rule: the lookup panel is laid out at `min(console width, 78)`, once.
+  At 78 columns or more it is the established layout, so wide output does not
+  change. Narrower, the sections are laid out again at the real width rather
+  than laid out at 78 and re-wrapped, which is what left orphan words. Bordered
+  panels (explanations, source status, posture, exposure, gaps, delta, chain)
+  keep their 80-column box when the console has room and otherwise render flat,
+  as a bold heading over the same body, so a border never folds or crops text.
+- Identifiers never break. A UUID, hostname, URL, email address or path that
+  does not fit moves to its own line at the value indent and may run past the
+  edge; panels are printed with `crop=False` so it is not cut. Other text wraps
+  between words, and only a word longer than a whole line is folded.
+- Every value in a block starts in one column. The key-facts label column is
+  the longest label present plus one, never less than the established 13 and
+  never more than 16; a longer label puts its value on the next line at the
+  value indent. Doctor rows use the same hanging indent: continuation lines
+  start at the detail column, or the detail moves to an indented block when
+  the name leaves too little room.
 - Preserve useful content and styles at 40, 60 and 80 columns. Exercise long
   identifiers and wide Unicode characters. Do not hide missing text by changing
   a golden rendering to match a defect.
@@ -93,7 +110,12 @@ command legible without requiring the symbol to explain the product.
 ## Regression checks
 
 `tests/test_panel_responsive_layout.py` preserves wide output and verifies
-narrow-width content and style retention. `tests/test_exposure_visual_semantics.py`
+narrow-width content and style retention. `tests/test_narrow_layout.py` renders
+the default, `--full` and `--explain` views at 40, 60, 80 and 120 columns and
+checks that only a single identifier runs past the edge, that identifiers stay
+on one line, that prose and key facts wrap once, that key-fact values share one
+column and that doctor continuations start at the detail column; its 40 and 60
+column golden renders sit beside the wide ones. `tests/test_exposure_visual_semantics.py`
 pins neutral index styling. `tests/test_theme_roles.py` pins the role table,
 color precedence and the ASCII fallback, and `tests/test_theme_contrast.py`
 measures panel contrast on Omarchy palettes. `tests/test_cohort_display_semantics.py` checks

@@ -22,12 +22,17 @@ from rich.markup import escape
 
 from recon_tool.cli.options import LookupOptions
 from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_NO_DATA, EXIT_VALIDATION
+from recon_tool.formatter.layout import wrap_plain_text
 from recon_tool.formatter.theme import ERROR, INFO, SUCCESS, WARNING
 from recon_tool.models import ReconLookupError
 from recon_tool.validator import strip_control_chars
 
 _MAX_DIAGNOSTIC_LEN = 2000
 _NARROW_HELP_COLUMNS = 70
+# Diagnostic rows: the indent of the block form, and the narrowest detail
+# column worth hanging beside the name before falling back to that block.
+_BLOCK_INDENT = 8
+_MIN_HANGING_DETAIL = 24
 
 
 def help_markup_mode() -> Literal["rich"] | None:
@@ -114,13 +119,18 @@ def fmt_exc(exc: BaseException) -> str:
     return str(exc) or type(exc).__name__
 
 
-def safe_diagnostic_markup(value: object) -> str:
-    """Return bounded literal text safe to interpolate into Rich markup."""
+def diagnostic_text(value: object) -> str:
+    """Return bounded, control-stripped literal text for a diagnostic row."""
     raw = str(value)
     cleaned = strip_control_chars(raw, max_len=_MAX_DIAGNOSTIC_LEN)
     if len(raw) > _MAX_DIAGNOSTIC_LEN:
         cleaned = f"{cleaned} [truncated]"
-    return escape(cleaned)
+    return cleaned
+
+
+def safe_diagnostic_markup(value: object) -> str:
+    """Return bounded literal text safe to interpolate into Rich markup."""
+    return escape(diagnostic_text(value))
 
 
 DiagnosticStatus = Literal["ok", "warn", "fail", "info"]
@@ -156,47 +166,43 @@ def render_diagnostic_status_row(
     name: object,
     detail: object,
 ) -> None:
-    """Render a safe status row with associated detail at narrow widths."""
-    safe_name = safe_diagnostic_markup(name)
-    safe_detail = safe_diagnostic_markup(detail)
-    header = f"  [{style}]{mark:>4}[/{style}]  {safe_name}:"
-    visible_header_length = 2 + 4 + 2 + len(str(name)) + 1
+    """Render a safe status row whose detail wraps once under the detail column.
+
+    The row follows the panel's hanging-indent rule (formatter/layout.py): the
+    detail wraps at the console width, every continuation line starts at the
+    detail column, and a path or hostname never breaks. When the name leaves
+    too little room beside it, the detail moves to an indented block below.
+    """
+    name_text = diagnostic_text(name)
+    detail_text = diagnostic_text(detail)
+    header = f"  [{style}]{mark:>4}[/{style}]  {escape(name_text)}:"
+    visible_header_length = 2 + 4 + 2 + len(name_text) + 1
     if visible_header_length > console.width:
         console.print(f"  [{style}]{mark:>4}[/{style}]")
-        name_indent = "        "
-        name_lines = textwrap.wrap(
-            safe_name,
-            width=max(1, console.width - len(name_indent)),
-            break_long_words=False,
-            break_on_hyphens=False,
-        ) or [""]
+        name_lines = wrap_plain_text(name_text, max(1, console.width - _BLOCK_INDENT))
         for index, line in enumerate(name_lines):
             suffix = ":" if index == len(name_lines) - 1 else ""
-            console.print(f"{name_indent}{line}{suffix}", soft_wrap=True)
-        detail_indent = "            "
-        detail_lines = textwrap.wrap(
-            safe_detail,
-            width=max(1, console.width - len(detail_indent)),
-            break_long_words=False,
-            break_on_hyphens=False,
-        ) or [""]
-        for line in detail_lines:
-            console.print(f"{detail_indent}{line}", soft_wrap=True)
+            console.print(f"{' ' * _BLOCK_INDENT}{escape(line)}{suffix}", soft_wrap=True)
+        _print_detail_block(console, detail_text, _BLOCK_INDENT + 4)
         return
-    if visible_header_length + 1 + len(str(detail)) <= console.width:
-        console.print(f"{header} {safe_detail}")
+    detail_column = visible_header_length + 1
+    if detail_column + len(detail_text) <= console.width:
+        console.print(f"{header} {escape(detail_text)}")
         return
-
+    if console.width - detail_column >= _MIN_HANGING_DETAIL:
+        lines = wrap_plain_text(detail_text, console.width - detail_column)
+        console.print(f"{header} {escape(lines[0])}", soft_wrap=True)
+        for line in lines[1:]:
+            console.print(f"{' ' * detail_column}{escape(line)}", soft_wrap=True)
+        return
     console.print(header)
-    continuation = "        "
-    wrapped = textwrap.wrap(
-        safe_detail,
-        width=max(1, console.width - len(continuation)),
-        break_long_words=False,
-        break_on_hyphens=False,
-    ) or [""]
-    for line in wrapped:
-        console.print(f"{continuation}{line}", soft_wrap=True)
+    _print_detail_block(console, detail_text, _BLOCK_INDENT)
+
+
+def _print_detail_block(console: Console, detail_text: str, indent: int) -> None:
+    """Print a detail wrapped once, with every line starting at ``indent``."""
+    for line in wrap_plain_text(detail_text, max(1, console.width - indent)):
+        console.print(f"{' ' * indent}{escape(line)}", soft_wrap=True)
 
 
 def raise_lookup_error(error: ReconLookupError, *, domain: str | None = None) -> Never:

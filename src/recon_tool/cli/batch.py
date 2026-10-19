@@ -629,7 +629,7 @@ def _batch_render_results(
             if isinstance(r, str) and r.startswith(error_prefix):
                 render_error(r[len(error_prefix) :])
             else:
-                console.print(r)
+                console.print(r, crop=False)
                 console.print()
 
 

@@ -9,6 +9,7 @@ from typing import Any
 from rich.panel import Panel
 from rich.text import Text
 
+from recon_tool.formatter.layout import BORDERED_PANEL_WIDTH, FittedPanel
 from recon_tool.formatter.theme import DIFF_ADDED, DIFF_CHANGED, DIFF_REMOVED, WARNING, glyph
 from recon_tool.models import DeltaReport
 from recon_tool.validator import strip_control_chars
@@ -134,10 +135,10 @@ def render_delta_panel(report: DeltaReport) -> Panel:
                 text.append(f"{label}: {safe_value}")
         _append_scalar_changes(text, report)
 
-    return Panel(
+    return FittedPanel(
         text,
         title="Delta Report",
-        width=80,
+        width=BORDERED_PANEL_WIDTH,
         padding=(1, 2),
         border_style="dim",
     )
