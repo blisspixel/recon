@@ -139,7 +139,7 @@ def _parse_mapping(raw: Any, profile_name: str, field_name: str) -> tuple[tuple[
         return ()
     if not isinstance(raw, dict):
         logger.warning(
-            "Profile %r has non-dict %s — ignored",
+            "Profile %r has non-dict %s; ignored",
             profile_name,
             field_name,
         )
@@ -148,7 +148,7 @@ def _parse_mapping(raw: Any, profile_name: str, field_name: str) -> tuple[tuple[
     for key, value in raw.items():  # pyright: ignore[reportUnknownVariableType]
         if not isinstance(key, str) or not key.strip():
             logger.warning(
-                "Profile %r has invalid %s key %r — skipped",
+                "Profile %r has invalid %s key %r; skipped",
                 profile_name,
                 field_name,
                 key,
@@ -168,7 +168,7 @@ def _parse_mapping(raw: Any, profile_name: str, field_name: str) -> tuple[tuple[
             mult = float(value)  # pyright: ignore[reportUnknownArgumentType]
         except (TypeError, ValueError):
             logger.warning(
-                "Profile %r has non-numeric %s value %r for key %r — skipped",
+                "Profile %r has non-numeric %s value %r for key %r; skipped",
                 profile_name,
                 field_name,
                 value,
@@ -186,7 +186,7 @@ def _parse_mapping(raw: Any, profile_name: str, field_name: str) -> tuple[tuple[
             continue
         if mult < 0:
             logger.warning(
-                "Profile %r has negative %s value %f for key %r — clamped to 0",
+                "Profile %r has negative %s value %f for key %r; clamped to 0",
                 profile_name,
                 field_name,
                 mult,
@@ -205,7 +205,7 @@ def _parse_string_list(raw: Any, profile_name: str, field_name: str) -> tuple[st
         return ()
     if not isinstance(raw, list):
         logger.warning(
-            "Profile %r has non-list %s — ignored",
+            "Profile %r has non-list %s; ignored",
             profile_name,
             field_name,
         )
@@ -214,7 +214,7 @@ def _parse_string_list(raw: Any, profile_name: str, field_name: str) -> tuple[st
     for entry in raw:  # pyright: ignore[reportUnknownVariableType]
         if not isinstance(entry, str) or not entry.strip():
             logger.warning(
-                "Profile %r has invalid %s entry %r — skipped",
+                "Profile %r has invalid %s entry %r; skipped",
                 profile_name,
                 field_name,
                 entry,
@@ -228,7 +228,7 @@ def _build_profile(data: dict[str, Any], source: str) -> Profile | None:
     """Validate a raw YAML dict into a Profile. Returns None on failure."""
     name = data.get("name")
     if not isinstance(name, str) or not name.strip():
-        logger.warning("Profile in %s missing 'name' — skipped", source)
+        logger.warning("Profile in %s missing 'name'; skipped", source)
         return None
     name = name.strip()
 
@@ -297,7 +297,7 @@ def _load_all_profiles() -> dict[str, Profile]:
                 logger.warning("Failed to load profile from %s: %s", path, exc)
                 continue
             if not isinstance(raw, dict):
-                logger.warning("Profile file %s is not a YAML mapping — skipped", path)
+                logger.warning("Profile file %s is not a YAML mapping; skipped", path)
                 continue
             profile = _build_profile(raw, str(path))
             if profile is None:

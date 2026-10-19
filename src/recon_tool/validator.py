@@ -7,11 +7,13 @@ from urllib.parse import urlsplit
 import deal
 
 __all__ = [
+    "SPECIAL_USE_SUFFIXES",
     "UUID_RE",
     "caa_issuer_host",
     "host_has_suffix",
     "is_domain_shaped",
     "is_safe_dns_name",
+    "is_special_use_name",
     "strip_control_chars",
     "validate_domain",
 ]
@@ -59,6 +61,46 @@ def is_domain_shaped(value: str) -> bool:
     it is not.
     """
     return bool(_DOMAIN_RE.fullmatch(value.strip().rstrip(".")))
+
+
+# Special-use and documentation names a forward lookup can be pointed at. Each
+# entry matches itself and every name below it. Sources: RFC 2606 and RFC 6761
+# (test, example, invalid, localhost, and the example.com/.net/.org documentation
+# second-level names), RFC 6762 (local), RFC 7686 (onion), RFC 9476 (alt), and
+# the forward entries of the IANA Special-Use Domain Names registry under arpa:
+# home.arpa (RFC 8375), ipv4only.arpa (RFC 8880), resolver.arpa (RFC 9462),
+# service.arpa (RFC 9665), 6tisch.arpa (RFC 9031) and eap-noob.arpa (RFC 9140).
+# Reverse-mapping zones (in-addr.arpa, ip6.arpa) are out of scope: recon does
+# not look up reverse names. Public answers for these names are residue, never
+# evidence about an organization.
+SPECIAL_USE_SUFFIXES: tuple[str, ...] = (
+    "test",
+    "example",
+    "invalid",
+    "localhost",
+    "local",
+    "onion",
+    "alt",
+    "example.com",
+    "example.net",
+    "example.org",
+    "home.arpa",
+    "ipv4only.arpa",
+    "resolver.arpa",
+    "service.arpa",
+    "6tisch.arpa",
+    "eap-noob.arpa",
+)
+
+
+def is_special_use_name(name: str) -> bool:
+    """True when *name* is, or sits below, a reserved special-use name.
+
+    The list is :data:`SPECIAL_USE_SUFFIXES`. The match is boundary-aware, so
+    ``example.com`` and ``www.example.com`` match while ``myexample.com`` does
+    not.
+    """
+    return any(host_has_suffix(name, suffix) for suffix in SPECIAL_USE_SUFFIXES)
 
 
 def caa_issuer_host(record: str) -> str | None:

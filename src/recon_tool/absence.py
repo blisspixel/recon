@@ -93,12 +93,12 @@ def evaluate_absence_signals(
         missing_descriptions = ", ".join(_describe_slug(s) for s in missing)
         description = (
             f"{match.name} detected but {missing_descriptions} "
-            f"not observed \u2014 may indicate a gap in the expected deployment"
+            f"not observed - may indicate a gap in the expected deployment"
         )
 
         absence_signals.append(
             SignalMatch(
-                name=f"{match.name} \u2014 Missing Counterparts",
+                name=f"{match.name}: Missing Counterparts",
                 category="Absence",
                 confidence="medium",
                 matched=tuple(missing),

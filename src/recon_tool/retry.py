@@ -117,7 +117,7 @@ def retry_on_transient(
                         raise
                     delay = delays[attempt_idx]
                     logger.debug(
-                        "transient %s in %s (attempt %d/%d) — retrying in %.1fs",
+                        "transient %s in %s (attempt %d/%d); retrying in %.1fs",
                         type(exc).__name__,
                         func.__qualname__,
                         attempt_idx + 1,

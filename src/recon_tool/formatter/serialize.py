@@ -15,6 +15,12 @@ from typing import Any
 
 from recon_tool.email_security import compute_email_security_score
 from recon_tool.formatter.briefing import BriefingView
+from recon_tool.formatter.caveats import (
+    DISPLAY_NAME_QUALIFIER,
+    display_name_is_reported,
+    is_reserved_name,
+    reserved_name_statement,
+)
 from recon_tool.formatter.classify import provider_line, slug_to_relationship_metadata
 from recon_tool.formatter.collection_status import (
     cache_reuse_note,
@@ -106,6 +112,9 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     d: dict[str, Any] = {
         "tenant_id": info.tenant_id,
         "display_name": info.display_name,
+        # Additive: recon never verifies the display name. It is the
+        # provider-reported brand string, or the queried-domain fallback.
+        "display_name_verified": False,
         "default_domain": info.default_domain,
         "queried_domain": info.queried_domain,
         "provider": provider,
@@ -369,6 +378,10 @@ def format_tenant_dict(info: TenantInfo, *, include_unclassified: bool = False) 
     # for the queried name. Absence does not establish that the name exists.
     if info.dns_name_status is not None:
         d["dns_name_status"] = info.dns_name_status
+    # Conditional, additive: present only when the queried name is a reserved
+    # special-use name, whose public answers are residue, not an organization.
+    if is_reserved_name(info):
+        d["reserved_name"] = True
     # SH7: self-describing payload. record_type discriminates the four object
     # output modes for a consumer (such as an agent) handed a bare payload
     # without the invocation context; schema_version lets a detached payload be
@@ -389,6 +402,7 @@ _PLAIN_PROSE_KEYS = frozenset(
         "next",
         "collection_note",
         "dns_name_note",
+        "reserved_name_note",
         "evidence_roles",
         "insights_note",
         "related_domains_note",
@@ -400,7 +414,7 @@ def _plain_value(value: Any, key: str) -> str:
     """Keep owned prose complete and make bounded source values explicit."""
     text = str(value)
     cleaned = strip_control_chars(text, max_len=len(text))
-    if key in _PLAIN_PROSE_KEYS:
+    if key in _PLAIN_PROSE_KEYS or isinstance(value, _QualifiedText):
         return cleaned
     bounded = strip_control_chars(cleaned)
     return bounded + " [truncated; see --json]" if len(bounded) < len(cleaned) else bounded
@@ -638,10 +652,48 @@ def format_tenant_plain(
     reuse_note = cache_reuse_note(info)
     if reuse_note is not None:
         data["cache_note"] = reuse_note
+    data = _with_plain_caveats(data, observable)
     lines: list[str] = []
     for key, value in data.items():
         lines.extend(plain_lines(value, str(key), 0))
     return "\n".join(lines)
+
+
+class _QualifiedText(str):
+    """A plain value already bounded and qualified by recon; not re-truncated."""
+
+    __slots__ = ()
+
+
+def _with_plain_caveats(data: dict[str, Any], info: TenantInfo) -> dict[str, Any]:
+    """Qualify ``display_name`` and add the reserved-name note after it.
+
+    The same two caveats the panel, ``--md`` and MCP text carry
+    (``formatter/caveats.py``). The display name is bounded before the
+    qualifier is appended, so the shared display bound can never cut the
+    ``(unverified)`` word off.
+    """
+    reserved = reserved_name_statement(info)
+    out: dict[str, Any] = {}
+    for key, value in data.items():
+        if key != "display_name":
+            out[key] = value
+            continue
+        out[key] = _qualified_plain_display_name(value) if display_name_is_reported(info) else value
+        if reserved is not None:
+            out["reserved_name_note"] = reserved
+    return out
+
+
+def _qualified_plain_display_name(value: object) -> object:
+    """Bound a provider-reported display name, then append its qualifier."""
+    if not isinstance(value, str):
+        return value
+    cleaned = strip_control_chars(value, max_len=len(value))
+    bounded = strip_control_chars(cleaned)
+    if len(bounded) < len(cleaned):
+        bounded += " [truncated; see --json]"
+    return _QualifiedText(f"{bounded} {DISPLAY_NAME_QUALIFIER}")
 
 
 # ── CSV output ───────────────────────────────────────────────────────────

@@ -40,10 +40,14 @@ CONDITIONAL_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "ct_provider_used",
     "ct_cache_age_days",
     "ct_attempt_outcome",
+    # Emitted on every current lookup record, but optional so records produced
+    # before the field was added still validate.
+    "display_name_verified",
     "dns_name_status",
     "evidence",
     "explanations",
     "explanation_dag",
+    "reserved_name",
     "shared_display_name",
     "shared_tenant",
     "shared_verification_tokens",

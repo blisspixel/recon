@@ -16,6 +16,7 @@ _ROOT = Path(__file__).resolve().parent.parent
 _SCHEMA_PATH = _ROOT / "docs" / "recon-schema.json"
 
 SPECIAL_SCHEMA_SOURCES: Mapping[str, str] = {
+    "display_name_verified": "static formatter qualifier: recon never verifies display_name",
     "email_security_score": "formatter-derived email control count",
     "evidence_conflicts": "formatter serialization of TenantInfo.merge_conflicts",
     "explanations": "explain-mode flat explanation extension",
@@ -26,6 +27,7 @@ SPECIAL_SCHEMA_SOURCES: Mapping[str, str] = {
     "partial": "formatter-derived core-source degradation flag",
     "provider": "formatter-derived provider summary",
     "record_type": "static formatter envelope discriminator",
+    "reserved_name": "formatter-derived from queried_domain against the special-use name list",
     "schema_version": "static formatter envelope version",
     "shared_display_name": "batch-mode extension",
     "shared_tenant": "batch-mode extension",

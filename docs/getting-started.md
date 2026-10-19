@@ -241,8 +241,13 @@ one muted line, such as `Cached result from 3 hours ago. Use
 lookup JSON contract is unchanged. Reserved names such as `example.com` return a
 real panel of stray public residue from unrelated test configurations,
 including a meaningless display name, at High confidence. It shows you the
-shape of the output, not a result about any organization. Point recon at a
-domain you want to review to see a real footprint.
+shape of the output, not a result about any organization, and the result says
+so: every human surface prints `Reserved name: results are public residue, not
+an organization.` under the title, and `--json` adds `"reserved_name": true`.
+The display name itself is provider-reported, so the panel, `--plain`, `--md`
+and MCP text mark it `(unverified)` and `--json` carries
+`"display_name_verified": false`. Point recon at a domain you want to review to
+see a real footprint.
 
 Cache reuse follows three rules:
 

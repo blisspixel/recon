@@ -108,8 +108,9 @@ recon "<domain>"
 <summary>Sample panel (collapsed)</summary>
 
 ```
-Synthetic Alpha Ltd
+Synthetic Alpha Ltd (unverified)
 alpha.invalid
+Reserved name: results are public residue, not an organization.
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 + Proofpoint gateway
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA

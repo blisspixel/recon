@@ -24,6 +24,7 @@ from recon_tool.formatter.briefing import (
     high_signal_related,
     scales_disagree,
 )
+from recon_tool.formatter.caveats import qualified_display_name, render_panel_title
 from recon_tool.formatter.classify import (
     CATEGORY_BY_SLUG,
     CLOUD_SLUG_QUALIFIERS,
@@ -461,15 +462,8 @@ def render_tenant_panel(
         """Insert a blank line between sections to separate them visually."""
         blocks.append(Text(""))
 
-    # ── Hero header ────────────────────────────────────────────────
-    # When display_name falls back to the queried namespace, render it once as
-    # bold instead of showing the same string twice.
-    header = Text()
-    header.append(info.display_name, style="bold")
-    if info.queried_domain != info.display_name:
-        header.append("\n")
-        header.append(info.queried_domain, style="dim")
-    blocks.append(header)
+    # Title block: display name, queried domain, reserved-name note.
+    blocks.append(render_panel_title(info))
     rule = Text(theme_rule(_PANEL_WIDTH), style="dim")
     blocks.append(rule)
 
@@ -1029,7 +1023,7 @@ def _render_degraded_note(info: TenantInfo) -> Text | None:
         note.append(f"{glyph('warn')} ", style=f"bold {WARNING}")
     note.append("Note", style="bold" if is_warning else MUTED)
     note.append("\n  ")
-    note_text = " — ".join(note_parts) + "."
+    note_text = "; ".join(note_parts) + "."
     for j, line in enumerate(_wrap_text(note_text, _PANEL_WIDTH - 2)):
         if j > 0:
             note.append("\n  ")
@@ -1152,13 +1146,13 @@ def render_sources_detail(results: list[SourceResult]) -> Table:
             "unavailable": ("fail", "unavailable", ERROR),
         }[state]
         status = Text.assemble((glyph(mark), role), f" {word}")
-        tenant_id = result.tenant_id or "—"
+        tenant_id = result.tenant_id or "n/a"
         # region and error can carry attacker-influenced text (a federation
         # region value, or a domain / exception interpolated into an error
         # string); strip control bytes for parity with the primary panel.
-        region = strip_control_chars(result.region) if result.region else "—"
+        region = strip_control_chars(result.region) if result.region else "n/a"
         details = (
-            strip_control_chars(result.error) if result.error else ("M365 detected" if result.m365_detected else "—")
+            strip_control_chars(result.error) if result.error else ("M365 detected" if result.m365_detected else "n/a")
         )
         table.add_row(result.source_name, status, tenant_id, region, details)
 
@@ -1300,7 +1294,7 @@ def render_chain_panel(report: ChainReport) -> Panel:
             # the default view's compaction (ADR-0012) unconditionally.
             provider = compact_provider_line(provider_line(r.info))
             text.append(f"{indent}{r.domain}", style=ACCENT)
-            text.append(f" — {r.info.display_name}", style="dim")
+            text.append(f" - {qualified_display_name(r.info)}", style="dim")
             if not provider.startswith("Unknown"):
                 text.append(f" ({provider})", style="dim")
             text.append("\n")
@@ -1360,15 +1354,15 @@ def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
             description = _source_success_description(result)
             text.append(f"  {glyph('ok')} ", style=SUCCESS)
             text.append(f"{result.source_name}", style="bold")
-            text.append(f" — {description}", style="dim")
+            text.append(f": {description}", style="dim")
         elif state == "no_match":
             text.append(f"  {glyph('neutral')} ", style=MUTED)
             text.append(f"{result.source_name}", style="bold")
-            text.append(f" — {result.error or 'no match'}", style="dim")
+            text.append(f": {result.error or 'no match'}", style="dim")
         else:
             text.append(f"  {glyph('fail')} ", style=ERROR)
             text.append(f"{result.source_name}", style="bold")
-            text.append(f" - {result.error or 'source unavailable'}", style="dim")
+            text.append(f": {result.error or 'source unavailable'}", style="dim")
     return Panel(
         text,
         title="Source Status",

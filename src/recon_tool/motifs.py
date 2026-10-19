@@ -125,7 +125,7 @@ def _validate_motif(raw: Any, source: str) -> ChainMotif | None:
         return None
     confidence = raw.get("confidence", "medium")
     if confidence not in _VALID_CONFIDENCE:
-        logger.warning("Motif %r has invalid confidence %r in %s — skipped", name, confidence, source)
+        logger.warning("Motif %r has invalid confidence %r in %s; skipped", name, confidence, source)
         return None
     description = raw.get("description") or ""
     if not isinstance(description, str):
@@ -135,7 +135,7 @@ def _validate_motif(raw: Any, source: str) -> ChainMotif | None:
         return None
     if len(chain_raw) > MOTIF_CHAIN_HARD_CAP:
         logger.warning(
-            "Motif %r has %d markers (cap %d) in %s — skipped",
+            "Motif %r has %d markers (cap %d) in %s; skipped",
             name,
             len(chain_raw),
             MOTIF_CHAIN_HARD_CAP,

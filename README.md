@@ -30,8 +30,9 @@ reproduces this fixture.
 
 ```text
 demo@recon:~$ recon example.com    # synthetic fixture, not a captured run
-Example Industries Ltd
+Example Industries Ltd (unverified)
 example.com
+Reserved name: results are public residue, not an organization.
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 + Proofpoint gateway
   Tenant       a1b2c3d4-e5f6-7890-abcd-ef1234567890 • NA

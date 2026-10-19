@@ -1,5 +1,6 @@
-Synthetic Gamma
+Synthetic Gamma (unverified)
 gamma.invalid
+Reserved name: results are public residue, not an organization.
 ──────────────────────────────────────────────────────────────────────────────
   Provider     Microsoft 365 (no supporting record)
   Confidence   ●○○ Low (1 source)

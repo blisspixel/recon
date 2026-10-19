@@ -122,7 +122,7 @@ def _signal_lineage_status(
 
 def _absence_parent(match: SignalMatch) -> tuple[str, str] | None:
     """Return the parent rule and exact absence evaluator for a derived match."""
-    missing_suffix = " \u2014 Missing Counterparts"
+    missing_suffix = ": Missing Counterparts"
     positive_suffix = ": Configured Indicators Not Observed"
     if match.name.endswith(missing_suffix):
         return match.name.removesuffix(missing_suffix), "evaluate_absence_signals"
@@ -480,7 +480,7 @@ def explain_confidence(
     # Weakening: note degraded sources
     weakening: list[str] = []
     for src in sorted(degraded):
-        weakening.append(f"Source '{src}' was unavailable — its data could have changed the confidence assessment")
+        weakening.append(f"Source '{src}' was unavailable; its data could have changed the confidence assessment")
 
     return ExplanationRecord(
         item_name="Overall Confidence",
