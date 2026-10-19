@@ -35,12 +35,12 @@ from recon_tool.cli.shared import (
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
 from recon_tool.cli.shared import help_markup_mode as _help_markup_mode
 from recon_tool.cli.shared import is_closed_pipe as _is_closed_pipe
-from recon_tool.cli.shared import render_usage_rows as _render_usage_rows
 from recon_tool.cli.shared import resolve_fusion_transition as _resolve_fusion_transition
 from recon_tool.cli.shared import silence_closed_standard_streams as _silence_closed_standard_streams
+from recon_tool.cli.welcome import print_welcome_banner
 from recon_tool.formatter import get_console, get_err_console
 from recon_tool.formatter.terminal import prepare_output
-from recon_tool.formatter.theme import ACCENT, ERROR, WARNING
+from recon_tool.formatter.theme import ERROR, WARNING
 
 # Command-implementation re-export facade (see cli_lookup / cli_batch / cli_doctor).
 _lookup = cli_lookup.lookup
@@ -262,74 +262,8 @@ def main(
     """
     prepare_output()  # resolve the glyph set before any renderer builds text
     if ctx.invoked_subcommand is None:
-        _print_welcome_banner()
+        print_welcome_banner()
         raise typer.Exit()
-
-
-def _print_welcome_banner() -> None:
-    """Print the curated onboarding banner shown when ``recon`` is run
-    with no arguments. Replaces the raw Typer help dump that was
-    shown before.
-
-    Kept tight - fits on ~15 lines - with a one-line value prop, the
-    recommended first command, progressive disclosure, three real
-    examples, and a doctor hint. No emojis, no hype, no wall of
-    flags. Users who want the full flag list can run
-    ``recon lookup --help`` or ``recon --help <subcommand>``.
-    """
-    from recon_tool import __version__
-
-    console = get_console()
-    # Subtle cyan for the header and section labels - matches the
-    # panel redesign tone. No red, no yellow, no alarmism.
-    console.print(f"[bold {ACCENT}]recon {__version__}[/bold {ACCENT}] - Passive domain intelligence")
-    console.print()
-    console.print(
-        "Observe what a domain publishes through public DNS and identity endpoints.\n"
-        "Evidence is role-scoped and hedged. Zero credentials. Zero scanning."
-    )
-    console.print(
-        "DNS queries may be observed by recursive and authoritative infrastructure.\n"
-        "The only default target-owned HTTP request fetches the MTA-STS policy.\n"
-        "Google CSE and BIMI direct probes run only with --direct-probes."
-    )
-    console.print()
-    console.print(f"[bold {ACCENT}]Usage[/bold {ACCENT}]")
-    _render_usage_rows(
-        console,
-        (
-            ("recon <domain>", "clean summary (recommended)"),
-            ("recon <domain> --plain", "panel as linear text for screen readers and grep"),
-            ("recon <domain> --md", "grouped Markdown; --full is the connection map"),
-            ("recon <domain> --json", "structured automation"),
-            ("recon <domain> --explain", "evidence and explanation"),
-            ("recon review <domain>", "fresh evidence-linked review handoff"),
-            ("recon batch domains.txt", "process multiple domains"),
-            ("recon doctor", "check online source connectivity"),
-            ("recon mcp install --help", "connect an MCP client"),
-        ),
-    )
-    console.print()
-    console.print(f"[bold {ACCENT}]Common examples[/bold {ACCENT}]")
-    console.print("  recon example.com")
-    console.print("  recon review example.com")
-    console.print("  recon example.com --verbose")
-    console.print("  recon example.com --full --json")
-    console.print(
-        "[dim]These are real lookup commands, not an offline demo. Ordinary lookups may "
-        "reuse the default 24-hour result cache; pass --no-cache for fresh collection. "
-        "These examples use reserved example.com to show flag shapes. Reserved names return "
-        "stray public residue at High confidence, not a company result. Point recon at a "
-        "domain you want to review.[/dim]"
-    )
-    console.print(
-        "[dim]Pass a public-suffix domain (for example, example.com). Bare hostnames without a "
-        "dot are rejected as invalid domain format.[/dim]"
-    )
-    console.print(
-        '[dim]Use "recon --version" or "python -m recon_tool --version" for an offline '
-        'install check; "recon doctor" tests online sources.[/dim]'
-    )
 
 
 @app.command(short_help="Look up a domain.")
