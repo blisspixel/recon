@@ -17,6 +17,7 @@ from recon_tool.email_security import compute_email_security_score
 from recon_tool.formatter.briefing import BriefingView
 from recon_tool.formatter.classify import provider_line, slug_to_relationship_metadata
 from recon_tool.formatter.collection_status import (
+    cache_reuse_note,
     collection_note_parts,
     low_confidence_guidance,
     project_collection_status,
@@ -614,6 +615,12 @@ def format_tenant_plain(
         view = build_briefing(observable, confidence_mode=confidence_mode, detailed=detailed)
         if view.is_split:
             data = _with_role_keys(data, view)
+    # A reused result names its earlier collection on both the default and the
+    # complete linear view. The key is human-surface only; lookup JSON keeps
+    # cached_at and resolved_at out of the stable contract.
+    reuse_note = cache_reuse_note(info)
+    if reuse_note is not None:
+        data["cache_note"] = reuse_note
     lines: list[str] = []
     for key, value in data.items():
         lines.extend(plain_lines(value, str(key), 0))

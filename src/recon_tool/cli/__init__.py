@@ -382,7 +382,7 @@ def lookup(
     no_cache: bool = typer.Option(
         False,
         "--no-cache",
-        help="Bypass lookup-result cache; CT cache still applies",
+        help="Bypass lookup-result cache reads and writes; CT cache still applies",
         rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     cache_ttl: int = typer.Option(
@@ -844,7 +844,10 @@ def delta(
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from exc
 
-    cached = cache_get(validated, ttl=30 * 86400)
+    # A delta baseline is the previous collection, complete or not. compute_delta
+    # already suppresses changes an incomplete collection cannot confirm, so an
+    # entry an ordinary lookup would not reuse is still a valid baseline here.
+    cached = cache_get(validated, ttl=30 * 86400, admit_incomplete=True)
     if cached is None:
         output_console = get_err_console() if json_output else console
         output_console.print(

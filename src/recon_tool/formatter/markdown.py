@@ -22,7 +22,7 @@ from recon_tool.formatter.classify import (
     google_workspace_cse_indicators,
     google_workspace_module_indicators,
 )
-from recon_tool.formatter.collection_status import project_collection_status
+from recon_tool.formatter.collection_status import cache_reuse_note, project_collection_status
 from recon_tool.models import ExplanationRecord, TenantInfo
 from recon_tool.validator import strip_control_chars
 
@@ -301,6 +301,9 @@ def _md_footer(info: TenantInfo) -> list[str]:
         note_parts.append(f"CT data came from local cache, {age_str} ({status.ct_subdomain_count} subdomains).")
     if note_parts:
         lines.append(f"*Note: {' '.join(note_parts)}*{MARKDOWN_HARD_BREAK}")
+    reuse_note = cache_reuse_note(info)
+    if reuse_note is not None:
+        lines.append(f"*{reuse_note}*{MARKDOWN_HARD_BREAK}")
     lines.append(f"*Sources: {', '.join(markdown_escape(source) for source in info.sources)}*")
     lines.append("")
     lines.append(f"*{_MD_SCOPE_CAVEAT}*")

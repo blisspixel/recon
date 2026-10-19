@@ -98,8 +98,10 @@ scanning or application crawling. Replace the placeholder to start:
 recon "<domain-you-want-to-review>"
 ```
 
-Ordinary lookups may reuse the 24-hour result cache. Use `--no-cache` to bypass
-it; certificate-transparency enrichment has a separate cache. See
+Ordinary lookups may reuse the 24-hour result cache and say so when they do; a
+result whose collection had unavailable sources is never reused. Use
+`--no-cache` to bypass the cache for both reading and writing;
+certificate-transparency enrichment has a separate cache. See
 [first lookup and cache behavior](https://github.com/blisspixel/recon/blob/main/docs/getting-started.md#first-lookup).
 
 ## Common Commands

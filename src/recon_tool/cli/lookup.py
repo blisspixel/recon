@@ -169,6 +169,23 @@ async def _resolve_cached(
     return info
 
 
+def _print_cache_reuse_note(console: Any, info: Any, *, spacer: bool = True) -> None:
+    """Print the shared muted reuse line under a panel built from a cached result.
+
+    The panel, ``--exposure``, and ``--gaps`` views print it after their own
+    content; ``--plain`` and ``--md`` carry the same sentence in their formatter,
+    and lookup JSON keeps the cache timestamps out of its stable contract.
+    The tenant panel already ends on a blank line, so it passes ``spacer=False``.
+    """
+    from recon_tool.formatter.panel_status import render_cache_reuse_note
+
+    note = render_cache_reuse_note(info)
+    if note is not None:
+        if spacer:
+            console.print()
+        console.print(note)
+
+
 async def _lookup_compare(
     console: Any,
     validated: str,
@@ -300,6 +317,7 @@ async def _lookup_exposure(
             typer.echo(format_exposure_json(assessment))
         else:
             console.print(render_exposure_panel(assessment))
+            _print_cache_reuse_note(console, info_exp)
     except ReconLookupError as exc:
         raise_lookup_error(exc, domain=domain)
     except Exception as exc:
@@ -334,6 +352,7 @@ async def _lookup_gaps(
             typer.echo(format_gaps_json(report))
         else:
             console.print(render_gaps_panel(report))
+            _print_cache_reuse_note(console, info_gaps)
     except ReconLookupError as exc:
         raise_lookup_error(exc, domain=domain)
     except Exception as exc:
@@ -398,7 +417,11 @@ async def _lookup_resolve_standard(
         info = _replace(info, slug_confidences={}, posterior_observations=())
 
     # Cache hits don't write back: the entry hasn't changed except for fusion
-    # output, which is recomputed on read anyway.
+    # output, which is recomputed on read anyway. A collection with a recorded
+    # collector failure is still written: `recon delta` uses it as a baseline
+    # and `recon cache show` reports it, but cache_get never serves it to an
+    # ordinary lookup, so the next default lookup collects again. --no-cache
+    # bypasses both the read and this write.
     if cache_miss and not options.no_cache and shareable_scope:
         from recon_tool.cache import cache_put
 
@@ -678,6 +701,7 @@ def _lookup_emit_panel(
             confidence_mode=confidence_mode,
         )
     )
+    _print_cache_reuse_note(console, info, spacer=False)
 
     if show_sources:
         console.print(render_sources_detail(visible_results))

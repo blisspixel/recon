@@ -77,16 +77,9 @@ def _ct_row_fits(console: Console, entry: CTCacheInfo, status: str) -> bool:
 
 def _age_label(age_seconds: float) -> str:
     """Return a compact, readable cache age without false precision."""
-    if age_seconds < 60:
-        return "under 1 minute"
-    if age_seconds < 3600:
-        minutes = int(age_seconds // 60)
-        return f"{minutes} minute{'s' if minutes != 1 else ''}"
-    if age_seconds < 86400:
-        hours = int(age_seconds // 3600)
-        return f"{hours} hour{'s' if hours != 1 else ''}"
-    days = int(age_seconds // 86400)
-    return f"{days} day{'s' if days != 1 else ''}"
+    from recon_tool.formatter.collection_status import cache_age_label
+
+    return cache_age_label(age_seconds)
 
 
 def _entry_count_label(count: int, *, incomplete: bool = False) -> str:
@@ -136,7 +129,7 @@ def _render_result_inspection(
         console.print("    Status:     no entry")
     else:
         entry = inspection.entry
-        status = "reusable" if entry.reusable else "expired; next lookup refreshes"
+        status = entry.status
         console.print(f"    Status:     {status}")
         console.print(f"    Cached:     {_safe_field(entry.cached_at)}")
         console.print(f"    Resolved:   {_safe_field(entry.resolved_at)}")
@@ -172,7 +165,7 @@ def _render_result_listing(console: Console, listing: CacheListing[ResultCacheIn
     label = _listing_count_label(listing)
     console.print(f"  [bold]Result cache ({label})[/bold]")
     for entry in listing.entries:
-        status = "reusable" if entry.reusable else "expired"
+        status = entry.short_status
         if not _result_row_fits(console, entry, status):
             print_indented(console, entry.domain, indent=4, style="bold")
             print_field(console, "Status", status, indent=6)

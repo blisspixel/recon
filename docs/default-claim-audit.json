@@ -1253,6 +1253,7 @@
       "src/recon_tool/formatter/panel.py#render_tenant_panel": "runtime.panel-assembly.v1",
       "src/recon_tool/formatter/panel.py#render_verbose_sources": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel.py#render_warning": "runtime.collection-status.v1",
+      "src/recon_tool/formatter/panel_status.py#render_cache_reuse_note": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel_status.py#render_low_confidence_guidance": "runtime.confidence-summary.v1",
       "src/recon_tool/formatter/review.py#format_review_bundle_markdown": "runtime.review-bundle.v1"
     },

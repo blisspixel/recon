@@ -6,7 +6,6 @@ Entries expire lazily and cache I/O degrades to misses instead of escaping error
 from __future__ import annotations
 
 import contextlib
-import dataclasses
 import json
 import logging
 import os
@@ -50,7 +49,6 @@ from recon_tool.cache_values import cache_float as _cache_float
 from recon_tool.cache_values import optional_cache_count as _optional_cache_count
 from recon_tool.cache_values import optional_cache_string as _optional_cache_string
 from recon_tool.cache_values import parse_confidence as _parse_confidence
-from recon_tool.json_limits import load_bounded_json_file
 from recon_tool.models import (
     CandidateValue,
     CertBurst,
@@ -101,8 +99,15 @@ def cache_dir() -> Path:
     return cache_root() / "cache"
 
 
-def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
-    """Read cached TenantInfo for domain. Returns None if missing/stale/corrupt.
+def cache_get(domain: str, ttl: int = DEFAULT_TTL, *, admit_incomplete: bool = False) -> TenantInfo | None:
+    """Read cached TenantInfo for domain. Returns None unless it is admitted.
+
+    Missing, expired, corrupt, lineage-invalid, and (by default)
+    collection-incomplete entries all read as a miss. ``admit_incomplete`` is
+    for ``recon delta``, which compares against the previous collection and
+    already suppresses changes an incomplete collection cannot confirm; an
+    ordinary lookup never reuses a result whose collection recorded a collector
+    failure, so a later run on a recovered network collects again.
 
     The returned ``TenantInfo`` carries ``cached_at`` set from the
     on-disk ``_cached_at`` field so downstream can distinguish a
@@ -110,37 +115,19 @@ def cache_get(domain: str, ttl: int = DEFAULT_TTL) -> TenantInfo | None:
     is preserved from the time the result was first produced.
     """
     try:
-        expected_domain = validate_domain(domain, apex=False)
-        path = _safe_cache_path(domain)
-        if path is None:
-            logger.debug("Cache read rejected invalid domain: %r", domain)
-            return None
-        data, _file_stat, _age_seconds = load_bounded_json_file(
-            path,
-            maximum_bytes=_MAX_CACHE_FILE_BYTES,
-            maximum_age_seconds=ttl,
-        )
-        if not isinstance(data, dict):
-            raise ValueError("Cache payload must be a JSON object")
-        if data.get("_cache_version") != _CACHE_VERSION:
-            logger.debug("Cache version mismatch for %s; treating as a miss", domain)
-            return None
-        if "insight_claims" not in data:
-            raise ValueError("Current cache payload is missing generated-insight lineage")
-        info = tenant_info_from_dict(data)
-        validate_insight_claim_coverage(info)
-        if info.queried_domain != expected_domain:
-            raise ValueError("Cache payload domain does not match its cache key")
-        cached_at = data.get("_cached_at")
-        if isinstance(cached_at, str) and cached_at:
-            info = dataclasses.replace(info, cached_at=cached_at)
-        return info
+        from recon_tool.cache_admission import read_result_cache_entry
+
+        entry = read_result_cache_entry(domain, ttl=ttl, skip_expired=True)
     except Exception:
         # Cache reads are best-effort by contract. Validation re-evaluates
         # generated claims, so malformed state and any ordinary decoder or
         # generator failure must degrade to a clean miss.
         logger.debug("Cache read failed for %s", domain, exc_info=True)
         return None
+    if entry.admission == "reusable" or (admit_incomplete and entry.admission == "collection_incomplete"):
+        return entry.info
+    logger.debug("Cache entry for %s not admitted: %s", domain, entry.admission)
+    return None
 
 
 def cache_put(domain: str, info: TenantInfo) -> None:
