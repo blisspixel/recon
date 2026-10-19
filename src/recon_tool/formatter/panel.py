@@ -81,7 +81,7 @@ from recon_tool.formatter.markdown import (
     format_tenant_markdown,
     markdown_escape,
 )
-from recon_tool.formatter.panel_status import confidence_is_high, render_low_confidence_guidance
+from recon_tool.formatter.panel_status import confidence_is_high, render_low_confidence_guidance, render_name_nxdomain
 from recon_tool.formatter.roles import (
     DOT_FILL_COLOR,
     DOT_FILL_GLYPH,
@@ -566,11 +566,11 @@ def render_tenant_panel(
         _spacer()
         blocks.append(ceiling)
 
-    # ── Related domains & external-footprint listings ─────────────
-    # Each helper self-gates on default-vs-full mode and returns None when its
-    # section does not apply, so the panel just appends whatever is present in
-    # the original section order.
+    # ── Queried-name NXDOMAIN, related domains & footprint listings ──
+    # Each helper self-gates and returns None when its section does not
+    # apply, so the panel appends whatever is present in section order.
     for footprint_section in (
+        render_name_nxdomain(info),
         _render_related_compact(info, show_domains),
         _render_unclassified_surface(info, show_domains),
         _render_full_tenant_domains(info, show_domains),

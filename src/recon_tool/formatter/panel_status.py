@@ -4,7 +4,11 @@ from __future__ import annotations
 
 from rich.text import Text
 
-from recon_tool.formatter.collection_status import low_confidence_guidance
+from recon_tool.formatter.collection_status import (
+    cache_reuse_note,
+    low_confidence_guidance,
+    name_nxdomain_statement,
+)
 from recon_tool.models import ConfidenceLevel, TenantInfo
 
 
@@ -23,3 +27,22 @@ def render_low_confidence_guidance(info: TenantInfo, verbose: bool, explain: boo
     guidance.append("\n  ")
     guidance.append(note, style="dim")
     return guidance
+
+
+def render_cache_reuse_note(info: TenantInfo) -> Text | None:
+    """One muted line naming a result reused from the result cache.
+
+    Plain text in the ``dim`` style, so the qualification is carried by its
+    words rather than color alone (docs/design-language.md). Rich wraps it at
+    the console width like the other notes.
+    """
+    note = cache_reuse_note(info)
+    if note is None:
+        return None
+    return Text(note, style="dim")
+
+
+def render_name_nxdomain(info: TenantInfo) -> Text | None:
+    """State an observed queried-name NXDOMAIN so it is not read as a quiet domain."""
+    statement = name_nxdomain_statement(info)
+    return None if statement is None else Text(statement, style="bold")

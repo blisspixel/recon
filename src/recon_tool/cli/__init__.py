@@ -15,6 +15,7 @@ from rich.markup import escape
 from recon_tool.cli import batch as cli_batch
 from recon_tool.cli import doctor as cli_doctor
 from recon_tool.cli import lookup as cli_lookup
+from recon_tool.cli import routing as cli_routing
 from recon_tool.cli.groups import register_command_groups
 from recon_tool.cli.options import (
     LookupDisplayOptions,
@@ -108,7 +109,17 @@ class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseC
     as a domain and route to ``lookup`` so validation can speak in domain
     language. Requiring a dot used to force undotted attempts such as
     ``recon alpha`` into Click's "No such command" path.
+
+    Before parsing, trailing ``--color``/``--no-color`` move in front of the
+    command so ``recon DOMAIN --no-color`` equals ``recon --no-color DOMAIN``.
     """
+
+    def parse_args(self, ctx: click.Context, args: list[str]) -> list[str]:
+        if not ctx.resilient_parsing:
+            misplaced = cli_routing.misplaced_root_option(args)
+            if misplaced is not None:
+                ctx.fail(cli_routing.misplaced_root_option_message(misplaced))
+        return super().parse_args(ctx, cli_routing.hoist_trailing_color_flags(args))
 
     def resolve_command(
         self,
@@ -125,8 +136,23 @@ class _DomainGroup(typer.core.TyperGroup):  # pyright: ignore[reportUntypedBaseC
         # no such dependency. Known subcommands and flags are left alone;
         # every other non-empty first token is domain input for lookup.
         if args and args[0] not in _SUBCOMMANDS and not args[0].startswith("-"):
+            self._reject_command_typo(ctx, args)
             args = ["lookup", *args]
         return super().resolve_command(ctx, args)
+
+    def _reject_command_typo(self, ctx: click.Context, args: list[str]) -> None:
+        """Suggest a subcommand when a near-miss first token leaves extra arguments.
+
+        A lone near-miss token stays domain input. Only an invocation that lookup
+        would reject for unexpected extra arguments gets the suggestion.
+        """
+        suggestion = cli_routing.near_miss_command(args[0], _SUBCOMMANDS)
+        lookup_command = self.get_command(ctx, "lookup")
+        if suggestion is None or lookup_command is None or ctx.resilient_parsing:
+            return
+        probe = lookup_command.make_context("lookup", list(args), parent=ctx, resilient_parsing=True)
+        if probe.args:
+            ctx.fail(f'Unknown command "{args[0]}". Did you mean "{suggestion}"?')
 
 
 app = typer.Typer(
@@ -209,7 +235,10 @@ def main(
         "--color/--no-color",
         callback=_color_callback,
         is_eager=True,
-        help="Force or disable colored output (overrides NO_COLOR / TTY detection).",
+        help=(
+            "Force or disable colored output (overrides NO_COLOR / TTY detection). "
+            "Accepted before or after the domain or command; the last one given wins."
+        ),
     ),
 ) -> None:
     """
@@ -382,7 +411,7 @@ def lookup(
     no_cache: bool = typer.Option(
         False,
         "--no-cache",
-        help="Bypass lookup-result cache; CT cache still applies",
+        help="Bypass lookup-result cache reads and writes; CT cache still applies",
         rich_help_panel=_COLLECTION_HELP_PANEL,
     ),
     cache_ttl: int = typer.Option(
@@ -844,7 +873,10 @@ def delta(
         render_error(_fmt_exc(exc))
         raise typer.Exit(code=EXIT_VALIDATION) from exc
 
-    cached = cache_get(validated, ttl=30 * 86400)
+    # A delta baseline is the previous collection, complete or not. compute_delta
+    # already suppresses changes an incomplete collection cannot confirm, so an
+    # entry an ordinary lookup would not reuse is still a valid baseline here.
+    cached = cache_get(validated, ttl=30 * 86400, admit_incomplete=True)
     if cached is None:
         output_console = get_err_console() if json_output else console
         output_console.print(

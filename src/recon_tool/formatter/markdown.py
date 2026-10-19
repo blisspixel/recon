@@ -22,7 +22,12 @@ from recon_tool.formatter.classify import (
     google_workspace_cse_indicators,
     google_workspace_module_indicators,
 )
-from recon_tool.formatter.collection_status import project_collection_status
+from recon_tool.formatter.collection_status import (
+    cache_reuse_note,
+    name_nxdomain_statement,
+    project_collection_status,
+    unavailable_sources_phrase,
+)
 from recon_tool.models import ExplanationRecord, TenantInfo
 from recon_tool.validator import strip_control_chars
 
@@ -94,6 +99,11 @@ def _md_header(info: TenantInfo, view: BriefingView, detailed: bool) -> list[str
         f"**Inference Confidence:** {info.inference_confidence.value}"
     )
     lines.append("")
+    nxdomain = name_nxdomain_statement(info)
+    if nxdomain is not None:
+        # Static recon-authored prose, so it needs no escaping.
+        lines.append(f"**{nxdomain}**")
+        lines.append("")
     return lines
 
 
@@ -286,9 +296,9 @@ def _md_footer(info: TenantInfo) -> list[str]:
     lines: list[str] = ["---"]
     status = project_collection_status(info)
     note_parts: list[str] = []
-    if status.unavailable_sources:
-        sources_list = ", ".join(markdown_escape(source) for source in status.unavailable_sources)
-        note_parts.append(f"Some sources were unavailable ({sources_list}).")
+    sources_phrase = unavailable_sources_phrase(status, verb="were", escape=markdown_escape)
+    if sources_phrase is not None:
+        note_parts.append(f"{sources_phrase}.")
     if status.ct_state == "unavailable":
         sources_list = ", ".join(markdown_escape(source) for source in status.ct_sources)
         note_parts.append(
@@ -301,6 +311,9 @@ def _md_footer(info: TenantInfo) -> list[str]:
         note_parts.append(f"CT data came from local cache, {age_str} ({status.ct_subdomain_count} subdomains).")
     if note_parts:
         lines.append(f"*Note: {' '.join(note_parts)}*{MARKDOWN_HARD_BREAK}")
+    reuse_note = cache_reuse_note(info)
+    if reuse_note is not None:
+        lines.append(f"*{reuse_note}*{MARKDOWN_HARD_BREAK}")
     lines.append(f"*Sources: {', '.join(markdown_escape(source) for source in info.sources)}*")
     lines.append("")
     lines.append(f"*{_MD_SCOPE_CAVEAT}*")

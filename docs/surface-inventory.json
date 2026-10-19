@@ -1275,7 +1275,19 @@
       },
       {
         "kind": "command",
-        "parameters": [],
+        "parameters": [
+          {
+            "is_flag": false,
+            "kind": "option",
+            "multiple": false,
+            "name": "launch_cwd",
+            "required": false,
+            "tokens": [
+              "--launch-cwd"
+            ],
+            "type": "text"
+          }
+        ],
         "path": [
           "mcp",
           "doctor"
@@ -2177,6 +2189,7 @@
       "display_name",
       "dmarc_pct",
       "dmarc_policy",
+      "dns_name_status",
       "domain_count",
       "email_gateway",
       "email_security_score",

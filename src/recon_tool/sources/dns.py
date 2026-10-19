@@ -720,13 +720,30 @@ class DNSSource:
         skip_ct = bool(kwargs.get("skip_ct", False))
         active_probes = bool(kwargs.get("active_probes", False))
         try:
-            ctx = await self._detect_services(domain, skip_ct=skip_ct, active_probes=active_probes)
+            with dns_base.dns_query_ledger() as ledger:
+                ctx = await self._detect_services(domain, skip_ct=skip_ct, active_probes=active_probes)
         except Exception as exc:
             return SourceResult(
                 source_name="dns_records",
                 error=f"DNS error for {domain}: {exc}",
                 source_unavailable=True,
             )
+
+        # Every DNS query timed out or found no usable nameserver, and nothing
+        # else (CT) contributed: the DNS source made no observation at all.
+        # Report that as a whole-source failure instead of an empty success,
+        # so a lookup whose every source failed reaches ``all_sources_failed``.
+        if ledger.all_unavailable and not ctx.services and ctx.ct_provider_used is None:
+            return SourceResult(
+                source_name="dns_records",
+                error=(
+                    f"DNS resolution unavailable for {domain}: none of {ledger.attempted} DNS queries "
+                    "received a usable resolver response (timeout or no usable nameserver)"
+                ),
+                degraded_sources=tuple(sorted(ctx.degraded_sources)),
+                source_unavailable=True,
+            )
+        dns_name_status = ledger.name_status(domain)
 
         surface_tuple = tuple(sorted(ctx.surface_attributions, key=lambda s: s.subdomain))
         unclassified_tuple = tuple(sorted(ctx.unclassified_cname_chains, key=lambda u: u.subdomain))
@@ -766,6 +783,7 @@ class DNSSource:
                 unclassified_dns_observations=unclassified_dns,
                 chain_motifs=chain_motifs_tuple,
                 infrastructure_clusters=ctx.infrastructure_clusters,
+                dns_name_status=dns_name_status,
             )
 
         return SourceResult(
@@ -795,6 +813,7 @@ class DNSSource:
             unclassified_dns_observations=unclassified_dns,
             chain_motifs=chain_motifs_tuple,
             infrastructure_clusters=ctx.infrastructure_clusters,
+            dns_name_status=dns_name_status,
         )
 
     @staticmethod

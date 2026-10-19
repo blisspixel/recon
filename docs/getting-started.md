@@ -234,12 +234,37 @@ recon example.com
 
 recon ships no offline demo mode: this is a real lookup command, but an ordinary
 lookup may reuse a recent result from the default 24-hour cache. Pass
-`--no-cache` to bypass the lookup-result cache; CT enrichment can still reuse
-its separate cache. Reserved names such as `example.com` return a
+`--no-cache` to bypass the lookup-result cache for both reading and writing;
+CT enrichment can still reuse its separate cache. A reused result says so in
+one muted line, such as `Cached result from 3 hours ago. Use
+--no-cache to collect again.`, on the panel, `--plain`, and `--md` output; the
+lookup JSON contract is unchanged. Reserved names such as `example.com` return a
 real panel of stray public residue from unrelated test configurations,
 including a meaningless display name, at High confidence. It shows you the
 shape of the output, not a result about any organization. Point recon at a
 domain you want to review to see a real footprint.
+
+Cache reuse follows three rules:
+
+- **Incomplete collections are not reused.** When a lookup records a collector
+  failure (an unavailable identity endpoint, a DNS channel that timed out, or
+  every CT provider failing with no CT cache fallback), recon still answers
+  with the partial result, but the next ordinary lookup collects again instead
+  of serving it. A routine CT fallback, where crt.sh failed but CertSpotter or
+  the CT cache supplied the data, is not a collector failure. Sparse results
+  with no failure, including low confidence and an empty service list, are
+  reused normally.
+- **`--no-cache` bypasses both the read and the write.** It always collects,
+  and it neither reads nor replaces the stored entry. An ordinary lookup
+  replaces the entry when it is expired or not reusable.
+- **`recon cache show <domain>` reports the same decision a lookup makes:**
+  `reusable`, `expired; next lookup refreshes`, or `not reusable; previous
+  collection had unavailable sources`. It shows metadata only, never the
+  cached payload. `recon cache clear <domain>` removes the entry if you want to
+  discard it outright.
+
+`--no-ct` and `--direct-probes` lookups never read or write the shared result
+cache, because their scope differs from a default lookup.
 
 Use explicit synthetic identities under reserved namespaces in examples and
 docs. Public validation work with real apexes stays in gitignored local
@@ -360,6 +385,14 @@ so evidence-role qualifiers are compacted unless you add `--explain`.
 This is the linear view for a standard single-domain lookup. Chain, compare,
 exposure, and gaps reports use their own formats; batch and delta have
 mode-specific output.
+
+`--color` and `--no-color` are global options, but they work in either
+position: `recon example.com --no-color` and `recon --no-color example.com` are
+the same, as is any subcommand form such as `recon review example.com
+--no-color`. When both appear, the last one given wins. The other global
+options must come first: use `recon --debug example.com`, and run
+`recon --version` on its own. A misplaced one is rejected with exit code 2 and
+a message that shows the working form.
 
 ## Exit Codes
 

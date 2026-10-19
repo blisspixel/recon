@@ -9,9 +9,17 @@ This module adds the dynamic complement: spawn the server as a subprocess the
 way a real MCP client would, perform the SDK-supported discovery flow, list
 tools and resources, and read each canonical local JSON resource.
 
-A pass validates this install's local stdio protocol surface. It does not read
-any MCP client's configuration. A failure identifies the protocol phase that
-broke, including startup, framing, registration, resource content, or hung I/O.
+Two launches are checked. The isolated check starts the server in an empty
+temporary directory, so it validates this install's local stdio protocol surface
+independent of any workspace. The generated-launch check starts the exact
+command, arguments, and environment entries that ``recon mcp install`` writes,
+from the working directory the operator chooses, so it covers the import-path
+and startup-guard behavior a client launch from that directory would meet. Each
+report names the launch configuration it exercised.
+
+Neither check reads any MCP client's configuration. A failure identifies the
+protocol phase that broke, including startup, framing, registration, resource
+content, or hung I/O.
 """
 
 from __future__ import annotations
@@ -24,8 +32,9 @@ import os
 import sys
 import tempfile
 import time
-from collections.abc import Awaitable, Callable, Generator
-from dataclasses import dataclass
+from collections.abc import Awaitable, Callable, Generator, Mapping
+from dataclasses import dataclass, field, replace
+from pathlib import Path
 from typing import Any, Literal, TextIO, cast
 
 from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, SDK_VERSION, model_wire_dict
@@ -75,6 +84,65 @@ class DoctorCheck:
     detail: str
 
 
+LaunchScope = Literal["isolated", "generated"]
+
+
+@dataclass(frozen=True)
+class LaunchConfig:
+    """The server launch one doctor check exercised.
+
+    ``env`` holds only the entries the launch adds on top of the inherited
+    environment. ``cwd`` is ``None`` for the isolated check, which runs in a
+    fresh empty temporary directory that no longer exists when the report is
+    rendered.
+    """
+
+    scope: LaunchScope
+    command: str
+    args: tuple[str, ...]
+    env: tuple[tuple[str, str], ...] = field(default_factory=tuple)
+    cwd: str | None = None
+
+
+def isolated_launch_config() -> LaunchConfig:
+    """Return the isolated smoke-check launch: this interpreter, empty cwd."""
+    return LaunchConfig(
+        scope="isolated",
+        command=sys.executable,
+        args=("-m", "recon_tool.server"),
+        env=(("PYTHONSAFEPATH", "1"), ("RECON_MCP_FORCE_STDIO", "1")),
+        cwd=None,
+    )
+
+
+def generated_launch_config(cwd: Path | None = None) -> LaunchConfig:
+    """Return the launch ``recon mcp install`` would persist, run from ``cwd``.
+
+    The command, arguments, and environment entries come from the installer's
+    own ``build_recon_block`` so the check cannot drift from the written
+    stanza. ``cwd`` defaults to the doctor's current working directory.
+    """
+    from recon_tool.mcp_client.install import build_recon_block
+
+    block = build_recon_block()
+    raw_args = block.get("args", [])
+    raw_env = block.get("env", {})
+    args = tuple(str(item) for item in cast(list[object], raw_args)) if isinstance(raw_args, list) else ()
+    env = (
+        tuple((str(key), str(value)) for key, value in cast(dict[object, object], raw_env).items())
+        if isinstance(raw_env, dict)
+        else ()
+    )
+    directory = (cwd if cwd is not None else Path.cwd()).absolute()
+    return LaunchConfig(
+        scope="generated",
+        command=str(block["command"]),
+        args=args,
+        env=env,
+        cwd=str(directory),
+    )
+
+
 @dataclass(frozen=True)
 class DoctorReport:
     """Aggregate result for the whole run.
@@ -89,6 +157,7 @@ class DoctorReport:
     checks: tuple[DoctorCheck, ...]
     elapsed_seconds: float
     server_stderr_tail: str = ""
+    launch: LaunchConfig | None = None
 
     @property
     def ok(self) -> bool:
@@ -316,19 +385,20 @@ async def _run_handshake(
     it on Python 3.11+. The runtime guard in
     ``recon_tool.server._detect_cwd_shadow_install`` is the third
     layer.
-    """
-    from mcp import ClientSession
-    from mcp.client.stdio import StdioServerParameters, stdio_client
 
-    checks: list[DoctorCheck] = []
-    phase_progress = progress if progress is not None else _HandshakeProgress()
+    Scope: because the cwd is an empty temporary directory, a pass here
+    says nothing about a client launch from the operator's own working
+    directory. ``run_generated_launch_check`` covers that launch.
+    """
+    from mcp.client.stdio import StdioServerParameters
+
+    launch = isolated_launch_config()
 
     # Run the server through the same Python interpreter that's running
     # the doctor - that way `recon mcp doctor` validates THIS install,
     # not whatever happens to be on PATH.
     env = dict(os.environ)
-    env["RECON_MCP_FORCE_STDIO"] = "1"  # bypass the TTY guard added in v1.9.x
-    env["PYTHONSAFEPATH"] = "1"  # v1.9.3.4: disable cwd prepend on Py3.11+
+    env.update(dict(launch.env))  # PYTHONSAFEPATH=1 and the TTY-guard bypass
 
     # v1.9.3.4: empty cwd for the child so ``-m recon_tool.server``
     # can never find a shadow ``recon_tool/`` next to it. We use a
@@ -351,22 +421,62 @@ async def _run_handshake(
         ignore_cleanup_errors=True,
     ) as safe_cwd:
         params = StdioServerParameters(
-            command=sys.executable,
-            args=["-m", "recon_tool.server"],
+            command=launch.command,
+            args=list(launch.args),
             env=env,
             cwd=safe_cwd,
         )
+        return await _handshake(params, errlog, progress)
 
-        async with stdio_client(params, errlog=errlog) as (read_stream, write_stream):
-            checks.append(DoctorCheck("server spawn", "ok", "stdio transport opened"))
 
-            phase_progress.start("client session", checks)
-            async with ClientSession(read_stream, write_stream) as session:
-                await _discover_session(cast(Any, session), checks, phase_progress)
-                tool_names = await _list_session_tools(cast(Any, session), checks, phase_progress)
-                resource_entries = await _list_session_resources(cast(Any, session), checks, phase_progress)
-                await _read_session_resources(cast(Any, session), resource_entries, checks, phase_progress)
-                phase_progress.start("session cleanup", checks)
+async def _run_generated_handshake(
+    errlog: TextIO,
+    progress: _HandshakeProgress,
+    launch: LaunchConfig,
+    base_env: Mapping[str, str],
+) -> tuple[list[str], list[str], list[DoctorCheck]]:
+    """Walk the MCP handshake through one generated client launch.
+
+    The launch's own environment entries are layered over ``base_env``, the
+    environment a client would pass through. Nothing is added beyond what the
+    installer writes, so a startup refusal here is the refusal a client
+    launching from the same directory would see.
+    """
+    from mcp.client.stdio import StdioServerParameters
+
+    env = dict(base_env)
+    env.update(dict(launch.env))
+    params = StdioServerParameters(
+        command=launch.command,
+        args=list(launch.args),
+        env=env,
+        cwd=launch.cwd,
+    )
+    return await _handshake(params, errlog, progress)
+
+
+async def _handshake(
+    params: Any,
+    errlog: TextIO,
+    progress: _HandshakeProgress | None,
+) -> tuple[list[str], list[str], list[DoctorCheck]]:
+    """Spawn one server from ``params`` and walk discovery, listing, and reads."""
+    from mcp import ClientSession
+    from mcp.client.stdio import stdio_client
+
+    checks: list[DoctorCheck] = []
+    phase_progress = progress if progress is not None else _HandshakeProgress()
+
+    async with stdio_client(params, errlog=errlog) as (read_stream, write_stream):
+        checks.append(DoctorCheck("server spawn", "ok", "stdio transport opened"))
+
+        phase_progress.start("client session", checks)
+        async with ClientSession(read_stream, write_stream) as session:
+            await _discover_session(cast(Any, session), checks, phase_progress)
+            tool_names = await _list_session_tools(cast(Any, session), checks, phase_progress)
+            resource_entries = await _list_session_resources(cast(Any, session), checks, phase_progress)
+            await _read_session_resources(cast(Any, session), resource_entries, checks, phase_progress)
+            phase_progress.start("session cleanup", checks)
 
     return tool_names, list(resource_entries), checks
 
@@ -612,7 +722,10 @@ def _timeout_failure_report(
     return _phase_failure_report(failure, errlog=errlog, start=start)
 
 
-async def _run_with_timeout() -> DoctorReport:
+async def _run_with_timeout(
+    launch: LaunchConfig | None = None,
+    base_env: Mapping[str, str] | None = None,
+) -> DoctorReport:
     """Wrap the handshake in a wall-clock budget.
 
     Uses a real on-disk tempfile (not ``io.StringIO``) for stderr
@@ -632,7 +745,16 @@ async def _run_with_timeout() -> DoctorReport:
 
     try:
         try:
-            handshake_task = asyncio.create_task(_run_handshake(errlog, progress))
+            if launch is None or launch.scope == "isolated":
+                handshake = _run_handshake(errlog, progress)
+            else:
+                handshake = _run_generated_handshake(
+                    errlog,
+                    progress,
+                    launch,
+                    os.environ if base_env is None else base_env,
+                )
+            handshake_task = asyncio.create_task(handshake)
             try:
                 done, _pending = await asyncio.wait(
                     {handshake_task},
@@ -714,5 +836,26 @@ async def _run_with_timeout() -> DoctorReport:
 
 
 def run_doctor() -> DoctorReport:
-    """Public entry point - runs the async handshake from sync code."""
-    return asyncio.run(_run_with_timeout())
+    """Run the isolated smoke check: this interpreter, empty temporary cwd."""
+    report = asyncio.run(_run_with_timeout())
+    return replace(report, launch=isolated_launch_config())
+
+
+def run_generated_launch_check(
+    cwd: Path | None = None,
+    *,
+    launch: LaunchConfig | None = None,
+    base_env: Mapping[str, str] | None = None,
+) -> DoctorReport:
+    """Run the installer-generated launch from ``cwd`` and walk the handshake.
+
+    ``launch`` defaults to :func:`generated_launch_config` for ``cwd``; tests
+    pass an explicit configuration to exercise a different installation.
+    ``base_env`` defaults to the doctor's own environment, standing in for the
+    environment a client passes through to the server.
+    """
+    config = launch if launch is not None else generated_launch_config(cwd)
+    if config.scope != "generated":
+        raise ValueError("run_generated_launch_check requires a generated launch configuration")
+    report = asyncio.run(_run_with_timeout(config, base_env))
+    return replace(report, launch=config)

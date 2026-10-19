@@ -44,6 +44,7 @@ def test_generated_top_level_fields_are_code_owned() -> None:
         "ct_provider_used",
         "ct_cache_age_days",
         "ct_attempt_outcome",
+        "dns_name_status",
         "evidence",
         "explanations",
         "explanation_dag",
@@ -52,7 +53,7 @@ def test_generated_top_level_fields_are_code_owned() -> None:
         "shared_verification_tokens",
         "unclassified_cname_chains",
     )
-    assert len(fields) == 58
+    assert len(fields) == 59
     assert len(fields) == len(set(fields))
 
 

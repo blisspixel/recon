@@ -687,6 +687,11 @@ class SourceResult:
     # ``error`` with this flag false. The distinction prevents failed sources
     # from being interpreted as observed absence during merge and delta.
     source_unavailable: bool = False
+    # No observation attempt (an opt-in probe left off): neither a clean result
+    # nor a failure, so it is excluded from the all_sources_failed decision.
+    not_attempted: bool = False
+    # "nxdomain" when every clean resolver response for the queried name was NXDOMAIN.
+    dns_name_status: str | None = None
 
     @property
     def crtsh_degraded(self) -> bool:
@@ -895,6 +900,10 @@ class TenantInfo:
     # the algorithm path that produced it ("louvain" | "connected_components"
     # | "skipped"). None when CT data was unavailable.
     infrastructure_clusters: InfrastructureClusterReport | None = None
+
+    # "nxdomain" when the resolver returned NXDOMAIN, and no NOERROR, for the queried
+    # name. Clean observed-empty, not authenticated denial; None in every other case.
+    dns_name_status: str | None = None
 
     @property
     def crtsh_degraded(self) -> bool:

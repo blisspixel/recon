@@ -156,7 +156,9 @@ environment health instead of always reading success. `recon doctor --mcp`
 follows the same rule for MCP setup: it exits 1 when the package or server
 cannot load, instructions are absent, or any canonical tool or local resource
 registration is missing. `recon mcp doctor` separately spawns the local stdio
-server, checks discovery and canonical tool registrations, and reads all six
+server twice, once in an empty temporary directory and once with the exact
+launcher `recon mcp install` writes from the current directory or
+`--launch-cwd`, names each launch it exercised, checks discovery and canonical tool registrations, and reads all six
 canonical JSON resources. It exits non-zero on an invalid resource envelope,
 URI, media type, JSON object, catalog count/list/identifier relationship,
 schema or surface-inventory envelope, cache metadata, missing registration,
@@ -235,12 +237,38 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   overflowing, or out-of-range fields are ignored as one invalid snapshot.
   Writes use a random exclusive temporary path and atomic replacement.
 - **Partial / degraded results are honored, not dropped.** `all_sources_failed`
-  is raised only when *every* source errored and no tenant was found; if any
-  source returns a clean result (even with no services), it is kept as a sparse
-  "looked and found nothing" answer. A failed source is recorded in
+  is raised only when *every* attempted source errored and no tenant was found;
+  if any source returns a clean result (even with no services), it is kept as a
+  sparse "looked and found nothing" answer. A source that makes no attempt by
+  default (the opt-in Google CSE probe) is excluded from that decision rather
+  than counted as a clean result. The DNS source reports a whole-source error
+  (`dns_records`) when none of its queries received a usable resolver response
+  (every query timed out or found no usable nameserver) and nothing else, such
+  as CT, contributed. One answered query, a NoAnswer, or an NXDOMAIN response
+  is a usable response, so successful-empty and mixed DNS results stay partial
+  lookups. With every source unavailable, `recon <domain>` exits 4 with the
+  concrete `all_sources_failed` message, `recon review` exits 4 with a failed
+  workflow, and MCP `lookup_tenant` returns its all-sources-failed error. If a
+  rendered result ever carries every default source as unavailable, the note
+  says "All N sources unavailable" rather than "Some". A failed source is recorded in
   `degraded_sources`, and confidence is downgraded one level when a source is
   degraded, except when only the CT providers degraded and a CT cache fallback
   recovered the data.
+- **Partial results are answered, not reused.** A result is a collection
+  failure when `degraded_sources` holds any non-CT marker, or holds CT provider
+  markers while no CT path (another provider, a partial page, or the CT cache)
+  supplied data. Such a result is returned for the current lookup and still
+  written to the result cache, where `recon delta` can use it as a baseline,
+  but read admission never serves it to an ordinary lookup or the `--exposure`
+  and `--gaps` reports. The rule applies on read, so entries written by earlier
+  releases recover without a manual clear. Sparse results with no failure stay
+  reusable; low confidence and empty service lists are not rejection rules.
+  `recon cache show` uses the same admission function, so its status matches
+  what a lookup does, and it reports metadata only. `--no-cache` bypasses both
+  the read and the write. A human lookup served from the cache names the reuse
+  in one muted line from the internal `resolved_at` time; the lookup JSON does
+  not gain `resolved_at` or `cached_at`. The MCP server's bounded in-process
+  cache (`CACHE_TTL`, 120 seconds) is separate and unchanged.
 - **Granular failure is not negative evidence.** DNS and detector markers may
   identify one unavailable observation channel, including `dns:apex_txt`,
   `dns:dmarc`, `dns:mta_sts`, `http:mta_sts_policy`, or `dns:mx`. Bayesian
@@ -248,6 +276,15 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   output mask only the affected channel. `NXDOMAIN` and `NoAnswer` remain clean,
   observed empty responses. Legacy `dns` and current `dns_records` markers mask
   every DNS channel.
+- **Queried-name NXDOMAIN is stated, not narrated.** The DNS adapter retains
+  each query's response class (answer, NoAnswer, NXDOMAIN, or unavailable)
+  before rendering. When every clean response for the queried name itself was
+  NXDOMAIN, the panel, `--plain`, `--md`, and MCP text say "No DNS name: the
+  resolver returned NXDOMAIN for this domain.", JSON carries the additive
+  `dns_name_status: "nxdomain"`, and the web-only, parked, staging, and
+  sparse-footprint narration is withheld. Exit code 0, `partial`, and the
+  confidence rules are unchanged. NoAnswer, transport failure, and a missing
+  subdomain under an existing apex never produce that statement.
 - **Observed empty is not authenticated denial.** The resolver adapter does not
   retain the authority section, recursive-resolver identity, or DNSSEC denial
   validation, and its private-canonical safety suppression also returns an

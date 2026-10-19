@@ -40,6 +40,7 @@ CONDITIONAL_TOP_LEVEL_FIELDS: tuple[str, ...] = (
     "ct_provider_used",
     "ct_cache_age_days",
     "ct_attempt_outcome",
+    "dns_name_status",
     "evidence",
     "explanations",
     "explanation_dag",

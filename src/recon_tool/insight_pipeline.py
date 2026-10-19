@@ -69,6 +69,7 @@ def build_insights_with_signals(
     evidence: tuple[EvidenceRecord, ...] = (),
     degraded_sources: tuple[str, ...] = (),
     insight_claims_out: list[InsightClaim] | None = None,
+    name_nxdomain: bool = False,
 ) -> list[str]:
     """Generate base insights, retain their lineage, and append signals.
 
@@ -95,6 +96,7 @@ def build_insights_with_signals(
         has_mx_records=has_mx_records,
         evidence=evidence,
         evidence_bound=True,
+        name_nxdomain=name_nxdomain,
     )
     generated_claims = [
         claim

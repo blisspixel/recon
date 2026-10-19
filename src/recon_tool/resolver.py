@@ -88,6 +88,7 @@ def _inventory_only_related_result(result: SourceResult) -> SourceResult:
         chain_motifs=(),
         infrastructure_clusters=None,
         source_unavailable=False,
+        dns_name_status=None,
     )
 
 
@@ -412,6 +413,7 @@ async def _enrich_from_related(
         evidence=info.evidence,
         degraded_sources=info.degraded_sources,
         insight_claims_out=enriched_claims,
+        name_nxdomain=info.dns_name_status == "nxdomain",
     )
 
     # Build enriched TenantInfo, keeping identity fields and updating

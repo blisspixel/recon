@@ -1502,6 +1502,13 @@
             "skipped"
           ]
         },
+        "dns_name_status": {
+          "description": "Conditional, additive. DNS response class for the queried name itself (the registrable apex, or the literal host under --exact). Present only as nxdomain, when the resolver returned NXDOMAIN for that name and no NOERROR response for it. This is a clean observed-empty response from the configured recursive resolver, not a source failure and not authenticated (DNSSEC-validated) denial. Absent in every other case, including NoAnswer, resolver failure, and older records, so absence does not establish that the name exists.",
+          "type": "string",
+          "enum": [
+            "nxdomain"
+          ]
+        },
         "cert_summary": {
           "description": "Certificate transparency summary. Null when no CT data was obtained.",
           "oneOf": [

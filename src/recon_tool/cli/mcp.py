@@ -10,6 +10,7 @@ import json
 import os
 import shlex
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import typer
 
@@ -17,6 +18,11 @@ from recon_tool.cli.shared import render_diagnostic_status_row as _render_status
 from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_INTERNAL, EXIT_VALIDATION
 from recon_tool.formatter import get_console, get_err_console
+
+if TYPE_CHECKING:
+    from rich.console import Console
+
+    from recon_tool.mcp_client.doctor import LaunchConfig
 
 mcp_app = typer.Typer(
     help="MCP server commands: start the stdio server, install client config, run a self-check.",
@@ -195,11 +201,59 @@ def mcp_install_command(
     _render_install_verification(client, result.path.absolute())
 
 
-@mcp_app.command("doctor", short_help="Check MCP tools and resources.")
-def mcp_doctor_command() -> None:
-    """Check local MCP startup, discovery, tools, and JSON resources."""
+def _render_launch_config(console: Console, title: str, scope_note: str, launch: LaunchConfig) -> None:
+    """Print which launch a doctor check exercised, before its result rows."""
+    env_text = " ".join(f"{key}={value}" for key, value in launch.env) or "(none added)"
+    cwd_text = launch.cwd if launch.cwd is not None else "(new empty temporary directory)"
+    console.print(f"  [bold]{_safe_markup(title)}[/bold]")
+    console.print(f"  [dim]{_safe_markup(scope_note)}[/dim]", soft_wrap=True)
+    for label, value in (
+        ("command", launch.command),
+        ("args", json.dumps(list(launch.args))),
+        ("env", env_text),
+        ("cwd", cwd_text),
+    ):
+        console.print(f"    {label:<9}{_safe_markup(value)}", soft_wrap=True)
+    console.print()
+
+
+def _resolve_launch_cwd(launch_cwd: str | None) -> Path | None:
+    """Expand ``--launch-cwd`` and require an existing directory."""
+    if launch_cwd is None:
+        return None
+    launch_dir: Path | None = None
     try:
-        from recon_tool.mcp_client.doctor import REQUIRED_RESOURCES, run_doctor
+        launch_dir = Path(os.path.expandvars(launch_cwd)).expanduser().absolute()
+        is_dir = launch_dir.is_dir()
+    except (OSError, RuntimeError, ValueError):
+        is_dir = False
+    if not is_dir or launch_dir is None:
+        get_err_console().print(
+            f"[red]--launch-cwd is not an existing directory:[/red] {_safe_markup(launch_cwd)}",
+            soft_wrap=True,
+        )
+        raise typer.Exit(EXIT_VALIDATION)
+    return launch_dir
+
+
+@mcp_app.command("doctor", short_help="Check MCP tools and resources.")
+def mcp_doctor_command(
+    launch_cwd: str | None = typer.Option(
+        None,
+        "--launch-cwd",
+        help=(
+            "Directory to start the generated client launch from. Defaults to the current "
+            "directory; set it to the working directory your MCP client uses."
+        ),
+    ),
+) -> None:
+    """Check local MCP startup, discovery, tools, and JSON resources.
+
+    Runs two launches: an isolated check in an empty temporary directory, and
+    the exact launcher `recon mcp install` writes, started from --launch-cwd.
+    """
+    try:
+        from recon_tool.mcp_client.doctor import REQUIRED_RESOURCES, run_doctor, run_generated_launch_check
     except ImportError as exc:
         get_console().print(
             "[red]MCP dependency unavailable in this environment.[/red]\n"
@@ -207,29 +261,49 @@ def mcp_doctor_command() -> None:
         )
         raise SystemExit(EXIT_ERROR) from exc
 
+    launch_dir = _resolve_launch_cwd(launch_cwd)
+
     console = get_console()
     console.print()
     console.print("  Checking local MCP startup, discovery, tools, and JSON resources...")
     console.print()
 
-    report = run_doctor()
+    isolated = run_doctor()
+    generated = run_generated_launch_check(launch_dir)
+    sections = (
+        (
+            "Isolated install check",
+            "Scope: this interpreter in an empty temporary directory. It verifies the install, not a client launch.",
+            isolated,
+        ),
+        (
+            "Generated client launch check",
+            "Scope: the command, args, and env that `recon mcp install` writes, started from the cwd below.",
+            generated,
+        ),
+    )
 
-    for check in report.checks:
-        mark = "ok" if check.status == "ok" else "FAIL"
-        style = "green" if check.status == "ok" else "red"
-        _render_status_row(
-            console,
-            mark=mark,
-            style=style,
-            name=check.name,
-            detail=check.detail,
-        )
+    for title, scope_note, report in sections:
+        if report.launch is not None:
+            _render_launch_config(console, title, scope_note, report.launch)
+        else:
+            console.print(f"  [bold]{_safe_markup(title)}[/bold]")
+        for check in report.checks:
+            mark = "ok" if check.status == "ok" else "FAIL"
+            style = "green" if check.status == "ok" else "red"
+            _render_status_row(
+                console,
+                mark=mark,
+                style=style,
+                name=check.name,
+                detail=check.detail,
+            )
+        console.print()
 
+    console.print(f"  elapsed: {isolated.elapsed_seconds + generated.elapsed_seconds:.2f}s")
     console.print()
-    console.print(f"  elapsed: {report.elapsed_seconds:.2f}s")
-    console.print()
 
-    if not report.ok:
+    if not (isolated.ok and generated.ok):
         console.print(
             "  [red]MCP self-check failed.[/red] Run "
             "[bold]recon doctor --mcp[/bold] for the static-shape "
@@ -237,6 +311,12 @@ def mcp_doctor_command() -> None:
         )
         raise typer.Exit(EXIT_INTERNAL)
 
+    exercised = generated.launch.cwd if generated.launch is not None else None
     console.print("  [green]All checks passed.[/green]")
     console.print(f"  Verified: canonical tool registrations and {len(REQUIRED_RESOURCES)} local JSON resource reads.")
+    console.print(
+        f"  Generated launch verified from {_safe_markup(exercised or 'the current directory')} only; "
+        "a client that starts elsewhere can differ. Use --launch-cwd to check its directory.",
+        soft_wrap=True,
+    )
     console.print("  [dim]Client config was not checked; run recon doctor --client=<name>.[/dim]")

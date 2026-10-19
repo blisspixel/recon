@@ -58,7 +58,7 @@ For the JSON output contract in full field-by-field detail, see
 | `--confidence-mode {hedged,strict}`, `--strict` | Stable | v0.11. Default `hedged`; `--strict` is a shortcut for `--confidence-mode strict`. `strict` drops hedging qualifiers (`observed`, `likely`, `indicators`) only on a dense-evidence record (High confidence with at least three sources); a thin-evidence record keeps its hedges under `strict` by design, so the same insight can read differently across two records and identically when neither is dense. |
 | `--compare <file>` | Stable | Diff against previous JSON export. |
 | `--chain`, `--depth <1-3>` | Stable | Recursive related-domain resolution. |
-| `--no-cache`, `--cache-ttl <sec>` | Stable | Lookup-result cache control. The independent CT cache still applies. |
+| `--no-cache`, `--cache-ttl <sec>` | Stable | Lookup-result cache control. `--no-cache` bypasses both the read and the write. A result whose collection recorded a collector failure is never reused. The independent CT cache still applies. |
 | `--timeout <sec>` / `-t` | Stable | Per-domain pipeline timeout (default 120s). Chains have a total budget of depth times timeout; each lookup is capped by the remaining budget. |
 | `--fusion` / `--no-fusion` | Stable (v2.0+) | Advanced Bayesian diagnostic control. v2 preserves the historical implicit enabled default. Pass `--no-fusion` for deterministic output or `--fusion` to pin the diagnostic on. A v2.12 interactive transition notice was withdrawn: the omitted-choice flip is deferred optional debt, not a scheduled default change. |
 | `--explain-dag` | Stable (v2.0+) | v1.9.0. Render Bayesian evidence DAG. |
@@ -147,7 +147,7 @@ The full top-level JSON contract is in [`schema.md`](schema.md) and the
 machine-readable schema is [`recon-schema.json`](recon-schema.json). Summary of
 stability tags:
 
-- **58 top-level properties, 48 required on single-domain success output**,
+- **59 top-level properties, 48 required on single-domain success output**,
   covering identity, provider, sources, services, domains, email security, CT
   metadata, sovereignty, and nested `cert_summary` / `bimi_identity` objects.
 - **Bayesian fusion fields** (`slug_confidences`,
@@ -161,6 +161,10 @@ stability tags:
   - `schema_version` (string): `"2.0"`.
   - `error_kind` (enum: `validation`, `lookup`, `timeout`): on the batch
     error record.
+
+- **`dns_name_status`** (conditional, additive): present only as `"nxdomain"`
+  when the resolver returned NXDOMAIN for the queried name; absent otherwise.
+  See [`schema.md`](schema.md).
 
 The v2.0 schema-hardening pass also reshaped two surfaces before the lock:
 `slug_confidences` is now an object map, and `wildcard_sibling_clusters`

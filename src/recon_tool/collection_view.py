@@ -538,6 +538,7 @@ def collection_observable_result(result: SourceResult) -> SourceResult:
         unclassified_cname_chains=(() if status.channel_unavailable("cname") else result.unclassified_cname_chains),
         chain_motifs=(() if status.channel_unavailable("cname") else result.chain_motifs),
         infrastructure_clusters=(None if status.whole_dns_unavailable else result.infrastructure_clusters),
+        dns_name_status=(None if status.whole_dns_unavailable else result.dns_name_status),
         tenant_id=(None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else result.tenant_id),
         region=(None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else result.region),
         cloud_instance=(None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else result.cloud_instance),
@@ -631,6 +632,7 @@ def _generated_insight_claims(
         ),
         evidence=evidence,
         evidence_bound=True,
+        name_nxdomain=info.dns_name_status == "nxdomain",
     )
     return tuple(generate_insight_claims(context))
 
@@ -848,6 +850,7 @@ def collection_observable_info(info: TenantInfo) -> TenantInfo:
         unclassified_cname_chains=(() if status.channel_unavailable("cname") else info.unclassified_cname_chains),
         chain_motifs=(() if status.channel_unavailable("cname") else info.chain_motifs),
         infrastructure_clusters=(None if status.whole_dns_unavailable else info.infrastructure_clusters),
+        dns_name_status=(None if status.whole_dns_unavailable else info.dns_name_status),
         tenant_id=(None if not status.degraded_sources.isdisjoint(_OIDC_MARKERS) else info.tenant_id),
         display_name=(
             info.queried_domain if not status.degraded_sources.isdisjoint(_USER_REALM_MARKERS) else info.display_name
