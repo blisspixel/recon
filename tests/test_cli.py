@@ -365,3 +365,173 @@ class TestDoctor:
             result = runner.invoke(app, ["doctor"])
         assert result.exit_code == 0
         assert "All checks passed" in result.output
+
+
+class TestRootOptionPlacement:
+    """Root ``--color/--no-color`` work after the domain or command (#224), other
+    root-only options name the working form, and a near-miss command typo
+    followed by more arguments gets a suggestion instead of an extra-argument error."""
+
+    @pytest.fixture
+    def color_calls(self, monkeypatch: pytest.MonkeyPatch) -> list[bool | None]:
+        calls: list[bool | None] = []
+        monkeypatch.setattr("recon_tool.formatter.set_color_override", calls.append)
+        return calls
+
+    @pytest.fixture
+    def looked_up(self, monkeypatch: pytest.MonkeyPatch) -> list[str]:
+        domains: list[str] = []
+
+        async def fake_lookup(domain, _options) -> None:
+            domains.append(domain)
+
+        monkeypatch.setattr("recon_tool.cli._lookup", fake_lookup)
+        return domains
+
+    @pytest.mark.parametrize(
+        ("args", "expected"),
+        [
+            (["--no-color", "example.com"], False),
+            (["example.com", "--no-color"], False),
+            (["lookup", "example.com", "--no-color"], False),
+            (["lookup", "example.com", "--json", "--color"], True),
+            (["--color", "example.com", "--no-color"], False),
+            (["--no-color", "lookup", "example.com", "--color"], True),
+        ],
+    )
+    def test_color_flag_position_is_equivalent_and_last_wins(
+        self, args: list[str], expected: bool, color_calls: list[bool | None], looked_up: list[str]
+    ) -> None:
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0, result.output
+        assert color_calls == [expected]
+        assert looked_up == ["example.com"]
+
+    @pytest.mark.parametrize(
+        "args",
+        [["doctor", "--no-color", "--help"], ["cache", "show", "--no-color", "--help"], ["review", "-h", "--no-color"]],
+    )
+    def test_trailing_no_color_is_accepted_by_other_commands(
+        self, args: list[str], color_calls: list[bool | None]
+    ) -> None:
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0, result.output
+        assert color_calls == [False]
+
+    def test_trailing_no_color_disables_console_color(self, looked_up: list[str]) -> None:
+        from recon_tool.formatter import get_console, set_color_override
+
+        try:
+            result = runner.invoke(app, ["example.com", "--no-color"])
+            assert result.exit_code == 0, result.output
+            assert get_console().no_color is True
+        finally:
+            set_color_override(None)
+
+    def test_tokens_after_double_dash_are_not_hoisted(
+        self, color_calls: list[bool | None], looked_up: list[str]
+    ) -> None:
+        result = runner.invoke(app, ["lookup", "--", "--no-color"])
+        assert result.exit_code == 0, result.output
+        assert color_calls == []
+        assert looked_up == ["--no-color"]
+
+    @pytest.mark.parametrize(
+        ("args", "expected"),
+        [
+            (["example.com", "--debug"], "--debug is a global option. Place it before the domain or command"),
+            (["lookup", "example.com", "--debug"], "for example: recon --debug example.com"),
+            (
+                ["lookup", "example.com", "--version"],
+                "--version is a global option. Run it on its own: recon --version",
+            ),
+            (["example.com", "-V"], "Run it on its own: recon -V"),
+        ],
+    )
+    def test_misplaced_root_only_option_names_working_form(
+        self, args: list[str], expected: str, looked_up: list[str]
+    ) -> None:
+        result = runner.invoke(app, args)
+        assert result.exit_code == 2
+        assert expected in " ".join(_strip_ansi(result.output).replace("│", " ").split())
+        assert "No such option" not in result.output
+        assert looked_up == []
+
+    def test_misplaced_root_option_check_is_skipped_while_completing(self) -> None:
+        ctx = get_command(app).make_context("recon", ["example.com", "--debug"], resilient_parsing=True)
+        assert ctx.resilient_parsing
+
+    @pytest.mark.parametrize(
+        ("args", "typo", "command"),
+        [
+            (["lookpu", "example.com"], "lookpu", "lookup"),
+            (["Lookup", "example.com"], "Lookup", "lookup"),
+            (["batc", "domains.txt", "--json"], "batc", "batch"),
+            (["doctr", "--no-color", "extra"], "doctr", "doctor"),
+        ],
+    )
+    def test_command_typo_with_extra_arguments_suggests_command(
+        self, args: list[str], typo: str, command: str, color_calls: list[bool | None], looked_up: list[str]
+    ) -> None:
+        result = runner.invoke(app, args)
+        assert result.exit_code == 2
+        collapsed = " ".join(_strip_ansi(result.output).replace("│", " ").split())
+        assert f'Unknown command "{typo}". Did you mean "{command}"?' in collapsed
+        assert "unexpected extra argument" not in collapsed
+        assert looked_up == []
+
+    @pytest.mark.parametrize(
+        "args",
+        [["lookpu"], ["lookpu", "--json"], ["lookpu", "--profile", "fintech"], ["lookup.example"]],
+    )
+    def test_near_miss_without_extra_arguments_stays_domain_input(self, args: list[str], looked_up: list[str]) -> None:
+        result = runner.invoke(app, args)
+        assert result.exit_code == 0, result.output
+        assert looked_up == [args[0]]
+
+    def test_distant_first_token_keeps_extra_argument_error(self, looked_up: list[str]) -> None:
+        result = runner.invoke(app, ["lookup.example", "extra"])
+        assert result.exit_code == 2
+        assert "Got unexpected extra argument(s) (extra)" in result.output
+        assert "Unknown command" not in result.output
+        assert looked_up == []
+
+    def test_typo_suggestion_is_skipped_while_completing(self) -> None:
+        ctx = get_command(app).make_context("recon", ["lookpu", "example.com"], resilient_parsing=True)
+        group = ctx.command
+        assert isinstance(group, typer.core.TyperGroup)
+        name, _command, _args = group.resolve_command(ctx, ["lookpu", "example.com"])
+        assert name == "lookup"
+
+
+class TestRoutingHelpers:
+    def test_hoist_leaves_option_only_and_separator_first_args_alone(self) -> None:
+        from recon_tool.cli.routing import hoist_trailing_color_flags
+
+        assert hoist_trailing_color_flags(["--no-color"]) == ["--no-color"]
+        assert hoist_trailing_color_flags(["--", "--no-color"]) == ["--", "--no-color"]
+        assert hoist_trailing_color_flags(["--debug", "-", "--color"]) == ["--debug", "--color", "-"]
+
+    def test_misplaced_root_option_ignores_leading_and_separated_tokens(self) -> None:
+        from recon_tool.cli.routing import misplaced_root_option
+
+        assert misplaced_root_option(["--debug", "example.com"]) is None
+        assert misplaced_root_option(["--debug"]) is None
+        assert misplaced_root_option(["lookup", "--", "--debug"]) is None
+        assert misplaced_root_option(["lookup", "example.com", "-V"]) == "-V"
+
+    @pytest.mark.parametrize(
+        ("token", "expected"),
+        [("lookpu", "lookup"), ("revew", "review"), ("MCP", "mcp"), ("deltaa", "delta"), ("example.com", None)],
+    )
+    def test_near_miss_command_uses_edit_distance_two(self, token: str, expected: str | None) -> None:
+        from recon_tool.cli import _SUBCOMMANDS  # pyright: ignore[reportPrivateUsage]
+        from recon_tool.cli.routing import near_miss_command
+
+        assert near_miss_command(token, _SUBCOMMANDS) == expected
+
+    def test_near_miss_command_rejects_distance_three(self) -> None:
+        from recon_tool.cli.routing import near_miss_command
+
+        assert near_miss_command("lkpu", ["lookup"]) is None
+        assert near_miss_command("lookup", []) is None

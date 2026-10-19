@@ -361,6 +361,14 @@ This is the linear view for a standard single-domain lookup. Chain, compare,
 exposure, and gaps reports use their own formats; batch and delta have
 mode-specific output.
 
+`--color` and `--no-color` are global options, but they work in either
+position: `recon example.com --no-color` and `recon --no-color example.com` are
+the same, as is any subcommand form such as `recon review example.com
+--no-color`. When both appear, the last one given wins. The other global
+options must come first: use `recon --debug example.com`, and run
+`recon --version` on its own. A misplaced one is rejected with exit code 2 and
+a message that shows the working form.
+
 ## Exit Codes
 
 Every command follows one exit-code contract, so a script can branch on the

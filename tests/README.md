@@ -27,7 +27,7 @@ uv run python scripts/check.py
 
 | Behavior | Defining source | Focused test owners |
 |---|---|---|
-| CLI registration and shared callbacks | `src/recon_tool/cli/__init__.py`, `src/recon_tool/cli/shared.py` | `test_cli.py`, `test_cli_crash_handler.py`, `test_cli_integration_smoke.py` |
+| CLI registration and shared callbacks | `src/recon_tool/cli/__init__.py`, `src/recon_tool/cli/routing.py`, `src/recon_tool/cli/shared.py` | `test_cli.py`, `test_cli_crash_handler.py`, `test_cli_integration_smoke.py` |
 | Lookup CLI | `src/recon_tool/cli/lookup.py` | `test_cli.py`, `test_lookup_compare_cli.py`, `test_cli_explain.py`, `test_cli_output_contracts.py` |
 | Batch CLI and scheduling | `src/recon_tool/cli/batch.py` | `test_batch.py`, `test_batch_stdin.py`, `test_batch_streaming.py`, `test_batch_ndjson_schema.py` |
 | Doctor and update flows | `src/recon_tool/cli/doctor.py`, `src/recon_tool/updater.py` | `test_doctor.py`, `test_doctor_client.py`, `test_doctor_mcp.py`, `test_updater.py` |
