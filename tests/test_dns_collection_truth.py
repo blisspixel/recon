@@ -453,14 +453,14 @@ class TestCollectionNoteQuantifier:
         notes = collection_note_parts(project_collection_status(_info(self._ALL)))
         assert notes[0].startswith(f"All {len(self._ALL)} sources unavailable (")
 
-    def test_partial_unavailability_keeps_some(self) -> None:
+    def test_partial_unavailability_counts_without_all(self) -> None:
         notes = collection_note_parts(project_collection_status(_info(self._ALL[:-1])))
-        assert notes[0].startswith("Some sources unavailable (")
+        assert notes[0].startswith(f"{len(self._ALL) - 1} sources unavailable (")
 
-    def test_any_observation_keeps_some(self) -> None:
+    def test_any_observation_counts_without_all(self) -> None:
         info = _info(self._ALL, services=("Synthetic Service",))
         notes = collection_note_parts(project_collection_status(info))
-        assert notes[0].startswith("Some sources unavailable (")
+        assert notes[0].startswith(f"{len(self._ALL)} sources unavailable (")
 
     def test_markdown_and_mcp_text_share_the_quantifier(self) -> None:
         from recon_tool.formatter.markdown import format_tenant_markdown

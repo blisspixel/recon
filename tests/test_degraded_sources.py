@@ -149,7 +149,7 @@ class TestFormatterDegradedOutput:
         panel = render_tenant_panel(ti)
         console.print(panel)
         output = buf.getvalue()
-        assert "Some sources were unavailable" not in output
+        assert "unavailable (" not in output
 
     def test_json_includes_degraded_sources(self):
         ti = _make_tenant_info(degraded_sources=("crt.sh",))
@@ -185,7 +185,7 @@ class TestFormatterDegradedOutput:
     def test_markdown_core_degradation_does_not_claim_subdomain_incompleteness(self):
         ti = _make_tenant_info(degraded_sources=("dns:dmarc",))
         md = format_tenant_markdown(ti)
-        assert "Some sources were unavailable (dns\\:dmarc)." in md
+        assert "1 source was unavailable (dns\\:dmarc)." in md
         assert "subdomain discovery may be incomplete" not in md
 
     def test_markdown_suppresses_routine_ct_fallback(self):
@@ -196,7 +196,7 @@ class TestFormatterDegradedOutput:
             ct_attempt_outcome="live_success",
         )
         md = format_tenant_markdown(ti)
-        assert "Some sources were unavailable" not in md
+        assert "unavailable (" not in md
         assert "subdomain discovery may be incomplete" not in md
 
     def test_markdown_names_ct_cache_recovery(self):

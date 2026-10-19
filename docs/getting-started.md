@@ -266,6 +266,35 @@ Cache reuse follows three rules:
 `--no-ct` and `--direct-probes` lookups never read or write the shared result
 cache, because their scope differs from a default lookup.
 
+### What you see while recon collects
+
+On an interactive terminal, a lookup that collects (not a cache hit) draws a
+short ladder on stderr, one row per source family: DNS records, Microsoft
+tenant discovery, Microsoft user realm, Google identity, MTA-STS policy and
+certificate transparency. Each row spins while it runs and settles to
+a check mark and `matched`, a dash mark and `no match`, or a cross and
+`unavailable (reason)` (`ok`, `-` and `x` in ASCII mode). When collection ends the ladder collapses into one source-health
+line above the panel:
+
+```text
+6 sources: 3 matched, 2 no match, 1 unavailable (CT: crt.sh, certspotter rate limited)
+```
+
+The ladder never animates under `--no-color`, `NO_COLOR`, `TERM=dumb`, `CI`,
+`--debug`, or when stderr is not a terminal; set `RECON_NO_ANIMATION=1` to
+turn it off anywhere else. In each of those cases the source-health line alone
+is printed. `--json`, `--md` and `--explain-dag` print neither, and stdout is
+never touched: `recon example.com 2>/dev/null` gives the same output with or
+without the ladder.
+
+Warnings from collectors are gathered during collection and summarized once
+on stderr after the ladder, for example
+`2 hosts could not be resolved (login.microsoftonline.com, autodiscover.example.com). Run recon doctor.`
+A name that does not resolve is worded `could not resolve`; a host recon
+refuses because it resolves to a private address is worded
+`skipped: resolves to a private address`. `--debug` keeps the detailed log
+lines instead of the summary.
+
 Use explicit synthetic identities under reserved namespaces in examples and
 docs. Public validation work with real apexes stays in gitignored local
 workspaces.

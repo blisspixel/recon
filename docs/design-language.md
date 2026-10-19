@@ -70,6 +70,38 @@ encode a qualification only in color, an icon, or an explanatory footnote.
 - Honor automatic terminal detection and the existing color overrides. Piped
   structured data must remain separate from diagnostics on stderr.
 
+## Motion
+
+recon has one moving element, the source ladder, and it lives on stderr only
+(`src/recon_tool/cli/source_ladder.py`, state and wording in
+`src/recon_tool/formatter/source_ladder.py`).
+
+- While a human lookup collects, the ladder shows one row per source family:
+  DNS records, Microsoft tenant discovery, Microsoft user realm, Google
+  identity, MTA-STS policy and certificate transparency. A running row shows a
+  braille spinner in the success role; it settles to a check mark and
+  `matched`, a dash mark and `no match`, or a cross and
+  `unavailable (reason)`, with the ASCII marks `ok`, `-` and `x`. A row changes only when the resolver reports that source's result.
+- When collection ends, the rows are erased and one source-health line takes
+  their place above the panel, for example
+  `6 sources: 3 matched, 2 no match, 1 unavailable (CT: crt.sh rate limited)`.
+  Counts are per collection unit, zero counts are omitted, and reasons come
+  from a fixed vocabulary (`timeout`, `could not resolve`, `rate limited`,
+  `HTTP 503`), never from collector text.
+- Each frame is written inside synchronized output (DEC mode 2026), at most 12
+  frames per second, from one task that sleeps between frames. Events update
+  state but never draw. Once collection settles the task is awaited, so a
+  finished ladder costs no CPU.
+- Animation is off under `--no-color`, `NO_COLOR`, `TERM=dumb`, `CI`,
+  `RECON_NO_ANIMATION=1`, `--debug`, a legacy Windows console, and whenever
+  stderr is not a terminal. The source-health line alone is the static form.
+  `--json`, `--md` and `--explain-dag` show neither.
+- Diagnostics never print through the live region. Collector warnings are
+  captured during collection and summarized once, after the ladder collapses:
+  `2 hosts could not be resolved (...). Run recon doctor.` Name a condition by
+  what it is: an unresolved name `could not resolve`, a refused destination
+  `skipped: resolves to a private address (10.0.0.5)`.
+
 ## Quantitative display
 
 Show units and denominators explicitly. A proportion based on eligible rows
@@ -96,7 +128,10 @@ command legible without requiring the symbol to explain the product.
 narrow-width content and style retention. `tests/test_exposure_visual_semantics.py`
 pins neutral index styling. `tests/test_theme_roles.py` pins the role table,
 color precedence and the ASCII fallback, and `tests/test_theme_contrast.py`
-measures panel contrast on Omarchy palettes. `tests/test_cohort_display_semantics.py` checks
+measures panel contrast on Omarchy palettes. `tests/test_source_ladder.py`
+pins the frame cap, the idle-after-settle rule, every animation off switch and
+the health-line counts, and `tests/test_collection_warnings.py` pins the
+warning summary and the resolver wording. `tests/test_cohort_display_semantics.py` checks
 units, denominators and unavailable values. `tests/test_mcp_collection_notes.py`
 keeps material CT caveats aligned across interfaces. The generated terminal
 demo and existing golden renders remain independent integration gates.

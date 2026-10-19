@@ -127,10 +127,26 @@ text are returned only through the caller's private tool response and are not
 copied into operator logs. Successful validation is required before a domain
 value can appear in ordinary cache, resolution, or failure diagnostics.
 
-Interactive cache-miss lookups use one deterministic, outcome-neutral progress
-message; chain resolution uses a separate label for that selected operation.
-Progress text does not claim that an individual collector, inference pass, or
-posture analysis is currently running. `--debug` enables diagnostics from both
+Human cache-miss lookups (the panel and `--plain`, including the exposure,
+gaps and compare views) report collection on stderr through the source ladder:
+one row per source family, settled only by a progress event the resolver
+emits when that source returns, never by elapsed time. The ladder animates
+only on an interactive stderr and is static under `--no-color`, `NO_COLOR`,
+`TERM=dumb`, `CI`, `RECON_NO_ANIMATION`, and `--debug`. Every human cache-miss
+lookup ends its stderr progress with one source-health line, such as
+`6 sources: 4 matched, 2 no match`, counted per collection unit. `--json`,
+`--md` and `--explain-dag` print no ladder and no health line. Chain
+resolution keeps a separate outcome-neutral label for that operation. Progress
+text does not claim that an inference pass or posture analysis is running.
+
+Without `--debug`, warnings logged by collectors during a lookup, chain, batch
+or review are captured and printed once on stderr after collection, grouped by
+condition, deduplicated, bounded to three named hosts per line, and reduced to
+hostname characters: for example `1 host could not be resolved (...). Run recon
+doctor.` This applies to `--json` too, where the summary replaces raw warning
+lines on stderr and stdout carries only the payload. A DNS resolution failure
+is worded `could not resolve`; only a destination refused for a private
+address uses `skipped: resolves to a private address`. `--debug` enables diagnostics from both
 owned logger namespaces (`recon` and `recon_tool`), installs one CLI stderr
 handler per namespace without adding another on repeat configuration, and
 prevents propagation to host root handlers. Direct handlers explicitly

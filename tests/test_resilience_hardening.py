@@ -127,8 +127,8 @@ class TestDecompressionBombGuard:
         """A compressing Content-Encoding (despite identity) is refused, not decoded."""
         from recon_tool import http as http_mod
 
-        async def _not_private(_host: str) -> bool:
-            return False
+        async def _not_private(_host: str) -> None:
+            return None
 
         raw_stream = _FakeStream([b"\x1f\x8b" + b"\x00" * 64])
         crafted = httpx.Response(
@@ -141,7 +141,7 @@ class TestDecompressionBombGuard:
         async def _fake_super(_self: Any, _request: httpx.Request) -> httpx.Response:
             return crafted
 
-        monkeypatch.setattr(http_mod, "_is_private_ip_async", _not_private)
+        monkeypatch.setattr(http_mod, "_destination_refusal_async", _not_private)
         monkeypatch.setattr(http_mod.CoreHTTPTransport, "handle_async_request", _fake_super)
 
         resp = await _SSRFSafeTransport().handle_async_request(httpx.Request("GET", "https://cse.alpha.invalid/x"))
@@ -157,8 +157,8 @@ class TestDecompressionBombGuard:
         """An uncompressed (identity) response is wrapped in the byte cap, not refused."""
         from recon_tool import http as http_mod
 
-        async def _not_private(_host: str) -> bool:
-            return False
+        async def _not_private(_host: str) -> None:
+            return None
 
         raw_stream = _FakeStream([b'{"ok": true}'])
         crafted = httpx.Response(
@@ -171,7 +171,7 @@ class TestDecompressionBombGuard:
         async def _fake_super(_self: Any, _request: httpx.Request) -> httpx.Response:
             return crafted
 
-        monkeypatch.setattr(http_mod, "_is_private_ip_async", _not_private)
+        monkeypatch.setattr(http_mod, "_destination_refusal_async", _not_private)
         monkeypatch.setattr(http_mod.CoreHTTPTransport, "handle_async_request", _fake_super)
 
         resp = await _SSRFSafeTransport().handle_async_request(httpx.Request("GET", "https://crt.sh/x"))

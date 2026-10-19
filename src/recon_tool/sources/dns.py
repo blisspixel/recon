@@ -14,6 +14,7 @@ import logging
 import time
 from typing import Any
 
+from recon_tool import collection_progress
 from recon_tool.fingerprints import (
     get_cname_target_rules,
 )
@@ -85,6 +86,25 @@ from recon_tool.sources.dns_tables import (
 )
 
 logger = logging.getLogger("recon")
+
+# Detectors that settle a progress unit of their own (see collection_progress).
+_PROGRESS_UNITS = {"email_security": collection_progress.MTA_STS_UNIT, "cert_intel": collection_progress.CT_UNIT}
+
+
+def _unit_outcome(unit: str, ctx: _DetectionCtx) -> collection_progress.UnitOutcome:
+    """Classify a DNS-internal progress unit from the shared context."""
+    if unit == collection_progress.CT_UNIT:
+        return collection_progress.ct_outcome(
+            subdomain_count=ctx.ct_subdomain_count,
+            has_summary=ctx.cert_summary is not None,
+            degraded=ctx.degraded_sources,
+            attempt_outcome=ctx.ct_attempt_outcome,
+        )
+    return collection_progress.mta_sts_outcome(
+        mode=ctx.mta_sts_mode,
+        record_observed=any(record.source_type == "MTA_STS" for record in ctx.evidence),
+        degraded=ctx.degraded_sources,
+    )
 
 
 # ── Detection context ───────────────────────────────────────────────────
@@ -877,11 +897,16 @@ class DNSSource:
         # regression that breaks a detector for every input is visible
         # rather than silently dropping that detector's intelligence.
         async def _isolate(name: str, coro: Any) -> None:
+            unit = _PROGRESS_UNITS.get(name)
+            if unit is not None:
+                collection_progress.emit(unit, "start")
             try:
                 await coro
             except Exception as exc:
                 logger.warning("DNS detector %r failed for %s: %s", name, domain, exc)
                 ctx.degraded_sources.add(f"detector:{name}")
+            if unit is not None:
+                collection_progress.emit(unit, "done", outcome=_unit_outcome(unit, ctx))
 
         await asyncio.gather(*(_isolate(name, coro) for name, coro in detectors))
 

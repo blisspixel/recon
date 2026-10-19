@@ -27,7 +27,7 @@ _BASE = TenantInfo(
     ("overrides", "expected"),
     [
         ({}, None),
-        ({"degraded_sources": ("dns:dmarc",)}, "Some sources unavailable (dns:dmarc)"),
+        ({"degraded_sources": ("dns:dmarc",)}, "1 source unavailable (dns:dmarc)"),
         (
             {"degraded_sources": ("crt.sh", "certspotter")},
             "All CT providers unavailable (crt.sh, certspotter)",
@@ -68,7 +68,8 @@ def test_default_plain_keeps_material_panel_collection_caveats(
 
     if expected is None:
         assert "collection_note:" not in plain
-        assert "Some sources unavailable" not in panel
+        assert "sources unavailable" not in panel
+        assert "source unavailable" not in panel
         assert "All CT providers unavailable" not in panel
         assert "CT: from local cache" not in panel
     else:
