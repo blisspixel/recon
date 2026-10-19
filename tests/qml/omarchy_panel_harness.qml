@@ -122,9 +122,9 @@ ShellRoot {
     // through the fake host Color.currentThemePath, never a real user theme.
     property string themeDir: fixture + "/state/omarchy/current/theme"
     property string lightToml: ['mode = "light"', 'background = "#f3f3f3"', 'red = "#a01929"',
-        'yellow = "#8a5d00"', 'green = "#1a7f37"', ''].join(String.fromCharCode(10))
+        'yellow = "#8a5d00"', 'green = "#1a7f37"', 'blue = "#0969da"', ''].join(String.fromCharCode(10))
     property string renamedToml: ['mode = "light"', 'background = "#f3f3f3"', 'red = "#a01929"',
-        'yellow = "#8a5d00"', 'green = "#0b6e4f"', ''].join(String.fromCharCode(10))
+        'yellow = "#8a5d00"', 'green = "#0b6e4f"', 'blue = "#0969da"', ''].join(String.fromCharCode(10))
     property bool lightApplied: false
     property bool captureStarted: false
     FileView {
@@ -152,7 +152,8 @@ ShellRoot {
     }
     function distinctStatus() {
         var c = panel.nativeColors;
-        return c.success !== c.warning && c.warning !== c.error && c.success !== c.error;
+        var roles = [c.success, c.warning, c.error, c.info];
+        return roles.every(function(value, index) { return !!value && roles.indexOf(value) === index; });
     }
 
     Component.onCompleted: {
@@ -420,8 +421,8 @@ ShellRoot {
         add("dark render", function() { capture("dark.png"); }, function() {
             if (!imageReady) return false;
             same(panel.view.color.toString(), Color.background.toString(), "Dark palette detached");
-            same([panel.nativeColors.success, panel.nativeColors.warning, panel.nativeColors.error],
-                 ["#9ece6a", "#e0af68", "#f7768e"], "Dark theme status roles not read from colors.toml");
+            same([panel.nativeColors.success, panel.nativeColors.warning, panel.nativeColors.error, panel.nativeColors.info],
+                 ["#9ece6a", "#e0af68", "#f7768e", "#7aa2f7"], "Dark theme status roles not read from colors.toml");
             assertThat(!panel.lightTheme && distinctStatus(), "Dark status roles collapsed");
             assertLookupHeader("visual.invalid");
             return true;
@@ -440,6 +441,7 @@ ShellRoot {
             same(panel.view.color.toString(), "#f3f3f3", "Light palette detached");
             assertThat(panel.lightTheme && panel.view.lightTheme && distinctStatus(), "Light status roles collapsed");
             same(panel.nativeColors.error, "#a01929", "Light error role detached");
+            same(panel.nativeColors.info, "#0969da", "Light info role detached");
             assertLookupHeader("visual.invalid");
             return true;
         });

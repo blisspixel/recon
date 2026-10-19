@@ -95,8 +95,9 @@ watching remains a separate follow-up, not an installed background feature.
 ## Colors
 
 Status colors match the CLI roles: success is the active theme's green,
-warning its yellow and error its red. The theme accent stays the focus and
-selection color. Every status chip and banner also carries its word (for
+warning its yellow, error its red and info its blue. The confidence badge uses
+success for High, info for Medium and warning for Low. The theme accent stays
+the focus and selection color. Every status chip and banner also carries its word (for
 example "Degraded sources", "Changes Observed", "Partial comparison"), so the
 panel still reads correctly when a theme's colors are close or identical.
 
@@ -104,8 +105,8 @@ The host `Color` singleton exposes only `foreground`, `background`, `accent`,
 `urgent` and `muted`, with no green, yellow or light/dark flag. The panel
 therefore reads the active theme's own `colors.toml` from the host's
 `Color.currentThemePath` (normally `~/.local/state/omarchy/current/theme`)
-through Quickshell `FileView`. It reads only `green`, `yellow`, `red`, the
-legacy `color2`, `color3`, `color1` and `mode`, accepts six-digit hex values
+through Quickshell `FileView`. It reads only `green`, `yellow`, `red`, `blue`,
+the legacy `color2`, `color3`, `color1`, `color4` and `mode`, accepts six-digit hex values
 only, and never runs a shell or helper for this. The light/dark flag is the
 theme's `mode` key, or the luminance of the host background when `mode` is
 absent.

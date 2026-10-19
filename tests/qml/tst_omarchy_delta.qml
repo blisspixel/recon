@@ -135,13 +135,18 @@ Item {
             verify(findText(view, "- Suppressed removal") === null);
         }
 
+        function distinctRoles(colors) {
+            var roles = [colors.success, colors.warning, colors.error, colors.info];
+            return roles.every(function(value, index) { return !!value && roles.indexOf(value) === index; });
+        }
+
         function test_preview_fallback_follows_light_flag() {
             var dark = view.colors;
-            verify(dark.success !== dark.warning && dark.warning !== dark.error && dark.success !== dark.error);
+            verify(distinctRoles(dark));
             view.lightTheme = true;
             var light = view.colors;
             verify(light.background !== dark.background);
-            verify(light.success !== light.warning && light.warning !== light.error && light.success !== light.error);
+            verify(distinctRoles(light));
             compare(view.color.toString(), light.background);
         }
     }

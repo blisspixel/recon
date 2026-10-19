@@ -101,6 +101,7 @@ accent = "#89b4fa"
 red = "#f7768e"
 yellow = "#e0af68"
 green = "#9ece6a"
+blue = "#7aa2f7"
 """
 
 

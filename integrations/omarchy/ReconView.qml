@@ -491,18 +491,18 @@ Rectangle {
 
                             Item { Layout.fillWidth: true }
 
-                            // Confidence Badge
+                            // Confidence badge: High is success, Medium info, Low warning, as in the CLI.
                             Rectangle {
                                 Layout.preferredHeight: 22
                                 Layout.preferredWidth: confText.implicitWidth + 14
                                 radius: 4
                                 color: {
                                     var c = root.lookupResult ? (root.lookupResult.confidence || "low") : "low";
-                                    return c === "high" ? root.colors.successFill : (c === "medium" ? root.colors.warningFill : root.colors.surface);
+                                    return c === "high" ? root.colors.successFill : (c === "medium" ? root.colors.infoFill : root.colors.warningFill);
                                 }
                                 border.color: {
                                     var c = root.lookupResult ? (root.lookupResult.confidence || "low") : "low";
-                                    return c === "high" ? root.colors.success : (c === "medium" ? root.colors.warning : root.colors.muted);
+                                    return c === "high" ? root.colors.success : (c === "medium" ? root.colors.info : root.colors.warning);
                                 }
                                 border.width: 1
 
@@ -518,7 +518,7 @@ Rectangle {
                                     font.weight: Font.DemiBold
                                     color: {
                                         var c = root.lookupResult ? (root.lookupResult.confidence || "low") : "low";
-                                        return c === "high" ? root.colors.success : (c === "medium" ? root.colors.warning : root.colors.foreground);
+                                        return c === "high" ? root.colors.success : (c === "medium" ? root.colors.info : root.colors.warning);
                                     }
                                 }
                             }

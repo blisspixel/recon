@@ -18,6 +18,9 @@ VIEW = (OMARCHY_DIR / "ReconView.qml").read_text(encoding="utf-8")
 PALETTE = (OMARCHY_DIR / "ThemePalette.js").read_text(encoding="utf-8")
 
 
+STATUS_ROLES = ("success", "warning", "error", "info")
+
+
 def _native_role(name: str) -> str:
     block = PANEL.split("readonly property var nativeColors: ({", 1)[1].split("})", 1)[0]
     match = re.search(rf"\b{name}:\s*([^,\n]+)", block)
@@ -26,17 +29,26 @@ def _native_role(name: str) -> str:
 
 
 def test_status_roles_are_distinct_and_not_accent_or_urgent() -> None:
-    roles = {name: _native_role(name) for name in ("success", "warning", "error")}
-    assert len(set(roles.values())) == 3, roles
+    roles = {name: _native_role(name) for name in STATUS_ROLES}
+    assert len(set(roles.values())) == 4, roles
     for expression in roles.values():
         assert expression not in ("Color.accent", "Color.urgent"), roles
-    fills = {name: _native_role(name + "Fill") for name in ("success", "warning", "error")}
-    assert len(set(fills.values())) == 3, fills
+    fills = {name: _native_role(name + "Fill") for name in STATUS_ROLES}
+    assert len(set(fills.values())) == 4, fills
     for expression in fills.values():
         assert "Color.accent" not in expression, fills
         assert "Color.urgent" not in expression, fills
     # Accent stays the focus and selection role.
     assert _native_role("accent") == "Color.accent"
+
+
+def test_confidence_badge_matches_cli_roles() -> None:
+    # High is success, Medium info, Low warning; the badge keeps its word.
+    badge = VIEW.split("// Confidence badge", 1)[1].split("// Provider & Tenant Row", 1)[0]
+    assert badge.count('c === "medium" ? root.colors.info :') == 2
+    assert 'c === "medium" ? root.colors.infoFill : root.colors.warningFill' in badge
+    assert badge.count("root.colors.info : root.colors.warning") == 2
+    assert 'c.slice(1) + " Confidence"' in badge
 
 
 def test_preview_fallback_has_light_and_dark_sets() -> None:
@@ -94,6 +106,7 @@ foreground = "#a9b1d6"
 red = "#f7768e"
 yellow = "#e0af68"
 green = "#9ece6a"
+blue = "#7aa2f7"
 bright_green = "#b9f27c"
 """
 CANONICAL_LIGHT = """mode = 'light'
@@ -101,11 +114,13 @@ background = "#eff1f5"
 red = "#D20F39"   # inline comment
 yellow = "#df8e1d"
 green = "#40a02b"
+blue = "#1e66f5"
 """
 LEGACY = """background = "#fdf6e3"
 color1 = "#dc322f"
 color2 = "#859900"
 color3 = "#b58900"
+color4 = "#268bd2"
 """
 
 
@@ -134,7 +149,13 @@ def test_palette_reads_theme_green_yellow_red_and_mode() -> None:
         ]
     )
     dark, light, legacy = output["results"]
-    assert dark["keys"] == {"mode": "dark", "red": "#f7768e", "yellow": "#e0af68", "green": "#9ece6a"}
+    assert dark["keys"] == {
+        "mode": "dark",
+        "red": "#f7768e",
+        "yellow": "#e0af68",
+        "green": "#9ece6a",
+        "blue": "#7aa2f7",
+    }
     assert dark["light"] is False
     assert (dark["roles"]["success"], dark["roles"]["warning"], dark["roles"]["error"]) == (
         "#9ece6a",
@@ -143,6 +164,9 @@ def test_palette_reads_theme_green_yellow_red_and_mode() -> None:
     )
     assert dark["roles"]["source"] == "theme"
     assert dark["roles"]["warningFill"] == "#1fe0af68"
+    assert dark["roles"]["info"] == "#7aa2f7"
+    assert dark["roles"]["infoFill"] == "#1f7aa2f7"
+    assert light["roles"]["info"] == "#1e66f5"
     assert light["light"] is True
     assert light["roles"]["error"] == "#d20f39"
     # Legacy ANSI keys work and the light flag falls back to background luminance.
@@ -152,9 +176,11 @@ def test_palette_reads_theme_green_yellow_red_and_mode() -> None:
         "#b58900",
         "#dc322f",
     )
+    assert legacy["roles"]["info"] == "#268bd2"
     for item in output["results"]:
         roles = item["roles"]
-        assert len({roles["success"], roles["warning"], roles["error"]}) == 3
+        assert roles["source"] == "theme"
+        assert len({roles[name] for name in STATUS_ROLES}) == 4
 
 
 def test_palette_falls_back_without_collapsing_roles() -> None:
@@ -164,10 +190,16 @@ def test_palette_falls_back_without_collapsing_roles() -> None:
             {"raw": "", "background": "#f3f3f3", "urgent": "#a01929"},
             {"raw": 'green = "#aaaaaa"\nyellow = "#aaaaaa"\nred = "#bbbbbb"\n', "background": "#000000", "urgent": ""},
             {"raw": 'green = "not-a-color"\nmode = "sepia"\nred = "#12345"\n', "background": "#000000", "urgent": ""},
+            {
+                "raw": 'green = "#00aa00"\nyellow = "#aaaa00"\nred = "#aa0000"\nblue = "#aaaa00"\n',
+                "background": "#000000",
+                "urgent": "",
+            },
+            {"raw": 'green = "#00aa00"\nyellow = "#aaaa00"\nred = "#aa0000"\n', "background": "#000000", "urgent": ""},
         ]
     )
     fallback = output["fallback"]
-    empty_dark, empty_light, colliding, invalid = output["results"]
+    empty_dark, empty_light, colliding, invalid, info_collides, info_missing = output["results"]
     assert empty_dark["light"] is False
     assert empty_light["light"] is True
     assert empty_dark["roles"]["source"] == "fallback"
@@ -177,9 +209,14 @@ def test_palette_falls_back_without_collapsing_roles() -> None:
     assert empty_light["roles"]["warning"] == fallback["light"]["warning"]
     assert colliding["roles"]["source"] == "fallback"
     assert invalid["keys"] == {}
+    # Info that repeats another role, or is absent, sends the theme to the fallback set.
+    assert info_collides["roles"]["source"] == "fallback"
+    assert info_missing["roles"]["source"] == "fallback"
+    assert info_missing["roles"]["info"] == fallback["dark"]["info"]
     for item in output["results"]:
         roles = item["roles"]
-        assert len({roles["success"], roles["warning"], roles["error"]}) == 3
+        assert len({roles[name] for name in STATUS_ROLES}) == 4
     for mode in ("light", "dark"):
         roles = fallback[mode]
-        assert len({roles["success"], roles["warning"], roles["error"], roles["accent"]}) == 4
+        assert len({roles[name] for name in (*STATUS_ROLES, "accent")}) == 5
+        assert len({roles[name + "Fill"] for name in STATUS_ROLES}) == 4

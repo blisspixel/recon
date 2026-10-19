@@ -43,9 +43,11 @@ Item {
         border: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15),
         accent: Color.accent, onAccent: Color.background,
         success: root.statusColors.success, warning: root.statusColors.warning, error: root.statusColors.error,
+        info: root.statusColors.info,
         successFill: root.statusColors.successFill,
         warningFill: root.statusColors.warningFill,
-        errorFill: root.statusColors.errorFill
+        errorFill: root.statusColors.errorFill,
+        infoFill: root.statusColors.infoFill
     })
 
     function open(payloadJson) {
