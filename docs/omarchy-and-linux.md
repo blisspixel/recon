@@ -5,7 +5,7 @@ on Omarchy and Arch Linux developer workstations.
 
 ## Overview
 
-recon is a pure-Python package compatible with Python 3.11 through 3.14. It
+recon is a pure-Python package compatible with Python 3.11 through 3.15. It
 requires no compiled extensions, native C dependencies, or root capabilities.
 On Linux systems, recon runs as an unprivileged CLI and local stdio MCP server.
 
@@ -22,7 +22,7 @@ Use an isolated tool manager:
 ### Recommended: uv tool
 
 ```bash
-uv tool install --python 3.14 recon-tool
+uv tool install --python 3.15 recon-tool
 ```
 
 `uv` installs recon into an isolated tool environment and symlinks the `recon`
@@ -31,10 +31,10 @@ binary into `~/.local/bin/`.
 ### Alternative: pipx
 
 ```bash
-pipx install --python python3.14 recon-tool
+pipx install --python python3.15 recon-tool
 ```
 
-Use an installed stable Python 3.11 through 3.14 for pipx. If mise selects a
+Use an installed stable Python 3.11 through 3.15 for pipx. If mise selects a
 newer Python by default, this explicit interpreter keeps the install within
 the tested range. If an older recon shadows the new installation, start with
 `type -a recon`; see [PATH troubleshooting](getting-started.md#installer-and-path-troubleshooting).

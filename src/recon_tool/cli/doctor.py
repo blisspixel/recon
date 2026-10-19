@@ -431,8 +431,8 @@ def _doctor_print_header(console: Any) -> None:
     method_detail = f"{method} (best effort)" if method == updater.PIP else method
     # Preserve copyable paths in captured output even at narrow terminal widths.
     console.print(f"  Python [bold]{sys.version.split()[0]}[/bold] at {python_executable}", soft_wrap=True)
-    if not (3, 11) <= sys.version_info[:2] <= (3, 14) or sys.version_info.releaselevel != "final":
-        console.print("  [yellow]Python is outside the tested stable range (3.11 through 3.14).[/yellow]")
+    if not (3, 11) <= sys.version_info[:2] <= (3, 15) or sys.version_info.releaselevel != "final":
+        console.print("  [yellow]Python is outside the tested stable range (3.11 through 3.15).[/yellow]")
     console.print(f"  Package {_safe_markup(package_location)}", soft_wrap=True)
     console.print(f"  Install method {_safe_markup(method_detail)}")
     console.print()
