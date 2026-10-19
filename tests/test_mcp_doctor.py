@@ -15,6 +15,7 @@ from __future__ import annotations
 import asyncio
 import io
 import json
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -27,6 +28,7 @@ from recon_tool.mcp_doctor import (
     REQUIRED_TOOLS,
     DoctorCheck,
     DoctorReport,
+    LaunchConfig,
     _HandshakePhaseError,
     _HandshakeProgress,
     _protocol_phase,
@@ -77,6 +79,9 @@ class TestLiveHandshake:
         # Sanity-check the shape of the report so silent regressions in
         # the report contract get caught here too.
         assert report.elapsed_seconds > 0
+        assert report.launch is not None
+        assert report.launch.scope == "isolated"
+        assert report.launch.cwd is None
         names = {c.name for c in report.checks}
         assert "server spawn" in names
         assert _DISCOVERY_CHECK in names
@@ -623,6 +628,30 @@ class TestDoctorReport:
         assert report.ok is False
 
 
+def _stub_generated(monkeypatch: pytest.MonkeyPatch, report: DoctorReport | None = None) -> list[Path | None]:
+    """Replace the generated-launch check with a passing (or given) report."""
+    calls: list[Path | None] = []
+
+    def _stub(cwd: Path | None = None) -> DoctorReport:
+        calls.append(cwd)
+        if report is not None:
+            return report
+        return DoctorReport(
+            checks=(DoctorCheck("server spawn", "ok", "stdio transport opened"),),
+            elapsed_seconds=0.1,
+            launch=LaunchConfig(
+                scope="generated",
+                command="/synthetic/python",
+                args=("-c", "launcher"),
+                env=(("PYTHONSAFEPATH", "1"),),
+                cwd=str(cwd) if cwd is not None else "/synthetic/cwd",
+            ),
+        )
+
+    monkeypatch.setattr("recon_tool.mcp_doctor.run_generated_launch_check", _stub)
+    return calls
+
+
 class TestCLI:
     def test_doctor_subcommand_help(self) -> None:
         result = runner.invoke(app, ["mcp", "doctor", "--help"])
@@ -638,6 +667,7 @@ class TestCLI:
             )
 
         monkeypatch.setattr("recon_tool.mcp_doctor.run_doctor", _stub_run)
+        _stub_generated(monkeypatch)
 
         result = runner.invoke(app, ["mcp", "doctor"])
         assert result.exit_code != 0
@@ -658,6 +688,7 @@ class TestCLI:
             )
 
         monkeypatch.setattr("recon_tool.mcp_doctor.run_doctor", _stub_run)
+        _stub_generated(monkeypatch)
         result = runner.invoke(app, ["mcp", "doctor"])
 
         assert result.exit_code != 0
@@ -683,6 +714,7 @@ class TestCLI:
             )
 
         monkeypatch.setattr("recon_tool.mcp_doctor.run_doctor", _stub_run)
+        _stub_generated(monkeypatch)
 
         result = runner.invoke(app, ["mcp", "doctor"])
         assert result.exit_code == 0
@@ -691,3 +723,132 @@ class TestCLI:
         assert "All checks passed" in result.output
         assert f"canonical tool registrations and {len(REQUIRED_RESOURCES)} local JSON resource reads" in result.output
         assert "client config was not checked" in result.output.lower()
+
+
+class TestLaunchScopes:
+    def test_generated_config_mirrors_the_installer_block(self, tmp_path: Path) -> None:
+        from recon_tool.mcp_client.doctor import generated_launch_config
+        from recon_tool.mcp_install import build_recon_block
+
+        block = build_recon_block()
+        config = generated_launch_config(tmp_path)
+
+        assert config.scope == "generated"
+        assert config.command == block["command"]
+        assert list(config.args) == block["args"]
+        assert dict(config.env) == block["env"]
+        assert config.cwd == str(tmp_path.absolute())
+
+    def test_generated_config_defaults_to_current_directory(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        from recon_tool.mcp_client.doctor import generated_launch_config
+
+        monkeypatch.chdir(tmp_path)
+        assert generated_launch_config().cwd == str(Path.cwd().absolute())
+
+    def test_generated_config_tolerates_malformed_block_fields(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from recon_tool.mcp_client.doctor import generated_launch_config
+
+        monkeypatch.setattr(
+            "recon_tool.mcp_client.install.build_recon_block",
+            lambda: {"command": "/synthetic/python", "args": "not-a-list", "env": None},
+        )
+        config = generated_launch_config(Path("/synthetic"))
+        assert config.args == ()
+        assert config.env == ()
+
+    def test_isolated_config_names_its_empty_directory_scope(self) -> None:
+        from recon_tool.mcp_client.doctor import isolated_launch_config
+
+        config = isolated_launch_config()
+        assert config.scope == "isolated"
+        assert config.cwd is None
+        assert config.args == ("-m", "recon_tool.server")
+
+    def test_generated_check_rejects_isolated_config(self) -> None:
+        from recon_tool.mcp_client.doctor import isolated_launch_config, run_generated_launch_check
+
+        with pytest.raises(ValueError, match="generated launch"):
+            run_generated_launch_check(launch=isolated_launch_config())
+
+    def test_generated_check_from_empty_directory_passes_and_names_launch(self, tmp_path: Path) -> None:
+        from recon_tool.mcp_client.doctor import run_generated_launch_check
+
+        report = run_generated_launch_check(tmp_path)
+
+        assert report.ok, [check for check in report.checks if check.status == "fail"]
+        assert report.launch is not None
+        assert report.launch.scope == "generated"
+        assert report.launch.cwd == str(tmp_path.absolute())
+
+
+class TestCLILaunchSections:
+    def _isolated_ok(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        from recon_tool.mcp_client.doctor import isolated_launch_config
+
+        def _stub_run() -> DoctorReport:
+            return DoctorReport(
+                checks=(DoctorCheck("server spawn", "ok", "stdio transport opened"),),
+                elapsed_seconds=0.1,
+                launch=isolated_launch_config(),
+            )
+
+        monkeypatch.setattr("recon_tool.mcp_doctor.run_doctor", _stub_run)
+
+    def test_ok_output_labels_both_scopes_and_names_exercised_launch(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        self._isolated_ok(monkeypatch)
+        calls = _stub_generated(monkeypatch)
+
+        result = runner.invoke(app, ["mcp", "doctor", "--launch-cwd", str(tmp_path)])
+
+        assert result.exit_code == 0, result.output
+        assert calls == [tmp_path.absolute()]
+        output = " ".join(result.output.split())
+        assert "Isolated install check" in output
+        assert "empty temporary directory" in output
+        assert "not a client launch" in output
+        assert "Generated client launch check" in output
+        assert "/synthetic/python" in output
+        assert "PYTHONSAFEPATH=1" in output
+        assert "(new empty temporary directory)" in output
+        assert f"Generated launch verified from {tmp_path.absolute()} only" in output
+
+    def test_generated_failure_alone_fails_the_command(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        self._isolated_ok(monkeypatch)
+        _stub_generated(
+            monkeypatch,
+            DoctorReport(
+                checks=(DoctorCheck("server/discover", "fail", "refusing to start"),),
+                elapsed_seconds=0.1,
+            ),
+        )
+
+        result = runner.invoke(app, ["mcp", "doctor"])
+
+        assert result.exit_code != 0
+        assert "Generated client launch check" in result.output
+        assert "refusing to start" in result.output
+        assert "All checks passed" not in result.output
+
+    def test_launch_cwd_must_be_an_existing_directory(
+        self,
+        tmp_path: Path,
+        monkeypatch: pytest.MonkeyPatch,
+    ) -> None:
+        self._isolated_ok(monkeypatch)
+        calls = _stub_generated(monkeypatch)
+        not_a_dir = tmp_path / "file.txt"
+        not_a_dir.write_text("x", encoding="utf-8")
+
+        result = runner.invoke(app, ["mcp", "doctor", "--launch-cwd", str(not_a_dir)])
+
+        assert result.exit_code == 2
+        assert "--launch-cwd is not an existing directory" in " ".join(result.output.split())
+        assert calls == []

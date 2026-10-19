@@ -156,7 +156,9 @@ environment health instead of always reading success. `recon doctor --mcp`
 follows the same rule for MCP setup: it exits 1 when the package or server
 cannot load, instructions are absent, or any canonical tool or local resource
 registration is missing. `recon mcp doctor` separately spawns the local stdio
-server, checks discovery and canonical tool registrations, and reads all six
+server twice, once in an empty temporary directory and once with the exact
+launcher `recon mcp install` writes from the current directory or
+`--launch-cwd`, names each launch it exercised, checks discovery and canonical tool registrations, and reads all six
 canonical JSON resources. It exits non-zero on an invalid resource envelope,
 URI, media type, JSON object, catalog count/list/identifier relationship,
 schema or surface-inventory envelope, cache metadata, missing registration,
