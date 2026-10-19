@@ -68,6 +68,12 @@ constraint, test, and release-shaped build behavior. `pyproject.toml` requires
 uv `>=0.11.8,<0.13`, a floor wide enough for Dependabot to run `uv lock` while
 still fixing the reproducible build path to 0.11.17 in every workflow.
 
+`.python-version` pins the local toolchain to the exact final CPython 3.15.0.
+uv 0.11.17 predates that release and can only download a 3.15 pre-release, so
+the exact pin makes uv use an installed 3.15.0 rather than silently selecting a
+beta. If none is installed, install CPython 3.15.0 from python.org or your
+package manager first. CI installs each matrix interpreter with setup-python.
+
 ```bash
 git clone https://github.com/blisspixel/recon.git
 cd recon
