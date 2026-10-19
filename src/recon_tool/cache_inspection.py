@@ -6,60 +6,71 @@ import json
 import logging
 from dataclasses import dataclass
 
-from recon_tool.cache import tenant_info_from_dict
-from recon_tool.cache_contract import (
-    DEFAULT_TTL,
-    MAX_RESULT_CACHE_FILE_BYTES,
-    RESULT_CACHE_VERSION,
-)
-from recon_tool.cache_paths import resolve_cache_directory, resolve_result_cache_path
+from recon_tool.cache_admission import ResultCacheAdmission, read_result_cache_entry
+from recon_tool.cache_contract import DEFAULT_TTL
+from recon_tool.cache_paths import resolve_cache_directory
 from recon_tool.cache_values import CacheInspection, CacheListing, select_cache_file_stems
-from recon_tool.json_limits import load_bounded_json_file
-from recon_tool.validator import validate_domain
 
 logger = logging.getLogger("recon")
 
 
+_ADMISSION_STATUS: dict[ResultCacheAdmission, str] = {
+    "reusable": "reusable",
+    "expired": "expired; next lookup refreshes",
+    "lineage_invalid": "not reusable; generated-insight lineage does not validate",
+    "collection_incomplete": "not reusable; previous collection had unavailable sources",
+}
+_ADMISSION_SHORT_STATUS: dict[ResultCacheAdmission, str] = {
+    "reusable": "reusable",
+    "expired": "expired",
+    "lineage_invalid": "lineage",
+    "collection_incomplete": "partial",
+}
+
+
 @dataclass(frozen=True)
 class ResultCacheInfo:
-    """Validated result-cache metadata without TenantInfo payload fields."""
+    """Validated result-cache metadata without TenantInfo payload fields.
+
+    ``admission`` is the same decision ``cache_get`` applies with the default
+    TTL, so ``recon cache show`` agrees with what an ordinary lookup does.
+    """
 
     domain: str
     cached_at: str
     resolved_at: str
     age_seconds: float
     file_size_bytes: int
-    reusable: bool
+    admission: ResultCacheAdmission
+
+    @property
+    def reusable(self) -> bool:
+        """Whether an ordinary default-TTL lookup would serve this entry."""
+        return self.admission == "reusable"
+
+    @property
+    def status(self) -> str:
+        """Human status naming why a stored entry is or is not reused."""
+        return _ADMISSION_STATUS[self.admission]
+
+    @property
+    def short_status(self) -> str:
+        """Compact status for one-row listings."""
+        return _ADMISSION_SHORT_STATUS[self.admission]
 
 
 def inspect_result_cache(domain: str) -> CacheInspection[ResultCacheInfo]:
     """Inspect one result-cache entry while preserving missing/failure truth."""
     try:
-        expected_domain = validate_domain(domain, apex=False)
-        path = resolve_result_cache_path(expected_domain)
-        if path is None:
-            raise ValueError("Result cache path is outside its configured boundary")
-        data, file_stat, age_seconds = load_bounded_json_file(
-            path,
-            maximum_bytes=MAX_RESULT_CACHE_FILE_BYTES,
-        )
-        if not isinstance(data, dict):
-            raise ValueError("Result cache payload must be a JSON object")
-        if data.get("_cache_version") != RESULT_CACHE_VERSION:
-            raise ValueError("Result cache version does not match the current format")
-        info = tenant_info_from_dict(data)
-        if info.queried_domain != expected_domain:
-            raise ValueError("Result cache payload domain does not match its cache key")
-
-        cached_at = data.get("_cached_at")
+        entry = read_result_cache_entry(domain, ttl=DEFAULT_TTL)
         return CacheInspection(
             entry=ResultCacheInfo(
-                domain=expected_domain,
-                cached_at=cached_at if isinstance(cached_at, str) and cached_at else "unknown",
-                resolved_at=info.resolved_at or "unknown",
-                age_seconds=age_seconds,
-                file_size_bytes=file_stat.st_size,
-                reusable=age_seconds <= DEFAULT_TTL,
+                domain=entry.info.queried_domain,
+                cached_at=entry.cached_at or "unknown",
+                resolved_at=entry.info.resolved_at or "unknown",
+                age_seconds=entry.age_seconds,
+                file_size_bytes=entry.file_size_bytes,
+                admission=entry.admission,
             )
         )
     except FileNotFoundError:

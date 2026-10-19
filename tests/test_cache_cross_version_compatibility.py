@@ -292,7 +292,10 @@ class TestCacheVersionConstantPinning:
         )
 
         cache_put(domain, info)
-        restored = cache_get(domain)
+        # The entry persists as a delta baseline, but an ordinary lookup never
+        # reuses a collection that recorded a collector failure (issue #223).
+        assert cache_get(domain) is None
+        restored = cache_get(domain, admit_incomplete=True)
 
         assert restored is not None
         assert restored.degraded_sources == (marker,)

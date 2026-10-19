@@ -100,3 +100,22 @@ class SourceStatus:
     def unavailable_channels(self) -> frozenset[ObservationChannel]:
         """Return every known channel made unavailable by the markers."""
         return frozenset(channel for channel in _CHANNEL_MARKERS if self.channel_unavailable(channel))
+
+
+CT_PROVIDER_MARKERS = frozenset({"crt.sh", "certspotter"})
+"""Markers for certificate-transparency providers, which have their own fallback chain."""
+
+
+def collection_incomplete(degraded_sources: Iterable[object] | None, *, ct_provider_used: str | None) -> bool:
+    """Return whether degraded markers record a collection failure.
+
+    Every non-CT marker records an unavailable collector or channel. A CT
+    provider marker is routine when another provider, a partial page, or the
+    separate CT cache still supplied the CT channel (``ct_provider_used`` is
+    set); it records a failure only when no CT path recovered. Sparse and
+    observed-empty results carry no marker, so this rule never rejects them.
+    """
+    markers = SourceStatus.from_degraded_sources(degraded_sources).degraded_sources
+    if any(marker not in CT_PROVIDER_MARKERS for marker in markers):
+        return True
+    return bool(markers) and ct_provider_used is None

@@ -129,3 +129,51 @@ def test_public_lookup_json_does_not_expose_internal_timestamps(cached: bool) ->
     assert "cached_at" not in public
     assert "_cached_at" not in public
     assert tenant_info_to_dict(info)["resolved_at"] == info.resolved_at
+
+
+_NOW = datetime(2026, 4, 21, 12, 0, tzinfo=UTC)
+
+
+@pytest.mark.parametrize(
+    ("resolved_at", "cached_at", "expected"),
+    [
+        ("2026-04-21T11:59:30+00:00", "2026-04-21T11:59:30+00:00", "under 1 minute ago"),
+        ("2026-04-21T11:59:00+00:00", "2026-04-21T11:59:00+00:00", "1 minute ago"),
+        ("2026-04-21T09:00:00+00:00", "2026-04-21T09:00:00+00:00", "3 hours ago"),
+        ("2026-04-19T12:00:00+00:00", "2026-04-21T09:00:00+00:00", "2 days ago"),
+        # Naive timestamps read as UTC; resolved_at wins over cached_at.
+        ("2026-04-21T11:00:00", "2026-04-21T09:00:00+00:00", "1 hour ago"),
+        # An unreadable collection time falls back to the cache-write time.
+        ("not-a-time", "2026-04-21T10:00:00+00:00", "2 hours ago"),
+        # A clock skewed into the future never yields a negative age.
+        ("2026-04-21T12:30:00+00:00", "2026-04-21T12:30:00+00:00", "under 1 minute ago"),
+        (None, "garbage", "an earlier collection"),
+    ],
+)
+def test_cache_reuse_note_names_the_earlier_collection(resolved_at: str | None, cached_at: str, expected: str) -> None:
+    from recon_tool.formatter.collection_status import cache_reuse_note
+
+    info = _minimal_info(resolved_at=resolved_at, cached_at=cached_at)
+
+    assert cache_reuse_note(info, now=_NOW) == f"Cached result from {expected}. Use --no-cache to collect again."
+
+
+def test_fresh_result_has_no_cache_reuse_note_on_any_human_surface() -> None:
+    from recon_tool.formatter import format_tenant_markdown, format_tenant_plain
+    from recon_tool.formatter.collection_status import cache_reuse_note
+
+    info = _minimal_info(resolved_at="2026-04-21T09:00:00+00:00")
+
+    assert cache_reuse_note(info) is None
+    assert "Cached result" not in format_tenant_plain(info)
+    assert "Cached result" not in format_tenant_plain(info, full=True)
+    assert "Cached result" not in format_tenant_markdown(info)
+
+
+def test_cache_reuse_note_reaches_plain_full_and_markdown() -> None:
+    from recon_tool.formatter import format_tenant_markdown, format_tenant_plain
+
+    info = _minimal_info(resolved_at="2026-04-21T09:00:00+00:00", cached_at="2026-04-21T09:00:00+00:00")
+
+    assert "cache_note: Cached result from " in format_tenant_plain(info, full=True)
+    assert "*Cached result from " in format_tenant_markdown(info)

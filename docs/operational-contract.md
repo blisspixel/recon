@@ -241,6 +241,21 @@ should use JSON rather than the spreadsheet-oriented CSV surface.
   `degraded_sources`, and confidence is downgraded one level when a source is
   degraded, except when only the CT providers degraded and a CT cache fallback
   recovered the data.
+- **Partial results are answered, not reused.** A result is a collection
+  failure when `degraded_sources` holds any non-CT marker, or holds CT provider
+  markers while no CT path (another provider, a partial page, or the CT cache)
+  supplied data. Such a result is returned for the current lookup and still
+  written to the result cache, where `recon delta` can use it as a baseline,
+  but read admission never serves it to an ordinary lookup or the `--exposure`
+  and `--gaps` reports. The rule applies on read, so entries written by earlier
+  releases recover without a manual clear. Sparse results with no failure stay
+  reusable; low confidence and empty service lists are not rejection rules.
+  `recon cache show` uses the same admission function, so its status matches
+  what a lookup does, and it reports metadata only. `--no-cache` bypasses both
+  the read and the write. A human lookup served from the cache names the reuse
+  in one muted line from the internal `resolved_at` time; the lookup JSON does
+  not gain `resolved_at` or `cached_at`. The MCP server's bounded in-process
+  cache (`CACHE_TTL`, 120 seconds) is separate and unchanged.
 - **Granular failure is not negative evidence.** DNS and detector markers may
   identify one unavailable observation channel, including `dns:apex_txt`,
   `dns:dmarc`, `dns:mta_sts`, `http:mta_sts_policy`, or `dns:mx`. Bayesian
