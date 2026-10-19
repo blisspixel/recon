@@ -1,5 +1,7 @@
-Example Industries Ltd
+Example Industries Ltd (unverified)
 example.com
+Reserved name: results are public
+residue, not an organization.
 ────────────────────────────────────────
   Provider      Microsoft 365 (MX
                 delivery path) +
