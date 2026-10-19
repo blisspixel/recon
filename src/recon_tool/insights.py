@@ -100,6 +100,11 @@ class InsightContext:
     # canonical evidence sequence is empty. Direct generator calls keep the
     # historical convenience behavior for isolated unit use.
     evidence_bound: bool = False
+    # True when the resolver returned NXDOMAIN for the queried name itself.
+    # Narration that describes a quiet but existing domain (web-only, parked,
+    # staging, sparse footprint) does not apply to a name that does not exist
+    # at the resolver, so those generators stay silent.
+    name_nxdomain: bool = False
 
     @classmethod
     def from_sets(
@@ -121,6 +126,7 @@ class InsightContext:
         has_mx_records: bool = False,
         evidence: Iterable[EvidenceRecord] = (),
         evidence_bound: bool = False,
+        name_nxdomain: bool = False,
     ) -> InsightContext:
         """Convenience constructor that converts mutable sets to frozensets."""
         evidence = tuple(evidence)
@@ -167,6 +173,7 @@ class InsightContext:
             role_scoped_services=frozenset(role_scoped_services),
             evidence=evidence,
             evidence_bound=evidence_bound,
+            name_nxdomain=name_nxdomain,
         )
 
 
@@ -706,8 +713,10 @@ def _no_email_infrastructure_insights(ctx: InsightContext) -> list[str]:
     """
     # Reuse the same typed predicate as the email-control summary. This keeps
     # the two generators mutually exclusive when a control is observable even
-    # without MX, such as DKIM, MTA-STS, BIMI, or strict SPF.
-    if _has_scoreable_email(ctx):
+    # without MX, such as DKIM, MTA-STS, BIMI, or strict SPF. A queried name
+    # that returned NXDOMAIN is reported directly by the renderers; the
+    # web-only / parked / staging alternatives describe an existing domain.
+    if ctx.name_nxdomain or _has_scoreable_email(ctx):
         return []
     if ctx.primary_email_provider or ctx.likely_primary_email_provider or ctx.email_gateway:
         return []
@@ -760,6 +769,9 @@ def _sovereignty_insights(ctx: InsightContext) -> list[str]:
 
 
 def _sparse_signal_insights(ctx: InsightContext) -> list[str]:
+    # Sparse-footprint narration presumes an existing, quiet namespace.
+    if ctx.name_nxdomain:
+        return []
     return sparse_signal_insights(ctx)
 
 

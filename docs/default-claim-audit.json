@@ -123,22 +123,27 @@
       ],
       "limits": [
         "Compatibility projections do not retain every per-query observation opportunity.",
-        "No degraded marker does not prove globally complete collection."
+        "No degraded marker does not prove globally complete collection.",
+        "dns_name_status reports the configured resolver's NXDOMAIN response class for the queried name only; it is not DNSSEC-validated denial."
       ],
       "lineage_status": "exact",
       "material": true,
       "producer_paths": [
         "src/recon_tool/collection_view.py#collection_observable_info",
         "src/recon_tool/source_status.py#SourceStatus",
+        "src/recon_tool/sources/dns_base.py#DnsQueryLedger",
+        "src/recon_tool/merger_status.py#raise_if_all_sources_failed",
         "src/recon_tool/formatter/serialize.py#format_tenant_dict"
       ],
       "regression_tests": [
         "tests/test_collection_view.py",
         "tests/test_degraded_sources.py",
+        "tests/test_dns_collection_truth.py",
         "tests/test_merger_error_surfacing.py"
       ],
       "renderer_obligations": [
-        "Mask unavailable channels, retain degraded markers, and distinguish empty observation from unavailable collection."
+        "Mask unavailable channels, retain degraded markers, and distinguish empty observation from unavailable collection.",
+        "Report total transport failure as a failed lookup, and state a queried-name NXDOMAIN only when the resolver returned it, never for NoAnswer or transport failure."
       ],
       "subject_scope": "one bounded collection attempt for the queried public namespace"
     },
@@ -1151,6 +1156,7 @@
       "display_name": "runtime.display-label.v1",
       "dmarc_pct": "runtime.email-control-observation.v1",
       "dmarc_policy": "runtime.email-control-observation.v1",
+      "dns_name_status": "runtime.collection-status.v1",
       "domain_count": "runtime.identity-and-tenant.v1",
       "email_gateway": "runtime.email-topology.v1",
       "email_security_score": "runtime.email-control-observation.v1",
@@ -1254,6 +1260,7 @@
       "src/recon_tool/formatter/panel.py#render_verbose_sources": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel.py#render_warning": "runtime.collection-status.v1",
       "src/recon_tool/formatter/panel_status.py#render_low_confidence_guidance": "runtime.confidence-summary.v1",
+      "src/recon_tool/formatter/panel_status.py#render_name_nxdomain": "runtime.collection-status.v1",
       "src/recon_tool/formatter/review.py#format_review_bundle_markdown": "runtime.review-bundle.v1"
     },
     "recommendation_producers": {
@@ -1402,7 +1409,7 @@
     ],
     "surface_digest_algorithm": "sha256(sorted UTF-8 surface IDs joined by LF)",
     "surface_digests": {
-      "json_fields": "4de20fa21a03e26768c3e844d94adcfdc1d451ba596b40664293f5705ee219d2",
+      "json_fields": "65b05487fa48c056a719db1d283ecc94e26d4460ad866be4a2ca3f97b34ce305",
       "mcp_tools": "c5606814d74e8f27a9885d094f0f80d4bb76df0fa467733eb42b496a0f241d1c"
     }
   },

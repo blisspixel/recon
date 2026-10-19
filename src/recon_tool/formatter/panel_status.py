@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from rich.text import Text
 
-from recon_tool.formatter.collection_status import low_confidence_guidance
+from recon_tool.formatter.collection_status import low_confidence_guidance, name_nxdomain_statement
 from recon_tool.models import ConfidenceLevel, TenantInfo
 
 
@@ -23,3 +23,9 @@ def render_low_confidence_guidance(info: TenantInfo, verbose: bool, explain: boo
     guidance.append("\n  ")
     guidance.append(note, style="dim")
     return guidance
+
+
+def render_name_nxdomain(info: TenantInfo) -> Text | None:
+    """State an observed queried-name NXDOMAIN so it is not read as a quiet domain."""
+    statement = name_nxdomain_statement(info)
+    return None if statement is None else Text(statement, style="bold")

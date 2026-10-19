@@ -2177,6 +2177,7 @@
       "display_name",
       "dmarc_pct",
       "dmarc_policy",
+      "dns_name_status",
       "domain_count",
       "email_gateway",
       "email_security_score",

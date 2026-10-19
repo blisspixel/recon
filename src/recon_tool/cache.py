@@ -46,6 +46,7 @@ from recon_tool.cache_values import (
 )
 from recon_tool.cache_values import cache_bool as _cache_bool
 from recon_tool.cache_values import cache_count as _cache_count
+from recon_tool.cache_values import cache_dns_name_status as _cache_dns_name_status
 from recon_tool.cache_values import cache_float as _cache_float
 from recon_tool.cache_values import optional_cache_count as _optional_cache_count
 from recon_tool.cache_values import optional_cache_string as _optional_cache_string
@@ -337,6 +338,7 @@ def tenant_info_to_dict(info: TenantInfo) -> dict[str, Any]:
         "ct_related_domains": list(info.ct_related_domains),
         "ct_cache_age_days": info.ct_cache_age_days,
         "ct_attempt_outcome": info.ct_attempt_outcome,
+        "dns_name_status": info.dns_name_status,
         "merge_conflicts": (
             serialize_conflicts(info.merge_conflicts)
             if info.merge_conflicts and info.merge_conflicts.has_conflicts
@@ -955,6 +957,7 @@ def tenant_info_from_dict(data: dict[str, Any]) -> TenantInfo:
         ct_related_domains=cache_string_tuple(data.get("ct_related_domains", []), "ct_related_domains"),
         ct_cache_age_days=_optional_cache_count(data.get("ct_cache_age_days"), "ct_cache_age_days"),
         ct_attempt_outcome=_optional_cache_string(data.get("ct_attempt_outcome"), "ct_attempt_outcome"),
+        dns_name_status=_cache_dns_name_status(data.get("dns_name_status")),
         slug_confidences=_read_slug_confidences(data.get("slug_confidences")),
         posterior_observations=_parse_posterior_observations(data),
         cloud_instance=_optional_cache_string(data.get("cloud_instance"), "cloud_instance"),

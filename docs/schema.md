@@ -140,7 +140,10 @@ Notes for scripters:
   contract.
 - For a single-domain lookup, only `error_type="no_data"` maps to `3`.
   Aggregate timeout, `all_sources_failed`, and unknown structured resolver
-  failures are caught pipeline failures and map to `4`.
+  failures are caught pipeline failures and map to `4`. When every DNS query
+  times out or finds no usable nameserver and every identity endpoint fails,
+  the lookup is `all_sources_failed` (exit `4`), not an empty success. An
+  apex NXDOMAIN is a clean observed-empty answer and still exits `0`.
 - A first `recon delta` call with no cached snapshot maps to `3`, performs no
   live resolution, and emits no delta payload. Run the ordinary lookup once to
   establish the baseline.
@@ -194,6 +197,7 @@ table above. Field order in emitted JSON is not guaranteed; use the key name.
 | `sources` | `list[string]` | no | subset of source names | stable | Distinct source names from error-free results that contributed useful data. |
 | `partial` | bool | no | n/a | stable | `true` when a **core** source or core collector-channel marker is in `degraded_sources`. CT-only degradation does not flip this flag, matching `docs/recon-schema.json`. |
 | `degraded_sources` | `list[string]` | no | n/a | stable | Stable source, collector-channel, or detector identifiers that failed or were unavailable, such as `dns_records`, `dns:dmarc`, `dns:mx`, or `detector:email_security`. Values can be finer-grained than top-level `sources`; an unavailable channel is unobserved, not a negative result. |
+| `dns_name_status` | string | n/a (conditional) | `nxdomain` | stable | Conditional and additive: present only when the configured resolver returned NXDOMAIN for the queried name itself (the registrable apex, or the literal host under `--exact`) and returned no NOERROR response for it. A clean, observed-empty response, so it is not listed in `degraded_sources`, does not change `partial`, and does not change the exit code. It is not DNSSEC-validated denial. The field is absent for NoAnswer, resolver failure, a missing subdomain under an existing apex, and older records, so absence does not establish that the name exists. |
 
 ### Services & detection
 

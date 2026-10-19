@@ -31,7 +31,11 @@ from recon_tool.formatter.classify import (
     google_workspace_cse_indicators,
     google_workspace_module_indicators,
 )
-from recon_tool.formatter.collection_status import collection_note_parts, project_collection_status
+from recon_tool.formatter.collection_status import (
+    collection_note_parts,
+    name_nxdomain_statement,
+    project_collection_status,
+)
 from recon_tool.formatter.layout import compact_subdomain_summary_lines, subdomain_surface_summary_items
 from recon_tool.mcp_client.sdk_compat import ToolError, tool_annotations
 from recon_tool.models import ExplanationRecord, ReconLookupError, SourceResult, TenantInfo
@@ -112,6 +116,9 @@ def _lookup_tenant_text(info: TenantInfo) -> str:
     if info.auth_type:
         lines.append(f"Auth: {info.auth_type}")
     lines.append(f"Confidence: {view.confidence_tier} ({view.source_count} {source_noun})")
+    nxdomain = name_nxdomain_statement(info)
+    if nxdomain is not None:
+        lines.append(nxdomain)
     # Compact the evidence-role qualifiers out of the service labels, matching
     # the default panel and --plain (ADR-0012): the agent gets the briefing.
     categorized, _, _ = compact_categorized_services(categorize_services(info))
