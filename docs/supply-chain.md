@@ -42,7 +42,7 @@ finding first disclosed after the enforcing release audit ran.
 ## Consumer verification quick path
 
 Run either complete path below from a reviewed checkout of the exact source tag.
-Both paths require Git, GitHub CLI `gh`, Python 3.11 through 3.14, `uv`/`uvx`,
+Both paths require Git, GitHub CLI `gh`, Python 3.11 through 3.15, `uv`/`uvx`,
 and network access to GitHub and PyPI. GitHub CLI must have a working
 authenticated session or a `GH_TOKEN` with public read access. These credentials
 belong to verifier tooling; the recon runtime itself still needs none. The
