@@ -234,7 +234,7 @@ async def _lookup_compare(
     if options.json_output:
         typer.echo(format_delta_json(delta))
     else:
-        console.print(render_delta_panel(delta))
+        console.print(render_delta_panel(delta), crop=False)
 
 
 async def _lookup_chain(
@@ -281,14 +281,14 @@ async def _lookup_chain(
                         domain_entry["conflicts"] = serialize_conflicts(chain_info.merge_conflicts)
         typer.echo(json.dumps(chain_dict, indent=2))
     else:
-        console.print(render_chain_panel(report))
+        console.print(render_chain_panel(report), crop=False)
         if options.show_explain:
             from recon_tool.formatter import render_explanations_panel
 
             for r in report.results:
                 explanations = _build_explanations(r.info, [])
                 if explanations:
-                    console.print(render_explanations_panel(explanations))
+                    console.print(render_explanations_panel(explanations), crop=False)
 
 
 async def _lookup_exposure(
@@ -317,7 +317,7 @@ async def _lookup_exposure(
         if options.json_output:
             typer.echo(format_exposure_json(assessment))
         else:
-            console.print(render_exposure_panel(assessment))
+            console.print(render_exposure_panel(assessment), crop=False)
             _print_cache_reuse_note(console, info_exp)
     except ReconLookupError as exc:
         raise_lookup_error(exc, domain=domain)
@@ -352,7 +352,7 @@ async def _lookup_gaps(
         if options.json_output:
             typer.echo(format_gaps_json(report))
         else:
-            console.print(render_gaps_panel(report))
+            console.print(render_gaps_panel(report), crop=False)
             _print_cache_reuse_note(console, info_gaps)
     except ReconLookupError as exc:
         raise_lookup_error(exc, domain=domain)
@@ -700,7 +700,10 @@ def _lookup_emit_panel(
             verbose=verbose,
             explain=show_explain,
             confidence_mode=confidence_mode,
-        )
+        ),
+        # An identifier wider than a narrow console runs past the edge on its
+        # own line instead of being cropped (formatter/layout.py width rule).
+        crop=False,
     )
     _print_cache_reuse_note(console, info, spacer=False)
 
@@ -713,7 +716,7 @@ def _lookup_emit_panel(
 
         posture_panel = render_posture_panel(observations)
         if posture_panel:
-            console.print(posture_panel)
+            console.print(posture_panel, crop=False)
 
     # Explanations panel after posture
     if show_explain:
@@ -728,11 +731,11 @@ def _lookup_emit_panel(
 
         status_panel = render_source_status_panel(status_results)
         if status_panel:
-            console.print(status_panel)
+            console.print(status_panel, crop=False)
 
         explanations = _build_explanations(info, visible_results, observations)
         if explanations:
-            console.print(render_explanations_panel(explanations))
+            console.print(render_explanations_panel(explanations), crop=False)
 
 
 async def _lookup_standard(

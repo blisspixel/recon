@@ -17,6 +17,7 @@ from rich.text import Text
 
 from recon_tool.exposure import ExposureAssessment, GapReport
 from recon_tool.exposure_models import ExposureIndex
+from recon_tool.formatter.layout import BORDERED_PANEL_WIDTH, FittedPanel
 from recon_tool.formatter.theme import ERROR, GAP_SEVERITY_ROLE, MUTED, SUCCESS, WARNING, glyph
 
 
@@ -298,10 +299,10 @@ def render_exposure_panel(assessment: ExposureAssessment) -> Panel:
 
     _append_hardening_status(text, assessment)
 
-    return Panel(
+    return FittedPanel(
         text,
         title="Exposure Assessment",
-        width=80,
+        width=BORDERED_PANEL_WIDTH,
         padding=(1, 2),
         border_style="dim",
     )
@@ -418,10 +419,10 @@ def render_gaps_panel(report: GapReport) -> Panel:
 
     text.append(f"\n  {report.disclaimer}", style="dim italic")
 
-    return Panel(
+    return FittedPanel(
         text,
         title="Hardening Gaps",
-        width=80,
+        width=BORDERED_PANEL_WIDTH,
         padding=(1, 2),
         border_style="dim",
     )

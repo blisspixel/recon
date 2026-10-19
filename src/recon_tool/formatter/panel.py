@@ -18,11 +18,9 @@ from rich.table import Table
 from rich.text import Text
 
 from recon_tool.formatter.briefing import (
-    SCALE_GAP_NOTE,
     briefing_insights,
     cap_insights,
     high_signal_related,
-    scales_disagree,
 )
 from recon_tool.formatter.caveats import qualified_display_name, render_panel_title
 from recon_tool.formatter.classify import (
@@ -70,10 +68,16 @@ from recon_tool.formatter.exposure import (  # re-exported: stable import path a
     render_exposure_panel,
     render_gaps_panel,
 )
-from recon_tool.formatter.key_facts import key_facts_auth_line, key_facts_multicloud_line
+from recon_tool.formatter.key_facts_block import render_key_facts
 from recon_tool.formatter.layout import (
+    BORDERED_PANEL_WIDTH,
+    PANEL_WIDTH,
+    FittedPanel,
     ResponsiveTextGroup,
     compact_subdomain_summary_lines,
+    pack_service_items,
+    panel_width,
+    panel_width_scope,
     subdomain_surface_summary_items,
 )
 from recon_tool.formatter.layout import wrap_plain_text as _wrap_text
@@ -83,12 +87,6 @@ from recon_tool.formatter.markdown import (
     markdown_escape,
 )
 from recon_tool.formatter.panel_status import render_low_confidence_guidance, render_name_nxdomain
-from recon_tool.formatter.roles import (
-    DOT_FILL_COLOR,
-    model_support_claims,
-    posterior_support_phrase,
-    role_split_vendors,
-)
 from recon_tool.formatter.serialize import (
     CSV_COLUMNS,
     format_batch_csv,
@@ -110,8 +108,6 @@ from recon_tool.formatter.theme import (
     MUTED,
     SUCCESS,
     WARNING,
-    confidence_marker,
-    fill_marker,
     glyph,
 )
 from recon_tool.formatter.theme import rule as theme_rule
@@ -223,11 +219,10 @@ _SKIP_COMPACT_EXACT = frozenset({"(SPF)", "(site verified)"})
 
 # ── Panel constants ─────────────────────────────────────────────
 
-_PANEL_WIDTH = 78  # One char narrower than an 80-col terminal to avoid
-# wrap-to-next-line artefacts when the last cell is
-# filled. The layout has no border, so the
-# effective content width equals the panel width.
-_LABEL_WIDTH = 13  # columns for Provider/Tenant/Auth/Confidence labels
+# Width rule: formatter/layout.py. Sections read ``_panel_width()`` so the same
+# builder lays the panel out at 78 columns or, narrower, once at the real width.
+_PANEL_WIDTH = PANEL_WIDTH
+_panel_width = panel_width
 
 
 # Minimum columns for the Services sub-category labels. The effective
@@ -261,6 +256,10 @@ def _wrap_service_list(
     # Continuation lines: indented by label_width (no "  " prefix needed)
     cont_line_max = content_width - label_width
     continuation_indent = " " * label_width
+    if panel_width < PANEL_WIDTH:
+        # Narrower than the established layout, rows get the real width left of
+        # the value column and wrap once; the wide layout keeps its margins.
+        return ("\n" + continuation_indent).join(pack_service_items(services, panel_width - label_width))
 
     joined = ", ".join(services)
     # If it fits on one line, just return it
@@ -284,131 +283,6 @@ def _wrap_service_list(
         lines.append(current_line)
 
     return ("\n" + continuation_indent).join(lines)
-
-
-def _append_field(facts: Text, label: str, value: str, value_style: str = "") -> None:
-    """Emit one "  Label    value" row into ``facts``, wrapping the value at the
-    panel width with a continuation indent matching the label column."""
-    label_width = max(_LABEL_WIDTH, len(label) + 1)
-    indent_width = 2 + label_width  # "  " + label column
-    max_width = _PANEL_WIDTH - indent_width
-    for i, line in enumerate(_wrap_text(value, max_width)):
-        if i == 0:
-            facts.append("  ")
-            facts.append(label.ljust(label_width), style="dim")
-        else:
-            facts.append(" " * indent_width)
-        facts.append(line, style=value_style)
-        facts.append("\n")
-
-
-def _append_confidence_field(facts: Text, info: TenantInfo) -> None:
-    """Render the Confidence row.
-
-    Confidence is always the deterministic source/corroboration tier. When
-    fusion ran and at least one positive claim fired, a separate ``Model
-    support`` row shows the weakest claimed node's threshold-relative display.
-    Keeping the two rows separate prevents the hand-set uncertainty band from
-    being presented as calibrated confidence, and when the two dot scales sit
-    two steps apart the row says why they can.
-    """
-    facts.append("  ")
-    facts.append("Confidence".ljust(_LABEL_WIDTH), style="dim")
-    source_count = len(info.sources)
-    source_noun = "source" if source_count == 1 else "sources"
-    tail = f" {info.confidence.value.capitalize()} ({source_count} {source_noun})"
-    # The marker carries the role color; the level word stays readable in the
-    # default foreground on light and dark themes alike.
-    facts.append(confidence_marker(info.confidence), style=CONFIDENCE_COLORS[info.confidence])
-    facts.append(tail)
-    facts.append("\n")
-    claimed = [o for o in info.posterior_observations if o.evidence_used]
-    if not claimed:
-        return
-    named, fill = model_support_claims(claimed)
-    # Wrap like every other row. This row appended without wrapping, which was
-    # invisible while the phrase named one claim and spilled past the panel
-    # edge once it could name two (ADR-0015). The dots sit in the value column,
-    # so continuation lines indent past them, not just past the label.
-    label = "Model support"
-    label_width = max(_LABEL_WIDTH, len(label) + 1)
-    marker = fill_marker(fill)
-    value_indent = 2 + label_width + len(marker) + 1
-    phrase = posterior_support_phrase(named, fill)
-    if scales_disagree(info.confidence, fill):
-        # Two rows, two dot scales, two steps apart: "Low (1 source)" above a
-        # filled model display reads as self-contradiction until you know they
-        # answer different questions. Say so here rather than in a doc the
-        # reader meets after the panel.
-        phrase = f"{phrase}. {SCALE_GAP_NOTE}"
-    for index, line in enumerate(_wrap_text(phrase, _PANEL_WIDTH - value_indent)):
-        if index == 0:
-            facts.append("  ")
-            facts.append(label.ljust(label_width), style="dim")
-            facts.append(marker, style=DOT_FILL_COLOR[fill])
-            facts.append(" ")
-        else:
-            facts.append(" " * value_indent)
-        facts.append(line, style="dim")
-        facts.append("\n")
-
-
-def _render_key_facts(info: TenantInfo, detailed: bool) -> Text:
-    """Build the key-facts block: Provider, Tenant/Region, Auth, Cloud
-    (sovereignty), Multi-cloud rollup, Confidence.
-
-    Extracted from ``render_tenant_panel`` so the panel orchestrator stays
-    a thin sequence of section calls. The golden renders in
-    ``tests/test_golden_renders.py`` pin the exact output.
-
-    ``detailed`` is the --explain / --verbose / --full view. The default view
-    compacts the Provider row's record-role qualifiers per ADR-0012; the
-    detailed view keeps them.
-    """
-    facts = Text()
-    # ADR-0015: when a vendor observed at an identity endpoint is not the one
-    # the mail summary names, print both with their roles instead of letting a
-    # single unroled "Provider" row read as the answer. Only a real split
-    # branches here; every other panel keeps the historical row byte for byte.
-    split = role_split_vendors(info)
-    if split is not None:
-        mail, identity = split
-        _append_field(facts, "Mail", mail if detailed else compact_provider_line(mail))
-        _append_field(facts, "Identity", identity)
-    else:
-        provider = provider_line(info)
-        _append_field(facts, "Provider", provider if detailed else compact_provider_line(provider))
-
-    if info.tenant_id:
-        tenant_line = info.tenant_id
-        if info.region:
-            tenant_line += f" • {info.region}"
-        _append_field(facts, "Tenant", tenant_line)
-    elif info.region:
-        _append_field(facts, "Region", info.region)
-
-    if info.default_domain != info.queried_domain:
-        _append_field(facts, "Tenant domain", info.default_domain)
-
-    auth_line = key_facts_auth_line(info)
-    if auth_line is not None:
-        _append_field(facts, "Auth", auth_line)
-
-    # Sovereignty — only when cloud_instance indicates non-commercial.
-    if info.cloud_instance and "microsoftonline.com" not in info.cloud_instance.lower():
-        sov_label = info.cloud_instance
-        if info.tenant_region_sub_scope:
-            sov_label += f" ({info.tenant_region_sub_scope})"
-        _append_field(facts, "Cloud", sov_label)
-
-    multicloud_line = key_facts_multicloud_line(info)
-    if multicloud_line is not None:
-        _append_field(facts, "Multi-cloud", multicloud_line)
-
-    # Deterministic confidence and, when fusion ran, a separate model display.
-    _append_confidence_field(facts, info)
-
-    return facts
 
 
 def render_tenant_panel(
@@ -453,6 +327,17 @@ def render_tenant_panel(
 
     info = collection_observable_info(info)
 
+    def _build(width: int) -> list[Any]:
+        with panel_width_scope(width):
+            return _panel_blocks(info, show_domains, verbose, explain, confidence_mode)
+
+    return ResponsiveTextGroup(*_build(PANEL_WIDTH), preferred_width=_PANEL_WIDTH, rebuild=_build)
+
+
+def _panel_blocks(
+    info: TenantInfo, show_domains: bool, verbose: bool, explain: bool, confidence_mode: str
+) -> list[Any]:
+    """Lay out the panel sections once, at the active ``_panel_width()``."""
     # Core layout blocks are accumulated into a list and wrapped in a
     # Rich Group at the end. Each block is a Text instance so we can
     # style per-segment without fighting markup.
@@ -464,7 +349,7 @@ def render_tenant_panel(
 
     # Title block: display name, queried domain, reserved-name note.
     blocks.append(render_panel_title(info))
-    rule = Text(theme_rule(_PANEL_WIDTH), style="dim")
+    rule = Text(theme_rule(_panel_width()), style="dim")
     blocks.append(rule)
 
     # ── Key facts block ────────────────────────────────────────────
@@ -473,7 +358,7 @@ def render_tenant_panel(
     # view and compacts them (ADR-0012). --domains is not a detail view: it
     # widens the domain listing without asking for evidence.
     detailed = verbose or explain
-    blocks.append(_render_key_facts(info, detailed))
+    blocks.append(render_key_facts(info, detailed))
 
     # ── Services section ──────────────────────────────────────────
     svc_block, ceiling_categorized_count = _render_services(info, show_domains, detailed)
@@ -515,8 +400,7 @@ def render_tenant_panel(
         if detail_section is not None:
             _spacer()
             blocks.append(detail_section)
-
-    return ResponsiveTextGroup(*blocks, preferred_width=_PANEL_WIDTH)
+    return blocks
 
 
 def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: bool, max_width: int) -> bool:
@@ -542,7 +426,7 @@ def _append_subdomain_summary(svc_block: Text, info: TenantInfo, show_domains: b
     surface_summary = subdomain_surface_summary_items(info.surface_attributions)
     if not surface_summary:
         return False
-    budget = _PANEL_WIDTH - (2 + max_width)
+    budget = _panel_width() - (2 + max_width)
     lines = compact_subdomain_summary_lines(surface_summary, budget)
     svc_block.append("  ")
     svc_block.append("Subdomain".ljust(max_width), style="dim")
@@ -612,7 +496,7 @@ def _render_services(info: TenantInfo, show_domains: bool, detailed: bool) -> tu
         wrapped = _wrap_service_list(
             svcs,
             label_width=2 + max_width,
-            panel_width=_PANEL_WIDTH,
+            panel_width=_panel_width(),
             panel_pad=0,
         )
         body.append(wrapped)
@@ -671,7 +555,7 @@ def _render_passive_dns_ceiling(info: TenantInfo, show_domains: bool, categorize
         "Passive DNS surfaces what publishes externally. Server-side API consumption, internal workloads, and "
         "SaaS without DNS verification do not appear in public DNS records."
     )
-    _append_wrapped_lines(ceiling, message, _PANEL_WIDTH - 2, "dim")
+    _append_wrapped_lines(ceiling, message, _panel_width() - 2, "dim")
     ceiling.rstrip()
     return ceiling
 
@@ -694,7 +578,7 @@ def _render_related_compact(info: TenantInfo, show_domains: bool) -> Text | None
     rel.append("  ")
     # Render as a wrapped comma-list within the panel width.
     joined = ", ".join(picked)
-    max_width = _PANEL_WIDTH - 2
+    max_width = _panel_width() - 2
     for j, line in enumerate(_wrap_text(joined, max_width)):
         if j > 0:
             rel.append("\n  ")
@@ -733,13 +617,13 @@ def _render_unclassified_surface(info: TenantInfo, show_domains: bool) -> Text |
             f"{n} CNAME chain {noun} reached, no fingerprint match. We walked them but "
             "cannot name them; open a fingerprint PR or run:"
         ),
-        _PANEL_WIDTH - 2,
+        _panel_width() - 2,
         "dim",
     )
     _append_wrapped_lines(
         unc,
         f"recon discover {info.queried_domain}",
-        _PANEL_WIDTH - 2,
+        _panel_width() - 2,
         "dim italic",
     )
     # Up to 2 representative pairs so the operator can sanity-check what's
@@ -750,9 +634,9 @@ def _render_unclassified_surface(info: TenantInfo, show_domains: bool) -> Text |
         for uc in examples:
             terminus = uc.chain[-1] if uc.chain else "(no terminus)"
             sample_strs.append(f"{strip_control_chars(uc.subdomain)} → {strip_control_chars(terminus)}")
-        _append_wrapped_lines(unc, "examples:", _PANEL_WIDTH - 2, "dim")
+        _append_wrapped_lines(unc, "examples:", _panel_width() - 2, "dim")
         for sample in sample_strs:
-            _append_wrapped_lines(unc, f"- {sample}", _PANEL_WIDTH - 2, "dim italic")
+            _append_wrapped_lines(unc, f"- {sample}", _panel_width() - 2, "dim italic")
     unc.rstrip()
     return unc
 
@@ -839,10 +723,10 @@ def _append_individual_rows(surf: Text, individuals: list[Any]) -> None:
     if not individuals:
         return
     # Column width derived from the longest individual subdomain. Min 24 so
-    # short panels don't crowd; max _PANEL_WIDTH - 30 so long ones don't push
+    # short panels don't crowd; max PANEL_WIDTH - 30 so long ones don't push
     # the service column off-screen.
     ind_max = max(len(s.subdomain) for s in individuals)
-    col_width = max(24, min(ind_max, _PANEL_WIDTH - 30))
+    col_width = max(24, min(ind_max, PANEL_WIDTH - 30))
     for sa in individuals:
         sub = strip_control_chars(sa.subdomain)
         if len(sub) > col_width:
@@ -882,7 +766,7 @@ def _append_collapsed_rows(
                 sub = "(apex)"
             short_names.append(sub)
         joined = ", ".join(short_names)
-        for line in _wrap_text(joined, _PANEL_WIDTH - 4):
+        for line in _wrap_text(joined, _panel_width() - 4):
             surf.append("    ")
             surf.append(line, style="dim")
             surf.append("\n")
@@ -956,7 +840,7 @@ def _render_insights(info: TenantInfo, verbose: bool, confidence_mode: str) -> T
     ins = Text()
     ins.append("Insights", style="bold")
     ins.append("\n")
-    max_width = _PANEL_WIDTH - 2
+    max_width = _panel_width() - 2
 
     if score_line is not None:
         _append_wrapped_lines(ins, score_line, max_width, "bold")
@@ -1024,7 +908,7 @@ def _render_degraded_note(info: TenantInfo) -> Text | None:
     note.append("Note", style="bold" if is_warning else MUTED)
     note.append("\n  ")
     note_text = "; ".join(note_parts) + "."
-    for j, line in enumerate(_wrap_text(note_text, _PANEL_WIDTH - 2)):
+    for j, line in enumerate(_wrap_text(note_text, _panel_width() - 2)):
         if j > 0:
             note.append("\n  ")
         note.append(line, style=style)
@@ -1233,10 +1117,10 @@ def render_posture_panel(observations: tuple[Observation, ...]) -> Panel | None:
             text.append(obs.statement)
             text.append("\n")
 
-    return Panel(
+    return FittedPanel(
         text,
         title="Posture Analysis",
-        width=80,
+        width=BORDERED_PANEL_WIDTH,
         padding=(1, 2),
         border_style="dim",
     )
@@ -1299,10 +1183,10 @@ def render_chain_panel(report: ChainReport) -> Panel:
                 text.append(f" ({provider})", style="dim")
             text.append("\n")
 
-    return Panel(
+    return FittedPanel(
         text,
         title="Chain Resolution",
-        width=80,
+        width=BORDERED_PANEL_WIDTH,
         padding=(1, 2),
         border_style="dim",
     )
@@ -1363,10 +1247,10 @@ def render_source_status_panel(results: list[SourceResult]) -> Panel | None:
             text.append(f"  {glyph('fail')} ", style=ERROR)
             text.append(f"{result.source_name}", style="bold")
             text.append(f": {result.error or 'source unavailable'}", style="dim")
-    return Panel(
+    return FittedPanel(
         text,
         title="Source Status",
-        width=80,
+        width=BORDERED_PANEL_WIDTH,
         padding=(1, 2),
         border_style="dim",
     )
