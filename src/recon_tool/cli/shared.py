@@ -22,6 +22,7 @@ from rich.markup import escape
 
 from recon_tool.cli.options import LookupOptions
 from recon_tool.exit_codes import EXIT_INTERNAL, EXIT_NO_DATA, EXIT_VALIDATION
+from recon_tool.formatter.theme import ERROR, INFO, SUCCESS, WARNING
 from recon_tool.models import ReconLookupError
 from recon_tool.validator import strip_control_chars
 
@@ -120,6 +121,31 @@ def safe_diagnostic_markup(value: object) -> str:
     if len(raw) > _MAX_DIAGNOSTIC_LEN:
         cleaned = f"{cleaned} [truncated]"
     return escape(cleaned)
+
+
+DiagnosticStatus = Literal["ok", "warn", "fail", "info"]
+
+# The one status vocabulary shared by `recon doctor`, `recon doctor --mcp`,
+# `recon doctor --client`, and `recon mcp doctor`. Each word is lowercase and
+# carries its meaning without color; the style is the theme role for that
+# state (success, warning, error, info) from formatter.theme.
+DIAGNOSTIC_STATUS_STYLES: dict[DiagnosticStatus, str] = {
+    "ok": SUCCESS,
+    "warn": WARNING,
+    "fail": ERROR,
+    "info": INFO,
+}
+
+
+def render_status_row(console: Console, status: DiagnosticStatus, name: object, detail: object) -> None:
+    """Render one diagnostic row in the shared status vocabulary."""
+    render_diagnostic_status_row(
+        console,
+        mark=status,
+        style=DIAGNOSTIC_STATUS_STYLES[status],
+        name=name,
+        detail=detail,
+    )
 
 
 def render_diagnostic_status_row(

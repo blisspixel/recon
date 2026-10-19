@@ -38,6 +38,7 @@ without guessing.
 | `recon capsule replay <file> --json` | a single `observation_capsule_replay` object | n/a |
 | `recon capsule compare <before> <after> --json` | a single `observation_capsule_delta` object | n/a |
 | `recon batch <file> --summary --json` | a single `cohort_summary` object (`record_type: "cohort_summary"`, `schema_version: "2.1"` by default; select `--summary-schema 2.2` explicitly) | n/a (aggregate-only; no per-domain records) |
+| `recon doctor --json` / `recon doctor --client=<name> --json` | a single doctor report object `{schema_version, mode, recon_version, checks, summary, notes}` | each `checks` element is `{name, status, detail, next}`; see [Doctor report](#doctor-report-recon-doctor---json) |
 
 The machine-readable form of each shape lives in
 [`recon-schema.json`](recon-schema.json): the document root is the
@@ -52,6 +53,38 @@ records, and classified capsule deltas use the separate Draft 2020-12
 [`observation-capsules.md`](observation-capsules.md) for collection, replay,
 comparison, integrity, privacy, and retention semantics. The small capture
 write receipt is command status, not a retained evidence artifact.
+
+### Doctor report (`recon doctor --json`)
+
+`recon doctor --json` and `recon doctor --client=<name> --json` render the same
+check list as the human view, as one JSON object on stdout with no human
+header and no terminal escape codes. The process exit code matches the human
+view: `1` for a failed default-mode check, `3` for a failed `--client` check,
+and `0` when only `warn` or `info` rows are present. `--json` is refused with
+exit code `2` for `--fix` (which writes files rather than reporting checks) and
+`--mcp` (whose stdout is already the `mcpServers` reference config).
+
+| Field | Type | Meaning |
+|---|---|---|
+| `schema_version` | integer | `1`. Raised only for a breaking change to this object. |
+| `mode` | string | `doctor` or `client`. |
+| `recon_version` | string | The running package version. |
+| `client` | string | `--client` mode only: the inspected client name. |
+| `checks` | array | One object per rendered row, in display order. |
+| `checks[].name` | string | Row label, for example `DNS resolution`. |
+| `checks[].status` | string | `ok`, `warn`, `fail`, or `info`, the same word the human row prints. |
+| `checks[].detail` | string | Row detail text. |
+| `checks[].next` | string or null | Next step for a failed or warning row; null when none applies. |
+| `summary.status` | string | Worst status present: `fail`, `warn`, or `ok` (`info` rows never raise it). |
+| `summary.ok` / `warn` / `fail` / `info` / `total` | integer | Row counts. |
+| `summary.message` | string | The closing line the human view prints. |
+| `summary.next` | string or null | The first failing row's next step, else the first warning's, else null. |
+| `summary.exit_code` | integer | The process exit code. |
+| `notes` | array of strings | `--client` teaching notes; empty in default mode. |
+
+Row names and detail text are diagnostics, not a contract: automation should
+key on `status`, the counts, and `exit_code`. This object is outside
+`recon-schema.json` and additive fields may appear in a minor release.
 
 NamespaceReviewBundle artifacts are also intentionally outside
 `recon-schema.json`. `recon review <domain> --json`, its optional `--output`

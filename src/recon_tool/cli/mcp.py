@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 
 import typer
 
-from recon_tool.cli.shared import render_diagnostic_status_row as _render_status_row
+from recon_tool.cli.shared import render_status_row as _render_status_row
 from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import EXIT_ERROR, EXIT_INTERNAL, EXIT_VALIDATION
 from recon_tool.formatter import get_console, get_err_console
@@ -292,25 +292,20 @@ def mcp_doctor_command(
         else:
             console.print(f"  [bold]{_safe_markup(title)}[/bold]")
         for check in report.checks:
-            mark = "ok" if check.status == "ok" else "FAIL"
-            style = SUCCESS if check.status == "ok" else ERROR
-            _render_status_row(
-                console,
-                mark=mark,
-                style=style,
-                name=check.name,
-                detail=check.detail,
-            )
+            _render_status_row(console, check.status, check.name, check.detail)
         console.print()
 
     console.print(f"  elapsed: {isolated.elapsed_seconds + generated.elapsed_seconds:.2f}s")
     console.print()
 
     if not (isolated.ok and generated.ok):
+        failed = sum(1 for check in (*isolated.checks, *generated.checks) if check.status == "fail")
+        noun = "check" if failed == 1 else "checks"
         console.print(
-            f"  [{ERROR}]MCP self-check failed.[/{ERROR}] Run "
-            "[bold]recon doctor --mcp[/bold] for the static-shape "
-            "diagnostics, or check stderr from the spawned server."
+            f"  [{ERROR}]MCP self-check failed: {failed} {noun} failed. "
+            "Next: recon doctor --mcp for the static-shape diagnostics, "
+            f"or check stderr from the spawned server.[/{ERROR}]",
+            soft_wrap=True,
         )
         raise typer.Exit(EXIT_INTERNAL)
 

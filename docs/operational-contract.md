@@ -167,6 +167,18 @@ later phase fails. This live server check does not inspect a client's saved
 configuration; `recon doctor --client=<name>` covers that boundary.
 Default mode contacts Microsoft identity endpoints, DNS for `example.com`, and
 crt.sh using synthetic inputs; it does not accept or query a target namespace.
+It also asks the system resolver for one random name under the reserved
+`.invalid` top-level domain. Any answer other than NXDOMAIN is a `warn` row
+naming a resolver that answers names that should not exist, a condition that
+makes related-domain results unreliable (see
+[limitations](limitations.md#resolvers-that-answer-names-that-should-not-exist)).
+That query runs only in doctor; lookups add no probe for it.
+Every doctor mode prints the same lowercase status words, `ok`, `warn`, `fail`,
+and `info`, and closes with a summary in the color of its worst status. A
+failure summary counts the failed rows and ends with a `Next:` step.
+`recon doctor --json` and `recon doctor --client=<name> --json` emit the same
+rows as one JSON object on stdout with the human view's exit code; see
+[schema.md](schema.md#doctor-report-recon-doctor---json).
 The `--fix`, `--mcp`, and `--client` modes are local-only. Every dynamic doctor
 row strips control bytes, escapes terminal markup, and bounds displayed detail.
 Every ordinary `httpx.RequestError` becomes a named failed row for a core probe

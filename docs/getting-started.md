@@ -490,7 +490,13 @@ search results keep relevance order and carry an explicit category and
 confidence instead of implying category grouping.
 
 If a lookup times out or every online source fails, run `recon doctor` to
-check source connectivity, then retry the lookup.
+check source connectivity, then retry the lookup. Each row reads `ok`, `warn`,
+`fail`, or `info`, and a failure summary ends with the next step to take.
+`recon doctor --json` returns the same rows for scripts, with the same exit
+code. If doctor prints `Resolver answers names that should not exist`, the
+system resolver is synthesizing answers, and related-domain results from that
+network are unreliable; see
+[limitations](limitations.md#resolvers-that-answer-names-that-should-not-exist).
 
 ## Namespace Review Bundles
 

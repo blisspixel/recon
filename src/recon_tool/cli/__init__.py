@@ -813,22 +813,27 @@ def doctor(
         "--config-path",
         help="With --client, inspect only this explicit MCP config file (including user profiles).",
     ),
+    json_output: bool = typer.Option(
+        False,
+        "--json",
+        help="Emit the check rows and summary as JSON on stdout (default mode and --client).",
+    ),
 ) -> None:
     """Check installation health and online source connectivity.
-    Synthetic checks: Microsoft identity endpoints, DNS for example.com, and crt.sh. No user-supplied target is queried.
-    --fix, --mcp, and --client are local-only modes."""
-    cli_doctor.validate_doctor_mode(fix=fix, mcp=mcp, client=client, config_path=config_path)
+    Synthetic checks: Microsoft identity endpoints, DNS for example.com and one reserved .invalid name, and crt.sh.
+    No user-supplied target is queried. --fix, --mcp, and --client are local-only modes."""
+    cli_doctor.validate_doctor_mode(fix=fix, mcp=mcp, client=client, config_path=config_path, json_output=json_output)
     if fix:
         if not _doctor_fix():
             raise typer.Exit(code=EXIT_ERROR)
         return
     if client is not None:
-        _doctor_client(client, config_path=config_path)
+        _doctor_client(client, config_path=config_path, json_output=json_output)
         return
     if mcp:
         _doctor_mcp()
         return
-    asyncio.run(_doctor())
+    asyncio.run(_doctor(json_output=json_output))
 
 
 @app.command(short_help="Check for updates.")

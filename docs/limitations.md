@@ -243,6 +243,26 @@ Times recon has been wrong in empirically verified ways:
   aren't actually distinct services. recon filters wildcard CT results but
   cannot fully neutralize wildcard A.
 
+### Resolvers that answer names that should not exist
+
+Lookups use the system resolver. Some resolvers answer names that do not
+exist: captive portals, filtering or content-blocking resolvers, and ISP
+resolvers that rewrite NXDOMAIN into an advertising or search address. Behind
+one of them, related-domain probing receives an answer for every candidate, so
+artifact hosts can be listed as related domains and a nonexistent name can look
+like it exists. recon cannot tell such a synthesized answer from a real one at
+lookup time, and it adds no lookup-time probe to try.
+
+`recon doctor` checks for the condition with one query for a random name under
+the reserved `.invalid` top-level domain, where no name can exist
+([RFC 6761 section 6.4](https://www.rfc-editor.org/rfc/rfc6761.html#section-6.4)).
+Any answer other than NXDOMAIN is reported as
+`warn  Nonexistent-name probe: Resolver answers names that should not exist`.
+When it appears, treat related-domain results as unreliable and rerun the
+lookup through a resolver that returns NXDOMAIN for nonexistent names. A
+resolver that rewrites only some names can pass this check, so a clean probe
+does not prove every answer is genuine.
+
 ---
 
 ## When to reach for something else

@@ -1048,6 +1048,18 @@
               "--config-path"
             ],
             "type": "text"
+          },
+          {
+            "default": false,
+            "is_flag": true,
+            "kind": "option",
+            "multiple": false,
+            "name": "json_output",
+            "required": false,
+            "tokens": [
+              "--json"
+            ],
+            "type": "boolean"
           }
         ],
         "path": [

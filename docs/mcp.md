@@ -619,7 +619,13 @@ installed server; the third validates that the named client was told about it.
    containing any non-string value is a failing diagnostic. The check exits
    non-zero when no usable stanza is found, so it is suitable for setup
    automation. Add `--config-path "<client-file>"` to check the same explicit
-   user-profile or custom file used during installation.
+   user-profile or custom file used during installation. Add `--json` for the
+   same rows as one JSON object on stdout with the same exit code.
+
+All three print the same status words, `ok`, `warn`, `fail`, and `info`, and a
+failure summary ends with a `Next:` step. A `recon` launcher missing from PATH
+is an `info` row in `recon doctor --mcp`, because the generated config falls
+back to the running interpreter.
 
 If all three pass but tools still do not appear, continue with the client-side
 checks below.

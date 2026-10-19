@@ -16,29 +16,48 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from collections.abc import Sequence
 from pathlib import Path
 from typing import Any, Literal, TypeAlias
 
 import typer
 
+from recon_tool.cli.doctor_report import (
+    CT_CHECK_NAME,
+    NEXT_MCP_REINSTALL,
+    NEXT_RERUN,
+    DoctorCheck,
+    DoctorStatus,
+    emit_doctor_json,
+    render_summary,
+    summarize_checks,
+)
 from recon_tool.cli.shared import fmt_exc as _fmt_exc
-from recon_tool.cli.shared import render_diagnostic_status_row as _render_status_row
+from recon_tool.cli.shared import render_status_row as _render_status_row
 from recon_tool.cli.shared import safe_diagnostic_markup as _safe_markup
 from recon_tool.exit_codes import (
     EXIT_ERROR,
-    EXIT_NO_DATA,
     EXIT_VALIDATION,
 )
 from recon_tool.formatter import get_console, get_err_console
-from recon_tool.formatter.theme import ERROR, MUTED, SUCCESS, WARNING
+from recon_tool.formatter.theme import ERROR, SUCCESS, WARNING
 
-McpCheck: TypeAlias = tuple[str, bool, str]
+McpCheck: TypeAlias = DoctorCheck
+
+_NEXT_IDENTITY = f"check network or proxy access to Microsoft identity endpoints, {NEXT_RERUN}"
+_NEXT_DNS = f"check the system resolver and network, {NEXT_RERUN}"
+_NEXT_REINSTALL = f"reinstall recon-tool in this environment, {NEXT_RERUN}"
+_LIMITATIONS_RESOLVER_ANCHOR = "docs/limitations.md#resolvers-that-answer-names-that-should-not-exist"
+RESOLVER_ANSWERS_NONEXISTENT = (
+    "Resolver answers names that should not exist; related-domain results will be unreliable. "
+    f"See {_LIMITATIONS_RESOLVER_ANCHOR}"
+)
+# RFC 6761 reserves `.invalid`: no name under it can exist, so any answer for
+# one comes from the resolver itself rather than from the DNS.
+RESOLVER_PROBE_PREFIX = "recon-doctor-nonexistent-"
+_NEXT_RESOLVER = f"use a resolver that returns NXDOMAIN for nonexistent names, {NEXT_RERUN}"
 
 
-DoctorStatus: TypeAlias = Literal["ok", "warn", "fail"]
-
-
-DoctorCheck: TypeAlias = tuple[str, DoctorStatus, str]
 TemplateCreateStatus: TypeAlias = Literal["created", "exists", "non_file"]
 
 _LAUNCHER_VERSION_RE = re.compile(r"^recon\s+v?(?P<version>\d+\.\d+\.\d+)$", re.IGNORECASE)
@@ -151,18 +170,19 @@ def _mcp_tool_registry_check(server_mcp: Any, required_tools: frozenset[str]) ->
         tool_names = {str(getattr(tool, "name", "")) for tool in tools}
         missing_tools = sorted(required_tools - tool_names)
         if missing_tools:
-            return (
+            return DoctorCheck(
                 "Tools enumerated",
-                False,
+                "fail",
                 f"{len(tools)} registered; missing canonical: {', '.join(missing_tools)}",
+                NEXT_MCP_REINSTALL,
             )
-        return (
+        return DoctorCheck(
             "Tools enumerated",
-            True,
+            "ok",
             f"{len(tools)} registered; {len(required_tools)} canonical tools present",
         )
     except Exception as exc:
-        return ("Tools enumerated", False, f"{exc}")
+        return DoctorCheck("Tools enumerated", "fail", f"{exc}", NEXT_MCP_REINSTALL)
 
 
 def _mcp_resource_registry_check(server_mcp: Any, required_resources: tuple[str, ...]) -> McpCheck:
@@ -172,18 +192,19 @@ def _mcp_resource_registry_check(server_mcp: Any, required_resources: tuple[str,
         resource_uris = {str(getattr(resource, "uri", "")) for resource in resources}
         missing_resources = [uri for uri in required_resources if uri not in resource_uris]
         if missing_resources:
-            return (
+            return DoctorCheck(
                 "Resources enumerated",
-                False,
+                "fail",
                 f"{len(resources)} registered; missing canonical: {', '.join(missing_resources)}",
+                NEXT_MCP_REINSTALL,
             )
-        return (
+        return DoctorCheck(
             "Resources enumerated",
-            True,
+            "ok",
             f"{len(resources)} registered; {len(required_resources)} canonical resources present",
         )
     except Exception as exc:
-        return ("Resources enumerated", False, f"{exc}")
+        return DoctorCheck("Resources enumerated", "fail", f"{exc}", NEXT_MCP_REINSTALL)
 
 
 def _render_mcp_reference_config() -> None:
@@ -246,29 +267,30 @@ def doctor_mcp() -> None:
         importlib.import_module("mcp")
         from recon_tool.mcp_client.sdk_compat import SDK_FAMILY, SDK_VERSION
 
-        checks.append(("MCP package", True, f"mcp {SDK_VERSION} ({SDK_FAMILY}) installed"))
+        checks.append(DoctorCheck("MCP package", "ok", f"mcp {SDK_VERSION} ({SDK_FAMILY}) installed"))
     except ImportError as exc:
-        checks.append(("MCP package", False, f"not installed: {exc}"))
-        checks.append(("Install hint", False, "pip install -U recon-tool"))
-        _render_mcp_checks(checks)
+        checks.append(DoctorCheck("MCP package", "fail", f"not installed: {exc}", NEXT_MCP_REINSTALL))
+        _render_mcp_checks(checks, summary=True)
         raise typer.Exit(code=EXIT_ERROR) from exc
 
     # 2. Server module imports cleanly
     try:
         from recon_tool.server import mcp as server_mcp
 
-        checks.append(("Server module", True, "loaded"))
+        checks.append(DoctorCheck("Server module", "ok", "loaded"))
     except Exception as exc:
-        checks.append(("Server module", False, f"import failed: {exc}"))
-        _render_mcp_checks(checks)
+        checks.append(DoctorCheck("Server module", "fail", f"import failed: {exc}", NEXT_MCP_REINSTALL))
+        _render_mcp_checks(checks, summary=True)
         raise typer.Exit(code=EXIT_ERROR) from exc
 
     # 3. MCP server has instructions
     instructions = getattr(server_mcp, "instructions", None)
     if isinstance(instructions, str) and instructions.strip():
-        checks.append(("Server Instructions", True, f"{len(instructions)} chars"))
+        checks.append(DoctorCheck("Server Instructions", "ok", f"{len(instructions)} chars"))
     else:
-        checks.append(("Server Instructions", False, "missing; agents may misuse tools"))
+        checks.append(
+            DoctorCheck("Server Instructions", "fail", "missing; agents may misuse tools", NEXT_MCP_REINSTALL)
+        )
 
     # 4. Enumerate tools through the public SDK surface and require the
     # canonical workflow anchors. Extra registered tools remain compatible.
@@ -280,32 +302,44 @@ def doctor_mcp() -> None:
     # not hide a second registration problem.
     checks.append(_mcp_resource_registry_check(server_mcp, REQUIRED_RESOURCES))
 
-    # 6. recon executable on PATH (important for short GUI-client configs)
+    # 6. recon executable on PATH (important for short GUI-client configs).
+    # A missing launcher is informational: the generated config still works
+    # through the interpreter fallback.
     recon_path = shutil.which("recon")
     if recon_path:
-        checks.append(("recon on PATH", True, recon_path))
+        checks.append(DoctorCheck("recon on PATH", "ok", recon_path))
     else:
-        checks.append(("recon on PATH", True, f"not found; generated config will use {sys.executable} fallback"))
+        checks.append(
+            DoctorCheck("recon on PATH", "info", f"not found; generated config will use {sys.executable} fallback")
+        )
 
-    _render_mcp_checks(checks)
+    _render_mcp_checks(checks, summary=True)
 
     # Keep the reference config in sync with the safe installer.
     _render_mcp_reference_config()
 
-    if not all(ok for _name, ok, _detail in checks):
+    if any(check.status == "fail" for check in checks):
         raise typer.Exit(code=EXIT_ERROR)
 
 
-def _render_mcp_checks(checks: list[tuple[str, bool, str]]) -> None:
-    """Render MCP check results with ok/FAIL labels."""
+def _render_mcp_checks(checks: Sequence[DoctorCheck], *, summary: bool = False) -> None:
+    """Render MCP check rows, then optionally the closing summary, on stderr."""
     console = get_err_console()
-    for name, ok, detail in checks:
-        mark = "ok" if ok else "FAIL"
-        style = SUCCESS if ok else ERROR
-        _render_status_row(console, mark=mark, style=style, name=name, detail=detail)
+    for check in checks:
+        _render_status_row(console, check.status, check.name, check.detail)
+    if summary:
+        console.print()
+        render_summary(console, summarize_checks(checks, mode="mcp"))
 
 
-def validate_doctor_mode(*, fix: bool, mcp: bool, client: str | None, config_path: str | None) -> None:
+def validate_doctor_mode(
+    *,
+    fix: bool,
+    mcp: bool,
+    client: str | None,
+    config_path: str | None,
+    json_output: bool = False,
+) -> None:
     """Reject incompatible local modes before any filesystem or network work."""
     if int(fix) + int(mcp) + int(client is not None) > 1:
         get_console().print(f"[{ERROR}]Choose exactly one of --fix, --mcp, or --client.[/{ERROR}]")
@@ -313,20 +347,35 @@ def validate_doctor_mode(*, fix: bool, mcp: bool, client: str | None, config_pat
     if config_path is not None and client is None:
         get_console().print(f"[{ERROR}]--config-path requires --client.[/{ERROR}]")
         raise typer.Exit(code=EXIT_VALIDATION)
+    if json_output and (fix or mcp):
+        # --mcp already writes its mcpServers reference config to stdout, and
+        # --fix writes files rather than reporting checks.
+        get_err_console().print(
+            f"[{ERROR}]--json works with recon doctor and --client, not with --fix or --mcp.[/{ERROR}]"
+        )
+        raise typer.Exit(code=EXIT_VALIDATION)
 
 
-def doctor_client(client: str, config_path: str | None = None) -> None:
+def _client_check(check: Any, client: str) -> DoctorCheck:
+    """Lift a client-doctor row into the shared doctor check shape."""
+    status: DoctorStatus = check.status
+    next_step = f"recon mcp install --client={client}" if status == "fail" else None
+    return DoctorCheck(str(check.name), status, str(check.detail), next_step)
+
+
+def doctor_client(client: str, config_path: str | None = None, *, json_output: bool = False) -> None:
     """Read a client's MCP config and report whether recon is registered.
 
     Complements `--mcp` (which validates the server) by answering the
     other half of "did the install work": does the client's own config
     file carry the recon server entry that client would load.
     """
-    from recon_tool.mcp_client.client_doctor import ClientCheck, check_client
+    from recon_tool.mcp_client.client_doctor import check_client
     from recon_tool.mcp_client.install import SUPPORTED_CLIENTS, InstallError, expand_config_path
 
-    console = get_console()
-    console.print()
+    console = get_err_console() if json_output else get_console()
+    if not json_output:
+        console.print()
 
     if client not in SUPPORTED_CLIENTS:
         console.print(
@@ -340,16 +389,19 @@ def doctor_client(client: str, config_path: str | None = None) -> None:
     except (InstallError, ValueError, OSError) as exc:
         console.print(f"  [{ERROR}]client config check refused:[/{ERROR}] {_safe_markup(exc)}")
         raise typer.Exit(EXIT_VALIDATION) from exc
+
+    checks = [_client_check(check, client) for check in report.checks]
+    summary = summarize_checks(checks, mode="client", client=client)
+    if json_output:
+        emit_doctor_json(checks, summary, mode="client", client=client, notes=report.notes)
+        if summary.exit_code:
+            raise typer.Exit(summary.exit_code)
+        return
+
     console.print(f"  [bold]MCP client config check: {_safe_markup(client)}[/bold]")
     console.print()
-
-    _style = {"ok": SUCCESS, "warn": WARNING, "fail": ERROR, "info": MUTED}
-    _mark = {"ok": "ok", "warn": "warn", "fail": "FAIL", "info": "·"}
-    check: ClientCheck
-    for check in report.checks:
-        style = _style[check.status]
-        mark = _mark[check.status]
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {_safe_markup(check.name)}: {_safe_markup(check.detail)}")
+    for check in checks:
+        _render_status_row(console, check.status, check.name, check.detail)
 
     if report.notes:
         console.print()
@@ -357,17 +409,15 @@ def doctor_client(client: str, config_path: str | None = None) -> None:
             console.print(f"  [dim]note:[/dim] {_safe_markup(note)}")
 
     console.print()
-    if report.ok:
-        console.print(f"  [{SUCCESS}]recon is registered in this client's config.[/{SUCCESS}]")
-        console.print()
-        return
-    console.print(
-        f"  [{WARNING}]recon was not found (or a config file is broken).[/{WARNING}] "
-        f"See the inspected paths above, or run `recon mcp install --client={client}`"
-        " with --config-path for an explicit profile."
-    )
+    render_summary(console, summary)
+    if summary.status == "fail":
+        console.print(
+            "  See the inspected paths above; add --config-path to check an explicit profile.",
+            soft_wrap=True,
+        )
     console.print()
-    raise typer.Exit(EXIT_NO_DATA)
+    if summary.exit_code:
+        raise typer.Exit(summary.exit_code)
 
 
 def doctor_fix() -> bool:
@@ -537,7 +587,7 @@ def _doctor_path_launcher_check() -> DoctorCheck:
 
     found = shutil.which("recon")
     if found is None:
-        return (
+        return DoctorCheck(
             "PATH recon launcher",
             "ok",
             f"not found; this environment can use `{sys.executable} -m recon_tool`",
@@ -547,7 +597,7 @@ def _doctor_path_launcher_check() -> DoctorCheck:
         launcher = lexical.resolve()
         executable_dir = Path(sys.executable).resolve().parent
     except OSError as exc:
-        return ("PATH recon launcher", "warn", f"could not resolve {found}: {_fmt_exc(exc)}")
+        return DoctorCheck("PATH recon launcher", "warn", f"could not resolve {found}: {_fmt_exc(exc)}")
 
     expected_launchers = (executable_dir / "recon", executable_dir / "recon.exe")
     if any(_same_path(launcher, candidate) for candidate in expected_launchers):
@@ -561,20 +611,27 @@ def _doctor_path_launcher_check() -> DoctorCheck:
 
     current = updater.current_version()
     if launcher_version is None:
-        return (
+        return DoctorCheck(
             "PATH recon launcher",
             "warn",
             f"{lexical} could not be verified ({error}); run `{lexical} --version`, then activate the intended "
             "environment or reinstall recon-tool for that launcher",
         )
     if updater.compare_versions(launcher_version, current) != 0:
-        return (
+        return DoctorCheck(
             "PATH recon launcher",
             "warn",
             f"{lexical} reports {launcher_version}, but this process is {current}; activate the intended environment "
             "or reinstall recon-tool for that launcher, then rerun `recon doctor`",
         )
-    return ("PATH recon launcher", "ok", f"{lexical} reports {launcher_version}")
+    return DoctorCheck("PATH recon launcher", "ok", f"{lexical} reports {launcher_version}")
+
+
+def _http_check(name: str, status_code: int) -> DoctorCheck:
+    """Map an identity-endpoint HTTP status to a doctor row."""
+    if status_code == 200:
+        return DoctorCheck(name, "ok", f"HTTP {status_code}")
+    return DoctorCheck(name, "fail", f"HTTP {status_code}", _NEXT_IDENTITY)
 
 
 async def _doctor_identity_checks() -> list[DoctorCheck]:
@@ -585,9 +642,9 @@ async def _doctor_identity_checks() -> list[DoctorCheck]:
     async with httpx.AsyncClient(timeout=10.0) as client:
         try:
             resp = await client.get("https://login.microsoftonline.com/common/.well-known/openid-configuration")
-            checks.append(("OIDC discovery", "ok" if resp.status_code == 200 else "fail", f"HTTP {resp.status_code}"))
+            checks.append(_http_check("OIDC discovery", resp.status_code))
         except (httpx.RequestError, OSError) as exc:
-            checks.append(("OIDC discovery", "fail", _fmt_exc(exc)))
+            checks.append(DoctorCheck("OIDC discovery", "fail", _fmt_exc(exc), _NEXT_IDENTITY))
 
         # Synthetic non-existent address avoids probing a real account.
         try:
@@ -595,9 +652,9 @@ async def _doctor_identity_checks() -> list[DoctorCheck]:
                 "https://login.microsoftonline.com/GetUserRealm.srf",
                 params={"login": "recon-connectivity-check@example.com", "json": "1"},
             )
-            checks.append(("GetUserRealm", "ok" if resp.status_code == 200 else "fail", f"HTTP {resp.status_code}"))
+            checks.append(_http_check("GetUserRealm", resp.status_code))
         except (httpx.RequestError, OSError) as exc:
-            checks.append(("GetUserRealm", "fail", _fmt_exc(exc)))
+            checks.append(DoctorCheck("GetUserRealm", "fail", _fmt_exc(exc), _NEXT_IDENTITY))
 
         try:
             resp = await client.post(
@@ -605,10 +662,26 @@ async def _doctor_identity_checks() -> list[DoctorCheck]:
                 content="<test/>",
                 headers={"Content-Type": "text/xml"},
             )
-            checks.append(("Autodiscover", "ok", f"HTTP {resp.status_code} (reachable)"))
+            checks.append(DoctorCheck("Autodiscover", "ok", f"HTTP {resp.status_code} (reachable)"))
         except (httpx.RequestError, OSError) as exc:
-            checks.append(("Autodiscover", "fail", _fmt_exc(exc)))
+            checks.append(DoctorCheck("Autodiscover", "fail", _fmt_exc(exc), _NEXT_IDENTITY))
     return checks
+
+
+def _dns_failure_detail(exc: BaseException, qname: str, rdtype: str) -> str:
+    """Describe a dnspython failure in plain language instead of its raw message."""
+    import dns.exception
+    import dns.resolver
+
+    if isinstance(exc, dns.resolver.NXDOMAIN):
+        return f"the resolver says {qname} does not exist"
+    if isinstance(exc, dns.resolver.NoAnswer):
+        return f"the resolver returned no {rdtype} records for {qname}"
+    if isinstance(exc, dns.resolver.NoNameservers):
+        return "no configured resolver could answer; every server failed or refused the query"
+    if isinstance(exc, dns.exception.Timeout):
+        return "the resolver did not answer in time"
+    return f"could not reach the resolver ({_fmt_exc(exc)})"
 
 
 def _doctor_dns_check() -> DoctorCheck:
@@ -618,15 +691,46 @@ def _doctor_dns_check() -> DoctorCheck:
 
     try:
         answers = dns.resolver.resolve("example.com", "TXT")
-        return ("DNS resolution", "ok", f"{len(list(answers))} TXT records")  # pyright: ignore[reportArgumentType]
-    except (
-        dns.resolver.NXDOMAIN,
-        dns.resolver.NoAnswer,
-        dns.resolver.NoNameservers,
-        dns.exception.Timeout,
-        OSError,
-    ) as exc:
-        return ("DNS resolution", "fail", _fmt_exc(exc))
+        return DoctorCheck("DNS resolution", "ok", f"{len(list(answers))} TXT records")  # pyright: ignore[reportArgumentType]
+    except (dns.exception.DNSException, OSError) as exc:
+        detail = _dns_failure_detail(exc, "example.com", "TXT")
+        if isinstance(exc, (dns.resolver.NXDOMAIN, dns.resolver.NoAnswer)):
+            # example.com publishes TXT records, so either answer is wrong.
+            detail = f"{detail}, although it publishes them; the resolver may be filtering or rewriting answers"
+        return DoctorCheck("DNS resolution", "fail", detail, _NEXT_DNS)
+
+
+def _doctor_resolver_probe() -> DoctorCheck:
+    """Ask the system resolver for a name that cannot exist.
+
+    Lookups use this same default resolver. A captive, filtering, or
+    NXDOMAIN-rewriting resolver answers names that do not exist, which makes
+    related-domain probing report artifact hosts as real. The doctor's
+    example.com TXT check cannot reveal that: it asks for a name that does
+    exist. So doctor makes one extra query, here only and never at lookup time,
+    for a random label under ``.invalid``. RFC 6761 reserves that TLD so no
+    name under it exists anywhere; any answer other than NXDOMAIN came from the
+    resolver itself. The random label defeats caching. A subdomain of
+    example.com is not a safe probe because that zone may synthesize answers.
+    """
+    import secrets
+
+    import dns.exception
+    import dns.resolver
+
+    name = "Nonexistent-name probe"
+    qname = f"{RESOLVER_PROBE_PREFIX}{secrets.token_hex(6)}.invalid"
+    try:
+        dns.resolver.resolve(qname, "A")
+    except dns.resolver.NXDOMAIN:
+        return DoctorCheck(name, "ok", "reserved test name returned NXDOMAIN")
+    except dns.resolver.NoAnswer:
+        # NOERROR with no records still claims the name exists.
+        return DoctorCheck(name, "warn", RESOLVER_ANSWERS_NONEXISTENT, _NEXT_RESOLVER)
+    except (dns.exception.DNSException, OSError) as exc:
+        detail = _dns_failure_detail(exc, qname, "A")
+        return DoctorCheck(name, "info", f"could not run the probe: {detail}")
+    return DoctorCheck(name, "warn", RESOLVER_ANSWERS_NONEXISTENT, _NEXT_RESOLVER)
 
 
 async def _doctor_ct_check() -> DoctorCheck:
@@ -637,14 +741,14 @@ async def _doctor_ct_check() -> DoctorCheck:
         try:
             resp = await client.get("https://crt.sh/?q=%.example.com&output=json")
             if resp.status_code == 200:
-                return ("crt.sh (cert transparency)", "ok", "HTTP 200")
-            return (
-                "crt.sh (cert transparency)",
+                return DoctorCheck(CT_CHECK_NAME, "ok", "HTTP 200")
+            return DoctorCheck(
+                CT_CHECK_NAME,
                 "warn",
                 f"HTTP {resp.status_code} (optional enrichment degraded)",
             )
         except (httpx.RequestError, OSError) as exc:
-            return ("crt.sh (cert transparency)", "warn", f"{_fmt_exc(exc)} (optional enrichment degraded)")
+            return DoctorCheck(CT_CHECK_NAME, "warn", f"{_fmt_exc(exc)} (optional enrichment degraded)")
 
 
 def _doctor_mcp_check() -> DoctorCheck:
@@ -652,9 +756,9 @@ def _doctor_mcp_check() -> DoctorCheck:
     try:
         from recon_tool.server import mcp  # noqa: F401  # pyright: ignore[reportUnusedImport]
 
-        return ("MCP server module", "ok", "loaded")
+        return DoctorCheck("MCP server module", "ok", "loaded")
     except Exception as exc:
-        return ("MCP server module", "fail", _fmt_exc(exc))
+        return DoctorCheck("MCP server module", "fail", _fmt_exc(exc), _NEXT_REINSTALL)
 
 
 def _doctor_fingerprint_db_check() -> DoctorCheck:
@@ -664,10 +768,12 @@ def _doctor_fingerprint_db_check() -> DoctorCheck:
 
         fps = load_fingerprints()
         if fps:
-            return ("Fingerprint database", "ok", f"{len(fps)} fingerprints loaded")
-        return ("Fingerprint database", "fail", "no fingerprints loaded; detection will not work")
+            return DoctorCheck("Fingerprint database", "ok", f"{len(fps)} fingerprints loaded")
+        return DoctorCheck(
+            "Fingerprint database", "fail", "no fingerprints loaded; detection will not work", _NEXT_REINSTALL
+        )
     except Exception as exc:
-        return ("Fingerprint database", "fail", _fmt_exc(exc))
+        return DoctorCheck("Fingerprint database", "fail", _fmt_exc(exc), _NEXT_REINSTALL)
 
 
 def _doctor_custom_path(filename: str) -> Path:
@@ -677,11 +783,15 @@ def _doctor_custom_path(filename: str) -> Path:
     return config_dir() / filename
 
 
+def _custom_file_next(path: Path) -> str:
+    return f"fix or move aside {path}, {NEXT_RERUN}"
+
+
 def _doctor_custom_fingerprints_check() -> DoctorCheck:
     """Report on the optional user fingerprints.yaml overlay."""
     custom_path = _doctor_custom_path("fingerprints.yaml")
     if not custom_path.exists():
-        return ("Custom fingerprints", "ok", f"none ({custom_path} not found)")
+        return DoctorCheck("Custom fingerprints", "ok", f"none ({custom_path} not found)")
     try:
         import yaml
 
@@ -691,9 +801,9 @@ def _doctor_custom_fingerprints_check() -> DoctorCheck:
             count = len(data["fingerprints"])
         elif isinstance(data, list):
             count = len(data)
-        return ("Custom fingerprints", "ok", f"{count} entries in {custom_path}")
+        return DoctorCheck("Custom fingerprints", "ok", f"{count} entries in {custom_path}")
     except Exception as exc:
-        return ("Custom fingerprints", "fail", _fmt_exc(exc))
+        return DoctorCheck("Custom fingerprints", "fail", _fmt_exc(exc), _custom_file_next(custom_path))
 
 
 def _doctor_signal_db_check() -> DoctorCheck:
@@ -711,10 +821,12 @@ def _doctor_signal_db_check() -> DoctorCheck:
         if sigs:
             listed = len(reportable_signals())
             detail = f"{len(sigs)} signals loaded ({listed} reportable via `recon signals list`)"
-            return ("Signal database", "ok", detail)
-        return ("Signal database", "fail", "no signals loaded; signal intelligence will not work")
+            return DoctorCheck("Signal database", "ok", detail)
+        return DoctorCheck(
+            "Signal database", "fail", "no signals loaded; signal intelligence will not work", _NEXT_REINSTALL
+        )
     except Exception as exc:
-        return ("Signal database", "fail", _fmt_exc(exc))
+        return DoctorCheck("Signal database", "fail", _fmt_exc(exc), _NEXT_REINSTALL)
 
 
 def _doctor_schema_fields_check() -> DoctorCheck:
@@ -743,17 +855,22 @@ def _doctor_schema_fields_check() -> DoctorCheck:
         payload = _json.loads(format_tenant_json(sample))
         missing = sorted(set(REQUIRED_TOP_LEVEL_FIELDS) - set(payload.keys()))
         if missing:
-            return ("Schema fields", "fail", f"{len(missing)} locked field(s) missing from emitter output: {missing}")
-        return ("Schema fields", "ok", f"{len(REQUIRED_TOP_LEVEL_FIELDS)} locked top-level fields present")
+            return DoctorCheck(
+                "Schema fields",
+                "fail",
+                f"{len(missing)} locked field(s) missing from emitter output: {missing}",
+                _NEXT_REINSTALL,
+            )
+        return DoctorCheck("Schema fields", "ok", f"{len(REQUIRED_TOP_LEVEL_FIELDS)} locked top-level fields present")
     except Exception as exc:
-        return ("Schema fields", "fail", _fmt_exc(exc))
+        return DoctorCheck("Schema fields", "fail", _fmt_exc(exc), _NEXT_REINSTALL)
 
 
 def _doctor_custom_signals_check() -> DoctorCheck:
     """Report on the optional user signals.yaml overlay."""
     custom_signals_path = _doctor_custom_path("signals.yaml")
     if not custom_signals_path.exists():
-        return ("Custom signals", "ok", f"none ({custom_signals_path} not found)")
+        return DoctorCheck("Custom signals", "ok", f"none ({custom_signals_path} not found)")
     try:
         import yaml as _yaml
 
@@ -761,44 +878,24 @@ def _doctor_custom_signals_check() -> DoctorCheck:
         count = 0
         if isinstance(data, dict) and "signals" in data:
             count = len(data["signals"])
-        return ("Custom signals", "ok", f"{count} entries in {custom_signals_path}")
+        return DoctorCheck("Custom signals", "ok", f"{count} entries in {custom_signals_path}")
     except Exception as exc:
-        return ("Custom signals", "fail", _fmt_exc(exc))
+        return DoctorCheck("Custom signals", "fail", _fmt_exc(exc), _custom_file_next(custom_signals_path))
 
 
-def _doctor_render(console: Any, checks: list[DoctorCheck]) -> bool:
+def _doctor_render(console: Any, checks: Sequence[DoctorCheck]) -> bool:
     """Print each check row and the closing summary line.
 
     Returns True when any check failed, so the caller can set a non-zero
     process exit code for scriptable health gating.
     """
-    has_failures = False
-    has_warnings = False
-    warning_names: list[str] = []
-    for name, status, detail in checks:
-        mark = {"ok": "ok", "warn": "WARN", "fail": "FAIL"}[status]
-        style = {"ok": SUCCESS, "warn": WARNING, "fail": ERROR}[status]
-        safe_name = _safe_markup(name)
-        safe_detail = _safe_markup(detail)
-        console.print(f"  [{style}]{mark:>4}[/{style}]  {safe_name}: {safe_detail}")
-        if status == "fail":
-            has_failures = True
-        elif status == "warn":
-            has_warnings = True
-            warning_names.append(name)
-
+    for check in checks:
+        _render_status_row(console, check.status, check.name, check.detail)
+    summary = summarize_checks(checks, mode="doctor")
     console.print()
-    if has_failures:
-        console.print(f"  [{WARNING}]Some checks failed. Lookups may be incomplete.[/{WARNING}]")
-    elif has_warnings:
-        if all(name == "crt.sh (cert transparency)" for name in warning_names):
-            console.print(f"  [{WARNING}]Core checks passed. Optional enrichment sources are degraded.[/{WARNING}]")
-        else:
-            console.print(f"  [{WARNING}]Core checks passed. Review the warnings above.[/{WARNING}]")
-    else:
-        console.print(f"  [{SUCCESS}]All checks passed.[/{SUCCESS}]")
+    render_summary(console, summary)
     console.print()
-    return has_failures
+    return summary.status == "fail"
 
 
 def _doctor_release_check() -> DoctorCheck:
@@ -808,16 +905,21 @@ def _doctor_release_check() -> DoctorCheck:
     current = updater.current_version()
     latest = updater.fetch_latest_version(timeout=3.0)
     if latest is None:
-        return ("Release status", "warn", "could not check PyPI; retry with `recon update --check`")
+        return DoctorCheck("Release status", "warn", "could not check PyPI; retry with `recon update --check`")
     comparison = updater.compare_versions(current, latest)
     if comparison < 0:
-        return ("Release status", "warn", f"{current} installed; {latest} available on PyPI; run `recon update`")
+        return DoctorCheck(
+            "Release status",
+            "warn",
+            f"{current} installed; {latest} available on PyPI; run `recon update`",
+            "recon update",
+        )
     if comparison > 0:
-        return ("Release status", "ok", f"{current} is newer than PyPI ({latest}); no downgrade offered")
-    return ("Release status", "ok", f"{current} is up to date on PyPI")
+        return DoctorCheck("Release status", "ok", f"{current} is newer than PyPI ({latest}); no downgrade offered")
+    return DoctorCheck("Release status", "ok", f"{current} is up to date on PyPI")
 
 
-async def doctor() -> None:
+async def doctor(*, json_output: bool = False) -> None:
     """Run diagnostic checks.
 
     The check order is load-bearing: ``tests/test_doctor.py`` drives the
@@ -827,16 +929,33 @@ async def doctor() -> None:
     Exit code is 0 when every check passes or only optional checks (including
     release status) report warnings, and 1 when any core check fails, so a CI or
     monitoring job can gate on ``recon doctor`` instead of always reading
-    success.
+    success. ``json_output`` renders the same check list as one JSON document
+    on stdout, with the same exit code and no human header.
     """
     console = get_console()
-    _doctor_print_header(console)
+    if not json_output:
+        _doctor_print_header(console)
 
+    checks = await collect_doctor_checks()
+    if json_output:
+        summary = summarize_checks(checks, mode="doctor")
+        emit_doctor_json(checks, summary, mode="doctor")
+        if summary.exit_code:
+            raise typer.Exit(code=summary.exit_code)
+        return
+
+    if _doctor_render(console, checks):
+        raise typer.Exit(code=EXIT_ERROR)
+
+
+async def collect_doctor_checks() -> list[DoctorCheck]:
+    """Run every default-mode check and return the rows, in display order."""
     checks: list[DoctorCheck] = []
     checks.append(_doctor_path_launcher_check())
     checks.append(await asyncio.to_thread(_doctor_release_check))
     checks.extend(await _doctor_identity_checks())
     checks.append(_doctor_dns_check())
+    checks.append(_doctor_resolver_probe())
     checks.append(await _doctor_ct_check())
     checks.append(_doctor_mcp_check())
     checks.append(_doctor_fingerprint_db_check())
@@ -844,6 +963,4 @@ async def doctor() -> None:
     checks.append(_doctor_signal_db_check())
     checks.append(_doctor_schema_fields_check())
     checks.append(_doctor_custom_signals_check())
-
-    if _doctor_render(console, checks):
-        raise typer.Exit(code=EXIT_ERROR)
+    return checks

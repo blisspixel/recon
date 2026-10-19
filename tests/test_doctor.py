@@ -21,6 +21,7 @@ from typer.testing import CliRunner
 
 from recon_tool.cli import app
 from recon_tool.cli.doctor import (
+    DoctorCheck,
     _doctor_path_launcher_check,
     _doctor_print_header,
     _doctor_release_check,
@@ -40,6 +41,20 @@ def _ok_response(status: int = 200) -> MagicMock:
     return resp
 
 
+def _honest_resolver(record_count: int = 2) -> MagicMock:
+    """A stub resolver: example.com answers, reserved `.invalid` names do not exist."""
+    import dns.resolver
+
+    def _resolve(qname: str, rdtype: str = "A", *args: object, **kwargs: object) -> list[MagicMock]:
+        if str(qname).rstrip(".").endswith(".invalid"):
+            raise dns.resolver.NXDOMAIN()
+        return [MagicMock() for _ in range(record_count)]
+
+    fake = MagicMock()
+    fake.resolve.side_effect = _resolve
+    return fake
+
+
 @pytest.fixture
 def fake_httpx_client():
     """A fake httpx.AsyncClient that returns 200s for every request."""
@@ -54,8 +69,7 @@ def fake_httpx_client():
 @pytest.fixture
 def patched_doctor_environment(fake_httpx_client):
     """Patch httpx.AsyncClient and dns.resolver.resolve so doctor runs offline."""
-    fake_dns = MagicMock()
-    fake_dns.resolve.return_value = [MagicMock(), MagicMock()]
+    fake_dns = _honest_resolver(2)
     with (
         patch("httpx.AsyncClient", return_value=fake_httpx_client),
         patch("dns.resolver.resolve", fake_dns.resolve),
@@ -71,7 +85,7 @@ def stable_doctor_path_launcher():
     with (
         patch(
             "recon_tool.cli.doctor._doctor_path_launcher_check",
-            return_value=("PATH recon launcher", "ok", "test launcher matches running package"),
+            return_value=DoctorCheck("PATH recon launcher", "ok", "test launcher matches running package"),
         ),
         patch("recon_tool.updater.fetch_latest_version", return_value=updater.current_version()),
     ):
@@ -92,7 +106,7 @@ def test_doctor_release_status(latest: str | None, status: str, detail: str) -> 
         patch("recon_tool.updater.current_version", return_value="2.19.4"),
         patch("recon_tool.updater.fetch_latest_version", return_value=latest) as fetch,
     ):
-        name, actual_status, actual_detail = _doctor_release_check()
+        name, actual_status, actual_detail, _next = _doctor_release_check()
     assert name == "Release status"
     assert actual_status == status
     assert detail in actual_detail
@@ -105,7 +119,7 @@ def test_doctor_release_warning_does_not_fail_health_check(patched_doctor_enviro
         result = runner.invoke(app, ["doctor"])
     assert result.exit_code == 0, result.output
     assert "Release status" in result.output
-    assert "Core checks passed. Review the warnings above." in result.output
+    assert "Core checks passed with 1 warning. Review the rows above." in result.output
 
 
 class TestDoctorCommandHappyPath:
@@ -261,8 +275,7 @@ class TestDoctorCommandFailures:
         fake_httpx_client,
         request_error: httpx.RequestError,
     ) -> None:
-        fake_dns = MagicMock()
-        fake_dns.resolve.return_value = [MagicMock()]
+        fake_dns = _honest_resolver(1)
         fake_httpx_client.get = AsyncMock(
             side_effect=[
                 request_error,
@@ -280,16 +293,15 @@ class TestDoctorCommandFailures:
 
         assert result.exit_code == 1
         assert not isinstance(result.exception, httpx.RequestError)
-        assert "FAIL  OIDC discovery" in result.output
+        assert "fail  OIDC discovery" in result.output
         assert "ok  GetUserRealm" in result.output
         assert "ok  Autodiscover" in result.output
         assert "ok  DNS resolution" in result.output
         assert "ok  crt.sh (cert transparency)" in result.output
-        assert "Some checks failed. Lookups may be incomplete." in result.output
+        assert "1 check failed. Lookups may be incomplete. Next:" in " ".join(result.output.split())
 
     def test_doctor_treats_crtsh_request_error_as_warning(self, fake_httpx_client) -> None:
-        fake_dns = MagicMock()
-        fake_dns.resolve.return_value = [MagicMock()]
+        fake_dns = _honest_resolver(1)
         fake_httpx_client.get = AsyncMock(
             side_effect=[
                 _ok_response(200),
@@ -307,13 +319,12 @@ class TestDoctorCommandFailures:
 
         assert result.exit_code == 0
         assert not isinstance(result.exception, httpx.RequestError)
-        assert "WARN  crt.sh (cert transparency)" in result.output
-        assert "Core checks passed. Optional enrichment sources are degraded." in result.output
+        assert "warn  crt.sh (cert transparency)" in result.output
+        assert "Core checks passed. Optional enrichment sources are degraded (1 warning)." in result.output
 
     def test_doctor_treats_crtsh_http_error_as_warning(self, fake_httpx_client) -> None:
         """crt.sh is optional enrichment; outage should not fail doctor."""
-        fake_dns = MagicMock()
-        fake_dns.resolve.return_value = [MagicMock(), MagicMock()]
+        fake_dns = _honest_resolver(2)
         fake_httpx_client.get = AsyncMock(
             side_effect=[
                 _ok_response(200),  # OIDC discovery
@@ -330,10 +341,10 @@ class TestDoctorCommandFailures:
             result = runner.invoke(app, ["doctor"])
 
         assert result.exit_code == 0
-        assert "WARN  crt.sh (cert transparency): HTTP 502" in result.output
-        assert "FAIL  crt.sh" not in result.output
-        assert "Core checks passed. Optional enrichment sources are degraded." in result.output
-        assert "Some checks failed" not in result.output
+        assert "warn  crt.sh (cert transparency): HTTP 502" in result.output
+        assert "fail  crt.sh" not in result.output
+        assert "Core checks passed. Optional enrichment sources are degraded (1 warning)." in result.output
+        assert "failed" not in result.output
 
 
 class TestDoctorPathLauncher:
@@ -361,7 +372,7 @@ class TestDoctorPathLauncher:
             patch("recon_tool.cli.doctor.shutil.which", return_value=str(shim)),
             patch("recon_tool.updater.current_version", return_value="2.17.11"),
         ):
-            _, status, detail = _doctor_path_launcher_check()
+            _, status, detail, _next = _doctor_path_launcher_check()
 
         assert status == "warn"
         assert f"{shim} reports 2.17.10, but this process is 2.17.11" in detail
@@ -387,7 +398,7 @@ class TestDoctorPathLauncher:
             patch("recon_tool.cli.doctor.shutil.which", return_value=str(launcher)),
             patch("recon_tool.cli.doctor._launcher_version") as probe,
         ):
-            _, status, detail = _doctor_path_launcher_check()
+            _, status, detail, _next = _doctor_path_launcher_check()
         assert status == "warn"
         assert "inside the current workspace" in detail
         probe.assert_not_called()
@@ -406,7 +417,7 @@ class TestDoctorPathLauncher:
             patch("pathlib.Path.cwd", return_value=workspace),
             patch("recon_tool.cli.doctor._launcher_version") as probe,
         ):
-            _, status, detail = _doctor_path_launcher_check()
+            _, status, detail, _next = _doctor_path_launcher_check()
 
         assert status == "warn"
         assert "inside the current workspace" in detail
@@ -426,7 +437,7 @@ class TestDoctorPathLauncher:
             patch("pathlib.Path.cwd", return_value=nested),
             patch("recon_tool.cli.doctor._launcher_version") as probe,
         ):
-            _, status, detail = _doctor_path_launcher_check()
+            _, status, detail, _next = _doctor_path_launcher_check()
 
         assert status == "warn"
         assert "inside the current workspace" in detail
@@ -438,7 +449,7 @@ class TestDoctorPathLauncher:
             patch("pathlib.Path.cwd", return_value=tmp_path),
             patch("recon_tool.cli.doctor._launcher_version") as probe,
         ):
-            _, status, detail = _doctor_path_launcher_check()
+            _, status, detail, _next = _doctor_path_launcher_check()
 
         assert status == "warn"
         assert "inside the current workspace" in detail
@@ -463,7 +474,7 @@ class TestDoctorPathLauncher:
             patch("pathlib.Path.cwd", return_value=workspace),
             patch("recon_tool.cli.doctor._launcher_version") as probe,
         ):
-            _, status, detail = _doctor_path_launcher_check()
+            _, status, detail, _next = _doctor_path_launcher_check()
 
         assert status == "warn"
         assert "inside the current workspace" in detail
@@ -515,7 +526,7 @@ class TestDoctorPathLauncher:
             patch("recon_tool.cli.doctor._launcher_version", return_value=("2.17.11", None)),
             patch("recon_tool.updater.current_version", return_value="2.17.11"),
         ):
-            name, status, detail = _doctor_path_launcher_check()
+            name, status, detail, _next = _doctor_path_launcher_check()
 
         assert name == "PATH recon launcher"
         assert status == "ok"
@@ -529,7 +540,7 @@ class TestDoctorPathLauncher:
             patch("recon_tool.cli.doctor._launcher_version", return_value=("2.6.3", None)),
             patch("recon_tool.updater.current_version", return_value="2.17.11"),
         ):
-            name, status, detail = _doctor_path_launcher_check()
+            name, status, detail, _next = _doctor_path_launcher_check()
 
         assert name == "PATH recon launcher"
         assert status == "warn"
@@ -542,7 +553,7 @@ class TestDoctorPathLauncher:
 
     def test_missing_path_launcher_keeps_module_invocation_available(self) -> None:
         with patch("recon_tool.cli.doctor.shutil.which", return_value=None):
-            name, status, detail = _doctor_path_launcher_check()
+            name, status, detail, _next = _doctor_path_launcher_check()
 
         assert name == "PATH recon launcher"
         assert status == "ok"
@@ -556,18 +567,18 @@ class TestDoctorDiagnosticRendering:
 
         has_failures = _doctor_render(
             console,
-            [("PATH recon launcher", "warn", "stale launcher")],
+            [DoctorCheck("PATH recon launcher", "warn", "stale launcher")],
         )
 
         assert not has_failures
-        assert "Core checks passed. Review the warnings above." in stream.getvalue()
+        assert "Core checks passed with 1 warning. Review the rows above." in stream.getvalue()
 
     def test_default_rows_escape_markup_strip_controls_and_bound_detail(self) -> None:
         stream = StringIO()
         console = Console(file=stream, force_terminal=False, color_system=None, width=120)
         hostile = "[red]forged[/red]\n  ok  forged-row\x1b]52;c;cGF5bG9hZA==\x07" + "x" * 2500
 
-        has_failures = _doctor_render(console, [("Probe [name]", "fail", hostile)])
+        has_failures = _doctor_render(console, [DoctorCheck("Probe [name]", "fail", hostile)])
 
         output = stream.getvalue()
         normalized = " ".join(output.split())
@@ -584,7 +595,7 @@ class TestDoctorDiagnosticRendering:
         console = Console(file=stream, force_terminal=False, color_system=None, width=120)
 
         with patch("recon_tool.cli.doctor.get_err_console", return_value=console):
-            _render_mcp_checks([("Tools [name]", False, "[red]forged[/red]\n  ok  forged-row")])
+            _render_mcp_checks([DoctorCheck("Tools [name]", "fail", "[red]forged[/red]\n  ok  forged-row")])
 
         output = stream.getvalue()
         assert "Tools [name]" in output
@@ -615,8 +626,8 @@ class TestDoctorExitCode:
             result = runner.invoke(app, ["doctor"])
 
         assert result.exit_code == 1
-        assert "FAIL  DNS resolution" in result.output
-        assert "Some checks failed. Lookups may be incomplete." in result.output
+        assert "fail  DNS resolution" in result.output
+        assert "1 check failed. Lookups may be incomplete. Next:" in " ".join(result.output.split())
 
 
 class TestDoctorFixSubcommand:

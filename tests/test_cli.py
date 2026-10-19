@@ -13,6 +13,7 @@ from typer.main import get_command
 from typer.testing import CliRunner
 
 from recon_tool.cli import app
+from recon_tool.cli.doctor import DoctorCheck
 from recon_tool.models import (
     ConfidenceLevel,
     ReconLookupError,
@@ -343,7 +344,16 @@ class TestDoctor:
     @patch("dns.resolver.resolve")
     @patch("httpx.AsyncClient")
     def test_doctor_all_pass(self, mock_http_cls, mock_dns) -> None:
-        mock_dns.return_value = [MagicMock()]
+        import dns.resolver
+
+        def _resolve(qname: str, *args: object, **kwargs: object) -> list[MagicMock]:
+            # Reserved `.invalid` names never exist; a stub that answered them
+            # would correctly draw the doctor's resolver warning.
+            if str(qname).endswith(".invalid"):
+                raise dns.resolver.NXDOMAIN()
+            return [MagicMock()]
+
+        mock_dns.side_effect = _resolve
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_client = AsyncMock()
@@ -358,7 +368,7 @@ class TestDoctor:
         with (
             patch(
                 "recon_tool.cli.doctor._doctor_path_launcher_check",
-                return_value=("PATH recon launcher", "ok", "test launcher matches running package"),
+                return_value=DoctorCheck("PATH recon launcher", "ok", "test launcher matches running package"),
             ),
             patch("recon_tool.updater.fetch_latest_version", return_value=__version__),
         ):

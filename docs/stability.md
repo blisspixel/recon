@@ -23,7 +23,7 @@ For the JSON output contract in full field-by-field detail, see
 |---|---|---|
 | `recon <domain>` / `recon lookup <domain>` | Stable | Default panel layout (section order, field names). |
 | `recon batch <file>` | Stable | One domain per line (comments with `#`), `--json` / `--md` / `--csv`. |
-| `recon doctor` | Stable | Check labels and exit codes. `--fix` and `--mcp` sub-flags. |
+| `recon doctor` | Stable | Check labels and exit codes. `--fix`, `--mcp`, and `--client` sub-flags. Rows use one status vocabulary: `ok`, `warn`, `fail`, `info`. `--json` (default mode and `--client`, additive) emits the doctor report object in [`schema.md`](schema.md#doctor-report-recon-doctor---json) with the human view's exit code. |
 | `recon mcp` | Stable | stdio transport only. |
 | `recon delta <domain>` | Stable | Auto-cache diff (v0.10.2). Diff panel + `--json`. |
 | `recon cache show [domain]` | Stable | Payload-free result and CT cache metadata; overview mode opens the first 100 completed JSON files per layer and reports exact totals, while `--all` explicitly inspects every completed JSON file. `--exact` selects literal-host keys. Missing, expired, inspection-failure, and temporary-residue states remain distinct. |
@@ -181,6 +181,13 @@ Removing or renaming existing fields, changing their types or meanings, or
 changing capsule digest canonicalization requires a new capsule schema version
 and a compatibility path. This guarantee does not make a digest a signature or
 the internal normalized snapshot part of the stable lookup JSON.
+
+The `recon doctor --json` report is a separate additive surface, documented in
+[`schema.md`](schema.md#doctor-report-recon-doctor---json). Its
+`schema_version` integer, the four status words, the summary counts, and
+`summary.exit_code` are stable. Row names, detail, and next-step text are
+diagnostics and may be reworded. Adding a check row or an optional field is
+additive.
 
 NamespaceReviewBundle artifacts use the separate
 [`review-bundle-schema.json`](review-bundle-schema.json) contract. Its
