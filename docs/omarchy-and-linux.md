@@ -163,7 +163,10 @@ recon performs public metadata reconnaissance without privileged network access:
 recon ships an on-demand, panel-only plugin in
 [`integrations/omarchy/`](../integrations/omarchy/). It follows Omarchy's native
 palette and font, defaults to no bar slot, and runs the existing CLI through
-structured argument arrays. Opening, pasting, copying JSON and changing
+structured argument arrays. Success, warning and error use the active theme's
+green, yellow and red, read from its `colors.toml` at open and on theme change,
+so they stay distinct in light and dark themes; see
+[Colors](../integrations/omarchy/README.md#colors). Opening, pasting, copying JSON and changing
 settings do not query. Enter or Inspect explicitly starts a bounded lookup;
 missing baselines offer an explicit Record baseline action.
 

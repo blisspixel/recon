@@ -14,6 +14,7 @@ Item {
 
         function init() {
             view.deltaResult = null;
+            view.lightTheme = false;
         }
 
         function test_domain_validation_data() {
@@ -132,6 +133,16 @@ Item {
             verify(findText(view, "Removed Services: not compared") !== null);
             verify(findText(view, "+ Suppressed addition") === null);
             verify(findText(view, "- Suppressed removal") === null);
+        }
+
+        function test_preview_fallback_follows_light_flag() {
+            var dark = view.colors;
+            verify(dark.success !== dark.warning && dark.warning !== dark.error && dark.success !== dark.error);
+            view.lightTheme = true;
+            var light = view.colors;
+            verify(light.background !== dark.background);
+            verify(light.success !== light.warning && light.warning !== light.error && light.success !== light.error);
+            compare(view.color.toString(), light.background);
         }
     }
 }

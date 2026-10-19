@@ -81,8 +81,10 @@ QtObject { readonly property QtObject font: QtObject { property string family: "
 
 FAKE_COLOR = """pragma Singleton
 import QtQuick
+import Quickshell
 QtObject {
     id: root
+    readonly property string currentThemePath: Quickshell.env("RECON_QML_ROOT") + "/state/omarchy/current/theme"
     property color background: "#181825"
     property color foreground: "#cdd6f4"
     property color accent: "#89b4fa"
@@ -90,6 +92,15 @@ QtObject {
     property color urgent: "#f38ba8"
     readonly property QtObject popups: QtObject { property color background: root.background }
 }
+"""
+
+DARK_THEME = """mode = "dark"
+background = "#181825"
+foreground = "#cdd6f4"
+accent = "#89b4fa"
+red = "#f7768e"
+yellow = "#e0af68"
+green = "#9ece6a"
 """
 
 
@@ -147,6 +158,10 @@ def test_real_quickshell_panel_process_and_theme_contracts(tmp_path: Path, priva
     )
     (commons / "Color.qml").write_text(FAKE_COLOR, encoding="utf-8")
     (commons / "Style.qml").write_text(FAKE_STYLE, encoding="utf-8")
+    theme = root / "state" / "omarchy" / "current" / "theme"
+    theme.mkdir(parents=True)
+    (theme / "colors.toml").write_text(DARK_THEME, encoding="utf-8")
+    (theme.parent / "theme.name").write_text("synthetic-dark\n", encoding="utf-8")
     binary = root / "bin"
     binary.mkdir()
     (binary / "python3").symlink_to(sys.executable)
@@ -231,6 +246,7 @@ def test_real_quickshell_panel_process_and_theme_contracts(tmp_path: Path, priva
         "visual lookup",
         "dark render",
         "light render",
+        "theme name recolor",
     ]
     for name in ("dark.png", "light.png"):
         assert (root / name).stat().st_size > 1000

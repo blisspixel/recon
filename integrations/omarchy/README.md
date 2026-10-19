@@ -92,6 +92,40 @@ The UI follows the host's live native palette and font, including light and
 dark themes. There is no automatic watching or scheduled refresh. Optional
 watching remains a separate follow-up, not an installed background feature.
 
+## Colors
+
+Status colors match the CLI roles: success is the active theme's green,
+warning its yellow and error its red. The theme accent stays the focus and
+selection color. Every status chip and banner also carries its word (for
+example "Degraded sources", "Changes Observed", "Partial comparison"), so the
+panel still reads correctly when a theme's colors are close or identical.
+
+The host `Color` singleton exposes only `foreground`, `background`, `accent`,
+`urgent` and `muted`, with no green, yellow or light/dark flag. The panel
+therefore reads the active theme's own `colors.toml` from the host's
+`Color.currentThemePath` (normally `~/.local/state/omarchy/current/theme`)
+through Quickshell `FileView`. It reads only `green`, `yellow`, `red`, the
+legacy `color2`, `color3`, `color1` and `mode`, accepts six-digit hex values
+only, and never runs a shell or helper for this. The light/dark flag is the
+theme's `mode` key, or the luminance of the host background when `mode` is
+absent.
+
+The file is read when the panel opens and again when the theme changes while it
+is open: either the host's live palette roles change, or
+`~/.local/state/omarchy/current/theme.name` is rewritten. Omarchy replaces the
+whole theme directory on a switch, so the panel watches that name file rather
+than `colors.toml` itself. The watch exists only while the panel is open. A
+missing or unreadable file, a missing role, or two roles with the same color
+fall back to a fixed light or dark set picked by the light/dark flag, with
+error kept on the host's `urgent` role. The same light and dark sets serve
+standalone previews of `ReconView.qml`:
+
+```bash
+python scripts/preview_omarchy_ui.py --light --output /tmp/recon-light.png
+```
+
+The preview script needs PySide6, which is not a recon dependency.
+
 ## Optional keybinding and menu entry
 
 These examples are manual opt-ins. The installer does not edit user bindings or
@@ -175,13 +209,16 @@ if needed. Remove any manually added keybinding or menu entry yourself.
 
 The panel lifecycle, manifest and facade contract were reviewed against Omarchy
 commit [`9480d1b6`](https://github.com/omacom/omarchy/tree/9480d1b6a98156314dbabe6bfef08f39f8b9cd07).
+The theme color source (`shell/Commons/Color.qml`, `bin/omarchy-theme-set` and
+`docs/theming.md`) was reviewed against Omarchy commit
+[`81fd2d23`](https://github.com/omacom/omarchy/tree/81fd2d23ca6e3462183a4dc8360de3113fa8d80c).
 The host's panel loader supplies the manifest and own-plugin facade; generic
 bar-widget settings are not injected into panels. Settings reads use the fixed
 public `omarchy-shell shell listShellConfig` call and immediately project the
 own entry in memory. Writes use that own facade, with no second live authority.
 
 ```bash
-uv run pytest tests/test_omarchy_integration.py tests/test_omarchy_lifecycle.py tests/test_omarchy_panel_runtime.py
+uv run pytest tests/test_omarchy_integration.py tests/test_omarchy_lifecycle.py tests/test_omarchy_panel_runtime.py tests/test_omarchy_theme_colors.py
 ```
 
 With the optional installed Qt Quick Test and Quickshell runtimes, these tests

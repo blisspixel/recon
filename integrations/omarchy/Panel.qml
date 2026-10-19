@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import qs.Commons
 import "Settings.js" as Settings
+import "ThemePalette.js" as ThemePalette
 
 // The host injects these facades before delivering open(payloadJson).
 Item {
@@ -30,15 +31,21 @@ Item {
     property alias view: reconView
     property alias processRunner: runner
     property alias settingsEditor: settingsForm
+    // Status keys parsed from the active theme's colors.toml (see ThemePalette.js).
+    property var themeKeys: ({})
+    readonly property string themePath: typeof Color.currentThemePath === "string" && Color.currentThemePath.length > 0
+        ? Color.currentThemePath : Quickshell.env("HOME") + "/.local/state/omarchy/current/theme"
+    readonly property bool lightTheme: ThemePalette.isLight(root.themeKeys, Color.background)
+    readonly property var statusColors: ThemePalette.statusRoles(root.themeKeys, root.lightTheme, Color.urgent)
     readonly property var nativeColors: ({
         background: Color.popups.background, surface: Color.popups.background,
         foreground: Color.foreground, secondary: Color.foreground, muted: Color.muted,
         border: Qt.rgba(Color.foreground.r, Color.foreground.g, Color.foreground.b, 0.15),
         accent: Color.accent, onAccent: Color.background,
-        success: Color.accent, warning: Color.urgent, error: Color.urgent,
-        successFill: Qt.rgba(Color.accent.r, Color.accent.g, Color.accent.b, 0.12),
-        warningFill: Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.12),
-        errorFill: Qt.rgba(Color.urgent.r, Color.urgent.g, Color.urgent.b, 0.12)
+        success: root.statusColors.success, warning: root.statusColors.warning, error: root.statusColors.error,
+        successFill: root.statusColors.successFill,
+        warningFill: root.statusColors.warningFill,
+        errorFill: root.statusColors.errorFill
     })
 
     function open(payloadJson) {
@@ -61,6 +68,7 @@ Item {
             root.payloadError = "Invalid summon payload: " + error.message;
         }
         root.opened = true;
+        themeColorsFile.reload();
         root.refreshSettings("load", ({}));
     }
 
@@ -200,6 +208,43 @@ Item {
         }
     }
 
+    // The theme's colors file is read at open and again whenever the theme
+    // changes while the panel is open. Omarchy replaces the whole theme
+    // directory on a switch, so a watch on colors.toml itself would not
+    // survive; the host's live palette roles and the theme.name file next to
+    // that directory are the change signals. No shell is run for this.
+    FileView {
+        id: themeColorsFile
+        path: root.themePath + "/colors.toml"
+        watchChanges: false
+        printErrors: false
+        onLoaded: root.themeKeys = ThemePalette.parse(themeColorsFile.text())
+        onLoadFailed: root.themeKeys = ({})
+    }
+    FileView {
+        id: themeNameFile
+        path: root.themePath + ".name"
+        preload: false
+        watchChanges: root.opened
+        printErrors: false
+        onFileChanged: themeReload.restart()
+    }
+    Connections {
+        target: Color
+        enabled: root.opened
+        function onBackgroundChanged() { themeReload.restart(); }
+        function onForegroundChanged() { themeReload.restart(); }
+        function onAccentChanged() { themeReload.restart(); }
+        function onUrgentChanged() { themeReload.restart(); }
+        function onMutedChanged() { themeReload.restart(); }
+    }
+    Timer {
+        id: themeReload
+        // The host assigns its palette roles one at a time; read once after.
+        interval: 50
+        onTriggered: themeColorsFile.reload()
+    }
+
     FloatingWindow {
         id: window
         visible: root.opened
@@ -214,6 +259,7 @@ Item {
             anchors.fill: parent
             visible: !root.showSettings
             colors: root.nativeColors
+            lightTheme: root.lightTheme
             fontFamily: Style.font.family
             isRunning: runner.busy
             canRun: root.settingsReady
