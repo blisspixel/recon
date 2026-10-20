@@ -26,35 +26,26 @@ operator, corporate group, ownership, or control.
 
 ## [Unreleased]
 
-### Security
+## [2.21.0] - 2026-10-19
 
-- Bump the locked mutation-testing dependency aiohttp from 3.14.3 to 3.14.5 for
-  CVE-2026-111063, CVE-2026-111064 and GHSA-2g87-pp6c-29x5. aiohttp is not a
-  runtime dependency of the published package.
+Report collection truth when every source fails or a name does not exist, stop
+reusing degraded cache entries, start the generated MCP launcher from any
+working directory, adopt Python 3.15 as the default toolchain, and bring the
+interface up to the retro-but-modern rules: theme color roles, an ASCII
+fallback, a source ladder, narrow-terminal layout, caveat parity and one
+doctor vocabulary with JSON output.
 
-### Fixed
+### Added
 
-- A lookup or review where every DNS query fails and every identity endpoint
-  fails now reports `all_sources_failed` and exits 4 instead of an empty
-  success. The disabled CSE probe no longer counts as a clean source. Empty and
-  mixed DNS results remain partial lookups (#221).
-- An NXDOMAIN for the queried name is now stated on the panel, `--plain`,
-  `--md`, and MCP text, carried as the additive JSON field `dns_name_status`,
-  and no longer narrated as a parked or web-only domain (#222).
-- A lookup whose collection had unavailable sources is no longer reused from
-  the result cache, so the next default lookup after a network recovery
-  collects again, including for entries saved by earlier releases. `recon cache
-  show` reports the same reuse decision as the lookup, and human output served
-  from the cache says so in one muted line. `--no-cache` remains a read and
-  write bypass; lookup JSON is unchanged (#223).
-- The MCP launcher written by `recon mcp install`, and `recon mcp`, no longer
-  refuse to start when the client's working directory is the home directory or
-  a filesystem root. The startup guard now refuses only a `recon_tool` package
-  imported through the working directory, with a bounded, actionable message
-  (#220).
-- `--color` and `--no-color` now work after the domain or command, matching
-  the leading form; the last one given wins. A trailing `--debug`, `-V`, or
-  `--version` explains that it is a global option (#224).
+- `--ascii` (also automatic under `TERM=dumb` and on terminals that cannot
+  encode the glyphs) prints pure ASCII: `[##-]`, `ok - x`, `H M L` and a `-`
+  divider, instead of substituting `?` (#226).
+- `recon doctor --json` and `recon doctor --client=<name> --json` emit the
+  same checks as the human view as one JSON object on stdout with the same
+  exit code (#230).
+- `recon doctor` names a resolver that answers names that should not exist,
+  using one doctor-only query for a reserved `.invalid` name (#230).
+- `RECON_NO_ANIMATION` turns off the animated source ladder (#227).
 
 ### Changed
 
@@ -119,17 +110,40 @@ operator, corporate group, ownership, or control.
   warning no longer looks like a failure and Medium confidence shows as info.
   The standalone preview gains a light fallback set (#231).
 
-### Added
+### Fixed
 
-- `--ascii` (also automatic under `TERM=dumb` and on terminals that cannot
-  encode the glyphs) prints pure ASCII: `[##-]`, `ok - x`, `H M L` and a `-`
-  divider, instead of substituting `?` (#226).
-- `recon doctor --json` and `recon doctor --client=<name> --json` emit the
-  same checks as the human view as one JSON object on stdout with the same
-  exit code (#230).
-- `recon doctor` names a resolver that answers names that should not exist,
-  using one doctor-only query for a reserved `.invalid` name (#230).
-- `RECON_NO_ANIMATION` turns off the animated source ladder (#227).
+- A lookup or review where every DNS query fails and every identity endpoint
+  fails now reports `all_sources_failed` and exits 4 instead of an empty
+  success. The disabled CSE probe no longer counts as a clean source. Empty and
+  mixed DNS results remain partial lookups (#221).
+- An NXDOMAIN for the queried name is now stated on the panel, `--plain`,
+  `--md`, and MCP text, carried as the additive JSON field `dns_name_status`,
+  and no longer narrated as a parked or web-only domain (#222).
+- A lookup whose collection had unavailable sources is no longer reused from
+  the result cache, so the next default lookup after a network recovery
+  collects again, including for entries saved by earlier releases. `recon cache
+  show` reports the same reuse decision as the lookup, and human output served
+  from the cache says so in one muted line. `--no-cache` remains a read and
+  write bypass; lookup JSON is unchanged (#223).
+- The MCP launcher written by `recon mcp install`, and `recon mcp`, no longer
+  refuse to start when the client's working directory is the home directory or
+  a filesystem root. The startup guard now refuses only a `recon_tool` package
+  imported through the working directory, with a bounded, actionable message
+  (#220).
+- `--color` and `--no-color` now work after the domain or command, matching
+  the leading form; the last one given wins. A trailing `--debug`, `-V`, or
+  `--version` explains that it is a global option (#224).
+
+### Security
+
+- Bump the locked mutation-testing dependency aiohttp from 3.14.3 to 3.14.5 for
+  CVE-2026-111063, CVE-2026-111064 and GHSA-2g87-pp6c-29x5. aiohttp is not a
+  runtime dependency of the published package.
+
+### Tool Surface Changes
+
+- Tool surface changes: added flags `--ascii` to `recon`, `--json` to
+  `recon doctor`, `--launch-cwd` to `recon mcp doctor`.
 
 ## [2.20.1] - 2026-10-11
 
